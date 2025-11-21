@@ -1,0 +1,63 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "target": "ES2020",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "resolveJsonModule": true,
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "jsx": "preserve",
+        "checkJs": false,
+        "paths": {
+            "@/*": [
+                "./resources/js/*"
+            ],
+            "@/Components/*": [
+                "./resources/js/Components/*"
+            ],
+            "@/Pages/*": [
+                "./resources/js/Pages/*"
+            ],
+            "@/Layouts/*": [
+                "./resources/js/Layouts/*"
+            ],
+            "@/composables/*": [
+                "./resources/js/composables/*"
+            ],
+            "@/utils/*": [
+                "./resources/js/utils/*"
+            ],
+            "ziggy-js": [
+                "./vendor/tightenco/ziggy"
+            ],
+            "~/*": [
+                "./*"
+            ]
+        },
+        "lib": [
+            "ES2020",
+            "DOM",
+            "DOM.Iterable"
+        ]
+    },
+    "include": [
+        "resources/js/**/*.js",
+        "resources/js/**/*.vue",
+        "resources/js/**/*.jsx",
+        "resources/js/**/*.ts",
+        "resources/js/**/*.tsx"
+    ],
+    "exclude": [
+        "node_modules",
+        "public",
+        "vendor",
+        "storage",
+        "bootstrap",
+        "database",
+        "tests"
+    ],
+    "vueCompilerOptions": {
+        "target": 3
+    }
+}

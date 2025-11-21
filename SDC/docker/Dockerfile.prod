@@ -1,0 +1,100 @@
+FROM php:8.3-fpm AS builder
+
+# Set working directory
+WORKDIR /var/www
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    libzip-dev \
+    libpq-dev \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip opcache \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Install Node.js for building frontend assets
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+
+# Copy application files
+COPY . /var/www
+
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+# Install Node dependencies and build assets
+RUN npm ci \
+    && npm run build \
+    && rm -rf node_modules
+
+# Production stage
+FROM php:8.3-fpm
+
+ARG BUILD_DATE
+LABEL build_date=$BUILD_DATE
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    libpng16-16 \
+    libonig5 \
+    libxml2 \
+    libzip4 \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip opcache \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure PHP for production
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
+# OPcache configuration
+RUN { \
+    echo 'opcache.memory_consumption=256'; \
+    echo 'opcache.interned_strings_buffer=16'; \
+    echo 'opcache.max_accelerated_files=20000'; \
+    echo 'opcache.validate_timestamps=0'; \
+    echo 'opcache.save_comments=1'; \
+    echo 'opcache.fast_shutdown=1'; \
+    } > /usr/local/etc/php/conf.d/opcache.ini
+
+# Custom PHP configuration
+RUN { \
+    echo 'memory_limit = 256M'; \
+    echo 'upload_max_filesize = 32M'; \
+    echo 'post_max_size = 32M'; \
+    echo 'max_execution_time = 60'; \
+    echo 'expose_php = Off'; \
+    } > /usr/local/etc/php/conf.d/custom.ini
+
+WORKDIR /var/www
+
+# Copy application from builder
+COPY --from=builder --chown=www-data:www-data /var/www /var/www
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www \
+    && chmod -R 755 /var/www/storage \
+    && chmod -R 755 /var/www/bootstrap/cache
+
+# Health check script
+RUN echo '#!/bin/sh' > /usr/local/bin/php-fpm-healthcheck \
+    && echo 'SCRIPT_NAME=/ping SCRIPT_FILENAME=/ping REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000' >> /usr/local/bin/php-fpm-healthcheck \
+    && chmod +x /usr/local/bin/php-fpm-healthcheck
+
+USER www-data
+
+EXPOSE 9000
+
+CMD ["php-fpm"]

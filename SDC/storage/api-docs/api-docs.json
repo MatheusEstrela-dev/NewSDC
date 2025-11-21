@@ -1,0 +1,1734 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "SDC API - Módulo PAE",
+        "description": "API REST para gerenciamento de Planos de Ação de Emergência (PAE)",
+        "contact": {
+            "email": "suporte@defesacivil.mg.gov.br"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost",
+            "description": "Servidor SDC API"
+        }
+    ],
+    "paths": {
+        "/api/v1/auth/login": {
+            "post": {
+                "tags": [
+                    "Autenticação"
+                ],
+                "summary": "Autentica um usuário e retorna token",
+                "description": "Realiza login e retorna um token de acesso para uso nas APIs",
+                "operationId": "login",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "cpf",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "cpf": {
+                                        "type": "string",
+                                        "example": "12345678900"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login realizado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "token": {
+                                            "type": "string",
+                                            "example": "1|abcdef123456..."
+                                        },
+                                        "user": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Admin Geral"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "admin@defesa.mg.gov.br"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Credenciais inválidas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "As credenciais fornecidas estão incorretas."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "tags": [
+                    "Autenticação"
+                ],
+                "summary": "Revoga o token de autenticação",
+                "description": "Revoga o token atual do usuário autenticado",
+                "operationId": "logout",
+                "responses": {
+                    "200": {
+                        "description": "Logout realizado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Logout realizado com sucesso"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/me": {
+            "get": {
+                "tags": [
+                    "Autenticação"
+                ],
+                "summary": "Retorna dados do usuário autenticado",
+                "description": "Retorna os dados do usuário atualmente autenticado",
+                "operationId": "me",
+                "responses": {
+                    "200": {
+                        "description": "Dados do usuário",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Admin Geral"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "admin@defesa.mg.gov.br"
+                                                },
+                                                "cpf": {
+                                                    "type": "string",
+                                                    "example": "12345678900"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/bi/entrada": {
+            "get": {
+                "tags": [
+                    "BI - Entrada"
+                ],
+                "summary": "Lista todas as entradas de desastres e eventos",
+                "description": "Retorna uma lista paginada de todas as entradas de desastres e eventos registrados no sistema",
+                "operationId": "listEntradas",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número da página",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Itens por página",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "uf",
+                        "in": "query",
+                        "description": "Filtrar por UF",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "MG"
+                        }
+                    },
+                    {
+                        "name": "municipio",
+                        "in": "query",
+                        "description": "Filtrar por município",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Juiz de Fora"
+                        }
+                    },
+                    {
+                        "name": "data_inicio",
+                        "in": "query",
+                        "description": "Data de início (formato: YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2025-01-01"
+                        }
+                    },
+                    {
+                        "name": "data_fim",
+                        "in": "query",
+                        "description": "Data de fim (formato: YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2025-12-31"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filtrar por status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Registro",
+                                "Em Análise",
+                                "Aprovado",
+                                "Rejeitado"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de entradas retornada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "sucesso": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "dados": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 98
+                                                    },
+                                                    "uf": {
+                                                        "type": "string",
+                                                        "example": "MG"
+                                                    },
+                                                    "municipio": {
+                                                        "type": "string",
+                                                        "example": "Juiz de Fora"
+                                                    },
+                                                    "codigo_ibge": {
+                                                        "type": "string",
+                                                        "example": "3136702"
+                                                    },
+                                                    "macroregiao": {
+                                                        "type": "string",
+                                                        "example": "ZONA DA MATA"
+                                                    },
+                                                    "latitude_dec": {
+                                                        "type": "number",
+                                                        "format": "float",
+                                                        "example": -21.764167
+                                                    },
+                                                    "longitude_dec": {
+                                                        "type": "number",
+                                                        "format": "float",
+                                                        "example": -43.350278
+                                                    },
+                                                    "data_registro": {
+                                                        "type": "string",
+                                                        "format": "date",
+                                                        "example": "2025-11-19"
+                                                    },
+                                                    "data_criacao": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2025-11-19T17:21:07.000000Z"
+                                                    },
+                                                    "protocolo": {
+                                                        "type": "string",
+                                                        "example": "MG-F-3136702-13321-20250613"
+                                                    },
+                                                    "cobrade": {
+                                                        "type": "string",
+                                                        "example": "1.3.3.2.1"
+                                                    },
+                                                    "tipo_desastre": {
+                                                        "type": "string",
+                                                        "example": "Onda de frio: friagem."
+                                                    },
+                                                    "status": {
+                                                        "type": "string",
+                                                        "example": "Registro"
+                                                    },
+                                                    "data_fato": {
+                                                        "type": "string",
+                                                        "format": "date",
+                                                        "example": "2025-06-13"
+                                                    },
+                                                    "obitos": {
+                                                        "type": "integer",
+                                                        "example": 0
+                                                    },
+                                                    "feridos": {
+                                                        "type": "integer",
+                                                        "example": 0
+                                                    },
+                                                    "desalojados": {
+                                                        "type": "integer",
+                                                        "example": 0
+                                                    },
+                                                    "desabrigados": {
+                                                        "type": "integer",
+                                                        "example": 0
+                                                    },
+                                                    "desaparecidos": {
+                                                        "type": "integer",
+                                                        "example": 0
+                                                    },
+                                                    "outros_afetados": {
+                                                        "type": "integer",
+                                                        "example": 50
+                                                    },
+                                                    "danos_humanos_quantidade": {
+                                                        "type": "integer",
+                                                        "example": 50
+                                                    },
+                                                    "danos_materiais_danificadas": {
+                                                        "type": "integer",
+                                                        "example": 0
+                                                    },
+                                                    "danos_materiais_destruidas": {
+                                                        "type": "integer",
+                                                        "example": 0
+                                                    },
+                                                    "danos_materiais_valor": {
+                                                        "type": "number",
+                                                        "format": "float",
+                                                        "example": 0
+                                                    },
+                                                    "prejuizos_publicos_valor": {
+                                                        "type": "number",
+                                                        "format": "float",
+                                                        "example": 0
+                                                    },
+                                                    "prejuizos_privados_valor": {
+                                                        "type": "number",
+                                                        "format": "float",
+                                                        "example": 0
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "total": {
+                                            "type": "integer",
+                                            "example": 100
+                                        },
+                                        "pagina_atual": {
+                                            "type": "integer",
+                                            "example": 1
+                                        },
+                                        "por_pagina": {
+                                            "type": "integer",
+                                            "example": 15
+                                        },
+                                        "ultima_pagina": {
+                                            "type": "integer",
+                                            "example": 7
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/bi/entrada/{id}": {
+            "get": {
+                "tags": [
+                    "BI - Entrada"
+                ],
+                "summary": "Exibe uma entrada específica",
+                "description": "Retorna os detalhes completos de uma entrada de desastre/evento específica",
+                "operationId": "showEntrada",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID da entrada",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 98
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Entrada encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "sucesso": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "dados": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Entrada não encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/integracao/rat/{ratId}/pae": {
+            "get": {
+                "tags": [
+                    "Integração"
+                ],
+                "summary": "Busca empreendimento PAE relacionado a um protocolo RAT",
+                "description": "Retorna o empreendimento PAE relacionado a um protocolo RAT através do município ou referência",
+                "operationId": "getPaeByRat",
+                "parameters": [
+                    {
+                        "name": "ratId",
+                        "in": "path",
+                        "description": "ID do protocolo RAT",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dados relacionados encontrados",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "rat": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "numero": {
+                                                            "type": "string",
+                                                            "example": "2025/001"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "pae": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "nome": {
+                                                            "type": "string",
+                                                            "example": "Barragem Sul Superior"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Nenhum relacionamento encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/integracao/pae/{paeId}/rat": {
+            "get": {
+                "tags": [
+                    "Integração"
+                ],
+                "summary": "Busca protocolos RAT relacionados a um empreendimento PAE",
+                "description": "Retorna todos os protocolos RAT relacionados a um empreendimento PAE",
+                "operationId": "getRatByPae",
+                "parameters": [
+                    {
+                        "name": "paeId",
+                        "in": "path",
+                        "description": "ID do empreendimento PAE",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Protocolos relacionados encontrados",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "pae": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "nome": {
+                                                            "type": "string",
+                                                            "example": "Barragem Sul Superior"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "protocolos_rat": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "numero": {
+                                                                "type": "string",
+                                                                "example": "2025/001"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pae/empreendimentos": {
+            "get": {
+                "tags": [
+                    "PAE"
+                ],
+                "summary": "Lista todos os empreendimentos PAE",
+                "description": "Retorna uma lista paginada de todos os empreendimentos cadastrados no sistema PAE",
+                "operationId": "listEmpreendimentos",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número da página",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Itens por página",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "municipio_id",
+                        "in": "query",
+                        "description": "Filtrar por município",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filtrar por status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "aprovado",
+                                "em_analise",
+                                "pendente",
+                                "vencido"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de empreendimentos retornada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Empreendimento"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        },
+                                        "links": {
+                                            "$ref": "#/components/schemas/PaginationLinks"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unauthenticated."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "PAE"
+                ],
+                "summary": "Cria um novo empreendimento PAE",
+                "description": "Cadastra um novo empreendimento no sistema PAE",
+                "operationId": "storeEmpreendimento",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nome",
+                                    "tipo",
+                                    "municipio_id",
+                                    "latitude",
+                                    "longitude",
+                                    "nivel_emergencia",
+                                    "status"
+                                ],
+                                "properties": {
+                                    "nome": {
+                                        "type": "string",
+                                        "example": "Barragem Sul Superior"
+                                    },
+                                    "tipo": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Barragem de Rejeitos",
+                                            "Barragem de Água",
+                                            "Outro"
+                                        ],
+                                        "example": "Barragem de Rejeitos"
+                                    },
+                                    "municipio_id": {
+                                        "type": "integer",
+                                        "example": 123
+                                    },
+                                    "latitude": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": -20.2547
+                                    },
+                                    "longitude": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": -43.8011
+                                    },
+                                    "nivel_emergencia": {
+                                        "type": "integer",
+                                        "enum": [
+                                            1,
+                                            2,
+                                            3
+                                        ],
+                                        "example": 1
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "aprovado",
+                                            "em_analise",
+                                            "pendente",
+                                            "vencido"
+                                        ],
+                                        "example": "em_analise"
+                                    },
+                                    "data_emissao": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-10-15"
+                                    },
+                                    "proximo_vencimento": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-10-15"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Empreendimento criado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Empreendimento"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Empreendimento criado com sucesso"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validação",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pae/empreendimentos/{id}": {
+            "get": {
+                "tags": [
+                    "PAE"
+                ],
+                "summary": "Exibe um empreendimento específico",
+                "description": "Retorna os detalhes completos de um empreendimento PAE, incluindo documentos, histórico e comitê",
+                "operationId": "showEmpreendimento",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID do empreendimento",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Empreendimento encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Empreendimento"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Empreendimento não encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Empreendimento não encontrado."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "PAE"
+                ],
+                "summary": "Atualiza um empreendimento PAE",
+                "description": "Atualiza os dados de um empreendimento existente",
+                "operationId": "updateEmpreendimento",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID do empreendimento",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nome": {
+                                        "type": "string",
+                                        "example": "Barragem Sul Superior"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "aprovado",
+                                            "em_analise",
+                                            "pendente",
+                                            "vencido"
+                                        ]
+                                    },
+                                    "nivel_emergencia": {
+                                        "type": "integer",
+                                        "enum": [
+                                            1,
+                                            2,
+                                            3
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Empreendimento atualizado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Empreendimento"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Empreendimento atualizado com sucesso"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Empreendimento não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "PAE"
+                ],
+                "summary": "Remove um empreendimento PAE",
+                "description": "Remove um empreendimento do sistema",
+                "operationId": "deleteEmpreendimento",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID do empreendimento",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Empreendimento removido com sucesso"
+                    },
+                    "404": {
+                        "description": "Empreendimento não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/power-bi/proxy/{api}/{path}": {
+            "get": {
+                "tags": [
+                    "Power BI"
+                ],
+                "summary": "Proxy para acessar APIs externas usando token Power BI",
+                "description": "Faz proxy de requisições para APIs externas. O sistema valida o token Power BI, busca o token individual da API e faz a requisição automaticamente.",
+                "operationId": "proxyRequest",
+                "parameters": [
+                    {
+                        "name": "api",
+                        "in": "path",
+                        "description": "Nome da API (pae, rat, tdap, bi)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pae",
+                                "rat",
+                                "tdap",
+                                "bi"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "path",
+                        "in": "path",
+                        "description": "Caminho do endpoint na API externa (ex: api/v1/empreendimentos)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "api/v1/empreendimentos"
+                        }
+                    },
+                    {
+                        "name": "X-PowerBI-Token",
+                        "in": "header",
+                        "description": "Token do Power BI",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resposta da API externa",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token inválido ou não fornecido"
+                    },
+                    "404": {
+                        "description": "API não encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/power-bi/token": {
+            "post": {
+                "tags": [
+                    "Power BI"
+                ],
+                "summary": "Gera token único para Power BI acessar múltiplas APIs",
+                "description": "Gera um token único que permite ao Power BI acessar todas as APIs configuradas (PAE, RAT, TDAP, BI). Este token contém tokens individuais para cada API.",
+                "operationId": "generatePowerBIToken",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "apis": {
+                                        "description": "Lista de APIs a incluir no token. Se não informado, inclui todas as APIs permitidas.",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "enum": [
+                                                "pae",
+                                                "rat",
+                                                "tdap",
+                                                "bi"
+                                            ]
+                                        }
+                                    },
+                                    "refresh": {
+                                        "description": "Força a renovação de todos os tokens",
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Token gerado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "token": {
+                                                    "description": "Token único para Power BI",
+                                                    "type": "string",
+                                                    "example": "a1b2c3d4e5f6..."
+                                                },
+                                                "expires_in": {
+                                                    "description": "Tempo de expiração em segundos",
+                                                    "type": "integer",
+                                                    "example": 3600
+                                                },
+                                                "apis": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "pae",
+                                                        "rat",
+                                                        "tdap",
+                                                        "bi"
+                                                    ]
+                                                },
+                                                "endpoints": {
+                                                    "properties": {
+                                                        "pae": {
+                                                            "properties": {
+                                                                "url": {
+                                                                    "type": "string",
+                                                                    "example": "https://api-pae.sdc.mg.gov.br"
+                                                                },
+                                                                "name": {
+                                                                    "type": "string",
+                                                                    "example": "API PAE"
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        },
+                                                        "rat": {
+                                                            "properties": {
+                                                                "url": {
+                                                                    "type": "string",
+                                                                    "example": "https://api-rat.sdc.mg.gov.br"
+                                                                },
+                                                                "name": {
+                                                                    "type": "string",
+                                                                    "example": "API RAT"
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "500": {
+                        "description": "Erro ao gerar token"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/power-bi/token/{token}": {
+            "get": {
+                "tags": [
+                    "Power BI"
+                ],
+                "summary": "Valida e retorna informações de um token do Power BI",
+                "description": "Valida um token do Power BI e retorna os tokens individuais para cada API",
+                "operationId": "validatePowerBIToken",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "description": "Token do Power BI",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Token válido",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "valid": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "apis": {
+                                                    "description": "Tokens individuais para cada API",
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Token inválido ou expirado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/power-bi/tokens": {
+            "get": {
+                "tags": [
+                    "Power BI"
+                ],
+                "summary": "Lista tokens individuais para cada API",
+                "description": "Retorna tokens individuais para cada API configurada, útil para testes",
+                "operationId": "listApiTokens",
+                "parameters": [
+                    {
+                        "name": "apis",
+                        "in": "query",
+                        "description": "Lista de APIs separadas por vírgula (pae,rat,tdap,bi)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "pae,rat,bi"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tokens obtidos com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "pae": {
+                                                    "type": "string",
+                                                    "example": "token_pae_123..."
+                                                },
+                                                "rat": {
+                                                    "type": "string",
+                                                    "example": "token_rat_456..."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/rat/protocolos": {
+            "get": {
+                "tags": [
+                    "RAT"
+                ],
+                "summary": "Lista todos os protocolos RAT",
+                "description": "Retorna uma lista paginada de todos os protocolos RAT cadastrados",
+                "operationId": "listProtocolos",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número da página",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de protocolos retornada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ProtocoloRAT"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "RAT"
+                ],
+                "summary": "Cria um novo protocolo RAT",
+                "operationId": "storeProtocolo",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "municipio_id",
+                                    "tipo"
+                                ],
+                                "properties": {
+                                    "municipio_id": {
+                                        "type": "integer",
+                                        "example": 123
+                                    },
+                                    "tipo": {
+                                        "type": "string",
+                                        "example": "Vistoria Técnica"
+                                    },
+                                    "descricao": {
+                                        "type": "string",
+                                        "example": "Solicitação de vistoria técnica"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Protocolo criado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProtocoloRAT"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Protocolo criado com sucesso"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/rat/protocolos/{id}": {
+            "get": {
+                "tags": [
+                    "RAT"
+                ],
+                "summary": "Exibe um protocolo RAT específico",
+                "operationId": "showProtocolo",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Protocolo encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProtocoloRAT"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Empreendimento": {
+                "title": "Empreendimento PAE",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "nome": {
+                        "type": "string",
+                        "example": "Barragem Sul Superior"
+                    },
+                    "tipo": {
+                        "type": "string",
+                        "example": "Barragem de Rejeitos"
+                    },
+                    "municipio": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 123
+                            },
+                            "nome": {
+                                "type": "string",
+                                "example": "Itabirito"
+                            },
+                            "uf": {
+                                "type": "string",
+                                "example": "MG"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "coordenadas": {
+                        "properties": {
+                            "lat": {
+                                "type": "number",
+                                "format": "float",
+                                "example": -20.2547
+                            },
+                            "lng": {
+                                "type": "number",
+                                "format": "float",
+                                "example": -43.8011
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "protocolo": {
+                        "type": "string",
+                        "example": "2024.10.15.0081"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "aprovado",
+                            "em_analise",
+                            "pendente",
+                            "vencido"
+                        ],
+                        "example": "aprovado"
+                    },
+                    "nivel_emergencia": {
+                        "type": "integer",
+                        "enum": [
+                            1,
+                            2,
+                            3
+                        ],
+                        "example": 1
+                    },
+                    "data_emissao": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-10-15"
+                    },
+                    "proximo_vencimento": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2025-10-15"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "PaginationMeta": {
+                "properties": {
+                    "current_page": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "from": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "last_page": {
+                        "type": "integer",
+                        "example": 5
+                    },
+                    "per_page": {
+                        "type": "integer",
+                        "example": 15
+                    },
+                    "to": {
+                        "type": "integer",
+                        "example": 15
+                    },
+                    "total": {
+                        "type": "integer",
+                        "example": 75
+                    }
+                },
+                "type": "object"
+            },
+            "PaginationLinks": {
+                "properties": {
+                    "first": {
+                        "type": "string",
+                        "example": "/api/v1/pae/empreendimentos?page=1"
+                    },
+                    "last": {
+                        "type": "string",
+                        "example": "/api/v1/pae/empreendimentos?page=5"
+                    },
+                    "prev": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "next": {
+                        "type": "string",
+                        "example": "/api/v1/pae/empreendimentos?page=2"
+                    }
+                },
+                "type": "object"
+            },
+            "ProtocoloRAT": {
+                "title": "Protocolo RAT",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "numero": {
+                        "type": "string",
+                        "example": "2025/001"
+                    },
+                    "municipio_id": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "tipo": {
+                        "type": "string",
+                        "example": "Vistoria Técnica"
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "em_analise"
+                    },
+                    "data": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2025-01-20"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "sanctum": {
+                "type": "http",
+                "description": "Enter token in format (Bearer <token>)",
+                "name": "Authorization",
+                "in": "header",
+                "scheme": "Bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Autenticação",
+            "description": "Endpoints para autenticação e geração de tokens"
+        },
+        {
+            "name": "BI - Entrada",
+            "description": "Endpoints para acesso aos dados de entrada de desastres e eventos"
+        },
+        {
+            "name": "Integração",
+            "description": "Endpoints para integração entre módulos (PAE, RAT, TDAP)"
+        },
+        {
+            "name": "PAE",
+            "description": "Endpoints do módulo PAE (Plano de Ação de Emergência)"
+        },
+        {
+            "name": "Power BI",
+            "description": "Endpoints para integração com Power BI e geração de tokens para múltiplas APIs"
+        },
+        {
+            "name": "RAT",
+            "description": "Endpoints do módulo RAT (Registro de Atendimento Técnico)"
+        }
+    ],
+    "security": [
+        {
+            "sanctum": []
+        }
+    ]
+}

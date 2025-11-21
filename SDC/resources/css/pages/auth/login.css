@@ -1,0 +1,297 @@
+/**
+ * Estilos específicos para a página de login
+ * Utiliza variáveis CSS e Tailwind CSS para um design moderno
+ */
+
+:root {
+  --login-primary: #f39c12;
+  --login-primary-hover: #d68910;
+  --login-bg-start: #06315c;
+  --login-bg-end: #001224;
+  --login-card-bg: rgba(15, 28, 43, 0.95);
+  --login-input-bg: rgba(8, 40, 73, 0.6);
+  --login-input-border: rgba(255, 255, 255, 0.1);
+  --login-input-focus: #f39c12;
+  --login-text-main: #ecf0f1;
+  --login-text-muted: #94a3b8;
+  --login-radius-md: 12px;
+  --login-radius-lg: 24px;
+}
+
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: linear-gradient(135deg, var(--login-bg-start), var(--login-bg-end));
+  position: relative;
+  overflow: hidden;
+}
+
+/* Background texture effect */
+.login-container::before {
+  content: '';
+  position: absolute;
+  width: 150%;
+  height: 150%;
+  background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDIiLz4KPC9zdmc+');
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 28rem;
+  position: relative;
+  z-index: 10;
+  background-color: var(--login-card-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 3rem 2.5rem;
+  border-radius: var(--login-radius-lg);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.3s ease;
+}
+
+.login-card:hover {
+  transform: translateY(-2px);
+}
+
+.card-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.main-logo {
+  max-width: 220px;
+  height: auto;
+  margin: 0 auto 1rem;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+}
+
+.system-title {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--login-text-main);
+  opacity: 0.8;
+}
+
+/* Input Group com Floating Label */
+.input-group {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.input-field {
+  width: 100%;
+  padding: 1rem;
+  padding-right: 2.75rem;
+  font-size: 1rem;
+  border-radius: 0.75rem;
+  transition: all 0.3s;
+  outline: none;
+  background: var(--login-input-bg);
+  border: 1px solid var(--login-input-border);
+  color: var(--login-text-main);
+}
+
+.input-field::placeholder {
+  color: transparent;
+}
+
+.input-field:focus {
+  border-color: var(--login-input-focus);
+  box-shadow: 0 0 0 4px rgba(243, 156, 18, 0.15);
+  background: rgba(8, 40, 73, 0.9);
+}
+
+.input-label {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  pointer-events: none;
+  transition: all 0.3s;
+  padding: 0 0.25rem;
+  color: var(--login-text-muted);
+  font-size: 1rem;
+  background-color: transparent;
+}
+
+.input-field:focus ~ .input-label,
+.input-field:not(:placeholder-shown) ~ .input-label {
+  top: -10px;
+  left: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--login-primary);
+  background-color: var(--login-card-bg);
+  border-radius: 4px;
+}
+
+.input-icon {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: color 0.3s;
+  color: var(--login-text-muted);
+}
+
+.input-field:focus ~ .input-icon {
+  color: var(--login-primary);
+}
+
+.toggle-password {
+  cursor: pointer;
+}
+
+.toggle-password:hover {
+  color: var(--login-text-main);
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  font-size: 0.875rem;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  color: var(--login-text-muted);
+}
+
+.remember-me input {
+  width: 18px;
+  height: 18px;
+  border-radius: 0.25rem;
+  border: 2px solid;
+  cursor: pointer;
+  transition: all 0.3s;
+  appearance: none;
+  background: transparent;
+  border-color: var(--login-text-muted);
+  position: relative;
+}
+
+.remember-me input:checked {
+  background-color: var(--login-primary);
+  border-color: var(--login-primary);
+}
+
+.remember-me input:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 0.75rem;
+}
+
+.forgot-password {
+  transition: color 0.3s;
+  color: var(--login-text-muted);
+  text-decoration: none;
+}
+
+.forgot-password:hover {
+  color: var(--login-primary);
+  text-decoration: underline;
+}
+
+/* Button */
+.btn-login {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--login-primary);
+  color: #fff;
+  border: none;
+}
+
+.btn-login:hover:not(:disabled) {
+  background-color: var(--login-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(243, 156, 18, 0.3);
+}
+
+.btn-login:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-login:disabled {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+/* Footer */
+.card-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--login-text-muted);
+}
+
+/* Error Messages */
+.error-message {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #f87171;
+}
+
+/* Loading Spinner */
+.btn-loading {
+  display: inline-block;
+}
+
+.btn-loading::after {
+  content: '';
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid white;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 0.5rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 2rem;
+  }
+  
+  .main-logo {
+    max-width: 180px;
+  }
+}
+

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose:*)",
+      "Bash(if exist vendor rmdir /s /q vendor)",
+      "Bash(if exist composer.lock del composer.lock)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

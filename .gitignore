@@ -1,0 +1,75 @@
+# Pasta aninhada duplicada (problema de estrutura)
+SDC/SDC/
+SDC/SDC/SDC/
+SDC/SDC/SDC/SDC/
+
+# Dependências
+node_modules/
+vendor/
+SDC/vendor/
+SDC/node_modules/
+
+# Arquivos de ambiente
+.env
+.env.*
+!.env.example
+SDC/.env
+SDC/.env.*
+
+# Build e cache
+SDC/public/build/
+SDC/public/hot/
+SDC/bootstrap/cache/*
+!SDC/bootstrap/cache/.gitignore
+SDC/storage/*.key
+SDC/storage/logs/*
+!SDC/storage/logs/.gitignore
+
+# IDEs
+.idea/
+.vscode/
+.fleet/
+*.swp
+*.swo
+*~
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.cache
+.phpunit.result.cache
+.phpunit.cache/
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Jenkins
+jenkins_home/
+jenkins_backups/
+jenkins_cache/
+jenkins_agent_workdir/
+
+# Backup
+SDC/docker/backup/data/
+SDC/docker/backup/backup.log
+
+# Arquivos de configuração local
+Homestead.json
+Homestead.yaml
+auth.json
+
+# Arquivos de build do Vite
+SDC/vite.config.js.timestamp-*
+

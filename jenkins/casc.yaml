@@ -1,0 +1,152 @@
+# ===== JENKINS CONFIGURATION AS CODE (JCasC) =====
+# Este arquivo configura o Jenkins automaticamente na inicialização
+# Resolve problema de configuração manual e garante reprodutibilidade
+
+jenkins:
+  systemMessage: "Jenkins CI/CD Server - SDC Project - Configured automatically via JCasC"
+
+  numExecutors: 2  # Número de executores no master (manter baixo, usar agentes)
+
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_USER:-admin}"
+          password: "${JENKINS_ADMIN_PASSWORD:-admin123}"
+
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+  crumbIssuer:
+    standard:
+      excludeClientIPFromCrumb: false
+
+  # Configuração de Agentes
+  nodes:
+    - permanent:
+        name: "docker-agent"
+        remoteFS: "/home/jenkins/agent"
+        launcher:
+          inbound:
+            workDirSettings:
+              disabled: false
+              failIfWorkDirIsMissing: false
+              internalDir: "remoting"
+
+  # Configurações globais
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: "APP_ENV"
+            value: "production"
+          - key: "DOCKER_BUILDKIT"
+            value: "1"
+          - key: "COMPOSE_DOCKER_CLI_BUILD"
+            value: "1"
+
+# ===== UNCLASSIFIED SETTINGS =====
+unclassified:
+  location:
+    url: "${JENKINS_URL:-http://localhost:8080}"
+    adminAddress: "${JENKINS_ADMIN_EMAIL:-admin@example.com}"
+
+  # Configuração de timezone
+  timestamper:
+    systemTimeFormat: "yyyy-MM-dd HH:mm:ss"
+
+  # Workspace cleanup
+  globalDefaultFlowDurabilityLevel:
+    durabilityHint: PERFORMANCE_OPTIMIZED
+
+# ===== CREDENTIALS =====
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          # Git SSH Key (será populado via variável de ambiente)
+          - basicSSHUserPrivateKey:
+              scope: GLOBAL
+              id: "git-ssh-key"
+              username: "git"
+              description: "SSH Key for Git repositories"
+              privateKeySource:
+                directEntry:
+                  privateKey: "${GIT_SSH_PRIVATE_KEY:-}"
+
+          # Docker Registry
+          - usernamePassword:
+              scope: GLOBAL
+              id: "docker-registry-credentials"
+              username: "${DOCKER_USERNAME:-}"
+              password: "${DOCKER_PASSWORD:-}"
+              description: "Docker Registry Credentials"
+
+          # Database credentials
+          - usernamePassword:
+              scope: GLOBAL
+              id: "db-credentials"
+              username: "${DB_USERNAME:-}"
+              password: "${DB_PASSWORD:-}"
+              description: "Database Credentials"
+
+# ===== TOOL CONFIGURATION =====
+tool:
+  git:
+    installations:
+      - name: "Default"
+        home: "git"
+
+  # Docker tool
+  dockerTool:
+    installations:
+      - name: "docker"
+        properties:
+          - installSource:
+              installers:
+                - fromDocker:
+                    version: "latest"
+
+# ===== SECURITY =====
+security:
+  # Desabilitar scripts inseguros
+  scriptApproval:
+    approvedSignatures:
+      - "method groovy.json.JsonSlurper parse java.io.Reader"
+      - "method groovy.json.JsonSlurper parseText java.lang.String"
+      - "new groovy.json.JsonSlurper"
+
+  # Configurações de API Token
+  apiToken:
+    creationOfLegacyTokenEnabled: false
+    tokenGenerationOnCreationEnabled: false
+    usageStatisticsEnabled: true
+
+# ===== JOBS CONFIGURATION =====
+jobs:
+  - script: >
+      folder('SDC') {
+        displayName('SDC Application')
+        description('CI/CD Pipeline for SDC Application')
+      }
+
+  - script: >
+      pipelineJob('SDC/build-and-deploy') {
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('${GIT_REPO_URL:-https://github.com/user/repo.git}')
+                  credentials('git-ssh-key')
+                }
+                branches('*/main', '*/develop')
+              }
+            }
+            scriptPath('Jenkinsfile')
+          }
+        }
+        triggers {
+          githubPush()
+        }
+      }

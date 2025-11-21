@@ -1,0 +1,149 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    container_name: sdc_app_dev
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - /var/www/vendor
+      - /var/www/node_modules
+    networks:
+      - sdc_network
+    depends_on:
+      - db
+      - redis
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_HOST=db
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - CACHE_DRIVER=redis
+      - SESSION_DRIVER=redis
+
+  nginx:
+    image: nginx:alpine
+    container_name: sdc_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx:/etc/nginx/conf.d
+    networks:
+      - sdc_network
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8.0
+    container_name: sdc_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+    volumes:
+      - sdc_db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - sdc_network
+
+  redis:
+    image: redis:alpine
+    container_name: sdc_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - sdc_network
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: sdc_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - sdc_network
+
+  node:
+    image: node:20-alpine
+    container_name: sdc_node
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - /var/www/node_modules
+    ports:
+      - "5173:5173"
+    networks:
+      - sdc_network
+    command: sh -c "if [ ! -d 'node_modules' ] || [ ! -f 'node_modules/.package-lock.json' ]; then npm install; fi && npm run dev -- --host"
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: sdc_jenkins
+    restart: unless-stopped
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - ./:/var/jenkins_workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - sdc_network
+    environment:
+      - JENKINS_OPTS=--httpPort=8080
+    depends_on:
+      - db
+
+  backup:
+    image: alpine:latest
+    container_name: sdc_backup
+    restart: unless-stopped
+    volumes:
+      - ./docker/backup:/backup
+      - backup_data:/backup/data
+    networks:
+      - sdc_network
+    environment:
+      - MYSQL_HOST=db
+      - MYSQL_DATABASE=${DB_DATABASE}
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - BACKUP_INTERVAL=86400
+      - BACKUP_RETENTION_DAYS=7
+    command: >
+      sh -c "
+      apk add --no-cache mysql-client bash && 
+      chmod +x /backup/*.sh && 
+      while true; do 
+        /backup/backup.sh >> /backup/backup.log 2>&1; 
+        sleep $${BACKUP_INTERVAL:-86400}; 
+      done
+      "
+    depends_on:
+      - db
+
+networks:
+  sdc_network:
+    driver: bridge
+
+volumes:
+  sdc_db_data:
+    driver: local
+  jenkins_home:
+    driver: local
+  backup_data:
+    driver: local

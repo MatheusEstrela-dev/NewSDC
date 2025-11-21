@@ -1,0 +1,360 @@
+pipeline {
+    // Usar agente Docker para builds isolados (resolve problema de workspace)
+    agent {
+        docker {
+            image 'php:8.2-cli'
+            // Resolve problema de networking: permite acesso a outros containers
+            args '-v /var/run/docker.sock:/var/run/docker.sock --network sdc_network'
+        }
+    }
+
+    environment {
+        APP_NAME = 'sdc'
+        DOCKER_COMPOSE = 'docker-compose -f docker-compose.prod.yml'
+
+        // Variáveis para Docker Buildkit (melhora performance)
+        DOCKER_BUILDKIT = '1'
+        COMPOSE_DOCKER_CLI_BUILD = '1'
+
+        // Diretórios de cache (resolve problema de workspace crescer infinito)
+        COMPOSER_CACHE_DIR = "${WORKSPACE}/.composer-cache"
+        NPM_CACHE_DIR = "${WORKSPACE}/.npm-cache"
+    }
+
+    options {
+        // Timeout global para evitar builds travados
+        timeout(time: 30, unit: 'MINUTES')
+
+        // Manter apenas últimos 10 builds
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
+
+        // Desabilitar checkout automático (faremos manualmente)
+        skipDefaultCheckout()
+
+        // Timestamps nos logs
+        timestamps()
+
+        // Colorir output
+        ansiColor('xterm')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📦 Checking out code...'
+                // Resolve problema SSH: usar credenciais configuradas
+                checkout scm
+
+                // Exibir informações do commit
+                script {
+                    env.GIT_COMMIT_MSG = sh(
+                        script: 'git log -1 --pretty=%B',
+                        returnStdout: true
+                    ).trim()
+                    env.GIT_AUTHOR = sh(
+                        script: 'git log -1 --pretty=%an',
+                        returnStdout: true
+                    ).trim()
+                }
+                echo "Commit: ${env.GIT_COMMIT_MSG}"
+                echo "Author: ${env.GIT_AUTHOR}"
+            }
+        }
+
+        stage('Pre-flight Checks') {
+            steps {
+                echo '🔍 Running pre-flight checks...'
+
+                script {
+                    // Verificar se Docker está disponível
+                    sh 'docker --version'
+                    sh 'docker-compose --version'
+
+                    // Verificar espaço em disco (mínimo 5GB)
+                    def availableSpace = sh(
+                        script: "df -BG ${WORKSPACE} | tail -1 | awk '{print \$4}' | sed 's/G//'",
+                        returnStdout: true
+                    ).trim().toInteger()
+
+                    if (availableSpace < 5) {
+                        error("Espaço em disco insuficiente: ${availableSpace}GB. Mínimo: 5GB")
+                    }
+                    echo "✅ Espaço disponível: ${availableSpace}GB"
+
+                    // Verificar se .env existe
+                    if (!fileExists('.env')) {
+                        echo '⚠️  .env não encontrado, copiando de .env.example'
+                        sh 'cp .env.example .env'
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                echo '🏗️  Building Docker images...'
+
+                script {
+                    // Resolver problema de memória: limpar builds antigos
+                    sh 'docker system prune -f --filter "until=24h"'
+
+                    // Build com cache para acelerar
+                    sh "${DOCKER_COMPOSE} build --parallel"
+                }
+            }
+        }
+
+        stage('Install Dependencies') {
+            parallel {
+                stage('PHP Dependencies') {
+                    steps {
+                        echo '📚 Installing PHP dependencies...'
+
+                        // Usar cache do Composer
+                        sh """
+                            mkdir -p ${COMPOSER_CACHE_DIR}
+                            ${DOCKER_COMPOSE} run --rm \
+                                -e COMPOSER_CACHE_DIR=/cache \
+                                -v ${COMPOSER_CACHE_DIR}:/cache \
+                                app composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+                        """
+                    }
+                }
+
+                stage('Node Dependencies') {
+                    steps {
+                        echo '📚 Installing Node dependencies...'
+
+                        // Usar cache do NPM
+                        sh """
+                            mkdir -p ${NPM_CACHE_DIR}
+                            ${DOCKER_COMPOSE} run --rm \
+                                -e NPM_CONFIG_CACHE=/cache \
+                                -v ${NPM_CACHE_DIR}:/cache \
+                                node npm ci --prefer-offline
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Generate Application Key') {
+            steps {
+                echo '🔑 Generating application key...'
+                sh "${DOCKER_COMPOSE} run --rm app php artisan key:generate --force"
+            }
+        }
+
+        stage('Database Setup') {
+            steps {
+                echo '🗄️  Setting up database...'
+
+                // Aguardar banco estar pronto (resolve problema de timing)
+                sh """
+                    ${DOCKER_COMPOSE} up -d db
+                    timeout 60 sh -c 'until docker-compose -f docker-compose.prod.yml exec -T db mysqladmin ping -h localhost --silent; do sleep 2; done'
+                """
+
+                // Executar migrations
+                sh "${DOCKER_COMPOSE} run --rm app php artisan migrate --force --seed"
+            }
+        }
+
+        stage('Build Frontend Assets') {
+            steps {
+                echo '🎨 Building frontend assets...'
+                sh "${DOCKER_COMPOSE} run --rm node npm run build"
+            }
+        }
+
+        stage('Code Quality') {
+            parallel {
+                stage('PHP Lint') {
+                    steps {
+                        echo '🔍 Running PHP code quality checks...'
+                        sh "${DOCKER_COMPOSE} run --rm app ./vendor/bin/pint --test || true"
+                    }
+                }
+
+                stage('PHP Static Analysis') {
+                    steps {
+                        echo '🔍 Running PHPStan...'
+                        sh "${DOCKER_COMPOSE} run --rm app ./vendor/bin/phpstan analyse --memory-limit=2G || true"
+                    }
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            parallel {
+                stage('Unit Tests') {
+                    steps {
+                        echo '🧪 Running unit tests...'
+                        sh """
+                            ${DOCKER_COMPOSE} run --rm app php artisan test \
+                                --testsuite=Unit \
+                                --coverage-html coverage/unit \
+                                --log-junit reports/junit-unit.xml
+                        """
+                    }
+                }
+
+                stage('Feature Tests') {
+                    steps {
+                        echo '🧪 Running feature tests...'
+                        sh """
+                            ${DOCKER_COMPOSE} run --rm app php artisan test \
+                                --testsuite=Feature \
+                                --coverage-html coverage/feature \
+                                --log-junit reports/junit-feature.xml
+                        """
+                    }
+                }
+            }
+            post {
+                always {
+                    // Publicar relatórios de teste
+                    junit 'reports/junit-*.xml'
+                    publishHTML([
+                        reportDir: 'coverage',
+                        reportFiles: 'index.html',
+                        reportName: 'Code Coverage'
+                    ])
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                echo '🔒 Running security audit...'
+
+                script {
+                    // Audit do Composer
+                    sh "${DOCKER_COMPOSE} run --rm app composer audit || true"
+
+                    // Audit do NPM
+                    sh "${DOCKER_COMPOSE} run --rm node npm audit --audit-level=moderate || true"
+                }
+            }
+        }
+
+        stage('Cache Optimization') {
+            steps {
+                echo '⚡ Optimizing application cache...'
+                sh """
+                    ${DOCKER_COMPOSE} run --rm app php artisan config:cache
+                    ${DOCKER_COMPOSE} run --rm app php artisan route:cache
+                    ${DOCKER_COMPOSE} run --rm app php artisan view:cache
+                    ${DOCKER_COMPOSE} run --rm app php artisan event:cache
+                """
+            }
+        }
+
+        stage('Deploy to Staging') {
+            when {
+                branch 'develop'
+            }
+            steps {
+                echo '🚀 Deploying to staging environment...'
+
+                script {
+                    // Deploy com zero downtime
+                    sh """
+                        ${DOCKER_COMPOSE} up -d --no-deps --build
+                        ${DOCKER_COMPOSE} exec -T app php artisan optimize
+                    """
+
+                    // Health check
+                    timeout(time: 2, unit: 'MINUTES') {
+                        sh """
+                            until curl -f http://localhost:80/health; do
+                                echo 'Waiting for application...'
+                                sleep 5
+                            done
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Production') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo '🚀 Deploying to production environment...'
+
+                // Aprovação manual
+                input message: 'Deploy to production?', ok: 'Deploy', submitter: 'admin'
+
+                script {
+                    // Backup antes do deploy
+                    sh './jenkins/backup.sh backup'
+
+                    // Deploy com zero downtime
+                    sh """
+                        ${DOCKER_COMPOSE} up -d --no-deps --build --force-recreate
+                        ${DOCKER_COMPOSE} exec -T app php artisan optimize
+                    """
+
+                    // Health check
+                    timeout(time: 5, unit: 'MINUTES') {
+                        sh """
+                            until curl -f http://localhost:80/health; do
+                                echo 'Waiting for application...'
+                                sleep 10
+                            done
+                        """
+                    }
+
+                    echo '✅ Production deployment successful!'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo '🧹 Cleaning up...'
+
+            script {
+                // Resolver problema: NÃO fazer down no ambiente de produção!
+                // Apenas limpar containers temporários
+                sh 'docker ps -a --filter "status=exited" -q | xargs -r docker rm || true'
+
+                // Limpar imagens não utilizadas
+                sh 'docker image prune -f --filter "dangling=true" || true'
+
+                // Limpar workspace cache (manter apenas últimos 3 builds)
+                sh """
+                    find ${WORKSPACE}/.composer-cache -type f -mtime +7 -delete || true
+                    find ${WORKSPACE}/.npm-cache -type f -mtime +7 -delete || true
+                """
+            }
+        }
+
+        success {
+            echo '✅ Pipeline completed successfully!'
+
+            // Notificação de sucesso (configurar no Jenkins)
+            // slackSend color: 'good', message: "Build #${env.BUILD_NUMBER} succeeded"
+        }
+
+        failure {
+            echo '❌ Pipeline failed!'
+
+            script {
+                // Coletar logs para debugging
+                sh "${DOCKER_COMPOSE} logs --tail=100 > docker-logs.txt || true"
+                archiveArtifacts artifacts: 'docker-logs.txt', allowEmptyArchive: true
+            }
+
+            // Notificação de falha
+            // slackSend color: 'danger', message: "Build #${env.BUILD_NUMBER} failed"
+        }
+
+        unstable {
+            echo '⚠️  Pipeline completed with warnings'
+        }
+    }
+}
