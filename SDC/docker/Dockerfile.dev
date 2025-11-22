@@ -16,11 +16,20 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     vim \
     gosu \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
+    wget \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip sockets \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install RoadRunner for Octane
+RUN curl -L https://github.com/roadrunner-server/roadrunner/releases/download/v2024.1.0/roadrunner-2024.1.0-linux-amd64.tar.gz -o /tmp/rr.tar.gz && \
+    tar -xzf /tmp/rr.tar.gz -C /tmp && \
+    mv /tmp/roadrunner-2024.1.0-linux-amd64/rr /usr/local/bin/rr && \
+    chmod +x /usr/local/bin/rr && \
+    rm -rf /tmp/rr.tar.gz /tmp/roadrunner-* && \
+    rr --version
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -40,8 +49,8 @@ RUN chown -R www-data:www-data /var/www
 
 # Keep as root for entrypoint to work, will switch to www-data in entrypoint
 
-# Expose port 9000 and start php-fpm server
-EXPOSE 9000
+# Expose port 8000 for Octane (RoadRunner)
+EXPOSE 8000
 
 # Use entrypoint script
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

@@ -137,6 +137,8 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { useLogin } from '../../composables/useLogin';
+// Importar CSS do login diretamente para garantir que seja aplicado
+import '../../../css/pages/auth/login.css';
 
 const {
   cpf,
@@ -152,19 +154,4 @@ const {
   submitLogin,
 } = useLogin();
 </script>
-
-<style scoped>
-/* Garantir que o container ocupe toda a tela */
-.login-container {
-  min-height: 100vh;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.25rem;
-  background: linear-gradient(135deg, #06315c, #001224);
-  position: relative;
-  overflow: hidden;
-}
-</style>
 

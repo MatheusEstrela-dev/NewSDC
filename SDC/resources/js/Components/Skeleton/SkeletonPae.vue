@@ -15,7 +15,7 @@
 
         <!-- Header -->
         <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
-            <div class="flex items-start justify-between">
+            <div class="flex items-start justify-between">image.png
                 <div class="flex-1 space-y-3">
                     <!-- Title -->
                     <SkeletonBase

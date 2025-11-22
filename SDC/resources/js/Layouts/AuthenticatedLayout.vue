@@ -33,6 +33,8 @@ provide('sidebarCollapsed', sidebarCollapsed);
             alt="MG Logo"
             class="footer-logo"
             style="height: 24px; margin-right: 12px;"
+            loading="lazy"
+            decoding="async"
           />
           <span class="footer-text">
             CEDEC - Defesa Civil de Minas Gerais
