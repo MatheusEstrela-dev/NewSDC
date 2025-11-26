@@ -1,10 +1,10 @@
 <template>
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 animate-fade-in-up">
     <!-- Coluna Principal -->
-    <div class="lg:col-span-2 space-y-6">
+    <div class="lg:col-span-2 space-y-4 sm:space-y-6 order-2 lg:order-1">
       <!-- Card 1: Dados Gerais -->
       <PaeCard title="1. Dados Gerais do Empreendimento">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <FormField label="Nome do Empreendimento" :value="empreendimento.nome" readonly />
           <FormField label="Tipo" :value="empreendimento.tipo" readonly />
           <FormField label="Município" :value="empreendimento.municipio" readonly />
@@ -19,7 +19,7 @@
 
       <!-- Card 2: Dados do PAE -->
       <PaeCard title="2. Dados do PAE (Plano de Ação de Emergência)">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <FormField
             label="Protocolo SDC"
             v-model="localData.protocolo"
@@ -44,7 +44,7 @@
     </div>
 
     <!-- Coluna Lateral -->
-    <div class="lg:col-span-1 space-y-6">
+    <div class="lg:col-span-1 space-y-4 sm:space-y-6 order-1 lg:order-2">
       <!-- Card 3: Documentos -->
       <PaeDocumentsCard :documents="documents" @upload="handleUpload" @remove="handleRemove" />
 

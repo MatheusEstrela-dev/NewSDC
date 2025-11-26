@@ -7,6 +7,7 @@
         @change="$emit('update:modelValue', $event.target.value)"
         :class="['form-select', icon ? 'pl-10' : '']"
       >
+        <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>
         <option v-for="option in options" :key="option.value" :value="option.value">
           {{ option.label }}
         </option>
@@ -35,6 +36,10 @@ defineProps({
   icon: {
     type: String,
     default: null,
+  },
+  placeholder: {
+    type: String,
+    default: '',
   },
 });
 

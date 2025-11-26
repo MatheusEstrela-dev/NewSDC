@@ -1,0 +1,90 @@
+# ============================================================================
+# SDC - RoadRunner Configuration para Produção
+# Alta performance para Laravel Octane
+# ============================================================================
+
+version: "3"
+
+server:
+  command: "php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=8000"
+  relay: pipes
+
+http:
+  address: "0.0.0.0:8000"
+  
+  # Pool de workers
+  pool:
+    num_workers: ${RR_NUM_WORKERS:-auto}
+    max_jobs: 1000
+    allocate_timeout: 60s
+    destroy_timeout: 60s
+    supervisor:
+      watch_tick: 1s
+      ttl: 0
+      idle_ttl: 10s
+      max_worker_memory: 256
+      exec_ttl: 60s
+  
+  # Middleware
+  middleware:
+    - gzip
+    - headers
+    - static
+  
+  # Headers
+  headers:
+    cors:
+      allowed_origin: "*"
+      allowed_headers: "*"
+      allowed_methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+      allow_credentials: true
+      exposed_headers: "Cache-Control,Content-Language,Content-Type,Expires,Last-Modified,Pragma"
+      max_age: 600
+    
+    response:
+      X-Powered-By: "SDC"
+  
+  # Static files
+  static:
+    dir: "public"
+    forbid:
+      - ".php"
+      - ".htaccess"
+    request:
+      input: "static"
+    response:
+      output: "static"
+  
+  # Upload
+  uploads:
+    dir: "/tmp"
+    forbid: [".php", ".exe", ".bat", ".sh"]
+    max_size: 33554432  # 32MB
+  
+  # Timeouts
+  max_request_size: 33554432
+  trusted_subnets:
+    - "10.0.0.0/8"
+    - "127.0.0.0/8"
+    - "172.16.0.0/12"
+    - "192.168.0.0/16"
+
+# Logs
+logs:
+  mode: production
+  level: warn
+  encoding: json
+  output: stderr
+
+# Health check
+status:
+  address: "0.0.0.0:2114"
+
+# Métricas Prometheus
+metrics:
+  address: "0.0.0.0:2112"
+
+# Reload automático (desabilitado em prod)
+reload:
+  enabled: false
+

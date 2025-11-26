@@ -50,7 +50,7 @@
   -webkit-backdrop-filter: blur(10px);
   padding: 3rem 2.5rem;
   border-radius: var(--login-radius-lg);
-  box-shadow: 
+  box-shadow:
     0 20px 40px rgba(0, 0, 0, 0.4),
     0 0 0 1px rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -140,6 +140,13 @@
   transform: translateY(-50%);
   transition: color 0.3s;
   color: var(--login-text-muted);
+  background: none;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
 }
 
 .input-field:focus ~ .input-icon {
@@ -148,10 +155,25 @@
 
 .toggle-password {
   cursor: pointer;
+  outline: none;
 }
 
 .toggle-password:hover {
-  color: var(--login-text-main);
+  color: var(--login-primary);
+}
+
+.toggle-password:focus {
+  color: var(--login-primary);
+  outline: 2px solid var(--login-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Garantir que apenas um ícone seja exibido */
+.toggle-password svg {
+  display: block;
+  width: 20px;
+  height: 20px;
 }
 
 /* Form Actions */
@@ -289,7 +311,7 @@
   .login-card {
     padding: 2rem;
   }
-  
+
   .main-logo {
     max-width: 180px;
   }

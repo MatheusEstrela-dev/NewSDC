@@ -1,12 +1,12 @@
 <template>
-  <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
-    <div>
-      <h1 class="text-3xl font-bold text-white tracking-tight">Ficha do Empreendimento</h1>
-      <p class="text-xl text-blue-400 font-light mt-1 flex items-center gap-2">
-        {{ empreendimento.nome }}
+  <div class="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-8 gap-4">
+    <div class="flex-1 min-w-0">
+      <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight break-words">Ficha do Empreendimento</h1>
+      <p class="text-lg sm:text-xl text-blue-400 font-light mt-1 flex flex-wrap items-center gap-2">
+        <span class="break-words">{{ empreendimento.nome }}</span>
         <span
           :class="[
-            'px-2 py-0.5 rounded text-xs font-bold border',
+            'px-2 py-0.5 rounded text-xs font-bold border whitespace-nowrap',
             getNivelEmergenciaClass(empreendimento.nivelEmergencia),
           ]"
         >
@@ -14,11 +14,11 @@
         </span>
       </p>
     </div>
-    <div class="text-right hidden md:block">
+    <div class="text-left md:text-right flex-shrink-0">
       <span class="text-xs text-slate-500 uppercase tracking-wider font-bold block mb-1">
         Última Atualização
       </span>
-      <span class="text-sm text-slate-300 font-mono">{{ lastUpdate }}</span>
+      <span class="text-sm text-slate-300 font-mono break-all md:break-normal">{{ lastUpdate }}</span>
     </div>
   </div>
 </template>

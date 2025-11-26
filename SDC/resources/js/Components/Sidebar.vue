@@ -44,7 +44,7 @@
           Visão Geral
         </NavItem>
         <NavItem
-          :href="route('dashboard')"
+          href="/rat"
           :active="false"
           icon="document"
           :collapsed="isCollapsed"

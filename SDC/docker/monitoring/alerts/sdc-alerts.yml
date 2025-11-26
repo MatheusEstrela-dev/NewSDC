@@ -1,0 +1,176 @@
+# ============================================================================
+# SDC - Prometheus Alerting Rules
+# Alertas para sistema crítico 24/7
+# ============================================================================
+
+groups:
+  - name: sdc-critical
+    rules:
+      # ==========================================
+      # Application Alerts
+      # ==========================================
+      - alert: ApplicationDown
+        expr: up{job="php-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Aplicação SDC está down"
+          description: "A aplicação Laravel não está respondendo há mais de 1 minuto."
+
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="php-app"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tempo de resposta alto"
+          description: "95% das requisições estão levando mais de 2 segundos."
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Taxa de erros alta"
+          description: "Mais de 5% das requisições estão retornando erro 5xx."
+
+      # ==========================================
+      # Database Alerts
+      # ==========================================
+      - alert: MySQLDown
+        expr: mysql_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL está down"
+          description: "O servidor MySQL não está respondendo."
+
+      - alert: MySQLHighConnections
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL - Muitas conexões"
+          description: "MySQL está usando mais de 80% das conexões disponíveis."
+
+      - alert: MySQLSlowQueries
+        expr: rate(mysql_global_status_slow_queries[5m]) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL - Queries lentas"
+          description: "Mais de 5 queries lentas por segundo nos últimos 10 minutos."
+
+      - alert: MySQLReplicationLag
+        expr: mysql_slave_status_seconds_behind_master > 60
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL - Lag de replicação"
+          description: "A réplica está mais de 60 segundos atrasada."
+
+      # ==========================================
+      # Redis Alerts
+      # ==========================================
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis está down"
+          description: "O servidor Redis não está respondendo."
+
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis - Memória alta"
+          description: "Redis está usando mais de 90% da memória configurada."
+
+      - alert: RedisHighConnections
+        expr: redis_connected_clients > 450
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis - Muitas conexões"
+          description: "Redis tem mais de 450 conexões ativas."
+
+      # ==========================================
+      # Infrastructure Alerts
+      # ==========================================
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU alta"
+          description: "Uso de CPU acima de 80% por mais de 10 minutos."
+
+      - alert: HighMemoryUsage
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Memória alta"
+          description: "Uso de memória acima de 90%."
+
+      - alert: DiskSpaceLow
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disco quase cheio"
+          description: "Uso de disco acima de 85%."
+
+      - alert: DiskSpaceCritical
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > 95
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disco crítico"
+          description: "Uso de disco acima de 95%."
+
+      # ==========================================
+      # Container Alerts
+      # ==========================================
+      - alert: ContainerKilled
+        expr: time() - container_last_seen > 60
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container morreu"
+          description: "Um container não é visto há mais de 60 segundos."
+
+      - alert: ContainerHighCPU
+        expr: (sum(rate(container_cpu_usage_seconds_total{name!=""}[3m])) by (name) / sum(container_spec_cpu_quota{name!=""}/container_spec_cpu_period{name!=""}) by (name)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container com CPU alta"
+          description: "Container {{ $labels.name }} está usando mais de 80% do CPU alocado."
+
+      - alert: ContainerHighMemory
+        expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container com memória alta"
+          description: "Container {{ $labels.name }} está usando mais de 90% da memória alocada."
+

@@ -1,0 +1,43 @@
+# ============================================================================
+# SDC - MySQL para DESENVOLVIMENTO
+# ============================================================================
+
+[mysqld]
+# Básico
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+default-storage-engine = InnoDB
+
+# Performance (desenvolvimento - recursos limitados)
+innodb_buffer_pool_size = 256M
+innodb_log_file_size = 64M
+innodb_flush_log_at_trx_commit = 2
+innodb_flush_method = O_DIRECT
+
+# Conexões
+max_connections = 100
+wait_timeout = 600
+interactive_timeout = 600
+
+# Slow queries para debugging
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 1
+log_queries_not_using_indexes = 1
+
+# General log (desabilite em prod!)
+general_log = 0
+general_log_file = /var/log/mysql/general.log
+
+# Erro log
+log_error = /var/log/mysql/error.log
+
+# SQL Mode
+sql_mode = STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
+
+[client]
+default-character-set = utf8mb4
+
+[mysql]
+default-character-set = utf8mb4
+

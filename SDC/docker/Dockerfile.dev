@@ -1,57 +1,111 @@
-FROM php:8.3-fpm
+# ============================================================================
+# SDC - DESENVOLVIMENTO DOCKERFILE
+# Otimizado para desenvolvimento rápido com hot reload e debugging
+# ============================================================================
 
-# Set working directory
-WORKDIR /var/www
+FROM php:8.3-fpm-alpine AS base
 
-# Install system dependencies and PHP extensions
-RUN apt-get update && apt-get install -y \
+# Labels para identificação
+LABEL maintainer="SDC Team"
+LABEL environment="development"
+
+# Argumentos de build
+ARG UID=1000
+ARG GID=1000
+
+# Variáveis de ambiente
+ENV COMPOSER_ALLOW_SUPERUSER=1 \
+    COMPOSER_HOME=/tmp/composer \
+    PHP_OPCACHE_ENABLE=0 \
+    PHP_MEMORY_LIMIT=512M
+
+# Set timezone
+RUN apk add --no-cache tzdata \
+    && cp /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime \
+    && echo "America/Sao_Paulo" > /etc/timezone
+
+# Instalar dependências do sistema
+RUN apk add --no-cache \
+    # Utilitários
     git \
     curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    zip \
-    unzip \
-    libzip-dev \
-    libpq-dev \
-    vim \
-    gosu \
     wget \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip sockets \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    vim \
+    bash \
+    shadow \
+    # Dependências de compilação PHP
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    libwebp-dev \
+    oniguruma-dev \
+    libxml2-dev \
+    libzip-dev \
+    postgresql-dev \
+    icu-dev \
+    linux-headers \
+    $PHPIZE_DEPS \
+    # Para debugging
+    strace \
+    # Para healthcheck
+    fcgi
 
-# Install RoadRunner for Octane
-RUN curl -L https://github.com/roadrunner-server/roadrunner/releases/download/v2024.1.0/roadrunner-2024.1.0-linux-amd64.tar.gz -o /tmp/rr.tar.gz && \
-    tar -xzf /tmp/rr.tar.gz -C /tmp && \
-    mv /tmp/roadrunner-2024.1.0-linux-amd64/rr /usr/local/bin/rr && \
-    chmod +x /usr/local/bin/rr && \
-    rm -rf /tmp/rr.tar.gz /tmp/roadrunner-* && \
-    rr --version
+# Instalar extensões PHP
+RUN docker-php-ext-configure gd \
+    --with-freetype \
+    --with-jpeg \
+    --with-webp \
+    && docker-php-ext-install -j$(nproc) \
+    pdo_mysql \
+    pdo_pgsql \
+    mysqli \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    zip \
+    intl \
+    opcache \
+    sockets
 
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Instalar extensões via PECL
+RUN pecl install redis-6.0.2 xdebug-3.3.2 \
+    && docker-php-ext-enable redis xdebug
 
-# Configure PHP for development
-RUN cp "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini" \
-    && echo "memory_limit = 512M" >> "$PHP_INI_DIR/conf.d/custom.ini" \
-    && echo "upload_max_filesize = 64M" >> "$PHP_INI_DIR/conf.d/custom.ini" \
-    && echo "post_max_size = 64M" >> "$PHP_INI_DIR/conf.d/custom.ini"
+# Instalar Composer
+COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
-# Copy entrypoint script
-COPY docker/entrypoint.dev.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Configuração PHP para desenvolvimento
+RUN cp "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www
+COPY docker/config/php/dev.ini /usr/local/etc/php/conf.d/99-custom.ini
+COPY docker/config/php/xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
-# Keep as root for entrypoint to work, will switch to www-data in entrypoint
+# Configuração PHP-FPM otimizada para desenvolvimento
+COPY docker/config/php-fpm/dev.conf /usr/local/etc/php-fpm.d/zz-docker.conf
 
-# Expose port 8000 for Octane (RoadRunner)
-EXPOSE 8000
+# Criar usuário para desenvolvimento (mesmo UID/GID do host)
+RUN deluser --remove-home www-data 2>/dev/null || true \
+    && addgroup -g ${GID} www-data \
+    && adduser -u ${UID} -G www-data -h /var/www -s /bin/bash -D www-data
 
-# Use entrypoint script
+# Diretório de trabalho
+WORKDIR /var/www
+
+# Scripts de entrada
+COPY docker/scripts/entrypoint.dev.sh /usr/local/bin/entrypoint.sh
+COPY docker/scripts/healthcheck.sh /usr/local/bin/healthcheck.sh
+
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/healthcheck.sh
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD /usr/local/bin/healthcheck.sh
+
+# Portas
+EXPOSE 9000 8000
+
+# Entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["php-fpm"]

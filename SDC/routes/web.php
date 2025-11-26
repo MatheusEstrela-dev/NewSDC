@@ -30,6 +30,30 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Pae');
     })->name('pae.index');
 
+    Route::get('/rat', function () {
+        return Inertia::render('Rat', [
+            'rat' => [
+                'id' => null,
+                'protocolo' => '',
+                'status' => 'rascunho',
+                'tem_vistoria' => false,
+                'dadosGerais' => [
+                    'data_fato' => '',
+                    'data_inicio_atividade' => '',
+                    'data_termino_atividade' => '',
+                    'nat_cobrade_id' => '',
+                    'nat_nome_operacao' => '',
+                    'local_municipio' => '',
+                ],
+            ],
+            'recursos' => [],
+            'envolvidos' => [],
+            'vistoria' => [],
+            'historyEvents' => [],
+            'lastUpdate' => now()->format('d/m/Y H:i'),
+        ]);
+    })->name('rat.index');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

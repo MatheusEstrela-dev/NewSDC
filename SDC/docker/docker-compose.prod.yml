@@ -1,0 +1,341 @@
+# ============================================================================
+# SDC - Docker Compose para PRODUÇÃO
+# Sistema Crítico 24/7 - Alta Disponibilidade
+# ============================================================================
+# Uso: cd docker && docker compose -f docker-compose.prod.yml up -d
+# ============================================================================
+
+name: sdc-prod
+
+services:
+  # ==========================================================================
+  # PHP Application (Laravel Octane)
+  # ==========================================================================
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+      target: octane
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        VCS_REF: ${VCS_REF:-}
+        VERSION: ${VERSION:-1.0.0}
+    image: sdc/app:${VERSION:-latest}
+    restart: always
+    
+    deploy:
+      mode: replicated
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    
+    networks:
+      - sdc_internal
+    
+    depends_on:
+      db-primary:
+        condition: service_healthy
+      redis-master:
+        condition: service_healthy
+    
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL}
+      DB_HOST: db-primary
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis-master
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      OCTANE_SERVER: roadrunner
+    
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ==========================================================================
+  # Queue Workers
+  # ==========================================================================
+  queue:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+      target: queue
+    image: sdc/queue:${VERSION:-latest}
+    restart: always
+    
+    deploy:
+      mode: replicated
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    
+    networks:
+      - sdc_internal
+    
+    depends_on:
+      - db-primary
+      - redis-master
+    
+    environment:
+      APP_ENV: production
+      DB_HOST: db-primary
+      REDIS_HOST: redis-master
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  # ==========================================================================
+  # Scheduler
+  # ==========================================================================
+  scheduler:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+      target: scheduler
+    image: sdc/scheduler:${VERSION:-latest}
+    restart: always
+    
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    
+    networks:
+      - sdc_internal
+    
+    depends_on:
+      - db-primary
+      - redis-master
+    
+    environment:
+      APP_ENV: production
+      DB_HOST: db-primary
+      REDIS_HOST: redis-master
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  # ==========================================================================
+  # Traefik (Load Balancer + SSL)
+  # ==========================================================================
+  traefik:
+    image: traefik:v3.0
+    container_name: sdc_traefik
+    restart: always
+    
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--metrics.prometheus=true"
+    
+    ports:
+      - "80:80"
+      - "443:443"
+    
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+      - ./logs/traefik:/var/log/traefik
+    
+    networks:
+      - sdc_external
+      - sdc_internal
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${APP_DOMAIN}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+
+  # ==========================================================================
+  # MySQL Primary
+  # ==========================================================================
+  db-primary:
+    image: mysql:8.0
+    container_name: sdc_db_primary
+    hostname: db-primary
+    restart: always
+    
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: America/Sao_Paulo
+    
+    volumes:
+      - db_primary_data:/var/lib/mysql
+      - ./mysql/prod-primary.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./logs/mysql:/var/log/mysql
+    
+    networks:
+      - sdc_internal
+    
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --server-id=1
+      --log-bin=mysql-bin
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # ==========================================================================
+  # Redis Master
+  # ==========================================================================
+  redis-master:
+    image: redis:7-alpine
+    container_name: sdc_redis_master
+    hostname: redis-master
+    restart: always
+    
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 1gb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD}
+    
+    volumes:
+      - redis_master_data:/data
+    
+    networks:
+      - sdc_internal
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1.5G
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ==========================================================================
+  # Prometheus
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    container_name: sdc_prometheus
+    restart: always
+    profiles:
+      - monitoring
+    
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts:/etc/prometheus/alerts:ro
+      - prometheus_data:/prometheus
+    
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    
+    networks:
+      - sdc_internal
+      - sdc_monitoring
+
+  # ==========================================================================
+  # Grafana
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:10.3.3
+    container_name: sdc_grafana
+    restart: always
+    profiles:
+      - monitoring
+    
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    
+    networks:
+      - sdc_monitoring
+    
+    depends_on:
+      - prometheus
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  sdc_external:
+    driver: bridge
+  sdc_internal:
+    driver: bridge
+    internal: true
+  sdc_monitoring:
+    driver: bridge
+    internal: true
+
+# ==========================================================================
+# Volumes
+# ==========================================================================
+volumes:
+  db_primary_data:
+    driver: local
+  redis_master_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  traefik_letsencrypt:
+    driver: local
+

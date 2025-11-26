@@ -1,0 +1,203 @@
+/**
+ * Estilos específicos para o módulo RAT
+ * Utiliza Tailwind CSS e variáveis CSS para um design consistente
+ * Baseado no padrão do PAE
+ */
+
+:root {
+  --rat-primary: #3b82f6;
+  --rat-bg: #0f172a;
+  --rat-card-bg: #1e293b;
+  --rat-border: #334155;
+  --rat-text: #f1f5f9;
+  --rat-text-muted: #94a3b8;
+}
+
+/* Campos de Formulário */
+.form-input {
+  @apply w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 outline-none transition-all duration-200;
+}
+
+.form-input:hover {
+  @apply border-slate-600;
+}
+
+.form-input:focus {
+  @apply border-blue-500 bg-slate-900 shadow-[0_0_0_1px_rgba(59,130,246,0.5)];
+}
+
+.form-input::placeholder {
+  @apply text-slate-500;
+}
+
+/* Campos Readonly */
+.form-input-readonly {
+  @apply w-full bg-slate-800/50 border border-slate-700/30 rounded-lg px-4 py-2.5 text-slate-400 cursor-default outline-none;
+}
+
+/* Select Fields */
+.form-select {
+  @apply w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 outline-none transition-all duration-200 appearance-none cursor-pointer;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+}
+
+.form-select:hover {
+  @apply border-slate-600;
+}
+
+.form-select:focus {
+  @apply border-blue-500 bg-slate-900;
+}
+
+/* Fix for date inputs in Webkit browsers */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Scrollbar Customization */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #334155;
+  border-radius: 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #475569;
+}
+
+/* Hide Scrollbar */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out forwards;
+}
+
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* RAT Specific Styles */
+.rat-container {
+  @apply min-h-screen bg-slate-900 text-slate-100 font-sans antialiased;
+  width: 100%;
+  margin: 0;
+}
+
+.rat-card {
+  @apply bg-slate-800 rounded-lg shadow-lg border border-slate-700/50 overflow-hidden;
+}
+
+.rat-card-header {
+  @apply px-6 py-4 border-b border-slate-700 bg-slate-800/50;
+}
+
+.rat-card-title {
+  @apply text-lg font-semibold text-white flex items-center gap-2;
+}
+
+.rat-card-title::before {
+  @apply w-1 h-6 bg-blue-500 rounded-full;
+  content: '';
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .rat-container {
+    padding: 1rem;
+  }
+  
+  .rat-card {
+    @apply rounded-lg;
+  }
+  
+  .rat-card-header {
+    @apply px-4 py-3;
+  }
+  
+  .rat-card-title {
+    @apply text-base;
+  }
+  
+  .form-input,
+  .form-select {
+    @apply text-sm;
+    padding: 0.75rem;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1024px) {
+  .rat-container {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .rat-container {
+    padding: 1.5rem 2rem;
+  }
+}
+
+/* Responsive tabs */
+@media (max-width: 640px) {
+  .rat-tabs {
+    @apply -mx-4 px-4;
+  }
+}
+
