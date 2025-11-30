@@ -7,28 +7,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * @OA\Info(
- *     title="SDC API - Módulo PAE",
- *     version="1.0.0",
- *     description="API REST para gerenciamento de Planos de Ação de Emergência (PAE)",
- *     @OA\Contact(
- *         email="suporte@defesacivil.mg.gov.br"
- *     )
- * )
- * 
- * @OA\Server(
- *     url=L5_SWAGGER_CONST_HOST,
- *     description="Servidor SDC API"
- * )
- * 
- * @OA\SecurityScheme(
- *     securityScheme="sanctum",
- *     type="http",
- *     scheme="bearer",
- *     bearerFormat="JWT",
- *     description="Autenticação via Laravel Sanctum. Use o formato: Bearer {token}"
- * )
- * 
  * @OA\Tag(
  *     name="PAE",
  *     description="Endpoints do módulo PAE (Plano de Ação de Emergência)"

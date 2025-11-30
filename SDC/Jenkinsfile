@@ -289,7 +289,7 @@ pipeline {
 
                 script {
                     // Backup antes do deploy
-                    sh './jenkins/backup.sh backup'
+                    sh './SDC/docker/jenkins/backup.sh backup'
 
                     // Deploy com zero downtime
                     sh """

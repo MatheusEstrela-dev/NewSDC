@@ -1,0 +1,47 @@
+# ============================================================================
+# Dockerfile para Serviço de Backup Jenkins
+# Backup inteligente com verificação, compressão e notificações
+# ============================================================================
+
+FROM alpine:latest
+
+LABEL maintainer="SDC DevOps <devops@sdc.gov.br>"
+LABEL description="Jenkins Backup Service - Multi-tier with verification"
+LABEL version="1.0.0"
+
+# Instalar dependências
+RUN apk add --no-cache \
+    bash \
+    curl \
+    aws-cli \
+    rsync \
+    openssh-client \
+    pigz \
+    tar \
+    findutils \
+    coreutils \
+    jq \
+    dcron \
+    && rm -rf /var/cache/apk/*
+
+# Criar diretórios
+RUN mkdir -p \
+    /source \
+    /backups \
+    /remote \
+    /scripts \
+    /var/log/backup
+
+# Copiar scripts
+COPY scripts/backup-*.sh /scripts/
+RUN chmod +x /scripts/*.sh
+
+# Configurar cron
+COPY crontab /etc/crontabs/root
+
+# Healthcheck
+HEALTHCHECK --interval=1h --timeout=10s --retries=2 \
+    CMD find /backups -type f -name 'jenkins-*.tar.gz' -mtime -1 | grep -q . || exit 1
+
+# Executar cron em foreground
+CMD ["crond", "-f", "-l", "2"]

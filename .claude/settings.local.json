@@ -1,7 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(docker compose:*)",
+      "Bash(where npx:*)",
+      "Bash(echo:*)",
+      "Bash(if [ -f \"Doc/jenkins02.md\" ])",
+      "Bash(then rm Doc/jenkins02.md)",
+      "Bash(else echo \"⚠️ jenkins02.md not found\")",
+      "Bash(fi)",
+      "Bash(if [ -f \"Doc/template_docker_jenkins_README.md\" ])",
+      "Bash(then rm Doc/template_docker_jenkins_README.md)",
+      "Bash(else echo \"⚠️ template_docker_jenkins_README.md not found\")",
+      "Bash(if [ -f \"Doc/JENKINS_PIPELINE_NOTION.md\" ])",
+      "Bash(then rm Doc/JENKINS_PIPELINE_NOTION.md)",
+      "Bash(else echo \"⚠️ JENKINS_PIPELINE_NOTION.md not found\")"
     ],
     "deny": [],
     "ask": []

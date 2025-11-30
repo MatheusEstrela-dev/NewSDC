@@ -1,0 +1,136 @@
+# ============================================================================
+# SDC - Docker Compose para Backup Automático de Banco de Dados
+# ============================================================================
+# Uso: docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d
+# ============================================================================
+
+name: sdc-backup
+
+services:
+  # ==========================================================================
+  # Database Backup Service (Automated)
+  # ==========================================================================
+  db-backup:
+    image: mysql:8.3
+    container_name: sdc-db-backup
+    restart: always
+
+    volumes:
+      - ./database/scripts:/scripts:ro
+      - ../../storage/backups/database:/backups/database
+      - /etc/localtime:/etc/localtime:ro
+
+    networks:
+      - sdc_network
+
+    environment:
+      # MySQL Connection
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE:-sdc}
+      DB_USERNAME: ${DB_USERNAME:-sdc_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # Backup Config
+      BACKUP_DIR: /backups/database
+      BACKUP_PREFIX: sdc-db
+      VERIFY_BACKUP: "true"
+      COMPRESS_BACKUP: "true"
+
+      # Retention GFS
+      DAILY_RETENTION: 7
+      WEEKLY_RETENTION: 4
+      MONTHLY_RETENTION: 12
+
+      # Notifications
+      NOTIFY_SLACK: ${NOTIFY_SLACK:-false}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+
+    # Cron schedule for automated backups
+    # Executa a cada 6 horas: 00:00, 06:00, 12:00, 18:00
+    command: >
+      sh -c '
+        echo "0 */6 * * * /scripts/backup-database.sh auto >> /var/log/backup.log 2>&1" | crontab - &&
+        echo "Backup scheduler iniciado. Backups a cada 6 horas." &&
+        crond -f -l 2
+      '
+
+    healthcheck:
+      test: ["CMD", "test", "-f", "/backups/database/sdc-db-latest.sql.gz"]
+      interval: 6h
+      timeout: 30s
+      retries: 2
+      start_period: 10m
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================================
+  # Backup Verification Service (Opcional)
+  # ==========================================================================
+  backup-monitor:
+    image: alpine:latest
+    container_name: sdc-backup-monitor
+    restart: always
+
+    volumes:
+      - ../../storage/backups/database:/backups/database:ro
+
+    command: >
+      sh -c '
+        while true; do
+          echo "[$(date)] Verificando backups..."
+
+          # Contar backups
+          DAILY=$(ls -1 /backups/database/sdc-db-auto-*.sql.gz 2>/dev/null | wc -l)
+          WEEKLY=$(ls -1 /backups/database/sdc-db-weekly-*.sql.gz 2>/dev/null | wc -l)
+          MONTHLY=$(ls -1 /backups/database/sdc-db-monthly-*.sql.gz 2>/dev/null | wc -l)
+          TOTAL_SIZE=$(du -sh /backups/database 2>/dev/null | awk "{print \$1}")
+
+          echo "📊 Backups: $DAILY diários, $WEEKLY semanais, $MONTHLY mensais ($TOTAL_SIZE)"
+
+          # Verificar se backup foi criado nas últimas 7 horas
+          if [ -f "/backups/database/sdc-db-latest.sql.gz" ]; then
+            AGE=$(($(date +%s) - $(stat -c %Y /backups/database/sdc-db-latest.sql.gz)))
+            HOURS=$((AGE / 3600))
+
+            if [ $HOURS -gt 7 ]; then
+              echo "⚠️  ALERTA: Último backup tem $HOURS horas!"
+            else
+              echo "✅ Último backup: $HOURS horas atrás"
+            fi
+          else
+            echo "❌ CRÍTICO: Nenhum backup encontrado!"
+          fi
+
+          sleep 3600  # Verifica a cada hora
+        done
+      '
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+networks:
+  sdc_network:
+    external: true

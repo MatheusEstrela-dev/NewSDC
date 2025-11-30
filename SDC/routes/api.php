@@ -7,6 +7,10 @@ use App\Http\Controllers\Api\V1\Rat\ProtocoloController;
 use App\Http\Controllers\Api\V1\Integracao\IntegracaoController;
 use App\Http\Controllers\Api\V1\PowerBI\TokenController;
 use App\Http\Controllers\Api\V1\BI\EntradaController;
+use App\Http\Controllers\Api\V1\Webhook\WebhookController;
+use App\Http\Controllers\Api\V1\Integration\DynamicIntegrationController;
+use App\Http\Controllers\Api\HealthCheckController;
+use App\Http\Controllers\Api\LogViewerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,6 +26,15 @@ use App\Http\Controllers\Api\V1\BI\EntradaController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// ============================================================================
+// MONITORING & HEALTH CHECK (Rotas Públicas)
+// ============================================================================
+
+// Health Checks (sem autenticação - para load balancers)
+Route::get('/health', [HealthCheckController::class, 'basic'])->name('health.basic');
+Route::get('/health/detailed', [HealthCheckController::class, 'detailed'])->name('health.detailed');
+Route::get('/health/metrics', [HealthCheckController::class, 'metrics'])->name('health.metrics');
 
 // Autenticação (sem middleware auth)
 Route::prefix('v1/auth')->group(function () {
@@ -60,10 +73,73 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('token', [TokenController::class, 'generateToken'])->name('token.generate');
         Route::get('token/{token}', [TokenController::class, 'validateToken'])->name('token.validate');
         Route::get('tokens', [TokenController::class, 'listTokens'])->name('tokens.list');
-        
+
         // Proxy para acessar APIs externas
         Route::match(['get', 'post', 'put', 'patch', 'delete'], 'proxy/{api}/{path}', [\App\Http\Controllers\Api\V1\PowerBI\ProxyController::class, 'proxy'])
             ->where('path', '.*')
             ->name('proxy');
+    });
+
+    // Webhooks - Sistema de alta performance para 100k+ usuários
+    Route::prefix('webhooks')->name('api.v1.webhooks.')->group(function () {
+
+        // Receber webhooks (com rate limiting tier webhook)
+        Route::post('receive', [WebhookController::class, 'receive'])
+            ->middleware('throttle:webhook')
+            ->name('receive')
+            ->withoutMiddleware('auth:sanctum'); // Permite webhooks externos
+
+        // Enviar webhooks (assíncrono via filas)
+        Route::post('send', [WebhookController::class, 'send'])
+            ->middleware('throttle:enterprise')
+            ->name('send');
+
+        // Enviar webhooks síncronos (apenas para testes/emergências)
+        Route::post('send-sync', [WebhookController::class, 'sendSync'])
+            ->middleware('throttle:premium')
+            ->name('send-sync');
+    });
+
+    // Hub de Integração Dinâmica - Plug-and-Play com sistemas externos
+    Route::prefix('integration')->name('api.v1.integration.')->group(function () {
+
+        // Executar integração (síncrona ou assíncrona)
+        Route::post('execute', [DynamicIntegrationController::class, 'execute'])
+            ->middleware('throttle:enterprise')
+            ->name('execute');
+
+        // Verificar status de integração assíncrona
+        Route::get('status/{integrationId}', [DynamicIntegrationController::class, 'status'])
+            ->middleware('throttle:default')
+            ->name('status');
+
+        // Listar templates pré-configurados
+        Route::get('templates', [DynamicIntegrationController::class, 'templates'])
+            ->middleware('throttle:default')
+            ->name('templates');
+    });
+
+    // Log Viewer - Visualização de logs em tempo real
+    Route::prefix('logs')->name('api.v1.logs.')->group(function () {
+
+        // Logs recentes
+        Route::get('recent', [LogViewerController::class, 'recent'])
+            ->middleware('throttle:default')
+            ->name('recent');
+
+        // Métricas de logs
+        Route::get('metrics', [LogViewerController::class, 'metrics'])
+            ->middleware('throttle:default')
+            ->name('metrics');
+
+        // Logs de erros
+        Route::get('errors', [LogViewerController::class, 'errors'])
+            ->middleware('throttle:default')
+            ->name('errors');
+
+        // Stream de logs em tempo real (SSE)
+        Route::get('stream', [LogViewerController::class, 'stream'])
+            ->middleware('throttle:premium')
+            ->name('stream');
     });
 });

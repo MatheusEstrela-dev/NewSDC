@@ -1,0 +1,454 @@
+# ============================================================================
+# SDC - Justfile para Gerenciamento de Banco de Dados
+# Comandos facilitados para migrations, rollback, seeds e manutenção
+# ============================================================================
+
+# Variáveis de ambiente
+compose := "docker compose -f docker/docker-compose.yml"
+compose_prod := "docker compose -f docker/docker-compose.prod.yml"
+app := compose + " exec app"
+app_prod := compose_prod + " exec app"
+db := compose + " exec db"
+db_prod := compose_prod + " exec db"
+
+# Define ambiente padrão (dev ou prod)
+env := env_var_or_default("ENV", "dev")
+
+# Escolhe comando baseado no ambiente
+_app := if env == "prod" { app_prod } else { app }
+_db := if env == "prod" { db_prod } else { db }
+_compose := if env == "prod" { compose_prod } else { compose }
+
+# ============================================================================
+# 📋 HELP & INFO
+# ============================================================================
+
+# Lista todos os comandos disponíveis (default)
+@default:
+    just --list
+
+# Mostra ajuda detalhada com exemplos
+help:
+    @echo "🗄️  SDC - Gerenciamento de Banco de Dados"
+    @echo ""
+    @echo "📚 CATEGORIAS:"
+    @echo "  Migrations   - Criar, executar e reverter migrations"
+    @echo "  Seeds        - Popular banco com dados"
+    @echo "  Backup       - Backup e restore"
+    @echo "  Manutenção   - Otimizar, reparar e limpar"
+    @echo "  Informações  - Status e estatísticas"
+    @echo ""
+    @echo "🎯 USO:"
+    @echo "  just <comando>              # Desenvolvimento"
+    @echo "  ENV=prod just <comando>     # Produção"
+    @echo ""
+    @echo "📖 EXEMPLOS:"
+    @echo "  just migrate                # Executar migrations pendentes"
+    @echo "  just rollback 3             # Reverter últimas 3 migrations"
+    @echo "  just fresh                  # Resetar banco com seeds"
+    @echo "  just backup manual          # Criar backup manual"
+    @echo "  ENV=prod just status        # Ver status em produção"
+    @echo ""
+    @echo "💡 TIP: Use 'just --list' para ver todos os comandos"
+
+# Mostra informações do ambiente atual
+info:
+    @echo "🔍 INFORMAÇÕES DO AMBIENTE"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo "Ambiente:      {{env}}"
+    @echo "Docker Compose: {{_compose}}"
+    @echo "Container App:  {{_app}}"
+    @echo "Container DB:   {{_db}}"
+    @echo ""
+    {{_compose}} ps
+
+# ============================================================================
+# 🔄 MIGRATIONS
+# ============================================================================
+
+# Executar migrations pendentes
+migrate:
+    @echo "🔄 Executando migrations..."
+    {{_app}} php artisan migrate --force
+    @echo "✅ Migrations concluídas!"
+
+# Executar migrations com output detalhado
+migrate-verbose:
+    @echo "🔄 Executando migrations (verbose)..."
+    {{_app}} php artisan migrate --force -vvv
+
+# Verificar status das migrations (quais já foram executadas)
+migrate-status:
+    @echo "📊 Status das Migrations:"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    {{_app}} php artisan migrate:status
+
+# Criar nova migration
+migrate-create name:
+    @echo "📝 Criando migration: {{name}}"
+    {{_app}} php artisan make:migration {{name}}
+    @echo "✅ Migration criada em database/migrations/"
+
+# Criar migration para tabela específica
+migrate-table name table:
+    @echo "📝 Criando migration para tabela: {{table}}"
+    {{_app}} php artisan make:migration {{name}} --create={{table}}
+    @echo "✅ Migration criada!"
+
+# Modificar tabela existente
+migrate-modify name table:
+    @echo "📝 Criando migration para modificar: {{table}}"
+    {{_app}} php artisan make:migration {{name}} --table={{table}}
+    @echo "✅ Migration criada!"
+
+# ============================================================================
+# ⏮️ ROLLBACK
+# ============================================================================
+
+# Reverter última batch de migrations
+rollback:
+    @echo "⏮️  Revertendo última batch de migrations..."
+    {{_app}} php artisan migrate:rollback --force
+    @echo "✅ Rollback concluído!"
+
+# Reverter N batches de migrations
+rollback-steps steps:
+    @echo "⏮️  Revertendo {{steps}} batches de migrations..."
+    {{_app}} php artisan migrate:rollback --step={{steps}} --force
+    @echo "✅ Rollback de {{steps}} batches concluído!"
+
+# Reverter TODAS as migrations
+rollback-all:
+    @echo "⚠️  ATENÇÃO: Revertendo TODAS as migrations!"
+    @echo "Pressione Ctrl+C para cancelar..."
+    sleep 3
+    {{_app}} php artisan migrate:reset --force
+    @echo "✅ Todas as migrations revertidas!"
+
+# Reverter e executar novamente última batch
+migrate-refresh:
+    @echo "🔄 Refresh da última batch..."
+    {{_app}} php artisan migrate:refresh --force
+    @echo "✅ Refresh concluído!"
+
+# Reverter e executar novamente N batches
+migrate-refresh-steps steps:
+    @echo "🔄 Refresh de {{steps}} batches..."
+    {{_app}} php artisan migrate:refresh --step={{steps}} --force
+    @echo "✅ Refresh de {{steps}} batches concluído!"
+
+# ============================================================================
+# 🌱 SEEDS
+# ============================================================================
+
+# Executar todos os seeders
+seed:
+    @echo "🌱 Executando seeders..."
+    {{_app}} php artisan db:seed --force
+    @echo "✅ Seeds concluídos!"
+
+# Executar seeder específico
+seed-class class:
+    @echo "🌱 Executando seeder: {{class}}"
+    {{_app}} php artisan db:seed --class={{class}} --force
+    @echo "✅ Seeder {{class}} concluído!"
+
+# Criar novo seeder
+seed-create name:
+    @echo "📝 Criando seeder: {{name}}"
+    {{_app}} php artisan make:seeder {{name}}
+    @echo "✅ Seeder criado em database/seeders/"
+
+# ============================================================================
+# 🔥 FRESH (PERIGOSO!)
+# ============================================================================
+
+# Dropar tudo, recriar e popular (DESENVOLVIMENTO)
+fresh:
+    @echo "🔥 ATENÇÃO: Dropando TODAS as tabelas!"
+    @echo "Ambiente: {{env}}"
+    @echo "Pressione Ctrl+C para cancelar..."
+    sleep 3
+    {{_app}} php artisan migrate:fresh --seed --force
+    @echo "✅ Banco de dados resetado com seeds!"
+
+# Fresh sem seeds
+fresh-no-seed:
+    @echo "🔥 Dropando e recriando banco (sem seeds)..."
+    {{_app}} php artisan migrate:fresh --force
+    @echo "✅ Banco de dados resetado!"
+
+# Fresh em PRODUÇÃO (requer confirmação dupla)
+fresh-prod:
+    @echo "🚨 PERIGO: FRESH EM PRODUÇÃO! 🚨"
+    @echo "Isso irá DELETAR TODOS OS DADOS!"
+    @echo ""
+    @read -p "Digite 'CONFIRMO' para continuar: " confirm; \
+    if [ "$$confirm" != "CONFIRMO" ]; then \
+        echo "❌ Cancelado!"; exit 1; \
+    fi
+    @echo "Última chance! Pressione Ctrl+C..."
+    sleep 5
+    ENV=prod {{_app_prod}} php artisan migrate:fresh --seed --force
+    @echo "✅ Produção resetada!"
+
+# ============================================================================
+# 💾 BACKUP & RESTORE
+# ============================================================================
+
+# Criar backup manual do banco de dados
+backup name="manual":
+    @echo "💾 Criando backup: {{name}}"
+    mkdir -p storage/backups
+    {{_db}} mysqldump -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE > storage/backups/backup-{{name}}-$(date +%Y%m%d-%H%M%S).sql
+    @echo "✅ Backup criado em storage/backups/"
+
+# Criar backup antes de migration arriscada
+backup-before-migrate:
+    @echo "💾 Criando backup de segurança..."
+    just backup "pre-migration"
+    @echo "🔄 Executando migrations..."
+    just migrate
+
+# Listar backups disponíveis
+backup-list:
+    @echo "📋 Backups Disponíveis:"
+    @ls -lh storage/backups/*.sql 2>/dev/null || echo "Nenhum backup encontrado"
+
+# Restaurar backup específico
+backup-restore file:
+    @echo "⚠️  ATENÇÃO: Restaurando backup!"
+    @echo "Arquivo: {{file}}"
+    @echo "Isso irá SOBRESCREVER o banco atual!"
+    @echo "Pressione Ctrl+C para cancelar..."
+    sleep 3
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE < {{file}}
+    @echo "✅ Backup restaurado!"
+
+# Criar backup automático (para cron)
+backup-auto:
+    #!/usr/bin/env bash
+    TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+    BACKUP_DIR="storage/backups"
+    mkdir -p $BACKUP_DIR
+
+    echo "💾 Backup automático: $TIMESTAMP"
+    {{_db}} mysqldump -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE > $BACKUP_DIR/backup-auto-$TIMESTAMP.sql
+
+    # Manter apenas últimos 7 backups
+    ls -t $BACKUP_DIR/backup-auto-*.sql | tail -n +8 | xargs -r rm
+    echo "✅ Backup concluído e rotacionado!"
+
+# ============================================================================
+# 🔧 MANUTENÇÃO
+# ============================================================================
+
+# Otimizar todas as tabelas
+optimize:
+    @echo "⚡ Otimizando tabelas..."
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "USE $$MYSQL_DATABASE; OPTIMIZE TABLE $({{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -Nse 'SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema=\"$$MYSQL_DATABASE\"');"
+    @echo "✅ Otimização concluída!"
+
+# Reparar tabelas corrompidas
+repair:
+    @echo "🔧 Reparando tabelas..."
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "USE $$MYSQL_DATABASE; REPAIR TABLE $({{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -Nse 'SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema=\"$$MYSQL_DATABASE\"');"
+    @echo "✅ Reparo concluído!"
+
+# Analisar tabelas
+analyze:
+    @echo "📊 Analisando tabelas..."
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "USE $$MYSQL_DATABASE; ANALYZE TABLE $({{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -Nse 'SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema=\"$$MYSQL_DATABASE\"');"
+    @echo "✅ Análise concluída!"
+
+# Verificar integridade das tabelas
+check:
+    @echo "🔍 Verificando integridade..."
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "USE $$MYSQL_DATABASE; CHECK TABLE $({{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -Nse 'SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema=\"$$MYSQL_DATABASE\"');"
+    @echo "✅ Verificação concluída!"
+
+# Limpar cache do Laravel
+cache-clear:
+    @echo "🧹 Limpando caches do Laravel..."
+    {{_app}} php artisan cache:clear
+    {{_app}} php artisan config:clear
+    {{_app}} php artisan route:clear
+    {{_app}} php artisan view:clear
+    @echo "✅ Caches limpos!"
+
+# Otimizar para produção
+cache-optimize:
+    @echo "⚡ Otimizando caches para produção..."
+    {{_app}} php artisan config:cache
+    {{_app}} php artisan route:cache
+    {{_app}} php artisan view:cache
+    {{_app}} php artisan event:cache
+    @echo "✅ Otimização concluída!"
+
+# ============================================================================
+# 📊 INFORMAÇÕES & STATUS
+# ============================================================================
+
+# Ver status completo do banco de dados
+status:
+    @echo "📊 STATUS DO BANCO DE DADOS"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo ""
+    @echo "🔄 Migrations:"
+    just migrate-status
+    @echo ""
+    @echo "💾 Tamanho do Banco:"
+    just db-size
+    @echo ""
+    @echo "📋 Tabelas:"
+    just tables
+
+# Listar todas as tabelas
+tables:
+    @echo "📋 Tabelas no Banco:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "USE $$MYSQL_DATABASE; SHOW TABLES;"
+
+# Contar registros de todas as tabelas
+count:
+    @echo "🔢 Contagem de Registros:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT table_name AS 'Tabela', table_rows AS 'Registros' FROM information_schema.tables WHERE table_schema = '$$MYSQL_DATABASE' ORDER BY table_rows DESC;"
+
+# Ver tamanho do banco de dados
+db-size:
+    @echo "💾 Tamanho do Banco de Dados:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "SELECT table_schema AS 'Database', ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'Size (MB)' FROM information_schema.tables WHERE table_schema = '$$MYSQL_DATABASE' GROUP BY table_schema;"
+
+# Ver tamanho de cada tabela
+table-sizes:
+    @echo "📊 Tamanho das Tabelas:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT table_name AS 'Tabela', ROUND(((data_length + index_length) / 1024 / 1024), 2) AS 'Size (MB)' FROM information_schema.TABLES WHERE table_schema = '$$MYSQL_DATABASE' ORDER BY (data_length + index_length) DESC;"
+
+# Descrever estrutura de uma tabela
+describe table:
+    @echo "📋 Estrutura da Tabela: {{table}}"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "DESCRIBE {{table}};"
+
+# Ver índices de uma tabela
+indexes table:
+    @echo "🔑 Índices da Tabela: {{table}}"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SHOW INDEXES FROM {{table}};"
+
+# ============================================================================
+# 🐚 ACESSO DIRETO
+# ============================================================================
+
+# Acesso direto ao MySQL CLI
+mysql:
+    @echo "🐚 Acessando MySQL CLI..."
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE
+
+# Executar query SQL direta
+query sql:
+    @echo "🔍 Executando query..."
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "{{sql}}"
+
+# Acesso ao shell do container app
+shell:
+    @echo "🐚 Acessando shell do container..."
+    {{_compose}} exec app bash
+
+# Acesso ao shell do container db
+db-shell:
+    @echo "🐚 Acessando shell do banco..."
+    {{_compose}} exec db bash
+
+# ============================================================================
+# 🧪 TESTES
+# ============================================================================
+
+# Executar migrations no banco de testes
+test-migrate:
+    @echo "🧪 Executando migrations no banco de testes..."
+    {{_app}} php artisan migrate --database=testing --force
+    @echo "✅ Migrations de teste concluídas!"
+
+# Resetar banco de testes
+test-fresh:
+    @echo "🧪 Resetando banco de testes..."
+    {{_app}} php artisan migrate:fresh --database=testing --seed --force
+    @echo "✅ Banco de testes resetado!"
+
+# ============================================================================
+# 🚀 WORKFLOWS COMPLETOS
+# ============================================================================
+
+# Setup inicial completo do banco
+setup:
+    @echo "🚀 SETUP INICIAL DO BANCO DE DADOS"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    just migrate
+    just seed
+    just cache-optimize
+    @echo ""
+    @echo "✅ Setup concluído!"
+    just status
+
+# Deploy seguro em produção
+deploy:
+    @echo "🚀 DEPLOY EM PRODUÇÃO"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo "1. Criando backup..."
+    ENV=prod just backup "pre-deploy"
+    @echo ""
+    @echo "2. Executando migrations..."
+    ENV=prod just migrate
+    @echo ""
+    @echo "3. Otimizando caches..."
+    ENV=prod just cache-optimize
+    @echo ""
+    @echo "✅ Deploy concluído!"
+    ENV=prod just status
+
+# Manutenção completa do banco
+maintenance:
+    @echo "🔧 MANUTENÇÃO COMPLETA"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    just backup "pre-maintenance"
+    just check
+    just analyze
+    just optimize
+    just cache-optimize
+    @echo ""
+    @echo "✅ Manutenção concluída!"
+    just db-size
+
+# Diagnóstico completo
+diagnose:
+    @echo "🔍 DIAGNÓSTICO COMPLETO"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo ""
+    just info
+    @echo ""
+    just status
+    @echo ""
+    just table-sizes
+    @echo ""
+    just count
+    @echo ""
+    @echo "✅ Diagnóstico concluído!"
+
+# ============================================================================
+# 🗑️ LIMPEZA (PERIGOSO!)
+# ============================================================================
+
+# Dropar banco e recriar do zero
+nuke:
+    @echo "💣 ATENÇÃO: DESTRUINDO BANCO DE DADOS!"
+    @echo "Ambiente: {{env}}"
+    @echo "Isso é IRREVERSÍVEL!"
+    @echo ""
+    @read -p "Digite 'DESTRUIR' para confirmar: " confirm; \
+    if [ "$$confirm" != "DESTRUIR" ]; then \
+        echo "❌ Cancelado!"; exit 1; \
+    fi
+    @echo ""
+    @echo "Última chance! Pressione Ctrl+C..."
+    sleep 5
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "DROP DATABASE IF EXISTS $$MYSQL_DATABASE; CREATE DATABASE $$MYSQL_DATABASE;"
+    just migrate
+    @echo "✅ Banco recriado do zero!"

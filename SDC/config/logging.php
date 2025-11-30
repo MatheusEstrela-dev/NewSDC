@@ -54,7 +54,7 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['single'],
+            'channels' => ['daily', 'stderr', 'events'],
             'ignore_exceptions' => false,
         ],
 
@@ -70,6 +70,42 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
+        // Canal para eventos do sistema (ActivityLogger)
+        'events' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/events.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
+        // Canal para erros críticos (sistema 24/7)
+        'critical' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/critical.log'),
+            'level' => 'critical',
+            'days' => 90,
+            'replace_placeholders' => true,
+        ],
+
+        // Canal para queries lentas
+        'queries' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/queries.log'),
+            'level' => 'debug',
+            'days' => 7,
+            'replace_placeholders' => true,
+        ],
+
+        // Canal para jobs falhados
+        'jobs' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/jobs.log'),
+            'level' => 'error',
+            'days' => 30,
             'replace_placeholders' => true,
         ],
 

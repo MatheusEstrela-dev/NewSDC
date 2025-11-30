@@ -1,0 +1,505 @@
+# ============================================================================
+# SDC - Jenkins CI/CD - PRODUÇÃO 24/7
+# Arquitetura resiliente para sistema crítico
+# ============================================================================
+# IMPORTANTE: Este é um sistema CRÍTICO 24/7
+# - Backup multi-tier com verificação
+# - Monitoramento contínuo
+# - Segurança hardened
+# - Alta disponibilidade
+# ============================================================================
+
+version: '3.8'
+
+x-common-variables: &common-env
+  TZ: America/Sao_Paulo
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ==========================================================================
+  # JENKINS MASTER (Primary)
+  # ==========================================================================
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+    container_name: sdc_jenkins_master
+    hostname: jenkins-primary
+    restart: unless-stopped
+
+    # ===== SECURITY HARDENING =====
+    security_opt:
+      - no-new-privileges:true
+    # NÃO usar privileged em produção!
+    privileged: false
+    # Read-only root filesystem (Jenkins escreve apenas em volumes)
+    read_only: true
+
+    tmpfs:
+      - /tmp:size=512M,mode=1777
+      - /var/jenkins_home/tmp:size=1G,mode=1777
+
+    ports:
+      - "8080:8080"   # Interface Web
+      - "50000:50000" # Agentes JNLP
+
+    environment:
+      <<: *common-env
+
+      # ===== JAVA HEAP (Ajustar conforme recursos) =====
+      # REGRA: -Xmx deve ser 75% de memory limit
+      # Se memory=4GB → -Xmx=3g
+      - JAVA_OPTS=-Xms512m -Xmx3g
+          -Djava.awt.headless=true
+          -Djenkins.install.runSetupWizard=false
+          -Dhudson.model.DirectoryBrowserSupport.CSP=
+          -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=false
+          -Djenkins.model.Jenkins.slaveAgentPort=50000
+          -Djenkins.model.Jenkins.slaveAgentPortEnforce=true
+
+      # ===== DOCKER (via Proxy - Mais Seguro) =====
+      - DOCKER_HOST=tcp://docker-proxy:2375
+      - DOCKER_TLS_VERIFY=
+
+      # ===== NETWORK =====
+      - JENKINS_OPTS=--prefix=/
+
+      # ===== BACKUP CONFIG =====
+      - BACKUP_ENABLED=true
+      - BACKUP_RETENTION_DAYS=30
+
+    volumes:
+      # ===== VOLUME PERSISTENTE =====
+      # CRÍTICO: Usar volume nomeado (melhor que bind mount)
+      - jenkins_home:/var/jenkins_home
+
+      # ===== CACHE (Performance) =====
+      - jenkins_cache_m2:/var/jenkins_home/.m2
+      - jenkins_cache_gradle:/var/jenkins_home/.gradle
+      - jenkins_cache_npm:/var/jenkins_home/.npm
+
+      # ===== BACKUP (Read-only) =====
+      - jenkins_backups:/backups:ro
+
+    networks:
+      - jenkins_internal  # Comunicação interna
+      - jenkins_dmz       # Comunicação externa (nginx)
+      - sdc_network       # Comunicação com app SDC
+
+    depends_on:
+      docker-proxy:
+        condition: service_healthy
+
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '2'
+          memory: 2G
+
+      # ===== RESTART POLICY =====
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s  # Jenkins demora para iniciar
+
+    logging: *default-logging
+
+    labels:
+      - "com.sdc.component=jenkins"
+      - "com.sdc.environment=production"
+      - "com.sdc.criticality=high"
+
+  # ==========================================================================
+  # DOCKER SOCKET PROXY (Segurança)
+  # Evita expor /var/run/docker.sock diretamente
+  # ==========================================================================
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: sdc_docker_proxy
+    hostname: docker-proxy
+    restart: unless-stopped
+
+    environment:
+      # ===== PERMISSÕES MÍNIMAS =====
+      # Apenas o necessário para Jenkins
+      - CONTAINERS=1  # Permitir listar/gerenciar containers
+      - IMAGES=1      # Permitir listar/gerenciar imagens
+      - NETWORKS=1    # Permitir gerenciar redes
+      - VOLUMES=1     # Permitir gerenciar volumes
+      - BUILD=1       # Permitir builds
+      - COMMIT=0      # NÃO permitir commits
+      - CONFIGS=0     # NÃO permitir configs
+      - SECRETS=0     # NÃO permitir secrets
+      - SWARM=0       # NÃO permitir swarm
+      - SERVICES=0    # NÃO permitir services
+      - TASKS=0       # NÃO permitir tasks
+      - POST=1        # Permitir operações POST (build, create)
+
+    volumes:
+      # Socket read-only
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    networks:
+      - jenkins_internal
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:2375/_ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+    logging: *default-logging
+
+  # ==========================================================================
+  # JENKINS AGENT (Docker - Dinâmico)
+  # ==========================================================================
+  jenkins-agent:
+    image: jenkins/inbound-agent:latest-jdk17
+    container_name: sdc_jenkins_agent
+    hostname: jenkins-agent-01
+    restart: unless-stopped
+
+    environment:
+      - JENKINS_URL=http://jenkins:8080
+      - JENKINS_AGENT_NAME=docker-agent-01
+      - JENKINS_SECRET=${JENKINS_AGENT_SECRET:-changeme}
+      - JENKINS_AGENT_WORKDIR=/home/jenkins/agent
+
+    volumes:
+      - jenkins_agent_workdir:/home/jenkins/agent
+
+    networks:
+      - jenkins_internal
+
+    depends_on:
+      jenkins:
+        condition: service_healthy
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
+    logging: *default-logging
+
+  # ==========================================================================
+  # NGINX REVERSE PROXY (SSL + Security Headers)
+  # ==========================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: sdc_jenkins_nginx
+    hostname: jenkins-nginx
+    restart: unless-stopped
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - ./jenkins/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./jenkins/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+
+    networks:
+      - jenkins_dmz
+
+    depends_on:
+      jenkins:
+        condition: service_healthy
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+    logging: *default-logging
+
+  # ==========================================================================
+  # BACKUP SERVICE (Multi-Tier com Verificação)
+  # ==========================================================================
+  backup-local:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile.backup
+    container_name: sdc_jenkins_backup_local
+    hostname: backup-local
+    restart: unless-stopped
+
+    environment:
+      <<: *common-env
+      - BACKUP_TYPE=local
+      - BACKUP_SCHEDULE=0 */6 * * *  # A cada 6 horas
+      - BACKUP_RETENTION_DAILY=7
+      - BACKUP_RETENTION_WEEKLY=4
+      - BACKUP_RETENTION_MONTHLY=12
+      - BACKUP_VERIFY=true
+      - BACKUP_NOTIFY=true
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - PROMETHEUS_PUSHGATEWAY=${PROMETHEUS_PUSHGATEWAY:-}
+
+    volumes:
+      - jenkins_home:/source:ro
+      - jenkins_backups:/backups
+      - ./jenkins/scripts:/scripts:ro
+
+    networks:
+      - jenkins_internal
+
+    depends_on:
+      - jenkins
+
+    # Executar backup via cron
+    command: crond -f -l 2
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+
+    healthcheck:
+      test: ["CMD-SHELL", "find /backups -type f -name 'jenkins-*.tar.gz' -mtime -1 | grep -q . || exit 1"]
+      interval: 3600s  # A cada 1 hora
+      timeout: 10s
+      retries: 2
+      start_period: 300s
+
+    logging: *default-logging
+
+  # ==========================================================================
+  # BACKUP REMOTO (S3/NFS/Rsync)
+  # ==========================================================================
+  backup-remote:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile.backup
+    container_name: sdc_jenkins_backup_remote
+    hostname: backup-remote
+    restart: unless-stopped
+
+    environment:
+      <<: *common-env
+      - BACKUP_TYPE=remote
+      - BACKUP_SCHEDULE=0 2 * * *  # Diariamente às 2h
+      - BACKUP_REMOTE_TYPE=${BACKUP_REMOTE_TYPE:-s3}  # s3, rsync, nfs
+      # S3
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - S3_BUCKET=${S3_BUCKET:-sdc-jenkins-backups}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      # Rsync
+      - RSYNC_HOST=${RSYNC_HOST:-}
+      - RSYNC_USER=${RSYNC_USER:-}
+      - RSYNC_PATH=${RSYNC_PATH:-/backups/jenkins}
+
+    volumes:
+      - jenkins_backups:/backups:ro
+      - backup_remote:/remote
+      - ./jenkins/scripts:/scripts:ro
+
+    networks:
+      - jenkins_internal
+
+    command: crond -f -l 2
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /remote/last_sync_success || exit 1"]
+      interval: 3600s
+      timeout: 30s
+      retries: 2
+
+    logging: *default-logging
+
+  # ==========================================================================
+  # PROMETHEUS EXPORTER (Métricas)
+  # ==========================================================================
+  prometheus-exporter:
+    image: prom/jenkins-exporter:latest
+    container_name: sdc_jenkins_exporter
+    hostname: jenkins-exporter
+    restart: unless-stopped
+
+    environment:
+      - JENKINS_URL=http://jenkins:8080
+      - JENKINS_USER=${JENKINS_PROMETHEUS_USER:-admin}
+      - JENKINS_PASSWORD=${JENKINS_PROMETHEUS_PASSWORD:-}
+
+    ports:
+      - "9118:9118"
+
+    networks:
+      - jenkins_internal
+
+    depends_on:
+      - jenkins
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9118/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+    logging: *default-logging
+
+  # ==========================================================================
+  # WATCHTOWER (Auto-update - Opcional)
+  # ==========================================================================
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: sdc_jenkins_watchtower
+    hostname: watchtower
+    restart: unless-stopped
+
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400  # 24h
+      - WATCHTOWER_INCLUDE_STOPPED=false
+      - WATCHTOWER_REVIVE_STOPPED=false
+      - WATCHTOWER_NOTIFICATIONS=slack
+      - WATCHTOWER_NOTIFICATION_SLACK_HOOK_URL=${SLACK_WEBHOOK_URL:-}
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    networks:
+      - jenkins_internal
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+    logging: *default-logging
+
+    # Desabilitar em produção se preferir updates manuais
+    profiles:
+      - autoupdate
+
+# ==========================================================================
+# NETWORKS
+# ==========================================================================
+networks:
+  # Rede interna (Jenkins + Agents + Docker Proxy)
+  jenkins_internal:
+    driver: bridge
+    internal: true  # Sem acesso externo
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.25.0.0/24
+    labels:
+      - "com.sdc.network=jenkins_internal"
+
+  # DMZ (Jenkins + Nginx)
+  jenkins_dmz:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.26.0.0/24
+    labels:
+      - "com.sdc.network=jenkins_dmz"
+
+  # Rede externa (SDC Application)
+  sdc_network:
+    external: true
+    name: sdc_network
+
+# ==========================================================================
+# VOLUMES
+# ==========================================================================
+volumes:
+  # Jenkins Home (Dados principais)
+  jenkins_home:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./jenkins_home
+    labels:
+      - "com.sdc.volume=jenkins_home"
+      - "com.sdc.backup=required"
+
+  # Cache (Performance)
+  jenkins_cache_m2:
+    driver: local
+    labels:
+      - "com.sdc.volume=cache"
+      - "com.sdc.backup=optional"
+
+  jenkins_cache_gradle:
+    driver: local
+
+  jenkins_cache_npm:
+    driver: local
+
+  # Agent Workdir
+  jenkins_agent_workdir:
+    driver: local
+    labels:
+      - "com.sdc.volume=agent_workdir"
+      - "com.sdc.backup=optional"
+
+  # Backups
+  jenkins_backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./jenkins_backups
+    labels:
+      - "com.sdc.volume=backups"
+      - "com.sdc.backup=critical"
+
+  backup_remote:
+    driver: local
+
+  # Logs
+  nginx_logs:
+    driver: local

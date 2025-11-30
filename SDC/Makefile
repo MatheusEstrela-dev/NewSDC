@@ -51,6 +51,20 @@ dev-down: ## Para ambiente de desenvolvimento
 dev-logs: ## Ver logs de desenvolvimento
 	docker compose -f docker/docker-compose.yml logs -f
 
+dev-monitoring: ## Inicia ambiente com monitoring stack completo
+	docker compose -f docker/docker-compose.yml -f docker/docker-compose.monitoring.yml up -d
+	@echo "${GREEN}Ambiente com monitoring iniciado!${RESET}"
+	@echo "App: http://localhost:8000"
+	@echo "Grafana: http://localhost:3000 (admin/admin123)"
+	@echo "Prometheus: http://localhost:9090"
+	@echo "Mailhog: http://localhost:8025"
+
+monitoring-down: ## Para monitoring stack
+	docker compose -f docker/docker-compose.monitoring.yml down
+
+monitoring-logs: ## Ver logs do monitoring stack
+	docker compose -f docker/docker-compose.monitoring.yml logs -f
+
 # ==========================================
 # Produção
 # ==========================================
@@ -143,15 +157,15 @@ test-coverage: ## Testes com coverage
 	docker compose -f docker/docker-compose.yml exec app php artisan test --coverage
 
 # ==========================================
-# Assets
+# Assets - Node.js
 # ==========================================
-npm-install: ## Instala dependências npm
+npm-install: ## Instala dependências npm (Node.js)
 	docker compose -f docker/docker-compose.yml exec node npm install
 
-npm-dev: ## Build de desenvolvimento
+npm-dev: ## Build de desenvolvimento (Node.js)
 	docker compose -f docker/docker-compose.yml exec node npm run dev
 
-npm-build: ## Build de produção
+npm-build: ## Build de produção (Node.js)
 	docker compose -f docker/docker-compose.yml exec node npm run build
 
 # ==========================================

@@ -1,7 +1,3 @@
-# Pasta aninhada duplicada (problema de estrutura)
-SDC/SDC/
-SDC/SDC/SDC/
-SDC/SDC/SDC/SDC/
 
 # Dependências
 node_modules/

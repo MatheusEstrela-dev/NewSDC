@@ -59,8 +59,8 @@ mkdir -p jenkins_cache/.m2
 mkdir -p jenkins_cache/.gradle
 mkdir -p jenkins_agent_workdir
 mkdir -p jenkins_backups
-mkdir -p jenkins/logs
-mkdir -p jenkins/ssl
+mkdir -p SDC/docker/jenkins/logs
+mkdir -p SDC/docker/jenkins/ssl
 
 # Ajustar permissões (UID 1000 = usuário jenkins no container)
 print_info "Ajustando UID/GID para 1000:1000 (usuário jenkins)..."
@@ -83,14 +83,18 @@ else
 fi
 
 # ===== CONFIGURAR ARQUIVO .env =====
-if [ ! -f jenkins/.env ]; then
+if [ ! -f SDC/docker/jenkins/.env ]; then
     print_info "Criando arquivo .env..."
-    cp jenkins/.env.example jenkins/.env
+    if [ -f SDC/docker/jenkins/.env.example ]; then
+        cp SDC/docker/jenkins/.env.example SDC/docker/jenkins/.env
+    else
+        touch SDC/docker/jenkins/.env
+    fi
 
     # Substituir DOCKER_GID no .env
-    sed -i "s/DOCKER_GID=999/DOCKER_GID=$DOCKER_GID/" jenkins/.env
+    sed -i "s/DOCKER_GID=999/DOCKER_GID=$DOCKER_GID/" SDC/docker/jenkins/.env
 
-    print_warning "IMPORTANTE: Edite o arquivo jenkins/.env e configure:"
+    print_warning "IMPORTANTE: Edite o arquivo SDC/docker/jenkins/.env e configure:"
     print_warning "  - JENKINS_ADMIN_PASSWORD"
     print_warning "  - JENKINS_ADMIN_EMAIL"
     print_warning "  - GIT_REPO_URL"
@@ -100,16 +104,16 @@ else
 fi
 
 # ===== GERAR CERTIFICADOS SSL AUTO-ASSINADOS =====
-if [ ! -f jenkins/ssl/jenkins.crt ]; then
+if [ ! -f SDC/docker/jenkins/ssl/jenkins.crt ]; then
     print_info "Gerando certificados SSL auto-assinados..."
 
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout jenkins/ssl/jenkins.key \
-        -out jenkins/ssl/jenkins.crt \
+        -keyout SDC/docker/jenkins/ssl/jenkins.key \
+        -out SDC/docker/jenkins/ssl/jenkins.crt \
         -subj "/C=BR/ST=State/L=City/O=SDC/CN=jenkins.local"
 
-    chmod 644 jenkins/ssl/jenkins.crt
-    chmod 600 jenkins/ssl/jenkins.key
+    chmod 644 SDC/docker/jenkins/ssl/jenkins.crt
+    chmod 600 SDC/docker/jenkins/ssl/jenkins.key
 
     print_info "Certificados SSL criados!"
 else
@@ -165,7 +169,7 @@ print_info "Setup concluído com sucesso!"
 echo "=========================================="
 echo ""
 print_info "Próximos passos:"
-echo "  1. Edite o arquivo jenkins/.env com suas credenciais"
+echo "  1. Edite o arquivo SDC/docker/jenkins/.env com suas credenciais"
 echo "  2. Inicie o Jenkins com: docker-compose -f docker-compose.jenkins.yml up -d"
 echo "  3. Aguarde 2-3 minutos para inicialização completa"
 echo "  4. Acesse: http://localhost:8080 ou https://localhost:443"

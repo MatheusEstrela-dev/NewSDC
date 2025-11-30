@@ -1,0 +1,14 @@
+# Jenkins Backup Crontab
+# ============================================================================
+
+# Backup Local (a cada 6 horas)
+0 */6 * * * /scripts/backup-local.sh >> /var/log/backup/cron.log 2>&1
+
+# Backup Remoto (diário às 2h)
+0 2 * * * /scripts/backup-remote.sh >> /var/log/backup/cron.log 2>&1
+
+# Verificação de Integridade (semanal - domingo às 3h)
+0 3 * * 0 /scripts/verify-all-backups.sh >> /var/log/backup/cron.log 2>&1
+
+# Limpeza de logs antigos (mensal)
+0 0 1 * * find /var/log/backup -name "*.log" -mtime +30 -delete

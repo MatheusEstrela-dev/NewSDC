@@ -1,0 +1,70 @@
+# ============================================================================
+# SDC - Docker Compose SSR (Inertia Server-Side Rendering)
+# ============================================================================
+# Uso: docker compose -f docker-compose.yml -f docker-compose.ssr.yml up -d
+# ============================================================================
+
+name: sdc-ssr
+
+services:
+  # ==========================================================================
+  # Inertia SSR Server
+  # ==========================================================================
+  ssr:
+    image: node:20-alpine
+    container_name: sdc-ssr
+    restart: always
+    working_dir: /app
+
+    command: node bootstrap/ssr/ssr.mjs
+
+    volumes:
+      - ../:/app:ro
+      - /app/node_modules
+
+    networks:
+      - sdc_network
+
+    environment:
+      NODE_ENV: production
+      PORT: 13714
+      HOST: 0.0.0.0
+
+    expose:
+      - "13714"
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:13714"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+    deploy:
+      mode: replicated
+      replicas: 2  # 2 instâncias para alta disponibilidade
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      restart_policy:
+        condition: any
+        delay: 3s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  sdc_network:
+    external: true

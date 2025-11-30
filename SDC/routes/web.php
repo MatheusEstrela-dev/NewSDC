@@ -60,6 +60,11 @@ Route::middleware('auth')->group(function () {
     
     // Log Viewer - Visualizador de Logs do Sistema
     Route::get('logs', '\Rap2hpoutre\LaravelLogViewer\LogViewerController@index')->name('logs.index');
+
+    // Health Check Dashboard - Visualizador de Saúde do Sistema
+    Route::get('health-dashboard', function () {
+        return view('health-dashboard');
+    })->name('health.dashboard');
 });
 
 require __DIR__.'/auth.php';

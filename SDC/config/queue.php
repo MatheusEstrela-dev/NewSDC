@@ -64,10 +64,50 @@ return [
 
         'redis' => [
             'driver' => 'redis',
-            'connection' => 'default',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
             'retry_after' => 90,
-            'block_for' => null,
+            'block_for' => 5,
+            'after_commit' => false,
+        ],
+
+        // Fila crítica - máxima prioridade
+        'redis-critical' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'critical',
+            'retry_after' => 30,
+            'block_for' => 2,
+            'after_commit' => false,
+        ],
+
+        // Fila alta - segunda prioridade
+        'redis-high' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'high',
+            'retry_after' => 60,
+            'block_for' => 3,
+            'after_commit' => false,
+        ],
+
+        // Fila de webhooks
+        'redis-webhooks' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'webhooks',
+            'retry_after' => 120,
+            'block_for' => 5,
+            'after_commit' => false,
+        ],
+
+        // Fila baixa - processamento em background
+        'redis-low' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'low',
+            'retry_after' => 300,
+            'block_for' => 10,
             'after_commit' => false,
         ],
 

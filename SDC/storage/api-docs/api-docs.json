@@ -1,20 +1,392 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "SDC API - Módulo PAE",
-        "description": "API REST para gerenciamento de Planos de Ação de Emergência (PAE)",
+        "title": "SDC - Sistema de Defesa Civil API",
+        "description": "API RESTful escalável para 100k+ usuários simultâneos.\r\n *                  Suporta webhooks, rate limiting inteligente, processamento assíncrono via Redis,\r\n *                  e múltiplos níveis de priorização de requisições.",
         "contact": {
-            "email": "suporte@defesacivil.mg.gov.br"
+            "name": "SDC API Support",
+            "email": "api@sdc.gov.br"
+        },
+        "license": {
+            "name": "Proprietary",
+            "url": "https://sdc.gov.br/license"
         },
         "version": "1.0.0"
     },
     "servers": [
         {
-            "url": "http://localhost",
-            "description": "Servidor SDC API"
+            "url": "http://localhost:8000",
+            "description": "Servidor de Desenvolvimento"
+        },
+        {
+            "url": "https://api.sdc.gov.br",
+            "description": "Servidor de Produção"
         }
     ],
     "paths": {
+        "/api/health": {
+            "get": {
+                "tags": [
+                    "Health Check"
+                ],
+                "summary": "Health check básico",
+                "description": "Verifica se a aplicação está respondendo",
+                "operationId": "healthBasic",
+                "responses": {
+                    "200": {
+                        "description": "Sistema operacional",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ok"
+                                        },
+                                        "timestamp": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "uptime": {
+                                            "type": "integer",
+                                            "example": 3600
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/health/detailed": {
+            "get": {
+                "tags": [
+                    "Health Check"
+                ],
+                "summary": "Health check detalhado",
+                "description": "Verifica todos os componentes críticos do sistema (DB, Redis, Cache, Filas)",
+                "operationId": "healthDetailed",
+                "responses": {
+                    "200": {
+                        "description": "Status detalhado de todos componentes",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "healthy"
+                                        },
+                                        "timestamp": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "checks": {
+                                            "properties": {
+                                                "database": {
+                                                    "properties": {
+                                                        "status": {
+                                                            "type": "string",
+                                                            "example": "ok"
+                                                        },
+                                                        "latency_ms": {
+                                                            "type": "number",
+                                                            "example": 2.45
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "redis": {
+                                                    "properties": {
+                                                        "status": {
+                                                            "type": "string",
+                                                            "example": "ok"
+                                                        },
+                                                        "latency_ms": {
+                                                            "type": "number",
+                                                            "example": 1.12
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "cache": {
+                                                    "properties": {
+                                                        "status": {
+                                                            "type": "string",
+                                                            "example": "ok"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "queue": {
+                                                    "properties": {
+                                                        "status": {
+                                                            "type": "string",
+                                                            "example": "ok"
+                                                        },
+                                                        "pending_jobs": {
+                                                            "type": "integer",
+                                                            "example": 15
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "system": {
+                                            "properties": {
+                                                "memory_usage_mb": {
+                                                    "type": "number",
+                                                    "example": 128.5
+                                                },
+                                                "cpu_load": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "number"
+                                                    },
+                                                    "example": [
+                                                        0.5,
+                                                        0.6,
+                                                        0.7
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Sistema com problemas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "degraded"
+                                        },
+                                        "errors": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/health/metrics": {
+            "get": {
+                "tags": [
+                    "Health Check"
+                ],
+                "summary": "Métricas do sistema",
+                "description": "Retorna métricas em formato Prometheus",
+                "operationId": "healthMetrics",
+                "responses": {
+                    "200": {
+                        "description": "Métricas Prometheus",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/logs/recent": {
+            "get": {
+                "tags": [
+                    "Log Viewer"
+                ],
+                "summary": "Logs recentes",
+                "description": "Retorna os logs mais recentes do sistema",
+                "operationId": "logsRecent",
+                "parameters": [
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "Tipo de log (all, api, webhook, integration, error, performance, security)",
+                        "schema": {
+                            "type": "string",
+                            "default": "all",
+                            "enum": [
+                                "all",
+                                "api",
+                                "webhook",
+                                "integration",
+                                "error",
+                                "performance",
+                                "security"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Número de logs a retornar",
+                        "schema": {
+                            "type": "integer",
+                            "default": 100,
+                            "maximum": 1000
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de logs",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "logs": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "total": {
+                                            "type": "integer"
+                                        },
+                                        "type": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/logs/metrics": {
+            "get": {
+                "tags": [
+                    "Log Viewer"
+                ],
+                "summary": "Métricas de logs",
+                "description": "Retorna estatísticas agregadas dos logs",
+                "operationId": "logsMetrics",
+                "responses": {
+                    "200": {
+                        "description": "Métricas agregadas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "metrics": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "summary": {
+                                            "properties": {
+                                                "total_events": {
+                                                    "type": "integer"
+                                                },
+                                                "events_by_type": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/logs/errors": {
+            "get": {
+                "tags": [
+                    "Log Viewer"
+                ],
+                "summary": "Logs de erros",
+                "description": "Retorna apenas logs de erro (error, critical)",
+                "operationId": "logsErrors",
+                "responses": {
+                    "200": {
+                        "description": "Lista de erros",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "errors": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "total": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/logs/stream": {
+            "get": {
+                "tags": [
+                    "Log Viewer"
+                ],
+                "summary": "Stream de logs em tempo real",
+                "description": "SSE (Server-Sent Events) para logs em tempo real",
+                "operationId": "logsStream",
+                "responses": {
+                    "200": {
+                        "description": "Stream de eventos",
+                        "content": {
+                            "text/event-stream": {}
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/auth/login": {
             "post": {
                 "tags": [
@@ -636,6 +1008,389 @@
                 "security": [
                     {
                         "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/integration/execute": {
+            "post": {
+                "tags": [
+                    "Dynamic Integration"
+                ],
+                "summary": "Executar integração bidirecional",
+                "description": "Endpoint universal para executar integrações com sistemas externos. Envia dados e recebe resposta em tempo real ou assíncrono.",
+                "operationId": "executeIntegration",
+                "requestBody": {
+                    "description": "Dados da integração",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "integration_type",
+                                    "action",
+                                    "payload"
+                                ],
+                                "properties": {
+                                    "integration_type": {
+                                        "description": "Tipo de integração",
+                                        "type": "string",
+                                        "enum": [
+                                            "rest_api",
+                                            "soap",
+                                            "graphql",
+                                            "webhook",
+                                            "database",
+                                            "file_transfer"
+                                        ],
+                                        "example": "rest_api"
+                                    },
+                                    "action": {
+                                        "description": "Ação a ser executada",
+                                        "type": "string",
+                                        "example": "create_user"
+                                    },
+                                    "endpoint": {
+                                        "description": "URL do endpoint externo",
+                                        "type": "string",
+                                        "format": "url",
+                                        "example": "https://api.external-system.com/v1/users"
+                                    },
+                                    "method": {
+                                        "type": "string",
+                                        "enum": [
+                                            "GET",
+                                            "POST",
+                                            "PUT",
+                                            "PATCH",
+                                            "DELETE"
+                                        ],
+                                        "example": "POST"
+                                    },
+                                    "payload": {
+                                        "description": "Dados a serem enviados",
+                                        "type": "object",
+                                        "example": {
+                                            "name": "João Silva",
+                                            "email": "joao@example.com"
+                                        }
+                                    },
+                                    "headers": {
+                                        "description": "Headers customizados",
+                                        "type": "object",
+                                        "example": {
+                                            "X-API-Key": "abc123",
+                                            "X-Client-ID": "xyz789"
+                                        }
+                                    },
+                                    "auth": {
+                                        "description": "Configuração de autenticação",
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "bearer",
+                                                    "basic",
+                                                    "oauth2",
+                                                    "api_key"
+                                                ],
+                                                "example": "bearer"
+                                            },
+                                            "token": {
+                                                "type": "string",
+                                                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "mapping": {
+                                        "description": "Mapeamento de campos (input → output)",
+                                        "type": "object",
+                                        "example": {
+                                            "internal_field": "external_field",
+                                            "user_name": "name"
+                                        }
+                                    },
+                                    "priority": {
+                                        "type": "string",
+                                        "enum": [
+                                            "low",
+                                            "normal",
+                                            "high",
+                                            "critical"
+                                        ],
+                                        "example": "normal"
+                                    },
+                                    "async": {
+                                        "description": "Se true, executa assíncrono via fila",
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "bidirectional": {
+                                        "description": "Se true, espera resposta e processa dados recebidos",
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "callback_url": {
+                                        "description": "URL para receber resposta (apenas async)",
+                                        "type": "string",
+                                        "format": "url",
+                                        "example": "https://meu-sistema.com/callback"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Integração executada com sucesso (síncrono)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Integration executed successfully"
+                                        },
+                                        "integration_id": {
+                                            "type": "string",
+                                            "example": "int_1234567890"
+                                        },
+                                        "sent_data": {
+                                            "description": "Dados enviados",
+                                            "type": "object"
+                                        },
+                                        "received_data": {
+                                            "description": "Dados recebidos do sistema externo",
+                                            "type": "object"
+                                        },
+                                        "mapped_response": {
+                                            "description": "Resposta mapeada conforme configuração",
+                                            "type": "object"
+                                        },
+                                        "duration_ms": {
+                                            "type": "number",
+                                            "example": 234.56
+                                        },
+                                        "external_status": {
+                                            "type": "integer",
+                                            "example": 201
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "202": {
+                        "description": "Integração enfileirada (assíncrono)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Integration queued for processing"
+                                        },
+                                        "integration_id": {
+                                            "type": "string",
+                                            "example": "int_1234567890"
+                                        },
+                                        "queue": {
+                                            "type": "string",
+                                            "example": "high"
+                                        },
+                                        "estimated_execution": {
+                                            "type": "string",
+                                            "example": "within 30 seconds"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validação",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro na integração",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "type": "string",
+                                            "example": "External API returned error 500"
+                                        },
+                                        "external_response": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/integration/status/{integrationId}": {
+            "get": {
+                "tags": [
+                    "Dynamic Integration"
+                ],
+                "summary": "Verificar status de integração",
+                "description": "Consulta o status de uma integração assíncrona",
+                "operationId": "checkIntegrationStatus",
+                "parameters": [
+                    {
+                        "name": "integrationId",
+                        "in": "path",
+                        "description": "ID da integração",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "int_1234567890"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Status da integração",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "integration_id": {
+                                            "type": "string",
+                                            "example": "int_1234567890"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "pending",
+                                                "processing",
+                                                "completed",
+                                                "failed"
+                                            ],
+                                            "example": "completed"
+                                        },
+                                        "result": {
+                                            "description": "Resultado (se completado)",
+                                            "type": "object"
+                                        },
+                                        "error": {
+                                            "description": "Erro (se falhou)",
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "created_at": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "completed_at": {
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/integration/templates": {
+            "get": {
+                "tags": [
+                    "Dynamic Integration"
+                ],
+                "summary": "Listar templates de integração pré-configurados",
+                "description": "Retorna templates prontos para integrações com sistemas populares (Salesforce, SAP, etc)",
+                "operationId": "listIntegrationTemplates",
+                "responses": {
+                    "200": {
+                        "description": "Lista de templates",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "templates": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "example": "salesforce_create_lead"
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "Salesforce - Criar Lead"
+                                                    },
+                                                    "description": {
+                                                        "type": "string"
+                                                    },
+                                                    "integration_type": {
+                                                        "type": "string",
+                                                        "example": "rest_api"
+                                                    },
+                                                    "required_fields": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "example_payload": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
                     }
                 ]
             }
@@ -1512,10 +2267,410 @@
                     }
                 ]
             }
+        },
+        "/api/v1/webhooks/receive": {
+            "post": {
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Receber webhook de sistema externo",
+                "description": "Endpoint para receber webhooks de sistemas externos com validação de segurança",
+                "operationId": "receiveWebhook",
+                "requestBody": {
+                    "description": "Payload do webhook",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "type",
+                                    "data"
+                                ],
+                                "properties": {
+                                    "type": {
+                                        "description": "Tipo do evento",
+                                        "type": "string",
+                                        "example": "payment.completed"
+                                    },
+                                    "data": {
+                                        "description": "Dados do evento",
+                                        "type": "object"
+                                    },
+                                    "timestamp": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2025-11-27T10:00:00Z"
+                                    },
+                                    "signature": {
+                                        "description": "Assinatura HMAC do webhook",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Webhook processado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Webhook received and queued for processing"
+                                        },
+                                        "webhook_id": {
+                                            "type": "string",
+                                            "example": "wh_1234567890"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Invalid webhook signature"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Muitas requisições",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Too many requests"
+                                        },
+                                        "retry_after": {
+                                            "type": "integer",
+                                            "example": 60
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/webhooks/send": {
+            "post": {
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Enviar webhook para sistema externo",
+                "description": "Envia webhook de forma assíncrona usando filas Redis. Suporta priorização e retry automático.",
+                "operationId": "sendWebhook",
+                "requestBody": {
+                    "description": "Dados do webhook a ser enviado",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "url",
+                                    "payload"
+                                ],
+                                "properties": {
+                                    "url": {
+                                        "type": "string",
+                                        "format": "url",
+                                        "example": "https://example.com/webhook"
+                                    },
+                                    "payload": {
+                                        "description": "Dados a serem enviados",
+                                        "type": "object"
+                                    },
+                                    "priority": {
+                                        "description": "Prioridade de processamento",
+                                        "type": "string",
+                                        "enum": [
+                                            "low",
+                                            "normal",
+                                            "high",
+                                            "critical",
+                                            "webhook"
+                                        ],
+                                        "example": "normal"
+                                    },
+                                    "headers": {
+                                        "description": "Headers customizados",
+                                        "type": "object",
+                                        "example": {
+                                            "X-Custom-Header": "value"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Webhook enfileirado para envio",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Webhook queued for delivery"
+                                        },
+                                        "priority": {
+                                            "type": "string",
+                                            "example": "normal"
+                                        },
+                                        "estimated_delivery": {
+                                            "type": "string",
+                                            "example": "within 30 seconds"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Dados de validação inválidos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/webhooks/send-sync": {
+            "post": {
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Enviar webhook síncrono (bloqueante)",
+                "description": "Envia webhook de forma síncrona. Use apenas para testes ou casos críticos onde resposta imediata é necessária.",
+                "operationId": "sendWebhookSync",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "url",
+                                    "payload"
+                                ],
+                                "properties": {
+                                    "url": {
+                                        "type": "string",
+                                        "format": "url"
+                                    },
+                                    "payload": {
+                                        "type": "object"
+                                    },
+                                    "timeout": {
+                                        "description": "Timeout em segundos",
+                                        "type": "integer",
+                                        "example": 30
+                                    },
+                                    "headers": {
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Webhook enviado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "status": {
+                                            "type": "integer",
+                                            "example": 200
+                                        },
+                                        "body": {
+                                            "type": "object"
+                                        },
+                                        "duration_ms": {
+                                            "type": "number",
+                                            "example": 145.67
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro ao enviar webhook",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
         "schemas": {
+            "ErrorResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "An error occurred"
+                    },
+                    "errors": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "SuccessResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Operation successful"
+                    },
+                    "data": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "PaginatedResponse": {
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
+                    "meta": {
+                        "properties": {
+                            "current_page": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "per_page": {
+                                "type": "integer",
+                                "example": 15
+                            },
+                            "total": {
+                                "type": "integer",
+                                "example": 100
+                            },
+                            "last_page": {
+                                "type": "integer",
+                                "example": 7
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "links": {
+                        "properties": {
+                            "first": {
+                                "type": "string"
+                            },
+                            "last": {
+                                "type": "string"
+                            },
+                            "prev": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "next": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
             "Empreendimento": {
                 "title": "Empreendimento PAE",
                 "properties": {
@@ -1690,6 +2845,14 @@
             }
         },
         "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Autenticação via Bearer Token (Sanctum)",
+                "name": "bearerAuth",
+                "in": "header",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            },
             "sanctum": {
                 "type": "http",
                 "description": "Enter token in format (Bearer <token>)",
@@ -1702,6 +2865,18 @@
     },
     "tags": [
         {
+            "name": "Health Check",
+            "description": "Endpoints de monitoramento e saúde do sistema"
+        },
+        {
+            "name": "Log Viewer",
+            "description": "Visualização de logs e eventos do sistema em tempo real"
+        },
+        {
+            "name": "Webhooks",
+            "description": "API Endpoints para gerenciamento de webhooks"
+        },
+        {
             "name": "Autenticação",
             "description": "Endpoints para autenticação e geração de tokens"
         },
@@ -1712,6 +2887,10 @@
         {
             "name": "Integração",
             "description": "Endpoints para integração entre módulos (PAE, RAT, TDAP)"
+        },
+        {
+            "name": "Dynamic Integration",
+            "description": "Hub de integração plug-and-play com sistemas externos. Suporte bidirecional para enviar e receber dados simultaneamente."
         },
         {
             "name": "PAE",
