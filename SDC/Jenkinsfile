@@ -16,7 +16,7 @@ pipeline {
         NPM_CACHE_DIR = "${WORKSPACE}/.npm-cache"
 
         // Azure Container Registry
-        ACR_NAME = 'apidover'
+        ACR_NAME = 'APIDOVER'
         ACR_RESOURCE_GROUP = 'DOVER'
         ACR_LOGIN_SERVER = 'apidover.azurecr.io'
         ACR_IMAGE = 'apidover.azurecr.io/sdc-dev-app'
