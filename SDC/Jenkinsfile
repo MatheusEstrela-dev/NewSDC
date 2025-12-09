@@ -17,6 +17,7 @@ pipeline {
 
         // Azure Container Registry
         ACR_NAME = 'apidover'
+        ACR_RESOURCE_GROUP = 'DOVER'
         ACR_LOGIN_SERVER = 'apidover.azurecr.io'
         ACR_IMAGE = 'apidover.azurecr.io/sdc-dev-app'
         ACR_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
@@ -124,6 +125,7 @@ pipeline {
                         sh """
                             az acr build \
                                 --registry ${ACR_NAME} \
+                                --resource-group ${ACR_RESOURCE_GROUP} \
                                 --image sdc-dev-app:${ACR_TAG} \
                                 --image sdc-dev-app:latest \
                                 --file docker/Dockerfile.prod \
