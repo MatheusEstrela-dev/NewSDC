@@ -133,6 +133,9 @@
 
       <div class="card-footer">
         &copy; 2025 Governo do Estado de Minas Gerais
+        <span style="font-size: 0.7rem; opacity: 0.6; display: block; margin-top: 4px;">
+          CI/CD Test - Deploy Automático
+        </span>
       </div>
     </div>
   </div>
