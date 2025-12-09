@@ -114,6 +114,14 @@ credentials:
               password: "${AZURE_CLIENT_SECRET:-}"
               description: "Azure Service Principal for Azure CLI"
 
+          # GitHub Personal Access Token
+          - usernamePassword:
+              scope: GLOBAL
+              id: "github-token"
+              username: "${GITHUB_USERNAME:-MatheusEstrela-dev}"
+              password: "${GITHUB_TOKEN:-}"
+              description: "GitHub Personal Access Token for HTTPS authentication"
+
 # ===== TOOL CONFIGURATION =====
 tool:
   git:
@@ -161,8 +169,8 @@ jobs:
             scm {
               git {
                 remote {
-                  url('${GIT_REPO_URL:-git@github.com:MatheusEstrela-dev/NewSDC.git}')
-                  credentials('git-ssh-key')
+                  url('${GIT_REPO_URL:-https://github.com/MatheusEstrela-dev/NewSDC.git}')
+                  credentials('github-token')
                 }
                 branches('*/main', '*/develop')
               }
