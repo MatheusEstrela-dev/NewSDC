@@ -84,11 +84,9 @@ pipeline {
                     }
                     echo "✅ Espaço disponível: ${availableSpace}GB"
 
-                    // Verificar se .env existe no diretório SDC
-                    if (!fileExists('SDC/.env')) {
-                        echo '⚠️  SDC/.env não encontrado, copiando de SDC/.env.example'
-                        sh 'cp SDC/.env.example SDC/.env'
-                    }
+                    // Nota: .env não é necessário para build Docker
+                    // A imagem Docker usa variáveis de ambiente do Azure App Service
+                    echo "ℹ️  Build usa variáveis de ambiente do Azure (não requer .env local)"
                 }
             }
         }
