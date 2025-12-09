@@ -1,12 +1,7 @@
 pipeline {
-    // Usar agente Docker para builds isolados (resolve problema de workspace)
-    agent {
-        docker {
-            image 'php:8.2-cli'
-            // Resolve problema de networking: permite acesso a outros containers
-            args '-v /var/run/docker.sock:/var/run/docker.sock --network sdc_network'
-        }
-    }
+    // Usar agente padrão do Jenkins (Azure App Service não expõe Docker socket)
+    // O container Jenkins já possui Docker, Docker Compose, Azure CLI e ferramentas necessárias
+    agent any
 
     environment {
         APP_NAME = 'sdc'
