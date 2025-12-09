@@ -84,168 +84,63 @@ pipeline {
                     }
                     echo "✅ Espaço disponível: ${availableSpace}GB"
 
-                    // Verificar se .env existe
-                    if (!fileExists('.env')) {
-                        echo '⚠️  .env não encontrado, copiando de .env.example'
-                        sh 'cp .env.example .env'
+                    // Verificar se .env existe no diretório SDC
+                    if (!fileExists('SDC/.env')) {
+                        echo '⚠️  SDC/.env não encontrado, copiando de SDC/.env.example'
+                        sh 'cp SDC/.env.example SDC/.env'
                     }
                 }
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Build and Push to ACR') {
             steps {
-                echo '🏗️  Building Docker images for production...'
+                echo '🏗️  Building Docker images using Azure Container Registry...'
 
                 script {
-                    // Resolver problema de memória: limpar builds antigos
-                    sh 'docker system prune -f --filter "until=24h"'
-
                     // Verificar se estamos no diretório correto
-                    sh 'pwd && ls -la'
+                    sh 'pwd && ls -la SDC/'
 
-                    // Build da imagem de produção usando Dockerfile.prod
-                    // O contexto é o diretório SDC (onde está o Jenkinsfile)
-                    sh """
-                        docker build \
-                            -f docker/Dockerfile.prod \
-                            -t sdc-dev-app:latest \
-                            -t ${ACR_IMAGE}:${ACR_TAG} \
-                            -t ${ACR_IMAGE}:latest \
-                            .
-                    """
-
-                    echo "✅ Imagem buildada: sdc-dev-app:latest"
-                    echo "✅ Imagem taggeada: ${ACR_IMAGE}:${ACR_TAG}"
-                    echo "✅ Imagem taggeada: ${ACR_IMAGE}:latest"
-                }
-            }
-        }
-
-        stage('Tag and Push to ACR') {
-            steps {
-                echo '📦 Tagging and pushing images to Azure Container Registry...'
-
-                script {
-                    // Verificar se Azure CLI está instalado
-                    def azCliInstalled = sh(
-                        script: 'which az || command -v az',
-                        returnStatus: true
-                    ) == 0
-
-                    if (!azCliInstalled) {
-                        echo '⚠️  Azure CLI não encontrado. Instalando...'
-                        sh '''
-                            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash || \
-                            curl -sL https://aka.ms/InstallAzureCLI | sudo bash || \
-                            echo "⚠️  Falha ao instalar Azure CLI. Continuando sem push para ACR..."
-                        '''
-                    }
-
-                    // Tentar login no Azure usando Service Principal ou credenciais do ACR
-                    def loginSuccess = false
-
-                    // Método 1: Service Principal (recomendado)
-                    try {
-                        withCredentials([usernamePassword(
-                            credentialsId: 'azure-service-principal',
-                            usernameVariable: 'AZURE_CLIENT_ID',
-                            passwordVariable: 'AZURE_CLIENT_SECRET'
-                        )]) {
-                            def tenantId = env.AZURE_TENANT_ID ?: ''
-                            if (tenantId) {
-                                sh """
-                                    az login --service-principal \
-                                        --username \$AZURE_CLIENT_ID \
-                                        --password \$AZURE_CLIENT_SECRET \
-                                        --tenant ${tenantId}
-                                """
-                                loginSuccess = true
-                                echo "✅ Login no Azure via Service Principal realizado"
-                            }
+                    // Login no Azure usando Service Principal
+                    withCredentials([usernamePassword(
+                        credentialsId: 'azure-service-principal',
+                        usernameVariable: 'AZURE_CLIENT_ID',
+                        passwordVariable: 'AZURE_CLIENT_SECRET'
+                    )]) {
+                        def tenantId = env.AZURE_TENANT_ID ?: ''
+                        if (!tenantId) {
+                            error("AZURE_TENANT_ID não configurado")
                         }
-                    } catch (Exception e) {
-                        echo "⚠️  Service Principal não configurado: ${e.message}"
-                    }
-
-                    // Método 2: Login direto no ACR (fallback)
-                    if (!loginSuccess) {
-                        try {
-                            withCredentials([usernamePassword(
-                                credentialsId: 'azure-acr-credentials',
-                                usernameVariable: 'ACR_USERNAME',
-                                passwordVariable: 'ACR_PASSWORD'
-                            )]) {
-                                sh """
-                                    echo \$ACR_PASSWORD | docker login ${ACR_LOGIN_SERVER} \
-                                        --username \$ACR_USERNAME \
-                                        --password-stdin
-                                """
-                                loginSuccess = true
-                                echo "✅ Login no ACR realizado diretamente"
-                            }
-                        } catch (Exception e) {
-                            echo "⚠️  Credenciais do ACR não configuradas: ${e.message}"
-                        }
-                    }
-
-                    // Método 3: Login interativo (último recurso)
-                    if (!loginSuccess && azCliInstalled) {
-                        echo "⚠️  Tentando login interativo no Azure..."
-                        sh "az acr login --name ${ACR_NAME}" || {
-                            echo "❌ Falha ao fazer login no ACR. Pulando push..."
-                            return
-                        }
-                        loginSuccess = true
-                    }
-
-                    if (loginSuccess) {
-                        // As imagens já foram taggeadas no stage de build
-                        // Apenas fazer push para ACR
-                        echo "📤 Fazendo push das imagens para ACR..."
 
                         sh """
-                            docker push ${ACR_IMAGE}:${ACR_TAG} || {
-                                echo "⚠️  Erro ao fazer push da tag ${ACR_TAG}, tentando novamente..."
-                                docker push ${ACR_IMAGE}:${ACR_TAG}
-                            }
+                            az login --service-principal \
+                                --username \$AZURE_CLIENT_ID \
+                                --password \$AZURE_CLIENT_SECRET \
+                                --tenant ${tenantId}
                         """
-
-                        sh """
-                            docker push ${ACR_IMAGE}:latest || {
-                                echo "⚠️  Erro ao fazer push da tag latest, tentando novamente..."
-                                docker push ${ACR_IMAGE}:latest
-                            }
-                        """
-
-                        echo "✅ Imagens enviadas para ACR:"
-                        echo "   - ${ACR_IMAGE}:${ACR_TAG}"
-                        echo "   - ${ACR_IMAGE}:latest"
-                    } else {
-                        echo "❌ Não foi possível fazer login no ACR. Push cancelado."
-                        echo "💡 Configure as credenciais do Azure no Jenkins:"
-                        echo "   1. azure-service-principal (recomendado)"
-                        echo "   2. azure-acr-credentials (fallback)"
-                        error("Falha ao fazer login no ACR. Configure as credenciais.")
                     }
+
+                    // Build e Push usando Azure Container Registry Build
+                    // Isso executa o build remotamente no Azure (não precisa de Docker local)
+                    dir('SDC') {
+                        sh """
+                            az acr build \
+                                --registry ${ACR_NAME} \
+                                --image sdc-dev-app:${ACR_TAG} \
+                                --image sdc-dev-app:latest \
+                                --file docker/Dockerfile.prod \
+                                --platform linux \
+                                .
+                        """
+                    }
+
+                    echo "✅ Imagem buildada e enviada para ACR:"
+                    echo "   - ${ACR_IMAGE}:${ACR_TAG}"
+                    echo "   - ${ACR_IMAGE}:latest"
                 }
             }
         }
 
-        stage('Verify Build') {
-            steps {
-                echo '✅ Verificando build da imagem...'
-                script {
-                    // Verificar se a imagem foi criada corretamente
-                    sh """
-                        docker images | grep sdc-dev-app || exit 1
-                        docker inspect sdc-dev-app:latest | grep -q '\"Architecture\"' || exit 1
-                    """
-                    echo "✅ Imagem verificada com sucesso!"
-                    echo "ℹ️  Nota: Dependências PHP/Node e assets já foram instalados/compilados durante o build"
-                }
-            }
-        }
 
         stage('Code Quality & Tests') {
             when {
@@ -370,18 +265,15 @@ pipeline {
             echo '🧹 Cleaning up...'
 
             script {
-                // Resolver problema: NÃO fazer down no ambiente de produção!
-                // Apenas limpar containers temporários
-                sh 'docker ps -a --filter "status=exited" -q | xargs -r docker rm || true'
-
-                // Limpar imagens não utilizadas
-                sh 'docker image prune -f --filter "dangling=true" || true'
-
                 // Limpar workspace cache (manter apenas últimos 3 builds)
                 sh """
-                    find ${WORKSPACE}/.composer-cache -type f -mtime +7 -delete || true
-                    find ${WORKSPACE}/.npm-cache -type f -mtime +7 -delete || true
+                    find ${WORKSPACE}/.composer-cache -type f -mtime +7 -delete 2>/dev/null || true
+                    find ${WORKSPACE}/.npm-cache -type f -mtime +7 -delete 2>/dev/null || true
                 """
+
+                // Nota: Limpeza de containers Docker desabilitada
+                // Azure App Service não expõe Docker socket
+                echo "ℹ️  Docker cleanup skipped (Azure App Service environment)"
             }
         }
 
@@ -403,7 +295,6 @@ pipeline {
                     echo "Git Commit: ${env.GIT_COMMIT}" >> build-info.txt
                     echo "Git Branch: ${env.GIT_BRANCH}" >> build-info.txt
                     echo "ACR Image: ${ACR_IMAGE}:${ACR_TAG}" >> build-info.txt
-                    docker images | grep sdc-dev-app >> build-info.txt || true
                 """
                 archiveArtifacts artifacts: 'build-info.txt', allowEmptyArchive: true
             }
