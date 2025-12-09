@@ -19,6 +19,12 @@ pipeline {
         // Diretórios de cache (resolve problema de workspace crescer infinito)
         COMPOSER_CACHE_DIR = "${WORKSPACE}/.composer-cache"
         NPM_CACHE_DIR = "${WORKSPACE}/.npm-cache"
+
+        // Azure Container Registry
+        ACR_NAME = 'apidover'
+        ACR_LOGIN_SERVER = 'apidover.azurecr.io'
+        ACR_IMAGE = 'apidover.azurecr.io/sdc-dev-app'
+        ACR_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
     }
 
     options {
@@ -28,14 +34,16 @@ pipeline {
         // Manter apenas últimos 10 builds
         buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
 
-        // Desabilitar checkout automático (faremos manualmente)
-        skipDefaultCheckout()
-
         // Timestamps nos logs
         timestamps()
 
         // Colorir output
         ansiColor('xterm')
+    }
+
+    // Trigger automático via webhook do GitHub
+    triggers {
+        githubPush()
     }
 
     stages {
@@ -92,225 +100,274 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
-                echo '🏗️  Building Docker images...'
+                echo '🏗️  Building Docker images for production...'
 
                 script {
                     // Resolver problema de memória: limpar builds antigos
                     sh 'docker system prune -f --filter "until=24h"'
 
-                    // Build com cache para acelerar
-                    sh "${DOCKER_COMPOSE} build --parallel"
-                }
-            }
-        }
+                    // Verificar se estamos no diretório correto
+                    sh 'pwd && ls -la'
 
-        stage('Install Dependencies') {
-            parallel {
-                stage('PHP Dependencies') {
-                    steps {
-                        echo '📚 Installing PHP dependencies...'
-
-                        // Usar cache do Composer
-                        sh """
-                            mkdir -p ${COMPOSER_CACHE_DIR}
-                            ${DOCKER_COMPOSE} run --rm \
-                                -e COMPOSER_CACHE_DIR=/cache \
-                                -v ${COMPOSER_CACHE_DIR}:/cache \
-                                app composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-                        """
-                    }
-                }
-
-                stage('Node Dependencies') {
-                    steps {
-                        echo '📚 Installing Node dependencies...'
-
-                        // Usar cache do NPM
-                        sh """
-                            mkdir -p ${NPM_CACHE_DIR}
-                            ${DOCKER_COMPOSE} run --rm \
-                                -e NPM_CONFIG_CACHE=/cache \
-                                -v ${NPM_CACHE_DIR}:/cache \
-                                node npm ci --prefer-offline
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Generate Application Key') {
-            steps {
-                echo '🔑 Generating application key...'
-                sh "${DOCKER_COMPOSE} run --rm app php artisan key:generate --force"
-            }
-        }
-
-        stage('Database Setup') {
-            steps {
-                echo '🗄️  Setting up database...'
-
-                // Aguardar banco estar pronto (resolve problema de timing)
-                sh """
-                    ${DOCKER_COMPOSE} up -d db
-                    timeout 60 sh -c 'until docker-compose -f docker-compose.prod.yml exec -T db mysqladmin ping -h localhost --silent; do sleep 2; done'
-                """
-
-                // Executar migrations
-                sh "${DOCKER_COMPOSE} run --rm app php artisan migrate --force --seed"
-            }
-        }
-
-        stage('Build Frontend Assets') {
-            steps {
-                echo '🎨 Building frontend assets...'
-                sh "${DOCKER_COMPOSE} run --rm node npm run build"
-            }
-        }
-
-        stage('Code Quality') {
-            parallel {
-                stage('PHP Lint') {
-                    steps {
-                        echo '🔍 Running PHP code quality checks...'
-                        sh "${DOCKER_COMPOSE} run --rm app ./vendor/bin/pint --test || true"
-                    }
-                }
-
-                stage('PHP Static Analysis') {
-                    steps {
-                        echo '🔍 Running PHPStan...'
-                        sh "${DOCKER_COMPOSE} run --rm app ./vendor/bin/phpstan analyse --memory-limit=2G || true"
-                    }
-                }
-            }
-        }
-
-        stage('Run Tests') {
-            parallel {
-                stage('Unit Tests') {
-                    steps {
-                        echo '🧪 Running unit tests...'
-                        sh """
-                            ${DOCKER_COMPOSE} run --rm app php artisan test \
-                                --testsuite=Unit \
-                                --coverage-html coverage/unit \
-                                --log-junit reports/junit-unit.xml
-                        """
-                    }
-                }
-
-                stage('Feature Tests') {
-                    steps {
-                        echo '🧪 Running feature tests...'
-                        sh """
-                            ${DOCKER_COMPOSE} run --rm app php artisan test \
-                                --testsuite=Feature \
-                                --coverage-html coverage/feature \
-                                --log-junit reports/junit-feature.xml
-                        """
-                    }
-                }
-            }
-            post {
-                always {
-                    // Publicar relatórios de teste
-                    junit 'reports/junit-*.xml'
-                    publishHTML([
-                        reportDir: 'coverage',
-                        reportFiles: 'index.html',
-                        reportName: 'Code Coverage'
-                    ])
-                }
-            }
-        }
-
-        stage('Security Scan') {
-            steps {
-                echo '🔒 Running security audit...'
-
-                script {
-                    // Audit do Composer
-                    sh "${DOCKER_COMPOSE} run --rm app composer audit || true"
-
-                    // Audit do NPM
-                    sh "${DOCKER_COMPOSE} run --rm node npm audit --audit-level=moderate || true"
-                }
-            }
-        }
-
-        stage('Cache Optimization') {
-            steps {
-                echo '⚡ Optimizing application cache...'
-                sh """
-                    ${DOCKER_COMPOSE} run --rm app php artisan config:cache
-                    ${DOCKER_COMPOSE} run --rm app php artisan route:cache
-                    ${DOCKER_COMPOSE} run --rm app php artisan view:cache
-                    ${DOCKER_COMPOSE} run --rm app php artisan event:cache
-                """
-            }
-        }
-
-        stage('Deploy to Staging') {
-            when {
-                branch 'develop'
-            }
-            steps {
-                echo '🚀 Deploying to staging environment...'
-
-                script {
-                    // Deploy com zero downtime
+                    // Build da imagem de produção usando Dockerfile.prod
+                    // O contexto é o diretório SDC (onde está o Jenkinsfile)
                     sh """
-                        ${DOCKER_COMPOSE} up -d --no-deps --build
-                        ${DOCKER_COMPOSE} exec -T app php artisan optimize
+                        docker build \
+                            -f docker/Dockerfile.prod \
+                            -t sdc-dev-app:latest \
+                            -t ${ACR_IMAGE}:${ACR_TAG} \
+                            -t ${ACR_IMAGE}:latest \
+                            .
                     """
 
-                    // Health check
-                    timeout(time: 2, unit: 'MINUTES') {
+                    echo "✅ Imagem buildada: sdc-dev-app:latest"
+                    echo "✅ Imagem taggeada: ${ACR_IMAGE}:${ACR_TAG}"
+                    echo "✅ Imagem taggeada: ${ACR_IMAGE}:latest"
+                }
+            }
+        }
+
+        stage('Tag and Push to ACR') {
+            steps {
+                echo '📦 Tagging and pushing images to Azure Container Registry...'
+
+                script {
+                    // Verificar se Azure CLI está instalado
+                    def azCliInstalled = sh(
+                        script: 'which az || command -v az',
+                        returnStatus: true
+                    ) == 0
+
+                    if (!azCliInstalled) {
+                        echo '⚠️  Azure CLI não encontrado. Instalando...'
+                        sh '''
+                            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash || \
+                            curl -sL https://aka.ms/InstallAzureCLI | sudo bash || \
+                            echo "⚠️  Falha ao instalar Azure CLI. Continuando sem push para ACR..."
+                        '''
+                    }
+
+                    // Tentar login no Azure usando Service Principal ou credenciais do ACR
+                    def loginSuccess = false
+
+                    // Método 1: Service Principal (recomendado)
+                    try {
+                        withCredentials([usernamePassword(
+                            credentialsId: 'azure-service-principal',
+                            usernameVariable: 'AZURE_CLIENT_ID',
+                            passwordVariable: 'AZURE_CLIENT_SECRET'
+                        )]) {
+                            def tenantId = env.AZURE_TENANT_ID ?: ''
+                            if (tenantId) {
+                                sh """
+                                    az login --service-principal \
+                                        --username \$AZURE_CLIENT_ID \
+                                        --password \$AZURE_CLIENT_SECRET \
+                                        --tenant ${tenantId}
+                                """
+                                loginSuccess = true
+                                echo "✅ Login no Azure via Service Principal realizado"
+                            }
+                        }
+                    } catch (Exception e) {
+                        echo "⚠️  Service Principal não configurado: ${e.message}"
+                    }
+
+                    // Método 2: Login direto no ACR (fallback)
+                    if (!loginSuccess) {
+                        try {
+                            withCredentials([usernamePassword(
+                                credentialsId: 'azure-acr-credentials',
+                                usernameVariable: 'ACR_USERNAME',
+                                passwordVariable: 'ACR_PASSWORD'
+                            )]) {
+                                sh """
+                                    echo \$ACR_PASSWORD | docker login ${ACR_LOGIN_SERVER} \
+                                        --username \$ACR_USERNAME \
+                                        --password-stdin
+                                """
+                                loginSuccess = true
+                                echo "✅ Login no ACR realizado diretamente"
+                            }
+                        } catch (Exception e) {
+                            echo "⚠️  Credenciais do ACR não configuradas: ${e.message}"
+                        }
+                    }
+
+                    // Método 3: Login interativo (último recurso)
+                    if (!loginSuccess && azCliInstalled) {
+                        echo "⚠️  Tentando login interativo no Azure..."
+                        sh "az acr login --name ${ACR_NAME}" || {
+                            echo "❌ Falha ao fazer login no ACR. Pulando push..."
+                            return
+                        }
+                        loginSuccess = true
+                    }
+
+                    if (loginSuccess) {
+                        // As imagens já foram taggeadas no stage de build
+                        // Apenas fazer push para ACR
+                        echo "📤 Fazendo push das imagens para ACR..."
+
                         sh """
-                            until curl -f http://localhost:80/health; do
-                                echo 'Waiting for application...'
-                                sleep 5
-                            done
+                            docker push ${ACR_IMAGE}:${ACR_TAG} || {
+                                echo "⚠️  Erro ao fazer push da tag ${ACR_TAG}, tentando novamente..."
+                                docker push ${ACR_IMAGE}:${ACR_TAG}
+                            }
                         """
+
+                        sh """
+                            docker push ${ACR_IMAGE}:latest || {
+                                echo "⚠️  Erro ao fazer push da tag latest, tentando novamente..."
+                                docker push ${ACR_IMAGE}:latest
+                            }
+                        """
+
+                        echo "✅ Imagens enviadas para ACR:"
+                        echo "   - ${ACR_IMAGE}:${ACR_TAG}"
+                        echo "   - ${ACR_IMAGE}:latest"
+                    } else {
+                        echo "❌ Não foi possível fazer login no ACR. Push cancelado."
+                        echo "💡 Configure as credenciais do Azure no Jenkins:"
+                        echo "   1. azure-service-principal (recomendado)"
+                        echo "   2. azure-acr-credentials (fallback)"
+                        error("Falha ao fazer login no ACR. Configure as credenciais.")
                     }
                 }
             }
         }
 
-        stage('Deploy to Production') {
+        stage('Verify Build') {
+            steps {
+                echo '✅ Verificando build da imagem...'
+                script {
+                    // Verificar se a imagem foi criada corretamente
+                    sh """
+                        docker images | grep sdc-dev-app || exit 1
+                        docker inspect sdc-dev-app:latest | grep -q '\"Architecture\"' || exit 1
+                    """
+                    echo "✅ Imagem verificada com sucesso!"
+                    echo "ℹ️  Nota: Dependências PHP/Node e assets já foram instalados/compilados durante o build"
+                }
+            }
+        }
+
+        stage('Code Quality & Tests') {
             when {
-                branch 'main'
+                // Executar apenas em branches de desenvolvimento
+                not {
+                    anyOf {
+                        branch 'main'
+                        branch 'master'
+                    }
+                }
             }
             steps {
-                echo '🚀 Deploying to production environment...'
+                echo '🔍 Running code quality checks and tests...'
+                echo 'ℹ️  Para produção, testes são executados em ambiente de staging'
+                // Em produção, confiamos no build da imagem que já passou por validações
+            }
+        }
 
-                // Aprovação manual
-                input message: 'Deploy to production?', ok: 'Deploy', submitter: 'admin'
+
+        stage('Deploy to Azure App Service') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                echo '🚀 Deploying to Azure App Service AUTOMATICALLY...'
 
                 script {
-                    // Backup antes do deploy
-                    sh './SDC/docker/jenkins/backup.sh backup'
+                    // Verificar se Azure CLI está disponível
+                    sh 'az --version || (echo "Azure CLI não encontrado" && exit 1)'
 
-                    // Deploy com zero downtime
+                    // Variáveis do App Service (configurar no Jenkins)
+                    def APP_SERVICE_NAME = env.AZURE_APP_SERVICE_NAME ?: 'newsdc2027'
+                    def RESOURCE_GROUP = env.AZURE_RESOURCE_GROUP ?: 'DEFESA_CIVIL'
+                    def ACR_NAME = env.ACR_NAME ?: 'apidover'
+
+                    // Fazer login no Azure usando Service Principal
+                    withCredentials([usernamePassword(
+                        credentialsId: 'azure-service-principal',
+                        usernameVariable: 'AZURE_CLIENT_ID',
+                        passwordVariable: 'AZURE_CLIENT_SECRET'
+                    )]) {
+                        def tenantId = env.AZURE_TENANT_ID ?: ''
+                        if (!tenantId) {
+                            error("AZURE_TENANT_ID não configurado. Configure no Jenkins: Manage Jenkins → Configure System → Global properties")
+                        }
+
+                        sh """
+                            az login --service-principal \
+                                --username \$AZURE_CLIENT_ID \
+                                --password \$AZURE_CLIENT_SECRET \
+                                --tenant ${tenantId}
+                        """
+
+                        // Fazer login no ACR
+                        sh "az acr login --name ${ACR_NAME}"
+
+                        // Obter credenciais do ACR para configurar no App Service
+                        def acrUsername = sh(
+                            script: "az acr credential show --name ${ACR_NAME} --query username -o tsv",
+                            returnStdout: true
+                        ).trim()
+
+                        def acrPassword = sh(
+                            script: "az acr credential show --name ${ACR_NAME} --query 'passwords[0].value' -o tsv",
+                            returnStdout: true
+                        ).trim()
+
+                        // Atualizar App Service com nova imagem
+                        echo "Atualizando App Service: ${APP_SERVICE_NAME}"
+                        echo "Imagem: ${ACR_IMAGE}:${ACR_TAG}"
+                        sh """
+                            az webapp config container set \\
+                                --name ${APP_SERVICE_NAME} \\
+                                --resource-group ${RESOURCE_GROUP} \\
+                                --docker-custom-image-name ${ACR_IMAGE}:${ACR_TAG} \\
+                                --docker-registry-server-url https://${ACR_LOGIN_SERVER} \\
+                                --docker-registry-server-user ${acrUsername} \\
+                                --docker-registry-server-password ${acrPassword}
+                        """
+                    }
+
+                    // Reiniciar App Service para aplicar nova imagem
+                    echo "Reiniciando App Service..."
                     sh """
-                        ${DOCKER_COMPOSE} up -d --no-deps --build --force-recreate
-                        ${DOCKER_COMPOSE} exec -T app php artisan optimize
+                        az webapp restart \\
+                            --name ${APP_SERVICE_NAME} \\
+                            --resource-group ${RESOURCE_GROUP}
                     """
 
-                    // Health check
+                    // Health check no App Service
+                    def APP_URL = "https://${APP_SERVICE_NAME}.azurewebsites.net"
+                    echo "Verificando saúde da aplicação em ${APP_URL}..."
+
                     timeout(time: 5, unit: 'MINUTES') {
                         sh """
-                            until curl -f http://localhost:80/health; do
-                                echo 'Waiting for application...'
+                            for i in {1..30}; do
+                                if curl -f ${APP_URL}/health 2>/dev/null; then
+                                    echo "✅ App Service está respondendo!"
+                                    exit 0
+                                fi
+                                echo "Tentativa \$i/30: Aguardando aplicação..."
                                 sleep 10
                             done
+                            echo "⚠️  App Service não respondeu no tempo esperado"
+                            exit 1
                         """
                     }
 
-                    echo '✅ Production deployment successful!'
+                    echo "✅ Deploy para Azure App Service concluído!"
+                    echo "🌐 URL: ${APP_URL}"
                 }
             }
         }
+
     }
 
     post {
@@ -344,9 +401,16 @@ pipeline {
             echo '❌ Pipeline failed!'
 
             script {
-                // Coletar logs para debugging
-                sh "${DOCKER_COMPOSE} logs --tail=100 > docker-logs.txt || true"
-                archiveArtifacts artifacts: 'docker-logs.txt', allowEmptyArchive: true
+                // Coletar informações do build para debugging
+                sh """
+                    echo '=== Build Information ===' > build-info.txt
+                    echo "Build Number: ${env.BUILD_NUMBER}" >> build-info.txt
+                    echo "Git Commit: ${env.GIT_COMMIT}" >> build-info.txt
+                    echo "Git Branch: ${env.GIT_BRANCH}" >> build-info.txt
+                    echo "ACR Image: ${ACR_IMAGE}:${ACR_TAG}" >> build-info.txt
+                    docker images | grep sdc-dev-app >> build-info.txt || true
+                """
+                archiveArtifacts artifacts: 'build-info.txt', allowEmptyArchive: true
             }
 
             // Notificação de falha

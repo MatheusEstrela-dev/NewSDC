@@ -13,6 +13,10 @@ jenkins:
       users:
         - id: "${JENKINS_ADMIN_USER:-admin}"
           password: "${JENKINS_ADMIN_PASSWORD:-admin123}"
+        - id: "omlioes"
+          password: "${JENKINS_OMLIOES_PASSWORD:-omlioes123}"
+        - id: "matheus.estrela"
+          password: "${JENKINS_MATHEUS_PASSWORD:-matheus123}"
 
   authorizationStrategy:
     loggedInUsersCanDoAnything:
@@ -44,6 +48,10 @@ jenkins:
             value: "1"
           - key: "COMPOSE_DOCKER_CLI_BUILD"
             value: "1"
+          - key: "AZURE_TENANT_ID"
+            value: "${AZURE_TENANT_ID:-}"
+          - key: "ACR_NAME"
+            value: "${ACR_NAME:-apidover}"
 
 # ===== UNCLASSIFIED SETTINGS =====
 unclassified:
@@ -89,6 +97,22 @@ credentials:
               username: "${DB_USERNAME:-}"
               password: "${DB_PASSWORD:-}"
               description: "Database Credentials"
+
+          # Azure Container Registry credentials
+          - usernamePassword:
+              scope: GLOBAL
+              id: "azure-acr-credentials"
+              username: "${AZURE_ACR_USERNAME:-}"
+              password: "${AZURE_ACR_PASSWORD:-}"
+              description: "Azure Container Registry Credentials (Service Principal)"
+
+          # Azure Service Principal (para Azure CLI)
+          - usernamePassword:
+              scope: GLOBAL
+              id: "azure-service-principal"
+              username: "${AZURE_CLIENT_ID:-}"
+              password: "${AZURE_CLIENT_SECRET:-}"
+              description: "Azure Service Principal for Azure CLI"
 
 # ===== TOOL CONFIGURATION =====
 tool:
@@ -137,13 +161,13 @@ jobs:
             scm {
               git {
                 remote {
-                  url('${GIT_REPO_URL:-https://github.com/user/repo.git}')
+                  url('${GIT_REPO_URL:-git@github.com:MatheusEstrela-dev/NewSDC.git}')
                   credentials('git-ssh-key')
                 }
                 branches('*/main', '*/develop')
               }
             }
-            scriptPath('Jenkinsfile')
+            scriptPath('SDC/Jenkinsfile')
           }
         }
         triggers {
