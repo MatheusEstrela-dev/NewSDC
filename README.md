@@ -7,6 +7,7 @@
 [![Vue.js](https://img.shields.io/badge/Vue.js-3.4-4FC08D?style=flat&logo=vue.js&logoColor=white)](https://vuejs.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-Jenkins-D24939?style=flat&logo=jenkins&logoColor=white)](https://jenkinssdc.azurewebsites.net/)
 
 ---
 
@@ -418,4 +419,11 @@ Para suporte, abra uma [issue](https://github.com/MatheusEstrela-dev/NewSDC/issu
 [⬆ Voltar ao topo](#-sdc---sistema-da-defesa-civil)
 
 </div>
+
+
+
+
+
+
+
 
