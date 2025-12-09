@@ -37,6 +37,7 @@ O sistema foi arquitetado com foco em:
 - 🛡️ **Confiabilidade**: Sistema crítico 24/7 com redundância
 - 🔌 **Integrações**: Hub de integração dinâmica plug-and-play
 - 📊 **Monitoramento**: Observabilidade completa com Prometheus/Grafana
+- 🚀 **CI/CD**: Pipeline automatizado com Jenkins e Azure
 
 ---
 
