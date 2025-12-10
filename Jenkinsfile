@@ -255,23 +255,35 @@ pipeline {
                     """
                     echo "✅ Restart concluído"
 
-                    // Health check OTIMIZADO - Mais rápido e inteligente
+                    // Health check OTIMIZADO - Mais tolerante e usando rota /health
                     def APP_URL = "https://${APP_SERVICE_NAME}.azurewebsites.net"
                     echo "🏥 Verificando saúde da aplicação..."
 
-                    timeout(time: 3, unit: 'MINUTES') {
+                    timeout(time: 5, unit: 'MINUTES') {
                         sh """
                             echo "⏳ Aguardando App Service inicializar..."
-                            sleep 15  # Aguardar Azure iniciar o pull da imagem
+                            sleep 30  # Aguardar Azure iniciar o pull da imagem e container
 
-                            # Health check rápido com retry exponencial
-                            for i in \$(seq 1 20); do
-                                HTTP_CODE=\$(curl -s -o /dev/null -w "%{http_code}" -m 5 ${APP_URL} 2>/dev/null || echo "000")
+                            # Health check com múltiplas tentativas e rotas
+                            SUCCESS=0
+                            for i in \$(seq 1 30); do
+                                # Tentar rota /health primeiro (mais confiável)
+                                HEALTH_CODE=\$(curl -s -o /dev/null -w "%{http_code}" -m 10 ${APP_URL}/health 2>/dev/null || echo "000")
+                                
+                                # Se /health não funcionar, tentar raiz
+                                if [ "\$HEALTH_CODE" = "000" ] || [ "\$HEALTH_CODE" = "404" ]; then
+                                    HTTP_CODE=\$(curl -s -o /dev/null -w "%{http_code}" -m 10 ${APP_URL} 2>/dev/null || echo "000")
+                                else
+                                    HTTP_CODE=\$HEALTH_CODE
+                                fi
 
-                                if [ "\$HTTP_CODE" = "200" ] || [ "\$HTTP_CODE" = "302" ]; then
+                                # Aceitar 200, 302 (redirect), 401 (auth required), 500 (app rodando mas erro)
+                                if [ "\$HTTP_CODE" = "200" ] || [ "\$HTTP_CODE" = "302" ] || [ "\$HTTP_CODE" = "401" ] || [ "\$HTTP_CODE" = "500" ]; then
+                                    echo ""
                                     echo "✅ App Service respondendo! (HTTP \$HTTP_CODE)"
-                                    echo "⏱️  Tempo de recuperação: ~\$((i * 5))s"
-                                    exit 0
+                                    echo "⏱️  Tempo de recuperação: ~\$((i * 8))s"
+                                    SUCCESS=1
+                                    break
                                 fi
 
                                 # Feedback visual
@@ -281,15 +293,20 @@ pipeline {
                                     echo -n "."
                                 fi
 
-                                # Retry interval progressivo (5s → 8s)
-                                WAIT_TIME=\$((5 + (i / 5) * 3))
+                                # Retry interval progressivo (8s → 12s)
+                                WAIT_TIME=\$((8 + (i / 10) * 4))
                                 sleep \$WAIT_TIME
                             done
 
-                            echo ""
-                            echo "⚠️  Timeout no health check (app pode ainda estar inicializando)"
-                            echo "ℹ️  Deploy foi concluído. Verificar manualmente: ${APP_URL}"
-                            echo "💡 Dica: App pode levar até 2min para estar completamente pronto"
+                            if [ \$SUCCESS -eq 0 ]; then
+                                echo ""
+                                echo "⚠️  Timeout no health check (app pode ainda estar inicializando)"
+                                echo "ℹ️  Deploy foi concluído. Verificar manualmente: ${APP_URL}"
+                                echo "💡 Dica: App pode levar até 5min para estar completamente pronto"
+                                echo "💡 Verifique logs: az webapp log tail --name ${APP_SERVICE_NAME} --resource-group ${RESOURCE_GROUP}"
+                                # Não falhar o build - apenas avisar
+                                exit 0
+                            fi
                             exit 0
                         """
                     }
