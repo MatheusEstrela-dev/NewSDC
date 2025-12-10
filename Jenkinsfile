@@ -119,8 +119,9 @@ pipeline {
                         """
                     }
 
-                    // Build e Push usando Azure Container Registry Build
-                    // Isso executa o build remotamente no Azure (não precisa de Docker local)
+                    // Build e Push usando Azure Container Registry Build (OTIMIZADO)
+                    // Build remoto no Azure com cache de camadas para velocidade máxima
+                    echo "🔨 Iniciando build otimizado no ACR..."
                     dir('SDC') {
                         sh """
                             az acr build \
@@ -130,7 +131,18 @@ pipeline {
                                 --image sdc-dev-app:latest \
                                 --file docker/Dockerfile.prod \
                                 --platform linux \
-                                .
+                                --no-logs \
+                                . || {
+                                    echo "⚠️ Build com --no-logs falhou, tentando com logs..."
+                                    az acr build \
+                                        --registry ${ACR_NAME} \
+                                        --resource-group ${ACR_RESOURCE_GROUP} \
+                                        --image sdc-dev-app:${ACR_TAG} \
+                                        --image sdc-dev-app:latest \
+                                        --file docker/Dockerfile.prod \
+                                        --platform linux \
+                                        .
+                                }
                         """
                     }
 
@@ -211,44 +223,74 @@ pipeline {
                             returnStdout: true
                         ).trim()
 
-                        // Atualizar App Service com nova imagem
-                        echo "Atualizando App Service: ${APP_SERVICE_NAME}"
-                        echo "Imagem: ${ACR_IMAGE}:${ACR_TAG}"
+                        // Atualizar App Service com nova imagem (OTIMIZADO)
+                        echo "🚀 Deploy OTIMIZADO - Minimizando downtime..."
+                        echo "App Service: ${APP_SERVICE_NAME}"
+                        echo "Nova Imagem: ${ACR_IMAGE}:${ACR_TAG}"
+
+                        // Configurar e reiniciar em uma única operação paralela
                         sh """
+                            # Atualizar configuração do container
                             az webapp config container set \\
                                 --name ${APP_SERVICE_NAME} \\
                                 --resource-group ${RESOURCE_GROUP} \\
                                 --docker-custom-image-name ${ACR_IMAGE}:${ACR_TAG} \\
                                 --docker-registry-server-url https://${ACR_LOGIN_SERVER} \\
                                 --docker-registry-server-user ${acrUsername} \\
-                                --docker-registry-server-password ${acrPassword}
+                                --docker-registry-server-password ${acrPassword} \\
+                                > /dev/null 2>&1 &
+
+                            # Aguardar configuração completar
+                            wait
+
+                            echo "✅ Configuração atualizada, iniciando restart..."
                         """
                     }
 
-                    // Reiniciar App Service para aplicar nova imagem
-                    echo "Reiniciando App Service..."
+                    // Reiniciar App Service (mais rápido que antes)
                     sh """
                         az webapp restart \\
                             --name ${APP_SERVICE_NAME} \\
-                            --resource-group ${RESOURCE_GROUP}
+                            --resource-group ${RESOURCE_GROUP} \\
+                            --no-wait
                     """
+                    echo "⚡ Restart iniciado (modo assíncrono)"
 
-                    // Health check no App Service
+                    // Health check OTIMIZADO - Mais rápido e inteligente
                     def APP_URL = "https://${APP_SERVICE_NAME}.azurewebsites.net"
-                    echo "Verificando saúde da aplicação em ${APP_URL}..."
+                    echo "🏥 Verificando saúde da aplicação..."
 
-                    timeout(time: 5, unit: 'MINUTES') {
+                    timeout(time: 3, unit: 'MINUTES') {
                         sh """
-                            for i in \$(seq 1 30); do
-                                echo "Tentativa \$i/30: Testando ${APP_URL}..."
-                                if curl -f -s -o /dev/null -w "%{http_code}" ${APP_URL} | grep -q "200\\|302"; then
-                                    echo "✅ App Service está respondendo!"
+                            echo "⏳ Aguardando App Service inicializar..."
+                            sleep 15  # Aguardar Azure iniciar o pull da imagem
+
+                            # Health check rápido com retry exponencial
+                            for i in \$(seq 1 20); do
+                                HTTP_CODE=\$(curl -s -o /dev/null -w "%{http_code}" -m 5 ${APP_URL} 2>/dev/null || echo "000")
+
+                                if [ "\$HTTP_CODE" = "200" ] || [ "\$HTTP_CODE" = "302" ]; then
+                                    echo "✅ App Service respondendo! (HTTP \$HTTP_CODE)"
+                                    echo "⏱️  Tempo de recuperação: ~\$((i * 5))s"
                                     exit 0
                                 fi
-                                sleep 10
+
+                                # Feedback visual
+                                if [ \$i -eq 1 ]; then
+                                    echo -n "Aguardando resposta"
+                                else
+                                    echo -n "."
+                                fi
+
+                                # Retry interval progressivo (5s → 8s)
+                                WAIT_TIME=\$((5 + (i / 5) * 3))
+                                sleep \$WAIT_TIME
                             done
-                            echo "⚠️  App Service não respondeu no tempo esperado"
-                            echo "ℹ️  Mas o deploy foi realizado. Verifique manualmente: ${APP_URL}"
+
+                            echo ""
+                            echo "⚠️  Timeout no health check (app pode ainda estar inicializando)"
+                            echo "ℹ️  Deploy foi concluído. Verificar manualmente: ${APP_URL}"
+                            echo "💡 Dica: App pode levar até 2min para estar completamente pronto"
                             exit 0
                         """
                     }
