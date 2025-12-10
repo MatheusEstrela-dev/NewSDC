@@ -161,12 +161,14 @@ pipeline {
 
 
         stage('Deploy to Azure App Service') {
-            when {
-                anyOf {
-                    branch 'main'
-                    branch 'master'
-                }
-            }
+            // Deploy habilitado para todas as branches
+            // Para restringir apenas a main/master, descomente o bloco 'when' abaixo:
+            // when {
+            //     anyOf {
+            //         branch 'main'
+            //         branch 'master'
+            //     }
+            // }
             steps {
                 echo '🚀 Deploying to Azure App Service AUTOMATICALLY...'
 
