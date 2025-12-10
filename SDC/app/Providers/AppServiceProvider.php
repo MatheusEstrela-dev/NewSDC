@@ -19,6 +19,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Forçar HTTPS em produção (Azure App Service)
+        if (app()->environment('production')) {
+            \URL::forceScheme('https');
+        }
     }
 }
