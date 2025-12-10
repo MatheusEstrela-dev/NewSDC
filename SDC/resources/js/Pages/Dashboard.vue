@@ -5,6 +5,10 @@
     <div class="min-h-screen bg-gray-100 p-8">
       <!-- Banner Ano Fiscal -->
       <div class="relative bg-gradient-to-r from-slate-800 to-slate-900 text-white px-6 py-5 rounded-2xl shadow-lg mb-8 overflow-hidden">
+        <!-- Badge CI/CD Jenkins - Alteração Visual para Teste -->
+        <div class="absolute top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg animate-pulse z-20">
+          🚀 Jenkins CI/CD Ativo - Deploy: {{ new Date().toLocaleString('pt-BR') }}
+        </div>
         <div class="relative z-10">
           <p class="text-xs text-blue-200/80 uppercase font-bold tracking-widest mb-1">
             Painel Gerencial
@@ -12,7 +16,6 @@
           <h2 class="text-3xl font-bold tracking-tight text-white">Exercício {{ currentYear }}</h2>
           <p class="text-slate-400 text-sm mt-1 max-w-md">
             Visão consolidada dos processos de transferência e apoio aos municípios mineiros.
-            <!-- CI/CD Test - Jenkins Pipeline ✅ -->
           </p>
         </div>
       </div>
