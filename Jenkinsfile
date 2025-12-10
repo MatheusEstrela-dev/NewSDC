@@ -247,14 +247,13 @@ pipeline {
                         """
                     }
 
-                    // Reiniciar App Service (mais rápido que antes)
+                    // Reiniciar App Service
                     sh """
                         az webapp restart \\
                             --name ${APP_SERVICE_NAME} \\
-                            --resource-group ${RESOURCE_GROUP} \\
-                            --no-wait
+                            --resource-group ${RESOURCE_GROUP}
                     """
-                    echo "⚡ Restart iniciado (modo assíncrono)"
+                    echo "✅ Restart concluído"
 
                     // Health check OTIMIZADO - Mais rápido e inteligente
                     def APP_URL = "https://${APP_SERVICE_NAME}.azurewebsites.net"
