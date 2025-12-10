@@ -197,10 +197,8 @@ pipeline {
                                 --tenant ${tenantId}
                         """
 
-                        // Fazer login no ACR
-                        sh "az acr login --name ${ACR_NAME}"
-
                         // Obter credenciais do ACR para configurar no App Service
+                        // Nota: az acr login não é necessário aqui (requer Docker socket)
                         def acrUsername = sh(
                             script: "az acr credential show --name ${ACR_NAME} --query username -o tsv",
                             returnStdout: true
@@ -308,4 +306,5 @@ pipeline {
         }
     }
 }
+
 
