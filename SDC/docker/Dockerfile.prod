@@ -91,10 +91,6 @@ RUN if [ -f package.json ]; then \
         (echo "⚠️ npm ci falhou, tentando npm install..." && npm install --no-audit --no-fund); \
     fi
 
-# Copiar script de entrypoint antes do COPY . . para garantir que está disponível
-COPY docker/scripts/entrypoint.prod.sh /start.sh
-RUN chmod +x /start.sh
-
 # Copiar resto do código da aplicação
 COPY . .
 
@@ -117,6 +113,10 @@ RUN apk del nodejs npm || true
 # Criar diretórios
 RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
+
+# Copiar script de entrypoint (agora que o código foi copiado)
+RUN cp /var/www/docker/scripts/entrypoint.prod.sh /start.sh \
+    && chmod +x /start.sh
 
 # Verificar que tudo está no lugar
 RUN ls -la /var/www && \
