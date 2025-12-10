@@ -72,21 +72,103 @@ if [ -n "$REDIS_HOST" ]; then
     log_success "Redis disponível"
 fi
 
-cd /var/www
+# Mudar para o diretório de trabalho
+cd /var/www || {
+    log_error "Não foi possível acessar /var/www"
+    exit 1
+}
+
+# Verificar se composer.json existe (volume montado)
+log_info "Verificando montagem do volume..."
+log_info "Diretório atual: $(pwd)"
+log_info "Conteúdo do diretório: $(ls -la /var/www | head -20)"
+
+if [ ! -f "/var/www/composer.json" ]; then
+    log_warning "composer.json não encontrado. Aguardando montagem do volume..."
+    # Aguardar até 30 segundos pelo composer.json
+    max_wait=30
+    wait_count=0
+    while [ ! -f "/var/www/composer.json" ] && [ $wait_count -lt $max_wait ]; do
+        sleep 1
+        wait_count=$((wait_count+1))
+        if [ $((wait_count % 5)) -eq 0 ]; then
+            log_info "Aguardando... ($wait_count/$max_wait segundos)"
+            log_info "Conteúdo: $(ls -la /var/www 2>/dev/null | head -10 || echo 'Diretório não acessível')"
+        fi
+    done
+    
+    if [ ! -f "/var/www/composer.json" ]; then
+        log_error "composer.json não encontrado após aguardar $max_wait segundos."
+        log_error "Conteúdo de /var/www:"
+        ls -la /var/www 2>/dev/null || echo "Diretório não existe ou não é acessível"
+        log_error "Verifique se o volume está montado corretamente no docker-compose.yml"
+        exit 1
+    fi
+    log_success "composer.json encontrado"
+fi
+
+# Criar .env se não existir
+if [ ! -f "/var/www/.env" ]; then
+    log_info "Arquivo .env não encontrado. Criando a partir do .env.example..."
+    if [ -f "/var/www/.env.example" ]; then
+        cp /var/www/.env.example /var/www/.env
+        log_success ".env criado a partir do .env.example"
+    else
+        log_warning ".env.example não encontrado. Criando .env básico..."
+        cat > /var/www/.env <<EOF
+APP_NAME=SDC
+APP_ENV=local
+APP_KEY=
+APP_DEBUG=true
+APP_URL=http://localhost
+
+LOG_CHANNEL=stack
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=debug
+
+DB_CONNECTION=mysql
+DB_HOST=db
+DB_PORT=3306
+DB_DATABASE=sdc
+DB_USERNAME=sdc
+DB_PASSWORD=secret
+
+CACHE_DRIVER=redis
+SESSION_DRIVER=redis
+QUEUE_CONNECTION=redis
+
+REDIS_HOST=redis
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+MAIL_MAILER=smtp
+MAIL_HOST=mailhog
+MAIL_PORT=1025
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS="noreply@localhost"
+MAIL_FROM_NAME="\${APP_NAME}"
+EOF
+        log_success ".env básico criado"
+    fi
+fi
 
 # Instalar dependências se não existirem
-if [ ! -d "vendor" ] || [ ! -f "vendor/autoload.php" ]; then
+if [ ! -d "/var/www/vendor" ] || [ ! -f "/var/www/vendor/autoload.php" ]; then
     log_info "Instalando dependências do Composer..."
+    cd /var/www
     composer install --no-interaction --prefer-dist
     log_success "Dependências instaladas"
 fi
 
 # Gerar APP_KEY se não existir
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" == "base64:" ]; then
-    if [ -f ".env" ] && grep -q "APP_KEY=base64:" .env; then
+    if [ -f "/var/www/.env" ] && grep -q "APP_KEY=base64:" /var/www/.env; then
         log_success "APP_KEY já configurada"
     else
         log_info "Gerando APP_KEY..."
+        cd /var/www
         php artisan key:generate --force
         log_success "APP_KEY gerada"
     fi
@@ -101,6 +183,7 @@ fi
 
 # Limpar caches de desenvolvimento
 log_info "Limpando caches..."
+cd /var/www
 php artisan config:clear 2>/dev/null || true
 php artisan route:clear 2>/dev/null || true
 php artisan view:clear 2>/dev/null || true
@@ -108,6 +191,7 @@ log_success "Caches limpos"
 
 # Permissões
 log_info "Ajustando permissões..."
+cd /var/www
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 log_success "Permissões ajustadas"

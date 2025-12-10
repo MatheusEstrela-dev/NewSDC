@@ -6,7 +6,7 @@
 # Ou:  docker compose -f docker/docker-compose.yml up -d
 # ============================================================================
 
-name: sdc-dev
+name: sdc
 
 services:
   # ==========================================================================
@@ -19,17 +19,20 @@ services:
       args:
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-    container_name: sdc_app_dev
+    container_name: sdc_app
     hostname: app
     restart: unless-stopped
     working_dir: /var/www
+    labels:
+      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.service=app"
     
     volumes:
       # Código fonte
       - ../:/var/www:cached
       # Volumes nomeados para dependências (performance)
-      - vendor_dev:/var/www/vendor
-      - node_modules_dev:/var/www/node_modules
+      - sdc_vendor:/var/www/vendor
+      - sdc_node_modules:/var/www/node_modules
       # Logs
       - ./logs/php:/var/log/php
     
@@ -106,9 +109,12 @@ services:
   # ==========================================================================
   nginx:
     image: nginx:1.25-alpine
-    container_name: sdc_nginx_dev
+    container_name: sdc_nginx
     hostname: nginx
     restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.service=nginx"
     
     ports:
       - "80:80"
@@ -137,9 +143,12 @@ services:
   # ==========================================================================
   db:
     image: mysql:8.0
-    container_name: sdc_db_dev
+    container_name: sdc_db
     hostname: db
     restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.service=db"
     
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
@@ -149,7 +158,7 @@ services:
       TZ: America/Sao_Paulo
     
     volumes:
-      - db_data_dev:/var/lib/mysql
+      - sdc_db_data:/var/lib/mysql
       - ./mysql/dev.cnf:/etc/mysql/conf.d/custom.cnf:ro
       - ./mysql/init:/docker-entrypoint-initdb.d:ro
     
@@ -177,14 +186,17 @@ services:
   # ==========================================================================
   redis:
     image: redis:7-alpine
-    container_name: sdc_redis_dev
+    container_name: sdc_redis
     hostname: redis
     restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.service=redis"
     
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     
     volumes:
-      - redis_data_dev:/data
+      - sdc_redis_data:/data
     
     ports:
       - "6379:6379"
@@ -204,9 +216,12 @@ services:
   # ==========================================================================
   mailhog:
     image: mailhog/mailhog:latest
-    container_name: sdc_mailhog_dev
+    container_name: sdc_mailhog
     hostname: mailhog
     restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.service=mailhog"
     
     ports:
       - "1025:1025"
@@ -223,11 +238,14 @@ services:
   # ==========================================================================
   phpmyadmin:
     image: phpmyadmin:latest
-    container_name: sdc_phpmyadmin_dev
+    container_name: sdc_phpmyadmin
     hostname: phpmyadmin
     restart: unless-stopped
     profiles:
       - tools
+    labels:
+      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.service=phpmyadmin"
     
     environment:
       PMA_HOST: db
@@ -249,11 +267,14 @@ services:
   # ==========================================================================
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: sdc_redis_commander_dev
+    container_name: sdc_redis_commander
     hostname: redis-commander
     restart: unless-stopped
     profiles:
       - tools
+    labels:
+      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.service=redis-commander"
     
     environment:
       REDIS_HOSTS: local:redis:6379
@@ -272,15 +293,18 @@ services:
   # ==========================================================================
   node:
     image: node:20-alpine
-    container_name: sdc_node_dev
+    container_name: sdc_node
     hostname: node
     restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.service=node"
     
     working_dir: /var/www
     
     volumes:
       - ../:/var/www:cached
-      - node_modules_dev:/var/www/node_modules
+      - sdc_node_modules:/var/www/node_modules
     
     networks:
       - sdc_network
@@ -293,7 +317,7 @@ services:
     ports:
       - "5173:5173"  # Vite dev server
     
-    command: sh -c "npm install && npm run dev"
+    command: sh -c "npm install --legacy-peer-deps --no-audit --prefer-offline || npm install --legacy-peer-deps --no-audit && npm run dev"
     
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:5173"]
@@ -317,12 +341,12 @@ networks:
 # Volumes
 # ==========================================================================
 volumes:
-  db_data_dev:
+  sdc_db_data:
     driver: local
-  redis_data_dev:
+  sdc_redis_data:
     driver: local
-  vendor_dev:
+  sdc_vendor:
     driver: local
-  node_modules_dev:
+  sdc_node_modules:
     driver: local
 
