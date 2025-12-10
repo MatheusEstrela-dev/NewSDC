@@ -71,8 +71,16 @@ fi
 if ! php artisan migrate:status --quiet 2>/dev/null | grep -q "users"; then
     echo "Executando migrations..."
     php artisan migrate --force 2>/dev/null || echo "⚠️  Aviso: Erro ao executar migrations"
+fi
+
+# Sempre verificar/corrigir usuário de teste (garante que existe e está correto)
+echo "Verificando usuário de teste..."
+if php artisan app:create-test-user --fix 2>/dev/null; then
+    echo "✅ Usuário de teste verificado/corrigido"
+else
+    # Se o comando não existir, usar método alternativo
+    echo "Comando app:create-test-user não encontrado, usando método alternativo..."
     
-    # Verificar se usuário existe antes de executar seeder
     USER_EXISTS=$(php artisan tinker --execute="echo \App\Models\User::where('cpf', '12345678900')->exists() ? 'true' : 'false';" 2>/dev/null || echo "false")
     
     if [ "$USER_EXISTS" != "true" ]; then
@@ -85,8 +93,6 @@ if ! php artisan migrate:status --quiet 2>/dev/null | grep -q "users"; then
     else
         echo "✅ Usuário de teste já existe no banco"
     fi
-else
-    echo "✅ Migrations já foram executadas"
 fi
 
 # Limpar caches
