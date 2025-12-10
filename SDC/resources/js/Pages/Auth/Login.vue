@@ -10,10 +10,6 @@
           class="main-logo"
         />
         <div class="system-title">Sistema Integrado de Defesa Civil</div>
-        <!-- Badge CI/CD Visual - Teste Jenkins -->
-        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 16px; border-radius: 8px; font-size: 0.75rem; font-weight: bold; margin-top: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); animation: pulse 2s infinite;">
-          ✅ Jenkins Pipeline Funcionando - Deploy: {{ new Date().toLocaleString('pt-BR') }}
-        </div>
       </header>
 
       <form @submit.prevent="submitLogin" class="login-form">
@@ -137,9 +133,6 @@
 
       <div class="card-footer">
         &copy; 2025 Governo do Estado de Minas Gerais
-        <div style="background: #1f2937; color: #10b981; padding: 8px; border-radius: 6px; margin-top: 8px; font-size: 0.7rem; font-weight: bold; text-align: center; border: 2px solid #10b981;">
-          🚀 CI/CD Automático Ativo | Build: {{ new Date().toLocaleString('pt-BR') }}
-        </div>
       </div>
     </div>
   </div>

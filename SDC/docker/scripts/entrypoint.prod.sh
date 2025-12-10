@@ -54,7 +54,8 @@ if ! grep -q "^APP_KEY=base64:" .env 2>/dev/null || grep -q "^APP_KEY=$" .env 2>
     fi
 fi
 
-# Criar arquivo SQLite se necessário
+# Executar migrations e seeders se necessário
+# Verificar se a tabela users existe (indica se migrations foram executadas)
 if [ "$DB_CONNECTION" = "sqlite" ]; then
     DB_FILE="${DB_DATABASE:-database/database.sqlite}"
     if [ ! -f "$DB_FILE" ]; then
@@ -63,18 +64,29 @@ if [ "$DB_CONNECTION" = "sqlite" ]; then
         touch "$DB_FILE"
         chmod 664 "$DB_FILE"
         echo "Arquivo SQLite criado"
-        
-        # Executar migrations e seeders para criar o usuário de teste
-        echo "Executando migrations..."
-        php artisan migrate --force 2>/dev/null || true
-        
+    fi
+fi
+
+# Verificar se migrations foram executadas (verifica se tabela users existe)
+if ! php artisan migrate:status --quiet 2>/dev/null | grep -q "users"; then
+    echo "Executando migrations..."
+    php artisan migrate --force 2>/dev/null || echo "⚠️  Aviso: Erro ao executar migrations"
+    
+    # Verificar se usuário existe antes de executar seeder
+    USER_EXISTS=$(php artisan tinker --execute="echo \App\Models\User::where('cpf', '12345678900')->exists() ? 'true' : 'false';" 2>/dev/null || echo "false")
+    
+    if [ "$USER_EXISTS" != "true" ]; then
         echo "Executando seeders (criando usuário de teste)..."
-        php artisan db:seed --force --class=DatabaseSeeder 2>/dev/null || true
+        php artisan db:seed --force --class=DatabaseSeeder 2>/dev/null || echo "⚠️  Aviso: Erro ao executar seeders"
         
         echo "✅ Banco de dados inicializado com usuário de teste"
-        echo "   CPF: 12345678900"
+        echo "   CPF: 12345678900 (sem formatação)"
         echo "   Senha: password"
+    else
+        echo "✅ Usuário de teste já existe no banco"
     fi
+else
+    echo "✅ Migrations já foram executadas"
 fi
 
 # Limpar caches
