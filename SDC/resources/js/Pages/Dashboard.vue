@@ -12,6 +12,7 @@
           <h2 class="text-3xl font-bold tracking-tight text-white">Exercício {{ currentYear }}</h2>
           <p class="text-slate-400 text-sm mt-1 max-w-md">
             Visão consolidada dos processos de transferência e apoio aos municípios mineiros.
+            <!-- CI/CD Test - Jenkins Pipeline ✅ -->
           </p>
         </div>
       </div>
