@@ -7,7 +7,8 @@ export default defineConfig({
     plugins: [
         laravel({
             input: 'resources/js/app.js',
-            ssr: 'resources/js/ssr.ts',
+            // SSR desabilitado temporariamente para build de produção
+            // ssr: 'resources/js/ssr.ts',
             refresh: true,
         }),
         vue({
