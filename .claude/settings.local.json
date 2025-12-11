@@ -14,7 +14,9 @@
       "Bash(else echo \"⚠️ template_docker_jenkins_README.md not found\")",
       "Bash(if [ -f \"Doc/JENKINS_PIPELINE_NOTION.md\" ])",
       "Bash(then rm Doc/JENKINS_PIPELINE_NOTION.md)",
-      "Bash(else echo \"⚠️ JENKINS_PIPELINE_NOTION.md not found\")"
+      "Bash(else echo \"⚠️ JENKINS_PIPELINE_NOTION.md not found\")",
+      "Bash(git checkout:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

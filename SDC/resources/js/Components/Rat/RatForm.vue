@@ -1,33 +1,63 @@
 <template>
   <div class="space-y-6 rat-form-content">
-    <!-- Card: Atendimento -->
-    <RatCard title="Atendimento" icon="clock">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <FormField
-          label="Data/Hora do Fato"
-          type="datetime-local"
-          v-model="localData.dadosGerais.data_fato"
-          required
-        />
-        <FormField
-          label="Início da Atividade"
-          type="datetime-local"
-          v-model="localData.dadosGerais.data_inicio_atividade"
-          required
-        />
-        <FormField
-          label="Término da Atividade"
-          type="datetime-local"
-          v-model="localData.dadosGerais.data_termino_atividade"
-        />
+    <!-- Seção: Atendimento -->
+    <div class="rat-section-card">
+      <div class="rat-section-header">
+        <div class="rat-section-icon rat-section-icon-default">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="rat-section-title">Atendimento</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Informações sobre data e horário do fato e atividades</p>
+        </div>
       </div>
-    </RatCard>
 
-    <!-- Card: Natureza e Configurações -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Natureza -->
-      <RatCard title="Natureza" icon="file-text">
-        <div class="space-y-4">
+      <div class="rat-section-content">
+        <div class="rat-grid-3">
+          <FormField
+            label="Data/Hora do Fato"
+            type="datetime-local"
+            v-model="localData.dadosGerais.data_fato"
+            required
+          />
+          <FormField
+            label="Início da Atividade"
+            type="datetime-local"
+            v-model="localData.dadosGerais.data_inicio_atividade"
+            required
+          />
+          <FormField
+            label="Término da Atividade"
+            type="datetime-local"
+            v-model="localData.dadosGerais.data_termino_atividade"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção: Comunicação da Ocorrência -->
+    <RatCommunicationSection
+      v-model="localData.comunicacao"
+    />
+
+    <!-- Seção: Natureza da Ocorrência -->
+    <div class="rat-section-card">
+      <div class="rat-section-header">
+        <div class="rat-section-icon rat-section-icon-success">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="rat-section-title">Natureza da Ocorrência</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Classificação COBRADE e identificação da operação</p>
+        </div>
+      </div>
+
+      <div class="rat-section-content">
+        <div class="rat-grid-2">
           <FormSelect
             label="Classificação COBRADE"
             v-model="localData.dadosGerais.nat_cobrade_id"
@@ -40,10 +70,25 @@
             placeholder="Ex: Operação Chuvas de Verão"
           />
         </div>
-      </RatCard>
+      </div>
+    </div>
 
-      <!-- Configurações -->
-      <RatCard title="Configurações do RAT" icon="settings">
+    <!-- Seção: Configurações do RAT -->
+    <div class="rat-section-card">
+      <div class="rat-section-header">
+        <div class="rat-section-icon rat-section-icon-purple">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="rat-section-title">Configurações do RAT</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Configurações gerais e unidade responsável</p>
+        </div>
+      </div>
+
+      <div class="rat-section-content">
         <div class="space-y-5">
           <!-- Toggle Vistoria -->
           <div class="flex items-center justify-between p-4 rounded-lg bg-slate-950/50 border border-slate-700/50">
@@ -83,8 +128,18 @@
             readonly
           />
         </div>
-      </RatCard>
+      </div>
     </div>
+
+    <!-- Seção: Local do Fato -->
+    <RatLocationSection
+      v-model="localData.local"
+    />
+
+    <!-- Seção: Endereço Detalhado -->
+    <RatAddressSection
+      v-model="localData.endereco"
+    />
 
     <!-- Footer Actions - Sticky dentro do container -->
     <div class="rat-actions-footer">
@@ -117,9 +172,11 @@
 import { ref, watch } from 'vue';
 import ClipboardIcon from '../Icons/ClipboardIcon.vue';
 import CheckCircleIcon from '../Icons/CheckCircleIcon.vue';
-import FormField from '../Pae/FormField.vue';
-import FormSelect from '../Pae/FormSelect.vue';
-import RatCard from './RatCard.vue';
+import FormField from '../Form/FormField.vue';
+import FormSelect from '../Form/FormSelect.vue';
+import RatCommunicationSection from './Sections/RatCommunicationSection.vue';
+import RatLocationSection from './Sections/RatLocationSection.vue';
+import RatAddressSection from './Sections/RatAddressSection.vue';
 
 const props = defineProps({
   rat: {
@@ -128,7 +185,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['save', 'save-draft', 'cancel']);
+const emit = defineEmits(['save', 'save-draft', 'cancel', 'update:tem-vistoria']);
 
 const localData = ref({
   dadosGerais: {
@@ -138,6 +195,30 @@ const localData = ref({
     nat_cobrade_id: props.rat.dadosGerais?.nat_cobrade_id || '',
     nat_nome_operacao: props.rat.dadosGerais?.nat_nome_operacao || '',
     tem_vistoria: props.rat.tem_vistoria || false,
+  },
+  comunicacao: {
+    data_comunicacao: props.rat.comunicacao?.data_comunicacao || '',
+    tipo_solicitacao: props.rat.comunicacao?.tipo_solicitacao || '',
+    telefone_contato: props.rat.comunicacao?.telefone_contato || '',
+    nome_solicitante: props.rat.comunicacao?.nome_solicitante || '',
+  },
+  local: {
+    pais_id: props.rat.local?.pais_id || '1',
+    uf: props.rat.local?.uf || '',
+    municipio_id: props.rat.local?.municipio_id || '',
+  },
+  endereco: {
+    cep: props.rat.endereco?.cep || '',
+    logradouro: props.rat.endereco?.logradouro || '',
+    numero: props.rat.endereco?.numero || '',
+    complemento: props.rat.endereco?.complemento || '',
+    bairro: props.rat.endereco?.bairro || '',
+    km: props.rat.endereco?.km || '',
+    cruzamento: props.rat.endereco?.cruzamento || '',
+    ponto_referencia: props.rat.endereco?.ponto_referencia || '',
+    tipo_localizacao: props.rat.endereco?.tipo_localizacao || '',
+    latitude: props.rat.endereco?.latitude || null,
+    longitude: props.rat.endereco?.longitude || null,
   },
 });
 
@@ -149,6 +230,7 @@ const cobradeOptions = [
 
 function toggleVistoria() {
   localData.value.dadosGerais.tem_vistoria = !localData.value.dadosGerais.tem_vistoria;
+  emit('update:tem-vistoria', localData.value.dadosGerais.tem_vistoria);
 }
 
 watch(

@@ -153,3 +153,4 @@ O entrypoint de produção (`entrypoint.prod.sh`) foi atualizado para:
 **Data**: 10/12/2025
 **Status**: Aguardando execução de migrations/seeders no App Service
 
+

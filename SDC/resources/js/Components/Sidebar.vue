@@ -44,8 +44,8 @@
           Visão Geral
         </NavItem>
         <NavItem
-          href="/rat"
-          :active="false"
+          :href="route('rat.index')"
+          :active="route().current('rat.*')"
           icon="document"
           :collapsed="isCollapsed"
         >

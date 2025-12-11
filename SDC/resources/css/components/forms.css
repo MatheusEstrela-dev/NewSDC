@@ -1,0 +1,204 @@
+/**
+ * Forms CSS - Componentes de Formulário Reutilizáveis
+ * Design System: Dark theme com Tailwind
+ */
+
+/* ============================================
+   Form Base Styles
+   ============================================ */
+
+.form-field {
+  @apply w-full;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-slate-300 mb-2;
+}
+
+/* ============================================
+   Input Fields
+   ============================================ */
+
+.form-input {
+  @apply w-full px-4 py-2.5 rounded-lg bg-slate-900/50 text-slate-200
+    placeholder-slate-500 transition-all duration-200
+    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950;
+}
+
+.form-input-normal {
+  @apply border border-slate-700/50
+    hover:border-slate-600
+    focus:border-blue-500 focus:ring-blue-500/20;
+}
+
+.form-input-filled {
+  @apply border-2 border-emerald-500/60
+    hover:border-emerald-500/80
+    focus:border-emerald-500 focus:ring-emerald-500/20
+    shadow-sm shadow-emerald-500/10;
+}
+
+.form-input-error {
+  @apply border border-red-500/50
+    focus:border-red-500 focus:ring-red-500/20;
+}
+
+.form-input-readonly {
+  @apply bg-slate-900/30 cursor-not-allowed text-slate-400;
+}
+
+.form-input-disabled {
+  @apply bg-slate-900/20 cursor-not-allowed text-slate-500 opacity-60;
+}
+
+/* ============================================
+   Select Fields
+   ============================================ */
+
+.form-select {
+  @apply w-full px-4 py-2.5 pr-10 rounded-lg bg-slate-900/50 text-slate-200
+    transition-all duration-200 appearance-none cursor-pointer
+    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950;
+}
+
+.form-select-normal {
+  @apply border border-slate-700/50
+    hover:border-slate-600
+    focus:border-blue-500 focus:ring-blue-500/20;
+}
+
+.form-select-filled {
+  @apply border-2 border-emerald-500/60
+    hover:border-emerald-500/80
+    focus:border-emerald-500 focus:ring-emerald-500/20
+    shadow-sm shadow-emerald-500/10;
+}
+
+.form-select-error {
+  @apply border border-red-500/50
+    focus:border-red-500 focus:ring-red-500/20;
+}
+
+.form-select-disabled {
+  @apply bg-slate-900/20 cursor-not-allowed text-slate-500 opacity-60;
+}
+
+/* ============================================
+   Error & Hint Messages
+   ============================================ */
+
+.form-error {
+  @apply mt-1.5 text-xs text-red-400 flex items-center gap-1;
+}
+
+.form-hint {
+  @apply mt-1.5 text-xs text-slate-500;
+}
+
+/* ============================================
+   Form Groups & Layout
+   ============================================ */
+
+.form-group {
+  @apply space-y-6;
+}
+
+.form-row {
+  @apply grid grid-cols-1 gap-6;
+}
+
+.form-row-2 {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+}
+
+.form-row-3 {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-6;
+}
+
+.form-row-4 {
+  @apply grid grid-cols-1 md:grid-cols-4 gap-6;
+}
+
+/* ============================================
+   Form Actions (Buttons)
+   ============================================ */
+
+.form-actions {
+  @apply flex items-center justify-end gap-3 pt-6 border-t border-slate-700/50;
+}
+
+.form-button-primary {
+  @apply px-5 py-2.5 rounded-lg text-sm font-medium
+    bg-blue-600 text-white border border-blue-500
+    hover:bg-blue-700 hover:border-blue-600
+    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-950
+    transition-all duration-200;
+}
+
+.form-button-secondary {
+  @apply px-5 py-2.5 rounded-lg text-sm font-medium
+    bg-slate-800 text-slate-300 border border-slate-700
+    hover:bg-slate-700 hover:border-slate-600 hover:text-white
+    focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-950
+    transition-all duration-200;
+}
+
+.form-button-danger {
+  @apply px-5 py-2.5 rounded-lg text-sm font-medium
+    bg-red-600/10 text-red-400 border border-red-500/30
+    hover:bg-red-600/20 hover:border-red-500/50
+    focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-950
+    transition-all duration-200;
+}
+
+.form-button-ghost {
+  @apply px-5 py-2.5 rounded-lg text-sm font-medium
+    text-slate-400 border border-transparent
+    hover:text-white hover:bg-slate-800 hover:border-slate-700
+    transition-all duration-200;
+}
+
+/* ============================================
+   Toggle Switch
+   ============================================ */
+
+.toggle-switch {
+  @apply w-12 h-6 flex items-center rounded-full
+    transition-all duration-200 cursor-pointer
+    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-blue-500;
+}
+
+.toggle-switch-on {
+  @apply bg-blue-600;
+}
+
+.toggle-switch-off {
+  @apply bg-slate-700;
+}
+
+.toggle-switch-handle {
+  @apply w-5 h-5 bg-white rounded-full shadow-md
+    transform transition-transform duration-200;
+}
+
+.toggle-switch-handle-on {
+  @apply translate-x-6;
+}
+
+.toggle-switch-handle-off {
+  @apply translate-x-0.5;
+}
+
+/* ============================================
+   Responsive Adjustments
+   ============================================ */
+
+@media (max-width: 640px) {
+  .form-actions {
+    @apply flex-col-reverse;
+  }
+
+  .form-actions > button {
+    @apply w-full;
+  }
+}

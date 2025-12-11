@@ -127,3 +127,4 @@ Após o deploy, teste:
 **Data**: 10/12/2025  
 **Status**: Correções aplicadas - aguardando deploy
 
+

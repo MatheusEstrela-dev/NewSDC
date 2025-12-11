@@ -233,3 +233,4 @@ O login deve funcionar agora! ✅
 **Data**: 10/12/2025
 **Status**: Aguardando verificação e correção do usuário no banco
 
+

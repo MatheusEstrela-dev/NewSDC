@@ -111,3 +111,4 @@ Se funcionar, o entrypoint automático está funcionando! ✅
 **Data**: 10/12/2025  
 **Status**: Entrypoint atualizado - aguardando próximo deploy ou reinicialização
 
+

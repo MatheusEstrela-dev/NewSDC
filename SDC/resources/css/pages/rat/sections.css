@@ -1,0 +1,178 @@
+/**
+ * RAT Sections CSS - Estilos para seções do formulário RAT
+ * Design System: Dark theme consistente
+ */
+
+/* ============================================
+   Section Cards
+   ============================================ */
+
+.rat-section-card {
+  @apply bg-slate-900/50 border border-slate-700/50 rounded-xl p-6
+    backdrop-blur-sm transition-all duration-200
+    hover:border-slate-600/50;
+}
+
+.rat-section-header {
+  @apply flex items-center gap-3 mb-6 pb-4 border-b border-slate-700/30;
+}
+
+.rat-section-icon {
+  @apply w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0;
+}
+
+.rat-section-icon-default {
+  @apply bg-blue-500/20 text-blue-400;
+}
+
+.rat-section-icon-success {
+  @apply bg-emerald-500/20 text-emerald-400;
+}
+
+.rat-section-icon-warning {
+  @apply bg-amber-500/20 text-amber-400;
+}
+
+.rat-section-icon-danger {
+  @apply bg-red-500/20 text-red-400;
+}
+
+.rat-section-icon-purple {
+  @apply bg-purple-500/20 text-purple-400;
+}
+
+.rat-section-title {
+  @apply text-lg font-semibold text-slate-200;
+}
+
+.rat-section-content {
+  @apply space-y-6;
+}
+
+/* ============================================
+   Location Section Specific
+   ============================================ */
+
+.location-map-button {
+  @apply w-full px-4 py-2.5 rounded-lg
+    bg-emerald-500/10 text-emerald-400 border border-emerald-500/30
+    hover:bg-emerald-500/20 hover:border-emerald-500/50
+    transition-all duration-200 text-sm font-medium
+    flex items-center justify-center gap-2
+    focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-950;
+}
+
+.location-map-icon {
+  @apply w-4 h-4;
+}
+
+.location-coords-info {
+  @apply text-xs text-slate-500 px-4 py-2;
+}
+
+/* ============================================
+   Address Section Specific
+   ============================================ */
+
+.address-cep-loading {
+  @apply text-blue-400 text-xs;
+}
+
+.address-cep-loading svg {
+  @apply animate-spin h-4 w-4;
+}
+
+/* ============================================
+   Communication Section Specific
+   ============================================ */
+
+.communication-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.communication-badge-phone {
+  @apply bg-blue-500/20 text-blue-400;
+}
+
+.communication-badge-emergency {
+  @apply bg-red-500/20 text-red-400;
+}
+
+.communication-badge-app {
+  @apply bg-purple-500/20 text-purple-400;
+}
+
+/* ============================================
+   Grid Layouts
+   ============================================ */
+
+.rat-grid-1 {
+  @apply grid grid-cols-1 gap-6;
+}
+
+.rat-grid-2 {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+}
+
+.rat-grid-3 {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-6;
+}
+
+.rat-grid-4 {
+  @apply grid grid-cols-1 md:grid-cols-4 gap-6;
+}
+
+/* Coluna que ocupa 2/3 do grid de 3 colunas */
+.rat-col-span-2-of-3 {
+  @apply md:col-span-2;
+}
+
+/* Coluna que ocupa 3/4 do grid de 4 colunas */
+.rat-col-span-3-of-4 {
+  @apply md:col-span-3;
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+
+@media (max-width: 768px) {
+  .rat-section-card {
+    @apply p-4;
+  }
+
+  .rat-section-header {
+    @apply flex-col items-start gap-2;
+  }
+
+  .rat-grid-2,
+  .rat-grid-3,
+  .rat-grid-4 {
+    @apply grid-cols-1;
+  }
+}
+
+/* ============================================
+   Dark Theme Enhancements
+   ============================================ */
+
+.rat-section-card:focus-within {
+  @apply border-slate-600/80 ring-2 ring-slate-600/20;
+}
+
+/* Scrollbar customizado para selects longos */
+.rat-section-card select::-webkit-scrollbar {
+  @apply w-2;
+}
+
+.rat-section-card select::-webkit-scrollbar-track {
+  @apply bg-slate-900;
+}
+
+.rat-section-card select::-webkit-scrollbar-thumb {
+  @apply bg-slate-600 rounded;
+}
+
+.rat-section-card select::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-500;
+}

@@ -3,7 +3,7 @@
 # Comandos facilitados para desenvolvimento e produção
 # ============================================================================
 
-.PHONY: help dev prod build up down restart logs shell db-shell redis-shell test migrate fresh seed backup clean
+.PHONY: help dev prod build up down restart logs shell db-shell redis-shell test migrate fresh seed backup clean network-init network-create network-rm network-ls network-inspect
 
 # Cores
 GREEN  := $(shell tput -Txterm setaf 2)
@@ -27,7 +27,7 @@ help: ## Mostra esta ajuda
 # ==========================================
 # Desenvolvimento
 # ==========================================
-dev: ## Inicia ambiente de desenvolvimento
+dev: network-init ## Inicia ambiente de desenvolvimento
 	docker compose -f docker/docker-compose.yml up -d
 	@echo "${GREEN}Ambiente de desenvolvimento iniciado!${RESET}"
 	@echo "App: http://localhost"
@@ -84,6 +84,53 @@ prod-logs: ## Ver logs de produção
 
 prod-scale: ## Scale dos workers (ex: make prod-scale N=5)
 	docker compose -f docker/docker-compose.prod.yml up -d --scale app=$(N) --scale queue=$(N)
+
+# ==========================================
+# Network - Bridge SDC
+# ==========================================
+network-init: ## Inicializa a rede bridge SDC
+	@echo "${YELLOW}Inicializando rede bridge SDC...${RESET}"
+	@if docker network ls | grep -qE "sdc.*sdc_network|sdc_network"; then \
+		echo "${GREEN}✓ Rede bridge SDC já existe${RESET}"; \
+		docker network ls | grep -E "sdc.*sdc_network|sdc_network" | head -1; \
+	else \
+		echo "${YELLOW}Criando rede bridge SDC...${RESET}"; \
+		docker compose -f docker/docker-compose.yml up -d --no-start 2>/dev/null || true; \
+		if docker network ls | grep -qE "sdc.*sdc_network|sdc_network"; then \
+			echo "${GREEN}✓ Rede bridge SDC criada com sucesso${RESET}"; \
+		else \
+			echo "${GREEN}✓ Rede será criada automaticamente ao iniciar os containers${RESET}"; \
+		fi; \
+	fi
+	@echo "${GREEN}Rede bridge SDC inicializada!${RESET}"
+
+network-create: ## Cria a rede bridge SDC manualmente
+	@echo "${YELLOW}Criando rede bridge SDC...${RESET}"
+	docker network create \
+		--driver bridge \
+		--subnet 172.25.0.0/16 \
+		sdc_network 2>/dev/null || \
+	(echo "${YELLOW}Rede já existe ou será criada pelo docker-compose.${RESET}" && \
+	 docker compose -f docker/docker-compose.yml up -d --no-start 2>/dev/null || true)
+	@echo "${GREEN}Rede bridge SDC criada!${RESET}"
+
+network-rm: ## Remove a rede bridge SDC
+	@echo "${YELLOW}Removendo rede bridge SDC...${RESET}"
+	docker network rm sdc_network 2>/dev/null || \
+	(echo "${YELLOW}Rede não existe ou está em uso.${RESET}" && \
+	 docker compose -f docker/docker-compose.yml down 2>/dev/null || true)
+	@echo "${GREEN}Rede bridge SDC removida!${RESET}"
+
+network-ls: ## Lista todas as redes Docker
+	@echo "${GREEN}Redes Docker disponíveis:${RESET}"
+	@docker network ls | grep -E "NETWORK|sdc|bridge" || docker network ls
+
+network-inspect: ## Inspeciona a rede bridge SDC
+	@echo "${GREEN}Informações da rede bridge SDC:${RESET}"
+	@docker network inspect sdc_network 2>/dev/null || \
+	(echo "${YELLOW}Rede não encontrada. Execute 'make network-init' ou 'make dev'.${RESET}" && \
+	 docker network inspect $$(docker compose -f docker/docker-compose.yml config 2>/dev/null | grep -A 5 "networks:" | grep "name:" | head -1 | awk '{print $$2}') 2>/dev/null || \
+	 echo "${YELLOW}Execute 'make dev' para criar a rede automaticamente.${RESET}")
 
 # ==========================================
 # Genéricos

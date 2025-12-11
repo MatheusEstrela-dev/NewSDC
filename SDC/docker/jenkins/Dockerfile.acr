@@ -1,0 +1,165 @@
+# ===== DOCKERFILE JENKINS FOR AZURE CONTAINER REGISTRY =====
+# Versão otimizada para produção no Azure
+# Inclui Azure CLI e todas as ferramentas necessárias
+
+FROM jenkins/jenkins:lts-jdk17
+
+# Informações de build
+LABEL maintainer="SDC DevOps Team"
+LABEL description="Jenkins CI/CD com Docker, Azure CLI e ferramentas completas"
+LABEL version="2.0.0"
+LABEL acr.registry="apidover.azurecr.io"
+LABEL acr.image="sdc-jenkins"
+
+# ===== VARIÁVEIS DE BUILD =====
+ARG DOCKER_GID=999
+ARG AZURE_CLI_VERSION=latest
+ARG NODE_VERSION=20.x
+
+USER root
+
+# ===== INSTALAR DEPENDÊNCIAS BASE =====
+RUN apt-get update && apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release \
+    git \
+    openssh-client \
+    vim \
+    wget \
+    unzip \
+    jq \
+    python3 \
+    python3-pip \
+    make \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# ===== CONFIGURAR SSH =====
+RUN mkdir -p /var/jenkins_home/.ssh && \
+    ssh-keyscan github.com >> /var/jenkins_home/.ssh/known_hosts && \
+    ssh-keyscan gitlab.com >> /var/jenkins_home/.ssh/known_hosts && \
+    ssh-keyscan bitbucket.org >> /var/jenkins_home/.ssh/known_hosts && \
+    chmod 700 /var/jenkins_home/.ssh && \
+    chmod 644 /var/jenkins_home/.ssh/known_hosts
+
+# ===== INSTALAR DOCKER CLI =====
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y docker-ce-cli docker-compose-plugin && \
+    rm -rf /var/lib/apt/lists/*
+
+# ===== INSTALAR DOCKER COMPOSE STANDALONE =====
+RUN curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && \
+    chmod +x /usr/local/bin/docker-compose && \
+    docker-compose --version
+
+# ===== CONFIGURAR GRUPO DOCKER =====
+RUN groupadd -g ${DOCKER_GID} docker || groupmod -g ${DOCKER_GID} docker && \
+    usermod -aG docker jenkins
+
+# ===== INSTALAR NODE.JS E NPM =====
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g npm@latest && \
+    node --version && npm --version
+
+# ===== INSTALAR PHP E COMPOSER =====
+# Adicionar repositório sury.org para PHP 8.2
+RUN curl -fsSL https://packages.sury.org/php/apt.gpg | gpg --dearmor -o /usr/share/keyrings/sury-php-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/sury-php-archive-keyring.gpg] https://packages.sury.org/php/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/sury-php.list > /dev/null && \
+    apt-get update && apt-get install -y \
+    php8.2-cli \
+    php8.2-curl \
+    php8.2-mbstring \
+    php8.2-xml \
+    php8.2-zip \
+    php8.2-mysql \
+    php8.2-gd \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
+    composer --version
+
+# ===== INSTALAR AZURE CLI =====
+# CRÍTICO: Necessário para push de imagens para ACR e deploy no Azure
+COPY install-azure-cli.sh /tmp/install-azure-cli.sh
+RUN chmod +x /tmp/install-azure-cli.sh && \
+    /tmp/install-azure-cli.sh && \
+    rm /tmp/install-azure-cli.sh && \
+    az --version
+
+# ===== INSTALAR KUBECTL (para Azure Kubernetes Service) =====
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
+    kubectl version --client
+
+# ===== INSTALAR HELM (para deploy no AKS) =====
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && \
+    helm version
+
+# ===== PLUGINS JENKINS ESSENCIAIS =====
+RUN jenkins-plugin-cli --plugins \
+    git \
+    workflow-aggregator \
+    docker-workflow \
+    docker-plugin \
+    kubernetes \
+    configuration-as-code \
+    job-dsl \
+    pipeline-stage-view \
+    blueocean \
+    credentials-binding \
+    ssh-agent \
+    github \
+    gitlab-plugin \
+    slack \
+    email-ext \
+    prometheus \
+    timestamper \
+    ws-cleanup \
+    build-timeout \
+    ansicolor \
+    azure-credentials \
+    azure-cli
+
+# ===== CONFIGURAÇÃO JCasC =====
+ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
+ENV CASC_JENKINS_CONFIG=/var/jenkins_home/casc.yaml
+
+# ===== SCRIPTS DE INICIALIZAÇÃO =====
+COPY --chown=jenkins:jenkins init.groovy.d/ /usr/share/jenkins/ref/init.groovy.d/
+COPY --chown=jenkins:jenkins casc.yaml /var/jenkins_home/casc.yaml
+
+# ===== HEALTHCHECK SCRIPT =====
+COPY healthcheck.sh /usr/local/bin/healthcheck.sh
+RUN chmod +x /usr/local/bin/healthcheck.sh
+
+# ===== AJUSTAR PERMISSÕES =====
+RUN chown -R jenkins:jenkins /var/jenkins_home
+
+# ===== JAVA HEAP CONFIGURATION =====
+ENV JAVA_OPTS="-Xms512m -Xmx2g -Djava.awt.headless=true \
+    -Djenkins.install.runSetupWizard=false \
+    -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=false"
+
+# ===== EXPOR PORTAS =====
+EXPOSE 8080 50000
+
+# Voltar para usuário jenkins
+USER jenkins
+
+# Healthcheck
+HEALTHCHECK --interval=60s --timeout=10s --retries=5 --start-period=120s \
+    CMD /usr/local/bin/healthcheck.sh
+
+WORKDIR /var/jenkins_home
+
+# Metadata para ACR
+LABEL org.opencontainers.image.title="SDC Jenkins CI/CD"
+LABEL org.opencontainers.image.description="Jenkins master com Azure CLI para CI/CD no Azure"
+LABEL org.opencontainers.image.vendor="SDC DevOps"
+LABEL org.opencontainers.image.source="https://github.com/your-org/New_SDC"

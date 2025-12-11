@@ -19,6 +19,7 @@
               @save="handleSave"
               @save-draft="handleSaveDraft"
               @cancel="handleCancel"
+              @update:tem-vistoria="handleToggleVistoria"
             />
           </div>
 
@@ -63,7 +64,7 @@
 
 <script setup>
 import { Head } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import '../../css/pages/rat/rat.css';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
@@ -173,12 +174,15 @@ const currentActiveTab = computed(() => {
   return Number(tabValue);
 });
 
+// Estado local para controlar visibilidade da aba Vistoria
+const temVistoria = ref(props.rat?.tem_vistoria || false);
+
 // Configuração das abas
 const tabConfig = computed(() => [
   { id: 1, label: 'Dados Gerais', icon: DocumentTextIcon },
   { id: 2, label: 'Recursos Empregados', icon: TruckIcon, badge: recursos.value.length > 0 ? recursos.value.length : null },
   { id: 3, label: 'Envolvidos', icon: UsersIcon, badge: envolvidos.value.length > 0 ? envolvidos.value.length : null },
-  { id: 4, label: 'Vistoria', icon: ClipboardIcon, hidden: !rat.value.tem_vistoria },
+  { id: 4, label: 'Vistoria', icon: ClipboardIcon, hidden: !temVistoria.value },
   { id: 5, label: 'Histórico', icon: ClockIcon },
 ]);
 
@@ -227,6 +231,10 @@ function handleAddObservation(observation) {
     ...observation,
     created_at: new Date().toISOString(),
   });
+}
+
+function handleToggleVistoria(value) {
+  temVistoria.value = value;
 }
 </script>
 

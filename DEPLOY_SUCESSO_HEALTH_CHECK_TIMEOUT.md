@@ -105,3 +105,4 @@ php artisan app:create-test-user --fix
 
 **Conclusão**: O deploy foi **bem-sucedido**. O timeout do health check é apenas um aviso - a aplicação está funcionando. O próximo deploy terá um health check mais tolerante.
 
+

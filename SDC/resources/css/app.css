@@ -1,3 +1,9 @@
+/* Component Styles - @import deve vir antes de @tailwind */
+@import './components/forms.css';
+
+/* Page Styles */
+@import './pages/rat/sections.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -1,0 +1,125 @@
+# ============================================================================
+# SDC - Jenkins CI/CD para Ambiente de Desenvolvimento
+# Conectado à rede sdc-dev_sdc_network
+# ============================================================================
+# IMPORTANTE: Configure as variáveis de ambiente em .env.jenkins
+# Copie .env.jenkins.example e preencha com suas credenciais
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # JENKINS MASTER (Development)
+  # ==========================================================================
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+      args:
+        DOCKER_GID: 999
+    image: sdc-jenkins:dev
+    container_name: sdc_jenkins_dev
+    hostname: jenkins-dev
+    restart: unless-stopped
+
+    ports:
+      - "8080:8080"   # Interface Web
+      - "50000:50000" # Agentes JNLP
+
+    environment:
+      - TZ=America/Sao_Paulo
+
+      # ===== JAVA HEAP (Desenvolvimento - menos recursos) =====
+      - JAVA_OPTS=-Xms256m -Xmx1g
+          -Djava.awt.headless=true
+          -Djenkins.install.runSetupWizard=false
+          -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=false
+
+      # ===== DOCKER HOST =====
+      # Usar socket direto em dev (mais simples)
+      - DOCKER_HOST=unix:///var/run/docker.sock
+
+      # ===== AZURE ACR CONFIG =====
+      - ACR_NAME=apidover
+      - ACR_LOGIN_SERVER=apidover.azurecr.io
+
+      # ===== CREDENCIAIS AZURE =====
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_ACR_USERNAME=${AZURE_ACR_USERNAME}
+      - AZURE_ACR_PASSWORD=${AZURE_ACR_PASSWORD}
+
+      # ===== JENKINS ADMIN =====
+      - JENKINS_ADMIN_USER=${JENKINS_ADMIN_USER:-admin}
+      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD:-admin123}
+      - JENKINS_URL=${JENKINS_URL:-http://localhost:8080}
+      - JENKINS_ADMIN_EMAIL=${JENKINS_ADMIN_EMAIL:-admin@sdc.local}
+
+      # ===== GIT REPO =====
+      - GIT_REPO_URL=${GIT_REPO_URL}
+
+    volumes:
+      # ===== VOLUME PERSISTENTE =====
+      - jenkins_home_dev:/var/jenkins_home
+
+      # ===== DOCKER SOCKET (Dev only - acesso direto) =====
+      - /var/run/docker.sock:/var/run/docker.sock
+
+      # ===== CACHE (Performance) =====
+      - jenkins_cache_m2:/var/jenkins_home/.m2
+      - jenkins_cache_npm:/var/jenkins_home/.npm
+
+      # ===== WORKSPACE (Compartilhado com SDC) =====
+      - ../:/workspace/sdc:rw
+
+    networks:
+      - sdc_network  # Conectar à rede do SDC
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+    labels:
+      - "com.sdc.component=jenkins"
+      - "com.sdc.environment=development"
+
+# ==========================================================================
+# NETWORKS
+# ==========================================================================
+networks:
+  # Usar rede externa do SDC
+  sdc_network:
+    external: true
+    name: sdc-dev_sdc_network
+
+# ==========================================================================
+# VOLUMES
+# ==========================================================================
+volumes:
+  # Jenkins Home (Dados principais)
+  jenkins_home_dev:
+    driver: local
+    labels:
+      - "com.sdc.volume=jenkins_home_dev"
+      - "com.sdc.backup=required"
+
+  # Cache (Performance)
+  jenkins_cache_m2:
+    driver: local
+
+  jenkins_cache_npm:
+    driver: local
