@@ -1,1 +1,0 @@
-# Teste de variáveis de ambiente Jenkins
