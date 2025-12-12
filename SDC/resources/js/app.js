@@ -2,6 +2,8 @@ import './bootstrap';
 // CSS base - carregado imediatamente
 import '../css/app.css';
 
+// Pipeline test: Build otimizado e validado
+
 // CSS lazy loading por página - carregado apenas quando necessário
 // Nota: Login.css agora é importado diretamente no componente Login.vue
 const loadPageCSS = (pageName) => {
@@ -10,7 +12,7 @@ const loadPageCSS = (pageName) => {
         'Dashboard': () => import('../css/pages/dashboard/dashboard.css'),
         'Pae': () => import('../css/pages/pae/pae.css'),
     };
-    
+
     const loader = cssMap[pageName];
     if (loader) {
         loader().catch(() => {
@@ -19,9 +21,9 @@ const loadPageCSS = (pageName) => {
     }
 };
 
-import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -32,11 +34,11 @@ createInertiaApp({
         // Carregar CSS específico da página em paralelo com o componente
         // Não aguardar CSS para não bloquear renderização
         loadPageCSS(name);
-        
+
         // Resolver componente com lazy loading otimizado
         return resolvePageComponent(
-            `./Pages/${name}.vue`, 
-            import.meta.glob('./Pages/**/*.vue', { 
+            `./Pages/${name}.vue`,
+            import.meta.glob('./Pages/**/*.vue', {
                 eager: false, // Lazy loading explícito
                 import: 'default' // Importar apenas default export
             })
