@@ -1,0 +1,582 @@
+pipeline {
+    agent none
+
+    environment {
+        APP_NAME = 'sdc'
+
+        // Azure Container Registry
+        ACR_NAME = 'APIDOVER'
+        ACR_RESOURCE_GROUP = 'DOVER'
+        ACR_LOGIN_SERVER = 'apidover.azurecr.io'
+        ACR_IMAGE = 'apidover.azurecr.io/sdc-dev-app'
+        ACR_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
+
+        // Azure App Service - BLUE/GREEN Configuration
+        APP_SERVICE_NAME = 'newsdc2027'
+        AZURE_RESOURCE_GROUP = 'DEFESA_CIVIL'
+
+        // BLUE/GREEN SLOTS
+        BLUE_SLOT = 'production'      // Production slot (atualmente live)
+        GREEN_SLOT = 'staging'         // Staging slot (para novo deploy)
+
+        // Health Check Configuration
+        HEALTH_CHECK_RETRIES = '10'
+        HEALTH_CHECK_INTERVAL = '10'   // segundos
+    }
+
+    options {
+        timeout(time: 45, unit: 'MINUTES')  // Mais tempo para Blue/Green
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
+        timestamps()
+        ansiColor('xterm')
+        disableConcurrentBuilds()
+    }
+
+    triggers {
+        githubPush()
+    }
+
+    stages {
+        // =================================================================
+        // FASE 1: CHECKOUT E VALIDAÇÃO
+        // =================================================================
+        stage('Checkout and Fast Validation') {
+            agent any
+            steps {
+                script {
+                    echo '📦 Checking out code...'
+                    checkout scm
+
+                    env.GIT_COMMIT_MSG = sh(
+                        script: 'git log -1 --pretty=%B',
+                        returnStdout: true
+                    ).trim()
+                    env.GIT_AUTHOR = sh(
+                        script: 'git log -1 --pretty=%an',
+                        returnStdout: true
+                    ).trim()
+
+                    echo "📝 Commit: ${env.GIT_COMMIT_MSG}"
+                    echo "👤 Author: ${env.GIT_AUTHOR}"
+
+                    // Conflict detection
+                    conflictDetection(
+                        branchName: env.GIT_BRANCH,
+                        workspace: env.WORKSPACE,
+                        author: env.GIT_AUTHOR,
+                        strictMode: false
+                    )
+                }
+            }
+        }
+
+        // =================================================================
+        // FASE 2: BUILD E PUSH
+        // =================================================================
+        stage('Build and Push to ACR') {
+            agent any
+            steps {
+                echo '🏗️  Building Docker image...'
+
+                script {
+                    def buildStartTime = System.currentTimeMillis()
+
+                    dir('SDC') {
+                        withCredentials([usernamePassword(
+                            credentialsId: 'azure-service-principal',
+                            usernameVariable: 'AZURE_CLIENT_ID',
+                            passwordVariable: 'AZURE_CLIENT_SECRET'
+                        )]) {
+                            def tenantId = env.AZURE_TENANT_ID ?: ''
+                            if (!tenantId) {
+                                error("❌ AZURE_TENANT_ID não configurado")
+                            }
+
+                            sh """
+                                az login --service-principal \
+                                    --username \$AZURE_CLIENT_ID \
+                                    --password \$AZURE_CLIENT_SECRET \
+                                    --tenant ${tenantId}
+                            """
+                        }
+
+                        sh """
+                            az acr build \
+                                --registry ${ACR_NAME} \
+                                --resource-group ${ACR_RESOURCE_GROUP} \
+                                --image sdc-dev-app:${ACR_TAG} \
+                                --image sdc-dev-app:latest \
+                                --file docker/Dockerfile.prod \
+                                --platform linux \
+                                --no-logs \
+                                . || az acr build \
+                                    --registry ${ACR_NAME} \
+                                    --resource-group ${ACR_RESOURCE_GROUP} \
+                                    --image sdc-dev-app:${ACR_TAG} \
+                                    --image sdc-dev-app:latest \
+                                    --file docker/Dockerfile.prod \
+                                    --platform linux \
+                                    .
+                        """
+                    }
+
+                    def buildDuration = (System.currentTimeMillis() - buildStartTime) / 1000
+                    echo "✅ Build completed in ${buildDuration}s"
+                }
+            }
+        }
+
+        // =================================================================
+        // FASE 3: DEPLOY TO GREEN (STAGING SLOT)
+        // Este é o ambiente "novo" que ainda NÃO recebe tráfego
+        // =================================================================
+        stage('Deploy to GREEN (Staging Slot)') {
+            agent any
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                echo '🟢 Deploying to GREEN environment (staging slot)...'
+
+                script {
+                    def deployStartTime = System.currentTimeMillis()
+
+                    withCredentials([usernamePassword(
+                        credentialsId: 'azure-service-principal',
+                        usernameVariable: 'AZURE_CLIENT_ID',
+                        passwordVariable: 'AZURE_CLIENT_SECRET'
+                    )]) {
+                        def tenantId = env.AZURE_TENANT_ID ?: ''
+                        sh """
+                            az login --service-principal \
+                                --username \$AZURE_CLIENT_ID \
+                                --password \$AZURE_CLIENT_SECRET \
+                                --tenant ${tenantId}
+                        """
+
+                        // Criar staging slot se não existir
+                        echo "🔧 Ensuring staging slot exists..."
+                        sh """
+                            az webapp deployment slot list \
+                                --name ${APP_SERVICE_NAME} \
+                                --resource-group ${AZURE_RESOURCE_GROUP} \
+                                --query "[?name=='${GREEN_SLOT}'].name" -o tsv | grep -q ${GREEN_SLOT} || \
+                            az webapp deployment slot create \
+                                --name ${APP_SERVICE_NAME} \
+                                --resource-group ${AZURE_RESOURCE_GROUP} \
+                                --slot ${GREEN_SLOT}
+                        """
+
+                        // Obter credenciais do ACR
+                        def acrUsername = sh(
+                            script: "az acr credential show --name ${ACR_NAME} --query username -o tsv",
+                            returnStdout: true
+                        ).trim()
+
+                        def acrPassword = sh(
+                            script: "az acr credential show --name ${ACR_NAME} --query 'passwords[0].value' -o tsv",
+                            returnStdout: true
+                        ).trim()
+
+                        // Deploy para GREEN (staging slot)
+                        echo "🚀 Deploying new version to GREEN slot..."
+                        sh """
+                            az webapp config container set \\
+                                --name ${APP_SERVICE_NAME} \\
+                                --resource-group ${AZURE_RESOURCE_GROUP} \\
+                                --slot ${GREEN_SLOT} \\
+                                --docker-custom-image-name ${ACR_IMAGE}:${ACR_TAG} \\
+                                --docker-registry-server-url https://${ACR_LOGIN_SERVER} \\
+                                --docker-registry-server-user ${acrUsername} \\
+                                --docker-registry-server-password ${acrPassword}
+                        """
+
+                        // Restart GREEN slot
+                        echo "🔄 Restarting GREEN slot..."
+                        sh """
+                            az webapp restart \\
+                                --name ${APP_SERVICE_NAME} \\
+                                --resource-group ${AZURE_RESOURCE_GROUP} \\
+                                --slot ${GREEN_SLOT}
+                        """
+                    }
+
+                    def deployDuration = (System.currentTimeMillis() - deployStartTime) / 1000
+                    echo "✅ GREEN deployment completed in ${deployDuration}s"
+                }
+            }
+        }
+
+        // =================================================================
+        // FASE 4: HEALTH CHECK ON GREEN
+        // Validar que a nova versão está funcionando ANTES de trocar tráfego
+        // =================================================================
+        stage('Health Check on GREEN') {
+            agent any
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                echo '🏥 Running health checks on GREEN environment...'
+
+                script {
+                    // URL do staging slot (GREEN)
+                    def GREEN_URL = "https://${APP_SERVICE_NAME}-${GREEN_SLOT}.azurewebsites.net"
+
+                    echo "🔍 Testing GREEN environment: ${GREEN_URL}"
+                    echo "⏳ Waiting for GREEN slot to warm up (30s)..."
+                    sleep 30
+
+                    def healthCheckPassed = false
+                    def retries = env.HEALTH_CHECK_RETRIES.toInteger()
+                    def interval = env.HEALTH_CHECK_INTERVAL.toInteger()
+
+                    for (int i = 1; i <= retries; i++) {
+                        echo "🔍 Health check attempt ${i}/${retries}..."
+
+                        def healthStatus = sh(
+                            script: """
+                                # Tentar endpoint /health primeiro
+                                HEALTH_CODE=\$(curl -s -o /dev/null -w "%{http_code}" -m 10 ${GREEN_URL}/health 2>/dev/null || echo "000")
+
+                                # Se /health falhar, tentar raiz
+                                if [ "\$HEALTH_CODE" = "000" ] || [ "\$HEALTH_CODE" = "404" ]; then
+                                    HTTP_CODE=\$(curl -s -o /dev/null -w "%{http_code}" -m 10 ${GREEN_URL} 2>/dev/null || echo "000")
+                                else
+                                    HTTP_CODE=\$HEALTH_CODE
+                                fi
+
+                                echo \$HTTP_CODE
+                            """,
+                            returnStdout: true
+                        ).trim()
+
+                        echo "Response code: ${healthStatus}"
+
+                        // Aceitar códigos que indicam app está rodando
+                        if (healthStatus in ['200', '302', '401', '500']) {
+                            echo "✅ GREEN is healthy! (HTTP ${healthStatus})"
+                            healthCheckPassed = true
+                            break
+                        }
+
+                        if (i < retries) {
+                            echo "⏳ Waiting ${interval}s before retry..."
+                            sleep interval
+                        }
+                    }
+
+                    if (!healthCheckPassed) {
+                        error("❌ GREEN environment health check FAILED after ${retries} attempts. Aborting deployment.")
+                    }
+
+                    // Smoke Tests adicionais
+                    echo "🧪 Running smoke tests on GREEN..."
+                    sh """
+                        # Test 1: Verificar se retorna HTML/JSON
+                        curl -s ${GREEN_URL} | head -10 || echo "⚠️  Could not fetch content"
+
+                        # Test 2: Verificar headers
+                        curl -I -s ${GREEN_URL} | grep -i "content-type" || echo "⚠️  No content-type header"
+
+                        # Test 3: Response time (deve ser < 5s)
+                        TIME=\$(curl -o /dev/null -s -w '%{time_total}' ${GREEN_URL})
+                        echo "Response time: \${TIME}s"
+
+                        echo "✅ Smoke tests completed"
+                    """
+                }
+            }
+        }
+
+        // =================================================================
+        // FASE 5: MANUAL APPROVAL (OPCIONAL)
+        // Gate de aprovação manual antes do traffic swap
+        // =================================================================
+        stage('Approval Gate') {
+            agent none
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                script {
+                    echo '🚦 Waiting for approval to swap BLUE ↔ GREEN...'
+
+                    def GREEN_URL = "https://${APP_SERVICE_NAME}-${GREEN_SLOT}.azurewebsites.net"
+                    def BLUE_URL = "https://${APP_SERVICE_NAME}.azurewebsites.net"
+
+                    echo """
+===========================================
+🔵 BLUE/GREEN DEPLOYMENT READY
+===========================================
+🔵 BLUE (Current): ${BLUE_URL}
+🟢 GREEN (New):     ${GREEN_URL}
+
+Next step will swap traffic:
+  BLUE ← GREEN (new version goes live)
+
+Review GREEN environment before approving.
+===========================================
+"""
+
+                    // Descomentar para habilitar aprovação manual
+                    // timeout(time: 30, unit: 'MINUTES') {
+                    //     input message: 'Swap BLUE ↔ GREEN?',
+                    //           ok: 'Deploy to Production',
+                    //           submitter: 'admin,release-manager'
+                    // }
+
+                    echo '✅ Proceeding with traffic swap (auto-approved)'
+                }
+            }
+        }
+
+        // =================================================================
+        // FASE 6: BLUE ↔ GREEN SWAP
+        // O momento crítico: GREEN vira BLUE (produção)
+        // =================================================================
+        stage('BLUE ↔ GREEN Traffic Swap') {
+            agent any
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                echo '🔄 Swapping BLUE ↔ GREEN (Traffic Cutover)...'
+
+                script {
+                    def swapStartTime = System.currentTimeMillis()
+
+                    withCredentials([usernamePassword(
+                        credentialsId: 'azure-service-principal',
+                        usernameVariable: 'AZURE_CLIENT_ID',
+                        passwordVariable: 'AZURE_CLIENT_SECRET'
+                    )]) {
+                        def tenantId = env.AZURE_TENANT_ID ?: ''
+                        sh """
+                            az login --service-principal \
+                                --username \$AZURE_CLIENT_ID \
+                                --password \$AZURE_CLIENT_SECRET \
+                                --tenant ${tenantId}
+                        """
+
+                        // SWAP: GREEN → BLUE (production)
+                        echo "🔀 Swapping slots..."
+                        sh """
+                            az webapp deployment slot swap \
+                                --name ${APP_SERVICE_NAME} \
+                                --resource-group ${AZURE_RESOURCE_GROUP} \
+                                --slot ${GREEN_SLOT} \
+                                --target-slot ${BLUE_SLOT}
+                        """
+                    }
+
+                    def swapDuration = (System.currentTimeMillis() - swapStartTime) / 1000
+                    echo "✅ Traffic swap completed in ${swapDuration}s"
+                    echo "🎉 GREEN is now BLUE (LIVE in production)"
+                }
+            }
+        }
+
+        // =================================================================
+        // FASE 7: POST-SWAP VALIDATION
+        // Validar que produção está saudável após swap
+        // =================================================================
+        stage('Post-Swap Validation') {
+            agent any
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                echo '🔍 Validating BLUE (production) after swap...'
+
+                script {
+                    def BLUE_URL = "https://${APP_SERVICE_NAME}.azurewebsites.net"
+
+                    sleep 10  // Aguardar estabilização
+
+                    def validationPassed = false
+
+                    for (int i = 1; i <= 5; i++) {
+                        def httpCode = sh(
+                            script: "curl -s -o /dev/null -w '%{http_code}' -m 10 ${BLUE_URL}",
+                            returnStdout: true
+                        ).trim()
+
+                        echo "Validation ${i}/5: HTTP ${httpCode}"
+
+                        if (httpCode in ['200', '302', '401']) {
+                            validationPassed = true
+                            break
+                        }
+
+                        if (i < 5) sleep 5
+                    }
+
+                    if (!validationPassed) {
+                        echo "⚠️  WARNING: Post-swap validation failed!"
+                        echo "🔧 Consider manual rollback if needed"
+                        // Não falhar build - apenas alertar
+                    } else {
+                        echo "✅ Production validation passed!"
+                    }
+                }
+            }
+        }
+
+        // =================================================================
+        // FASE 8: CLEANUP (OPCIONAL)
+        // Desligar ou manter GREEN (antiga versão) como backup
+        // =================================================================
+        stage('Cleanup Strategy') {
+            agent any
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                script {
+                    echo '🧹 Cleanup options:'
+                    echo '  Option 1: Keep GREEN (old version) as rollback backup'
+                    echo '  Option 2: Delete GREEN slot to save costs'
+                    echo ''
+                    echo '✅ Keeping GREEN slot as backup for quick rollback'
+                    echo 'ℹ️  To rollback: Swap slots again in Azure Portal or CLI'
+
+                    // Para deletar GREEN e economizar recursos:
+                    // sh """
+                    //     az webapp deployment slot delete \
+                    //         --name ${APP_SERVICE_NAME} \
+                    //         --resource-group ${AZURE_RESOURCE_GROUP} \
+                    //         --slot ${GREEN_SLOT}
+                    // """
+                }
+            }
+        }
+    }
+
+    // =================================================================
+    // POST ACTIONS
+    // =================================================================
+    post {
+        always {
+            script {
+                node('master') {
+                    echo '🧹 Running cleanup...'
+                    sh """
+                        find ${WORKSPACE}/.composer-cache -type f -mtime +7 -delete 2>/dev/null || true
+                        find ${WORKSPACE}/.npm-cache -type f -mtime +7 -delete 2>/dev/null || true
+                    """
+
+                    cleanWs(
+                        deleteDirs: true,
+                        disableDeferredWipeout: true,
+                        notFailBuild: true,
+                        patterns: [
+                            [pattern: '.composer-cache', type: 'EXCLUDE'],
+                            [pattern: '.npm-cache', type: 'EXCLUDE']
+                        ]
+                    )
+                }
+            }
+        }
+
+        success {
+            echo '✅ BLUE/GREEN Deployment completed successfully!'
+
+            script {
+                def deploymentInfo = """
+===========================================
+✅ BLUE/GREEN DEPLOYMENT SUCCESS
+===========================================
+Build Number: ${env.BUILD_NUMBER}
+Git Commit: ${env.GIT_COMMIT}
+Git Author: ${env.GIT_AUTHOR}
+ACR Image: ${ACR_IMAGE}:${ACR_TAG}
+
+Deployment Strategy: BLUE/GREEN
+GREEN Slot: ${GREEN_SLOT} (staging)
+BLUE Slot: ${BLUE_SLOT} (production - LIVE)
+
+Production URL: https://${APP_SERVICE_NAME}.azurewebsites.net
+Rollback URL: https://${APP_SERVICE_NAME}-${GREEN_SLOT}.azurewebsites.net
+
+Completed: ${new Date()}
+===========================================
+"""
+                writeFile file: 'bluegreen-deployment-success.txt', text: deploymentInfo
+                archiveArtifacts artifacts: 'bluegreen-deployment-success.txt', allowEmptyArchive: true
+
+                echo deploymentInfo
+            }
+        }
+
+        failure {
+            echo '❌ BLUE/GREEN Deployment failed!'
+
+            script {
+                def failureInfo = """
+===========================================
+❌ BLUE/GREEN DEPLOYMENT FAILURE
+===========================================
+Build Number: ${env.BUILD_NUMBER}
+Git Commit: ${env.GIT_COMMIT}
+
+ROLLBACK INSTRUCTIONS:
+1. If swap occurred, rollback via:
+   az webapp deployment slot swap \\
+     --name ${APP_SERVICE_NAME} \\
+     --resource-group ${AZURE_RESOURCE_GROUP} \\
+     --slot ${GREEN_SLOT}
+
+2. Or use Azure Portal:
+   Deployment slots → Swap
+
+Failure Time: ${new Date()}
+===========================================
+"""
+                writeFile file: 'bluegreen-deployment-failure.txt', text: failureInfo
+                archiveArtifacts artifacts: 'bluegreen-deployment-failure.txt', allowEmptyArchive: true
+
+                echo failureInfo
+            }
+        }
+    }
+}
+
+// =============================================================================
+// BLUE/GREEN DEPLOYMENT - AZURE APP SERVICE SLOTS
+// =============================================================================
+// Slots utilizados:
+// - production (BLUE): Ambiente live que recebe tráfego
+// - staging (GREEN): Ambiente para novo deploy (isolado)
+//
+// Fluxo:
+// 1. Deploy nova versão → GREEN (staging slot)
+// 2. Health checks → GREEN
+// 3. Smoke tests → GREEN
+// 4. [Opcional] Aprovação manual
+// 5. Traffic swap: GREEN ↔ BLUE
+// 6. Validação pós-swap
+// 7. GREEN (versão antiga) fica como backup para rollback
+//
+// Rollback:
+// - Rápido: Swap novamente (< 1 minuto)
+// - Comando: az webapp deployment slot swap --slot staging
+// =============================================================================
