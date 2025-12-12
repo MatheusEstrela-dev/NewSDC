@@ -60,6 +60,8 @@ pipeline {
                     echo "📝 Commit: ${env.GIT_COMMIT_MSG}"
                     echo "👤 Author: ${env.GIT_AUTHOR}"
                     echo "🏷️  ACR Tag: ${env.ACR_TAG}"
+                    echo "🌿 Branch: ${env.GIT_BRANCH}"
+                    echo "🔍 Branch Name (parsed): ${env.GIT_BRANCH?.tokenize('/')?.last()}"
 
                     // MELHORIA 3: Conflict detection inline (shared library requer configuração)
                     echo '🔍 Running conflict detection...'
@@ -239,12 +241,13 @@ pipeline {
         // =================================================================
         stage('Deploy to Azure App Service') {
             agent any
-            when {
-                anyOf {
-                    branch 'main'
-                    branch 'master'
-                }
-            }
+            // TEMPORÁRIO: Removida condição when para debug
+            // when {
+            //     anyOf {
+            //         branch 'main'
+            //         branch 'master'
+            //     }
+            // }
             steps {
                 echo '🚀 Deploying to Azure App Service AUTOMATICALLY'
 
