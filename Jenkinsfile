@@ -358,15 +358,23 @@ pipeline {
             script {
                 echo '🧹 Running cleanup tasks...'
 
-                node('master') {
-                    // Limpar cache antigo
+                // Limpar cache antigo (se workspace existir)
+                try {
                     sh """
-                        find ${WORKSPACE}/.composer-cache -type f -mtime +7 -delete 2>/dev/null || true
-                        find ${WORKSPACE}/.npm-cache -type f -mtime +7 -delete 2>/dev/null || true
+                        if [ -d "${WORKSPACE}/.composer-cache" ]; then
+                            find ${WORKSPACE}/.composer-cache -type f -mtime +7 -delete 2>/dev/null || true
+                        fi
+                        if [ -d "${WORKSPACE}/.npm-cache" ]; then
+                            find ${WORKSPACE}/.npm-cache -type f -mtime +7 -delete 2>/dev/null || true
+                        fi
                     """
+                } catch (Exception e) {
+                    echo "⚠️  Cache cleanup skipped: ${e.message}"
+                }
 
-                    // MELHORIA 9: Workspace cleanup (mantendo caches)
-                    echo 'Cleaning workspace (preserving caches)...'
+                // MELHORIA 9: Workspace cleanup (mantendo caches)
+                echo 'Cleaning workspace (preserving caches)...'
+                try {
                     cleanWs(
                         deleteDirs: true,
                         disableDeferredWipeout: true,
@@ -376,6 +384,8 @@ pipeline {
                             [pattern: '.npm-cache', type: 'EXCLUDE']
                         ]
                     )
+                } catch (Exception e) {
+                    echo "⚠️  Workspace cleanup skipped: ${e.message}"
                 }
             }
         }
