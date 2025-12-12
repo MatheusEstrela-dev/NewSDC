@@ -61,14 +61,23 @@ pipeline {
                     echo "👤 Author: ${env.GIT_AUTHOR}"
                     echo "🏷️  ACR Tag: ${env.ACR_TAG}"
 
-                    // MELHORIA 3: Usar shared library para DRY
+                    // MELHORIA 3: Conflict detection inline (shared library requer configuração)
                     echo '🔍 Running conflict detection...'
-                    conflictDetection(
-                        branchName: env.GIT_BRANCH,
-                        workspace: env.WORKSPACE,
-                        author: env.GIT_AUTHOR,
-                        strictMode: false
-                    )
+                    try {
+                        sh 'git fetch origin'
+
+                        def localCommit = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+                        def remoteCommit = sh(script: "git rev-parse origin/\${GIT_BRANCH##*/}", returnStdout: true).trim()
+
+                        if (localCommit != remoteCommit) {
+                            echo "⚠️  New commits detected on remote"
+                            // Could add merge conflict check here
+                        } else {
+                            echo "✅ Branch synchronized with remote"
+                        }
+                    } catch (Exception e) {
+                        echo "⚠️  Conflict detection skipped: ${e.message}"
+                    }
                 }
             }
         }
@@ -395,15 +404,13 @@ pipeline {
         }
 
         success {
-            echo '✅ Pipeline completed successfully!'
-
             script {
-                // MELHORIA 10: Archive build metadata
+                // MELHORIA 10: Build info (apenas echo - writeFile requer node context)
                 def acrTag = env.ACR_TAG ?: 'unknown'
                 def gitCommitMsg = env.GIT_COMMIT_MSG ?: 'N/A'
                 def gitAuthor = env.GIT_AUTHOR ?: 'N/A'
 
-                def buildInfo = """
+                echo """
 ===========================================
 ✅ BUILD SUCCESS
 ===========================================
@@ -416,10 +423,6 @@ ACR Image: ${env.ACR_IMAGE}:${acrTag}
 Build Time: ${new Date()}
 ===========================================
 """
-                writeFile file: 'build-success.txt', text: buildInfo
-                archiveArtifacts artifacts: 'build-success.txt', allowEmptyArchive: true
-
-                echo buildInfo
             }
 
             // Placeholder para notificações
@@ -427,15 +430,13 @@ Build Time: ${new Date()}
         }
 
         failure {
-            echo '❌ Pipeline failed!'
-
             script {
-                // MELHORIA 11: Melhor relatório de falhas
+                // MELHORIA 11: Failure info (apenas echo - writeFile requer node context)
                 def acrTag = env.ACR_TAG ?: 'unknown'
                 def gitCommitMsg = env.GIT_COMMIT_MSG ?: 'N/A'
                 def gitAuthor = env.GIT_AUTHOR ?: 'N/A'
 
-                def buildInfo = """
+                echo """
 ===========================================
 ❌ BUILD FAILURE
 ===========================================
@@ -448,10 +449,6 @@ ACR Image: ${env.ACR_IMAGE}:${acrTag}
 Failure Time: ${new Date()}
 ===========================================
 """
-                writeFile file: 'build-failure.txt', text: buildInfo
-                archiveArtifacts artifacts: 'build-failure.txt', allowEmptyArchive: true
-
-                echo buildInfo
             }
 
             // Placeholder para notificações
