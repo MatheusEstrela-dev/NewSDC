@@ -11,7 +11,7 @@ pipeline {
         ACR_RESOURCE_GROUP = 'DOVER'
         ACR_LOGIN_SERVER = 'apidover.azurecr.io'
         ACR_IMAGE = 'apidover.azurecr.io/sdc-dev-app'
-        ACR_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
+        // ACR_TAG será definido dinamicamente após checkout
 
         // Azure App Service
         APP_SERVICE_NAME = 'newsdc2027'
@@ -44,6 +44,9 @@ pipeline {
                     // Checkout
                     checkout scm
 
+                    // Definir ACR_TAG dinamicamente após checkout
+                    env.ACR_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
+
                     // Informações do commit
                     env.GIT_COMMIT_MSG = sh(
                         script: 'git log -1 --pretty=%B',
@@ -56,6 +59,7 @@ pipeline {
 
                     echo "📝 Commit: ${env.GIT_COMMIT_MSG}"
                     echo "👤 Author: ${env.GIT_AUTHOR}"
+                    echo "🏷️  ACR Tag: ${env.ACR_TAG}"
 
                     // MELHORIA 3: Usar shared library para DRY
                     echo '🔍 Running conflict detection...'
@@ -395,16 +399,20 @@ pipeline {
 
             script {
                 // MELHORIA 10: Archive build metadata
+                def acrTag = env.ACR_TAG ?: 'unknown'
+                def gitCommitMsg = env.GIT_COMMIT_MSG ?: 'N/A'
+                def gitAuthor = env.GIT_AUTHOR ?: 'N/A'
+
                 def buildInfo = """
 ===========================================
 ✅ BUILD SUCCESS
 ===========================================
 Build Number: ${env.BUILD_NUMBER}
-Git Commit: ${env.GIT_COMMIT}
-Git Branch: ${env.GIT_BRANCH}
-Git Author: ${env.GIT_AUTHOR}
-Commit Message: ${env.GIT_COMMIT_MSG}
-ACR Image: ${ACR_IMAGE}:${ACR_TAG}
+Git Commit: ${env.GIT_COMMIT ?: 'N/A'}
+Git Branch: ${env.GIT_BRANCH ?: 'N/A'}
+Git Author: ${gitAuthor}
+Commit Message: ${gitCommitMsg}
+ACR Image: ${env.ACR_IMAGE}:${acrTag}
 Build Time: ${new Date()}
 ===========================================
 """
@@ -423,16 +431,20 @@ Build Time: ${new Date()}
 
             script {
                 // MELHORIA 11: Melhor relatório de falhas
+                def acrTag = env.ACR_TAG ?: 'unknown'
+                def gitCommitMsg = env.GIT_COMMIT_MSG ?: 'N/A'
+                def gitAuthor = env.GIT_AUTHOR ?: 'N/A'
+
                 def buildInfo = """
 ===========================================
 ❌ BUILD FAILURE
 ===========================================
 Build Number: ${env.BUILD_NUMBER}
-Git Commit: ${env.GIT_COMMIT}
-Git Branch: ${env.GIT_BRANCH}
-Git Author: ${env.GIT_AUTHOR}
-Commit Message: ${env.GIT_COMMIT_MSG}
-ACR Image: ${ACR_IMAGE}:${ACR_TAG}
+Git Commit: ${env.GIT_COMMIT ?: 'N/A'}
+Git Branch: ${env.GIT_BRANCH ?: 'N/A'}
+Git Author: ${gitAuthor}
+Commit Message: ${gitCommitMsg}
+ACR Image: ${env.ACR_IMAGE}:${acrTag}
 Failure Time: ${new Date()}
 ===========================================
 """
