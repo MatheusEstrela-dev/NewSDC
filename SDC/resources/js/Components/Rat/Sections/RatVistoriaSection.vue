@@ -416,6 +416,7 @@ const patologiasOptions = [
   { value: 'nao_estruturais', label: 'Patologia em Elementos Não Estruturais' },
 ];
 
+// Watch para emitir mudanças do localData para o pai
 watch(
   localData,
   (newValue) => {
@@ -424,11 +425,19 @@ watch(
   { deep: true }
 );
 
+// Watch para sincronizar props.modelValue com localData, evitando loops infinitos
 watch(
   () => props.modelValue,
   (newValue) => {
     if (newValue) {
-      Object.assign(localData.value, newValue);
+      // Compara valores para evitar atualizações desnecessárias
+      const currentStr = JSON.stringify(localData.value);
+      const newStr = JSON.stringify(newValue);
+
+      // Só atualiza se houver diferença real
+      if (currentStr !== newStr) {
+        Object.assign(localData.value, newValue);
+      }
     }
   },
   { deep: true }

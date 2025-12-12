@@ -447,6 +447,7 @@ const removerAgente = (index) => {
   }
 };
 
+// Watch para emitir mudanças do localData para o pai
 watch(
   localData,
   (newValue) => {
@@ -455,11 +456,19 @@ watch(
   { deep: true }
 );
 
+// Watch para sincronizar props.modelValue com localData, evitando loops infinitos
 watch(
   () => props.modelValue,
   (newValue) => {
     if (newValue) {
-      localData.value = { ...localData.value, ...newValue };
+      // Compara valores para evitar atualizações desnecessárias
+      const currentStr = JSON.stringify(localData.value);
+      const newStr = JSON.stringify({ ...localData.value, ...newValue });
+
+      // Só atualiza se houver diferença real
+      if (currentStr !== newStr) {
+        localData.value = { ...localData.value, ...newValue };
+      }
     }
   },
   { deep: true }

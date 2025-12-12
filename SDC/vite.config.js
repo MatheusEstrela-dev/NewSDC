@@ -1,7 +1,7 @@
-import { defineConfig } from 'vite';
-import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
+import laravel from 'laravel-vite-plugin';
 import path from 'path';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
     plugins: [
@@ -53,13 +53,21 @@ export default defineConfig({
         minify: 'esbuild',
         // Chunk size warnings
         chunkSizeWarningLimit: 1000,
-        // Source maps apenas em dev
+        // Source maps desabilitados em produção para melhor performance
         sourcemap: false,
         // Otimizar assets
         assetsInlineLimit: 4096, // Inline assets < 4kb
         // Otimizar para carregamento paralelo
         cssCodeSplit: true, // Separar CSS por chunk
         reportCompressedSize: false, // Desabilitar para builds mais rápidos
+        // Otimizações adicionais para produção
+        target: 'es2015', // Suporte a navegadores modernos
+        terserOptions: {
+            compress: {
+                drop_console: false, // Manter console em dev, remover em prod se necessário
+                drop_debugger: true,
+            },
+        },
     },
     // Otimizações de dependências
     optimizeDeps: {
