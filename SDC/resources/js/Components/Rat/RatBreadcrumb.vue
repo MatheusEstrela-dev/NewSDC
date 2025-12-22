@@ -12,14 +12,19 @@
         Início
       </Link>
       <ChevronRightIcon class="w-4 h-4 mx-2 text-slate-600" />
-      <span class="text-slate-400">RAT</span>
+      <Link 
+        :href="route('rat.index')" 
+        class="text-slate-400 hover:text-blue-400 transition-colors"
+      >
+        RAT
+      </Link>
       <ChevronRightIcon class="w-4 h-4 mx-2 text-slate-600" />
-      <span class="text-white font-medium">Novo RAT</span>
+      <span class="text-white font-medium">{{ isEdit ? 'Editar RAT' : 'Novo RAT' }}</span>
     </nav>
 
     <!-- Back Button -->
     <Link
-      :href="route('dashboard')"
+      :href="route('rat.index')"
       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 hover:border-slate-600 transition-all duration-200"
     >
       <ArrowLeftIcon class="w-4 h-4" />
@@ -30,7 +35,14 @@
 
 <script setup>
 import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import ChevronRightIcon from '../Icons/ChevronRightIcon.vue';
 import ArrowLeftIcon from '../Icons/ArrowLeftIcon.vue';
+
+const page = usePage();
+const isEdit = computed(() => {
+  return page.props.rat?.id !== null && page.props.rat?.id !== undefined;
+});
 </script>
 

@@ -1,0 +1,13 @@
+/* Filter Molecule Styles */
+.molecule-filter-section {
+  @apply mb-6;
+}
+
+.molecule-filter-field {
+  @apply w-full;
+}
+
+.molecule-filter-actions {
+  @apply flex items-end gap-2;
+}
+

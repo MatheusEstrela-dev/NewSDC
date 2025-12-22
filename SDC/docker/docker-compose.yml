@@ -6,7 +6,7 @@
 # Ou:  docker compose -f docker/docker-compose.yml up -d
 # ============================================================================
 
-name: sdc
+name: newsdc
 
 services:
   # ==========================================================================
@@ -19,20 +19,20 @@ services:
       args:
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-    container_name: sdc_app
+    container_name: newsdc_app
     hostname: app
     restart: unless-stopped
     working_dir: /var/www
     labels:
-      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=app"
     
     volumes:
       # Código fonte
       - ../:/var/www:cached
       # Volumes nomeados para dependências (performance)
-      - sdc_vendor:/var/www/vendor
-      - sdc_node_modules:/var/www/node_modules
+      - newsdc_vendor:/var/www/vendor
+      - newsdc_node_modules:/var/www/node_modules
       # Logs
       - ./logs/php:/var/log/php
     
@@ -85,8 +85,8 @@ services:
     command: php artisan serve --host=0.0.0.0 --port=8000
     
     ports:
-      - "8000:8000"
-      - "9000:9000"
+      - "8001:8000"
+      - "9001:9000"
     
     deploy:
       resources:
@@ -109,16 +109,16 @@ services:
   # ==========================================================================
   nginx:
     image: nginx:1.25-alpine
-    container_name: sdc_nginx
+    container_name: newsdc_nginx
     hostname: nginx
     restart: unless-stopped
     labels:
-      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=nginx"
     
     ports:
-      - "80:80"
-      - "443:443"
+      - "8082:80"
+      - "8443:443"
     
     volumes:
       - ../:/var/www:ro
@@ -143,11 +143,11 @@ services:
   # ==========================================================================
   db:
     image: mysql:8.0
-    container_name: sdc_db
+    container_name: newsdc_db
     hostname: db
     restart: unless-stopped
     labels:
-      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=db"
     
     environment:
@@ -158,12 +158,12 @@ services:
       TZ: America/Sao_Paulo
     
     volumes:
-      - sdc_db_data:/var/lib/mysql
+      - newsdc_db_data:/var/lib/mysql
       - ./mysql/dev.cnf:/etc/mysql/conf.d/custom.cnf:ro
       - ./mysql/init:/docker-entrypoint-initdb.d:ro
     
     ports:
-      - "3306:3306"
+      - "3307:3306"
     
     networks:
       - sdc_network
@@ -186,20 +186,20 @@ services:
   # ==========================================================================
   redis:
     image: redis:7-alpine
-    container_name: sdc_redis
+    container_name: newsdc_redis
     hostname: redis
     restart: unless-stopped
     labels:
-      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=redis"
     
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     
     volumes:
-      - sdc_redis_data:/data
+      - newsdc_redis_data:/data
     
     ports:
-      - "6379:6379"
+      - "6380:6379"
     
     networks:
       - sdc_network
@@ -216,16 +216,16 @@ services:
   # ==========================================================================
   mailhog:
     image: mailhog/mailhog:latest
-    container_name: sdc_mailhog
+    container_name: newsdc_mailhog
     hostname: mailhog
     restart: unless-stopped
     labels:
-      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=mailhog"
     
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "1026:1025"
+      - "8026:8025"
     
     networks:
       - sdc_network
@@ -238,13 +238,13 @@ services:
   # ==========================================================================
   phpmyadmin:
     image: phpmyadmin:latest
-    container_name: sdc_phpmyadmin
+    container_name: newsdc_phpmyadmin
     hostname: phpmyadmin
     restart: unless-stopped
     profiles:
       - tools
     labels:
-      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=phpmyadmin"
     
     environment:
@@ -254,7 +254,7 @@ services:
       UPLOAD_LIMIT: 100M
     
     ports:
-      - "8080:80"
+      - "8083:80"
     
     networks:
       - sdc_network
@@ -267,20 +267,20 @@ services:
   # ==========================================================================
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: sdc_redis_commander
+    container_name: newsdc_redis_commander
     hostname: redis-commander
     restart: unless-stopped
     profiles:
       - tools
     labels:
-      - "com.docker.compose.project=sdc"
+      - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=redis-commander"
     
     environment:
       REDIS_HOSTS: local:redis:6379
     
     ports:
-      - "8081:8081"
+      - "8084:8081"
     
     networks:
       - sdc_network
@@ -290,41 +290,42 @@ services:
 
   # ==========================================================================
   # Node.js (Runtime JavaScript tradicional)
+  # COMENTADO: Vite será executado no host, não no container
   # ==========================================================================
-  node:
-    image: node:20-alpine
-    container_name: sdc_node
-    hostname: node
-    restart: unless-stopped
-    labels:
-      - "com.docker.compose.project=sdc"
-      - "com.docker.compose.service=node"
-    
-    working_dir: /var/www
-    
-    volumes:
-      - ../:/var/www:cached
-      - sdc_node_modules:/var/www/node_modules
-    
-    networks:
-      - sdc_network
-    
-    environment:
-      NODE_ENV: development
-      VITE_HOST: 0.0.0.0
-      VITE_PORT: 5173
-    
-    ports:
-      - "5173:5173"  # Vite dev server
-    
-    command: sh -c "npm install --legacy-peer-deps --no-audit --prefer-offline || npm install --legacy-peer-deps --no-audit && npm run dev"
-    
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5173"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+  # node:
+  #   image: node:20-alpine
+  #   container_name: newsdc_node
+  #   hostname: node
+  #   restart: unless-stopped
+  #   labels:
+  #     - "com.docker.compose.project=newsdc"
+  #     - "com.docker.compose.service=node"
+  #   
+  #   working_dir: /var/www
+  #   
+  #   volumes:
+  #     - ../:/var/www:cached
+  #     - newsdc_node_modules:/var/www/node_modules
+  #   
+  #   networks:
+  #     - sdc_network
+  #   
+  #   environment:
+  #     NODE_ENV: development
+  #     VITE_HOST: 0.0.0.0
+  #     VITE_PORT: 5175
+  #   
+  #   ports:
+  #     - "5175:5175"  # Vite dev server
+  #   
+  #   command: sh -c "rm -rf node_modules/.vite 2>/dev/null || true && npm ci --legacy-peer-deps --no-audit || (rm -rf node_modules package-lock.json && npm install --legacy-peer-deps --no-audit) && npm run dev"
+  #   
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-q", "--spider", "http://localhost:5175"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
 
 # ==========================================================================
 # Networks
@@ -335,18 +336,18 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 172.25.0.0/16
+        - subnet: 172.26.0.0/16
 
 # ==========================================================================
 # Volumes
 # ==========================================================================
 volumes:
-  sdc_db_data:
+  newsdc_db_data:
     driver: local
-  sdc_redis_data:
+  newsdc_redis_data:
     driver: local
-  sdc_vendor:
+  newsdc_vendor:
     driver: local
-  sdc_node_modules:
+  newsdc_node_modules:
     driver: local
 

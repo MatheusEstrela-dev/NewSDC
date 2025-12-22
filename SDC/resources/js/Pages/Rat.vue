@@ -56,6 +56,16 @@
               @add-observation="handleAddObservation"
             />
           </div>
+
+          <!-- Aba 6: Anexos -->
+          <div v-else-if="Number(activeTab) === 6">
+            <RatAttachments
+              :anexos="anexos"
+              @add="handleAddAnexo"
+              @remove="handleRemoveAnexo"
+              @update="handleUpdateAnexos"
+            />
+          </div>
         </template>
       </RatTabs>
     </div>
@@ -71,6 +81,7 @@ import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import ClipboardIcon from '@/Components/Icons/ClipboardIcon.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import PaperClipIcon from '@/Components/Icons/PaperClipIcon.vue';
 import RatBreadcrumb from '@/Components/Rat/RatBreadcrumb.vue';
 import RatForm from '@/Components/Rat/RatForm.vue';
 import RatHeader from '@/Components/Rat/RatHeader.vue';
@@ -78,6 +89,7 @@ import RatHistory from '@/Components/Rat/RatHistory.vue';
 import RatInspection from '@/Components/Rat/RatInspection.vue';
 import RatInvolved from '@/Components/Rat/RatInvolved.vue';
 import RatResources from '@/Components/Rat/RatResources.vue';
+import RatAttachments from '@/Components/Rat/RatAttachments.vue';
 import RatTabs from '@/Components/Rat/RatTabs.vue';
 import { useRat } from '@/composables/useRat';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -104,6 +116,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  anexos: {
+    type: Array,
+    default: () => [],
+  },
   lastUpdate: {
     type: String,
     default: null,
@@ -111,12 +127,23 @@ const props = defineProps({
 });
 
 // Usa composable com dados do Inertia
+const initialTab = (() => {
+  try {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    const n = Number(tab);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  } catch {
+    return 1;
+  }
+})();
+
 const {
   rat: ratState,
   recursos: recursosState,
   envolvidos: envolvidosState,
   vistoria: vistoriaState,
   historyEvents: historyEventsState,
+  anexos: anexosState,
   tabs,
   saveRat,
   saveDraft,
@@ -127,7 +154,8 @@ const {
   envolvidos: props.envolvidos,
   vistoria: props.vistoria,
   historyEvents: props.historyEvents,
-  activeTab: 1,
+  anexos: props.anexos,
+  activeTab: initialTab,
 });
 
 // Usa dados do Inertia ou do composable
@@ -166,6 +194,13 @@ const historyEvents = computed(() => {
   return historyEventsState.value || [];
 });
 
+const anexos = computed(() => {
+  if (props.anexos && Array.isArray(props.anexos) && props.anexos.length > 0) {
+    return props.anexos;
+  }
+  return anexosState.value || [];
+});
+
 const currentActiveTab = computed(() => {
   const tabValue = tabs.activeTab;
   if (typeof tabValue === 'object' && tabValue !== null && 'value' in tabValue) {
@@ -178,13 +213,17 @@ const currentActiveTab = computed(() => {
 const temVistoria = ref(props.rat?.tem_vistoria || false);
 
 // Configuração das abas
-const tabConfig = computed(() => [
-  { id: 1, label: 'Dados Gerais', icon: DocumentTextIcon },
-  { id: 2, label: 'Recursos Empregados', icon: TruckIcon, badge: recursos.value.length > 0 ? recursos.value.length : null },
-  { id: 3, label: 'Envolvidos', icon: UsersIcon, badge: envolvidos.value.length > 0 ? envolvidos.value.length : null },
-  { id: 4, label: 'Vistoria', icon: ClipboardIcon, hidden: !temVistoria.value },
-  { id: 5, label: 'Histórico', icon: ClockIcon },
-]);
+const tabConfig = computed(() => {
+  const tabs = [
+    { id: 1, label: 'Dados Gerais', icon: DocumentTextIcon },
+    { id: 2, label: 'Recursos Empregados', icon: TruckIcon, badge: recursos.value?.length > 0 ? recursos.value.length : null },
+    { id: 3, label: 'Envolvidos', icon: UsersIcon, badge: envolvidos.value?.length > 0 ? envolvidos.value.length : null },
+    { id: 4, label: 'Vistoria', icon: ClipboardIcon, hidden: !temVistoria.value },
+    { id: 5, label: 'Histórico', icon: ClockIcon },
+    { id: 6, label: 'Anexos', icon: PaperClipIcon, badge: (anexos.value && Array.isArray(anexos.value) && anexos.value.length > 0) ? anexos.value.length : null },
+  ];
+  return tabs;
+});
 
 // Handlers
 function handleSave(data) {
@@ -231,6 +270,27 @@ function handleAddObservation(observation) {
     ...observation,
     created_at: new Date().toISOString(),
   });
+}
+
+function handleAddAnexo(anexo) {
+  if (!anexosState.value) {
+    anexosState.value = [];
+  }
+  anexosState.value.push(anexo);
+}
+
+function handleRemoveAnexo(id) {
+  if (!anexosState.value) return;
+  const index = anexosState.value.findIndex(a => a.id === id);
+  if (index > -1) {
+    anexosState.value.splice(index, 1);
+  }
+}
+
+function handleUpdateAnexos(updatedAnexos) {
+  if (Array.isArray(updatedAnexos)) {
+    anexosState.value = [...updatedAnexos];
+  }
 }
 
 function handleToggleVistoria(value) {

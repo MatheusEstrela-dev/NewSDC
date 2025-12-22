@@ -1,0 +1,25 @@
+/* Badge Atom Styles */
+.atom-badge {
+  @apply inline-flex items-center font-medium rounded-full;
+}
+
+.atom-badge-info {
+  @apply bg-cyan-500/20 text-cyan-400;
+}
+
+.atom-badge-success {
+  @apply bg-emerald-500/20 text-emerald-400;
+}
+
+.atom-badge-warning {
+  @apply bg-amber-500/20 text-amber-400;
+}
+
+.atom-badge-danger {
+  @apply bg-red-500/20 text-red-400;
+}
+
+.atom-badge-default {
+  @apply bg-slate-500/20 text-slate-400;
+}
+

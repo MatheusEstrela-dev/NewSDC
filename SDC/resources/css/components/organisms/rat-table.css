@@ -1,0 +1,25 @@
+/* Rat Table Organism Styles */
+.organism-rat-table {
+  @apply w-full;
+}
+
+.organism-rat-table table {
+  @apply w-full;
+}
+
+.organism-rat-table thead {
+  @apply bg-slate-900/50;
+}
+
+.organism-rat-table tbody tr {
+  @apply border-b border-slate-700/50 transition-colors duration-150;
+}
+
+.organism-rat-table tbody tr:hover {
+  @apply bg-slate-800/30;
+}
+
+.organism-rat-table tbody tr.striped {
+  @apply bg-slate-900/20;
+}
+

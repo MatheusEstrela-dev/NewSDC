@@ -49,6 +49,9 @@ export function useRat(initialData = {}) {
     },
   ]);
 
+  // Anexos
+  const anexos = ref(initialData.anexos || []);
+
   /**
    * Salva o RAT
    */
@@ -135,6 +138,26 @@ export function useRat(initialData = {}) {
     });
   }
 
+  /**
+   * Adiciona anexo
+   */
+  function addAnexo(anexo) {
+    anexos.value.push({
+      id: Date.now(),
+      ...anexo,
+    });
+  }
+
+  /**
+   * Remove anexo
+   */
+  function removeAnexo(id) {
+    const index = anexos.value.findIndex(a => a.id === id);
+    if (index > -1) {
+      anexos.value.splice(index, 1);
+    }
+  }
+
   return {
     // State
     rat,
@@ -142,6 +165,7 @@ export function useRat(initialData = {}) {
     envolvidos,
     vistoria,
     historyEvents,
+    anexos,
 
     // Composables
     tabs,
@@ -157,6 +181,8 @@ export function useRat(initialData = {}) {
     removeEnvolvido,
     saveVistoria,
     addObservation,
+    addAnexo,
+    removeAnexo,
   };
 }
 

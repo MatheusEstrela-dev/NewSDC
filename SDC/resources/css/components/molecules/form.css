@@ -1,0 +1,22 @@
+/* Form Molecule Styles */
+.molecule-form-field {
+  @apply w-full;
+}
+
+.molecule-form-field label {
+  @apply block mb-1.5 text-sm font-medium text-slate-300;
+}
+
+.molecule-form-field label.required::after {
+  content: '*';
+  @apply text-red-400 ml-1;
+}
+
+.molecule-form-field .error-message {
+  @apply mt-1 text-xs text-red-400;
+}
+
+.molecule-form-field .hint-message {
+  @apply mt-1 text-xs text-slate-500;
+}
+
