@@ -1,11 +1,15 @@
 <template>
-  <td :class="cellClasses">
+  <td v-bind="attrs" :class="[cellClasses, attrs.class]">
     <slot />
   </td>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, useAttrs } from 'vue';
+
+defineOptions({ inheritAttrs: false });
+
+const attrs = useAttrs();
 
 const props = defineProps({
   align: {

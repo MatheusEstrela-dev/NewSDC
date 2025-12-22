@@ -1,6 +1,6 @@
 <template>
-  <th :class="headerClasses" @click="handleSort">
-    <div class="flex items-center gap-2">
+  <th v-bind="attrs" :class="[headerClasses, attrs.class]" @click="handleSort">
+    <div :class="wrapperClasses">
       <slot />
       <span v-if="sortable" class="flex flex-col">
         <svg 
@@ -25,7 +25,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, useAttrs } from 'vue';
+
+defineOptions({ inheritAttrs: false });
+
+const attrs = useAttrs();
 
 const props = defineProps({
   align: {
@@ -58,6 +62,19 @@ const alignClasses = {
   center: 'text-center',
   right: 'text-right',
 };
+
+const justifyClasses = {
+  left: 'justify-start',
+  center: 'justify-center',
+  right: 'justify-end',
+};
+
+const wrapperClasses = computed(() => {
+  return [
+    'w-full flex items-center gap-2',
+    justifyClasses[props.align],
+  ].join(' ');
+});
 
 const headerClasses = computed(() => {
   const base = 'px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider bg-slate-900/50';

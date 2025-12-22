@@ -52,7 +52,15 @@
           RAT
         </NavItem>
         <NavItem
-          :href="route('pae.index')"
+          :href="route('demandas.index')"
+          :active="route().current('demandas.*')"
+          icon="checkbadge"
+          :collapsed="isCollapsed"
+        >
+          DEMANDAS
+        </NavItem>
+        <NavItem
+          :href="route('pae.protocolos.index')"
           :active="route().current('pae.*')"
           icon="document"
           :collapsed="isCollapsed"

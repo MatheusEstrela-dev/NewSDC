@@ -23,15 +23,15 @@
     </div>
     
     <div v-else class="overflow-x-auto">
-      <table class="w-full">
+      <table class="w-full table-fixed">
         <TableHeaderRow>
-          <TableHeader>Número RAT</TableHeader>
-          <TableHeader>Data/Hora</TableHeader>
-          <TableHeader align="center">Ano</TableHeader>
-          <TableHeader align="center">Status</TableHeader>
-          <TableHeader>Município</TableHeader>
-          <TableHeader>Criado por</TableHeader>
-          <TableHeader align="right">Ações</TableHeader>
+          <TableHeader class="w-48 whitespace-nowrap">Número RAT</TableHeader>
+          <TableHeader class="w-44 whitespace-nowrap">Data/Hora</TableHeader>
+          <TableHeader align="center" class="w-24 whitespace-nowrap">Ano</TableHeader>
+          <TableHeader align="center" class="w-36 whitespace-nowrap">Status</TableHeader>
+          <TableHeader class="w-56 whitespace-nowrap">Município</TableHeader>
+          <TableHeader class="w-44 whitespace-nowrap">Criado por</TableHeader>
+          <TableHeader align="right" class="w-28 whitespace-nowrap">Ações</TableHeader>
         </TableHeaderRow>
         <tbody>
           <RatTableRow

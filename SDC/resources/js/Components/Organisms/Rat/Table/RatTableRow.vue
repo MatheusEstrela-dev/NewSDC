@@ -1,6 +1,6 @@
 <template>
   <TableDataRow>
-    <TableCell>
+    <TableCell class="w-48 whitespace-nowrap">
       <Link
         :href="route('rat.show', rat.id)"
         class="text-blue-400 hover:text-blue-300 font-medium transition-colors"
@@ -8,24 +8,24 @@
         {{ rat.protocolo || `RAT #${rat.id}` }}
       </Link>
     </TableCell>
-    <TableCell>
+    <TableCell class="w-44 whitespace-nowrap">
       {{ formatDateTime(rat.created_at) }}
     </TableCell>
-    <TableCell align="center">
+    <TableCell align="center" class="w-24 whitespace-nowrap">
       <Badge variant="info" size="sm">
         {{ getYear(rat.created_at) }}
       </Badge>
     </TableCell>
-    <TableCell align="center">
+    <TableCell align="center" class="w-36 whitespace-nowrap">
       <StatusBadge :status="rat.status" />
     </TableCell>
-    <TableCell>
+    <TableCell class="w-56 whitespace-nowrap">
       {{ rat.local?.municipio || 'Não informado' }}
     </TableCell>
-    <TableCell>
+    <TableCell class="w-44 whitespace-nowrap">
       {{ rat.criado_por || 'Sistema' }}
     </TableCell>
-    <TableCell align="right">
+    <TableCell align="right" class="w-28 whitespace-nowrap">
       <TableActions
         @view="handleView"
         @edit="handleEdit"

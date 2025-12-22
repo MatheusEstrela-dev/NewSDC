@@ -27,6 +27,16 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
+    // DEMANDAS - Listagem (placeholder)
+    Route::get('/demandas', function () {
+        return Inertia::render('DemandasIndex');
+    })->name('demandas.index');
+
+    // PAE - Protocolos (listagem)
+    Route::get('/pae/protocolo', function () {
+        return Inertia::render('PaeProtocolosIndex');
+    })->name('pae.protocolos.index');
+
     Route::get('/pae', function () {
         return Inertia::render('Pae');
     })->name('pae.index');
