@@ -61,7 +61,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   modelValue: {
@@ -112,7 +112,8 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'blur']);
 
-const fieldId = computed(() => `field-${Math.random().toString(36).substr(2, 9)}`);
+// ID estável gerado uma única vez na inicialização do componente
+const fieldId = ref(`field-${Math.random().toString(36).substring(2, 11)}`);
 
 // Computed para verificar se o campo está preenchido
 const isFilled = computed(() => {

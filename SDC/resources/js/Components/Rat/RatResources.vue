@@ -43,6 +43,7 @@ const localRecurso = ref(
     : props.recursos
 );
 
+// Watch para emitir mudanças do localRecurso para o pai
 watch(
   localRecurso,
   (newValue) => {
@@ -51,11 +52,19 @@ watch(
   { deep: true }
 );
 
+// Watch para sincronizar props.recursos com localRecurso, evitando loops infinitos
 watch(
   () => props.recursos,
   (newValue) => {
     if (newValue && !Array.isArray(newValue)) {
-      localRecurso.value = { ...newValue };
+      // Compara valores para evitar atualizações desnecessárias
+      const currentStr = JSON.stringify(localRecurso.value);
+      const newStr = JSON.stringify(newValue);
+
+      // Só atualiza se houver diferença real
+      if (currentStr !== newStr) {
+        localRecurso.value = { ...newValue };
+      }
     }
   },
   { deep: true }
