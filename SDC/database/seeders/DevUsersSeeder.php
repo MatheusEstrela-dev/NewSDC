@@ -11,6 +11,13 @@ class DevUsersSeeder extends Seeder
 {
     public function run(): void
     {
+        // Segurança: este seeder é exclusivo para DEV/local.
+        // Não deve ser executado em produção.
+        if (!app()->environment('local')) {
+            $this->command?->warn('DevUsersSeeder ignorado: permitido apenas em ambiente local.');
+            return;
+        }
+
         $guard = config('auth.defaults.guard', 'web');
 
         // Garantir que as roles existam (se ainda não rodou o seeder principal)
