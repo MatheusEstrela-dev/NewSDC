@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Pae;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empreendimento;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -63,6 +64,11 @@ use Illuminate\Http\Request;
  */
 class EmpreendimentoController extends Controller
 {
+    public function __construct()
+    {
+        $this->authorizeResource(Empreendimento::class, 'empreendimento');
+    }
+
     /**
      * @OA\Get(
      *     path="/api/v1/pae/empreendimentos",
@@ -297,6 +303,22 @@ class EmpreendimentoController extends Controller
     {
         // TODO: Implementar lógica real
         return response()->json(null, 204);
+    }
+
+    /**
+     * Aprova um empreendimento (ação customizada)
+     */
+    public function approve(Request $request, int $empreendimento): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Empreendimento aprovado com sucesso',
+            'data' => [
+                'id' => $empreendimento,
+                'approved_by' => $request->user()?->id,
+                'approved_at' => now()->toIso8601String(),
+            ],
+        ], 200);
     }
 }
 

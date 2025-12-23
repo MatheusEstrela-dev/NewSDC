@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Rat;
 
 use App\Http\Controllers\Controller;
+use App\Models\Protocolo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -26,6 +27,16 @@ use Illuminate\Http\Request;
  */
 class ProtocoloController extends Controller
 {
+    public function __construct()
+    {
+        $this->authorizeResource(Protocolo::class, 'protocolo');
+    }
+
+    public function __construct()
+    {
+        $this->authorizeResource(\App\Models\Rat\Protocolo::class, 'protocolo');
+    }
+
     /**
      * @OA\Get(
      *     path="/api/v1/rat/protocolos",
@@ -120,6 +131,32 @@ class ProtocoloController extends Controller
             'data' => $request->all(),
             'message' => 'Protocolo criado com sucesso',
         ], 201);
+    }
+
+    public function update(Request $request, int $id): JsonResponse
+    {
+        return response()->json([
+            'data' => array_merge(['id' => $id], $request->all()),
+            'message' => 'Protocolo atualizado com sucesso',
+        ], 200);
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        return response()->json(null, 204);
+    }
+
+    public function finalize(Request $request, int $protocolo): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Protocolo finalizado com sucesso',
+            'data' => [
+                'id' => $protocolo,
+                'finalized_by' => $request->user()?->id,
+                'finalized_at' => now()->toIso8601String(),
+            ],
+        ], 200);
     }
 }
 

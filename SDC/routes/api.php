@@ -2,15 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\Pae\EmpreendimentoController;
-use App\Http\Controllers\Api\V1\Rat\ProtocoloController;
-use App\Http\Controllers\Api\V1\Integracao\IntegracaoController;
-use App\Http\Controllers\Api\V1\PowerBI\TokenController;
-use App\Http\Controllers\Api\V1\BI\EntradaController;
-use App\Http\Controllers\Api\V1\Webhook\WebhookController;
-use App\Http\Controllers\Api\V1\Integration\DynamicIntegrationController;
 use App\Http\Controllers\Api\HealthCheckController;
-use App\Http\Controllers\Api\LogViewerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -63,103 +55,13 @@ Route::prefix('v1/auth')->group(function () {
     Route::get('/me', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'me'])->middleware('auth:sanctum');
 });
 
-// API v1
+// API v1 - modularizada (TASK4) + apiResource (TASK3)
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
-    
-    // Módulo PAE
-    Route::prefix('pae')->name('api.v1.pae.')->group(function () {
-        Route::apiResource('empreendimentos', EmpreendimentoController::class);
-    });
-    
-    // Módulo RAT
-    Route::prefix('rat')->name('api.v1.rat.')->group(function () {
-        Route::apiResource('protocolos', ProtocoloController::class);
-    });
-    
-    // Integração entre Módulos
-    Route::prefix('integracao')->name('api.v1.integracao.')->group(function () {
-        Route::get('rat/{ratId}/pae', [IntegracaoController::class, 'getPaeByRat'])->name('rat.pae');
-        Route::get('pae/{paeId}/rat', [IntegracaoController::class, 'getRatByPae'])->name('pae.rat');
-    });
-    
-    // BI - Dados de Entrada
-    Route::prefix('bi')->name('api.v1.bi.')->group(function () {
-        Route::get('entrada', [EntradaController::class, 'index'])->name('entrada.index');
-        Route::get('entrada/{id}', [EntradaController::class, 'show'])->name('entrada.show');
-    });
-    
-    // Power BI - Gerenciamento de Tokens para múltiplas APIs
-    Route::prefix('power-bi')->name('api.v1.power-bi.')->group(function () {
-        Route::post('token', [TokenController::class, 'generateToken'])->name('token.generate');
-        Route::get('token/{token}', [TokenController::class, 'validateToken'])->name('token.validate');
-        Route::get('tokens', [TokenController::class, 'listTokens'])->name('tokens.list');
-
-        // Proxy para acessar APIs externas
-        Route::match(['get', 'post', 'put', 'patch', 'delete'], 'proxy/{api}/{path}', [\App\Http\Controllers\Api\V1\PowerBI\ProxyController::class, 'proxy'])
-            ->where('path', '.*')
-            ->name('proxy');
-    });
-
-    // Webhooks - Sistema de alta performance para 100k+ usuários
-    Route::prefix('webhooks')->name('api.v1.webhooks.')->group(function () {
-
-        // Receber webhooks (com rate limiting tier webhook)
-        Route::post('receive', [WebhookController::class, 'receive'])
-            ->middleware('throttle:webhook')
-            ->name('receive')
-            ->withoutMiddleware('auth:sanctum'); // Permite webhooks externos
-
-        // Enviar webhooks (assíncrono via filas)
-        Route::post('send', [WebhookController::class, 'send'])
-            ->middleware('throttle:enterprise')
-            ->name('send');
-
-        // Enviar webhooks síncronos (apenas para testes/emergências)
-        Route::post('send-sync', [WebhookController::class, 'sendSync'])
-            ->middleware('throttle:premium')
-            ->name('send-sync');
-    });
-
-    // Hub de Integração Dinâmica - Plug-and-Play com sistemas externos
-    Route::prefix('integration')->name('api.v1.integration.')->group(function () {
-
-        // Executar integração (síncrona ou assíncrona)
-        Route::post('execute', [DynamicIntegrationController::class, 'execute'])
-            ->middleware('throttle:enterprise')
-            ->name('execute');
-
-        // Verificar status de integração assíncrona
-        Route::get('status/{integrationId}', [DynamicIntegrationController::class, 'status'])
-            ->middleware('throttle:default')
-            ->name('status');
-
-        // Listar templates pré-configurados
-        Route::get('templates', [DynamicIntegrationController::class, 'templates'])
-            ->middleware('throttle:default')
-            ->name('templates');
-    });
-
-    // Log Viewer - Visualização de logs em tempo real
-    Route::prefix('logs')->name('api.v1.logs.')->group(function () {
-
-        // Logs recentes
-        Route::get('recent', [LogViewerController::class, 'recent'])
-            ->middleware('throttle:default')
-            ->name('recent');
-
-        // Métricas de logs
-        Route::get('metrics', [LogViewerController::class, 'metrics'])
-            ->middleware('throttle:default')
-            ->name('metrics');
-
-        // Logs de erros
-        Route::get('errors', [LogViewerController::class, 'errors'])
-            ->middleware('throttle:default')
-            ->name('errors');
-
-        // Stream de logs em tempo real (SSE)
-        Route::get('stream', [LogViewerController::class, 'stream'])
-            ->middleware('throttle:premium')
-            ->name('stream');
-    });
+    require __DIR__.'/modules/pae.php';
+    require __DIR__.'/modules/rat.php';
+    require __DIR__.'/modules/bi.php';
+    require __DIR__.'/modules/integrations.php';
+    require __DIR__.'/modules/webhooks.php';
+    require __DIR__.'/modules/system.php';
+    require __DIR__.'/modules/admin.php';
 });

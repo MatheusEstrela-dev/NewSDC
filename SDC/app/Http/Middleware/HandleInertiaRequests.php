@@ -29,10 +29,23 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'cpf' => $user->cpf ?? null,
+                    'email' => $user->email ?? null,
+                    // Spatie roles/permissions (usado para esconder/mostrar menus no frontend)
+                    'is_super_admin' => method_exists($user, 'hasRole') ? $user->hasRole('super-admin') : false,
+                    'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames()->values() : [],
+                    'permissions' => method_exists($user, 'getAllPermissions')
+                        ? $user->getAllPermissions()->pluck('name')->values()
+                        : [],
+                ] : null,
             ],
         ];
     }

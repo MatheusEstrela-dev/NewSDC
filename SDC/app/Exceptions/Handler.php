@@ -4,10 +4,12 @@ namespace App\Exceptions;
 
 use App\Services\Logging\ActivityLogger;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
@@ -173,6 +175,29 @@ class Handler extends ExceptionHandler
             return $this->renderApiException($request, $e);
         }
 
+        // Web (SPA/Inertia): sempre responder com páginas Inertia (sem redirect 302 / sem HTML "solto")
+        // Assim o erro renderiza no mesmo layout, ao lado do sidebar.
+        if ($e instanceof AuthenticationException) {
+            return Inertia::render('Auth/Login', [
+                'status' => 'Sua sessão expirou. Faça login novamente.',
+                'intended' => $request->fullUrl(),
+            ])->toResponse($request)->setStatusCode(401);
+        }
+
+        if ($e instanceof AuthorizationException || ($e instanceof HttpException && $e->getStatusCode() === 403)) {
+            return Inertia::render('Errors/Forbidden', [
+                'title' => 'Acesso negado',
+                'message' => 'Você não tem permissão para acessar esta página.',
+            ])->toResponse($request)->setStatusCode(403);
+        }
+
+        if ($e instanceof ModelNotFoundException || ($e instanceof HttpException && $e->getStatusCode() === 404)) {
+            return Inertia::render('Errors/NotFound', [
+                'title' => 'Não encontrado',
+                'message' => 'O recurso solicitado não foi encontrado.',
+            ])->toResponse($request)->setStatusCode(404);
+        }
+
         return parent::render($request, $e);
     }
 
@@ -216,6 +241,10 @@ class Handler extends ExceptionHandler
             return 401;
         }
 
+        if ($e instanceof AuthorizationException) {
+            return 403;
+        }
+
         if ($e instanceof ValidationException) {
             return 422;
         }
@@ -238,6 +267,10 @@ class Handler extends ExceptionHandler
 
         if ($e instanceof AuthenticationException) {
             return 'Unauthenticated';
+        }
+
+        if ($e instanceof AuthorizationException) {
+            return 'Forbidden';
         }
 
         if (config('app.debug')) {

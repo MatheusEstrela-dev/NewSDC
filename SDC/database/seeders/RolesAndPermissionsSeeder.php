@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
@@ -13,6 +14,12 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     public function run(): void
     {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        // O projeto usa auth guard padrão "web" (sessão) para a UI.
+        // Manter consistente com config/auth.php evita inconsistências no Spatie.
+        $guard = config('auth.defaults.guard', 'web');
+
         // ========================================================================
         // DEFINIR PERMISSIONS (Permissões Granulares por Módulo)
         // ========================================================================
@@ -230,9 +237,22 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(
-                ['slug' => $permission['slug']],
-                $permission
+            Permission::updateOrCreate(
+                [
+                    'name' => $permission['slug'],
+                    'guard_name' => $guard,
+                ],
+                [
+                    'name' => $permission['slug'], // Spatie usa `name` como identificador
+                    'guard_name' => $guard,
+                    'slug' => $permission['slug'],
+                    'description' => $permission['description'] ?? null,
+                    'group' => $permission['group'] ?? 'general',
+                    // module pode ser derivado do group (ou preenchido manualmente)
+                    'module' => $permission['group'] ?? null,
+                    'is_active' => true,
+                    'is_immutable' => false,
+                ]
             );
         }
 
@@ -242,27 +262,35 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // 1. SUPER ADMIN - Acesso Total (Nível 0 - Máximo)
         $superAdmin = Role::firstOrCreate(
-            ['slug' => 'super-admin'],
+            ['name' => 'super-admin', 'guard_name' => $guard],
             [
-                'name' => 'Super Administrador',
+                'name' => 'super-admin',
+                'guard_name' => $guard,
+                'slug' => 'super-admin',
+                'hierarchy_level' => 0,
                 'description' => 'Acesso total ao sistema - Desenvolvimento e Manutenção',
+                'is_active' => true,
             ]
         );
 
         // Super Admin tem TODAS as permissões
-        $allPermissions = Permission::all()->pluck('id')->toArray();
-        $superAdmin->syncPermissions($allPermissions);
+        $allPermissionNames = Permission::where('guard_name', $guard)->pluck('name')->toArray();
+        $superAdmin->syncPermissions($allPermissionNames);
 
         // 2. ADMIN - Administrador Geral (Nível 1)
         $admin = Role::firstOrCreate(
-            ['slug' => 'admin'],
+            ['name' => 'admin', 'guard_name' => $guard],
             [
-                'name' => 'Administrador',
+                'name' => 'admin',
+                'guard_name' => $guard,
+                'slug' => 'admin',
+                'hierarchy_level' => 1,
                 'description' => 'Administrador geral do sistema',
+                'is_active' => true,
             ]
         );
 
-        $adminPermissions = Permission::whereIn('slug', [
+        $adminPermissions = [
             // Users
             'users.view',
             'users.create',
@@ -273,6 +301,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'roles.view',
             'roles.create',
             'roles.edit',
+            'roles.delete',
+
+            // Permissions
+            'permissions.view',
+            'permissions.manage',
 
             // PAE
             'pae.empreendimentos.view',
@@ -306,20 +339,25 @@ class RolesAndPermissionsSeeder extends Seeder
             // System
             'system.logs.view',
             'system.cache.clear',
-        ])->pluck('id')->toArray();
+            'system.settings.manage',
+        ];
 
         $admin->syncPermissions($adminPermissions);
 
         // 3. GESTOR - Gestor de Área (Nível 2)
         $manager = Role::firstOrCreate(
-            ['slug' => 'manager'],
+            ['name' => 'manager', 'guard_name' => $guard],
             [
-                'name' => 'Gestor',
+                'name' => 'manager',
+                'guard_name' => $guard,
+                'slug' => 'manager',
+                'hierarchy_level' => 2,
                 'description' => 'Gestor de área - Pode aprovar e gerenciar módulos',
+                'is_active' => true,
             ]
         );
 
-        $managerPermissions = Permission::whereIn('slug', [
+        $managerPermissions = [
             // Users (apenas visualizar)
             'users.view',
 
@@ -346,20 +384,24 @@ class RolesAndPermissionsSeeder extends Seeder
             // Webhooks
             'webhooks.send',
             'webhooks.logs.view',
-        ])->pluck('id')->toArray();
+        ];
 
         $manager->syncPermissions($managerPermissions);
 
         // 4. ANALISTA - Analista Técnico (Nível 3)
         $analyst = Role::firstOrCreate(
-            ['slug' => 'analyst'],
+            ['name' => 'analyst', 'guard_name' => $guard],
             [
-                'name' => 'Analista',
+                'name' => 'analyst',
+                'guard_name' => $guard,
+                'slug' => 'analyst',
+                'hierarchy_level' => 3,
                 'description' => 'Analista técnico - Pode criar e editar registros',
+                'is_active' => true,
             ]
         );
 
-        $analystPermissions = Permission::whereIn('slug', [
+        $analystPermissions = [
             // PAE
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',
@@ -379,20 +421,24 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Webhooks
             'webhooks.logs.view',
-        ])->pluck('id')->toArray();
+        ];
 
         $analyst->syncPermissions($analystPermissions);
 
         // 5. OPERADOR - Operador de Sistema (Nível 4)
         $operator = Role::firstOrCreate(
-            ['slug' => 'operator'],
+            ['name' => 'operator', 'guard_name' => $guard],
             [
-                'name' => 'Operador',
+                'name' => 'operator',
+                'guard_name' => $guard,
+                'slug' => 'operator',
+                'hierarchy_level' => 4,
                 'description' => 'Operador de sistema - Pode visualizar e criar registros básicos',
+                'is_active' => true,
             ]
         );
 
-        $operatorPermissions = Permission::whereIn('slug', [
+        $operatorPermissions = [
             // PAE
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',
@@ -403,20 +449,24 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // BI
             'bi.dashboards.view',
-        ])->pluck('id')->toArray();
+        ];
 
         $operator->syncPermissions($operatorPermissions);
 
         // 6. VISUALIZADOR - Somente Leitura (Nível 5)
         $viewer = Role::firstOrCreate(
-            ['slug' => 'viewer'],
+            ['name' => 'viewer', 'guard_name' => $guard],
             [
-                'name' => 'Visualizador',
+                'name' => 'viewer',
+                'guard_name' => $guard,
+                'slug' => 'viewer',
+                'hierarchy_level' => 5,
                 'description' => 'Acesso somente leitura - Pode apenas visualizar dados',
+                'is_active' => true,
             ]
         );
 
-        $viewerPermissions = Permission::whereIn('slug', [
+        $viewerPermissions = [
             // PAE
             'pae.empreendimentos.view',
 
@@ -425,25 +475,31 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // BI
             'bi.dashboards.view',
-        ])->pluck('id')->toArray();
+        ];
 
         $viewer->syncPermissions($viewerPermissions);
 
         // 7. USER - Usuário Padrão (Nível 6 - Mínimo)
         $user = Role::firstOrCreate(
-            ['slug' => 'user'],
+            ['name' => 'user', 'guard_name' => $guard],
             [
-                'name' => 'Usuário',
+                'name' => 'user',
+                'guard_name' => $guard,
+                'slug' => 'user',
+                'hierarchy_level' => 6,
                 'description' => 'Usuário padrão do sistema',
+                'is_active' => true,
             ]
         );
 
-        $userPermissions = Permission::whereIn('slug', [
+        $userPermissions = [
             'pae.empreendimentos.view',
             'rat.protocolos.view',
-        ])->pluck('id')->toArray();
+        ];
 
         $user->syncPermissions($userPermissions);
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->command->info('✅ Roles e Permissions criadas com sucesso!');
         $this->command->info('');

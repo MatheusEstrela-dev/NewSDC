@@ -136,20 +136,86 @@
           Vistoria
         </NavItem>
       </div>
+
+      <!-- ADMINISTRAÇÃO -->
+      <div class="nav-section">
+        <div v-show="!isCollapsed" class="nav-section-title">ADMINISTRAÇÃO</div>
+
+        <!-- Permissionamento com submenu -->
+        <div class="nav-group">
+          <button
+            @click="toggleSubMenu('permissions')"
+            class="nav-group-toggle"
+            :class="{ 'is-open': openSubMenus.permissions }"
+            :title="isCollapsed ? 'Permissionamento' : ''"
+          >
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span v-show="!isCollapsed">Permissionamento</span>
+            <svg
+              v-show="!isCollapsed"
+              class="nav-arrow"
+              :class="{ 'rotate-90': openSubMenus.permissions }"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          <div v-show="openSubMenus.permissions && !isCollapsed" class="nav-submenu">
+            <NavItem
+              :href="route('admin.permissions.users.index')"
+              :active="route().current('admin.permissions.users.*')"
+              icon="dot"
+              is-submenu
+              :collapsed="isCollapsed"
+            >
+              Usuários
+            </NavItem>
+            <NavItem
+              :href="route('admin.permissions.roles.index')"
+              :active="route().current('admin.permissions.roles.*')"
+              icon="dot"
+              is-submenu
+              :collapsed="isCollapsed"
+            >
+              Cargos
+            </NavItem>
+            <NavItem
+              :href="route('admin.permissions.permissions.index')"
+              :active="route().current('admin.permissions.permissions.*')"
+              icon="dot"
+              is-submenu
+              :collapsed="isCollapsed"
+            >
+              Permissões
+            </NavItem>
+          </div>
+        </div>
+      </div>
     </nav>
   </aside>
 </template>
 
 <script setup>
-import { ref, provide, inject } from 'vue';
+import { ref, provide, inject, computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import NavItem from './NavItem.vue';
 
 // Tentar injetar o estado do layout, se não existir, criar localmente
 const sidebarCollapsed = inject('sidebarCollapsed', ref(false));
 const isCollapsed = sidebarCollapsed;
 
+const page = usePage();
+// Mantemos a checagem para uso futuro (ex.: desabilitar links),
+// mas o módulo deve aparecer no sidebar seguindo o padrão do projeto.
+const canSeeAdmin = computed(() => !!page.props?.auth?.user);
+
 const openSubMenus = ref({
   tdap: true,
+  permissions: false,
 });
 
 function toggleSidebar() {
@@ -157,6 +223,7 @@ function toggleSidebar() {
   // Fechar submenus quando colapsar
   if (isCollapsed.value) {
     openSubMenus.value.tdap = false;
+    openSubMenus.value.permissions = false;
   }
 }
 
@@ -310,6 +377,20 @@ provide('sidebarCollapsed', isCollapsed);
   font-size: 0.9375rem;
 }
 
+.sidebar.is-collapsed .nav-group-toggle {
+  padding: 0.75rem;
+  justify-content: center;
+  gap: 0;
+}
+
+.sidebar.is-collapsed .nav-group-toggle.is-open {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.35);
+  border-radius: 12px;
+  margin: 0 0.5rem;
+}
+
 .nav-group-toggle:hover {
   background: rgba(255, 255, 255, 0.05);
   color: white;
@@ -359,4 +440,3 @@ provide('sidebarCollapsed', isCollapsed);
   background: rgba(255, 255, 255, 0.3);
 }
 </style>
-

@@ -2,45 +2,30 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Spatie\Permission\Models\Permission as SpatiePermission;
 
-class Permission extends Model
+class Permission extends SpatiePermission
 {
-    use HasFactory;
-
+    /**
+     * Extende o model do Spatie e adiciona metadados usados no NewSDC.
+     *
+     * Importante: o Spatie usa `name` como identificador lógico (permission name).
+     */
     protected $fillable = [
         'name',
+        'guard_name',
         'slug',
         'description',
         'group',
+        'module',
         'is_active',
+        'is_immutable',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_immutable' => 'boolean',
     ];
-
-    /**
-     * Roles that have this permission
-     */
-    public function roles(): BelongsToMany
-    {
-        return $this->belongsToMany(Role::class, 'permission_role')
-            ->withTimestamps();
-    }
-
-    /**
-     * Check if permission belongs to a specific role
-     */
-    public function belongsToRole(string $roleSlug): bool
-    {
-        return $this->roles()
-            ->where('slug', $roleSlug)
-            ->where('is_active', true)
-            ->exists();
-    }
 
     /**
      * Get all permissions grouped by category

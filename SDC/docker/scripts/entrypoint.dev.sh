@@ -154,13 +154,58 @@ EOF
     fi
 fi
 
-# Instalar dependências se não existirem
-if [ ! -d "/var/www/vendor" ] || [ ! -f "/var/www/vendor/autoload.php" ]; then
-    log_info "Instalando dependências do Composer..."
-    cd /var/www
-    composer install --no-interaction --prefer-dist
-    log_success "Dependências instaladas"
-fi
+# ----------------------------------------------------------------------------
+# Composer dependencies
+# ----------------------------------------------------------------------------
+# Em dev usamos volume nomeado para /var/www/vendor. Quando o composer.lock muda
+# (nova dependência), o vendor pode ficar "velho" e causar erros como
+# "Trait/Class not found". Para evitar isso, guardamos um fingerprint e
+# reinstalamos automaticamente quando houver mudança.
+composer_fingerprint() {
+    # Preferir composer.lock (estado real instalado). Fallback para composer.json.
+    if [ -f "/var/www/composer.lock" ]; then
+        sha256sum /var/www/composer.lock | awk '{print $1}'
+    else
+        sha256sum /var/www/composer.json | awk '{print $1}'
+    fi
+}
+
+ensure_composer_dependencies() {
+    local vendor_autoload="/var/www/vendor/autoload.php"
+    local fingerprint_file="/var/www/vendor/.sdc-composer-fingerprint.sha256"
+    local current_fp
+    current_fp="$(composer_fingerprint)"
+
+    if [ ! -f "$vendor_autoload" ]; then
+        log_info "vendor/autoload.php não encontrado. Instalando dependências do Composer..."
+        cd /var/www
+        composer install --no-interaction --prefer-dist
+        echo "$current_fp" > "$fingerprint_file" 2>/dev/null || true
+        log_success "Dependências instaladas"
+        return 0
+    fi
+
+    if [ ! -f "$fingerprint_file" ]; then
+        log_warning "Fingerprint do Composer não encontrado. Reinstalando dependências (primeira execução após update)..."
+        cd /var/www
+        composer install --no-interaction --prefer-dist
+        echo "$current_fp" > "$fingerprint_file" 2>/dev/null || true
+        log_success "Dependências reinstaladas"
+        return 0
+    fi
+
+    local previous_fp
+    previous_fp="$(cat "$fingerprint_file" 2>/dev/null || echo '')"
+    if [ "$previous_fp" != "$current_fp" ]; then
+        log_warning "composer.lock/composer.json mudou. Atualizando dependências do Composer..."
+        cd /var/www
+        composer install --no-interaction --prefer-dist
+        echo "$current_fp" > "$fingerprint_file" 2>/dev/null || true
+        log_success "Dependências atualizadas"
+    fi
+}
+
+ensure_composer_dependencies
 
 # Gerar APP_KEY se não existir
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" == "base64:" ]; then

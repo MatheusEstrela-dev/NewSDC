@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Empreendimento;
+use App\Models\Entrada;
+use App\Models\Protocolo;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
@@ -27,6 +30,16 @@ class RouteServiceProvider extends ServiceProvider
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
+
+        /**
+         * Bindings explícitos para resources que ainda não têm persistência real.
+         *
+         * Isso permite que `authorizeResource()` receba um model (objeto) e o Gate
+         * consiga resolver a Policy correta, mesmo sem tabela/DB no módulo.
+         */
+        Route::bind('empreendimento', fn ($value) => new Empreendimento(['id' => (int) $value]));
+        Route::bind('protocolo', fn ($value) => new Protocolo(['id' => (int) $value]));
+        Route::bind('entrada', fn ($value) => new Entrada(['id' => (int) $value]));
 
         $this->routes(function () {
             Route::middleware('api')

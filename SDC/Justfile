@@ -72,6 +72,31 @@ migrate:
     {{_app}} php artisan migrate --force
     @echo "✅ Migrations concluídas!"
 
+# Executar APENAS as migrations do sistema de permissionamento (v2.0)
+migrate-permissions:
+    @echo "🔐 Executando migrations do sistema de permissionamento..."
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo ""
+    @echo "📋 Migrations incluídas:"
+    @echo "  - 2025_12_10_000001_create_roles_table.php"
+    @echo "  - 2025_12_10_000002_create_permissions_table.php"
+    @echo "  - 2025_12_10_000003_create_role_user_table.php"
+    @echo "  - 2025_12_10_000004_create_permission_role_table.php"
+    @echo "  - 2025_12_23_000001_create_permission_audit_log_table.php"
+    @echo ""
+    {{_app}} php artisan migrate --path=database/migrations/2025_12_10_000001_create_roles_table.php --force
+    {{_app}} php artisan migrate --path=database/migrations/2025_12_10_000002_create_permissions_table.php --force
+    {{_app}} php artisan migrate --path=database/migrations/2025_12_10_000003_create_role_user_table.php --force
+    {{_app}} php artisan migrate --path=database/migrations/2025_12_10_000004_create_permission_role_table.php --force
+    {{_app}} php artisan migrate --path=database/migrations/2025_12_23_000001_create_permission_audit_log_table.php --force
+    @echo ""
+    @echo "✅ Migrations de permissionamento concluídas!"
+    @echo ""
+    @echo "💡 Próximos passos:"
+    @echo "  1. Execute: just seed-permissions"
+    @echo "  2. Limpe o cache: just cache-clear"
+    @echo "  3. Verifique: just permissions-status"
+
 # Executar migrations com output detalhado
 migrate-verbose:
     @echo "🔄 Executando migrations (verbose)..."
@@ -152,6 +177,17 @@ seed-class class:
     @echo "🌱 Executando seeder: {{class}}"
     {{_app}} php artisan db:seed --class={{class}} --force
     @echo "✅ Seeder {{class}} concluído!"
+
+# Executar seeder de roles e permissions
+seed-permissions:
+    @echo "🔐 Populando roles e permissions..."
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    {{_app}} php artisan db:seed --class=RolesAndPermissionsSeeder --force
+    @echo ""
+    @echo "✅ Roles e permissions criados!"
+    @echo ""
+    @echo "📊 Resumo:"
+    just permissions-count
 
 # Criar novo seeder
 seed-create name:
@@ -452,3 +488,135 @@ nuke:
     {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "DROP DATABASE IF EXISTS $$MYSQL_DATABASE; CREATE DATABASE $$MYSQL_DATABASE;"
     just migrate
     @echo "✅ Banco recriado do zero!"
+
+# ============================================================================
+# 🔐 SISTEMA DE PERMISSIONAMENTO (v2.0)
+# ============================================================================
+
+# Status completo do sistema de permissionamento
+permissions-status:
+    @echo "🔐 STATUS DO SISTEMA DE PERMISSIONAMENTO"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo ""
+    @echo "📊 Contadores:"
+    just permissions-count
+    @echo ""
+    @echo "👥 Roles por Hierarquia:"
+    just permissions-roles
+    @echo ""
+    @echo "🔑 Permissions por Módulo:"
+    just permissions-by-module
+    @echo ""
+    @echo "📝 Logs de Auditoria (últimos 10):"
+    just permissions-audit
+
+# Contar roles, permissions e usuários
+permissions-count:
+    @echo "📊 Contadores do Sistema:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'Roles' AS Tipo, COUNT(*) AS Total FROM roles WHERE is_active = 1 UNION ALL SELECT 'Permissions' AS Tipo, COUNT(*) AS Total FROM permissions WHERE is_active = 1 UNION ALL SELECT 'Users' AS Tipo, COUNT(*) AS Total FROM users WHERE email_verified_at IS NOT NULL UNION ALL SELECT 'Role Assignments' AS Tipo, COUNT(*) AS Total FROM role_user UNION ALL SELECT 'Audit Logs' AS Tipo, COUNT(*) AS Total FROM permission_audit_log;"
+
+# Listar todos os roles
+permissions-roles:
+    @echo "👥 Roles Cadastrados:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT id, name AS 'Nome', slug AS 'Slug', hierarchy_level AS 'Nível', is_active AS 'Ativo', (SELECT COUNT(*) FROM role_user WHERE role_id = roles.id) AS 'Usuários' FROM roles ORDER BY hierarchy_level;"
+
+# Listar permissions por módulo
+permissions-by-module:
+    @echo "🔑 Permissions por Módulo:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT COALESCE(module, 'general') AS 'Módulo', COUNT(*) AS 'Total', SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) AS 'Ativas', SUM(CASE WHEN is_immutable = 1 THEN 1 ELSE 0 END) AS 'Imutáveis' FROM permissions GROUP BY module ORDER BY Total DESC;"
+
+# Listar permissions de um módulo específico
+permissions-module module:
+    @echo "🔑 Permissions do Módulo: {{module}}"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT id, name AS 'Nome', slug AS 'Slug', description AS 'Descrição', is_active AS 'Ativo', is_immutable AS 'Imutável' FROM permissions WHERE module = '{{module}}' ORDER BY name;"
+
+# Ver últimos logs de auditoria
+permissions-audit limit="10":
+    @echo "📝 Últimos {{limit}} Logs de Auditoria:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT pal.id, u.name AS 'Usuário', pal.action AS 'Ação', pal.entity_type AS 'Entidade', pal.entity_id AS 'ID', pal.ip_address AS 'IP', DATE_FORMAT(pal.created_at, '%Y-%m-%d %H:%i:%s') AS 'Data/Hora' FROM permission_audit_log pal LEFT JOIN users u ON pal.user_id = u.id ORDER BY pal.created_at DESC LIMIT {{limit}};"
+
+# Ver logs de auditoria de um usuário específico
+permissions-audit-user user_id:
+    @echo "📝 Logs de Auditoria do Usuário: {{user_id}}"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT id, action AS 'Ação', entity_type AS 'Entidade', entity_id AS 'ID', ip_address AS 'IP', DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS 'Data/Hora' FROM permission_audit_log WHERE user_id = {{user_id}} ORDER BY created_at DESC LIMIT 20;"
+
+# Ver permissions de um role específico
+permissions-role role_slug:
+    @echo "🔑 Permissions do Role: {{role_slug}}"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT p.id, p.name AS 'Permission', p.slug AS 'Slug', p.module AS 'Módulo' FROM permissions p INNER JOIN permission_role pr ON p.id = pr.permission_id INNER JOIN roles r ON pr.role_id = r.id WHERE r.slug = '{{role_slug}}' ORDER BY p.module, p.name;"
+
+# Ver roles de um usuário específico
+permissions-user user_id:
+    @echo "👤 Roles do Usuário: {{user_id}}"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT r.id, r.name AS 'Role', r.slug AS 'Slug', r.hierarchy_level AS 'Nível', DATE_FORMAT(ru.created_at, '%Y-%m-%d %H:%i:%s') AS 'Atribuído em' FROM roles r INNER JOIN role_user ru ON r.id = ru.role_id WHERE ru.user_id = {{user_id}} ORDER BY r.hierarchy_level;"
+
+# Verificar integridade do sistema de permissionamento
+permissions-check:
+    @echo "🔍 VERIFICAÇÃO DE INTEGRIDADE"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo ""
+    @echo "1. Verificando tabelas..."
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'OK' AS Status FROM roles LIMIT 1;" > /dev/null 2>&1 && echo "  ✅ Tabela 'roles' existe" || echo "  ❌ Tabela 'roles' não encontrada"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'OK' AS Status FROM permissions LIMIT 1;" > /dev/null 2>&1 && echo "  ✅ Tabela 'permissions' existe" || echo "  ❌ Tabela 'permissions' não encontrada"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'OK' AS Status FROM role_user LIMIT 1;" > /dev/null 2>&1 && echo "  ✅ Tabela 'role_user' existe" || echo "  ❌ Tabela 'role_user' não encontrada"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'OK' AS Status FROM permission_role LIMIT 1;" > /dev/null 2>&1 && echo "  ✅ Tabela 'permission_role' existe" || echo "  ❌ Tabela 'permission_role' não encontrada"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'OK' AS Status FROM permission_audit_log LIMIT 1;" > /dev/null 2>&1 && echo "  ✅ Tabela 'permission_audit_log' existe" || echo "  ❌ Tabela 'permission_audit_log' não encontrada"
+    @echo ""
+    @echo "2. Verificando integridade referencial..."
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT COUNT(*) AS 'Roles órfãos' FROM role_user ru LEFT JOIN roles r ON ru.role_id = r.id WHERE r.id IS NULL;"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT COUNT(*) AS 'Users órfãos' FROM role_user ru LEFT JOIN users u ON ru.user_id = u.id WHERE u.id IS NULL;"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT COUNT(*) AS 'Permissions órfãs' FROM permission_role pr LEFT JOIN permissions p ON pr.permission_id = p.id WHERE p.id IS NULL;"
+    @echo ""
+    @echo "✅ Verificação concluída!"
+
+# Setup completo do sistema de permissionamento
+permissions-setup:
+    @echo "🚀 SETUP DO SISTEMA DE PERMISSIONAMENTO v2.0"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo ""
+    @echo "1️⃣  Criando backup..."
+    just backup "pre-permissions-setup"
+    @echo ""
+    @echo "2️⃣  Executando migrations..."
+    just migrate-permissions
+    @echo ""
+    @echo "3️⃣  Populando roles e permissions..."
+    just seed-permissions
+    @echo ""
+    @echo "4️⃣  Limpando caches..."
+    just cache-clear
+    @echo ""
+    @echo "5️⃣  Verificando integridade..."
+    just permissions-check
+    @echo ""
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo "✅ SETUP CONCLUÍDO COM SUCESSO!"
+    @echo ""
+    @echo "📊 Status Final:"
+    just permissions-status
+
+# Documentação do sistema de permissionamento
+permissions-docs:
+    @echo "📚 DOCUMENTAÇÃO DO SISTEMA DE PERMISSIONAMENTO"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo ""
+    @echo "📄 Documentos Disponíveis:"
+    @echo "  - Doc/PERMISSION_SYSTEM_ARCHITECTURE.md"
+    @echo "  - Doc/RESUMO_EXECUTIVO_PERMISSIONAMENTO.md"
+    @echo ""
+    @echo "🔧 Comandos Disponíveis:"
+    @echo "  just permissions-setup          # Setup completo"
+    @echo "  just permissions-status         # Ver status"
+    @echo "  just permissions-check          # Verificar integridade"
+    @echo "  just migrate-permissions        # Executar migrations"
+    @echo "  just seed-permissions           # Popular dados"
+    @echo "  just permissions-roles          # Listar roles"
+    @echo "  just permissions-by-module      # Listar por módulo"
+    @echo "  just permissions-audit          # Ver logs auditoria"
+    @echo ""
+    @echo "📊 Consultas Específicas:"
+    @echo "  just permissions-role <slug>    # Permissions de um role"
+    @echo "  just permissions-user <id>      # Roles de um usuário"
+    @echo "  just permissions-module <mod>   # Permissions de um módulo"
+    @echo ""
+    @echo "📖 Para mais informações, consulte a documentação completa."

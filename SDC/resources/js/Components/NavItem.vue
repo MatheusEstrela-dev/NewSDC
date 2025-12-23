@@ -82,7 +82,7 @@ const tooltipText = computed(() => {
   transition: all 0.2s;
   position: relative;
   font-size: 0.9375rem;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .nav-item.is-collapsed {
@@ -100,6 +100,14 @@ const tooltipText = computed(() => {
   color: #3b82f6;
   border-left: 3px solid #3b82f6;
   padding-left: calc(1.25rem - 3px);
+}
+
+.nav-item.is-active.is-collapsed {
+  border-left: none;
+  padding-left: 0.75rem; /* mantém alinhamento central no modo retraído */
+  box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.35);
+  border-radius: 12px;
+  margin: 0 0.5rem;
 }
 
 .nav-item.is-submenu {

@@ -25,6 +25,9 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \App\Models\User::observe(\App\Observers\UserObserver::class);
+        \App\Models\Role::observe(\App\Observers\RoleObserver::class);
+
         // Log queries lentas (> 1 segundo) - Sistema Crítico 24/7
         \DB::listen(function ($query) {
             $threshold = env('QUERY_SLOW_THRESHOLD', 1000); // 1 segundo padrão

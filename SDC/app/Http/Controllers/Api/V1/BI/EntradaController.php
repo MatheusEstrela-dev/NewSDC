@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\BI;
 
 use App\Http\Controllers\Controller;
+use App\Models\Entrada;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,6 +15,11 @@ use Illuminate\Http\Request;
  */
 class EntradaController extends Controller
 {
+    public function __construct()
+    {
+        $this->authorizeResource(Entrada::class, 'entrada');
+    }
+
     /**
      * @OA\Get(
      *     path="/api/v1/bi/entrada",

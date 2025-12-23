@@ -43,7 +43,7 @@ class AuthController extends Controller
         // Assign default role (user)
         $defaultRole = \App\Models\Role::where('slug', 'user')->first();
         if ($defaultRole) {
-            $user->assignRoles([$defaultRole->id]);
+            $user->assignRole($defaultRole);
         }
 
         // Create token with user abilities
