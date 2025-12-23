@@ -44,7 +44,8 @@
           Visão Geral
         </NavItem>
         <NavItem
-          :href="route('rat.index')"
+          v-if="route().has('rat.index') || route().has('rat.create')"
+          :href="ratHref"
           :active="route().current('rat.*')"
           icon="document"
           :collapsed="isCollapsed"
@@ -61,7 +62,8 @@
           DEMANDAS
         </NavItem>
         <NavItem
-          :href="route('pae.index')"
+          v-if="route().has('pae.protocolos.index') || route().has('pae.index')"
+          :href="paeHref"
           :active="route().current('pae.*')"
           icon="document"
           :collapsed="isCollapsed"
@@ -217,6 +219,19 @@ const canSeeAdmin = computed(() => !!page.props?.auth?.user);
 const openSubMenus = ref({
   tdap: true,
   permissions: false,
+});
+
+// Links resilientes (evita tela branca quando uma rota não existir no Ziggy)
+const ratHref = computed(() => {
+  if (route().has('rat.index')) return route('rat.index');
+  if (route().has('rat.create')) return route('rat.create');
+  return route('dashboard');
+});
+
+const paeHref = computed(() => {
+  if (route().has('pae.protocolos.index')) return route('pae.protocolos.index'); // produção
+  if (route().has('pae.index')) return route('pae.index'); // fallback
+  return route('dashboard');
 });
 
 function toggleSidebar() {
