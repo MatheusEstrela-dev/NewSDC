@@ -32,11 +32,6 @@ class ProtocoloController extends Controller
         $this->authorizeResource(Protocolo::class, 'protocolo');
     }
 
-    public function __construct()
-    {
-        $this->authorizeResource(\App\Models\Rat\Protocolo::class, 'protocolo');
-    }
-
     /**
      * @OA\Get(
      *     path="/api/v1/rat/protocolos",
