@@ -178,12 +178,12 @@ ensure_composer_dependencies() {
 
     if [ ! -f "$vendor_autoload" ]; then
         log_info "vendor/autoload.php não encontrado. Instalando dependências do Composer..."
-        cd /var/www
-        composer install --no-interaction --prefer-dist
+    cd /var/www
+    composer install --no-interaction --prefer-dist
         echo "$current_fp" > "$fingerprint_file" 2>/dev/null || true
-        log_success "Dependências instaladas"
+    log_success "Dependências instaladas"
         return 0
-    fi
+fi
 
     if [ ! -f "$fingerprint_file" ]; then
         log_warning "Fingerprint do Composer não encontrado. Reinstalando dependências (primeira execução após update)..."

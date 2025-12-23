@@ -52,6 +52,7 @@
           RAT
         </NavItem>
         <NavItem
+          v-if="route().has('demandas.index')"
           :href="route('demandas.index')"
           :active="route().current('demandas.*')"
           icon="checkbadge"
@@ -60,7 +61,7 @@
           DEMANDAS
         </NavItem>
         <NavItem
-          :href="route('pae.protocolos.index')"
+          :href="route('pae.index')"
           :active="route().current('pae.*')"
           icon="document"
           :collapsed="isCollapsed"
