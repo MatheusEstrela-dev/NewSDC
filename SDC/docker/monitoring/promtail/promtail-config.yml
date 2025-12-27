@@ -1,0 +1,236 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # ========================================
+  # Laravel Application Logs (JSON)
+  # ========================================
+  - job_name: laravel-app
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: laravel
+          app: sdc
+          environment: production
+          __path__: /var/lib/docker/containers/*/*.log
+
+    pipeline_stages:
+      # Parse Docker JSON logs
+      - docker: {}
+
+      # Parse Laravel JSON logs
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: severity
+            message: message
+            request_id: request_id
+            user_id: user_id
+            event_type: event_type
+            event_name: event_name
+            url: url
+            http_method: http_method
+            status_code: status_code
+            duration_ms: duration_ms
+            ip_address: ip_address
+            environment: environment
+            hostname: hostname
+
+      # Extract additional labels
+      - labels:
+          level:
+          event_type:
+          request_id:
+          environment:
+
+      # Timestamp from log entry
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+
+      # Output para debug (opcional)
+      - output:
+          source: message
+
+  # ========================================
+  # Critical Logs (High Priority)
+  # ========================================
+  - job_name: laravel-critical
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: laravel-critical
+          app: sdc
+          environment: production
+          severity: critical
+          __path__: /var/lib/docker/containers/*/*.log
+
+    pipeline_stages:
+      - docker: {}
+
+      - json:
+          expressions:
+            severity: severity
+            message: message
+            exception_class: exception_class
+            error_file: error_file
+            error_line: error_line
+
+      # Filtra apenas logs críticos
+      - match:
+          selector: '{job="laravel-critical"} |~ "critical"'
+          stages:
+            - labels:
+                severity:
+            - timestamp:
+                source: timestamp
+                format: RFC3339
+
+  # ========================================
+  # Slow Queries
+  # ========================================
+  - job_name: laravel-queries
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: laravel-queries
+          app: sdc
+          type: database
+          __path__: /var/lib/docker/containers/*/*.log
+
+    pipeline_stages:
+      - docker: {}
+
+      - json:
+          expressions:
+            event_name: event_name
+            time_ms: time_ms
+            sql: sql
+
+      # Filtra apenas slow queries
+      - match:
+          selector: '{job="laravel-queries"} |~ "Slow Query"'
+          stages:
+            - labels:
+                event_name:
+            - metrics:
+                query_duration_ms:
+                  type: Histogram
+                  description: "Query execution time"
+                  source: time_ms
+                  config:
+                    buckets: [100, 500, 1000, 2000, 5000, 10000]
+
+  # ========================================
+  # Jobs and Queues
+  # ========================================
+  - job_name: laravel-jobs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: laravel-jobs
+          app: sdc
+          type: queue
+          __path__: /var/lib/docker/containers/*/*.log
+
+    pipeline_stages:
+      - docker: {}
+
+      - json:
+          expressions:
+            job_name: job_name
+            queue: queue
+            status: status
+            duration_ms: duration_ms
+            attempts: attempts
+
+      # Métricas de jobs
+      - match:
+          selector: '{job="laravel-jobs"}'
+          stages:
+            - labels:
+                job_name:
+                status:
+                queue:
+            - metrics:
+                job_duration_ms:
+                  type: Histogram
+                  description: "Job execution time"
+                  source: duration_ms
+                  config:
+                    buckets: [100, 500, 1000, 5000, 10000, 30000]
+                job_attempts:
+                  type: Counter
+                  description: "Number of job attempts"
+                  source: attempts
+
+  # ========================================
+  # HTTP Requests (API)
+  # ========================================
+  - job_name: laravel-http
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: laravel-http
+          app: sdc
+          type: http
+          __path__: /var/lib/docker/containers/*/*.log
+
+    pipeline_stages:
+      - docker: {}
+
+      - json:
+          expressions:
+            direction: direction
+            method: method
+            path: path
+            status_code: status_code
+            duration_ms: duration_ms
+            request_id: request_id
+
+      # Métricas de HTTP
+      - match:
+          selector: '{job="laravel-http"} |~ "HTTP"'
+          stages:
+            - labels:
+                method:
+                status_code:
+            - metrics:
+                http_request_duration_ms:
+                  type: Histogram
+                  description: "HTTP request duration"
+                  source: duration_ms
+                  config:
+                    buckets: [50, 100, 200, 500, 1000, 2000, 5000]
+                http_requests_total:
+                  type: Counter
+                  description: "Total HTTP requests"
+                  action: inc
+
+# ========================================
+# Limits
+# ========================================
+limits_config:
+  # Rate limiting
+  ingestion_rate_mb: 10
+  ingestion_burst_size_mb: 20
+
+  # Stream limits
+  max_streams_per_user: 10000
+  max_line_size: 256000
+
+  # Query limits
+  max_entries_limit_per_query: 5000
+  max_query_length: 5000s

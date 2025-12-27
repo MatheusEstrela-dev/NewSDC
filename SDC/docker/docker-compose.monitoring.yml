@@ -1,170 +1,326 @@
 # ============================================================================
-# SDC - Docker Compose MONITORING STACK
-# Prometheus, Grafana, Redis Exporter, MySQL Exporter
+# SDC - Sistema de Monitoramento Completo (Produção Ready)
+# Stack: Prometheus + Grafana + Alertmanager + Exporters
+# Metodologias: Golden Signals (Google) + USE Method
 # ============================================================================
-# Uso: docker compose -f docker/docker-compose.yml -f docker/docker-compose.monitoring.yml up -d
+# Uso: docker compose -f docker-compose.monitoring.yml up -d
 # ============================================================================
+
+name: newsdc-monitoring
 
 services:
   # ==========================================================================
-  # Prometheus - Coleta de Métricas
+  # PROMETHEUS - Coleta e Armazenamento de Métricas (TSDB)
   # ==========================================================================
   prometheus:
-    image: prom/prometheus:latest
-    container_name: sdc_prometheus
+    image: prom/prometheus:v2.48.1
+    container_name: newsdc_prometheus
     hostname: prometheus
     restart: unless-stopped
+    user: "0:0"
 
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.time=30d'  # Retenção: 30 dias
+      - '--storage.tsdb.retention.size=10GB'  # Limite: 10GB
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'  # Permite reload via API
+      - '--web.enable-admin-api'  # Habilita API admin
+
+    ports:
+      - "9090:9090"  # Prometheus UI
 
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
-      - prometheus_data:/prometheus
-
-    ports:
-      - "9090:9090"
+      - ./monitoring/prometheus/alerts:/etc/prometheus/alerts:ro
+      - newsdc_prometheus_data:/prometheus
 
     networks:
       - sdc_network
+
+    labels:
+      - "com.docker.compose.project=newsdc-monitoring"
+      - "com.docker.compose.service=prometheus"
 
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 3
+      start_period: 30s
 
   # ==========================================================================
-  # Grafana - Visualização de Dashboards
-  # ==========================================================================
-  grafana:
-    image: grafana/grafana:latest
-    container_name: sdc_grafana
-    hostname: grafana
-    restart: unless-stopped
-
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
-      GF_INSTALL_PLUGINS: redis-datasource,grafana-clock-panel
-      GF_SERVER_ROOT_URL: http://localhost:3000
-      GF_USERS_ALLOW_SIGN_UP: "false"
-
-    volumes:
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-      - grafana_data:/var/lib/grafana
-
-    ports:
-      - "3000:3000"
-
-    networks:
-      - sdc_network
-
-    depends_on:
-      - prometheus
-
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  # ==========================================================================
-  # Unified Exporter - Redis + MySQL Métricas (2-em-1)
-  # ==========================================================================
-  unified-exporter:
-    build:
-      context: ./monitoring/unified-exporter
-      dockerfile: Dockerfile
-    container_name: sdc_unified_exporter
-    hostname: unified-exporter
-    restart: unless-stopped
-
-    environment:
-      REDIS_ADDR: redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      MYSQLD_EXPORTER_PASSWORD: ${DB_EXPORTER_PASSWORD:-exporter_pass}
-
-    ports:
-      - "9121:9121"  # Redis metrics
-      - "9104:9104"  # MySQL metrics
-
-    networks:
-      - sdc_network
-
-    depends_on:
-      - redis
-      - db
-
-  # ==========================================================================
-  # Node Exporter - Métricas do Host
-  # ==========================================================================
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: sdc_node_exporter
-    hostname: node-exporter
-    restart: unless-stopped
-
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-
-    ports:
-      - "9100:9100"
-
-    networks:
-      - sdc_network
-
-  # ==========================================================================
-  # AlertManager - Gerenciamento de Alertas
+  # ALERTMANAGER - Gerenciamento e Roteamento de Alertas
   # ==========================================================================
   alertmanager:
-    image: prom/alertmanager:latest
-    container_name: sdc_alertmanager
+    image: prom/alertmanager:v0.26.0
+    container_name: newsdc_alertmanager
     hostname: alertmanager
     restart: unless-stopped
 
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+
+    ports:
+      - "9093:9093"  # Alertmanager UI
 
     volumes:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanager_data:/alertmanager
-
-    ports:
-      - "9093:9093"
+      - newsdc_alertmanager_data:/alertmanager
 
     networks:
       - sdc_network
 
+    labels:
+      - "com.docker.compose.project=newsdc-monitoring"
+      - "com.docker.compose.service=alertmanager"
+
+    depends_on:
+      - prometheus
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==========================================================================
+  # GRAFANA - Visualização e Dashboards
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: newsdc_grafana
+    hostname: grafana
+    restart: unless-stopped
+    user: "0:0"
+
+    environment:
+      # Configurações básicas
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin@123}
+      GF_SERVER_ROOT_URL: http://localhost:3000
+      GF_SERVER_DOMAIN: localhost
+
+      # Datasources automáticos
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource,grafana-piechart-panel
+
+      # Segurança
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_SECURITY_COOKIE_SECURE: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+
+      # Analytics
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+
+      # Logs
+      GF_LOG_MODE: console
+      GF_LOG_LEVEL: info
+
+    ports:
+      - "3000:3000"  # Grafana UI
+
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - newsdc_grafana_data:/var/lib/grafana
+
+    networks:
+      - sdc_network
+
+    labels:
+      - "com.docker.compose.project=newsdc-monitoring"
+      - "com.docker.compose.service=grafana"
+
+    depends_on:
+      - prometheus
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ==========================================================================
+  # NODE EXPORTER - Métricas de Infraestrutura (Host)
+  # Metodologia: USE (Utilization, Saturation, Errors)
+  # ==========================================================================
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: newsdc_node_exporter
+    hostname: node-exporter
+    restart: unless-stopped
+
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.netclass.ignored-devices=^(veth.*|br-.*|docker.*|lo)$$'
+      - '--collector.netdev.device-exclude=^(veth.*|br-.*|docker.*|lo)$$'
+
+    ports:
+      - "9100:9100"
+
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+
+    networks:
+      - sdc_network
+
+    labels:
+      - "com.docker.compose.project=newsdc-monitoring"
+      - "com.docker.compose.service=node-exporter"
+
+    privileged: true
+
+  # ==========================================================================
+  # cADVISOR - Métricas de Containers Docker
+  # Golden Signals: Latência, Tráfego, Erros, Saturação
+  # ==========================================================================
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    container_name: newsdc_cadvisor
+    hostname: cadvisor
+    restart: unless-stopped
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+
+    networks:
+      - sdc_network
+
+    labels:
+      - "com.docker.compose.project=newsdc-monitoring"
+      - "com.docker.compose.service=cadvisor"
+
+    privileged: true
+
+    devices:
+      - /dev/kmsg
+
+  # ==========================================================================
+  # MYSQL EXPORTER - Métricas do MySQL
+  # ==========================================================================
+  mysql-exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    container_name: newsdc_mysql_exporter
+    hostname: mysql-exporter
+    restart: unless-stopped
+
+    environment:
+      DATA_SOURCE_NAME: "${DB_USERNAME:-sdc}:${DB_PASSWORD:-secret}@(newsdc_db:3306)/"
+
+    ports:
+      - "9104:9104"
+
+    networks:
+      - sdc_network
+
+    labels:
+      - "com.docker.compose.project=newsdc-monitoring"
+      - "com.docker.compose.service=mysql-exporter"
+
+  # ==========================================================================
+  # REDIS EXPORTER - Métricas do Redis
+  # ==========================================================================
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.56.0
+    container_name: newsdc_redis_exporter
+    hostname: redis-exporter
+    restart: unless-stopped
+
+    environment:
+      REDIS_ADDR: newsdc_redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+
+    ports:
+      - "9121:9121"
+
+    networks:
+      - sdc_network
+
+    labels:
+      - "com.docker.compose.project=newsdc-monitoring"
+      - "com.docker.compose.service=redis-exporter"
+
+  # ==========================================================================
+  # NGINX EXPORTER - Métricas do Nginx
+  # ==========================================================================
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.0.0
+    container_name: newsdc_nginx_exporter
+    hostname: nginx-exporter
+    restart: unless-stopped
+
+    command:
+      - '-nginx.scrape-uri=http://newsdc_nginx:80/nginx_status'
+
+    ports:
+      - "9113:9113"
+
+    networks:
+      - sdc_network
+
+    labels:
+      - "com.docker.compose.project=newsdc-monitoring"
+      - "com.docker.compose.service=nginx-exporter"
+
+  # ==========================================================================
+  # BLACKBOX EXPORTER - Monitoramento Externo (Probes)
+  # Testa endpoints HTTP, TCP, ICMP (ping), DNS
+  # ==========================================================================
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.24.0
+    container_name: newsdc_blackbox_exporter
+    hostname: blackbox-exporter
+    restart: unless-stopped
+
+    command:
+      - '--config.file=/etc/blackbox/blackbox.yml'
+
+    ports:
+      - "9115:9115"
+
+    volumes:
+      - ./monitoring/blackbox/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+
+    networks:
+      - sdc_network
+
+    labels:
+      - "com.docker.compose.project=newsdc-monitoring"
+      - "com.docker.compose.service=blackbox-exporter"
+
 # ==========================================================================
-# Networks
+# NETWORKS - Usar a rede existente do projeto
 # ==========================================================================
 networks:
   sdc_network:
     external: true
-    name: sdc-dev_sdc_network
+    name: newsdc_sdc_network
 
 # ==========================================================================
-# Volumes
+# VOLUMES - Persistência de Dados
 # ==========================================================================
 volumes:
-  prometheus_data:
+  newsdc_prometheus_data:
     driver: local
-  grafana_data:
+  newsdc_grafana_data:
     driver: local
-  alertmanager_data:
+  newsdc_alertmanager_data:
     driver: local

@@ -1,0 +1,99 @@
+# ============================================================================
+# Prometheus Alert Rules - USE Method (Utilization, Saturation, Errors)
+# Metodologia para infraestrutura
+# ============================================================================
+
+groups:
+  - name: use_method_infrastructure
+    interval: 30s
+    rules:
+      # ======================================================================
+      # UTILIZATION - Quanto o recurso está sendo usado
+      # ======================================================================
+      - alert: HighLoadAverage
+        expr: node_load15 / count without (cpu, mode) (node_cpu_seconds_total{mode="system"}) > 2
+        for: 10m
+        labels:
+          severity: warning
+          category: utilization
+        annotations:
+          summary: "Load average alto (> 2x número de CPUs)"
+          description: "Load 15min = {{ $value }} - pode indicar gargalo de CPU"
+
+      - alert: HighNetworkUtilization
+        expr: |
+          rate(node_network_receive_bytes_total{device!~"veth.*|br-.*|docker.*|lo"}[5m]) > 100000000
+        for: 5m
+        labels:
+          severity: warning
+          category: utilization
+        annotations:
+          summary: "Alto uso de rede (> 100MB/s)"
+          description: "Interface {{ $labels.device }} recebendo {{ $value | humanize }}B/s"
+
+      # ======================================================================
+      # SATURATION - Quanto trabalho está em fila esperando
+      # ======================================================================
+      - alert: ContextSwitchesHigh
+        expr: rate(node_context_switches_total[5m]) > 10000
+        for: 10m
+        labels:
+          severity: warning
+          category: saturation
+        annotations:
+          summary: "Alto número de context switches"
+          description: "{{ $value }} context switches/s - possível contenção de CPU"
+
+      - alert: RedisMemoryFragmentation
+        expr: redis_mem_fragmentation_ratio > 1.5
+        for: 10m
+        labels:
+          severity: warning
+          category: saturation
+        annotations:
+          summary: "Alta fragmentação de memória no Redis"
+          description: "Fragmentação em {{ $value }} - considerar restart do Redis"
+
+      - alert: MySQLConnectionsSaturated
+        expr: |
+          mysql_global_status_threads_connected / mysql_global_variables_max_connections * 100 > 80
+        for: 5m
+        labels:
+          severity: critical
+          category: saturation
+        annotations:
+          summary: "Pool de conexões MySQL saturado (> 80%)"
+          description: "{{ $value | humanizePercentage }} do limite de conexões atingido"
+
+      # ======================================================================
+      # ERRORS - Eventos de erro de hardware/software
+      # ======================================================================
+      - alert: NetworkPacketsDropped
+        expr: |
+          rate(node_network_receive_drop_total{device!~"veth.*|br-.*|docker.*|lo"}[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: errors
+        annotations:
+          summary: "Pacotes de rede sendo dropados"
+          description: "{{ $value }} pacotes/s dropados em {{ $labels.device }}"
+
+      - alert: DiskIOErrors
+        expr: rate(node_disk_io_now[5m]) > 1000
+        for: 10m
+        labels:
+          severity: critical
+          category: errors
+        annotations:
+          summary: "Alta taxa de I/O errors em disco"
+          description: "{{ $value }} operações I/O em espera - possível problema de disco"
+
+      - alert: ContainerOOMKilled
+        expr: sum(container_oom_events_total) by (name) > 0
+        labels:
+          severity: critical
+          category: errors
+        annotations:
+          summary: "Container {{ $labels.name }} morto por OOM"
+          description: "Container ficou sem memória e foi killado pelo kernel"

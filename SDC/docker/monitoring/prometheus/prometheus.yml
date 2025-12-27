@@ -1,63 +1,152 @@
 # ============================================================================
 # Prometheus Configuration - SDC Monitoring
+# Implementa: Golden Signals + USE Method
 # ============================================================================
 
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 15s      # Scrape a cada 15s
+  evaluation_interval: 15s  # Avaliar regras a cada 15s
+  scrape_timeout: 10s
+
   external_labels:
     cluster: 'sdc-production'
     environment: 'production'
 
-# Alerting configuration
+# Alertmanager configuration
 alerting:
   alertmanagers:
     - static_configs:
         - targets:
             - alertmanager:9093
 
-# Load rules
+# Load alert rules
 rule_files:
-  - /etc/prometheus/alerts.yml
+  - '/etc/prometheus/alerts/*.yml'
 
 # Scrape configurations
 scrape_configs:
-  # Laravel Application Metrics
-  - job_name: 'laravel-app'
-    static_configs:
-      - targets:
-          - 'app:8000'
-    metrics_path: '/api/health/metrics'
-    scrape_interval: 10s
-
-  # Prometheus self-monitoring
+  # ==========================================================================
+  # Prometheus Self-Monitoring
+  # ==========================================================================
   - job_name: 'prometheus'
     static_configs:
-      - targets:
-          - 'localhost:9090'
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+          tier: 'monitoring'
 
-  # Redis metrics (via unified-exporter)
-  - job_name: 'redis'
+  # ==========================================================================
+  # Node Exporter - Infraestrutura (USE Method)
+  # Métricas: CPU, Memória, Disco, Rede
+  # ==========================================================================
+  - job_name: 'node-exporter'
     static_configs:
-      - targets:
-          - 'unified-exporter:9121'
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'host-metrics'
+          tier: 'infrastructure'
+          instance: 'sdc-server'
 
-  # MySQL metrics (via unified-exporter)
+  # ==========================================================================
+  # cAdvisor - Docker Containers (Golden Signals)
+  # Métricas: Latência, Tráfego, Erros, Saturação
+  # ==========================================================================
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'container-metrics'
+          tier: 'infrastructure'
+
+  # ==========================================================================
+  # MySQL Exporter - Banco de Dados
+  # ==========================================================================
   - job_name: 'mysql'
     static_configs:
-      - targets:
-          - 'unified-exporter:9104'
+      - targets: ['mysql-exporter:9104']
+        labels:
+          service: 'mysql'
+          tier: 'database'
+          database: 'sdc'
 
-  # Node (host) metrics
-  - job_name: 'node'
+  # ==========================================================================
+  # Redis Exporter - Cache/Sessões/Filas
+  # ==========================================================================
+  - job_name: 'redis'
     static_configs:
-      - targets:
-          - 'node-exporter:9100'
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+          tier: 'cache'
 
-  # Nginx metrics (via stub_status)
+  # ==========================================================================
+  # Nginx Exporter - Web Server
+  # ==========================================================================
   - job_name: 'nginx'
     static_configs:
+      - targets: ['nginx-exporter:9113']
+        labels:
+          service: 'nginx'
+          tier: 'webserver'
+
+  # ==========================================================================
+  # Blackbox Exporter - External Probes
+  # HTTP, TCP, ICMP monitoring
+  # ==========================================================================
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
       - targets:
-          - 'nginx:80'
-    metrics_path: '/nginx_status'
-    scrape_interval: 5s
+          - http://newsdc_nginx:80
+          - http://newsdc_app:8000
+        labels:
+          probe_type: 'http'
+          tier: 'application'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Health check específico para endpoints críticos
+  - job_name: 'blackbox-health'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://newsdc_nginx:80/health
+        labels:
+          probe_type: 'health_check'
+          tier: 'critical'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # ==========================================================================
+  # Alertmanager Monitoring
+  # ==========================================================================
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+        labels:
+          service: 'alertmanager'
+          tier: 'monitoring'
+
+  # ==========================================================================
+  # Grafana Monitoring
+  # ==========================================================================
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+        labels:
+          service: 'grafana'
+          tier: 'monitoring'

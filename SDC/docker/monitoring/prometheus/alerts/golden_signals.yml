@@ -1,0 +1,118 @@
+# ============================================================================
+# Prometheus Alert Rules - Golden Signals (Google SRE)
+# Latência, Tráfego, Erros, Saturação
+# ============================================================================
+
+groups:
+  - name: golden_signals
+    interval: 30s
+    rules:
+      # ======================================================================
+      # LATÊNCIA - Tempo de resposta elevado
+      # ======================================================================
+      - alert: HighResponseTime
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(nginx_http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          signal: latency
+        annotations:
+          summary: "Alta latência detectada (P95 > 1s)"
+          description: "95% das requisições estão demorando mais de 1 segundo"
+
+      # ======================================================================
+      # TRÁFEGO - Volume de requisições anormal
+      # ======================================================================
+      - alert: LowTrafficVolume
+        expr: |
+          sum(rate(nginx_http_requests_total[5m])) < 1
+        for: 10m
+        labels:
+          severity: warning
+          signal: traffic
+        annotations:
+          summary: "Baixo volume de tráfego"
+          description: "Menos de 1 req/s nos últimos 10 minutos - possível problema"
+
+      - alert: TrafficSpike
+        expr: |
+          sum(rate(nginx_http_requests_total[5m])) > 
+          sum(rate(nginx_http_requests_total[5m] offset 1h)) * 3
+        for: 5m
+        labels:
+          severity: warning
+          signal: traffic
+        annotations:
+          summary: "Pico de tráfego detectado (3x acima do normal)"
+          description: "Volume de requisições 3x maior que a média da última hora"
+
+      # ======================================================================
+      # ERROS - Taxa de erro HTTP 5xx elevada
+      # ======================================================================
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(nginx_http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(nginx_http_requests_total[5m]))
+          ) * 100 > 5
+        for: 5m
+        labels:
+          severity: critical
+          signal: errors
+        annotations:
+          summary: "Alta taxa de erros HTTP 5xx (> 5%)"
+          description: "{{ $value | humanizePercentage }} das requisições estão falhando"
+
+      - alert: DatabaseErrors
+        expr: mysql_global_status_connection_errors_total > 10
+        for: 5m
+        labels:
+          severity: warning
+          signal: errors
+        annotations:
+          summary: "Erros de conexão MySQL"
+          description: "{{ $value }} erros de conexão nos últimos 5 minutos"
+
+      # ======================================================================
+      # SATURAÇÃO - Recursos próximos do limite
+      # ======================================================================
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          signal: saturation
+        annotations:
+          summary: "Uso de memória acima de 85%"
+          description: "Memória em {{ $value | humanizePercentage }} - risco de OOM"
+
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+          signal: saturation
+        annotations:
+          summary: "CPU acima de 80%"
+          description: "CPU em {{ $value | humanizePercentage }} nos últimos 10 minutos"
+
+      - alert: DiskSpaceRunningOut
+        expr: |
+          (
+            node_filesystem_avail_bytes{mountpoint="/"}
+            /
+            node_filesystem_size_bytes{mountpoint="/"}
+          ) * 100 < 15
+        for: 5m
+        labels:
+          severity: critical
+          signal: saturation
+        annotations:
+          summary: "Disco com menos de 15% livre"
+          description: "Apenas {{ $value | humanizePercentage }} de espaço disponível"
