@@ -172,6 +172,7 @@ return [
         // Module Service Providers
         App\Modules\Rat\RatServiceProvider::class,
         App\Modules\Demandas\DemandasServiceProvider::class,
+        App\Modules\Tdap\TdapServiceProvider::class,
     ])->toArray(),
 
     /*

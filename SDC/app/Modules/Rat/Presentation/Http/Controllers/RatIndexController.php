@@ -17,54 +17,36 @@ class RatIndexController extends Controller
     ) {
     }
 
-    public function index(Request $request): Response
+    public function index(Request $request): Response|\Illuminate\Http\RedirectResponse
     {
-        $filters = $request->only([
-            'protocolo',
-            'status',
-            'data_inicio',
-            'data_fim',
-            'ano',
-            'municipio',
-            'tipo_cobrade',
-            'natureza',
-            'criado_por',
-        ]);
+        try {
+            $filters = $request->only([
+                'protocolo',
+                'status',
+                'data_inicio',
+                'data_fim',
+                'ano',
+                'municipio',
+                'tipo_cobrade',
+                'natureza',
+                'criado_por',
+            ]);
 
-        $statistics = $this->getStatisticsUseCase->execute($filters);
-        $rats = $this->listRatsUseCase->execute($filters, 15);
+            $statistics = $this->getStatisticsUseCase->execute($filters);
+            $ratsResult = $this->listRatsUseCase->executeAsDTO($filters, 15);
 
-        // Transformar RATs para formato esperado pelo frontend
-        $ratsData = $rats->map(function ($rat) {
-            return [
-                'id' => $rat->id,
-                'protocolo' => $rat->protocolo,
-                'status' => $rat->status,
-                'created_at' => $rat->created_at->toDateTimeString(),
-                'updated_at' => $rat->updated_at->toDateTimeString(),
-                'local' => $rat->local ?? [],
-                'dadosGerais' => $rat->dados_gerais ?? [],
-                'recursos' => [],
-                'envolvidos' => [],
-                'anexos' => [],
-                'criado_por' => $rat->created_by ?? 'Sistema',
-            ];
-        });
-
-        return Inertia::render('RatIndex', [
-            'statistics' => $statistics->toArray(),
-            'rats' => $ratsData,
-            'filters' => $filters,
-            'pagination' => [
-                'current_page' => $rats->currentPage(),
-                'last_page' => $rats->lastPage(),
-                'per_page' => $rats->perPage(),
-                'total' => $rats->total(),
-            ],
-            'municipalities' => [], // TODO: Buscar do banco
-            'cobradeTypes' => [], // TODO: Buscar do banco
-            'years' => range(date('Y'), 2020, -1),
-        ]);
+            return Inertia::render('RatIndex', [
+                'statistics' => $statistics->toArray(),
+                'rats' => $ratsResult['data'],
+                'pagination' => $ratsResult['pagination'],
+                'filters' => $filters,
+                'municipalities' => [], // TODO: Buscar do banco
+                'cobradeTypes' => [], // TODO: Buscar do banco
+                'years' => range(date('Y'), 2020, -1),
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erro ao carregar RATs. Por favor, tente novamente.');
+        }
     }
 }
 
