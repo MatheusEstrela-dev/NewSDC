@@ -1,15 +1,18 @@
 <template>
-  <div class="filter-field">
-    <Label v-if="label" :for-id="fieldId" :size="'sm'" color="muted">
+  <div class="filter-field group">
+    <Label v-if="label" :for-id="fieldId" :size="'sm'" color="muted" class="mb-1.5 transition-colors duration-200 group-focus-within:text-primary-400">
       {{ label }}
     </Label>
-    <component
-      :is="fieldComponent"
-      :id="fieldId"
-      :model-value="modelValue"
-      v-bind="fieldProps"
-      @update:model-value="$emit('update:modelValue', $event)"
-    />
+    <div class="relative">
+      <component
+        :is="fieldComponent"
+        :id="fieldId"
+        :model-value="modelValue"
+        v-bind="fieldProps"
+        @update:model-value="$emit('update:modelValue', $event)"
+        class="transition-all duration-200 ease-in-out focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+      />
+    </div>
   </div>
 </template>
 
@@ -82,6 +85,22 @@ const fieldProps = computed(() => {
 <style scoped>
 .filter-field {
   @apply w-full;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filter-field:hover {
+  animation: none;
 }
 </style>
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Webhook\WebhookController;
 use App\Http\Controllers\Api\V1\Integration\DynamicIntegrationController;
 use App\Http\Controllers\Api\HealthCheckController;
 use App\Http\Controllers\Api\LogViewerController;
+use App\Http\Controllers\Api\V1\LogViewerController as LogViewerV1Controller;
 
 /*
 |--------------------------------------------------------------------------
@@ -139,25 +140,45 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             ->name('templates');
     });
 
-    // Log Viewer - Visualização de logs em tempo real
+    // Log Viewer - Sistema avançado de visualização de logs
     Route::prefix('logs')->name('api.v1.logs.')->group(function () {
 
-        // Logs recentes
-        Route::get('recent', [LogViewerController::class, 'recent'])
+        // Buscar logs com filtros avançados (data, tipo, nível, busca)
+        Route::get('/', [LogViewerV1Controller::class, 'index'])
+            ->middleware('throttle:default')
+            ->name('index');
+
+        // Estatísticas agregadas dos logs
+        Route::get('statistics', [LogViewerV1Controller::class, 'statistics'])
+            ->middleware('throttle:default')
+            ->name('statistics');
+
+        // Listar arquivos de log
+        Route::get('files', [LogViewerV1Controller::class, 'files'])
+            ->middleware('throttle:default')
+            ->name('files');
+
+        // Download de arquivo de log
+        Route::get('download/{filename}', [LogViewerV1Controller::class, 'download'])
+            ->middleware('throttle:default')
+            ->name('download');
+
+        // Logs recentes do Redis (tempo real)
+        Route::get('recent', [LogViewerV1Controller::class, 'recent'])
             ->middleware('throttle:default')
             ->name('recent');
 
-        // Métricas de logs
-        Route::get('metrics', [LogViewerController::class, 'metrics'])
+        // Limpar logs antigos
+        Route::delete('clean', [LogViewerV1Controller::class, 'clean'])
             ->middleware('throttle:default')
-            ->name('metrics');
+            ->name('clean');
 
-        // Logs de erros
-        Route::get('errors', [LogViewerController::class, 'errors'])
+        // Níveis e tipos disponíveis
+        Route::get('levels', [LogViewerV1Controller::class, 'levels'])
             ->middleware('throttle:default')
-            ->name('errors');
+            ->name('levels');
 
-        // Stream de logs em tempo real (SSE)
+        // Stream de logs em tempo real (SSE) - legado
         Route::get('stream', [LogViewerController::class, 'stream'])
             ->middleware('throttle:premium')
             ->name('stream');

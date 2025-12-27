@@ -75,7 +75,18 @@
       <!-- MÓDULOS DE GESTÃO -->
       <div class="nav-section">
         <div v-show="!isCollapsed" class="nav-section-title">MÓDULOS DE GESTÃO</div>
-        
+
+        <!-- DECRETAÇÕES -->
+        <NavItem
+          v-if="route().has('decretacoes.index')"
+          :href="route('decretacoes.index')"
+          :active="route().current('decretacoes.*')"
+          icon="scale"
+          :collapsed="isCollapsed"
+        >
+          Decretações
+        </NavItem>
+
         <!-- TDAP com submenu -->
         <div class="nav-group">
           <button
@@ -101,31 +112,44 @@
           </button>
           <div v-show="openSubMenus.tdap && !isCollapsed" class="nav-submenu">
             <NavItem
-              :href="route('dashboard')"
-              :active="route().current('dashboard')"
+              v-if="route().has('tdap.dashboard')"
+              :href="route('tdap.dashboard')"
+              :active="route().current('tdap.dashboard')"
               icon="dot"
               is-submenu
               :collapsed="isCollapsed"
             >
-              PMDA
+              Dashboard
             </NavItem>
             <NavItem
-              :href="route('dashboard')"
-              :active="false"
+              v-if="route().has('tdap.products.index')"
+              :href="route('tdap.products.index')"
+              :active="route().current('tdap.products.*')"
               icon="dot"
               is-submenu
               :collapsed="isCollapsed"
             >
-              Relatórios
+              Produtos
             </NavItem>
             <NavItem
-              :href="route('dashboard')"
-              :active="false"
+              v-if="route().has('tdap.recebimentos.index')"
+              :href="route('tdap.recebimentos.index')"
+              :active="route().current('tdap.recebimentos.*')"
               icon="dot"
               is-submenu
               :collapsed="isCollapsed"
             >
-              Configurações
+              Recebimentos
+            </NavItem>
+            <NavItem
+              v-if="route().has('tdap.movimentacoes.index')"
+              :href="route('tdap.movimentacoes.index')"
+              :active="route().current('tdap.movimentacoes.*')"
+              icon="dot"
+              is-submenu
+              :collapsed="isCollapsed"
+            >
+              Movimentações
             </NavItem>
           </div>
         </div>

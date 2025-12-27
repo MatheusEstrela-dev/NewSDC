@@ -83,7 +83,7 @@ return [
     |
     */
 
-    'locale' => 'en',
+    'locale' => 'pt_BR',
 
     /*
     |--------------------------------------------------------------------------
@@ -96,7 +96,7 @@ return [
     |
     */
 
-    'fallback_locale' => 'en',
+    'fallback_locale' => 'pt_BR',
 
     /*
     |--------------------------------------------------------------------------
@@ -173,6 +173,7 @@ return [
         App\Modules\Rat\RatServiceProvider::class,
         App\Modules\Demandas\DemandasServiceProvider::class,
         App\Modules\Tdap\TdapServiceProvider::class,
+        App\Modules\Decretacoes\DecretacoesServiceProvider::class,
     ])->toArray(),
 
     /*

@@ -4,6 +4,42 @@ use App\Http\Controllers\ProfileController;
 use App\Modules\Rat\Presentation\Http\Controllers\RatIndexController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Modules\Tdap\Application\UseCases\ListMovimentacoesUseCase;
+
+// DEBUG: Rota temporária para testar serialização
+Route::get('/debug/movimentacoes', function () {
+    return response()->json([
+        'status' => 'OK',
+        'message' => 'Debug route is working',
+        'opcache_enabled' => function_exists('opcache_reset'),
+        'php_version' => PHP_VERSION,
+        'timestamp' => now()->toIso8601String(),
+    ]);
+});
+
+// DEBUG: Rota para testar executeAsDTO (requer container)
+Route::get('/debug/test-dto', function () {
+    try {
+        $useCase = app(ListMovimentacoesUseCase::class);
+        $result = $useCase->executeAsDTO([], 15);
+
+        return response()->json([
+            'debug' => 'Testing executeAsDTO method',
+            'result_type' => gettype($result),
+            'is_array' => is_array($result),
+            'keys' => array_keys($result),
+            'data_type' => gettype($result['data'] ?? null),
+            'data_count' => is_array($result['data'] ?? null) ? count($result['data']) : 'N/A',
+            'pagination' => $result['pagination'] ?? null,
+            'first_item' => $result['data'][0] ?? null,
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ], 500);
+    }
+});
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -89,7 +125,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Log Viewer - Visualizador de Logs do Sistema
+    // Log Viewer - Sistema Avançado de Visualização de Logs
+    Route::get('/log-viewer', function () {
+        return Inertia::render('LogViewer/Index');
+    })->name('log-viewer.index');
+
+    // Log Viewer Legado - Visualizador de Logs Simples
     Route::get('logs', '\\Rap2hpoutre\\LaravelLogViewer\\LogViewerController@index')->name('logs.index');
 
     // Health Check Dashboard - Visualizador de Saúde do Sistema
@@ -99,6 +140,9 @@ Route::middleware('auth')->group(function () {
 
     // Permissionamento (Admin)
     require __DIR__.'/modules/permissions.php';
+
+    // Módulo: Decretações
+    require __DIR__.'/modules/decretacoes.php';
 });
 
 require __DIR__.'/auth.php';

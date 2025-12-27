@@ -1,20 +1,20 @@
 <template>
   <div :class="cardClasses">
-    <div class="flex items-start justify-between gap-4">
+    <div class="flex items-start justify-between gap-2 sm:gap-4">
       <div class="min-w-0 flex-1">
-        <Text size="sm" color="muted" weight="medium" class="mb-1">
+        <Text size="sm" color="muted" weight="medium" class="mb-0.5 sm:mb-1 text-xs sm:text-sm leading-tight">
           {{ title }}
         </Text>
-        <Heading :level="2" color="white" class="mb-0">
+        <Heading :level="2" color="white" class="mb-0 text-xl sm:text-2xl md:text-3xl">
           {{ formattedValue }}
         </Heading>
-        <Text v-if="subtitle" size="xs" color="muted" class="mt-1">
+        <Text v-if="subtitle" size="xs" color="muted" class="mt-0.5 sm:mt-1 hidden sm:block">
           {{ subtitle }}
         </Text>
       </div>
 
       <div v-if="icon" :class="iconContainerClasses">
-        <component :is="icon" class="w-6 h-6" />
+        <component :is="icon" class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
       </div>
     </div>
   </div>
@@ -69,12 +69,12 @@ const variantBorderClasses = {
 
 const cardClasses = computed(() => {
   const base =
-    'rounded-xl border bg-slate-900/60 backdrop-blur-sm px-5 py-4 transition-all duration-200';
+    'rounded-lg sm:rounded-xl border bg-slate-900/60 backdrop-blur-sm px-3 py-2.5 sm:px-4 sm:py-3 md:px-5 md:py-4 transition-all duration-300 hover:bg-slate-900/80 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] touch-manipulation';
   return [base, variantBorderClasses[props.variant]].filter(Boolean).join(' ');
 });
 
 const iconContainerClasses = computed(() => {
-  return `p-3 rounded-lg ${variantAccentClasses[props.variant]}`;
+  return `p-1.5 sm:p-2 md:p-3 rounded-md sm:rounded-lg ${variantAccentClasses[props.variant]}`;
 });
 
 const formattedValue = computed(() => {
