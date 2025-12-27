@@ -54,7 +54,9 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['daily', 'stderr', 'events'],
+            'channels' => env('APP_ENV') === 'production'
+                ? ['json_stderr', 'daily']
+                : ['daily', 'stderr', 'events'],
             'ignore_exceptions' => false,
         ],
 
@@ -73,40 +75,78 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Canal JSON para produção (Docker/Kubernetes/Loki)
+        'json_stderr' => [
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => StreamHandler::class,
+            'formatter' => Monolog\Formatter\JsonFormatter::class,
+            'with' => [
+                'stream' => 'php://stderr',
+            ],
+            'processors' => [
+                PsrLogMessageProcessor::class,
+                Monolog\Processor\IntrospectionProcessor::class,
+                Monolog\Processor\WebProcessor::class,
+                Monolog\Processor\MemoryUsageProcessor::class,
+            ],
+        ],
+
         // Canal para eventos do sistema (ActivityLogger)
         'events' => [
-            'driver' => 'daily',
+            'driver' => env('APP_ENV') === 'production' ? 'monolog' : 'daily',
             'path' => storage_path('logs/events.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 30,
             'replace_placeholders' => true,
+            'formatter' => env('APP_ENV') === 'production'
+                ? Monolog\Formatter\JsonFormatter::class
+                : null,
+            'handler' => env('APP_ENV') === 'production'
+                ? StreamHandler::class
+                : null,
+            'processors' => env('APP_ENV') === 'production'
+                ? [PsrLogMessageProcessor::class]
+                : [],
         ],
 
         // Canal para erros críticos (sistema 24/7)
         'critical' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/critical.log'),
+            'driver' => 'monolog',
             'level' => 'critical',
-            'days' => 90,
-            'replace_placeholders' => true,
+            'handler' => StreamHandler::class,
+            'formatter' => Monolog\Formatter\JsonFormatter::class,
+            'with' => [
+                'stream' => storage_path('logs/critical.log'),
+            ],
+            'processors' => [
+                PsrLogMessageProcessor::class,
+                Monolog\Processor\IntrospectionProcessor::class,
+            ],
         ],
 
-        // Canal para queries lentas
+        // Canal para queries lentas (JSON estruturado)
         'queries' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/queries.log'),
+            'driver' => 'monolog',
             'level' => 'debug',
-            'days' => 7,
-            'replace_placeholders' => true,
+            'handler' => StreamHandler::class,
+            'formatter' => Monolog\Formatter\JsonFormatter::class,
+            'with' => [
+                'stream' => storage_path('logs/queries.log'),
+            ],
+            'processors' => [PsrLogMessageProcessor::class],
         ],
 
-        // Canal para jobs falhados
+        // Canal para jobs falhados (JSON estruturado)
         'jobs' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/jobs.log'),
+            'driver' => 'monolog',
             'level' => 'error',
-            'days' => 30,
-            'replace_placeholders' => true,
+            'handler' => StreamHandler::class,
+            'formatter' => Monolog\Formatter\JsonFormatter::class,
+            'with' => [
+                'stream' => storage_path('logs/jobs.log'),
+            ],
+            'processors' => [PsrLogMessageProcessor::class],
         ],
 
         'slack' => [

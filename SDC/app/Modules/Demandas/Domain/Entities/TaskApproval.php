@@ -40,26 +40,26 @@ class TaskApproval extends Model
 
     /**
      * Aprovar
+     * Nota: O repositório deve chamar save() após esta operação
      */
     public function aprovar(?string $comentario = null): self
     {
         $this->status = 'aprovado';
         $this->comentario = $comentario;
         $this->respondido_em = now();
-        $this->save();
 
         return $this;
     }
 
     /**
      * Rejeitar
+     * Nota: O repositório deve chamar save() após esta operação
      */
     public function rejeitar(?string $comentario = null): self
     {
         $this->status = 'rejeitado';
         $this->comentario = $comentario;
         $this->respondido_em = now();
-        $this->save();
 
         return $this;
     }

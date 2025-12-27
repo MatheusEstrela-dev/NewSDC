@@ -289,43 +289,355 @@ services:
       - redis
 
   # ==========================================================================
-  # Node.js (Runtime JavaScript tradicional)
-  # COMENTADO: Vite será executado no host, não no container
+  # Queue Worker (Supervisor)
   # ==========================================================================
-  # node:
-  #   image: node:20-alpine
-  #   container_name: newsdc_node
-  #   hostname: node
-  #   restart: unless-stopped
-  #   labels:
-  #     - "com.docker.compose.project=newsdc"
-  #     - "com.docker.compose.service=node"
-  #   
-  #   working_dir: /var/www
-  #   
-  #   volumes:
-  #     - ../:/var/www:cached
-  #     - newsdc_node_modules:/var/www/node_modules
-  #   
-  #   networks:
-  #     - sdc_network
-  #   
-  #   environment:
-  #     NODE_ENV: development
-  #     VITE_HOST: 0.0.0.0
-  #     VITE_PORT: 5175
-  #   
-  #   ports:
-  #     - "5175:5175"  # Vite dev server
-  #   
-  #   command: sh -c "rm -rf node_modules/.vite 2>/dev/null || true && npm ci --legacy-peer-deps --no-audit || (rm -rf node_modules package-lock.json && npm install --legacy-peer-deps --no-audit) && npm run dev"
-  #   
-  #   healthcheck:
-  #     test: ["CMD", "wget", "-q", "--spider", "http://localhost:5175"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 30s
+  queue:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.queue
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    container_name: newsdc_queue
+    hostname: queue
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=newsdc"
+      - "com.docker.compose.service=queue"
+
+    volumes:
+      - ../:/var/www:cached
+      - newsdc_vendor:/var/www/vendor
+      - ./logs/queue:/var/www/storage/logs
+
+    networks:
+      - sdc_network
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-sdc}
+      DB_USERNAME: ${DB_USERNAME:-sdc}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+
+    healthcheck:
+      test: ["CMD", "supervisorctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # ==========================================================================
+  # Node.js + Vite (Frontend Development Server)
+  # ==========================================================================
+  node:
+    image: node:20-alpine
+    container_name: newsdc_node
+    hostname: node
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=newsdc"
+      - "com.docker.compose.service=node"
+
+    working_dir: /var/www
+
+    volumes:
+      - ../:/var/www:cached
+      - newsdc_node_modules:/var/www/node_modules
+
+    networks:
+      - sdc_network
+
+    environment:
+      NODE_ENV: development
+      VITE_HOST: 0.0.0.0
+      VITE_PORT: 5173
+      NODE_OPTIONS: "--max-old-space-size=4096"
+
+    ports:
+      - "5173:5173"  # Vite dev server
+
+    command: sh -c "rm -rf node_modules/.vite && npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0 --port 5173"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  # ==========================================================================
+  # MONITORAMENTO - Prometheus
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: newsdc_prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    platform: linux/amd64
+    labels:
+      - "com.docker.compose.project=newsdc"
+    security_opt:
+      - apparmor=unconfined
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts:/etc/prometheus/alerts:ro
+      - newsdc_prometheus_data:/prometheus
+    networks:
+      - sdc_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ==========================================================================
+  # MONITORAMENTO - Alertmanager
+  # ==========================================================================
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: newsdc_alertmanager
+    hostname: alertmanager
+    restart: unless-stopped
+    platform: linux/amd64
+    labels:
+      - "com.docker.compose.project=newsdc"
+    security_opt:
+      - apparmor=unconfined
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - newsdc_alertmanager_data:/alertmanager
+    networks:
+      - sdc_network
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==========================================================================
+  # MONITORAMENTO - Grafana
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: newsdc_grafana
+    hostname: grafana
+    restart: unless-stopped
+    platform: linux/amd64
+    labels:
+      - "com.docker.compose.project=newsdc"
+    security_opt:
+      - apparmor=unconfined
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin@123}
+      GF_SERVER_ROOT_URL: http://localhost:3000
+      GF_SERVER_DOMAIN: localhost
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource,grafana-piechart-panel
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_SECURITY_COOKIE_SECURE: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_LOG_MODE: console
+      GF_LOG_LEVEL: info
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - newsdc_grafana_data:/var/lib/grafana
+    networks:
+      - sdc_network
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ==========================================================================
+  # MONITORAMENTO - Node Exporter
+  # ==========================================================================
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: newsdc_node_exporter
+    hostname: node-exporter
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=newsdc"
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.netclass.ignored-devices=^(veth.*|br-.*|docker.*|lo)$$'
+      - '--collector.netdev.device-exclude=^(veth.*|br-.*|docker.*|lo)$$'
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - sdc_network
+    privileged: true
+
+  # ==========================================================================
+  # MONITORAMENTO - cAdvisor
+  # ==========================================================================
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: newsdc_cadvisor
+    hostname: cadvisor
+    restart: unless-stopped
+    platform: linux/amd64
+    labels:
+      - "com.docker.compose.project=newsdc"
+    security_opt:
+      - apparmor=unconfined
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - sdc_network
+    privileged: true
+    devices:
+      - /dev/kmsg
+
+  # ==========================================================================
+  # MONITORAMENTO - MySQL Exporter
+  # ==========================================================================
+  mysql-exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    container_name: newsdc_mysql_exporter
+    hostname: mysql-exporter
+    restart: unless-stopped
+    platform: linux/amd64
+    labels:
+      - "com.docker.compose.project=newsdc"
+    command:
+      - --mysqld.address=newsdc_db:3306
+      - --mysqld.username=sdc
+      - --web.listen-address=:9104
+    environment:
+      MYSQLD_EXPORTER_PASSWORD: "secret"
+    ports:
+      - "9104:9104"
+    networks:
+      - sdc_network
+
+  # ==========================================================================
+  # MONITORAMENTO - Redis Exporter
+  # ==========================================================================
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.56.0
+    container_name: newsdc_redis_exporter
+    hostname: redis-exporter
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=newsdc"
+    environment:
+      REDIS_ADDR: newsdc_redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    ports:
+      - "9121:9121"
+    networks:
+      - sdc_network
+
+  # ==========================================================================
+  # MONITORAMENTO - Nginx Exporter
+  # ==========================================================================
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.0.0
+    container_name: newsdc_nginx_exporter
+    hostname: nginx-exporter
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=newsdc"
+    command:
+      - '-nginx.scrape-uri=http://newsdc_nginx:80/nginx_status'
+    ports:
+      - "9113:9113"
+    networks:
+      - sdc_network
+
+  # ==========================================================================
+  # MONITORAMENTO - Blackbox Exporter
+  # ==========================================================================
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.24.0
+    container_name: newsdc_blackbox_exporter
+    hostname: blackbox-exporter
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=newsdc"
+    command:
+      - '--config.file=/etc/blackbox/blackbox.yml'
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./monitoring/blackbox/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    networks:
+      - sdc_network
 
 # ==========================================================================
 # Networks
@@ -349,5 +661,11 @@ volumes:
   newsdc_vendor:
     driver: local
   newsdc_node_modules:
+    driver: local
+  newsdc_prometheus_data:
+    driver: local
+  newsdc_grafana_data:
+    driver: local
+  newsdc_alertmanager_data:
     driver: local
 

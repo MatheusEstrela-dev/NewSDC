@@ -16,7 +16,7 @@
 
     <div v-else-if="protocolos.length === 0" class="p-12 text-center">
       <DocumentTextIcon class="w-12 h-12 text-slate-600 mx-auto mb-4" />
-      <Heading level="4" color="muted">Nenhum protocolo encontrado</Heading>
+      <Heading :level="4" color="muted">Nenhum protocolo encontrado</Heading>
       <Text size="sm" color="muted" class="mt-2">
         Tente ajustar os filtros de busca
       </Text>

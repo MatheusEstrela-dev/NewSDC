@@ -3,7 +3,7 @@
     <div class="flex items-start justify-between gap-3 mb-4">
       <div class="min-w-0">
         <div class="flex items-center gap-2">
-          <Heading level="5" color="white" class="mb-0 truncate">
+          <Heading :level="5" color="white" class="mb-0 truncate">
             Protocolo #
           </Heading>
           <Text class="font-mono text-slate-200 truncate">{{ protocolo.protocoloNumero }}</Text>

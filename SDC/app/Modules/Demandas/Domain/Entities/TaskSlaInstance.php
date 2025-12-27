@@ -72,12 +72,12 @@ class TaskSlaInstance extends Model
 
     /**
      * Pausar SLA (quando aguardando terceiros)
+     * Nota: O repositório deve chamar save() após esta operação
      */
     public function pausar(): self
     {
         if (! $this->isPausado()) {
             $this->pausado_em = now();
-            $this->save();
         }
 
         return $this;
@@ -85,6 +85,7 @@ class TaskSlaInstance extends Model
 
     /**
      * Retomar SLA
+     * Nota: O repositório deve chamar save() após esta operação
      */
     public function retomar(): self
     {
@@ -92,7 +93,6 @@ class TaskSlaInstance extends Model
             $minutosNaPausa = now()->diffInMinutes($this->pausado_em);
             $this->tempo_pausado_total += $minutosNaPausa;
             $this->pausado_em = null;
-            $this->save();
         }
 
         return $this;

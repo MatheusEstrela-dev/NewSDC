@@ -1,47 +1,91 @@
 <template>
   <div class="demandas-container">
-    <div class="mb-6">
-      <div class="rounded-2xl bg-gradient-to-r from-red-700/18 to-rose-600/10 bg-slate-900/25 border border-slate-700/30 p-6">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div class="flex items-center gap-4">
-            <div class="w-11 h-11 rounded-full bg-transparent border border-slate-600/40 flex items-center justify-center">
-              <CheckBadgeIcon class="w-6 h-6 text-slate-200" />
-            </div>
-            <div>
-              <Heading level="2" color="white" class="mb-1">
-                Demandas
-              </Heading>
-              <Text size="sm" color="muted">
-                Módulo em construção — estrutura pronta para evoluir com Atomic Design e DDD.
-              </Text>
-            </div>
-          </div>
+    <DemandasPageHeader @open-modal="showModal = true" />
+    <DemandasStatisticsCards :statistics="demandasStatistics" />
 
-          <div class="flex items-center gap-3">
-            <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left" disabled>
-              Nova Demanda
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <DemandasList
+      :demandas="demandas"
+      :filters="filters"
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      :get-tipo-label="getTipoLabel"
+      :get-prioridade-label="getPrioridadeLabel"
+      :get-status-label="getStatusLabel"
+      @filter-change="handleFilterChange"
+      @clear-filters="handleClearFilters"
+      @page-change="handlePageChange"
+      @demanda-click="handleDemandaClick"
+    />
 
-    <CardBase variant="default" padding="lg" class="bg-slate-800/60 border-slate-700/50">
-      <Heading level="4" color="white" class="mb-2">Próximos passos</Heading>
-      <Text size="sm" color="muted">
-        Aqui entraremos com listagem, filtros retráteis, cards e paginação (mock) — seguindo o mesmo padrão de RAT/PAE.
-      </Text>
-    </CardBase>
+    <NovaDemandaModal
+      :show="showModal"
+      @close="showModal = false"
+      @submit="handleCreateDemanda"
+    />
   </div>
 </template>
 
 <script setup>
-import CardBase from '@/Components/Atoms/Card/CardBase.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
-import PlusIcon from '@/Components/Icons/PlusIcon.vue';
-import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
+import { ref } from 'vue';
+import { useDemandas } from '@/Composables/useDemandas';
+import DemandasPageHeader from '@/Components/Organisms/Demandas/Header/DemandasPageHeader.vue';
+import DemandasStatisticsCards from '@/Components/Organisms/Demandas/Statistics/DemandasStatisticsCards.vue';
+import DemandasList from '@/Components/Organisms/Demandas/Lists/DemandasList.vue';
+import NovaDemandaModal from '@/Components/Organisms/Demandas/Modals/NovaDemandaModal.vue';
+
+const props = defineProps({
+  statistics: {
+    type: Object,
+    default: () => ({
+      total: 0,
+      abertas: 0,
+      em_andamento: 0,
+      concluidas: 0,
+    }),
+  },
+});
+
+// Usa o composable de demandas
+const {
+  demandas,
+  filters,
+  currentPage,
+  totalPages,
+  statistics: demandasStatistics,
+  createDemanda,
+  setFilters,
+  clearFilters,
+  goToPage,
+  getTipoLabel,
+  getPrioridadeLabel,
+  getStatusLabel,
+} = useDemandas();
+
+const showModal = ref(false);
+
+const handleFilterChange = (newFilters) => {
+  setFilters(newFilters);
+};
+
+const handleClearFilters = () => {
+  clearFilters();
+};
+
+const handlePageChange = (page) => {
+  goToPage(page);
+};
+
+const handleDemandaClick = (demanda) => {
+  console.log('Demanda clicada:', demanda);
+  // Futuramente: abrir modal de detalhes ou navegar para página de detalhes
+};
+
+const handleCreateDemanda = (demandaData) => {
+  const newDemanda = createDemanda(demandaData);
+  showModal.value = false;
+  console.log('Nova demanda criada:', newDemanda);
+  // Futuramente: mostrar toast de sucesso
+};
 </script>
 
 <style scoped>
@@ -63,5 +107,3 @@ import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
   }
 }
 </style>
-
-

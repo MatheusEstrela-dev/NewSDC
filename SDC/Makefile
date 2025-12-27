@@ -1,262 +1,538 @@
 # ============================================================================
-# SDC - Makefile para Docker
-# Comandos facilitados para desenvolvimento e produção
+# SDC - MAKEFILE COMPLETO PARA DOCKER
+# Instrumentalização completa do ambiente com um único comando
+# ============================================================================
+# Uso:
+#   make build-all        # Build completo de toda stack
+#   make up-all           # Sobe toda stack (dev + monitoring)
+#   make dev              # Ambiente dev padrão
+#   make prod             # Ambiente produção
+#   make monitor          # Apenas monitoring
+#   make help             # Ajuda completa
 # ============================================================================
 
-.PHONY: help dev prod build up down restart logs shell db-shell redis-shell test migrate fresh seed backup clean network-init network-create network-rm network-ls network-inspect
+.PHONY: help
+.DEFAULT_GOAL := help
 
-# Cores
+# ============================================================================
+# CORES E FORMATAÇÃO
+# ============================================================================
 GREEN  := $(shell tput -Txterm setaf 2)
 YELLOW := $(shell tput -Txterm setaf 3)
+BLUE   := $(shell tput -Txterm setaf 4)
+RED    := $(shell tput -Txterm setaf 1)
+CYAN   := $(shell tput -Txterm setaf 6)
 WHITE  := $(shell tput -Txterm setaf 7)
+BOLD   := $(shell tput -Txterm bold)
 RESET  := $(shell tput -Txterm sgr0)
 
-# ==========================================
-# Help
-# ==========================================
-help: ## Mostra esta ajuda
+# ============================================================================
+# VARIÁVEIS DE AMBIENTE
+# ============================================================================
+COMPOSE_DEV := docker compose -f docker/docker-compose.yml
+COMPOSE_PROD := docker compose -f docker/docker-compose.prod.yml
+
+# Build args
+HOST_UID ?= $(shell id -u)
+HOST_GID ?= $(shell id -g)
+DOCKER_BUILDKIT ?= 1
+COMPOSE_DOCKER_CLI_BUILD ?= 1
+
+# Exportar variáveis
+export DOCKER_BUILDKIT
+export COMPOSE_DOCKER_CLI_BUILD
+export HOST_UID
+export HOST_GID
+
+# ============================================================================
+# 📚 HELP & DOCUMENTAÇÃO
+# ============================================================================
+
+help: ## 📚 Mostra ajuda completa e categorizada
 	@echo ''
-	@echo '${GREEN}SDC - Sistema de Defesa Civil${RESET}'
+	@echo '${BOLD}${CYAN}╔════════════════════════════════════════════════════════════════════╗${RESET}'
+	@echo '${BOLD}${CYAN}║     SDC - Sistema de Defesa Civil - Docker Management Tool        ║${RESET}'
+	@echo '${BOLD}${CYAN}╚════════════════════════════════════════════════════════════════════╝${RESET}'
 	@echo ''
-	@echo 'Uso:'
-	@echo '  ${YELLOW}make${RESET} ${GREEN}<target>${RESET}'
+	@echo '${BOLD}📦 BUILD & SETUP:${RESET}'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## 📦/ {printf "  ${YELLOW}%-20s${RESET} %s\n", $$1, substr($$2, 4)}' $(MAKEFILE_LIST)
 	@echo ''
-	@echo 'Targets:'
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  ${YELLOW}%-15s${RESET} %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo '${BOLD}🚀 AMBIENTE COMPLETO (ONE-COMMAND):${RESET}'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## 🚀/ {printf "  ${GREEN}%-20s${RESET} %s\n", $$1, substr($$2, 4)}' $(MAKEFILE_LIST)
+	@echo ''
+	@echo '${BOLD}🔧 DESENVOLVIMENTO:${RESET}'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## 🔧/ {printf "  ${GREEN}%-20s${RESET} %s\n", $$1, substr($$2, 4)}' $(MAKEFILE_LIST)
+	@echo ''
+	@echo '${BOLD}🏭 PRODUÇÃO:${RESET}'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## 🏭/ {printf "  ${BLUE}%-20s${RESET} %s\n", $$1, substr($$2, 4)}' $(MAKEFILE_LIST)
+	@echo ''
+	@echo '${BOLD}📊 MONITORAMENTO:${RESET}'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## 📊/ {printf "  ${CYAN}%-20s${RESET} %s\n", $$1, substr($$2, 4)}' $(MAKEFILE_LIST)
+	@echo ''
+	@echo '${BOLD}🐚 ACESSO & DEBUG:${RESET}'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## 🐚/ {printf "  ${WHITE}%-20s${RESET} %s\n", $$1, substr($$2, 4)}' $(MAKEFILE_LIST)
+	@echo ''
+	@echo '${BOLD}🗑️  LIMPEZA:${RESET}'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## 🗑/ {printf "  ${RED}%-20s${RESET} %s\n", $$1, substr($$2, 5)}' $(MAKEFILE_LIST)
+	@echo ''
+	@echo '${BOLD}💾 BANCO DE DADOS:${RESET}'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## 💾/ {printf "  ${YELLOW}%-20s${RESET} %s\n", $$1, substr($$2, 4)}' $(MAKEFILE_LIST)
+	@echo ''
+	@echo '${BOLD}🎨 FRONTEND:${RESET}'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## 🎨/ {printf "  ${CYAN}%-20s${RESET} %s\n", $$1, substr($$2, 4)}' $(MAKEFILE_LIST)
+	@echo ''
+	@echo '${BOLD}Exemplos de uso:${RESET}'
+	@echo '  ${GREEN}make build-all${RESET}              # Build completo de toda stack'
+	@echo '  ${GREEN}make up-all${RESET}                 # Sobe ambiente completo (dev + monitoring)'
+	@echo '  ${GREEN}make dev-full${RESET}               # Desenvolvimento com todas ferramentas'
+	@echo '  ${BLUE}make prod${RESET}                   # Ambiente de produção'
+	@echo '  ${CYAN}make status${RESET}                 # Status de todos containers'
+	@echo ''
 
-# ==========================================
-# Desenvolvimento
-# ==========================================
-dev: network-init ## Inicia ambiente de desenvolvimento
-	docker compose -f docker/docker-compose.yml up -d
-	@echo "${GREEN}Ambiente de desenvolvimento iniciado!${RESET}"
-	@echo "App: http://localhost"
-	@echo "Mailhog: http://localhost:8025"
+# ============================================================================
+# 🚀 COMANDOS ONE-COMMAND (BUILD & UP COMPLETO)
+# ============================================================================
 
-dev-full: ## Inicia desenvolvimento com todas as ferramentas
-	docker compose -f docker/docker-compose.yml --profile tools up -d
-	@echo "${GREEN}Ambiente completo iniciado!${RESET}"
-	@echo "App: http://localhost"
-	@echo "phpMyAdmin: http://localhost:8080"
-	@echo "Redis Commander: http://localhost:8081"
-	@echo "Mailhog: http://localhost:8025"
+build-all: ## 🚀 Build completo de TODA a stack (dev + monitoring + tools)
+	@echo "${BOLD}${CYAN}════════════════════════════════════════════════════════════${RESET}"
+	@echo "${BOLD}${CYAN}  BUILD COMPLETO DE TODA A STACK${RESET}"
+	@echo "${BOLD}${CYAN}════════════════════════════════════════════════════════════${RESET}"
+	@echo ""
+	@echo "${YELLOW}→ Construindo imagens de desenvolvimento...${RESET}"
+	@$(COMPOSE_DEV) build --parallel
+	@echo "${GREEN}✓ Build de desenvolvimento concluído${RESET}"
+	@echo ""
+	@echo "${BOLD}${GREEN}✓ BUILD COMPLETO FINALIZADO COM SUCESSO!${RESET}"
 
-dev-build: ## Rebuild do ambiente de desenvolvimento
-	docker compose -f docker/docker-compose.yml build --no-cache
-	docker compose -f docker/docker-compose.yml up -d
+build-dev: ## 📦 Build apenas desenvolvimento
+	@echo "${YELLOW}→ Build de desenvolvimento...${RESET}"
+	@$(COMPOSE_DEV) build --parallel
+	@echo "${GREEN}✓ Build concluído${RESET}"
 
-dev-down: ## Para ambiente de desenvolvimento
-	docker compose -f docker/docker-compose.yml down
+build-prod: ## 📦 Build apenas produção
+	@echo "${YELLOW}→ Build de produção...${RESET}"
+	@$(COMPOSE_PROD) build --parallel
+	@echo "${GREEN}✓ Build concluído${RESET}"
 
-dev-logs: ## Ver logs de desenvolvimento
-	docker compose -f docker/docker-compose.yml logs -f
+build-clean: ## 📦 Build limpo (sem cache)
+	@echo "${YELLOW}→ Build limpo (sem cache)...${RESET}"
+	@$(COMPOSE_DEV) build --no-cache --parallel
+	@echo "${GREEN}✓ Build limpo concluído${RESET}"
 
-dev-monitoring: ## Inicia ambiente com monitoring stack completo
-	docker compose -f docker/docker-compose.yml -f docker/docker-compose.monitoring.yml up -d
-	@echo "${GREEN}Ambiente com monitoring iniciado!${RESET}"
-	@echo "App: http://localhost:8000"
-	@echo "Grafana: http://localhost:3000 (admin/admin123)"
-	@echo "Prometheus: http://localhost:9090"
-	@echo "Mailhog: http://localhost:8025"
+up-all: network-init ## 🚀 Sobe TODA stack (app + db + redis + monitoring + tools)
+	@echo "${BOLD}${CYAN}════════════════════════════════════════════════════════════${RESET}"
+	@echo "${BOLD}${CYAN}  SUBINDO STACK COMPLETA${RESET}"
+	@echo "${BOLD}${CYAN}════════════════════════════════════════════════════════════${RESET}"
+	@echo ""
+	@echo "${YELLOW}→ Iniciando todos os serviços...${RESET}"
+	@$(COMPOSE_DEV) --profile tools up -d
+	@echo ""
+	@echo "${GREEN}✓ Stack completa iniciada!${RESET}"
+	@echo ""
+	@$(MAKE) urls
 
-monitoring-down: ## Para monitoring stack
-	docker compose -f docker/docker-compose.monitoring.yml down
+down-all: ## 🚀 Para TODA stack
+	@echo "${YELLOW}→ Parando todos os serviços...${RESET}"
+	@$(COMPOSE_DEV) --profile tools down
+	@echo "${GREEN}✓ Todos os serviços parados${RESET}"
 
-monitoring-logs: ## Ver logs do monitoring stack
-	docker compose -f docker/docker-compose.monitoring.yml logs -f
+restart-all: ## 🚀 Reinicia TODA stack
+	@echo "${YELLOW}→ Reiniciando stack completa...${RESET}"
+	@$(MAKE) down-all
+	@$(MAKE) up-all
 
-# ==========================================
-# Produção
-# ==========================================
-prod: ## Inicia ambiente de produção
-	docker compose -f docker/docker-compose.prod.yml up -d
-	@echo "${GREEN}Ambiente de produção iniciado!${RESET}"
+# ============================================================================
+# 🔧 DESENVOLVIMENTO
+# ============================================================================
 
-prod-build: ## Build de produção
-	docker compose -f docker/docker-compose.prod.yml build --no-cache
-	docker compose -f docker/docker-compose.prod.yml up -d
+dev: network-init ## 🔧 Ambiente de desenvolvimento padrão
+	@echo "${YELLOW}→ Iniciando ambiente de desenvolvimento...${RESET}"
+	@$(COMPOSE_DEV) up -d app nginx db redis mailhog queue node
+	@echo "${GREEN}✓ Ambiente de desenvolvimento iniciado!${RESET}"
+	@echo ""
+	@echo "${CYAN}Serviços disponíveis:${RESET}"
+	@echo "  App (Laravel):     ${GREEN}http://localhost:8001${RESET}"
+	@echo "  Nginx:             ${GREEN}http://localhost:8082${RESET}"
+	@echo "  Vite (HMR):        ${GREEN}http://localhost:5173${RESET}"
+	@echo "  Mailhog:           ${GREEN}http://localhost:8026${RESET}"
+	@echo "  MySQL:             ${GREEN}localhost:3307${RESET}"
+	@echo "  Redis:             ${GREEN}localhost:6380${RESET}"
 
-prod-down: ## Para ambiente de produção
-	docker compose -f docker/docker-compose.prod.yml down
+dev-full: network-init ## 🔧 Desenvolvimento + ferramentas (phpmyadmin, redis-commander)
+	@echo "${YELLOW}→ Iniciando ambiente completo...${RESET}"
+	@$(COMPOSE_DEV) --profile tools up -d
+	@echo "${GREEN}✓ Ambiente completo iniciado!${RESET}"
+	@echo ""
+	@$(MAKE) urls
 
-prod-logs: ## Ver logs de produção
-	docker compose -f docker/docker-compose.prod.yml logs -f
+dev-minimal: network-init ## 🔧 Desenvolvimento mínimo (apenas app + db + redis)
+	@echo "${YELLOW}→ Iniciando ambiente mínimo...${RESET}"
+	@$(COMPOSE_DEV) up -d app db redis
+	@echo "${GREEN}✓ Ambiente mínimo iniciado!${RESET}"
 
-prod-scale: ## Scale dos workers (ex: make prod-scale N=5)
-	docker compose -f docker/docker-compose.prod.yml up -d --scale app=$(N) --scale queue=$(N)
+dev-build: ## 🔧 Rebuild desenvolvimento
+	@echo "${YELLOW}→ Rebuild e reinicio do ambiente...${RESET}"
+	@$(COMPOSE_DEV) down
+	@$(COMPOSE_DEV) build
+	@$(COMPOSE_DEV) up -d
+	@echo "${GREEN}✓ Rebuild concluído${RESET}"
 
-# ==========================================
-# Network - Bridge SDC
-# ==========================================
-network-init: ## Inicializa a rede bridge SDC
-	@echo "${YELLOW}Inicializando rede bridge SDC...${RESET}"
-	@if docker network ls | grep -qE "sdc.*sdc_network|sdc_network"; then \
-		echo "${GREEN}✓ Rede bridge SDC já existe${RESET}"; \
-		docker network ls | grep -E "sdc.*sdc_network|sdc_network" | head -1; \
-	else \
-		echo "${YELLOW}Criando rede bridge SDC...${RESET}"; \
-		docker compose -f docker/docker-compose.yml up -d --no-start 2>/dev/null || true; \
-		if docker network ls | grep -qE "sdc.*sdc_network|sdc_network"; then \
-			echo "${GREEN}✓ Rede bridge SDC criada com sucesso${RESET}"; \
-		else \
-			echo "${GREEN}✓ Rede será criada automaticamente ao iniciar os containers${RESET}"; \
-		fi; \
-	fi
-	@echo "${GREEN}Rede bridge SDC inicializada!${RESET}"
+dev-logs: ## 🔧 Logs desenvolvimento (follow)
+	@$(COMPOSE_DEV) logs -f
 
-network-create: ## Cria a rede bridge SDC manualmente
-	@echo "${YELLOW}Criando rede bridge SDC...${RESET}"
-	docker network create \
-		--driver bridge \
-		--subnet 172.25.0.0/16 \
-		sdc_network 2>/dev/null || \
-	(echo "${YELLOW}Rede já existe ou será criada pelo docker-compose.${RESET}" && \
-	 docker compose -f docker/docker-compose.yml up -d --no-start 2>/dev/null || true)
-	@echo "${GREEN}Rede bridge SDC criada!${RESET}"
+dev-ps: ## 🔧 Status dos containers dev
+	@$(COMPOSE_DEV) ps
 
-network-rm: ## Remove a rede bridge SDC
-	@echo "${YELLOW}Removendo rede bridge SDC...${RESET}"
-	docker network rm sdc_network 2>/dev/null || \
-	(echo "${YELLOW}Rede não existe ou está em uso.${RESET}" && \
-	 docker compose -f docker/docker-compose.yml down 2>/dev/null || true)
-	@echo "${GREEN}Rede bridge SDC removida!${RESET}"
+# ============================================================================
+# 🏭 PRODUÇÃO
+# ============================================================================
 
-network-ls: ## Lista todas as redes Docker
-	@echo "${GREEN}Redes Docker disponíveis:${RESET}"
-	@docker network ls | grep -E "NETWORK|sdc|bridge" || docker network ls
+prod: ## 🏭 Ambiente de produção completo
+	@echo "${YELLOW}→ Iniciando ambiente de produção...${RESET}"
+	@$(COMPOSE_PROD) up -d
+	@echo "${GREEN}✓ Ambiente de produção iniciado!${RESET}"
 
-network-inspect: ## Inspeciona a rede bridge SDC
-	@echo "${GREEN}Informações da rede bridge SDC:${RESET}"
-	@docker network inspect sdc_network 2>/dev/null || \
-	(echo "${YELLOW}Rede não encontrada. Execute 'make network-init' ou 'make dev'.${RESET}" && \
-	 docker network inspect $$(docker compose -f docker/docker-compose.yml config 2>/dev/null | grep -A 5 "networks:" | grep "name:" | head -1 | awk '{print $$2}') 2>/dev/null || \
-	 echo "${YELLOW}Execute 'make dev' para criar a rede automaticamente.${RESET}")
+prod-build: ## 🏭 Build e deploy produção
+	@echo "${YELLOW}→ Build de produção...${RESET}"
+	@$(COMPOSE_PROD) build --no-cache
+	@$(COMPOSE_PROD) up -d
+	@echo "${GREEN}✓ Deploy de produção concluído${RESET}"
 
-# ==========================================
-# Genéricos
-# ==========================================
-build: ## Build das imagens Docker
-	docker compose -f docker/docker-compose.yml build
+prod-logs: ## 🏭 Logs produção
+	@$(COMPOSE_PROD) logs -f
 
-up: ## Inicia os containers
-	docker compose -f docker/docker-compose.yml up -d
+prod-down: ## 🏭 Para produção
+	@$(COMPOSE_PROD) down
 
-down: ## Para os containers
-	docker compose -f docker/docker-compose.yml down
+prod-scale: ## 🏭 Scale workers (uso: make prod-scale N=5)
+	@$(COMPOSE_PROD) up -d --scale queue=$(N)
 
-restart: ## Reinicia os containers
-	docker compose -f docker/docker-compose.yml restart
+# ============================================================================
+# 📊 MONITORAMENTO
+# ============================================================================
 
-logs: ## Ver logs
-	docker compose -f docker/docker-compose.yml logs -f
+monitor: network-init ## 📊 Sobe stack de monitoramento completa
+	@echo "${YELLOW}→ Iniciando stack de monitoramento...${RESET}"
+	@$(COMPOSE_DEV) up -d prometheus grafana alertmanager node-exporter cadvisor mysql-exporter redis-exporter nginx-exporter blackbox-exporter
+	@echo "${GREEN}✓ Stack de monitoramento iniciada!${RESET}"
+	@echo ""
+	@echo "${CYAN}Dashboards disponíveis:${RESET}"
+	@echo "  Grafana:           ${GREEN}http://localhost:3000${RESET} (admin/admin@123)"
+	@echo "  Prometheus:        ${GREEN}http://localhost:9090${RESET}"
+	@echo "  Alertmanager:      ${GREEN}http://localhost:9093${RESET}"
+	@echo "  cAdvisor:          ${GREEN}http://localhost:8080${RESET}"
+	@echo ""
+	@echo "  Node Exporter:     ${CYAN}http://localhost:9100/metrics${RESET}"
+	@echo "  MySQL Exporter:    ${CYAN}http://localhost:9104/metrics${RESET}"
+	@echo "  Redis Exporter:    ${CYAN}http://localhost:9121/metrics${RESET}"
+	@echo "  Nginx Exporter:    ${CYAN}http://localhost:9113/metrics${RESET}"
 
-ps: ## Lista containers
-	docker compose -f docker/docker-compose.yml ps
+monitor-down: ## 📊 Para monitoramento
+	@echo "${YELLOW}→ Parando stack de monitoramento...${RESET}"
+	@$(COMPOSE_DEV) stop prometheus grafana alertmanager node-exporter cadvisor mysql-exporter redis-exporter nginx-exporter blackbox-exporter
+	@echo "${GREEN}✓ Monitoramento parado${RESET}"
 
-# ==========================================
-# Shell Access
-# ==========================================
-shell: ## Acessa shell do container app
-	docker compose -f docker/docker-compose.yml exec app bash
+monitor-logs: ## 📊 Logs do monitoramento
+	@$(COMPOSE_DEV) logs -f prometheus grafana alertmanager
 
-shell-root: ## Acessa shell como root
-	docker compose -f docker/docker-compose.yml exec -u root app bash
+monitor-restart: ## 📊 Reinicia monitoramento
+	@$(MAKE) monitor-down
+	@$(MAKE) monitor
 
-db-shell: ## Acessa MySQL CLI
-	docker compose -f docker/docker-compose.yml exec db mysql -u root -p
+# ============================================================================
+# 🐚 ACESSO & DEBUG
+# ============================================================================
 
-redis-shell: ## Acessa Redis CLI
-	docker compose -f docker/docker-compose.yml exec redis redis-cli
+shell: ## 🐚 Shell app (www-data)
+	@$(COMPOSE_DEV) exec app bash
 
-# ==========================================
-# Laravel Commands
-# ==========================================
-artisan: ## Executa artisan (ex: make artisan CMD="migrate")
-	docker compose -f docker/docker-compose.yml exec app php artisan $(CMD)
+shell-root: ## 🐚 Shell app (root)
+	@$(COMPOSE_DEV) exec -u root app bash
 
-migrate: ## Executa migrations
-	docker compose -f docker/docker-compose.yml exec app php artisan migrate
+shell-db: ## 🐚 MySQL CLI
+	@$(COMPOSE_DEV) exec db mysql -u root -proot sdc
 
-fresh: ## Fresh migrations com seeds
-	docker compose -f docker/docker-compose.yml exec app php artisan migrate:fresh --seed
+shell-redis: ## 🐚 Redis CLI
+	@$(COMPOSE_DEV) exec redis redis-cli
 
-seed: ## Executa seeds
-	docker compose -f docker/docker-compose.yml exec app php artisan db:seed
+shell-queue: ## 🐚 Shell queue worker
+	@$(COMPOSE_DEV) exec queue bash
 
-cache-clear: ## Limpa todos os caches
-	docker compose -f docker/docker-compose.yml exec app php artisan cache:clear
-	docker compose -f docker/docker-compose.yml exec app php artisan config:clear
-	docker compose -f docker/docker-compose.yml exec app php artisan route:clear
-	docker compose -f docker/docker-compose.yml exec app php artisan view:clear
+shell-node: ## 🐚 Shell node container
+	@$(COMPOSE_DEV) exec node sh
 
-optimize: ## Otimiza para produção
-	docker compose -f docker/docker-compose.yml exec app php artisan config:cache
-	docker compose -f docker/docker-compose.yml exec app php artisan route:cache
-	docker compose -f docker/docker-compose.yml exec app php artisan view:cache
+# ============================================================================
+# 🗑️ LIMPEZA & MANUTENÇÃO
+# ============================================================================
 
-# ==========================================
-# Testing
-# ==========================================
-test: ## Executa testes
-	docker compose -f docker/docker-compose.yml exec app php artisan test
+clean: ## 🗑️ Para e remove containers (preserva volumes)
+	@echo "${YELLOW}→ Limpando containers...${RESET}"
+	@$(COMPOSE_DEV) down
+	@echo "${GREEN}✓ Containers removidos${RESET}"
 
-test-coverage: ## Testes com coverage
-	docker compose -f docker/docker-compose.yml exec app php artisan test --coverage
+clean-volumes: ## 🗑️ Remove containers E volumes (⚠️  APAGA DADOS!)
+	@echo "${RED}${BOLD}⚠️  ATENÇÃO: Isso vai APAGAR todos os dados do banco!${RESET}"
+	@echo "${YELLOW}Pressione Ctrl+C para cancelar...${RESET}"
+	@sleep 3
+	@$(COMPOSE_DEV) down -v
+	@echo "${GREEN}✓ Containers e volumes removidos${RESET}"
 
-# ==========================================
-# Assets - Node.js
-# ==========================================
-npm-install: ## Instala dependências npm (Node.js)
-	docker compose -f docker/docker-compose.yml exec node npm install
+clean-images: ## 🗑️ Remove containers, volumes E imagens
+	@echo "${RED}${BOLD}⚠️  ATENÇÃO: Isso vai remover TUDO!${RESET}"
+	@echo "${YELLOW}Pressione Ctrl+C para cancelar...${RESET}"
+	@sleep 5
+	@$(COMPOSE_DEV) down -v --rmi all
+	@echo "${GREEN}✓ Tudo removido${RESET}"
 
-npm-dev: ## Build de desenvolvimento (Node.js)
-	docker compose -f docker/docker-compose.yml exec node npm run dev
+clean-system: ## 🗑️ Limpeza completa do Docker system
+	@echo "${YELLOW}→ Limpando sistema Docker...${RESET}"
+	@docker system prune -af --volumes
+	@echo "${GREEN}✓ Sistema limpo${RESET}"
 
-npm-build: ## Build de produção (Node.js)
-	docker compose -f docker/docker-compose.yml exec node npm run build
+nuke: clean-images clean-system ## 🗑️ DESTRUIÇÃO TOTAL (⚠️  USA COM CUIDADO!)
+	@echo "${RED}${BOLD}💣 NUKE EXECUTADO!${RESET}"
 
-# ==========================================
-# Backup
-# ==========================================
-backup: ## Executa backup manual
-	docker compose -f docker/docker-compose.yml exec backup /backup/backup.sh
+# ============================================================================
+# 💾 BANCO DE DADOS
+# ============================================================================
 
-# ==========================================
-# Cleanup
-# ==========================================
-clean: ## Limpa volumes e imagens não utilizadas
-	docker compose -f docker/docker-compose.yml down -v
-	docker system prune -f
+db-migrate: ## 💾 Executar migrations
+	@$(COMPOSE_DEV) exec app php artisan migrate --force
 
-clean-all: ## Limpa TUDO (cuidado!)
-	docker compose -f docker/docker-compose.yml down -v --rmi all
-	docker system prune -af --volumes
+db-rollback: ## 💾 Rollback migrations
+	@$(COMPOSE_DEV) exec app php artisan migrate:rollback --force
 
-# ==========================================
-# Monitoramento (Produção)
-# ==========================================
-monitor: ## Abre dashboards de monitoramento
-	@echo "Grafana: http://localhost:3000"
-	@echo "Prometheus: http://localhost:9090"
-	@echo "Traefik: http://localhost:8080"
+db-fresh: ## 💾 Fresh migrations + seed
+	@echo "${RED}⚠️  Isso vai APAGAR todos os dados!${RESET}"
+	@echo "${YELLOW}Pressione Ctrl+C para cancelar...${RESET}"
+	@sleep 3
+	@$(COMPOSE_DEV) exec app php artisan migrate:fresh --seed --force
 
-# ==========================================
-# Deploy
-# ==========================================
-deploy: ## Deploy para produção
-	@echo "${YELLOW}Iniciando deploy...${RESET}"
+db-seed: ## 💾 Executar seeds
+	@$(COMPOSE_DEV) exec app php artisan db:seed --force
+
+db-backup: ## 💾 Backup do banco
+	@echo "${YELLOW}→ Criando backup...${RESET}"
+	@mkdir -p storage/backups
+	@$(COMPOSE_DEV) exec db mysqldump -u root -proot sdc > storage/backups/backup-$(shell date +%Y%m%d-%H%M%S).sql
+	@echo "${GREEN}✓ Backup criado em storage/backups/${RESET}"
+
+db-restore: ## 💾 Restore backup (uso: make db-restore FILE=arquivo.sql)
+	@echo "${YELLOW}→ Restaurando backup: $(FILE)${RESET}"
+	@$(COMPOSE_DEV) exec -T db mysql -u root -proot sdc < $(FILE)
+	@echo "${GREEN}✓ Backup restaurado${RESET}"
+
+# ============================================================================
+# 🎨 FRONTEND (Node.js + Vite)
+# ============================================================================
+
+npm-install: ## 🎨 Install dependências npm
+	@$(COMPOSE_DEV) exec node npm install --legacy-peer-deps
+
+npm-update: ## 🎨 Update dependências npm
+	@$(COMPOSE_DEV) exec node npm update
+
+npm-dev: ## 🎨 Vite dev server
+	@$(COMPOSE_DEV) exec node npm run dev
+
+npm-build: ## 🎨 Build produção
+	@$(COMPOSE_DEV) exec node npm run build
+
+npm-clean: ## 🎨 Limpar node_modules e cache
+	@$(COMPOSE_DEV) exec node sh -c "rm -rf node_modules/.vite && npm cache clean --force"
+
+# ============================================================================
+# ⚙️  LARAVEL ARTISAN
+# ============================================================================
+
+cache-clear: ## ⚙️  Limpa todos os caches
+	@echo "${YELLOW}→ Limpando caches...${RESET}"
+	@$(COMPOSE_DEV) exec app php artisan cache:clear
+	@$(COMPOSE_DEV) exec app php artisan config:clear
+	@$(COMPOSE_DEV) exec app php artisan route:clear
+	@$(COMPOSE_DEV) exec app php artisan view:clear
+	@echo "${GREEN}✓ Caches limpos${RESET}"
+
+cache-optimize: ## ⚙️  Otimiza caches (produção)
+	@echo "${YELLOW}→ Otimizando caches...${RESET}"
+	@$(COMPOSE_DEV) exec app php artisan config:cache
+	@$(COMPOSE_DEV) exec app php artisan route:cache
+	@$(COMPOSE_DEV) exec app php artisan view:cache
+	@$(COMPOSE_DEV) exec app php artisan event:cache
+	@echo "${GREEN}✓ Caches otimizados${RESET}"
+
+artisan: ## ⚙️  Executar artisan (uso: make artisan CMD="migrate")
+	@$(COMPOSE_DEV) exec app php artisan $(CMD)
+
+# ============================================================================
+# 🌐 NETWORK
+# ============================================================================
+
+network-init: ## 🌐 Inicializa network
+	@echo "${YELLOW}→ Verificando network...${RESET}"
+	@docker network inspect sdc_network >/dev/null 2>&1 || \
+		(echo "${YELLOW}→ Criando network...${RESET}" && \
+		 docker network create --driver bridge --subnet 172.26.0.0/16 sdc_network)
+	@echo "${GREEN}✓ Network OK${RESET}"
+
+network-inspect: ## 🌐 Inspeciona network
+	@docker network inspect sdc_network
+
+network-clean: ## 🌐 Remove network
+	@docker network rm sdc_network 2>/dev/null || true
+
+# ============================================================================
+# 📋 STATUS & INFO
+# ============================================================================
+
+status: ## 📋 Status completo de todos containers
+	@echo "${BOLD}${CYAN}════════════════════════════════════════════════════════════${RESET}"
+	@echo "${BOLD}${CYAN}  STATUS COMPLETO DA STACK${RESET}"
+	@echo "${BOLD}${CYAN}════════════════════════════════════════════════════════════${RESET}"
+	@echo ""
+	@$(COMPOSE_DEV) ps
+	@echo ""
+	@echo "${BOLD}${CYAN}Containers ativos:${RESET}"
+	@docker ps --filter "name=newsdc" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+ps: status ## 📋 Alias para status
+
+urls: ## 📋 Mostra todas URLs disponíveis
+	@echo "${BOLD}${CYAN}════════════════════════════════════════════════════════════${RESET}"
+	@echo "${BOLD}${CYAN}  URLS E PORTAS DISPONÍVEIS${RESET}"
+	@echo "${BOLD}${CYAN}════════════════════════════════════════════════════════════${RESET}"
+	@echo ""
+	@echo "${BOLD}🚀 APLICAÇÃO:${RESET}"
+	@echo "  App (Laravel):     ${GREEN}http://localhost:8001${RESET}"
+	@echo "  Nginx:             ${GREEN}http://localhost:8082${RESET}"
+	@echo "  Vite (HMR):        ${GREEN}http://localhost:5173${RESET}"
+	@echo ""
+	@echo "${BOLD}💾 BANCO DE DADOS:${RESET}"
+	@echo "  MySQL:             ${GREEN}localhost:3307${RESET} (user: sdc, pass: secret)"
+	@echo "  Redis:             ${GREEN}localhost:6380${RESET}"
+	@echo "  phpMyAdmin:        ${GREEN}http://localhost:8083${RESET}"
+	@echo "  Redis Commander:   ${GREEN}http://localhost:8084${RESET}"
+	@echo ""
+	@echo "${BOLD}📧 FERRAMENTAS:${RESET}"
+	@echo "  Mailhog:           ${GREEN}http://localhost:8026${RESET}"
+	@echo ""
+	@echo "${BOLD}📊 MONITORAMENTO:${RESET}"
+	@echo "  Grafana:           ${GREEN}http://localhost:3000${RESET} (admin/admin@123)"
+	@echo "  Prometheus:        ${GREEN}http://localhost:9090${RESET}"
+	@echo "  Alertmanager:      ${GREEN}http://localhost:9093${RESET}"
+	@echo "  cAdvisor:          ${GREEN}http://localhost:8080${RESET}"
+	@echo ""
+	@echo "${BOLD}📈 EXPORTERS:${RESET}"
+	@echo "  Node Exporter:     ${CYAN}http://localhost:9100/metrics${RESET}"
+	@echo "  MySQL Exporter:    ${CYAN}http://localhost:9104/metrics${RESET}"
+	@echo "  Redis Exporter:    ${CYAN}http://localhost:9121/metrics${RESET}"
+	@echo "  Nginx Exporter:    ${CYAN}http://localhost:9113/metrics${RESET}"
+	@echo "  Blackbox Exporter: ${CYAN}http://localhost:9115/metrics${RESET}"
+
+logs: ## 📋 Logs de todos containers (follow)
+	@$(COMPOSE_DEV) logs -f
+
+logs-app: ## 📋 Logs apenas app
+	@$(COMPOSE_DEV) logs -f app
+
+logs-nginx: ## 📋 Logs apenas nginx
+	@$(COMPOSE_DEV) logs -f nginx
+
+logs-db: ## 📋 Logs apenas database
+	@$(COMPOSE_DEV) logs -f db
+
+logs-queue: ## 📋 Logs queue worker
+	@$(COMPOSE_DEV) logs -f queue
+
+# ============================================================================
+# 🧪 TESTES
+# ============================================================================
+
+test: ## 🧪 Executar testes
+	@$(COMPOSE_DEV) exec app php artisan test
+
+test-coverage: ## 🧪 Testes com coverage
+	@$(COMPOSE_DEV) exec app php artisan test --coverage
+
+test-filter: ## 🧪 Testes filtrados (uso: make test-filter FILTER="NomeDoTeste")
+	@$(COMPOSE_DEV) exec app php artisan test --filter=$(FILTER)
+
+# ============================================================================
+# 🔄 WORKFLOWS COMPLETOS
+# ============================================================================
+
+setup: build-all up-all db-migrate cache-optimize ## 🔄 Setup inicial completo
+	@echo ""
+	@echo "${BOLD}${GREEN}════════════════════════════════════════════════════════════${RESET}"
+	@echo "${BOLD}${GREEN}  ✓ SETUP COMPLETO FINALIZADO!${RESET}"
+	@echo "${BOLD}${GREEN}════════════════════════════════════════════════════════════${RESET}"
+	@echo ""
+	@$(MAKE) urls
+
+reset: clean-volumes build-all up-all db-migrate db-seed ## 🔄 Reset completo (⚠️  APAGA DADOS!)
+	@echo ""
+	@echo "${BOLD}${GREEN}✓ RESET COMPLETO FINALIZADO!${RESET}"
+	@echo ""
+	@$(MAKE) urls
+
+deploy-prod: ## 🔄 Deploy completo produção
+	@echo "${BOLD}${CYAN}→ DEPLOY PRODUÇÃO${RESET}"
 	git pull origin main
-	docker compose -f docker/docker-compose.prod.yml build
-	docker compose -f docker/docker-compose.prod.yml up -d
-	docker compose -f docker/docker-compose.prod.yml exec app php artisan migrate --force
-	docker compose -f docker/docker-compose.prod.yml exec app php artisan config:cache
-	docker compose -f docker/docker-compose.prod.yml exec app php artisan route:cache
-	docker compose -f docker/docker-compose.prod.yml exec app php artisan view:cache
-	@echo "${GREEN}Deploy concluído!${RESET}"
+	@$(MAKE) prod-build
+	@$(COMPOSE_PROD) exec app php artisan migrate --force
+	@$(COMPOSE_PROD) exec app php artisan config:cache
+	@$(COMPOSE_PROD) exec app php artisan route:cache
+	@$(COMPOSE_PROD) exec app php artisan view:cache
+	@echo "${BOLD}${GREEN}✓ DEPLOY CONCLUÍDO!${RESET}"
 
-rollback: ## Rollback para versão anterior
-	docker compose -f docker/docker-compose.prod.yml down
-	git checkout HEAD~1
-	docker compose -f docker/docker-compose.prod.yml up -d
-	@echo "${YELLOW}Rollback executado!${RESET}"
+# ============================================================================
+# 🏥 HEALTHCHECK
+# ============================================================================
 
+health: ## 🏥 Healthcheck de todos serviços
+	@echo "${BOLD}${CYAN}Verificando saúde dos serviços...${RESET}"
+	@echo ""
+	@echo -n "${YELLOW}App:         ${RESET}"
+	@curl -sf http://localhost:8001 > /dev/null && echo "${GREEN}✓ OK${RESET}" || echo "${RED}✗ FALHOU${RESET}"
+	@echo -n "${YELLOW}Nginx:       ${RESET}"
+	@curl -sf http://localhost:8082 > /dev/null && echo "${GREEN}✓ OK${RESET}" || echo "${RED}✗ FALHOU${RESET}"
+	@echo -n "${YELLOW}Vite:        ${RESET}"
+	@curl -sf http://localhost:5173 > /dev/null && echo "${GREEN}✓ OK${RESET}" || echo "${RED}✗ FALHOU${RESET}"
+	@echo -n "${YELLOW}Grafana:     ${RESET}"
+	@curl -sf http://localhost:3000/api/health > /dev/null && echo "${GREEN}✓ OK${RESET}" || echo "${RED}✗ FALHOU${RESET}"
+	@echo -n "${YELLOW}Prometheus:  ${RESET}"
+	@curl -sf http://localhost:9090/-/healthy > /dev/null && echo "${GREEN}✓ OK${RESET}" || echo "${RED}✗ FALHOU${RESET}"
+
+# ============================================================================
+# 📝 INFO
+# ============================================================================
+
+info: ## 📝 Informações do ambiente
+	@echo "${BOLD}${CYAN}════════════════════════════════════════════════════════════${RESET}"
+	@echo "${BOLD}${CYAN}  INFORMAÇÕES DO AMBIENTE${RESET}"
+	@echo "${BOLD}${CYAN}════════════════════════════════════════════════════════════${RESET}"
+	@echo ""
+	@echo "${BOLD}Host:${RESET}"
+	@echo "  UID:               ${GREEN}$(HOST_UID)${RESET}"
+	@echo "  GID:               ${GREEN}$(HOST_GID)${RESET}"
+	@echo "  Docker Buildkit:   ${GREEN}$(DOCKER_BUILDKIT)${RESET}"
+	@echo ""
+	@echo "${BOLD}Docker:${RESET}"
+	@docker version --format '  Versão:            ${GREEN}{{.Server.Version}}${RESET}'
+	@echo ""
+	@echo "${BOLD}Docker Compose:${RESET}"
+	@docker compose version --short | xargs -I {} echo "  Versão:            ${GREEN}{}${RESET}"
+	@echo ""
+	@echo "${BOLD}Uso de recursos:${RESET}"
+	@docker system df
+	@echo ""
+
+version: ## 📝 Versão das ferramentas
+	@echo "${BOLD}Versões instaladas:${RESET}"
+	@echo "Docker:          $(shell docker --version)"
+	@echo "Docker Compose:  $(shell docker compose version)"
+	@echo "Make:            $(shell make --version | head -1)"
+
+# ============================================================================
+# FIM
+# ============================================================================

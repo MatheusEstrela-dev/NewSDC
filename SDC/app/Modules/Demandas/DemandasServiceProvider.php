@@ -25,6 +25,17 @@ class DemandasServiceProvider extends ServiceProvider
             TaskRepositoryInterface::class,
             EloquentTaskRepository::class
         );
+
+        // Registrar Use Cases (singleton para melhor performance)
+        $this->app->singleton(\App\Modules\Demandas\Application\UseCases\CreateTaskUseCase::class);
+        $this->app->singleton(\App\Modules\Demandas\Application\UseCases\ShowTaskUseCase::class);
+        $this->app->singleton(\App\Modules\Demandas\Application\UseCases\UpdateTaskUseCase::class);
+        $this->app->singleton(\App\Modules\Demandas\Application\UseCases\DeleteTaskUseCase::class);
+        $this->app->singleton(\App\Modules\Demandas\Application\UseCases\AddCommentUseCase::class);
+        $this->app->singleton(\App\Modules\Demandas\Application\UseCases\AssignTaskUseCase::class);
+        $this->app->singleton(\App\Modules\Demandas\Application\UseCases\ChangeTaskStatusUseCase::class);
+        $this->app->singleton(\App\Modules\Demandas\Application\UseCases\ListTasksUseCase::class);
+        $this->app->singleton(\App\Modules\Demandas\Application\UseCases\GetTaskStatisticsUseCase::class);
     }
 
     /**

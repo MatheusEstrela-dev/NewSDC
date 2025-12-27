@@ -36,7 +36,7 @@ function handleIconError() {
             <ClipboardIcon v-if="iconStatus !== 'ok'" class="w-6 h-6 text-slate-200" />
           </div>
           <div>
-            <Heading level="2" color="white" class="mb-1">
+            <Heading :level="2" color="white" class="mb-1">
               Protocolos PAE
             </Heading>
             <Text size="sm" color="muted">

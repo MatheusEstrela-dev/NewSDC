@@ -2,7 +2,7 @@
   <CardBase variant="default" padding="none" class="overflow-hidden">
     <div class="px-6 py-4 border-b border-slate-700/50 bg-slate-900/30">
       <div class="flex items-center justify-between">
-        <Heading level="5" color="default" class="flex items-center gap-2">
+        <Heading :level="5" color="default" class="flex items-center gap-2">
           <DocumentTextIcon class="w-5 h-5" />
           Lista de RATs ({{ pagination?.total || rats.length }} registros)
         </Heading>
@@ -16,7 +16,7 @@
     
     <div v-else-if="rats.length === 0" class="p-12 text-center">
       <DocumentTextIcon class="w-12 h-12 text-slate-600 mx-auto mb-4" />
-      <Heading level="4" color="muted">Nenhum RAT encontrado</Heading>
+      <Heading :level="4" color="muted">Nenhum RAT encontrado</Heading>
       <Text size="sm" color="muted" class="mt-2">
         Tente ajustar os filtros de busca ou crie um novo RAT
       </Text>

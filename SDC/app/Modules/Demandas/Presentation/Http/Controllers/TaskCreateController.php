@@ -6,6 +6,7 @@ namespace App\Modules\Demandas\Presentation\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Demandas\Application\UseCases\CreateTaskUseCase;
+use App\Modules\Demandas\Presentation\Http\Requests\CreateTaskRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -37,23 +38,25 @@ class TaskCreateController extends Controller
     /**
      * Salvar nova demanda
      */
-    public function store(Request $request)
+    public function store(CreateTaskRequest $request)
     {
-        $validated = $request->validate([
-            'tipo' => 'required|in:incidente,solicitacao',
-            'titulo' => 'required|string|max:255',
-            'descricao' => 'nullable|string',
-            'categoria' => 'nullable|string|max:100',
-            'subcategoria' => 'nullable|string|max:100',
-            'urgencia' => 'nullable|in:alta,media,baixa',
-            'impacto' => 'nullable|in:alto,medio,baixo',
-        ]);
+        try {
+            $validated = $request->validated();
 
-        $task = $this->createTaskUseCase->execute($validated, $request->user());
+            $task = $this->createTaskUseCase->execute($validated, $request->user());
 
-        return redirect()
-            ->route('demandas.show', $task->id)
-            ->with('success', "Demanda {$task->protocolo} criada com sucesso!");
+            return redirect()
+                ->route('demandas.show', $task->id)
+                ->with('success', "Demanda {$task->protocolo} criada com sucesso!");
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->back()
+                            ->withInput()
+                            ->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            return redirect()->back()
+                            ->withInput()
+                            ->with('error', 'Erro ao criar demanda. Por favor, tente novamente.');
+        }
     }
 
     /**

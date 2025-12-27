@@ -12,11 +12,31 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        \App\Models\User::factory()->create([
+        // Primeiro, criar roles e permissões
+        $this->call(RolesAndPermissionsSeeder::class);
+
+        // Criar admin principal do sistema
+        $admin = \App\Models\User::factory()->create([
             'name' => 'Admin Geral',
             'email' => 'admin@defesa.mg.gov.br',
             'cpf' => '12345678900',
             'password' => bcrypt('password'),
         ]);
+
+        // Atribuir role super-admin (acesso total)
+        $guard = config('auth.defaults.guard', 'web');
+        $superAdminRole = \App\Models\Role::where('name', 'super-admin')
+            ->where('guard_name', $guard)
+            ->first();
+
+        if ($superAdminRole) {
+            $admin->assignRole($superAdminRole);
+            $this->command->info('✅ Admin Geral criado com role super-admin');
+        }
+
+        // Em ambiente de desenvolvimento, criar usuários de teste
+        if (app()->environment('local')) {
+            $this->call(DevUsersSeeder::class);
+        }
     }
 }

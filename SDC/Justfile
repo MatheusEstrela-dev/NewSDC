@@ -620,3 +620,148 @@ permissions-docs:
     @echo "  just permissions-module <mod>   # Permissions de um módulo"
     @echo ""
     @echo "📖 Para mais informações, consulte a documentação completa."
+
+# ============================================================================
+# 📦 MÓDULO TDAP - GESTÃO DE DEPÓSITO
+# ============================================================================
+
+# Executar migrations do módulo TDAP
+migrate-tdap:
+    @echo "📦 Executando migrations do TDAP..."
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo ""
+    @echo "📋 Migrations incluídas:"
+    @echo "  - 2025_01_26_000001_create_tdap_products_table.php"
+    @echo "  - 2025_01_26_000002_create_tdap_product_lotes_table.php"
+    @echo "  - 2025_01_26_000003_create_tdap_product_compositions_table.php"
+    @echo "  - 2025_01_26_000004_create_tdap_recebimentos_table.php"
+    @echo "  - 2025_01_26_000005_create_tdap_recebimento_itens_table.php"
+    @echo "  - 2025_01_26_000006_create_tdap_movimentacoes_table.php"
+    @echo ""
+    {{_app}} php artisan migrate --path=database/migrations/2025_01_26_000001_create_tdap_products_table.php --force
+    {{_app}} php artisan migrate --path=database/migrations/2025_01_26_000002_create_tdap_product_lotes_table.php --force
+    {{_app}} php artisan migrate --path=database/migrations/2025_01_26_000003_create_tdap_product_compositions_table.php --force
+    {{_app}} php artisan migrate --path=database/migrations/2025_01_26_000004_create_tdap_recebimentos_table.php --force
+    {{_app}} php artisan migrate --path=database/migrations/2025_01_26_000005_create_tdap_recebimento_itens_table.php --force
+    {{_app}} php artisan migrate --path=database/migrations/2025_01_26_000006_create_tdap_movimentacoes_table.php --force
+    @echo ""
+    @echo "✅ Migrations do TDAP executadas com sucesso!"
+    @echo ""
+    @echo "💡 Próximos passos:"
+    @echo "  1. Execute: just seed-tdap"
+    @echo "  2. Acesse: http://localhost:8001/tdap"
+
+# Reverter migrations do TDAP
+rollback-tdap:
+    @echo "⏮️  Revertendo migrations do TDAP..."
+    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_01_26_000006_create_tdap_movimentacoes_table.php --force
+    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_01_26_000005_create_tdap_recebimento_itens_table.php --force
+    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_01_26_000004_create_tdap_recebimentos_table.php --force
+    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_01_26_000003_create_tdap_product_compositions_table.php --force
+    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_01_26_000002_create_tdap_product_lotes_table.php --force
+    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_01_26_000001_create_tdap_products_table.php --force
+    @echo "✅ Migrations do TDAP revertidas!"
+
+# Popular dados de exemplo do TDAP
+seed-tdap:
+    @echo "🌱 Criando produtos de exemplo no TDAP..."
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    {{_app}} php artisan tinker --execute="App\Modules\Tdap\Domain\Entities\Product::create(['codigo' => 'CB-001', 'nome' => 'Cesta Básica Tipo 1', 'descricao' => 'Cesta básica completa com itens essenciais', 'tipo' => 'cesta_basica', 'grupo_risco' => 'ALIMENTO', 'estoque_minimo' => 50, 'estoque_maximo' => 500, 'dias_alerta_validade' => 30, 'volume_unitario_m3' => 0.05, 'peso_unitario_kg' => 15]);"
+    {{_app}} php artisan tinker --execute="App\Modules\Tdap\Domain\Entities\Product::create(['codigo' => 'KL-001', 'nome' => 'Kit Limpeza Completo', 'descricao' => 'Kit com produtos de limpeza e higiene', 'tipo' => 'kit_limpeza', 'grupo_risco' => 'QUIMICO', 'estoque_minimo' => 30, 'estoque_maximo' => 300, 'dias_alerta_validade' => 90, 'volume_unitario_m3' => 0.03, 'peso_unitario_kg' => 5]);"
+    {{_app}} php artisan tinker --execute="App\Modules\Tdap\Domain\Entities\Product::create(['codigo' => 'COL-001', 'nome' => 'Colchão Solteiro', 'descricao' => 'Colchão solteiro D28', 'tipo' => 'colchao', 'grupo_risco' => 'GERAL', 'estoque_minimo' => 20, 'estoque_maximo' => 200, 'volume_unitario_m3' => 0.5, 'peso_unitario_kg' => 8]);"
+    {{_app}} php artisan tinker --execute="App\Modules\Tdap\Domain\Entities\Product::create(['codigo' => 'CB-002', 'nome' => 'Cesta Básica Tipo 2', 'descricao' => 'Cesta básica reforçada', 'tipo' => 'cesta_basica', 'grupo_risco' => 'ALIMENTO', 'estoque_minimo' => 30, 'estoque_maximo' => 300, 'dias_alerta_validade' => 30, 'volume_unitario_m3' => 0.06, 'peso_unitario_kg' => 20]);"
+    {{_app}} php artisan tinker --execute="App\Modules\Tdap\Domain\Entities\Product::create(['codigo' => 'KL-002', 'nome' => 'Kit Higiene Pessoal', 'descricao' => 'Kit com itens de higiene pessoal', 'tipo' => 'kit_limpeza', 'grupo_risco' => 'QUIMICO', 'estoque_minimo' => 40, 'estoque_maximo' => 400, 'dias_alerta_validade' => 180, 'volume_unitario_m3' => 0.02, 'peso_unitario_kg' => 3]);"
+    @echo ""
+    @echo "✅ 5 produtos de exemplo criados!"
+    @echo ""
+    @echo "📊 Produtos cadastrados:"
+    just tdap-products
+
+# Listar produtos do TDAP
+tdap-products:
+    @echo "📦 Produtos Cadastrados no TDAP:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT id, codigo AS 'Código', nome AS 'Nome', tipo AS 'Tipo', grupo_risco AS 'Grupo Risco', estoque_minimo AS 'Est. Mín', estoque_maximo AS 'Est. Máx' FROM tdap_products ORDER BY tipo, codigo;"
+
+# Listar tabelas do TDAP
+tdap-tables:
+    @echo "📋 Tabelas do Módulo TDAP:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SHOW TABLES LIKE 'tdap%';"
+
+# Status completo do TDAP
+tdap-status:
+    @echo "📊 STATUS DO MÓDULO TDAP"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo ""
+    @echo "📦 Produtos:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT tipo AS 'Tipo', COUNT(*) AS 'Quantidade' FROM tdap_products GROUP BY tipo UNION ALL SELECT 'TOTAL', COUNT(*) FROM tdap_products;"
+    @echo ""
+    @echo "📦 Lotes:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT COUNT(*) AS 'Total Lotes', SUM(quantidade_atual) AS 'Quantidade Total' FROM tdap_product_lotes;" 2>/dev/null || echo "Nenhum lote cadastrado"
+    @echo ""
+    @echo "📥 Recebimentos:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT status AS 'Status', COUNT(*) AS 'Quantidade' FROM tdap_recebimentos GROUP BY status;" 2>/dev/null || echo "Nenhum recebimento cadastrado"
+    @echo ""
+    @echo "🔄 Movimentações:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT tipo AS 'Tipo', COUNT(*) AS 'Quantidade' FROM tdap_movimentacoes GROUP BY tipo;" 2>/dev/null || echo "Nenhuma movimentação registrada"
+
+# Contar registros das tabelas do TDAP
+tdap-count:
+    @echo "🔢 Contagem de Registros do TDAP:"
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'Produtos' AS Tabela, COUNT(*) AS Registros FROM tdap_products UNION ALL SELECT 'Lotes', COUNT(*) FROM tdap_product_lotes UNION ALL SELECT 'Composições', COUNT(*) FROM tdap_product_compositions UNION ALL SELECT 'Recebimentos', COUNT(*) FROM tdap_recebimentos UNION ALL SELECT 'Itens Recebimento', COUNT(*) FROM tdap_recebimento_itens UNION ALL SELECT 'Movimentações', COUNT(*) FROM tdap_movimentacoes;"
+
+# Setup completo do TDAP
+tdap-setup:
+    @echo "🚀 SETUP DO MÓDULO TDAP"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo ""
+    @echo "1️⃣  Executando migrations..."
+    just migrate-tdap
+    @echo ""
+    @echo "2️⃣  Populando produtos de exemplo..."
+    just seed-tdap
+    @echo ""
+    @echo "3️⃣  Limpando caches..."
+    just cache-clear
+    @echo ""
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo "✅ SETUP DO TDAP CONCLUÍDO!"
+    @echo ""
+    @echo "📊 Status Final:"
+    just tdap-status
+    @echo ""
+    @echo "🌐 Acesse: http://localhost:8001/tdap"
+
+# Limpar todos os dados do TDAP (CUIDADO!)
+tdap-clean:
+    @echo "⚠️  ATENÇÃO: Limpando TODOS os dados do TDAP!"
+    @echo "Pressione Ctrl+C para cancelar..."
+    sleep 3
+    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "TRUNCATE TABLE tdap_movimentacoes; TRUNCATE TABLE tdap_recebimento_itens; TRUNCATE TABLE tdap_recebimentos; TRUNCATE TABLE tdap_product_lotes; TRUNCATE TABLE tdap_product_compositions; TRUNCATE TABLE tdap_products;"
+    @echo "✅ Dados do TDAP limpos!"
+
+# Documentação do TDAP
+tdap-docs:
+    @echo "📚 DOCUMENTAÇÃO DO MÓDULO TDAP"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo ""
+    @echo "📄 Documento:"
+    @echo "  - app/Modules/Tdap/README.md"
+    @echo ""
+    @echo "🔧 Comandos Disponíveis:"
+    @echo "  just tdap-setup          # Setup completo do TDAP"
+    @echo "  just migrate-tdap        # Executar migrations"
+    @echo "  just rollback-tdap       # Reverter migrations"
+    @echo "  just seed-tdap           # Popular produtos exemplo"
+    @echo "  just tdap-status         # Ver status completo"
+    @echo "  just tdap-products       # Listar produtos"
+    @echo "  just tdap-count          # Contar registros"
+    @echo "  just tdap-clean          # Limpar todos os dados"
+    @echo ""
+    @echo "📊 Funcionalidades:"
+    @echo "  - Gestão de Produtos (Cestas, Kits, Colchões)"
+    @echo "  - Controle de Lotes (FEFO/FIFO)"
+    @echo "  - Recebimento de Materiais (Modal TDPA)"
+    @echo "  - Movimentações de Estoque"
+    @echo "  - Dashboard com Alertas"
+    @echo ""
+    @echo "🌐 Acesso: http://localhost:8001/tdap"

@@ -241,13 +241,13 @@ class Task extends Model
 
     /**
      * Altera o status (com validação automática)
+     * Nota: O repositório deve chamar save() após esta operação
      */
     public function changeStatus(TaskStatus $newStatus, ?User $user = null, ?string $comentario = null): self
     {
         $statusAnterior = $this->status;
 
         $this->status = $newStatus;
-        $this->save();
 
         // Registrar no audit log
         TaskAuditLog::create([
@@ -280,13 +280,13 @@ class Task extends Model
 
     /**
      * Atribui a tarefa para um usuário
+     * Nota: O repositório deve chamar save() após esta operação
      */
     public function assignTo(User $user, ?User $assignedBy = null): self
     {
         $anteriorId = $this->atribuido_para_id;
 
         $this->atribuido_para_id = $user->id;
-        $this->save();
 
         // Audit log
         TaskAuditLog::create([

@@ -29,17 +29,11 @@ class DevUsersSeeder extends Seeder
         $defaultPassword = 'password';
 
         $users = [
-            // Usuário espelhando o admin da produção (útil para testes locais)
-            [
-                'name' => 'Admin Geral',
-                'email' => 'admin@defesa.mg.gov.br',
-                'cpf' => '99999999999',
-                'role' => 'super-admin',
-            ],
+            // Usuários de teste para desenvolvimento
             [
                 'name' => 'Usuario Teste',
                 'email' => 'teste@example.com',
-                'cpf' => '12345678900',
+                'cpf' => '11111111111',
                 'role' => 'super-admin',
             ],
             [

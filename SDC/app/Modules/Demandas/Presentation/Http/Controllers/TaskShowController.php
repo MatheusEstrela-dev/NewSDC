@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Demandas\Presentation\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Demandas\Domain\Repositories\TaskRepositoryInterface;
+use App\Modules\Demandas\Application\UseCases\ShowTaskUseCase;
+use App\Modules\Demandas\Application\UseCases\UpdateTaskUseCase;
+use App\Modules\Demandas\Application\UseCases\DeleteTaskUseCase;
+use App\Modules\Demandas\Application\UseCases\AddCommentUseCase;
+use App\Modules\Demandas\Presentation\Http\Requests\UpdateTaskRequest;
+use App\Modules\Demandas\Presentation\Http\Requests\AddCommentRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,7 +21,10 @@ use Inertia\Response;
 class TaskShowController extends Controller
 {
     public function __construct(
-        private readonly TaskRepositoryInterface $taskRepository
+        private readonly ShowTaskUseCase $showTaskUseCase,
+        private readonly UpdateTaskUseCase $updateTaskUseCase,
+        private readonly DeleteTaskUseCase $deleteTaskUseCase,
+        private readonly AddCommentUseCase $addCommentUseCase,
     ) {
     }
 
@@ -25,18 +33,15 @@ class TaskShowController extends Controller
      */
     public function show(Request $request, int $id): Response
     {
-        $task = $this->taskRepository->find($id);
+        try {
+            $task = $this->showTaskUseCase->execute($id);
 
-        if (! $task) {
-            abort(404, 'Demanda não encontrada');
-        }
+            // Verificar se pode ver esta demanda
+            if (! $request->user()->can('demandas.manage') && $task->solicitante_id !== $request->user()->id) {
+                abort(403, 'Você não tem permissão para ver esta demanda');
+            }
 
-        // Verificar se pode ver esta demanda
-        if (! $request->user()->can('demandas.manage') && $task->solicitante_id !== $request->user()->id) {
-            abort(403, 'Você não tem permissão para ver esta demanda');
-        }
-
-        $task->load(['solicitante', 'atribuidoPara', 'comments.autor', 'attachments']);
+            $task->load(['solicitante', 'atribuidoPara', 'comments.autor', 'attachments']);
 
         return Inertia::render('Demandas/DemandasShow', [
             'task' => [
@@ -87,6 +92,11 @@ class TaskShowController extends Controller
             'canManage' => $request->user()->can('demandas.manage'),
             'canEdit' => $request->user()->can('demandas.edit'),
         ]);
+        } catch (\DomainException $e) {
+            abort(404, $e->getMessage());
+        } catch (\Exception $e) {
+            abort(500, 'Erro ao carregar detalhes da demanda.');
+        }
     }
 
     /**
@@ -104,31 +114,27 @@ class TaskShowController extends Controller
     /**
      * Adicionar comentário
      */
-    public function addComment(Request $request, int $id)
+    public function addComment(AddCommentRequest $request, int $id)
     {
-        $task = $this->taskRepository->find($id);
+        try {
+            $task = $this->showTaskUseCase->execute($id);
 
-        if (! $task) {
-            abort(404, 'Demanda não encontrada');
+            // Verificar permissão
+            $user = $request->user();
+            if (! $user->can('demandas.manage') && $task->solicitante_id !== $user->id) {
+                abort(403, 'Você não tem permissão para comentar nesta demanda');
+            }
+
+            $validated = $request->validated();
+
+            $this->addCommentUseCase->execute($id, $user->id, $validated['comentario']);
+
+            return redirect()->back()->with('success', 'Comentário adicionado!');
+        } catch (\DomainException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erro ao adicionar comentário. Por favor, tente novamente.');
         }
-
-        // Verificar permissão
-        $user = $request->user();
-        if (! $user->can('demandas.manage') && $task->solicitante_id !== $user->id) {
-            abort(403, 'Você não tem permissão para comentar nesta demanda');
-        }
-
-        $validated = $request->validate([
-            'comentario' => 'required|string|max:5000',
-        ]);
-
-        $task->comments()->create([
-            'comentario' => $validated['comentario'],
-            'autor_id' => $user->id,
-            'visivel_solicitante' => true,
-        ]);
-
-        return redirect()->back()->with('success', 'Comentário adicionado!');
     }
 
     /**
@@ -146,29 +152,41 @@ class TaskShowController extends Controller
      */
     public function edit(Request $request, int $id): Response
     {
-        $this->authorize('demandas.edit');
+        try {
+            $this->authorize('demandas.edit');
 
-        $task = $this->taskRepository->find($id);
+            $task = $this->showTaskUseCase->execute($id);
 
-        if (! $task) {
-            abort(404);
+            return Inertia::render('Admin/Demandas/DemandasEdit', [
+                'task' => $task,
+            ]);
+        } catch (\DomainException $e) {
+            abort(404, $e->getMessage());
+        } catch (\Exception $e) {
+            abort(500, 'Erro ao carregar formulário de edição.');
         }
-
-        return Inertia::render('Admin/Demandas/DemandasEdit', [
-            'task' => $task,
-        ]);
     }
 
     /**
      * Atualizar demanda
      */
-    public function update(Request $request, int $id)
+    public function update(UpdateTaskRequest $request, int $id)
     {
-        $this->authorize('demandas.edit');
+        try {
+            $validated = $request->validated();
 
-        // TODO: Implementar
+            $this->updateTaskUseCase->execute($id, $validated);
 
-        return redirect()->back()->with('success', 'Demanda atualizada!');
+            return redirect()->back()->with('success', 'Demanda atualizada!');
+        } catch (\DomainException $e) {
+            return redirect()->back()
+                            ->withInput()
+                            ->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            return redirect()->back()
+                            ->withInput()
+                            ->with('error', 'Erro ao atualizar demanda. Por favor, tente novamente.');
+        }
     }
 
     /**
@@ -176,12 +194,18 @@ class TaskShowController extends Controller
      */
     public function destroy(int $id)
     {
-        $this->authorize('demandas.delete');
+        try {
+            $this->authorize('demandas.delete');
 
-        $this->taskRepository->delete($id);
+            $this->deleteTaskUseCase->execute($id);
 
-        return redirect()
-            ->route('admin.demandas.index')
-            ->with('success', 'Demanda deletada!');
+            return redirect()
+                ->route('admin.demandas.index')
+                ->with('success', 'Demanda deletada!');
+        } catch (\DomainException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erro ao deletar demanda. Por favor, tente novamente.');
+        }
     }
 }

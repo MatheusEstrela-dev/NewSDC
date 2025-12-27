@@ -9,7 +9,7 @@
             <DocumentTextIcon class="w-6 h-6 text-slate-200" />
           </div>
           <div>
-            <Heading level="2" color="white" class="mb-1">
+            <Heading :level="2" color="white" class="mb-1">
               Gestão de RAT
             </Heading>
             <Text size="sm" color="muted">
