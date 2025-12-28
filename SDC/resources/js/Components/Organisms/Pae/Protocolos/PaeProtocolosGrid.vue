@@ -10,12 +10,12 @@
     </div>
 
     <div v-if="loading" class="p-12 text-center">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
-      <p class="mt-4 text-slate-400">Carregando...</p>
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 dark:border-blue-400 border-blue-600"></div>
+      <p class="mt-4 text-slate-400 dark:text-slate-400 text-slate-600">Carregando...</p>
     </div>
 
     <div v-else-if="protocolos.length === 0" class="p-12 text-center">
-      <DocumentTextIcon class="w-12 h-12 text-slate-600 mx-auto mb-4" />
+      <DocumentTextIcon class="w-12 h-12 text-slate-600 dark:text-slate-600 text-slate-400 mx-auto mb-4" />
       <Heading :level="4" color="muted">Nenhum protocolo encontrado</Heading>
       <Text size="sm" color="muted" class="mt-2">
         Tente ajustar os filtros de busca
@@ -34,7 +34,7 @@
     </div>
 
     <div v-if="pagination && pagination.last_page > 1" class="mt-6">
-      <CardBase variant="default" padding="md" class="bg-slate-800/60 border-slate-700/50">
+      <CardBase variant="default" padding="md">
         <Pagination :pagination="pagination" @page-change="$emit('page-change', $event)" />
       </CardBase>
     </div>

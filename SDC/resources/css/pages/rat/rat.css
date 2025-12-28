@@ -15,19 +15,19 @@
 
 /* Campos de Formulário */
 .form-input {
-  @apply w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 outline-none transition-all duration-200;
+  @apply w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition-all duration-200;
 }
 
 .form-input:hover {
-  @apply border-slate-600;
+  @apply border-slate-400 dark:border-slate-600;
 }
 
 .form-input:focus {
-  @apply border-blue-500 bg-slate-900 shadow-[0_0_0_1px_rgba(59,130,246,0.5)];
+  @apply border-blue-500 dark:border-blue-500 bg-white dark:bg-slate-900 shadow-[0_0_0_1px_rgba(59,130,246,0.5)];
 }
 
 .form-input::placeholder {
-  @apply text-slate-500;
+  @apply text-slate-400 dark:text-slate-500;
 }
 
 /* Campos Readonly */
@@ -37,7 +37,7 @@
 
 /* Select Fields */
 .form-select {
-  @apply w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 outline-none transition-all duration-200 appearance-none cursor-pointer;
+  @apply w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition-all duration-200 appearance-none cursor-pointer;
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
   background-position: right 0.5rem center;
   background-repeat: no-repeat;
@@ -45,11 +45,11 @@
 }
 
 .form-select:hover {
-  @apply border-slate-600;
+  @apply border-slate-400 dark:border-slate-600;
 }
 
 .form-select:focus {
-  @apply border-blue-500 bg-slate-900;
+  @apply border-blue-500 dark:border-blue-500 bg-white dark:bg-slate-900;
 }
 
 /* Fix for date inputs in Webkit browsers */

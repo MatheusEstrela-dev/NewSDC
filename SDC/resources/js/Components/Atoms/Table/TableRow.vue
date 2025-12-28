@@ -31,11 +31,11 @@ function handleClick(event) {
 }
 
 const rowClasses = computed(() => {
-  const base = 'border-b border-slate-700/50 transition-colors duration-150';
-  const hoverClass = props.hover ? 'hover:bg-slate-800/30' : '';
+  const base = 'border-b border-slate-700/50 dark:border-slate-700/50 border-slate-200 transition-colors duration-150';
+  const hoverClass = props.hover ? 'hover:bg-slate-800/30 dark:hover:bg-slate-800/30 hover:bg-slate-100' : '';
   const clickableClass = props.clickable ? 'cursor-pointer' : '';
-  const stripedClass = props.striped ? 'bg-slate-900/20' : '';
-  
+  const stripedClass = props.striped ? 'bg-slate-900/20 dark:bg-slate-900/20 bg-slate-50' : '';
+
   return [
     base,
     hoverClass,

@@ -1,0 +1,47 @@
+/**
+ * Estilos para BeneficiarioCard com efeito neon/glow
+ */
+
+/* Card com borda verde (ATIVO) */
+.beneficiario-card-ativo {
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+  transition: all 0.3s ease;
+}
+
+.beneficiario-card-ativo:hover {
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.5);
+}
+
+/* Card com borda cinza (INATIVO) */
+.beneficiario-card-inativo {
+  border-color: rgba(100, 116, 139, 0.5);
+  box-shadow: 0 0 15px rgba(100, 116, 139, 0.2);
+  transition: all 0.3s ease;
+}
+
+.beneficiario-card-inativo:hover {
+  box-shadow: 0 0 25px rgba(100, 116, 139, 0.3);
+}
+
+/* Card com borda âmbar (DESLOCADO) */
+.beneficiario-card-deslocado {
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+  transition: all 0.3s ease;
+}
+
+.beneficiario-card-deslocado:hover {
+  box-shadow: 0 0 25px rgba(245, 158, 11, 0.5);
+}
+
+/* Card com borda ciano (RETORNADO) */
+.beneficiario-card-retornado {
+  border-color: rgba(6, 182, 212, 0.5);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+  transition: all 0.3s ease;
+}
+
+.beneficiario-card-retornado:hover {
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.5);
+}

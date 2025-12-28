@@ -1,13 +1,13 @@
 <template>
   <div class="demandas-list">
     <!-- Filtros -->
-    <CardBase variant="default" padding="lg" class="bg-slate-800/60 border-slate-700/50 mb-6">
+    <CardBase variant="default" padding="lg" class="mb-6">
       <div class="flex items-center justify-between mb-4">
-        <Heading :level="4" color="white">Filtros</Heading>
+        <Heading :level="4" color="default">Filtros</Heading>
         <button
           v-if="hasActiveFilters"
           @click="handleClearFilters"
-          class="text-sm text-red-400 hover:text-red-300 transition-colors"
+          class="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
         >
           Limpar filtros
         </button>
@@ -21,7 +21,12 @@
             @input="handleFilterChange"
             type="text"
             placeholder="Buscar por título, código ou descrição..."
-            class="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 placeholder-slate-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-sm"
+            class="w-full px-4 py-2 rounded-lg
+                   bg-white dark:bg-slate-900
+                   border border-slate-300 dark:border-slate-700
+                   text-slate-900 dark:text-slate-100
+                   placeholder-slate-400 dark:placeholder-slate-500
+                   focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-sm"
           />
         </div>
 
@@ -30,7 +35,11 @@
           <select
             v-model="localFilters.tipo"
             @change="handleFilterChange"
-            class="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-sm"
+            class="w-full px-4 py-2 rounded-lg
+                   bg-white dark:bg-slate-900
+                   border border-slate-300 dark:border-slate-700
+                   text-slate-900 dark:text-slate-100
+                   focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-sm"
           >
             <option value="">Todos os tipos</option>
             <option value="tarefa">Tarefa</option>
@@ -45,7 +54,11 @@
           <select
             v-model="localFilters.prioridade"
             @change="handleFilterChange"
-            class="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-sm"
+            class="w-full px-4 py-2 rounded-lg
+                   bg-white dark:bg-slate-900
+                   border border-slate-300 dark:border-slate-700
+                   text-slate-900 dark:text-slate-100
+                   focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-sm"
           >
             <option value="">Todas prioridades</option>
             <option value="baixa">Baixa</option>
@@ -60,7 +73,11 @@
           <select
             v-model="localFilters.status"
             @change="handleFilterChange"
-            class="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-sm"
+            class="w-full px-4 py-2 rounded-lg
+                   bg-white dark:bg-slate-900
+                   border border-slate-300 dark:border-slate-700
+                   text-slate-900 dark:text-slate-100
+                   focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all text-sm"
           >
             <option value="">Todos os status</option>
             <option value="aberta">Aberta</option>
@@ -78,7 +95,7 @@
         :key="demanda.id"
         variant="default"
         padding="lg"
-        class="bg-slate-800/60 border-slate-700/50 hover:border-red-500/30 transition-all cursor-pointer"
+        class="hover:border-red-500/30 dark:hover:border-red-500/30 hover:border-red-300 transition-all cursor-pointer"
         @click="handleDemandaClick(demanda)"
       >
         <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
@@ -95,7 +112,7 @@
                     {{ getPrioridadeLabel(demanda.prioridade) }}
                   </span>
                 </div>
-                <Heading :level="4" color="white" class="mb-2">{{ demanda.titulo }}</Heading>
+                <Heading :level="4" color="default" class="mb-2">{{ demanda.titulo }}</Heading>
                 <Text size="sm" color="muted" class="line-clamp-2">
                   {{ demanda.descricao }}
                 </Text>
@@ -107,14 +124,14 @@
               <span
                 v-for="tag in demanda.tags"
                 :key="tag"
-                class="px-2 py-1 rounded-md bg-slate-700/50 text-slate-300 text-xs"
+                class="px-2 py-1 rounded-md bg-slate-700/50 dark:bg-slate-700/50 bg-slate-200 text-slate-300 dark:text-slate-300 text-slate-700 text-xs"
               >
                 #{{ tag }}
               </span>
             </div>
 
             <!-- Metadados -->
-            <div class="flex flex-wrap items-center gap-4 text-xs text-slate-400">
+            <div class="flex flex-wrap items-center gap-4 text-xs text-slate-400 dark:text-slate-400 text-slate-600">
               <div v-if="demanda.responsavel_nome" class="flex items-center gap-1">
                 <UserIcon class="w-4 h-4" />
                 <span>{{ demanda.responsavel_nome }}</span>
@@ -149,10 +166,10 @@
       v-else
       variant="default"
       padding="xl"
-      class="bg-slate-800/60 border-slate-700/50 text-center"
+      class="text-center"
     >
       <div class="py-12">
-        <ClipboardDocumentListIcon class="w-16 h-16 text-slate-600 mx-auto mb-4" />
+        <ClipboardDocumentListIcon class="w-16 h-16 text-slate-600 dark:text-slate-600 text-slate-400 mx-auto mb-4" />
         <Heading :level="4" color="muted" class="mb-2">Nenhuma demanda encontrada</Heading>
         <Text size="sm" color="muted">
           {{ hasActiveFilters ? 'Tente ajustar os filtros' : 'Crie sua primeira demanda para começar' }}
@@ -165,7 +182,12 @@
       <button
         @click="handlePageChange(currentPage - 1)"
         :disabled="currentPage === 1"
-        class="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        class="px-4 py-2 rounded-lg
+               bg-slate-800 dark:bg-slate-800 bg-white
+               border border-slate-700 dark:border-slate-700 border-slate-300
+               text-slate-300 dark:text-slate-300 text-slate-700
+               hover:bg-slate-700 dark:hover:bg-slate-700 hover:bg-slate-100
+               disabled:opacity-50 disabled:cursor-not-allowed transition-all"
       >
         Anterior
       </button>
@@ -179,7 +201,7 @@
             'px-4 py-2 rounded-lg border transition-all',
             page === currentPage
               ? 'bg-red-500 border-red-500 text-white'
-              : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+              : 'bg-slate-800 dark:bg-slate-800 bg-white border-slate-700 dark:border-slate-700 border-slate-300 text-slate-300 dark:text-slate-300 text-slate-700 hover:bg-slate-700 dark:hover:bg-slate-700 hover:bg-slate-100'
           ]"
         >
           {{ page }}
@@ -189,7 +211,12 @@
       <button
         @click="handlePageChange(currentPage + 1)"
         :disabled="currentPage === totalPages"
-        class="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        class="px-4 py-2 rounded-lg
+               bg-slate-800 dark:bg-slate-800 bg-white
+               border border-slate-700 dark:border-slate-700 border-slate-300
+               text-slate-300 dark:text-slate-300 text-slate-700
+               hover:bg-slate-700 dark:hover:bg-slate-700 hover:bg-slate-100
+               disabled:opacity-50 disabled:cursor-not-allowed transition-all"
       >
         Próxima
       </button>
@@ -321,20 +348,20 @@ const getTipoColor = (tipo) => {
 
 const getPrioridadeBadgeClass = (prioridade) => {
   const classes = {
-    baixa: 'px-2 py-0.5 rounded-md bg-gray-500/15 text-gray-300 text-xs font-medium',
-    media: 'px-2 py-0.5 rounded-md bg-yellow-500/15 text-yellow-300 text-xs font-medium',
-    alta: 'px-2 py-0.5 rounded-md bg-orange-500/15 text-orange-300 text-xs font-medium',
-    critica: 'px-2 py-0.5 rounded-md bg-red-500/15 text-red-300 text-xs font-medium',
+    baixa: 'px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-500/15 text-gray-700 dark:text-gray-300 text-xs font-medium',
+    media: 'px-2 py-0.5 rounded-md bg-yellow-100 dark:bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 text-xs font-medium',
+    alta: 'px-2 py-0.5 rounded-md bg-orange-100 dark:bg-orange-500/15 text-orange-700 dark:text-orange-300 text-xs font-medium',
+    critica: 'px-2 py-0.5 rounded-md bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 text-xs font-medium',
   };
   return classes[prioridade] || classes.media;
 };
 
 const getStatusBadgeClass = (status) => {
   const classes = {
-    aberta: 'px-3 py-1.5 rounded-lg bg-cyan-500/15 text-cyan-300 text-sm font-medium border border-cyan-500/30',
-    em_andamento: 'px-3 py-1.5 rounded-lg bg-yellow-500/15 text-yellow-300 text-sm font-medium border border-yellow-500/30',
-    concluida: 'px-3 py-1.5 rounded-lg bg-green-500/15 text-green-300 text-sm font-medium border border-green-500/30',
-    cancelada: 'px-3 py-1.5 rounded-lg bg-gray-500/15 text-gray-300 text-sm font-medium border border-gray-500/30',
+    aberta: 'px-3 py-1.5 rounded-lg bg-cyan-100 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 text-sm font-medium border border-cyan-300 dark:border-cyan-500/30',
+    em_andamento: 'px-3 py-1.5 rounded-lg bg-yellow-100 dark:bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 text-sm font-medium border border-yellow-300 dark:border-yellow-500/30',
+    concluida: 'px-3 py-1.5 rounded-lg bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-300 text-sm font-medium border border-green-300 dark:border-green-500/30',
+    cancelada: 'px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-500/15 text-gray-700 dark:text-gray-300 text-sm font-medium border border-gray-300 dark:border-gray-500/30',
   };
   return classes[status] || classes.aberta;
 };

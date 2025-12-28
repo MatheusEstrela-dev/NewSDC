@@ -168,9 +168,8 @@ function closeHistorico() {
 
 <style scoped>
 .pae-protocolos-container {
-  @apply w-full min-h-screen;
+  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
   padding: 1.5rem;
-  background: #0f172a;
 }
 
 @media (min-width: 640px) {

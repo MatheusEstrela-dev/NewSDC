@@ -53,13 +53,13 @@
         <span
           v-for="municipio in processo.municipios.slice(0, 3)"
           :key="municipio.id"
-          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 text-[10px] sm:text-xs text-slate-300"
+          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 dark:bg-slate-700/30 bg-slate-200 text-[10px] sm:text-xs text-slate-300 dark:text-slate-300 text-slate-700"
         >
           {{ municipio.nome }}
         </span>
         <span
           v-if="processo.municipios.length > 3"
-          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 text-[10px] sm:text-xs text-slate-400"
+          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 dark:bg-slate-700/30 bg-slate-200 text-[10px] sm:text-xs text-slate-400 dark:text-slate-400 text-slate-600"
         >
           +{{ processo.municipios.length - 3 }}
         </span>
@@ -67,7 +67,7 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-700/30">
+    <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-700/30 dark:border-slate-700/30 border-slate-200">
       <TableActions
         :show-view="true"
         :show-edit="canEdit"

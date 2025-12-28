@@ -1,6 +1,6 @@
 <template>
   <CardBase variant="default" padding="none" class="overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-700/50 bg-slate-900/30">
+    <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/30">
       <div class="flex items-center justify-between">
         <Heading :level="5" color="default" class="flex items-center gap-2">
           <DocumentTextIcon class="w-5 h-5" />
@@ -8,14 +8,14 @@
         </Heading>
       </div>
     </div>
-    
+
     <div v-if="loading" class="p-12 text-center">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
-      <p class="mt-4 text-slate-400">Carregando...</p>
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+      <p class="mt-4 text-slate-600 dark:text-slate-400">Carregando...</p>
     </div>
-    
+
     <div v-else-if="rats.length === 0" class="p-12 text-center">
-      <DocumentTextIcon class="w-12 h-12 text-slate-600 mx-auto mb-4" />
+      <DocumentTextIcon class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-4" />
       <Heading :level="4" color="muted">Nenhum RAT encontrado</Heading>
       <Text size="sm" color="muted" class="mt-2">
         Tente ajustar os filtros de busca ou crie um novo RAT
@@ -47,7 +47,7 @@
       </table>
     </div>
     
-    <div v-if="pagination && pagination.last_page > 1" class="px-6 py-4 border-t border-slate-700/50">
+    <div v-if="pagination && pagination.last_page > 1" class="px-6 py-4 border-t border-slate-200 dark:border-slate-700/50">
       <Pagination :pagination="pagination" @page-change="handlePageChange" />
     </div>
   </CardBase>

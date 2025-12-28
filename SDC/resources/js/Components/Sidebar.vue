@@ -87,6 +87,17 @@
           Decretações
         </NavItem>
 
+        <!-- Ajuda Humanitária -->
+        <NavItem
+          v-if="route().has('ajuda-humanitaria.beneficiarios.index')"
+          :href="route('ajuda-humanitaria.beneficiarios.index')"
+          :active="route().current('ajuda-humanitaria.*')"
+          icon="heart"
+          :collapsed="isCollapsed"
+        >
+          Ajuda Humanitária
+        </NavItem>
+
         <!-- TDAP com submenu -->
         <div class="nav-group">
           <button
@@ -243,6 +254,7 @@ const canSeeAdmin = computed(() => !!page.props?.auth?.user);
 const openSubMenus = ref({
   tdap: true,
   permissions: false,
+  ajudaHumanitaria: false,
 });
 
 // Links resilientes (evita tela branca quando uma rota não existir no Ziggy)

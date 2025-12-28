@@ -2,13 +2,13 @@
   <div class="tdap-products-container">
     <TdapProductsPageHeader />
 
-    <CardBase variant="default" padding="lg" class="bg-slate-800/60 border-slate-700/50">
-      <Heading :level="4" color="white" class="mb-4">Lista de Produtos</Heading>
+    <CardBase variant="default" padding="lg">
+      <Heading :level="4" color="default" class="mb-4">Lista de Produtos</Heading>
 
       <div class="overflow-x-auto">
         <table class="min-w-full">
           <thead>
-            <tr class="border-b border-slate-700">
+            <tr class="border-b border-slate-700 dark:border-slate-700 border-slate-200">
               <th class="px-4 py-3 text-left">
                 <Text size="xs" color="muted" weight="medium" class="uppercase">Código</Text>
               </th>
@@ -26,13 +26,13 @@
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-700/50">
-            <tr v-for="product in products" :key="product.id" class="hover:bg-slate-700/30 transition-colors">
+          <tbody class="divide-y divide-slate-700/50 dark:divide-slate-700/50 divide-slate-200">
+            <tr v-for="product in products" :key="product.id" class="hover:bg-slate-700/30 dark:hover:bg-slate-700/30 hover:bg-slate-100 transition-colors">
               <td class="px-4 py-4">
-                <Text size="sm" color="white" weight="medium">{{ product.codigo }}</Text>
+                <Text size="sm" color="default" weight="medium">{{ product.codigo }}</Text>
               </td>
               <td class="px-4 py-4">
-                <Text size="sm" color="white">{{ product.nome }}</Text>
+                <Text size="sm" color="default">{{ product.nome }}</Text>
               </td>
               <td class="px-4 py-4">
                 <ProductTypeBadge :type="product.tipo" />
@@ -84,9 +84,8 @@ const props = defineProps({
 
 <style scoped>
 .tdap-products-container {
-  @apply w-full min-h-screen;
+  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
   padding: 1.5rem;
-  background: #0f172a;
 }
 
 @media (min-width: 640px) {

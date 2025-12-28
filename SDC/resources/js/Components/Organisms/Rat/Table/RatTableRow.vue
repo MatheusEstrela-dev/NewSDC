@@ -3,7 +3,7 @@
     <TableCell class="w-48 whitespace-nowrap">
       <Link
         :href="route('rat.show', rat.id)"
-        class="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+        class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
       >
         {{ rat.protocolo || `RAT #${rat.id}` }}
       </Link>

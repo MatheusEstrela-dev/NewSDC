@@ -25,11 +25,11 @@ const props = defineProps({
 });
 
 const variantClasses = {
-  default: 'bg-slate-800/80 border-slate-700/50',
-  info: 'bg-cyan-500/10 border-cyan-500/30',
-  success: 'bg-emerald-500/10 border-emerald-500/30',
-  warning: 'bg-amber-500/10 border-amber-500/30',
-  danger: 'bg-red-500/10 border-red-500/30',
+  default: 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/50',
+  info: 'bg-cyan-50 dark:bg-cyan-500/10 border-cyan-200 dark:border-cyan-500/30',
+  success: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30',
+  warning: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30',
+  danger: 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30',
 };
 
 const paddingClasses = {
@@ -41,8 +41,8 @@ const paddingClasses = {
 
 const cardClasses = computed(() => {
   const base = 'rounded-xl border backdrop-blur-sm transition-all duration-200';
-  const hoverClass = props.hover ? 'hover:border-slate-600/50 hover:shadow-lg' : '';
-  
+  const hoverClass = props.hover ? 'hover:border-slate-300 dark:hover:border-slate-600/50 hover:shadow-lg' : '';
+
   return [
     base,
     variantClasses[props.variant],

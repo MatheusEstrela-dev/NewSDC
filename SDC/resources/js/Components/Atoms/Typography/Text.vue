@@ -38,12 +38,12 @@ const sizeClasses = {
 };
 
 const colorClasses = {
-  default: 'text-slate-300',
-  muted: 'text-slate-500',
-  primary: 'text-blue-400',
-  success: 'text-emerald-400',
-  warning: 'text-amber-400',
-  danger: 'text-red-400',
+  default: 'text-slate-300 dark:text-slate-300 text-slate-700',
+  muted: 'text-slate-500 dark:text-slate-500 text-slate-500',
+  primary: 'text-blue-400 dark:text-blue-400 text-blue-600',
+  success: 'text-emerald-400 dark:text-emerald-400 text-emerald-600',
+  warning: 'text-amber-400 dark:text-amber-400 text-amber-600',
+  danger: 'text-red-400 dark:text-red-400 text-red-600',
 };
 
 const weightClasses = {

@@ -12,14 +12,14 @@
       </div>
 
       <!-- View Toggle -->
-      <div class="flex items-center gap-2 bg-slate-800/50 rounded-lg p-1 border border-slate-700/50 self-start md:self-auto">
+      <div class="flex items-center gap-2 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50 self-start md:self-auto">
         <button
           @click="viewMode = 'grid'"
           :class="[
             'px-2.5 md:px-3 py-1.5 rounded text-xs font-medium transition-all touch-manipulation',
             viewMode === 'grid'
               ? 'bg-primary-600 text-white shadow-sm'
-              : 'text-slate-400 hover:text-slate-300'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
           ]"
           title="Visualização em Grade"
         >
@@ -32,7 +32,7 @@
             'px-2.5 md:px-3 py-1.5 rounded text-xs font-medium transition-all touch-manipulation',
             viewMode === 'table'
               ? 'bg-primary-600 text-white shadow-sm'
-              : 'text-slate-400 hover:text-slate-300'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
           ]"
           title="Visualização em Tabela"
         >
@@ -156,9 +156,8 @@ const handleStatFilter = (type) => {
 
 <style scoped>
 .processos-container {
-  @apply w-full min-h-screen;
+  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
   padding: 1rem;
-  background: #0f172a;
 }
 
 @media (min-width: 640px) {

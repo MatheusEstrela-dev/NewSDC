@@ -2,13 +2,13 @@
   <div class="space-y-4">
     <!-- Loading -->
     <div v-if="loading" class="p-12 text-center">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-400"></div>
-      <p class="mt-4 text-slate-400">Carregando processos...</p>
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-400 dark:border-primary-400 border-primary-600"></div>
+      <p class="mt-4 text-slate-400 dark:text-slate-400 text-slate-600">Carregando processos...</p>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="processos.length === 0" class="p-12 text-center">
-      <DocumentIcon class="w-16 h-16 text-slate-600 mx-auto mb-4" />
+      <DocumentIcon class="w-16 h-16 text-slate-600 dark:text-slate-600 text-slate-400 mx-auto mb-4" />
       <Heading :level="3" color="muted">Nenhum processo encontrado</Heading>
       <Text size="sm" color="muted" class="mt-2">
         Tente ajustar os filtros de busca ou crie um novo processo
