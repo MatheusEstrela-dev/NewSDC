@@ -76,17 +76,23 @@ export default defineConfig({
     },
     server: {
         host: '0.0.0.0',
-        port: 5175,
+        port: 5173,
         strictPort: true,
+        // Configuração otimizada para Docker
         watch: {
             usePolling: true,
-            interval: 1000,
+            interval: 300, // Reduzido de 1000ms para 300ms para detecção mais rápida
+            ignored: ['**/node_modules/**', '**/vendor/**', '**/storage/**', '**/public/**'],
         },
         hmr: {
             host: 'localhost',
-            port: 5175,
+            port: 5173,
             protocol: 'ws',
-            clientPort: 5175,
+            clientPort: 5173,
+            overlay: true, // Mostrar erros na tela
         },
+        // Configurações adicionais para HMR
+        cors: true,
+        origin: 'http://localhost:5173',
     },
 });

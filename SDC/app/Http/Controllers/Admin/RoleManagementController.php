@@ -38,7 +38,10 @@ class RoleManagementController extends Controller
         $stats = [
             'total' => Role::count(),
             'active' => Role::where('is_active', true)->count(),
-            'users_with_roles' => \DB::table('role_user')->distinct('user_id')->count('user_id'),
+            'users_with_roles' => \DB::table('model_has_roles')
+                ->where('model_type', 'App\\Models\\User')
+                ->distinct('model_id')
+                ->count('model_id'),
         ];
 
         return Inertia::render('Admin/Permissions/Roles/Index', [
