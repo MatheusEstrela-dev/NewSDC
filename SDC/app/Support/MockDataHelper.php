@@ -158,4 +158,128 @@ class MockDataHelper
             'proximos_vencer' => 1,
         ];
     }
+
+    public static function getUsers(): array
+    {
+        $data = [];
+        $roles = [
+            ['id' => 1, 'name' => 'Super Admin', 'slug' => 'super-admin'],
+            ['id' => 2, 'name' => 'Administrador', 'slug' => 'admin'],
+            ['id' => 3, 'name' => 'Agente', 'slug' => 'agent'],
+        ];
+
+        for ($i = 1; $i <= 15; $i++) {
+            $data[] = [
+                'id' => $i,
+                'name' => "Usuário Exemplo " . $i,
+                'email' => "usuario{$i}@exemplo.com",
+                'email_verified_at' => now()->subDays($i)->toIso8601String(),
+                'created_at' => now()->subMonths(1)->addDays($i)->toIso8601String(),
+                'roles' => [$roles[$i % 3]],
+                'permissions' => [],
+            ];
+        }
+
+        return [
+            'data' => $data,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => 15,
+            'total' => 15,
+        ];
+    }
+
+    public static function getRoles(): array
+    {
+        $data = [
+            [
+                'id' => 1,
+                'name' => 'Super Admin',
+                'slug' => 'super-admin',
+                'description' => 'Acesso total ao sistema',
+                'hierarchy_level' => 0,
+                'is_active' => true,
+                'users_count' => 1,
+                'permissions_count' => 50,
+            ],
+            [
+                'id' => 2,
+                'name' => 'Administrador',
+                'slug' => 'admin',
+                'description' => 'Acesso administrativo',
+                'hierarchy_level' => 1,
+                'is_active' => true,
+                'users_count' => 5,
+                'permissions_count' => 45,
+            ],
+            [
+                'id' => 3,
+                'name' => 'Gestor',
+                'slug' => 'manager',
+                'description' => 'Gestão de módulos específicos',
+                'hierarchy_level' => 2,
+                'is_active' => true,
+                'users_count' => 10,
+                'permissions_count' => 30,
+            ],
+            [
+                'id' => 4,
+                'name' => 'Analista',
+                'slug' => 'analyst',
+                'description' => 'Operação e análise técnica',
+                'hierarchy_level' => 3,
+                'is_active' => true,
+                'users_count' => 20,
+                'permissions_count' => 20,
+            ],
+        ];
+
+        return [
+            'data' => $data,
+            'current_page' => 1,
+            'last_page' => 1,
+            'per_page' => 12,
+            'total' => 4,
+        ];
+    }
+
+    public static function getRoleStatistics(): array
+    {
+        return [
+            'total' => 4,
+            'active' => 4,
+            'users_with_roles' => 36,
+        ];
+    }
+
+    public static function getPermissions(): array
+    {
+        $modules = ['users', 'roles', 'permissions', 'pae', 'rat', 'demandas'];
+        $actions = ['view', 'create', 'edit', 'delete', 'manage'];
+        $data = [];
+
+        $id = 1;
+        foreach ($modules as $module) {
+            foreach ($actions as $action) {
+                $data[] = [
+                    'id' => $id++,
+                    'name' => "{$module}.{$action}",
+                    'description' => "Permissão para {$action} no módulo {$module}",
+                    'module' => $module,
+                    'roles_count' => rand(1, 3),
+                ];
+            }
+        }
+
+        return $data;
+    }
+
+    public static function getPermissionStatistics(): array
+    {
+        return [
+            'total' => 30,
+            'modules' => 6,
+            'active' => 30,
+        ];
+    }
 }
