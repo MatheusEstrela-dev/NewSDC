@@ -36,6 +36,10 @@ class ProcessoIndexController extends Controller
         try {
             $processos = $this->processoRepository->paginate(15);
 
+            if ($processos->total() === 0) {
+                throw new \Exception("Table is empty, using mocks.");
+            }
+
             $statistics = [
                 'total' => $processos->total(),
                 'vigentes' => \App\Modules\Decretacoes\Domain\Entities\Processo::vigentes()->count(),

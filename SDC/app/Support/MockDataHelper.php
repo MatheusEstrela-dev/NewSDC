@@ -36,9 +36,9 @@ class MockDataHelper
     {
         return [
             'total' => 150,
-            'desabrigados' => 45,
-            'desalojados' => 60,
-            'vulneraveis' => 45,
+            'ativos' => 135,
+            'em_abrigo' => 45,
+            'fora_de_abrigo' => 90,
         ];
     }
 
@@ -68,8 +68,9 @@ class MockDataHelper
     {
         return [
             'total' => 10,
-            'ativos' => 4,
-            'concluidos' => 6,
+            'planejados' => 4,
+            'em_andamento' => 3,
+            'concluidos' => 3,
             'inscritos' => 342,
         ];
     }
@@ -77,7 +78,7 @@ class MockDataHelper
     public static function getOrgaos(): array
     {
         $data = [];
-        $tipos = ['municipal', 'estadual', 'federal'];
+        $tipos = ['compdec', 'redec', 'cedec'];
         $status = ['ativo', 'inativo'];
 
         for ($i = 1; $i <= 12; $i++) {
@@ -86,7 +87,7 @@ class MockDataHelper
                 'codigo' => "ORG-" . str_pad((string) $i, 3, '0', STR_PAD_LEFT),
                 'nome' => "Órgão Competente " . $i,
                 'tipo' => $tipos[$i % 3],
-                'tipoLabel' => ucfirst($tipos[$i % 3]),
+                'tipoLabel' => strtoupper($tipos[$i % 3]),
                 'municipio' => ['nome' => 'Município ' . $i],
                 'status' => $status[$i % 2],
                 'statusLabel' => $status[$i % 2] === 'ativo' ? 'Ativo' : 'Inativo',
@@ -111,6 +112,11 @@ class MockDataHelper
             'ativos' => 10,
             'inativos' => 2,
             'com_compdec' => 8,
+            'por_tipo' => [
+                'compdec' => 8,
+                'redec' => 3,
+                'cedec' => 1,
+            ],
         ];
     }
 
@@ -140,6 +146,16 @@ class MockDataHelper
             'last_page' => 1,
             'per_page' => 15,
             'total' => 10,
+        ];
+    }
+
+    public static function getProcessoStatistics(): array
+    {
+        return [
+            'total' => 10,
+            'vigentes' => 7,
+            'vencidos' => 2,
+            'proximos_vencer' => 1,
         ];
     }
 }

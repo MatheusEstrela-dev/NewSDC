@@ -41,6 +41,11 @@ class BeneficiarioIndexController extends Controller
             // Lista beneficiários com paginação
             $beneficiarios = $this->beneficiarioRepository->list($filters, 15);
 
+            // Se estiver vazio, força mock para visualização em produção
+            if ($beneficiarios->total() === 0) {
+                throw new \Exception("Table is empty, using mocks.");
+            }
+
             // Obtém estatísticas
             $statistics = $this->beneficiarioRepository->getStatistics();
         } catch (\Exception $e) {

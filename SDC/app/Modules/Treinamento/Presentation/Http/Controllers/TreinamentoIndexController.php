@@ -30,6 +30,11 @@ class TreinamentoIndexController extends Controller
             $treinamentos = $this->listUseCase->execute($filters, 15);
             $statistics = $this->repository->getStatistics($filters);
 
+            // Forçar mock se estiver vazio em produção para visualização
+            if ($treinamentos->total() === 0) {
+                throw new \Exception("Table is empty, using mocks for preview.");
+            }
+
             $treinamentosData = [
                 'data' => TreinamentoListDTO::collection($treinamentos->items()),
                 'pagination' => [

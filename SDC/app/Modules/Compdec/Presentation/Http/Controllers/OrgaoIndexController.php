@@ -36,6 +36,9 @@ class OrgaoIndexController extends Controller
             'orgaos' => $orgaos,
             'statistics' => $statistics,
             'filters' => $filters,
+            'filterOptions' => [
+                'municipalities' => [],
+            ],
             'canManage' => $request->user()?->can('compdec.manage') ?? false,
         ]);
     }
