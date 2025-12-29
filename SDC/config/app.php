@@ -175,6 +175,8 @@ return [
         App\Modules\Tdap\TdapServiceProvider::class,
         App\Modules\Decretacoes\DecretacoesServiceProvider::class,
         App\Modules\AjudaHumanitaria\AjudaHumanitariaServiceProvider::class,
+        App\Modules\Compdec\CompdecServiceProvider::class,
+        App\Modules\Treinamento\TreinamentoServiceProvider::class,
     ])->toArray(),
 
     /*

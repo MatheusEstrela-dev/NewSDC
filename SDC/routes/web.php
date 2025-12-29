@@ -141,8 +141,24 @@ Route::middleware('auth')->group(function () {
     // Permissionamento (Admin)
     require __DIR__.'/modules/permissions.php';
 
+    // ========================================================================
+    // MÓDULOS DE NEGÓCIO
+    // ========================================================================
+
     // Módulo: Decretações
     require __DIR__.'/modules/decretacoes.php';
+
+    // Módulo: Ajuda Humanitária
+    require __DIR__.'/modules/ajuda-humanitaria.php';
+
+    // Módulo: TDAP (Gestão de Depósito)
+    require __DIR__.'/modules/tdap.php';
+
+    // Módulo: Compdec (Órgãos e Competências)
+    require __DIR__.'/modules/compdec.php';
+
+    // Módulo: Treinamento
+    require __DIR__.'/modules/treinamento.php';
 });
 
 require __DIR__.'/auth.php';

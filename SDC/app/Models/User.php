@@ -32,6 +32,7 @@ class User extends Authenticatable
         'email',
         'cpf',
         'password',
+        'orgao_principal_id',
     ];
 
     /**
@@ -73,5 +74,39 @@ class User extends Authenticatable
     public function createTokenWithCustomAbilities(string $name, array $abilities): NewAccessToken
     {
         return $this->createToken($name, $abilities);
+    }
+
+    /**
+     * Órgão principal do usuário (cache de performance)
+     */
+    public function orgaoPrincipal(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_principal_id');
+    }
+
+    /**
+     * Todos os órgãos vinculados ao usuário
+     */
+    public function orgaos(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_user')
+            ->withPivot('funcao', 'is_principal')
+            ->withTimestamps();
+    }
+
+    /**
+     * Verifica se o usuário pertence a um órgão específico
+     */
+    public function pertenceAoOrgao(int $orgaoId): bool
+    {
+        return $this->orgaos()->where('orgao_id', $orgaoId)->exists();
+    }
+
+    /**
+     * Retorna os órgãos do tipo especificado
+     */
+    public function orgaosPorTipo(string $tipo): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->orgaos()->where('tipo', $tipo)->get();
     }
 }

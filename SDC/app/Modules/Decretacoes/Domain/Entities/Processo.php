@@ -47,6 +47,7 @@ class Processo extends Model
         'observacoes',
         'processo_inserido_sei',
         'area_afetada_geom',
+        'orgao_responsavel_id',
         'created_by',
     ];
 
@@ -265,5 +266,13 @@ class Processo extends Model
     public function getTotalPrejuizos(): float
     {
         return $this->prejuizos->sum('valor');
+    }
+
+    /**
+     * Relacionamento: Órgão responsável (COMPDEC)
+     */
+    public function orgaoResponsavel(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_responsavel_id');
     }
 }

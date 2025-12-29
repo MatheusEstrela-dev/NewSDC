@@ -16,10 +16,8 @@ use App\Modules\Tdap\Presentation\Http\Controllers\TdapMovimentacoesController;
 |
 */
 
-Route::middleware(['auth', 'verified'])
-    ->prefix('tdap')
-    ->name('tdap.')
-    ->group(function () {
+// Já está dentro do middleware auth do web.php, então não precisa redefinir
+Route::prefix('tdap')->name('tdap.')->group(function () {
 
         // Dashboard
         Route::get('/', [TdapDashboardController::class, 'index'])
@@ -75,12 +73,11 @@ Route::middleware(['auth', 'verified'])
             });
     });
 
-// Rotas de administração do TDAP
-Route::middleware(['auth', 'verified', 'can:tdap.admin'])
+// Rotas de administração do TDAP (já está dentro do middleware auth)
+Route::middleware('can:tdap.admin')
     ->prefix('admin/tdap')
     ->name('admin.tdap.')
     ->group(function () {
-
         Route::get('/', [TdapDashboardController::class, 'index'])
             ->name('dashboard');
 

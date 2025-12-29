@@ -19,6 +19,7 @@ class AuthServiceProvider extends ServiceProvider
         \App\Models\Empreendimento::class => \App\Policies\EmpreendimentoPolicy::class,
         \App\Models\Protocolo::class => \App\Policies\ProtocoloPolicy::class,
         \App\Models\Entrada::class => \App\Policies\EntradaPolicy::class,
+        \App\Modules\Compdec\Domain\Entities\Orgao::class => \App\Policies\OrgaoPolicy::class,
     ];
 
     /**

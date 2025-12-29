@@ -98,6 +98,17 @@
           Ajuda Humanitária
         </NavItem>
 
+        <!-- COMPDEC -->
+        <NavItem
+          v-if="route().has('compdec.index')"
+          :href="route('compdec.index')"
+          :active="route().current('compdec.*')"
+          icon="building"
+          :collapsed="isCollapsed"
+        >
+          Órgãos
+        </NavItem>
+
         <!-- TDAP com submenu -->
         <div class="nav-group">
           <button
@@ -164,6 +175,17 @@
             </NavItem>
           </div>
         </div>
+
+        <!-- Treinamento -->
+        <NavItem
+          v-if="route().has('treinamentos.index')"
+          :href="route('treinamentos.index')"
+          :active="route().current('treinamentos.*')"
+          icon="academic"
+          :collapsed="isCollapsed"
+        >
+          Treinamento
+        </NavItem>
 
         <NavItem
           :href="route('dashboard')"
@@ -252,7 +274,7 @@ const page = usePage();
 const canSeeAdmin = computed(() => !!page.props?.auth?.user);
 
 const openSubMenus = ref({
-  tdap: true,
+  tdap: false,
   permissions: false,
   ajudaHumanitaria: false,
 });

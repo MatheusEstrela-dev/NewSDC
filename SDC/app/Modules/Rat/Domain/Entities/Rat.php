@@ -17,6 +17,7 @@ class Rat extends Model
         'local',
         'endereco',
         'comunicacao',
+        'orgao_emissor_id',
         'created_by',
         'updated_by',
     ];
@@ -46,12 +47,20 @@ class Rat extends Model
         if (!$this->local) {
             return null;
         }
-        
+
         return new Localizacao(
             $this->local['municipio'] ?? null,
             $this->local['uf'] ?? null,
             $this->local['pais_id'] ?? 1
         );
+    }
+
+    /**
+     * Órgão emissor do RAT (COMPDEC responsável)
+     */
+    public function orgaoEmissor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_emissor_id');
     }
 }
 
