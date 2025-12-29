@@ -1,6 +1,51 @@
 <template>
   <div class="pae-protocolos-container">
-    <PaeProtocolosHeader />
+    <!-- Header Padronizado com Toggle -->
+    <PageHeader
+      title="Protocolos PAE"
+      description="Gerencie os protocolos de análise de PAE"
+      :icon="ClipboardDocumentListIcon"
+      variant="gradient"
+    >
+      <template #actions>
+        <div class="flex items-center gap-3">
+          <!-- Toggle Grade/Tabela -->
+          <div class="flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
+            <button
+              @click="viewMode = 'grid'"
+              :class="[
+                'px-3 py-1.5 rounded text-xs font-medium transition-all',
+                viewMode === 'grid'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              ]"
+              title="Visualização em Grade"
+            >
+              Grade
+            </button>
+            <button
+              @click="viewMode = 'table'"
+              :class="[
+                'px-3 py-1.5 rounded text-xs font-medium transition-all',
+                viewMode === 'table'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              ]"
+              title="Visualização em Tabela"
+            >
+              Tabela
+            </button>
+          </div>
+
+          <!-- Botão Novo Protocolo -->
+          <Link :href="route('pae.index')">
+            <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
+              Novo Protocolo
+            </Button>
+          </Link>
+        </div>
+      </template>
+    </PageHeader>
 
     <PaeProtocolosStatsCards :stats="statsToUse" />
 
@@ -13,7 +58,9 @@
       @filter-reset="handleFilterReset"
     />
 
+    <!-- Visualização Condicional: Grade -->
     <PaeProtocolosGrid
+      v-if="viewMode === 'grid'"
       :protocolos="paginatedProtocolos"
       :loading="loading"
       :pagination="paginationToUse"
@@ -22,6 +69,23 @@
       @history="handleHistory"
       @page-change="handlePageChange"
     />
+
+    <!-- Visualização Condicional: Tabela -->
+    <div v-else class="space-y-6">
+      <PaeProtocolosTable
+        :protocolos="paginatedProtocolos"
+        @view="handleView"
+        @edit="handleEdit"
+        @history="handleHistory"
+      />
+      
+      <!-- Paginação para Tabela -->
+      <div v-if="paginationToUse && paginationToUse.last_page > 1" class="mt-6">
+        <CardBase variant="default" padding="md">
+          <Pagination :pagination="paginationToUse" @page-change="handlePageChange" />
+        </CardBase>
+      </div>
+    </div>
 
     <PaeHistoricoModal
       :open="historicoModalOpen"
@@ -34,12 +98,19 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { router, Link } from '@inertiajs/vue3';
 
-import PaeProtocolosHeader from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosHeader.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+
 import PaeProtocolosStatsCards from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosStatsCards.vue';
 import PaeProtocolosFilters from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosFilters.vue';
 import PaeProtocolosGrid from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosGrid.vue';
+import PaeProtocolosTable from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosTable.vue';
 import PaeHistoricoModal from '@/Components/Organisms/Pae/Protocolos/PaeHistoricoModal.vue';
 
 import { MockPaeProtocoloRepository } from '@/infrastructure/pae/MockPaeProtocoloRepository';
@@ -64,6 +135,9 @@ const props = defineProps({
     default: false,
   },
 });
+
+// Estado da visualização
+const viewMode = ref('grid');
 
 // Data source (mock por enquanto)
 const repository = new MockPaeProtocoloRepository();
