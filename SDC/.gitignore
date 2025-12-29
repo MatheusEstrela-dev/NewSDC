@@ -19,3 +19,7 @@ yarn-error.log
 /.vscode
 rr
 .rr.yaml
+/docker/logs
+*.log
+.DS_Store
+.gemini

@@ -59,19 +59,17 @@ const handleFilter = (filters) => {
 
 <template>
   <AuthenticatedLayout title="Treinamentos">
-    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-      <TreinamentoIndexTemplate
-        :treinamentos="treinamentos.data"
-        :statistics="statistics"
-        :pagination="treinamentos.pagination"
-        :filters="filters"
-        :can-manage="canManage"
-        @create="handleCreate"
-        @view="handleView"
-        @edit="handleEdit"
-        @delete="handleDelete"
-        @filter="handleFilter"
-      />
-    </div>
+    <TreinamentoIndexTemplate
+      :treinamentos="treinamentos.data"
+      :statistics="statistics"
+      :pagination="treinamentos.pagination"
+      :filters="filters"
+      :can-manage="canManage"
+      @create="handleCreate"
+      @view="handleView"
+      @edit="handleEdit"
+      @delete="handleDelete"
+      @filter="handleFilter"
+    />
   </AuthenticatedLayout>
 </template>

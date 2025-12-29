@@ -1,19 +1,17 @@
 <template>
   <AuthenticatedLayout title="Ajuda Humanitária - Beneficiários">
-    <div class="max-w-7xl mx-auto py-6 md:py-8 px-4 sm:px-6 lg:px-8">
-      <BeneficiarioIndexTemplate
-        :beneficiarios="beneficiarios.data || []"
-        :statistics="statistics"
-        :pagination="beneficiarios"
-        :can-edit="true"
-        :can-delete="true"
-        @create="openCreateModal"
-        @view="viewBeneficiario"
-        @edit="editBeneficiario"
-        @delete="deleteBeneficiario"
-        @filter="filterByStatus"
-      />
-    </div>
+    <BeneficiarioIndexTemplate
+      :beneficiarios="beneficiarios.data || []"
+      :statistics="statistics"
+      :pagination="beneficiarios"
+      :can-edit="true"
+      :can-delete="true"
+      @create="openCreateModal"
+      @view="viewBeneficiario"
+      @edit="editBeneficiario"
+      @delete="deleteBeneficiario"
+      @filter="filterByStatus"
+    />
 
     <!-- Modal de Criar/Editar -->
     <teleport to="body">

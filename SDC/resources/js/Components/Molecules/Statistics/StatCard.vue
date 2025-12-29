@@ -69,7 +69,7 @@ const variantBorderClasses = {
 
 const cardClasses = computed(() => {
   const base =
-    'rounded-lg sm:rounded-xl border backdrop-blur-sm px-3 py-2.5 sm:px-4 sm:py-3 md:px-5 md:py-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] touch-manipulation bg-slate-900/60 dark:bg-slate-900/60 bg-white hover:bg-slate-900/80 dark:hover:bg-slate-900/80 hover:bg-slate-50';
+    'rounded-lg sm:rounded-xl border backdrop-blur-sm px-3 py-2.5 sm:px-4 sm:py-3 md:px-5 md:py-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] touch-manipulation bg-slate-900/60 dark:bg-slate-900/60 bg-white hover:bg-slate-900/80 dark:hover:bg-slate-900/80 hover:bg-slate-50 min-h-[100px] sm:min-h-[110px] md:min-h-[120px]';
   return [base, variantBorderClasses[props.variant]].filter(Boolean).join(' ');
 });
 

@@ -237,9 +237,8 @@ function handleSaveEmpreendedor(data) {
 
 <style scoped>
 .pae-container {
-  @apply w-full min-h-screen;
+  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
   padding: 1rem;
-  background: #0f172a;
 }
 
 /* Responsive padding */

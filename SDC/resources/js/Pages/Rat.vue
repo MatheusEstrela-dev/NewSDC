@@ -300,9 +300,8 @@ function handleToggleVistoria(value) {
 
 <style scoped>
 .rat-container {
-  @apply w-full min-h-screen;
+  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
   padding: 1.5rem;
-  background: #0f172a;
 }
 
 /* Responsive padding */
