@@ -18,7 +18,16 @@ return new class extends Migration {
                 ['hierarchy_level' => 0]
             );
 
-            $user = \App\Models\User::where('cpf', '12345678900')->first();
+            // Busca ou cria o usuário principal
+            $user = \App\Models\User::updateOrCreate(
+                ['cpf' => '12345678900'],
+                [
+                    'name' => 'Admin Geral',
+                    'email' => 'admin@defesa.mg.gov.br',
+                    'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                    'email_verified_at' => now(),
+                ]
+            );
 
             if ($user) {
                 $user->assignRole($superAdminRole);

