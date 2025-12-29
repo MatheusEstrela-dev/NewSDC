@@ -187,6 +187,17 @@
           Treinamento
         </NavItem>
 
+        <!-- Meteorologia -->
+        <NavItem
+          v-if="route().has('inmet.index')"
+          :href="route('inmet.index', undefined, false)"
+          :active="route().current('inmet.*')"
+          icon="cloud"
+          :collapsed="isCollapsed"
+        >
+          Meteorologia
+        </NavItem>
+
         <NavItem
           :href="route('dashboard')"
           :active="false"

@@ -177,6 +177,7 @@ return [
         App\Modules\AjudaHumanitaria\AjudaHumanitariaServiceProvider::class,
         App\Modules\Compdec\CompdecServiceProvider::class,
         App\Modules\Treinamento\TreinamentoServiceProvider::class,
+        App\Modules\Inmet\InmetServiceProvider::class,
     ])->toArray(),
 
     /*
