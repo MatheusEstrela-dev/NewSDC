@@ -106,7 +106,8 @@ class LogViewerController extends Controller
             type: $validated['type'] ?? null,
             level: $validated['level'] ?? null,
             search: $validated['search'] ?? null,
-            limit: $validated['limit'] ?? 1000
+            limit: $validated['limit'] ?? 1000,
+            file: $request->query('file')
         );
 
         return response()->json([
@@ -174,7 +175,8 @@ class LogViewerController extends Controller
         $stats = ActivityLogger::getLogStatistics(
             startDate: $startDate,
             endDate: $endDate,
-            type: $validated['type'] ?? null
+            type: $validated['type'] ?? null,
+            file: $request->query('file')
         );
 
         return response()->json([

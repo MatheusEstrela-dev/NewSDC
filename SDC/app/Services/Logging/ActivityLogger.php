@@ -121,7 +121,11 @@ class ActivityLogger
             'user_id' => $userId,
         ], $extra);
 
-        self::logEvent('api', 'request', $data, $userId,
+        self::logEvent(
+            'api',
+            'request',
+            $data,
+            $userId,
             $statusCode >= 500 ? 'error' : ($statusCode >= 400 ? 'warning' : 'info')
         );
     }
@@ -359,7 +363,8 @@ class ActivityLogger
         ?string $type = null,
         ?string $level = null,
         ?string $search = null,
-        int $limit = 1000
+        int $limit = 1000,
+        ?string $file = null
     ): array {
         $logReader = app(\App\Services\Logging\LogFileReaderService::class);
 
@@ -370,6 +375,7 @@ class ActivityLogger
             'level' => $level,
             'search' => $search,
             'limit' => $limit,
+            'file' => $file
         ]);
 
         return $logs->toArray();
@@ -381,7 +387,8 @@ class ActivityLogger
     public static function getLogStatistics(
         \Carbon\Carbon $startDate,
         \Carbon\Carbon $endDate,
-        ?string $type = null
+        ?string $type = null,
+        ?string $file = null
     ): array {
         $logReader = app(\App\Services\Logging\LogFileReaderService::class);
 
@@ -389,6 +396,7 @@ class ActivityLogger
             'start_date' => $startDate,
             'end_date' => $endDate,
             'type' => $type,
+            'file' => $file
         ]);
     }
 }

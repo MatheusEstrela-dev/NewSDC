@@ -128,10 +128,12 @@ Route::middleware('auth')->group(function () {
     // Log Viewer - Sistema Avançado de Visualização de Logs
     Route::get('/log-viewer', function () {
         return Inertia::render('LogViewer/Index');
-    })->name('log-viewer.index');
+    })->middleware('can:logs.view')->name('log-viewer.index');
 
-    // Log Viewer Legado - Visualizador de Logs Simples
-    Route::get('logs', '\\Rap2hpoutre\\LaravelLogViewer\\LogViewerController@index')->name('logs.index');
+    // Redirect Legacy Log Viewer to New Premium Viewer
+    Route::get('logs', function () {
+        return redirect()->route('log-viewer.index');
+    })->name('logs.index');
 
     // Health Check Dashboard - Visualizador de Saúde do Sistema
     Route::get('health-dashboard', function () {
@@ -139,26 +141,26 @@ Route::middleware('auth')->group(function () {
     })->name('health.dashboard');
 
     // Permissionamento (Admin)
-    require __DIR__.'/modules/permissions.php';
+    require __DIR__ . '/modules/permissions.php';
 
     // ========================================================================
     // MÓDULOS DE NEGÓCIO
     // ========================================================================
 
     // Módulo: Decretações
-    require __DIR__.'/modules/decretacoes.php';
+    require __DIR__ . '/modules/decretacoes.php';
 
     // Módulo: Ajuda Humanitária
-    require __DIR__.'/modules/ajuda-humanitaria.php';
+    require __DIR__ . '/modules/ajuda-humanitaria.php';
 
     // Módulo: TDAP (Gestão de Depósito)
-    require __DIR__.'/modules/tdap.php';
+    require __DIR__ . '/modules/tdap.php';
 
     // Módulo: Compdec (Órgãos e Competências)
-    require __DIR__.'/modules/compdec.php';
+    require __DIR__ . '/modules/compdec.php';
 
     // Módulo: Treinamento
-    require __DIR__.'/modules/treinamento.php';
+    require __DIR__ . '/modules/treinamento.php';
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

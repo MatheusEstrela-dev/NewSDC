@@ -66,29 +66,29 @@ Route::prefix('v1/auth')->group(function () {
 
 // API v1
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
-    
+
     // Módulo PAE
     Route::prefix('pae')->name('api.v1.pae.')->group(function () {
         Route::apiResource('empreendimentos', EmpreendimentoController::class);
     });
-    
+
     // Módulo RAT
     Route::prefix('rat')->name('api.v1.rat.')->group(function () {
         Route::apiResource('protocolos', ProtocoloController::class);
     });
-    
+
     // Integração entre Módulos
     Route::prefix('integracao')->name('api.v1.integracao.')->group(function () {
         Route::get('rat/{ratId}/pae', [IntegracaoController::class, 'getPaeByRat'])->name('rat.pae');
         Route::get('pae/{paeId}/rat', [IntegracaoController::class, 'getRatByPae'])->name('pae.rat');
     });
-    
+
     // BI - Dados de Entrada
     Route::prefix('bi')->name('api.v1.bi.')->group(function () {
         Route::get('entrada', [EntradaController::class, 'index'])->name('entrada.index');
         Route::get('entrada/{id}', [EntradaController::class, 'show'])->name('entrada.show');
     });
-    
+
     // Power BI - Gerenciamento de Tokens para múltiplas APIs
     Route::prefix('power-bi')->name('api.v1.power-bi.')->group(function () {
         Route::post('token', [TokenController::class, 'generateToken'])->name('token.generate');
@@ -141,7 +141,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     });
 
     // Log Viewer - Sistema avançado de visualização de logs
-    Route::prefix('logs')->name('api.v1.logs.')->group(function () {
+    Route::prefix('logs')->middleware('can:logs.view')->name('api.v1.logs.')->group(function () {
 
         // Buscar logs com filtros avançados (data, tipo, nível, busca)
         Route::get('/', [LogViewerV1Controller::class, 'index'])
