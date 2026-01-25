@@ -89,10 +89,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { nextTick, onMounted, ref } from 'vue';
 
 const props = defineProps({
   leituras: Array,
@@ -171,10 +171,15 @@ function getMarkerColor(nivel) {
 /* Dark Mode Base */
 .inmet-container {
   background-color: #111315; /* Cor de fundo bem escura */
-  min-height: 100vh;
+  min-height: calc(100vh - 64px); /* Account for topbar height */
   color: #e5e7eb;
   font-family: 'Inter', sans-serif;
   padding: 20px;
+  width: 100%; /* Ensure it doesn't overflow */
+  max-width: 100%; /* Prevent any overflow */
+  box-sizing: border-box; /* Include padding in width calculation */
+  margin: 0; /* Remove any default margins */
+  position: relative; /* Establish positioning context */
 }
 
 /* Header */
@@ -210,10 +215,12 @@ function getMarkerColor(nivel) {
 .map-wrapper {
   position: relative;
   height: 600px;
+  width: 100%; /* Ensure it doesn't overflow container */
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #374151;
   margin-bottom: 24px;
+  box-sizing: border-box; /* Include border in width calculation */
 }
 
 #map {
@@ -317,6 +324,9 @@ function getMarkerColor(nivel) {
   border-radius: 8px;
   border: 1px solid #374151;
   overflow: hidden;
+  width: 100%; /* Ensure it doesn't overflow container */
+  box-sizing: border-box; /* Include border in width calculation */
+  overflow-x: auto; /* Allow horizontal scroll if needed */
 }
 
 .dark-table {
@@ -389,4 +399,88 @@ function getMarkerColor(nivel) {
   color: #6b7280;
   font-size: 12px;
 }
+
+/* Base Responsive Container */
+.inmet-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .inmet-container {
+    padding: 16px 12px;
+    height: auto;
+    min-height: calc(100vh - 64px);
+    padding-bottom: 80px; /* Space for bottom navigation if exists */
+  }
+
+  .header-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .search-input {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .map-wrapper {
+    height: 450px; /* Slightly shorter on mobile */
+    margin: 0 -12px 24px -12px; /* Full bleed on very small screens */
+    width: calc(100% + 24px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  /* Reposition Overlays for Mobile */
+  .stats-overlay {
+    top: auto;
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    transform: none;
+    background: rgba(26, 29, 33, 0.98);
+    /* Make it collapsible or compact */
+    padding: 12px;
+  }
+  
+  .stats-overlay .stat-row {
+     display: inline-block;
+     margin-right: 12px;
+     margin-bottom: 4px;
+  }
+
+  .legend-overlay {
+    position: static; /* Move out of map flow */
+    width: 100%;
+    margin-bottom: 20px;
+    background: #1a1d21;
+    border: 1px solid #374151;
+  }
+
+  /* Table adjustments */
+  .table-container {
+    margin: 0 -12px;
+    width: calc(100% + 24px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  .dark-table th, .dark-table td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  
+  .station-name {
+    font-size: 13px;
+  }
+}
+
 </style>

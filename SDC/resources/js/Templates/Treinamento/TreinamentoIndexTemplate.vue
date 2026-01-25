@@ -9,6 +9,10 @@ import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
 import TreinamentoStatsCards from '@/Components/Organisms/Treinamento/TreinamentoStatsCards.vue';
 import TreinamentoFiltersSection from '@/Components/Organisms/Treinamento/TreinamentoFiltersSection.vue';
 import TreinamentoGrid from '@/Components/Organisms/Treinamento/TreinamentoGrid.vue';
+import { useMobile } from '@/composables/useMobile';
+
+// Detecção mobile
+const { isMobile } = useMobile();
 
 const props = defineProps({
   treinamentos: {
@@ -71,9 +75,9 @@ const handleFilterReset = () => {
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-3">
-          <!-- Toggle Grade/Tabela -->
-          <div class="flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Toggle Grade/Tabela - Oculto em mobile -->
+          <div class="hidden md:flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
             <button
               @click="viewMode = 'grid'"
               :class="[
@@ -99,7 +103,7 @@ const handleFilterReset = () => {
               Tabela
             </button>
           </div>
-          <!-- Botão Criar -->
+          <!-- Botão Criar - Responsivo -->
           <Button
             v-if="canManage"
             variant="primary"
@@ -108,7 +112,8 @@ const handleFilterReset = () => {
             icon-position="left"
             @click="emit('create')"
           >
-            Novo Treinamento
+            <span class="hidden sm:inline">Novo Treinamento</span>
+            <span class="sm:hidden">Novo</span>
           </Button>
         </div>
       </template>
@@ -124,9 +129,9 @@ const handleFilterReset = () => {
       @filter-reset="handleFilterReset"
     />
 
-    <!-- Grid de Treinamentos -->
+    <!-- Mobile: Sempre Grade | Desktop: Grade ou Tabela -->
     <TreinamentoGrid
-      v-if="viewMode === 'grid'"
+      v-if="viewMode === 'grid' || isMobile"
       :treinamentos="treinamentos"
       :can-edit="canManage"
       :can-delete="canManage"
@@ -135,8 +140,8 @@ const handleFilterReset = () => {
       @delete="emit('delete', $event)"
     />
 
-    <!-- Table de Treinamentos -->
-    <div v-else class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+    <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
+    <div v-else-if="viewMode === 'table' && !isMobile" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       <table class="w-full">
         <thead class="bg-slate-50 dark:bg-slate-700/50">
           <tr>

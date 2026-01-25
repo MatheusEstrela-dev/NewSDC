@@ -8,9 +8,9 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-3">
-          <!-- Toggle Grade/Tabela -->
-          <div class="flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Toggle Grade/Tabela - Oculto em mobile -->
+          <div class="hidden md:flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
             <button
               @click="viewMode = 'grid'"
               :class="[
@@ -36,7 +36,7 @@
               Tabela
             </button>
           </div>
-          <!-- Botão Criar -->
+          <!-- Botão Criar - Responsivo -->
           <Button
             v-if="canCreate"
             variant="primary"
@@ -45,7 +45,8 @@
             icon-position="left"
             @click="$emit('create')"
           >
-            Novo Processo
+            <span class="hidden sm:inline">Novo Processo</span>
+            <span class="sm:hidden">Novo</span>
           </Button>
         </div>
       </template>
@@ -66,16 +67,17 @@
       class="mb-6"
     />
 
-    <!-- Grid ou Table -->
+    <!-- Mobile: Sempre Grade | Desktop: Grade ou Tabela -->
     <ProcessoGrid
-      v-if="viewMode === 'grid'"
+      v-if="viewMode === 'grid' || isMobile"
       :processos="processos"
       :loading="loading"
       :can-edit="canEdit"
     />
 
+    <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
     <ProcessoTable
-      v-else
+      v-else-if="viewMode === 'table' && !isMobile"
       :processos="processos"
       :can-edit="canEdit"
       @view="(id) => $emit('view', id)"
@@ -103,6 +105,10 @@ import ProcessoFilters from '@/Components/Organisms/Decretacoes/ProcessoFilters.
 import ProcessoGrid from '@/Components/Organisms/Decretacoes/ProcessoGrid.vue';
 import ProcessoTable from '@/Components/Organisms/Decretacoes/ProcessoTable.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import { useMobile } from '@/composables/useMobile';
+
+// Detecção mobile
+const { isMobile } = useMobile();
 
 const props = defineProps({
   processos: {

@@ -5,6 +5,9 @@
 /* Page Styles */
 @import './pages/rat/sections.css';
 
+/* Mobile Utilities */
+@import './utilities/mobile.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

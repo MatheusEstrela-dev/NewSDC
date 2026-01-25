@@ -8,9 +8,9 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-3">
-          <!-- Toggle Grade/Tabela -->
-          <div class="flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Toggle Grade/Tabela - Oculto em mobile -->
+          <div class="hidden md:flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
             <button
               @click="viewMode = 'grid'"
               :class="[
@@ -37,10 +37,11 @@
             </button>
           </div>
 
-          <!-- Botão Novo Protocolo -->
+          <!-- Botão Novo Protocolo - Responsivo -->
           <Link :href="route('pae.index')">
             <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
-              Novo Protocolo
+              <span class="hidden sm:inline">Novo Protocolo</span>
+              <span class="sm:hidden">Novo</span>
             </Button>
           </Link>
         </div>
@@ -58,9 +59,9 @@
       @filter-reset="handleFilterReset"
     />
 
-    <!-- Visualização Condicional: Grade -->
+    <!-- Mobile: Sempre Grade | Desktop: Grade ou Tabela -->
     <PaeProtocolosGrid
-      v-if="viewMode === 'grid'"
+      v-if="viewMode === 'grid' || isMobile"
       :protocolos="paginatedProtocolos"
       :loading="loading"
       :pagination="paginationToUse"
@@ -70,15 +71,15 @@
       @page-change="handlePageChange"
     />
 
-    <!-- Visualização Condicional: Tabela -->
-    <div v-else class="space-y-6">
+    <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
+    <div v-else-if="viewMode === 'table' && !isMobile" class="space-y-6">
       <PaeProtocolosTable
         :protocolos="paginatedProtocolos"
         @view="handleView"
         @edit="handleEdit"
         @history="handleHistory"
       />
-      
+
       <!-- Paginação para Tabela -->
       <div v-if="paginationToUse && paginationToUse.last_page > 1" class="mt-6">
         <CardBase variant="default" padding="md">
@@ -125,6 +126,8 @@ import {
   matchesPaeFilters,
 } from '@/mocks/pae';
 
+import { useMobile } from '@/composables/useMobile';
+
 const props = defineProps({
   loading: {
     type: Boolean,
@@ -136,7 +139,10 @@ const props = defineProps({
   },
 });
 
-// Estado da visualização
+// Detecção mobile
+const { isMobile } = useMobile();
+
+// Estado da visualização (mobile sempre será grade)
 const viewMode = ref('grid');
 
 // Data source (mock por enquanto)

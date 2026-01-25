@@ -1,6 +1,25 @@
 <template>
   <div class="rat-index-container">
-    <RatPageHeader />
+    <!-- Header Padronizado -->
+    <PageHeader
+      title="Gestão de RAT"
+      description="Visualize e gerencie todos os Registros de Atendimento Técnico"
+      :icon="DocumentTextIcon"
+      variant="gradient"
+    >
+      <template #actions>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Botão Criar - Responsivo -->
+          <Link :href="route('rat.create')">
+            <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
+              <span class="hidden sm:inline">Novo RAT</span>
+              <span class="sm:hidden">Novo</span>
+            </Button>
+          </Link>
+        </div>
+      </template>
+    </PageHeader>
+
     <RatStatisticsCards :statistics="statisticsToUse" />
     <RatFiltersSection
       :filters="filtersToUse"
@@ -24,9 +43,12 @@
 </template>
 
 <script setup>
-import { router } from '@inertiajs/vue3';
+import { router, Link } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
-import RatPageHeader from '../../Components/Organisms/Rat/Header/RatPageHeader.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import RatStatisticsCards from '../../Components/Organisms/Rat/Statistics/RatStatisticsCards.vue';
 import RatFiltersSection from '../../Components/Organisms/Rat/Filters/RatFiltersSection.vue';
 import RatTable from '../../Components/Organisms/Rat/Table/RatTable.vue';

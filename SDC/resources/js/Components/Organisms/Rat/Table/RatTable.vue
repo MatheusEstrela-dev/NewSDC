@@ -21,8 +21,9 @@
         Tente ajustar os filtros de busca ou crie um novo RAT
       </Text>
     </div>
-    
-    <div v-else class="overflow-x-auto">
+
+    <!-- Desktop: Tabela -->
+    <div v-else-if="!isMobile" class="overflow-x-auto">
       <table class="w-full table-fixed">
         <TableHeaderRow>
           <TableHeader class="w-48 whitespace-nowrap">Número RAT</TableHeader>
@@ -46,6 +47,20 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Mobile: Cards -->
+    <div v-else class="divide-y divide-slate-200 dark:divide-slate-700/50">
+      <RatCard
+        v-for="rat in rats"
+        :key="rat.id"
+        :rat="rat"
+        @view="handleView"
+        @edit="handleEdit"
+        @attachments="handleAttachments"
+        @delete="handleDelete"
+        class="m-4 first:mt-0 last:mb-0"
+      />
+    </div>
     
     <div v-if="pagination && pagination.last_page > 1" class="px-6 py-4 border-t border-slate-200 dark:border-slate-700/50">
       <Pagination :pagination="pagination" @page-change="handlePageChange" />
@@ -60,8 +75,13 @@ import Text from '@/Components/Atoms/Typography/Text.vue';
 import TableHeaderRow from '@/Components/Molecules/Table/TableHeaderRow.vue';
 import TableHeader from '@/Components/Atoms/Table/TableHeader.vue';
 import RatTableRow from './RatTableRow.vue';
+import RatCard from '@/Components/Molecules/Rat/RatCard.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import { useMobile } from '@/composables/useMobile';
+
+// Detecção mobile
+const { isMobile } = useMobile();
 
 const props = defineProps({
   rats: {

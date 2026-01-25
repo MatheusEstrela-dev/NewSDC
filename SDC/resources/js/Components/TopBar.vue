@@ -1,18 +1,31 @@
 <template>
   <header
-    class="fixed top-0 right-0 h-16 z-40 transition-all duration-300 bg-white border-b border-slate-200 shadow-sm"
-    :class="isCollapsed ? 'left-20' : 'left-[280px]'"
+    class="fixed top-0 right-0 h-16 z-40 transition-all duration-300 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm left-0 md:left-20 lg:left-[280px]"
+    :class="{
+      'lg:left-20': isCollapsed
+    }"
+    :data-collapsed="isCollapsed"
   >
-    <div class="flex items-center justify-between h-full px-8 gap-8">
-      <!-- Logo SDC -->
-      <div class="flex items-center">
-        <span class="text-xl font-bold text-slate-900 tracking-wider">SDC</span>
+    <div class="flex items-center justify-between h-full px-4 sm:px-6 lg:px-8 gap-2 sm:gap-4 lg:gap-8">
+      <!-- Mobile: Hamburger + Logo -->
+      <div class="flex items-center gap-3 md:hidden">
+        <HamburgerButton
+          :is-open="isSidebarOpen"
+          @click="toggleSidebar"
+          class="text-slate-700 dark:text-slate-300"
+        />
+        <span class="text-lg font-bold text-slate-900 dark:text-white tracking-wider">SDC</span>
+      </div>
+
+      <!-- Tablet/Desktop: Logo SDC -->
+      <div class="hidden md:flex items-center">
+        <span class="text-lg md:text-xl font-bold text-slate-900 dark:text-white tracking-wider">SDC</span>
       </div>
 
       <!-- Search Bar -->
-      <div class="flex-1 max-w-2xl mx-auto">
-        <div class="relative flex items-center">
-          <svg class="absolute left-4 w-5 h-5 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="hidden md:flex flex-1 max-w-2xl mx-auto">
+        <div class="relative flex items-center w-full">
+          <svg class="absolute left-3 lg:left-4 w-4 h-4 lg:w-5 lg:h-5 text-slate-400 dark:text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -20,21 +33,35 @@
             v-model="searchQuery"
             @input="handleSearch"
             placeholder="Buscar protocolo, município..."
-            class="w-full pl-11 pr-4 py-2.5 text-sm rounded-lg outline-none transition-all
-                   bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400
-                   focus:border-blue-500 focus:ring-3 focus:ring-blue-500/10"
+            class="w-full pl-10 lg:pl-11 pr-3 lg:pr-4 py-2 lg:py-2.5 text-xs lg:text-sm rounded-lg outline-none transition-all
+                   bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500
+                   focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 dark:focus:ring-blue-400/10"
           />
         </div>
       </div>
 
+      <!-- Mobile: Search Icon Button -->
+      <button
+        class="flex md:hidden items-center justify-center w-10 h-10 rounded-lg transition-all
+               text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+        title="Buscar"
+        @click="showMobileSearch = !showMobileSearch"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </button>
+
       <!-- Right Section - User Info & Actions -->
-      <div class="flex items-center gap-4 flex-shrink-0">
+      <div class="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0">
         <!-- Notifications Dropdown -->
         <Dropdown align="right" width="96" contentClasses="p-0 overflow-hidden">
           <template #trigger>
             <button
-              class="relative flex items-center justify-center w-10 h-10 rounded-lg transition-all
-                     text-slate-600 hover:bg-slate-100 hover:text-slate-700"
+              class="relative flex items-center justify-center w-10 h-10 lg:w-10 lg:h-10 rounded-lg transition-all
+                     text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
+                     active:scale-95"
               title="Notificações"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,8 +87,9 @@
         <!-- Theme Toggle -->
         <button
           @click="toggleTheme"
-          class="flex items-center justify-center w-10 h-10 rounded-lg transition-all
-                 text-slate-600 hover:bg-slate-100 hover:text-slate-700"
+          class="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg transition-all
+                 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
+                 active:scale-95"
           title="Alternar tema"
         >
           <svg v-if="isDarkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,8 +106,9 @@
         <Dropdown align="right" width="80" contentClasses="p-0 overflow-hidden">
           <template #trigger>
             <button
-              class="flex items-center justify-center w-10 h-10 rounded-lg transition-all
-                     text-slate-600 hover:bg-slate-100 hover:text-slate-700"
+              class="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg transition-all
+                     text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
+                     active:scale-95"
               title="Configurações"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,13 +126,14 @@
         <div class="relative user-menu">
           <button
             @click="toggleUserMenu"
-            class="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all
-                   border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+            class="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg transition-all
+                   border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600
+                   active:scale-95"
           >
-            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-semibold">
+            <div class="w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-semibold">
               {{ userInitials }}
             </div>
-            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="hidden sm:block w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
@@ -127,22 +157,22 @@
             <div
               v-show="showUserMenu"
               class="absolute top-full right-0 mt-2 w-70 rounded-xl shadow-lg border overflow-hidden z-[101]
-                     bg-white border-slate-200"
+                     bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
             >
-            <div class="flex items-center gap-4 p-4 bg-slate-50">
+            <div class="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900">
               <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
                 {{ userInitials }}
               </div>
               <div class="flex-1 min-w-0">
-                <div class="text-sm font-semibold text-slate-900 truncate">{{ userName }}</div>
-                <div class="text-xs text-slate-600 truncate">{{ userEmail }}</div>
+                <div class="text-sm font-semibold text-slate-900 dark:text-white truncate">{{ userName }}</div>
+                <div class="text-xs text-slate-600 dark:text-slate-400 truncate">{{ userEmail }}</div>
               </div>
             </div>
-            <div class="h-px bg-slate-200 my-2"></div>
+            <div class="h-px bg-slate-200 dark:bg-slate-700 my-2"></div>
             <Link
               :href="route('profile.edit')"
               class="flex items-center gap-3 px-4 py-3 text-sm transition-all
-                     text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                     text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white"
             >
               <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -154,7 +184,7 @@
               method="post"
               as="button"
               class="w-full flex items-center gap-3 px-4 py-3 text-sm transition-all
-                     text-red-600 hover:bg-red-50 hover:text-red-700"
+                     text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300"
             >
               <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -177,14 +207,23 @@ import { useNotifications } from '@/composables/useNotifications';
 import Dropdown from './Dropdown.vue';
 import NotificationsPanel from './Organisms/Notifications/NotificationsPanel.vue';
 import SettingsPanel from './Organisms/Settings/SettingsPanel.vue';
+import HamburgerButton from './Atoms/Button/HamburgerButton.vue';
 
 const page = usePage();
 const showUserMenu = ref(false);
 const searchQuery = ref('');
+const showMobileSearch = ref(false);
 
-// Injetar o estado da sidebar
+// Injetar o estado da sidebar desktop
 const sidebarCollapsed = inject('sidebarCollapsed', ref(false));
 const isCollapsed = computed(() => sidebarCollapsed.value);
+
+// Injetar estados mobile
+const isMobile = inject('isMobile', ref(false));
+const isTablet = inject('isTablet', ref(false));
+const isDesktop = inject('isDesktop', ref(true));
+const isSidebarOpen = inject('isSidebarOpen', ref(false));
+const toggleSidebar = inject('toggleSidebar', () => {});
 
 // Usar composable de tema
 const { isDarkMode, toggleTheme } = useTheme();
@@ -220,9 +259,17 @@ function toggleUserMenu() {
 
 <style scoped>
 /* Responsive */
-@media (max-width: 1024px) {
+@media (max-width: 767px) {
   header {
     left: 0 !important;
+  }
+}
+
+/* Touch-friendly buttons on mobile */
+@media (max-width: 640px) {
+  button {
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 </style>

@@ -1,8 +1,15 @@
 <template>
   <div class="tdap-movimentacoes-container">
-    <TdapMovimentacoesPageHeader />
+    <!-- Header Padronizado -->
+    <PageHeader
+      title="Movimentações TDAP"
+      description="Controle de movimentações de estoque"
+      :icon="ArrowsRightLeftIcon"
+      variant="gradient"
+    />
 
-    <CardBase variant="default" padding="lg" class="bg-slate-800/60 border-slate-700/50">
+    <!-- Desktop: Tabela -->
+    <CardBase v-if="!isMobile" variant="default" padding="lg" class="bg-slate-800/60 border-slate-700/50">
       <Heading :level="4" color="white" class="mb-4">Movimentações de Estoque</Heading>
 
       <div class="overflow-x-auto">
@@ -62,15 +69,33 @@
         </table>
       </div>
     </CardBase>
+
+    <!-- Mobile: Cards -->
+    <div v-else class="grid grid-cols-1 gap-4">
+      <TdapMovimentacaoCard
+        v-for="mov in movimentacoes"
+        :key="mov.id"
+        :movimentacao="mov"
+      />
+      <div v-if="!movimentacoes || movimentacoes.length === 0" class="text-center py-8 bg-slate-800/60 border border-slate-700/50 rounded-lg">
+        <Text size="sm" color="muted">Nenhuma movimentação registrada</Text>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import TdapMovimentacoesPageHeader from '@/Components/Organisms/Tdap/Header/TdapMovimentacoesPageHeader.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import MovimentacaoTypeBadge from '@/Components/Atoms/Tdap/MovimentacaoTypeBadge.vue';
+import TdapMovimentacaoCard from '@/Components/Molecules/Tdap/TdapMovimentacaoCard.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import ArrowsRightLeftIcon from '@/Components/Icons/ArrowsRightLeftIcon.vue';
+import { useMobile } from '@/composables/useMobile';
+
+// Detecção mobile
+const { isMobile } = useMobile();
 
 const props = defineProps({
   movimentacoes: {

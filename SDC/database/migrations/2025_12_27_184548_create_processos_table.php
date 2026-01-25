@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,7 +13,15 @@ return new class extends Migration
         Schema::create('processos', function (Blueprint $table) {
             $table->id();
 
+
             // Datas
+            $table->foreignId('orgao_responsavel_id')
+                ->nullable()
+                ->after('id')
+                ->constrained('orgaos')
+                ->nullOnDelete()
+                ->comment('COMPDEC responsável pelo processo');
+
             $table->date('data_entrada')->nullable();
             $table->date('data_ocorrencia_desastre')->nullable();
             $table->date('data_decreto_municipal')->nullable();

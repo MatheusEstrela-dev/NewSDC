@@ -1,8 +1,15 @@
 <template>
   <div class="tdap-recebimentos-container">
-    <TdapRecebimentosPageHeader />
+    <!-- Header Padronizado -->
+    <PageHeader
+      title="Recebimentos TDAP"
+      description="Gestão de recebimentos de produtos"
+      :icon="TruckIcon"
+      variant="gradient"
+    />
 
-    <CardBase variant="default" padding="lg" class="bg-slate-800/60 border-slate-700/50">
+    <!-- Desktop: Tabela -->
+    <CardBase v-if="!isMobile" variant="default" padding="lg" class="bg-slate-800/60 border-slate-700/50">
       <Heading :level="4" color="white" class="mb-4">Lista de Recebimentos</Heading>
 
       <div class="overflow-x-auto">
@@ -53,15 +60,33 @@
         </table>
       </div>
     </CardBase>
+
+    <!-- Mobile: Cards -->
+    <div v-else class="grid grid-cols-1 gap-4">
+      <TdapRecebimentoCard
+        v-for="recebimento in recebimentos"
+        :key="recebimento.id"
+        :recebimento="recebimento"
+      />
+      <div v-if="!recebimentos || recebimentos.length === 0" class="text-center py-8 bg-slate-800/60 border border-slate-700/50 rounded-lg">
+        <Text size="sm" color="muted">Nenhum recebimento cadastrado</Text>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import TdapRecebimentosPageHeader from '@/Components/Organisms/Tdap/Header/TdapRecebimentosPageHeader.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import RecebimentoStatusBadge from '@/Components/Atoms/Tdap/RecebimentoStatusBadge.vue';
+import TdapRecebimentoCard from '@/Components/Molecules/Tdap/TdapRecebimentoCard.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import { useMobile } from '@/composables/useMobile';
+
+// Detecção mobile
+const { isMobile } = useMobile();
 
 const props = defineProps({
   recebimentos: {

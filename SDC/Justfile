@@ -765,3 +765,33 @@ tdap-docs:
     @echo "  - Dashboard com Alertas"
     @echo ""
     @echo "🌐 Acesso: http://localhost:8001/tdap"
+
+# ============================================================================
+# 🎓 TREINAMENTOS - CAPACITAÇÃO
+# ============================================================================
+
+# Executar migrations do módulo Treinamentos
+migrate-treinamentos:
+    @echo "🎓 Executando migrations de Treinamentos..."
+    {{_app}} php artisan migrate --path=database/migrations/2025_12_28_140000_create_treinamentos_table.php --force
+    {{_app}} php artisan migrate --path=database/migrations/2025_12_28_140100_create_modulos_table.php --force
+    {{_app}} php artisan migrate --path=database/migrations/2025_12_28_140200_create_inscricoes_table.php --force
+    {{_app}} php artisan migrate --path=database/migrations/2025_12_28_140300_create_frequencias_table.php --force
+    @echo "✅ Migrations de Treinamentos executadas!"
+
+# Reverter migrations do módulo Treinamentos
+rollback-treinamentos:
+    @echo "⏮️  Revertendo migrations de Treinamentos..."
+    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_12_28_140300_create_frequencias_table.php --force
+    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_12_28_140200_create_inscricoes_table.php --force
+    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_12_28_140100_create_modulos_table.php --force
+    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_12_28_140000_create_treinamentos_table.php --force
+    @echo "✅ Migrations de Treinamentos revertidas!"
+
+# Setup completo do módulo Treinamentos
+setup-treinamentos:
+    @echo "🚀 SETUP DO MÓDULO TREINAMENTOS"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    just migrate-treinamentos
+    just cache-clear
+    @echo "✅ Setup de Treinamentos concluído!"

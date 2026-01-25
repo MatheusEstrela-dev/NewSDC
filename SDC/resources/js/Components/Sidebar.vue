@@ -1,5 +1,11 @@
 <template>
-  <aside class="sidebar" :class="{ 'is-collapsed': isCollapsed }">
+  <aside
+    class="sidebar"
+    :class="{
+      'is-collapsed': isCollapsed,
+      'is-mobile-open': isSidebarOpen && (isMobile || isTablet)
+    }"
+  >
     <!-- Header -->
     <div class="sidebar-header">
       <div class="logo-container">
@@ -15,7 +21,7 @@
       </div>
       <button
         @click="toggleSidebar"
-        class="sidebar-toggle"
+        class="sidebar-toggle hidden lg:flex"
         :title="isCollapsed ? 'Expandir sidebar' : 'Recolher sidebar'"
       >
         <svg
@@ -31,8 +37,22 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="sidebar-nav">
-      <!-- PRINCIPAL -->
+    <div class="sidebar-nav-wrapper">
+      <!-- Gradientes de indicação de scroll -->
+      <div
+        class="scroll-gradient scroll-gradient-top"
+        :class="{ 'is-visible': showTopGradient && isHovering }"
+      ></div>
+
+      <nav
+        ref="sidebarNav"
+        class="sidebar-nav"
+        @mouseenter="onMouseEnter"
+        @mouseleave="onMouseLeave"
+        @mousemove="onMouseMove"
+        @scroll="onScroll"
+      >
+        <!-- PRINCIPAL -->
       <div class="nav-section">
         <div v-show="!isCollapsed" class="nav-section-title">PRINCIPAL</div>
         <NavItem
@@ -267,17 +287,31 @@
         </div>
       </div>
     </nav>
+
+    <!-- Gradiente inferior -->
+    <div
+      class="scroll-gradient scroll-gradient-bottom"
+      :class="{ 'is-visible': showBottomGradient && isHovering }"
+    ></div>
+  </div>
   </aside>
 </template>
 
 <script setup>
-import { ref, provide, inject, computed } from 'vue';
+import { ref, provide, inject, computed, onMounted, onUnmounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import NavItem from './NavItem.vue';
 
 // Tentar injetar o estado do layout, se não existir, criar localmente
 const sidebarCollapsed = inject('sidebarCollapsed', ref(false));
 const isCollapsed = sidebarCollapsed;
+
+// Injetar estados mobile
+const isMobile = inject('isMobile', ref(false));
+const isTablet = inject('isTablet', ref(false));
+const isDesktop = inject('isDesktop', ref(true));
+const isSidebarOpen = inject('isSidebarOpen', ref(false));
+const closeSidebar = inject('closeSidebar', () => {});
 
 const page = usePage();
 // Mantemos a checagem para uso futuro (ex.: desabilitar links),
@@ -317,6 +351,115 @@ function toggleSubMenu(menu) {
   openSubMenus.value[menu] = !openSubMenus.value[menu];
 }
 
+// Fechar sidebar mobile ao clicar em um link (será propagado aos NavItems)
+provide('onNavItemClick', () => {
+  if (isMobile.value || isTablet.value) {
+    closeSidebar();
+  }
+});
+
+// ============================================================================
+// Smooth Scroll Feature - Auto-scroll quando mouse está próximo das bordas
+// ============================================================================
+const sidebarNav = ref(null);
+let scrollInterval = null;
+const scrollSpeed = ref(0);
+const isHovering = ref(false);
+const showTopGradient = ref(false);
+const showBottomGradient = ref(false);
+
+// Configurações
+const EDGE_THRESHOLD = 60; // Pixels da borda para ativar auto-scroll
+const MAX_SCROLL_SPEED = 8; // Velocidade máxima de scroll (pixels por frame)
+const SCROLL_ACCELERATION = 0.5; // Aceleração do scroll
+
+function onMouseEnter() {
+  isHovering.value = true;
+}
+
+function onMouseLeave() {
+  isHovering.value = false;
+  stopAutoScroll();
+}
+
+function onMouseMove(event) {
+  if (!sidebarNav.value || !isHovering.value) return;
+
+  const rect = sidebarNav.value.getBoundingClientRect();
+  const mouseY = event.clientY - rect.top;
+  const containerHeight = rect.height;
+
+  // Calcular a velocidade baseada na proximidade da borda
+  let targetSpeed = 0;
+
+  // Mouse próximo do topo
+  if (mouseY < EDGE_THRESHOLD) {
+    const intensity = 1 - (mouseY / EDGE_THRESHOLD);
+    targetSpeed = -MAX_SCROLL_SPEED * intensity;
+  }
+  // Mouse próximo do fundo
+  else if (mouseY > containerHeight - EDGE_THRESHOLD) {
+    const distanceFromBottom = containerHeight - mouseY;
+    const intensity = 1 - (distanceFromBottom / EDGE_THRESHOLD);
+    targetSpeed = MAX_SCROLL_SPEED * intensity;
+  }
+
+  // Atualizar velocidade com aceleração suave
+  if (targetSpeed !== 0) {
+    startAutoScroll(targetSpeed);
+  } else {
+    stopAutoScroll();
+  }
+}
+
+function startAutoScroll(targetSpeed) {
+  scrollSpeed.value = targetSpeed;
+
+  if (!scrollInterval) {
+    scrollInterval = setInterval(() => {
+      if (sidebarNav.value && scrollSpeed.value !== 0) {
+        sidebarNav.value.scrollTop += scrollSpeed.value;
+      }
+    }, 16); // ~60fps
+  }
+}
+
+function stopAutoScroll() {
+  if (scrollInterval) {
+    clearInterval(scrollInterval);
+    scrollInterval = null;
+  }
+  scrollSpeed.value = 0;
+}
+
+function onScroll() {
+  updateGradients();
+}
+
+function updateGradients() {
+  if (!sidebarNav.value) return;
+
+  const { scrollTop, scrollHeight, clientHeight } = sidebarNav.value;
+
+  // Mostrar gradiente superior se não estiver no topo
+  showTopGradient.value = scrollTop > 10;
+
+  // Mostrar gradiente inferior se não estiver no fundo
+  showBottomGradient.value = scrollTop < scrollHeight - clientHeight - 10;
+}
+
+// Atualizar gradientes ao montar e ao redimensionar
+onMounted(() => {
+  updateGradients();
+  window.addEventListener('resize', updateGradients);
+});
+
+// Limpar interval ao desmontar componente
+onUnmounted(() => {
+  stopAutoScroll();
+  window.removeEventListener('resize', updateGradients);
+});
+
 // Fornecer o estado para componentes filhos
 provide('sidebarCollapsed', isCollapsed);
 </script>
@@ -324,7 +467,7 @@ provide('sidebarCollapsed', isCollapsed);
 <style scoped>
 .sidebar {
   width: 280px;
-  min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
   display: flex;
   flex-direction: column;
@@ -333,11 +476,88 @@ provide('sidebarCollapsed', isCollapsed);
   top: 0;
   z-index: 50;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  transition: width 0.3s ease;
+  transition: width 0.3s ease, transform 0.3s ease;
 }
 
 .sidebar.is-collapsed {
   width: 80px;
+}
+
+/* Tablet (768px - 1023px): Sidebar sempre collapsed (apenas ícones) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .sidebar {
+    width: 80px !important;
+    transform: translateX(0);
+  }
+
+  /* Forçar sempre collapsed em tablet */
+  .sidebar.is-collapsed,
+  .sidebar:not(.is-collapsed) {
+    width: 80px !important;
+  }
+
+  /* Esconder completamente todos os textos */
+  .logo-text,
+  .nav-section-title,
+  .nav-arrow {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+
+  /* Esconder submenu em tablet */
+  .nav-submenu {
+    display: none !important;
+  }
+
+  /* Ajustar header */
+  .sidebar-header {
+    padding: 1rem;
+    justify-content: center;
+  }
+
+  .logo-container {
+    justify-content: center;
+  }
+
+  /* Esconder botão de toggle em tablet */
+  .sidebar-toggle {
+    display: none !important;
+  }
+
+  /* Centralizar e ajustar nav-group-toggle */
+  .nav-group-toggle {
+    justify-content: center !important;
+    padding: 0.75rem !important;
+  }
+
+  /* Garantir que spans dentro de buttons sejam escondidos */
+  .nav-group-toggle span {
+    display: none !important;
+  }
+
+  /* Ajustar ícones */
+  .nav-icon {
+    margin: 0 !important;
+  }
+}
+
+/* Mobile (< 768px): Esconder sidebar por padrão e mostrar como drawer */
+@media (max-width: 767px) {
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+    z-index: 50;
+  }
+
+  .sidebar.is-mobile-open {
+    transform: translateX(0);
+  }
+
+  /* Desabilitar collapsed mode em mobile quando drawer aberto */
+  .sidebar.is-collapsed {
+    width: 280px;
+  }
 }
 
 .sidebar-header {
@@ -427,7 +647,11 @@ provide('sidebarCollapsed', isCollapsed);
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 1rem 0;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  min-height: 0; /* Critical: allows flexbox to shrink below content size */
 }
 
 .nav-section {
@@ -523,5 +747,90 @@ provide('sidebarCollapsed', isCollapsed);
 
 .sidebar-nav::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* Wrapper para os gradientes */
+.sidebar-nav-wrapper {
+  position: relative;
+  flex: 1 1 auto; /* Allow shrinking and growing */
+  overflow: hidden;
+  min-height: 0; /* Critical: Fix flexbox overflow issue */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Gradientes de indicação de scroll */
+.scroll-gradient {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 60px;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.scroll-gradient.is-visible {
+  opacity: 1;
+}
+
+.scroll-gradient-top {
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(30, 41, 59, 0.95) 0%,
+    rgba(30, 41, 59, 0.8) 40%,
+    rgba(30, 41, 59, 0) 100%
+  );
+}
+
+.scroll-gradient-bottom {
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    rgba(15, 23, 42, 0.95) 0%,
+    rgba(15, 23, 42, 0.8) 40%,
+    rgba(15, 23, 42, 0) 100%
+  );
+}
+
+/* Indicador visual de zona de scroll ao hover */
+.sidebar-nav-wrapper:hover .scroll-gradient.is-visible {
+  opacity: 0.7;
+}
+
+/* Efeito de brilho nas bordas durante hover */
+.sidebar-nav-wrapper:hover .scroll-gradient-top.is-visible::after,
+.sidebar-nav-wrapper:hover .scroll-gradient-bottom.is-visible::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(59, 130, 246, 0.5) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+.sidebar-nav-wrapper:hover .scroll-gradient-top.is-visible::after {
+  top: 0;
+}
+
+.sidebar-nav-wrapper:hover .scroll-gradient-bottom.is-visible::after {
+  bottom: 0;
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 </style>

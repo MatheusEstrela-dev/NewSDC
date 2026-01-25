@@ -8,9 +8,9 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-3">
-          <!-- Toggle Grade/Tabela -->
-          <div class="flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Toggle Grade/Tabela - Oculto em mobile -->
+          <div class="hidden md:flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
             <button
               @click="viewMode = 'grid'"
               :class="[
@@ -36,7 +36,7 @@
               Tabela
             </button>
           </div>
-          <!-- Botão Criar -->
+          <!-- Botão Criar - Responsivo -->
           <Button
             variant="primary"
             size="md"
@@ -44,7 +44,8 @@
             icon-position="left"
             @click="$emit('create')"
           >
-            Novo Beneficiário
+            <span class="hidden sm:inline">Novo Beneficiário</span>
+            <span class="sm:hidden">Novo</span>
           </Button>
         </div>
       </template>
@@ -64,9 +65,9 @@
       @filter-reset="handleFilterReset"
     />
 
-    <!-- Grid de Beneficiários -->
+    <!-- Mobile: Sempre Grade | Desktop: Grade ou Tabela -->
     <BeneficiarioGrid
-      v-if="viewMode === 'grid'"
+      v-if="viewMode === 'grid' || isMobile"
       :beneficiarios="beneficiarios"
       :loading="loading"
       :can-edit="canEdit"
@@ -76,8 +77,8 @@
       @delete="(id) => $emit('delete', id)"
     />
 
-    <!-- Table de Beneficiários -->
-    <div v-else class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+    <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
+    <div v-else-if="viewMode === 'table' && !isMobile" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       <table class="w-full">
         <thead class="bg-slate-50 dark:bg-slate-700/50">
           <tr>
@@ -150,6 +151,7 @@ import HeartIcon from '@/Components/Icons/HeartIcon.vue';
 import BeneficiarioStatsCards from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioStatsCards.vue';
 import BeneficiarioFiltersSection from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioFiltersSection.vue';
 import BeneficiarioGrid from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioGrid.vue';
+import { useMobile } from '@/composables/useMobile';
 
 const props = defineProps({
   beneficiarios: {
@@ -187,6 +189,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['create', 'view', 'edit', 'delete', 'filter', 'filter-change', 'filter-reset']);
+
+// Detecção mobile
+const { isMobile } = useMobile();
 
 const viewMode = ref('grid');
 const localFilters = ref({ ...props.filters });

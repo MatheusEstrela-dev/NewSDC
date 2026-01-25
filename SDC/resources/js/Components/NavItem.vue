@@ -10,6 +10,7 @@
       }
     ]"
     :title="collapsed ? tooltipText : ''"
+    @click="handleClick"
   >
     <svg v-if="icon === 'dashboard'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -53,10 +54,11 @@
 </template>
 
 <script setup>
-import { computed, useSlots } from 'vue';
+import { computed, useSlots, inject } from 'vue';
 import { Link } from '@inertiajs/vue3';
 
 const slots = useSlots();
+const onNavItemClick = inject('onNavItemClick', null);
 
 const props = defineProps({
   href: {
@@ -85,12 +87,18 @@ const tooltipText = computed(() => {
   if (!props.collapsed || !slots.default) return '';
   const slotContent = slots.default();
   if (slotContent && slotContent[0] && slotContent[0].children) {
-    return typeof slotContent[0].children === 'string' 
-      ? slotContent[0].children 
+    return typeof slotContent[0].children === 'string'
+      ? slotContent[0].children
       : slotContent[0].children.toString();
   }
   return '';
 });
+
+function handleClick() {
+  if (onNavItemClick) {
+    onNavItemClick();
+  }
+}
 </script>
 
 <style scoped>
@@ -157,6 +165,40 @@ const tooltipText = computed(() => {
   background: #3b82f6;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+/* Tablet (768px - 1023px): Forçar modo collapsed */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .nav-item {
+    padding: 0.75rem !important;
+    justify-content: center !important;
+  }
+
+  .nav-item-text {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+
+  .nav-item-dot {
+    display: none !important;
+  }
+
+  .nav-item.is-submenu {
+    padding: 0.75rem !important;
+  }
+
+  .nav-item.is-active {
+    border-left: none !important;
+    padding: 0.75rem !important;
+    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.35);
+    border-radius: 12px;
+    margin: 0 0.5rem;
+  }
+
+  .nav-item-icon {
+    margin: 0 !important;
+  }
 }
 </style>
 

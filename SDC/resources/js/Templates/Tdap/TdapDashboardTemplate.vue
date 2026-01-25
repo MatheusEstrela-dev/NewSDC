@@ -1,6 +1,13 @@
 <template>
   <div class="tdap-dashboard-container">
-    <TdapPageHeader />
+    <!-- Header Padronizado -->
+    <PageHeader
+      title="TDAP Dashboard"
+      description="Gestão de produtos de ajuda humanitária"
+      :icon="CubeIcon"
+      variant="gradient"
+    />
+
     <TdapStatisticsCards :statistics="statistics" />
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -51,7 +58,7 @@
 
 <script setup>
 import { router } from '@inertiajs/vue3';
-import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import TdapStatisticsCards from '@/Components/Organisms/Tdap/Statistics/TdapStatisticsCards.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';

@@ -1,8 +1,15 @@
 <template>
   <div class="tdap-products-container">
-    <TdapProductsPageHeader />
+    <!-- Header Padronizado -->
+    <PageHeader
+      title="Produtos TDAP"
+      description="Gestão de produtos para ajuda humanitária"
+      :icon="CubeIcon"
+      variant="gradient"
+    />
 
-    <CardBase variant="default" padding="lg">
+    <!-- Desktop: Tabela -->
+    <CardBase v-if="!isMobile" variant="default" padding="lg">
       <Heading :level="4" color="default" class="mb-4">Lista de Produtos</Heading>
 
       <div class="overflow-x-auto">
@@ -60,15 +67,33 @@
         </table>
       </div>
     </CardBase>
+
+    <!-- Mobile: Cards -->
+    <div v-else class="grid grid-cols-1 gap-4">
+      <TdapProductCard
+        v-for="product in products"
+        :key="product.id"
+        :product="product"
+      />
+      <div v-if="!products || products.length === 0" class="text-center py-8">
+        <Text size="sm" color="muted">Nenhum produto cadastrado</Text>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import TdapProductsPageHeader from '@/Components/Organisms/Tdap/Header/TdapProductsPageHeader.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ProductTypeBadge from '@/Components/Atoms/Tdap/ProductTypeBadge.vue';
+import TdapProductCard from '@/Components/Molecules/Tdap/TdapProductCard.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import CubeIcon from '@/Components/Icons/CubeIcon.vue';
+import { useMobile } from '@/composables/useMobile';
+
+// Detecção mobile
+const { isMobile } = useMobile();
 
 const props = defineProps({
   products: {
