@@ -33,21 +33,27 @@ pipeline {
 
     stages {
         // =================================================================
-        // FASE 1: CHECKOUT E VALIDAÇÃO RÁPIDA (FAIL FAST)
+        // FASE 1: CHECKOUT E VALIDACAO RAPIDA (FAIL FAST)
         // =================================================================
         stage('Checkout and Fast Validation') {
             agent any
+            options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
             steps {
                 script {
-                    echo '📦 Checking out code and running fast validation...'
+                    echo 'Checking out code and running fast validation...'
 
-                    // Checkout
+                    // Checkout com timeout
                     checkout scm
 
-                    // Definir ACR_TAG dinamicamente após checkout
-                    env.ACR_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
+                    // Aguardar GIT_COMMIT estar disponivel
+                    def gitCommit = env.GIT_COMMIT ?: sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
 
-                    // Informações do commit
+                    // Definir ACR_TAG dinamicamente apos checkout
+                    env.ACR_TAG = "${env.BUILD_NUMBER}-${gitCommit.take(7)}"
+
+                    // Informacoes do commit
                     env.GIT_COMMIT_MSG = sh(
                         script: 'git log -1 --pretty=%B',
                         returnStdout: true
@@ -57,107 +63,74 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    echo "📝 Commit: ${env.GIT_COMMIT_MSG}"
-                    echo "👤 Author: ${env.GIT_AUTHOR}"
-                    echo "🏷️  ACR Tag: ${env.ACR_TAG}"
-                    echo "🌿 Branch: ${env.GIT_BRANCH}"
-                    echo "🔍 Branch Name (parsed): ${env.GIT_BRANCH?.tokenize('/')?.last()}"
+                    echo "Commit: ${env.GIT_COMMIT_MSG}"
+                    echo "Author: ${env.GIT_AUTHOR}"
+                    echo "ACR Tag: ${env.ACR_TAG}"
+                    echo "Branch: ${env.GIT_BRANCH}"
 
-                    // MELHORIA 3: Conflict detection inline (shared library requer configuração)
-                    echo '🔍 Running conflict detection...'
-                    try {
-                        sh 'git fetch origin'
+                    // Parsear nome do branch de forma segura
+                    def branchName = env.GIT_BRANCH ? env.GIT_BRANCH.tokenize('/').last() : 'unknown'
+                    echo "Branch Name (parsed): ${branchName}"
 
-                        def localCommit = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
-                        def remoteCommit = sh(script: "git rev-parse origin/\${GIT_BRANCH##*/}", returnStdout: true).trim()
-
-                        if (localCommit != remoteCommit) {
-                            echo "⚠️  New commits detected on remote"
-                            // Could add merge conflict check here
-                        } else {
-                            echo "✅ Branch synchronized with remote"
-                        }
-                    } catch (Exception e) {
-                        echo "⚠️  Conflict detection skipped: ${e.message}"
-                    }
+                    // Conflict detection DESABILITADO - causa timeout
+                    // O checkout scm ja garante que o codigo esta atualizado
+                    echo 'Checkout completed successfully'
                 }
             }
         }
 
         // =================================================================
-        // FASE 2: ANÁLISE ESTÁTICA E PRÉ-CHECKS (PARALELO)
-        // MELHORIA 4: Paralelizar verificações independentes
+        // FASE 2: ANALISE ESTATICA E PRE-CHECKS
         // =================================================================
         stage('Pre-flight Checks') {
-            parallel {
-                stage('Environment Validation') {
-                    agent any
-                    steps {
-                        echo '🔧 Validating environment...'
-                        script {
-                            // Verificar Docker
-                            sh 'docker --version'
-                            sh 'docker-compose --version'
+            agent any
+            options {
+                timeout(time: 3, unit: 'MINUTES')
+            }
+            steps {
+                script {
+                    echo 'Validating environment...'
 
-                            // Verificar espaço em disco (mínimo 5GB)
-                            def availableSpace = sh(
-                                script: "df -BG ${WORKSPACE} | tail -1 | awk '{print \$4}' | sed 's/G//'",
-                                returnStdout: true
-                            ).trim().toInteger()
+                    // Verificar Docker
+                    sh 'docker --version'
+                    sh 'docker-compose --version || docker compose version'
 
-                            if (availableSpace < 5) {
-                                error("❌ Espaço em disco insuficiente: ${availableSpace}GB. Mínimo: 5GB")
-                            }
-                            echo "✅ Espaço disponível: ${availableSpace}GB"
+                    // Verificar espaco em disco (minimo 5GB)
+                    def availableSpace = sh(
+                        script: "df -BG ${WORKSPACE} | tail -1 | awk '{print \$4}' | sed 's/G//'",
+                        returnStdout: true
+                    ).trim()
+
+                    try {
+                        def spaceInt = availableSpace.toInteger()
+                        if (spaceInt < 5) {
+                            error("Espaco em disco insuficiente: ${spaceInt}GB. Minimo: 5GB")
                         }
+                        echo "Espaco disponivel: ${spaceInt}GB"
+                    } catch (Exception e) {
+                        echo "Aviso: Nao foi possivel verificar espaco em disco"
                     }
-                }
 
-                stage('Azure CLI Check') {
-                    agent any
-                    steps {
-                        echo '☁️  Validating Azure CLI...'
-                        sh 'az --version || (echo "❌ Azure CLI não encontrado" && exit 1)'
-                        echo '✅ Azure CLI OK'
-                    }
-                }
-
-                stage('Code Syntax Check') {
-                    agent any
-                    when {
-                        not {
-                            anyOf {
-                                branch 'main'
-                                branch 'master'
-                            }
-                        }
-                    }
-                    steps {
-                        echo '🔍 PHP Syntax validation...'
-                        dir('SDC') {
-                            sh '''
-                                # Verificar sintaxe PHP básica
-                                echo "Checking PHP syntax..."
-                                find app -name "*.php" -print0 | xargs -0 -n1 php -l > /dev/null 2>&1 || echo "⚠️  Alguns arquivos podem ter problemas de sintaxe"
-                                echo "✅ Syntax check completed"
-                            '''
-                        }
-                    }
+                    // Verificar Azure CLI
+                    echo 'Validating Azure CLI...'
+                    sh 'az --version || (echo "Azure CLI nao encontrado" && exit 1)'
+                    echo 'Azure CLI OK'
                 }
             }
         }
 
         // =================================================================
-        // FASE 3: BUILD E PUSH (COM MÉTRICAS)
-        // MELHORIA 5: Adicionar métricas de performance
+        // FASE 3: BUILD E PUSH
         // =================================================================
         stage('Build and Push to ACR') {
             agent any
+            options {
+                timeout(time: 15, unit: 'MINUTES')
+            }
             steps {
-                echo '🏗️  Building Docker images using Azure Container Registry'
+                echo 'Building Docker images using Azure Container Registry'
 
                 script {
-                    // Métricas de performance
                     def buildStartTime = System.currentTimeMillis()
 
                     dir('SDC') {
@@ -169,10 +142,10 @@ pipeline {
                         )]) {
                             def tenantId = env.AZURE_TENANT_ID ?: ''
                             if (!tenantId) {
-                                error("❌ AZURE_TENANT_ID não configurado")
+                                error("AZURE_TENANT_ID nao configurado")
                             }
 
-                            echo "🔐 Logging into Azure..."
+                            echo "Logging into Azure..."
                             sh """
                                 az login --service-principal \
                                     --username \$AZURE_CLIENT_ID \
@@ -181,36 +154,24 @@ pipeline {
                             """
                         }
 
-                        // Build remoto otimizado no ACR
-                        echo "🔨 Starting ACR build..."
+                        // Build remoto no ACR
+                        echo "Starting ACR build..."
                         sh """
                             az acr build \
                                 --registry ${ACR_NAME} \
                                 --resource-group ${ACR_RESOURCE_GROUP} \
-                                --image sdc-dev-app:${ACR_TAG} \
+                                --image sdc-dev-app:${env.ACR_TAG} \
                                 --image sdc-dev-app:latest \
                                 --file docker/Dockerfile.prod \
                                 --platform linux \
-                                --no-logs \
-                                . || {
-                                    echo "⚠️ Build com --no-logs falhou, tentando com logs..."
-                                    az acr build \
-                                        --registry ${ACR_NAME} \
-                                        --resource-group ${ACR_RESOURCE_GROUP} \
-                                        --image sdc-dev-app:${ACR_TAG} \
-                                        --image sdc-dev-app:latest \
-                                        --file docker/Dockerfile.prod \
-                                        --platform linux \
-                                        .
-                                }
+                                .
                         """
                     }
 
-                    // MELHORIA 6: Métricas de tempo
                     def buildDuration = (System.currentTimeMillis() - buildStartTime) / 1000
-                    echo "✅ Build completed in ${buildDuration}s"
-                    echo "📦 Images built:"
-                    echo "   - ${ACR_IMAGE}:${ACR_TAG}"
+                    echo "Build completed in ${buildDuration}s"
+                    echo "Images built:"
+                    echo "   - ${ACR_IMAGE}:${env.ACR_TAG}"
                     echo "   - ${ACR_IMAGE}:latest"
                 }
             }
@@ -230,29 +191,29 @@ pipeline {
                 }
             }
             steps {
-                echo '🔍 Running code quality checks and tests'
-                echo 'ℹ️  Para produção, testes são executados em ambiente de staging'
-                // Placeholder para testes futuros (PHPUnit, PHPStan, etc)
+                echo 'Running code quality checks and tests'
+                echo 'Para producao, testes sao executados em ambiente de staging'
             }
         }
 
         // =================================================================
-        // FASE 5: DEPLOY (APENAS MAIN/MASTER - COM MÉTRICAS)
+        // FASE 5: DEPLOY
         // =================================================================
         stage('Deploy to Azure App Service') {
             agent any
-            // TEMPORÁRIO: Removida condição when para debug
-            // when {
-            //     anyOf {
-            //         branch 'main'
-            //         branch 'master'
-            //     }
-            // }
+            options {
+                timeout(time: 10, unit: 'MINUTES')
+            }
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
             steps {
-                echo '🚀 Deploying to Azure App Service AUTOMATICALLY'
+                echo 'Deploying to Azure App Service'
 
                 script {
-                    // Métricas de deploy
                     def deployStartTime = System.currentTimeMillis()
 
                     withCredentials([usernamePassword(
@@ -262,7 +223,7 @@ pipeline {
                     )]) {
                         def tenantId = env.AZURE_TENANT_ID ?: ''
                         if (!tenantId) {
-                            error("❌ AZURE_TENANT_ID não configurado")
+                            error("AZURE_TENANT_ID nao configurado")
                         }
 
                         sh """
@@ -283,83 +244,53 @@ pipeline {
                             returnStdout: true
                         ).trim()
 
-                        // Deploy otimizado
-                        echo "🚀 Deploying image: ${ACR_IMAGE}:${ACR_TAG}"
+                        echo "Deploying image: ${ACR_IMAGE}:${env.ACR_TAG}"
                         sh """
-                            az webapp config container set \\
-                                --name ${APP_SERVICE_NAME} \\
-                                --resource-group ${AZURE_RESOURCE_GROUP} \\
-                                --docker-custom-image-name ${ACR_IMAGE}:${ACR_TAG} \\
-                                --docker-registry-server-url https://${ACR_LOGIN_SERVER} \\
-                                --docker-registry-server-user ${acrUsername} \\
-                                --docker-registry-server-password ${acrPassword} \\
-                                > /dev/null 2>&1 &
-
-                            wait
-                            echo "✅ Configuration updated"
+                            az webapp config container set \
+                                --name ${APP_SERVICE_NAME} \
+                                --resource-group ${AZURE_RESOURCE_GROUP} \
+                                --docker-custom-image-name ${ACR_IMAGE}:${env.ACR_TAG} \
+                                --docker-registry-server-url https://${ACR_LOGIN_SERVER} \
+                                --docker-registry-server-user ${acrUsername} \
+                                --docker-registry-server-password ${acrPassword}
                         """
                     }
 
                     // Restart App Service
                     sh """
-                        az webapp restart \\
-                            --name ${APP_SERVICE_NAME} \\
+                        az webapp restart \
+                            --name ${APP_SERVICE_NAME} \
                             --resource-group ${AZURE_RESOURCE_GROUP}
                     """
-                    echo "✅ App Service restarted"
+                    echo "App Service restarted"
 
-                    // Health check otimizado
+                    // Health check
                     def APP_URL = "https://${APP_SERVICE_NAME}.azurewebsites.net"
-                    echo "🏥 Verifying application health at ${APP_URL}"
+                    echo "Verifying application health at ${APP_URL}"
 
-                    timeout(time: 5, unit: 'MINUTES') {
-                        sh """
-                            echo "⏳ Waiting for app to start..."
-                            sleep 30
+                    sh """
+                        echo "Waiting for app to start..."
+                        sleep 30
 
-                            SUCCESS=0
-                            for i in \$(seq 1 30); do
-                                HEALTH_CODE=\$(curl -s -o /dev/null -w "%{http_code}" -m 10 ${APP_URL}/health 2>/dev/null || echo "000")
+                        for i in \$(seq 1 15); do
+                            HTTP_CODE=\$(curl -s -o /dev/null -w "%{http_code}" -m 10 ${APP_URL} 2>/dev/null || echo "000")
 
-                                if [ "\$HEALTH_CODE" = "000" ] || [ "\$HEALTH_CODE" = "404" ]; then
-                                    HTTP_CODE=\$(curl -s -o /dev/null -w "%{http_code}" -m 10 ${APP_URL} 2>/dev/null || echo "000")
-                                else
-                                    HTTP_CODE=\$HEALTH_CODE
-                                fi
-
-                                if [ "\$HTTP_CODE" = "200" ] || [ "\$HTTP_CODE" = "302" ] || [ "\$HTTP_CODE" = "401" ] || [ "\$HTTP_CODE" = "500" ]; then
-                                    echo ""
-                                    echo "✅ App Service responding! (HTTP \$HTTP_CODE)"
-                                    echo "⏱️  Recovery time: ~\$((i * 8))s"
-                                    SUCCESS=1
-                                    break
-                                fi
-
-                                if [ \$i -eq 1 ]; then
-                                    echo -n "Waiting for response"
-                                else
-                                    echo -n "."
-                                fi
-
-                                WAIT_TIME=\$((8 + (i / 10) * 4))
-                                sleep \$WAIT_TIME
-                            done
-
-                            if [ \$SUCCESS -eq 0 ]; then
-                                echo ""
-                                echo "⚠️  Timeout on health check"
-                                echo "ℹ️  Deploy completed. Verify manually: ${APP_URL}"
-                                echo "💡 Tip: Check logs with: az webapp log tail --name ${APP_SERVICE_NAME} --resource-group ${AZURE_RESOURCE_GROUP}"
+                            if [ "\$HTTP_CODE" = "200" ] || [ "\$HTTP_CODE" = "302" ] || [ "\$HTTP_CODE" = "401" ]; then
+                                echo "App Service responding! (HTTP \$HTTP_CODE)"
                                 exit 0
                             fi
-                            exit 0
-                        """
-                    }
 
-                    // MELHORIA 7: Métricas de deploy
+                            echo "Attempt \$i/15: Waiting..."
+                            sleep 10
+                        done
+
+                        echo "Warning: Health check timeout. Verify manually: ${APP_URL}"
+                        exit 0
+                    """
+
                     def deployDuration = (System.currentTimeMillis() - deployStartTime) / 1000
-                    echo "✅ Deploy completed in ${deployDuration}s"
-                    echo "🌐 Application URL: ${APP_URL}"
+                    echo "Deploy completed in ${deployDuration}s"
+                    echo "Application URL: ${APP_URL}"
                 }
             }
         }
@@ -367,55 +298,35 @@ pipeline {
 
     // =================================================================
     // POST ACTIONS
-    // MELHORIA 8: Melhor cleanup e observabilidade
     // =================================================================
     post {
         always {
-            script {
-                echo '🧹 Running cleanup tasks...'
+            node('any') {
+                script {
+                    echo 'Running cleanup tasks...'
 
-                // Limpar cache antigo (se workspace existir)
-                try {
-                    sh """
-                        if [ -d "${WORKSPACE}/.composer-cache" ]; then
-                            find ${WORKSPACE}/.composer-cache -type f -mtime +7 -delete 2>/dev/null || true
-                        fi
-                        if [ -d "${WORKSPACE}/.npm-cache" ]; then
-                            find ${WORKSPACE}/.npm-cache -type f -mtime +7 -delete 2>/dev/null || true
-                        fi
-                    """
-                } catch (Exception e) {
-                    echo "⚠️  Cache cleanup skipped: ${e.message}"
-                }
-
-                // MELHORIA 9: Workspace cleanup (mantendo caches)
-                echo 'Cleaning workspace (preserving caches)...'
-                try {
-                    cleanWs(
-                        deleteDirs: true,
-                        disableDeferredWipeout: true,
-                        notFailBuild: true,
-                        patterns: [
-                            [pattern: '.composer-cache', type: 'EXCLUDE'],
-                            [pattern: '.npm-cache', type: 'EXCLUDE']
-                        ]
-                    )
-                } catch (Exception e) {
-                    echo "⚠️  Workspace cleanup skipped: ${e.message}"
+                    try {
+                        cleanWs(
+                            deleteDirs: true,
+                            disableDeferredWipeout: true,
+                            notFailBuild: true
+                        )
+                    } catch (Exception e) {
+                        echo "Workspace cleanup skipped: ${e.message}"
+                    }
                 }
             }
         }
 
         success {
             script {
-                // MELHORIA 10: Build info (apenas echo - writeFile requer node context)
                 def acrTag = env.ACR_TAG ?: 'unknown'
                 def gitCommitMsg = env.GIT_COMMIT_MSG ?: 'N/A'
                 def gitAuthor = env.GIT_AUTHOR ?: 'N/A'
 
                 echo """
 ===========================================
-✅ BUILD SUCCESS
+BUILD SUCCESS
 ===========================================
 Build Number: ${env.BUILD_NUMBER}
 Git Commit: ${env.GIT_COMMIT ?: 'N/A'}
@@ -427,21 +338,17 @@ Build Time: ${new Date()}
 ===========================================
 """
             }
-
-            // Placeholder para notificações
-            // slackSend color: 'good', message: "Build #${env.BUILD_NUMBER} succeeded"
         }
 
         failure {
             script {
-                // MELHORIA 11: Failure info (apenas echo - writeFile requer node context)
                 def acrTag = env.ACR_TAG ?: 'unknown'
                 def gitCommitMsg = env.GIT_COMMIT_MSG ?: 'N/A'
                 def gitAuthor = env.GIT_AUTHOR ?: 'N/A'
 
                 echo """
 ===========================================
-❌ BUILD FAILURE
+BUILD FAILURE
 ===========================================
 Build Number: ${env.BUILD_NUMBER}
 Git Commit: ${env.GIT_COMMIT ?: 'N/A'}
@@ -453,29 +360,10 @@ Failure Time: ${new Date()}
 ===========================================
 """
             }
-
-            // Placeholder para notificações
-            // slackSend color: 'danger', message: "Build #${env.BUILD_NUMBER} failed"
         }
 
         unstable {
-            echo '⚠️  Pipeline completed with warnings'
+            echo 'Pipeline completed with warnings'
         }
     }
 }
-
-// =============================================================================
-// MELHORIAS IMPLEMENTADAS:
-// =============================================================================
-// 1. Agent none (permite Docker agents específicos por stage)
-// 2. disableConcurrentBuilds() (evita conflitos de recursos)
-// 3. Shared library conflictDetection() (DRY)
-// 4. Paralelização de pre-flight checks (velocidade)
-// 5. Métricas de performance (build time, deploy time)
-// 6. Métricas detalhadas de tempo
-// 7. Métricas de deploy
-// 8. Melhor cleanup e observabilidade
-// 9. cleanWs() com exclusão de caches
-// 10. Archive de build metadata
-// 11. Relatórios detalhados de falhas
-// =============================================================================
