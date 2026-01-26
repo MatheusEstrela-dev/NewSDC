@@ -10,3 +10,4 @@ Route::prefix('pae')->name('pae.')->group(function () {
     })->name('index');
 
 });
+

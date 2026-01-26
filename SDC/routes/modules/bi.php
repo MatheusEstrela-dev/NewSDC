@@ -8,3 +8,4 @@ Route::prefix('bi')->name('api.v1.bi.')->group(function () {
 });
 
 
+

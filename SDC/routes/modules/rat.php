@@ -30,3 +30,4 @@ Route::prefix('rat')->name('rat.')->group(function () {
     })->name('index');
 
 });
+
