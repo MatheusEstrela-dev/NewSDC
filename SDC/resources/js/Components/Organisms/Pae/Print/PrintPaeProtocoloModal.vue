@@ -71,6 +71,7 @@ function handlePrint() {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Protocolo PAE - ${props.protocolo?.protocoloNumero || 'N/A'}</title>
+      <base href="${window.location.origin}/">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0 !important; }
         body { font-family: Arial, sans-serif; font-size: 10px; background: white; }

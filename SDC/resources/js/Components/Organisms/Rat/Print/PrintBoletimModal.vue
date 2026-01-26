@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import XMarkIcon from '@/Components/Icons/XMarkIcon.vue';
 import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
-import BoletimHeader from './Sections/BoletimHeader.vue';
+import PrintHeader from '@/Components/Organisms/Print/Sections/PrintHeader.vue';
 import BoletimDadosGerais from './Sections/BoletimDadosGerais.vue';
 import BoletimHistorico from './Sections/BoletimHistorico.vue';
 import BoletimRecursos from './Sections/BoletimRecursos.vue';
@@ -104,6 +104,7 @@ function handlePrint() {
     <html lang="pt-BR">
     <head>
       <meta charset="UTF-8">
+      <base href="${window.location.origin}/">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Boletim de Ocorrencia - ${props.ocorrencia?.numero_bos || 'N/A'}</title>
       <style>
@@ -221,7 +222,12 @@ function handlePrint() {
               <div v-else ref="printContentRef" class="print-content bg-white">
                 <div class="container mx-auto">
                   <div class="card border-2 border-black">
-                    <BoletimHeader :ocorrencia="ocorrencia" />
+                    <PrintHeader
+                      titulo="SISTEMA INTEGRADO DE DEFESA CIVIL"
+                      subtitulo="BOLETIM DE OCORRENCIA SIMPLIFICADO"
+                      :numero="ocorrencia.numero_bos || 'N/A'"
+                      label-numero="BOS"
+                    />
 
                     <div class="card-body p-0">
                       <BoletimDadosGerais :dados="dadosGerais" />
