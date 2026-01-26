@@ -1,3 +1,45 @@
+<script setup>
+import { ref } from 'vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import RecebimentoStatusBadge from '@/Components/Atoms/Tdap/RecebimentoStatusBadge.vue';
+import TdapRecebimentoCard from '@/Components/Molecules/Tdap/TdapRecebimentoCard.vue';
+import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import Heading from '@/Components/Atoms/Typography/Heading.vue';
+import Text from '@/Components/Atoms/Typography/Text.vue';
+import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
+import PrintTdapRecebimentoModal from '@/Components/Organisms/Tdap/Print/PrintTdapRecebimentoModal.vue';
+import { useMobile } from '@/composables/useMobile';
+
+// Detecção mobile
+const { isMobile } = useMobile();
+
+const props = defineProps({
+  recebimentos: {
+    type: Array,
+    default: () => [],
+  },
+  statistics: {
+    type: Object,
+    default: () => ({}),
+  },
+});
+
+const formatDate = (date) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('pt-BR');
+};
+
+// Print Logic
+const showPrintModal = ref(false);
+const selectedRecebimento = ref(null);
+
+const handlePrint = (recebimento) => {
+  selectedRecebimento.value = recebimento;
+  showPrintModal.value = true;
+};
+</script>
+
 <template>
   <div class="tdap-recebimentos-container">
     <!-- Header Padronizado -->
@@ -31,6 +73,9 @@
               <th class="px-4 py-3 text-left">
                 <Text size="xs" color="muted" weight="medium" class="uppercase">Status</Text>
               </th>
+              <th class="px-4 py-3 text-center">
+                <Text size="xs" color="muted" weight="medium" class="uppercase">Ações</Text>
+              </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-700/50">
@@ -50,9 +95,18 @@
               <td class="px-4 py-4">
                 <RecebimentoStatusBadge :status="recebimento.status" />
               </td>
+              <td class="px-4 py-4 text-center">
+                <button
+                  @click="handlePrint(recebimento)"
+                  class="text-slate-400 hover:text-white transition-colors p-1"
+                  title="Imprimir Recebimento"
+                >
+                  <PrinterIcon class="w-5 h-5" />
+                </button>
+              </td>
             </tr>
             <tr v-if="!recebimentos || recebimentos.length === 0">
-              <td colspan="5" class="px-4 py-8 text-center">
+              <td colspan="6" class="px-4 py-8 text-center">
                 <Text size="sm" color="muted">Nenhum recebimento cadastrado</Text>
               </td>
             </tr>
@@ -63,47 +117,32 @@
 
     <!-- Mobile: Cards -->
     <div v-else class="grid grid-cols-1 gap-4">
-      <TdapRecebimentoCard
-        v-for="recebimento in recebimentos"
-        :key="recebimento.id"
-        :recebimento="recebimento"
-      />
+      <div v-for="recebimento in recebimentos" :key="recebimento.id" class="relative">
+         <TdapRecebimentoCard
+          :recebimento="recebimento"
+        />
+        <button
+            @click="handlePrint(recebimento)"
+            class="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800/80 p-1 rounded"
+            title="Imprimir"
+        >
+            <PrinterIcon class="w-5 h-5" />
+        </button>
+      </div>
+
       <div v-if="!recebimentos || recebimentos.length === 0" class="text-center py-8 bg-slate-800/60 border border-slate-700/50 rounded-lg">
         <Text size="sm" color="muted">Nenhum recebimento cadastrado</Text>
       </div>
     </div>
+
+    <!-- Modals -->
+    <PrintTdapRecebimentoModal
+      :show="showPrintModal"
+      :recebimento="selectedRecebimento"
+      @close="showPrintModal = false"
+    />
   </div>
 </template>
-
-<script setup>
-import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import RecebimentoStatusBadge from '@/Components/Atoms/Tdap/RecebimentoStatusBadge.vue';
-import TdapRecebimentoCard from '@/Components/Molecules/Tdap/TdapRecebimentoCard.vue';
-import CardBase from '@/Components/Atoms/Card/CardBase.vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
-import TruckIcon from '@/Components/Icons/TruckIcon.vue';
-import { useMobile } from '@/composables/useMobile';
-
-// Detecção mobile
-const { isMobile } = useMobile();
-
-const props = defineProps({
-  recebimentos: {
-    type: Array,
-    default: () => [],
-  },
-  statistics: {
-    type: Object,
-    default: () => ({}),
-  },
-});
-
-const formatDate = (date) => {
-  if (!date) return '-';
-  return new Date(date).toLocaleDateString('pt-BR');
-};
-</script>
 
 <style scoped>
 .tdap-recebimentos-container {

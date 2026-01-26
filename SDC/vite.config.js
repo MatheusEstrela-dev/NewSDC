@@ -79,11 +79,7 @@ export default defineConfig({
         port: 5173,
         strictPort: true,
         // Configuração otimizada para Docker
-        watch: {
-            usePolling: true,
-            interval: 300, // Reduzido de 1000ms para 300ms para detecção mais rápida
-            ignored: ['**/node_modules/**', '**/vendor/**', '**/storage/**', '**/public/**'],
-        },
+
         hmr: {
             host: 'localhost',
             port: 5173,

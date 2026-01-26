@@ -70,10 +70,12 @@
     <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-700/30 dark:border-slate-700/30 border-slate-200">
       <TableActions
         :show-view="true"
+        :show-print="true"
         :show-edit="canEdit"
         :show-attachments="false"
         :show-delete="false"
         @view="$emit('view', processo.id)"
+        @print="$emit('print', processo.id)"
         @edit="$emit('edit', processo.id)"
       />
     </div>
@@ -101,7 +103,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['click', 'view', 'edit']);
+defineEmits(['click', 'view', 'print', 'edit']);
 
 const municipiosCount = computed(() => {
   if (!props.processo.municipios?.length) return '—';

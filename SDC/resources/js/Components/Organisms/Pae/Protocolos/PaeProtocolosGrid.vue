@@ -28,6 +28,7 @@
         :key="p.id"
         :protocolo="p"
         @view="$emit('view', $event)"
+        @print="$emit('print', $event)"
         @edit="$emit('edit', $event)"
         @history="$emit('history', $event)"
       />
@@ -65,7 +66,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['view', 'edit', 'history', 'page-change']);
+defineEmits(['view', 'print', 'edit', 'history', 'page-change']);
 </script>
 
 

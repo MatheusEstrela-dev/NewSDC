@@ -46,7 +46,7 @@
               <StatusPill :situacao="protocolo.situacao" />
             </td>
 
-            <!-- Ações -->
+            <!-- Acoes -->
             <td class="px-4 py-3">
               <div class="flex items-center justify-end gap-1">
                 <button
@@ -59,6 +59,14 @@
                 </button>
                 <button
                   type="button"
+                  class="p-1.5 rounded-lg text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 transition-all duration-200"
+                  title="Imprimir"
+                  @click="$emit('print', protocolo.id)"
+                >
+                  <PrinterIcon class="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
                   class="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all duration-200"
                   title="Editar"
                   @click="$emit('edit', protocolo.id)"
@@ -68,7 +76,7 @@
                 <button
                   type="button"
                   class="p-1.5 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-all duration-200"
-                  title="Série Histórica"
+                  title="Serie Historica"
                   @click="$emit('history', protocolo.id)"
                 >
                   <ClockIcon class="w-4 h-4" />
@@ -91,6 +99,7 @@
 import StatusPill from '@/Components/Molecules/Pae/Protocolos/StatusPill.vue';
 import PrazosPill from '@/Components/Molecules/Pae/Protocolos/PrazosPill.vue';
 import EyeIcon from '@/Components/Icons/EyeIcon.vue';
+import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 
@@ -101,5 +110,5 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'edit', 'history']);
+defineEmits(['view', 'print', 'edit', 'history']);
 </script>

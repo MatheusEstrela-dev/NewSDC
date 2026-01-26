@@ -71,15 +71,17 @@
               />
             </td>
 
-            <!-- Ações -->
+            <!-- Acoes -->
             <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
               <div class="flex items-center justify-end">
                 <TableActions
                   :show-view="true"
+                  :show-print="true"
                   :show-edit="canEdit"
                   :show-attachments="false"
                   :show-delete="false"
                   @view="$emit('view', processo.id)"
+                  @print="$emit('print', processo.id)"
                   @edit="$emit('edit', processo.id)"
                 />
               </div>
@@ -126,7 +128,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['view', 'edit']);
+defineEmits(['view', 'print', 'edit']);
 
 const formatDate = (date) => {
   if (!date) return '—';

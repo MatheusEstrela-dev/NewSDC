@@ -2,14 +2,14 @@
   <div class="rat-index-container">
     <!-- Header Padronizado -->
     <PageHeader
-      title="Gestão de RAT"
-      description="Visualize e gerencie todos os Registros de Atendimento Técnico"
+      title="Gestao de RAT"
+      description="Visualize e gerencie todos os Registros de Atendimento Tecnico"
       :icon="DocumentTextIcon"
       variant="gradient"
     >
       <template #actions>
         <div class="flex items-center gap-2 sm:gap-3">
-          <!-- Botão Criar - Responsivo -->
+          <!-- Botao Criar - Responsivo -->
           <Link :href="route('rat.create')">
             <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
               <span class="hidden sm:inline">Novo RAT</span>
@@ -34,10 +34,19 @@
       :loading="loading"
       :pagination="paginationToUse"
       @view="handleView"
+      @print="handlePrint"
       @edit="handleEdit"
       @attachments="handleAttachments"
       @delete="handleDelete"
       @page-change="handlePageChange"
+    />
+
+    <!-- Modal de Impressao do Boletim -->
+    <PrintBoletimModal
+      :show="showPrintModal"
+      :ocorrencia="selectedOcorrencia"
+      :loading="printLoading"
+      @close="closePrintModal"
     />
   </div>
 </template>
@@ -52,6 +61,7 @@ import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import RatStatisticsCards from '../../Components/Organisms/Rat/Statistics/RatStatisticsCards.vue';
 import RatFiltersSection from '../../Components/Organisms/Rat/Filters/RatFiltersSection.vue';
 import RatTable from '../../Components/Organisms/Rat/Table/RatTable.vue';
+import PrintBoletimModal from '../../Components/Organisms/Rat/Print/PrintBoletimModal.vue';
 import { getMockStatisticsFromRats } from '@/mocks/rat';
 
 const props = defineProps({
@@ -224,6 +234,68 @@ function handleDelete(id) {
     // TODO: Implementar delete
     console.log('Delete RAT:', id);
   }
+}
+
+// =========================
+// Modal de Impressao
+// =========================
+const showPrintModal = ref(false);
+const selectedOcorrencia = ref(null);
+const printLoading = ref(false);
+
+// #region agent log
+async function handlePrint(id) {
+  const logData = {location:'RatIndexTemplate.vue:handlePrint',message:'handlePrint called',data:{id,showPrintModalBefore:showPrintModal.value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+  console.log('DEBUG:', logData);
+  fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
+  console.log('RAT: handlePrint called for id:', id);
+  showPrintModal.value = true;
+  printLoading.value = true;
+  selectedOcorrencia.value = null;
+  fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RatIndexTemplate.vue:handlePrint',message:'State updated before fetch',data:{showPrintModal:showPrintModal.value,printLoading:printLoading.value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+
+  try {
+    const url = route('rat.show.json', id);
+    const logData1 = {location:'RatIndexTemplate.vue:handlePrint',message:'Fetching data',data:{url,id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
+    console.log('DEBUG:', logData1);
+    fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData1)}).catch(()=>{});
+    console.log('RAT: Fetching URL:', url);
+    const response = await fetch(url);
+    const logData2 = {location:'RatIndexTemplate.vue:handlePrint',message:'Response received',data:{status:response.status,statusText:response.statusText,ok:response.ok,headers:Object.fromEntries(response.headers.entries())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
+    console.log('DEBUG:', logData2);
+    fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(()=>{});
+    if (!response.ok) {
+      const errorText = await response.text();
+      const logData3 = {location:'RatIndexTemplate.vue:handlePrint',message:'Response not OK',data:{status:response.status,errorText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+      console.error('DEBUG:', logData3);
+      fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(()=>{});
+      throw new Error(`Erro ao carregar dados: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    const logData4 = {location:'RatIndexTemplate.vue:handlePrint',message:'Data parsed from JSON',data:{hasData:!!data,dataKeys:data?Object.keys(data):[],hasNumeroBos:!!data?.numero_bos,hasDadosGerais:!!data?.dados_gerais,hasEnvolvidos:!!data?.envolvidos,hasRecursos:!!data?.recursos,hasVistoria:!!data?.vistoria,hasHistorico:!!data?.historico},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+    console.log('DEBUG:', logData4);
+    fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData4)}).catch(()=>{});
+    console.log('RAT: Data loaded:', data);
+    selectedOcorrencia.value = data;
+    const logData5 = {location:'RatIndexTemplate.vue:handlePrint',message:'State updated after data load',data:{showPrintModal:showPrintModal.value,hasOcorrencia:!!selectedOcorrencia.value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
+    console.log('DEBUG:', logData5);
+    fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData5)}).catch(()=>{});
+  } catch (error) {
+    const logData6 = {location:'RatIndexTemplate.vue:handlePrint',message:'Error loading data',data:{error:error.message,errorStack:error.stack,showPrintModal:showPrintModal.value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
+    console.error('DEBUG:', logData6);
+    fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData6)}).catch(()=>{});
+    console.error('RAT: Erro ao carregar ocorrencia:', error);
+    alert('Erro ao carregar dados do boletim: ' + error.message);
+    showPrintModal.value = false;
+  } finally {
+    printLoading.value = false;
+  }
+}
+// #endregion
+
+function closePrintModal() {
+  showPrintModal.value = false;
+  selectedOcorrencia.value = null;
 }
 
 function handlePageChange(page) {

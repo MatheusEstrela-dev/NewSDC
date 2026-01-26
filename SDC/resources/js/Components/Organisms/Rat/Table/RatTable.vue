@@ -32,7 +32,7 @@
           <TableHeader align="center" class="w-36 whitespace-nowrap">Status</TableHeader>
           <TableHeader class="w-56 whitespace-nowrap">Município</TableHeader>
           <TableHeader class="w-44 whitespace-nowrap">Criado por</TableHeader>
-          <TableHeader align="right" class="w-28 whitespace-nowrap">Ações</TableHeader>
+          <TableHeader align="right" class="w-36 whitespace-nowrap">Ações</TableHeader>
         </TableHeaderRow>
         <tbody>
           <RatTableRow
@@ -40,6 +40,7 @@
             :key="rat.id"
             :rat="rat"
             @view="handleView"
+            @print="handlePrint"
             @edit="handleEdit"
             @attachments="handleAttachments"
             @delete="handleDelete"
@@ -55,6 +56,7 @@
         :key="rat.id"
         :rat="rat"
         @view="handleView"
+        @print="handlePrint"
         @edit="handleEdit"
         @attachments="handleAttachments"
         @delete="handleDelete"
@@ -98,10 +100,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['view', 'edit', 'attachments', 'delete', 'page-change']);
+const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'delete', 'page-change']);
 
 function handleView(id) {
   emit('view', id);
+}
+
+function handlePrint(id) {
+  emit('print', id);
 }
 
 function handleEdit(id) {

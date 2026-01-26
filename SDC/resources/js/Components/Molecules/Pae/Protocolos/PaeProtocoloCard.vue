@@ -54,6 +54,14 @@
         </button>
         <button
           type="button"
+          class="p-2 rounded-lg text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-500/10 transition-all"
+          title="Imprimir"
+          @click="handlePrintClick"
+        >
+          <PrinterIcon class="w-4 h-4" />
+        </button>
+        <button
+          type="button"
           class="p-2 rounded-lg text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/10 transition-all"
           title="Editar"
           @click="$emit('edit', protocolo.id)"
@@ -63,7 +71,7 @@
         <button
           type="button"
           class="p-2 rounded-lg text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-500/10 transition-all"
-          title="Série Histórica"
+          title="Serie Historica"
           @click="$emit('history', protocolo.id)"
         >
           <ClockIcon class="w-4 h-4" />
@@ -71,14 +79,12 @@
         <button
           type="button"
           class="p-2 rounded-lg text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-500/10 transition-all"
-          title="Notificações"
-          @click="$emit('history', protocolo.id)"
+          title="Notificacoes"
+          @click="$emit('notifications', protocolo.id)"
         >
           <BellIcon class="w-4 h-4" />
         </button>
       </div>
-
-      <!-- Removido: badges pequenos de contagem (análises/notificações) a pedido do usuário -->
     </div>
   </CardBase>
 </template>
@@ -88,6 +94,7 @@ import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import EyeIcon from '@/Components/Icons/EyeIcon.vue';
+import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import BellIcon from '@/Components/Icons/BellIcon.vue';
@@ -105,7 +112,15 @@ const props = defineProps({
   },
 });
 
-defineEmits(['view', 'edit', 'history']);
+const emit = defineEmits(['view', 'print', 'edit', 'history', 'notifications']);
+
+// #region agent log
+function handlePrintClick() {
+  fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PaeProtocoloCard.vue:handlePrintClick',message:'Print button clicked',data:{protocoloId:props.protocolo.id,protocoloNumero:props.protocolo.protocoloNumero},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  emit('print', props.protocolo.id);
+  fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PaeProtocoloCard.vue:handlePrintClick',message:'Print event emitted',data:{protocoloId:props.protocolo.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+}
+// #endregion
 </script>
 
 

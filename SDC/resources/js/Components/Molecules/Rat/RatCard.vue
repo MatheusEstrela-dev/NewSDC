@@ -45,6 +45,16 @@
 
       <button
         type="button"
+        class="rat-card-action rat-card-action-print"
+        title="Imprimir Boletim"
+        @click="$emit('print', rat.id)"
+      >
+        <PrinterIcon class="w-4 h-4" />
+        <span>Imprimir</span>
+      </button>
+
+      <button
+        type="button"
         class="rat-card-action rat-card-action-edit"
         title="Editar"
         @click="$emit('edit', rat.id)"
@@ -70,6 +80,7 @@
 <script setup>
 import StatusBadge from '@/Components/Atoms/Badge/StatusBadge.vue';
 import EyeIcon from '@/Components/Icons/EyeIcon.vue';
+import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
 import PaperClipIcon from '@/Components/Icons/PaperClipIcon.vue';
 
@@ -80,7 +91,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['view', 'edit', 'attachments', 'delete']);
+defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);
 
 const formatDateTime = (dateTime) => {
   if (!dateTime) return '-';
@@ -291,6 +302,30 @@ const formatDateTime = (dateTime) => {
 
   .rat-card-action-view:hover {
     background: rgba(59, 130, 246, 0.25);
+  }
+}
+
+.rat-card-action-print {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.rat-card-action-print:hover {
+  background: #bae6fd;
+}
+
+.rat-card-action-print:active {
+  background: #7dd3fc;
+}
+
+@media (prefers-color-scheme: dark) {
+  .rat-card-action-print {
+    background: rgba(14, 165, 233, 0.15);
+    color: #38bdf8;
+  }
+
+  .rat-card-action-print:hover {
+    background: rgba(14, 165, 233, 0.25);
   }
 }
 

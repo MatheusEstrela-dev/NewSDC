@@ -10,6 +10,15 @@
       <EyeIcon class="w-4 h-4" />
     </button>
     <button
+      v-if="showPrint"
+      type="button"
+      @click="$emit('print')"
+      class="p-1.5 rounded-lg text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 transition-all duration-200"
+      title="Imprimir Boletim"
+    >
+      <PrinterIcon class="w-4 h-4" />
+    </button>
+    <button
       v-if="showEdit"
       type="button"
       @click="$emit('edit')"
@@ -41,12 +50,17 @@
 
 <script setup>
 import EyeIcon from '../../Icons/EyeIcon.vue';
+import PrinterIcon from '../../Icons/PrinterIcon.vue';
 import PencilIcon from '../../Icons/PencilIcon.vue';
 import TrashIcon from '../../Icons/TrashIcon.vue';
 import PaperClipIcon from '../../Icons/PaperClipIcon.vue';
 
 const props = defineProps({
   showView: {
+    type: Boolean,
+    default: true,
+  },
+  showPrint: {
     type: Boolean,
     default: true,
   },
@@ -64,6 +78,6 @@ const props = defineProps({
   },
 });
 
-defineEmits(['view', 'edit', 'attachments', 'delete']);
+defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);
 </script>
 

@@ -64,16 +64,26 @@ const props = defineProps({
   },
 });
 
-// Frontend-only: por enquanto, usar mocks. Depois é só trocar para false ou usar env flag.
-const useMock = true;
+// Usar dados reais do backend quando disponíveis, caso contrário usar mocks
+const useMock = computed(() => {
+  // Se não houver dados do backend ou se a lista estiver vazia, usar mocks
+  return !props.rats || props.rats.length === 0;
+});
 
-const effectiveRats = computed(() => (useMock ? getMockRats() : props.rats));
-const effectiveStatistics = computed(() =>
-  useMock ? getMockStatisticsFromRats(effectiveRats.value) : props.statistics
-);
-const effectiveFilters = computed(() => (useMock ? {} : props.filters));
-const effectivePagination = computed(() => (useMock ? null : props.pagination));
-const effectiveMunicipalities = computed(() => (useMock ? mockMunicipalities : props.municipalities));
-const effectiveCobradeTypes = computed(() => (useMock ? mockCobradeTypes : props.cobradeTypes));
-const effectiveYears = computed(() => (useMock ? getDefaultYears() : props.years));
+const effectiveRats = computed(() => {
+  const logData = {location:'RatIndex.vue:effectiveRats',message:'Computing effectiveRats',data:{useMock:useMock.value,propsRatsCount:props.rats?.length||0,hasPagination:!!props.pagination},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'};
+  console.log('DEBUG:', logData);
+  return useMock.value ? getMockRats() : props.rats;
+});
+const effectiveStatistics = computed(() => {
+  if (useMock.value) {
+    return getMockStatisticsFromRats(effectiveRats.value);
+  }
+  return props.statistics;
+});
+const effectiveFilters = computed(() => (useMock.value ? {} : props.filters));
+const effectivePagination = computed(() => (useMock.value ? null : props.pagination));
+const effectiveMunicipalities = computed(() => (useMock.value ? mockMunicipalities : props.municipalities));
+const effectiveCobradeTypes = computed(() => (useMock.value ? mockCobradeTypes : props.cobradeTypes));
+const effectiveYears = computed(() => (useMock.value ? getDefaultYears() : props.years));
 </script>
