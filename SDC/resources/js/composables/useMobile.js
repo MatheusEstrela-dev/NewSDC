@@ -1,36 +1,61 @@
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+
+/**
+ * Verifica se o dispositivo e realmente um touch device (mobile/tablet real)
+ */
+function isTouchDevice() {
+  if (typeof window === 'undefined') return false;
+  return (
+    'ontouchstart' in window ||
+    navigator.maxTouchPoints > 0 ||
+    window.matchMedia('(pointer: coarse)').matches
+  );
+}
 
 /**
  * Composable para detecção e gerenciamento de responsividade mobile
+ * Considera zoom do navegador para evitar falsos positivos em desktop
  */
 export function useMobile() {
-  // Breakpoints padrao (seguindo Tailwind)
   const MOBILE_BREAKPOINT = 768;
   const TABLET_BREAKPOINT = 1024;
 
-  // Deteccao inicial imediata (se no browser)
-  const getInitialWidth = () => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth;
-    }
-    return TABLET_BREAKPOINT; // Default para desktop no SSR
+  const isRealTouchDevice = ref(false);
+  const viewportWidth = ref(TABLET_BREAKPOINT);
+
+  const getViewportWidth = () => {
+    if (typeof window === 'undefined') return TABLET_BREAKPOINT;
+    return window.innerWidth;
   };
-
-  const initialWidth = getInitialWidth();
-
-  const isMobile = ref(initialWidth < MOBILE_BREAKPOINT);
-  const isTablet = ref(initialWidth >= MOBILE_BREAKPOINT && initialWidth < TABLET_BREAKPOINT);
-  const isDesktop = ref(initialWidth >= TABLET_BREAKPOINT);
 
   const checkDeviceType = () => {
     if (typeof window === 'undefined') return;
-
-    const width = window.innerWidth;
-
-    isMobile.value = width < MOBILE_BREAKPOINT;
-    isTablet.value = width >= MOBILE_BREAKPOINT && width < TABLET_BREAKPOINT;
-    isDesktop.value = width >= TABLET_BREAKPOINT;
+    viewportWidth.value = getViewportWidth();
+    isRealTouchDevice.value = isTouchDevice();
   };
+
+  const isMobile = computed(() => {
+    const width = viewportWidth.value;
+    if (!isRealTouchDevice.value) {
+      return false;
+    }
+    return width < MOBILE_BREAKPOINT;
+  });
+
+  const isTablet = computed(() => {
+    const width = viewportWidth.value;
+    if (!isRealTouchDevice.value) {
+      return false;
+    }
+    return width >= MOBILE_BREAKPOINT && width < TABLET_BREAKPOINT;
+  });
+
+  const isDesktop = computed(() => {
+    if (!isRealTouchDevice.value) {
+      return true;
+    }
+    return viewportWidth.value >= TABLET_BREAKPOINT;
+  });
 
   onMounted(() => {
     checkDeviceType();

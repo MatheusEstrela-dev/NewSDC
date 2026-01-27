@@ -87,7 +87,7 @@
         <!-- Theme Toggle -->
         <button
           @click="toggleTheme"
-          class="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg transition-all
+          class="flex items-center justify-center w-10 h-10 rounded-lg transition-all
                  text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
                  active:scale-95"
           title="Alternar tema"
