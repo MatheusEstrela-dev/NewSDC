@@ -35,7 +35,7 @@ const label = computed(() => config[props.tipo]?.label || props.tipo);
 const iconComponent = computed(() => config[props.tipo]?.icon || BuildingIcon);
 const badgeClasses = computed(() => {
   return [
-    'px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold inline-block whitespace-nowrap',
+    'px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold inline-block whitespace-nowrap',
     config[props.tipo]?.classes || 'bg-slate-500/20 text-slate-300 border border-slate-500/20',
   ].join(' ');
 });

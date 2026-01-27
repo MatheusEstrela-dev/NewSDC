@@ -49,7 +49,8 @@
       "Bash(grep:*)",
       "Bash(git -C /home/matheus/Documentos/NewSDC tag -l)",
       "Bash(git log:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(make up-all:*)"
     ],
     "deny": [],
     "ask": []

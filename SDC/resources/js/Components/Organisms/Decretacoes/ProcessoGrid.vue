@@ -16,7 +16,7 @@
     </div>
 
     <!-- Grid de Cards -->
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+    <div v-else class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
       <ProcessoCard
         v-for="processo in processos"
         :key="processo.id"

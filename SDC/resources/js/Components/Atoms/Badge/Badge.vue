@@ -34,8 +34,8 @@ const variantClasses = {
 
 const sizeClasses = {
   sm: 'px-2 py-0.5 text-xs',
-  md: 'px-2.5 py-1 text-xs',
-  lg: 'px-3 py-1.5 text-sm',
+  md: 'px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs',
+  lg: 'px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm',
 };
 
 const badgeClasses = computed(() => {

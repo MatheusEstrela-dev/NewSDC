@@ -29,19 +29,19 @@
     <!-- Info Grid -->
     <div class="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4">
       <div class="min-w-0">
-        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-[10px] sm:text-xs">Protocolo FIDE</Text>
+        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-xs">Protocolo FIDE</Text>
         <Text size="sm" weight="medium" class="text-xs sm:text-sm truncate">{{ processo.n_protocolo_fide || '—' }}</Text>
       </div>
       <div class="min-w-0">
-        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-[10px] sm:text-xs">Data Entrada</Text>
+        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-xs">Data Entrada</Text>
         <Text size="sm" weight="medium" class="text-xs sm:text-sm">{{ formatDate(processo.data_entrada) }}</Text>
       </div>
       <div class="min-w-0">
-        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-[10px] sm:text-xs">Analista</Text>
+        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-xs">Analista</Text>
         <Text size="sm" weight="medium" class="text-xs sm:text-sm truncate">{{ processo.analista || '—' }}</Text>
       </div>
       <div class="min-w-0">
-        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-[10px] sm:text-xs">Municípios</Text>
+        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-xs">Municípios</Text>
         <Text size="sm" weight="medium" class="text-xs sm:text-sm">{{ municipiosCount }}</Text>
       </div>
     </div>
@@ -53,13 +53,13 @@
         <span
           v-for="municipio in processo.municipios.slice(0, 3)"
           :key="municipio.id"
-          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 dark:bg-slate-700/30 bg-slate-200 text-[10px] sm:text-xs text-slate-300 dark:text-slate-300 text-slate-700"
+          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 dark:bg-slate-700/30 bg-slate-200 text-xs text-slate-300 dark:text-slate-300 text-slate-700"
         >
           {{ municipio.nome }}
         </span>
         <span
           v-if="processo.municipios.length > 3"
-          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 dark:bg-slate-700/30 bg-slate-200 text-[10px] sm:text-xs text-slate-400 dark:text-slate-400 text-slate-600"
+          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 dark:bg-slate-700/30 bg-slate-200 text-xs text-slate-400 dark:text-slate-400 text-slate-600"
         >
           +{{ processo.municipios.length - 3 }}
         </span>

@@ -75,7 +75,8 @@ RUN pecl install redis-6.0.2 \
     && docker-php-ext-enable redis xdebug
 
 # Instalar Composer
-COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+# Instalar Composer via downloader para garantir compatibilidade de arquitetura
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
 # Configuração PHP para desenvolvimento
 RUN cp "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
