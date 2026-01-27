@@ -258,10 +258,18 @@ function toggleUserMenu() {
 </script>
 
 <style scoped>
+/* TopBar sempre fixa no topo - garantia extra */
+header {
+  position: fixed !important;
+  top: 0 !important;
+  z-index: 55 !important;
+}
+
 /* Responsive */
 @media (max-width: 767px) {
   header {
     left: 0 !important;
+    right: 0 !important;
   }
 }
 

@@ -292,3 +292,15 @@
   overflow: hidden;
   height: 100vh;
 }
+
+/* Sidebar mobile - fallback CSS para garantir funcionamento */
+@media (max-width: 767px) {
+  body.sidebar-open .sidebar {
+    transform: translateX(0) !important;
+  }
+
+  body.sidebar-open .mobile-overlay {
+    display: block !important;
+    opacity: 1 !important;
+  }
+}

@@ -58,14 +58,18 @@ export function useSidebarMobile() {
 
   const openSidebar = () => {
     isSidebarOpen.value = true;
-    // Prevenir scroll do body quando sidebar está aberta
-    document.body.style.overflow = 'hidden';
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = 'hidden';
+      document.body.classList.add('sidebar-open');
+    }
   };
 
   const closeSidebar = () => {
     isSidebarOpen.value = false;
-    // Restaurar scroll do body
-    document.body.style.overflow = '';
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = '';
+      document.body.classList.remove('sidebar-open');
+    }
   };
 
   const toggleSidebar = () => {
