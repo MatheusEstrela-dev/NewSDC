@@ -22,7 +22,8 @@
 
         <div class="flex items-center gap-3">
           <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left" @click="handleOpenModal">
-            Nova Demanda
+            <span class="hidden sm:inline">Nova Demanda</span>
+            <span class="sm:hidden">Novo</span>
           </Button>
         </div>
       </div>

@@ -70,11 +70,7 @@ const useMock = computed(() => {
   return !props.rats || props.rats.length === 0;
 });
 
-const effectiveRats = computed(() => {
-  const logData = {location:'RatIndex.vue:effectiveRats',message:'Computing effectiveRats',data:{useMock:useMock.value,propsRatsCount:props.rats?.length||0,hasPagination:!!props.pagination},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'};
-  console.log('DEBUG:', logData);
-  return useMock.value ? getMockRats() : props.rats;
-});
+const effectiveRats = computed(() => useMock.value ? getMockRats() : props.rats);
 const effectiveStatistics = computed(() => {
   if (useMock.value) {
     return getMockStatisticsFromRats(effectiveRats.value);
