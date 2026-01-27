@@ -45,6 +45,16 @@ class EloquentRatRepository implements RatRepositoryInterface
         // Controller/UseCases esperam objetos (ex.: $rat->id). No mock, converter arrays em objetos.
         $rats = $rats->map(static fn (array $rat) => (object) $rat);
 
+        // Aplicar filtro de busca no mock
+        if (!empty($filters['search'])) {
+            $search = strtolower($filters['search']);
+            $rats = $rats->filter(function ($rat) use ($search) {
+                return str_contains(strtolower($rat->protocolo), $search) ||
+                       str_contains(strtolower($rat->status), $search) ||
+                       (isset($rat->local['municipio']) && str_contains(strtolower($rat->local['municipio']), $search));
+            });
+        }
+
         // Simular paginação
         $currentPage = request()->get('page', 1);
         $perPage = 15;

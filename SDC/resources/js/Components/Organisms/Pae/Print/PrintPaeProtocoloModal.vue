@@ -137,7 +137,8 @@ function formatDateTime(date) {
     <Transition leave-active-class="duration-200">
       <div
         v-show="show"
-        class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50"
+        class="fixed inset-0 overflow-y-auto px-3 py-4 pt-16 sm:px-0 sm:pt-20"
+        style="z-index: 9999 !important;"
         scroll-region
       >
         <Transition
@@ -151,6 +152,7 @@ function formatDateTime(date) {
           <div
             v-show="show"
             class="fixed inset-0 transform transition-all"
+            style="z-index: 9998 !important;"
             @click="close"
           >
             <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75" />
@@ -168,6 +170,7 @@ function formatDateTime(date) {
           <div
             v-show="show"
             class="mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full sm:mx-auto max-w-6xl"
+            style="z-index: 10000 !important;"
           >
             <div class="flex items-center justify-between px-6 py-4 bg-sky-600 text-white">
               <h3 class="text-lg font-semibold flex items-center gap-2">

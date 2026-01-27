@@ -50,6 +50,38 @@ class EloquentProcessoRepository implements ProcessoRepositoryInterface
                        ->paginate($perPage);
     }
 
+    public function findAll(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = Processo::query()->with(['municipios']);
+
+        if (isset($filters['search'])) {
+            $query->where(function($q) use ($filters) {
+                $q->where('n_protocolo_fide', 'like', "%{$filters['search']}%")
+                  ->orWhere('analista', 'like', "%{$filters['search']}%")
+                  ->orWhere('observacoes', 'like', "%{$filters['search']}%");
+            });
+        }
+
+        if (isset($filters['processo'])) {
+            $query->where('processo', $filters['processo']);
+        }
+
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (isset($filters['vigencia_status'])) {
+            match($filters['vigencia_status']) {
+                'vigente' => $query->vigentes(),
+                'vencido' => $query->vencidos(),
+                'proximo_vencer' => $query->proximosVencer(),
+                default => null
+            };
+        }
+
+        return $query->orderBy('data_entrada', 'desc')->paginate($perPage);
+    }
+
     public function filterBy(array $filters): Collection
     {
         $query = Processo::query()->with(['municipios']);

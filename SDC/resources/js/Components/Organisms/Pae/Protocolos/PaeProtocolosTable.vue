@@ -48,39 +48,35 @@
 
             <!-- Acoes -->
             <td class="px-4 py-3">
-              <div class="flex items-center justify-end gap-1">
-                <button
-                  type="button"
-                  class="p-1.5 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-all duration-200"
+              <div class="flex items-center justify-end gap-2">
+                <ButtonIcon
+                  :icon="EyeIcon"
+                  variant="primary"
+                  size="md"
                   title="Visualizar"
                   @click="$emit('view', protocolo.id)"
-                >
-                  <EyeIcon class="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  class="p-1.5 rounded-lg text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 transition-all duration-200"
+                />
+                <ButtonIcon
+                  :icon="PrinterIcon"
+                  variant="info"
+                  size="md"
                   title="Imprimir"
                   @click="$emit('print', protocolo.id)"
-                >
-                  <PrinterIcon class="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  class="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all duration-200"
+                />
+                <ButtonIcon
+                  :icon="PencilIcon"
+                  variant="warning"
+                  size="md"
                   title="Editar"
                   @click="$emit('edit', protocolo.id)"
-                >
-                  <PencilIcon class="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  class="p-1.5 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-all duration-200"
-                  title="Serie Historica"
+                />
+                <ButtonIcon
+                  :icon="ClockIcon"
+                  variant="success"
+                  size="md"
+                  title="Série Histórica"
                   @click="$emit('history', protocolo.id)"
-                >
-                  <ClockIcon class="w-4 h-4" />
-                </button>
+                />
               </div>
             </td>
           </tr>
@@ -98,6 +94,7 @@
 <script setup>
 import StatusPill from '@/Components/Molecules/Pae/Protocolos/StatusPill.vue';
 import PrazosPill from '@/Components/Molecules/Pae/Protocolos/PrazosPill.vue';
+import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
 import EyeIcon from '@/Components/Icons/EyeIcon.vue';
 import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';

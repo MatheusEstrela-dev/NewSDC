@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import XMarkIcon from '@/Components/Icons/XMarkIcon.vue';
 import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
 import PrintHeader from '@/Components/Organisms/Print/Sections/PrintHeader.vue';
@@ -29,12 +29,11 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const printContentRef = ref(null);
+const printModalContainer = ref(null);
 
-// #region agent log
 watch(
   () => props.show,
-  (newVal, oldVal) => {
-    fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PrintBoletimModal.vue:watch(show)',message:'Show prop changed',data:{show:newVal,oldVal,hasOcorrencia:!!props.ocorrencia,loading:props.loading,numeroBos:props.ocorrencia?.numero_bos},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  (newVal) => {
     if (newVal) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -43,7 +42,6 @@ watch(
   },
   { immediate: true }
 );
-// #endregion
 
 const close = () => {
   emit('close');
@@ -63,11 +61,7 @@ onUnmounted(() => {
 });
 
 const dadosGerais = computed(() => {
-  // #region agent log
-  const result = props.ocorrencia?.dados_gerais || props.ocorrencia?.dadosGerais || null;
-  fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PrintBoletimModal.vue:dadosGerais',message:'Computing dadosGerais',data:{hasOcorrencia:!!props.ocorrencia,hasDadosGerais:!!result,ocorrenciaKeys:props.ocorrencia?Object.keys(props.ocorrencia):[]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-  // #endregion
-  return result;
+  return props.ocorrencia?.dados_gerais || props.ocorrencia?.dadosGerais || null;
 });
 
 const envolvidos = computed(() => {
@@ -153,8 +147,10 @@ function handlePrint() {
     <Transition leave-active-class="duration-200">
       <div
         v-show="show"
-        class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50"
+        class="fixed inset-0 overflow-y-auto px-3 py-4 pt-16 sm:px-0 sm:pt-20"
+        style="z-index: 9999 !important;"
         scroll-region
+        ref="printModalContainer"
       >
         <Transition
           enter-active-class="ease-out duration-300"
@@ -167,6 +163,7 @@ function handlePrint() {
           <div
             v-show="show"
             class="fixed inset-0 transform transition-all"
+            style="z-index: 9998 !important;"
             @click="close"
           >
             <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75" />
@@ -183,7 +180,8 @@ function handlePrint() {
         >
           <div
             v-show="show"
-            class="mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full sm:mx-auto max-w-6xl"
+            class="relative mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full sm:mx-auto max-w-6xl"
+            style="z-index: 10000 !important;"
           >
             <div class="flex items-center justify-between px-6 py-4 bg-sky-600 text-white">
               <h3 class="text-lg font-semibold flex items-center gap-2">
@@ -196,7 +194,7 @@ function handlePrint() {
                   @click="handlePrint"
                   class="px-4 py-2 bg-white text-sky-600 rounded-lg font-medium hover:bg-sky-50 transition-colors flex items-center gap-2"
                 >
-                  <PrinterIcon class="w-4 h-4" />
+                  <PrinterIcon class="w-5 h-5" />
                   Imprimir
                 </button>
                 <button

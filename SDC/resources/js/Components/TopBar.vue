@@ -1,6 +1,6 @@
 <template>
   <header
-    class="fixed top-0 right-0 h-16 z-[55] transition-all duration-300 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm left-0 md:left-20 lg:left-[280px]"
+    class="fixed top-0 right-0 left-0 h-16 z-30 transition-all duration-300 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm md:left-20 lg:left-[280px]"
     :class="{
       'lg:left-20': isCollapsed
     }"
@@ -22,23 +22,26 @@
         <span class="text-lg md:text-xl font-bold text-slate-900 dark:text-white tracking-wider">SDC</span>
       </div>
 
-      <!-- Search Bar -->
-      <div class="hidden md:flex flex-1 max-w-2xl mx-auto">
-        <div class="relative flex items-center w-full">
-          <svg class="absolute left-3 lg:left-4 w-4 h-4 lg:w-5 lg:h-5 text-slate-400 dark:text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <!-- Search Bar Trigger (Pro Mode) -->
+      <div class="hidden md:flex flex-1 max-w-2xl mx-auto z-[60]">
+        <button
+          @click="openCommandPalette"
+          class="relative flex items-center w-full group outline-none"
+        >
+          <div class="absolute inset-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors group-hover:border-blue-400 dark:group-hover:border-blue-500"></div>
+          <svg class="absolute left-3 lg:left-4 w-4 h-4 lg:w-5 lg:h-5 text-slate-400 dark:text-slate-500 pointer-events-none group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <input
-            type="text"
-            v-model="searchQuery"
-            @input="handleSearch"
-            placeholder="Buscar protocolo, município..."
-            class="w-full pl-10 lg:pl-11 pr-3 lg:pr-4 py-2 lg:py-2.5 text-xs lg:text-sm rounded-lg outline-none transition-all
-                   bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700
-                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500
-                   focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 dark:focus:ring-blue-400/10"
-          />
-        </div>
+          <div
+            class="w-full pl-10 lg:pl-11 pr-3 lg:pr-4 py-2 lg:py-2.5 text-xs lg:text-sm text-left text-slate-400 dark:text-slate-500 font-medium relative flex items-center justify-between"
+          >
+            <span>Buscar protocolo, município, demanda...</span>
+            <div class="flex items-center gap-1 opacity-60">
+                <kbd class="hidden lg:inline-block font-sans px-1.5 py-0.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded text-[10px] leading-3 text-slate-500 dark:text-slate-400">Ctrl</kbd>
+                <kbd class="hidden lg:inline-block font-sans px-1.5 py-0.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded text-[10px] leading-3 text-slate-500 dark:text-slate-400">K</kbd>
+            </div>
+          </div>
+        </button>
       </div>
 
       <!-- Mobile: Search Icon Button -->
@@ -46,7 +49,7 @@
         class="flex md:hidden items-center justify-center w-10 h-10 rounded-lg transition-all
                text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
         title="Buscar"
-        @click="showMobileSearch = !showMobileSearch"
+        @click="openCommandPalette"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -54,7 +57,7 @@
       </button>
 
       <!-- Right Section - User Info & Actions -->
-      <div class="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0">
+      <div class="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0 relative z-40">
         <!-- Notifications Dropdown -->
         <Dropdown align="right" width="96" contentClasses="p-0 overflow-hidden">
           <template #trigger>
@@ -102,25 +105,20 @@
           </svg>
         </button>
 
-        <!-- Settings Dropdown -->
-        <Dropdown align="right" width="80" contentClasses="p-0 overflow-hidden">
-          <template #trigger>
-            <button
-              class="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg transition-all
-                     text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
-                     active:scale-95"
-              title="Configurações"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
-          </template>
-          <template #content>
-            <SettingsPanel />
-          </template>
-        </Dropdown>
+        <!-- Settings Button -->
+        <button
+          id="settings-btn"
+          @click.stop="openSettings"
+          class="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg transition-all
+                 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
+                 active:scale-95 relative"
+          title="Configurações e Preferências"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
 
         <!-- User Menu -->
         <div class="relative user-menu">
@@ -169,16 +167,16 @@
               </div>
             </div>
             <div class="h-px bg-slate-200 dark:bg-slate-700 my-2"></div>
-            <Link
-              :href="route('profile.edit')"
-              class="flex items-center gap-3 px-4 py-3 text-sm transition-all
+            <button
+              @click="showProfileModal = true; showUserMenu = false"
+              class="w-full flex items-center gap-3 px-4 py-3 text-sm transition-all
                      text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white"
             >
               <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               Meu Perfil
-            </Link>
+            </button>
             <Link
               :href="route('logout')"
               method="post"
@@ -197,22 +195,69 @@
       </div>
     </div>
   </header>
+
+  <!-- Modais fora do Header (Fragment) -->
+  <UserProfileModal :show="showProfileModal" @close="showProfileModal = false" />
+  <CommandPalette :is-open="isCommandPaletteOpen" @close="isCommandPaletteOpen = false" />
+  <SettingsModal :is-open="isSettingsOpen" @close="isSettingsOpen = false" />
 </template>
 
 <script setup>
-import { ref, computed, inject, Transition } from 'vue';
+import { ref, computed, inject, Transition, watch, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { useTheme } from '@/composables/useTheme';
 import { useNotifications } from '@/composables/useNotifications';
 import Dropdown from './Dropdown.vue';
 import NotificationsPanel from './Organisms/Notifications/NotificationsPanel.vue';
-import SettingsPanel from './Organisms/Settings/SettingsPanel.vue';
+import UserProfileModal from './Organisms/UserProfileModal.vue';
 import HamburgerButton from './Atoms/Button/HamburgerButton.vue';
+import CommandPalette from './Organisms/CommandPalette.vue';
+import SettingsModal from './Organisms/Settings/SettingsModal.vue';
 
+// Force cache invalidation
 const page = usePage();
 const showUserMenu = ref(false);
-const searchQuery = ref('');
-const showMobileSearch = ref(false);
+const showProfileModal = ref(false);
+
+// Pro Mode: Command Palette State
+const isCommandPaletteOpen = ref(false);
+
+const openCommandPalette = () => {
+    isCommandPaletteOpen.value = true;
+};
+
+// Pro Mode: Settings Modal State
+const isSettingsOpen = ref(false);
+const openSettings = (event) => {
+    console.log('Settings button clicked', event);
+    isSettingsOpen.value = true;
+};
+
+// Global Keyboard Shortcuts
+const handleGlobalKeydown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        openCommandPalette();
+    }
+};
+
+onMounted(() => {
+    window.addEventListener('keydown', handleGlobalKeydown);
+    
+    // Fallback native click listener
+    const btn = document.getElementById('settings-btn');
+    if (btn) {
+        btn.onclick = (e) => {
+            console.log('Native click detected on settings button');
+            openSettings(e);
+        };
+    }
+});
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleGlobalKeydown);
+});
+
 
 // Injetar o estado da sidebar desktop
 const sidebarCollapsed = inject('sidebarCollapsed', ref(false));
@@ -231,14 +276,6 @@ const { isDarkMode, toggleTheme } = useTheme();
 // Usar composable de notificações
 const { unreadCount, hasUnread } = useNotifications();
 
-function handleSearch() {
-  // TODO: Implementar lógica de busca
-  if (searchQuery.value.length > 2) {
-    // Implementar busca
-    console.log('Buscando:', searchQuery.value);
-  }
-}
-
 
 const userName = computed(() => page.props.auth?.user?.name || 'Usuário');
 const userEmail = computed(() => page.props.auth?.user?.email || '');
@@ -252,27 +289,26 @@ const userInitials = computed(() => {
     .toUpperCase();
 });
 
+// Watch for URL changes to handle profile modal opening
+watch(() => page.url, (newUrl) => {
+  if (typeof window === 'undefined') return;
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('open_profile')) {
+    showProfileModal.value = true;
+    
+    // Clean up URL without refresh
+    const cleanUrl = window.location.pathname;
+    window.history.replaceState({}, '', cleanUrl);
+  }
+}, { immediate: true });
+
 function toggleUserMenu() {
   showUserMenu.value = !showUserMenu.value;
 }
 </script>
 
 <style scoped>
-/* TopBar sempre fixa no topo - garantia extra */
-header {
-  position: fixed !important;
-  top: 0 !important;
-  z-index: 55 !important;
-}
-
-/* Responsive */
-@media (max-width: 767px) {
-  header {
-    left: 0 !important;
-    right: 0 !important;
-  }
-}
-
 /* Touch-friendly buttons on mobile */
 @media (max-width: 640px) {
   button {
@@ -281,4 +317,3 @@ header {
   }
 }
 </style>
-

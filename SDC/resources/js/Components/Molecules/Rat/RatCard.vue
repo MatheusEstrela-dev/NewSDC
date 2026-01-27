@@ -39,7 +39,7 @@
         title="Visualizar"
         @click="$emit('view', rat.id)"
       >
-        <EyeIcon class="w-4 h-4" />
+        <EyeIcon class="w-6 h-6" />
         <span>Ver</span>
       </button>
 
@@ -49,7 +49,7 @@
         title="Imprimir Boletim"
         @click="$emit('print', rat.id)"
       >
-        <PrinterIcon class="w-4 h-4" />
+        <PrinterIcon class="w-6 h-6" />
         <span>Imprimir</span>
       </button>
 
@@ -59,7 +59,7 @@
         title="Editar"
         @click="$emit('edit', rat.id)"
       >
-        <PencilIcon class="w-4 h-4" />
+        <PencilIcon class="w-6 h-6" />
         <span>Editar</span>
       </button>
 
@@ -70,7 +70,7 @@
         title="Anexos"
         @click="$emit('attachments', rat.id)"
       >
-        <PaperClipIcon class="w-4 h-4" />
+        <PaperClipIcon class="w-6 h-6" />
         <span>Anexos</span>
       </button>
     </div>

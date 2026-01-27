@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Modules\Rat\Presentation\Http\Controllers\RatIndexController;
+use App\Http\Controllers\GlobalSearchController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Modules\Tdap\Application\UseCases\ListMovimentacoesUseCase;
@@ -139,6 +140,9 @@ Route::middleware('auth')->group(function () {
     Route::get('health-dashboard', function () {
         return view('health-dashboard');
     })->name('health.dashboard');
+
+    // Global Search
+    Route::get('/global-search', [GlobalSearchController::class, 'index'])->name('global.search');
 
     // Permissionamento (Admin)
     require __DIR__ . '/modules/permissions.php';
