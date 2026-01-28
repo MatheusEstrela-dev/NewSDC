@@ -1,26 +1,23 @@
 <template>
   <header
-    class="fixed top-0 right-0 left-0 h-16 z-30 transition-all duration-300 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm md:left-20 lg:left-[280px]"
+    class="fixed top-0 right-0 left-0 h-16 z-30 transition-all duration-300 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm md:left-20"
     :class="{
+      'lg:left-[280px]': !isCollapsed,
       'lg:left-20': isCollapsed
     }"
     :data-collapsed="isCollapsed"
   >
     <div class="flex items-center justify-between h-full px-4 sm:px-6 lg:px-8 gap-2 sm:gap-4 lg:gap-8">
-      <!-- Mobile: Hamburger + Logo -->
+      <!-- Mobile: Hamburger Button Only -->
       <div class="flex items-center gap-3 md:hidden">
         <HamburgerButton
           :is-open="isSidebarOpen"
           @click="toggleSidebar"
           class="text-slate-700 dark:text-slate-300"
         />
-        <span class="text-lg font-bold text-slate-900 dark:text-white tracking-wider">SDC</span>
       </div>
 
-      <!-- Tablet/Desktop: Logo SDC -->
-      <div class="hidden md:flex items-center">
-        <span class="text-lg md:text-xl font-bold text-slate-900 dark:text-white tracking-wider">SDC</span>
-      </div>
+
 
       <!-- Search Bar Trigger (Pro Mode) -->
       <div class="hidden md:flex flex-1 max-w-2xl mx-auto z-[60]">
@@ -233,16 +230,21 @@ const openSettings = (event) => {
     isSettingsOpen.value = true;
 };
 
-// Global Keyboard Shortcuts
+// Global Keyboard Shortcuts - using capture:true to intercept before browser
 const handleGlobalKeydown = (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    // Ctrl+K or Cmd+K to open Command Palette
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         openCommandPalette();
+        return false;
     }
 };
 
 onMounted(() => {
-    window.addEventListener('keydown', handleGlobalKeydown);
+    // Use capture:true to intercept keydown BEFORE browser default handlers
+    window.addEventListener('keydown', handleGlobalKeydown, { capture: true });
     
     // Fallback native click listener
     const btn = document.getElementById('settings-btn');
@@ -255,7 +257,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-    window.removeEventListener('keydown', handleGlobalKeydown);
+    window.removeEventListener('keydown', handleGlobalKeydown, { capture: true });
 });
 
 

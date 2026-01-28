@@ -24,7 +24,7 @@
 
     <!-- Desktop: Tabela -->
     <div v-else-if="!isMobile" class="overflow-x-auto">
-      <table class="w-full table-fixed">
+      <table class="w-full">
         <TableHeaderRow>
           <TableHeader class="w-48 whitespace-nowrap">Número RAT</TableHeader>
           <TableHeader class="w-44 whitespace-nowrap">Data/Hora</TableHeader>
@@ -32,7 +32,7 @@
           <TableHeader align="center" class="w-36 whitespace-nowrap">Status</TableHeader>
           <TableHeader class="w-56 whitespace-nowrap">Município</TableHeader>
           <TableHeader class="w-44 whitespace-nowrap">Criado por</TableHeader>
-          <TableHeader align="right" class="w-36 whitespace-nowrap">Ações</TableHeader>
+          <TableHeader align="right" class="w-auto whitespace-nowrap">Ações</TableHeader>
         </TableHeaderRow>
         <tbody>
           <RatTableRow

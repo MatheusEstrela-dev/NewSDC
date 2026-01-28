@@ -58,7 +58,7 @@ const props = defineProps({
   },
   defaultCollapsed: {
     type: Boolean,
-    default: false,
+    default: true,
   },
 });
 

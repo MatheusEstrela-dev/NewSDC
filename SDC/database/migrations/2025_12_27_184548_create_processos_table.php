@@ -17,7 +17,6 @@ return new class extends Migration {
             // Datas
             $table->foreignId('orgao_responsavel_id')
                 ->nullable()
-                ->after('id')
                 ->constrained('orgaos')
                 ->nullOnDelete()
                 ->comment('COMPDEC responsável pelo processo');

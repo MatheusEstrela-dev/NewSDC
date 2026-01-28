@@ -6,7 +6,7 @@
     :title="title"
     @click="$emit('click', $event)"
   >
-    <component :is="icon" :class="iconSizeClasses" />
+    <component :is="icon" :class="iconClasses" />
   </button>
 </template>
 
@@ -27,6 +27,10 @@ const props = defineProps({
     type: String,
     default: 'md',
     validator: (value) => ['sm', 'md', 'lg'].includes(value),
+  },
+  touchTarget: {
+    type: Boolean,
+    default: true,
   },
   disabled: {
     type: Boolean,
@@ -50,30 +54,43 @@ const variantClasses = {
   success: 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10',
   danger: 'text-red-400 hover:text-red-300 hover:bg-red-500/10',
   warning: 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10',
-  info: 'text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10',
+  info: 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10',
 };
 
-const sizeClasses = {
-  sm: 'p-1',
-  md: 'p-2',
-  lg: 'p-3',
-};
-
-const iconSizeClasses = {
-  sm: 'w-5 h-5',
-  md: 'w-6 h-6',
-  lg: 'w-7 h-7',
+const SIZE_CONFIG = {
+  sm: {
+    padding: 'p-1',
+    paddingTouch: 'p-1.5',
+    minSize: 'min-w-[28px] min-h-[28px]',
+    icon: 'w-4 h-4',
+  },
+  md: {
+    padding: 'p-1.5',
+    paddingTouch: 'p-2',
+    minSize: 'min-w-[32px] min-h-[32px]',
+    icon: 'w-5 h-5',
+  },
+  lg: {
+    padding: 'p-2',
+    paddingTouch: 'p-2.5',
+    minSize: 'min-w-[40px] min-h-[40px]',
+    icon: 'w-6 h-6',
+  },
 };
 
 const buttonClasses = computed(() => {
-  const base = 'inline-flex items-center justify-center rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
-  
+  const config = SIZE_CONFIG[props.size];
+  const base = 'inline-flex items-center justify-center rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation';
+
   return [
     base,
     variantClasses[props.variant],
-    sizeClasses[props.size],
+    props.touchTarget ? config.paddingTouch : config.padding,
+    props.touchTarget ? config.minSize : '',
     props.disabled ? 'cursor-not-allowed' : 'cursor-pointer',
-  ].join(' ');
+  ].filter(Boolean).join(' ');
 });
+
+const iconClasses = computed(() => SIZE_CONFIG[props.size].icon);
 </script>
 

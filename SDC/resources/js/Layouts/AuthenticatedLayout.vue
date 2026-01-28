@@ -3,9 +3,11 @@ import { ref, provide } from 'vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import TopBar from '@/Components/TopBar.vue';
 import { useMobile, useSidebarMobile } from '@/composables/useMobile';
+import SupportModal from '@/Components/Organisms/Suporte/SupportModal.vue';
 
 // Estado compartilhado da sidebar desktop
 const sidebarCollapsed = ref(false);
+const showSupportModal = ref(false);
 
 // Estado e funções para sidebar mobile
 const { isMobile, isTablet, isDesktop } = useMobile();
@@ -41,8 +43,9 @@ provide('openSidebar', openSidebar);
 
     <!-- Main Content Area -->
     <div
-      class="flex-1 flex flex-col min-h-screen transition-all duration-300 ml-0 md:ml-20 lg:ml-[280px]"
+      class="flex-1 flex flex-col min-h-screen transition-all duration-300 ml-0 md:ml-20"
       :class="{
+        'lg:ml-[280px]': !sidebarCollapsed,
         'lg:ml-20': sidebarCollapsed
       }"
       :data-collapsed="sidebarCollapsed"
@@ -72,10 +75,12 @@ provide('openSidebar', openSidebar);
         <div class="flex gap-4 sm:gap-6">
           <a href="#" class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Termos</a>
           <a href="#" class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Privacidade</a>
-          <a href="#" class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Suporte</a>
+          <a href="#" @click.prevent="showSupportModal = true" class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Suporte</a>
         </div>
       </footer>
     </div>
+    <!-- Support Modal -->
+    <SupportModal :show="showSupportModal" @close="showSupportModal = false" />
   </div>
 </template>
 

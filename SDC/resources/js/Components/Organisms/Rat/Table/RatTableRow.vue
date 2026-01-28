@@ -25,7 +25,7 @@
     <TableCell class="w-44 whitespace-nowrap">
       {{ rat.criado_por || 'Sistema' }}
     </TableCell>
-    <TableCell align="right" class="w-36 whitespace-nowrap">
+    <TableCell align="right" class="whitespace-nowrap">
       <TableActions
         :show-print="true"
         @view="handleView"
@@ -76,13 +76,9 @@ function handleView() {
   emit('view', props.rat.id);
 }
 
-// #region agent log
 function handlePrint() {
-  fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RatTableRow.vue:handlePrint',message:'Print button clicked',data:{ratId:props.rat.id,protocolo:props.rat.protocolo},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
   emit('print', props.rat.id);
-  fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RatTableRow.vue:handlePrint',message:'Print event emitted',data:{ratId:props.rat.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
 }
-// #endregion
 
 function handleEdit() {
   emit('edit', props.rat.id);

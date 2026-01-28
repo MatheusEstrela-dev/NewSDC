@@ -178,6 +178,7 @@ return [
         App\Modules\Compdec\CompdecServiceProvider::class,
         App\Modules\Treinamento\TreinamentoServiceProvider::class,
         App\Modules\Inmet\InmetServiceProvider::class,
+        App\Modules\Suporte\SuporteServiceProvider::class,
     ])->toArray(),
 
     /*

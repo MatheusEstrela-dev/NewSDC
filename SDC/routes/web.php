@@ -168,6 +168,9 @@ Route::middleware('auth')->group(function () {
 
     // Módulo: RAT (Registro de Atendimento Técnico)
     require __DIR__ . '/modules/rat.php';
+
+    // Módulo: Suporte
+    require __DIR__ . '/modules/suporte.php';
 });
 
 require __DIR__ . '/auth.php';

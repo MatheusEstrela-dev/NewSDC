@@ -48,34 +48,15 @@
 
             <!-- Acoes -->
             <td class="px-4 py-3">
-              <div class="flex items-center justify-end gap-2">
-                <ButtonIcon
-                  :icon="EyeIcon"
-                  variant="primary"
-                  size="md"
-                  title="Visualizar"
-                  @click="$emit('view', protocolo.id)"
-                />
-                <ButtonIcon
-                  :icon="PrinterIcon"
-                  variant="info"
-                  size="md"
-                  title="Imprimir"
-                  @click="$emit('print', protocolo.id)"
-                />
-                <ButtonIcon
-                  :icon="PencilIcon"
-                  variant="warning"
-                  size="md"
-                  title="Editar"
-                  @click="$emit('edit', protocolo.id)"
-                />
-                <ButtonIcon
-                  :icon="ClockIcon"
-                  variant="success"
-                  size="md"
-                  title="Série Histórica"
-                  @click="$emit('history', protocolo.id)"
+              <div class="flex items-center justify-end">
+                <TableActions
+                  :show-attachments="false"
+                  :show-delete="false"
+                  :show-history="true"
+                  @view="$emit('view', protocolo.id)"
+                  @print="$emit('print', protocolo.id)"
+                  @edit="$emit('edit', protocolo.id)"
+                  @history="$emit('history', protocolo.id)"
                 />
               </div>
             </td>
@@ -94,11 +75,7 @@
 <script setup>
 import StatusPill from '@/Components/Molecules/Pae/Protocolos/StatusPill.vue';
 import PrazosPill from '@/Components/Molecules/Pae/Protocolos/PrazosPill.vue';
-import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
-import EyeIcon from '@/Components/Icons/EyeIcon.vue';
-import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
-import PencilIcon from '@/Components/Icons/PencilIcon.vue';
-import ClockIcon from '@/Components/Icons/ClockIcon.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 
 defineProps({
   protocolos: {

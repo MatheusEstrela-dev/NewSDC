@@ -33,56 +33,23 @@
 
     <!-- Footer Actions -->
     <div class="rat-card-footer">
-      <button
-        type="button"
-        class="rat-card-action rat-card-action-view"
-        title="Visualizar"
-        @click="$emit('view', rat.id)"
-      >
-        <EyeIcon class="w-6 h-6" />
-        <span>Ver</span>
-      </button>
-
-      <button
-        type="button"
-        class="rat-card-action rat-card-action-print"
-        title="Imprimir Boletim"
-        @click="$emit('print', rat.id)"
-      >
-        <PrinterIcon class="w-6 h-6" />
-        <span>Imprimir</span>
-      </button>
-
-      <button
-        type="button"
-        class="rat-card-action rat-card-action-edit"
-        title="Editar"
-        @click="$emit('edit', rat.id)"
-      >
-        <PencilIcon class="w-6 h-6" />
-        <span>Editar</span>
-      </button>
-
-      <button
-        v-if="rat.has_attachments"
-        type="button"
-        class="rat-card-action rat-card-action-attachments"
-        title="Anexos"
-        @click="$emit('attachments', rat.id)"
-      >
-        <PaperClipIcon class="w-6 h-6" />
-        <span>Anexos</span>
-      </button>
+      <TableActions
+        :show-print="true"
+        :show-attachments="!!rat.has_attachments"
+        :show-delete="false"
+        size="md"
+        @view="$emit('view', rat.id)"
+        @print="$emit('print', rat.id)"
+        @edit="$emit('edit', rat.id)"
+        @attachments="$emit('attachments', rat.id)"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
 import StatusBadge from '@/Components/Atoms/Badge/StatusBadge.vue';
-import EyeIcon from '@/Components/Icons/EyeIcon.vue';
-import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
-import PencilIcon from '@/Components/Icons/PencilIcon.vue';
-import PaperClipIcon from '@/Components/Icons/PaperClipIcon.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 
 const props = defineProps({
   rat: {
@@ -267,113 +234,4 @@ const formatDateTime = (dateTime) => {
   }
 }
 
-.rat-card-action {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.5rem 0.875rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  min-height: 36px;
-}
-
-.rat-card-action-view {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.rat-card-action-view:hover {
-  background: #bfdbfe;
-}
-
-.rat-card-action-view:active {
-  background: #93c5fd;
-}
-
-@media (prefers-color-scheme: dark) {
-  .rat-card-action-view {
-    background: rgba(59, 130, 246, 0.15);
-    color: #60a5fa;
-  }
-
-  .rat-card-action-view:hover {
-    background: rgba(59, 130, 246, 0.25);
-  }
-}
-
-.rat-card-action-print {
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
-.rat-card-action-print:hover {
-  background: #bae6fd;
-}
-
-.rat-card-action-print:active {
-  background: #7dd3fc;
-}
-
-@media (prefers-color-scheme: dark) {
-  .rat-card-action-print {
-    background: rgba(14, 165, 233, 0.15);
-    color: #38bdf8;
-  }
-
-  .rat-card-action-print:hover {
-    background: rgba(14, 165, 233, 0.25);
-  }
-}
-
-.rat-card-action-edit {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.rat-card-action-edit:hover {
-  background: #fde68a;
-}
-
-.rat-card-action-edit:active {
-  background: #fcd34d;
-}
-
-@media (prefers-color-scheme: dark) {
-  .rat-card-action-edit {
-    background: rgba(245, 158, 11, 0.15);
-    color: #fbbf24;
-  }
-
-  .rat-card-action-edit:hover {
-    background: rgba(245, 158, 11, 0.25);
-  }
-}
-
-.rat-card-action-attachments {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.rat-card-action-attachments:hover {
-  background: #a7f3d0;
-}
-
-.rat-card-action-attachments:active {
-  background: #6ee7b7;
-}
-
-@media (prefers-color-scheme: dark) {
-  .rat-card-action-attachments {
-    background: rgba(16, 185, 129, 0.15);
-    color: #34d399;
-  }
-
-  .rat-card-action-attachments:hover {
-    background: rgba(16, 185, 129, 0.25);
-  }
-}
 </style>

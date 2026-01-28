@@ -1,61 +1,66 @@
 <template>
   <div class="flex items-center gap-2">
-    <button
+    <ButtonIcon
       v-if="showView"
-      type="button"
-      @click="$emit('view')"
-      class="p-2 sm:p-1.5 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-all duration-200 touch-manipulation flex items-center justify-center"
+      :icon="EyeIcon"
+      variant="primary"
+      :size="size"
       title="Visualizar"
-    >
-      <EyeIcon class="w-6 h-6" />
-    </button>
-    <button
+      @click="$emit('view')"
+    />
+    <ButtonIcon
       v-if="showPrint"
-      type="button"
+      :icon="PrinterIcon"
+      variant="info"
+      :size="size"
+      title="Imprimir"
       @click="$emit('print')"
-      class="p-2 sm:p-1.5 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 rounded-lg text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 transition-all duration-200 touch-manipulation flex items-center justify-center"
-      title="Imprimir Boletim"
-    >
-      <PrinterIcon class="w-6 h-6" />
-    </button>
-    <button
+    />
+    <ButtonIcon
       v-if="showEdit"
-      type="button"
-      @click="$emit('edit')"
-      class="p-2 sm:p-1.5 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all duration-200 touch-manipulation flex items-center justify-center"
+      :icon="PencilIcon"
+      variant="warning"
+      :size="size"
       title="Editar"
-    >
-      <PencilIcon class="w-6 h-6" />
-    </button>
-    <button
+      @click="$emit('edit')"
+    />
+    <ButtonIcon
       v-if="showAttachments"
-      type="button"
-      @click="$emit('attachments')"
-      class="p-2 sm:p-1.5 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-all duration-200 touch-manipulation flex items-center justify-center"
+      :icon="PaperClipIcon"
+      variant="success"
+      :size="size"
       title="Anexos"
-    >
-      <PaperClipIcon className="w-6 h-6" />
-    </button>
-    <button
+      @click="$emit('attachments')"
+    />
+    <ButtonIcon
       v-if="showDelete"
-      type="button"
-      @click="$emit('delete')"
-      class="p-2 sm:p-1.5 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 touch-manipulation flex items-center justify-center"
+      :icon="TrashIcon"
+      variant="danger"
+      :size="size"
       title="Excluir"
-    >
-      <TrashIcon class="w-6 h-6" />
-    </button>
+      @click="$emit('delete')"
+    />
+    <ButtonIcon
+      v-if="showHistory"
+      :icon="ClockIcon"
+      variant="success"
+      :size="size"
+      title="Série Histórica"
+      @click="$emit('history')"
+    />
   </div>
 </template>
 
 <script setup>
+import ButtonIcon from '../../Atoms/Button/ButtonIcon.vue';
 import EyeIcon from '../../Icons/EyeIcon.vue';
 import PrinterIcon from '../../Icons/PrinterIcon.vue';
 import PencilIcon from '../../Icons/PencilIcon.vue';
 import TrashIcon from '../../Icons/TrashIcon.vue';
 import PaperClipIcon from '../../Icons/PaperClipIcon.vue';
+import ClockIcon from '../../Icons/ClockIcon.vue';
 
-const props = defineProps({
+defineProps({
   showView: {
     type: Boolean,
     default: true,
@@ -72,12 +77,21 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  showHistory: {
+    type: Boolean,
+    default: false,
+  },
   showDelete: {
     type: Boolean,
     default: true,
   },
+  size: {
+    type: String,
+    default: 'md',
+    validator: (value) => ['sm', 'md', 'lg'].includes(value),
+  },
 });
 
-defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);
+defineEmits(['view', 'print', 'edit', 'attachments', 'history', 'delete']);
 </script>
 

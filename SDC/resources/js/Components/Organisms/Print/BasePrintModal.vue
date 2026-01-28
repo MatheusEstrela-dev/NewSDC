@@ -26,11 +26,9 @@ const emit = defineEmits(['close']);
 
 const printContentRef = ref(null);
 
-// #region agent log
 watch(
   () => props.show,
-  (newVal, oldVal) => {
-    fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BasePrintModal.vue:watch(show)',message:'Show prop changed',data:{show:newVal,oldVal,title:props.title},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  (newVal) => {
     if (newVal) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -39,7 +37,6 @@ watch(
   },
   { immediate: true }
 );
-// #endregion
 
 const close = () => {
   emit('close');
@@ -120,9 +117,11 @@ defineExpose({ printContentRef, handlePrint });
     <Transition leave-active-class="duration-200">
       <div
         v-show="show"
-        class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-[60]"
+        class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0"
+        style="z-index: 9999 !important;"
         scroll-region
       >
+        <!-- Backdrop with blur - this blurs the background -->
         <Transition
           enter-active-class="ease-out duration-300"
           enter-from-class="opacity-0"
@@ -134,12 +133,14 @@ defineExpose({ printContentRef, handlePrint });
           <div
             v-show="show"
             class="fixed inset-0 transform transition-all"
+            style="z-index: 9998 !important;"
             @click="close"
           >
-            <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75" />
+            <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-md" />
           </div>
         </Transition>
 
+        <!-- Modal content - isolated from blur -->
         <Transition
           enter-active-class="ease-out duration-300"
           enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
@@ -150,7 +151,8 @@ defineExpose({ printContentRef, handlePrint });
         >
           <div
             v-show="show"
-            class="mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full sm:mx-auto max-w-6xl"
+            class="relative mb-6 bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-2xl ring-1 ring-black/10 transform transition-all sm:w-full sm:mx-auto max-w-6xl isolate"
+            style="z-index: 10000 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;"
           >
             <div class="flex items-center justify-between px-6 py-4 bg-sky-600 text-white">
               <h3 class="text-lg font-semibold flex items-center gap-2">
