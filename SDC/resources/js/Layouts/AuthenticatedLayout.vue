@@ -4,10 +4,14 @@ import Sidebar from '@/Components/Sidebar.vue';
 import TopBar from '@/Components/TopBar.vue';
 import { useMobile, useSidebarMobile } from '@/composables/useMobile';
 import SupportModal from '@/Components/Organisms/Suporte/SupportModal.vue';
+import TermosUsoModal from '@/Components/Organisms/TermosUsoModal.vue';
+import PrivacidadeModal from '@/Components/Organisms/PrivacidadeModal.vue';
 
 // Estado compartilhado da sidebar desktop
 const sidebarCollapsed = ref(false);
 const showSupportModal = ref(false);
+const showTermosModal = ref(false);
+const showPrivacidadeModal = ref(false);
 
 // Estado e funções para sidebar mobile
 const { isMobile, isTablet, isDesktop } = useMobile();
@@ -73,14 +77,18 @@ provide('openSidebar', openSidebar);
           </span>
         </div>
         <div class="flex gap-4 sm:gap-6">
-          <a href="#" class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Termos</a>
-          <a href="#" class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Privacidade</a>
+          <a href="#" @click.prevent="showTermosModal = true" class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Termos</a>
+          <a href="#" @click.prevent="showPrivacidadeModal = true" class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Privacidade</a>
           <a href="#" @click.prevent="showSupportModal = true" class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Suporte</a>
         </div>
       </footer>
     </div>
     <!-- Support Modal -->
     <SupportModal :show="showSupportModal" @close="showSupportModal = false" />
+    <!-- Termos Uso Modal -->
+    <TermosUsoModal :show="showTermosModal" @close="showTermosModal = false" />
+    <!-- Privacidade Modal -->
+    <PrivacidadeModal :show="showPrivacidadeModal" @close="showPrivacidadeModal = false" />
   </div>
 </template>
 
