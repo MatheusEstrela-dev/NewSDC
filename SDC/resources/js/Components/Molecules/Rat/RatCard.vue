@@ -36,12 +36,13 @@
       <TableActions
         :show-print="true"
         :show-attachments="!!rat.has_attachments"
-        :show-delete="false"
+        :show-delete="true"
         size="md"
         @view="$emit('view', rat.id)"
         @print="$emit('print', rat.id)"
         @edit="$emit('edit', rat.id)"
         @attachments="$emit('attachments', rat.id)"
+        @delete="$emit('delete', rat.id)"
       />
     </div>
   </div>

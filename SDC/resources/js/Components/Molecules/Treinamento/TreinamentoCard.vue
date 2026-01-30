@@ -4,6 +4,7 @@ import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 
 const props = defineProps({
   treinamento: {
@@ -110,26 +111,17 @@ const vagasText = computed(() => {
 
       <!-- Ações -->
       <div class="flex gap-1" @click.stop>
-        <button
-          v-if="canEdit"
-          @click="emit('edit', treinamento.id)"
-          class="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition"
-          title="Editar"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </button>
-        <button
-          v-if="canDelete"
-          @click="emit('delete', treinamento.id)"
-          class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition"
-          title="Excluir"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
+        <TableActions
+          :show-view="true"
+          :show-print="false"
+          :show-edit="canEdit"
+          :show-attachments="false"
+          :show-delete="canDelete"
+          size="sm"
+          @view="emit('view', treinamento.id)"
+          @edit="emit('edit', treinamento.id)"
+          @delete="emit('delete', treinamento.id)"
+        />
       </div>
     </div>
   </CardBase>

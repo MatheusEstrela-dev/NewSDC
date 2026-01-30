@@ -1,6 +1,6 @@
 <template>
   <div class="demandas-container">
-    <DemandasPageHeader @open-modal="showModal = true" />
+    <DemandasPageHeader @open-modal="showModal = true" @open-export="showExportModal = true" />
     <DemandasStatisticsCards :statistics="demandasStatistics" />
 
     <DemandasList
@@ -22,6 +22,14 @@
       @close="showModal = false"
       @submit="handleCreateDemanda"
     />
+
+    <!-- Modal de Exportação CSV -->
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="Demandas"
+      @close="showExportModal = false"
+      @export="handleExportCsv"
+    />
   </div>
 </template>
 
@@ -32,6 +40,7 @@ import DemandasPageHeader from '@/Components/Organisms/Demandas/Header/DemandasP
 import DemandasStatisticsCards from '@/Components/Organisms/Demandas/Statistics/DemandasStatisticsCards.vue';
 import DemandasList from '@/Components/Organisms/Demandas/Lists/DemandasList.vue';
 import NovaDemandaModal from '@/Components/Organisms/Demandas/Modals/NovaDemandaModal.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 
 const props = defineProps({
   statistics: {
@@ -62,6 +71,7 @@ const {
 } = useDemandas();
 
 const showModal = ref(false);
+const showExportModal = ref(false);
 
 const handleFilterChange = (newFilters) => {
   setFilters(newFilters);
@@ -85,6 +95,11 @@ const handleCreateDemanda = (demandaData) => {
   showModal.value = false;
   console.log('Nova demanda criada:', newDemanda);
   // Futuramente: mostrar toast de sucesso
+};
+
+const handleExportCsv = (params) => {
+  console.log('Exportar Demandas com parâmetros:', params);
+  alert(`Exportação Demandas iniciada!\nTipo: ${params.type}\nData Início: ${params.data_inicio || 'N/A'}\nData Fim: ${params.data_fim || 'N/A'}`);
 };
 </script>
 

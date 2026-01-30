@@ -3,9 +3,6 @@
     <Head title="Gestão de PAE" />
 
     <div class="pae-container">
-      <!-- Breadcrumb -->
-      <PaeBreadcrumb />
-
       <!-- Header -->
       <PaeHeader :empreendimento="empreendimento" :last-update="lastUpdate" />
 
@@ -63,7 +60,6 @@ import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
-import PaeBreadcrumb from '@/Components/Pae/PaeBreadcrumb.vue';
 import PaeCommittee from '@/Components/Pae/PaeCommittee.vue';
 import PaeEntrepreneur from '@/Components/Pae/PaeEntrepreneur.vue';
 import PaeForm from '@/Components/Pae/PaeForm.vue';

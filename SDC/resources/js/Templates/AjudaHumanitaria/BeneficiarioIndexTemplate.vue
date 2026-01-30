@@ -36,6 +36,12 @@
               Tabela
             </button>
           </div>
+
+          <!-- Botão Exportar -->
+          <Button variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+            <span class="hidden sm:inline">Exportar</span>
+          </Button>
+
           <!-- Botão Criar - Responsivo -->
           <Button
             variant="primary"
@@ -50,6 +56,22 @@
         </div>
       </template>
     </PageHeader>
+
+    <!-- Modal de Exportação CSV -->
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="Beneficiários"
+      @close="showExportModal = false"
+      @export="handleExportCsv"
+    />
+
+    <!-- Modal de Impressão do Beneficiário -->
+    <PrintBeneficiarioModal
+      :show="showPrintModal"
+      :beneficiario="selectedBeneficiario"
+      :loading="printLoading"
+      @close="showPrintModal = false"
+    />
 
     <!-- Statistics Cards -->
     <BeneficiarioStatsCards
@@ -73,6 +95,7 @@
       :can-edit="canEdit"
       :can-delete="canDelete"
       @view="(id) => $emit('view', id)"
+      @print="handlePrint"
       @edit="(id) => $emit('edit', id)"
       @delete="(id) => $emit('delete', id)"
     />
@@ -107,19 +130,20 @@
               </span>
             </td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ beneficiario.telefone || '—' }}</td>
-            <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ beneficiario.municipio || '—' }}</td>
+            <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ beneficiario.municipio?.nome || beneficiario.municipio || '—' }}</td>
             <td class="px-4 py-3 text-right">
-              <div class="flex items-center justify-end gap-1">
-                <button @click="$emit('view', beneficiario.id)" class="p-1.5 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-all duration-200" title="Visualizar">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                </button>
-                <button v-if="canEdit" @click="$emit('edit', beneficiario.id)" class="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all duration-200" title="Editar">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                </button>
-                <button v-if="canDelete" @click="$emit('delete', beneficiario.id)" class="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200" title="Excluir">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                </button>
-              </div>
+              <TableActions
+                :show-view="true"
+                :show-print="true"
+                :show-edit="canEdit"
+                :show-attachments="false"
+                :show-delete="canDelete"
+                size="sm"
+                @view="$emit('view', beneficiario.id)"
+                @print="handlePrint(beneficiario.id)"
+                @edit="$emit('edit', beneficiario.id)"
+                @delete="$emit('delete', beneficiario.id)"
+              />
             </td>
           </tr>
           <tr v-if="!beneficiarios || beneficiarios.length === 0">
@@ -144,6 +168,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
@@ -151,6 +176,9 @@ import HeartIcon from '@/Components/Icons/HeartIcon.vue';
 import BeneficiarioStatsCards from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioStatsCards.vue';
 import BeneficiarioFiltersSection from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioFiltersSection.vue';
 import BeneficiarioGrid from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioGrid.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import PrintBeneficiarioModal from '@/Components/Organisms/AjudaHumanitaria/Print/PrintBeneficiarioModal.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import { useMobile } from '@/composables/useMobile';
 
 const props = defineProps({
@@ -188,7 +216,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['create', 'view', 'edit', 'delete', 'filter', 'filter-change', 'filter-reset']);
+const emit = defineEmits(['create', 'view', 'edit', 'delete', 'print', 'filter', 'filter-change', 'filter-reset']);
 
 // Detecção mobile
 const { isMobile } = useMobile();
@@ -209,6 +237,33 @@ const handleFilterReset = () => {
   localFilters.value = {};
   emit('filter-reset');
 };
+
+// =========================
+// Modal de Exportação CSV
+// =========================
+const showExportModal = ref(false);
+
+function handleExportCsv(params) {
+  // TODO: Implementar lógica de exportação real
+  console.log('Exportar:', params); 
+  showExportModal.value = false;
+}
+
+// =========================
+// Modal de Impressão
+// =========================
+const showPrintModal = ref(false);
+const selectedBeneficiario = ref(null);
+const printLoading = ref(false);
+
+function handlePrint(id) {
+  // Encontrar beneficiário na lista
+  const beneficiario = props.beneficiarios.find(b => b.id === id);
+  if (beneficiario) {
+    selectedBeneficiario.value = beneficiario;
+    showPrintModal.value = true;
+  }
+}
 </script>
 
 <style scoped>

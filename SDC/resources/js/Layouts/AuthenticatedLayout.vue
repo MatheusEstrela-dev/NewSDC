@@ -2,6 +2,7 @@
 import { ref, provide } from 'vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import TopBar from '@/Components/TopBar.vue';
+import NavigationHeader from '@/Components/Organisms/Navigation/NavigationHeader.vue';
 import { useMobile, useSidebarMobile } from '@/composables/useMobile';
 import SupportModal from '@/Components/Organisms/Suporte/SupportModal.vue';
 import TermosUsoModal from '@/Components/Organisms/TermosUsoModal.vue';
@@ -54,8 +55,11 @@ provide('openSidebar', openSidebar);
       }"
       :data-collapsed="sidebarCollapsed"
     >
+      <!-- Navigation Header (Breadcrumb) -->
+      <NavigationHeader class="mt-16 flex-shrink-0" />
+
       <!-- Page Content -->
-      <main class="flex-1 mt-16 bg-slate-50 dark:bg-slate-950 overflow-x-hidden px-4 sm:px-6 lg:px-8">
+      <main class="flex-1 pt-4 bg-slate-50 dark:bg-slate-950 overflow-x-hidden px-4 sm:px-6 lg:px-8">
         <slot />
       </main>
 

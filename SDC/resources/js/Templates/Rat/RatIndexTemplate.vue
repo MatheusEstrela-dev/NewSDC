@@ -9,6 +9,39 @@
     >
       <template #actions>
         <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Toggle Grade/Tabela - Oculto em mobile -->
+          <div class="hidden md:flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
+            <button
+              @click="viewMode = 'grid'"
+              :class="[
+                'px-3 py-1.5 rounded text-xs font-medium transition-all',
+                viewMode === 'grid'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              ]"
+              title="Visualização em Grade"
+            >
+              Grade
+            </button>
+            <button
+              @click="viewMode = 'table'"
+              :class="[
+                'px-3 py-1.5 rounded text-xs font-medium transition-all',
+                viewMode === 'table'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              ]"
+              title="Visualização em Tabela"
+            >
+              Tabela
+            </button>
+          </div>
+
+          <!-- Botão Exportar -->
+          <Button variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+            <span class="hidden sm:inline">Exportar</span>
+          </Button>
+
           <!-- Botao Criar - Responsivo -->
           <Link :href="route('rat.create')">
             <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
@@ -20,6 +53,14 @@
       </template>
     </PageHeader>
 
+    <!-- Modal de Exportação CSV -->
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="RAT"
+      @close="showExportModal = false"
+      @export="handleExportCsv"
+    />
+
     <RatStatisticsCards :statistics="statisticsToUse" />
     <RatFiltersSection
       :filters="filtersToUse"
@@ -29,7 +70,23 @@
       @filter-change="handleFilterChange"
       @filter-reset="handleFilterReset"
     />
+    <!-- Grid View -->
+    <RatGrid
+      v-if="viewMode === 'grid'"
+      :rats="ratsToUse"
+      :loading="loading"
+      :pagination="paginationToUse"
+      @view="handleView"
+      @print="handlePrint"
+      @edit="handleEdit"
+      @attachments="handleAttachments"
+      @delete="handleDelete"
+      @page-change="handlePageChange"
+    />
+
+    <!-- Table View -->
     <RatTable
+      v-else
       :rats="ratsToUse"
       :loading="loading"
       :pagination="paginationToUse"
@@ -58,10 +115,13 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import RatStatisticsCards from '../../Components/Organisms/Rat/Statistics/RatStatisticsCards.vue';
 import RatFiltersSection from '../../Components/Organisms/Rat/Filters/RatFiltersSection.vue';
 import RatTable from '../../Components/Organisms/Rat/Table/RatTable.vue';
+import RatGrid from '../../Components/Organisms/Rat/Grid/RatGrid.vue';
 import PrintBoletimModal from '../../Components/Organisms/Rat/Print/PrintBoletimModal.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import { getMockStatisticsFromRats } from '@/mocks/rat';
 
 const props = defineProps({
@@ -109,6 +169,7 @@ const props = defineProps({
 const perPage = 15;
 const currentPage = ref(1);
 const localFilters = ref({ ...(props.filters || {}) });
+const viewMode = ref('table'); // 'grid' or 'table' - default to table for RAT
 
 watch(
   () => props.filters,
@@ -262,6 +323,18 @@ async function handlePrint(id) {
   } finally {
     printLoading.value = false;
   }
+}
+
+// =========================
+// Modal de Exportação CSV
+// =========================
+const showExportModal = ref(false);
+
+function handleExportCsv(params) {
+  console.log('Exportar RAT com parâmetros:', params);
+  // TODO: Implementar chamada ao backend para exportação
+  // Por enquanto, apenas mostra alerta
+  alert(`Exportação iniciada!\nTipo: ${params.type}\nData Início: ${params.data_inicio || 'N/A'}\nData Fim: ${params.data_fim || 'N/A'}`);
 }
 
 function closePrintModal() {

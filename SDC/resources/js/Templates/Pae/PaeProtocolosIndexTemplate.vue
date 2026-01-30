@@ -37,6 +37,11 @@
             </button>
           </div>
 
+          <!-- Botão Exportar -->
+          <Button variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+            <span class="hidden sm:inline">Exportar</span>
+          </Button>
+
           <!-- Botão Novo Protocolo - Responsivo -->
           <Link :href="route('pae.index')">
             <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
@@ -47,6 +52,14 @@
         </div>
       </template>
     </PageHeader>
+
+    <!-- Modal de Exportação CSV -->
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="PAE"
+      @close="showExportModal = false"
+      @export="handleExportCsv"
+    />
 
     <PaeProtocolosStatsCards :stats="statsToUse" />
 
@@ -108,6 +121,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { router, Link } from '@inertiajs/vue3';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
@@ -115,6 +129,7 @@ import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 
 import PaeProtocolosStatsCards from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosStatsCards.vue';
 import PaeProtocolosFilters from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosFilters.vue';
@@ -280,6 +295,17 @@ function handlePrint(id) {
 function closePrint() {
   printModalOpen.value = false;
   selectedProtocoloPrint.value = null;
+}
+
+// =========================
+// Modal de Exportação CSV
+// =========================
+const showExportModal = ref(false);
+
+function handleExportCsv(params) {
+  console.log('Exportar PAE com parâmetros:', params);
+  // TODO: Implementar chamada ao backend para exportação
+  alert(`Exportação PAE iniciada!\nTipo: ${params.type}\nData Início: ${params.data_inicio || 'N/A'}\nData Fim: ${params.data_fim || 'N/A'}`);
 }
 </script>
 

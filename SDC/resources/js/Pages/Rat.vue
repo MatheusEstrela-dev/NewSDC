@@ -3,9 +3,6 @@
     <Head title="Gestão de RAT" />
 
     <div class="rat-container">
-      <!-- Breadcrumb -->
-      <RatBreadcrumb />
-
       <!-- Header -->
       <RatHeader :rat="rat" :last-update="lastUpdate" />
 
@@ -82,7 +79,6 @@ import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import ClipboardIcon from '@/Components/Icons/ClipboardIcon.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import PaperClipIcon from '@/Components/Icons/PaperClipIcon.vue';
-import RatBreadcrumb from '@/Components/Rat/RatBreadcrumb.vue';
 import RatForm from '@/Components/Rat/RatForm.vue';
 import RatHeader from '@/Components/Rat/RatHeader.vue';
 import RatHistory from '@/Components/Rat/RatHistory.vue';

@@ -90,10 +90,12 @@
     <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-700/30 dark:border-slate-700/30 border-slate-200">
       <TableActions
         :show-view="true"
+        :show-print="true"
         :show-edit="canEdit"
         :show-attachments="false"
         :show-delete="canDelete"
         @view="$emit('view', beneficiario.id)"
+        @print="$emit('print', beneficiario.id)"
         @edit="$emit('edit', beneficiario.id)"
         @delete="$emit('delete', beneficiario.id)"
       />
@@ -123,7 +125,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['click', 'view', 'edit', 'delete']);
+defineEmits(['click', 'view', 'print', 'edit', 'delete']);
 
 // Glow neon effect baseado no status
 const getCardClasses = () => {

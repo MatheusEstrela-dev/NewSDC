@@ -36,6 +36,12 @@
               Tabela
             </button>
           </div>
+
+          <!-- Botão Exportar -->
+          <Button variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+            <span class="hidden sm:inline">Exportar</span>
+          </Button>
+
           <!-- Botão Criar - Responsivo -->
           <Button
             v-if="canCreate"
@@ -51,6 +57,14 @@
         </div>
       </template>
     </PageHeader>
+
+    <!-- Modal de Exportação CSV -->
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="Decretações"
+      @close="showExportModal = false"
+      @export="handleExportCsv"
+    />
 
     <!-- Statistics Cards -->
     <ProcessoStatsCards
@@ -96,6 +110,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
@@ -105,6 +120,7 @@ import ProcessoFilters from '@/Components/Organisms/Decretacoes/ProcessoFilters.
 import ProcessoGrid from '@/Components/Organisms/Decretacoes/ProcessoGrid.vue';
 import ProcessoTable from '@/Components/Organisms/Decretacoes/ProcessoTable.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import { useMobile } from '@/composables/useMobile';
 
 // Detecção mobile
@@ -172,6 +188,16 @@ const handleStatFilter = (type) => {
   localFilters.value.vigencia_status = type === 'all' ? '' : type;
   handleApplyFilters(localFilters.value);
 };
+
+// =========================
+// Modal de Exportação CSV
+// =========================
+const showExportModal = ref(false);
+
+function handleExportCsv(params) {
+  console.log('Exportar Decretações com parâmetros:', params);
+  alert(`Exportação Decretações iniciada!\nTipo: ${params.type}\nData Início: ${params.data_inicio || 'N/A'}\nData Fim: ${params.data_fim || 'N/A'}`);
+}
 </script>
 
 <style scoped>
