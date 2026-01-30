@@ -56,9 +56,14 @@ class EloquentRatRepository implements RatRepositoryInterface
         }
 
         // Simular paginação
-        $currentPage = request()->get('page', 1);
-        $perPage = 15;
         $total = $rats->count();
+        $currentPage = request()->get('page', 1);
+        
+        if ($perPage === -1) {
+            $perPage = $total > 0 ? $total : 1;
+            $currentPage = 1;
+        }
+        
         $items = $rats->forPage($currentPage, $perPage);
 
         return new \Illuminate\Pagination\LengthAwarePaginator(

@@ -1,5 +1,7 @@
 <?php
 
+
+
 use App\Http\Controllers\ProfileController;
 use App\Modules\Rat\Presentation\Http\Controllers\RatIndexController;
 use App\Http\Controllers\GlobalSearchController;
@@ -66,61 +68,7 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Pae');
     })->name('pae.index');
 
-    // Listagem de RATs
-    Route::get('/rat', [RatIndexController::class, 'index'])->name('rat.index');
 
-    // Criar novo RAT
-    Route::get('/rat/create', function () {
-        return Inertia::render('Rat', [
-            'rat' => [
-                'id' => null,
-                'protocolo' => '',
-                'status' => 'rascunho',
-                'tem_vistoria' => false,
-                'dadosGerais' => [
-                    'data_fato' => '',
-                    'data_inicio_atividade' => '',
-                    'data_termino_atividade' => '',
-                    'nat_cobrade_id' => '',
-                    'nat_nome_operacao' => '',
-                    'local_municipio' => '',
-                ],
-            ],
-            'recursos' => [],
-            'envolvidos' => [],
-            'vistoria' => [],
-            'historyEvents' => [],
-            'anexos' => [],
-            'lastUpdate' => now()->format('d/m/Y H:i'),
-        ]);
-    })->name('rat.create');
-
-    // Visualizar/Editar RAT existente
-    Route::get('/rat/{id}', function ($id) {
-        // TODO: Buscar RAT do banco de dados pelo ID
-        return Inertia::render('Rat', [
-            'rat' => [
-                'id' => $id,
-                'protocolo' => 'RAT-2024-001',
-                'status' => 'em_andamento',
-                'tem_vistoria' => false,
-                'dadosGerais' => [
-                    'data_fato' => now()->subDays(3)->format('Y-m-d\\TH:i'),
-                    'data_inicio_atividade' => now()->subDays(3)->format('Y-m-d\\TH:i'),
-                    'data_termino_atividade' => '',
-                    'nat_cobrade_id' => '',
-                    'nat_nome_operacao' => '',
-                    'local_municipio' => '',
-                ],
-            ],
-            'recursos' => [],
-            'envolvidos' => [],
-            'vistoria' => [],
-            'historyEvents' => [],
-            'anexos' => [],
-            'lastUpdate' => now()->format('d/m/Y H:i'),
-        ]);
-    })->name('rat.show');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

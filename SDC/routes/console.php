@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,3 +18,9 @@ use Illuminate\Support\Facades\Artisan;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Schedule::command('sdc:check-user-inactivity')
+    ->dailyAt('02:00')
+    ->onOneServer()       // Garante execução única em ambientes com múltiplos containers (requer Redis/Memcached)
+    ->runInBackground()   // Executa em background para não bloquear outras tarefas agendadas no mesmo horário
+    ->emailOutputOnFailure('admin@sdc.gov.br'); // Opcional: Configurar email do admin no .env futuramente

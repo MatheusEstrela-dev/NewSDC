@@ -6,9 +6,11 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import TreinamentoStatsCards from '@/Components/Organisms/Treinamento/TreinamentoStatsCards.vue';
 import TreinamentoFiltersSection from '@/Components/Organisms/Treinamento/TreinamentoFiltersSection.vue';
 import TreinamentoGrid from '@/Components/Organisms/Treinamento/TreinamentoGrid.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import { useMobile } from '@/composables/useMobile';
 
 // Detecção mobile
@@ -63,6 +65,16 @@ const handleFilterReset = () => {
   localFilters.value = {};
   emit('filter-reset');
 };
+
+// =========================
+// Modal de Exportação CSV
+// =========================
+const showExportModal = ref(false);
+
+function handleExportCsv(params) {
+  console.log('Exportar Treinamentos com parâmetros:', params);
+  alert(`Exportação Treinamentos iniciada!\nTipo: ${params.type}\nData Início: ${params.data_inicio || 'N/A'}\nData Fim: ${params.data_fim || 'N/A'}`);
+}
 </script>
 
 <template>
@@ -103,6 +115,12 @@ const handleFilterReset = () => {
               Tabela
             </button>
           </div>
+
+          <!-- Botão Exportar -->
+          <Button variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+            <span class="hidden sm:inline">Exportar</span>
+          </Button>
+
           <!-- Botão Criar - Responsivo -->
           <Button
             v-if="canManage"
@@ -118,6 +136,14 @@ const handleFilterReset = () => {
         </div>
       </template>
     </PageHeader>
+
+    <!-- Modal de Exportação CSV -->
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="Treinamentos"
+      @close="showExportModal = false"
+      @export="handleExportCsv"
+    />
 
     <!-- Statistics Cards -->
     <TreinamentoStatsCards :statistics="statistics" class="mb-6" @filter="handleStatFilter" />
@@ -230,18 +256,6 @@ const handleFilterReset = () => {
 <style scoped>
 .treinamentos-container {
   @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .treinamentos-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .treinamentos-container {
-    padding: 2rem 2.5rem;
-  }
+  /* Padding removed for global alignment */
 }
 </style>

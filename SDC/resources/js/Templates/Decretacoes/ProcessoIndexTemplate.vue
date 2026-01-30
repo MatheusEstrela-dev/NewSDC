@@ -203,18 +203,6 @@ function handleExportCsv(params) {
 <style scoped>
 .processos-container {
   @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .processos-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .processos-container {
-    padding: 2rem 2.5rem;
-  }
+  /* Padding removed for global alignment */
 }
 </style>

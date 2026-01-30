@@ -326,15 +326,18 @@ async function handlePrint(id) {
 }
 
 // =========================
-// Modal de Exportação CSV
+// Modal de Exportação CSV (Usando Composable)
 // =========================
-const showExportModal = ref(false);
+import { useExport } from '@/Composables/useExport';
+
+const { 
+  showExportModal, 
+  handleExport: triggerExport 
+} = useExport('rat.export');
 
 function handleExportCsv(params) {
-  console.log('Exportar RAT com parâmetros:', params);
-  // TODO: Implementar chamada ao backend para exportação
-  // Por enquanto, apenas mostra alerta
-  alert(`Exportação iniciada!\nTipo: ${params.type}\nData Início: ${params.data_inicio || 'N/A'}\nData Fim: ${params.data_fim || 'N/A'}`);
+  // Passamos os filtros atuais da tela para serem combinados com os filtros do modal
+  triggerExport(params, filtersToUse.value);
 }
 
 function closePrintModal() {
@@ -355,25 +358,7 @@ function handlePageChange(page) {
 <style scoped>
 .rat-index-container {
   @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .rat-index-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .rat-index-container {
-    padding: 2rem 2.5rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .rat-index-container {
-    padding: 2rem 3rem;
-  }
+  /* Padding removed to align with NavigationHeader which matches main content padding */
 }
 </style>
 

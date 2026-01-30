@@ -31,6 +31,7 @@ class User extends Authenticatable
         'name',
         'email',
         'cpf',
+        'active',
         'password',
         'orgao_principal_id',
     ];
@@ -53,7 +54,16 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'active' => 'boolean',
     ];
+
+    /**
+     * Escopo para usuários com dados desatualizados há mais de 6 meses.
+     */
+    public function scopeOutdated(\Illuminate\Database\Eloquent\Builder $query): void
+    {
+        $query->where('updated_at', '<', now()->subMonths(6));
+    }
 
     /**
      * Create a new Bearer token with abilities based on user permissions

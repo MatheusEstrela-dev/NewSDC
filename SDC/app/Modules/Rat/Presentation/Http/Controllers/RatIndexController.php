@@ -10,11 +10,14 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
+use App\Services\Export\CsvExportService;
+
 class RatIndexController extends Controller
 {
     public function __construct(
         private readonly GetRatStatisticsUseCase $getStatisticsUseCase,
-        private readonly ListRatsUseCase $listRatsUseCase
+        private readonly ListRatsUseCase $listRatsUseCase,
+        private readonly CsvExportService $csvExportService
     ) {
     }
 
@@ -50,21 +53,10 @@ class RatIndexController extends Controller
             $ratsResult = $this->listRatsUseCase->executeAsDTO($filters, 15);
 
             // #region agent log
-            $logData = [
-                'location' => 'RatIndexController.php:index',
-                'message' => 'Data prepared for response',
-                'data' => [
-                    'rats_count' => count($ratsResult['data']),
-                    'pagination_total' => $ratsResult['pagination']['total'] ?? 0,
-                    'statistics' => $statistics->toArray(),
-                ],
-                'timestamp' => now()->timestamp * 1000,
-                'sessionId' => 'debug-session',
-                'runId' => 'run1',
-                'hypothesisId' => 'F'
-            ];
-            Log::info('DEBUG: Data prepared', $logData);
-            $this->writeDebugLog($logData);
+            Log::info('DEBUG: Data prepared', [
+                'rats_count' => count($ratsResult['data']),
+                'pagination_total' => $ratsResult['pagination']['total'] ?? 0,
+            ]);
             // #endregion
 
             return Inertia::render('RatIndex', [
@@ -97,6 +89,48 @@ class RatIndexController extends Controller
             return redirect()->back()->with('error', 'Erro ao carregar RATs. Por favor, tente novamente.');
         }
     }
+    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $filters = $request->only([
+            'protocolo',
+            'status',
+            'data_inicio',
+            'data_fim',
+            'ano',
+            'municipio',
+            'tipo_cobrade',
+            'natureza',
+            'criado_por',
+        ]);
+
+        $ratsResult = $this->listRatsUseCase->executeAsDTO($filters, -1);
+        $rats = $ratsResult['data'];
+
+        $headers = [
+            'ID',
+            'Protocolo',
+            'Status',
+            'Tipo Demanda',
+            'Município',
+            'Descrição',
+            'Data Criação',
+        ];
+
+        $mapper = function ($rat) {
+            return [
+                $rat['id'] ?? '',
+                $rat['protocolo'] ?? '',
+                $rat['status'] ?? '',
+                $rat['tipo_demanda'] ?? '',
+                $rat['municipio'] ?? '',
+                $rat['descricao'] ?? '',
+                $rat['created_at'] ?? '',
+            ];
+        };
+
+        return $this->csvExportService->export($rats, $headers, $mapper, 'rats_export');
+    }
+
     public function showJson(string $id): \Illuminate\Http\JsonResponse
     {
         // #region agent log

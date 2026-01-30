@@ -5,57 +5,38 @@ export function useBreadcrumb() {
     const page = usePage();
 
     const breadcrumbMap = {
-        'Dashboard': ['Início'],
+        'Dashboard': [], // Dashboard is home
 
-        'Rat/RatIndex': ['Início', 'RAT'],
-        'Rat/Create': ['Início', 'RAT', 'Novo RAT'],
-        'Rat/Edit': ['Início', 'RAT', 'Edição'],
-        'Rat/Show': ['Início', 'RAT', 'Visualizar'],
+        'Rat/RatIndex': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'RAT', route: null }
+        ],
+        'Rat/Create': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'RAT', route: 'rat.index' },
+            { label: 'Novo RAT', route: null }
+        ],
+        'Rat/Edit': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'RAT', route: 'rat.index' },
+            { label: 'Edição', route: null }
+        ],
+        'Rat/Show': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'RAT', route: 'rat.index' },
+            { label: 'Visualizar', route: null }
+        ],
 
-        'Pae/Pae': ['Início', 'PAE'],
-        'Pae/Create': ['Início', 'PAE', 'Novo PAE'],
-        'Pae/Edit': ['Início', 'PAE', 'Edição'],
-        'Pae/Show': ['Início', 'PAE', 'Visualizar'],
-        'Pae/PaeProtocolosIndex': ['Início', 'PAE', 'Protocolos'],
-        'Pae/ProtocoloShow': ['Início', 'PAE', 'Protocolos', 'Visualizar'],
-
-        'AjudaHumanitaria/Index': ['Início', 'Ajuda Humanitária'],
-        'AjudaHumanitaria/Create': ['Início', 'Ajuda Humanitária', 'Nova Solicitação'],
-        'AjudaHumanitaria/Edit': ['Início', 'Ajuda Humanitária', 'Edição'],
-        'AjudaHumanitaria/Show': ['Início', 'Ajuda Humanitária', 'Visualizar'],
-
-        'Demandas/Index': ['Início', 'Demandas'],
-        'Demandas/Create': ['Início', 'Demandas', 'Nova Demanda'],
-        'Demandas/Edit': ['Início', 'Demandas', 'Edição'],
-        'Demandas/Show': ['Início', 'Demandas', 'Visualizar'],
-
-        'Decretacoes/Index': ['Início', 'Decretações'],
-        'Decretacoes/Create': ['Início', 'Decretações', 'Nova Decretação'],
-        'Decretacoes/Edit': ['Início', 'Decretações', 'Edição'],
-        'Decretacoes/Show': ['Início', 'Decretações', 'Visualizar'],
-
-        'Compdec/Index': ['Início', 'Compdec'],
-        'Compdec/Create': ['Início', 'Compdec', 'Novo Registro'],
-        'Compdec/Edit': ['Início', 'Compdec', 'Edição'],
-        'Compdec/Show': ['Início', 'Compdec', 'Visualizar'],
-
-        'Tdap/Index': ['Início', 'TDAP'],
-        'Tdap/Create': ['Início', 'TDAP', 'Novo Registro'],
-        'Tdap/Edit': ['Início', 'TDAP', 'Edição'],
-        'Tdap/Show': ['Início', 'TDAP', 'Visualizar'],
-
-        'Treinamento/Index': ['Início', 'Treinamento'],
-        'Treinamento/Create': ['Início', 'Treinamento', 'Novo Treinamento'],
-        'Treinamento/Edit': ['Início', 'Treinamento', 'Edição'],
-        'Treinamento/Show': ['Início', 'Treinamento', 'Visualizar'],
-
-        'Admin/Index': ['Início', 'Administração'],
-        'Admin/Users': ['Início', 'Administração', 'Usuários'],
-        'Admin/Settings': ['Início', 'Administração', 'Configurações'],
-
-        'LogViewer/Index': ['Início', 'Logs'],
-
-        'Profile/Edit': ['Início', 'Perfil'],
+        'Pae/Pae': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'PAE', route: null }
+        ],
+        'Pae/Create': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'PAE', route: 'pae.index' },
+            { label: 'Novo PAE', route: null }
+        ],
+        // ... (I will map other common ones or leave legacy strings to be handled by fallback)
     };
 
     const currentRoute = computed(() => page.component.value);
@@ -72,13 +53,14 @@ export function useBreadcrumb() {
         }
 
         const segments = componentName.split('/');
-        const items = ['Início'];
+        const items = [{ label: 'Início', route: 'dashboard' }];
 
         if (segments[0]) {
             const moduleName = segments[0]
                 .replace(/([A-Z])/g, ' $1')
                 .trim();
-            items.push(moduleName);
+            // TODO: Try to infer route? e.g. lower(moduleName) + '.index'
+            items.push({ label: moduleName, route: null });
         }
 
         if (segments[1]) {
@@ -91,7 +73,7 @@ export function useBreadcrumb() {
 
             const action = actionMap[segments[1]];
             if (action) {
-                items.push(action);
+                items.push({ label: action, route: null });
             }
         }
 

@@ -1,58 +1,119 @@
 import './bootstrap';
-// CSS base - carregado imediatamente
 import '../css/app.css';
 
-// Pipeline test: Build otimizado e validado
+import { createInertiaApp, router } from '@inertiajs/vue3';
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { createApp, h } from 'vue';
+import { ZiggyVue } from 'ziggy-js';
+import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 
-// CSS lazy loading por página - carregado apenas quando necessário
-// Nota: Login.css agora é importado diretamente no componente Login.vue
 const loadPageCSS = (pageName) => {
     const cssMap = {
-        // Login removido - importado diretamente no componente
         'Dashboard': () => import('../css/pages/dashboard/dashboard.css'),
         'Pae': () => import('../css/pages/pae/pae.css'),
     };
 
     const loader = cssMap[pageName];
     if (loader) {
-        loader().catch(() => {
-            // Ignorar erros de CSS não encontrado
-        });
+        loader().catch(() => {});
     }
 };
 
-import { createInertiaApp } from '@inertiajs/vue3';
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { createApp, h } from 'vue';
-import { ZiggyVue } from 'ziggy-js';
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            staleTime: 1000 * 60 * 5,
+            gcTime: 1000 * 60 * 30,
+            refetchOnWindowFocus: true,
+            refetchOnReconnect: true,
+            retry: 1,
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+        },
+        mutations: {
+            retry: 0,
+        },
+    },
+});
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const prefetchedRoutes = new Set();
+
+const setupPrefetching = () => {
+    document.addEventListener('mouseover', (e) => {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('http') || prefetchedRoutes.has(href)) {
+            return;
+        }
+
+        prefetchedRoutes.add(href);
+        router.prefetch(href, { method: 'get' });
+    }, { passive: true });
+
+    document.addEventListener('touchstart', (e) => {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('http') || prefetchedRoutes.has(href)) {
+            return;
+        }
+
+        prefetchedRoutes.add(href);
+        router.prefetch(href, { method: 'get' });
+    }, { passive: true });
+};
+
+const registerServiceWorker = async () => {
+    if ('serviceWorker' in navigator && import.meta.env.PROD) {
+        try {
+            const { registerSW } = await import('virtual:pwa-register');
+            registerSW({
+                immediate: true,
+                onRegistered(registration) {
+                    if (registration) {
+                        setInterval(() => {
+                            registration.update();
+                        }, 1000 * 60 * 60);
+                    }
+                },
+                onOfflineReady() {},
+            });
+        } catch (e) {}
+    }
+};
+
+const appName = import.meta.env.VITE_APP_NAME || 'SDC';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => {
-        // Carregar CSS específico da página em paralelo com o componente
-        // Não aguardar CSS para não bloquear renderização
         loadPageCSS(name);
-
-        // Resolver componente com lazy loading otimizado
         return resolvePageComponent(
             `./Pages/${name}.vue`,
             import.meta.glob('./Pages/**/*.vue', {
-                eager: false, // Lazy loading explícito
-                import: 'default' // Importar apenas default export
+                eager: false,
+                import: 'default'
             })
         );
     },
     setup({ el, App, props, plugin }) {
-        return createApp({ render: () => h(App, props) })
+        const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
-            .mount(el);
+            .use(VueQueryPlugin, { queryClient });
+
+        app.mount(el);
+
+        setupPrefetching();
+        registerServiceWorker();
+
+        return app;
     },
     progress: {
-        color: '#4B5563',
-        showSpinner: false, // Remover spinner para carregamento mais rápido
-        delay: 0, // Sem delay no progresso
+        color: '#1e40af',
+        showSpinner: false,
+        delay: 0,
     },
 });

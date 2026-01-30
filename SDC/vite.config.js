@@ -2,13 +2,12 @@ import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
 import path from 'path';
 import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
     plugins: [
         laravel({
             input: 'resources/js/app.js',
-            // SSR desabilitado temporariamente para build de produção
-            // ssr: 'resources/js/ssr.ts',
             refresh: true,
         }),
         vue({
@@ -19,6 +18,101 @@ export default defineConfig({
                 },
             },
         }),
+        VitePWA({
+            registerType: 'autoUpdate',
+            includeAssets: ['favicon.ico', 'robots.txt', 'imgs/**/*'],
+            manifest: {
+                name: 'SDC - Sistema de Defesa Civil',
+                short_name: 'SDC',
+                description: 'Sistema de Defesa Civil do Estado de Minas Gerais',
+                theme_color: '#1e40af',
+                background_color: '#ffffff',
+                display: 'standalone',
+                orientation: 'portrait',
+                scope: '/',
+                start_url: '/',
+                icons: [
+                    {
+                        src: '/imgs/pwa-192x192.png',
+                        sizes: '192x192',
+                        type: 'image/png',
+                    },
+                    {
+                        src: '/imgs/pwa-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                    },
+                    {
+                        src: '/imgs/pwa-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                        purpose: 'maskable',
+                    },
+                ],
+            },
+            workbox: {
+                globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+                runtimeCaching: [
+                    {
+                        urlPattern: /^https:\/\/api\..*/i,
+                        handler: 'StaleWhileRevalidate',
+                        options: {
+                            cacheName: 'api-cache',
+                            expiration: {
+                                maxEntries: 100,
+                                maxAgeSeconds: 60 * 60 * 24,
+                            },
+                            cacheableResponse: {
+                                statuses: [0, 200],
+                            },
+                        },
+                    },
+                    {
+                        urlPattern: /\/api\/.*/i,
+                        handler: 'StaleWhileRevalidate',
+                        options: {
+                            cacheName: 'internal-api-cache',
+                            expiration: {
+                                maxEntries: 200,
+                                maxAgeSeconds: 60 * 5,
+                            },
+                            cacheableResponse: {
+                                statuses: [0, 200],
+                            },
+                        },
+                    },
+                    {
+                        urlPattern: /\.(png|jpg|jpeg|svg|gif|webp|avif)$/i,
+                        handler: 'CacheFirst',
+                        options: {
+                            cacheName: 'images-cache',
+                            expiration: {
+                                maxEntries: 100,
+                                maxAgeSeconds: 60 * 60 * 24 * 30,
+                            },
+                        },
+                    },
+                    {
+                        urlPattern: /\.(woff|woff2|ttf|eot)$/i,
+                        handler: 'CacheFirst',
+                        options: {
+                            cacheName: 'fonts-cache',
+                            expiration: {
+                                maxEntries: 20,
+                                maxAgeSeconds: 60 * 60 * 24 * 365,
+                            },
+                        },
+                    },
+                ],
+                navigateFallback: null,
+                cleanupOutdatedCaches: true,
+                skipWaiting: true,
+                clientsClaim: true,
+            },
+            devOptions: {
+                enabled: false,
+            },
+        }),
     ],
     resolve: {
         alias: {
@@ -27,68 +121,52 @@ export default defineConfig({
         },
     },
     build: {
-        // Code splitting otimizado
         rollupOptions: {
             output: {
                 manualChunks: (id) => {
-                    // Separar vendor chunks para carregamento paralelo
                     if (id.includes('node_modules')) {
                         if (id.includes('vue') || id.includes('@inertiajs')) {
                             return 'vendor-vue';
                         }
+                        if (id.includes('@tanstack')) {
+                            return 'vendor-query';
+                        }
                         if (id.includes('ziggy')) {
                             return 'vendor-utils';
                         }
-                        // Outros node_modules em chunk separado
+                        if (id.includes('leaflet')) {
+                            return 'vendor-maps';
+                        }
                         return 'vendor-other';
                     }
                 },
-                // Otimizar nomes de chunks
                 chunkFileNames: 'js/[name]-[hash].js',
                 entryFileNames: 'js/[name]-[hash].js',
                 assetFileNames: 'assets/[name]-[hash].[ext]',
             },
         },
-        // Otimizações de build - usar esbuild (mais rápido que terser)
         minify: 'esbuild',
-        // Chunk size warnings
         chunkSizeWarningLimit: 1000,
-        // Source maps desabilitados em produção para melhor performance
         sourcemap: false,
-        // Otimizar assets
-        assetsInlineLimit: 4096, // Inline assets < 4kb
-        // Otimizar para carregamento paralelo
-        cssCodeSplit: true, // Separar CSS por chunk
-        reportCompressedSize: false, // Desabilitar para builds mais rápidos
-        // Otimizações adicionais para produção
-        target: 'es2015', // Suporte a navegadores modernos
-        terserOptions: {
-            compress: {
-                drop_console: false, // Manter console em dev, remover em prod se necessário
-                drop_debugger: true,
-            },
-        },
+        assetsInlineLimit: 4096,
+        cssCodeSplit: true,
+        reportCompressedSize: false,
+        target: 'es2015',
     },
-    // Otimizações de dependências
     optimizeDeps: {
-        include: ['vue', '@inertiajs/vue3', 'ziggy-js'],
+        include: ['vue', '@inertiajs/vue3', 'ziggy-js', '@tanstack/vue-query'],
         exclude: [],
     },
     server: {
         host: '0.0.0.0',
-        port: 5173,
-        strictPort: true,
-        // Configuração otimizada para Docker
-
+        port: 5175,
+        strictPort: false,
         hmr: {
             host: 'localhost',
-            port: 5173,
+            port: 5175,
             protocol: 'ws',
-            clientPort: 5173,
-            overlay: true, // Mostrar erros na tela
         },
-        // Configurações adicionais para HMR
         cors: true,
-        origin: 'http://localhost:5173',
+        origin: 'http://localhost:5175',
     },
 });

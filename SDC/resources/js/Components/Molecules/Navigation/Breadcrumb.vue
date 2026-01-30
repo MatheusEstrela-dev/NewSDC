@@ -34,12 +34,12 @@ const props = defineProps({
 function getItemClasses(item, isLast) {
   const base = 'flex items-center text-sm transition-colors';
   if (isLast) {
-    return `${base} text-white font-medium`;
+    return `${base} text-slate-800 dark:text-white font-medium`;
   }
   if (item.href) {
-    return `${base} text-slate-400 hover:text-blue-400`;
+    return `${base} text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400`;
   }
-  return `${base} text-slate-400`;
+  return `${base} text-slate-500 dark:text-slate-400`;
 }
 
 const navClasses = computed(() => {

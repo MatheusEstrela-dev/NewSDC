@@ -106,18 +106,6 @@ const handleExportCsv = (params) => {
 <style scoped>
 .demandas-container {
   @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .demandas-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .demandas-container {
-    padding: 2rem 2.5rem;
-  }
+  /* Padding removed to align with NavigationHeader which matches main content padding */
 }
 </style>

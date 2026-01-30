@@ -123,25 +123,7 @@ const formatDate = (date) => {
 <style scoped>
 .tdap-movimentacoes-container {
   @apply w-full min-h-screen;
-  padding: 1.5rem;
+  /* Padding removed for global alignment */
   background: #0f172a;
-}
-
-@media (min-width: 640px) {
-  .tdap-movimentacoes-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .tdap-movimentacoes-container {
-    padding: 2rem 2.5rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .tdap-movimentacoes-container {
-    padding: 2rem 3rem;
-  }
 }
 </style>

@@ -85,5 +85,15 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             }
         }
+
+        \Illuminate\Auth\Notifications\ResetPassword::toMailUsing(function (object $notifiable, string $token) {
+            return (new \Illuminate\Notifications\Messages\MailMessage)
+                ->subject('Redefinição de Senha - SDC')
+                ->view('emails.password_reset_simple', [
+                    'token' => $token,
+                    'email' => $notifiable->getEmailForPasswordReset(),
+                    'cpf_coordenador' => $notifiable->cpf ?? null,
+                ]);
+        });
     }
 }

@@ -110,24 +110,6 @@ const props = defineProps({
 <style scoped>
 .tdap-products-container {
   @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .tdap-products-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .tdap-products-container {
-    padding: 2rem 2.5rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .tdap-products-container {
-    padding: 2rem 3rem;
-  }
+  /* Padding removed for global alignment */
 }
 </style>

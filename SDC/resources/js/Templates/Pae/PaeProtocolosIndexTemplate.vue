@@ -298,33 +298,25 @@ function closePrint() {
 }
 
 // =========================
-// Modal de Exportação CSV
+// Modal de Exportação CSV (Usando Composable)
 // =========================
-const showExportModal = ref(false);
+import { useExport } from '@/Composables/useExport';
+
+const { 
+  showExportModal, 
+  handleExport: triggerExport 
+} = useExport('pae.export');
 
 function handleExportCsv(params) {
-  console.log('Exportar PAE com parâmetros:', params);
-  // TODO: Implementar chamada ao backend para exportação
-  alert(`Exportação PAE iniciada!\nTipo: ${params.type}\nData Início: ${params.data_inicio || 'N/A'}\nData Fim: ${params.data_fim || 'N/A'}`);
+  // Passamos os filtros atuais da tela para serem combinados com os filtros do modal
+  triggerExport(params, filters.value);
 }
 </script>
 
 <style scoped>
 .pae-protocolos-container {
   @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .pae-protocolos-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .pae-protocolos-container {
-    padding: 2rem 2.5rem;
-  }
+  /* Padding removed to align with NavigationHeader which matches main content padding */
 }
 </style>
 

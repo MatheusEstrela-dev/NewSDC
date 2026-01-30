@@ -16,12 +16,12 @@ class DatabaseSeeder extends Seeder
         $this->call(RolesAndPermissionsSeeder::class);
 
         // Criar admin principal do sistema
-        $admin = \App\Models\User::firstOrCreate(
+        $admin = \App\Models\User::updateOrCreate(
             ['cpf' => '12345678900'],
             [
                 'name' => 'Admin Geral',
                 'email' => 'admin@defesa.mg.gov.br',
-                'password' => bcrypt('password'),
+                'password' => 'password',
                 'email_verified_at' => now(),
             ]
         );
