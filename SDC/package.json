@@ -27,8 +27,10 @@
     "dependencies": {
         "@heroicons/vue": "^2.2.0",
         "@tanstack/vue-query": "^5.62.16",
+        "dexie": "^3.2.4",
         "idb-keyval": "^6.2.1",
         "leaflet": "^1.9.4",
+        "uuid": "^9.0.1",
         "ziggy-js": "^2.6.0"
     }
 }

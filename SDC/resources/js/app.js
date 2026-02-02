@@ -65,10 +65,10 @@ const setupPrefetching = () => {
     }, { passive: true });
 };
 
+import { SyncService } from './infrastructure/services/SyncService';
+
 const registerServiceWorker = async () => {
-    // PWA disabled for development stability
-    /*
-    if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    if ('serviceWorker' in navigator) {
         try {
             const { registerSW } = await import('virtual:pwa-register');
             registerSW({
@@ -80,11 +80,14 @@ const registerServiceWorker = async () => {
                         }, 1000 * 60 * 60);
                     }
                 },
-                onOfflineReady() {},
+                onOfflineReady() {
+                    console.log('App ready to work offline');
+                },
             });
-        } catch (e) {}
+        } catch (e) {
+            console.error('Service Worker registration failed:', e);
+        }
     }
-    */
 };
 
 const appName = import.meta.env.VITE_APP_NAME || 'SDC';
@@ -111,6 +114,7 @@ createInertiaApp({
 
         setupPrefetching();
         registerServiceWorker();
+        SyncService.init(); // Inicializa o serviço de sincronização
 
         return app;
     },

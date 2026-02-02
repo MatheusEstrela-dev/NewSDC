@@ -6,10 +6,17 @@ use App\Modules\Rat\Domain\ValueObjects\Protocolo;
 use App\Modules\Rat\Domain\ValueObjects\Status;
 use App\Modules\Rat\Domain\ValueObjects\Localizacao;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Rat extends Model
 {
+    use HasUuids;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
+
     protected $fillable = [
+        'id', // Permitir atribuição de ID (UUID vindo do front)
         'protocolo',
         'status',
         'tem_vistoria',

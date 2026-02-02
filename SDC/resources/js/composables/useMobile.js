@@ -1,7 +1,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 
 /**
- * Verifica se o dispositivo e realmente um touch device (mobile/tablet real)
+ * Verifica se o dispositivo suporta touch (para features especificas)
  */
 function isTouchDevice() {
   if (typeof window === 'undefined') return false;
@@ -13,15 +13,15 @@ function isTouchDevice() {
 }
 
 /**
- * Composable para detecção e gerenciamento de responsividade mobile
- * Considera zoom do navegador para evitar falsos positivos em desktop
+ * Composable para deteccao e gerenciamento de responsividade mobile
+ * Usa apenas viewport width para consistencia com media queries CSS
  */
 export function useMobile() {
   const MOBILE_BREAKPOINT = 768;
   const TABLET_BREAKPOINT = 1024;
 
-  const isRealTouchDevice = ref(false);
-  const viewportWidth = ref(TABLET_BREAKPOINT);
+  const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : TABLET_BREAKPOINT);
+  const hasTouchSupport = ref(false);
 
   const getViewportWidth = () => {
     if (typeof window === 'undefined') return TABLET_BREAKPOINT;
@@ -31,29 +31,21 @@ export function useMobile() {
   const checkDeviceType = () => {
     if (typeof window === 'undefined') return;
     viewportWidth.value = getViewportWidth();
-    isRealTouchDevice.value = isTouchDevice();
+    hasTouchSupport.value = isTouchDevice();
   };
 
+  // Mobile: viewport < 768px (consistente com CSS @media max-width: 767px)
   const isMobile = computed(() => {
-    const width = viewportWidth.value;
-    if (!isRealTouchDevice.value) {
-      return false;
-    }
-    return width < MOBILE_BREAKPOINT;
+    return viewportWidth.value < MOBILE_BREAKPOINT;
   });
 
+  // Tablet: viewport >= 768px e < 1024px (consistente com CSS @media min-width: 768px and max-width: 1023px)
   const isTablet = computed(() => {
-    const width = viewportWidth.value;
-    if (!isRealTouchDevice.value) {
-      return false;
-    }
-    return width >= MOBILE_BREAKPOINT && width < TABLET_BREAKPOINT;
+    return viewportWidth.value >= MOBILE_BREAKPOINT && viewportWidth.value < TABLET_BREAKPOINT;
   });
 
+  // Desktop: viewport >= 1024px
   const isDesktop = computed(() => {
-    if (!isRealTouchDevice.value) {
-      return true;
-    }
     return viewportWidth.value >= TABLET_BREAKPOINT;
   });
 
@@ -72,6 +64,7 @@ export function useMobile() {
     isMobile,
     isTablet,
     isDesktop,
+    hasTouchSupport,
   };
 }
 

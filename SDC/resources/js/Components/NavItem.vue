@@ -170,37 +170,71 @@ function handleClick() {
   flex-shrink: 0;
 }
 
-/* Tablet (768px - 1023px): Forçar modo collapsed */
+/* Tablet (768px - 1023px): Estilo controlado pelo parent Sidebar */
 @media (min-width: 768px) and (max-width: 1023px) {
-  .nav-item {
-    padding: 0.75rem !important;
-    justify-content: center !important;
+  /* Estado collapsed padrao */
+  :global(.sidebar:not(.is-mobile-open)) .nav-item {
+    padding: 0.75rem;
+    justify-content: center;
   }
 
-  .nav-item-text {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
+  :global(.sidebar:not(.is-mobile-open)) .nav-item-text {
+    display: none;
+    opacity: 0;
+    visibility: hidden;
   }
 
-  .nav-item-dot {
-    display: none !important;
+  :global(.sidebar:not(.is-mobile-open)) .nav-item-dot {
+    display: none;
   }
 
-  .nav-item.is-submenu {
-    padding: 0.75rem !important;
+  :global(.sidebar:not(.is-mobile-open)) .nav-item.is-submenu {
+    padding: 0.75rem;
   }
 
-  .nav-item.is-active {
-    border-left: none !important;
-    padding: 0.75rem !important;
+  :global(.sidebar:not(.is-mobile-open)) .nav-item.is-active {
+    border-left: none;
+    padding: 0.75rem;
     box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.35);
     border-radius: 12px;
     margin: 0 0.5rem;
   }
 
-  .nav-item-icon {
-    margin: 0 !important;
+  :global(.sidebar:not(.is-mobile-open)) .nav-item-icon {
+    margin: 0;
+  }
+
+  /* Estado expandido quando drawer aberto */
+  :global(.sidebar.is-mobile-open) .nav-item {
+    padding: 0.75rem 1.25rem;
+    justify-content: flex-start;
+    gap: 0.75rem;
+  }
+
+  :global(.sidebar.is-mobile-open) .nav-item-text {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  :global(.sidebar.is-mobile-open) .nav-item-dot {
+    display: block;
+  }
+
+  :global(.sidebar.is-mobile-open) .nav-item.is-submenu {
+    padding-left: 2.5rem;
+  }
+
+  :global(.sidebar.is-mobile-open) .nav-item.is-active {
+    border-left: 3px solid #3b82f6;
+    padding-left: calc(1.25rem - 3px);
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  :global(.sidebar.is-mobile-open) .nav-item.is-submenu.is-active {
+    padding-left: calc(2.5rem - 3px);
   }
 }
 </style>

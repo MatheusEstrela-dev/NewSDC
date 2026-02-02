@@ -458,62 +458,101 @@ provide('sidebarCollapsed', isCollapsed);
   width: 80px;
 }
 
-/* Tablet (768px - 1023px): Sidebar sempre collapsed (apenas ícones) */
+/* Tablet (768px - 1023px): Sidebar collapsed por padrao, expande quando drawer abre */
 @media (min-width: 768px) and (max-width: 1023px) {
   .sidebar {
-    width: 80px !important;
+    width: 80px;
     transform: translateX(0);
+    transition: width 0.3s ease, transform 0.3s ease;
   }
 
-  /* Forçar sempre collapsed em tablet */
-  .sidebar.is-collapsed,
-  .sidebar:not(.is-collapsed) {
-    width: 80px !important;
+  /* Quando drawer abre em tablet, expandir completamente */
+  .sidebar.is-mobile-open {
+    width: 280px !important;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
   }
 
-  /* Esconder completamente todos os textos */
-  .logo-text,
-  .nav-section-title,
-  .nav-arrow {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
+  /* Estado collapsed padrao (sem drawer aberto) */
+  .sidebar:not(.is-mobile-open) .logo-text,
+  .sidebar:not(.is-mobile-open) .nav-section-title,
+  .sidebar:not(.is-mobile-open) .nav-arrow {
+    display: none;
+    opacity: 0;
+    visibility: hidden;
   }
 
-  /* Esconder submenu em tablet */
-  .nav-submenu {
-    display: none !important;
+  /* Mostrar textos quando drawer esta aberto */
+  .sidebar.is-mobile-open .logo-text,
+  .sidebar.is-mobile-open .nav-section-title,
+  .sidebar.is-mobile-open .nav-arrow {
+    display: flex;
+    opacity: 1;
+    visibility: visible;
   }
 
-  /* Ajustar header */
-  .sidebar-header {
+  .sidebar.is-mobile-open .logo-text {
+    flex-direction: column;
+  }
+
+  /* Esconder submenu quando collapsed */
+  .sidebar:not(.is-mobile-open) .nav-submenu {
+    display: none;
+  }
+
+  /* Mostrar submenu quando drawer aberto */
+  .sidebar.is-mobile-open .nav-submenu {
+    display: block;
+  }
+
+  /* Ajustar header no estado collapsed */
+  .sidebar:not(.is-mobile-open) .sidebar-header {
     padding: 1rem;
     justify-content: center;
   }
 
-  .logo-container {
+  .sidebar:not(.is-mobile-open) .logo-container {
     justify-content: center;
   }
 
-  /* Esconder botão de toggle em tablet */
+  /* Ajustar header quando drawer aberto */
+  .sidebar.is-mobile-open .sidebar-header {
+    padding: 1.5rem 1.25rem;
+    justify-content: space-between;
+  }
+
+  .sidebar.is-mobile-open .logo-container {
+    justify-content: flex-start;
+  }
+
+  /* Esconder botao toggle desktop em tablet */
   .sidebar-toggle {
     display: none !important;
   }
 
-  /* Centralizar e ajustar nav-group-toggle */
-  .nav-group-toggle {
-    justify-content: center !important;
-    padding: 0.75rem !important;
+  /* nav-group-toggle collapsed */
+  .sidebar:not(.is-mobile-open) .nav-group-toggle {
+    justify-content: center;
+    padding: 0.75rem;
   }
 
-  /* Garantir que spans dentro de buttons sejam escondidos */
-  .nav-group-toggle span {
-    display: none !important;
+  .sidebar:not(.is-mobile-open) .nav-group-toggle span {
+    display: none;
   }
 
-  /* Ajustar ícones */
-  .nav-icon {
-    margin: 0 !important;
+  /* nav-group-toggle expandido */
+  .sidebar.is-mobile-open .nav-group-toggle {
+    justify-content: flex-start;
+    padding: 0.75rem 1.25rem;
+    gap: 0.75rem;
+  }
+
+  .sidebar.is-mobile-open .nav-group-toggle span {
+    display: inline;
+  }
+
+  /* Ajustar icones quando collapsed */
+  .sidebar:not(.is-mobile-open) .nav-icon {
+    margin: 0;
   }
 }
 

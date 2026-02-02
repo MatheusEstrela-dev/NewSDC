@@ -156,7 +156,7 @@ export default defineConfig({
     },
     optimizeDeps: {
         include: ['vue', '@inertiajs/vue3', 'ziggy-js', '@tanstack/vue-query'],
-        exclude: [],
+        exclude: ['virtual:pwa-register'],
     },
     server: {
         host: '0.0.0.0',

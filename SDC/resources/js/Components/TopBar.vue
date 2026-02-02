@@ -8,8 +8,8 @@
     :data-collapsed="isCollapsed"
   >
     <div class="flex items-center justify-between h-full px-4 sm:px-6 lg:px-8 gap-2 sm:gap-4 lg:gap-8">
-      <!-- Mobile: Hamburger Button Only -->
-      <div class="flex items-center gap-3 md:hidden">
+      <!-- Mobile/Tablet: Hamburger Button (visivel em telas < 1024px) -->
+      <div class="flex items-center gap-3 lg:hidden flex-shrink-0">
         <HamburgerButton
           :is-open="isSidebarOpen"
           @click="toggleSidebar"
@@ -17,10 +17,11 @@
         />
       </div>
 
+      <!-- Spacer para balancear o layout em desktop (mesmo tamanho do hamburger) -->
+      <div class="hidden lg:block w-10 flex-shrink-0"></div>
 
-
-      <!-- Search Bar Trigger (Pro Mode) -->
-      <div class="hidden md:flex flex-1 max-w-2xl mx-auto z-[60]">
+      <!-- Search Bar Trigger (Pro Mode) - visivel em tablet e desktop -->
+      <div class="hidden md:flex flex-1 max-w-2xl mx-auto z-[60] items-center gap-3">
         <button
           @click="openCommandPalette"
           class="relative flex items-center w-full group outline-none"
@@ -39,9 +40,25 @@
             </div>
           </div>
         </button>
+
+        <!-- AI Assistant Button (Next to Search) -->
+        <button
+          @click="showAiAssistant = true"
+          class="flex flex-shrink-0 items-center justify-center w-10 h-10 rounded-lg transition-all
+                 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 group"
+          title="Assistente IA - Defesa Civil"
+        >
+          <div class="w-9 h-9 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 group-hover:border-blue-400 dark:group-hover:border-blue-500 transition-colors bg-white">
+            <img 
+                src="/imgs/logo_dc.png"
+                alt="AI"
+                class="w-full h-full object-contain p-0.5"
+            />
+          </div>
+        </button>
       </div>
 
-      <!-- Mobile: Search Icon Button -->
+      <!-- Mobile Only: Search Icon Button (< 768px) -->
       <button
         class="flex md:hidden items-center justify-center w-10 h-10 rounded-lg transition-all
                text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -197,6 +214,7 @@
   <UserProfileModal :show="showProfileModal" @close="showProfileModal = false" />
   <CommandPalette :is-open="isCommandPaletteOpen" @close="isCommandPaletteOpen = false" />
   <SettingsModal :is-open="isSettingsOpen" @close="isSettingsOpen = false" />
+  <AiAssistantModal :show="showAiAssistant" @close="showAiAssistant = false" />
 </template>
 
 <script setup>
@@ -210,11 +228,13 @@ import UserProfileModal from './Organisms/UserProfileModal.vue';
 import HamburgerButton from './Atoms/Button/HamburgerButton.vue';
 import CommandPalette from './Organisms/CommandPalette.vue';
 import SettingsModal from './Organisms/Settings/SettingsModal.vue';
+import AiAssistantModal from './Organisms/AiAssistantModal.vue';
 
 // Force cache invalidation
 const page = usePage();
 const showUserMenu = ref(false);
 const showProfileModal = ref(false);
+const showAiAssistant = ref(false);
 
 // Pro Mode: Command Palette State
 const isCommandPaletteOpen = ref(false);

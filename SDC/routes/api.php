@@ -184,3 +184,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             ->name('stream');
     });
 });
+
+// ============================================================================
+// IA INTEGRATION CORE
+// ============================================================================
+
+Route::prefix('ia')->middleware('auth:sanctum')->name('ia.')->group(function () {
+    Route::get('plugins', [\App\Core\IA\Http\Controllers\AIPluginController::class, 'index'])->name('plugins.index');
+    Route::post('execute-plugin', [\App\Core\IA\Http\Controllers\AIPluginController::class, 'execute'])->name('execute-plugin');
+});

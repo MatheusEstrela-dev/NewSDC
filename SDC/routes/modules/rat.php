@@ -3,8 +3,12 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Modules\Rat\Presentation\Http\Controllers\RatIndexController;
+use App\Modules\Rat\Presentation\Http\Controllers\RatSyncController;
 
 Route::prefix('rat')->name('rat.')->group(function () {
+    // Rota de Sincronização Offline (Deve vir antes de /{id})
+    Route::post('/sync', [RatSyncController::class, 'sync'])->name('sync');
+
     // Rota para exportar RATs como CSV (DEVE vir antes de rotas com parâmetros como {id})
     Route::get('/export', [RatIndexController::class, 'export'])->name('export');
 
