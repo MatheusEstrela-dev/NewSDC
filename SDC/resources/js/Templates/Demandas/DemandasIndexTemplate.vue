@@ -36,6 +36,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useDemandas } from '@/Composables/useDemandas';
+import { useExport } from '@/Composables/useExport';
 import DemandasPageHeader from '@/Components/Organisms/Demandas/Header/DemandasPageHeader.vue';
 import DemandasStatisticsCards from '@/Components/Organisms/Demandas/Statistics/DemandasStatisticsCards.vue';
 import DemandasList from '@/Components/Organisms/Demandas/Lists/DemandasList.vue';
@@ -71,7 +72,11 @@ const {
 } = useDemandas();
 
 const showModal = ref(false);
-const showExportModal = ref(false);
+
+const { 
+  showExportModal, 
+  handleExport: triggerExport 
+} = useExport('admin.demandas.export');
 
 const handleFilterChange = (newFilters) => {
   setFilters(newFilters);
@@ -97,10 +102,9 @@ const handleCreateDemanda = (demandaData) => {
   // Futuramente: mostrar toast de sucesso
 };
 
-const handleExportCsv = (params) => {
-  console.log('Exportar Demandas com parâmetros:', params);
-  alert(`Exportação Demandas iniciada!\nTipo: ${params.type}\nData Início: ${params.data_inicio || 'N/A'}\nData Fim: ${params.data_fim || 'N/A'}`);
-};
+function handleExportCsv(params) {
+  triggerExport(params, filters.value);
+}
 </script>
 
 <style scoped>

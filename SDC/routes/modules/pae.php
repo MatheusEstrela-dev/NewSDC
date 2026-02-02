@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Pae\Presentation\Http\Controllers\PaeProtocoloController;
+use Inertia\Inertia;
 
 Route::prefix('pae')->name('pae.')->group(function () {
 

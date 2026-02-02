@@ -16,6 +16,9 @@ Route::prefix('decretacoes')->name('decretacoes.')->group(function () {
     // Index - Lista de processos
     Route::get('/', ProcessoIndexController::class)->name('index');
 
+    // Export - Exportar CSV
+    Route::get('/export', \App\Modules\Decretacoes\Presentation\Http\Controllers\ProcessoExportController::class)->name('export');
+
     // Show - Visualizar processo
     Route::get('/{id}', ProcessoShowController::class)->name('show');
 

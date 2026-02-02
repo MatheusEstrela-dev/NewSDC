@@ -14,11 +14,23 @@
           alt="SDC Logo"
           class="logo-image"
         />
-        <div v-show="!isCollapsed" class="logo-text">
+        <div v-show="!isCollapsed || (isMobile || isTablet)" class="logo-text">
           <div class="logo-title">SDC MG</div>
           <div class="logo-subtitle">SISTEMA INTEGRADO</div>
         </div>
       </div>
+      <!-- Botao fechar mobile -->
+      <button
+        v-if="isMobile || isTablet"
+        @click="closeSidebar"
+        class="sidebar-close-mobile"
+        title="Fechar menu"
+      >
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-6 h-6">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <!-- Botao toggle desktop -->
       <button
         @click="toggleSidebar"
         class="sidebar-toggle hidden lg:flex"
@@ -228,63 +240,19 @@
         </NavItem>
       </div>
 
-      <!-- ADMINISTRAÇÃO -->
+      <!-- ADMINISTRACAO -->
       <div class="nav-section">
-        <div v-show="!isCollapsed" class="nav-section-title">ADMINISTRAÇÃO</div>
+        <div v-show="!isCollapsed" class="nav-section-title">ADMINISTRACAO</div>
 
-        <!-- Permissionamento com submenu -->
-        <div class="nav-group">
-          <button
-            @click="toggleSubMenu('permissions')"
-            class="nav-group-toggle"
-            :class="{ 'is-open': openSubMenus.permissions }"
-            :title="isCollapsed ? 'Permissionamento' : ''"
-          >
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <span v-show="!isCollapsed">Permissionamento</span>
-            <svg
-              v-show="!isCollapsed"
-              class="nav-arrow"
-              :class="{ 'rotate-90': openSubMenus.permissions }"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <div v-show="openSubMenus.permissions && !isCollapsed" class="nav-submenu">
-            <NavItem
-              :href="route('admin.permissions.users.index')"
-              :active="route().current('admin.permissions.users.*')"
-              icon="dot"
-              is-submenu
-              :collapsed="isCollapsed"
-            >
-              Usuários
-            </NavItem>
-            <NavItem
-              :href="route('admin.permissions.roles.index')"
-              :active="route().current('admin.permissions.roles.*')"
-              icon="dot"
-              is-submenu
-              :collapsed="isCollapsed"
-            >
-              Cargos
-            </NavItem>
-            <NavItem
-              :href="route('admin.permissions.permissions.index')"
-              :active="route().current('admin.permissions.permissions.*')"
-              icon="dot"
-              is-submenu
-              :collapsed="isCollapsed"
-            >
-              Permissões
-            </NavItem>
-          </div>
-        </div>
+        <!-- Permissionamento - Link direto sem submenu -->
+        <NavItem
+          :href="permissionamentoHref"
+          :active="route().current('admin.permissions.*')"
+          icon="lock"
+          :collapsed="isCollapsed"
+        >
+          Permissionamento
+        </NavItem>
       </div>
     </nav>
 
@@ -300,6 +268,7 @@
 <script setup>
 import { ref, provide, inject, computed, onMounted, onUnmounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import NavItem from './NavItem.vue';
 
 // Tentar injetar o estado do layout, se não existir, criar localmente
@@ -320,11 +289,10 @@ const canSeeAdmin = computed(() => !!page.props?.auth?.user);
 
 const openSubMenus = ref({
   tdap: false,
-  permissions: false,
   ajudaHumanitaria: false,
 });
 
-// Links resilientes (evita tela branca quando uma rota não existir no Ziggy)
+// Links resilientes (evita tela branca quando uma rota nao existir no Ziggy)
 const ratHref = computed(() => {
   if (route().has('rat.index')) return route('rat.index');
   if (route().has('rat.create')) return route('rat.create');
@@ -332,8 +300,15 @@ const ratHref = computed(() => {
 });
 
 const paeHref = computed(() => {
-  if (route().has('pae.protocolos.index')) return route('pae.protocolos.index'); // produção
-  if (route().has('pae.index')) return route('pae.index'); // fallback
+  if (route().has('pae.protocolos.index')) return route('pae.protocolos.index');
+  if (route().has('pae.index')) return route('pae.index');
+  return route('dashboard');
+});
+
+const permissionamentoHref = computed(() => {
+  if (route().has('admin.permissions.users.index')) return route('admin.permissions.users.index');
+  if (route().has('admin.permissions.roles.index')) return route('admin.permissions.roles.index');
+  if (route().has('admin.permissions.permissions.index')) return route('admin.permissions.permissions.index');
   return route('dashboard');
 });
 
@@ -342,7 +317,7 @@ function toggleSidebar() {
   // Fechar submenus quando colapsar
   if (isCollapsed.value) {
     openSubMenus.value.tdap = false;
-    openSubMenus.value.permissions = false;
+    openSubMenus.value.ajudaHumanitaria = false;
   }
 }
 
@@ -832,5 +807,37 @@ provide('sidebarCollapsed', isCollapsed);
   50% {
     opacity: 0.8;
   }
+}
+
+/* Mobile close button */
+.sidebar-close-mobile {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-close-mobile:hover,
+.sidebar-close-mobile:active {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.sidebar-close-mobile:active {
+  transform: scale(0.95);
+}
+
+.sidebar-close-mobile svg {
+  width: 24px;
+  height: 24px;
 }
 </style>

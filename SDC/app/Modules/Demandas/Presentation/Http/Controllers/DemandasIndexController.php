@@ -15,6 +15,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
+use App\Services\Export\CsvExportService;
+
 /**
  * Controller: Demandas Index
  *
@@ -26,7 +28,8 @@ class DemandasIndexController extends Controller
         private readonly ListTasksUseCase $listTasksUseCase,
         private readonly GetTaskStatisticsUseCase $getStatisticsUseCase,
         private readonly AssignTaskUseCase $assignTaskUseCase,
-        private readonly ChangeTaskStatusUseCase $changeTaskStatusUseCase
+        private readonly ChangeTaskStatusUseCase $changeTaskStatusUseCase,
+        private readonly CsvExportService $csvExportService
     ) {
     }
 
@@ -137,5 +140,61 @@ class DemandasIndexController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Erro ao alterar status. Por favor, tente novamente.');
         }
+    }
+
+    /**
+     * Exportar demandas para CSV
+     */
+    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $user = $request->user();
+
+        // Mesmos filtros do Index e AdminIndex
+        $filters = $request->only([
+            'protocolo',
+            'status',
+            'tipo',
+            'prioridade',
+            'categoria',
+            'atribuido_para_id',
+            'solicitante_id',
+            'data_inicio',
+            'data_fim',
+            'atrasadas',
+            'minhas_tasks',
+            'search',
+        ]);
+
+        // Reutilizar caso de uso de listagem com -1 para pegar todos
+        $tasksResult = $this->listTasksUseCase->executeAsDTO($filters, $user, -1);
+        $tasks = $tasksResult['data'];
+
+        $headers = [
+            'ID',
+            'Protocolo',
+            'Título',
+            'Tipo',
+            'Prioridade',
+            'Status',
+            'Solicitante',
+            'Responsável',
+            'Data Criação'
+        ];
+
+        $mapper = function ($task) {
+            return [
+                $task['id'] ?? '',
+                $task['protocolo'] ?? '',
+                $task['titulo'] ?? '',
+                $task['tipo'] ?? '',
+                $task['prioridade'] ?? '',
+                $task['status'] ?? '',
+                $task['solicitante']['name'] ?? '',
+                $task['tecnico_responsavel']['name'] ?? '',
+                $task['created_at'] ?? ''
+            ];
+        };
+
+        return $this->csvExportService->export($tasks, $headers, $mapper, 'demandas_export');
     }
 }

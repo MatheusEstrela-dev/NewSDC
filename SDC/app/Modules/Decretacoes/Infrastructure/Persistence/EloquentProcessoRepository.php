@@ -45,9 +45,15 @@ class EloquentProcessoRepository implements ProcessoRepositoryInterface
 
     public function paginate(int $perPage = 15): LengthAwarePaginator
     {
-        return Processo::with(['municipios'])
-                       ->orderBy('data_entrada', 'desc')
-                       ->paginate($perPage);
+        $query = Processo::with(['municipios'])
+                       ->orderBy('data_entrada', 'desc');
+
+        if ($perPage === -1) {
+            $total = (clone $query)->count();
+            $perPage = $total > 0 ? $total : 1;
+        }
+
+        return $query->paginate($perPage);
     }
 
     public function findAll(array $filters = [], int $perPage = 15): LengthAwarePaginator

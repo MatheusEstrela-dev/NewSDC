@@ -15,7 +15,7 @@ const loadPageCSS = (pageName) => {
 
     const loader = cssMap[pageName];
     if (loader) {
-        loader().catch(() => {});
+        loader().catch(() => { });
     }
 };
 
@@ -66,6 +66,8 @@ const setupPrefetching = () => {
 };
 
 const registerServiceWorker = async () => {
+    // PWA disabled for development stability
+    /*
     if ('serviceWorker' in navigator && import.meta.env.PROD) {
         try {
             const { registerSW } = await import('virtual:pwa-register');
@@ -82,6 +84,7 @@ const registerServiceWorker = async () => {
             });
         } catch (e) {}
     }
+    */
 };
 
 const appName = import.meta.env.VITE_APP_NAME || 'SDC';

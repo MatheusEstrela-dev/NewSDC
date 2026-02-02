@@ -3,6 +3,8 @@ import { ref, provide } from 'vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import TopBar from '@/Components/TopBar.vue';
 import NavigationHeader from '@/Components/Organisms/Navigation/NavigationHeader.vue';
+import OfflineIndicator from '@/Components/Molecules/OfflineIndicator.vue';
+import PullToRefresh from '@/Components/Molecules/PullToRefresh.vue';
 import { useMobile, useSidebarMobile } from '@/composables/useMobile';
 import SupportModal from '@/Components/Organisms/Suporte/SupportModal.vue';
 import TermosUsoModal from '@/Components/Organisms/TermosUsoModal.vue';
@@ -31,6 +33,12 @@ provide('openSidebar', openSidebar);
 
 <template>
   <div class="flex min-h-screen bg-slate-50 dark:bg-slate-950">
+    <!-- Offline/Slow Connection Indicator -->
+    <OfflineIndicator />
+
+    <!-- Pull to Refresh (Mobile Only) -->
+    <PullToRefresh />
+
     <!-- Mobile Overlay/Backdrop -->
     <Transition name="fade">
       <div

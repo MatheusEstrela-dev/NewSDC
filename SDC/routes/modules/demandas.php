@@ -51,6 +51,10 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     Route::middleware(['can:demandas.manage'])->prefix('admin/demandas')->name('admin.demandas.')->group(function () {
 
+        // Exportar
+        Route::get('/export', [DemandasIndexController::class, 'export'])
+            ->name('export');
+
         // Dashboard de gestão (todas as demandas)
         Route::get('/', [DemandasIndexController::class, 'adminIndex'])
             ->name('index');

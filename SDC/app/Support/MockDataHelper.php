@@ -240,6 +240,11 @@ class MockDataHelper
             'last_page' => 1,
             'per_page' => 12,
             'total' => 4,
+            'links' => [
+                ['url' => null, 'label' => '&laquo; Anterior', 'active' => false],
+                ['url' => '#', 'label' => '1', 'active' => true],
+                ['url' => null, 'label' => 'Proximo &raquo;', 'active' => false],
+            ],
         ];
     }
 

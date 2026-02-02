@@ -16,6 +16,7 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
 
     // Portal do Usuário - Visualizar treinamentos
     Route::get('/', TreinamentoIndexController::class)->name('index');
+    Route::get('/export', \App\Modules\Treinamento\Presentation\Http\Controllers\TreinamentoExportController::class)->name('export');
     Route::get('/{id}', TreinamentoShowController::class)->name('show');
 
     // Admin - Gestão de Treinamentos

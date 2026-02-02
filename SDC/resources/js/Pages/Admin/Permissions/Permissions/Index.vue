@@ -157,6 +157,7 @@
 <script setup>
 import { ref, computed, h } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import StatsCard from '@/Components/Admin/StatsCard.vue';
 import PermissionBadge from '@/Components/Admin/PermissionBadge.vue';

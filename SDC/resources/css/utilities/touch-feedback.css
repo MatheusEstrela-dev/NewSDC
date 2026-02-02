@@ -1,0 +1,194 @@
+/**
+ * Touch Feedback Utilities
+ * Feedback visual imediato para interacoes touch em mobile
+ */
+
+/* Base touch feedback - scale down on active */
+.touch-feedback {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+  will-change: transform;
+}
+
+.touch-feedback:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+/* Touch feedback mais sutil */
+.touch-feedback-subtle:active {
+  transform: scale(0.98);
+  opacity: 0.95;
+}
+
+/* Touch feedback mais intenso */
+.touch-feedback-strong:active {
+  transform: scale(0.92);
+  opacity: 0.85;
+}
+
+/* Ripple Effect Container */
+.ripple-container {
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ripple Effect Base */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple-animation 0.6s linear;
+  background-color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+
+/* Dark ripple para fundos claros */
+.ripple-dark {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Primary color ripple */
+.ripple-primary {
+  background-color: rgba(37, 99, 235, 0.3);
+}
+
+@keyframes ripple-animation {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Button press effect */
+.btn-press {
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-press:active {
+  transform: scale(0.97) translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Card press effect */
+.card-press {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform, box-shadow;
+}
+
+.card-press:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* List item press effect */
+.list-item-press {
+  transition: background-color 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.list-item-press:active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark .list-item-press:active {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Icon button press */
+.icon-btn-press {
+  transition: transform 0.1s ease, background-color 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.icon-btn-press:active {
+  transform: scale(0.9);
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Nav item press */
+.nav-item-press {
+  transition: transform 0.1s ease, background-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-item-press:active {
+  transform: scale(0.97);
+  background-color: rgba(37, 99, 235, 0.15);
+}
+
+/* Disable touch feedback on desktop */
+@media (hover: hover) and (pointer: fine) {
+  .touch-feedback:active,
+  .touch-feedback-subtle:active,
+  .touch-feedback-strong:active,
+  .btn-press:active,
+  .card-press:active,
+  .icon-btn-press:active,
+  .nav-item-press:active {
+    transform: none;
+    opacity: 1;
+  }
+
+  /* Enable hover effects instead on desktop */
+  .touch-feedback:hover {
+    opacity: 0.9;
+  }
+
+  .btn-press:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .card-press:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* Haptic feedback simulation via CSS (visual only) */
+.haptic-light:active {
+  animation: haptic-light 0.1s ease;
+}
+
+.haptic-medium:active {
+  animation: haptic-medium 0.15s ease;
+}
+
+.haptic-heavy:active {
+  animation: haptic-heavy 0.2s ease;
+}
+
+@keyframes haptic-light {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.98); }
+}
+
+@keyframes haptic-medium {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.96); }
+}
+
+@keyframes haptic-heavy {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.94); }
+}
+
+/* Focus ring for accessibility */
+.touch-focus:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Remove default browser touch highlight */
+.no-tap-highlight {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}

@@ -67,13 +67,17 @@ const handleFilterReset = () => {
 };
 
 // =========================
-// Modal de Exportação CSV
+// Modal de Exportação CSV (Usando Composable)
 // =========================
-const showExportModal = ref(false);
+import { useExport } from '@/Composables/useExport';
+
+const {
+  showExportModal,
+  handleExport: triggerExport
+} = useExport('treinamentos.export');
 
 function handleExportCsv(params) {
-  console.log('Exportar Treinamentos com parâmetros:', params);
-  alert(`Exportação Treinamentos iniciada!\nTipo: ${params.type}\nData Início: ${params.data_inicio || 'N/A'}\nData Fim: ${params.data_fim || 'N/A'}`);
+  triggerExport(params, localFilters.value);
 }
 </script>
 

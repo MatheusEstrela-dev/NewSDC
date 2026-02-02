@@ -190,13 +190,17 @@ const handleStatFilter = (type) => {
 };
 
 // =========================
-// Modal de Exportação CSV
+// Modal de Exportação CSV (Usando Composable)
 // =========================
-const showExportModal = ref(false);
+import { useExport } from '@/Composables/useExport';
+
+const {
+  showExportModal,
+  handleExport: triggerExport
+} = useExport('decretacoes.export');
 
 function handleExportCsv(params) {
-  console.log('Exportar Decretações com parâmetros:', params);
-  alert(`Exportação Decretações iniciada!\nTipo: ${params.type}\nData Início: ${params.data_inicio || 'N/A'}\nData Fim: ${params.data_fim || 'N/A'}`);
+  triggerExport(params, localFilters.value);
 }
 </script>
 

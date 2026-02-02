@@ -1,5 +1,6 @@
 <template>
   <AuthenticatedLayout>
+    <Head title="Gerenciamento de Cargos" />
     <div class="permissions-container">
       <div class="page-header">
         <div class="header-content">
@@ -174,14 +175,20 @@
         </div>
 
         <div v-if="roles.data.length > 0" class="pagination">
-          <Link
-            v-for="link in roles.links"
-            :key="link.label"
-            :href="link.url"
-            class="pagination-link"
-            :class="{ active: link.active, disabled: !link.url }"
-            v-html="link.label"
-          />
+          <template v-for="(link, key) in roles.links" :key="key">
+            <Link
+              v-if="link.url"
+              :href="link.url"
+              class="pagination-link"
+              :class="{ active: link.active }"
+              v-html="link.label"
+            />
+            <span
+              v-else
+              class="pagination-link disabled"
+              v-html="link.label"
+            ></span>
+          </template>
         </div>
       </div>
     </div>
@@ -203,7 +210,8 @@
 
 <script setup>
 import { ref, h } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import StatsCard from '@/Components/Admin/StatsCard.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';

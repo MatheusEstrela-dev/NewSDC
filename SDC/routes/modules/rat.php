@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 use App\Modules\Rat\Presentation\Http\Controllers\RatIndexController;
 
 Route::prefix('rat')->name('rat.')->group(function () {

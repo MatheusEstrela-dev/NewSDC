@@ -180,6 +180,7 @@ import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PrintBeneficiarioModal from '@/Components/Organisms/AjudaHumanitaria/Print/PrintBeneficiarioModal.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import { useMobile } from '@/composables/useMobile';
+import { useExport } from '@/Composables/useExport';
 
 const props = defineProps({
   beneficiarios: {
@@ -239,14 +240,15 @@ const handleFilterReset = () => {
 };
 
 // =========================
-// Modal de Exportação CSV
+// Modal de Exportação CSV (Usando Composable)
 // =========================
-const showExportModal = ref(false);
+const { 
+  showExportModal, 
+  handleExport: triggerExport 
+} = useExport('ajuda-humanitaria.beneficiarios.export');
 
 function handleExportCsv(params) {
-  // TODO: Implementar lógica de exportação real
-  console.log('Exportar:', params); 
-  showExportModal.value = false;
+  triggerExport(params, filters.value);
 }
 
 // =========================

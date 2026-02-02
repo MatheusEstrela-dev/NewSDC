@@ -18,6 +18,7 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
 
     // Beneficiários
     Route::prefix('beneficiarios')->name('beneficiarios.')->group(function () {
+        Route::get('/export', \App\Modules\AjudaHumanitaria\Presentation\Http\Controllers\Beneficiarios\BeneficiarioExportController::class)->name('export');
         Route::get('/', BeneficiarioIndexController::class)->name('index');
         Route::post('/', BeneficiarioStoreController::class)->name('store');
         Route::get('/{id}', BeneficiarioShowController::class)->name('show');

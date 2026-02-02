@@ -64,6 +64,11 @@ class EloquentBeneficiarioRepository implements BeneficiarioRepositoryInterface
         $sortDirection = $filters['sort_direction'] ?? 'desc';
         $query->orderBy($sortField, $sortDirection);
 
+        if ($perPage === -1) {
+            $total = (clone $query)->count();
+            $perPage = $total > 0 ? $total : 1;
+        }
+
         return $query->paginate($perPage);
     }
 

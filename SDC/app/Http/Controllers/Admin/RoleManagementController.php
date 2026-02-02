@@ -36,10 +36,6 @@ class RoleManagementController extends Controller
 
             $roles = $query->paginate(12)->withQueryString();
 
-            if ($roles->total() === 0) {
-                throw new \Exception("No roles found, using mocks.");
-            }
-
             $stats = [
                 'total' => Role::count(),
                 'active' => Role::where('is_active', true)->count(),

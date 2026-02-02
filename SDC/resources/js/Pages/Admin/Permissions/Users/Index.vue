@@ -161,14 +161,20 @@
         <div class="pagination-info">
           Mostrando {{ users.from }} até {{ users.to }} de {{ users.total }} usuários
         </div>
-        <div class="pagination-links">
-          <Link
-            v-for="link in users.links"
-            :key="link.label"
-            :href="link.url"
-            :class="['pagination-link', { active: link.active, disabled: !link.url }]"
-            v-html="link.label"
-          />
+        <div class="pagination-links" v-if="users.links">
+          <template v-for="(link, key) in users.links" :key="key">
+            <Link
+              v-if="link.url"
+              :href="link.url"
+              :class="['pagination-link', { active: link.active }]"
+              v-html="link.label"
+            />
+            <span
+              v-else
+              class="pagination-link disabled"
+              v-html="link.label"
+            ></span>
+          </template>
         </div>
       </div>
     </div>
@@ -178,6 +184,7 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 const props = defineProps({
