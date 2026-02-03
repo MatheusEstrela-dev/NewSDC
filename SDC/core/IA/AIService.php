@@ -9,6 +9,7 @@ use App\Core\IA\Contracts\ToolInterface;
 use App\Core\IA\Drivers\OpenAIDriver;
 use App\Core\IA\Drivers\ClaudeDriver;
 use App\Core\IA\Drivers\GeminiDriver;
+use App\Core\IA\Drivers\OllamaDriver;
 use App\Core\IA\DTOs\ChatInputDTO;
 use App\Core\IA\Models\AIConversation;
 use App\Core\IA\Models\AIMessage;
@@ -37,6 +38,8 @@ class AIService
             'openai' => new OpenAIDriver(),
             'claude' => new ClaudeDriver(),
             'gemini' => new GeminiDriver(),
+            'ollama' => new OllamaDriver(),
+            'mock' => new \App\Core\IA\Drivers\MockDriver(),
             default => throw new InvalidArgumentException("Driver [$name] not supported"),
         };
     }
@@ -234,23 +237,24 @@ class AIService
     protected function saveMessages(string $userMessage, string $assistantMessage, array $toolResults): void
     {
         if (!$this->conversationId) {
-            $conversation = AIConversation::create([
-                'id' => Str::uuid(),
+            $uuid = (string) Str::uuid();
+            AIConversation::create([
+                'id' => $uuid,
                 'user_id' => Auth::id(),
                 'title' => Str::limit($userMessage, 100),
             ]);
-            $this->conversationId = $conversation->id;
+            $this->conversationId = $uuid;
         }
 
         AIMessage::create([
-            'id' => Str::uuid(),
+            'id' => (string) Str::uuid(),
             'conversation_id' => $this->conversationId,
             'role' => 'user',
             'content' => $userMessage,
         ]);
 
         AIMessage::create([
-            'id' => Str::uuid(),
+            'id' => (string) Str::uuid(),
             'conversation_id' => $this->conversationId,
             'role' => 'assistant',
             'content' => $assistantMessage,
@@ -266,13 +270,14 @@ class AIService
             return $conversationId;
         }
 
+        $uuid = (string) Str::uuid();
         $conversation = AIConversation::create([
-            'id' => Str::uuid(),
+            'id' => $uuid,
             'user_id' => Auth::id(),
         ]);
 
-        $this->conversationId = $conversation->id;
-        return $conversation->id;
+        $this->conversationId = $uuid;
+        return $uuid;
     }
 
     public function getDriver(): LLMDriverInterface

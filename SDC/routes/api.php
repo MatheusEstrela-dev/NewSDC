@@ -189,7 +189,39 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 // IA INTEGRATION CORE
 // ============================================================================
 
+Route::prefix('ai')->middleware('auth:sanctum')->group(function () {
+    Route::post('chat', [\App\Core\IA\Http\Controllers\ChatController::class, 'chat']);
+    Route::post('chat/stream', [\App\Core\IA\Http\Controllers\ChatController::class, 'stream']);
+    Route::get('conversations', [\App\Core\IA\Http\Controllers\ChatController::class, 'conversations']);
+    Route::get('conversations/{id}/messages', [\App\Core\IA\Http\Controllers\ChatController::class, 'messages']);
+    Route::delete('conversations/{id}', [\App\Core\IA\Http\Controllers\ChatController::class, 'deleteConversation']);
+    Route::get('tools', [\App\Core\IA\Http\Controllers\ChatController::class, 'tools']);
+});
+
 Route::prefix('ia')->middleware('auth:sanctum')->name('ia.')->group(function () {
     Route::get('plugins', [\App\Core\IA\Http\Controllers\AIPluginController::class, 'index'])->name('plugins.index');
     Route::post('execute-plugin', [\App\Core\IA\Http\Controllers\AIPluginController::class, 'execute'])->name('execute-plugin');
 });
+
+// ============================================================================
+// DEV ONLY - AI Routes without authentication (remove in production)
+// ============================================================================
+
+if (app()->environment('local', 'development')) {
+    Route::prefix('ai/dev')->group(function () {
+        Route::post('chat', [\App\Core\IA\Http\Controllers\ChatController::class, 'chat']);
+        Route::post('chat/stream', [\App\Core\IA\Http\Controllers\ChatController::class, 'stream']);
+        Route::get('status', function () {
+            $driver = app(\App\Core\IA\AIService::class);
+            $ollamaDriver = $driver->getDriver();
+
+            return response()->json([
+                'driver' => $ollamaDriver->getDriverName(),
+                'model' => $ollamaDriver->getModel(),
+                'available' => method_exists($ollamaDriver, 'isAvailable')
+                    ? $ollamaDriver->isAvailable()
+                    : true,
+            ]);
+        });
+    });
+}

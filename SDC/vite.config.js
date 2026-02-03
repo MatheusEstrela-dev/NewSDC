@@ -169,5 +169,11 @@ export default defineConfig({
         },
         cors: true,
         origin: 'http://localhost:5175',
+        headers: {
+            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*;",
+        },
+    },
+    worker: {
+        format: 'es',
     },
 });

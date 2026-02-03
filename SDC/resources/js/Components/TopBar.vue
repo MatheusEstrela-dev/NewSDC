@@ -43,8 +43,9 @@
 
         <!-- AI Assistant Button (Next to Search) -->
         <button
+          type="button"
           @click="showAiAssistant = true"
-          class="flex flex-shrink-0 items-center justify-center w-10 h-10 rounded-lg transition-all
+          class="relative z-50 flex flex-shrink-0 items-center justify-center w-10 h-10 rounded-lg transition-all
                  hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 group"
           title="Assistente IA - Defesa Civil"
         >

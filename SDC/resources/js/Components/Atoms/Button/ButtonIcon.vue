@@ -1,17 +1,20 @@
 <template>
-  <button
-    :type="type"
+  <component
+    :is="componentTag"
+    :href="href"
+    :type="href ? undefined : type"
     :disabled="disabled"
     :class="buttonClasses"
     :title="title"
-    @click="$emit('click', $event)"
+    @click="handleClick"
   >
     <component :is="icon" :class="iconClasses" />
-  </button>
+  </component>
 </template>
 
 <script setup>
 import { computed } from 'vue';
+import { Link } from '@inertiajs/vue3';
 
 const props = defineProps({
   icon: {
@@ -44,9 +47,29 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  href: {
+    type: String,
+    default: null,
+  },
+  confirmMessage: {
+    type: String,
+    default: null,
+  },
 });
 
-defineEmits(['click']);
+const emit = defineEmits(['click']);
+
+const componentTag = computed(() => props.href ? Link : 'button');
+
+const handleClick = (event) => {
+  if (props.confirmMessage) {
+    if (!confirm(props.confirmMessage)) {
+      event.preventDefault();
+      return;
+    }
+  }
+  emit('click', event);
+};
 
 const variantClasses = {
   primary: 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10',

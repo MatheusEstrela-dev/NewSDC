@@ -15,16 +15,37 @@
 .DEFAULT_GOAL := help
 
 # ============================================================================
-# CORES E FORMATAÇÃO
+# CORES E FORMATAÇÃO (Cross-Platform)
 # ============================================================================
-GREEN  := $(shell tput -Txterm setaf 2)
-YELLOW := $(shell tput -Txterm setaf 3)
-BLUE   := $(shell tput -Txterm setaf 4)
-RED    := $(shell tput -Txterm setaf 1)
-CYAN   := $(shell tput -Txterm setaf 6)
-WHITE  := $(shell tput -Txterm setaf 7)
-BOLD   := $(shell tput -Txterm bold)
-RESET  := $(shell tput -Txterm sgr0)
+ifeq ($(OS),Windows_NT)
+    # Windows - Usar códigos ANSI diretos (requer terminal moderno)
+    GREEN  := [32m
+    YELLOW := [33m
+    BLUE   := [34m
+    RED    := [31m
+    CYAN   := [36m
+    WHITE  := [37m
+    BOLD   := [1m
+    RESET  := [0m
+    
+    # User ID fallback para Windows
+    HOST_UID := 1000
+    HOST_GID := 1000
+else
+    # Linux/Mac - Usar tput para detecção correta
+    GREEN  := $(shell tput -Txterm setaf 2)
+    YELLOW := $(shell tput -Txterm setaf 3)
+    BLUE   := $(shell tput -Txterm setaf 4)
+    RED    := $(shell tput -Txterm setaf 1)
+    CYAN   := $(shell tput -Txterm setaf 6)
+    WHITE  := $(shell tput -Txterm setaf 7)
+    BOLD   := $(shell tput -Txterm bold)
+    RESET  := $(shell tput -Txterm sgr0)
+
+    # User ID correto do host
+    HOST_UID := $(shell id -u)
+    HOST_GID := $(shell id -g)
+endif
 
 # ============================================================================
 # VARIÁVEIS DE AMBIENTE
@@ -33,8 +54,6 @@ COMPOSE_DEV := docker compose -f docker/docker-compose.yml
 COMPOSE_PROD := docker compose -f docker/docker-compose.prod.yml
 
 # Build args
-HOST_UID ?= $(shell id -u)
-HOST_GID ?= $(shell id -g)
 DOCKER_BUILDKIT ?= 1
 COMPOSE_DOCKER_CLI_BUILD ?= 1
 

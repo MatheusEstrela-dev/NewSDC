@@ -1,6 +1,7 @@
 <script setup>
 import { ref, nextTick, watch, onMounted, onUnmounted } from 'vue';
 import Modal from '@/Components/Modal.vue';
+import { useHybridAI } from '@/Composables/useHybridAI';
 import { 
     ChatBubbleLeftIcon, 
     PaperAirplaneIcon, 
@@ -17,7 +18,7 @@ import {
     PaperClipIcon, 
     ArrowRightIcon, 
     ShieldCheckIcon 
-} from '@heroicons/vue/24/outline'; // Checking imports, 24/outline is standard for Heroicons v2
+} from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     show: Boolean,
@@ -25,9 +26,11 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 
+// Hybrid AI Composable
+const { ask, isThinking, isReady, error } = useHybridAI();
+
 const isSidebarOpen = ref(true);
 const userInput = ref('');
-const isTyping = ref(false);
 const messagesContainer = ref(null);
 const messages = ref([]);
 
@@ -58,14 +61,16 @@ const scrollToBottom = async () => {
 };
 
 watch(() => messages.value.length, scrollToBottom);
+watch(() => isThinking.value, (val) => {
+    if (val) scrollToBottom();
+});
 watch(() => props.show, (val) => {
     if (val) {
         scrollToBottom();
-        // Reset state slightly on open if desired, or keep history
     }
 });
 
-const handleSend = (content = null) => {
+const handleSend = async (content = null) => {
     const textToSend = content || userInput.value;
     if (!textToSend || !textToSend.trim()) return;
 
@@ -78,20 +83,31 @@ const handleSend = (content = null) => {
     });
 
     userInput.value = '';
-    isTyping.value = true;
     scrollToBottom();
 
-    // AI Simulation
-    setTimeout(() => {
-        messages.value.push({
-            id: Date.now() + 1,
-            role: 'assistant',
-            content: `Certo! Analisando sua solicitação sobre "${textToSend}". O sistema SDC está processando os dados geográficos e meteorológicos em tempo real para fornecer a melhor resposta.`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        });
-        isTyping.value = false;
-        scrollToBottom();
-    }, 1200);
+    // Create Assistant Message placeholder
+    const aiMsgId = Date.now() + 1;
+    messages.value.push({
+        id: aiMsgId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+
+    // Call Hybrid AI
+    await ask(
+        textToSend,
+        (chunk) => {
+            const idx = messages.value.findIndex(m => m.id === aiMsgId);
+            if (idx !== -1) {
+                messages.value[idx].content += chunk;
+                scrollToBottom();
+            }
+        },
+        () => {
+            console.log("Response complete");
+        }
+    );
 };
 
 const close = () => {
@@ -142,7 +158,9 @@ const close = () => {
                     
                     <div class="mt-4 p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-lg shadow-blue-500/20">
                         <p class="text-xs font-bold uppercase tracking-wider mb-1">Status do Sistema</p>
-                        <p class="text-[10px] opacity-80 mb-3 font-medium">Você está operando no módulo avançado da Defesa Civil.</p>
+                        <p class="text-[10px] opacity-80 mb-3 font-medium">
+                            {{ isReady ? 'IA Híbrida Ativa (WASM + Cloud)' : 'Carregando Módulos IA...' }}
+                        </p>
                         <button class="w-full py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-lg text-xs font-bold transition-all">
                             Ver Painel Geral
                         </button>
@@ -230,17 +248,18 @@ const close = () => {
                             <!-- Message Body -->
                             <div class="flex flex-col max-w-[85%]" :class="msg.role === 'user' ? 'items-end' : 'items-start'">
                                 <div 
-                                    class="p-5 rounded-2xl text-sm leading-relaxed shadow-sm"
+                                    class="p-5 rounded-2xl text-sm leading-relaxed shadow-sm whitespace-pre-wrap"
                                     :class="msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-tl-none'"
                                 >
                                     {{ msg.content }}
+                                    <span v-if="msg.role === 'assistant' && msg.content === '' && isThinking" class="inline-block w-2 h-4 bg-blue-500 animate-pulse ml-1">|</span>
                                 </div>
                                 <span class="text-[10px] text-slate-400 mt-2 font-medium">{{ msg.timestamp }}</span>
                             </div>
                         </div>
 
-                        <!-- Typing Indicator -->
-                        <div v-if="isTyping" class="flex gap-4">
+                        <!-- Thinking Indicator -->
+                        <div v-if="isThinking && messages[messages.length-1].role !== 'assistant'" class="flex gap-4">
                             <div class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-blue-500 shadow-md shadow-blue-500/5">
                                 <CpuChipIcon class="w-5 h-5" />
                             </div>
@@ -256,6 +275,9 @@ const close = () => {
                 <!-- FOOTER / INPUT -->
                 <footer class="p-6 bg-gradient-to-t from-white dark:from-[#0b0f1a] via-white dark:via-[#0b0f1a] to-transparent z-10">
                     <div class="max-w-4xl mx-auto">
+                        <div v-if="error" class="mb-2 p-2 bg-red-100 text-red-700 rounded-lg text-xs">
+                            {{ error }}
+                        </div>
                         <div class="relative flex items-center bg-white dark:bg-[#161d2b] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl shadow-slate-200/20 dark:shadow-none p-1 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
                             <button class="p-3 text-slate-400 hover:text-blue-500 transition-colors">
                                 <PaperClipIcon class="w-5 h-5" />
@@ -271,9 +293,9 @@ const close = () => {
                             
                             <button 
                                 @click="handleSend()"
-                                :disabled="!userInput.trim()"
+                                :disabled="!userInput.trim() || isThinking"
                                 class="p-3 rounded-xl transition-all m-1"
-                                :class="userInput.trim() ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'"
+                                :class="userInput.trim() && !isThinking ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'"
                             >
                                 <PaperAirplaneIcon class="w-5 h-5" />
                             </button>

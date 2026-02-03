@@ -139,26 +139,31 @@
             </div>
 
             <div class="role-card-footer">
-              <Link :href="route('admin.permissions.roles.show', role.id)" class="btn-icon-action">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              </Link>
-              <Link v-if="!role.is_immutable" :href="route('admin.permissions.roles.edit', role.id)" class="btn-icon-action">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </Link>
-              <button
-                v-if="!role.is_immutable && role.users_count === 0"
-                @click="confirmDelete(role)"
-                class="btn-icon-action danger"
-              >
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
+              <ButtonGroup size="sm">
+                <ButtonIcon
+                  :icon="EyeIcon"
+                  :href="route('admin.permissions.roles.show', role.id)"
+                  variant="info"
+                  title="Visualizar"
+                  size="sm"
+                />
+                <ButtonIcon
+                  v-if="!role.is_immutable"
+                  :icon="PencilSquareIcon"
+                  :href="route('admin.permissions.roles.edit', role.id)"
+                  variant="warning"
+                  title="Editar"
+                  size="sm"
+                />
+                <ButtonIcon
+                  v-if="!role.is_immutable && role.users_count === 0"
+                  :icon="TrashIcon"
+                  variant="danger"
+                  title="Excluir"
+                  size="sm"
+                  @click="confirmDelete(role)"
+                />
+              </ButtonGroup>
             </div>
           </div>
         </div>
@@ -215,6 +220,11 @@ import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import StatsCard from '@/Components/Admin/StatsCard.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
+import ButtonGroup from '@/Components/Atoms/Button/ButtonGroup.vue';
+import EyeIcon from '@/Components/Icons/EyeIcon.vue';
+import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
+import TrashIcon from '@/Components/Icons/TrashIcon.vue';
 
 const debounce = (func, wait) => {
   let timeout;
@@ -646,38 +656,6 @@ const deleteRole = () => {
   padding: 1rem 1.5rem;
   border-top: 1px solid #334155;
   background: #1e293b;
-}
-
-.btn-icon-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  border: 1px solid #334155;
-  background: #0f172a;
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-}
-
-.btn-icon-action:hover {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: #3b82f6;
-  color: #60a5fa;
-}
-
-.btn-icon-action.danger:hover {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: #ef4444;
-  color: #f87171;
-}
-
-.btn-icon-action svg {
-  width: 20px;
-  height: 20px;
 }
 
 .empty-state {

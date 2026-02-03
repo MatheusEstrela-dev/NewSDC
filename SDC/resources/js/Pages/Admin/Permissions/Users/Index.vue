@@ -121,27 +121,30 @@
               </td>
               <td>{{ formatDate(user.created_at) }}</td>
               <td class="text-right">
-                <div class="action-buttons">
-                  <Link
+                <ButtonGroup size="sm">
+                  <ButtonIcon
+                    :icon="EyeIcon"
                     :href="route('admin.permissions.users.show', user.id)"
-                    class="btn-icon"
+                    variant="info"
                     title="Visualizar"
-                  >
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  </Link>
-                  <Link
+                    size="sm"
+                  />
+                  <ButtonIcon
+                    :icon="PencilSquareIcon"
                     :href="route('admin.permissions.users.edit', user.id)"
-                    class="btn-icon"
+                    variant="warning"
                     title="Editar"
-                  >
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </Link>
-                </div>
+                    size="sm"
+                  />
+                  <ButtonIcon
+                    :icon="TrashIcon"
+                    variant="danger"
+                    title="Desativar"
+                    size="sm"
+                    confirmMessage="Tem certeza que deseja desativar este usuario?"
+                    @click="deactivateUser(user.id)"
+                  />
+                </ButtonGroup>
               </td>
             </tr>
           </tbody>
@@ -186,6 +189,11 @@ import { ref, reactive } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
+import ButtonGroup from '@/Components/Atoms/Button/ButtonGroup.vue';
+import EyeIcon from '@/Components/Icons/EyeIcon.vue';
+import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
+import TrashIcon from '@/Components/Icons/TrashIcon.vue';
 
 const props = defineProps({
   users: Object,
@@ -227,6 +235,12 @@ const formatDate = (date) => {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+  });
+};
+
+const deactivateUser = (userId) => {
+  router.delete(route('admin.permissions.users.destroy', userId), {
+    preserveScroll: true,
   });
 };
 </script>
@@ -475,37 +489,6 @@ const formatDate = (date) => {
   text-align: right;
 }
 
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-}
-
-.btn-icon {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-}
-
-.btn-icon:hover {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: #3b82f6;
-  color: #60a5fa;
-}
-
-.btn-icon svg {
-  width: 18px;
-  height: 18px;
-}
 
 .empty-state {
   padding: 4rem 2rem;

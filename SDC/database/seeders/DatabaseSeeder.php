@@ -37,9 +37,7 @@ class DatabaseSeeder extends Seeder
             $this->command->info('✅ Admin Geral criado com role super-admin');
         }
 
-        // Em ambiente de desenvolvimento, criar usuários de teste
-        if (app()->environment('local')) {
-            $this->call(DevUsersSeeder::class);
-        }
+        // Criar usuarios mock
+        $this->call(MockUsersSeeder::class);
     }
 }

@@ -636,6 +636,33 @@ services:
     networks:
       - sdc_network
 
+  # ==========================================================================
+  # AI - Ollama (Local LLM)
+  # ==========================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    hostname: ollama
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=newsdc"
+      - "com.docker.compose.service=ollama"
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - sdc_network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - OLLAMA_KEEP_ALIVE=30m
+
 # ==========================================================================
 # Networks
 # ==========================================================================
@@ -661,4 +688,6 @@ volumes:
   newsdc_grafana_data:
     driver: local
   newsdc_alertmanager_data:
+    driver: local
+  ollama_data:
     driver: local

@@ -23,7 +23,9 @@ class SecurityHeaders
         $scriptSrc = [
             "'self'",
             "'unsafe-inline'",
+            "'unsafe-inline'",
             "'unsafe-eval'",
+            "blob:",
         ];
 
         $styleSrc = [
@@ -81,6 +83,7 @@ class SecurityHeaders
             'font-src ' . implode(' ', array_unique($fontSrc)),
             'connect-src ' . implode(' ', array_unique($connectSrc)),
             "frame-ancestors 'self'",
+            "worker-src 'self' blob:",
         ]);
 
         $response->headers->set('Content-Security-Policy', $csp);

@@ -7,6 +7,7 @@ namespace App\Core\IA\Http\Controllers;
 use App\Core\IA\AIService;
 use App\Core\IA\DTOs\ChatInputDTO;
 use App\Core\IA\Models\AIConversation;
+use App\Core\IA\Services\RagService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -16,11 +17,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class ChatController extends Controller
 {
     protected AIService $aiService;
+    protected RagService $ragService;
 
     public function __construct()
     {
-        // Ideally this should be injected, but keeping current pattern
         $this->aiService = new AIService();
+        $this->ragService = new RagService();
     }
 
     public function chat(Request $request): JsonResponse
@@ -41,15 +43,20 @@ class ChatController extends Controller
             $this->aiService->conversation($conversationId);
         }
 
-        // Use DTO explicitly
+        // RAG: Enriquecer mensagem com dados do banco
+        $enrichedMessage = $this->ragService->enrichMessage($validated['message']);
+
         $dto = new ChatInputDTO(
-            message: $validated['message'],
+            message: $enrichedMessage,
             conversationId: $conversationId,
             intent: $validated['intent'] ?? null,
             options: $validated['options'] ?? []
         );
 
         $response = $this->aiService->chat($dto);
+
+        // Adicionar contexto RAG na resposta
+        $response['rag_context'] = $this->ragService->getContextData();
 
         return response()->json($response);
     }
@@ -72,8 +79,11 @@ class ChatController extends Controller
             $this->aiService->conversation($conversationId);
         }
 
+        // RAG: Enriquecer mensagem com dados do banco
+        $enrichedMessage = $this->ragService->enrichMessage($validated['message']);
+
         $dto = new ChatInputDTO(
-            message: $validated['message'],
+            message: $enrichedMessage,
             conversationId: $conversationId,
             intent: $validated['intent'] ?? null,
             options: $validated['options'] ?? []
