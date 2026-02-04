@@ -4,12 +4,19 @@ declare(strict_types=1);
 
 namespace App\Core\IA\Services;
 
-use App\Modules\Rat\Domain\Entities\Rat;
+use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
+use App\Modules\Rat\Infrastructure\Persistence\EloquentRatRepository;
 use Illuminate\Support\Facades\Log;
 
 class RagService
 {
     protected array $contextData = [];
+    protected RatRepositoryInterface $ratRepository;
+
+    public function __construct(?RatRepositoryInterface $ratRepository = null)
+    {
+        $this->ratRepository = $ratRepository ?? new EloquentRatRepository();
+    }
 
     public function enrichMessage(string $message): string
     {
@@ -78,115 +85,87 @@ class RagService
         try {
             $reference = strtoupper(trim($reference));
 
-            $rat = Rat::where('protocolo', 'LIKE', "%{$reference}%")->first();
+            $rats = $this->ratRepository->findAll(['search' => $reference], -1);
 
-            if (!$rat) {
-                preg_match('/(\d+)/', $reference, $numMatches);
-                if (!empty($numMatches[1])) {
-                    $rat = Rat::find((int) $numMatches[1]);
+            foreach ($rats as $rat) {
+                if (str_contains(strtoupper($rat->protocolo), $reference)) {
+                    return $this->formatRatContext($rat);
                 }
             }
 
-            if (!$rat) {
-                return $this->getMockRatData($reference);
+            preg_match('/(\d+)/', $reference, $numMatches);
+            if (!empty($numMatches[1])) {
+                $ratById = $this->ratRepository->find((int) $numMatches[1]);
+                if ($ratById) {
+                    return $this->formatRatContext($ratById);
+                }
             }
 
-            return $this->formatRatContext($rat);
+            return null;
         } catch (\Exception $e) {
-            Log::warning('RagService: Erro ao buscar RAT, usando mock', ['error' => $e->getMessage()]);
-            return $this->getMockRatData($reference);
+            Log::warning('RagService: Erro ao buscar RAT', ['error' => $e->getMessage()]);
+            return null;
         }
     }
 
     protected function fetchRecentRats(int $limit = 3): array
     {
         try {
-            $rats = Rat::orderBy('created_at', 'desc')
-                ->limit($limit)
-                ->get();
+            $rats = $this->ratRepository->findAll([], $limit);
 
             if ($rats->isEmpty()) {
-                return $this->getMockRecentRats($limit);
+                return [];
             }
 
-            return $rats->map(fn($rat) => $this->formatRatContext($rat))->toArray();
+            $result = [];
+            foreach ($rats as $rat) {
+                $result[] = $this->formatRatContext($rat);
+            }
+            return $result;
         } catch (\Exception $e) {
-            Log::warning('RagService: Erro ao buscar RATs recentes, usando mock', ['error' => $e->getMessage()]);
-            return $this->getMockRecentRats($limit);
+            Log::warning('RagService: Erro ao buscar RATs recentes', ['error' => $e->getMessage()]);
+            return [];
         }
-    }
-
-    protected function getMockRatData(string $reference): array
-    {
-        preg_match('/(\d+)/', $reference, $matches);
-        $id = $matches[1] ?? rand(1, 100);
-        $year = date('Y');
-
-        return [
-            'id' => $id,
-            'protocolo' => "RAT-{$year}-" . str_pad((string)$id, 3, '0', STR_PAD_LEFT),
-            'status' => 'Em Andamento',
-            'municipio' => 'Belo Horizonte/MG',
-            'tipo_ocorrencia' => 'Inundacao',
-            'codigo_cobrade' => '12302',
-            'data_fato' => now()->subDays(2)->format('d/m/Y H:i'),
-            'data_inicio' => now()->subDays(2)->format('d/m/Y H:i'),
-            'data_termino' => null,
-            'tem_vistoria' => 'Nao',
-            'endereco_completo' => 'Rua Exemplo, 123, Centro',
-            'criado_em' => now()->subDays(2)->format('d/m/Y H:i'),
-            'atualizado_em' => now()->format('d/m/Y H:i'),
-            'is_mock' => true,
-        ];
-    }
-
-    protected function getMockRecentRats(int $limit): array
-    {
-        $mocks = [];
-        $year = date('Y');
-
-        for ($i = 1; $i <= $limit; $i++) {
-            $mocks[] = [
-                'id' => $i,
-                'protocolo' => "RAT-{$year}-" . str_pad((string)$i, 3, '0', STR_PAD_LEFT),
-                'status' => ['Rascunho', 'Em Andamento', 'Finalizado'][rand(0, 2)],
-                'municipio' => ['Belo Horizonte/MG', 'Uberlandia/MG', 'Juiz de Fora/MG'][rand(0, 2)],
-                'tipo_ocorrencia' => ['Inundacao', 'Deslizamento', 'Vendaval'][rand(0, 2)],
-                'codigo_cobrade' => '12302',
-                'data_fato' => now()->subDays(rand(1, 30))->format('d/m/Y H:i'),
-                'data_inicio' => now()->subDays(rand(1, 30))->format('d/m/Y H:i'),
-                'data_termino' => null,
-                'tem_vistoria' => rand(0, 1) ? 'Sim' : 'Nao',
-                'endereco_completo' => 'Rua Exemplo, ' . rand(1, 999) . ', Centro',
-                'criado_em' => now()->subDays(rand(1, 30))->format('d/m/Y H:i'),
-                'atualizado_em' => now()->format('d/m/Y H:i'),
-                'is_mock' => true,
-            ];
-        }
-
-        return $mocks;
     }
 
     protected function formatRatContext($rat): array
     {
-        $dadosGerais = $rat->dados_gerais ?? [];
-        $local = $rat->local ?? [];
-        $endereco = $rat->endereco ?? [];
+        $dadosGerais = is_array($rat->dados_gerais) ? $rat->dados_gerais : [];
+        $local = is_array($rat->local) ? $rat->local : [];
+        $endereco = isset($rat->endereco) && is_array($rat->endereco) ? $rat->endereco : [];
+
+        $createdAt = $rat->created_at ?? null;
+        $updatedAt = $rat->updated_at ?? null;
+
+        $formattedCreatedAt = null;
+        $formattedUpdatedAt = null;
+
+        if ($createdAt) {
+            $formattedCreatedAt = is_string($createdAt)
+                ? $this->formatDate($createdAt)
+                : (method_exists($createdAt, 'format') ? $createdAt->format('d/m/Y H:i') : null);
+        }
+
+        if ($updatedAt) {
+            $formattedUpdatedAt = is_string($updatedAt)
+                ? $this->formatDate($updatedAt)
+                : (method_exists($updatedAt, 'format') ? $updatedAt->format('d/m/Y H:i') : null);
+        }
 
         return [
             'id' => $rat->id,
             'protocolo' => $rat->protocolo,
-            'status' => $this->translateStatus($rat->status),
+            'status' => $this->translateStatus($rat->status ?? null),
             'municipio' => $dadosGerais['local_municipio'] ?? $local['municipio'] ?? 'Nao informado',
             'tipo_ocorrencia' => $dadosGerais['nat_nome_operacao'] ?? 'Nao informado',
             'codigo_cobrade' => $dadosGerais['nat_cobrade_id'] ?? null,
             'data_fato' => $this->formatDate($dadosGerais['data_fato'] ?? null),
             'data_inicio' => $this->formatDate($dadosGerais['data_inicio_atividade'] ?? null),
             'data_termino' => $this->formatDate($dadosGerais['data_termino_atividade'] ?? null),
-            'tem_vistoria' => $rat->tem_vistoria ? 'Sim' : 'Nao',
+            'tem_vistoria' => !empty($rat->tem_vistoria) ? 'Sim' : 'Nao',
             'endereco_completo' => $this->formatEndereco($endereco),
-            'criado_em' => $rat->created_at?->format('d/m/Y H:i'),
-            'atualizado_em' => $rat->updated_at?->format('d/m/Y H:i'),
+            'criado_em' => $formattedCreatedAt,
+            'atualizado_em' => $formattedUpdatedAt,
         ];
     }
 
@@ -201,17 +180,25 @@ class RagService
         };
     }
 
-    protected function formatDate(?string $date): ?string
+    protected function formatDate($date): ?string
     {
         if (!$date) {
             return null;
         }
 
-        try {
-            return \Carbon\Carbon::parse($date)->format('d/m/Y H:i');
-        } catch (\Exception $e) {
-            return $date;
+        if ($date instanceof \Carbon\Carbon || $date instanceof \DateTimeInterface) {
+            return $date->format('d/m/Y H:i');
         }
+
+        if (is_string($date)) {
+            try {
+                return \Carbon\Carbon::parse($date)->format('d/m/Y H:i');
+            } catch (\Exception $e) {
+                return $date;
+            }
+        }
+
+        return null;
     }
 
     protected function formatEndereco(array $endereco): string

@@ -3,11 +3,17 @@
 namespace App\Core\IA\Tools;
 
 use App\Core\IA\Contracts\ToolInterface;
-use App\Modules\Rat\Domain\Entities\Rat;
-use Illuminate\Support\Facades\DB;
+use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
+use App\Modules\Rat\Infrastructure\Persistence\EloquentRatRepository;
 
 class RatQueryTool implements ToolInterface
 {
+    protected RatRepositoryInterface $ratRepository;
+
+    public function __construct(?RatRepositoryInterface $ratRepository = null)
+    {
+        $this->ratRepository = $ratRepository ?? new EloquentRatRepository();
+    }
     public function getName(): string
     {
         return 'consultar_rat';
@@ -72,7 +78,7 @@ class RatQueryTool implements ToolInterface
 
     protected function findById(int $id): array
     {
-        $rat = Rat::find($id);
+        $rat = $this->ratRepository->find($id);
 
         if (!$rat) {
             return [
@@ -86,47 +92,46 @@ class RatQueryTool implements ToolInterface
 
     protected function findByProtocolo(string $protocolo): array
     {
-        // Normaliza o protocolo (remove espacos, converte para maiusculo)
         $protocolo = strtoupper(trim($protocolo));
 
-        // Tenta encontrar pelo protocolo exato
-        $rat = Rat::where('protocolo', $protocolo)->first();
+        $rats = $this->ratRepository->findAll(['search' => $protocolo], -1);
 
-        // Se nao encontrar, tenta busca parcial
-        if (!$rat) {
-            $rat = Rat::where('protocolo', 'LIKE', "%{$protocolo}%")->first();
+        foreach ($rats as $rat) {
+            if (strtoupper($rat->protocolo) === $protocolo ||
+                str_contains(strtoupper($rat->protocolo), $protocolo)) {
+                return $this->formatRat($rat);
+            }
         }
 
-        if (!$rat) {
-            return [
-                'encontrado' => false,
-                'mensagem' => "Nenhum RAT encontrado com protocolo {$protocolo}",
-            ];
-        }
-
-        return $this->formatRat($rat);
+        return [
+            'encontrado' => false,
+            'mensagem' => "Nenhum RAT encontrado com protocolo {$protocolo}",
+        ];
     }
 
     protected function search(?string $municipio, ?string $status, int $limit): array
     {
-        $query = Rat::query();
-
+        $filters = [];
         if ($municipio) {
-            $query->where(function ($q) use ($municipio) {
-                $q->whereRaw("JSON_EXTRACT(dados_gerais, '$.local_municipio') LIKE ?", ["%{$municipio}%"])
-                    ->orWhereRaw("JSON_EXTRACT(local, '$.municipio') LIKE ?", ["%{$municipio}%"]);
-            });
+            $filters['search'] = $municipio;
         }
 
-        if ($status) {
-            $query->where('status', $status);
+        $rats = $this->ratRepository->findAll($filters, $limit);
+
+        $filtered = collect();
+        foreach ($rats as $rat) {
+            $local = is_array($rat->local) ? $rat->local : [];
+            $municipioRat = $local['municipio'] ?? '';
+
+            $matchMunicipio = !$municipio || str_contains(strtolower($municipioRat), strtolower($municipio));
+            $matchStatus = !$status || $rat->status === $status;
+
+            if ($matchMunicipio && $matchStatus) {
+                $filtered->push($rat);
+            }
         }
 
-        $rats = $query->orderBy('created_at', 'desc')
-            ->limit($limit)
-            ->get();
-
-        if ($rats->isEmpty()) {
+        if ($filtered->isEmpty()) {
             return [
                 'encontrado' => false,
                 'total' => 0,
@@ -136,15 +141,21 @@ class RatQueryTool implements ToolInterface
 
         return [
             'encontrado' => true,
-            'total' => $rats->count(),
-            'rats' => $rats->map(fn($rat) => $this->formatRatSummary($rat))->toArray(),
+            'total' => $filtered->count(),
+            'rats' => $filtered->map(fn($rat) => $this->formatRatSummary($rat))->toArray(),
         ];
     }
 
     protected function formatRat($rat): array
     {
-        $dadosGerais = $rat->dados_gerais ?? [];
-        $local = $rat->local ?? [];
+        $dadosGerais = is_array($rat->dados_gerais) ? $rat->dados_gerais : [];
+        $local = is_array($rat->local) ? $rat->local : [];
+
+        $createdAt = $rat->created_at ?? null;
+        $updatedAt = $rat->updated_at ?? null;
+
+        $formattedCreatedAt = $this->formatDateTime($createdAt);
+        $formattedUpdatedAt = $this->formatDateTime($updatedAt);
 
         return [
             'encontrado' => true,
@@ -154,20 +165,23 @@ class RatQueryTool implements ToolInterface
             'municipio' => $dadosGerais['local_municipio'] ?? $local['municipio'] ?? 'Nao informado',
             'tipo_ocorrencia' => $dadosGerais['nat_nome_operacao'] ?? 'Nao informado',
             'cobrade' => $dadosGerais['nat_cobrade_id'] ?? 'Nao informado',
-            'data_fato' => $dadosGerais['data_fato'] ?? null,
+            'data_fato' => $this->formatDateTime($dadosGerais['data_fato'] ?? null),
             'data_inicio' => $dadosGerais['data_inicio_atividade'] ?? null,
             'data_termino' => $dadosGerais['data_termino_atividade'] ?? null,
             'tem_vistoria' => $rat->tem_vistoria ?? false,
-            'endereco' => $rat->endereco ?? [],
-            'criado_em' => $rat->created_at?->format('d/m/Y H:i') ?? null,
-            'atualizado_em' => $rat->updated_at?->format('d/m/Y H:i') ?? null,
+            'endereco' => isset($rat->endereco) && is_array($rat->endereco) ? $rat->endereco : [],
+            'criado_em' => $formattedCreatedAt,
+            'atualizado_em' => $formattedUpdatedAt,
         ];
     }
 
     protected function formatRatSummary($rat): array
     {
-        $dadosGerais = $rat->dados_gerais ?? [];
-        $local = $rat->local ?? [];
+        $dadosGerais = is_array($rat->dados_gerais) ? $rat->dados_gerais : [];
+        $local = is_array($rat->local) ? $rat->local : [];
+
+        $createdAt = $rat->created_at ?? null;
+        $formattedCreatedAt = $this->formatDateTime($createdAt);
 
         return [
             'id' => $rat->id,
@@ -175,8 +189,29 @@ class RatQueryTool implements ToolInterface
             'status' => $rat->status,
             'municipio' => $dadosGerais['local_municipio'] ?? $local['municipio'] ?? 'Nao informado',
             'tipo_ocorrencia' => $dadosGerais['nat_nome_operacao'] ?? 'Nao informado',
-            'criado_em' => $rat->created_at?->format('d/m/Y H:i') ?? null,
+            'criado_em' => $formattedCreatedAt,
         ];
+    }
+
+    protected function formatDateTime($datetime): ?string
+    {
+        if (!$datetime) {
+            return null;
+        }
+
+        if (is_string($datetime)) {
+            try {
+                return \Carbon\Carbon::parse($datetime)->format('d/m/Y H:i');
+            } catch (\Exception $e) {
+                return $datetime;
+            }
+        }
+
+        if (method_exists($datetime, 'format')) {
+            return $datetime->format('d/m/Y H:i');
+        }
+
+        return null;
     }
 
     public function validateParameters(array $parameters): bool

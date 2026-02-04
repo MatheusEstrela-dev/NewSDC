@@ -53,7 +53,7 @@ export function useReset() {
       data.id_municipio = municipioId.value;
     }
 
-    router.post('/password/email', data, {
+    router.post('/forgot-password', data, {
       onFinish: () => {
         loading.value = false;
       },
