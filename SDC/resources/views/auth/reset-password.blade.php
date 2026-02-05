@@ -84,15 +84,29 @@
                     @csrf
                     <input type="hidden" name="token" value="{{ $token }}">
 
+                    @php
+                        $maskedEmail = '';
+                        $emailValue = old('email', $email);
+                        if ($emailValue) {
+                            $parts = explode('@', $emailValue);
+                            if (count($parts) === 2) {
+                                $name = $parts[0];
+                                $domain = $parts[1];
+                                $maskedName = substr($name, 0, 2) . str_repeat('*', max(strlen($name) - 2, 3));
+                                $maskedEmail = $maskedName . '@' . $domain;
+                            }
+                        }
+                    @endphp
+                    <input type="hidden" name="email" value="{{ $emailValue }}">
                     <div class="input-group mb-3">
-                        <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', $email) }}" placeholder="Email" readonly>
+                        <input type="text" class="form-control" value="{{ $maskedEmail }}" placeholder="Email" readonly disabled>
                         <div class="input-group-append">
                             <div class="input-group-text">
                                 <span class="fas fa-envelope"></span>
                             </div>
                         </div>
                         @error('email')
-                            <span class="invalid-feedback" role="alert">
+                            <span class="invalid-feedback d-block" role="alert">
                                 <strong>{{ $message }}</strong>
                             </span>
                         @enderror

@@ -10,6 +10,8 @@ use App\Modules\Compdec\Domain\ValueObjects\TipoOrgao;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,6 +37,17 @@ class PasswordResetLinkController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $throttleKey = 'password-reset:' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            throw ValidationException::withMessages([
+                'throttle' => "Muitas tentativas. Tente novamente em {$seconds} segundos.",
+            ]);
+        }
+
+        RateLimiter::hit($throttleKey, 60);
+
         $request->validate([
             'reset_type' => 'required|in:cpf,municipio',
             'cpf' => 'required_if:reset_type,cpf',
@@ -76,27 +89,18 @@ class PasswordResetLinkController extends Controller
             }
         }
 
+        $genericSuccessMessage = 'Se os dados informados estiverem corretos, um link de redefinicao sera enviado para o e-mail cadastrado. Verifique sua caixa de entrada e spam.';
+
         if (empty($emails)) {
-            return back()->with('error', 'Usuário não encontrado com os dados informados.');
+            return back()->with('success', $genericSuccessMessage);
         }
 
-        // Remove duplicatas e emails vazios
         $emails = array_unique(array_filter($emails));
-        $sent = false;
 
         foreach ($emails as $email) {
-            // Password::sendResetLink busca o usuário pelo email e envia o link
-            $status = Password::sendResetLink(['email' => $email]);
-            
-            if ($status == Password::RESET_LINK_SENT) {
-                $sent = true;
-            }
+            Password::sendResetLink(['email' => $email]);
         }
 
-        if ($sent) {
-            return back()->with('success', 'Link de redefinição enviado para o(s) e-mail(s) vinculado(s). Verifique sua caixa de entrada e spam.');
-        }
-
-        return back()->with('error', 'Não foi possível enviar o e-mail de redefinição. Verifique se o e-mail do usuário está correto ou contate o suporte.');
+        return back()->with('success', $genericSuccessMessage);
     }
 }
