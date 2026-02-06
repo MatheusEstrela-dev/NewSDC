@@ -22,7 +22,6 @@
 
 <script setup>
 import { computed } from 'vue';
-import TextInput from './TextInput.vue';
 
 const props = defineProps({
   modelValue: {
@@ -58,24 +57,27 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  size: {
+    type: String,
+    default: 'md',
+    validator: (value) => ['sm', 'md', 'lg'].includes(value),
+  },
 });
 
 const emit = defineEmits(['update:modelValue', 'blur', 'focus']);
 
 const formattedValue = computed(() => {
   if (!props.modelValue) return '';
-  
-  // Se já está no formato correto (YYYY-MM-DD), retorna
+
   if (props.modelValue.match(/^\d{4}-\d{2}-\d{2}/)) {
     return props.modelValue;
   }
-  
-  // Tenta converter de formato brasileiro para ISO
+
   const parts = props.modelValue.split('/');
   if (parts.length === 3) {
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   }
-  
+
   return props.modelValue;
 });
 
@@ -84,27 +86,31 @@ function handleInput(event) {
 }
 
 const sizeClasses = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2.5 text-sm',
-  lg: 'px-5 py-3 text-base',
+  sm: 'atom-input-sm',
+  md: 'atom-input-md',
+  lg: 'atom-input-lg',
 };
 
-const inputClasses = computed(() => {
-  const base = 'w-full rounded-lg border transition-all duration-200 outline-none focus:ring-2';
-  const bgClass = props.readonly
-    ? 'bg-slate-100 dark:bg-slate-800/50 border-slate-300 dark:border-slate-700/30 text-slate-600 dark:text-slate-400 cursor-default'
-    : 'bg-white dark:bg-slate-900/50 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500';
-  const errorClass = props.error ? 'border-red-500 focus:ring-red-500/20' : 'focus:border-blue-500 focus:ring-blue-500/20';
-  const disabledClass = props.disabled ? 'opacity-50 cursor-not-allowed' : '';
-  const iconPadding = props.showIcon ? 'pr-10' : '';
+const isFilled = computed(() => {
+  if (props.readonly || props.disabled) return false;
+  const value = props.modelValue;
+  return value !== null && value !== undefined && value !== '';
+});
 
+const stateClass = computed(() => {
+  if (props.readonly) return 'atom-input-readonly';
+  if (props.error) return 'atom-input-error';
+  if (isFilled.value) return 'atom-input-filled';
+  return 'atom-input-normal';
+});
+
+const inputClasses = computed(() => {
   return [
-    base,
-    bgClass,
-    errorClass,
-    sizeClasses.md,
-    disabledClass,
-    iconPadding,
+    'atom-input',
+    stateClass.value,
+    sizeClasses[props.size],
+    props.disabled ? 'atom-input-disabled' : '',
+    props.showIcon ? 'pr-10' : '',
   ].filter(Boolean).join(' ');
 });
 </script>

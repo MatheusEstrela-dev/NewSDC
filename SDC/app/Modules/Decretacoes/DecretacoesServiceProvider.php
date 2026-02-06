@@ -12,6 +12,7 @@ use Illuminate\Support\ServiceProvider;
  * Service Provider: Módulo Decretações
  *
  * Registra todas as dependências do módulo de reconhecimento de desastres
+ * Seguindo padrão Always-to-DTO
  */
 class DecretacoesServiceProvider extends ServiceProvider
 {
@@ -26,15 +27,14 @@ class DecretacoesServiceProvider extends ServiceProvider
             EloquentProcessoRepository::class
         );
 
-        // Registrar Use Cases (singleton para melhor performance)
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\CreateProcessoUseCase::class);
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\ShowProcessoUseCase::class);
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\UpdateProcessoUseCase::class);
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\DeleteProcessoUseCase::class);
+        // Registrar UseCases ativos (singleton para melhor performance)
         $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\ListProcessosUseCase::class);
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\UpdateDadosDesastreUseCase::class);
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\GetStatisticsUseCase::class);
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\ExportProcessosUseCase::class);
+        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\GetDecretacoesStatisticsUseCase::class);
+        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\GetProcessoFormDataUseCase::class);
+        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\GetProcessoShowUseCase::class);
+
+        // Registrar Services (singleton)
+        $this->app->singleton(\App\Modules\Decretacoes\Application\Services\ProcessoService::class);
     }
 
     /**
@@ -50,15 +50,5 @@ class DecretacoesServiceProvider extends ServiceProvider
 
         // Carregar migrations
         $this->loadMigrationsFrom(database_path('migrations'));
-
-        // TODO: Registrar observers para eventos de Processo
-        // Processo::observe(ProcessoObserver::class);
-
-        // TODO: Registrar policies
-        // Gate::policy(Processo::class, ProcessoPolicy::class);
-
-        // TODO: Registrar event listeners
-        // Event::listen(ProcessoCriado::class, NotificarRedecListener::class);
-        // Event::listen(ProcessoCriado::class, SincronizarHexagonListener::class);
     }
 }

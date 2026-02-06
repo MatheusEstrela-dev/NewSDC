@@ -104,9 +104,7 @@ const handleSend = async (content = null) => {
                 scrollToBottom();
             }
         },
-        () => {
-            console.log("Response complete");
-        }
+        () => {}
     );
 };
 

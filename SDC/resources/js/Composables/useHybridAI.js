@@ -10,36 +10,29 @@ export function useHybridAI() {
     const worker = ref(null);
     const currentResponse = ref('');
 
-    // Initialize Worker
     const initWorker = () => {
         try {
-            console.log("DEBUG: initWorker called via Blob Proxy");
             if (typeof Worker !== 'undefined') {
-                console.log("DEBUG: Creating Worker Blob for URL:", AIWorkerUrl);
-
-                // Create a Blob that imports the external Vite worker script
-                // This bypasses the "SecurityError: Failed to construct 'Worker': Script at ... cannot be accessed"
                 const blobContent = `import "${AIWorkerUrl}";`;
                 const blob = new Blob([blobContent], { type: 'application/javascript' });
                 const workerUrl = URL.createObjectURL(blob);
 
                 worker.value = new Worker(workerUrl, { type: 'module' });
 
-                console.log("DEBUG: Worker created successfully");
-
                 worker.value.onmessage = (e) => {
                     const { type, message } = e.data;
-                    console.log("DEBUG: Worker msg", type, message);
                     if (type === 'READY') isReady.value = true;
                     if (type === 'ERROR') {
-                        console.error('Worker Error:', message);
                         error.value = message;
                     }
                 };
+
+                worker.value.onerror = () => {
+                    isReady.value = false;
+                };
             }
         } catch (e) {
-            console.error("DEBUG: Failed to init worker", e);
-            error.value = "Failed to start AI: " + e.message;
+            isReady.value = false;
         }
     };
 
@@ -63,8 +56,6 @@ export function useHybridAI() {
 
         return new Promise((resolve, reject) => {
             if (!isReady.value) {
-                // Fallback to server immediately if worker not ready
-                console.log('Worker not ready, falling back to server...');
                 handleServerStream(prompt, onChunk, onDone).then(resolve).catch(reject);
                 return;
             }
@@ -75,8 +66,6 @@ export function useHybridAI() {
 
                 if (type === 'CLASSIFICATION_RESULT') {
                     worker.value.removeEventListener('message', handleClassification);
-
-                    console.log(`Intent detected: ${payload.intent} (Local: ${payload.isLocal})`);
 
                     if (payload.isLocal) {
                         const localReply = getLocalResponse(payload.intent);
@@ -144,9 +133,8 @@ export function useHybridAI() {
             }
             onDone();
         } catch (err) {
-            console.error('Stream Error:', err);
             error.value = "Erro ao conectar com o servidor da Defesa Civil.";
-            currentResponse.value += "\n[Erro de conexão]";
+            currentResponse.value += "\n[Erro de conexao]";
             isThinking.value = false;
         } finally {
             isThinking.value = false;

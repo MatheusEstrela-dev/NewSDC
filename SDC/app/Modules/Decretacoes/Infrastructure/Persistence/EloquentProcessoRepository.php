@@ -119,4 +119,9 @@ class EloquentProcessoRepository implements ProcessoRepositoryInterface
 
         return $query->orderBy('data_entrada', 'desc')->get();
     }
+
+    public function count(): int
+    {
+        return Processo::count();
+    }
 }

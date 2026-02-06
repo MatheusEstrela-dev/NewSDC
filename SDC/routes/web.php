@@ -113,6 +113,9 @@ Route::middleware('auth')->group(function () {
 
     // Módulo: Suporte
     require __DIR__ . '/modules/suporte.php';
+
+    // Modulo: IA
+    require __DIR__ . '/modules/ia.php';
 });
 
 require __DIR__ . '/auth.php';

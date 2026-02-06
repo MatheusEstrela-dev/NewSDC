@@ -1,5 +1,6 @@
 /* Component Styles - @import deve vir antes de @tailwind */
 @import './components/forms.css';
+@import './components/atoms/input.css';
 @import './components/beneficiario-card.css';
 
 /* Page Styles */

@@ -21,4 +21,5 @@ interface ProcessoRepositoryInterface
     public function paginate(int $perPage = 15): LengthAwarePaginator;
     public function findAll(array $filters = [], int $perPage = 15): LengthAwarePaginator;
     public function filterBy(array $filters): Collection;
+    public function count(): int;
 }

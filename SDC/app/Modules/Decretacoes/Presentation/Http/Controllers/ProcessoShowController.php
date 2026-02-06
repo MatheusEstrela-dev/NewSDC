@@ -5,37 +5,33 @@ declare(strict_types=1);
 namespace App\Modules\Decretacoes\Presentation\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Decretacoes\Domain\Repositories\ProcessoRepositoryInterface;
+use App\Modules\Decretacoes\Application\UseCases\GetProcessoShowUseCase;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Controller: Processo Show
+ *
+ * Regra de Ouro: O Controller não "monta" dados.
+ * Apenas pede ao UseCase e entrega o DTO para o Inertia::render()
  */
 class ProcessoShowController extends Controller
 {
-    public function __construct(
-        private readonly ProcessoRepositoryInterface $processoRepository
-    ) {
-    }
-
-    public function __invoke(int $id): Response
+    /**
+     * Eficiência máxima: UseCase já entrega o DTO tipado e higienizado
+     */
+    public function __invoke(int $id, GetProcessoShowUseCase $useCase): Response
     {
-        $processo = $this->processoRepository->findById($id);
+        $viewModel = $useCase->execute($id);
 
-        if (!$processo) {
-            abort(404, 'Processo não encontrado');
+        if (!$viewModel) {
+            throw new NotFoundHttpException('Processo não encontrado');
         }
 
+        // Inertia converte automaticamente via Arrayable
         return Inertia::render('Decretacoes/ProcessoShow', [
-            'processo' => $processo->load([
-                'municipios',
-                'danosHumanos.municipio',
-                'danosMateriais.municipio',
-                'prejuizos.municipio',
-                'anexos',
-                'logs.user'
-            ]),
+            'processo' => $viewModel,
         ]);
     }
 }

@@ -67,8 +67,9 @@
     />
 
     <!-- Statistics Cards -->
-    <ProcessoStatsCards
+    <DecretacoesStatsCards
       :statistics="statistics"
+      :loading="loading"
       @filter="handleStatFilter"
     />
 
@@ -115,7 +116,7 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
-import ProcessoStatsCards from '@/Components/Organisms/Decretacoes/ProcessoStatsCards.vue';
+import DecretacoesStatsCards from '@/Components/Organisms/Decretacoes/DecretacoesStatsCards.vue';
 import ProcessoFilters from '@/Components/Organisms/Decretacoes/ProcessoFilters.vue';
 import ProcessoGrid from '@/Components/Organisms/Decretacoes/ProcessoGrid.vue';
 import ProcessoTable from '@/Components/Organisms/Decretacoes/ProcessoTable.vue';

@@ -11,6 +11,7 @@
       @filter-change="handleFilterChange"
       @clear-filters="handleClearFilters"
       @page-change="handlePageChange"
+      @create="handleCreate"
     />
   </AuthenticatedLayout>
 </template>
@@ -76,5 +77,9 @@ const handlePageChange = (page) => {
       loading.value = false;
     },
   });
+};
+
+const handleCreate = () => {
+  router.visit(route('decretacoes.create'));
 };
 </script>
