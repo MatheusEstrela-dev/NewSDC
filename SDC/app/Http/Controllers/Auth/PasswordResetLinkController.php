@@ -31,9 +31,14 @@ class PasswordResetLinkController extends Controller
     }
 
     /**
-     * Handle an incoming password reset link request.
+     * Process a password reset link request, locate recipient emails based on the provided
+     * reset type (CPF or municipality), send reset links to those emails, and redirect back
+     * with a generic success message.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * Validation is performed on the request input; requests from the same IP are rate-limited.
+     *
+     * @throws \Illuminate\Validation\ValidationException If the request exceeds rate limits or validation fails.
+     * @return \Illuminate\Http\RedirectResponse A redirect response back to the previous page containing a generic success message.
      */
     public function store(Request $request): RedirectResponse
     {

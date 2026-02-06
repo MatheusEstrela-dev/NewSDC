@@ -34,9 +34,11 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Attempt to authenticate the request's credentials.
+     * Attempts to authenticate the incoming credentials, logs the user in on success, and enforces rate limiting.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * If credentials are invalid, increments the request's rate limiter and throws a ValidationException with an error for the `cpf` field.
+     *
+     * @throws \Illuminate\Validation\ValidationException When authentication fails or the request is temporarily rate limited.
      */
     public function authenticate(): void
     {
