@@ -2,40 +2,15 @@
   <div class="rat-index-container">
     <!-- Header Padronizado -->
     <PageHeader
-      title="Gestao de RAT"
-      description="Visualize e gerencie todos os Registros de Atendimento Tecnico"
+      :title="MESSAGES.rat.title"
+      :description="MESSAGES.rat.description"
       :icon="DocumentTextIcon"
       variant="gradient"
     >
       <template #actions>
         <div class="flex items-center gap-2 sm:gap-3">
-          <!-- Toggle Grade/Tabela - Oculto em mobile -->
-          <div class="hidden md:flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
-            <button
-              @click="viewMode = 'grid'"
-              :class="[
-                'px-3 py-1.5 rounded text-xs font-medium transition-all',
-                viewMode === 'grid'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-              ]"
-              title="Visualização em Grade"
-            >
-              Grade
-            </button>
-            <button
-              @click="viewMode = 'table'"
-              :class="[
-                'px-3 py-1.5 rounded text-xs font-medium transition-all',
-                viewMode === 'table'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-              ]"
-              title="Visualização em Tabela"
-            >
-              Tabela
-            </button>
-          </div>
+          <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
+          <ViewModeToggle v-model="viewMode" />
 
           <!-- Botão Exportar -->
           <Button variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
@@ -113,6 +88,7 @@ import { router, Link } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
@@ -123,6 +99,8 @@ import RatGrid from '../../Components/Organisms/Rat/Grid/RatGrid.vue';
 import PrintBoletimModal from '../../Components/Organisms/Rat/Print/PrintBoletimModal.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import { getMockStatisticsFromRats } from '@/mocks/rat';
+import { useModalState } from '@/Composables/useModalState';
+import { MESSAGES } from '@/constants/messages';
 
 const props = defineProps({
   statistics: {
@@ -291,38 +269,39 @@ function handleAttachments(id) {
 }
 
 function handleDelete(id) {
-  if (confirm('Tem certeza que deseja excluir este RAT?')) {
+  if (confirm(MESSAGES.confirmations.deleteRat)) {
     // TODO: Implementar delete
     console.log('Delete RAT:', id);
   }
 }
 
 // =========================
-// Modal de Impressao
+// Modal de Impressao (usando composable)
 // =========================
-const showPrintModal = ref(false);
-const selectedOcorrencia = ref(null);
-const printLoading = ref(false);
+const {
+  isOpen: showPrintModal,
+  data: selectedOcorrencia,
+  loading: printLoading,
+  close: closePrintModal,
+  openWithLoading
+} = useModalState();
 
 async function handlePrint(id) {
-  showPrintModal.value = true;
-  printLoading.value = true;
-  selectedOcorrencia.value = null;
-
-  try {
-    const url = route('rat.show.json', id);
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Erro ao carregar dados: ${response.status} ${response.statusText}`);
+  await openWithLoading(
+    async () => {
+      const url = route('rat.show.json', id);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Erro ao carregar dados: ${response.status} ${response.statusText}`);
+      }
+      return response.json();
+    },
+    {
+      onError: (error) => {
+        alert(MESSAGES.errors.loadData('RAT') + ': ' + error.message);
+      }
     }
-    const data = await response.json();
-    selectedOcorrencia.value = data;
-  } catch (error) {
-    alert('Erro ao carregar dados do boletim: ' + error.message);
-    showPrintModal.value = false;
-  } finally {
-    printLoading.value = false;
-  }
+  );
 }
 
 // =========================
@@ -338,11 +317,6 @@ const {
 function handleExportCsv(params) {
   // Passamos os filtros atuais da tela para serem combinados com os filtros do modal
   triggerExport(params, filtersToUse.value);
-}
-
-function closePrintModal() {
-  showPrintModal.value = false;
-  selectedOcorrencia.value = null;
 }
 
 function handlePageChange(page) {
