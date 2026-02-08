@@ -82,25 +82,24 @@
       @print="handlePrint"
       @edit="handleEdit"
       @history="handleHistory"
-      @page-change="handlePageChange"
     />
 
     <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
-    <div v-else-if="viewMode === 'table' && !isMobile" class="space-y-6">
-      <PaeProtocolosTable
-        :protocolos="paginatedProtocolos"
-        @view="handleView"
-        @print="handlePrint"
-        @edit="handleEdit"
-        @history="handleHistory"
-      />
+    <PaeProtocolosTable
+      v-else-if="viewMode === 'table' && !isMobile"
+      :protocolos="paginatedProtocolos"
+      @view="handleView"
+      @print="handlePrint"
+      @edit="handleEdit"
+      @history="handleHistory"
+    />
 
-      <!-- Paginação para Tabela -->
-      <div v-if="paginationToUse && paginationToUse.last_page > 1" class="mt-6">
-        <CardBase variant="default" padding="md">
-          <Pagination :pagination="paginationToUse" @page-change="handlePageChange" />
-        </CardBase>
-      </div>
+    <!-- Pagination -->
+    <div v-if="paginationToUse" class="mt-6">
+      <Pagination
+        :pagination="paginationToUse"
+        @page-change="handlePageChange"
+      />
     </div>
 
     <PaeHistoricoModal
@@ -125,7 +124,6 @@ import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
-import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
@@ -175,7 +173,7 @@ const listUsecase = new ListPaeProtocolos(repository);
 const historicoUsecase = new GetPaeProtocoloHistorico(repository);
 
 // Local state (modo mock: tudo local)
-const perPage = 12;
+const perPage = 15;
 const currentPage = ref(1);
 const filters = ref({
   buscar: '',
@@ -315,8 +313,7 @@ function handleExportCsv(params) {
 
 <style scoped>
 .pae-protocolos-container {
-  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  /* Padding removed to align with NavigationHeader which matches main content padding */
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>
 

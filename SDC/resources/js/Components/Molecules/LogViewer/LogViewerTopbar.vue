@@ -36,7 +36,7 @@ const toggleLevel = (level) => {
         <div class="flex flex-wrap gap-2">
             <button 
                 @click="toggleLevel('debug')"
-                class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all border"
+                class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border"
                 :class="filters.level === 'debug' 
                     ? 'bg-gray-700 border-gray-600 text-white ring-1 ring-gray-500' 
                     : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:border-gray-600'"
@@ -47,7 +47,7 @@ const toggleLevel = (level) => {
             
             <button 
                 @click="toggleLevel('info')"
-                class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all border"
+                class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border"
                 :class="filters.level === 'info' 
                     ? 'bg-blue-900/40 border-blue-800 text-blue-100 ring-1 ring-blue-700' 
                     : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:border-gray-600'"
@@ -58,7 +58,7 @@ const toggleLevel = (level) => {
             
             <button 
                 @click="toggleLevel('warning')"
-                class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all border"
+                class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border"
                 :class="filters.level === 'warning' 
                     ? 'bg-yellow-900/40 border-yellow-800 text-yellow-100 ring-1 ring-yellow-700' 
                     : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:border-gray-600'"
@@ -69,7 +69,7 @@ const toggleLevel = (level) => {
             
             <button 
                 @click="toggleLevel('error')"
-                class="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all border"
+                class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border"
                 :class="filters.level === 'error' 
                     ? 'bg-red-900/40 border-red-800 text-red-100 ring-1 ring-red-700' 
                     : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:border-gray-600'"
@@ -92,7 +92,7 @@ const toggleLevel = (level) => {
                     @input="e => emit('update:filters', { ...filters, search: e.target.value })"
                     type="text"
                     placeholder="Search logs... (supports Regex)"
-                    class="block w-full pl-10 pr-3 py-1.5 bg-gray-800 border-gray-700 rounded-md text-sm text-gray-200 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500 transition-colors border"
+                    class="block w-full pl-10 pr-3 py-1.5 bg-gray-800 border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500 transition-colors border"
                 />
             </div>
             

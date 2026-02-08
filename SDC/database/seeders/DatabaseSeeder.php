@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -12,10 +11,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Primeiro, criar roles e permissões
+        // 1. Roles e Permissões (base do sistema)
         $this->call(RolesAndPermissionsSeeder::class);
 
-        // Criar admin principal do sistema
+        // 2. Órgãos (hierarquia CEDEC > REDEC > COMPDEC)
+        $this->call(OrgaosSeeder::class);
+
+        // 3. Admin principal do sistema
         $admin = \App\Models\User::updateOrCreate(
             ['cpf' => '12345678900'],
             [
@@ -26,7 +28,6 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Atribuir role super-admin (acesso total)
         $guard = config('auth.defaults.guard', 'web');
         $superAdminRole = \App\Models\Role::where('name', 'super-admin')
             ->where('guard_name', $guard)
@@ -34,10 +35,16 @@ class DatabaseSeeder extends Seeder
 
         if ($superAdminRole) {
             $admin->assignRole($superAdminRole);
-            $this->command->info('✅ Admin Geral criado com role super-admin');
+            $this->command->info('Admin Geral criado com role super-admin');
         }
 
-        // Criar usuarios mock
+        // 4. Usuários mock originais
         $this->call(MockUsersSeeder::class);
+
+        // 5. Usuários com hierarquias diversas (30 usuários em todos os níveis)
+        $this->call(MockUsersHierarchySeeder::class);
+
+        // 6. RATs mock (15 registros com status variados)
+        $this->call(RatMockSeeder::class);
     }
 }

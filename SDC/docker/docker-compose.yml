@@ -78,8 +78,9 @@ services:
       XDEBUG_MODE: debug,develop,coverage
       XDEBUG_CONFIG: client_host=host.docker.internal
 
-      # Migrations
+      # Migrations e Seeders
       RUN_MIGRATIONS: "false"
+      RUN_SEEDERS: "false"
 
     # PHP-FPM (padrão) ou Artisan Serve
     command: php artisan serve --host=0.0.0.0 --port=8000
@@ -132,7 +133,7 @@ services:
       - app
 
     healthcheck:
-      test: [ "CMD", "wget", "-q", "--spider", "http://localhost/health" ]
+      test: [ "CMD-SHELL", "curl -sf http://localhost/health || exit 1" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -234,7 +235,7 @@ services:
   # phpMyAdmin (Profile: tools)
   # ==========================================================================
   phpmyadmin:
-    image: phpmyadmin:latest
+    image: phpmyadmin/phpmyadmin:5.2.1
     container_name: newsdc_phpmyadmin
     hostname: phpmyadmin
     restart: unless-stopped
@@ -370,13 +371,13 @@ services:
     environment:
       NODE_ENV: development
       VITE_HOST: 0.0.0.0
-      VITE_PORT: 5173
+      VITE_PORT: 5175
       NODE_OPTIONS: "--max-old-space-size=4096"
 
     ports:
-      - "5173:5173" # Vite dev server
+      - "5175:5175" # Vite dev server
 
-    command: sh -c "rm -rf node_modules/.vite && npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0 --port 5173"
+    command: sh -c "rm -rf node_modules/.vite && npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0 --port 5175"
 
     deploy:
       resources:
@@ -388,7 +389,7 @@ services:
           memory: 512M
 
     healthcheck:
-      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:5173" ]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:5175" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -648,18 +649,18 @@ services:
       - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=ollama"
     ports:
-      - "11434:11434"
+      - "11435:11434"
     volumes:
       - ollama_data:/root/.ollama
     networks:
       - sdc_network
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
     environment:
       - OLLAMA_KEEP_ALIVE=30m
 
@@ -669,7 +670,6 @@ services:
 networks:
   sdc_network:
     external: true
-
 
 # ==========================================================================
 # Volumes

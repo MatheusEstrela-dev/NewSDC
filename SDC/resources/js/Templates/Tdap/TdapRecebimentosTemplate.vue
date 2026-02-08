@@ -1,15 +1,16 @@
 <script setup>
-import { ref } from 'vue';
-import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import RecebimentoStatusBadge from '@/Components/Atoms/Tdap/RecebimentoStatusBadge.vue';
-import TdapRecebimentoCard from '@/Components/Molecules/Tdap/TdapRecebimentoCard.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import RecebimentoStatusBadge from '@/Components/Atoms/Tdap/RecebimentoStatusBadge.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
+import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import TdapRecebimentoCard from '@/Components/Molecules/Tdap/TdapRecebimentoCard.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import PrintTdapRecebimentoModal from '@/Components/Organisms/Tdap/Print/PrintTdapRecebimentoModal.vue';
 import { useMobile } from '@/composables/useMobile';
+import { ref } from 'vue';
 
 // Detecção mobile
 const { isMobile } = useMobile();
@@ -23,7 +24,13 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  pagination: {
+    type: Object,
+    default: null,
+  },
 });
+
+const emit = defineEmits(['page-change']);
 
 const formatDate = (date) => {
   if (!date) return '-';
@@ -135,6 +142,14 @@ const handlePrint = (recebimento) => {
       </div>
     </div>
 
+    <!-- Pagination -->
+    <div v-if="pagination" class="mt-6">
+      <Pagination
+        :pagination="pagination"
+        @page-change="(page) => $emit('page-change', page)"
+      />
+    </div>
+
     <!-- Modals -->
     <PrintTdapRecebimentoModal
       :show="showPrintModal"
@@ -146,8 +161,7 @@ const handlePrint = (recebimento) => {
 
 <style scoped>
 .tdap-recebimentos-container {
-  @apply w-full min-h-screen;
-  /* Padding removed for global alignment */
+  @apply w-full pb-8;
   background: #0f172a;
 }
 </style>

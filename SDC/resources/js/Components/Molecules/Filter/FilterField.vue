@@ -4,25 +4,28 @@
       {{ label }}
     </Label>
     <div class="relative">
-      <component
-        :is="fieldComponent"
-        :id="fieldId"
-        :model-value="modelValue"
-        v-bind="fieldProps"
-        @update:model-value="$emit('update:modelValue', $event)"
-        class="transition-all duration-200 ease-in-out focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
-      />
+      <!-- Renderiza slot se fornecido, senão usa componente dinâmico -->
+      <slot>
+        <component
+          :is="fieldComponent"
+          :id="fieldId"
+          :model-value="modelValue"
+          v-bind="fieldProps"
+          @update:model-value="$emit('update:modelValue', $event)"
+          class="transition-all duration-200 ease-in-out focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+        />
+      </slot>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import Label from '../../Atoms/Typography/Label.vue';
-import TextInput from '../../Atoms/Input/TextInput.vue';
-import SelectInput from '../../Atoms/Input/SelectInput.vue';
 import DateInput from '../../Atoms/Input/DateInput.vue';
 import SearchInput from '../../Atoms/Input/SearchInput.vue';
+import SelectInput from '../../Atoms/Input/SelectInput.vue';
+import TextInput from '../../Atoms/Input/TextInput.vue';
+import Label from '../../Atoms/Typography/Label.vue';
 
 const props = defineProps({
   modelValue: {

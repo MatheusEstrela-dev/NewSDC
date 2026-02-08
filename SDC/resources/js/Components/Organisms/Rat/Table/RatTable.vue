@@ -63,10 +63,6 @@
         class="m-4 first:mt-0 last:mb-0"
       />
     </div>
-    
-    <div v-if="pagination && pagination.last_page > 1" class="px-6 py-4 border-t border-slate-200 dark:border-slate-700/50">
-      <Pagination :pagination="pagination" @page-change="handlePageChange" />
-    </div>
   </CardBase>
 </template>
 
@@ -78,7 +74,6 @@ import TableHeaderRow from '@/Components/Molecules/Table/TableHeaderRow.vue';
 import TableHeader from '@/Components/Atoms/Table/TableHeader.vue';
 import RatTableRow from './RatTableRow.vue';
 import RatCard from '@/Components/Molecules/Rat/RatCard.vue';
-import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import { useMobile } from '@/composables/useMobile';
 
@@ -100,7 +95,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'delete', 'page-change']);
+const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);
 
 function handleView(id) {
   emit('view', id);
@@ -120,10 +115,6 @@ function handleAttachments(id) {
 
 function handleDelete(id) {
   emit('delete', id);
-}
-
-function handlePageChange(page) {
-  emit('page-change', page);
 }
 </script>
 

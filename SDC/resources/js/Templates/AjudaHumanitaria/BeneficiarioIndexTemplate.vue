@@ -156,12 +156,11 @@
     </div>
 
     <!-- Pagination -->
-    <div v-if="pagination && pagination.last_page > 1" class="mt-6">
-      <div class="flex items-center justify-between px-6 py-4 bg-white dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700/30">
-        <p class="text-sm text-slate-600 dark:text-slate-400">
-          Mostrando {{ pagination.from || 0 }} a {{ pagination.to || 0 }} de {{ pagination.total || 0 }} resultados
-        </p>
-      </div>
+    <div v-if="pagination" class="mt-6">
+      <Pagination
+        :pagination="pagination"
+        @page-change="(page) => emit('filter', { page })"
+      />
     </div>
   </div>
 </template>
@@ -179,6 +178,7 @@ import BeneficiarioGrid from '@/Components/Organisms/AjudaHumanitaria/Beneficiar
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PrintBeneficiarioModal from '@/Components/Organisms/AjudaHumanitaria/Print/PrintBeneficiarioModal.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import { useMobile } from '@/composables/useMobile';
 import { useExport } from '@/Composables/useExport';
 
@@ -270,7 +270,6 @@ function handlePrint(id) {
 
 <style scoped>
 .beneficiarios-container {
-  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  /* Padding removed for global alignment */
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>

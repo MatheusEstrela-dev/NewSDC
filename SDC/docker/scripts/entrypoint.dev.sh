@@ -226,6 +226,15 @@ if [ "$RUN_MIGRATIONS" == "true" ]; then
     log_success "Migrations executadas"
 fi
 
+# Executar seeders se habilitado (dados mock para desenvolvimento)
+if [ "$RUN_SEEDERS" == "true" ]; then
+    log_info "Executando seeders (mock data: usuários, hierarquias, RATs)..."
+    cd /var/www
+    php artisan db:seed --force --class=DatabaseSeeder 2>/dev/null && \
+        log_success "Seeders executados (30+ usuários, 15 RATs, 7 hierarquias)" || \
+        log_warning "Erro ao executar seeders"
+fi
+
 # Limpar caches de desenvolvimento
 log_info "Limpando caches..."
 cd /var/www

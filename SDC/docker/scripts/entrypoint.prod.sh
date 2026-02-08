@@ -67,33 +67,19 @@ if [ "$DB_CONNECTION" = "sqlite" ]; then
     fi
 fi
 
-# Verificar se migrations foram executadas (verifica se tabela users existe)
-if ! php artisan migrate:status --quiet 2>/dev/null | grep -q "users"; then
-    echo "Executando migrations..."
-    php artisan migrate --force 2>/dev/null || echo "⚠️  Aviso: Erro ao executar migrations"
-fi
+# Executar migrations
+echo "Executando migrations..."
+php artisan migrate --force 2>/dev/null || echo "⚠️  Aviso: Erro ao executar migrations"
 
-# Sempre verificar/corrigir usuário de teste (garante que existe e está correto)
-echo "Verificando usuário de teste..."
-if php artisan app:create-test-user --fix 2>/dev/null; then
-    echo "✅ Usuário de teste verificado/corrigido"
-else
-    # Se o comando não existir, usar método alternativo
-    echo "Comando app:create-test-user não encontrado, usando método alternativo..."
-    
-    USER_EXISTS=$(php artisan tinker --execute="echo \App\Models\User::where('cpf', '12345678900')->exists() ? 'true' : 'false';" 2>/dev/null || echo "false")
-    
-    if [ "$USER_EXISTS" != "true" ]; then
-        echo "Executando seeders (criando usuário de teste)..."
-        php artisan db:seed --force --class=DatabaseSeeder 2>/dev/null || echo "⚠️  Aviso: Erro ao executar seeders"
-        
-        echo "✅ Banco de dados inicializado com usuário de teste"
-        echo "   CPF: 12345678900 (sem formatação)"
-        echo "   Senha: password"
-    else
-        echo "✅ Usuário de teste já existe no banco"
-    fi
-fi
+# Executar seeders completos (idempotentes — usam updateOrCreate/insertOrIgnore)
+# Inclui: Roles, Órgãos, Admin, Usuários Mock (diversas hierarquias), RATs Mock
+echo "Executando seeders (dados mock + hierarquias)..."
+php artisan db:seed --force --class=DatabaseSeeder 2>/dev/null || echo "⚠️  Aviso: Erro ao executar seeders"
+
+echo "✅ Banco inicializado com dados mock completos"
+echo "   Admin: admin@defesa.mg.gov.br / password"
+echo "   Hierarquias: super-admin, admin, manager, analyst, operator, viewer, user"
+echo "   RATs: 15 registros (em_andamento, rascunho, finalizado)"
 
 # Limpar caches
 php artisan config:clear 2>/dev/null || true

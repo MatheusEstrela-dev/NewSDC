@@ -81,17 +81,26 @@
         <Text size="sm" color="muted">Nenhuma movimentação registrada</Text>
       </div>
     </div>
+
+    <!-- Pagination -->
+    <div v-if="pagination" class="mt-6">
+      <Pagination
+        :pagination="pagination"
+        @page-change="(page) => $emit('page-change', page)"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import MovimentacaoTypeBadge from '@/Components/Atoms/Tdap/MovimentacaoTypeBadge.vue';
-import TdapMovimentacaoCard from '@/Components/Molecules/Tdap/TdapMovimentacaoCard.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import MovimentacaoTypeBadge from '@/Components/Atoms/Tdap/MovimentacaoTypeBadge.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import ArrowsRightLeftIcon from '@/Components/Icons/ArrowsRightLeftIcon.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import TdapMovimentacaoCard from '@/Components/Molecules/Tdap/TdapMovimentacaoCard.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { useMobile } from '@/composables/useMobile';
 
 // Detecção mobile
@@ -106,7 +115,13 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  pagination: {
+    type: Object,
+    default: null,
+  },
 });
+
+const emit = defineEmits(['page-change']);
 
 const formatDate = (date) => {
   if (!date) return '-';
@@ -122,8 +137,7 @@ const formatDate = (date) => {
 
 <style scoped>
 .tdap-movimentacoes-container {
-  @apply w-full min-h-screen;
-  /* Padding removed for global alignment */
+  @apply w-full pb-8;
   background: #0f172a;
 }
 </style>

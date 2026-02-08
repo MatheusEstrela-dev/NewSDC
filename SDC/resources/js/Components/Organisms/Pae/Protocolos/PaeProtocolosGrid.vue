@@ -34,20 +34,13 @@
       />
     </div>
 
-    <div v-if="pagination && pagination.last_page > 1" class="mt-6">
-      <CardBase variant="default" padding="md">
-        <Pagination :pagination="pagination" @page-change="$emit('page-change', $event)" />
-      </CardBase>
-    </div>
   </div>
 </template>
 
 <script setup>
-import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import PaeProtocoloCard from '@/Components/Molecules/Pae/Protocolos/PaeProtocoloCard.vue';
 
@@ -66,7 +59,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'page-change']);
+defineEmits(['view', 'print', 'edit', 'history']);
 </script>
 
 

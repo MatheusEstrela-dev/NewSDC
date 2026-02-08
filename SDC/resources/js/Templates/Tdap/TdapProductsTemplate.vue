@@ -79,17 +79,26 @@
         <Text size="sm" color="muted">Nenhum produto cadastrado</Text>
       </div>
     </div>
+
+    <!-- Pagination -->
+    <div v-if="pagination" class="mt-6">
+      <Pagination
+        :pagination="pagination"
+        @page-change="(page) => $emit('page-change', page)"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import ProductTypeBadge from '@/Components/Atoms/Tdap/ProductTypeBadge.vue';
-import TdapProductCard from '@/Components/Molecules/Tdap/TdapProductCard.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import ProductTypeBadge from '@/Components/Atoms/Tdap/ProductTypeBadge.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import CubeIcon from '@/Components/Icons/CubeIcon.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import TdapProductCard from '@/Components/Molecules/Tdap/TdapProductCard.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { useMobile } from '@/composables/useMobile';
 
 // Detecção mobile
@@ -104,12 +113,17 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  pagination: {
+    type: Object,
+    default: null,
+  },
 });
+
+const emit = defineEmits(['page-change']);
 </script>
 
 <style scoped>
 .tdap-products-container {
-  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  /* Padding removed for global alignment */
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>

@@ -100,7 +100,7 @@
     />
 
     <!-- Pagination -->
-    <div v-if="pagination && pagination.last_page > 1" class="mt-6">
+    <div v-if="pagination" class="mt-6">
       <Pagination
         :pagination="pagination"
         @page-change="handlePageChange"
@@ -207,7 +207,6 @@ function handleExportCsv(params) {
 
 <style scoped>
 .processos-container {
-  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  /* Padding removed for global alignment */
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>

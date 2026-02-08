@@ -11,6 +11,7 @@ import TreinamentoStatsCards from '@/Components/Organisms/Treinamento/Treinament
 import TreinamentoFiltersSection from '@/Components/Organisms/Treinamento/TreinamentoFiltersSection.vue';
 import TreinamentoGrid from '@/Components/Organisms/Treinamento/TreinamentoGrid.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import { useMobile } from '@/composables/useMobile';
 
 // Detecção mobile
@@ -229,37 +230,17 @@ function handleExportCsv(params) {
     </div>
 
     <!-- Pagination -->
-    <div v-if="pagination && pagination.last_page > 1" class="mt-6 flex justify-between items-center">
-      <Text size="sm" color="muted">
-        Mostrando {{ pagination.from }} a {{ pagination.to }} de {{ pagination.total }} resultados
-      </Text>
-
-      <div class="flex gap-2">
-        <button
-          :disabled="pagination.current_page === 1"
-          class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Anterior
-        </button>
-        <div class="flex items-center px-4">
-          <Text size="sm">
-            Página {{ pagination.current_page }} de {{ pagination.last_page }}
-          </Text>
-        </div>
-        <button
-          :disabled="pagination.current_page === pagination.last_page"
-          class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Próxima
-        </button>
-      </div>
+    <div v-if="pagination" class="mt-6">
+      <Pagination
+        :pagination="pagination"
+        @page-change="(page) => emit('filter', { page })"
+      />
     </div>
   </div>
 </template>
 
 <style scoped>
 .treinamentos-container {
-  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  /* Padding removed for global alignment */
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>

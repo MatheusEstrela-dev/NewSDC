@@ -56,7 +56,6 @@
       @edit="handleEdit"
       @attachments="handleAttachments"
       @delete="handleDelete"
-      @page-change="handlePageChange"
     />
 
     <!-- Table View -->
@@ -70,8 +69,15 @@
       @edit="handleEdit"
       @attachments="handleAttachments"
       @delete="handleDelete"
-      @page-change="handlePageChange"
     />
+
+    <!-- Pagination -->
+    <div v-if="paginationToUse" class="mt-6">
+      <Pagination
+        :pagination="paginationToUse"
+        @page-change="handlePageChange"
+      />
+    </div>
 
     <!-- Modal de Impressao do Boletim -->
     <PrintBoletimModal
@@ -98,6 +104,7 @@ import RatTable from '../../Components/Organisms/Rat/Table/RatTable.vue';
 import RatGrid from '../../Components/Organisms/Rat/Grid/RatGrid.vue';
 import PrintBoletimModal from '../../Components/Organisms/Rat/Print/PrintBoletimModal.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import { getMockStatisticsFromRats } from '@/mocks/rat';
 import { useModalState } from '@/Composables/useModalState';
 import { MESSAGES } from '@/constants/messages';
@@ -331,8 +338,7 @@ function handlePageChange(page) {
 
 <style scoped>
 .rat-index-container {
-  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  /* Padding removed to align with NavigationHeader which matches main content padding */
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>
 

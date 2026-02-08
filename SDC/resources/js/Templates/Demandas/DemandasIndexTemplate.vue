@@ -6,16 +6,21 @@
     <DemandasList
       :demandas="demandas"
       :filters="filters"
-      :current-page="currentPage"
-      :total-pages="totalPages"
       :get-tipo-label="getTipoLabel"
       :get-prioridade-label="getPrioridadeLabel"
       :get-status-label="getStatusLabel"
       @filter-change="handleFilterChange"
       @clear-filters="handleClearFilters"
-      @page-change="handlePageChange"
       @demanda-click="handleDemandaClick"
     />
+
+    <!-- Pagination -->
+    <div v-if="pagination" class="mt-6">
+      <Pagination
+        :pagination="pagination"
+        @page-change="handlePageChange"
+      />
+    </div>
 
     <NovaDemandaModal
       :show="showModal"
@@ -42,6 +47,7 @@ import DemandasStatisticsCards from '@/Components/Organisms/Demandas/Statistics/
 import DemandasList from '@/Components/Organisms/Demandas/Lists/DemandasList.vue';
 import NovaDemandaModal from '@/Components/Organisms/Demandas/Modals/NovaDemandaModal.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 
 const props = defineProps({
   statistics: {
@@ -61,6 +67,7 @@ const {
   filters,
   currentPage,
   totalPages,
+  pagination,
   statistics: demandasStatistics,
   createDemanda,
   setFilters,
@@ -109,7 +116,6 @@ function handleExportCsv(params) {
 
 <style scoped>
 .demandas-container {
-  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  /* Padding removed to align with NavigationHeader which matches main content padding */
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>

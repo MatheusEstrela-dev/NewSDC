@@ -24,15 +24,11 @@
       />
     </div>
 
-    <div v-if="pagination && pagination.last_page > 1" class="mt-6">
-      <Pagination :pagination="pagination" @page-change="$emit('page-change', $event)" />
-    </div>
   </div>
 </template>
 
 <script setup>
 import RatCard from '@/Components/Molecules/Rat/RatCard.vue';
-import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 
 defineProps({
@@ -50,5 +46,5 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'attachments', 'delete', 'page-change']);
+defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);
 </script>
