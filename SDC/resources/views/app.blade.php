@@ -22,9 +22,10 @@
                     $manifestPath = public_path('build/manifest.json');
                     if (file_exists($manifestPath)) {
                         $manifest = json_decode(file_get_contents($manifestPath), true);
-                        $appCss = $manifest['resources/css/app.css']['file'] ?? null;
                         $appJs = $manifest['resources/js/app.js']['file'] ?? null;
-                        
+                        $appCssArray = $manifest['resources/js/app.js']['css'] ?? [];
+                        $appCss = !empty($appCssArray) ? $appCssArray[0] : null;
+
                         if ($appCss) {
                             echo '<link rel="preload" href="/build/' . $appCss . '" as="style">';
                         }

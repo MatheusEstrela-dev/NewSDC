@@ -69,12 +69,12 @@ fi
 
 # Executar migrations
 echo "Executando migrations..."
-php artisan migrate --force 2>/dev/null || echo "⚠️  Aviso: Erro ao executar migrations"
+php artisan migrate --force || echo "⚠️  Aviso: Erro ao executar migrations"
 
 # Executar seeders completos (idempotentes — usam updateOrCreate/insertOrIgnore)
 # Inclui: Roles, Órgãos, Admin, Usuários Mock (diversas hierarquias), RATs Mock
 echo "Executando seeders (dados mock + hierarquias)..."
-php artisan db:seed --force --class=DatabaseSeeder 2>/dev/null || echo "⚠️  Aviso: Erro ao executar seeders"
+php artisan db:seed --force --class=DatabaseSeeder || echo "⚠️  Aviso: Erro ao executar seeders"
 
 echo "✅ Banco inicializado com dados mock completos"
 echo "   Admin: admin@defesa.mg.gov.br / password"

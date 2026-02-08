@@ -80,7 +80,7 @@ class OrgaosSeeder extends Seeder
             [
                 'codigo' => 'COMPDEC-FLORIANOPOLIS',
                 'nome' => 'COMPDEC Florianópolis',
-                'municipio_id' => 1,
+                'municipio_id' => null,
                 'redec_id' => $redecIds[0],
                 'responsavel_nome' => 'João da Silva',
                 'responsavel_cpf' => '123.456.789-00',
@@ -90,7 +90,7 @@ class OrgaosSeeder extends Seeder
             [
                 'codigo' => 'COMPDEC-SAO-JOSE',
                 'nome' => 'COMPDEC São José',
-                'municipio_id' => 2,
+                'municipio_id' => null,
                 'redec_id' => $redecIds[0],
                 'responsavel_nome' => 'Maria Santos',
                 'responsavel_cpf' => '987.654.321-00',
@@ -100,7 +100,7 @@ class OrgaosSeeder extends Seeder
             [
                 'codigo' => 'COMPDEC-BLUMENAU',
                 'nome' => 'COMPDEC Blumenau',
-                'municipio_id' => 10,
+                'municipio_id' => null,
                 'redec_id' => $redecIds[1],
                 'responsavel_nome' => 'Carlos Oliveira',
                 'responsavel_cpf' => '456.789.123-00',
@@ -110,7 +110,7 @@ class OrgaosSeeder extends Seeder
             [
                 'codigo' => 'COMPDEC-JOINVILLE',
                 'nome' => 'COMPDEC Joinville',
-                'municipio_id' => 20,
+                'municipio_id' => null,
                 'redec_id' => $redecIds[2],
                 'responsavel_nome' => 'Ana Paula',
                 'responsavel_cpf' => '321.654.987-00',

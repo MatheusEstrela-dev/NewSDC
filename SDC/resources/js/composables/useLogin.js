@@ -28,13 +28,15 @@ export function useLogin() {
   });
 
   /**
-   * Atualiza o CPF aplicando a máscara automaticamente
+   * Atualiza o CPF permitindo apenas números e aplicando a máscara
    */
-  function updateCpf(value) {
+  function updateCpf(event) {
+    const value = event.target.value;
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 11) {
       cpf.value = numbers;
     }
+    event.target.value = applyCpfMask(cpf.value);
   }
 
   /**

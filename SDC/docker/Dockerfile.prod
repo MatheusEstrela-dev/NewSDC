@@ -94,6 +94,9 @@ RUN if [ -f package.json ]; then \
 # Copiar resto do código da aplicação
 COPY . .
 
+# Remover arquivo hot do Vite dev server (segurança extra além do .dockerignore)
+RUN rm -f public/hot
+
 # Executar scripts do composer após copiar código
 RUN composer dump-autoload --optimize --classmap-authoritative
 

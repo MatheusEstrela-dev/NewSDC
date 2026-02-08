@@ -17,9 +17,10 @@
         <div class="input-group">
           <input
             type="text"
+            inputmode="numeric"
             id="cpf"
-            v-model="cpfFormatted"
-            @input="updateCpf($event.target.value)"
+            :value="cpfFormatted"
+            @input="updateCpf($event)"
             class="input-field"
             placeholder=" "
             maxlength="14"
