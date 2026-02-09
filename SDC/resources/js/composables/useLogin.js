@@ -1,6 +1,6 @@
-import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
-import { applyCpfMask, removeCpfMask, isValidCpfFormat } from '../utils/cpfMask';
+import { computed, ref } from 'vue';
+import { applyCpfMask, isValidCpfFormat, removeCpfMask } from '../utils/cpfMask';
 
 /**
  * Composable para gerenciar o estado e lógica do formulário de login
@@ -29,14 +29,16 @@ export function useLogin() {
 
   /**
    * Atualiza o CPF permitindo apenas números e aplicando a máscara
+   * @param {String} value
    */
-  function updateCpf(event) {
-    const value = event.target.value;
-    const numbers = value.replace(/\D/g, '');
+  function updateCpf(value) {
+    // Garante que é string
+    const strValue = String(value || '');
+    const numbers = strValue.replace(/\D/g, '');
+
     if (numbers.length <= 11) {
       cpf.value = numbers;
     }
-    event.target.value = applyCpfMask(cpf.value);
   }
 
   /**
@@ -93,11 +95,11 @@ export function useLogin() {
     showPassword,
     loading,
     errors,
-    
+
     // Computed
     cpfFormatted,
     isValid,
-    
+
     // Methods
     updateCpf,
     togglePasswordVisibility,

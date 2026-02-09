@@ -50,7 +50,12 @@
       "Bash(git -C /home/matheus/Documentos/NewSDC tag -l)",
       "Bash(git log:*)",
       "WebSearch",
-      "Bash(make up-all:*)"
+      "Bash(make up-all:*)",
+      "Bash(docker network:*)",
+      "Bash(sudo docker network:*)",
+      "Bash(sudo docker ps:*)",
+      "Bash(sudo -S usermod:*)",
+      "Bash(sg docker:*)"
     ],
     "deny": [],
     "ask": []
