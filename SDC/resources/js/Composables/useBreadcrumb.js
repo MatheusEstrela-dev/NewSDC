@@ -36,6 +36,65 @@ export function useBreadcrumb() {
             { label: 'PAE', route: 'pae.index' },
             { label: 'Novo PAE', route: null }
         ],
+
+        // Admin / Permissions
+        'Admin/Permissions/Users/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Admin', route: null },
+            { label: 'Usuários', route: null }
+        ],
+        'Admin/Permissions/Users/Show': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Admin', route: null },
+            { label: 'Usuários', route: 'admin.permissions.users.index' },
+            { label: 'Visualizar', route: null }
+        ],
+        'Admin/Permissions/Users/Edit': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Admin', route: null },
+            { label: 'Usuários', route: 'admin.permissions.users.index' },
+            { label: 'Edição', route: null }
+        ],
+        'Admin/Permissions/Users/Create': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Admin', route: null },
+            { label: 'Usuários', route: 'admin.permissions.users.index' },
+            { label: 'Novo', route: null }
+        ],
+        'Admin/Permissions/Roles/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Admin', route: null },
+            { label: 'Cargos', route: null }
+        ],
+        'Admin/Permissions/Roles/Show': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Admin', route: null },
+            { label: 'Cargos', route: 'admin.permissions.roles.index' },
+            { label: 'Visualizar', route: null }
+        ],
+        'Admin/Permissions/Roles/Edit': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Admin', route: null },
+            { label: 'Cargos', route: 'admin.permissions.roles.index' },
+            { label: 'Edição', route: null }
+        ],
+        'Admin/Permissions/Roles/Create': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Admin', route: null },
+            { label: 'Cargos', route: 'admin.permissions.roles.index' },
+            { label: 'Novo', route: null }
+        ],
+        'Admin/Permissions/Permissions/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Admin', route: null },
+            { label: 'Permissões', route: null }
+        ],
+        'Admin/Permissions/Permissions/Show': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Admin', route: null },
+            { label: 'Permissões', route: 'admin.permissions.permissions.index' },
+            { label: 'Visualizar', route: null }
+        ],
         // ... (I will map other common ones or leave legacy strings to be handled by fallback)
     };
 

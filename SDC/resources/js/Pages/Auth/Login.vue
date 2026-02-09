@@ -20,7 +20,11 @@
             inputmode="numeric"
             id="cpf"
             :value="cpfFormatted"
-            @input="updateCpf($event)"
+            @input="handleInput"
+            @keydown="onlyNumbers"
+            @paste="handlePaste"
+            inputmode="numeric"
+            pattern="[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}"
             class="input-field"
             placeholder=" "
             maxlength="14"
@@ -160,5 +164,54 @@ const {
   togglePasswordVisibility,
   submitLogin,
 } = useLogin();
+
+/**
+ * Manipula a entrada de dados para garantir que apenas números sejam aceitos
+ * Força a atualização do DOM caso o Vue não detecte mudança no model (ex: digitar letra que é removida)
+ */
+const handleInput = (evt) => {
+  const target = evt.target;
+  const rawValue = target.value;
+
+  // Remove qualquer caractere que não seja número
+  const numbersOnly = rawValue.replace(/\D/g, '');
+
+  // Atualiza o model com apenas números
+  updateCpf(numbersOnly);
+
+  // Força atualização visual imediata do input com valor formatado
+  target.value = cpfFormatted.value;
+};
+
+/**
+ * Permite apenas números e teclas de controle no input (intercepta antes da digitação)
+ */
+const onlyNumbers = (evt) => {
+  // Permite teclas de controle (Backspace, Delete, Tab, Setas, Enter, etc)
+  if (evt.key.length > 1) return;
+  
+  // Permite Ctrl+C, Ctrl+V, Ctrl+A, etc
+  if (evt.ctrlKey || evt.metaKey) return;
+  
+  // Se for caractere visível e não for dígito, bloqueia
+  if (!/^\d$/.test(evt.key)) {
+    evt.preventDefault();
+  }
+};
+
+/**
+ * Intercepta colagem e filtra apenas números
+ */
+const handlePaste = (evt) => {
+  evt.preventDefault();
+  const clipboardData = evt.clipboardData || window.clipboardData;
+  const pastedData = clipboardData.getData('Text');
+  // Extrai apenas números do texto colado
+  const numbersOnly = pastedData.replace(/\D/g, '');
+  if (numbersOnly) {
+    updateCpf(numbersOnly);
+    evt.target.value = cpfFormatted.value;
+  }
+};
 </script>
 

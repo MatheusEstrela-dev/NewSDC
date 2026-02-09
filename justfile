@@ -156,9 +156,26 @@ dev:
 npm-install:
     cd SDC && npm install
 
-# ==================== PERMISSÕES ====================
+# ==================== PERMISSOES (SISTEMA) ====================
 
-# Corrige permissões dos arquivos
+# Executa a migration consolidada do sistema de permissionamento
+perm-migrate:
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_000001_enhance_permission_system.php --force
+    @echo "Migration de permissionamento executada!"
+
+# Rollback da migration de permissionamento
+perm-rollback:
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_000001_enhance_permission_system.php --force
+    @echo "Migration de permissionamento revertida!"
+
+# Limpa o cache de permissoes (Spatie)
+perm-cache-clear:
+    docker exec {{docker_app}} php artisan permission:cache-reset
+    @echo "Cache de permissoes limpo!"
+
+# ==================== PERMISSOES (ARQUIVOS) ====================
+
+# Corrige permissoes dos arquivos
 fix-permissions:
     docker exec {{docker_app}} chown -R www-data:www-data /var/www/storage
     docker exec {{docker_app}} chown -R www-data:www-data /var/www/bootstrap/cache

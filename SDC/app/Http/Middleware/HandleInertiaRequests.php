@@ -34,19 +34,55 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $user ? [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'cpf' => $user->cpf ?? null,
-                    'email' => $user->email ?? null,
-                    // Spatie roles/permissions (usado para esconder/mostrar menus no frontend)
-                    'is_super_admin' => method_exists($user, 'hasRole') ? $user->hasRole('super-admin') : false,
-                    'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames()->values() : [],
-                    'permissions' => method_exists($user, 'getAllPermissions')
-                        ? $user->getAllPermissions()->pluck('name')->values()
-                        : [],
-                ] : null,
+                'user' => $user ? $this->getUserData($user) : null,
             ],
+            'acl' => $this->getAclConfig(),
+        ];
+    }
+
+    /**
+     * Retorna dados do usuario autenticado.
+     */
+    protected function getUserData($user): array
+    {
+        $roles = [];
+        if (method_exists($user, 'roles')) {
+            $roles = $user->roles->map(fn($role) => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'slug' => $role->slug,
+                'hierarchy_level' => $role->hierarchy_level,
+            ])->values()->toArray();
+        }
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'cpf' => $user->cpf ?? null,
+            'email' => $user->email ?? null,
+            'is_super_admin' => method_exists($user, 'hasRole') ? $user->hasRole('super-admin') : false,
+            'roles' => $roles,
+            'role_names' => method_exists($user, 'getRoleNames') ? $user->getRoleNames()->values() : [],
+            'permissions' => method_exists($user, 'getAllPermissions')
+                ? $user->getAllPermissions()->pluck('name')->values()
+                : [],
+            'hierarchy_level' => method_exists($user, 'getHierarchyLevel')
+                ? $user->getHierarchyLevel()
+                : 99,
+        ];
+    }
+
+    /**
+     * Retorna configuracao ACL do config/permissions.php para o frontend.
+     */
+    protected function getAclConfig(): array
+    {
+        return [
+            'levels' => config('permissions.levels', []),
+            'modules' => config('permissions.modules', []),
+            'protected_roles' => config('permissions.protected_roles', []),
+            'immutable_permissions' => config('permissions.immutable_permissions', []),
+            'default_level' => config('permissions.default_level', 99),
         ];
     }
 }

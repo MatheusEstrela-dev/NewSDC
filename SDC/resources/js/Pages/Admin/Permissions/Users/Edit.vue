@@ -1,197 +1,234 @@
 <template>
   <AuthenticatedLayout>
-    <div class="permissions-container">
-      <div class="page-header">
-        <div class="header-content">
-          <div class="header-left">
-            <Link :href="route('admin.permissions.users.show', user.id)" class="back-link">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-              Voltar
-            </Link>
-            <h1 class="page-title">Editar Usuário</h1>
-            <p class="page-subtitle">Atualize informações, cargos e permissões</p>
+    <Head title="Editar Usuário" />
+    <div class="w-full py-6">
+
+
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Editar Usuário</h1>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Atualize informações, cargos e permissões</p>
           </div>
-        </div>
       </div>
 
-      <form @submit.prevent="submitForm" class="content-grid">
-        <div class="main-content">
-          <div class="section-card">
-            <div class="section-header">
-              <h3 class="section-title">
-                <svg class="section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <form @submit.prevent="submitForm" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Main Content -->
+        <div class="lg:col-span-3 space-y-6">
+          
+          <!-- Basic Info Card -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+              <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 Informações Básicas
               </h3>
             </div>
 
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="name" class="form-label">Nome Completo</label>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-2">
+                <label for="name" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nome Completo</label>
                 <input
                   id="name"
                   v-model="form.name"
                   type="text"
-                  class="form-input"
-                  :class="{ 'input-error': errors.name }"
+                  class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                  :class="{ 'border-red-500 focus:ring-red-500': errors.name }"
                   placeholder="Digite o nome completo"
                   required
                 />
-                <span v-if="errors.name" class="error-message">{{ errors.name }}</span>
+                <span v-if="errors.name" class="text-xs text-red-500 font-medium">{{ errors.name }}</span>
               </div>
 
-              <div class="form-group">
-                <label for="email" class="form-label">Email</label>
+              <div class="space-y-2">
+                <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
                 <input
                   id="email"
                   v-model="form.email"
                   type="email"
-                  class="form-input"
-                  :class="{ 'input-error': errors.email }"
+                  class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                  :class="{ 'border-red-500 focus:ring-red-500': errors.email }"
                   placeholder="Digite o email"
                   required
                 />
-                <span v-if="errors.email" class="error-message">{{ errors.email }}</span>
+                <span v-if="errors.email" class="text-xs text-red-500 font-medium">{{ errors.email }}</span>
               </div>
             </div>
           </div>
 
-          <div class="section-card">
-            <div class="section-header">
-              <h3 class="section-title">
-                <svg class="section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <!-- Roles Card -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+              <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
                 Cargos
               </h3>
-              <span class="count-badge">{{ selectedRolesCount }}</span>
+              <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                {{ selectedRolesCount }}
+              </span>
             </div>
 
-            <div class="roles-selection">
+            <div class="p-6 space-y-3">
               <div
                 v-for="role in availableRoles"
                 :key="role.id"
-                class="role-checkbox-card"
-                :class="{ 'selected': form.roles.includes(role.id), 'disabled': role.slug === 'super-admin' && !canEditSuperAdmin }"
+                @click="!checkRoleDisabled(role) && toggleRole(role.id)"
+                class="relative flex items-center gap-4 p-4 rounded-xl border-2 transition-all cursor-pointer"
+                :class="[
+                  form.roles.includes(role.id)
+                    ? 'border-teal-500 bg-teal-50/30 dark:bg-teal-900/10'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
+                  checkRoleDisabled(role) ? 'opacity-50 cursor-not-allowed' : ''
+                ]"
               >
-                <label class="role-checkbox-label">
-                  <input
-                    type="checkbox"
-                    :value="role.id"
-                    v-model="form.roles"
-                    :disabled="role.slug === 'super-admin' && !canEditSuperAdmin"
-                    class="role-checkbox-input"
-                  />
-                  <div class="role-checkbox-content">
-                    <div class="role-checkbox-header">
-                      <div class="role-icon-small" :class="`hierarchy-${role.hierarchy_level}`">
-                        <svg fill="currentColor" viewBox="0 0 20 20">
-                          <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" />
-                          <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
-                        </svg>
-                      </div>
-                      <div class="role-checkbox-info">
-                        <h4 class="role-checkbox-name">{{ role.name }}</h4>
-                        <p class="role-checkbox-description">{{ role.description }}</p>
-                      </div>
-                      <div class="checkbox-indicator">
-                        <svg v-if="form.roles.includes(role.id)" fill="currentColor" viewBox="0 0 20 20">
-                          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                        </svg>
-                      </div>
-                    </div>
-                    <div class="role-checkbox-footer">
-                      <span class="role-hierarchy-badge">Nível {{ role.hierarchy_level }}</span>
-                      <span class="role-permissions-badge">{{ role.permissions_count || 0 }} permissões</span>
-                    </div>
+                <!-- Role Icon - Design Pattern from Roles/Index -->
+                <div
+                  class="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 border transition-colors"
+                  :class="getRoleIconClass(role.hierarchy_level, form.roles.includes(role.id))"
+                >
+                  <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" />
+                    <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
+                  </svg>
+                </div>
+
+                <!-- Role Info -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <h4 class="font-semibold text-slate-900 dark:text-slate-100">{{ role.name }}</h4>
                   </div>
-                </label>
+                  <p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-1">{{ role.description }}</p>
+                  <div class="flex items-center gap-4 mt-2">
+                    <span class="text-xs text-slate-400 dark:text-slate-500">Nivel {{ role.hierarchy_level }}</span>
+                    <span class="text-xs font-medium text-blue-600 dark:text-blue-400">{{ role.permissions_count || 0 }} permissoes</span>
+                  </div>
+                </div>
+
+                <!-- Checkbox -->
+                <div class="flex-shrink-0">
+                  <div
+                    class="w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors"
+                    :class="form.roles.includes(role.id)
+                      ? 'bg-teal-600 border-teal-600'
+                      : 'border-slate-300 dark:border-slate-600'"
+                  >
+                    <svg v-if="form.roles.includes(role.id)" class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="section-card">
-            <div class="section-header">
-              <h3 class="section-title">
-                <svg class="section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <!-- Direct Permissions Card - Renderizado via ACL Config -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+              <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+                <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                Permissões Diretas
+                Permissoes Diretas
               </h3>
-              <span class="count-badge">{{ selectedPermissionsCount }}</span>
+              <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                {{ selectedPermissionsCount }}
+              </span>
             </div>
 
-            <div class="permissions-modules">
-              <div v-for="(modulePermissions, moduleName) in groupedPermissions" :key="moduleName" class="permission-module-section">
-                <div class="module-header" @click="toggleModule(moduleName)">
-                  <div class="module-header-left">
-                    <svg class="module-expand-icon" :class="{ 'expanded': expandedModules.includes(moduleName) }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="p-6 space-y-4">
+              <!-- Itera sobre modulos do config/permissions.php via $page.props.acl.modules -->
+              <div v-for="(groups, moduleName) in aclModules" :key="moduleName" class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                <div
+                  @click="toggleModule(moduleName)"
+                  class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/30 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900/50 transition-colors select-none"
+                >
+                  <div class="flex items-center gap-3">
+                    <svg class="w-4 h-4 text-slate-400 transition-transform duration-200" :class="{ 'rotate-90 text-blue-500': expandedModules.includes(moduleName) }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
-                    <h4 class="module-header-title">{{ formatModuleName(moduleName) }}</h4>
+                    <h4 class="font-semibold text-slate-700 dark:text-slate-200 uppercase text-xs tracking-wider">{{ moduleName }}</h4>
                   </div>
-                  <span class="module-count-badge">{{ getModuleSelectedCount(moduleName) }}/{{ modulePermissions.length }}</span>
+                  <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">
+                    {{ getModuleSelectedCount(moduleName) }}/{{ getModuleTotalCount(groups) }}
+                  </span>
                 </div>
 
-                <Transition name="expand">
-                  <div v-if="expandedModules.includes(moduleName)" class="module-permissions-grid">
-                    <label
-                      v-for="permission in modulePermissions"
-                      :key="permission.id"
-                      class="permission-checkbox-label"
-                    >
-                      <input
-                        type="checkbox"
-                        :value="permission.id"
-                        v-model="form.direct_permissions"
-                        class="permission-checkbox-input"
-                      />
-                      <span class="permission-checkbox-text">{{ formatPermissionName(permission.name) }}</span>
-                      <span class="permission-checkbox-indicator"></span>
-                    </label>
+                <div v-show="expandedModules.includes(moduleName)" class="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                  <!-- Itera sobre grupos dentro do modulo -->
+                  <div v-for="(permissions, groupName) in groups" :key="groupName" class="p-4 border-b border-slate-100 dark:border-slate-700 last:border-b-0">
+                    <h5 class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wide">{{ groupName }}</h5>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                      <!-- Itera sobre acoes/permissoes do grupo -->
+                      <div v-for="(slug, action) in permissions" :key="slug" class="flex items-center">
+                        <input
+                          :id="`perm-${slug}`"
+                          type="checkbox"
+                          :value="slug"
+                          v-model="form.direct_permissions"
+                          :disabled="isImmutablePermission(slug)"
+                          class="w-4 h-4 text-purple-600 bg-slate-100 border-slate-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                        <label
+                          :for="`perm-${slug}`"
+                          class="ml-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer select-none"
+                          :class="{ 'opacity-50 cursor-not-allowed': isImmutablePermission(slug) }"
+                          :title="slug"
+                        >
+                          {{ formatActionName(action) }}
+                        </label>
+                      </div>
+                    </div>
                   </div>
-                </Transition>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="sidebar-content">
-          <div class="sticky-sidebar">
-            <div class="summary-card">
-              <h3 class="summary-title">Resumo das Alterações</h3>
-              <div class="summary-items">
-                <div class="summary-item">
-                  <span class="summary-label">Cargos Selecionados</span>
-                  <span class="summary-value">{{ selectedRolesCount }}</span>
+        <!-- Sidebar Actions -->
+        <div class="lg:col-span-1">
+          <div class="sticky top-6 space-y-6">
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden p-6">
+              <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Resumo das Alterações</h3>
+              
+              <div class="space-y-3 mb-6">
+                <div class="flex justify-between items-center text-sm border-b border-slate-100 dark:border-slate-700 pb-2">
+                  <span class="text-slate-600 dark:text-slate-400">Cargos Selecionados</span>
+                  <span class="font-medium text-slate-900 dark:text-slate-100">{{ selectedRolesCount }}</span>
                 </div>
-                <div class="summary-item">
-                  <span class="summary-label">Permissões Diretas</span>
-                  <span class="summary-value">{{ selectedPermissionsCount }}</span>
+                <div class="flex justify-between items-center text-sm border-b border-slate-100 dark:border-slate-700 pb-2">
+                  <span class="text-slate-600 dark:text-slate-400">Permissões Diretas</span>
+                  <span class="font-medium text-slate-900 dark:text-slate-100">{{ selectedPermissionsCount }}</span>
                 </div>
-                <div class="summary-item">
-                  <span class="summary-label">Total de Permissões</span>
-                  <span class="summary-value">{{ totalPermissionsCount }}</span>
+                <div class="flex justify-between items-center text-sm font-medium pt-1">
+                  <span class="text-slate-800 dark:text-slate-200">Total de Permissões</span>
+                  <span class="text-blue-600 dark:text-blue-400">{{ totalPermissionsCount }}</span>
                 </div>
               </div>
-            </div>
 
-            <div class="actions-card">
-              <button type="submit" class="btn btn-primary btn-block" :disabled="form.processing">
-                <svg v-if="!form.processing" class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                <svg v-else class="btn-spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <circle class="spinner-circle" cx="12" cy="12" r="10" stroke-width="4" />
-                </svg>
-                {{ form.processing ? 'Salvando...' : 'Salvar Alterações' }}
-              </button>
-              <Link :href="route('admin.permissions.users.show', user.id)" class="btn btn-secondary btn-block">
-                Cancelar
-              </Link>
+              <div class="space-y-3">
+                <button
+                  type="submit"
+                  class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm disabled:opacity-75 disabled:cursor-not-allowed"
+                  :disabled="form.processing"
+                >
+                  <svg v-if="form.processing" class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span v-else>Salvar Alterações</span>
+                </button>
+                
+                <Link
+                  :href="route('admin.permissions.users.show', user.id)"
+                  class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg transition-colors"
+                >
+                  Cancelar
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -202,8 +239,10 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { Link, useForm } from '@inertiajs/vue3';
+import { Link, useForm, usePage, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { useHierarchy } from '@/Composables/useHierarchy';
+import { route } from 'ziggy-js';
 
 const props = defineProps({
   user: {
@@ -228,25 +267,56 @@ const props = defineProps({
   }
 });
 
+const page = usePage();
+const { isSuperAdmin, canAssignRole, isImmutablePermission: checkImmutable } = useHierarchy();
+
+const aclModules = computed(() => page.props.acl?.modules ?? {});
+
+const checkRoleDisabled = (role) => {
+  if (isSuperAdmin.value) return false;
+  if (role.slug === 'super-admin' && !props.canEditSuperAdmin) return true;
+  return !canAssignRole(role);
+};
+
+const isImmutablePermission = (slug) => {
+  return checkImmutable(slug);
+};
+
+const getRoleIconClass = (hierarchyLevel, isSelected) => {
+  const baseClasses = {
+    0: 'bg-red-50 dark:bg-red-900/20 text-red-500 border-red-200 dark:border-red-800',
+    1: 'bg-amber-50 dark:bg-amber-900/20 text-amber-500 border-amber-200 dark:border-amber-800',
+    2: 'bg-blue-50 dark:bg-blue-900/20 text-blue-500 border-blue-200 dark:border-blue-800',
+    3: 'bg-purple-50 dark:bg-purple-900/20 text-purple-500 border-purple-200 dark:border-purple-800',
+    4: 'bg-teal-50 dark:bg-teal-900/20 text-teal-500 border-teal-200 dark:border-teal-800',
+    5: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 border-indigo-200 dark:border-indigo-800',
+    6: 'bg-pink-50 dark:bg-pink-900/20 text-pink-500 border-pink-200 dark:border-pink-800',
+  };
+
+  if (isSelected) {
+    return 'bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 border-teal-300 dark:border-teal-700';
+  }
+
+  return baseClasses[hierarchyLevel] || 'bg-slate-50 dark:bg-slate-900/20 text-slate-500 border-slate-200 dark:border-slate-700';
+};
+
+const toggleRole = (roleId) => {
+  const index = form.roles.indexOf(roleId);
+  if (index > -1) {
+    form.roles.splice(index, 1);
+  } else {
+    form.roles.push(roleId);
+  }
+};
+
 const form = useForm({
   name: props.user.name,
   email: props.user.email,
   roles: props.user.roles?.map(r => r.id) || [],
-  direct_permissions: props.user.direct_permissions?.map(p => p.id) || []
+  direct_permissions: props.user.direct_permissions?.map(p => p.name) || []
 });
 
-const expandedModules = ref(['users', 'pae', 'rat']);
-
-const groupedPermissions = computed(() => {
-  return props.availablePermissions.reduce((acc, permission) => {
-    const module = permission.name.split('.')[0];
-    if (!acc[module]) {
-      acc[module] = [];
-    }
-    acc[module].push(permission);
-    return acc;
-  }, {});
-});
+const expandedModules = ref(['SISTEMA', 'PAE', 'RAT']);
 
 const selectedRolesCount = computed(() => form.roles.length);
 
@@ -269,634 +339,53 @@ const toggleModule = (moduleName) => {
   }
 };
 
+const getModuleTotalCount = (groups) => {
+  let count = 0;
+  for (const groupName in groups) {
+    count += Object.keys(groups[groupName]).length;
+  }
+  return count;
+};
+
 const getModuleSelectedCount = (moduleName) => {
-  const modulePermissionIds = groupedPermissions.value[moduleName]?.map(p => p.id) || [];
-  return form.direct_permissions.filter(id => modulePermissionIds.includes(id)).length;
+  const groups = aclModules.value[moduleName] ?? {};
+  let count = 0;
+  for (const groupName in groups) {
+    for (const action in groups[groupName]) {
+      const slug = groups[groupName][action];
+      if (form.direct_permissions.includes(slug)) {
+        count++;
+      }
+    }
+  }
+  return count;
 };
 
-const formatModuleName = (module) => {
-  const moduleNames = {
-    users: 'Usuários',
-    roles: 'Cargos',
-    permissions: 'Permissões',
-    pae: 'PAE',
-    rat: 'RAT',
-    bi: 'Business Intelligence',
-    integrations: 'Integrações',
-    webhooks: 'Webhooks',
-    system: 'Sistema'
-  };
-  return moduleNames[module] || module.toUpperCase();
-};
-
-const formatPermissionName = (name) => {
-  const parts = name.split('.');
-  const action = parts[parts.length - 1];
+const formatActionName = (action) => {
   const actionNames = {
     view: 'Visualizar',
     create: 'Criar',
     edit: 'Editar',
     delete: 'Deletar',
-    manage: 'Gerenciar'
+    manage: 'Gerenciar',
+    approve: 'Aprovar',
+    finalize: 'Finalizar',
+    execute: 'Executar',
+    export: 'Exportar',
+    send: 'Enviar',
+    logs: 'Ver Logs',
+    cache: 'Cache',
+    settings: 'Config'
   };
-  return actionNames[action] || action;
+  return actionNames[action] || action.charAt(0).toUpperCase() + action.slice(1);
 };
 
 const submitForm = () => {
   form.put(route('admin.permissions.users.update', props.user.id), {
     preserveScroll: true,
     onSuccess: () => {
-      console.log('User updated successfully');
+      // Success
     }
   });
 };
 </script>
-
-<style scoped>
-.permissions-container {
-  padding: 2rem;
-  background: #0f172a;
-  min-height: 100vh;
-}
-
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.header-left {
-  flex: 1;
-}
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #60a5fa;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  margin-bottom: 1rem;
-  transition: all 0.2s;
-}
-
-.back-link:hover {
-  color: #3b82f6;
-  transform: translateX(-4px);
-}
-
-.back-link svg {
-  width: 20px;
-  height: 20px;
-}
-
-.page-title {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  margin-bottom: 0.5rem;
-}
-
-.page-subtitle {
-  font-size: 0.9375rem;
-  color: #94a3b8;
-}
-
-.content-grid {
-  display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 1.5rem;
-  align-items: start;
-}
-
-.main-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.section-card {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 1.5rem;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #f1f5f9;
-  flex: 1;
-}
-
-.section-icon {
-  width: 20px;
-  height: 20px;
-  color: #60a5fa;
-}
-
-.count-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 0.5rem;
-  background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
-  border-radius: 6px;
-  font-size: 0.8125rem;
-  font-weight: 700;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.25rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #cbd5e1;
-}
-
-.form-input {
-  padding: 0.75rem 1rem;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  color: #f1f5f9;
-  font-size: 0.9375rem;
-  transition: all 0.2s;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.form-input.input-error {
-  border-color: #ef4444;
-}
-
-.error-message {
-  color: #f87171;
-  font-size: 0.8125rem;
-  font-weight: 500;
-}
-
-.roles-selection {
-  display: grid;
-  gap: 1rem;
-}
-
-.role-checkbox-card {
-  background: #0f172a;
-  border: 2px solid #334155;
-  border-radius: 8px;
-  transition: all 0.2s;
-  cursor: pointer;
-}
-
-.role-checkbox-card:hover:not(.disabled) {
-  border-color: #475569;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.role-checkbox-card.selected {
-  border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.05);
-}
-
-.role-checkbox-card.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.role-checkbox-label {
-  display: block;
-  cursor: pointer;
-}
-
-.role-checkbox-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.role-checkbox-content {
-  padding: 1.25rem;
-}
-
-.role-checkbox-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.role-icon-small {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  flex-shrink: 0;
-}
-
-.role-icon-small.hierarchy-0 {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%);
-  color: #f87171;
-}
-
-.role-icon-small.hierarchy-1 {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
-  color: #fbbf24;
-}
-
-.role-icon-small.hierarchy-2 {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%);
-  color: #60a5fa;
-}
-
-.role-icon-small svg {
-  width: 20px;
-  height: 20px;
-}
-
-.role-checkbox-info {
-  flex: 1;
-}
-
-.role-checkbox-name {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #f1f5f9;
-  margin-bottom: 0.25rem;
-}
-
-.role-checkbox-description {
-  font-size: 0.875rem;
-  color: #94a3b8;
-  line-height: 1.5;
-}
-
-.checkbox-indicator {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  border: 2px solid #334155;
-  background: #0f172a;
-  transition: all 0.2s;
-}
-
-.role-checkbox-card.selected .checkbox-indicator {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: white;
-}
-
-.checkbox-indicator svg {
-  width: 16px;
-  height: 16px;
-}
-
-.role-checkbox-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 1rem;
-  border-top: 1px solid #334155;
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.role-hierarchy-badge {
-  color: #64748b;
-}
-
-.role-permissions-badge {
-  color: #60a5fa;
-}
-
-.permissions-modules {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.permission-module-section {
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.module-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.module-header:hover {
-  background: rgba(59, 130, 246, 0.05);
-}
-
-.module-header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.module-expand-icon {
-  width: 16px;
-  height: 16px;
-  color: #64748b;
-  transition: transform 0.2s;
-}
-
-.module-expand-icon.expanded {
-  transform: rotate(90deg);
-}
-
-.module-header-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: #e2e8f0;
-}
-
-.module-count-badge {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #60a5fa;
-}
-
-.module-permissions-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-  padding: 1.25rem;
-  border-top: 1px solid #334155;
-}
-
-.permission-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
-}
-
-.permission-checkbox-label:hover {
-  border-color: #475569;
-  background: rgba(59, 130, 246, 0.05);
-}
-
-.permission-checkbox-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.permission-checkbox-input:checked ~ .permission-checkbox-indicator {
-  background: #3b82f6;
-  border-color: #3b82f6;
-}
-
-.permission-checkbox-input:checked ~ .permission-checkbox-indicator::after {
-  opacity: 1;
-}
-
-.permission-checkbox-text {
-  flex: 1;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #e2e8f0;
-}
-
-.permission-checkbox-indicator {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #334155;
-  border-radius: 4px;
-  background: #0f172a;
-  transition: all 0.2s;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.permission-checkbox-indicator::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 10px;
-  height: 10px;
-  background: white;
-  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.expand-enter-active,
-.expand-leave-active {
-  transition: all 0.3s ease;
-  max-height: 500px;
-  overflow: hidden;
-}
-
-.expand-enter-from,
-.expand-leave-to {
-  max-height: 0;
-  opacity: 0;
-}
-
-.sidebar-content {
-  position: relative;
-}
-
-.sticky-sidebar {
-  position: sticky;
-  top: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.summary-card,
-.actions-card {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 1.5rem;
-}
-
-.summary-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #f1f5f9;
-  margin-bottom: 1.25rem;
-}
-
-.summary-items {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.summary-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #334155;
-}
-
-.summary-item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.summary-label {
-  font-size: 0.875rem;
-  color: #94a3b8;
-  font-weight: 500;
-}
-
-.summary-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #60a5fa;
-}
-
-.actions-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-}
-
-.btn-block {
-  width: 100%;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-.btn-secondary {
-  background: #334155;
-  color: #e2e8f0;
-}
-
-.btn-secondary:hover {
-  background: #475569;
-}
-
-.btn-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.btn-spinner {
-  width: 18px;
-  height: 18px;
-  animation: spin 1s linear infinite;
-}
-
-.spinner-circle {
-  opacity: 0.25;
-  stroke: currentColor;
-  fill: none;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-@media (max-width: 1280px) {
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sticky-sidebar {
-    position: relative;
-    top: 0;
-  }
-}
-
-@media (max-width: 768px) {
-  .permissions-container {
-    padding: 1rem;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .module-permissions-grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

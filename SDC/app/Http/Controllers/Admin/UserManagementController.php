@@ -65,6 +65,41 @@ class UserManagementController extends Controller
         ]);
     }
 
+    public function create(): Response
+    {
+        $roles = Role::select(['id', 'name', 'slug'])->orderBy('hierarchy_level')->get();
+
+        return Inertia::render('Admin/Permissions/Users/Create', [
+            'roles' => $roles,
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'cpf' => 'required|string|size:11|unique:users,cpf',
+            'password' => 'required|string|min:8|confirmed',
+            'roles' => 'required|array',
+            'roles.*' => 'exists:roles,id',
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'cpf' => $validated['cpf'],
+            'password' => bcrypt($validated['password']),
+            'active' => true,
+        ]);
+
+        $user->roles()->sync($validated['roles']);
+
+        return redirect()
+            ->route('admin.permissions.users.index')
+            ->with('success', 'Usuario criado com sucesso');
+    }
+
     public function show(User $user): Response
     {
         $user->load(['roles.permissions', 'permissions']);

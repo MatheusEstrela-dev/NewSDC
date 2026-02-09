@@ -21,8 +21,10 @@ class PermissionAuditLog extends Model
         'entity_id',
         'before_state',
         'after_state',
+        'reason',
         'ip_address',
         'user_agent',
+        'session_id',
     ];
 
     protected $casts = [
@@ -60,6 +62,9 @@ class PermissionAuditLog extends Model
             if (!$model->user_agent) {
                 $model->user_agent = request()->userAgent();
             }
+            if (!$model->session_id && session()->isStarted()) {
+                $model->session_id = session()->getId();
+            }
         });
 
         static::updating(function ($model) {
@@ -82,7 +87,8 @@ class PermissionAuditLog extends Model
         string $entityType,
         ?int $entityId = null,
         ?array $beforeState = null,
-        ?array $afterState = null
+        ?array $afterState = null,
+        ?string $reason = null
     ): self {
         return self::create([
             'user_id' => $userId,
@@ -91,6 +97,7 @@ class PermissionAuditLog extends Model
             'entity_id' => $entityId,
             'before_state' => $beforeState,
             'after_state' => $afterState,
+            'reason' => $reason,
         ]);
     }
 

@@ -15,7 +15,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(
+            \App\Contracts\HierarchyServiceInterface::class,
+            \App\Services\Auth\HierarchyService::class
+        );
     }
 
     /**
