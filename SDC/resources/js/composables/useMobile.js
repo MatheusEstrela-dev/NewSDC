@@ -1,62 +1,43 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 
 /**
- * Verifica se o dispositivo suporta touch (para features especificas)
+ * Breakpoints padrao do Tailwind
  */
-function isTouchDevice() {
-  if (typeof window === 'undefined') return false;
-  return (
-    'ontouchstart' in window ||
-    navigator.maxTouchPoints > 0 ||
-    window.matchMedia('(pointer: coarse)').matches
-  );
-}
+const BREAKPOINTS = {
+  sm: 640,
+  md: 768,
+  lg: 1024,
+  xl: 1280,
+  '2xl': 1536,
+};
 
 /**
- * Composable para deteccao e gerenciamento de responsividade mobile
- * Usa apenas viewport width para consistencia com media queries CSS
+ * Composable para deteccao de tipo de dispositivo
+ * @returns {Object} - isMobile, isTablet, isDesktop, screenWidth
  */
 export function useMobile() {
-  const MOBILE_BREAKPOINT = 768;
-  const TABLET_BREAKPOINT = 1024;
+  const screenWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
-  const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : TABLET_BREAKPOINT);
-  const hasTouchSupport = ref(false);
+  const isMobile = computed(() => screenWidth.value < BREAKPOINTS.md);
+  const isTablet = computed(() => screenWidth.value >= BREAKPOINTS.md && screenWidth.value < BREAKPOINTS.lg);
+  const isDesktop = computed(() => screenWidth.value >= BREAKPOINTS.lg);
 
-  const getViewportWidth = () => {
-    if (typeof window === 'undefined') return TABLET_BREAKPOINT;
-    return window.innerWidth;
-  };
-
-  const checkDeviceType = () => {
-    if (typeof window === 'undefined') return;
-    viewportWidth.value = getViewportWidth();
-    hasTouchSupport.value = isTouchDevice();
-  };
-
-  // Mobile: viewport < 768px (consistente com CSS @media max-width: 767px)
-  const isMobile = computed(() => {
-    return viewportWidth.value < MOBILE_BREAKPOINT;
-  });
-
-  // Tablet: viewport >= 768px e < 1024px (consistente com CSS @media min-width: 768px and max-width: 1023px)
-  const isTablet = computed(() => {
-    return viewportWidth.value >= MOBILE_BREAKPOINT && viewportWidth.value < TABLET_BREAKPOINT;
-  });
-
-  // Desktop: viewport >= 1024px
-  const isDesktop = computed(() => {
-    return viewportWidth.value >= TABLET_BREAKPOINT;
-  });
+  let resizeHandler = null;
 
   onMounted(() => {
-    checkDeviceType();
-    window.addEventListener('resize', checkDeviceType);
+    if (typeof window === 'undefined') return;
+
+    resizeHandler = () => {
+      screenWidth.value = window.innerWidth;
+    };
+
+    window.addEventListener('resize', resizeHandler, { passive: true });
+    resizeHandler();
   });
 
   onUnmounted(() => {
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('resize', checkDeviceType);
+    if (resizeHandler && typeof window !== 'undefined') {
+      window.removeEventListener('resize', resizeHandler);
     }
   });
 
@@ -64,38 +45,32 @@ export function useMobile() {
     isMobile,
     isTablet,
     isDesktop,
-    hasTouchSupport,
+    screenWidth,
   };
 }
 
 /**
- * Composable para gerenciar estado da sidebar mobile
+ * Estado global da sidebar mobile (singleton)
+ */
+const sidebarState = ref(false);
+
+/**
+ * Composable para gerenciamento da sidebar mobile
+ * @returns {Object} - isSidebarOpen, openSidebar, closeSidebar, toggleSidebar
  */
 export function useSidebarMobile() {
-  const isSidebarOpen = ref(false);
+  const isSidebarOpen = sidebarState;
 
   const openSidebar = () => {
     isSidebarOpen.value = true;
-    if (typeof document !== 'undefined') {
-      document.body.style.overflow = 'hidden';
-      document.body.classList.add('sidebar-open');
-    }
   };
 
   const closeSidebar = () => {
     isSidebarOpen.value = false;
-    if (typeof document !== 'undefined') {
-      document.body.style.overflow = '';
-      document.body.classList.remove('sidebar-open');
-    }
   };
 
   const toggleSidebar = () => {
-    if (isSidebarOpen.value) {
-      closeSidebar();
-    } else {
-      openSidebar();
-    }
+    isSidebarOpen.value = !isSidebarOpen.value;
   };
 
   return {
@@ -103,5 +78,61 @@ export function useSidebarMobile() {
     openSidebar,
     closeSidebar,
     toggleSidebar,
+  };
+}
+
+/**
+ * Composable para deteccao de orientacao do dispositivo
+ * @returns {Object} - isPortrait, isLandscape, orientation
+ */
+export function useOrientation() {
+  const orientation = ref(typeof window !== 'undefined' ? window.screen?.orientation?.type : 'portrait-primary');
+
+  const isPortrait = computed(() => orientation.value?.includes('portrait'));
+  const isLandscape = computed(() => orientation.value?.includes('landscape'));
+
+  let orientationHandler = null;
+
+  onMounted(() => {
+    if (typeof window === 'undefined' || !window.screen?.orientation) return;
+
+    orientationHandler = () => {
+      orientation.value = window.screen.orientation.type;
+    };
+
+    window.screen.orientation.addEventListener('change', orientationHandler);
+  });
+
+  onUnmounted(() => {
+    if (orientationHandler && typeof window !== 'undefined' && window.screen?.orientation) {
+      window.screen.orientation.removeEventListener('change', orientationHandler);
+    }
+  });
+
+  return {
+    orientation,
+    isPortrait,
+    isLandscape,
+  };
+}
+
+/**
+ * Composable para deteccao de capacidades touch
+ * @returns {Object} - isTouchDevice, supportsHover
+ */
+export function useTouchCapabilities() {
+  const isTouchDevice = computed(() => {
+    if (typeof window === 'undefined') return false;
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  });
+
+  const supportsHover = computed(() => {
+    if (typeof window === 'undefined') return true;
+    return window.matchMedia('(hover: hover)').matches;
+  });
+
+  return {
+    isTouchDevice,
+    supportsHover,
   };
 }

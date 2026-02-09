@@ -97,10 +97,27 @@ const tooltipText = computed(() => {
   return '';
 });
 
-function handleClick() {
+function handleClick(event) {
+  createRipple(event);
   if (onNavItemClick) {
     onNavItemClick();
   }
+}
+
+function createRipple(event) {
+  const button = event.currentTarget;
+  const circle = document.createElement('span');
+  const diameter = Math.max(button.clientWidth, button.clientHeight);
+  const radius = diameter / 2;
+
+  circle.style.width = circle.style.height = `${diameter}px`;
+  circle.style.left = `${event.clientX - button.getBoundingClientRect().left - radius}px`;
+  circle.style.top = `${event.clientY - button.getBoundingClientRect().top - radius}px`;
+  circle.classList.add('ripple');
+
+  button.appendChild(circle);
+
+  setTimeout(() => circle.remove(), 600);
 }
 </script>
 
@@ -112,10 +129,27 @@ function handleClick() {
   padding: 0.75rem 1.25rem;
   color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   font-size: 0.9375rem;
   justify-content: flex-start;
+  overflow: hidden;
+}
+
+.nav-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 100%;
+  background: #3b82f6;
+  transition: width 0.3s ease;
+  z-index: 1;
+}
+
+.nav-item:hover::before {
+  width: 4px;
 }
 
 .nav-item.is-collapsed {
@@ -126,6 +160,11 @@ function handleClick() {
 .nav-item:hover {
   background: rgba(255, 255, 255, 0.05);
   color: white;
+  padding-left: calc(1.25rem + 4px);
+}
+
+.nav-item.is-collapsed:hover {
+  padding-left: 0.75rem;
 }
 
 .nav-item.is-active {
@@ -235,6 +274,22 @@ function handleClick() {
 
   :global(.sidebar.is-mobile-open) .nav-item.is-submenu.is-active {
     padding-left: calc(2.5rem - 3px);
+  }
+}
+
+:global(.ripple) {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+  background-color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
   }
 }
 </style>

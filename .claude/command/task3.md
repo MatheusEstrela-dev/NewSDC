@@ -1,45 +1,31 @@
-1. O Problema da "Visão Fantasma" (Phantom Reads)
-Se o sistema é altamente concorrido, pode ser que esses registros que você vê no banco (ID 157 a 168) estejam em um estado de "rascunho" ou "bloqueado" que a sua API de Business Intelligence (BI) ignora propositalmente para não mostrar dados incompletos.
+o NewSDC, precisamos ir além do básico do Spatie. Vamos estruturar um sistema onde os cargos não são apenas nomes, mas possuem um Nível de Peso (Hierarchy Weight).
 
-Cenário: O Usuário A entra na aba 2 e começa a editar. O sistema cria o registro 157 com status = 0 (Em edição).
+Isso evita, por exemplo, que um admin tente excluir ou editar um super-admin.
 
-Consequência: A API (que alimenta o dashboard) filtra status = 0 para não mostrar gráficos "quebrados" ou parciais.
+1. Arquitetura da Hierarquia (Banco de Dados)
+Primeiro, precisamos adicionar uma coluna de level ou weight na tabela roles. Quanto menor o número, maior o poder (ou vice-versa).
 
-Solução: Se você precisa ver esses dados, você tem que ajustar a query para incluir status = 0 (em edição), mas marcar visualmente no front-end que aquele dado é provisório.
+SQL para ajustar a tabela Roles:
+2. O "Cérebro" de Regras (config/permissions.php)
+Aqui definimos as regras "em pedra". Usaremos uma estrutura de herança, onde cargos superiores herdam permissões de inferiores automaticamente se desejar, ou definimos explicitamente.
 
-2. A Solução Técnica: WebSockets (Laravel Reverb / Pusher)
-Para acompanhar 100 usuários em tempo real, você não deve fazer o front-end ficar perguntando para o servidor a cada segundo "tem novidade?" (Polling). Isso derruba o servidor.
+3. Implementação da Lógica de Hierarquia
+Para impedir que um usuário altere alguém de hierarquia superior, criamos um Policy ou um Middleware.
 
-Você precisa de WebSockets (Broadcasting).
+Middleware de Hierarquia (App\Http\Middleware\CheckHierarchy.php)
+4. O Estado no Vue.js (Frontend)
+Para a sua tela de gerenciamento (os prints que você enviou), o Vue precisa entender essa hierarquia para desabilitar opções que o usuário não pode tocar.
 
-Como deve funcionar:
+Estrutura de Resposta do Objeto de Regras:
+No componente Vue:
+5. Visualização da Trama de Permissões (Mermaid)
+Este fluxo mostra como o sistema decide se concede o acesso batendo na hierarquia primeiro:
 
-O Usuário A altera um campo na "Aba 3".
+Próximo Passo Sugerido
+Para que isso funcione no seu banco dbsdc sem quebrar o que já existe:
 
-O Backend salva no banco (ou Redis) e dispara um Evento (OcorrenciaUpdated).
+Migrar role_users: Converter essa tabela para o formato model_has_roles do Spatie.
 
-O Laravel (via Laravel Reverb, Soketi ou Pusher) "empurra" essa mensagem para os outros 99 usuários conectados naquele canal.
+Popular Níveis: Atribuir os inteiros (1, 2, 3...) na coluna level da tabela roles.
 
-O Front-end dos outros usuários recebe o aviso e atualiza apenas aquele pedacinho da tela, sem recarregar tudo.
-
-3. Evitando o Caos: Bloqueio Otimista (Optimistic Locking) ou Cache (Redis)
-Com tanta gente mexendo, o risco de Race Condition (condição de corrida) é altíssimo.
-
-Estratégia de "Lock" (Semáforo):
-
-Quando o Usuário A clica no campo "Endereço", o sistema avisa via WebSocket para todos: "O campo Endereço está bloqueado pelo Usuário A".
-
-O campo fica cinza (read-only) para o Usuário B até o A terminar.
-
-Isso geralmente é gerenciado via Redis (é muito rápido para gravar/ler esses estados temporários).
-
-O que fazer agora?
-Voltando ao seu problema da imagem (API retornando 2 registros vs Banco com 14):
-
-Confirme o Status: Mantenho a aposta de que o código está filtrando pelo status. Em sistemas complexos, registros "em edição" (status 0) geralmente ficam invisíveis para relatórios de BI até serem "publicados" (status 1).
-
-Verifique se há Cache: Com 100 usuários, é muito comum que a API leia de um Cache (Redis) e não direto do MySQL.
-
-Se for Cache, pode ser que o cache não tenha sido limpo/atualizado quando você criou os novos registros manualmente ou via teste. Tente rodar php artisan cache:clear.
-
-Pergunta: Você já está usando alguma tecnologia de WebSocket (Laravel Echo, Pusher, Reverb) nesse projeto ou a atualização é feita apenas recarregando a página/fazendo requests periódicos?
+Matheus, você quer que eu escreva o script de Migração PHP que faz essa leitura da sua tabela antiga role_users e insere corretamente na nova model_has_roles do Spatie?

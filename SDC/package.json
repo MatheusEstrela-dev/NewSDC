@@ -27,10 +27,13 @@
     "dependencies": {
         "@heroicons/vue": "^2.2.0",
         "@tanstack/vue-query": "^5.62.16",
+        "@vueuse/core": "^14.2.0",
+        "apexcharts": "^5.3.6",
         "dexie": "^3.2.4",
         "idb-keyval": "^6.2.1",
         "leaflet": "^1.9.4",
         "uuid": "^9.0.1",
+        "vue3-apexcharts": "^1.10.0",
         "ziggy-js": "^2.6.0"
     }
 }

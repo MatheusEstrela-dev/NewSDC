@@ -13,7 +13,12 @@
 
       <!-- Grid de Métricas com Trends -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div v-for="metric in metrics" :key="metric.title" :class="metricCardClasses(metric.variant)">
+        <div
+          v-for="(metric, index) in metrics"
+          :key="metric.title"
+          :style="{ animationDelay: `${index * 100}ms` }"
+          :class="['animate-fade-in-up', metricCardClasses(metric.variant)]"
+        >
           <div class="flex items-start justify-between gap-2 sm:gap-4">
             <div class="min-w-0 flex-1">
               <p class="text-xs sm:text-sm font-medium text-slate-400 dark:text-slate-400 mb-0.5 sm:mb-1 leading-tight">
@@ -68,24 +73,11 @@
             </div>
           </div>
           <div class="p-5">
-            <div class="flex items-end justify-between gap-2 sm:gap-3 h-48">
-              <div
-                v-for="(bar, i) in activeBarData"
-                :key="i"
-                class="flex-1 flex flex-col items-center gap-2 group"
-              >
-                <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {{ bar.value }}
-                </span>
-                <div class="w-full relative rounded-t-md overflow-hidden" :style="{ height: barHeight(bar.value) + '%' }">
-                  <div
-                    class="absolute inset-0 rounded-t-md transition-all duration-500 group-hover:opacity-90"
-                    :class="i === activeBarData.length - 1 ? 'bg-gradient-to-t from-cyan-600 to-cyan-400' : 'bg-gradient-to-t from-cyan-700/60 to-cyan-500/60 dark:from-cyan-600/40 dark:to-cyan-400/40'"
-                  ></div>
-                </div>
-                <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400">{{ bar.label }}</span>
-              </div>
-            </div>
+            <apexchart
+              height="200"
+              :options="barChartOptions"
+              :series="barChartSeries"
+            />
           </div>
         </div>
 
@@ -100,7 +92,7 @@
             <div class="relative w-44 h-44 sm:w-48 sm:h-48 flex-shrink-0">
               <div class="donut-chart w-full h-full rounded-full" :style="donutStyle"></div>
               <div class="absolute inset-0 flex items-center justify-center">
-                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white dark:bg-slate-800/80 flex flex-col items-center justify-center shadow-inner">
+                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white dark:bg-slate-800/80 flex flex-col items-center justify-center shadow-inner transition-transform duration-300 hover:scale-105">
                   <span class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">{{ totalRegistros.toLocaleString('pt-BR') }}</span>
                   <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total</span>
                 </div>
@@ -109,9 +101,11 @@
             <!-- Legenda -->
             <div class="flex-1 space-y-3 w-full">
               <div
-                v-for="mod in moduleDistribution"
+                v-for="(mod, index) in moduleDistribution"
                 :key="mod.name"
-                class="flex items-center justify-between gap-3 group"
+                class="flex items-center justify-between gap-3 group cursor-pointer transition-all duration-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 p-2 rounded-lg"
+                @mouseenter="hoveredSegment = index"
+                @mouseleave="hoveredSegment = null"
               >
                 <div class="flex items-center gap-2.5 min-w-0">
                   <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: mod.color }"></span>
@@ -134,18 +128,21 @@
           <div
             v-for="mod in moduleSparklines"
             :key="mod.name"
-            class="rounded-xl shadow-lg border bg-white dark:bg-slate-800/80 border-slate-100 dark:border-slate-700/50 p-4 hover:shadow-xl transition-all cursor-pointer group"
+            class="rounded-xl shadow-lg border bg-white dark:bg-slate-900/60 border-slate-100 dark:border-slate-800/50 p-4 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group overflow-hidden relative"
           >
-            <div class="flex items-center justify-between gap-3">
+            <!-- Background Decoration -->
+            <div class="absolute inset-0 bg-gradient-to-br from-transparent via-transparent opacity-0 group-hover:opacity-10 transition-opacity duration-500" :class="'to-' + mod.variant"></div>
+            
+            <div class="flex items-center justify-between gap-3 relative z-10">
               <div class="flex items-center gap-3 min-w-0">
-                <div :class="sparklineIconClasses(mod.variant)">
+                <div :class="sparklineIconClasses(mod.variant)" class="group-hover:scale-110 transition-transform duration-300">
                   <component :is="mod.icon" class="w-4 h-4" />
                 </div>
                 <div class="min-w-0">
                   <p class="text-sm font-bold text-slate-900 dark:text-slate-200 truncate">{{ mod.name }}</p>
                   <div class="flex items-center gap-1.5 mt-0.5">
                     <span class="text-lg font-bold text-slate-900 dark:text-slate-100">{{ mod.value }}</span>
-                    <span :class="trendClasses(mod.trend)" class="!text-[10px]">
+                    <span :class="trendClasses(mod.trend)" class="!text-[10px] animate-pulse">
                       <svg v-if="mod.trend > 0" class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18" />
                       </svg>
@@ -157,20 +154,22 @@
                   </div>
                 </div>
               </div>
-              <!-- Mini Sparkline SVG -->
-              <svg class="w-20 h-8 flex-shrink-0" viewBox="0 0 80 32" fill="none">
+              <!-- Mini Sparkline SVG Animado -->
+              <svg class="w-20 h-10 flex-shrink-0 drop-shadow-sm group-hover:drop-shadow-[0_0_8px_rgba(var(--spark-color),0.5)] transition-all duration-500" viewBox="0 0 80 32" fill="none" :style="`--spark-color: ${mod.variant === 'info' ? '6,182,212' : mod.variant === 'warning' ? '245,158,11' : '239,68,68'}`">
                 <polyline
                   :points="sparklinePoints(mod.data)"
                   fill="none"
                   :stroke="sparklineColor(mod.variant)"
-                  stroke-width="2"
+                  :stroke-width="2.5"
                   stroke-linecap="round"
                   stroke-linejoin="round"
+                  class="trend-line-path"
                 />
                 <polyline
                   :points="sparklineAreaPoints(mod.data)"
                   :fill="sparklineAreaFill(mod.variant)"
                   stroke="none"
+                  class="opacity-50 group-hover:opacity-80 transition-opacity"
                 />
               </svg>
             </div>
@@ -178,25 +177,25 @@
         </div>
 
         <!-- PMDA em Análise -->
-        <div class="rounded-xl shadow-lg border bg-white dark:bg-slate-800/80 border-slate-100 dark:border-slate-700/50">
-          <div class="px-4 sm:px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+        <div class="rounded-xl shadow-lg border bg-white dark:bg-slate-900/60 border-slate-100 dark:border-slate-800/50 overflow-hidden">
+          <div class="px-4 sm:px-5 py-4 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
             <div>
               <h3 class="font-bold text-base text-slate-900 dark:text-slate-200">PMDA em Análise</h3>
               <p class="text-xs mt-0.5 text-slate-500 dark:text-slate-400">Aguardando intervenção técnica</p>
             </div>
-            <span class="text-xs font-bold px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
+            <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 animate-pulse">
               {{ pmdaEmAnalise.length }} processos
             </span>
           </div>
-          <div class="divide-y divide-slate-100 dark:divide-slate-700/50">
+          <div class="divide-y divide-slate-100 dark:divide-slate-800/50">
             <div
               v-for="item in pmdaEmAnalise"
               :key="item.id"
-              class="px-4 sm:px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors"
+              class="px-4 sm:px-5 py-3 hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all duration-300 group cursor-pointer"
             >
               <div class="flex items-center justify-between gap-3 mb-1">
-                <span class="font-bold text-sm text-slate-900 dark:text-slate-200">{{ item.protocolo }}</span>
-                <span :class="statusBadgeClasses(item.statusType)">
+                <span class="font-bold text-sm text-slate-900 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{{ item.protocolo }}</span>
+                <span :class="statusBadgeClasses(item.statusType)" class="group-hover:scale-105 transition-transform">
                   {{ item.status }}
                 </span>
               </div>
@@ -209,36 +208,39 @@
         </div>
 
         <!-- Timeline Últimas Movimentações -->
-        <div class="rounded-xl shadow-lg border bg-white dark:bg-slate-800/80 border-slate-100 dark:border-slate-700/50">
-          <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+        <div class="rounded-xl shadow-lg border bg-white dark:bg-slate-900/60 border-slate-100 dark:border-slate-800/50 overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
             <h3 class="font-bold text-base text-slate-900 dark:text-slate-200">Últimas Movimentações</h3>
-            <div class="flex items-center gap-1.5">
-              <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-              <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400">Tempo real</span>
+            <div class="flex items-center gap-1.5 realtime-indicator">
+              <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full absolute"></span>
+              <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full relative"></span>
+              <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider ml-1">Tempo real</span>
             </div>
           </div>
-          <div class="p-5">
-            <div class="space-y-0">
+          <div class="p-5 max-h-[400px] overflow-y-auto custom-scrollbar">
+            <TransitionGroup name="timeline-list" tag="div" class="space-y-0">
               <div
                 v-for="(h, index) in historico"
                 :key="h.id"
-                class="flex gap-3 pb-4 last:pb-0 relative"
+                class="flex gap-4 pb-5 last:pb-0 relative group/item"
               >
                 <!-- Linha vertical -->
                 <div class="flex flex-col items-center">
-                  <div :class="['w-3 h-3 rounded-full flex-shrink-0 ring-4 ring-white dark:ring-slate-800/80', timelineDotColor(h.type)]"></div>
-                  <div v-if="index < historico.length - 1" class="w-px flex-1 bg-slate-200 dark:bg-slate-700 mt-1"></div>
+                  <div :class="['w-3.5 h-3.5 rounded-full flex-shrink-0 ring-4 ring-white dark:ring-slate-900 z-10 transition-all duration-300 group-hover/item:scale-125 group-hover/item:shadow-[0_0_10px_currentColor]', timelineDotColor(h.type)]"></div>
+                  <div v-if="index < historico.length - 1" class="w-0.5 flex-1 bg-slate-100 dark:bg-slate-800 mt-1 transition-colors group-hover/item:bg-blue-400/30"></div>
                 </div>
-                <div class="flex-1 -mt-0.5 pb-2">
-                  <p class="font-semibold text-sm text-slate-900 dark:text-slate-200">{{ h.municipio }}</p>
-                  <p class="text-xs mt-0.5 text-slate-600 dark:text-slate-400">{{ h.acao }}</p>
-                  <div class="flex items-center gap-2 mt-1">
-                    <span class="text-[11px] font-mono text-slate-500 dark:text-slate-500">{{ h.protocolo }}</span>
-                    <span class="text-[11px] text-slate-400 dark:text-slate-500">{{ h.data }}</span>
+                <div class="flex-1 -mt-1 pb-2 group-hover/item:translate-x-1 transition-transform duration-300">
+                  <div class="flex items-center justify-between">
+                    <p class="font-bold text-sm text-slate-900 dark:text-slate-200 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400">{{ h.municipio }}</p>
+                    <span class="text-[10px] text-slate-400 dark:text-slate-500 font-medium bg-slate-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-700/50">{{ h.data }}</span>
+                  </div>
+                  <p class="text-xs mt-1 text-slate-600 dark:text-slate-400 leading-relaxed">{{ h.acao }}</p>
+                  <div class="flex items-center gap-2 mt-2">
+                    <span class="text-[10px] font-mono font-bold text-blue-600/70 dark:text-blue-400/70 bg-blue-50 dark:bg-blue-400/10 px-1.5 py-0.5 rounded">{{ h.protocolo }}</span>
                   </div>
                 </div>
               </div>
-            </div>
+            </TransitionGroup>
           </div>
         </div>
       </div>
@@ -330,7 +332,7 @@
             <h3 class="font-bold text-base text-slate-900 dark:text-slate-200">Indicadores Rápidos</h3>
             <p class="text-xs mt-0.5 text-slate-500 dark:text-slate-400">Resumo consolidado</p>
           </div>
-          <div class="p-5 space-y-5">
+          <div class="p-5 space-y-5" ref="quickStatsRef">
             <!-- Municípios Atendidos -->
             <div>
               <div class="flex items-center justify-between mb-2">
@@ -341,7 +343,7 @@
                 <span class="text-sm font-bold text-slate-900 dark:text-slate-100">142 <span class="text-xs font-normal text-slate-500">/ 853</span></span>
               </div>
               <div class="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div class="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400 transition-all duration-1000" style="width: 16.6%"></div>
+                <div class="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400 transition-all duration-1000 ease-out" :style="{ width: isQuickStatsVisible ? '16.6%' : '0%' }"></div>
               </div>
             </div>
 
@@ -355,7 +357,7 @@
                 <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400">94%</span>
               </div>
               <div class="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-1000" style="width: 94%"></div>
+                <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-1000 ease-out" :style="{ width: isQuickStatsVisible ? '94%' : '0%' }"></div>
               </div>
             </div>
 
@@ -369,7 +371,7 @@
                 <span class="text-sm font-bold text-slate-900 dark:text-slate-100">3.2 <span class="text-xs font-normal text-slate-500">dias</span></span>
               </div>
               <div class="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div class="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-1000" style="width: 36%"></div>
+                <div class="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-1000 ease-out" :style="{ width: isQuickStatsVisible ? '36%' : '0%' }"></div>
               </div>
             </div>
 
@@ -383,7 +385,7 @@
                 <span class="text-sm font-bold text-slate-900 dark:text-slate-100">28 <span class="text-xs font-normal text-slate-500">/ 45</span></span>
               </div>
               <div class="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div class="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-1000" style="width: 62%"></div>
+                <div class="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-1000 ease-out" :style="{ width: isQuickStatsVisible ? '62%' : '0%' }"></div>
               </div>
             </div>
 
@@ -397,7 +399,7 @@
                 <span class="text-sm font-bold text-slate-900 dark:text-slate-100">1.247</span>
               </div>
               <div class="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div class="h-full rounded-full bg-gradient-to-r from-red-500 to-red-400 transition-all duration-1000" style="width: 78%"></div>
+                <div class="h-full rounded-full bg-gradient-to-r from-red-500 to-red-400 transition-all duration-1000 ease-out" :style="{ width: isQuickStatsVisible ? '78%' : '0%' }"></div>
               </div>
             </div>
           </div>
@@ -410,7 +412,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, defineComponent, onMounted, nextTick } from 'vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import HomeIcon from '@/Components/Icons/HomeIcon.vue';
 import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
@@ -422,10 +424,184 @@ import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
 import HeartIcon from '@/Components/Icons/HeartIcon.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import VueApexCharts from 'vue3-apexcharts';
+import { useIntersectionObserver } from '@vueuse/core';
+
+const isLoaded = ref(false);
+const isQuickStatsVisible = ref(false);
+const quickStatsRef = ref(null);
+
+onMounted(() => {
+  nextTick(() => {
+    isLoaded.value = true;
+  });
+});
 
 // ─── Dados ────────────────────────────────────────
 const currentYear = ref(new Date().getFullYear());
 const barPeriod = ref('6M');
+
+useIntersectionObserver(quickStatsRef, ([{ isIntersecting }]) => {
+  if (isIntersecting) isQuickStatsVisible.value = true;
+});
+
+// Configurações Globais ApexCharts
+const chartTheme = {
+  mode: 'dark',
+  palette: 'palette1',
+};
+
+// ─── ApexCharts Options ───────────────────────────
+
+// 1. Atendimentos por Mês (Bar Chart)
+const barChartOptions = computed(() => ({
+  chart: {
+    type: 'bar',
+    toolbar: { show: false },
+    animations: { enabled: true, easing: 'easeinout', speed: 800 },
+    background: 'transparent',
+    fontFamily: 'Inter, sans-serif'
+  },
+  plotOptions: {
+    bar: {
+      borderRadius: 6,
+      columnWidth: '45%',
+      distributed: false,
+    }
+  },
+  dataLabels: { enabled: false },
+  colors: ['#06b6d4'],
+  xaxis: {
+    categories: activeBarData.value.map(d => d.label),
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+    labels: { style: { colors: '#94a3b8', fontSize: '11px' } }
+  },
+  yaxis: {
+    labels: { style: { colors: '#94a3b8', fontSize: '11px' } }
+  },
+  grid: {
+    borderColor: '#334155',
+    strokeDashArray: 4,
+    xaxis: { lines: { show: false } }
+  },
+  tooltip: { theme: 'dark' },
+  fill: {
+    type: 'gradient',
+    gradient: {
+      shade: 'dark',
+      type: 'vertical',
+      shadeIntensity: 0.5,
+      gradientToColors: ['#22d3ee'],
+      inverseColors: true,
+      opacityFrom: 0.85,
+      opacityTo: 0.85,
+      stops: [0, 100]
+    }
+  }
+}));
+
+const barChartSeries = computed(() => [{
+  name: 'Atendimentos',
+  data: activeBarData.value.map(d => d.value)
+}]);
+
+// 2. Distribuição por Módulo (Donut Chart)
+const donutChartOptions = computed(() => ({
+  chart: {
+    type: 'donut',
+    background: 'transparent',
+    animations: { enabled: true, easing: 'easeinout', speed: 800 },
+    fontFamily: 'Inter, sans-serif'
+  },
+  colors: moduleDistribution.value.map(m => m.color),
+  labels: moduleDistribution.value.map(m => m.name),
+  legend: { show: false },
+  dataLabels: { enabled: false },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: '75%',
+        background: 'transparent',
+        labels: {
+          show: true,
+          name: { show: true, fontSize: '12px', color: '#94a3b8', offsetY: -10 },
+          value: { show: true, fontSize: '24px', fontWeight: 700, color: '#f1f5f9', offsetY: 10 },
+          total: {
+            show: true,
+            label: 'TOTAL',
+            fontSize: '10px',
+            fontWeight: 600,
+            color: '#94a3b8',
+            formatter: () => totalRegistros.value.toLocaleString('pt-BR')
+          }
+        }
+      }
+    }
+  },
+  stroke: { show: false },
+  tooltip: { theme: 'dark' }
+}));
+
+const donutChartSeries = computed(() => moduleDistribution.value.map(m => m.value));
+
+// 3. Tendência Mensal (Area Chart)
+const trendChartOptions = computed(() => ({
+  chart: {
+    type: 'area',
+    toolbar: { show: false },
+    animations: { enabled: true, easing: 'easeinout', speed: 800 },
+    background: 'transparent',
+    fontFamily: 'Inter, sans-serif'
+  },
+  colors: ['#06b6d4', '#10b981'],
+  stroke: { curve: 'smooth', width: 3 },
+  dataLabels: { enabled: false },
+  grid: {
+    borderColor: '#334155',
+    strokeDashArray: 4,
+  },
+  xaxis: {
+    categories: trendMonths.value,
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+    labels: { style: { colors: '#94a3b8', fontSize: '11px' } }
+  },
+  yaxis: {
+    labels: { style: { colors: '#94a3b8', fontSize: '11px' } }
+  },
+  legend: {
+    show: false
+  },
+  fill: {
+    type: 'gradient',
+    gradient: {
+      shadeIntensity: 1,
+      opacityFrom: 0.4,
+      opacityTo: 0.05,
+      stops: [0, 90, 100]
+    }
+  },
+  tooltip: {
+    theme: 'dark',
+    x: { show: true },
+    enabled: true,
+    shared: true,
+    intersect: false,
+    followCursor: true,
+    marker: { show: true }
+  },
+  crosshairs: {
+    show: true,
+    width: 1,
+    stroke: { color: '#94a3b8', width: 1, dashArray: 4 }
+  }
+}));
+
+const trendChartSeries = computed(() => [
+  { name: 'Abertos', data: trendAbertos.value },
+  { name: 'Concluídos', data: trendConcluidos.value }
+]);
 
 // Métricas com trends
 const metrics = ref([
@@ -478,17 +654,28 @@ const moduleDistribution = ref([
 ]);
 
 const totalRegistros = computed(() => moduleDistribution.value.reduce((sum, m) => sum + m.value, 0));
+const hoveredSegment = ref(null);
 
-const donutStyle = computed(() => {
-  let cumulative = 0;
-  const segments = moduleDistribution.value.map(m => {
-    const start = cumulative;
-    cumulative += m.percent;
-    return `${m.color} ${start}% ${cumulative}%`;
+const donutSegments = computed(() => {
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  let accumulatedPercent = 0;
+
+  return moduleDistribution.value.map((m, index) => {
+    const percent = m.percent / 100;
+    const dashArray = `${percent * circumference} ${circumference}`;
+    // SVG stroke-dashoffset starts from 3 o'clock. -90deg rotation in CSS fixes start.
+    // We accumulate negative offset to rotate segments clockwise.
+    const dashOffset = -accumulatedPercent * circumference;
+    accumulatedPercent += percent;
+
+    return {
+      ...m,
+      dashArray,
+      dashOffset,
+      active: hoveredSegment.value === index
+    };
   });
-  return {
-    background: `conic-gradient(${segments.join(', ')})`,
-  };
 });
 
 // ─── Sparklines ───────────────────────────────────
@@ -628,16 +815,16 @@ const variantIconMap = {
 };
 
 function metricCardClasses(variant) {
-  return `rounded-lg sm:rounded-xl border backdrop-blur-sm px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] touch-manipulation bg-slate-900/60 dark:bg-slate-900/60 bg-white hover:bg-slate-900/80 dark:hover:bg-slate-900/80 hover:bg-slate-50 ${variantBorderMap[variant]}`;
+  return `rounded-2xl border backdrop-blur-sm px-4 py-4 md:px-5 md:py-5 transition-all duration-500 ease-out hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.6)] bg-white dark:bg-slate-900/60 ${variantBorderMap[variant]} hover:border-opacity-100 dark:hover:border-opacity-100 border-opacity-40`;
 }
 
 function metricIconClasses(variant) {
-  return `p-1.5 sm:p-2 md:p-3 rounded-md sm:rounded-lg ${variantIconMap[variant]}`;
+  return `p-1.5 sm:p-2 md:p-3 rounded-md sm:rounded-lg transition-colors duration-500 group-hover:bg-opacity-100 ${variantIconMap[variant]}`;
 }
 
 function trendClasses(trend) {
   return [
-    'inline-flex items-center gap-0.5 text-xs font-bold px-1.5 py-0.5 rounded-full',
+    'inline-flex items-center gap-0.5 text-xs font-bold px-1.5 py-0.5 rounded-full transition-transform duration-300 group-hover:scale-110',
     trend > 0
       ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
       : 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400',
@@ -651,10 +838,76 @@ function trendClasses(trend) {
 }
 
 .donut-chart {
-  transition: transform 0.3s ease;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .donut-chart:hover {
-  transform: scale(1.03);
+  transform: scale(1.05);
+}
+
+.trend-line {
+  transition: stroke-width 0.3s ease, filter 0.3s ease;
+}
+
+.group:hover .trend-line {
+  stroke-width: 3px;
+  animation: line-glow 1.5s infinite alternate;
+}
+
+@keyframes line-glow {
+  0% { filter: drop-shadow(0 0 1px currentColor); opacity: 0.8; }
+  100% { filter: drop-shadow(0 0 6px currentColor); opacity: 1; }
+}
+
+/* Transições para listas */
+.list-move,
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.5s ease;
+}
+
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.realtime-indicator::before {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: pulse-ring 1.5s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+.trend-line-path {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawLine 2s ease-out forwards;
+}
+
+@keyframes drawLine {
+  to { stroke-dashoffset: 0; }
+}
+
+.list-leave-active {
+  position: absolute;
 }
 </style>
