@@ -14,7 +14,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 
 // Props simulação
@@ -27,6 +27,32 @@ const radarMetrics = ref([
   { label: 'Cobertura', value: 95, fullMark: 100 },
 ]);
 
+// Intervalo para animação
+let interval = null;
+
+function updateRadarData() {
+  radarMetrics.value = radarMetrics.value.map(metric => {
+    // Flutuação aleatória entre -5 e +5
+    const change = Math.floor(Math.random() * 11) - 5;
+    let newValue = metric.value + change;
+    
+    // Limites de 0 a 100
+    if (newValue > 100) newValue = 100;
+    if (newValue < 20) newValue = 20;
+
+    return { ...metric, value: newValue };
+  });
+}
+
+onMounted(() => {
+  // Atualiza a cada 2 segundos para dar efeito de "respiração"
+  interval = setInterval(updateRadarData, 2000);
+});
+
+onUnmounted(() => {
+  if (interval) clearInterval(interval);
+});
+
 const radarChartSeries = computed(() => [{
   name: 'Avaliação',
   data: radarMetrics.value.map(m => m.value),
@@ -37,6 +63,19 @@ const radarChartOptions = computed(() => ({
     type: 'radar',
     height: 350,
     toolbar: { show: false },
+    animations: {
+      enabled: true,
+      easing: 'easeinout',
+      speed: 1000,
+      animateGradually: {
+        enabled: true,
+        delay: 150
+      },
+      dynamicAnimation: {
+        enabled: true,
+        speed: 1000
+      }
+    },
     background: 'transparent',
     fontFamily: 'Inter, sans-serif',
     dropShadow: { enabled: true, blur: 1, left: 1, top: 1, opacity: 0.1 }
