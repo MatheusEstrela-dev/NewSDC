@@ -94,18 +94,11 @@ RUN rm -f public/hot
 # Executar scripts do composer após copiar código
 RUN composer dump-autoload --optimize --classmap-authoritative
 
-# Instalar dependências Node.js e compilar assets (TUDO JUNTO para garantir consistencia)
-RUN if [ -f package.json ]; then \
-        echo "=== Instalando dependencias Node.js ===" && \
-        npm ci --no-audit --no-fund --include=dev && \
-        echo "=== Compilando assets do Vite ===" && \
-        npm run build && \
-        echo "=== Verificando build ===" && \
-        ls -la public/build/ && \
-        test -f public/build/manifest.json && echo "OK: manifest.json existe" || (echo "ERRO: manifest.json NAO existe" && exit 1); \
-    else \
-        echo "ERRO: package.json nao encontrado" && exit 1; \
-    fi
+# Instalar dependencias Node.js e compilar assets
+RUN npm install --no-audit --no-fund && \
+    npm run build && \
+    ls -la public/build/ && \
+    test -f public/build/manifest.json || exit 1
 
 # Remover Node.js e npm após compilar assets (reduzir tamanho da imagem)
 RUN apk del nodejs npm || true
