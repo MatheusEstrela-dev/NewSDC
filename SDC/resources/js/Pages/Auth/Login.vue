@@ -23,7 +23,6 @@
             @input="handleInput"
             @keydown="onlyNumbers"
             @paste="handlePaste"
-            inputmode="numeric"
             pattern="[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}"
             class="input-field"
             placeholder=" "

@@ -45,6 +45,10 @@ class DatabaseSeeder extends Seeder
         $this->call(MockUsersHierarchySeeder::class);
 
         // 6. RATs mock (15 registros com status variados)
-        $this->call(RatMockSeeder::class);
+        if (\Illuminate\Support\Facades\Schema::hasTable('rats')) {
+            $this->call(RatMockSeeder::class);
+        } else {
+            $this->command->warn('Tabela "rats" não encontrada - RatMockSeeder pulado.');
+        }
     }
 }

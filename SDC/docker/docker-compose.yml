@@ -79,8 +79,8 @@ services:
       XDEBUG_CONFIG: client_host=host.docker.internal
 
       # Migrations e Seeders
-      RUN_MIGRATIONS: "false"
-      RUN_SEEDERS: "false"
+      RUN_MIGRATIONS: "true"
+      RUN_SEEDERS: "true"
 
     # PHP-FPM (padrão) ou Artisan Serve
     command: php artisan serve --host=0.0.0.0 --port=8000
