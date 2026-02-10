@@ -155,7 +155,7 @@ export default defineConfig({
         target: 'es2015',
     },
     optimizeDeps: {
-        include: ['vue', '@inertiajs/vue3', 'ziggy-js', '@tanstack/vue-query'],
+        include: ['vue', '@inertiajs/vue3', 'ziggy-js', '@tanstack/vue-query', 'vuedraggable', 'sortablejs'],
         exclude: ['virtual:pwa-register'],
     },
     server: {
@@ -177,3 +177,4 @@ export default defineConfig({
         format: 'es',
     },
 });
+// Force reload
