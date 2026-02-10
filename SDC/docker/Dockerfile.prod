@@ -85,29 +85,26 @@ RUN composer install \
     --ignore-platform-reqs \
     --no-scripts || (echo "ERRO ao instalar dependências" && cat composer.json && exit 1)
 
-# Instalar dependências Node.js (incluindo devDependencies para compilar assets)
-RUN if [ -f package.json ]; then \
-        npm ci --no-audit --no-fund || \
-        (echo "⚠️ npm ci falhou, tentando npm install..." && npm install --no-audit --no-fund); \
-    fi
-
 # Copiar resto do código da aplicação
 COPY . .
 
-# Remover arquivo hot do Vite dev server (segurança extra além do .dockerignore)
+# Remover arquivo hot do Vite dev server
 RUN rm -f public/hot
 
 # Executar scripts do composer após copiar código
 RUN composer dump-autoload --optimize --classmap-authoritative
 
-# Compilar assets do Vite (CRÍTICO para aplicação funcionar)
+# Instalar dependências Node.js e compilar assets (TUDO JUNTO para garantir consistencia)
 RUN if [ -f package.json ]; then \
-        echo "🔨 Compilando assets do Vite..." && \
+        echo "=== Instalando dependencias Node.js ===" && \
+        npm ci --no-audit --no-fund --include=dev && \
+        echo "=== Compilando assets do Vite ===" && \
         npm run build && \
-        echo "✅ Assets compilados com sucesso!" && \
-        ls -la public/build/ || echo "⚠️ Diretório build não encontrado"; \
+        echo "=== Verificando build ===" && \
+        ls -la public/build/ && \
+        test -f public/build/manifest.json && echo "OK: manifest.json existe" || (echo "ERRO: manifest.json NAO existe" && exit 1); \
     else \
-        echo "⚠️ package.json não encontrado, pulando build de assets"; \
+        echo "ERRO: package.json nao encontrado" && exit 1; \
     fi
 
 # Remover Node.js e npm após compilar assets (reduzir tamanho da imagem)
