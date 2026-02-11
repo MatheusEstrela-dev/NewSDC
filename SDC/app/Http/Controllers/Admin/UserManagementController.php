@@ -121,9 +121,24 @@ class UserManagementController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
+            'roles' => 'nullable|array',
+            'roles.*' => 'exists:roles,id',
+            'direct_permissions' => 'nullable|array',
+            'direct_permissions.*' => 'exists:permissions,name',
         ]);
 
-        $user->update($validated);
+        $user->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ]);
+
+        if (isset($validated['roles'])) {
+            $user->roles()->sync($validated['roles']);
+        }
+
+        if (isset($validated['direct_permissions'])) {
+            $user->syncPermissions($validated['direct_permissions']);
+        }
 
         return redirect()
             ->route('admin.permissions.users.show', $user)

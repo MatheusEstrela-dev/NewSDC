@@ -152,7 +152,7 @@ return [
             'system.*',
         ],
         'manager' => [
-            'users.view',
+
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',
             'pae.empreendimentos.edit',

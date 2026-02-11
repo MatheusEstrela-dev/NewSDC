@@ -76,7 +76,7 @@
           Visão Geral
         </NavItem>
         <NavItem
-          v-if="route().has('rat.index') || route().has('rat.create')"
+          v-if="canSeeRat && (route().has('rat.index') || route().has('rat.create'))"
           :href="ratHref"
           :active="route().current('rat.*')"
           icon="document"
@@ -85,7 +85,7 @@
           RAT
         </NavItem>
         <NavItem
-          v-if="route().has('demandas.index')"
+          v-if="canSeeDemandas && route().has('demandas.index')"
           :href="route('demandas.index')"
           :active="route().current('demandas.*')"
           icon="checkbadge"
@@ -94,7 +94,7 @@
           DEMANDAS
         </NavItem>
         <NavItem
-          v-if="route().has('pae.protocolos.index') || route().has('pae.index')"
+          v-if="canSeePae && (route().has('pae.protocolos.index') || route().has('pae.index'))"
           :href="paeHref"
           :active="route().current('pae.*')"
           icon="document"
@@ -108,41 +108,41 @@
       <div class="nav-section">
         <div v-show="!isCollapsed" class="nav-section-title">MÓDULOS DE GESTÃO</div>
 
-        <!-- DECRETAÇÕES -->
+        <!-- DECRETACOES -->
         <NavItem
-          v-if="route().has('decretacoes.index')"
+          v-if="canSeeDecretacoes && route().has('decretacoes.index')"
           :href="route('decretacoes.index')"
           :active="route().current('decretacoes.*')"
           icon="scale"
           :collapsed="isCollapsed"
         >
-          Decretações
+          Decretacoes
         </NavItem>
 
-        <!-- Ajuda Humanitária -->
+        <!-- Ajuda Humanitaria -->
         <NavItem
-          v-if="route().has('ajuda-humanitaria.beneficiarios.index')"
+          v-if="canSeeAjudaHumanitaria && route().has('ajuda-humanitaria.beneficiarios.index')"
           :href="route('ajuda-humanitaria.beneficiarios.index')"
           :active="route().current('ajuda-humanitaria.*')"
           icon="heart"
           :collapsed="isCollapsed"
         >
-          Ajuda Humanitária
+          Ajuda Humanitaria
         </NavItem>
 
-        <!-- COMPDEC -->
+        <!-- COMPDEC / Orgaos -->
         <NavItem
-          v-if="route().has('compdec.index')"
+          v-if="canSeeOrgaos && route().has('compdec.index')"
           :href="route('compdec.index')"
           :active="route().current('compdec.*')"
           icon="building"
           :collapsed="isCollapsed"
         >
-          Órgãos
+          Orgaos
         </NavItem>
 
         <!-- TDAP com submenu -->
-        <div class="nav-group">
+        <div v-if="canSeeTdap" class="nav-group">
           <button
             @click="toggleSubMenu('tdap')"
             class="nav-group-toggle"
@@ -210,7 +210,7 @@
 
         <!-- Treinamento -->
         <NavItem
-          v-if="route().has('treinamentos.index')"
+          v-if="canSeeTreinamento && route().has('treinamentos.index')"
           :href="route('treinamentos.index')"
           :active="route().current('treinamentos.*')"
           icon="academic"
@@ -221,7 +221,7 @@
 
         <!-- Meteorologia -->
         <NavItem
-          v-if="route().has('inmet.index')"
+          v-if="canSeeMeteorologia && route().has('inmet.index')"
           :href="route('inmet.index', undefined, false)"
           :active="route().current('inmet.*')"
           icon="cloud"
@@ -230,7 +230,9 @@
           Meteorologia
         </NavItem>
 
+        <!-- Vistoria -->
         <NavItem
+          v-if="canSeeVistoria"
           :href="route('dashboard')"
           :active="false"
           icon="book"
@@ -240,8 +242,8 @@
         </NavItem>
       </div>
 
-      <!-- ADMINISTRACAO -->
-      <div class="nav-section">
+      <!-- ADMINISTRACAO - Visivel apenas para usuarios com permissao -->
+      <div v-if="canSeeAdmin" class="nav-section">
         <div v-show="!isCollapsed" class="nav-section-title">ADMINISTRACAO</div>
 
         <!-- Permissionamento - Link direto sem submenu -->
@@ -283,9 +285,103 @@ const isSidebarOpen = inject('isSidebarOpen', ref(false));
 const closeSidebar = inject('closeSidebar', () => {});
 
 const page = usePage();
-// Mantemos a checagem para uso futuro (ex.: desabilitar links),
-// mas o módulo deve aparecer no sidebar seguindo o padrão do projeto.
-const canSeeAdmin = computed(() => !!page.props?.auth?.user);
+
+// Helper para verificar permissoes do usuario
+const hasPermission = (permissionList) => {
+  const user = page.props?.auth?.user;
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+
+  const permissions = user.permissions || [];
+  return permissionList.some(perm => permissions.includes(perm));
+};
+
+const hasRole = (roleList) => {
+  const user = page.props?.auth?.user;
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+
+  const roles = user.roles || [];
+  return roles.some(role => roleList.includes(role.slug || role.name));
+};
+
+// ============================================================================
+// CONTROLE DE VISIBILIDADE POR MODULO
+// Por enquanto, apenas ADMIN esta restrito. Os demais estao preparados.
+// Para ativar restricao em um modulo, altere o return para usar hasPermission()
+// ============================================================================
+
+// PRINCIPAL
+const canSeeRat = computed(() => {
+  // TODO: Ativar quando necessario
+  // return hasPermission(['rat.protocolos.view', 'rat.view']);
+  return true; // Liberado por enquanto
+});
+
+const canSeeDemandas = computed(() => {
+  // TODO: Ativar quando necessario
+  // return hasPermission(['demandas.view']);
+  return true; // Liberado por enquanto
+});
+
+const canSeePae = computed(() => {
+  // TODO: Ativar quando necessario
+  // return hasPermission(['pae.empreendimentos.view', 'pae.view']);
+  return true; // Liberado por enquanto
+});
+
+// MODULOS DE GESTAO
+const canSeeDecretacoes = computed(() => {
+  // TODO: Ativar quando necessario
+  // return hasPermission(['decretacoes.view']);
+  return true; // Liberado por enquanto
+});
+
+const canSeeAjudaHumanitaria = computed(() => {
+  // TODO: Ativar quando necessario
+  // return hasPermission(['ajuda_humanitaria.view', 'ajuda_humanitaria.beneficiarios.view']);
+  return true; // Liberado por enquanto
+});
+
+const canSeeOrgaos = computed(() => {
+  // TODO: Ativar quando necessario
+  // return hasPermission(['compdec.view', 'orgaos.view']);
+  return true; // Liberado por enquanto
+});
+
+const canSeeTdap = computed(() => {
+  // TODO: Ativar quando necessario
+  // return hasPermission(['tdap.view', 'tdap.products.view', 'tdap.movimentacoes.view']);
+  return true; // Liberado por enquanto
+});
+
+const canSeeTreinamento = computed(() => {
+  // TODO: Ativar quando necessario
+  // return hasPermission(['treinamentos.view']);
+  return true; // Liberado por enquanto
+});
+
+const canSeeMeteorologia = computed(() => {
+  // TODO: Ativar quando necessario
+  // return hasPermission(['inmet.view', 'meteorologia.view']);
+  return true; // Liberado por enquanto
+});
+
+const canSeeVistoria = computed(() => {
+  // TODO: Ativar quando necessario
+  // return hasPermission(['vistoria.view']);
+  return true; // Liberado por enquanto
+});
+
+// ADMINISTRACAO - RESTRITO (unico modulo com restricao ativa)
+const canSeeAdmin = computed(() => {
+  const user = page.props?.auth?.user;
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  if (hasRole(['super-admin', 'admin'])) return true;
+
+  return hasPermission(['users.view', 'roles.view', 'permissions.view', 'permissions.manage']);
+});
 
 const openSubMenus = ref({
   tdap: false,
