@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rat_recursos_componentes_guarnicao_copia', function (Blueprint $table) {
+        if (Schema::hasTable('rat_recursos_componentes_guarnicao')) return;
+        Schema::create('rat_recursos_componentes_guarnicao', function (Blueprint $table) {
             // Comentário da tabela
             $table->comment('Tabela de Componentes da Guarnição - Armazena informações dos agentes/servidores que participaram do atendimento');
 
@@ -64,6 +65,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rat_recursos_componentes_guarnicao_copia');
+        Schema::dropIfExists('rat_recursos_componentes_guarnicao');
     }
 };

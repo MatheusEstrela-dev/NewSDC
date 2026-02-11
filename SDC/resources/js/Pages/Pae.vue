@@ -66,7 +66,7 @@ import PaeForm from '@/Components/Pae/PaeForm.vue';
 import PaeHeader from '@/Components/Pae/PaeHeader.vue';
 import PaeHistory from '@/Components/Pae/PaeHistory.vue';
 import PaeTabs from '@/Components/Pae/PaeTabs.vue';
-import { usePae } from '@/composables/usePae';
+import { usePae } from '@/Composables/usePae';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 // Recebe props do Inertia

@@ -15,6 +15,12 @@ class Kernel extends ConsoleKernel
     {
         // Limpa roles e permissions expiradas a cada hora
         $schedule->job(new CleanExpiredPermissions())->hourly();
+
+        // Desativa usuarios inativos ha mais de 6 meses (executa diariamente as 02:00)
+        $schedule->command('users:deactivate-inactive')
+            ->dailyAt('02:00')
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**

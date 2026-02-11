@@ -122,7 +122,7 @@ import ProcessoGrid from '@/Components/Organisms/Decretacoes/ProcessoGrid.vue';
 import ProcessoTable from '@/Components/Organisms/Decretacoes/ProcessoTable.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
-import { useMobile } from '@/composables/useMobile';
+import { useMobile } from '@/Composables/useMobile';
 
 // Detecção mobile
 const { isMobile } = useMobile();

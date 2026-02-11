@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rat_redec_copia', function (Blueprint $table) {
+        if (Schema::hasTable('rat_redec')) return;
+        Schema::create('rat_redec', function (Blueprint $table) {
             $table->id(); // bigint unsigned NOT NULL AUTO_INCREMENT
             
             // Nome da REDEC
@@ -35,6 +36,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rat_redec_copia');
+        Schema::dropIfExists('rat_redec');
     }
 };

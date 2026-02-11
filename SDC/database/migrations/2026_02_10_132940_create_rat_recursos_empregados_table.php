@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rat_recursos_empregados_copia', function (Blueprint $table) {
+        if (Schema::hasTable('rat_recursos_empregados')) return;
+        Schema::create('rat_recursos_empregados', function (Blueprint $table) {
             $table->id();
             
             // Relacionamento com Relato (Chave Estrangeira)
@@ -58,7 +59,7 @@ return new class extends Migration
             // Definição da Foreign Key com Cascade
             $table->foreign('relato_recurso_id', 'rat_recursos_empregados_relato_recurso_id_foreign')
                   ->references('id')
-                  ->on('rat_relato_recursos_copia')
+                  ->on('rat_relato_recursos')
                   ->onDelete('cascade');
 
             $table->engine = 'InnoDB';
@@ -72,6 +73,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rat_recursos_empregados_copia');
+        Schema::dropIfExists('rat_recursos_empregados');
     }
 };

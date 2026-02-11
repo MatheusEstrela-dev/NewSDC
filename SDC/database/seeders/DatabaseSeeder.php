@@ -50,5 +50,11 @@ class DatabaseSeeder extends Seeder
         } else {
             $this->command->warn('Tabela "rats" não encontrada - RatMockSeeder pulado.');
         }
+
+        // 7. Orgaos de teste (hierarquia completa para testes)
+        $this->call(TestOrgaosSeeder::class);
+
+        // 8. Usuarios de teste com hierarquia e diferentes status
+        $this->call(TestUsersSeeder::class);
     }
 }

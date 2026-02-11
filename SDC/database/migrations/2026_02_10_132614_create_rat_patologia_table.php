@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rat_patologia_copia', function (Blueprint $table) {
+        if (Schema::hasTable('rat_patologia')) return;
+        Schema::create('rat_patologia', function (Blueprint $table) {
             $table->id();
 
             // Descrição com comentário e índice para buscas
@@ -41,6 +42,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rat_patologia_copia');
+        Schema::dropIfExists('rat_patologia');
     }
 };

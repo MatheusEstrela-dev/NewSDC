@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rat_ocorrencias_copia', function (Blueprint $table) {
+        if (Schema::hasTable('rat_ocorrencias')) return;
+        Schema::create('rat_ocorrencias', function (Blueprint $table) {
             $table->id();
             
             // Número BOS com Unique e Comentário
@@ -48,7 +49,7 @@ return new class extends Migration
             // Definição da Foreign Key e Constraints
             $table->foreign('ocorrencia_origem_id', 'rat_ocorrencias_ocorrencia_origem_id_foreign')
                   ->references('id')
-                  ->on('rat_ocorrencias_copia')
+                  ->on('rat_ocorrencias')
                   ->onDelete('set null');
 
             // Configurações do Banco
@@ -63,6 +64,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rat_ocorrencias_copia');
+        Schema::dropIfExists('rat_ocorrencias');
     }
 };

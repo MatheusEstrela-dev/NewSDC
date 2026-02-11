@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rat_relato_vistoria_copia', function (Blueprint $table) {
+        if (Schema::hasTable('rat_relato_vistoria')) return;
+        Schema::create('rat_relato_vistoria', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -167,6 +168,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rat_relato_vistoria_copia');
+        Schema::dropIfExists('rat_relato_vistoria');
     }
 };

@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rat_ocorrencia_relatos_copia', function (Blueprint $table) {
+        if (Schema::hasTable('rat_ocorrencia_relatos')) return;
+        Schema::create('rat_ocorrencia_relatos', function (Blueprint $table) {
             $table->id(); // bigint unsigned NOT NULL AUTO_INCREMENT
             
             // Criado por (usando 191 conforme seu SQL)
@@ -40,6 +41,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rat_ocorrencia_relatos_copia');
+        Schema::dropIfExists('rat_ocorrencia_relatos');
     }
 };

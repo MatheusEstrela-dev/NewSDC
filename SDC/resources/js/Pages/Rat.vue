@@ -87,7 +87,7 @@ import RatInvolved from '@/Components/Rat/RatInvolved.vue';
 import RatResources from '@/Components/Rat/RatResources.vue';
 import RatAttachments from '@/Components/Rat/RatAttachments.vue';
 import RatTabs from '@/Components/Rat/RatTabs.vue';
-import { useRat } from '@/composables/useRat';
+import { useRat } from '@/Composables/useRat';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 // Recebe props do Inertia

@@ -142,6 +142,48 @@ ajuda-rollback:
     docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2025_12_28_120000_create_beneficiarios_table.php --force
     @echo "✅ Migrations do módulo Ajuda Humanitária revertidas!"
 
+# ==================== RAT (REGISTRO DE ATIVIDADES) ====================
+
+# Executa as migrations do módulo RAT
+rat-migrate:
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_131610_create_rat_bem_afetado_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_131811_create_rat_encaminhamento_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_132039_create_rat_ocorrencia_relatos_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_132204_create_rat_ocorrencias_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_132344_create_rat_acionado_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_132614_create_rat_patologia_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_132732_create_rat_recursos_componentes_guarnicao_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_132940_create_rat_recursos_empregados_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_133127_create_rat_redec_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_133300_create_rat_dados_gerais_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_133452_create_rat_relato_envolvidos_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_133724_create_rat_relato_recursos_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_134052_create_rat_relato_vistoria_table.php --force
+    docker exec {{docker_app}} php artisan migrate --path=database/migrations/2026_02_10_134152_create_rat_veiculos_table.php --force
+    @echo "✅ Migrations do módulo RAT executadas com sucesso!"
+
+# Verifica as tabelas do módulo RAT
+rat-tables:
+    docker exec {{docker_db}} mysql -u root -proot sdc -e "SHOW TABLES LIKE 'rat%';"
+
+# Remove o módulo RAT (rollback migrations)
+rat-rollback:
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_134152_create_rat_veiculos_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_134052_create_rat_relato_vistoria_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_133724_create_rat_relato_recursos_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_133452_create_rat_relato_envolvidos_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_133300_create_rat_dados_gerais_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_133127_create_rat_redec_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_132940_create_rat_recursos_empregados_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_132732_create_rat_recursos_componentes_guarnicao_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_132614_create_rat_patologia_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_132344_create_rat_acionado_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_132204_create_rat_ocorrencias_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_132039_create_rat_ocorrencia_relatos_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_131811_create_rat_encaminhamento_table.php --force
+    docker exec {{docker_app}} php artisan migrate:rollback --path=database/migrations/2026_02_10_131610_create_rat_bem_afetado_table.php --force
+    @echo "✅ Migrations do módulo RAT revertidas!"
+
 # ==================== FRONTEND ====================
 
 # Build do frontend
@@ -188,7 +230,7 @@ fix-permissions:
 info:
     @echo "📦 Projeto: SDC - Sistema de Defesa Civil"
     @echo "🐳 Containers:"
-    @docker ps --format "  - {{.Names}}: {{.Status}}"
+    @docker ps --format "  - {{'{{'}}.Names}}"
     @echo ""
     @echo "🌐 URLs:"
     @echo "  - App: http://localhost:8001"
@@ -217,6 +259,7 @@ setup:
     just migrate
     just tdap-migrate
     just ajuda-migrate
+    just rat-migrate
     just clear
     cd SDC && npm install
     just build

@@ -221,8 +221,8 @@
 <script setup>
 import { ref, computed, inject, Transition, watch, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
-import { useTheme } from '@/composables/useTheme';
-import { useNotifications } from '@/composables/useNotifications';
+import { useTheme } from '@/Composables/useTheme';
+import { useNotifications } from '@/Composables/useNotifications';
 import Dropdown from './Dropdown.vue';
 import NotificationsPanel from './Organisms/Notifications/NotificationsPanel.vue';
 import UserProfileModal from './Organisms/UserProfileModal.vue';

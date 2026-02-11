@@ -148,7 +148,7 @@ import {
   matchesPaeFilters,
 } from '@/mocks/pae';
 
-import { useMobile } from '@/composables/useMobile';
+import { useMobile } from '@/Composables/useMobile';
 
 const props = defineProps({
   loading: {

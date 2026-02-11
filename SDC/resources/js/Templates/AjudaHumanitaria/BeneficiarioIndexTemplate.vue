@@ -179,7 +179,7 @@ import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PrintBeneficiarioModal from '@/Components/Organisms/AjudaHumanitaria/Print/PrintBeneficiarioModal.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
-import { useMobile } from '@/composables/useMobile';
+import { useMobile } from '@/Composables/useMobile';
 import { useExport } from '@/Composables/useExport';
 
 const props = defineProps({

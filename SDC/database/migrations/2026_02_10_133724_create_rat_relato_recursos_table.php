@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rat_relato_recursos_copia', function (Blueprint $table) {
+        if (Schema::hasTable('rat_relato_recursos')) return;
+        Schema::create('rat_relato_recursos', function (Blueprint $table) {
             $table->comment('Tabela de Recursos do Relato - Armazena informações principais dos recursos utilizados no atendimento');
             
             $table->id();
@@ -79,6 +80,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rat_relato_recursos_copia');
+        Schema::dropIfExists('rat_relato_recursos');
     }
 };

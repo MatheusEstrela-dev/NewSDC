@@ -101,7 +101,7 @@ import ArrowsRightLeftIcon from '@/Components/Icons/ArrowsRightLeftIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import TdapMovimentacaoCard from '@/Components/Molecules/Tdap/TdapMovimentacaoCard.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import { useMobile } from '@/composables/useMobile';
+import { useMobile } from '@/Composables/useMobile';
 
 // Detecção mobile
 const { isMobile } = useMobile();

@@ -269,7 +269,7 @@
 import { ref, watch } from 'vue';
 import FormField from '../../Form/FormField.vue';
 import FormSelect from '../../Form/FormSelect.vue';
-import { useCep } from '../../../composables/useCep';
+import { useCep } from '../../../Composables/useCep';
 
 const props = defineProps({
   modelValue: {

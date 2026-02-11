@@ -89,7 +89,7 @@
           :subtitle="user.email"
           :data="{
             email: user.email,
-            status: user.email_verified_at ? 'Ativo' : 'Pendente',
+            status: statusLabel(user.status),
             created_at: formatDate(user.created_at),
             roles: user.roles.map(r => r.name).join(', ') || 'Nenhum cargo'
           }"
@@ -208,11 +208,9 @@
                 <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
                   <span
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                    :class="user.email_verified_at
-                      ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                      : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'"
+                    :class="statusClass(user.status)"
                   >
-                    {{ user.email_verified_at ? 'Ativo' : 'Pendente' }}
+                    {{ statusLabel(user.status) }}
                   </span>
                 </td>
                 <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400 hidden lg:table-cell">
@@ -333,6 +331,28 @@ const formatDate = (date) => {
     month: '2-digit',
     year: 'numeric',
   });
+};
+
+const statusLabel = (status) => {
+  const labels = {
+    active: 'Ativo',
+    inactive: 'Inativo',
+    suspended: 'Suspenso',
+    pending: 'Pendente',
+    blocked: 'Bloqueado',
+  };
+  return labels[status] || status || 'Desconhecido';
+};
+
+const statusClass = (status) => {
+  const classes = {
+    active: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
+    inactive: 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
+    suspended: 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300',
+    pending: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300',
+    blocked: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300',
+  };
+  return classes[status] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
 };
 
 const deactivateUser = (userId) => {

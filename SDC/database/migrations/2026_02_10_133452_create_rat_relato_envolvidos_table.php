@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rat_relato_envolvidos_copia', function (Blueprint $table) {
+        if (Schema::hasTable('rat_relato_envolvidos')) return;
+        Schema::create('rat_relato_envolvidos', function (Blueprint $table) {
             $table->id();
 
             // --- Dados Gerais (Prefixo g_) ---
@@ -88,6 +89,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rat_relato_envolvidos_copia');
+        Schema::dropIfExists('rat_relato_envolvidos');
     }
 };

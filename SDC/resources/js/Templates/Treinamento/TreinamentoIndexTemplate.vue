@@ -12,7 +12,7 @@ import TreinamentoFiltersSection from '@/Components/Organisms/Treinamento/Treina
 import TreinamentoGrid from '@/Components/Organisms/Treinamento/TreinamentoGrid.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
-import { useMobile } from '@/composables/useMobile';
+import { useMobile } from '@/Composables/useMobile';
 
 // Detecção mobile
 const { isMobile } = useMobile();

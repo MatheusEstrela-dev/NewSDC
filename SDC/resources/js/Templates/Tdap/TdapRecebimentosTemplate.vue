@@ -9,7 +9,7 @@ import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import TdapRecebimentoCard from '@/Components/Molecules/Tdap/TdapRecebimentoCard.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import PrintTdapRecebimentoModal from '@/Components/Organisms/Tdap/Print/PrintTdapRecebimentoModal.vue';
-import { useMobile } from '@/composables/useMobile';
+import { useMobile } from '@/Composables/useMobile';
 import { ref } from 'vue';
 
 // Detecção mobile

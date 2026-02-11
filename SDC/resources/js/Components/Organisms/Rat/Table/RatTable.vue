@@ -75,7 +75,7 @@ import TableHeader from '@/Components/Atoms/Table/TableHeader.vue';
 import RatTableRow from './RatTableRow.vue';
 import RatCard from '@/Components/Molecules/Rat/RatCard.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
-import { useMobile } from '@/composables/useMobile';
+import { useMobile } from '@/Composables/useMobile';
 
 // Detecção mobile
 const { isMobile } = useMobile();

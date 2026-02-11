@@ -99,7 +99,7 @@ import CubeIcon from '@/Components/Icons/CubeIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import TdapProductCard from '@/Components/Molecules/Tdap/TdapProductCard.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import { useMobile } from '@/composables/useMobile';
+import { useMobile } from '@/Composables/useMobile';
 
 // Detecção mobile
 const { isMobile } = useMobile();

@@ -5,7 +5,7 @@ import TopBar from '@/Components/TopBar.vue';
 import NavigationHeader from '@/Components/Organisms/Navigation/NavigationHeader.vue';
 import OfflineIndicator from '@/Components/Molecules/OfflineIndicator.vue';
 import PullToRefresh from '@/Components/Molecules/PullToRefresh.vue';
-import { useMobile, useSidebarMobile } from '@/composables/useMobile';
+import { useMobile, useSidebarMobile } from '@/Composables/useMobile';
 import SupportModal from '@/Components/Organisms/Suporte/SupportModal.vue';
 import TermosUsoModal from '@/Components/Organisms/TermosUsoModal.vue';
 import PrivacidadeModal from '@/Components/Organisms/PrivacidadeModal.vue';

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -77,6 +78,10 @@ class AuthController extends Controller
         // Criar novo token
         $token = $user->createToken('api-token')->plainTextToken;
 
+        // Registrar login
+        $user->recordLogin($request->ip(), $request->userAgent());
+        AuditLog::logLogin($user->id);
+
         return response()->json([
             'token' => $token,
             'user' => [
@@ -107,7 +112,11 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
+        $userId = $request->user()->id;
+
         $request->user()->currentAccessToken()->delete();
+
+        AuditLog::logLogout($userId);
 
         return response()->json([
             'message' => 'Logout realizado com sucesso',
