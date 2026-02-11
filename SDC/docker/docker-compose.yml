@@ -32,7 +32,6 @@ services:
       - ../:/var/www:cached
       # Volumes nomeados para dependências (performance)
       - newsdc_vendor:/var/www/vendor
-      - newsdc_node_modules:/var/www/node_modules
       # Logs
       - ./logs/php:/var/log/php
 
@@ -363,7 +362,6 @@ services:
 
     volumes:
       - ../:/var/www:cached
-      - newsdc_node_modules:/var/www/node_modules
 
     networks:
       - sdc_network
@@ -377,7 +375,7 @@ services:
     ports:
       - "5175:5175" # Vite dev server
 
-    command: sh -c "rm -rf node_modules/.vite && npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0 --port 5175"
+    command: sh -c "rm -rf node_modules/.vite && npm run dev -- --host 0.0.0.0 --port 5175"
 
     deploy:
       resources:
@@ -680,8 +678,6 @@ volumes:
   newsdc_redis_data:
     driver: local
   newsdc_vendor:
-    driver: local
-  newsdc_node_modules:
     driver: local
   newsdc_prometheus_data:
     driver: local

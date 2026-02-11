@@ -131,38 +131,56 @@ return new class extends Migration
     }
 
     /**
-     * Adiciona indice se nao existir.
+     * Adiciona indice se nao existir (compativel com MySQL e SQLite).
      */
     protected function addIndexIfNotExists(string $table, array $columns, string $indexName): void
     {
-        $indexes = collect(DB::select("SHOW INDEX FROM {$table}"))->pluck('Key_name')->unique();
+        $driver = Schema::getConnection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            $indexes = collect(DB::select("PRAGMA index_list({$table})"))->pluck('name');
+        } else {
+            $indexes = collect(DB::select("SHOW INDEX FROM {$table}"))->pluck('Key_name')->unique();
+        }
 
         if (!$indexes->contains($indexName)) {
-            Schema::table($table, function (Blueprint $table) use ($columns, $indexName) {
-                $table->index($columns, $indexName);
+            Schema::table($table, function (Blueprint $blueprint) use ($columns, $indexName) {
+                $blueprint->index($columns, $indexName);
             });
         }
     }
 
     /**
-     * Remove indice se existir.
+     * Remove indice se existir (compativel com MySQL e SQLite).
      */
     protected function dropIndexIfExists(string $table, string $indexName): void
     {
-        $indexes = collect(DB::select("SHOW INDEX FROM {$table}"))->pluck('Key_name')->unique();
+        $driver = Schema::getConnection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            $indexes = collect(DB::select("PRAGMA index_list({$table})"))->pluck('name');
+        } else {
+            $indexes = collect(DB::select("SHOW INDEX FROM {$table}"))->pluck('Key_name')->unique();
+        }
 
         if ($indexes->contains($indexName)) {
-            Schema::table($table, function (Blueprint $table) use ($indexName) {
-                $table->dropIndex($indexName);
+            Schema::table($table, function (Blueprint $blueprint) use ($indexName) {
+                $blueprint->dropIndex($indexName);
             });
         }
     }
 
     /**
-     * Adiciona CHECK constraint se nao existir.
+     * Adiciona CHECK constraint se nao existir (apenas MySQL 8+).
      */
     protected function addCheckConstraintIfNotExists(string $table, string $constraintName, string $expression): void
     {
+        $driver = Schema::getConnection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            return;
+        }
+
         $constraints = DB::select("
             SELECT CONSTRAINT_NAME
             FROM information_schema.TABLE_CONSTRAINTS
@@ -179,10 +197,16 @@ return new class extends Migration
     }
 
     /**
-     * Remove CHECK constraint se existir.
+     * Remove CHECK constraint se existir (apenas MySQL).
      */
     protected function dropCheckConstraintIfExists(string $table, string $constraintName): void
     {
+        $driver = Schema::getConnection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            return;
+        }
+
         $constraints = DB::select("
             SELECT CONSTRAINT_NAME
             FROM information_schema.TABLE_CONSTRAINTS
