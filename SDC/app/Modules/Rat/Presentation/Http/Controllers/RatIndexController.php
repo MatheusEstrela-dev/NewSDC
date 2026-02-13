@@ -17,9 +17,57 @@ class RatIndexController extends Controller
     public function __construct(
         private readonly GetRatStatisticsUseCase $getStatisticsUseCase,
         private readonly ListRatsUseCase $listRatsUseCase,
-        private readonly CsvExportService $csvExportService
+        private readonly CsvExportService $csvExportService,
+        private readonly \App\Modules\Rat\Application\UseCases\DeleteRatUseCase $deleteRatUseCase
     ) {
     }
+
+    public function destroy(string $id): \Illuminate\Http\RedirectResponse
+    {
+        // #region agent log
+        $logData = [
+            'location' => 'RatIndexController.php:destroy',
+            'message' => 'destroy called',
+            'data' => ['id' => $id],
+            'timestamp' => now()->timestamp * 1000,
+            'sessionId' => 'debug-session',
+            'runId' => 'run1',
+            'hypothesisId' => 'G'
+        ];
+        Log::info('DEBUG: RatIndex destroy called', $logData);
+        $this->writeDebugLog($logData);
+        // #endregion
+
+        try {
+            $this->authorize('delete', \App\Modules\Rat\Domain\Entities\Rat::class); // Alternativa se houver Policy, se nao usar middleware na rota
+
+            $this->deleteRatUseCase->execute($id);
+
+            return redirect()->route('rat.index')
+                ->with('success', 'RAT excluído com sucesso.');
+        } catch (\Exception $e) {
+            // #region agent log
+            $logData = [
+                'location' => 'RatIndexController.php:destroy',
+                'message' => 'Error in destroy',
+                'data' => [
+                    'error' => $e->getMessage(),
+                    'id' => $id
+                ],
+                'timestamp' => now()->timestamp * 1000,
+                'sessionId' => 'debug-session',
+                'runId' => 'run1',
+                'hypothesisId' => 'G'
+            ];
+            Log::error('DEBUG: Error in destroy', $logData);
+            $this->writeDebugLog($logData);
+            // #endregion
+
+            return redirect()->back()
+                ->with('error', 'Erro ao excluir RAT: ' . $e->getMessage());
+        }
+    }
+
 
     public function index(Request $request): Response|\Illuminate\Http\RedirectResponse
     {

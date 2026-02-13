@@ -53,10 +53,12 @@
                   :show-attachments="false"
                   :show-delete="false"
                   :show-history="true"
+                  :show-archive="true"
                   @view="$emit('view', protocolo.id)"
                   @print="$emit('print', protocolo.id)"
                   @edit="$emit('edit', protocolo.id)"
                   @history="$emit('history', protocolo.id)"
+                  @archive="$emit('archive', protocolo.id)"
                 />
               </div>
             </td>
@@ -84,5 +86,5 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'history']);
+defineEmits(['view', 'print', 'edit', 'history', 'archive']);
 </script>

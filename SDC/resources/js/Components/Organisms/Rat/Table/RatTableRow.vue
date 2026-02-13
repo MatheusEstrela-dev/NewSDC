@@ -28,12 +28,15 @@
     <TableCell align="right" class="whitespace-nowrap">
       <TableActions
         :show-print="true"
+        :show-edit="can('rat.protocolos.edit')"
+        :show-delete="can('rat.protocolos.delete')"
         @view="handleView"
         @print="handlePrint"
         @edit="handleEdit"
         @attachments="handleAttachments"
         @delete="handleDelete"
       />
+
     </TableCell>
   </TableDataRow>
 </template>
@@ -45,6 +48,7 @@ import TableCell from '../../../Atoms/Table/TableCell.vue';
 import TableActions from '../../../Molecules/Table/TableActions.vue';
 import Badge from '../../../Atoms/Badge/Badge.vue';
 import StatusBadge from '../../../Atoms/Badge/StatusBadge.vue';
+import { usePermissions } from '@/Composables/usePermissions';
 
 const props = defineProps({
   rat: {
@@ -54,6 +58,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);
+const { can } = usePermissions();
 
 function formatDateTime(date) {
   if (!date) return 'Data não informada';
@@ -92,4 +97,5 @@ function handleDelete() {
   emit('delete', props.rat.id);
 }
 </script>
+
 

@@ -1,6 +1,8 @@
 <template>
   <div class="rat-index-container">
     <!-- Header Padronizado -->
+
+
     <PageHeader
       :title="MESSAGES.rat.title"
       :description="MESSAGES.rat.description"

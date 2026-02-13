@@ -99,6 +99,14 @@ return [
                 'edit'    => 'pae.empreendimentos.edit',
                 'delete'  => 'pae.empreendimentos.delete',
                 'approve' => 'pae.empreendimentos.approve',
+                'export'  => 'pae.empreendimentos.export',
+            ],
+            'Protocolos' => [
+                'view'   => 'pae.protocolos.view',
+                'create' => 'pae.protocolos.create',
+                'edit'   => 'pae.protocolos.edit',
+                'delete' => 'pae.protocolos.delete',
+                'export' => 'pae.protocolos.export',
             ],
         ],
         'RAT' => [
@@ -108,6 +116,64 @@ return [
                 'edit'     => 'rat.protocolos.edit',
                 'delete'   => 'rat.protocolos.delete',
                 'finalize' => 'rat.protocolos.finalize',
+                'export'   => 'rat.protocolos.export',
+            ],
+        ],
+        'DEMANDAS' => [
+            'Chamados' => [
+                'view'   => 'demandas.chamados.view',
+                'create' => 'demandas.chamados.create',
+                'edit'   => 'demandas.chamados.edit',
+                'delete' => 'demandas.chamados.delete',
+                'export' => 'demandas.chamados.export',
+                'manage' => 'demandas.chamados.manage',
+            ],
+        ],
+        'DECRETACOES' => [
+            'Processos' => [
+                'view'   => 'decretacoes.processos.view',
+                'create' => 'decretacoes.processos.create',
+                'edit'   => 'decretacoes.processos.edit',
+                'delete' => 'decretacoes.processos.delete',
+                'export' => 'decretacoes.processos.export',
+            ],
+        ],
+        'AJUDA_HUMANITARIA' => [
+            'Beneficiarios' => [
+                'view'   => 'humanitaria.beneficiarios.view',
+                'create' => 'humanitaria.beneficiarios.create',
+                'edit'   => 'humanitaria.beneficiarios.edit',
+                'delete' => 'humanitaria.beneficiarios.delete',
+                'export' => 'humanitaria.beneficiarios.export',
+            ],
+        ],
+        'TDAP' => [
+            'Produtos' => [
+                'view'   => 'tdap.products.view',
+                'create' => 'tdap.products.create',
+                'edit'   => 'tdap.products.edit',
+                'delete' => 'tdap.products.delete',
+            ],
+            'Recebimentos' => [
+                'view'     => 'tdap.recebimentos.view',
+                'create'   => 'tdap.recebimentos.create',
+                'processar' => 'tdap.recebimentos.processar',
+            ],
+            'Movimentacoes' => [
+                'view'   => 'tdap.movimentacoes.view',
+                'create' => 'tdap.movimentacoes.create',
+            ],
+            'Admin' => [
+                'admin' => 'tdap.admin',
+            ],
+        ],
+        'TREINAMENTO' => [
+            'Cursos' => [
+                'view'   => 'treinamento.cursos.view',
+                'create' => 'treinamento.cursos.create',
+                'edit'   => 'treinamento.cursos.edit',
+                'delete' => 'treinamento.cursos.delete',
+                'export' => 'treinamento.cursos.export',
             ],
         ],
         'BI' => [
@@ -146,55 +212,160 @@ return [
             'permissions.*',
             'pae.*',
             'rat.*',
+            'demandas.*',
+            'decretacoes.*',
+            'humanitaria.*',
+            'tdap.*',
+            'treinamento.*',
             'bi.*',
             'integrations.*',
             'webhooks.*',
             'system.*',
         ],
         'manager' => [
-
+            // PAE - CRUD completo exceto delete
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',
             'pae.empreendimentos.edit',
             'pae.empreendimentos.approve',
+            'pae.empreendimentos.export',
+            'pae.protocolos.view',
+            'pae.protocolos.create',
+            'pae.protocolos.edit',
+            'pae.protocolos.export',
+            // RAT - CRUD completo exceto delete
             'rat.protocolos.view',
             'rat.protocolos.create',
             'rat.protocolos.edit',
             'rat.protocolos.finalize',
+            'rat.protocolos.export',
+            // Demandas - gestao completa
+            'demandas.chamados.view',
+            'demandas.chamados.create',
+            'demandas.chamados.edit',
+            'demandas.chamados.export',
+            'demandas.chamados.manage',
+            // Decretacoes - CRUD completo exceto delete
+            'decretacoes.processos.view',
+            'decretacoes.processos.create',
+            'decretacoes.processos.edit',
+            'decretacoes.processos.export',
+            // Ajuda Humanitaria - CRUD completo exceto delete
+            'humanitaria.beneficiarios.view',
+            'humanitaria.beneficiarios.create',
+            'humanitaria.beneficiarios.edit',
+            'humanitaria.beneficiarios.export',
+            // TDAP - gestao completa
+            'tdap.products.view',
+            'tdap.products.create',
+            'tdap.products.edit',
+            'tdap.recebimentos.view',
+            'tdap.recebimentos.create',
+            'tdap.recebimentos.processar',
+            'tdap.movimentacoes.view',
+            'tdap.movimentacoes.create',
+            // Treinamento - gestao completa
+            'treinamento.cursos.view',
+            'treinamento.cursos.create',
+            'treinamento.cursos.edit',
+            'treinamento.cursos.export',
+            // BI
             'bi.dashboards.view',
             'bi.reports.export',
+            // Integracoes
             'integrations.view',
             'integrations.execute',
             'webhooks.send',
             'webhooks.logs.view',
         ],
         'analyst' => [
+            // PAE - view, create, edit
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',
             'pae.empreendimentos.edit',
+            'pae.protocolos.view',
+            'pae.protocolos.create',
+            'pae.protocolos.edit',
+            // RAT - view, create, edit
             'rat.protocolos.view',
             'rat.protocolos.create',
             'rat.protocolos.edit',
+            // Demandas - view, create, edit
+            'demandas.chamados.view',
+            'demandas.chamados.create',
+            'demandas.chamados.edit',
+            // Decretacoes - view, create, edit
+            'decretacoes.processos.view',
+            'decretacoes.processos.create',
+            'decretacoes.processos.edit',
+            // Ajuda Humanitaria - view, create, edit
+            'humanitaria.beneficiarios.view',
+            'humanitaria.beneficiarios.create',
+            'humanitaria.beneficiarios.edit',
+            // TDAP - view, create
+            'tdap.products.view',
+            'tdap.products.create',
+            'tdap.recebimentos.view',
+            'tdap.recebimentos.create',
+            'tdap.movimentacoes.view',
+            'tdap.movimentacoes.create',
+            // Treinamento - view
+            'treinamento.cursos.view',
+            // BI
             'bi.dashboards.view',
             'bi.reports.export',
+            // Integracoes
             'integrations.view',
             'webhooks.logs.view',
         ],
         'operator' => [
+            // PAE - view, create
             'pae.empreendimentos.view',
             'pae.empreendimentos.create',
+            'pae.protocolos.view',
+            'pae.protocolos.create',
+            // RAT - view, create
             'rat.protocolos.view',
             'rat.protocolos.create',
+            // Demandas - view, create
+            'demandas.chamados.view',
+            'demandas.chamados.create',
+            // Decretacoes - view
+            'decretacoes.processos.view',
+            // Ajuda Humanitaria - view, create
+            'humanitaria.beneficiarios.view',
+            'humanitaria.beneficiarios.create',
+            // TDAP - view
+            'tdap.products.view',
+            'tdap.recebimentos.view',
+            'tdap.movimentacoes.view',
+            // Treinamento - view
+            'treinamento.cursos.view',
+            // BI - view
             'bi.dashboards.view',
         ],
         'viewer' => [
+            // Somente visualizacao em todos os modulos
             'pae.empreendimentos.view',
+            'pae.protocolos.view',
             'rat.protocolos.view',
+            'demandas.chamados.view',
+            'decretacoes.processos.view',
+            'humanitaria.beneficiarios.view',
+            'tdap.products.view',
+            'tdap.recebimentos.view',
+            'tdap.movimentacoes.view',
+            'treinamento.cursos.view',
             'bi.dashboards.view',
         ],
         'user' => [
+            // Acesso basico apenas
             'pae.empreendimentos.view',
+            'pae.protocolos.view',
             'rat.protocolos.view',
+            'demandas.chamados.view',
+            'demandas.chamados.create',
+            'treinamento.cursos.view',
         ],
     ],
 

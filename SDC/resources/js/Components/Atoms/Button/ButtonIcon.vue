@@ -24,7 +24,7 @@ const props = defineProps({
   variant: {
     type: String,
     default: 'secondary',
-    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'warning', 'info'].includes(value),
+    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'topaz'].includes(value),
   },
   size: {
     type: String,
@@ -78,6 +78,7 @@ const variantClasses = {
   danger: 'text-red-400 hover:text-red-300 hover:bg-red-500/10',
   warning: 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10',
   info: 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10',
+  topaz: 'text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10',
 };
 
 const SIZE_CONFIG = {

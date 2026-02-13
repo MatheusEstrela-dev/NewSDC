@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout title="Decretações">
+  <AuthenticatedLayout title="Decretacoes">
     <ProcessoIndexTemplate
       :processos="processos.data || []"
       :statistics="statistics"
@@ -7,7 +7,9 @@
       :filter-options="filterOptions"
       :pagination="processos"
       :loading="loading"
-      :can-edit="true"
+      :can-create="can('decretacoes.processos.create')"
+      :can-edit="can('decretacoes.processos.edit')"
+      :can-delete="can('decretacoes.processos.delete')"
       @filter-change="handleFilterChange"
       @clear-filters="handleClearFilters"
       @page-change="handlePageChange"
@@ -21,6 +23,9 @@ import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ProcessoIndexTemplate from '@/Templates/Decretacoes/ProcessoIndexTemplate.vue';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
 
 const props = defineProps({
   processos: {

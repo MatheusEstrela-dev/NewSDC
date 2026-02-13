@@ -48,7 +48,7 @@
             </svg>
           </span>
         </div>
-        <div v-if="errors.cpf" class="error-message">{{ errors.cpf }}</div>
+
 
         <!-- Input Senha -->
         <div class="input-group">
@@ -107,7 +107,12 @@
             </svg>
           </button>
         </div>
-        <div v-if="errors.password" class="error-message">{{ errors.password }}</div>
+        <!-- Error Messages (Discrete & Centered) -->
+        <div v-if="errors.cpf || errors.password" class="mb-4 mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-center shadow-sm backdrop-blur-sm">
+          <p v-if="errors.cpf" class="text-sm text-red-400 font-medium">{{ errors.cpf }}</p>
+          <p v-if="errors.password" class="text-sm text-red-400 font-medium">{{ errors.password }}</p>
+        </div>
+
 
         <!-- Form Actions -->
         <div class="form-actions">

@@ -34,7 +34,15 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-  canManage: {
+  canCreate: {
+    type: Boolean,
+    default: false,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
     type: Boolean,
     default: false,
   },
@@ -126,9 +134,9 @@ function handleExportCsv(params) {
             <span class="hidden sm:inline">Exportar</span>
           </Button>
 
-          <!-- Botão Criar - Responsivo -->
+          <!-- Botao Criar - Responsivo -->
           <Button
-            v-if="canManage"
+            v-if="canCreate"
             variant="primary"
             size="md"
             :icon="PlusIcon"
@@ -164,8 +172,8 @@ function handleExportCsv(params) {
     <TreinamentoGrid
       v-if="viewMode === 'grid' || isMobile"
       :treinamentos="treinamentos"
-      :can-edit="canManage"
-      :can-delete="canManage"
+      :can-edit="canEdit"
+      :can-delete="canDelete"
       @view="emit('view', $event)"
       @edit="emit('edit', $event)"
       @delete="emit('delete', $event)"
@@ -214,7 +222,7 @@ function handleExportCsv(params) {
                 <button @click="emit('view', treinamento.id)" class="p-1.5 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-all duration-200" title="Visualizar">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                 </button>
-                <button v-if="canManage" @click="emit('edit', treinamento.id)" class="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all duration-200" title="Editar">
+                <button v-if="canEdit" @click="emit('edit', treinamento.id)" class="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all duration-200" title="Editar">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 </button>
               </div>

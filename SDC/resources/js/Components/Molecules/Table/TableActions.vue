@@ -40,13 +40,23 @@
       title="Excluir"
       @click="$emit('delete')"
     />
+
+
     <ButtonIcon
       v-if="showHistory"
       :icon="ClockIcon"
       variant="success"
       :size="size"
-      title="Série Histórica"
+      title="Serie Historica"
       @click="$emit('history')"
+    />
+    <ButtonIcon
+      v-if="showArchive"
+      :icon="ArchiveBoxIcon"
+      variant="topaz"
+      :size="size"
+      title="Arquivar"
+      @click="$emit('archive')"
     />
   </div>
 </template>
@@ -59,6 +69,7 @@ import PencilIcon from '../../Icons/PencilIcon.vue';
 import TrashIcon from '../../Icons/TrashIcon.vue';
 import PaperClipIcon from '../../Icons/PaperClipIcon.vue';
 import ClockIcon from '../../Icons/ClockIcon.vue';
+import ArchiveBoxIcon from '../../Icons/ArchiveBoxIcon.vue';
 
 defineProps({
   showView: {
@@ -85,6 +96,10 @@ defineProps({
     type: Boolean,
     default: true,
   },
+  showArchive: {
+    type: Boolean,
+    default: false,
+  },
   size: {
     type: String,
     default: 'md',
@@ -92,6 +107,6 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'attachments', 'history', 'delete']);
+defineEmits(['view', 'print', 'edit', 'attachments', 'history', 'delete', 'archive']);
 </script>
 

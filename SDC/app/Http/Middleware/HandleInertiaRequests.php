@@ -63,13 +63,31 @@ class HandleInertiaRequests extends Middleware
             'is_super_admin' => method_exists($user, 'hasRole') ? $user->hasRole('super-admin') : false,
             'roles' => $roles,
             'role_names' => method_exists($user, 'getRoleNames') ? $user->getRoleNames()->values() : [],
-            'permissions' => method_exists($user, 'getAllPermissions')
-                ? $user->getAllPermissions()->pluck('name')->values()
-                : [],
+            'permissions' => $this->getEffectivePermissions($user),
             'hierarchy_level' => method_exists($user, 'getHierarchyLevel')
                 ? $user->getHierarchyLevel()
                 : 99,
         ];
+    }
+
+    /**
+     * Retorna as permissoes efetivas do usuario.
+     * Se o usuario tem permissoes diretas configuradas, usa apenas essas.
+     * Caso contrario, usa as permissoes herdadas dos cargos.
+     */
+    protected function getEffectivePermissions($user): array
+    {
+        if (!method_exists($user, 'permissions') || !method_exists($user, 'getPermissionsViaRoles')) {
+            return [];
+        }
+
+        $directPermissions = $user->permissions->pluck('name')->values()->toArray();
+
+        if (count($directPermissions) > 0) {
+            return $directPermissions;
+        }
+
+        return $user->getPermissionsViaRoles()->pluck('name')->values()->toArray();
     }
 
     /**

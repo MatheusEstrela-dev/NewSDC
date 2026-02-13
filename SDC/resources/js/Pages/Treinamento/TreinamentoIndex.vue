@@ -2,6 +2,9 @@
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TreinamentoIndexTemplate from '@/Templates/Treinamento/TreinamentoIndexTemplate.vue';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
 
 const props = defineProps({
   treinamentos: {
@@ -20,13 +23,7 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-  auth: {
-    type: Object,
-    required: true,
-  },
 });
-
-const canManage = props.auth?.user?.permissions?.includes('treinamento.manage') || false;
 
 const handleCreate = () => {
   // TODO: Implementar modal ou página de criação
@@ -64,7 +61,9 @@ const handleFilter = (filters) => {
       :statistics="statistics"
       :pagination="treinamentos.pagination"
       :filters="filters"
-      :can-manage="canManage"
+      :can-create="can('treinamento.cursos.create')"
+      :can-edit="can('treinamento.cursos.edit')"
+      :can-delete="can('treinamento.cursos.delete')"
       @create="handleCreate"
       @view="handleView"
       @edit="handleEdit"

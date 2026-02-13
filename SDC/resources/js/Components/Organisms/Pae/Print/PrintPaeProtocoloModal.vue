@@ -65,81 +65,89 @@ function formatDateTime(date) {
         <div class="card-body p-0">
           <PrintSection titulo="DADOS DO PROTOCOLO">
             <table class="bos-table">
-              <tr>
-                <td class="field-label" width="18%">NUMERO DO PROTOCOLO</td>
-                <td class="field-value" width="32%">{{ protocolo.protocoloNumero || '' }}</td>
-                <td class="field-label" width="20%">SITUACAO</td>
-                <td class="field-value" width="30%">{{ protocolo.situacao || '' }}</td>
-              </tr>
-              <tr>
-                <td class="field-label">DATA DE ENTRADA</td>
-                <td class="field-value">{{ protocolo.dataEntrada || '' }}</td>
-                <td class="field-label">LIMITE DE ANALISE</td>
-                <td class="field-value">{{ protocolo.limiteAnalise || '' }}</td>
-              </tr>
+              <tbody>
+                <tr>
+                  <td class="field-label" width="18%">NUMERO DO PROTOCOLO</td>
+                  <td class="field-value" width="32%">{{ protocolo.protocoloNumero || '' }}</td>
+                  <td class="field-label" width="20%">SITUACAO</td>
+                  <td class="field-value" width="30%">{{ protocolo.situacao || '' }}</td>
+                </tr>
+                <tr>
+                  <td class="field-label">DATA DE ENTRADA</td>
+                  <td class="field-value">{{ protocolo.dataEntrada || '' }}</td>
+                  <td class="field-label">LIMITE DE ANALISE</td>
+                  <td class="field-value">{{ protocolo.limiteAnalise || '' }}</td>
+                </tr>
+              </tbody>
             </table>
           </PrintSection>
 
           <PrintSection titulo="DADOS DO EMPREENDEDOR">
             <table class="bos-table">
-              <tr>
-                <td class="field-label" width="18%">EMPREENDEDOR</td>
-                <td class="field-value" colspan="3">{{ protocolo.empreendedor || '' }}</td>
-              </tr>
-              <tr>
-                <td class="field-label">ESTRUTURA</td>
-                <td class="field-value" colspan="3">{{ protocolo.estrutura || '' }}</td>
-              </tr>
-              <tr>
-                <td class="field-label">CNPJ</td>
-                <td class="field-value">{{ protocolo.cnpj || '' }}</td>
-                <td class="field-label">TELEFONE</td>
-                <td class="field-value">{{ protocolo.telefone || '' }}</td>
-              </tr>
-              <tr>
-                <td class="field-label">EMAIL</td>
-                <td class="field-value" colspan="3">{{ protocolo.email || '' }}</td>
-              </tr>
+              <tbody>
+                <tr>
+                  <td class="field-label" width="18%">EMPREENDEDOR</td>
+                  <td class="field-value" colspan="3">{{ protocolo.empreendedor || '' }}</td>
+                </tr>
+                <tr>
+                  <td class="field-label">ESTRUTURA</td>
+                  <td class="field-value" colspan="3">{{ protocolo.estrutura || '' }}</td>
+                </tr>
+                <tr>
+                  <td class="field-label">CNPJ</td>
+                  <td class="field-value">{{ protocolo.cnpj || '' }}</td>
+                  <td class="field-label">TELEFONE</td>
+                  <td class="field-value">{{ protocolo.telefone || '' }}</td>
+                </tr>
+                <tr>
+                  <td class="field-label">EMAIL</td>
+                  <td class="field-value" colspan="3">{{ protocolo.email || '' }}</td>
+                </tr>
+              </tbody>
             </table>
           </PrintSection>
 
           <PrintSection titulo="LOCALIZACAO">
             <table class="bos-table">
-              <tr>
-                <td class="field-label" width="18%">MUNICIPIO</td>
-                <td class="field-value" width="32%">{{ protocolo.municipio || '' }}</td>
-                <td class="field-label" width="20%">UF</td>
-                <td class="field-value" width="30%">{{ protocolo.uf || 'MG' }}</td>
-              </tr>
-              <tr>
-                <td class="field-label">ENDERECO</td>
-                <td class="field-value" colspan="3">{{ protocolo.endereco || '' }}</td>
-              </tr>
-              <tr>
-                <td class="field-label">LATITUDE</td>
-                <td class="field-value">{{ protocolo.latitude || '' }}</td>
-                <td class="field-label">LONGITUDE</td>
-                <td class="field-value">{{ protocolo.longitude || '' }}</td>
-              </tr>
+              <tbody>
+                <tr>
+                  <td class="field-label" width="18%">MUNICIPIO</td>
+                  <td class="field-value" width="32%">{{ protocolo.municipio || '' }}</td>
+                  <td class="field-label" width="20%">UF</td>
+                  <td class="field-value" width="30%">{{ protocolo.uf || 'MG' }}</td>
+                </tr>
+                <tr>
+                  <td class="field-label">ENDERECO</td>
+                  <td class="field-value" colspan="3">{{ protocolo.endereco || '' }}</td>
+                </tr>
+                <tr>
+                  <td class="field-label">LATITUDE</td>
+                  <td class="field-value">{{ protocolo.latitude || '' }}</td>
+                  <td class="field-label">LONGITUDE</td>
+                  <td class="field-value">{{ protocolo.longitude || '' }}</td>
+                </tr>
+              </tbody>
             </table>
           </PrintSection>
 
           <PrintSection titulo="ANALISE">
             <table class="bos-table">
-              <tr>
-                <td class="field-label" width="18%">ANALISTA RESPONSAVEL</td>
-                <td class="field-value" colspan="3">{{ protocolo.analista || '' }}</td>
-              </tr>
-              <tr>
-                <td class="field-label">DATA DA ANALISE</td>
-                <td class="field-value">{{ protocolo.dataAnalise || '' }}</td>
-                <td class="field-label">PRAZO</td>
-                <td class="field-value">{{ protocolo.prazo || '' }}</td>
-              </tr>
-              <tr v-if="protocolo.observacoes">
-                <td class="field-label">OBSERVACOES</td>
-                <td class="field-value" colspan="3" style="white-space: pre-wrap;">{{ protocolo.observacoes }}</td>
-              </tr>
+              <tbody>
+                <tr>
+                  <td class="field-label" width="18%">ANALISTA RESPONSAVEL</td>
+                  <td class="field-value" colspan="3">{{ protocolo.analista || '' }}</td>
+                </tr>
+                <tr>
+                  <td class="field-label">DATA DA ANALISE</td>
+                  <td class="field-value">{{ protocolo.dataAnalise || '' }}</td>
+                  <td class="field-label">PRAZO</td>
+                  <td class="field-value">{{ protocolo.prazo || '' }}</td>
+                </tr>
+                <tr v-if="protocolo.observacoes">
+                  <td class="field-label">OBSERVACOES</td>
+                  <td class="field-value" colspan="3" style="white-space: pre-wrap;">{{ protocolo.observacoes }}</td>
+                </tr>
+              </tbody>
             </table>
           </PrintSection>
 
@@ -148,20 +156,22 @@ function formatDateTime(date) {
               <template v-for="(analise, index) in protocolo.analises" :key="index">
                 <PrintSection :titulo="`ANALISE No ${index + 1}`" :is-subsection="true">
                   <table class="bos-table">
-                    <tr>
-                      <td class="field-label" width="18%">DATA</td>
-                      <td class="field-value" width="32%">{{ formatDateTime(analise.data) }}</td>
-                      <td class="field-label" width="20%">ANALISTA</td>
-                      <td class="field-value" width="30%">{{ analise.analista || '' }}</td>
-                    </tr>
-                    <tr>
-                      <td class="field-label">PARECER</td>
-                      <td class="field-value" colspan="3">{{ analise.parecer || '' }}</td>
-                    </tr>
-                    <tr v-if="analise.observacoes">
-                      <td class="field-label">OBSERVACOES</td>
-                      <td class="field-value" colspan="3" style="white-space: pre-wrap;">{{ analise.observacoes }}</td>
-                    </tr>
+                    <tbody>
+                      <tr>
+                        <td class="field-label" width="18%">DATA</td>
+                        <td class="field-value" width="32%">{{ formatDateTime(analise.data) }}</td>
+                        <td class="field-label" width="20%">ANALISTA</td>
+                        <td class="field-value" width="30%">{{ analise.analista || '' }}</td>
+                      </tr>
+                      <tr>
+                        <td class="field-label">PARECER</td>
+                        <td class="field-value" colspan="3">{{ analise.parecer || '' }}</td>
+                      </tr>
+                      <tr v-if="analise.observacoes">
+                        <td class="field-label">OBSERVACOES</td>
+                        <td class="field-value" colspan="3" style="white-space: pre-wrap;">{{ analise.observacoes }}</td>
+                      </tr>
+                    </tbody>
                   </table>
                 </PrintSection>
               </template>

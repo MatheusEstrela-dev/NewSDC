@@ -31,6 +31,7 @@
         @print="$emit('print', $event)"
         @edit="$emit('edit', $event)"
         @history="$emit('history', $event)"
+        @archive="$emit('archive', $event)"
       />
     </div>
 
@@ -59,7 +60,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'history']);
+defineEmits(['view', 'print', 'edit', 'history', 'archive']);
 </script>
 
 

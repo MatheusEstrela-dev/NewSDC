@@ -37,13 +37,13 @@
             </button>
           </div>
 
-          <!-- Botão Exportar -->
-          <Button variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+          <!-- Botao Exportar -->
+          <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
             <span class="hidden sm:inline">Exportar</span>
           </Button>
 
-          <!-- Botão Novo Protocolo - Responsivo -->
-          <Link :href="route('pae.index')">
+          <!-- Botao Novo Protocolo - Responsivo -->
+          <Link v-if="canCreate" :href="route('pae.index')">
             <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
               <span class="hidden sm:inline">Novo Protocolo</span>
               <span class="sm:hidden">Novo</span>
@@ -82,9 +82,10 @@
       @print="handlePrint"
       @edit="handleEdit"
       @history="handleHistory"
+      @archive="handleArchive"
     />
 
-    <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
+    <!-- Desktop: Tabela (somente quando selecionada e nao mobile) -->
     <PaeProtocolosTable
       v-else-if="viewMode === 'table' && !isMobile"
       :protocolos="paginatedProtocolos"
@@ -92,6 +93,7 @@
       @print="handlePrint"
       @edit="handleEdit"
       @history="handleHistory"
+      @archive="handleArchive"
     />
 
     <!-- Pagination -->
@@ -156,6 +158,22 @@ const props = defineProps({
     default: false,
   },
   useMock: {
+    type: Boolean,
+    default: false,
+  },
+  canCreate: {
+    type: Boolean,
+    default: false,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
+  canExport: {
     type: Boolean,
     default: false,
   },
@@ -246,8 +264,35 @@ function handleView(id) {
 }
 
 function handleEdit(id) {
-  // TODO: quando existir edição por protocolo, trocar para rota correta.
+  // TODO: quando existir edicao por protocolo, trocar para rota correta.
   router.visit(route('pae.index'));
+}
+
+async function handleArchive(id) {
+  const protocolo = (allProtocolos.value || []).find((p) => p.id === id);
+  if (!protocolo) return;
+
+  const confirmed = confirm(
+    `Deseja arquivar o protocolo #${protocolo.protocoloNumero}?\n\nEsta acao pode ser revertida posteriormente.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    // TODO: Implementar chamada real a API quando disponivel
+    // await router.delete(route('api.pae.protocolos.archive', id));
+
+    // Por enquanto, remove localmente do array (mock)
+    const index = allProtocolos.value.findIndex((p) => p.id === id);
+    if (index !== -1) {
+      allProtocolos.value.splice(index, 1);
+    }
+
+    alert('Protocolo arquivado com sucesso!');
+  } catch (error) {
+    console.error('Erro ao arquivar protocolo:', error);
+    alert('Erro ao arquivar protocolo. Tente novamente.');
+  }
 }
 
 // Modal de histórico

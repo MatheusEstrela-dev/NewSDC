@@ -76,8 +76,15 @@
           :icon="BellIcon"
           variant="secondary"
           size="md"
-          title="Notificações"
+          title="Notificacoes"
           @click="$emit('notifications', protocolo.id)"
+        />
+        <ButtonIcon
+          :icon="ArchiveBoxIcon"
+          variant="topaz"
+          size="md"
+          title="Arquivar"
+          @click="$emit('archive', protocolo.id)"
         />
       </div>
     </div>
@@ -94,6 +101,7 @@ import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import BellIcon from '@/Components/Icons/BellIcon.vue';
+import ArchiveBoxIcon from '@/Components/Icons/ArchiveBoxIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
@@ -108,7 +116,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'notifications']);
+defineEmits(['view', 'print', 'edit', 'history', 'notifications', 'archive']);
 </script>
 
 

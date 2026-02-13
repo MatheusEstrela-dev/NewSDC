@@ -126,16 +126,22 @@
 
           <!-- Direct Permissions Card - Renderizado via ACL Config -->
           <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-            <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-              <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
-                <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                Permissoes Diretas
-              </h3>
-              <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-                {{ selectedPermissionsCount }}
-              </span>
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+              <div class="flex justify-between items-center">
+                <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+                  <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Permissoes Efetivas
+                </h3>
+                <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                  {{ selectedPermissionsCount }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                Marque/desmarque para definir as permissoes finais do usuario.
+                <span class="text-blue-600 dark:text-blue-400">cargo</span> indica permissao herdada.
+              </p>
             </div>
 
             <div class="p-6 space-y-4">
@@ -162,7 +168,7 @@
                     <h5 class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wide">{{ groupName }}</h5>
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                       <!-- Itera sobre acoes/permissoes do grupo -->
-                      <div v-for="(slug, action) in permissions" :key="slug" class="flex items-center">
+                      <div v-for="(slug, action) in permissions" :key="slug" class="flex items-center gap-1">
                         <input
                           :id="`perm-${slug}`"
                           type="checkbox"
@@ -173,12 +179,19 @@
                         />
                         <label
                           :for="`perm-${slug}`"
-                          class="ml-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer select-none"
+                          class="text-sm text-slate-700 dark:text-slate-300 cursor-pointer select-none"
                           :class="{ 'opacity-50 cursor-not-allowed': isImmutablePermission(slug) }"
                           :title="slug"
                         >
                           {{ formatActionName(action) }}
                         </label>
+                        <span
+                          v-if="isFromRole(slug)"
+                          class="text-[10px] px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                          title="Herdada do cargo"
+                        >
+                          cargo
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -313,8 +326,14 @@ const form = useForm({
   name: props.user.name,
   email: props.user.email,
   roles: props.user.roles?.map(r => r.id) || [],
-  direct_permissions: props.user.direct_permissions?.map(p => p.name) || []
+  direct_permissions: props.user.effective_permissions || props.user.direct_permissions?.map(p => p.name) || []
 });
+
+const rolePermissionsList = computed(() => props.user.role_permissions || []);
+
+const isFromRole = (slug) => {
+  return rolePermissionsList.value.includes(slug) && !props.user.direct_permissions?.some(p => p.name === slug);
+};
 
 const expandedModules = ref(['SISTEMA', 'PAE', 'RAT']);
 
@@ -323,11 +342,7 @@ const selectedRolesCount = computed(() => form.roles.length);
 const selectedPermissionsCount = computed(() => form.direct_permissions.length);
 
 const totalPermissionsCount = computed(() => {
-  const directCount = form.direct_permissions.length;
-  const rolePermissions = props.availableRoles
-    .filter(role => form.roles.includes(role.id))
-    .reduce((sum, role) => sum + (role.permissions_count || 0), 0);
-  return directCount + rolePermissions;
+  return form.direct_permissions.length;
 });
 
 const toggleModule = (moduleName) => {

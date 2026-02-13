@@ -1,11 +1,12 @@
 <template>
-  <AuthenticatedLayout title="Ajuda Humanitária - Beneficiários">
+  <AuthenticatedLayout title="Ajuda Humanitaria - Beneficiarios">
     <BeneficiarioIndexTemplate
       :beneficiarios="beneficiarios.data || []"
       :statistics="statistics"
       :pagination="beneficiarios"
-      :can-edit="true"
-      :can-delete="true"
+      :can-create="can('humanitaria.beneficiarios.create')"
+      :can-edit="can('humanitaria.beneficiarios.edit')"
+      :can-delete="can('humanitaria.beneficiarios.delete')"
       @create="openCreateModal"
       @view="viewBeneficiario"
       @edit="editBeneficiario"
@@ -53,6 +54,9 @@ import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import BeneficiarioIndexTemplate from '@/Templates/AjudaHumanitaria/BeneficiarioIndexTemplate.vue';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
 
 const props = defineProps({
   beneficiarios: {

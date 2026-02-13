@@ -9,6 +9,7 @@ use App\Models\Permission;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\PermissionRegistrar;
 
 class UserManagementController extends Controller
 {
@@ -78,7 +79,10 @@ class UserManagementController extends Controller
             'active' => true,
         ]);
 
-        $user->roles()->sync($validated['roles']);
+        $roleNames = Role::whereIn('id', $validated['roles'])->pluck('name')->toArray();
+        $user->syncRoles($roleNames);
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return redirect()
             ->route('admin.permissions.users.index')
@@ -101,9 +105,18 @@ class UserManagementController extends Controller
 
     public function edit(User $user): Response
     {
-        $user->load(['roles', 'permissions']);
+        $user->load(['roles.permissions', 'permissions']);
+
+        $directPermissions = $user->permissions->pluck('name')->toArray();
+        $rolePermissions = $user->getPermissionsViaRoles()->pluck('name')->toArray();
+
+        $effectivePermissions = count($directPermissions) > 0
+            ? $directPermissions
+            : $rolePermissions;
 
         $user->direct_permissions = $user->permissions;
+        $user->effective_permissions = $effectivePermissions;
+        $user->role_permissions = $rolePermissions;
 
         $availableRoles = Role::withCount('permissions')->orderBy('hierarchy_level')->get();
         $availablePermissions = Permission::orderBy('name')->get();
@@ -133,12 +146,15 @@ class UserManagementController extends Controller
         ]);
 
         if (isset($validated['roles'])) {
-            $user->roles()->sync($validated['roles']);
+            $roleNames = Role::whereIn('id', $validated['roles'])->pluck('name')->toArray();
+            $user->syncRoles($roleNames);
         }
 
-        if (isset($validated['direct_permissions'])) {
-            $user->syncPermissions($validated['direct_permissions']);
+        if (array_key_exists('direct_permissions', $validated)) {
+            $user->syncPermissions($validated['direct_permissions'] ?? []);
         }
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return redirect()
             ->route('admin.permissions.users.show', $user)
@@ -152,7 +168,10 @@ class UserManagementController extends Controller
             'roles.*' => 'exists:roles,id',
         ]);
 
-        $user->roles()->sync($validated['roles']);
+        $roleNames = Role::whereIn('id', $validated['roles'])->pluck('name')->toArray();
+        $user->syncRoles($roleNames);
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return redirect()
             ->route('admin.permissions.users.show', $user)
@@ -166,7 +185,10 @@ class UserManagementController extends Controller
             'permissions.*' => 'exists:permissions,id',
         ]);
 
-        $user->permissions()->sync($validated['permissions']);
+        $permissionNames = Permission::whereIn('id', $validated['permissions'])->pluck('name')->toArray();
+        $user->syncPermissions($permissionNames);
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return redirect()
             ->route('admin.permissions.users.show', $user)
