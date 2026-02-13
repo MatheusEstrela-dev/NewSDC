@@ -1,11 +1,13 @@
 <template>
   <AuthenticatedLayout>
-    <Head title="TDAP - Movimentações" />
+    <Head title="TDAP - Movimentacoes" />
     <TdapMovimentacoesTemplate
       :movimentacoes="movimentacoes"
       :pagination="pagination"
       :filters="filters"
       :statistics="statistics"
+      :can-create="can('tdap.movimentacoes.create')"
+      :can-view="can('tdap.movimentacoes.view')"
     />
   </AuthenticatedLayout>
 </template>
@@ -14,6 +16,9 @@
 import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapMovimentacoesTemplate from '@/Templates/Tdap/TdapMovimentacoesTemplate.vue';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
 
 const props = defineProps({
   movimentacoes: {

@@ -11,22 +11,24 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pae_coordenador', function (Blueprint $table) {
-            // id_coordenador bigint unsigned NOT NULL AUTO_INCREMENT
-            $table->bigIncrements('id_coordenador');
+        if (!Schema::hasTable('pae_coordenador')) {
+            Schema::create('pae_coordenador', function (Blueprint $table) {
+                // id_coordenador bigint unsigned NOT NULL AUTO_INCREMENT
+                $table->bigIncrements('id_coordenador');
 
-            $table->string('nome', 255);
-            $table->string('telefone', 50)->nullable();
-            
-            // email UNIQUE e com índice nomeado conforme seu SQL
-            $table->string('email', 255)->nullable()->unique('email');
+                $table->string('nome', 255);
+                $table->string('telefone', 50)->nullable();
+                
+                // email UNIQUE e com índice nomeado conforme seu SQL
+                $table->string('email', 255)->nullable()->unique('email');
 
-            // created_at e updated_at
-            $table->timestamps();
+                // created_at e updated_at
+                $table->timestamps();
 
-            // Índice adicional para o email (seguindo seu KEY `idx_coordenador_email`)
-            $table->index('email', 'idx_coordenador_email');
-        });
+                // Índice adicional para o email (seguindo seu KEY `idx_coordenador_email`)
+                $table->index('email', 'idx_coordenador_email');
+            });
+        }
     }
 
     /**

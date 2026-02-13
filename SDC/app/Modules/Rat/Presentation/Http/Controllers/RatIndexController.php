@@ -24,45 +24,14 @@ class RatIndexController extends Controller
 
     public function destroy(string $id): \Illuminate\Http\RedirectResponse
     {
-        // #region agent log
-        $logData = [
-            'location' => 'RatIndexController.php:destroy',
-            'message' => 'destroy called',
-            'data' => ['id' => $id],
-            'timestamp' => now()->timestamp * 1000,
-            'sessionId' => 'debug-session',
-            'runId' => 'run1',
-            'hypothesisId' => 'G'
-        ];
-        Log::info('DEBUG: RatIndex destroy called', $logData);
-        $this->writeDebugLog($logData);
-        // #endregion
-
         try {
-            $this->authorize('delete', \App\Modules\Rat\Domain\Entities\Rat::class); // Alternativa se houver Policy, se nao usar middleware na rota
+            $this->authorize('delete', \App\Modules\Rat\Domain\Entities\Rat::class);
 
             $this->deleteRatUseCase->execute($id);
 
             return redirect()->route('rat.index')
                 ->with('success', 'RAT excluído com sucesso.');
         } catch (\Exception $e) {
-            // #region agent log
-            $logData = [
-                'location' => 'RatIndexController.php:destroy',
-                'message' => 'Error in destroy',
-                'data' => [
-                    'error' => $e->getMessage(),
-                    'id' => $id
-                ],
-                'timestamp' => now()->timestamp * 1000,
-                'sessionId' => 'debug-session',
-                'runId' => 'run1',
-                'hypothesisId' => 'G'
-            ];
-            Log::error('DEBUG: Error in destroy', $logData);
-            $this->writeDebugLog($logData);
-            // #endregion
-
             return redirect()->back()
                 ->with('error', 'Erro ao excluir RAT: ' . $e->getMessage());
         }
@@ -71,19 +40,6 @@ class RatIndexController extends Controller
 
     public function index(Request $request): Response|\Illuminate\Http\RedirectResponse
     {
-        // #region agent log
-        $logData = [
-            'location' => 'RatIndexController.php:index',
-            'message' => 'index called',
-            'data' => ['filters' => $request->all()],
-            'timestamp' => now()->timestamp * 1000,
-            'sessionId' => 'debug-session',
-            'runId' => 'run1',
-            'hypothesisId' => 'F'
-        ];
-        Log::info('DEBUG: RatIndex index called', $logData);
-        $this->writeDebugLog($logData);
-        // #endregion
         try {
             $filters = $request->only([
                 'protocolo',
@@ -100,13 +56,6 @@ class RatIndexController extends Controller
             $statistics = $this->getStatisticsUseCase->execute($filters);
             $ratsResult = $this->listRatsUseCase->executeAsDTO($filters, 15);
 
-            // #region agent log
-            Log::info('DEBUG: Data prepared', [
-                'rats_count' => count($ratsResult['data']),
-                'pagination_total' => $ratsResult['pagination']['total'] ?? 0,
-            ]);
-            // #endregion
-
             return Inertia::render('RatIndex', [
                 'statistics' => $statistics->toArray(),
                 'rats' => $ratsResult['data'],
@@ -117,26 +66,10 @@ class RatIndexController extends Controller
                 'years' => range(date('Y'), 2020, -1),
             ]);
         } catch (\Exception $e) {
-            // #region agent log
-            $logData = [
-                'location' => 'RatIndexController.php:index',
-                'message' => 'Error in index',
-                'data' => [
-                    'error' => $e->getMessage(),
-                    'error_class' => get_class($e),
-                    'trace' => $e->getTraceAsString()
-                ],
-                'timestamp' => now()->timestamp * 1000,
-                'sessionId' => 'debug-session',
-                'runId' => 'run1',
-                'hypothesisId' => 'F'
-            ];
-            Log::error('DEBUG: Error in index', $logData);
-            $this->writeDebugLog($logData);
-            // #endregion
             return redirect()->back()->with('error', 'Erro ao carregar RATs. Por favor, tente novamente.');
         }
     }
+
     public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $filters = $request->only([
@@ -181,75 +114,15 @@ class RatIndexController extends Controller
 
     public function showJson(string $id): \Illuminate\Http\JsonResponse
     {
-        // #region agent log
-        $logData = [
-            'location' => 'RatIndexController.php:showJson',
-            'message' => 'showJson called',
-            'data' => ['id' => $id],
-            'timestamp' => now()->timestamp * 1000,
-            'sessionId' => 'debug-session',
-            'runId' => 'run1',
-            'hypothesisId' => 'B'
-        ];
-        Log::info('DEBUG: showJson called', $logData);
-        $this->writeDebugLog($logData);
-        // #endregion
         try {
-            // #region agent log
-            $logData = [
-                'location' => 'RatIndexController.php:showJson',
-                'message' => 'Attempting to find Rat',
-                'data' => ['id' => $id],
-                'timestamp' => now()->timestamp * 1000,
-                'sessionId' => 'debug-session',
-                'runId' => 'run1',
-                'hypothesisId' => 'B'
-            ];
-            Log::info('DEBUG: Attempting to find Rat', $logData);
-            $this->writeDebugLog($logData);
-            // #endregion
             // Tentar encontrar o RAT no banco
             $rat = \App\Modules\Rat\Domain\Entities\Rat::find($id);
             
             // Se não encontrar, usar dados mockados temporariamente
             if (!$rat) {
-                // #region agent log
-                $logData = [
-                    'location' => 'RatIndexController.php:showJson',
-                    'message' => 'Rat not found in DB, using mock data',
-                    'data' => ['id' => $id],
-                    'timestamp' => now()->timestamp * 1000,
-                    'sessionId' => 'debug-session',
-                    'runId' => 'run1',
-                    'hypothesisId' => 'B'
-                ];
-                Log::warning('DEBUG: Rat not found, using mock', $logData);
-                $this->writeDebugLog($logData);
-                // #endregion
-                
                 // Retornar dados mockados baseados no ID
                 $response = $this->getMockRatData($id);
             } else {
-                // #region agent log
-                $logData = [
-                    'location' => 'RatIndexController.php:showJson',
-                    'message' => 'Rat found',
-                    'data' => [
-                        'id' => $rat->id,
-                        'protocolo' => $rat->protocolo,
-                        'has_dados_gerais' => !empty($rat->dados_gerais),
-                        'has_local' => !empty($rat->local),
-                        'rat_keys' => array_keys($rat->toArray())
-                    ],
-                    'timestamp' => now()->timestamp * 1000,
-                    'sessionId' => 'debug-session',
-                    'runId' => 'run1',
-                    'hypothesisId' => 'C'
-                ];
-                Log::info('DEBUG: Rat found', $logData);
-                $this->writeDebugLog($logData);
-                // #endregion
-                
                 $ratArray = $rat->toArray();
                 
                 // Transformar para o formato esperado pelo frontend
@@ -275,48 +148,8 @@ class RatIndexController extends Controller
                 ];
             }
             
-            // #region agent log
-            $logData = [
-                'location' => 'RatIndexController.php:showJson',
-                'message' => 'Returning JSON response',
-                'data' => [
-                    'response_keys' => array_keys($response),
-                    'has_numero_bos' => !empty($response['numero_bos']),
-                    'has_dados_gerais' => !empty($response['dados_gerais']),
-                    'has_envolvidos' => !empty($response['envolvidos']),
-                    'has_recursos' => !empty($response['recursos']),
-                    'has_vistoria' => !empty($response['vistoria']),
-                    'has_historico' => !empty($response['historico']),
-                ],
-                'timestamp' => now()->timestamp * 1000,
-                'sessionId' => 'debug-session',
-                'runId' => 'run1',
-                'hypothesisId' => 'E'
-            ];
-            Log::info('DEBUG: Returning JSON response', $logData);
-            $this->writeDebugLog($logData);
-            // #endregion
             return response()->json($response);
         } catch (\Exception $e) {
-            // #region agent log
-            $logData = [
-                'location' => 'RatIndexController.php:showJson',
-                'message' => 'Error in showJson',
-                'data' => [
-                    'error' => $e->getMessage(),
-                    'error_class' => get_class($e),
-                    'id' => $id,
-                    'trace' => $e->getTraceAsString()
-                ],
-                'timestamp' => now()->timestamp * 1000,
-                'sessionId' => 'debug-session',
-                'runId' => 'run1',
-                'hypothesisId' => 'B'
-            ];
-            Log::error('DEBUG: Error in showJson', $logData);
-            $this->writeDebugLog($logData);
-            // #endregion
-            
             // Em caso de erro, tentar retornar dados mockados
             try {
                 $response = $this->getMockRatData((int) $id);
@@ -327,22 +160,6 @@ class RatIndexController extends Controller
         }
     }
 
-    // #region agent log
-    private function writeDebugLog(array $data): void
-    {
-        $logDir = 'c:\\Users\\x24679188\\Documents\\GitHub\\sdc\\.cursor';
-        $logPath = $logDir . '\\debug.log';
-        try {
-            if (!is_dir($logDir)) {
-                @mkdir($logDir, 0755, true);
-            }
-            $logEntry = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
-            @file_put_contents($logPath, $logEntry, FILE_APPEND | LOCK_EX);
-        } catch (\Exception $e) {
-            // Silently fail - logging is not critical
-        }
-    }
-    
     /**
      * Retorna dados mockados de um RAT para desenvolvimento
      * TODO: Remover quando a tabela do banco estiver populada
@@ -433,6 +250,4 @@ class RatIndexController extends Controller
             'updated_by' => 1,
         ];
     }
-    // #endregion
 }
-

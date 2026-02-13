@@ -46,6 +46,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canExport: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['create', 'view', 'edit', 'delete', 'filter', 'filter-change', 'filter-reset']);
@@ -130,7 +134,7 @@ function handleExportCsv(params) {
           </div>
 
           <!-- Botão Exportar -->
-          <Button variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+          <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
             <span class="hidden sm:inline">Exportar</span>
           </Button>
 

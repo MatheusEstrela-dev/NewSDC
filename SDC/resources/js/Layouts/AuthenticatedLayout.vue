@@ -1,14 +1,16 @@
 <script setup>
-import { ref, provide } from 'vue';
+import { ref, provide, defineAsyncComponent } from 'vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import TopBar from '@/Components/TopBar.vue';
 import NavigationHeader from '@/Components/Organisms/Navigation/NavigationHeader.vue';
 import OfflineIndicator from '@/Components/Molecules/OfflineIndicator.vue';
 import PullToRefresh from '@/Components/Molecules/PullToRefresh.vue';
 import { useMobile, useSidebarMobile } from '@/Composables/useMobile';
-import SupportModal from '@/Components/Organisms/Suporte/SupportModal.vue';
-import TermosUsoModal from '@/Components/Organisms/TermosUsoModal.vue';
-import PrivacidadeModal from '@/Components/Organisms/PrivacidadeModal.vue';
+
+// Modais carregados sob demanda (raramente usados, reduz bundle de ~50KB+ por página)
+const SupportModal = defineAsyncComponent(() => import('@/Components/Organisms/Suporte/SupportModal.vue'));
+const TermosUsoModal = defineAsyncComponent(() => import('@/Components/Organisms/TermosUsoModal.vue'));
+const PrivacidadeModal = defineAsyncComponent(() => import('@/Components/Organisms/PrivacidadeModal.vue'));
 
 // Estado compartilhado da sidebar desktop
 const sidebarCollapsed = ref(false);
@@ -68,7 +70,9 @@ provide('openSidebar', openSidebar);
 
       <!-- Page Content -->
       <main class="flex-1 pt-4 bg-slate-50 dark:bg-slate-950 overflow-x-hidden px-4 sm:px-6 lg:px-8">
-        <slot />
+        <Transition name="page" mode="out-in" appear>
+          <slot />
+        </Transition>
       </main>
 
       <!-- Footer -->
@@ -131,6 +135,21 @@ provide('openSidebar', openSidebar);
   .flex-1.flex.flex-col {
     margin-left: 0 !important;
   }
+}
+
+/* Page transitions (SPA feel) */
+.page-enter-active {
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+}
+.page-leave-active {
+  transition: opacity 0.1s ease-in;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.page-leave-to {
+  opacity: 0;
 }
 
 /* Ajustes para dispositivos muito pequenos */

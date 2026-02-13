@@ -11,9 +11,9 @@
           </div>
       </div>
 
-      <form @submit.prevent="submitForm" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <form @submit.prevent="submitForm" class="grid grid-cols-1 xl:grid-cols-4 gap-6">
         <!-- Main Content -->
-        <div class="lg:col-span-3 space-y-6">
+        <div class="xl:col-span-3 space-y-6">
           
           <!-- Basic Info Card -->
           <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
@@ -135,12 +135,12 @@
                   Permissoes Efetivas
                 </h3>
                 <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-                  {{ selectedPermissionsCount }}
+                  {{ totalPermissionsCount }}
                 </span>
               </div>
               <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                Marque/desmarque para definir as permissoes finais do usuario.
-                <span class="text-blue-600 dark:text-blue-400">cargo</span> indica permissao herdada.
+                <span class="text-blue-600 dark:text-blue-400 font-medium">cargo</span> = permissoes fixas do cargo (nao editaveis).
+                <span class="text-purple-600 dark:text-purple-400 font-medium">extra</span> = permissoes adicionais personalizaveis.
               </p>
             </div>
 
@@ -173,24 +173,43 @@
                           :id="`perm-${slug}`"
                           type="checkbox"
                           :value="slug"
-                          v-model="form.direct_permissions"
-                          :disabled="isImmutablePermission(slug)"
-                          class="w-4 h-4 text-purple-600 bg-slate-100 border-slate-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          :checked="isFromRole(slug) || form.direct_permissions.includes(slug)"
+                          :disabled="isFromRole(slug) || isImmutablePermission(slug)"
+                          @change="toggleExtraPermission(slug, $event)"
+                          class="w-4 h-4 rounded focus:ring-2 dark:ring-offset-slate-800 dark:bg-slate-700 dark:border-slate-600"
+                          :class="[
+                            isFromRole(slug)
+                              ? 'text-blue-600 bg-blue-100 border-blue-300 cursor-not-allowed opacity-75'
+                              : 'text-purple-600 bg-slate-100 border-slate-300 focus:ring-purple-500 dark:focus:ring-purple-600',
+                            isImmutablePermission(slug) ? 'opacity-50 cursor-not-allowed' : ''
+                          ]"
                         />
                         <label
                           :for="`perm-${slug}`"
-                          class="text-sm text-slate-700 dark:text-slate-300 cursor-pointer select-none"
-                          :class="{ 'opacity-50 cursor-not-allowed': isImmutablePermission(slug) }"
+                          class="text-sm select-none"
+                          :class="[
+                            isFromRole(slug)
+                              ? 'text-blue-700 dark:text-blue-400 cursor-not-allowed'
+                              : 'text-slate-700 dark:text-slate-300 cursor-pointer',
+                            isImmutablePermission(slug) ? 'opacity-50 cursor-not-allowed' : ''
+                          ]"
                           :title="slug"
                         >
                           {{ formatActionName(action) }}
                         </label>
                         <span
                           v-if="isFromRole(slug)"
-                          class="text-[10px] px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                          title="Herdada do cargo"
+                          class="text-[10px] px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium"
+                          title="Permissao fixa do cargo (nao editavel)"
                         >
                           cargo
+                        </span>
+                        <span
+                          v-else-if="form.direct_permissions.includes(slug)"
+                          class="text-[10px] px-1 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium"
+                          title="Permissao extra adicionada"
+                        >
+                          extra
                         </span>
                       </div>
                     </div>
@@ -202,7 +221,7 @@
         </div>
 
         <!-- Sidebar Actions -->
-        <div class="lg:col-span-1">
+        <div class="xl:col-span-1">
           <div class="sticky top-6 space-y-6">
             <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden p-6">
               <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Resumo das Alterações</h3>
@@ -213,8 +232,12 @@
                   <span class="font-medium text-slate-900 dark:text-slate-100">{{ selectedRolesCount }}</span>
                 </div>
                 <div class="flex justify-between items-center text-sm border-b border-slate-100 dark:border-slate-700 pb-2">
-                  <span class="text-slate-600 dark:text-slate-400">Permissões Diretas</span>
-                  <span class="font-medium text-slate-900 dark:text-slate-100">{{ selectedPermissionsCount }}</span>
+                  <span class="text-blue-600 dark:text-blue-400">Permissoes do Cargo</span>
+                  <span class="font-medium text-blue-600 dark:text-blue-400">{{ rolePermissionsCount }}</span>
+                </div>
+                <div class="flex justify-between items-center text-sm border-b border-slate-100 dark:border-slate-700 pb-2">
+                  <span class="text-purple-600 dark:text-purple-400">Permissoes Extras</span>
+                  <span class="font-medium text-purple-600 dark:text-purple-400">{{ extraPermissionsCount }}</span>
                 </div>
                 <div class="flex justify-between items-center text-sm font-medium pt-1">
                   <span class="text-slate-800 dark:text-slate-200">Total de Permissões</span>
@@ -252,7 +275,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { Link, useForm, usePage, router } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { useHierarchy } from '@/Composables/useHierarchy';
 import { route } from 'ziggy-js';
@@ -322,27 +345,47 @@ const toggleRole = (roleId) => {
   }
 };
 
+const rolePermissionsList = computed(() => props.user.role_permissions || []);
+
+const getInitialDirectPermissions = () => {
+  const diretas = props.user.direct_permissions?.map(p => p.name) || [];
+  return diretas.filter(perm => !rolePermissionsList.value.includes(perm));
+};
+
 const form = useForm({
   name: props.user.name,
   email: props.user.email,
   roles: props.user.roles?.map(r => r.id) || [],
-  direct_permissions: props.user.effective_permissions || props.user.direct_permissions?.map(p => p.name) || []
+  direct_permissions: getInitialDirectPermissions()
 });
 
-const rolePermissionsList = computed(() => props.user.role_permissions || []);
-
 const isFromRole = (slug) => {
-  return rolePermissionsList.value.includes(slug) && !props.user.direct_permissions?.some(p => p.name === slug);
+  return rolePermissionsList.value.includes(slug);
+};
+
+const toggleExtraPermission = (slug, event) => {
+  if (isFromRole(slug)) return;
+
+  const isChecked = event.target.checked;
+  const index = form.direct_permissions.indexOf(slug);
+
+  if (isChecked && index === -1) {
+    form.direct_permissions.push(slug);
+  } else if (!isChecked && index > -1) {
+    form.direct_permissions.splice(index, 1);
+  }
 };
 
 const expandedModules = ref(['SISTEMA', 'PAE', 'RAT']);
 
 const selectedRolesCount = computed(() => form.roles.length);
 
-const selectedPermissionsCount = computed(() => form.direct_permissions.length);
+const rolePermissionsCount = computed(() => rolePermissionsList.value.length);
+
+const extraPermissionsCount = computed(() => form.direct_permissions.length);
 
 const totalPermissionsCount = computed(() => {
-  return form.direct_permissions.length;
+  return rolePermissionsCount.value + extraPermissionsCount.value;
 });
 
 const toggleModule = (moduleName) => {
@@ -368,7 +411,7 @@ const getModuleSelectedCount = (moduleName) => {
   for (const groupName in groups) {
     for (const action in groups[groupName]) {
       const slug = groups[groupName][action];
-      if (form.direct_permissions.includes(slug)) {
+      if (isFromRole(slug) || form.direct_permissions.includes(slug)) {
         count++;
       }
     }

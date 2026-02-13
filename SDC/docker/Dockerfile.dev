@@ -33,6 +33,8 @@ RUN apk add --no-cache \
     vim \
     bash \
     shadow \
+    nodejs \
+    npm \
     # Dependências de compilação PHP
     libpng-dev \
     libjpeg-turbo-dev \
@@ -94,6 +96,12 @@ RUN deluser --remove-home www-data 2>/dev/null || true \
 
 # Diretório de trabalho
 WORKDIR /var/www
+
+# Instalar dependencias PHP durante o build (rede Docker com internet)
+# O volume nomeado newsdc_vendor sera populado com este conteudo na primeira execucao
+COPY composer.json composer.lock* ./
+RUN composer install --no-interaction --prefer-dist --no-scripts --no-autoloader \
+    && composer dump-autoload --optimize --no-scripts
 
 # Scripts de entrada
 COPY docker/scripts/entrypoint.dev.sh /usr/local/bin/entrypoint.sh

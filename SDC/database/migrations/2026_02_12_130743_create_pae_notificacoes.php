@@ -11,35 +11,37 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pae_notificacoes', function (Blueprint $table) {
-            $table->id(); // bigint unsigned NOT NULL AUTO_INCREMENT
+        if (!Schema::hasTable('pae_notificacoes')) {
+            Schema::create('pae_notificacoes', function (Blueprint $table) {
+                $table->id(); // bigint unsigned NOT NULL AUTO_INCREMENT
 
-            $table->string('num_sei', 110);
-            
-            // Usuário que enviou a notificação
-            $table->foreignId('user_id')
-                  ->nullable()
-                  ->constrained('users')
-                  ->onDelete('set null');
+                $table->string('num_sei', 110);
+                
+                // Usuário que enviou a notificação
+                $table->foreignId('user_id')
+                      ->nullable()
+                      ->constrained('users')
+                      ->onDelete('set null');
 
-            // Vínculo com a análise que originou a notificação
-            $table->foreignId('pae_analise_id')
-                  ->constrained('pae_analises')
-                  ->onDelete('cascade');
+                // Vínculo com a análise que originou a notificação
+                $table->foreignId('pae_analise_id')
+                      ->constrained('pae_analises')
+                      ->onDelete('cascade');
 
-            $table->date('dt_notificacao');
-            $table->boolean('prorrogacao')->default(false);
-            $table->date('dt_devolutiva')->nullable();
-            $table->text('obs')->nullable();
+                $table->date('dt_notificacao');
+                $table->boolean('prorrogacao')->default(false);
+                $table->date('dt_devolutiva')->nullable();
+                $table->text('obs')->nullable();
 
-            // Timestamps e SoftDeletes
-            $table->timestamps();
-            $table->softDeletes();
+                // Timestamps e SoftDeletes
+                $table->timestamps();
+                $table->softDeletes();
 
-            // Índices Manuais
-            $table->index('pae_analise_id', 'idx_notificacoes_analise');
-            $table->index('user_id', 'idx_notificacoes_user');
-        });
+                // Índices Manuais
+                $table->index('pae_analise_id', 'idx_notificacoes_analise');
+                $table->index('user_id', 'idx_notificacoes_user');
+            });
+        }
     }
 
     /**

@@ -14,8 +14,9 @@
         </div>
       </div>
 
-      <div class="max-w-4xl">
-        <form @submit.prevent="submit" class="space-y-6">
+      <form @submit.prevent="submit" class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <!-- Main Content -->
+        <div class="xl:col-span-3 space-y-6">
           <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
             <div class="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
               <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -123,35 +124,51 @@
               </div>
             </div>
           </div>
+        </div>
 
-          <div class="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              @click="() => router.visit(route('admin.permissions.users.index'))"
-              class="px-6 py-2.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              :disabled="form.processing"
-              class="px-8 py-2.5 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <svg v-if="form.processing" class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              {{ form.processing ? 'Processando...' : 'Salvar Usuário' }}
-            </button>
+        <!-- Sidebar Actions -->
+        <div class="xl:col-span-1">
+          <div class="sticky top-6 space-y-6">
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden p-6">
+              <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Resumo</h3>
+              
+              <div class="space-y-3 mb-6">
+                <div class="flex justify-between items-center text-sm border-b border-slate-100 dark:border-slate-700 pb-2">
+                  <span class="text-slate-600 dark:text-slate-400">Cargos Selecionados</span>
+                  <span class="font-medium text-slate-900 dark:text-slate-100">{{ form.roles.length }}</span>
+                </div>
+              </div>
+
+              <div class="space-y-3">
+                <button
+                  type="submit"
+                  :disabled="form.processing"
+                  class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm disabled:opacity-75 disabled:cursor-not-allowed"
+                >
+                  <svg v-if="form.processing" class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span v-else>Salvar Usuário</span>
+                </button>
+                
+                <Link
+                  :href="route('admin.permissions.users.index')"
+                  class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg transition-colors"
+                >
+                  Cancelar
+                </Link>
+              </div>
+            </div>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { Head, useForm, router, Link } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 

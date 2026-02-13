@@ -1,6 +1,6 @@
 <template>
   <div class="demandas-container">
-    <DemandasPageHeader @open-modal="showModal = true" @open-export="showExportModal = true" />
+    <DemandasPageHeader :can-create="canCreate" :can-export="canExport" @open-modal="showModal = true" @open-export="showExportModal = true" />
     <DemandasStatisticsCards :statistics="demandasStatistics" />
 
     <DemandasList
@@ -58,6 +58,14 @@ const props = defineProps({
       em_andamento: 0,
       concluidas: 0,
     }),
+  },
+  canCreate: {
+    type: Boolean,
+    default: false,
+  },
+  canExport: {
+    type: Boolean,
+    default: false,
   },
 });
 

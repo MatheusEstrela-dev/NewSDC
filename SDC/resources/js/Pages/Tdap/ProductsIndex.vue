@@ -6,6 +6,9 @@
       :pagination="pagination"
       :filters="filters"
       :statistics="statistics"
+      :can-create="can('tdap.products.create')"
+      :can-edit="can('tdap.products.edit')"
+      :can-delete="can('tdap.products.delete')"
     />
   </AuthenticatedLayout>
 </template>
@@ -14,6 +17,9 @@
 import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapProductsTemplate from '@/Templates/Tdap/TdapProductsTemplate.vue';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
 
 const props = defineProps({
   products: {

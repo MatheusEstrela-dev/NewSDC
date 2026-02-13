@@ -11,20 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pae_polif', function (Blueprint $table) {
-            // id_polif bigint unsigned NOT NULL AUTO_INCREMENT
-            $table->bigIncrements('id_polif');
+        if (!Schema::hasTable('pae_polif')) {
+            Schema::create('pae_polif', function (Blueprint $table) {
+                // id_polif bigint unsigned NOT NULL AUTO_INCREMENT
+                $table->bigIncrements('id_polif');
 
-            // Colunas para o polimorfismo (polif_type e polif_id)
-            // O polif_id é BIGINT UNSIGNED conforme definimos para todo o banco
-            $table->string('polif_type', 100);
-            $table->unsignedBigInteger('polif_id');
+                // Colunas para o polimorfismo (polif_type e polif_id)
+                // O polif_id é BIGINT UNSIGNED conforme definimos para todo o banco
+                $table->string('polif_type', 100);
+                $table->unsignedBigInteger('polif_id');
 
-            $table->timestamps();
+                $table->timestamps();
 
-            // Índice composto crucial para buscas polimórficas
-            $table->index(['polif_type', 'polif_id'], 'idx_polif_link');
-        });
+                // Índice composto crucial para buscas polimórficas
+                $table->index(['polif_type', 'polif_id'], 'idx_polif_link');
+            });
+        }
     }
 
     /**

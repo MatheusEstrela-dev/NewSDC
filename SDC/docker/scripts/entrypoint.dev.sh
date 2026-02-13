@@ -176,36 +176,43 @@ ensure_composer_dependencies() {
     local current_fp
     current_fp="$(composer_fingerprint)"
 
-    if [ ! -f "$vendor_autoload" ]; then
-        log_info "vendor/autoload.php não encontrado. Instalando dependências do Composer..."
-    cd /var/www
-    composer install --no-interaction --prefer-dist
-        echo "$current_fp" > "$fingerprint_file" 2>/dev/null || true
-    log_success "Dependências instaladas"
-        return 0
-fi
-
-    if [ ! -f "$fingerprint_file" ]; then
-        log_warning "Fingerprint do Composer não encontrado. Reinstalando dependências (primeira execução após update)..."
-        cd /var/www
-        composer install --no-interaction --prefer-dist
-        echo "$current_fp" > "$fingerprint_file" 2>/dev/null || true
-        log_success "Dependências reinstaladas"
-        return 0
+    # Se vendor/autoload.php existe e fingerprint bate, nada a fazer
+    if [ -f "$vendor_autoload" ] && [ -f "$fingerprint_file" ]; then
+        local previous_fp
+        previous_fp="$(cat "$fingerprint_file" 2>/dev/null || echo '')"
+        if [ "$previous_fp" = "$current_fp" ]; then
+            log_success "Dependências Composer já estão atualizadas (fingerprint OK)"
+            return 0
+        fi
+        log_warning "composer.lock/composer.json mudou. Tentando atualizar dependências..."
+    elif [ -f "$vendor_autoload" ]; then
+        log_info "Vendor encontrado mas sem fingerprint. Tentando atualizar..."
+    else
+        log_info "vendor/autoload.php não encontrado. Tentando instalar dependências..."
     fi
 
-    local previous_fp
-    previous_fp="$(cat "$fingerprint_file" 2>/dev/null || echo '')"
-    if [ "$previous_fp" != "$current_fp" ]; then
-        log_warning "composer.lock/composer.json mudou. Atualizando dependências do Composer..."
-        cd /var/www
-        composer install --no-interaction --prefer-dist
+    # Tentar composer install com timeout (rede pode não estar disponível)
+    cd /var/www
+    if timeout 120 composer install --no-interaction --prefer-dist 2>&1; then
         echo "$current_fp" > "$fingerprint_file" 2>/dev/null || true
-        log_success "Dependências atualizadas"
+        log_success "Dependências Composer instaladas/atualizadas"
+    else
+        if [ -f "$vendor_autoload" ]; then
+            log_warning "Composer install falhou (sem rede?), mas vendor/autoload.php existe. Continuando com dependências do build..."
+            echo "$current_fp" > "$fingerprint_file" 2>/dev/null || true
+        else
+            log_error "Composer install falhou e vendor/autoload.php não existe."
+            log_error "Verifique a conexão de rede dos containers ou rebuild a imagem: docker compose build app"
+            exit 1
+        fi
     fi
 }
 
 ensure_composer_dependencies
+
+# Gerar manifesto de pacotes (necessário pois --no-scripts foi usado no build)
+log_info "Gerando manifesto de pacotes..."
+php artisan package:discover --ansi || log_warning "Falha ao descobrir pacotes via artisan"
 
 # Gerar APP_KEY se não existir
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" == "base64:" ]; then
@@ -222,8 +229,11 @@ fi
 # Executar migrations se necessário
 if [ "$RUN_MIGRATIONS" == "true" ]; then
     log_info "Executando migrations..."
-    php artisan migrate --force
-    log_success "Migrations executadas"
+    if php artisan migrate --force 2>&1; then
+        log_success "Migrations executadas"
+    else
+        log_warning "Algumas migrations falharam (tabelas/colunas já existem?). Continuando..."
+    fi
 fi
 
 # Executar seeders se habilitado (dados mock para desenvolvimento)
@@ -257,6 +267,31 @@ log_info "Composer Version: $(composer --version | head -n1)"
 echo ""
 
 # Executar comando passado
-log_info "Iniciando: $@"
-exec "$@"
+# ----------------------------------------------------------------------------
+# Octane (RoadRunner) Setup
+# ----------------------------------------------------------------------------
+log_info "Configurando Octane (RoadRunner)..."
+
+# Instalar binário do RoadRunner se não existir
+if [ ! -f "/var/www/rr" ]; then
+    log_info "Binário RoadRunner não encontrado. Instalando..."
+    cd /var/www
+    # Tenta usar o comando do octane primeiro
+    php artisan octane:install --server=roadrunner --no-interaction || {
+        log_warning "Falha ao instalar via artisan. Tentando baixar diretamente..."
+        vendor/bin/rr get-binary --no-interaction || log_error "Falha ao baixar binário RoadRunner"
+    }
+    chmod +x rr 2>/dev/null || true
+    log_success "RoadRunner instalado"
+fi
+
+# Iniciar Octane com Watch (hot reload)
+log_info "Iniciando Octane com Watch..."
+echo ""
+echo -e "${GREEN}🚀 Servidor Octane (RoadRunner) iniciando em http://0.0.0.0:8000${NC}"
+echo -e "${BLUE}ℹ️  Modo Watch ativado (File changes trigger reload)${NC}"
+echo ""
+
+# Executar comando
+exec php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=8000 --watch
 

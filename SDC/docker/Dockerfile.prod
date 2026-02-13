@@ -56,6 +56,13 @@ RUN docker-php-ext-configure gd \
     && docker-php-ext-enable redis \
     && apk del .build-deps
 
+# Instalar RoadRunner binary
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
+RUN mkdir -p /var/www && cd /var/www && \
+    composer require laravel/octane spiral/roadrunner-cli spiral/roadrunner-http && \
+    php artisan octane:install --server=roadrunner
+
+
 # Copiar Composer
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 

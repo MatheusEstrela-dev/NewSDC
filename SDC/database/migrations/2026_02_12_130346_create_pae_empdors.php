@@ -11,26 +11,28 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pae_empdors', function (Blueprint $table) {
-            // id bigint unsigned NOT NULL AUTO_INCREMENT
-            $table->id();
+        if (!Schema::hasTable('pae_empdors')) {
+            Schema::create('pae_empdors', function (Blueprint $table) {
+                // id bigint unsigned NOT NULL AUTO_INCREMENT
+                $table->id();
 
-            $table->string('nome', 255);
-            
-            // cnpj UNIQUE
-            $table->string('cnpj', 18)->nullable()->unique('cnpj');
-            
-            $table->string('status', 50)->default('ATIVO');
+                $table->string('nome', 255);
+                
+                // cnpj UNIQUE
+                $table->string('cnpj', 18)->nullable()->unique('cnpj');
+                
+                $table->string('status', 50)->default('ATIVO');
 
-            // created_at e updated_at
-            $table->timestamps();
-            
-            // deleted_at (Para suporte ao SoftDeletes do Eloquent)
-            $table->softDeletes();
+                // created_at e updated_at
+                $table->timestamps();
+                
+                // deleted_at (Para suporte ao SoftDeletes do Eloquent)
+                $table->softDeletes();
 
-            // Índice para busca por status
-            $table->index('status', 'idx_empdors_status');
-        });
+                // Índice para busca por status
+                $table->index('status', 'idx_empdors_status');
+            });
+        }
     }
 
     /**

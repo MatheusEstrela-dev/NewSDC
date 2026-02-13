@@ -126,17 +126,29 @@ export default defineConfig({
             output: {
                 manualChunks: (id) => {
                     if (id.includes('node_modules')) {
+                        // Framework core (~80KB) - carregado em toda página
                         if (id.includes('vue') || id.includes('@inertiajs')) {
                             return 'vendor-vue';
                         }
+                        // Data fetching (~30KB)
                         if (id.includes('@tanstack')) {
                             return 'vendor-query';
                         }
-                        if (id.includes('ziggy')) {
-                            return 'vendor-utils';
+                        // Charts (~500KB) - só carregado em páginas com gráficos
+                        if (id.includes('apexcharts') || id.includes('vue3-apexcharts')) {
+                            return 'vendor-charts';
                         }
+                        // Maps (~200KB) - só carregado em páginas com mapa
                         if (id.includes('leaflet')) {
                             return 'vendor-maps';
+                        }
+                        // Drag & Drop (~40KB) - só Dashboard
+                        if (id.includes('vuedraggable') || id.includes('sortablejs')) {
+                            return 'vendor-dnd';
+                        }
+                        // Routing
+                        if (id.includes('ziggy')) {
+                            return 'vendor-utils';
                         }
                         return 'vendor-other';
                     }

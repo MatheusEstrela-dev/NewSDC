@@ -89,7 +89,7 @@ php artisan view:clear 2>/dev/null || true
 # Ajustar permissões
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
-# Iniciar servidor
-echo "Iniciando servidor Laravel..."
-exec php artisan serve --host=0.0.0.0 --port=8000
+# Iniciar servidor Octane (RoadRunner)
+echo "Iniciando servidor Octane (RoadRunner)..."
+exec php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=8000 --workers=auto
 

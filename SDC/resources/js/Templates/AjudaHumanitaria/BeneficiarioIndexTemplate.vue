@@ -38,12 +38,13 @@
           </div>
 
           <!-- Botão Exportar -->
-          <Button variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+          <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
             <span class="hidden sm:inline">Exportar</span>
           </Button>
 
           <!-- Botão Criar - Responsivo -->
           <Button
+            v-if="canCreate"
             variant="primary"
             size="md"
             :icon="PlusIcon"
@@ -203,9 +204,17 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  canCreate: {
+    type: Boolean,
+    default: false,
+  },
   canDelete: {
     type: Boolean,
     default: true,
+  },
+  canExport: {
+    type: Boolean,
+    default: false,
   },
   filters: {
     type: Object,

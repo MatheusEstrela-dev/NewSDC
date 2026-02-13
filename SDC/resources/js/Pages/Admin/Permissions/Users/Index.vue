@@ -10,12 +10,12 @@
           <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Gerenciamento de Usuários</h1>
           <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Gerencie usuários, cargos e permissões do sistema</p>
         </div>
-        <div class="flex gap-3">
+        <div v-if="canCreate" class="flex gap-3">
           <Link :href="route('admin.permissions.users.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
-            Novo Usuário
+            Novo Usuario
           </Link>
         </div>
       </div>
@@ -109,6 +109,7 @@
                 size="sm"
               />
               <ButtonIcon
+                v-if="canEdit"
                 :icon="PencilSquareIcon"
                 :href="route('admin.permissions.users.edit', user.id)"
                 variant="warning"
@@ -227,6 +228,7 @@
                       class="!text-blue-600 hover:!bg-blue-50 dark:!text-blue-400 dark:hover:!bg-blue-900/20"
                     />
                     <ButtonIcon
+                      v-if="canEdit"
                       :icon="PencilSquareIcon"
                       :href="route('admin.permissions.users.edit', user.id)"
                       variant="warning"
@@ -235,6 +237,7 @@
                       class="!text-amber-600 hover:!bg-amber-50 dark:!text-amber-400 dark:hover:!bg-amber-900/20"
                     />
                     <ButtonIcon
+                      v-if="canDelete"
                       :icon="TrashIcon"
                       variant="danger"
                       title="Desativar"
@@ -281,6 +284,13 @@ import EyeIcon from '@/Components/Icons/EyeIcon.vue';
 import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
 import TrashIcon from '@/Components/Icons/TrashIcon.vue';
 import { useMobile } from '@/Composables/useMobile';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
+
+const canCreate = can('users.create');
+const canEdit = can('users.edit');
+const canDelete = can('users.delete');
 
 const props = defineProps({
   users: Object,

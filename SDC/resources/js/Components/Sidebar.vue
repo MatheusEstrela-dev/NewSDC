@@ -307,80 +307,62 @@ const hasRole = (roleList) => {
 
 // ============================================================================
 // CONTROLE DE VISIBILIDADE POR MODULO
-// Por enquanto, apenas ADMIN esta restrito. Os demais estao preparados.
-// Para ativar restricao em um modulo, altere o return para usar hasPermission()
+// Verifica permissao .view de cada modulo conforme config/permissions.php
+// Segue padrao: MODULO.GRUPO.view
 // ============================================================================
 
 // PRINCIPAL
 const canSeeRat = computed(() => {
-  // TODO: Ativar quando necessario
-  // return hasPermission(['rat.protocolos.view', 'rat.view']);
-  return true; // Liberado por enquanto
+  return hasPermission(['rat.protocolos.view']);
 });
 
 const canSeeDemandas = computed(() => {
-  // TODO: Ativar quando necessario
-  // return hasPermission(['demandas.view']);
-  return true; // Liberado por enquanto
+  return hasPermission(['demandas.chamados.view']);
 });
 
 const canSeePae = computed(() => {
-  // TODO: Ativar quando necessario
-  // return hasPermission(['pae.empreendimentos.view', 'pae.view']);
-  return true; // Liberado por enquanto
+  return hasPermission(['pae.protocolos.view', 'pae.empreendimentos.view']);
 });
 
 // MODULOS DE GESTAO
 const canSeeDecretacoes = computed(() => {
-  // TODO: Ativar quando necessario
-  // return hasPermission(['decretacoes.view']);
-  return true; // Liberado por enquanto
+  return hasPermission(['decretacoes.processos.view']);
 });
 
 const canSeeAjudaHumanitaria = computed(() => {
-  // TODO: Ativar quando necessario
-  // return hasPermission(['ajuda_humanitaria.view', 'ajuda_humanitaria.beneficiarios.view']);
-  return true; // Liberado por enquanto
+  return hasPermission(['humanitaria.beneficiarios.view']);
 });
 
 const canSeeOrgaos = computed(() => {
-  // TODO: Ativar quando necessario
-  // return hasPermission(['compdec.view', 'orgaos.view']);
-  return true; // Liberado por enquanto
+  // TODO: Adicionar permissao compdec.orgaos.view no config
+  return hasPermission(['users.view']); // Temporario - usar permissao de admin
 });
 
 const canSeeTdap = computed(() => {
-  // TODO: Ativar quando necessario
-  // return hasPermission(['tdap.view', 'tdap.products.view', 'tdap.movimentacoes.view']);
-  return true; // Liberado por enquanto
+  return hasPermission([
+    'tdap.products.view',
+    'tdap.recebimentos.view',
+    'tdap.movimentacoes.view'
+  ]);
 });
 
 const canSeeTreinamento = computed(() => {
-  // TODO: Ativar quando necessario
-  // return hasPermission(['treinamentos.view']);
-  return true; // Liberado por enquanto
+  return hasPermission(['treinamento.cursos.view']);
 });
 
 const canSeeMeteorologia = computed(() => {
-  // TODO: Ativar quando necessario
-  // return hasPermission(['inmet.view', 'meteorologia.view']);
-  return true; // Liberado por enquanto
+  // TODO: Adicionar permissao meteorologia.dados.view no config
+  return true; // Liberado - modulo publico
 });
 
 const canSeeVistoria = computed(() => {
-  // TODO: Ativar quando necessario
-  // return hasPermission(['vistoria.view']);
-  return true; // Liberado por enquanto
+  // TODO: Adicionar permissao vistoria.registros.view no config
+  return true; // Liberado - modulo em desenvolvimento
 });
 
-// ADMINISTRACAO - RESTRITO (unico modulo com restricao ativa)
+// ADMINISTRACAO
 const canSeeAdmin = computed(() => {
-  const user = page.props?.auth?.user;
-  if (!user) return false;
-  if (user.is_super_admin) return true;
-  if (hasRole(['super-admin', 'admin'])) return true;
-
-  return hasPermission(['users.view', 'roles.view', 'permissions.view', 'permissions.manage']);
+  return hasPermission(['users.view', 'roles.view', 'permissions.view']);
 });
 
 const openSubMenus = ref({

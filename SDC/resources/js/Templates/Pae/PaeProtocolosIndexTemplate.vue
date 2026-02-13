@@ -316,24 +316,13 @@ function closeHistorico() {
 const printModalOpen = ref(false);
 const selectedProtocoloPrint = ref(null);
 
-// #region agent log
 function handlePrint(id) {
-  fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PaeProtocolosIndexTemplate.vue:handlePrint',message:'handlePrint called',data:{id,printModalOpenBefore:printModalOpen.value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-  console.log('PAE: handlePrint called for id:', id);
   const protocolo = (allProtocolos.value || []).find((p) => p.id === id) || null;
-  fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PaeProtocolosIndexTemplate.vue:handlePrint',message:'Protocolo search result',data:{id,protocoloFound:!!protocolo,protocoloNumero:protocolo?.protocoloNumero},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-  console.log('PAE: Protocolo found:', protocolo);
   if (protocolo) {
     selectedProtocoloPrint.value = protocolo;
     printModalOpen.value = true;
-    fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PaeProtocolosIndexTemplate.vue:handlePrint',message:'State updated',data:{printModalOpen:printModalOpen.value,selectedProtocoloPrint:!!selectedProtocoloPrint.value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    console.log('PAE: printModalOpen set to true');
-  } else {
-    fetch('http://127.0.0.1:7242/ingest/64e59590-eb2a-4207-934f-0400ea12fcbd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PaeProtocolosIndexTemplate.vue:handlePrint',message:'Protocolo not found',data:{id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    console.warn('PAE: Protocolo not found for id:', id);
   }
 }
-// #endregion
 
 function closePrint() {
   printModalOpen.value = false;

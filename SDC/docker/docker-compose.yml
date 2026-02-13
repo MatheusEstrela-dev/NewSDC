@@ -81,8 +81,8 @@ services:
       RUN_MIGRATIONS: "true"
       RUN_SEEDERS: "true"
 
-    # PHP-FPM (padrão) ou Artisan Serve
-    command: php artisan serve --host=0.0.0.0 --port=8000
+    # Command é gerido pelo entrypoint.sh agora (Octane)
+    # command: php artisan serve --host=0.0.0.0 --port=8000
 
     ports:
       - "8001:8000"
@@ -350,7 +350,9 @@ services:
   # Node.js + Vite (Frontend Development Server)
   # ==========================================================================
   node:
-    image: node:20-alpine
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.node
     container_name: newsdc_node
     hostname: node
     restart: unless-stopped
@@ -362,6 +364,9 @@ services:
 
     volumes:
       - ../:/var/www:cached
+      # Volume nomeado para node_modules (evita conflito Windows/Linux)
+      # Na primeira execucao, Docker copia o conteudo da imagem para o volume
+      - newsdc_node_modules:/var/www/node_modules
 
     networks:
       - sdc_network
@@ -375,6 +380,7 @@ services:
     ports:
       - "5175:5175" # Vite dev server
 
+    # npm install ja foi feito no Dockerfile.node (durante o build, com acesso a internet)
     command: sh -c "rm -rf node_modules/.vite && npm run dev -- --host 0.0.0.0 --port 5175"
 
     deploy:
@@ -678,6 +684,8 @@ volumes:
   newsdc_redis_data:
     driver: local
   newsdc_vendor:
+    driver: local
+  newsdc_node_modules:
     driver: local
   newsdc_prometheus_data:
     driver: local

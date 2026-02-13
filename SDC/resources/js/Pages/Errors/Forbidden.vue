@@ -28,6 +28,8 @@ defineProps({
   title: { type: String, default: null },
   message: { type: String, default: null },
 });
+
+
 </script>
 
 <style scoped>

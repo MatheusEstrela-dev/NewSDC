@@ -1,6 +1,6 @@
 <template>
   <AuthenticatedLayout>
-    <Head title="Gestão de RAT" />
+    <Head title="Gestao de RAT" />
     <RatIndexTemplate
       :statistics="effectiveStatistics"
       :rats="effectiveRats"
@@ -11,6 +11,11 @@
       :years="effectiveYears"
       :loading="false"
       :use-mock="useMock"
+      :can-create="can('rat.protocolos.create')"
+      :can-edit="can('rat.protocolos.edit')"
+      :can-delete="can('rat.protocolos.delete')"
+      :can-export="can('rat.protocolos.export')"
+      :can-finalize="can('rat.protocolos.finalize')"
     />
   </AuthenticatedLayout>
 </template>
@@ -20,6 +25,9 @@ import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import RatIndexTemplate from '@/Templates/Rat/RatIndexTemplate.vue';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
 import {
   getMockRats,
   getMockStatisticsFromRats,

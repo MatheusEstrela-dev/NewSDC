@@ -1,7 +1,14 @@
 <template>
   <AuthenticatedLayout>
     <Head title="Demandas" />
-    <DemandasIndexTemplate :statistics="statistics" />
+    <DemandasIndexTemplate
+      :statistics="statistics"
+      :can-create="can('demandas.chamados.create')"
+      :can-edit="can('demandas.chamados.edit')"
+      :can-delete="can('demandas.chamados.delete')"
+      :can-export="can('demandas.chamados.export')"
+      :can-manage="can('demandas.chamados.manage')"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -9,6 +16,9 @@
 import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DemandasIndexTemplate from '@/Templates/Demandas/DemandasIndexTemplate.vue';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
 
 defineProps({
   statistics: {

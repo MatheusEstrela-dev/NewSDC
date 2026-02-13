@@ -59,16 +59,16 @@ import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListI
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
 import HeartIcon from '@/Components/Icons/HeartIcon.vue';
-import { ref } from 'vue';
+import { markRaw, ref } from 'vue';
 
 defineEmits(['select-module']);
 
 const moduleSparklines = ref([
-  { name: 'RAT', value: 156, trend: 18, variant: 'info', icon: DocumentTextIcon, data: [12, 19, 15, 22, 18, 25, 20] },
-  { name: 'Demandas', value: 43, trend: -5, variant: 'warning', icon: ClipboardDocumentListIcon, data: [8, 12, 10, 7, 9, 6, 8] },
-  { name: 'Decretações', value: 28, trend: 32, variant: 'danger', icon: ExclamationTriangleIcon, data: [3, 5, 4, 8, 6, 10, 9] },
-  { name: 'PAE', value: 12, trend: 5, variant: 'success', icon: CheckCircleIcon, data: [2, 4, 3, 5, 4, 6, 5] },
-  { name: 'Ajuda Humanitária', value: 204, trend: 15, variant: 'primary', icon: HeartIcon, data: [15, 25, 20, 30, 25, 35, 30] },
+  { name: 'RAT', value: 156, trend: 18, variant: 'info', icon: markRaw(DocumentTextIcon), data: [12, 19, 15, 22, 18, 25, 20] },
+  { name: 'Demandas', value: 43, trend: -5, variant: 'warning', icon: markRaw(ClipboardDocumentListIcon), data: [8, 12, 10, 7, 9, 6, 8] },
+  { name: 'Decretações', value: 28, trend: 32, variant: 'danger', icon: markRaw(ExclamationTriangleIcon), data: [3, 5, 4, 8, 6, 10, 9] },
+  { name: 'PAE', value: 12, trend: 5, variant: 'success', icon: markRaw(CheckCircleIcon), data: [2, 4, 3, 5, 4, 6, 5] },
+  { name: 'Ajuda Humanitária', value: 204, trend: 15, variant: 'primary', icon: markRaw(HeartIcon), data: [15, 25, 20, 30, 25, 35, 30] },
 ]);
 
 // Helpers de Estilo e SVG

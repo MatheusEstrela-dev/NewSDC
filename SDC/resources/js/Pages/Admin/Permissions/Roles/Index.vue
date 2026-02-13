@@ -9,7 +9,7 @@
           <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Gerenciamento de Cargos</h1>
           <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Gerencie cargos e suas permissões do sistema</p>
         </div>
-        <div class="flex gap-3">
+        <div v-if="canCreate" class="flex gap-3">
           <Link :href="route('admin.permissions.roles.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -166,7 +166,7 @@
                   class="!text-blue-600 hover:!bg-blue-50 dark:!text-blue-400 dark:hover:!bg-blue-900/20"
                 />
                 <ButtonIcon
-                  v-if="!role.is_immutable"
+                  v-if="canEdit && !role.is_immutable"
                   :icon="PencilSquareIcon"
                   :href="route('admin.permissions.roles.edit', role.id)"
                   variant="warning"
@@ -175,7 +175,7 @@
                   class="!text-amber-600 hover:!bg-amber-50 dark:!text-amber-400 dark:hover:!bg-amber-900/20"
                 />
                 <ButtonIcon
-                  v-if="!role.is_immutable && role.users_count === 0"
+                  v-if="canDelete && !role.is_immutable && role.users_count === 0"
                   :icon="TrashIcon"
                   variant="danger"
                   title="Excluir"
@@ -233,6 +233,13 @@ import ButtonGroup from '@/Components/Atoms/Button/ButtonGroup.vue';
 import EyeIcon from '@/Components/Icons/EyeIcon.vue';
 import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
 import TrashIcon from '@/Components/Icons/TrashIcon.vue';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
+
+const canCreate = can('roles.create');
+const canEdit = can('roles.edit');
+const canDelete = can('roles.delete');
 
 const debounce = (func, wait) => {
   let timeout;

@@ -112,16 +112,23 @@ createInertiaApp({
 
         app.mount(el);
 
+        // Prefetching ativado imediatamente (leve, event listeners)
         setupPrefetching();
-        registerServiceWorker();
-        SyncService.init(); // Inicializa o serviço de sincronização
+
+        // Service Worker e SyncService deferidos para não bloquear render inicial
+        // requestIdleCallback executa quando o browser está ocioso (~1-2s após mount)
+        const deferInit = window.requestIdleCallback || ((cb) => setTimeout(cb, 2000));
+        deferInit(() => {
+            registerServiceWorker();
+            SyncService.init();
+        });
 
         return app;
     },
     progress: {
         color: '#1e40af',
-        showSpinner: false,
-        delay: 0,
+        showSpinner: true,
+        delay: 150, // Evita flash em navegações rápidas (<150ms)
     },
 });
 

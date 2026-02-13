@@ -10,6 +10,7 @@
       :can-create="can('decretacoes.processos.create')"
       :can-edit="can('decretacoes.processos.edit')"
       :can-delete="can('decretacoes.processos.delete')"
+      :can-export="can('decretacoes.processos.export')"
       @filter-change="handleFilterChange"
       @clear-filters="handleClearFilters"
       @page-change="handlePageChange"

@@ -15,12 +15,12 @@
           <ViewModeToggle v-model="viewMode" />
 
           <!-- Botão Exportar -->
-          <Button variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+          <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
             <span class="hidden sm:inline">Exportar</span>
           </Button>
 
           <!-- Botao Criar - Responsivo -->
-          <Link :href="route('rat.create')">
+          <Link v-if="canCreate" :href="route('rat.create')">
             <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
               <span class="hidden sm:inline">Novo RAT</span>
               <span class="sm:hidden">Novo</span>
@@ -145,6 +145,26 @@ const props = defineProps({
     default: false,
   },
   useMock: {
+    type: Boolean,
+    default: false,
+  },
+  canCreate: {
+    type: Boolean,
+    default: false,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
+  canExport: {
+    type: Boolean,
+    default: false,
+  },
+  canFinalize: {
     type: Boolean,
     default: false,
   },

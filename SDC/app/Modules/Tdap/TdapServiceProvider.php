@@ -42,24 +42,14 @@ class TdapServiceProvider extends ServiceProvider
 
     /**
      * Bootstrap dos serviços do módulo
+     *
+     * NOTA: As rotas do módulo são carregadas via routes/web.php dentro do
+     * middleware group 'auth' (que inclui 'web'). NÃO usar loadRoutesFrom()
+     * aqui, pois isso registra rotas SEM o middleware 'auth', causando
+     * 403 para todos os usuários. Padrão: mesmo que RatServiceProvider.
      */
     public function boot(): void
     {
-        // Carregar migrations
-        $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
-
-        // Registrar rotas
-        $this->registerRoutes();
-    }
-
-    /**
-     * Registra as rotas do módulo
-     */
-    protected function registerRoutes(): void
-    {
-        Route::middleware('web')
-            ->group(function () {
-                $this->loadRoutesFrom(__DIR__ . '/../../../routes/modules/tdap.php');
-            });
+        // Rotas carregadas via routes/web.php -> routes/modules/tdap.php
     }
 }

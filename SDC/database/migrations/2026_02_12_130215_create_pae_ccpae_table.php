@@ -12,28 +12,30 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pae_ccpae', function (Blueprint $table) {
-            $table->id(); // bigint unsigned NOT NULL AUTO_INCREMENT
+        if (!Schema::hasTable('pae_ccpae')) {
+            Schema::create('pae_ccpae', function (Blueprint $table) {
+                $table->id(); // bigint unsigned NOT NULL AUTO_INCREMENT
 
-            // Chave Estrangeira para pae_protocolos
-            $table->foreignId('protocolo_id')
-                  ->constrained('pae_protocolos')
-                  ->onDelete('cascade');
+                // Chave Estrangeira para pae_protocolos
+                $table->foreignId('protocolo_id')
+                      ->constrained('pae_protocolos')
+                      ->onDelete('cascade');
 
-            $table->string('codigo', 100)->unique('idx_ccpae_codigo_unique');
-            
-            // Data de emissão com valor default do banco (CURDATE)
-            $table->date('dt_emissao')->default(DB::raw('(CURRENT_DATE)'));
-            
-            $table->date('dt_vencimento')->nullable();
-            $table->string('status', 50)->default('ATIVO');
+                $table->string('codigo', 100)->unique('idx_ccpae_codigo_unique');
+                
+                // Data de emissão com valor default do banco (CURDATE)
+                $table->date('dt_emissao')->default(DB::raw('(CURRENT_DATE)'));
+                
+                $table->date('dt_vencimento')->nullable();
+                $table->string('status', 50)->default('ATIVO');
 
-            // timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+                // timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
 
-            // Índice manual adicional conforme seu SQL
-            $table->index('protocolo_id', 'idx_ccpae_protocolo');
-        });
+                // Índice manual adicional conforme seu SQL
+                $table->index('protocolo_id', 'idx_ccpae_protocolo');
+            });
+        }
     }
 
     /**

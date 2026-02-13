@@ -136,19 +136,19 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import draggable from '@/lib/vuedraggable-src/vuedraggable.js';
 import { Head } from '@inertiajs/vue3';
-import { ref, shallowRef } from 'vue';
+import { defineAsyncComponent, markRaw, ref } from 'vue';
 
-// Importação dos Widgets
-import BarChartWidget from '@/Components/Dashboard/Widgets/BarChartWidget.vue';
-import DashboardMetricCard from '@/Components/Dashboard/Widgets/DashboardMetricCard.vue';
-import DonutChartWidget from '@/Components/Dashboard/Widgets/DonutChartWidget.vue';
-import PmdaListWidget from '@/Components/Dashboard/Widgets/PmdaListWidget.vue';
-import RadarChartWidget from '@/Components/Dashboard/Widgets/RadarChartWidget.vue';
-import SparklinesWidget from '@/Components/Dashboard/Widgets/SparklinesWidget.vue';
-import TimelineWidget from '@/Components/Dashboard/Widgets/TimelineWidget.vue';
-import TrendChartWidget from '@/Components/Dashboard/Widgets/TrendChartWidget.vue';
+// Widgets carregados sob demanda (lazy) para reduzir bundle inicial
+const DashboardMetricCard = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/DashboardMetricCard.vue'));
+const BarChartWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/BarChartWidget.vue'));
+const DonutChartWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/DonutChartWidget.vue'));
+const SparklinesWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/SparklinesWidget.vue'));
+const PmdaListWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/PmdaListWidget.vue'));
+const TimelineWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/TimelineWidget.vue'));
+const TrendChartWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/TrendChartWidget.vue'));
+const RadarChartWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/RadarChartWidget.vue'));
 
-// Ícones para Métricas (passados via props)
+// Ícones para Métricas (leves, podem ser eager)
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
@@ -217,67 +217,67 @@ const dashboardItems = ref([
   // Métricas (Linha 1)
   { 
     id: 'metric-1', 
-    component: shallowRef(DashboardMetricCard), 
+    component: markRaw(DashboardMetricCard), 
     colSpan: 'col-span-1 lg:col-span-3', 
-    props: { title: 'Em Edição', value: 24, trend: 12, subtitle: '3 novos hoje', variant: 'info', icon: PencilSquareIcon } 
+    props: { title: 'Em Edição', value: 24, trend: 12, subtitle: '3 novos hoje', variant: 'info', icon: markRaw(PencilSquareIcon) } 
   },
   { 
     id: 'metric-2', 
-    component: shallowRef(DashboardMetricCard), 
+    component: markRaw(DashboardMetricCard), 
     colSpan: 'col-span-1 lg:col-span-3', 
-    props: { title: 'Em Análise', value: 5, trend: -8, subtitle: 'Tempo médio: 4 dias', variant: 'warning', icon: ClockIcon } 
+    props: { title: 'Em Análise', value: 5, trend: -8, subtitle: 'Tempo médio: 4 dias', variant: 'warning', icon: markRaw(ClockIcon) } 
   },
   { 
     id: 'metric-3', 
-    component: shallowRef(DashboardMetricCard), 
+    component: markRaw(DashboardMetricCard), 
     colSpan: 'col-span-1 lg:col-span-3', 
-    props: { title: 'Aprovados', value: 77, trend: 15, subtitle: '12 esta semana', variant: 'success', icon: CheckCircleIcon } 
+    props: { title: 'Aprovados', value: 77, trend: 15, subtitle: '12 esta semana', variant: 'success', icon: markRaw(CheckCircleIcon) } 
   },
   { 
     id: 'metric-4', 
-    component: shallowRef(DashboardMetricCard), 
+    component: markRaw(DashboardMetricCard), 
     colSpan: 'col-span-1 lg:col-span-3', 
-    props: { title: 'Atendidos', value: 12, trend: 5, subtitle: '98% resolução', variant: 'danger', icon: CheckCircleIcon } 
+    props: { title: 'Atendidos', value: 12, trend: 5, subtitle: '98% resolução', variant: 'danger', icon: markRaw(CheckCircleIcon) } 
   },
   
   // Gráficos Principais (Linha 2)
   { 
     id: 'chart-bar', 
-    component: shallowRef(BarChartWidget), 
+    component: markRaw(BarChartWidget), 
     colSpan: 'col-span-1 lg:col-span-6' 
   },
   { 
     id: 'chart-donut', 
-    component: shallowRef(DonutChartWidget), 
+    component: markRaw(DonutChartWidget), 
     colSpan: 'col-span-1 lg:col-span-6' 
   },
 
   // Linha 3 (Sparklines, PMDA, Timeline)
   { 
     id: 'sparklines', 
-    component: shallowRef(SparklinesWidget), 
+    component: markRaw(SparklinesWidget), 
     colSpan: 'col-span-1 lg:col-span-4' 
   },
   { 
     id: 'pmda-list', 
-    component: shallowRef(PmdaListWidget), 
+    component: markRaw(PmdaListWidget), 
     colSpan: 'col-span-1 lg:col-span-4' 
   },
   { 
     id: 'timeline', 
-    component: shallowRef(TimelineWidget), 
+    component: markRaw(TimelineWidget), 
     colSpan: 'col-span-1 lg:col-span-4' 
   },
 
   // Linha 4 (Tendência + Radar)
   { 
     id: 'chart-trend', 
-    component: shallowRef(TrendChartWidget), 
+    component: markRaw(TrendChartWidget), 
     colSpan: 'col-span-1 lg:col-span-8' 
   },
   { 
     id: 'chart-radar', 
-    component: shallowRef(RadarChartWidget), 
+    component: markRaw(RadarChartWidget), 
     colSpan: 'col-span-1 lg:col-span-4' 
   },
 ]);

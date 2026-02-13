@@ -11,31 +11,33 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pae_dilacoes', function (Blueprint $table) {
-            $table->id(); // bigint unsigned NOT NULL AUTO_INCREMENT
+        if (!Schema::hasTable('pae_dilacoes')) {
+            Schema::create('pae_dilacoes', function (Blueprint $table) {
+                $table->id(); // bigint unsigned NOT NULL AUTO_INCREMENT
 
-            // Relacionamento com Protocolos
-            $table->foreignId('protocolo_id')
-                  ->constrained('pae_protocolos')
-                  ->onDelete('cascade');
+                // Relacionamento com Protocolos
+                $table->foreignId('protocolo_id')
+                      ->constrained('pae_protocolos')
+                      ->onDelete('cascade');
 
-            $table->string('status', 50)->default('PENDENTE');
-            $table->integer('dias_adicionais');
-            $table->text('justificativa')->nullable();
+                $table->string('status', 50)->default('PENDENTE');
+                $table->integer('dias_adicionais');
+                $table->text('justificativa')->nullable();
 
-            // Relacionamento com Usuário (Quem aprovou)
-            $table->foreignId('aprovado_por')
-                  ->nullable()
-                  ->constrained('users')
-                  ->onDelete('set null');
+                // Relacionamento com Usuário (Quem aprovou)
+                $table->foreignId('aprovado_por')
+                      ->nullable()
+                      ->constrained('users')
+                      ->onDelete('set null');
 
-            // created_at e updated_at com comportamento de timestamp do MySQL
-            $table->timestamps();
+                // created_at e updated_at com comportamento de timestamp do MySQL
+                $table->timestamps();
 
-            // Índices manuais para garantir performance nas buscas
-            $table->index('protocolo_id', 'idx_dilacoes_protocolo');
-            $table->index('aprovado_por', 'idx_dilacoes_aprovado_por');
-        });
+                // Índices manuais para garantir performance nas buscas
+                $table->index('protocolo_id', 'idx_dilacoes_protocolo');
+                $table->index('aprovado_por', 'idx_dilacoes_aprovado_por');
+            });
+        }
     }
 
     /**

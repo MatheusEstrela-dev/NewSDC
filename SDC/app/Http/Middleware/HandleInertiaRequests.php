@@ -72,8 +72,12 @@ class HandleInertiaRequests extends Middleware
 
     /**
      * Retorna as permissoes efetivas do usuario.
-     * Se o usuario tem permissoes diretas configuradas, usa apenas essas.
-     * Caso contrario, usa as permissoes herdadas dos cargos.
+     * LOGICA ADITIVA: Permissoes do CARGO + Permissoes DIRETAS = Efetivas
+     *
+     * Tabelas envolvidas:
+     * - role_has_permissions: permissoes do cargo
+     * - model_has_permissions: permissoes diretas do usuario
+     * - model_has_roles: cargos atribuidos ao usuario
      */
     protected function getEffectivePermissions($user): array
     {
@@ -81,13 +85,10 @@ class HandleInertiaRequests extends Middleware
             return [];
         }
 
+        $rolePermissions = $user->getPermissionsViaRoles()->pluck('name')->values()->toArray();
         $directPermissions = $user->permissions->pluck('name')->values()->toArray();
 
-        if (count($directPermissions) > 0) {
-            return $directPermissions;
-        }
-
-        return $user->getPermissionsViaRoles()->pluck('name')->values()->toArray();
+        return array_values(array_unique(array_merge($rolePermissions, $directPermissions)));
     }
 
     /**

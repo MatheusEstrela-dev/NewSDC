@@ -103,6 +103,14 @@ class UserManagementController extends Controller
         ]);
     }
 
+    /**
+     * Editar usuario com suas permissoes.
+     *
+     * LOGICA ADITIVA:
+     * - role_permissions: permissoes herdadas do cargo (role_has_permissions)
+     * - direct_permissions: permissoes atribuidas diretamente (model_has_permissions)
+     * - effective_permissions: MERGE de cargo + diretas (o que vale de fato)
+     */
     public function edit(User $user): Response
     {
         $user->load(['roles.permissions', 'permissions']);
@@ -110,9 +118,7 @@ class UserManagementController extends Controller
         $directPermissions = $user->permissions->pluck('name')->toArray();
         $rolePermissions = $user->getPermissionsViaRoles()->pluck('name')->toArray();
 
-        $effectivePermissions = count($directPermissions) > 0
-            ? $directPermissions
-            : $rolePermissions;
+        $effectivePermissions = array_values(array_unique(array_merge($rolePermissions, $directPermissions)));
 
         $user->direct_permissions = $user->permissions;
         $user->effective_permissions = $effectivePermissions;

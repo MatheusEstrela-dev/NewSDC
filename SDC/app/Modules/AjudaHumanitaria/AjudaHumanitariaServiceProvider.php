@@ -40,27 +40,15 @@ class AjudaHumanitariaServiceProvider extends ServiceProvider
 
     /**
      * Bootstrap services
+     *
+     * NOTA: As rotas do módulo são carregadas via routes/web.php dentro do
+     * middleware group 'auth' (que inclui 'web'). NÃO usar loadRoutesFrom()
+     * aqui, pois isso registra rotas SEM os middlewares web/auth, causando
+     * 403 para todos os usuários (sessão e autenticação ausentes).
+     * Padrão: mesmo que RatServiceProvider.
      */
     public function boot(): void
     {
-        // Carregar rotas do módulo
-        $routesPath = base_path('routes/modules/ajuda-humanitaria.php');
-        if (file_exists($routesPath)) {
-            $this->loadRoutesFrom($routesPath);
-        }
-
-        // Carregar migrations
-        $this->loadMigrationsFrom(database_path('migrations'));
-
-        // TODO: Registrar observers para eventos
-        // Beneficiario::observe(BeneficiarioObserver::class);
-        // Abrigo::observe(AbrigoObserver::class);
-
-        // TODO: Registrar policies
-        // Gate::policy(Beneficiario::class, BeneficiarioPolicy::class);
-
-        // TODO: Registrar event listeners
-        // Event::listen(BeneficiarioCriado::class, NotificarEquipeListener::class);
-        // Event::listen(AuxilioDistribuido::class, AtualizarEstoqueListener::class);
+        // Rotas carregadas via routes/web.php -> routes/modules/ajuda-humanitaria.php
     }
 }

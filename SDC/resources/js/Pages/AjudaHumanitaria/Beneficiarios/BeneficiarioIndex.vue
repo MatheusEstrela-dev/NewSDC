@@ -7,6 +7,7 @@
       :can-create="can('humanitaria.beneficiarios.create')"
       :can-edit="can('humanitaria.beneficiarios.edit')"
       :can-delete="can('humanitaria.beneficiarios.delete')"
+      :can-export="can('humanitaria.beneficiarios.export')"
       @create="openCreateModal"
       @view="viewBeneficiario"
       @edit="editBeneficiario"
