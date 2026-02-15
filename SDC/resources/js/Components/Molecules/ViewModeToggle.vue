@@ -7,10 +7,10 @@
       :key="option.value"
       @click="$emit('update:modelValue', option.value)"
       :class="[
-        'px-3 py-1.5 rounded text-xs font-medium transition-all',
+        'atom-button px-3 py-1.5 text-xs',
         modelValue === option.value
           ? 'bg-blue-600 text-white shadow-sm'
-          : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+          : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
       ]"
       :title="option.title"
     >

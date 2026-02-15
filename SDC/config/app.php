@@ -168,7 +168,7 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        
+
         // Module Service Providers
         App\Modules\Rat\RatServiceProvider::class,
         App\Modules\Demandas\DemandasServiceProvider::class,
@@ -179,6 +179,7 @@ return [
         App\Modules\Treinamento\TreinamentoServiceProvider::class,
         App\Modules\Inmet\InmetServiceProvider::class,
         App\Modules\Suporte\SuporteServiceProvider::class,
+        App\Modules\Plantao\PlantaoServiceProvider::class,
     ])->toArray(),
 
     /*

@@ -106,6 +106,9 @@ Route::middleware('auth')->group(function () {
 
     // Modulo: Inmet (Meteorologia)
     require __DIR__ . '/modules/inmet.php';
+
+    // Módulo: Plantão Diário
+    require __DIR__ . '/modules/plantao.php';
 });
 
 require __DIR__ . '/auth.php';

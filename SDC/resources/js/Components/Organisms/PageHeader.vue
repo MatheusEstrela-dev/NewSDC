@@ -1,7 +1,7 @@
 <script setup>
-import { computed } from 'vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import { computed } from 'vue';
 
 const props = defineProps({
   /**
@@ -35,6 +35,13 @@ const props = defineProps({
     default: 'default',
     validator: (value) => ['default', 'gradient'].includes(value),
   },
+  /**
+   * Classes extras para o ícone
+   */
+  iconClass: {
+    type: String,
+    default: '',
+  },
 });
 
 const containerClasses = computed(() => {
@@ -63,7 +70,7 @@ const iconContainerClasses = computed(() => {
         <div v-if="icon" :class="iconContainerClasses">
           <component 
             :is="icon" 
-            class="w-6 h-6 text-slate-600 dark:text-slate-200" 
+            :class="['w-6 h-6', iconClass || 'text-slate-600 dark:text-slate-200']" 
           />
         </div>
         

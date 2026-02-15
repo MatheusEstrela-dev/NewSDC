@@ -1,508 +1,2216 @@
-2026-02-10T16:42:56.7857555Z   Database\Seeders\MockUsersHierarchySeeder ................... 53,375 ms DONE
-2026-02-10T16:42:56.7857573Z
-2026-02-10T16:42:56.7976076Z Tabela "rats" não encontrada - RatMockSeeder pulado.
-2026-02-10T16:42:56.94679Z ✅ Banco inicializado com dados mock completos
-2026-02-10T16:42:56.9475507Z    Admin: admin@defesa.mg.gov.br / password
-2026-02-10T16:42:56.9482199Z    Hierarquias: super-admin, admin, manager, analyst, operator, viewer, user
-2026-02-10T16:42:56.9484346Z    RATs: 15 registros (em_andamento, rascunho, finalizado)
-2026-02-10T16:42:58.6152974Z   2026-02-10 16:42:58 / ............................................ ~ 0.53ms
-2026-02-10T16:42:59.0068977Z
-2026-02-10T16:42:59.0069543Z    INFO  Configuration cache cleared successfully.
-2026-02-10T16:42:59.0069645Z
-2026-02-10T16:42:59.117957Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:42:58.746654+00:00","extra":{"request_id":"1795f019-aed5-428d-93bc-c0296b1a8511","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/login","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:42:59.1381145Z   2026-02-10 16:42:58 /login ....................................... ~ 1.33ms
-2026-02-10T16:42:59.6426785Z   2026-02-10 16:42:59 / ............................................ ~ 0.36ms
-2026-02-10T16:43:00.1637777Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:42:59.833550+00:00","extra":{"request_id":"66d647ea-522d-4b6a-8de8-6359e87a4ede","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/login","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:43:00.1747533Z   2026-02-10 16:42:59 /login ....................................... ~ 2.32ms
-2026-02-10T16:43:00.4444788Z
-2026-02-10T16:43:00.4445249Z    INFO  Route cache cleared successfully.
-2026-02-10T16:43:00.4445293Z
-2026-02-10T16:43:00.6773997Z   2026-02-10 16:43:00 /favicon.ico ................................. ~ 0.36ms
-2026-02-10T16:43:01.6105404Z
-2026-02-10T16:43:01.6105935Z    INFO  Compiled views cleared successfully.
-2026-02-10T16:43:01.6105969Z
-2026-02-10T16:43:01.6798966Z Iniciando servidor Laravel...
-2026-02-10T16:43:03.5384792Z
-2026-02-10T16:43:03.538655Z    INFO  Server running on [http://0.0.0.0:8000].
-2026-02-10T16:43:03.5386614Z
-2026-02-10T16:43:03.5463442Z   Press Ctrl+C to stop the server
-2026-02-10T16:43:03.5463601Z
-2026-02-10T16:43:05.0785138Z   2026-02-10 16:43:03 /robots933456.txt ................................ ~ 1s
-2026-02-10T16:13:16.9588796Z
-2026-02-10T16:13:16.9589235Z    INFO  Preparing database.
-2026-02-10T16:13:16.958926Z
-2026-02-10T16:13:17.1718219Z   Creating migration table ..................................... 199.52ms DONE
-2026-02-10T16:13:17.1718491Z
-2026-02-10T16:13:17.4540124Z    INFO  Running migrations.
-2026-02-10T16:13:17.454056Z
-2026-02-10T16:13:17.5044164Z   2014_10_12_000000_create_users_table .......................... 31.32ms DONE
-2026-02-10T16:13:17.5849222Z   2014_10_12_100000_create_password_reset_tokens_table .......... 60.20ms DONE
-2026-02-10T16:13:17.6428614Z   2019_08_19_000000_create_failed_jobs_table .................... 11.91ms DONE
-2026-02-10T16:13:17.7026388Z   2019_12_14_000001_create_personal_access_tokens_table ......... 40.76ms DONE
-2026-02-10T16:13:17.873604Z   2025_01_15_000001_create_tasks_table ......................... 122.21ms DONE
-2026-02-10T16:13:17.9155923Z   2025_01_15_000002_create_task_comments_table .................. 10.76ms DONE
-2026-02-10T16:13:17.9836979Z   2025_01_15_000003_create_task_attachments_table ............... 49.38ms DONE
-2026-02-10T16:13:18.0772063Z   2025_01_15_000004_create_task_approvals_table ................. 21.33ms DONE
-2026-02-10T16:13:18.4092678Z   2025_01_15_000005_create_task_sla_definitions_table .......... 261.07ms DONE
-2026-02-10T16:13:18.6287781Z   2025_01_15_000006_create_task_sla_instances_table ............ 161.24ms DONE
-2026-02-10T16:13:18.7479847Z   2025_01_15_000007_create_task_audit_logs_table ................ 89.05ms DONE
-2026-02-10T16:13:18.8292951Z   2025_01_26_000001_create_tdap_products_table .................. 61.04ms DONE
-2026-02-10T16:13:18.9016124Z   2025_01_26_000002_create_tdap_product_lotes_table ............. 61.32ms DONE
-2026-02-10T16:13:18.9312143Z   2025_01_26_000003_create_tdap_product_compositions_table ...... 18.48ms DONE
-2026-02-10T16:13:19.050017Z   2025_01_26_000004_create_tdap_recebimentos_table .............. 99.47ms DONE
-2026-02-10T16:13:19.1418112Z   2025_01_26_000005_create_tdap_recebimento_itens_table ......... 49.12ms DONE
-2026-02-10T16:13:19.2726242Z   2025_01_26_000006_create_tdap_movimentacoes_table ............ 118.91ms DONE
-2026-02-10T16:13:19.4825015Z   2025_01_27_000000_create_notifications_table .................. 99.75ms DONE
-2026-02-10T16:13:19.5965945Z   2025_11_21_143256_add_cpf_to_users_table ...................... 85.38ms DONE
-2026-02-10T16:13:19.8957712Z   2025_11_27_000001_create_webhook_logs_table .................. 175.01ms DONE
-2026-02-10T16:13:20.4578263Z   2025_11_27_000002_create_integrations_table .................. 322.28ms DONE
-2026-02-10T16:13:20.9306928Z   2025_12_23_000001_create_permission_audit_log_table .......... 420.99ms DONE
-2026-02-10T16:13:21.6840338Z   2025_12_24_000001_create_permission_tables ................... 641.73ms DONE
-2026-02-10T16:13:22.1632613Z   2025_12_24_000002_add_permission_metadata_fields ............. 412.18ms DONE
-2026-02-10T16:13:22.2043575Z   2025_12_24_000003_add_guard_name_to_roles_and_permissions ...... 9.47ms DONE
-2026-02-10T16:13:22.2564432Z   2025_12_27_184500_create_municipios_table ..................... 39.43ms DONE
-2026-02-10T16:13:22.4763064Z   2025_12_27_184510_create_orgaos_table ........................ 169.44ms DONE
-2026-02-10T16:13:22.6358542Z   2025_12_27_184548_create_processos_table ..................... 119.38ms DONE
-2026-02-10T16:13:22.6679898Z   2025_12_27_184612_create_processo_danos_humanos_table ......... 19.12ms DONE
-2026-02-10T16:13:22.717664Z   2025_12_27_184612_create_processo_danos_materiais_table ....... 39.03ms DONE
-2026-02-10T16:13:22.7575206Z   2025_12_27_184612_create_processo_municipios_table ............ 28.94ms DONE
-2026-02-10T16:13:22.807806Z   2025_12_27_184612_create_processo_prejuizos_table ............. 37.97ms DONE
-2026-02-10T16:13:22.9186749Z   2025_12_27_184613_create_processo_anexos_table ................ 57.89ms DONE
-2026-02-10T16:13:23.0172036Z   2025_12_27_184613_create_processo_logs_table .................. 71.93ms DONE
-2026-02-10T16:13:23.260624Z   2025_12_28_120000_create_beneficiarios_table ................. 221.69ms DONE
-2026-02-10T16:13:23.3788072Z   2025_12_28_120100_create_abrigos_table ........................ 72.63ms DONE
-2026-02-10T16:13:23.451724Z   2025_12_28_120200_create_membros_familia_table ................ 50.92ms DONE
-2026-02-10T16:13:23.590107Z   2025_12_28_120300_create_beneficiario_abrigo_pivot_table ...... 68.36ms DONE
-2026-02-10T16:13:23.7031657Z   2025_12_28_120400_create_doacoes_table ....................... 139.04ms DONE
-2026-02-10T16:13:23.8018246Z   2025_12_28_120500_create_itens_doacao_table ................... 80.03ms DONE
-2026-02-10T16:13:23.9134007Z   2025_12_28_120600_create_auxilios_table ....................... 99.96ms DONE
-2026-02-10T16:13:23.9744186Z   2025_12_28_120700_create_itens_auxilio_table .................. 20.00ms DONE
-2026-02-10T16:13:24.0432719Z   2025_12_28_120800_create_estoques_table ....................... 49.26ms DONE
-2026-02-10T16:13:24.2943414Z   2025_12_28_120900_create_movimentacoes_estoque_table ......... 218.21ms DONE
-2026-02-10T16:13:24.4040068Z   2025_12_28_121000_create_movimentacoes_financeiras_table ...... 82.49ms DONE
-2026-02-10T16:13:24.5160117Z   2025_12_28_140000_create_treinamentos_table ................... 60.36ms DONE
-2026-02-10T16:13:24.6159648Z   2025_12_28_140100_create_modulos_table ........................ 70.47ms DONE
-2026-02-10T16:13:24.6564342Z   2025_12_28_140200_create_inscricoes_table ..................... 22.16ms DONE
-2026-02-10T16:13:24.726864Z   2025_12_28_140300_create_frequencias_table .................... 50.80ms DONE
-2026-02-10T16:13:24.8929791Z   2025_12_29_000002_create_orgao_user_table .................... 144.01ms DONE
-2026-02-10T16:13:24.9498483Z   2025_12_29_000003_add_orgao_principal_id_to_users_table ....... 48.44ms DONE
-2026-02-10T16:13:24.9585298Z   2025_12_29_000005_add_orgao_emissor_id_to_rats_table ........... 0.26ms DONE
-2026-02-10T16:13:24.9776067Z   2025_12_29_022154_create_estacoes_meteorologicas_table ........ 10.07ms DONE
-2026-02-10T16:13:25.0300627Z {"message":"Erro ao atribuir role na migração: SQLSTATE[HY000]: General error: 1 no such column: roles.deleted_at (Connection: sqlite, Database: database/database.sqlite, SQL: select * from \"roles\" where (\"name\" = super-admin and \"guard_name\" = web) and \"roles\".\"deleted_at\" is null limit 1)","context":{},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:13:25.029321+00:00","extra":{"command_id":"edad134a-686c-49cf-b327-3ce0a4f28856","is_console":true,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","memory_usage":"36.5 MB"}}
-2026-02-10T16:13:25.0392793Z   2025_12_29_221144_give_super_admin_access_to_main_user ........ 58.75ms DONE
-2026-02-10T16:13:25.0500754Z   2026_01_28_000000_create_support_tickets_table ................. 1.92ms DONE
-2026-02-10T16:13:25.110534Z   2026_01_28_000001_create_support_ticket_messages_table ........ 30.34ms DONE
-2026-02-10T16:13:25.2913564Z   2026_02_02_000001_create_ai_tables ........................... 160.32ms DONE
-2026-02-10T16:13:25.3218524Z   2026_02_02_000001_modify_rats_id_to_uuid ....................... 0.25ms DONE
-2026-02-10T16:13:25.4205733Z   2026_02_09_191000_add_deleted_at_to_roles_table ............... 58.22ms DONE
-2026-02-10T16:13:25.4999189Z   2026_02_10_000001_enhance_permission_system ................... 53.37ms FAIL
-2026-02-10T16:13:25.584564Z {"message":"SQLSTATE[HY000]: General error: 1 near \"SHOW\": syntax error (Connection: sqlite, Database: database/database.sqlite, SQL: SHOW INDEX FROM roles)","context":{"exception":{"class":"Illuminate\\Database\\QueryException","message":"SQLSTATE[HY000]: General error: 1 near \"SHOW\": syntax error (Connection: sqlite, Database: database/database.sqlite, SQL: SHOW INDEX FROM roles)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Database/Connection.php:838","previous":{"class":"PDOException","message":"SQLSTATE[HY000]: General error: 1 near \"SHOW\": syntax error","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Database/Connection.php:420"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:13:25.584386+00:00","extra":{"command_id":"edad134a-686c-49cf-b327-3ce0a4f28856","is_console":true,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","memory_usage":"38.5 MB"}}
-2026-02-10T16:13:25.5914022Z
-2026-02-10T16:13:25.6105415Z In Connection.php line 838:
-2026-02-10T16:13:25.611574Z
-2026-02-10T16:13:25.6125563Z   SQLSTATE[HY000]: General error: 1 near "SHOW": syntax error (Connection: sq
-2026-02-10T16:13:25.6221515Z   lite, Database: database/database.sqlite, SQL: SHOW INDEX FROM roles)
-2026-02-10T16:13:25.6221805Z
-2026-02-10T16:13:25.6221832Z
-2026-02-10T16:13:25.6221857Z In Connection.php line 420:
-2026-02-10T16:13:25.6221879Z
-2026-02-10T16:13:25.6221899Z   SQLSTATE[HY000]: General error: 1 near "SHOW": syntax error
-2026-02-10T16:13:25.6221919Z
-2026-02-10T16:13:25.6228921Z
-2026-02-10T16:13:25.7009854Z ⚠️  Aviso: Erro ao executar migrations
-2026-02-10T16:13:25.7022856Z Executando seeders (dados mock + hierarquias)...
-2026-02-10T16:13:27.2090351Z
-2026-02-10T16:13:27.2091042Z    INFO  Seeding database.
-2026-02-10T16:13:27.2091068Z
-2026-02-10T16:13:27.2188096Z   Database\Seeders\RolesAndPermissionsSeeder ......................... RUNNING
-2026-02-10T16:13:28.2168516Z Roles e Permissions sincronizadas via config/permissions.php
-2026-02-10T16:13:28.2350734Z
-2026-02-10T16:13:28.2351077Z Hierarquia de Cargos:
-2026-02-10T16:13:28.235115Z   Nivel 0: Super Admin (super-admin)
-2026-02-10T16:13:28.235122Z   Nivel 1: Administrador (admin)
-2026-02-10T16:13:28.2351366Z   Nivel 2: Gestor (manager)
-2026-02-10T16:13:28.2351426Z   Nivel 3: Analista (analyst)
-2026-02-10T16:13:28.2351481Z   Nivel 4: Operador (operator)
-2026-02-10T16:13:28.2351535Z   Nivel 5: Visualizador (viewer)
-2026-02-10T16:13:28.235159Z   Nivel 6: Usuario (user)
-2026-02-10T16:13:28.2351681Z   Database\Seeders\RolesAndPermissionsSeeder ................... 1,007 ms DONE
-2026-02-10T16:13:28.2351739Z
-2026-02-10T16:13:28.2457878Z   Database\Seeders\OrgaosSeeder ...................................... RUNNING
-2026-02-10T16:13:28.293469Z ✅ Órgãos criados com sucesso!
-2026-02-10T16:13:28.2966806Z    - 1 CEDEC (Estadual)
-2026-02-10T16:13:28.296693Z    - 3 REDECs (Regionais)
-2026-02-10T16:13:28.2966961Z    - 4 COMPDECs (Municipais)
-2026-02-10T16:13:28.2966983Z   Database\Seeders\OrgaosSeeder ................................... 49 ms DONE
-2026-02-10T16:13:28.2970562Z
-2026-02-10T16:13:29.2537175Z Admin Geral criado com role super-admin
-2026-02-10T16:13:29.2707356Z   Database\Seeders\MockUsersSeeder ................................... RUNNING
-2026-02-10T16:13:30.4015663Z ✓ Usuário João Silva criado com role admin
-2026-02-10T16:13:31.4030903Z ✓ Usuário Maria Santos criado com role analyst
-2026-02-10T16:13:32.3504023Z ✓ Usuário Pedro Oliveira criado com role analyst
-2026-02-10T16:13:33.7075032Z ✓ Usuário Ana Costa criado com role operator
-2026-02-10T16:13:35.575872Z ✓ Usuário Carlos Pereira criado com role operator
-2026-02-10T16:13:37.2256529Z ✓ Usuário Juliana Almeida criado com role analyst
-2026-02-10T16:13:38.8330908Z ✓ Usuário Roberto Fernandes criado com role admin
-2026-02-10T16:13:40.7832853Z ✓ Usuário Fernanda Lima criado com role operator
-2026-02-10T16:13:40.7842878Z
-2026-02-10T16:13:40.7847157Z ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2026-02-10T16:13:40.8030163Z   USUÁRIOS MOCK CRIADOS COM SUCESSO
-2026-02-10T16:13:40.8035533Z ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2026-02-10T16:13:40.8041655Z
-2026-02-10T16:13:40.8049226Z Credenciais padrão:
-2026-02-10T16:13:40.8053376Z   Email: <qualquer email acima>
-2026-02-10T16:13:40.8139507Z   Senha: password
-2026-02-10T16:13:40.8139618Z
-2026-02-10T16:13:40.9247979Z +-------------------+------------------------------------+----------+
-2026-02-10T16:13:40.9332109Z | Nome              | Email                              | Role     |
-2026-02-10T16:13:40.9342331Z +-------------------+------------------------------------+----------+
-2026-02-10T16:13:40.9351089Z | João Silva        | joao.silva@defesa.mg.gov.br        | admin    |
-2026-02-10T16:13:40.9359958Z | Maria Santos      | maria.santos@defesa.mg.gov.br      | analyst  |
-2026-02-10T16:13:40.9531072Z | Pedro Oliveira    | pedro.oliveira@defesa.mg.gov.br    | analyst  |
-2026-02-10T16:13:40.9531336Z | Ana Costa         | ana.costa@defesa.mg.gov.br         | operator |
-2026-02-10T16:13:40.9531407Z | Carlos Pereira    | carlos.pereira@defesa.mg.gov.br    | operator |
-2026-02-10T16:13:40.9531469Z | Juliana Almeida   | juliana.almeida@defesa.mg.gov.br   | analyst  |
-2026-02-10T16:13:40.9531527Z | Roberto Fernandes | roberto.fernandes@defesa.mg.gov.br | admin    |
-2026-02-10T16:13:40.9531587Z | Fernanda Lima     | fernanda.lima@defesa.mg.gov.br     | operator |
-2026-02-10T16:13:40.9531681Z +-------------------+------------------------------------+----------+
-2026-02-10T16:13:40.9531748Z   Database\Seeders\MockUsersSeeder ............................ 11,683 ms DONE
-2026-02-10T16:13:40.9540599Z
-2026-02-10T16:13:40.9562239Z   Database\Seeders\MockUsersHierarchySeeder .......................... RUNNING
-2026-02-10T16:14:22.0825614Z
-2026-02-10T16:14:22.082608Z ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2026-02-10T16:14:22.0840402Z   USUÁRIOS COM HIERARQUIAS DIVERSAS - MOCK
-2026-02-10T16:14:22.0844393Z ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2026-02-10T16:14:22.0847821Z   Criados: 29 | Já existentes (pulados): 0
-2026-02-10T16:14:22.092066Z   Senha padrão: password
-2026-02-10T16:14:22.0931559Z
-2026-02-10T16:14:22.093443Z   Distribuição por Hierarquia:
-2026-02-10T16:14:22.0934528Z     super-admin: 2 usuários
-2026-02-10T16:14:22.0934551Z     admin: 3 usuários
-2026-02-10T16:14:22.093457Z     manager: 4 usuários
-2026-02-10T16:14:22.1050795Z     analyst: 7 usuários
-2026-02-10T16:14:22.124181Z     operator: 6 usuários
-2026-02-10T16:14:22.1242872Z     viewer: 3 usuários
-2026-02-10T16:14:22.1242919Z     user: 2 usuários
-2026-02-10T16:14:22.1242981Z     sem-cargo: 2 usuários
-2026-02-10T16:14:22.1242999Z
-2026-02-10T16:14:22.1641131Z +---------------------------+------------------------------------+-------------+------------------------+---------+
-2026-02-10T16:14:22.1641333Z | Nome                      | Email                              | Cargo       | Órgão                  | Status  |
-2026-02-10T16:14:22.1641364Z +---------------------------+------------------------------------+-------------+------------------------+---------+
-2026-02-10T16:14:22.1641386Z | Matheus Developer         | matheus.dev@defesa.mg.gov.br       | super-admin | CEDEC-SC               | Ativo   |
-2026-02-10T16:14:22.1641449Z | Lucas DevOps              | lucas.devops@defesa.mg.gov.br      | super-admin | CEDEC-SC               | Ativo   |
-2026-02-10T16:14:22.1641471Z | Carlos Eduardo Souza      | carlos.souza@defesa.mg.gov.br      | admin       | CEDEC-SC               | Ativo   |
-2026-02-10T16:14:22.1641496Z | Patrícia Mendes           | patricia.mendes@defesa.mg.gov.br   | admin       | CEDEC-SC               | Ativo   |
-2026-02-10T16:14:22.1641522Z | Rodrigo Alves Lima        | rodrigo.lima@defesa.mg.gov.br      | admin       | REDEC-01-FLORIANOPOLIS | Ativo   |
-2026-02-10T16:14:22.1722339Z | Fernando Augusto Ribeiro  | fernando.ribeiro@defesa.mg.gov.br  | manager     | REDEC-01-FLORIANOPOLIS | Ativo   |
-2026-02-10T16:14:22.1722468Z | Adriana Campos Silva      | adriana.silva@defesa.mg.gov.br     | manager     | REDEC-02-ITAJAI        | Ativo   |
-2026-02-10T16:14:22.1722498Z | Marcos Vinícius Ferreira  | marcos.ferreira@defesa.mg.gov.br   | manager     | REDEC-03-JOINVILLE     | Ativo   |
-2026-02-10T16:14:22.1722524Z | Renata Cristina Barros    | renata.barros@defesa.mg.gov.br     | manager     | CEDEC-SC               | Ativo   |
-2026-02-10T16:14:22.1722556Z | Thiago Henrique Costa     | thiago.costa@defesa.mg.gov.br      | analyst     | COMPDEC-FLORIANOPOLIS  | Ativo   |
-2026-02-10T16:14:22.1722594Z | Camila de Oliveira Santos | camila.santos@defesa.mg.gov.br     | analyst     | COMPDEC-SAO-JOSE       | Ativo   |
-2026-02-10T16:14:22.1722617Z | Bruno Nascimento Pereira  | bruno.pereira@defesa.mg.gov.br     | analyst     | COMPDEC-BLUMENAU       | Ativo   |
-2026-02-10T16:14:22.1722639Z | Isabela Vieira Machado    | isabela.machado@defesa.mg.gov.br   | analyst     | COMPDEC-JOINVILLE      | Ativo   |
-2026-02-10T16:14:22.1722662Z | Rafael Dias Monteiro      | rafael.monteiro@defesa.mg.gov.br   | analyst     | REDEC-01-FLORIANOPOLIS | Ativo   |
-2026-02-10T16:14:22.1722689Z | Larissa Freitas Gonçalves | larissa.goncalves@defesa.mg.gov.br | analyst     | REDEC-02-ITAJAI        | Ativo   |
-2026-02-10T16:14:22.1722735Z | Diego Moreira Lopes       | diego.lopes@defesa.mg.gov.br       | operator    | COMPDEC-FLORIANOPOLIS  | Ativo   |
-2026-02-10T16:14:22.1722758Z | Priscila Rocha Almeida    | priscila.almeida@defesa.mg.gov.br  | operator    | COMPDEC-SAO-JOSE       | Ativo   |
-2026-02-10T16:14:22.172278Z | Gustavo Henrique Teixeira | gustavo.teixeira@defesa.mg.gov.br  | operator    | COMPDEC-BLUMENAU       | Ativo   |
-2026-02-10T16:14:22.1722801Z | Amanda Beatriz Cardoso    | amanda.cardoso@defesa.mg.gov.br    | operator    | COMPDEC-JOINVILLE      | Ativo   |
-2026-02-10T16:14:22.1722908Z | Leandro Martins Nunes     | leandro.nunes@defesa.mg.gov.br     | operator    | REDEC-01-FLORIANOPOLIS | Ativo   |
-2026-02-10T16:14:22.1751349Z | Mariana Lúcia Barbosa     | mariana.barbosa@defesa.mg.gov.br   | viewer      | CEDEC-SC               | Ativo   |
-2026-02-10T16:14:22.185458Z | Paulo Ricardo Azevedo     | paulo.azevedo@defesa.mg.gov.br     | viewer      | REDEC-02-ITAJAI        | Ativo   |
-2026-02-10T16:14:22.1856432Z | Cláudia Aparecida Fonseca | claudia.fonseca@defesa.mg.gov.br   | viewer      | COMPDEC-FLORIANOPOLIS  | Ativo   |
-2026-02-10T16:14:22.1929946Z | Tatiane Souza Ramos       | tatiane.ramos@defesa.mg.gov.br     | user        | COMPDEC-BLUMENAU       | Ativo   |
-2026-02-10T16:14:22.2025656Z | Vinícius de Araújo Pinto  | vinicius.pinto@defesa.mg.gov.br    | user        | COMPDEC-JOINVILLE      | Ativo   |
-2026-02-10T16:14:22.2040107Z | Luciana Matos Correia     | luciana.correia@defesa.mg.gov.br   | Sem cargo   | -                      | Ativo   |
-2026-02-10T16:14:22.2040243Z | Sérgio Luiz Borges        | sergio.borges@defesa.mg.gov.br     | Sem cargo   | -                      | Ativo   |
-2026-02-10T16:14:22.2040274Z | Roberto Carlos Inactive   | roberto.inactive@defesa.mg.gov.br  | operator    | COMPDEC-FLORIANOPOLIS  | Inativo |
-2026-02-10T16:14:22.2040299Z | Simone Inativa Pereira    | simone.inativa@defesa.mg.gov.br    | analyst     | REDEC-01-FLORIANOPOLIS | Inativo |
-2026-02-10T16:14:22.2040382Z +---------------------------+------------------------------------+-------------+------------------------+---------+
-2026-02-10T16:14:22.2040414Z   Database\Seeders\MockUsersHierarchySeeder ................... 41,240 ms DONE
-2026-02-10T16:14:22.2040432Z
-2026-02-10T16:14:22.2440356Z Tabela "rats" não encontrada - RatMockSeeder pulado.
-2026-02-10T16:14:22.4147344Z ✅ Banco inicializado com dados mock completos
-2026-02-10T16:14:22.4147865Z    Admin: admin@defesa.mg.gov.br / password
-2026-02-10T16:14:22.4147897Z    Hierarquias: super-admin, admin, manager, analyst, operator, viewer, user
-2026-02-10T16:14:22.4147918Z    RATs: 15 registros (em_andamento, rascunho, finalizado)
-2026-02-10T16:14:24.1655593Z
-2026-02-10T16:14:24.1656033Z    INFO  Configuration cache cleared successfully.
-2026-02-10T16:14:24.1656068Z
-2026-02-10T16:14:25.1900927Z
-2026-02-10T16:14:25.1901354Z    INFO  Route cache cleared successfully.
-2026-02-10T16:14:25.1901389Z
-2026-02-10T16:14:26.2960308Z
-2026-02-10T16:14:26.2960837Z    INFO  Compiled views cleared successfully.
-2026-02-10T16:14:26.2960875Z
-2026-02-10T16:14:26.3980798Z Iniciando servidor Laravel...
-2026-02-10T16:14:27.9600738Z
-2026-02-10T16:14:27.9602322Z    INFO  Server running on [http://0.0.0.0:8000].
-2026-02-10T16:14:27.9602366Z
-2026-02-10T16:14:27.9604495Z   Press Ctrl+C to stop the server
-2026-02-10T16:14:27.9605573Z
-2026-02-10T16:14:30.0179078Z   2026-02-10 16:14:28 /robots933456.txt ................................ ~ 1s
-2026-02-10T16:17:01.8832629Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:17:01.473678+00:00","extra":{"request_id":"767efeff-7e7c-456a-b327-028b097bb653","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/dashboard","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"6 MB"}}
-2026-02-10T16:17:01.9006976Z   2026-02-10 16:17:01 /dashboard ................................. ~ 538.74ms
-2026-02-10T16:17:31.5185611Z   2026-02-10 16:17:31 / ............................................ ~ 0.34ms
-2026-02-10T16:17:32.5281604Z   2026-02-10 16:17:32 / ............................................ ~ 0.33ms
-2026-02-10T16:17:32.5353518Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:17:32.399539+00:00","extra":{"request_id":"93c60746-ea2f-4df3-ac0b-124173f27d08","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/login","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:17:32.5353757Z   2026-02-10 16:17:32 /login ....................................... ~ 0.21ms
-2026-02-10T16:18:20.5979335Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:18:20.375708+00:00","extra":{"request_id":"343fd18b-647a-48e8-b116-1f588e7f1376","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/dashboard","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:18:20.6006264Z   2026-02-10 16:18:20 /dashboard ................................... ~ 0.81ms
-2026-02-10T16:18:21.1033416Z   2026-02-10 16:18:20 /favicon.ico ................................. ~ 0.28ms
-2026-02-10T16:26:50.8658289Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:26:50.569479+00:00","extra":{"request_id":"a4afe89f-b963-42ea-9f24-10d4f9d7d847","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/dashboard","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:26:50.8658608Z   2026-02-10 16:26:50 /dashboard ................................... ~ 2.77ms
-2026-02-10T16:26:51.3671649Z   2026-02-10 16:26:50 /favicon.ico ................................. ~ 0.16ms
-2026-02-10T16:41:39.1400164Z Criando arquivo .env a partir de variáveis de ambiente...
-2026-02-10T16:41:39.1511346Z Arquivo .env criado
-2026-02-10T16:41:39.1511484Z Criando arquivo SQLite: database/database.sqlite
-2026-02-10T16:41:39.1511509Z Arquivo SQLite criado
-2026-02-10T16:41:39.1511756Z Executando migrations...
-2026-02-10T16:41:42.2203525Z
-2026-02-10T16:41:42.2204066Z    INFO  Preparing database.
-2026-02-10T16:41:42.2204098Z
-2026-02-10T16:41:42.2506187Z   Creating migration table ...................................... 20.28ms DONE
-2026-02-10T16:41:42.2510249Z
-2026-02-10T16:41:42.3116485Z    INFO  Running migrations.
-2026-02-10T16:41:42.3116807Z
-2026-02-10T16:41:42.3292942Z   2014_10_12_000000_create_users_table ........................... 3.86ms DONE
-2026-02-10T16:41:42.3789562Z   2014_10_12_100000_create_password_reset_tokens_table ........... 1.60ms DONE
-2026-02-10T16:41:42.391811Z   2019_08_19_000000_create_failed_jobs_table ..................... 9.35ms DONE
-2026-02-10T16:41:42.4092454Z   2019_12_14_000001_create_personal_access_tokens_table .......... 8.36ms DONE
-2026-02-10T16:41:42.4500589Z   2025_01_15_000001_create_tasks_table .......................... 33.37ms DONE
-2026-02-10T16:41:42.4631762Z   2025_01_15_000002_create_task_comments_table .................. 10.21ms DONE
-2026-02-10T16:41:42.4799954Z   2025_01_15_000003_create_task_attachments_table ................ 3.02ms DONE
-2026-02-10T16:41:42.4997357Z   2025_01_15_000004_create_task_approvals_table ................. 12.16ms DONE
-2026-02-10T16:41:42.5216239Z   2025_01_15_000005_create_task_sla_definitions_table ........... 18.43ms DONE
-2026-02-10T16:41:42.5437837Z   2025_01_15_000006_create_task_sla_instances_table ............. 12.47ms DONE
-2026-02-10T16:41:42.5696001Z   2025_01_15_000007_create_task_audit_logs_table ................ 12.67ms DONE
-2026-02-10T16:41:42.5901381Z   2025_01_26_000001_create_tdap_products_table .................. 12.01ms DONE
-2026-02-10T16:41:42.6103169Z   2025_01_26_000002_create_tdap_product_lotes_table ............. 12.29ms DONE
-2026-02-10T16:41:42.6238993Z   2025_01_26_000003_create_tdap_product_compositions_table ...... 11.55ms DONE
-2026-02-10T16:41:42.6505115Z   2025_01_26_000004_create_tdap_recebimentos_table .............. 13.76ms DONE
-2026-02-10T16:41:42.6736393Z   2025_01_26_000005_create_tdap_recebimento_itens_table ......... 19.91ms DONE
-2026-02-10T16:41:42.7631627Z   2025_01_26_000006_create_tdap_movimentacoes_table ............. 26.71ms DONE
-2026-02-10T16:41:42.7749159Z   2025_01_27_000000_create_notifications_table ................... 8.92ms DONE
-2026-02-10T16:41:42.7930786Z   2025_11_21_143256_add_cpf_to_users_table ....................... 9.35ms DONE
-2026-02-10T16:41:42.8139328Z   2025_11_27_000001_create_webhook_logs_table ................... 17.25ms DONE
-2026-02-10T16:41:42.8361284Z   2025_11_27_000002_create_integrations_table ................... 19.36ms DONE
-2026-02-10T16:41:42.8738165Z   2025_12_23_000001_create_permission_audit_log_table ........... 20.46ms DONE
-2026-02-10T16:41:42.9063418Z   2025_12_24_000001_create_permission_tables .................... 29.57ms DONE
-2026-02-10T16:41:43.0243654Z   2025_12_24_000002_add_permission_metadata_fields ............. 104.28ms DONE
-2026-02-10T16:41:43.0352465Z   2025_12_24_000003_add_guard_name_to_roles_and_permissions ...... 1.14ms DONE
-2026-02-10T16:41:43.0549306Z   2025_12_27_184500_create_municipios_table ..................... 11.82ms DONE
-2026-02-10T16:41:43.076361Z   2025_12_27_184510_create_orgaos_table ......................... 18.32ms DONE
-2026-02-10T16:41:43.1178748Z   2025_12_27_184548_create_processos_table ...................... 35.54ms DONE
-2026-02-10T16:41:43.1297815Z   2025_12_27_184612_create_processo_danos_humanos_table .......... 9.32ms DONE
-2026-02-10T16:41:43.1405917Z   2025_12_27_184612_create_processo_danos_materiais_table ........ 2.83ms DONE
-2026-02-10T16:41:43.1569376Z   2025_12_27_184612_create_processo_municipios_table ............. 2.87ms DONE
-2026-02-10T16:41:43.1688379Z   2025_12_27_184612_create_processo_prejuizos_table .............. 8.58ms DONE
-2026-02-10T16:41:43.1800639Z   2025_12_27_184613_create_processo_anexos_table ................. 7.85ms DONE
-2026-02-10T16:41:43.1985147Z   2025_12_27_184613_create_processo_logs_table ................... 9.78ms DONE
-2026-02-10T16:41:43.2289908Z   2025_12_28_120000_create_beneficiarios_table .................. 21.29ms DONE
-2026-02-10T16:41:43.2580588Z   2025_12_28_120100_create_abrigos_table ........................ 12.15ms DONE
-2026-02-10T16:41:43.2777057Z   2025_12_28_120200_create_membros_familia_table ................. 9.98ms DONE
-2026-02-10T16:41:43.3075316Z   2025_12_28_120300_create_beneficiario_abrigo_pivot_table ....... 6.49ms DONE
-2026-02-10T16:41:43.3605611Z   2025_12_28_120400_create_doacoes_table ........................ 44.42ms DONE
-2026-02-10T16:41:43.374357Z   2025_12_28_120500_create_itens_doacao_table ................... 11.53ms DONE
-2026-02-10T16:41:43.4133055Z   2025_12_28_120600_create_auxilios_table ....................... 29.91ms DONE
-2026-02-10T16:41:43.6347964Z   2025_12_28_120700_create_itens_auxilio_table .................. 68.89ms DONE
-2026-02-10T16:41:43.803932Z   2025_12_28_120800_create_estoques_table ....................... 99.48ms DONE
-2026-02-10T16:41:44.0157779Z   2025_12_28_120900_create_movimentacoes_estoque_table ......... 159.24ms DONE
-2026-02-10T16:41:44.3689556Z   2025_12_28_121000_create_movimentacoes_financeiras_table ..... 272.18ms DONE
-2026-02-10T16:41:44.6999694Z   2025_12_28_140000_create_treinamentos_table .................. 251.20ms DONE
-2026-02-10T16:41:44.8203703Z   2025_12_28_140100_create_modulos_table ........................ 79.28ms DONE
-2026-02-10T16:41:45.0711421Z   2025_12_28_140200_create_inscricoes_table .................... 210.01ms DONE
-2026-02-10T16:41:45.2124629Z   2025_12_28_140300_create_frequencias_table ................... 127.90ms DONE
-2026-02-10T16:41:45.2738797Z   2025_12_29_000002_create_orgao_user_table ..................... 50.59ms DONE
-2026-02-10T16:41:45.3969398Z   2025_12_29_000003_add_orgao_principal_id_to_users_table ...... 103.12ms DONE
-2026-02-10T16:41:45.405232Z   2025_12_29_000005_add_orgao_emissor_id_to_rats_table ........... 0.29ms DONE
-2026-02-10T16:41:45.4244397Z   2025_12_29_022154_create_estacoes_meteorologicas_table ......... 9.89ms DONE
-2026-02-10T16:41:45.4758977Z {"message":"Erro ao atribuir role na migração: SQLSTATE[HY000]: General error: 1 no such column: roles.deleted_at (Connection: sqlite, Database: database/database.sqlite, SQL: select * from \"roles\" where (\"name\" = super-admin and \"guard_name\" = web) and \"roles\".\"deleted_at\" is null limit 1)","context":{},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:41:45.475462+00:00","extra":{"command_id":"5969b27c-1ff1-454e-ae8a-64e9b02bf573","is_console":true,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","memory_usage":"36.5 MB"}}
-2026-02-10T16:41:45.4836795Z   2025_12_29_221144_give_super_admin_access_to_main_user ........ 50.20ms DONE
-2026-02-10T16:41:45.4951105Z   2026_01_28_000000_create_support_tickets_table ................. 8.29ms DONE
-2026-02-10T16:41:45.5054241Z   2026_01_28_000001_create_support_ticket_messages_table ......... 1.65ms DONE
-2026-02-10T16:41:45.5429152Z   2026_02_02_000001_create_ai_tables ............................ 22.03ms DONE
-2026-02-10T16:41:45.5462204Z   2026_02_02_000001_modify_rats_id_to_uuid ....................... 0.21ms DONE
-2026-02-10T16:41:45.5655208Z   2026_02_09_191000_add_deleted_at_to_roles_table ................ 9.88ms DONE
-2026-02-10T16:41:45.7133338Z   2026_02_10_000001_enhance_permission_system .................. 123.49ms DONE
-2026-02-10T16:41:45.7255066Z   2026_02_10_131610_create_rat_bem_afetado_table ................. 8.53ms DONE
-2026-02-10T16:41:45.7371124Z   2026_02_10_131811_create_rat_encaminhamento_table .............. 8.91ms DONE
-2026-02-10T16:41:45.7474359Z   2026_02_10_132039_create_rat_ocorrencia_relatos_table .......... 1.28ms DONE
-2026-02-10T16:41:45.7661229Z   2026_02_10_132204_create_rat_ocorrencias_table ................. 9.27ms DONE
-2026-02-10T16:41:45.7849198Z   2026_02_10_132344_create_rat_acionado_table .................... 2.56ms DONE
-2026-02-10T16:41:45.8042365Z   2026_02_10_132614_create_rat_patologia_table ................... 2.56ms DONE
-2026-02-10T16:41:45.8443349Z   2026_02_10_132732_create_rat_recursos_componentes_guarnicao_table  34.09ms DONE
-2026-02-10T16:41:45.8665033Z   2026_02_10_132940_create_rat_recursos_empregados_table ........ 19.09ms DONE
-2026-02-10T16:41:45.8842786Z   2026_02_10_133127_create_rat_redec_table ....................... 1.54ms DONE
-2026-02-10T16:41:45.8960083Z   2026_02_10_133300_create_rat_dados_gerais_table ................ 8.08ms DONE
-2026-02-10T16:41:45.907575Z   2026_02_10_133452_create_rat_relato_envolvidos_table ........... 2.42ms DONE
-2026-02-10T16:41:45.9353164Z   2026_02_10_133724_create_rat_relato_recursos_table ............ 13.53ms DONE
-2026-02-10T16:41:45.9553149Z   2026_02_10_134052_create_rat_relato_vistoria_table ............ 11.41ms DONE
-2026-02-10T16:41:45.9696478Z   2026_02_10_134152_create_rat_veiculos_table ................... 11.53ms DONE
-2026-02-10T16:41:45.9781167Z
-2026-02-10T16:41:46.033365Z Executando seeders (dados mock + hierarquias)...
-2026-02-10T16:41:47.3133857Z
-2026-02-10T16:41:47.3134317Z    INFO  Seeding database.
-2026-02-10T16:41:47.3134348Z
-2026-02-10T16:41:47.3758902Z   Database\Seeders\RolesAndPermissionsSeeder ......................... RUNNING
-2026-02-10T16:41:47.9198325Z Roles e Permissions sincronizadas via config/permissions.php
-2026-02-10T16:41:47.9204765Z
-2026-02-10T16:41:47.9208504Z Hierarquia de Cargos:
-2026-02-10T16:41:47.9283819Z   Nivel 0: Super Admin (super-admin)
-2026-02-10T16:41:47.9283918Z   Nivel 1: Administrador (admin)
-2026-02-10T16:41:47.9283945Z   Nivel 2: Gestor (manager)
-2026-02-10T16:41:47.9283985Z   Nivel 3: Analista (analyst)
-2026-02-10T16:41:47.9284018Z   Nivel 4: Operador (operator)
-2026-02-10T16:41:47.928404Z   Nivel 5: Visualizador (viewer)
-2026-02-10T16:41:47.928406Z   Nivel 6: Usuario (user)
-2026-02-10T16:41:47.928408Z   Database\Seeders\RolesAndPermissionsSeeder ..................... 551 ms DONE
-2026-02-10T16:41:47.9284099Z
-2026-02-10T16:41:47.9296506Z   Database\Seeders\OrgaosSeeder ...................................... RUNNING
-2026-02-10T16:41:47.9612474Z ✅ Órgãos criados com sucesso!
-2026-02-10T16:41:47.9615426Z    - 1 CEDEC (Estadual)
-2026-02-10T16:41:47.9618094Z    - 3 REDECs (Regionais)
-2026-02-10T16:41:47.9620288Z    - 4 COMPDECs (Municipais)
-2026-02-10T16:41:47.9680588Z   Database\Seeders\OrgaosSeeder ................................... 32 ms DONE
-2026-02-10T16:41:47.9683447Z
-2026-02-10T16:41:48.9142706Z Admin Geral criado com role super-admin
-2026-02-10T16:41:48.9231437Z   Database\Seeders\MockUsersSeeder ................................... RUNNING
-2026-02-10T16:41:49.8695236Z ✓ Usuário João Silva criado com role admin
-2026-02-10T16:41:51.0648094Z ✓ Usuário Maria Santos criado com role analyst
-2026-02-10T16:41:53.2868839Z ✓ Usuário Pedro Oliveira criado com role analyst
-2026-02-10T16:41:56.1307318Z ✓ Usuário Ana Costa criado com role operator
-2026-02-10T16:41:57.5305158Z ✓ Usuário Carlos Pereira criado com role operator
-2026-02-10T16:41:58.8153949Z ✓ Usuário Juliana Almeida criado com role analyst
-2026-02-10T16:42:00.8877607Z ✓ Usuário Roberto Fernandes criado com role admin
-2026-02-10T16:42:03.2498169Z ✓ Usuário Fernanda Lima criado com role operator
-2026-02-10T16:42:03.2498768Z
-2026-02-10T16:42:03.2498817Z ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2026-02-10T16:42:03.2498843Z   USUÁRIOS MOCK CRIADOS COM SUCESSO
-2026-02-10T16:42:03.2498872Z ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2026-02-10T16:42:03.2498889Z
-2026-02-10T16:42:03.2498909Z Credenciais padrão:
-2026-02-10T16:42:03.2498928Z   Email: <qualquer email acima>
-2026-02-10T16:42:03.2498962Z   Senha: password
-2026-02-10T16:42:03.249898Z
-2026-02-10T16:42:03.3006692Z +-------------------+------------------------------------+----------+
-2026-02-10T16:42:03.3409809Z | Nome              | Email                              | Role     |
-2026-02-10T16:42:03.34101Z +-------------------+------------------------------------+----------+
-2026-02-10T16:42:03.3410136Z | João Silva        | joao.silva@defesa.mg.gov.br        | admin    |
-2026-02-10T16:42:03.3410161Z | Maria Santos      | maria.santos@defesa.mg.gov.br      | analyst  |
-2026-02-10T16:42:03.3510395Z | Pedro Oliveira    | pedro.oliveira@defesa.mg.gov.br    | analyst  |
-2026-02-10T16:42:03.3510632Z | Ana Costa         | ana.costa@defesa.mg.gov.br         | operator |
-2026-02-10T16:42:03.3510662Z | Carlos Pereira    | carlos.pereira@defesa.mg.gov.br    | operator |
-2026-02-10T16:42:03.3510689Z | Juliana Almeida   | juliana.almeida@defesa.mg.gov.br   | analyst  |
-2026-02-10T16:42:03.3510712Z | Roberto Fernandes | roberto.fernandes@defesa.mg.gov.br | admin    |
-2026-02-10T16:42:03.3510735Z | Fernanda Lima     | fernanda.lima@defesa.mg.gov.br     | operator |
-2026-02-10T16:42:03.3510799Z +-------------------+------------------------------------+----------+
-2026-02-10T16:42:03.3510823Z   Database\Seeders\MockUsersSeeder ............................ 14,426 ms DONE
-2026-02-10T16:42:03.3510921Z
-2026-02-10T16:42:03.4098752Z   Database\Seeders\MockUsersHierarchySeeder .......................... RUNNING
-2026-02-10T16:42:14.1667328Z   2026-02-10 16:42:13 / .......................................... ~ 501.81ms
-2026-02-10T16:42:15.1842341Z   2026-02-10 16:42:14 / .......................................... ~ 504.93ms
-2026-02-10T16:42:15.1842637Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:42:15.142589+00:00","extra":{"request_id":"ab314ba4-6474-4230-8025-163bde15f2db","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/login","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:42:15.6962403Z   2026-02-10 16:42:14 /login ..................................... ~ 502.77ms
-2026-02-10T16:42:47.8237461Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:42:47.522225+00:00","extra":{"request_id":"12cbd0ad-3fe8-451e-97f7-4de9cfacbfa8","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/dashboard","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:42:47.8458078Z   2026-02-10 16:42:47 /dashboard ................................. ~ 514.62ms
-2026-02-10T16:42:48.3869069Z   2026-02-10 16:42:47 /favicon.ico ................................. ~ 0.14ms
-2026-02-10T16:42:49.3894145Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:42:49.310054+00:00","extra":{"request_id":"d9bbc7dc-8c61-4e7b-9252-8bb4c036189f","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/dashboard","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:42:49.392005Z   2026-02-10 16:42:49 /dashboard ................................... ~ 1.20ms
-2026-02-10T16:42:49.9138329Z   2026-02-10 16:42:49 /favicon.ico ................................. ~ 0.35ms
-2026-02-10T16:42:52.9280842Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:42:52.860462+00:00","extra":{"request_id":"11eebeb3-29a8-45c4-a118-38b012ff1227","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/dashboard","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:42:52.9309827Z   2026-02-10 16:42:52 /dashboard ................................... ~ 1.37ms
-2026-02-10T16:42:53.4577124Z   2026-02-10 16:42:53 /favicon.ico ................................. ~ 0.37ms
-2026-02-10T16:42:56.7266662Z
-2026-02-10T16:42:56.7345598Z ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2026-02-10T16:42:56.7349718Z   USUÁRIOS COM HIERARQUIAS DIVERSAS - MOCK
-2026-02-10T16:42:56.7349895Z ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2026-02-10T16:42:56.735132Z   Criados: 29 | Já existentes (pulados): 0
-2026-02-10T16:42:56.7352998Z   Senha padrão: password
-2026-02-10T16:42:56.7354812Z
-2026-02-10T16:42:56.7356983Z   Distribuição por Hierarquia:
-2026-02-10T16:42:56.7358822Z     super-admin: 2 usuários
-2026-02-10T16:42:56.7360878Z     admin: 3 usuários
-2026-02-10T16:42:56.736254Z     manager: 4 usuários
-2026-02-10T16:42:56.7364197Z     analyst: 7 usuários
-2026-02-10T16:42:56.7365823Z     operator: 6 usuários
-2026-02-10T16:42:56.7367435Z     viewer: 3 usuários
-2026-02-10T16:42:56.7369025Z     user: 2 usuários
-2026-02-10T16:42:56.7370639Z     sem-cargo: 2 usuários
-2026-02-10T16:42:56.7372048Z
-2026-02-10T16:42:56.7645364Z +---------------------------+------------------------------------+-------------+------------------------+---------+
-2026-02-10T16:42:56.765012Z | Nome                      | Email                              | Cargo       | Órgão                  | Status  |
-2026-02-10T16:42:56.7655815Z +---------------------------+------------------------------------+-------------+------------------------+---------+
-2026-02-10T16:42:56.7659628Z | Matheus Developer         | matheus.dev@defesa.mg.gov.br       | super-admin | CEDEC-SC               | Ativo   |
-2026-02-10T16:42:56.7662017Z | Lucas DevOps              | lucas.devops@defesa.mg.gov.br      | super-admin | CEDEC-SC               | Ativo   |
-2026-02-10T16:42:56.7664202Z | Carlos Eduardo Souza      | carlos.souza@defesa.mg.gov.br      | admin       | CEDEC-SC               | Ativo   |
-2026-02-10T16:42:56.7666474Z | Patrícia Mendes           | patricia.mendes@defesa.mg.gov.br   | admin       | CEDEC-SC               | Ativo   |
-2026-02-10T16:42:56.7668848Z | Rodrigo Alves Lima        | rodrigo.lima@defesa.mg.gov.br      | admin       | REDEC-01-FLORIANOPOLIS | Ativo   |
-2026-02-10T16:42:56.7671345Z | Fernando Augusto Ribeiro  | fernando.ribeiro@defesa.mg.gov.br  | manager     | REDEC-01-FLORIANOPOLIS | Ativo   |
-2026-02-10T16:42:56.7673943Z | Adriana Campos Silva      | adriana.silva@defesa.mg.gov.br     | manager     | REDEC-02-ITAJAI        | Ativo   |
-2026-02-10T16:42:56.7676606Z | Marcos Vinícius Ferreira  | marcos.ferreira@defesa.mg.gov.br   | manager     | REDEC-03-JOINVILLE     | Ativo   |
-2026-02-10T16:42:56.7856447Z | Renata Cristina Barros    | renata.barros@defesa.mg.gov.br     | manager     | CEDEC-SC               | Ativo   |
-2026-02-10T16:42:56.7856746Z | Thiago Henrique Costa     | thiago.costa@defesa.mg.gov.br      | analyst     | COMPDEC-FLORIANOPOLIS  | Ativo   |
-2026-02-10T16:42:56.785678Z | Camila de Oliveira Santos | camila.santos@defesa.mg.gov.br     | analyst     | COMPDEC-SAO-JOSE       | Ativo   |
-2026-02-10T16:42:56.7856804Z | Bruno Nascimento Pereira  | bruno.pereira@defesa.mg.gov.br     | analyst     | COMPDEC-BLUMENAU       | Ativo   |
-2026-02-10T16:42:56.7856881Z | Isabela Vieira Machado    | isabela.machado@defesa.mg.gov.br   | analyst     | COMPDEC-JOINVILLE      | Ativo   |
-2026-02-10T16:42:56.7856905Z | Rafael Dias Monteiro      | rafael.monteiro@defesa.mg.gov.br   | analyst     | REDEC-01-FLORIANOPOLIS | Ativo   |
-2026-02-10T16:42:56.7856932Z | Larissa Freitas Gonçalves | larissa.goncalves@defesa.mg.gov.br | analyst     | REDEC-02-ITAJAI        | Ativo   |
-2026-02-10T16:42:56.7856958Z | Diego Moreira Lopes       | diego.lopes@defesa.mg.gov.br       | operator    | COMPDEC-FLORIANOPOLIS  | Ativo   |
-2026-02-10T16:42:56.785698Z | Priscila Rocha Almeida    | priscila.almeida@defesa.mg.gov.br  | operator    | COMPDEC-SAO-JOSE       | Ativo   |
-2026-02-10T16:42:56.7857022Z | Gustavo Henrique Teixeira | gustavo.teixeira@defesa.mg.gov.br  | operator    | COMPDEC-BLUMENAU       | Ativo   |
-2026-02-10T16:42:56.7857045Z | Amanda Beatriz Cardoso    | amanda.cardoso@defesa.mg.gov.br    | operator    | COMPDEC-JOINVILLE      | Ativo   |
-2026-02-10T16:42:56.7857067Z | Leandro Martins Nunes     | leandro.nunes@defesa.mg.gov.br     | operator    | REDEC-01-FLORIANOPOLIS | Ativo   |
-2026-02-10T16:42:56.7857091Z | Mariana Lúcia Barbosa     | mariana.barbosa@defesa.mg.gov.br   | viewer      | CEDEC-SC               | Ativo   |
-2026-02-10T16:42:56.7857116Z | Paulo Ricardo Azevedo     | paulo.azevedo@defesa.mg.gov.br     | viewer      | REDEC-02-ITAJAI        | Ativo   |
-2026-02-10T16:42:56.785714Z | Cláudia Aparecida Fonseca | claudia.fonseca@defesa.mg.gov.br   | viewer      | COMPDEC-FLORIANOPOLIS  | Ativo   |
-2026-02-10T16:42:56.7857181Z | Tatiane Souza Ramos       | tatiane.ramos@defesa.mg.gov.br     | user        | COMPDEC-BLUMENAU       | Ativo   |
-2026-02-10T16:42:56.7857374Z | Vinícius de Araújo Pinto  | vinicius.pinto@defesa.mg.gov.br    | user        | COMPDEC-JOINVILLE      | Ativo   |
-2026-02-10T16:42:56.7857423Z | Luciana Matos Correia     | luciana.correia@defesa.mg.gov.br   | Sem cargo   | -                      | Ativo   |
-2026-02-10T16:42:56.7857449Z | Sérgio Luiz Borges        | sergio.borges@defesa.mg.gov.br     | Sem cargo   | -                      | Ativo   |
-2026-02-10T16:42:56.7857488Z | Roberto Carlos Inactive   | roberto.inactive@defesa.mg.gov.br  | operator    | COMPDEC-FLORIANOPOLIS  | Inativo |
-2026-02-10T16:42:56.7857511Z | Simone Inativa Pereira    | simone.inativa@defesa.mg.gov.br    | analyst     | REDEC-01-FLORIANOPOLIS | Inativo |
-2026-02-10T16:42:56.7857534Z +---------------------------+------------------------------------+-------------+------------------------+---------+
-2026-02-10T16:42:56.7857555Z   Database\Seeders\MockUsersHierarchySeeder ................... 53,375 ms DONE
-2026-02-10T16:42:56.7857573Z
-2026-02-10T16:42:56.7976076Z Tabela "rats" não encontrada - RatMockSeeder pulado.
-2026-02-10T16:42:56.94679Z ✅ Banco inicializado com dados mock completos
-2026-02-10T16:42:56.9475507Z    Admin: admin@defesa.mg.gov.br / password
-2026-02-10T16:42:56.9482199Z    Hierarquias: super-admin, admin, manager, analyst, operator, viewer, user
-2026-02-10T16:42:56.9484346Z    RATs: 15 registros (em_andamento, rascunho, finalizado)
-2026-02-10T16:42:58.6152974Z   2026-02-10 16:42:58 / ............................................ ~ 0.53ms
-2026-02-10T16:42:59.0068977Z
-2026-02-10T16:42:59.0069543Z    INFO  Configuration cache cleared successfully.
-2026-02-10T16:42:59.0069645Z
-2026-02-10T16:42:59.117957Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:42:58.746654+00:00","extra":{"request_id":"1795f019-aed5-428d-93bc-c0296b1a8511","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/login","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:42:59.1381145Z   2026-02-10 16:42:58 /login ....................................... ~ 1.33ms
-2026-02-10T16:42:59.6426785Z   2026-02-10 16:42:59 / ............................................ ~ 0.36ms
-2026-02-10T16:43:00.1637777Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:42:59.833550+00:00","extra":{"request_id":"66d647ea-522d-4b6a-8de8-6359e87a4ede","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/login","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:43:00.1747533Z   2026-02-10 16:42:59 /login ....................................... ~ 2.32ms
-2026-02-10T16:43:00.4444788Z
-2026-02-10T16:43:00.4445249Z    INFO  Route cache cleared successfully.
-2026-02-10T16:43:00.4445293Z
-2026-02-10T16:43:00.6773997Z   2026-02-10 16:43:00 /favicon.ico ................................. ~ 0.36ms
-2026-02-10T16:43:01.6105404Z
-2026-02-10T16:43:01.6105935Z    INFO  Compiled views cleared successfully.
-2026-02-10T16:43:01.6105969Z
-2026-02-10T16:43:01.6798966Z Iniciando servidor Laravel...
-2026-02-10T16:43:03.5384792Z
-2026-02-10T16:43:03.538655Z    INFO  Server running on [http://0.0.0.0:8000].
-2026-02-10T16:43:03.5386614Z
-2026-02-10T16:43:03.5463442Z   Press Ctrl+C to stop the server
-2026-02-10T16:43:03.5463601Z
-2026-02-10T16:43:05.0785138Z   2026-02-10 16:43:03 /robots933456.txt ................................ ~ 1s
-2026-02-10T16:44:09.2425309Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:44:09.083648+00:00","extra":{"request_id":"724e344f-d98f-498b-814d-b0569544329a","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/login","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"6 MB"}}
-2026-02-10T16:44:09.2451097Z   2026-02-10 16:44:08 /login ..................................... ~ 501.48ms
-2026-02-10T16:44:09.7487965Z   2026-02-10 16:44:09 /favicon.ico ................................. ~ 0.17ms
-2026-02-10T16:44:52.3237224Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:44:52.304729+00:00","extra":{"request_id":"8f1c2f26-ba4c-4645-b569-f93643daca99","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/login","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:44:52.8269035Z   2026-02-10 16:44:52 /login ..................................... ~ 501.60ms
-2026-02-10T16:45:01.8695311Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:45:01.438768+00:00","extra":{"request_id":"50426c23-ecc2-473c-bc80-0030cecc8b92","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/dashboard","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:45:01.8695702Z   2026-02-10 16:45:01 /dashboard ................................. ~ 501.00ms
-2026-02-10T16:45:01.8809695Z   2026-02-10 16:45:01 /favicon.ico ................................. ~ 0.08ms
-2026-02-10T16:45:07.3999803Z   2026-02-10 16:45:07 / ............................................ ~ 0.12ms
-2026-02-10T16:45:07.4000122Z   {"message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","context":{"exception":{"class":"Illuminate\\View\\ViewException","message":"Vite manifest not found at: /var/www/public/build/manifest.json (View: /var/www/resources/views/app.blade.php)","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946","previous":{"class":"Illuminate\\Foundation\\ViteManifestNotFoundException","message":"Vite manifest not found at: /var/www/public/build/manifest.json","code":0,"file":"/var/www/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:946"}}},"level":400,"level_name":"ERROR","channel":"production","datetime":"2026-02-10T16:45:07.370137+00:00","extra":{"request_id":"76b6cc1b-69fc-4b6f-8fdf-3b1cb1c54a22","environment":"production","app_name":"SDC","file":"/var/www/vendor/laravel/framework/src/Illuminate/Log/Logger.php","line":187,"class":"Illuminate\\Log\\Logger","callType":"->","function":"writeLog","url":"/login","ip":"169.254.130.1","http_method":"GET","server":"0.0.0.0","referrer":null,"memory_usage":"4 MB"}}
-2026-02-10T16:45:07.408618Z   2026-02-10 16:45:07 /login ....................................... ~ 0.22ms
-2026-02-10T16:45:07.9107048Z   2026-02-10 16:45:07 /favicon.ico ................................. ~ 0.42ms
-2026-02-10T16:46:27.324Z Nenhum novo rastreamento nos últimos 1 minutos.
-2026-02-10T16:47:27.324Z Nenhum novo rastreamento nos últimos 2 minutos.
+2026-02-14 20:18:08.863 | 
+2026-02-14 20:18:08.863 | ╔══════════════════════════════════════════════════════════════╗
+2026-02-14 20:18:08.863 | ║        SDC - Sistema de Defesa Civil                        ║
+2026-02-14 20:18:08.864 | ║        Ambiente de Desenvolvimento                          ║
+2026-02-14 20:18:08.864 | ╚══════════════════════════════════════════════════════════════╝
+2026-02-14 20:18:08.864 | 
+2026-02-14 20:18:08.870 | [INFO] Aguardando banco de dados...
+2026-02-14 20:18:08.877 | [OK] Banco de dados disponível
+2026-02-14 20:18:08.877 | [INFO] Aguardando Redis...
+2026-02-14 20:18:08.878 | [OK] Redis disponível
+2026-02-14 20:18:08.880 | [INFO] Verificando montagem do volume...
+2026-02-14 20:18:08.880 | [INFO] Diretório atual: /var/www
+2026-02-14 20:18:08.890 | [INFO] Conteúdo do diretório: total 2116
+2026-02-14 20:18:08.890 | drwxrwxr-x   23 www-data www-data      4096 Feb 14 20:04 .
+2026-02-14 20:18:08.890 | drwxr-xr-x    1 root     root          4096 Jan 29 22:22 ..
+2026-02-14 20:18:08.890 | -rw-rw-r--    1 www-data www-data       211 Dec 26 14:00 .ci-test
+2026-02-14 20:18:08.890 | drwxrwxr-x    2 www-data www-data      4096 Feb 14 17:44 .claude
+2026-02-14 20:18:08.890 | drwxrwxr-x    3 www-data www-data      4096 Dec 26 14:00 .composer
+2026-02-14 20:18:08.890 | drwxrwxr-x    3 www-data www-data      4096 Dec 26 14:00 .config
+2026-02-14 20:18:08.890 | -rw-rw-r--    1 www-data www-data       371 Feb  8 18:50 .dockerignore
+2026-02-14 20:18:08.890 | -rw-rw-r--    1 www-data www-data       258 Dec 26 14:00 .editorconfig
+2026-02-14 20:18:08.890 | -rw-r--r--    1 www-data www-data       455 Feb 14 18:20 .env
+2026-02-14 20:18:08.890 | -rw-rw-r--    1 www-data www-data       300 Dec 26 19:45 .env.testing
+2026-02-14 20:18:08.890 | -rw-rw-r--    1 www-data www-data       186 Dec 26 14:00 .gitattributes
+2026-02-14 20:18:08.890 | -rw-rw-r--    1 www-data www-data        29 Dec 26 14:00 .gitconfig
+2026-02-14 20:18:08.890 | -rw-rw-r--    1 www-data www-data       303 Feb  7 18:06 .gitignore
+2026-02-14 20:18:08.890 | -rw-rw-r--    1 www-data www-data         0 Dec 26 14:00 .octane-installed
+2026-02-14 20:18:08.890 | -rw-rw-r--    1 www-data www-data     15871 Dec 29 18:36 CODE_REVIEW_IMPROVEMENTS.md
+2026-02-14 20:18:08.890 | -rw-rw-r--    1 www-data www-data      2891 Dec 29 18:36 DOCKER_OPCACHE_FIX.md
+2026-02-14 20:18:08.890 | -rw-rw-r--    1 www-data www-data      6934 Jan 26 20:41 DOCKER_SETUP_COMPLETE.md
+2026-02-14 20:18:08.890 | -rw-rw-r--    1 www-data www-data     33757 Feb 14 17:44 DOC_TABELA_VERDADE_PERMISSOES.md
+2026-02-14 20:18:08.890 | drwxrwxr-x    2 www-data www-data      4096 Feb 14 17:44 Doc
+2026-02-14 20:18:08.901 | [OK] Dependências Composer já estão atualizadas (fingerprint OK)
+2026-02-14 20:18:08.902 | [INFO] Gerando manifesto de pacotes...
+2026-02-14 20:18:09.210 | 
+2026-02-14 20:18:09.210 |    INFO  Discovering packages.  
+2026-02-14 20:18:09.210 | 
+2026-02-14 20:18:09.217 |   darkaonline/l5-swagger ................................................ DONE
+2026-02-14 20:18:09.219 |   inertiajs/inertia-laravel ............................................. DONE
+2026-02-14 20:18:09.221 |   laravel/breeze ........................................................ DONE
+2026-02-14 20:18:09.223 |   laravel/octane ........................................................ DONE
+2026-02-14 20:18:09.225 |   laravel/sail .......................................................... DONE
+2026-02-14 20:18:09.228 |   laravel/sanctum ....................................................... DONE
+2026-02-14 20:18:09.230 |   laravel/tinker ........................................................ DONE
+2026-02-14 20:18:09.232 |   nativephp/mobile ...................................................... DONE
+2026-02-14 20:18:09.234 |   nesbot/carbon ......................................................... DONE
+2026-02-14 20:18:09.235 |   nunomaduro/collision .................................................. DONE
+2026-02-14 20:18:09.237 |   nunomaduro/termwind ................................................... DONE
+2026-02-14 20:18:09.238 |   rap2hpoutre/laravel-log-viewer ........................................ DONE
+2026-02-14 20:18:09.240 |   spatie/laravel-ignition ............................................... DONE
+2026-02-14 20:18:09.241 |   spatie/laravel-permission ............................................. DONE
+2026-02-14 20:18:09.244 |   tightenco/ziggy ....................................................... DONE
+2026-02-14 20:18:09.244 | 
+2026-02-14 20:18:09.252 | [OK] APP_KEY já configurada
+2026-02-14 20:18:09.252 | [INFO] Executando migrations...
+2026-02-14 20:18:09.459 | 
+2026-02-14 20:18:09.459 |    INFO  Nothing to migrate.  
+2026-02-14 20:18:09.459 | 
+2026-02-14 20:18:09.465 | [OK] Migrations executadas
+2026-02-14 20:18:09.466 | [INFO] Executando seeders (mock data: usuários, hierarquias, RATs)...
+2026-02-14 20:18:09.676 | 
+2026-02-14 20:18:09.676 |    INFO  Seeding database.  
+2026-02-14 20:18:09.676 | 
+2026-02-14 20:18:09.677 |   Database\Seeders\RolesAndPermissionsSeeder ......................... RUNNING  
+2026-02-14 20:18:09.916 | Roles e Permissions sincronizadas via config/permissions.php
+2026-02-14 20:18:09.916 | 
+2026-02-14 20:18:09.916 | Hierarquia de Cargos:
+2026-02-14 20:18:09.916 |   Nivel 0: Super Admin (super-admin)
+2026-02-14 20:18:09.916 |   Nivel 1: Administrador (admin)
+2026-02-14 20:18:09.916 |   Nivel 2: Gestor (manager)
+2026-02-14 20:18:09.916 |   Nivel 3: Analista (analyst)
+2026-02-14 20:18:09.916 |   Nivel 4: Operador (operator)
+2026-02-14 20:18:09.916 |   Nivel 5: Visualizador (viewer)
+2026-02-14 20:18:09.916 |   Nivel 6: Usuario (user)
+2026-02-14 20:18:09.917 |   Database\Seeders\RolesAndPermissionsSeeder ..................... 239 ms DONE  
+2026-02-14 20:18:09.917 | 
+2026-02-14 20:18:09.917 |   Database\Seeders\OrgaosSeeder ...................................... RUNNING  
+2026-02-14 20:18:09.937 | ✅ Órgãos criados/atualizados com sucesso!
+2026-02-14 20:18:09.937 |    - 1 CEDEC (Estadual)
+2026-02-14 20:18:09.937 |    - 3 REDECs (Regionais)
+2026-02-14 20:18:09.937 |    - 4 COMPDECs (Municipais)
+2026-02-14 20:18:09.937 |   Database\Seeders\OrgaosSeeder ................................... 19 ms DONE  
+2026-02-14 20:18:09.937 | 
+2026-02-14 20:18:10.130 | Admin Geral criado com role super-admin
+2026-02-14 20:18:10.131 |   Database\Seeders\MockUsersSeeder ................................... RUNNING  
+2026-02-14 20:18:10.133 | Usuário joao.silva@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:10.133 | Usuário maria.santos@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:10.134 | Usuário pedro.oliveira@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:10.134 | Usuário ana.costa@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:10.135 | Usuário carlos.pereira@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:10.135 | Usuário juliana.almeida@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:10.136 | Usuário roberto.fernandes@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:10.136 | Usuário fernanda.lima@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:10.136 | 
+2026-02-14 20:18:10.136 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:18:10.137 |   USUÁRIOS MOCK CRIADOS COM SUCESSO
+2026-02-14 20:18:10.137 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:18:10.137 | 
+2026-02-14 20:18:10.137 | Credenciais padrão:
+2026-02-14 20:18:10.137 |   Email: <qualquer email acima>
+2026-02-14 20:18:10.137 |   Senha: password
+2026-02-14 20:18:10.137 | 
+2026-02-14 20:18:10.139 | +-------------------+------------------------------------+----------+
+2026-02-14 20:18:10.139 | | Nome              | Email                              | Role     |
+2026-02-14 20:18:10.139 | +-------------------+------------------------------------+----------+
+2026-02-14 20:18:10.139 | | João Silva        | joao.silva@defesa.mg.gov.br        | admin    |
+2026-02-14 20:18:10.139 | | Maria Santos      | maria.santos@defesa.mg.gov.br      | analyst  |
+2026-02-14 20:18:10.140 | | Pedro Oliveira    | pedro.oliveira@defesa.mg.gov.br    | analyst  |
+2026-02-14 20:18:10.140 | | Ana Costa         | ana.costa@defesa.mg.gov.br         | operator |
+2026-02-14 20:18:10.140 | | Carlos Pereira    | carlos.pereira@defesa.mg.gov.br    | operator |
+2026-02-14 20:18:10.140 | | Juliana Almeida   | juliana.almeida@defesa.mg.gov.br   | analyst  |
+2026-02-14 20:18:10.140 | | Roberto Fernandes | roberto.fernandes@defesa.mg.gov.br | admin    |
+2026-02-14 20:18:10.140 | | Fernanda Lima     | fernanda.lima@defesa.mg.gov.br     | operator |
+2026-02-14 20:18:10.140 | +-------------------+------------------------------------+----------+
+2026-02-14 20:18:10.140 |   Database\Seeders\MockUsersSeeder ................................. 9 ms DONE  
+2026-02-14 20:18:10.140 | 
+2026-02-14 20:18:10.141 |   Database\Seeders\MockUsersHierarchySeeder .......................... RUNNING  
+2026-02-14 20:18:10.154 | 
+2026-02-14 20:18:10.154 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:18:10.154 |   USUÁRIOS COM HIERARQUIAS DIVERSAS - MOCK
+2026-02-14 20:18:10.154 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:18:10.155 |   Criados: 0 | Já existentes (pulados): 29
+2026-02-14 20:18:10.155 |   Senha padrão: password
+2026-02-14 20:18:10.155 | 
+2026-02-14 20:18:10.155 |   Distribuição por Hierarquia:
+2026-02-14 20:18:10.155 |     super-admin: 2 usuários
+2026-02-14 20:18:10.155 |     admin: 3 usuários
+2026-02-14 20:18:10.155 |     manager: 4 usuários
+2026-02-14 20:18:10.155 |     analyst: 7 usuários
+2026-02-14 20:18:10.155 |     operator: 6 usuários
+2026-02-14 20:18:10.155 |     viewer: 3 usuários
+2026-02-14 20:18:10.155 |     user: 2 usuários
+2026-02-14 20:18:10.155 |     sem-cargo: 2 usuários
+2026-02-14 20:18:10.155 | 
+2026-02-14 20:18:10.156 |   Database\Seeders\MockUsersHierarchySeeder ....................... 14 ms DONE  
+2026-02-14 20:18:10.156 | 
+2026-02-14 20:18:10.159 | Tabela "rats" não encontrada - RatMockSeeder pulado.
+2026-02-14 20:18:10.160 |   Database\Seeders\TestOrgaosSeeder .................................. RUNNING  
+2026-02-14 20:18:10.160 | Criando orgaos de teste...
+2026-02-14 20:18:10.161 | Orgaos de teste ja existem. Pulando...
+2026-02-14 20:18:10.161 |   Database\Seeders\TestOrgaosSeeder ................................ 1 ms DONE  
+2026-02-14 20:18:10.161 | 
+2026-02-14 20:18:10.162 |   Database\Seeders\TestUsersSeeder ................................... RUNNING  
+2026-02-14 20:18:10.162 | Criando usuarios de teste com hierarquia...
+2026-02-14 20:18:10.164 | Usuario ja existe: super.admin@test.defesa.mg.gov.br
+2026-02-14 20:18:10.165 | Usuario ja existe: admin.cedec@test.defesa.mg.gov.br
+2026-02-14 20:18:10.165 | Usuario ja existe: admin.redec@test.defesa.mg.gov.br
+2026-02-14 20:18:10.166 | Usuario ja existe: coord.metro@test.defesa.mg.gov.br
+2026-02-14 20:18:10.166 | Usuario ja existe: coord.sul@test.defesa.mg.gov.br
+2026-02-14 20:18:10.167 | Usuario ja existe: coord.bh@test.defesa.mg.gov.br
+2026-02-14 20:18:10.167 | Usuario ja existe: analista.bh@test.defesa.mg.gov.br
+2026-02-14 20:18:10.168 | Usuario ja existe: analista.contagem@test.defesa.mg.gov.br
+2026-02-14 20:18:10.168 | Usuario ja existe: analista.pouso@test.defesa.mg.gov.br
+2026-02-14 20:18:10.169 | Usuario ja existe: operador.bh@test.defesa.mg.gov.br
+2026-02-14 20:18:10.169 | Usuario ja existe: operador.varginha@test.defesa.mg.gov.br
+2026-02-14 20:18:10.170 | Usuario ja existe: visualizador.ativo@test.defesa.mg.gov.br
+2026-02-14 20:18:10.170 | Usuario ja existe: visualizador.inativo@test.defesa.mg.gov.br
+2026-02-14 20:18:10.171 | Usuario ja existe: visualizador.bloqueado@test.defesa.mg.gov.br
+2026-02-14 20:18:10.171 | Usuario ja existe: usuario.suspenso@test.defesa.mg.gov.br
+2026-02-14 20:18:10.172 | Usuario ja existe: usuario.pendente@test.defesa.mg.gov.br
+2026-02-14 20:18:10.172 | Usuario ja existe: sem.role@test.defesa.mg.gov.br
+2026-02-14 20:18:10.172 | Usuarios criados: 0 | Ignorados: 17
+2026-02-14 20:18:10.172 | 
+2026-02-14 20:18:10.172 | Credenciais de teste:
+2026-02-14 20:18:10.174 | +----------------------------------------------+------------+--------------+-----------+
+2026-02-14 20:18:10.174 | | Email                                        | Senha      | Role         | Status    |
+2026-02-14 20:18:10.174 | +----------------------------------------------+------------+--------------+-----------+
+2026-02-14 20:18:10.174 | | super.admin@test.defesa.mg.gov.br            | Test@2026! | super-admin  | active    |
+2026-02-14 20:18:10.174 | | admin.cedec@test.defesa.mg.gov.br            | Test@2026! | admin        | active    |
+2026-02-14 20:18:10.174 | | admin.redec@test.defesa.mg.gov.br            | Test@2026! | admin        | active    |
+2026-02-14 20:18:10.174 | | coord.metro@test.defesa.mg.gov.br            | Test@2026! | coordenador  | active    |
+2026-02-14 20:18:10.174 | | coord.sul@test.defesa.mg.gov.br              | Test@2026! | coordenador  | active    |
+2026-02-14 20:18:10.174 | | coord.bh@test.defesa.mg.gov.br               | Test@2026! | coordenador  | active    |
+2026-02-14 20:18:10.175 | | analista.bh@test.defesa.mg.gov.br            | Test@2026! | analista     | active    |
+2026-02-14 20:18:10.175 | | analista.contagem@test.defesa.mg.gov.br      | Test@2026! | analista     | active    |
+2026-02-14 20:18:10.175 | | analista.pouso@test.defesa.mg.gov.br         | Test@2026! | analista     | active    |
+2026-02-14 20:18:10.175 | | operador.bh@test.defesa.mg.gov.br            | Test@2026! | operador     | active    |
+2026-02-14 20:18:10.175 | | operador.varginha@test.defesa.mg.gov.br      | Test@2026! | operador     | active    |
+2026-02-14 20:18:10.175 | | visualizador.ativo@test.defesa.mg.gov.br     | Test@2026! | visualizador | active    |
+2026-02-14 20:18:10.175 | | visualizador.inativo@test.defesa.mg.gov.br   | Test@2026! | visualizador | inactive  |
+2026-02-14 20:18:10.175 | | visualizador.bloqueado@test.defesa.mg.gov.br | Test@2026! | visualizador | blocked   |
+2026-02-14 20:18:10.175 | | usuario.suspenso@test.defesa.mg.gov.br       | Test@2026! | operador     | suspended |
+2026-02-14 20:18:10.175 | | usuario.pendente@test.defesa.mg.gov.br       | Test@2026! | operador     | pending   |
+2026-02-14 20:18:10.175 | | sem.role@test.defesa.mg.gov.br               | Test@2026! | sem-role     | active    |
+2026-02-14 20:18:10.175 | +----------------------------------------------+------------+--------------+-----------+
+2026-02-14 20:18:10.176 |   Database\Seeders\TestUsersSeeder ................................ 13 ms DONE  
+2026-02-14 20:18:10.176 | 
+2026-02-14 20:18:10.183 | [OK] Seeders executados (30+ usuários, 15 RATs, 7 hierarquias)
+2026-02-14 20:18:10.183 | [INFO] Limpando caches...
+2026-02-14 20:18:10.396 | 
+2026-02-14 20:18:10.396 |    INFO  Configuration cache cleared successfully.  
+2026-02-14 20:18:10.396 | 
+2026-02-14 20:18:10.611 | 
+2026-02-14 20:18:10.611 |    INFO  Route cache cleared successfully.  
+2026-02-14 20:18:10.611 | 
+2026-02-14 20:18:10.827 | 
+2026-02-14 20:18:10.827 |    INFO  Compiled views cleared successfully.  
+2026-02-14 20:18:10.827 | 
+2026-02-14 20:18:10.835 | [OK] Caches limpos
+2026-02-14 20:18:10.835 | [INFO] Ajustando permissões...
+2026-02-14 20:18:10.855 | [OK] Permissões ajustadas
+2026-02-14 20:18:10.855 | 
+2026-02-14 20:18:10.879 | [INFO] PHP Version: PHP 8.3.30 (cli) (built: Jan 30 2026 01:24:18) (NTS)
+2026-02-14 20:18:10.937 | PHP version 8.3.30 (/usr/local/bin/php)
+2026-02-14 20:18:10.937 | Run the "diagnose" command to get more detailed diagnostics output.
+2026-02-14 20:18:10.942 | [INFO] Composer Version: Composer version 2.9.5 2026-01-29 11:40:53
+2026-02-14 20:18:10.942 | 
+2026-02-14 20:18:10.942 | [INFO] Configurando Octane (RoadRunner)...
+2026-02-14 20:18:10.942 | [INFO] Binário RoadRunner não encontrado. Instalando...
+2026-02-14 20:18:11.195 | 
+2026-02-14 20:18:11.195 |  Environment:
+2026-02-14 20:18:11.195 |    - Version:          2025.*
+2026-02-14 20:18:11.195 |    - Stability:        stable
+2026-02-14 20:18:11.195 |    - Operating System: linux
+2026-02-14 20:18:11.195 |    - Architecture:     amd64
+2026-02-14 20:18:11.195 | 
+2026-02-14 20:18:22.418 | 
+2026-02-14 20:18:22.420 | In ErrorChunk.php line 55:
+2026-02-14 20:18:22.420 |                                                                                
+2026-02-14 20:18:22.420 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:22.420 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:22.420 |   page=1".                                                                     
+2026-02-14 20:18:22.420 |                                                                                
+2026-02-14 20:18:22.420 | 
+2026-02-14 20:18:22.422 | In CurlResponse.php line 336:
+2026-02-14 20:18:22.422 |                                                                                
+2026-02-14 20:18:22.422 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:22.422 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:22.422 |   page=1".                                                                     
+2026-02-14 20:18:22.422 |                                                                                
+2026-02-14 20:18:22.422 | 
+2026-02-14 20:18:22.422 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:18:22.422 | 
+2026-02-14 20:18:22.443 | [2026-02-14 23:18:22] local.ERROR: The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | Exit Code: 1(General error)
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | Working directory: /var/www
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | Output:
+2026-02-14 20:18:22.443 | ================
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 |  Environment:
+2026-02-14 20:18:22.443 |    - Version:          2025.*
+2026-02-14 20:18:22.443 |    - Stability:        stable
+2026-02-14 20:18:22.443 |    - Operating System: linux
+2026-02-14 20:18:22.443 |    - Architecture:     amd64
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | Error Output:
+2026-02-14 20:18:22.443 | ================
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | In ErrorChunk.php line 55:
+2026-02-14 20:18:22.443 |                                                                                
+2026-02-14 20:18:22.443 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:22.443 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:22.443 |   page=1".                                                                     
+2026-02-14 20:18:22.443 |                                                                                
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | In CurlResponse.php line 336:
+2026-02-14 20:18:22.443 |                                                                                
+2026-02-14 20:18:22.443 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:22.443 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:22.443 |   page=1".                                                                     
+2026-02-14 20:18:22.443 |                                                                                
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 |  {"exception":"[object] (Symfony\\Component\\Process\\Exception\\ProcessFailedException(code: 0): The command \"'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'\" failed.
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | Exit Code: 1(General error)
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | Working directory: /var/www
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | Output:
+2026-02-14 20:18:22.443 | ================
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 |  Environment:
+2026-02-14 20:18:22.443 |    - Version:          \u001b[32m2025.*\u001b[39m
+2026-02-14 20:18:22.443 |    - Stability:        \u001b[32mstable\u001b[39m
+2026-02-14 20:18:22.443 |    - Operating System: \u001b[32mlinux\u001b[39m
+2026-02-14 20:18:22.443 |    - Architecture:     \u001b[32mamd64\u001b[39m
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | Error Output:
+2026-02-14 20:18:22.443 | ================
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | \u001b[33mIn ErrorChunk.php line 55:\u001b[39m
+2026-02-14 20:18:22.443 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:18:22.443 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:18:22.443 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:18:22.443 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:18:22.443 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | \u001b[33mIn CurlResponse.php line 336:\u001b[39m
+2026-02-14 20:18:22.443 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:18:22.443 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:18:22.443 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:18:22.443 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:18:22.443 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 | \u001b[32mget-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]\u001b[39m
+2026-02-14 20:18:22.443 | 
+2026-02-14 20:18:22.443 |  at /var/www/vendor/symfony/process/Process.php:280)
+2026-02-14 20:18:22.443 | [stacktrace]
+2026-02-14 20:18:22.443 | #0 /var/www/vendor/laravel/framework/src/Illuminate/Support/HigherOrderTapProxy.php(33): Symfony\\Component\\Process\\Process->mustRun(Object(Closure))
+2026-02-14 20:18:22.443 | #1 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(174): Illuminate\\Support\\HigherOrderTapProxy->__call('mustRun', Array)
+2026-02-14 20:18:22.443 | #2 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(108): Laravel\\Octane\\Commands\\InstallCommand->downloadRoadRunnerBinary()
+2026-02-14 20:18:22.443 | #3 /var/www/vendor/laravel/octane/src/Commands/InstallCommand.php(115): Laravel\\Octane\\Commands\\InstallCommand->ensureRoadRunnerBinaryIsInstalled()
+2026-02-14 20:18:22.443 | #4 /var/www/vendor/laravel/octane/src/Commands/InstallCommand.php(50): Laravel\\Octane\\Commands\\InstallCommand->installRoadRunnerServer()
+2026-02-14 20:18:22.443 | #5 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Laravel\\Octane\\Commands\\InstallCommand->handle()
+2026-02-14 20:18:22.443 | #6 /var/www/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+2026-02-14 20:18:22.443 | #7 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+2026-02-14 20:18:22.443 | #8 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+2026-02-14 20:18:22.443 | #9 /var/www/vendor/laravel/framework/src/Illuminate/Container/Container.php(799): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+2026-02-14 20:18:22.443 | #10 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate\\Container\\Container->call(Array)
+2026-02-14 20:18:22.443 | #11 /var/www/vendor/symfony/console/Command/Command.php(341): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:18:22.443 | #12 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:18:22.443 | #13 /var/www/vendor/symfony/console/Application.php(1102): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:18:22.443 | #14 /var/www/vendor/symfony/console/Application.php(356): Symfony\\Component\\Console\\Application->doRunCommand(Object(Laravel\\Octane\\Commands\\InstallCommand), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:18:22.443 | #15 /var/www/vendor/symfony/console/Application.php(195): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:18:22.443 | #16 /var/www/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:18:22.443 | #17 /var/www/artisan(35): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:18:22.443 | #18 {main}
+2026-02-14 20:18:22.443 | "} {"command_id":"c24e0f22-0e60-4de4-a591-577b6a16aaa5","is_console":true}
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 |    Symfony\Component\Process\Exception\ProcessFailedException 
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 |   The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 | Exit Code: 1(General error)
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 | Working directory: /var/www
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 | Output:
+2026-02-14 20:18:22.446 | ================
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 |  Environment:
+2026-02-14 20:18:22.446 |    - Version:          2025.*
+2026-02-14 20:18:22.446 |    - Stability:        stable
+2026-02-14 20:18:22.446 |    - Operating System: linux
+2026-02-14 20:18:22.446 |    - Architecture:     amd64
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 | Error Output:
+2026-02-14 20:18:22.446 | ================
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 | In ErrorChunk.php line 55:
+2026-02-14 20:18:22.446 |                                                                                
+2026-02-14 20:18:22.446 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:22.446 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:22.446 |   page=1".                                                                     
+2026-02-14 20:18:22.446 |                                                                                
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 | In CurlResponse.php line 336:
+2026-02-14 20:18:22.446 |                                                                                
+2026-02-14 20:18:22.446 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:22.446 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:22.446 |   page=1".                                                                     
+2026-02-14 20:18:22.446 |                                                                                
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:18:22.446 | 
+2026-02-14 20:18:22.446 |   at vendor/symfony/process/Process.php:280
+2026-02-14 20:18:22.449 |     276▕      */
+2026-02-14 20:18:22.449 |     277▕     public function mustRun(?callable $callback = null, array $env = []): static
+2026-02-14 20:18:22.449 |     278▕     {
+2026-02-14 20:18:22.449 |     279▕         if (0 !== $this->run($callback, $env)) {
+2026-02-14 20:18:22.449 |   ➜ 280▕             throw new ProcessFailedException($this);
+2026-02-14 20:18:22.449 |     281▕         }
+2026-02-14 20:18:22.449 |     282▕ 
+2026-02-14 20:18:22.449 |     283▕         return $this;
+2026-02-14 20:18:22.449 |     284▕     }
+2026-02-14 20:18:22.449 | 
+2026-02-14 20:18:22.449 |       +17 vendor frames 
+2026-02-14 20:18:22.449 | 
+2026-02-14 20:18:22.449 |   18  artisan:35
+2026-02-14 20:18:22.449 |       Illuminate\Foundation\Console\Kernel::handle(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+2026-02-14 20:18:22.449 | 
+2026-02-14 20:18:22.458 | [WARN] Falha ao instalar via artisan. Tentando baixar diretamente...
+2026-02-14 20:18:22.502 | 
+2026-02-14 20:18:22.502 |  Environment:
+2026-02-14 20:18:22.502 |    - Version:          2025.*
+2026-02-14 20:18:22.502 |    - Stability:        stable
+2026-02-14 20:18:22.502 |    - Operating System: linux
+2026-02-14 20:18:22.502 |    - Architecture:     amd64
+2026-02-14 20:18:22.502 | 
+2026-02-14 20:18:33.971 | 
+2026-02-14 20:18:33.973 | In ErrorChunk.php line 55:
+2026-02-14 20:18:33.973 |                                                                                
+2026-02-14 20:18:33.973 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:33.973 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:33.973 |   page=1".                                                                     
+2026-02-14 20:18:33.973 |                                                                                
+2026-02-14 20:18:33.973 | 
+2026-02-14 20:18:33.975 | In CurlResponse.php line 336:
+2026-02-14 20:18:33.975 |                                                                                
+2026-02-14 20:18:33.975 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:33.975 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:33.975 |   page=1".                                                                     
+2026-02-14 20:18:33.975 |                                                                                
+2026-02-14 20:18:33.975 | 
+2026-02-14 20:18:33.975 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:18:33.975 | 
+2026-02-14 20:18:33.979 | [ERROR] Falha ao baixar binário RoadRunner
+2026-02-14 20:18:33.980 | [OK] RoadRunner instalado
+2026-02-14 20:18:33.980 | [INFO] Iniciando Octane com Watch...
+2026-02-14 20:18:33.980 | 
+2026-02-14 20:18:33.980 | 🚀 Servidor Octane (RoadRunner) iniciando em http://0.0.0.0:8000
+2026-02-14 20:18:33.980 | ℹ️  Modo Watch ativado (File changes trigger reload)
+2026-02-14 20:18:33.980 | 
+2026-02-14 20:18:34.228 | 
+2026-02-14 20:18:34.228 |  Environment:
+2026-02-14 20:18:34.228 |    - Version:          2025.*
+2026-02-14 20:18:34.228 |    - Stability:        stable
+2026-02-14 20:18:34.228 |    - Operating System: linux
+2026-02-14 20:18:34.228 |    - Architecture:     amd64
+2026-02-14 20:18:34.228 | 
+2026-02-14 20:18:47.450 | 
+2026-02-14 20:18:47.453 | In ErrorChunk.php line 55:
+2026-02-14 20:18:47.453 |                                                                                
+2026-02-14 20:18:47.453 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:47.453 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:47.453 |   page=1".                                                                     
+2026-02-14 20:18:47.453 |                                                                                
+2026-02-14 20:18:47.453 | 
+2026-02-14 20:18:47.455 | In CurlResponse.php line 336:
+2026-02-14 20:18:47.455 |                                                                                
+2026-02-14 20:18:47.455 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:47.455 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:47.455 |   page=1".                                                                     
+2026-02-14 20:18:47.455 |                                                                                
+2026-02-14 20:18:47.455 | 
+2026-02-14 20:18:47.455 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:18:47.455 | 
+2026-02-14 20:18:47.474 | [2026-02-14 23:18:47] local.ERROR: The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:18:47.474 | 
+2026-02-14 20:18:47.474 | Exit Code: 1(General error)
+2026-02-14 20:18:47.474 | 
+2026-02-14 20:18:47.474 | Working directory: /var/www
+2026-02-14 20:18:47.474 | 
+2026-02-14 20:18:47.474 | Output:
+2026-02-14 20:18:47.474 | ================
+2026-02-14 20:18:47.474 | 
+2026-02-14 20:18:47.474 |  Environment:
+2026-02-14 20:18:47.474 |    - Version:          2025.*
+2026-02-14 20:18:47.474 |    - Stability:        stable
+2026-02-14 20:18:47.474 |    - Operating System: linux
+2026-02-14 20:18:47.474 |    - Architecture:     amd64
+2026-02-14 20:18:47.474 | 
+2026-02-14 20:18:47.474 | 
+2026-02-14 20:18:47.474 | 
+2026-02-14 20:18:47.474 | Error Output:
+2026-02-14 20:18:47.474 | ================
+2026-02-14 20:18:47.474 | 
+2026-02-14 20:18:47.474 | In ErrorChunk.php line 55:
+2026-02-14 20:18:47.474 |                                                                                
+2026-02-14 20:18:47.474 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:47.474 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:47.474 |   page=1".                                                                     
+2026-02-14 20:18:47.474 |                                                                                
+2026-02-14 20:18:47.474 | 
+2026-02-14 20:18:47.474 | In CurlResponse.php line 336:
+2026-02-14 20:18:47.474 |                                                                                
+2026-02-14 20:18:47.474 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:47.474 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:47.474 |   page=1".                                                                     
+2026-02-14 20:18:47.474 |                                                                                
+2026-02-14 20:18:47.474 | 
+2026-02-14 20:18:47.474 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:18:47.474 | 
+2026-02-14 20:18:47.474 |  {"exception":"[object] (Symfony\\Component\\Process\\Exception\\ProcessFailedException(code: 0): The command \"'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'\" failed.
+2026-02-14 20:18:47.474 | 
+2026-02-14 20:18:47.474 | Exit Code: 1(General error)
+2026-02-14 20:18:47.475 | 
+2026-02-14 20:18:47.475 | Working directory: /var/www
+2026-02-14 20:18:47.475 | 
+2026-02-14 20:18:47.475 | Output:
+2026-02-14 20:18:47.475 | ================
+2026-02-14 20:18:47.475 | 
+2026-02-14 20:18:47.475 |  Environment:
+2026-02-14 20:18:47.475 |    - Version:          \u001b[32m2025.*\u001b[39m
+2026-02-14 20:18:47.475 |    - Stability:        \u001b[32mstable\u001b[39m
+2026-02-14 20:18:47.475 |    - Operating System: \u001b[32mlinux\u001b[39m
+2026-02-14 20:18:47.475 |    - Architecture:     \u001b[32mamd64\u001b[39m
+2026-02-14 20:18:47.475 | 
+2026-02-14 20:18:47.475 | 
+2026-02-14 20:18:47.475 | 
+2026-02-14 20:18:47.475 | Error Output:
+2026-02-14 20:18:47.475 | ================
+2026-02-14 20:18:47.475 | 
+2026-02-14 20:18:47.475 | \u001b[33mIn ErrorChunk.php line 55:\u001b[39m
+2026-02-14 20:18:47.475 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:18:47.475 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:18:47.475 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:18:47.475 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:18:47.475 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:18:47.475 | 
+2026-02-14 20:18:47.475 | \u001b[33mIn CurlResponse.php line 336:\u001b[39m
+2026-02-14 20:18:47.475 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:18:47.475 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:18:47.475 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:18:47.475 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:18:47.475 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:18:47.475 | 
+2026-02-14 20:18:47.475 | \u001b[32mget-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]\u001b[39m
+2026-02-14 20:18:47.475 | 
+2026-02-14 20:18:47.475 |  at /var/www/vendor/symfony/process/Process.php:280)
+2026-02-14 20:18:47.475 | [stacktrace]
+2026-02-14 20:18:47.475 | #0 /var/www/vendor/laravel/framework/src/Illuminate/Support/HigherOrderTapProxy.php(33): Symfony\\Component\\Process\\Process->mustRun(Object(Closure))
+2026-02-14 20:18:47.475 | #1 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(174): Illuminate\\Support\\HigherOrderTapProxy->__call('mustRun', Array)
+2026-02-14 20:18:47.475 | #2 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(108): Laravel\\Octane\\Commands\\StartRoadRunnerCommand->downloadRoadRunnerBinary()
+2026-02-14 20:18:47.475 | #3 /var/www/vendor/laravel/octane/src/Commands/StartRoadRunnerCommand.php(65): Laravel\\Octane\\Commands\\StartRoadRunnerCommand->ensureRoadRunnerBinaryIsInstalled()
+2026-02-14 20:18:47.475 | #4 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Laravel\\Octane\\Commands\\StartRoadRunnerCommand->handle(Object(Laravel\\Octane\\RoadRunner\\ServerProcessInspector), Object(Laravel\\Octane\\RoadRunner\\ServerStateFile))
+2026-02-14 20:18:47.475 | #5 /var/www/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+2026-02-14 20:18:47.475 | #6 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+2026-02-14 20:18:47.475 | #7 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+2026-02-14 20:18:47.475 | #8 /var/www/vendor/laravel/framework/src/Illuminate/Container/Container.php(799): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+2026-02-14 20:18:47.475 | #9 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate\\Container\\Container->call(Array)
+2026-02-14 20:18:47.475 | #10 /var/www/vendor/symfony/console/Command/Command.php(341): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArrayInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:18:47.475 | #11 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArrayInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:18:47.475 | #12 /var/www/vendor/laravel/framework/src/Illuminate/Console/Concerns/CallsCommands.php(68): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArrayInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:18:47.475 | #13 /var/www/vendor/laravel/framework/src/Illuminate/Console/Concerns/CallsCommands.php(29): Illuminate\\Console\\Command->runCommand('octane:roadrunn...', Array, Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:18:47.475 | #14 /var/www/vendor/laravel/octane/src/Commands/StartCommand.php(85): Illuminate\\Console\\Command->call('octane:roadrunn...', Array)
+2026-02-14 20:18:47.475 | #15 /var/www/vendor/laravel/octane/src/Commands/StartCommand.php(54): Laravel\\Octane\\Commands\\StartCommand->startRoadRunnerServer()
+2026-02-14 20:18:47.475 | #16 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Laravel\\Octane\\Commands\\StartCommand->handle()
+2026-02-14 20:18:47.475 | #17 /var/www/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+2026-02-14 20:18:47.475 | #18 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+2026-02-14 20:18:47.475 | #19 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+2026-02-14 20:18:47.475 | #20 /var/www/vendor/laravel/framework/src/Illuminate/Container/Container.php(799): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+2026-02-14 20:18:47.475 | #21 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate\\Container\\Container->call(Array)
+2026-02-14 20:18:47.475 | #22 /var/www/vendor/symfony/console/Command/Command.php(341): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:18:47.475 | #23 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:18:47.475 | #24 /var/www/vendor/symfony/console/Application.php(1102): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:18:47.475 | #25 /var/www/vendor/symfony/console/Application.php(356): Symfony\\Component\\Console\\Application->doRunCommand(Object(Laravel\\Octane\\Commands\\StartCommand), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:18:47.475 | #26 /var/www/vendor/symfony/console/Application.php(195): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:18:47.475 | #27 /var/www/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:18:47.475 | #28 /var/www/artisan(35): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:18:47.475 | #29 {main}
+2026-02-14 20:18:47.475 | "} {"command_id":"4881c5b0-7ea8-4248-bdf8-b00f1350694e","is_console":true}
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 |    Symfony\Component\Process\Exception\ProcessFailedException 
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 |   The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 | Exit Code: 1(General error)
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 | Working directory: /var/www
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 | Output:
+2026-02-14 20:18:47.477 | ================
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 |  Environment:
+2026-02-14 20:18:47.477 |    - Version:          2025.*
+2026-02-14 20:18:47.477 |    - Stability:        stable
+2026-02-14 20:18:47.477 |    - Operating System: linux
+2026-02-14 20:18:47.477 |    - Architecture:     amd64
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 | Error Output:
+2026-02-14 20:18:47.477 | ================
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 | In ErrorChunk.php line 55:
+2026-02-14 20:18:47.477 |                                                                                
+2026-02-14 20:18:47.477 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:47.477 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:47.477 |   page=1".                                                                     
+2026-02-14 20:18:47.477 |                                                                                
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 | In CurlResponse.php line 336:
+2026-02-14 20:18:47.477 |                                                                                
+2026-02-14 20:18:47.477 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:18:47.477 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:18:47.477 |   page=1".                                                                     
+2026-02-14 20:18:47.477 |                                                                                
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:18:47.477 | 
+2026-02-14 20:18:47.477 |   at vendor/symfony/process/Process.php:280
+2026-02-14 20:18:47.481 |     276▕      */
+2026-02-14 20:18:47.481 |     277▕     public function mustRun(?callable $callback = null, array $env = []): static
+2026-02-14 20:18:47.481 |     278▕     {
+2026-02-14 20:18:47.481 |     279▕         if (0 !== $this->run($callback, $env)) {
+2026-02-14 20:18:47.481 |   ➜ 280▕             throw new ProcessFailedException($this);
+2026-02-14 20:18:47.481 |     281▕         }
+2026-02-14 20:18:47.481 |     282▕ 
+2026-02-14 20:18:47.481 |     283▕         return $this;
+2026-02-14 20:18:47.481 |     284▕     }
+2026-02-14 20:18:47.481 | 
+2026-02-14 20:18:47.481 |       +28 vendor frames 
+2026-02-14 20:18:47.481 | 
+2026-02-14 20:18:47.481 |   29  artisan:35
+2026-02-14 20:18:47.481 |       Illuminate\Foundation\Console\Kernel::handle(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+2026-02-14 20:18:47.481 | 
+2026-02-14 20:18:47.920 | 
+2026-02-14 20:18:47.920 | ╔══════════════════════════════════════════════════════════════╗
+2026-02-14 20:18:47.920 | ║        SDC - Sistema de Defesa Civil                        ║
+2026-02-14 20:18:47.920 | ║        Ambiente de Desenvolvimento                          ║
+2026-02-14 20:18:47.920 | ╚══════════════════════════════════════════════════════════════╝
+2026-02-14 20:18:47.920 | 
+2026-02-14 20:18:47.922 | [INFO] Aguardando banco de dados...
+2026-02-14 20:18:47.924 | [OK] Banco de dados disponível
+2026-02-14 20:18:47.924 | [INFO] Aguardando Redis...
+2026-02-14 20:18:47.926 | [OK] Redis disponível
+2026-02-14 20:18:47.926 | [INFO] Verificando montagem do volume...
+2026-02-14 20:18:47.926 | [INFO] Diretório atual: /var/www
+2026-02-14 20:18:47.930 | [INFO] Conteúdo do diretório: total 2116
+2026-02-14 20:18:47.930 | drwxrwxr-x   23 www-data www-data      4096 Feb 14 20:04 .
+2026-02-14 20:18:47.930 | drwxr-xr-x    1 root     root          4096 Jan 29 22:22 ..
+2026-02-14 20:18:47.930 | -rw-rw-r--    1 www-data www-data       211 Dec 26 14:00 .ci-test
+2026-02-14 20:18:47.930 | drwxrwxr-x    2 www-data www-data      4096 Feb 14 17:44 .claude
+2026-02-14 20:18:47.930 | drwxrwxr-x    3 www-data www-data      4096 Dec 26 14:00 .composer
+2026-02-14 20:18:47.930 | drwxrwxr-x    3 www-data www-data      4096 Dec 26 14:00 .config
+2026-02-14 20:18:47.930 | -rw-rw-r--    1 www-data www-data       371 Feb  8 18:50 .dockerignore
+2026-02-14 20:18:47.930 | -rw-rw-r--    1 www-data www-data       258 Dec 26 14:00 .editorconfig
+2026-02-14 20:18:47.930 | -rw-r--r--    1 www-data www-data       455 Feb 14 18:20 .env
+2026-02-14 20:18:47.930 | -rw-rw-r--    1 www-data www-data       300 Dec 26 19:45 .env.testing
+2026-02-14 20:18:47.930 | -rw-rw-r--    1 www-data www-data       186 Dec 26 14:00 .gitattributes
+2026-02-14 20:18:47.930 | -rw-rw-r--    1 www-data www-data        29 Dec 26 14:00 .gitconfig
+2026-02-14 20:18:47.930 | -rw-rw-r--    1 www-data www-data       303 Feb  7 18:06 .gitignore
+2026-02-14 20:18:47.930 | -rw-rw-r--    1 www-data www-data         0 Dec 26 14:00 .octane-installed
+2026-02-14 20:18:47.930 | -rw-rw-r--    1 www-data www-data     15871 Dec 29 18:36 CODE_REVIEW_IMPROVEMENTS.md
+2026-02-14 20:18:47.930 | -rw-rw-r--    1 www-data www-data      2891 Dec 29 18:36 DOCKER_OPCACHE_FIX.md
+2026-02-14 20:18:47.930 | -rw-rw-r--    1 www-data www-data      6934 Jan 26 20:41 DOCKER_SETUP_COMPLETE.md
+2026-02-14 20:18:47.930 | -rw-rw-r--    1 www-data www-data     33757 Feb 14 17:44 DOC_TABELA_VERDADE_PERMISSOES.md
+2026-02-14 20:18:47.930 | drwxrwxr-x    2 www-data www-data      4096 Feb 14 17:44 Doc
+2026-02-14 20:18:47.935 | [OK] Dependências Composer já estão atualizadas (fingerprint OK)
+2026-02-14 20:18:47.935 | [INFO] Gerando manifesto de pacotes...
+2026-02-14 20:18:48.133 | 
+2026-02-14 20:18:48.133 |    INFO  Discovering packages.  
+2026-02-14 20:18:48.133 | 
+2026-02-14 20:18:48.141 |   darkaonline/l5-swagger ................................................ DONE
+2026-02-14 20:18:48.143 |   inertiajs/inertia-laravel ............................................. DONE
+2026-02-14 20:18:48.145 |   laravel/breeze ........................................................ DONE
+2026-02-14 20:18:48.147 |   laravel/octane ........................................................ DONE
+2026-02-14 20:18:48.149 |   laravel/sail .......................................................... DONE
+2026-02-14 20:18:48.151 |   laravel/sanctum ....................................................... DONE
+2026-02-14 20:18:48.153 |   laravel/tinker ........................................................ DONE
+2026-02-14 20:18:48.154 |   nativephp/mobile ...................................................... DONE
+2026-02-14 20:18:48.156 |   nesbot/carbon ......................................................... DONE
+2026-02-14 20:18:48.158 |   nunomaduro/collision .................................................. DONE
+2026-02-14 20:18:48.160 |   nunomaduro/termwind ................................................... DONE
+2026-02-14 20:18:48.161 |   rap2hpoutre/laravel-log-viewer ........................................ DONE
+2026-02-14 20:18:48.163 |   spatie/laravel-ignition ............................................... DONE
+2026-02-14 20:18:48.164 |   spatie/laravel-permission ............................................. DONE
+2026-02-14 20:18:48.166 |   tightenco/ziggy ....................................................... DONE
+2026-02-14 20:18:48.166 | 
+2026-02-14 20:18:48.177 | [OK] APP_KEY já configurada
+2026-02-14 20:18:48.177 | [INFO] Executando migrations...
+2026-02-14 20:18:48.389 | 
+2026-02-14 20:18:48.389 |    INFO  Nothing to migrate.  
+2026-02-14 20:18:48.389 | 
+2026-02-14 20:18:48.398 | [OK] Migrations executadas
+2026-02-14 20:18:48.398 | [INFO] Executando seeders (mock data: usuários, hierarquias, RATs)...
+2026-02-14 20:18:48.613 | 
+2026-02-14 20:18:48.614 |    INFO  Seeding database.  
+2026-02-14 20:18:48.614 | 
+2026-02-14 20:18:48.615 |   Database\Seeders\RolesAndPermissionsSeeder ......................... RUNNING  
+2026-02-14 20:18:48.887 | Roles e Permissions sincronizadas via config/permissions.php
+2026-02-14 20:18:48.887 | 
+2026-02-14 20:18:48.887 | Hierarquia de Cargos:
+2026-02-14 20:18:48.887 |   Nivel 0: Super Admin (super-admin)
+2026-02-14 20:18:48.887 |   Nivel 1: Administrador (admin)
+2026-02-14 20:18:48.887 |   Nivel 2: Gestor (manager)
+2026-02-14 20:18:48.887 |   Nivel 3: Analista (analyst)
+2026-02-14 20:18:48.887 |   Nivel 4: Operador (operator)
+2026-02-14 20:18:48.887 |   Nivel 5: Visualizador (viewer)
+2026-02-14 20:18:48.887 |   Nivel 6: Usuario (user)
+2026-02-14 20:18:48.888 |   Database\Seeders\RolesAndPermissionsSeeder ..................... 272 ms DONE  
+2026-02-14 20:18:48.888 | 
+2026-02-14 20:18:48.889 |   Database\Seeders\OrgaosSeeder ...................................... RUNNING  
+2026-02-14 20:18:48.911 | ✅ Órgãos criados/atualizados com sucesso!
+2026-02-14 20:18:48.911 |    - 1 CEDEC (Estadual)
+2026-02-14 20:18:48.911 |    - 3 REDECs (Regionais)
+2026-02-14 20:18:48.911 |    - 4 COMPDECs (Municipais)
+2026-02-14 20:18:48.911 |   Database\Seeders\OrgaosSeeder ................................... 21 ms DONE  
+2026-02-14 20:18:48.911 | 
+2026-02-14 20:18:49.104 | Admin Geral criado com role super-admin
+2026-02-14 20:18:49.105 |   Database\Seeders\MockUsersSeeder ................................... RUNNING  
+2026-02-14 20:18:49.108 | Usuário joao.silva@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:49.108 | Usuário maria.santos@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:49.109 | Usuário pedro.oliveira@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:49.109 | Usuário ana.costa@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:49.110 | Usuário carlos.pereira@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:49.110 | Usuário juliana.almeida@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:49.111 | Usuário roberto.fernandes@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:49.111 | Usuário fernanda.lima@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:18:49.111 | 
+2026-02-14 20:18:49.111 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:18:49.111 |   USUÁRIOS MOCK CRIADOS COM SUCESSO
+2026-02-14 20:18:49.111 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:18:49.111 | 
+2026-02-14 20:18:49.111 | Credenciais padrão:
+2026-02-14 20:18:49.111 |   Email: <qualquer email acima>
+2026-02-14 20:18:49.111 |   Senha: password
+2026-02-14 20:18:49.111 | 
+2026-02-14 20:18:49.114 | +-------------------+------------------------------------+----------+
+2026-02-14 20:18:49.114 | | Nome              | Email                              | Role     |
+2026-02-14 20:18:49.114 | +-------------------+------------------------------------+----------+
+2026-02-14 20:18:49.114 | | João Silva        | joao.silva@defesa.mg.gov.br        | admin    |
+2026-02-14 20:18:49.114 | | Maria Santos      | maria.santos@defesa.mg.gov.br      | analyst  |
+2026-02-14 20:18:49.114 | | Pedro Oliveira    | pedro.oliveira@defesa.mg.gov.br    | analyst  |
+2026-02-14 20:18:49.114 | | Ana Costa         | ana.costa@defesa.mg.gov.br         | operator |
+2026-02-14 20:18:49.114 | | Carlos Pereira    | carlos.pereira@defesa.mg.gov.br    | operator |
+2026-02-14 20:18:49.114 | | Juliana Almeida   | juliana.almeida@defesa.mg.gov.br   | analyst  |
+2026-02-14 20:18:49.114 | | Roberto Fernandes | roberto.fernandes@defesa.mg.gov.br | admin    |
+2026-02-14 20:18:49.115 | | Fernanda Lima     | fernanda.lima@defesa.mg.gov.br     | operator |
+2026-02-14 20:18:49.115 | +-------------------+------------------------------------+----------+
+2026-02-14 20:18:49.115 |   Database\Seeders\MockUsersSeeder ................................ 10 ms DONE  
+2026-02-14 20:18:49.115 | 
+2026-02-14 20:18:49.116 |   Database\Seeders\MockUsersHierarchySeeder .......................... RUNNING  
+2026-02-14 20:18:49.131 | 
+2026-02-14 20:18:49.131 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:18:49.131 |   USUÁRIOS COM HIERARQUIAS DIVERSAS - MOCK
+2026-02-14 20:18:49.131 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:18:49.131 |   Criados: 0 | Já existentes (pulados): 29
+2026-02-14 20:18:49.131 |   Senha padrão: password
+2026-02-14 20:18:49.131 | 
+2026-02-14 20:18:49.132 |   Distribuição por Hierarquia:
+2026-02-14 20:18:49.132 |     super-admin: 2 usuários
+2026-02-14 20:18:49.132 |     admin: 3 usuários
+2026-02-14 20:18:49.132 |     manager: 4 usuários
+2026-02-14 20:18:49.132 |     analyst: 7 usuários
+2026-02-14 20:18:49.132 |     operator: 6 usuários
+2026-02-14 20:18:49.132 |     viewer: 3 usuários
+2026-02-14 20:18:49.132 |     user: 2 usuários
+2026-02-14 20:18:49.132 |     sem-cargo: 2 usuários
+2026-02-14 20:18:49.132 | 
+2026-02-14 20:18:49.132 |   Database\Seeders\MockUsersHierarchySeeder ....................... 16 ms DONE  
+2026-02-14 20:18:49.132 | 
+2026-02-14 20:18:49.135 | Tabela "rats" não encontrada - RatMockSeeder pulado.
+2026-02-14 20:18:49.136 |   Database\Seeders\TestOrgaosSeeder .................................. RUNNING  
+2026-02-14 20:18:49.136 | Criando orgaos de teste...
+2026-02-14 20:18:49.137 | Orgaos de teste ja existem. Pulando...
+2026-02-14 20:18:49.137 |   Database\Seeders\TestOrgaosSeeder ................................ 1 ms DONE  
+2026-02-14 20:18:49.137 | 
+2026-02-14 20:18:49.138 |   Database\Seeders\TestUsersSeeder ................................... RUNNING  
+2026-02-14 20:18:49.138 | Criando usuarios de teste com hierarquia...
+2026-02-14 20:18:49.140 | Usuario ja existe: super.admin@test.defesa.mg.gov.br
+2026-02-14 20:18:49.140 | Usuario ja existe: admin.cedec@test.defesa.mg.gov.br
+2026-02-14 20:18:49.141 | Usuario ja existe: admin.redec@test.defesa.mg.gov.br
+2026-02-14 20:18:49.141 | Usuario ja existe: coord.metro@test.defesa.mg.gov.br
+2026-02-14 20:18:49.142 | Usuario ja existe: coord.sul@test.defesa.mg.gov.br
+2026-02-14 20:18:49.142 | Usuario ja existe: coord.bh@test.defesa.mg.gov.br
+2026-02-14 20:18:49.143 | Usuario ja existe: analista.bh@test.defesa.mg.gov.br
+2026-02-14 20:18:49.144 | Usuario ja existe: analista.contagem@test.defesa.mg.gov.br
+2026-02-14 20:18:49.144 | Usuario ja existe: analista.pouso@test.defesa.mg.gov.br
+2026-02-14 20:18:49.145 | Usuario ja existe: operador.bh@test.defesa.mg.gov.br
+2026-02-14 20:18:49.145 | Usuario ja existe: operador.varginha@test.defesa.mg.gov.br
+2026-02-14 20:18:49.146 | Usuario ja existe: visualizador.ativo@test.defesa.mg.gov.br
+2026-02-14 20:18:49.146 | Usuario ja existe: visualizador.inativo@test.defesa.mg.gov.br
+2026-02-14 20:18:49.147 | Usuario ja existe: visualizador.bloqueado@test.defesa.mg.gov.br
+2026-02-14 20:18:49.148 | Usuario ja existe: usuario.suspenso@test.defesa.mg.gov.br
+2026-02-14 20:18:49.148 | Usuario ja existe: usuario.pendente@test.defesa.mg.gov.br
+2026-02-14 20:18:49.149 | Usuario ja existe: sem.role@test.defesa.mg.gov.br
+2026-02-14 20:18:49.149 | Usuarios criados: 0 | Ignorados: 17
+2026-02-14 20:18:49.149 | 
+2026-02-14 20:18:49.149 | Credenciais de teste:
+2026-02-14 20:18:49.150 | +----------------------------------------------+------------+--------------+-----------+
+2026-02-14 20:18:49.151 | | Email                                        | Senha      | Role         | Status    |
+2026-02-14 20:18:49.151 | +----------------------------------------------+------------+--------------+-----------+
+2026-02-14 20:18:49.151 | | super.admin@test.defesa.mg.gov.br            | Test@2026! | super-admin  | active    |
+2026-02-14 20:18:49.151 | | admin.cedec@test.defesa.mg.gov.br            | Test@2026! | admin        | active    |
+2026-02-14 20:18:49.151 | | admin.redec@test.defesa.mg.gov.br            | Test@2026! | admin        | active    |
+2026-02-14 20:18:49.151 | | coord.metro@test.defesa.mg.gov.br            | Test@2026! | coordenador  | active    |
+2026-02-14 20:18:49.151 | | coord.sul@test.defesa.mg.gov.br              | Test@2026! | coordenador  | active    |
+2026-02-14 20:18:49.151 | | coord.bh@test.defesa.mg.gov.br               | Test@2026! | coordenador  | active    |
+2026-02-14 20:18:49.151 | | analista.bh@test.defesa.mg.gov.br            | Test@2026! | analista     | active    |
+2026-02-14 20:18:49.151 | | analista.contagem@test.defesa.mg.gov.br      | Test@2026! | analista     | active    |
+2026-02-14 20:18:49.151 | | analista.pouso@test.defesa.mg.gov.br         | Test@2026! | analista     | active    |
+2026-02-14 20:18:49.151 | | operador.bh@test.defesa.mg.gov.br            | Test@2026! | operador     | active    |
+2026-02-14 20:18:49.151 | | operador.varginha@test.defesa.mg.gov.br      | Test@2026! | operador     | active    |
+2026-02-14 20:18:49.152 | | visualizador.ativo@test.defesa.mg.gov.br     | Test@2026! | visualizador | active    |
+2026-02-14 20:18:49.152 | | visualizador.inativo@test.defesa.mg.gov.br   | Test@2026! | visualizador | inactive  |
+2026-02-14 20:18:49.152 | | visualizador.bloqueado@test.defesa.mg.gov.br | Test@2026! | visualizador | blocked   |
+2026-02-14 20:18:49.152 | | usuario.suspenso@test.defesa.mg.gov.br       | Test@2026! | operador     | suspended |
+2026-02-14 20:18:49.152 | | usuario.pendente@test.defesa.mg.gov.br       | Test@2026! | operador     | pending   |
+2026-02-14 20:18:49.152 | | sem.role@test.defesa.mg.gov.br               | Test@2026! | sem-role     | active    |
+2026-02-14 20:18:49.152 | +----------------------------------------------+------------+--------------+-----------+
+2026-02-14 20:18:49.153 |   Database\Seeders\TestUsersSeeder ................................ 14 ms DONE  
+2026-02-14 20:18:49.153 | 
+2026-02-14 20:18:49.162 | [OK] Seeders executados (30+ usuários, 15 RATs, 7 hierarquias)
+2026-02-14 20:18:49.162 | [INFO] Limpando caches...
+2026-02-14 20:18:49.365 | 
+2026-02-14 20:18:49.365 |    INFO  Configuration cache cleared successfully.  
+2026-02-14 20:18:49.365 | 
+2026-02-14 20:18:49.568 | 
+2026-02-14 20:18:49.568 |    INFO  Route cache cleared successfully.  
+2026-02-14 20:18:49.568 | 
+2026-02-14 20:18:49.760 | 
+2026-02-14 20:18:49.760 |    INFO  Compiled views cleared successfully.  
+2026-02-14 20:18:49.760 | 
+2026-02-14 20:18:49.768 | [OK] Caches limpos
+2026-02-14 20:18:49.768 | [INFO] Ajustando permissões...
+2026-02-14 20:18:49.787 | [OK] Permissões ajustadas
+2026-02-14 20:18:49.787 | 
+2026-02-14 20:18:49.809 | [INFO] PHP Version: PHP 8.3.30 (cli) (built: Jan 30 2026 01:24:18) (NTS)
+2026-02-14 20:18:49.852 | PHP version 8.3.30 (/usr/local/bin/php)
+2026-02-14 20:18:49.852 | Run the "diagnose" command to get more detailed diagnostics output.
+2026-02-14 20:18:49.857 | [INFO] Composer Version: Composer version 2.9.5 2026-01-29 11:40:53
+2026-02-14 20:18:49.857 | 
+2026-02-14 20:18:49.857 | [INFO] Configurando Octane (RoadRunner)...
+2026-02-14 20:18:49.857 | [INFO] Binário RoadRunner não encontrado. Instalando...
+2026-02-14 20:18:50.101 | 
+2026-02-14 20:18:50.101 |  Environment:
+2026-02-14 20:18:50.101 |    - Version:          2025.*
+2026-02-14 20:18:50.101 |    - Stability:        stable
+2026-02-14 20:18:50.101 |    - Operating System: linux
+2026-02-14 20:18:50.101 |    - Architecture:     amd64
+2026-02-14 20:18:50.101 | 
+2026-02-14 20:19:02.264 | 
+2026-02-14 20:19:02.267 | In ErrorChunk.php line 55:
+2026-02-14 20:19:02.267 |                                                                                
+2026-02-14 20:19:02.267 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:02.267 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:02.267 |   page=1".                                                                     
+2026-02-14 20:19:02.267 |                                                                                
+2026-02-14 20:19:02.267 | 
+2026-02-14 20:19:02.268 | In CurlResponse.php line 336:
+2026-02-14 20:19:02.268 |                                                                                
+2026-02-14 20:19:02.268 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:02.268 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:02.268 |   page=1".                                                                     
+2026-02-14 20:19:02.268 |                                                                                
+2026-02-14 20:19:02.268 | 
+2026-02-14 20:19:02.268 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:19:02.268 | 
+2026-02-14 20:19:02.288 | [2026-02-14 23:19:02] local.ERROR: The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | Exit Code: 1(General error)
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | Working directory: /var/www
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | Output:
+2026-02-14 20:19:02.288 | ================
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 |  Environment:
+2026-02-14 20:19:02.288 |    - Version:          2025.*
+2026-02-14 20:19:02.288 |    - Stability:        stable
+2026-02-14 20:19:02.288 |    - Operating System: linux
+2026-02-14 20:19:02.288 |    - Architecture:     amd64
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | Error Output:
+2026-02-14 20:19:02.288 | ================
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | In ErrorChunk.php line 55:
+2026-02-14 20:19:02.288 |                                                                                
+2026-02-14 20:19:02.288 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:02.288 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:02.288 |   page=1".                                                                     
+2026-02-14 20:19:02.288 |                                                                                
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | In CurlResponse.php line 336:
+2026-02-14 20:19:02.288 |                                                                                
+2026-02-14 20:19:02.288 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:02.288 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:02.288 |   page=1".                                                                     
+2026-02-14 20:19:02.288 |                                                                                
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 |  {"exception":"[object] (Symfony\\Component\\Process\\Exception\\ProcessFailedException(code: 0): The command \"'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'\" failed.
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | Exit Code: 1(General error)
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | Working directory: /var/www
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | Output:
+2026-02-14 20:19:02.288 | ================
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 |  Environment:
+2026-02-14 20:19:02.288 |    - Version:          \u001b[32m2025.*\u001b[39m
+2026-02-14 20:19:02.288 |    - Stability:        \u001b[32mstable\u001b[39m
+2026-02-14 20:19:02.288 |    - Operating System: \u001b[32mlinux\u001b[39m
+2026-02-14 20:19:02.288 |    - Architecture:     \u001b[32mamd64\u001b[39m
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | 
+2026-02-14 20:19:02.288 | Error Output:
+2026-02-14 20:19:02.288 | ================
+2026-02-14 20:19:02.289 | 
+2026-02-14 20:19:02.289 | \u001b[33mIn ErrorChunk.php line 55:\u001b[39m
+2026-02-14 20:19:02.289 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:19:02.289 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:19:02.289 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:19:02.289 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:19:02.289 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:19:02.289 | 
+2026-02-14 20:19:02.289 | \u001b[33mIn CurlResponse.php line 336:\u001b[39m
+2026-02-14 20:19:02.289 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:19:02.289 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:19:02.289 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:19:02.289 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:19:02.289 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:19:02.289 | 
+2026-02-14 20:19:02.289 | \u001b[32mget-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]\u001b[39m
+2026-02-14 20:19:02.289 | 
+2026-02-14 20:19:02.289 |  at /var/www/vendor/symfony/process/Process.php:280)
+2026-02-14 20:19:02.289 | [stacktrace]
+2026-02-14 20:19:02.289 | #0 /var/www/vendor/laravel/framework/src/Illuminate/Support/HigherOrderTapProxy.php(33): Symfony\\Component\\Process\\Process->mustRun(Object(Closure))
+2026-02-14 20:19:02.289 | #1 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(174): Illuminate\\Support\\HigherOrderTapProxy->__call('mustRun', Array)
+2026-02-14 20:19:02.289 | #2 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(108): Laravel\\Octane\\Commands\\InstallCommand->downloadRoadRunnerBinary()
+2026-02-14 20:19:02.289 | #3 /var/www/vendor/laravel/octane/src/Commands/InstallCommand.php(115): Laravel\\Octane\\Commands\\InstallCommand->ensureRoadRunnerBinaryIsInstalled()
+2026-02-14 20:19:02.289 | #4 /var/www/vendor/laravel/octane/src/Commands/InstallCommand.php(50): Laravel\\Octane\\Commands\\InstallCommand->installRoadRunnerServer()
+2026-02-14 20:19:02.289 | #5 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Laravel\\Octane\\Commands\\InstallCommand->handle()
+2026-02-14 20:19:02.289 | #6 /var/www/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+2026-02-14 20:19:02.289 | #7 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+2026-02-14 20:19:02.289 | #8 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+2026-02-14 20:19:02.289 | #9 /var/www/vendor/laravel/framework/src/Illuminate/Container/Container.php(799): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+2026-02-14 20:19:02.289 | #10 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate\\Container\\Container->call(Array)
+2026-02-14 20:19:02.289 | #11 /var/www/vendor/symfony/console/Command/Command.php(341): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:19:02.289 | #12 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:19:02.289 | #13 /var/www/vendor/symfony/console/Application.php(1102): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:02.289 | #14 /var/www/vendor/symfony/console/Application.php(356): Symfony\\Component\\Console\\Application->doRunCommand(Object(Laravel\\Octane\\Commands\\InstallCommand), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:02.289 | #15 /var/www/vendor/symfony/console/Application.php(195): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:02.289 | #16 /var/www/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:02.289 | #17 /var/www/artisan(35): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:02.289 | #18 {main}
+2026-02-14 20:19:02.289 | "} {"command_id":"3af08161-bee2-4c63-a760-187364cb7186","is_console":true}
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 |    Symfony\Component\Process\Exception\ProcessFailedException 
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 |   The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 | Exit Code: 1(General error)
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 | Working directory: /var/www
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 | Output:
+2026-02-14 20:19:02.291 | ================
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 |  Environment:
+2026-02-14 20:19:02.291 |    - Version:          2025.*
+2026-02-14 20:19:02.291 |    - Stability:        stable
+2026-02-14 20:19:02.291 |    - Operating System: linux
+2026-02-14 20:19:02.291 |    - Architecture:     amd64
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 | Error Output:
+2026-02-14 20:19:02.291 | ================
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 | In ErrorChunk.php line 55:
+2026-02-14 20:19:02.291 |                                                                                
+2026-02-14 20:19:02.291 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:02.291 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:02.291 |   page=1".                                                                     
+2026-02-14 20:19:02.291 |                                                                                
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 | In CurlResponse.php line 336:
+2026-02-14 20:19:02.291 |                                                                                
+2026-02-14 20:19:02.291 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:02.291 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:02.291 |   page=1".                                                                     
+2026-02-14 20:19:02.291 |                                                                                
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:19:02.291 | 
+2026-02-14 20:19:02.291 |   at vendor/symfony/process/Process.php:280
+2026-02-14 20:19:02.294 |     276▕      */
+2026-02-14 20:19:02.294 |     277▕     public function mustRun(?callable $callback = null, array $env = []): static
+2026-02-14 20:19:02.294 |     278▕     {
+2026-02-14 20:19:02.294 |     279▕         if (0 !== $this->run($callback, $env)) {
+2026-02-14 20:19:02.294 |   ➜ 280▕             throw new ProcessFailedException($this);
+2026-02-14 20:19:02.294 |     281▕         }
+2026-02-14 20:19:02.294 |     282▕ 
+2026-02-14 20:19:02.294 |     283▕         return $this;
+2026-02-14 20:19:02.294 |     284▕     }
+2026-02-14 20:19:02.294 | 
+2026-02-14 20:19:02.294 |       +17 vendor frames 
+2026-02-14 20:19:02.294 | 
+2026-02-14 20:19:02.294 |   18  artisan:35
+2026-02-14 20:19:02.294 |       Illuminate\Foundation\Console\Kernel::handle(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+2026-02-14 20:19:02.294 | 
+2026-02-14 20:19:02.303 | [WARN] Falha ao instalar via artisan. Tentando baixar diretamente...
+2026-02-14 20:19:02.352 | 
+2026-02-14 20:19:02.352 |  Environment:
+2026-02-14 20:19:02.352 |    - Version:          2025.*
+2026-02-14 20:19:02.352 |    - Stability:        stable
+2026-02-14 20:19:02.352 |    - Operating System: linux
+2026-02-14 20:19:02.352 |    - Architecture:     amd64
+2026-02-14 20:19:02.352 | 
+2026-02-14 20:19:14.937 | 
+2026-02-14 20:19:14.940 | In ErrorChunk.php line 55:
+2026-02-14 20:19:14.940 |                                                                                
+2026-02-14 20:19:14.940 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:14.940 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:14.940 |   page=1".                                                                     
+2026-02-14 20:19:14.941 |                                                                                
+2026-02-14 20:19:14.941 | 
+2026-02-14 20:19:14.943 | In CurlResponse.php line 336:
+2026-02-14 20:19:14.943 |                                                                                
+2026-02-14 20:19:14.943 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:14.943 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:14.943 |   page=1".                                                                     
+2026-02-14 20:19:14.943 |                                                                                
+2026-02-14 20:19:14.943 | 
+2026-02-14 20:19:14.943 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:19:14.943 | 
+2026-02-14 20:19:14.948 | [ERROR] Falha ao baixar binário RoadRunner
+2026-02-14 20:19:14.949 | [OK] RoadRunner instalado
+2026-02-14 20:19:14.949 | [INFO] Iniciando Octane com Watch...
+2026-02-14 20:19:14.949 | 
+2026-02-14 20:19:14.949 | 🚀 Servidor Octane (RoadRunner) iniciando em http://0.0.0.0:8000
+2026-02-14 20:19:14.949 | ℹ️  Modo Watch ativado (File changes trigger reload)
+2026-02-14 20:19:14.949 | 
+2026-02-14 20:19:15.229 | 
+2026-02-14 20:19:15.229 |  Environment:
+2026-02-14 20:19:15.229 |    - Version:          2025.*
+2026-02-14 20:19:15.229 |    - Stability:        stable
+2026-02-14 20:19:15.229 |    - Operating System: linux
+2026-02-14 20:19:15.229 |    - Architecture:     amd64
+2026-02-14 20:19:15.229 | 
+2026-02-14 20:19:26.206 | 
+2026-02-14 20:19:26.208 | In ErrorChunk.php line 55:
+2026-02-14 20:19:26.208 |                                                                                
+2026-02-14 20:19:26.208 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:26.208 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:26.208 |   page=1".                                                                     
+2026-02-14 20:19:26.208 |                                                                                
+2026-02-14 20:19:26.209 | 
+2026-02-14 20:19:26.210 | In CurlResponse.php line 336:
+2026-02-14 20:19:26.210 |                                                                                
+2026-02-14 20:19:26.210 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:26.210 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:26.210 |   page=1".                                                                     
+2026-02-14 20:19:26.210 |                                                                                
+2026-02-14 20:19:26.210 | 
+2026-02-14 20:19:26.210 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:19:26.210 | 
+2026-02-14 20:19:26.230 | [2026-02-14 23:19:26] local.ERROR: The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | Exit Code: 1(General error)
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | Working directory: /var/www
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | Output:
+2026-02-14 20:19:26.230 | ================
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 |  Environment:
+2026-02-14 20:19:26.230 |    - Version:          2025.*
+2026-02-14 20:19:26.230 |    - Stability:        stable
+2026-02-14 20:19:26.230 |    - Operating System: linux
+2026-02-14 20:19:26.230 |    - Architecture:     amd64
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | Error Output:
+2026-02-14 20:19:26.230 | ================
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | In ErrorChunk.php line 55:
+2026-02-14 20:19:26.230 |                                                                                
+2026-02-14 20:19:26.230 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:26.230 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:26.230 |   page=1".                                                                     
+2026-02-14 20:19:26.230 |                                                                                
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | In CurlResponse.php line 336:
+2026-02-14 20:19:26.230 |                                                                                
+2026-02-14 20:19:26.230 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:26.230 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:26.230 |   page=1".                                                                     
+2026-02-14 20:19:26.230 |                                                                                
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 |  {"exception":"[object] (Symfony\\Component\\Process\\Exception\\ProcessFailedException(code: 0): The command \"'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'\" failed.
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | Exit Code: 1(General error)
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | Working directory: /var/www
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | Output:
+2026-02-14 20:19:26.230 | ================
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 |  Environment:
+2026-02-14 20:19:26.230 |    - Version:          \u001b[32m2025.*\u001b[39m
+2026-02-14 20:19:26.230 |    - Stability:        \u001b[32mstable\u001b[39m
+2026-02-14 20:19:26.230 |    - Operating System: \u001b[32mlinux\u001b[39m
+2026-02-14 20:19:26.230 |    - Architecture:     \u001b[32mamd64\u001b[39m
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | Error Output:
+2026-02-14 20:19:26.230 | ================
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | \u001b[33mIn ErrorChunk.php line 55:\u001b[39m
+2026-02-14 20:19:26.230 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:19:26.230 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:19:26.230 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:19:26.230 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:19:26.230 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | \u001b[33mIn CurlResponse.php line 336:\u001b[39m
+2026-02-14 20:19:26.230 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:19:26.230 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:19:26.230 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:19:26.230 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:19:26.230 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 | \u001b[32mget-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]\u001b[39m
+2026-02-14 20:19:26.230 | 
+2026-02-14 20:19:26.230 |  at /var/www/vendor/symfony/process/Process.php:280)
+2026-02-14 20:19:26.230 | [stacktrace]
+2026-02-14 20:19:26.230 | #0 /var/www/vendor/laravel/framework/src/Illuminate/Support/HigherOrderTapProxy.php(33): Symfony\\Component\\Process\\Process->mustRun(Object(Closure))
+2026-02-14 20:19:26.230 | #1 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(174): Illuminate\\Support\\HigherOrderTapProxy->__call('mustRun', Array)
+2026-02-14 20:19:26.230 | #2 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(108): Laravel\\Octane\\Commands\\StartRoadRunnerCommand->downloadRoadRunnerBinary()
+2026-02-14 20:19:26.230 | #3 /var/www/vendor/laravel/octane/src/Commands/StartRoadRunnerCommand.php(65): Laravel\\Octane\\Commands\\StartRoadRunnerCommand->ensureRoadRunnerBinaryIsInstalled()
+2026-02-14 20:19:26.230 | #4 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Laravel\\Octane\\Commands\\StartRoadRunnerCommand->handle(Object(Laravel\\Octane\\RoadRunner\\ServerProcessInspector), Object(Laravel\\Octane\\RoadRunner\\ServerStateFile))
+2026-02-14 20:19:26.230 | #5 /var/www/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+2026-02-14 20:19:26.230 | #6 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+2026-02-14 20:19:26.230 | #7 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+2026-02-14 20:19:26.230 | #8 /var/www/vendor/laravel/framework/src/Illuminate/Container/Container.php(799): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+2026-02-14 20:19:26.230 | #9 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate\\Container\\Container->call(Array)
+2026-02-14 20:19:26.230 | #10 /var/www/vendor/symfony/console/Command/Command.php(341): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArrayInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:19:26.230 | #11 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArrayInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:19:26.230 | #12 /var/www/vendor/laravel/framework/src/Illuminate/Console/Concerns/CallsCommands.php(68): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArrayInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:19:26.230 | #13 /var/www/vendor/laravel/framework/src/Illuminate/Console/Concerns/CallsCommands.php(29): Illuminate\\Console\\Command->runCommand('octane:roadrunn...', Array, Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:19:26.230 | #14 /var/www/vendor/laravel/octane/src/Commands/StartCommand.php(85): Illuminate\\Console\\Command->call('octane:roadrunn...', Array)
+2026-02-14 20:19:26.230 | #15 /var/www/vendor/laravel/octane/src/Commands/StartCommand.php(54): Laravel\\Octane\\Commands\\StartCommand->startRoadRunnerServer()
+2026-02-14 20:19:26.230 | #16 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Laravel\\Octane\\Commands\\StartCommand->handle()
+2026-02-14 20:19:26.230 | #17 /var/www/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+2026-02-14 20:19:26.230 | #18 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+2026-02-14 20:19:26.230 | #19 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+2026-02-14 20:19:26.230 | #20 /var/www/vendor/laravel/framework/src/Illuminate/Container/Container.php(799): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+2026-02-14 20:19:26.230 | #21 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate\\Container\\Container->call(Array)
+2026-02-14 20:19:26.230 | #22 /var/www/vendor/symfony/console/Command/Command.php(341): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:19:26.230 | #23 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:19:26.230 | #24 /var/www/vendor/symfony/console/Application.php(1102): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:26.230 | #25 /var/www/vendor/symfony/console/Application.php(356): Symfony\\Component\\Console\\Application->doRunCommand(Object(Laravel\\Octane\\Commands\\StartCommand), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:26.230 | #26 /var/www/vendor/symfony/console/Application.php(195): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:26.230 | #27 /var/www/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:26.230 | #28 /var/www/artisan(35): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:26.230 | #29 {main}
+2026-02-14 20:19:26.230 | "} {"command_id":"e31af5a9-fe8b-4a58-b1bf-b9b37fe9df41","is_console":true}
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 |    Symfony\Component\Process\Exception\ProcessFailedException 
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 |   The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 | Exit Code: 1(General error)
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 | Working directory: /var/www
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 | Output:
+2026-02-14 20:19:26.232 | ================
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 |  Environment:
+2026-02-14 20:19:26.232 |    - Version:          2025.*
+2026-02-14 20:19:26.232 |    - Stability:        stable
+2026-02-14 20:19:26.232 |    - Operating System: linux
+2026-02-14 20:19:26.232 |    - Architecture:     amd64
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 | Error Output:
+2026-02-14 20:19:26.232 | ================
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 | In ErrorChunk.php line 55:
+2026-02-14 20:19:26.232 |                                                                                
+2026-02-14 20:19:26.232 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:26.232 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:26.232 |   page=1".                                                                     
+2026-02-14 20:19:26.232 |                                                                                
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 | In CurlResponse.php line 336:
+2026-02-14 20:19:26.232 |                                                                                
+2026-02-14 20:19:26.232 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:26.232 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:26.232 |   page=1".                                                                     
+2026-02-14 20:19:26.232 |                                                                                
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:19:26.232 | 
+2026-02-14 20:19:26.232 |   at vendor/symfony/process/Process.php:280
+2026-02-14 20:19:26.236 |     276▕      */
+2026-02-14 20:19:26.236 |     277▕     public function mustRun(?callable $callback = null, array $env = []): static
+2026-02-14 20:19:26.236 |     278▕     {
+2026-02-14 20:19:26.236 |     279▕         if (0 !== $this->run($callback, $env)) {
+2026-02-14 20:19:26.236 |   ➜ 280▕             throw new ProcessFailedException($this);
+2026-02-14 20:19:26.236 |     281▕         }
+2026-02-14 20:19:26.236 |     282▕ 
+2026-02-14 20:19:26.236 |     283▕         return $this;
+2026-02-14 20:19:26.236 |     284▕     }
+2026-02-14 20:19:26.236 | 
+2026-02-14 20:19:26.236 |       +28 vendor frames 
+2026-02-14 20:19:26.236 | 
+2026-02-14 20:19:26.236 |   29  artisan:35
+2026-02-14 20:19:26.236 |       Illuminate\Foundation\Console\Kernel::handle(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+2026-02-14 20:19:26.236 | 
+2026-02-14 20:19:27.980 | 
+2026-02-14 20:19:27.980 | ╔══════════════════════════════════════════════════════════════╗
+2026-02-14 20:19:27.980 | ║        SDC - Sistema de Defesa Civil                        ║
+2026-02-14 20:19:27.980 | ║        Ambiente de Desenvolvimento                          ║
+2026-02-14 20:19:27.980 | ╚══════════════════════════════════════════════════════════════╝
+2026-02-14 20:19:27.980 | 
+2026-02-14 20:19:27.982 | [INFO] Aguardando banco de dados...
+2026-02-14 20:19:27.984 | [OK] Banco de dados disponível
+2026-02-14 20:19:27.984 | [INFO] Aguardando Redis...
+2026-02-14 20:19:27.985 | [OK] Redis disponível
+2026-02-14 20:19:27.985 | [INFO] Verificando montagem do volume...
+2026-02-14 20:19:27.986 | [INFO] Diretório atual: /var/www
+2026-02-14 20:19:27.989 | [INFO] Conteúdo do diretório: total 2116
+2026-02-14 20:19:27.989 | drwxrwxr-x   23 www-data www-data      4096 Feb 14 20:04 .
+2026-02-14 20:19:27.989 | drwxr-xr-x    1 root     root          4096 Jan 29 22:22 ..
+2026-02-14 20:19:27.989 | -rw-rw-r--    1 www-data www-data       211 Dec 26 14:00 .ci-test
+2026-02-14 20:19:27.989 | drwxrwxr-x    2 www-data www-data      4096 Feb 14 17:44 .claude
+2026-02-14 20:19:27.989 | drwxrwxr-x    3 www-data www-data      4096 Dec 26 14:00 .composer
+2026-02-14 20:19:27.989 | drwxrwxr-x    3 www-data www-data      4096 Dec 26 14:00 .config
+2026-02-14 20:19:27.989 | -rw-rw-r--    1 www-data www-data       371 Feb  8 18:50 .dockerignore
+2026-02-14 20:19:27.989 | -rw-rw-r--    1 www-data www-data       258 Dec 26 14:00 .editorconfig
+2026-02-14 20:19:27.989 | -rw-r--r--    1 www-data www-data       455 Feb 14 18:20 .env
+2026-02-14 20:19:27.989 | -rw-rw-r--    1 www-data www-data       300 Dec 26 19:45 .env.testing
+2026-02-14 20:19:27.989 | -rw-rw-r--    1 www-data www-data       186 Dec 26 14:00 .gitattributes
+2026-02-14 20:19:27.989 | -rw-rw-r--    1 www-data www-data        29 Dec 26 14:00 .gitconfig
+2026-02-14 20:19:27.989 | -rw-rw-r--    1 www-data www-data       303 Feb  7 18:06 .gitignore
+2026-02-14 20:19:27.989 | -rw-rw-r--    1 www-data www-data         0 Dec 26 14:00 .octane-installed
+2026-02-14 20:19:27.989 | -rw-rw-r--    1 www-data www-data     15871 Dec 29 18:36 CODE_REVIEW_IMPROVEMENTS.md
+2026-02-14 20:19:27.989 | -rw-rw-r--    1 www-data www-data      2891 Dec 29 18:36 DOCKER_OPCACHE_FIX.md
+2026-02-14 20:19:27.989 | -rw-rw-r--    1 www-data www-data      6934 Jan 26 20:41 DOCKER_SETUP_COMPLETE.md
+2026-02-14 20:19:27.989 | -rw-rw-r--    1 www-data www-data     33757 Feb 14 17:44 DOC_TABELA_VERDADE_PERMISSOES.md
+2026-02-14 20:19:27.990 | drwxrwxr-x    2 www-data www-data      4096 Feb 14 17:44 Doc
+2026-02-14 20:19:27.995 | [OK] Dependências Composer já estão atualizadas (fingerprint OK)
+2026-02-14 20:19:27.995 | [INFO] Gerando manifesto de pacotes...
+2026-02-14 20:19:28.188 | 
+2026-02-14 20:19:28.188 |    INFO  Discovering packages.  
+2026-02-14 20:19:28.188 | 
+2026-02-14 20:19:28.196 |   darkaonline/l5-swagger ................................................ DONE
+2026-02-14 20:19:28.198 |   inertiajs/inertia-laravel ............................................. DONE
+2026-02-14 20:19:28.200 |   laravel/breeze ........................................................ DONE
+2026-02-14 20:19:28.202 |   laravel/octane ........................................................ DONE
+2026-02-14 20:19:28.204 |   laravel/sail .......................................................... DONE
+2026-02-14 20:19:28.206 |   laravel/sanctum ....................................................... DONE
+2026-02-14 20:19:28.208 |   laravel/tinker ........................................................ DONE
+2026-02-14 20:19:28.210 |   nativephp/mobile ...................................................... DONE
+2026-02-14 20:19:28.212 |   nesbot/carbon ......................................................... DONE
+2026-02-14 20:19:28.214 |   nunomaduro/collision .................................................. DONE
+2026-02-14 20:19:28.215 |   nunomaduro/termwind ................................................... DONE
+2026-02-14 20:19:28.216 |   rap2hpoutre/laravel-log-viewer ........................................ DONE
+2026-02-14 20:19:28.219 |   spatie/laravel-ignition ............................................... DONE
+2026-02-14 20:19:28.221 |   spatie/laravel-permission ............................................. DONE
+2026-02-14 20:19:28.223 |   tightenco/ziggy ....................................................... DONE
+2026-02-14 20:19:28.223 | 
+2026-02-14 20:19:28.233 | [OK] APP_KEY já configurada
+2026-02-14 20:19:28.233 | [INFO] Executando migrations...
+2026-02-14 20:19:28.452 | 
+2026-02-14 20:19:28.452 |    INFO  Nothing to migrate.  
+2026-02-14 20:19:28.452 | 
+2026-02-14 20:19:28.462 | [OK] Migrations executadas
+2026-02-14 20:19:28.462 | [INFO] Executando seeders (mock data: usuários, hierarquias, RATs)...
+2026-02-14 20:19:28.699 | 
+2026-02-14 20:19:28.699 |    INFO  Seeding database.  
+2026-02-14 20:19:28.700 | 
+2026-02-14 20:19:28.702 |   Database\Seeders\RolesAndPermissionsSeeder ......................... RUNNING  
+2026-02-14 20:19:28.950 | Roles e Permissions sincronizadas via config/permissions.php
+2026-02-14 20:19:28.950 | 
+2026-02-14 20:19:28.950 | Hierarquia de Cargos:
+2026-02-14 20:19:28.950 |   Nivel 0: Super Admin (super-admin)
+2026-02-14 20:19:28.950 |   Nivel 1: Administrador (admin)
+2026-02-14 20:19:28.950 |   Nivel 2: Gestor (manager)
+2026-02-14 20:19:28.950 |   Nivel 3: Analista (analyst)
+2026-02-14 20:19:28.950 |   Nivel 4: Operador (operator)
+2026-02-14 20:19:28.950 |   Nivel 5: Visualizador (viewer)
+2026-02-14 20:19:28.950 |   Nivel 6: Usuario (user)
+2026-02-14 20:19:28.951 |   Database\Seeders\RolesAndPermissionsSeeder ..................... 248 ms DONE  
+2026-02-14 20:19:28.951 | 
+2026-02-14 20:19:28.952 |   Database\Seeders\OrgaosSeeder ...................................... RUNNING  
+2026-02-14 20:19:28.972 | ✅ Órgãos criados/atualizados com sucesso!
+2026-02-14 20:19:28.972 |    - 1 CEDEC (Estadual)
+2026-02-14 20:19:28.972 |    - 3 REDECs (Regionais)
+2026-02-14 20:19:28.972 |    - 4 COMPDECs (Municipais)
+2026-02-14 20:19:28.972 |   Database\Seeders\OrgaosSeeder ................................... 20 ms DONE  
+2026-02-14 20:19:28.973 | 
+2026-02-14 20:19:29.164 | Admin Geral criado com role super-admin
+2026-02-14 20:19:29.165 |   Database\Seeders\MockUsersSeeder ................................... RUNNING  
+2026-02-14 20:19:29.168 | Usuário joao.silva@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:19:29.168 | Usuário maria.santos@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:19:29.169 | Usuário pedro.oliveira@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:19:29.169 | Usuário ana.costa@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:19:29.170 | Usuário carlos.pereira@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:19:29.170 | Usuário juliana.almeida@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:19:29.171 | Usuário roberto.fernandes@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:19:29.171 | Usuário fernanda.lima@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:19:29.171 | 
+2026-02-14 20:19:29.171 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:19:29.171 |   USUÁRIOS MOCK CRIADOS COM SUCESSO
+2026-02-14 20:19:29.171 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:19:29.171 | 
+2026-02-14 20:19:29.171 | Credenciais padrão:
+2026-02-14 20:19:29.171 |   Email: <qualquer email acima>
+2026-02-14 20:19:29.171 |   Senha: password
+2026-02-14 20:19:29.171 | 
+2026-02-14 20:19:29.174 | +-------------------+------------------------------------+----------+
+2026-02-14 20:19:29.174 | | Nome              | Email                              | Role     |
+2026-02-14 20:19:29.174 | +-------------------+------------------------------------+----------+
+2026-02-14 20:19:29.174 | | João Silva        | joao.silva@defesa.mg.gov.br        | admin    |
+2026-02-14 20:19:29.174 | | Maria Santos      | maria.santos@defesa.mg.gov.br      | analyst  |
+2026-02-14 20:19:29.174 | | Pedro Oliveira    | pedro.oliveira@defesa.mg.gov.br    | analyst  |
+2026-02-14 20:19:29.174 | | Ana Costa         | ana.costa@defesa.mg.gov.br         | operator |
+2026-02-14 20:19:29.174 | | Carlos Pereira    | carlos.pereira@defesa.mg.gov.br    | operator |
+2026-02-14 20:19:29.174 | | Juliana Almeida   | juliana.almeida@defesa.mg.gov.br   | analyst  |
+2026-02-14 20:19:29.174 | | Roberto Fernandes | roberto.fernandes@defesa.mg.gov.br | admin    |
+2026-02-14 20:19:29.174 | | Fernanda Lima     | fernanda.lima@defesa.mg.gov.br     | operator |
+2026-02-14 20:19:29.174 | +-------------------+------------------------------------+----------+
+2026-02-14 20:19:29.175 |   Database\Seeders\MockUsersSeeder ................................. 9 ms DONE  
+2026-02-14 20:19:29.175 | 
+2026-02-14 20:19:29.176 |   Database\Seeders\MockUsersHierarchySeeder .......................... RUNNING  
+2026-02-14 20:19:29.188 | 
+2026-02-14 20:19:29.188 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:19:29.188 |   USUÁRIOS COM HIERARQUIAS DIVERSAS - MOCK
+2026-02-14 20:19:29.188 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:19:29.189 |   Criados: 0 | Já existentes (pulados): 29
+2026-02-14 20:19:29.189 |   Senha padrão: password
+2026-02-14 20:19:29.189 | 
+2026-02-14 20:19:29.189 |   Distribuição por Hierarquia:
+2026-02-14 20:19:29.189 |     super-admin: 2 usuários
+2026-02-14 20:19:29.189 |     admin: 3 usuários
+2026-02-14 20:19:29.189 |     manager: 4 usuários
+2026-02-14 20:19:29.189 |     analyst: 7 usuários
+2026-02-14 20:19:29.189 |     operator: 6 usuários
+2026-02-14 20:19:29.189 |     viewer: 3 usuários
+2026-02-14 20:19:29.189 |     user: 2 usuários
+2026-02-14 20:19:29.189 |     sem-cargo: 2 usuários
+2026-02-14 20:19:29.189 | 
+2026-02-14 20:19:29.190 |   Database\Seeders\MockUsersHierarchySeeder ....................... 14 ms DONE  
+2026-02-14 20:19:29.190 | 
+2026-02-14 20:19:29.192 | Tabela "rats" não encontrada - RatMockSeeder pulado.
+2026-02-14 20:19:29.193 |   Database\Seeders\TestOrgaosSeeder .................................. RUNNING  
+2026-02-14 20:19:29.193 | Criando orgaos de teste...
+2026-02-14 20:19:29.193 | Orgaos de teste ja existem. Pulando...
+2026-02-14 20:19:29.194 |   Database\Seeders\TestOrgaosSeeder ................................ 1 ms DONE  
+2026-02-14 20:19:29.194 | 
+2026-02-14 20:19:29.195 |   Database\Seeders\TestUsersSeeder ................................... RUNNING  
+2026-02-14 20:19:29.195 | Criando usuarios de teste com hierarquia...
+2026-02-14 20:19:29.196 | Usuario ja existe: super.admin@test.defesa.mg.gov.br
+2026-02-14 20:19:29.197 | Usuario ja existe: admin.cedec@test.defesa.mg.gov.br
+2026-02-14 20:19:29.197 | Usuario ja existe: admin.redec@test.defesa.mg.gov.br
+2026-02-14 20:19:29.198 | Usuario ja existe: coord.metro@test.defesa.mg.gov.br
+2026-02-14 20:19:29.198 | Usuario ja existe: coord.sul@test.defesa.mg.gov.br
+2026-02-14 20:19:29.199 | Usuario ja existe: coord.bh@test.defesa.mg.gov.br
+2026-02-14 20:19:29.199 | Usuario ja existe: analista.bh@test.defesa.mg.gov.br
+2026-02-14 20:19:29.200 | Usuario ja existe: analista.contagem@test.defesa.mg.gov.br
+2026-02-14 20:19:29.200 | Usuario ja existe: analista.pouso@test.defesa.mg.gov.br
+2026-02-14 20:19:29.201 | Usuario ja existe: operador.bh@test.defesa.mg.gov.br
+2026-02-14 20:19:29.201 | Usuario ja existe: operador.varginha@test.defesa.mg.gov.br
+2026-02-14 20:19:29.202 | Usuario ja existe: visualizador.ativo@test.defesa.mg.gov.br
+2026-02-14 20:19:29.202 | Usuario ja existe: visualizador.inativo@test.defesa.mg.gov.br
+2026-02-14 20:19:29.203 | Usuario ja existe: visualizador.bloqueado@test.defesa.mg.gov.br
+2026-02-14 20:19:29.203 | Usuario ja existe: usuario.suspenso@test.defesa.mg.gov.br
+2026-02-14 20:19:29.204 | Usuario ja existe: usuario.pendente@test.defesa.mg.gov.br
+2026-02-14 20:19:29.204 | Usuario ja existe: sem.role@test.defesa.mg.gov.br
+2026-02-14 20:19:29.204 | Usuarios criados: 0 | Ignorados: 17
+2026-02-14 20:19:29.204 | 
+2026-02-14 20:19:29.204 | Credenciais de teste:
+2026-02-14 20:19:29.206 | +----------------------------------------------+------------+--------------+-----------+
+2026-02-14 20:19:29.206 | | Email                                        | Senha      | Role         | Status    |
+2026-02-14 20:19:29.206 | +----------------------------------------------+------------+--------------+-----------+
+2026-02-14 20:19:29.206 | | super.admin@test.defesa.mg.gov.br            | Test@2026! | super-admin  | active    |
+2026-02-14 20:19:29.206 | | admin.cedec@test.defesa.mg.gov.br            | Test@2026! | admin        | active    |
+2026-02-14 20:19:29.206 | | admin.redec@test.defesa.mg.gov.br            | Test@2026! | admin        | active    |
+2026-02-14 20:19:29.206 | | coord.metro@test.defesa.mg.gov.br            | Test@2026! | coordenador  | active    |
+2026-02-14 20:19:29.206 | | coord.sul@test.defesa.mg.gov.br              | Test@2026! | coordenador  | active    |
+2026-02-14 20:19:29.206 | | coord.bh@test.defesa.mg.gov.br               | Test@2026! | coordenador  | active    |
+2026-02-14 20:19:29.206 | | analista.bh@test.defesa.mg.gov.br            | Test@2026! | analista     | active    |
+2026-02-14 20:19:29.206 | | analista.contagem@test.defesa.mg.gov.br      | Test@2026! | analista     | active    |
+2026-02-14 20:19:29.206 | | analista.pouso@test.defesa.mg.gov.br         | Test@2026! | analista     | active    |
+2026-02-14 20:19:29.206 | | operador.bh@test.defesa.mg.gov.br            | Test@2026! | operador     | active    |
+2026-02-14 20:19:29.206 | | operador.varginha@test.defesa.mg.gov.br      | Test@2026! | operador     | active    |
+2026-02-14 20:19:29.206 | | visualizador.ativo@test.defesa.mg.gov.br     | Test@2026! | visualizador | active    |
+2026-02-14 20:19:29.206 | | visualizador.inativo@test.defesa.mg.gov.br   | Test@2026! | visualizador | inactive  |
+2026-02-14 20:19:29.207 | | visualizador.bloqueado@test.defesa.mg.gov.br | Test@2026! | visualizador | blocked   |
+2026-02-14 20:19:29.207 | | usuario.suspenso@test.defesa.mg.gov.br       | Test@2026! | operador     | suspended |
+2026-02-14 20:19:29.207 | | usuario.pendente@test.defesa.mg.gov.br       | Test@2026! | operador     | pending   |
+2026-02-14 20:19:29.207 | | sem.role@test.defesa.mg.gov.br               | Test@2026! | sem-role     | active    |
+2026-02-14 20:19:29.207 | +----------------------------------------------+------------+--------------+-----------+
+2026-02-14 20:19:29.207 |   Database\Seeders\TestUsersSeeder ................................ 12 ms DONE  
+2026-02-14 20:19:29.207 | 
+2026-02-14 20:19:29.216 | [OK] Seeders executados (30+ usuários, 15 RATs, 7 hierarquias)
+2026-02-14 20:19:29.216 | [INFO] Limpando caches...
+2026-02-14 20:19:29.422 | 
+2026-02-14 20:19:29.422 |    INFO  Configuration cache cleared successfully.  
+2026-02-14 20:19:29.422 | 
+2026-02-14 20:19:29.656 | 
+2026-02-14 20:19:29.656 |    INFO  Route cache cleared successfully.  
+2026-02-14 20:19:29.656 | 
+2026-02-14 20:19:29.863 | 
+2026-02-14 20:19:29.863 |    INFO  Compiled views cleared successfully.  
+2026-02-14 20:19:29.863 | 
+2026-02-14 20:19:29.873 | [OK] Caches limpos
+2026-02-14 20:19:29.873 | [INFO] Ajustando permissões...
+2026-02-14 20:19:29.888 | [WARN] chown ignorado (ex.: octane-server-state.json em volume)
+2026-02-14 20:19:29.899 | [OK] Permissões ajustadas
+2026-02-14 20:19:29.899 | 
+2026-02-14 20:19:29.925 | [INFO] PHP Version: PHP 8.3.30 (cli) (built: Jan 30 2026 01:24:18) (NTS)
+2026-02-14 20:19:29.967 | PHP version 8.3.30 (/usr/local/bin/php)
+2026-02-14 20:19:29.967 | Run the "diagnose" command to get more detailed diagnostics output.
+2026-02-14 20:19:29.972 | [INFO] Composer Version: Composer version 2.9.5 2026-01-29 11:40:53
+2026-02-14 20:19:29.972 | 
+2026-02-14 20:19:29.972 | [INFO] Configurando Octane (RoadRunner)...
+2026-02-14 20:19:29.973 | [INFO] Binário RoadRunner não encontrado. Instalando...
+2026-02-14 20:19:30.261 | 
+2026-02-14 20:19:30.261 |  Environment:
+2026-02-14 20:19:30.261 |    - Version:          2025.*
+2026-02-14 20:19:30.261 |    - Stability:        stable
+2026-02-14 20:19:30.261 |    - Operating System: linux
+2026-02-14 20:19:30.261 |    - Architecture:     amd64
+2026-02-14 20:19:30.261 | 
+2026-02-14 20:19:40.542 | 
+2026-02-14 20:19:40.544 | In ErrorChunk.php line 55:
+2026-02-14 20:19:40.544 |                                                                                
+2026-02-14 20:19:40.544 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:40.544 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:40.544 |   page=1".                                                                     
+2026-02-14 20:19:40.544 |                                                                                
+2026-02-14 20:19:40.544 | 
+2026-02-14 20:19:40.546 | In CurlResponse.php line 336:
+2026-02-14 20:19:40.546 |                                                                                
+2026-02-14 20:19:40.546 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:40.546 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:40.546 |   page=1".                                                                     
+2026-02-14 20:19:40.546 |                                                                                
+2026-02-14 20:19:40.546 | 
+2026-02-14 20:19:40.546 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:19:40.546 | 
+2026-02-14 20:19:40.565 | [2026-02-14 23:19:40] local.ERROR: The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | Exit Code: 1(General error)
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | Working directory: /var/www
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | Output:
+2026-02-14 20:19:40.565 | ================
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 |  Environment:
+2026-02-14 20:19:40.565 |    - Version:          2025.*
+2026-02-14 20:19:40.565 |    - Stability:        stable
+2026-02-14 20:19:40.565 |    - Operating System: linux
+2026-02-14 20:19:40.565 |    - Architecture:     amd64
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | Error Output:
+2026-02-14 20:19:40.565 | ================
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | In ErrorChunk.php line 55:
+2026-02-14 20:19:40.565 |                                                                                
+2026-02-14 20:19:40.565 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:40.565 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:40.565 |   page=1".                                                                     
+2026-02-14 20:19:40.565 |                                                                                
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | In CurlResponse.php line 336:
+2026-02-14 20:19:40.565 |                                                                                
+2026-02-14 20:19:40.565 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:40.565 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:40.565 |   page=1".                                                                     
+2026-02-14 20:19:40.565 |                                                                                
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 |  {"exception":"[object] (Symfony\\Component\\Process\\Exception\\ProcessFailedException(code: 0): The command \"'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'\" failed.
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | Exit Code: 1(General error)
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | Working directory: /var/www
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | Output:
+2026-02-14 20:19:40.565 | ================
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 |  Environment:
+2026-02-14 20:19:40.565 |    - Version:          \u001b[32m2025.*\u001b[39m
+2026-02-14 20:19:40.565 |    - Stability:        \u001b[32mstable\u001b[39m
+2026-02-14 20:19:40.565 |    - Operating System: \u001b[32mlinux\u001b[39m
+2026-02-14 20:19:40.565 |    - Architecture:     \u001b[32mamd64\u001b[39m
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | Error Output:
+2026-02-14 20:19:40.565 | ================
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | \u001b[33mIn ErrorChunk.php line 55:\u001b[39m
+2026-02-14 20:19:40.565 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:19:40.565 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:19:40.565 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:19:40.565 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:19:40.565 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | \u001b[33mIn CurlResponse.php line 336:\u001b[39m
+2026-02-14 20:19:40.565 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:19:40.565 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:19:40.565 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:19:40.565 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:19:40.565 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 | \u001b[32mget-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]\u001b[39m
+2026-02-14 20:19:40.565 | 
+2026-02-14 20:19:40.565 |  at /var/www/vendor/symfony/process/Process.php:280)
+2026-02-14 20:19:40.565 | [stacktrace]
+2026-02-14 20:19:40.565 | #0 /var/www/vendor/laravel/framework/src/Illuminate/Support/HigherOrderTapProxy.php(33): Symfony\\Component\\Process\\Process->mustRun(Object(Closure))
+2026-02-14 20:19:40.565 | #1 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(174): Illuminate\\Support\\HigherOrderTapProxy->__call('mustRun', Array)
+2026-02-14 20:19:40.565 | #2 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(108): Laravel\\Octane\\Commands\\InstallCommand->downloadRoadRunnerBinary()
+2026-02-14 20:19:40.565 | #3 /var/www/vendor/laravel/octane/src/Commands/InstallCommand.php(115): Laravel\\Octane\\Commands\\InstallCommand->ensureRoadRunnerBinaryIsInstalled()
+2026-02-14 20:19:40.565 | #4 /var/www/vendor/laravel/octane/src/Commands/InstallCommand.php(50): Laravel\\Octane\\Commands\\InstallCommand->installRoadRunnerServer()
+2026-02-14 20:19:40.565 | #5 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Laravel\\Octane\\Commands\\InstallCommand->handle()
+2026-02-14 20:19:40.565 | #6 /var/www/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+2026-02-14 20:19:40.565 | #7 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+2026-02-14 20:19:40.565 | #8 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+2026-02-14 20:19:40.565 | #9 /var/www/vendor/laravel/framework/src/Illuminate/Container/Container.php(799): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+2026-02-14 20:19:40.565 | #10 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate\\Container\\Container->call(Array)
+2026-02-14 20:19:40.565 | #11 /var/www/vendor/symfony/console/Command/Command.php(341): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:19:40.565 | #12 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:19:40.565 | #13 /var/www/vendor/symfony/console/Application.php(1102): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:40.565 | #14 /var/www/vendor/symfony/console/Application.php(356): Symfony\\Component\\Console\\Application->doRunCommand(Object(Laravel\\Octane\\Commands\\InstallCommand), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:40.565 | #15 /var/www/vendor/symfony/console/Application.php(195): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:40.565 | #16 /var/www/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:40.565 | #17 /var/www/artisan(35): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:19:40.565 | #18 {main}
+2026-02-14 20:19:40.565 | "} {"command_id":"e6511cf4-0b9e-4952-b30c-eedee5b2bb31","is_console":true}
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 |    Symfony\Component\Process\Exception\ProcessFailedException 
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 |   The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 | Exit Code: 1(General error)
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 | Working directory: /var/www
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 | Output:
+2026-02-14 20:19:40.567 | ================
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 |  Environment:
+2026-02-14 20:19:40.567 |    - Version:          2025.*
+2026-02-14 20:19:40.567 |    - Stability:        stable
+2026-02-14 20:19:40.567 |    - Operating System: linux
+2026-02-14 20:19:40.567 |    - Architecture:     amd64
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 | Error Output:
+2026-02-14 20:19:40.567 | ================
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 | In ErrorChunk.php line 55:
+2026-02-14 20:19:40.567 |                                                                                
+2026-02-14 20:19:40.567 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:40.567 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:40.567 |   page=1".                                                                     
+2026-02-14 20:19:40.567 |                                                                                
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 | In CurlResponse.php line 336:
+2026-02-14 20:19:40.567 |                                                                                
+2026-02-14 20:19:40.567 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:40.567 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:40.567 |   page=1".                                                                     
+2026-02-14 20:19:40.567 |                                                                                
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:19:40.567 | 
+2026-02-14 20:19:40.567 |   at vendor/symfony/process/Process.php:280
+2026-02-14 20:19:40.571 |     276▕      */
+2026-02-14 20:19:40.571 |     277▕     public function mustRun(?callable $callback = null, array $env = []): static
+2026-02-14 20:19:40.571 |     278▕     {
+2026-02-14 20:19:40.571 |     279▕         if (0 !== $this->run($callback, $env)) {
+2026-02-14 20:19:40.571 |   ➜ 280▕             throw new ProcessFailedException($this);
+2026-02-14 20:19:40.571 |     281▕         }
+2026-02-14 20:19:40.571 |     282▕ 
+2026-02-14 20:19:40.571 |     283▕         return $this;
+2026-02-14 20:19:40.571 |     284▕     }
+2026-02-14 20:19:40.571 | 
+2026-02-14 20:19:40.571 |       +17 vendor frames 
+2026-02-14 20:19:40.571 | 
+2026-02-14 20:19:40.571 |   18  artisan:35
+2026-02-14 20:19:40.571 |       Illuminate\Foundation\Console\Kernel::handle(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+2026-02-14 20:19:40.571 | 
+2026-02-14 20:19:40.579 | [WARN] Falha ao instalar via artisan. Tentando baixar diretamente...
+2026-02-14 20:19:40.622 | 
+2026-02-14 20:19:40.622 |  Environment:
+2026-02-14 20:19:40.622 |    - Version:          2025.*
+2026-02-14 20:19:40.622 |    - Stability:        stable
+2026-02-14 20:19:40.622 |    - Operating System: linux
+2026-02-14 20:19:40.622 |    - Architecture:     amd64
+2026-02-14 20:19:40.622 | 
+2026-02-14 20:19:53.793 | 
+2026-02-14 20:19:53.795 | In ErrorChunk.php line 55:
+2026-02-14 20:19:53.795 |                                                                                
+2026-02-14 20:19:53.795 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:53.795 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:53.795 |   page=1".                                                                     
+2026-02-14 20:19:53.795 |                                                                                
+2026-02-14 20:19:53.795 | 
+2026-02-14 20:19:53.797 | In CurlResponse.php line 336:
+2026-02-14 20:19:53.797 |                                                                                
+2026-02-14 20:19:53.797 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:19:53.797 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:19:53.797 |   page=1".                                                                     
+2026-02-14 20:19:53.797 |                                                                                
+2026-02-14 20:19:53.797 | 
+2026-02-14 20:19:53.797 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:19:53.797 | 
+2026-02-14 20:19:53.801 | [ERROR] Falha ao baixar binário RoadRunner
+2026-02-14 20:19:53.802 | [OK] RoadRunner instalado
+2026-02-14 20:19:53.802 | [INFO] Iniciando Octane com Watch...
+2026-02-14 20:19:53.802 | 
+2026-02-14 20:19:53.802 | 🚀 Servidor Octane (RoadRunner) iniciando em http://0.0.0.0:8000
+2026-02-14 20:19:53.802 | ℹ️  Modo Watch ativado (File changes trigger reload)
+2026-02-14 20:19:53.802 | 
+2026-02-14 20:19:54.037 | 
+2026-02-14 20:19:54.037 |  Environment:
+2026-02-14 20:19:54.037 |    - Version:          2025.*
+2026-02-14 20:19:54.037 |    - Stability:        stable
+2026-02-14 20:19:54.037 |    - Operating System: linux
+2026-02-14 20:19:54.037 |    - Architecture:     amd64
+2026-02-14 20:19:54.037 | 
+2026-02-14 20:20:05.154 | 
+2026-02-14 20:20:05.157 | In ErrorChunk.php line 55:
+2026-02-14 20:20:05.157 |                                                                                
+2026-02-14 20:20:05.157 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:05.157 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:05.157 |   page=1".                                                                     
+2026-02-14 20:20:05.157 |                                                                                
+2026-02-14 20:20:05.157 | 
+2026-02-14 20:20:05.160 | In CurlResponse.php line 336:
+2026-02-14 20:20:05.160 |                                                                                
+2026-02-14 20:20:05.160 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:05.160 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:05.160 |   page=1".                                                                     
+2026-02-14 20:20:05.160 |                                                                                
+2026-02-14 20:20:05.160 | 
+2026-02-14 20:20:05.160 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:20:05.160 | 
+2026-02-14 20:20:05.179 | [2026-02-14 23:20:05] local.ERROR: The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:20:05.179 | 
+2026-02-14 20:20:05.179 | Exit Code: 1(General error)
+2026-02-14 20:20:05.179 | 
+2026-02-14 20:20:05.179 | Working directory: /var/www
+2026-02-14 20:20:05.179 | 
+2026-02-14 20:20:05.179 | Output:
+2026-02-14 20:20:05.179 | ================
+2026-02-14 20:20:05.179 | 
+2026-02-14 20:20:05.179 |  Environment:
+2026-02-14 20:20:05.179 |    - Version:          2025.*
+2026-02-14 20:20:05.179 |    - Stability:        stable
+2026-02-14 20:20:05.179 |    - Operating System: linux
+2026-02-14 20:20:05.179 |    - Architecture:     amd64
+2026-02-14 20:20:05.179 | 
+2026-02-14 20:20:05.179 | 
+2026-02-14 20:20:05.179 | 
+2026-02-14 20:20:05.179 | Error Output:
+2026-02-14 20:20:05.179 | ================
+2026-02-14 20:20:05.179 | 
+2026-02-14 20:20:05.179 | In ErrorChunk.php line 55:
+2026-02-14 20:20:05.179 |                                                                                
+2026-02-14 20:20:05.179 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:05.179 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:05.179 |   page=1".                                                                     
+2026-02-14 20:20:05.179 |                                                                                
+2026-02-14 20:20:05.179 | 
+2026-02-14 20:20:05.179 | In CurlResponse.php line 336:
+2026-02-14 20:20:05.180 |                                                                                
+2026-02-14 20:20:05.180 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:05.180 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:05.180 |   page=1".                                                                     
+2026-02-14 20:20:05.180 |                                                                                
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 |  {"exception":"[object] (Symfony\\Component\\Process\\Exception\\ProcessFailedException(code: 0): The command \"'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'\" failed.
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 | Exit Code: 1(General error)
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 | Working directory: /var/www
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 | Output:
+2026-02-14 20:20:05.180 | ================
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 |  Environment:
+2026-02-14 20:20:05.180 |    - Version:          \u001b[32m2025.*\u001b[39m
+2026-02-14 20:20:05.180 |    - Stability:        \u001b[32mstable\u001b[39m
+2026-02-14 20:20:05.180 |    - Operating System: \u001b[32mlinux\u001b[39m
+2026-02-14 20:20:05.180 |    - Architecture:     \u001b[32mamd64\u001b[39m
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 | Error Output:
+2026-02-14 20:20:05.180 | ================
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 | \u001b[33mIn ErrorChunk.php line 55:\u001b[39m
+2026-02-14 20:20:05.180 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:20:05.180 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:20:05.180 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:20:05.180 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:20:05.180 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 | \u001b[33mIn CurlResponse.php line 336:\u001b[39m
+2026-02-14 20:20:05.180 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:20:05.180 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:20:05.180 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:20:05.180 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:20:05.180 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 | \u001b[32mget-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]\u001b[39m
+2026-02-14 20:20:05.180 | 
+2026-02-14 20:20:05.180 |  at /var/www/vendor/symfony/process/Process.php:280)
+2026-02-14 20:20:05.180 | [stacktrace]
+2026-02-14 20:20:05.180 | #0 /var/www/vendor/laravel/framework/src/Illuminate/Support/HigherOrderTapProxy.php(33): Symfony\\Component\\Process\\Process->mustRun(Object(Closure))
+2026-02-14 20:20:05.180 | #1 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(174): Illuminate\\Support\\HigherOrderTapProxy->__call('mustRun', Array)
+2026-02-14 20:20:05.180 | #2 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(108): Laravel\\Octane\\Commands\\StartRoadRunnerCommand->downloadRoadRunnerBinary()
+2026-02-14 20:20:05.180 | #3 /var/www/vendor/laravel/octane/src/Commands/StartRoadRunnerCommand.php(65): Laravel\\Octane\\Commands\\StartRoadRunnerCommand->ensureRoadRunnerBinaryIsInstalled()
+2026-02-14 20:20:05.180 | #4 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Laravel\\Octane\\Commands\\StartRoadRunnerCommand->handle(Object(Laravel\\Octane\\RoadRunner\\ServerProcessInspector), Object(Laravel\\Octane\\RoadRunner\\ServerStateFile))
+2026-02-14 20:20:05.180 | #5 /var/www/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+2026-02-14 20:20:05.180 | #6 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+2026-02-14 20:20:05.180 | #7 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+2026-02-14 20:20:05.180 | #8 /var/www/vendor/laravel/framework/src/Illuminate/Container/Container.php(799): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+2026-02-14 20:20:05.180 | #9 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate\\Container\\Container->call(Array)
+2026-02-14 20:20:05.180 | #10 /var/www/vendor/symfony/console/Command/Command.php(341): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArrayInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:20:05.180 | #11 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArrayInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:20:05.180 | #12 /var/www/vendor/laravel/framework/src/Illuminate/Console/Concerns/CallsCommands.php(68): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArrayInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:20:05.180 | #13 /var/www/vendor/laravel/framework/src/Illuminate/Console/Concerns/CallsCommands.php(29): Illuminate\\Console\\Command->runCommand('octane:roadrunn...', Array, Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:20:05.180 | #14 /var/www/vendor/laravel/octane/src/Commands/StartCommand.php(85): Illuminate\\Console\\Command->call('octane:roadrunn...', Array)
+2026-02-14 20:20:05.180 | #15 /var/www/vendor/laravel/octane/src/Commands/StartCommand.php(54): Laravel\\Octane\\Commands\\StartCommand->startRoadRunnerServer()
+2026-02-14 20:20:05.180 | #16 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Laravel\\Octane\\Commands\\StartCommand->handle()
+2026-02-14 20:20:05.180 | #17 /var/www/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+2026-02-14 20:20:05.180 | #18 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+2026-02-14 20:20:05.180 | #19 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+2026-02-14 20:20:05.180 | #20 /var/www/vendor/laravel/framework/src/Illuminate/Container/Container.php(799): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+2026-02-14 20:20:05.180 | #21 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate\\Container\\Container->call(Array)
+2026-02-14 20:20:05.180 | #22 /var/www/vendor/symfony/console/Command/Command.php(341): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:20:05.180 | #23 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:20:05.180 | #24 /var/www/vendor/symfony/console/Application.php(1102): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:20:05.180 | #25 /var/www/vendor/symfony/console/Application.php(356): Symfony\\Component\\Console\\Application->doRunCommand(Object(Laravel\\Octane\\Commands\\StartCommand), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:20:05.180 | #26 /var/www/vendor/symfony/console/Application.php(195): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:20:05.180 | #27 /var/www/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:20:05.180 | #28 /var/www/artisan(35): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:20:05.180 | #29 {main}
+2026-02-14 20:20:05.180 | "} {"command_id":"9b295a84-c103-415e-be23-c82fb8b51955","is_console":true}
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 |    Symfony\Component\Process\Exception\ProcessFailedException 
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 |   The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 | Exit Code: 1(General error)
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 | Working directory: /var/www
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 | Output:
+2026-02-14 20:20:05.183 | ================
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 |  Environment:
+2026-02-14 20:20:05.183 |    - Version:          2025.*
+2026-02-14 20:20:05.183 |    - Stability:        stable
+2026-02-14 20:20:05.183 |    - Operating System: linux
+2026-02-14 20:20:05.183 |    - Architecture:     amd64
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 | Error Output:
+2026-02-14 20:20:05.183 | ================
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 | In ErrorChunk.php line 55:
+2026-02-14 20:20:05.183 |                                                                                
+2026-02-14 20:20:05.183 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:05.183 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:05.183 |   page=1".                                                                     
+2026-02-14 20:20:05.183 |                                                                                
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 | In CurlResponse.php line 336:
+2026-02-14 20:20:05.183 |                                                                                
+2026-02-14 20:20:05.183 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:05.183 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:05.183 |   page=1".                                                                     
+2026-02-14 20:20:05.183 |                                                                                
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:20:05.183 | 
+2026-02-14 20:20:05.183 |   at vendor/symfony/process/Process.php:280
+2026-02-14 20:20:05.186 |     276▕      */
+2026-02-14 20:20:05.186 |     277▕     public function mustRun(?callable $callback = null, array $env = []): static
+2026-02-14 20:20:05.186 |     278▕     {
+2026-02-14 20:20:05.186 |     279▕         if (0 !== $this->run($callback, $env)) {
+2026-02-14 20:20:05.186 |   ➜ 280▕             throw new ProcessFailedException($this);
+2026-02-14 20:20:05.186 |     281▕         }
+2026-02-14 20:20:05.186 |     282▕ 
+2026-02-14 20:20:05.186 |     283▕         return $this;
+2026-02-14 20:20:05.186 |     284▕     }
+2026-02-14 20:20:05.186 | 
+2026-02-14 20:20:05.186 |       +28 vendor frames 
+2026-02-14 20:20:05.186 | 
+2026-02-14 20:20:05.186 |   29  artisan:35
+2026-02-14 20:20:05.186 |       Illuminate\Foundation\Console\Kernel::handle(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+2026-02-14 20:20:05.186 | 
+2026-02-14 20:20:07.178 | 
+2026-02-14 20:20:07.178 | ╔══════════════════════════════════════════════════════════════╗
+2026-02-14 20:20:07.178 | ║        SDC - Sistema de Defesa Civil                        ║
+2026-02-14 20:20:07.178 | ║        Ambiente de Desenvolvimento                          ║
+2026-02-14 20:20:07.178 | ╚══════════════════════════════════════════════════════════════╝
+2026-02-14 20:20:07.178 | 
+2026-02-14 20:20:07.181 | [INFO] Aguardando banco de dados...
+2026-02-14 20:20:07.182 | [OK] Banco de dados disponível
+2026-02-14 20:20:07.182 | [INFO] Aguardando Redis...
+2026-02-14 20:20:07.183 | [OK] Redis disponível
+2026-02-14 20:20:07.183 | [INFO] Verificando montagem do volume...
+2026-02-14 20:20:07.184 | [INFO] Diretório atual: /var/www
+2026-02-14 20:20:07.191 | [INFO] Conteúdo do diretório: total 2116
+2026-02-14 20:20:07.191 | drwxrwxr-x   23 www-data www-data      4096 Feb 14 20:04 .
+2026-02-14 20:20:07.191 | drwxr-xr-x    1 root     root          4096 Jan 29 22:22 ..
+2026-02-14 20:20:07.191 | -rw-rw-r--    1 www-data www-data       211 Dec 26 14:00 .ci-test
+2026-02-14 20:20:07.191 | drwxrwxr-x    2 www-data www-data      4096 Feb 14 17:44 .claude
+2026-02-14 20:20:07.191 | drwxrwxr-x    3 www-data www-data      4096 Dec 26 14:00 .composer
+2026-02-14 20:20:07.191 | drwxrwxr-x    3 www-data www-data      4096 Dec 26 14:00 .config
+2026-02-14 20:20:07.191 | -rw-rw-r--    1 www-data www-data       371 Feb  8 18:50 .dockerignore
+2026-02-14 20:20:07.191 | -rw-rw-r--    1 www-data www-data       258 Dec 26 14:00 .editorconfig
+2026-02-14 20:20:07.191 | -rw-r--r--    1 www-data www-data       455 Feb 14 18:20 .env
+2026-02-14 20:20:07.191 | -rw-rw-r--    1 www-data www-data       300 Dec 26 19:45 .env.testing
+2026-02-14 20:20:07.191 | -rw-rw-r--    1 www-data www-data       186 Dec 26 14:00 .gitattributes
+2026-02-14 20:20:07.191 | -rw-rw-r--    1 www-data www-data        29 Dec 26 14:00 .gitconfig
+2026-02-14 20:20:07.191 | -rw-rw-r--    1 www-data www-data       303 Feb  7 18:06 .gitignore
+2026-02-14 20:20:07.191 | -rw-rw-r--    1 www-data www-data         0 Dec 26 14:00 .octane-installed
+2026-02-14 20:20:07.191 | -rw-rw-r--    1 www-data www-data     15871 Dec 29 18:36 CODE_REVIEW_IMPROVEMENTS.md
+2026-02-14 20:20:07.191 | -rw-rw-r--    1 www-data www-data      2891 Dec 29 18:36 DOCKER_OPCACHE_FIX.md
+2026-02-14 20:20:07.191 | -rw-rw-r--    1 www-data www-data      6934 Jan 26 20:41 DOCKER_SETUP_COMPLETE.md
+2026-02-14 20:20:07.191 | -rw-rw-r--    1 www-data www-data     33757 Feb 14 17:44 DOC_TABELA_VERDADE_PERMISSOES.md
+2026-02-14 20:20:07.191 | drwxrwxr-x    2 www-data www-data      4096 Feb 14 17:44 Doc
+2026-02-14 20:20:07.197 | [OK] Dependências Composer já estão atualizadas (fingerprint OK)
+2026-02-14 20:20:07.197 | [INFO] Gerando manifesto de pacotes...
+2026-02-14 20:20:07.432 | 
+2026-02-14 20:20:07.432 |    INFO  Discovering packages.  
+2026-02-14 20:20:07.433 | 
+2026-02-14 20:20:07.440 |   darkaonline/l5-swagger ................................................ DONE
+2026-02-14 20:20:07.442 |   inertiajs/inertia-laravel ............................................. DONE
+2026-02-14 20:20:07.444 |   laravel/breeze ........................................................ DONE
+2026-02-14 20:20:07.446 |   laravel/octane ........................................................ DONE
+2026-02-14 20:20:07.448 |   laravel/sail .......................................................... DONE
+2026-02-14 20:20:07.449 |   laravel/sanctum ....................................................... DONE
+2026-02-14 20:20:07.451 |   laravel/tinker ........................................................ DONE
+2026-02-14 20:20:07.453 |   nativephp/mobile ...................................................... DONE
+2026-02-14 20:20:07.455 |   nesbot/carbon ......................................................... DONE
+2026-02-14 20:20:07.456 |   nunomaduro/collision .................................................. DONE
+2026-02-14 20:20:07.458 |   nunomaduro/termwind ................................................... DONE
+2026-02-14 20:20:07.459 |   rap2hpoutre/laravel-log-viewer ........................................ DONE
+2026-02-14 20:20:07.461 |   spatie/laravel-ignition ............................................... DONE
+2026-02-14 20:20:07.462 |   spatie/laravel-permission ............................................. DONE
+2026-02-14 20:20:07.464 |   tightenco/ziggy ....................................................... DONE
+2026-02-14 20:20:07.464 | 
+2026-02-14 20:20:07.473 | [OK] APP_KEY já configurada
+2026-02-14 20:20:07.473 | [INFO] Executando migrations...
+2026-02-14 20:20:07.698 | 
+2026-02-14 20:20:07.698 |    INFO  Nothing to migrate.  
+2026-02-14 20:20:07.698 | 
+2026-02-14 20:20:07.707 | [OK] Migrations executadas
+2026-02-14 20:20:07.707 | [INFO] Executando seeders (mock data: usuários, hierarquias, RATs)...
+2026-02-14 20:20:07.925 | 
+2026-02-14 20:20:07.925 |    INFO  Seeding database.  
+2026-02-14 20:20:07.925 | 
+2026-02-14 20:20:07.927 |   Database\Seeders\RolesAndPermissionsSeeder ......................... RUNNING  
+2026-02-14 20:20:08.205 | Roles e Permissions sincronizadas via config/permissions.php
+2026-02-14 20:20:08.205 | 
+2026-02-14 20:20:08.205 | Hierarquia de Cargos:
+2026-02-14 20:20:08.205 |   Nivel 0: Super Admin (super-admin)
+2026-02-14 20:20:08.205 |   Nivel 1: Administrador (admin)
+2026-02-14 20:20:08.205 |   Nivel 2: Gestor (manager)
+2026-02-14 20:20:08.205 |   Nivel 3: Analista (analyst)
+2026-02-14 20:20:08.205 |   Nivel 4: Operador (operator)
+2026-02-14 20:20:08.205 |   Nivel 5: Visualizador (viewer)
+2026-02-14 20:20:08.205 |   Nivel 6: Usuario (user)
+2026-02-14 20:20:08.206 |   Database\Seeders\RolesAndPermissionsSeeder ..................... 278 ms DONE  
+2026-02-14 20:20:08.206 | 
+2026-02-14 20:20:08.207 |   Database\Seeders\OrgaosSeeder ...................................... RUNNING  
+2026-02-14 20:20:08.226 | ✅ Órgãos criados/atualizados com sucesso!
+2026-02-14 20:20:08.226 |    - 1 CEDEC (Estadual)
+2026-02-14 20:20:08.226 |    - 3 REDECs (Regionais)
+2026-02-14 20:20:08.226 |    - 4 COMPDECs (Municipais)
+2026-02-14 20:20:08.227 |   Database\Seeders\OrgaosSeeder ................................... 19 ms DONE  
+2026-02-14 20:20:08.227 | 
+2026-02-14 20:20:08.416 | Admin Geral criado com role super-admin
+2026-02-14 20:20:08.417 |   Database\Seeders\MockUsersSeeder ................................... RUNNING  
+2026-02-14 20:20:08.419 | Usuário joao.silva@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:20:08.420 | Usuário maria.santos@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:20:08.421 | Usuário pedro.oliveira@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:20:08.421 | Usuário ana.costa@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:20:08.422 | Usuário carlos.pereira@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:20:08.422 | Usuário juliana.almeida@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:20:08.423 | Usuário roberto.fernandes@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:20:08.423 | Usuário fernanda.lima@defesa.mg.gov.br já existe. Pulando...
+2026-02-14 20:20:08.423 | 
+2026-02-14 20:20:08.423 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:20:08.423 |   USUÁRIOS MOCK CRIADOS COM SUCESSO
+2026-02-14 20:20:08.423 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:20:08.423 | 
+2026-02-14 20:20:08.423 | Credenciais padrão:
+2026-02-14 20:20:08.423 |   Email: <qualquer email acima>
+2026-02-14 20:20:08.423 |   Senha: password
+2026-02-14 20:20:08.423 | 
+2026-02-14 20:20:08.426 | +-------------------+------------------------------------+----------+
+2026-02-14 20:20:08.426 | | Nome              | Email                              | Role     |
+2026-02-14 20:20:08.426 | +-------------------+------------------------------------+----------+
+2026-02-14 20:20:08.426 | | João Silva        | joao.silva@defesa.mg.gov.br        | admin    |
+2026-02-14 20:20:08.426 | | Maria Santos      | maria.santos@defesa.mg.gov.br      | analyst  |
+2026-02-14 20:20:08.426 | | Pedro Oliveira    | pedro.oliveira@defesa.mg.gov.br    | analyst  |
+2026-02-14 20:20:08.426 | | Ana Costa         | ana.costa@defesa.mg.gov.br         | operator |
+2026-02-14 20:20:08.426 | | Carlos Pereira    | carlos.pereira@defesa.mg.gov.br    | operator |
+2026-02-14 20:20:08.426 | | Juliana Almeida   | juliana.almeida@defesa.mg.gov.br   | analyst  |
+2026-02-14 20:20:08.426 | | Roberto Fernandes | roberto.fernandes@defesa.mg.gov.br | admin    |
+2026-02-14 20:20:08.427 | | Fernanda Lima     | fernanda.lima@defesa.mg.gov.br     | operator |
+2026-02-14 20:20:08.427 | +-------------------+------------------------------------+----------+
+2026-02-14 20:20:08.427 |   Database\Seeders\MockUsersSeeder ................................ 10 ms DONE  
+2026-02-14 20:20:08.427 | 
+2026-02-14 20:20:08.428 |   Database\Seeders\MockUsersHierarchySeeder .......................... RUNNING  
+2026-02-14 20:20:08.443 | 
+2026-02-14 20:20:08.443 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:20:08.443 |   USUÁRIOS COM HIERARQUIAS DIVERSAS - MOCK
+2026-02-14 20:20:08.443 | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-02-14 20:20:08.443 |   Criados: 0 | Já existentes (pulados): 29
+2026-02-14 20:20:08.443 |   Senha padrão: password
+2026-02-14 20:20:08.443 | 
+2026-02-14 20:20:08.443 |   Distribuição por Hierarquia:
+2026-02-14 20:20:08.443 |     super-admin: 2 usuários
+2026-02-14 20:20:08.443 |     admin: 3 usuários
+2026-02-14 20:20:08.443 |     manager: 4 usuários
+2026-02-14 20:20:08.443 |     analyst: 7 usuários
+2026-02-14 20:20:08.443 |     operator: 6 usuários
+2026-02-14 20:20:08.443 |     viewer: 3 usuários
+2026-02-14 20:20:08.443 |     user: 2 usuários
+2026-02-14 20:20:08.443 |     sem-cargo: 2 usuários
+2026-02-14 20:20:08.443 | 
+2026-02-14 20:20:08.444 |   Database\Seeders\MockUsersHierarchySeeder ....................... 15 ms DONE  
+2026-02-14 20:20:08.444 | 
+2026-02-14 20:20:08.447 | Tabela "rats" não encontrada - RatMockSeeder pulado.
+2026-02-14 20:20:08.448 |   Database\Seeders\TestOrgaosSeeder .................................. RUNNING  
+2026-02-14 20:20:08.448 | Criando orgaos de teste...
+2026-02-14 20:20:08.449 | Orgaos de teste ja existem. Pulando...
+2026-02-14 20:20:08.449 |   Database\Seeders\TestOrgaosSeeder ................................ 1 ms DONE  
+2026-02-14 20:20:08.449 | 
+2026-02-14 20:20:08.450 |   Database\Seeders\TestUsersSeeder ................................... RUNNING  
+2026-02-14 20:20:08.450 | Criando usuarios de teste com hierarquia...
+2026-02-14 20:20:08.452 | Usuario ja existe: super.admin@test.defesa.mg.gov.br
+2026-02-14 20:20:08.453 | Usuario ja existe: admin.cedec@test.defesa.mg.gov.br
+2026-02-14 20:20:08.453 | Usuario ja existe: admin.redec@test.defesa.mg.gov.br
+2026-02-14 20:20:08.454 | Usuario ja existe: coord.metro@test.defesa.mg.gov.br
+2026-02-14 20:20:08.454 | Usuario ja existe: coord.sul@test.defesa.mg.gov.br
+2026-02-14 20:20:08.455 | Usuario ja existe: coord.bh@test.defesa.mg.gov.br
+2026-02-14 20:20:08.455 | Usuario ja existe: analista.bh@test.defesa.mg.gov.br
+2026-02-14 20:20:08.456 | Usuario ja existe: analista.contagem@test.defesa.mg.gov.br
+2026-02-14 20:20:08.456 | Usuario ja existe: analista.pouso@test.defesa.mg.gov.br
+2026-02-14 20:20:08.457 | Usuario ja existe: operador.bh@test.defesa.mg.gov.br
+2026-02-14 20:20:08.457 | Usuario ja existe: operador.varginha@test.defesa.mg.gov.br
+2026-02-14 20:20:08.458 | Usuario ja existe: visualizador.ativo@test.defesa.mg.gov.br
+2026-02-14 20:20:08.458 | Usuario ja existe: visualizador.inativo@test.defesa.mg.gov.br
+2026-02-14 20:20:08.459 | Usuario ja existe: visualizador.bloqueado@test.defesa.mg.gov.br
+2026-02-14 20:20:08.459 | Usuario ja existe: usuario.suspenso@test.defesa.mg.gov.br
+2026-02-14 20:20:08.460 | Usuario ja existe: usuario.pendente@test.defesa.mg.gov.br
+2026-02-14 20:20:08.460 | Usuario ja existe: sem.role@test.defesa.mg.gov.br
+2026-02-14 20:20:08.460 | Usuarios criados: 0 | Ignorados: 17
+2026-02-14 20:20:08.460 | 
+2026-02-14 20:20:08.460 | Credenciais de teste:
+2026-02-14 20:20:08.462 | +----------------------------------------------+------------+--------------+-----------+
+2026-02-14 20:20:08.462 | | Email                                        | Senha      | Role         | Status    |
+2026-02-14 20:20:08.462 | +----------------------------------------------+------------+--------------+-----------+
+2026-02-14 20:20:08.462 | | super.admin@test.defesa.mg.gov.br            | Test@2026! | super-admin  | active    |
+2026-02-14 20:20:08.462 | | admin.cedec@test.defesa.mg.gov.br            | Test@2026! | admin        | active    |
+2026-02-14 20:20:08.463 | | admin.redec@test.defesa.mg.gov.br            | Test@2026! | admin        | active    |
+2026-02-14 20:20:08.463 | | coord.metro@test.defesa.mg.gov.br            | Test@2026! | coordenador  | active    |
+2026-02-14 20:20:08.463 | | coord.sul@test.defesa.mg.gov.br              | Test@2026! | coordenador  | active    |
+2026-02-14 20:20:08.463 | | coord.bh@test.defesa.mg.gov.br               | Test@2026! | coordenador  | active    |
+2026-02-14 20:20:08.463 | | analista.bh@test.defesa.mg.gov.br            | Test@2026! | analista     | active    |
+2026-02-14 20:20:08.463 | | analista.contagem@test.defesa.mg.gov.br      | Test@2026! | analista     | active    |
+2026-02-14 20:20:08.463 | | analista.pouso@test.defesa.mg.gov.br         | Test@2026! | analista     | active    |
+2026-02-14 20:20:08.463 | | operador.bh@test.defesa.mg.gov.br            | Test@2026! | operador     | active    |
+2026-02-14 20:20:08.463 | | operador.varginha@test.defesa.mg.gov.br      | Test@2026! | operador     | active    |
+2026-02-14 20:20:08.463 | | visualizador.ativo@test.defesa.mg.gov.br     | Test@2026! | visualizador | active    |
+2026-02-14 20:20:08.463 | | visualizador.inativo@test.defesa.mg.gov.br   | Test@2026! | visualizador | inactive  |
+2026-02-14 20:20:08.463 | | visualizador.bloqueado@test.defesa.mg.gov.br | Test@2026! | visualizador | blocked   |
+2026-02-14 20:20:08.463 | | usuario.suspenso@test.defesa.mg.gov.br       | Test@2026! | operador     | suspended |
+2026-02-14 20:20:08.463 | | usuario.pendente@test.defesa.mg.gov.br       | Test@2026! | operador     | pending   |
+2026-02-14 20:20:08.463 | | sem.role@test.defesa.mg.gov.br               | Test@2026! | sem-role     | active    |
+2026-02-14 20:20:08.463 | +----------------------------------------------+------------+--------------+-----------+
+2026-02-14 20:20:08.464 |   Database\Seeders\TestUsersSeeder ................................ 13 ms DONE  
+2026-02-14 20:20:08.464 | 
+2026-02-14 20:20:08.474 | [OK] Seeders executados (30+ usuários, 15 RATs, 7 hierarquias)
+2026-02-14 20:20:08.474 | [INFO] Limpando caches...
+2026-02-14 20:20:08.679 | 
+2026-02-14 20:20:08.679 |    INFO  Configuration cache cleared successfully.  
+2026-02-14 20:20:08.679 | 
+2026-02-14 20:20:08.912 | 
+2026-02-14 20:20:08.912 |    INFO  Route cache cleared successfully.  
+2026-02-14 20:20:08.912 | 
+2026-02-14 20:20:09.152 | 
+2026-02-14 20:20:09.152 |    INFO  Compiled views cleared successfully.  
+2026-02-14 20:20:09.152 | 
+2026-02-14 20:20:09.160 | [OK] Caches limpos
+2026-02-14 20:20:09.160 | [INFO] Ajustando permissões...
+2026-02-14 20:20:09.179 | [OK] Permissões ajustadas
+2026-02-14 20:20:09.179 | 
+2026-02-14 20:20:09.202 | [INFO] PHP Version: PHP 8.3.30 (cli) (built: Jan 30 2026 01:24:18) (NTS)
+2026-02-14 20:20:09.248 | PHP version 8.3.30 (/usr/local/bin/php)
+2026-02-14 20:20:09.248 | Run the "diagnose" command to get more detailed diagnostics output.
+2026-02-14 20:20:09.253 | [INFO] Composer Version: Composer version 2.9.5 2026-01-29 11:40:53
+2026-02-14 20:20:09.253 | 
+2026-02-14 20:20:09.253 | [INFO] Configurando Octane (RoadRunner)...
+2026-02-14 20:20:09.254 | [INFO] Binário RoadRunner não encontrado. Instalando...
+2026-02-14 20:20:09.528 | 
+2026-02-14 20:20:09.528 |  Environment:
+2026-02-14 20:20:09.528 |    - Version:          2025.*
+2026-02-14 20:20:09.528 |    - Stability:        stable
+2026-02-14 20:20:09.528 |    - Operating System: linux
+2026-02-14 20:20:09.528 |    - Architecture:     amd64
+2026-02-14 20:20:09.529 | 
+2026-02-14 20:20:22.515 | 
+2026-02-14 20:20:22.518 | In ErrorChunk.php line 55:
+2026-02-14 20:20:22.518 |                                                                                
+2026-02-14 20:20:22.518 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:22.518 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:22.518 |   page=1".                                                                     
+2026-02-14 20:20:22.518 |                                                                                
+2026-02-14 20:20:22.518 | 
+2026-02-14 20:20:22.520 | In CurlResponse.php line 336:
+2026-02-14 20:20:22.520 |                                                                                
+2026-02-14 20:20:22.520 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:22.520 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:22.520 |   page=1".                                                                     
+2026-02-14 20:20:22.520 |                                                                                
+2026-02-14 20:20:22.520 | 
+2026-02-14 20:20:22.520 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:20:22.520 | 
+2026-02-14 20:20:22.539 | [2026-02-14 23:20:22] local.ERROR: The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | Exit Code: 1(General error)
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | Working directory: /var/www
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | Output:
+2026-02-14 20:20:22.539 | ================
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 |  Environment:
+2026-02-14 20:20:22.539 |    - Version:          2025.*
+2026-02-14 20:20:22.539 |    - Stability:        stable
+2026-02-14 20:20:22.539 |    - Operating System: linux
+2026-02-14 20:20:22.539 |    - Architecture:     amd64
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | Error Output:
+2026-02-14 20:20:22.539 | ================
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | In ErrorChunk.php line 55:
+2026-02-14 20:20:22.539 |                                                                                
+2026-02-14 20:20:22.539 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:22.539 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:22.539 |   page=1".                                                                     
+2026-02-14 20:20:22.539 |                                                                                
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | In CurlResponse.php line 336:
+2026-02-14 20:20:22.539 |                                                                                
+2026-02-14 20:20:22.539 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:22.539 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:22.539 |   page=1".                                                                     
+2026-02-14 20:20:22.539 |                                                                                
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 |  {"exception":"[object] (Symfony\\Component\\Process\\Exception\\ProcessFailedException(code: 0): The command \"'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'\" failed.
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | Exit Code: 1(General error)
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | Working directory: /var/www
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | Output:
+2026-02-14 20:20:22.539 | ================
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 |  Environment:
+2026-02-14 20:20:22.539 |    - Version:          \u001b[32m2025.*\u001b[39m
+2026-02-14 20:20:22.539 |    - Stability:        \u001b[32mstable\u001b[39m
+2026-02-14 20:20:22.539 |    - Operating System: \u001b[32mlinux\u001b[39m
+2026-02-14 20:20:22.539 |    - Architecture:     \u001b[32mamd64\u001b[39m
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | Error Output:
+2026-02-14 20:20:22.539 | ================
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | \u001b[33mIn ErrorChunk.php line 55:\u001b[39m
+2026-02-14 20:20:22.539 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:20:22.539 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:20:22.539 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:20:22.539 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:20:22.539 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | \u001b[33mIn CurlResponse.php line 336:\u001b[39m
+2026-02-14 20:20:22.539 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:20:22.539 | \u001b[37;41m  Could not resolve host: api.github.com (Timeout while contacting DNS server  \u001b[39;49m
+2026-02-14 20:20:22.539 | \u001b[37;41m  s) for \"https://api.github.com/repos/roadrunner-server/roadrunner/releases?  \u001b[39;49m
+2026-02-14 20:20:22.539 | \u001b[37;41m  page=1\".                                                                     \u001b[39;49m
+2026-02-14 20:20:22.539 | \u001b[37;41m                                                                               \u001b[39;49m
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 | \u001b[32mget-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]\u001b[39m
+2026-02-14 20:20:22.539 | 
+2026-02-14 20:20:22.539 |  at /var/www/vendor/symfony/process/Process.php:280)
+2026-02-14 20:20:22.539 | [stacktrace]
+2026-02-14 20:20:22.539 | #0 /var/www/vendor/laravel/framework/src/Illuminate/Support/HigherOrderTapProxy.php(33): Symfony\\Component\\Process\\Process->mustRun(Object(Closure))
+2026-02-14 20:20:22.539 | #1 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(174): Illuminate\\Support\\HigherOrderTapProxy->__call('mustRun', Array)
+2026-02-14 20:20:22.539 | #2 /var/www/vendor/laravel/octane/src/Commands/Concerns/InstallsRoadRunnerDependencies.php(108): Laravel\\Octane\\Commands\\InstallCommand->downloadRoadRunnerBinary()
+2026-02-14 20:20:22.539 | #3 /var/www/vendor/laravel/octane/src/Commands/InstallCommand.php(115): Laravel\\Octane\\Commands\\InstallCommand->ensureRoadRunnerBinaryIsInstalled()
+2026-02-14 20:20:22.539 | #4 /var/www/vendor/laravel/octane/src/Commands/InstallCommand.php(50): Laravel\\Octane\\Commands\\InstallCommand->installRoadRunnerServer()
+2026-02-14 20:20:22.539 | #5 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Laravel\\Octane\\Commands\\InstallCommand->handle()
+2026-02-14 20:20:22.539 | #6 /var/www/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+2026-02-14 20:20:22.539 | #7 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+2026-02-14 20:20:22.539 | #8 /var/www/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+2026-02-14 20:20:22.539 | #9 /var/www/vendor/laravel/framework/src/Illuminate/Container/Container.php(799): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+2026-02-14 20:20:22.539 | #10 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate\\Container\\Container->call(Array)
+2026-02-14 20:20:22.539 | #11 /var/www/vendor/symfony/console/Command/Command.php(341): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:20:22.539 | #12 /var/www/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+2026-02-14 20:20:22.539 | #13 /var/www/vendor/symfony/console/Application.php(1102): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:20:22.539 | #14 /var/www/vendor/symfony/console/Application.php(356): Symfony\\Component\\Console\\Application->doRunCommand(Object(Laravel\\Octane\\Commands\\InstallCommand), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:20:22.539 | #15 /var/www/vendor/symfony/console/Application.php(195): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:20:22.539 | #16 /var/www/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:20:22.539 | #17 /var/www/artisan(35): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+2026-02-14 20:20:22.539 | #18 {main}
+2026-02-14 20:20:22.539 | "} {"command_id":"f8c2bf2e-9720-4c1d-a49d-48d2be78bc85","is_console":true}
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 |    Symfony\Component\Process\Exception\ProcessFailedException 
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 |   The command "'/usr/local/bin/php' './vendor/bin/rr' 'get-binary' '-n' '--ansi'" failed.
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 | Exit Code: 1(General error)
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 | Working directory: /var/www
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 | Output:
+2026-02-14 20:20:22.542 | ================
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 |  Environment:
+2026-02-14 20:20:22.542 |    - Version:          2025.*
+2026-02-14 20:20:22.542 |    - Stability:        stable
+2026-02-14 20:20:22.542 |    - Operating System: linux
+2026-02-14 20:20:22.542 |    - Architecture:     amd64
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 | Error Output:
+2026-02-14 20:20:22.542 | ================
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 | In ErrorChunk.php line 55:
+2026-02-14 20:20:22.542 |                                                                                
+2026-02-14 20:20:22.542 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:22.542 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:22.542 |   page=1".                                                                     
+2026-02-14 20:20:22.542 |                                                                                
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 | In CurlResponse.php line 336:
+2026-02-14 20:20:22.542 |                                                                                
+2026-02-14 20:20:22.542 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:22.542 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:22.542 |   page=1".                                                                     
+2026-02-14 20:20:22.542 |                                                                                
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:20:22.542 | 
+2026-02-14 20:20:22.542 |   at vendor/symfony/process/Process.php:280
+2026-02-14 20:20:22.545 |     276▕      */
+2026-02-14 20:20:22.545 |     277▕     public function mustRun(?callable $callback = null, array $env = []): static
+2026-02-14 20:20:22.545 |     278▕     {
+2026-02-14 20:20:22.545 |     279▕         if (0 !== $this->run($callback, $env)) {
+2026-02-14 20:20:22.545 |   ➜ 280▕             throw new ProcessFailedException($this);
+2026-02-14 20:20:22.545 |     281▕         }
+2026-02-14 20:20:22.545 |     282▕ 
+2026-02-14 20:20:22.545 |     283▕         return $this;
+2026-02-14 20:20:22.545 |     284▕     }
+2026-02-14 20:20:22.545 | 
+2026-02-14 20:20:22.545 |       +17 vendor frames 
+2026-02-14 20:20:22.545 | 
+2026-02-14 20:20:22.545 |   18  artisan:35
+2026-02-14 20:20:22.545 |       Illuminate\Foundation\Console\Kernel::handle(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+2026-02-14 20:20:22.545 | 
+2026-02-14 20:20:22.553 | [WARN] Falha ao instalar via artisan. Tentando baixar diretamente...
+2026-02-14 20:20:22.596 | 
+2026-02-14 20:20:22.596 |  Environment:
+2026-02-14 20:20:22.596 |    - Version:          2025.*
+2026-02-14 20:20:22.596 |    - Stability:        stable
+2026-02-14 20:20:22.596 |    - Operating System: linux
+2026-02-14 20:20:22.596 |    - Architecture:     amd64
+2026-02-14 20:20:22.596 | 
+2026-02-14 20:20:32.485 | 
+2026-02-14 20:20:32.488 | In ErrorChunk.php line 55:
+2026-02-14 20:20:32.488 |                                                                                
+2026-02-14 20:20:32.488 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:32.488 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:32.488 |   page=1".                                                                     
+2026-02-14 20:20:32.488 |                                                                                
+2026-02-14 20:20:32.488 | 
+2026-02-14 20:20:32.489 | In CurlResponse.php line 336:
+2026-02-14 20:20:32.489 |                                                                                
+2026-02-14 20:20:32.489 |   Could not resolve host: api.github.com (Timeout while contacting DNS server  
+2026-02-14 20:20:32.489 |   s) for "https://api.github.com/repos/roadrunner-server/roadrunner/releases?  
+2026-02-14 20:20:32.489 |   page=1".                                                                     
+2026-02-14 20:20:32.489 |                                                                                
+2026-02-14 20:20:32.489 | 
+2026-02-14 20:20:32.490 | get-binary [-p|--plugin [PLUGIN]] [--preset [PRESET]] [--no-config] [-o|--os [OS]] [-a|--arch [ARCH]] [-f|--filter [FILTER]] [-l|--location [LOCATION]] [-s|--stability [STABILITY]]
+2026-02-14 20:20:32.490 | 
+2026-02-14 20:20:32.495 | [ERROR] Falha ao baixar binário RoadRunner
+2026-02-14 20:20:32.495 | [OK] RoadRunner instalado
+2026-02-14 20:20:32.495 | [INFO] Iniciando Octane com Watch...
+2026-02-14 20:20:32.495 | 
+2026-02-14 20:20:32.496 | 🚀 Servidor Octane (RoadRunner) iniciando em http://0.0.0.0:8000
+2026-02-14 20:20:32.496 | ℹ️  Modo Watch ativado (File changes trigger reload)
+2026-02-14 20:20:32.496 | 
+2026-02-14 20:20:32.738 | 
+2026-02-14 20:20:32.738 |  Environment:
+2026-02-14 20:20:32.738 |    - Version:          2025.*
+2026-02-14 20:20:32.738 |    - Stability:        stable
+2026-02-14 20:20:32.738 |    - Operating System: linux
+2026-02-14 20:20:32.738 |    - Architecture:     amd64
+2026-02-14 20:20:32.738 | 

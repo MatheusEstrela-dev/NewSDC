@@ -102,6 +102,15 @@
         >
           PAE
         </NavItem>
+        <NavItem
+          v-if="canSeePlantao && route().has('plantao.index')"
+          :href="route('plantao.index')"
+          :active="isRouteActive('plantao.*')"
+          icon="clock"
+          :collapsed="isCollapsed"
+        >
+          Plantão Diário
+        </NavItem>
       </div>
 
       <!-- MÓDULOS DE GESTÃO -->
@@ -291,7 +300,11 @@ const page = usePage();
 const isRouteActive = (pattern) => {
   // Acessar page.url garante que esta função seja re-executada quando a URL mudar
   const _ = page.url; 
-  return route().current(pattern);
+  const isActive = route().current(pattern);
+  if (pattern === 'plantao.*' || pattern === 'pae.*') {
+    console.log(`Checking pattern: ${pattern}, isActive: ${isActive}, currentRoute: ${route().current()}`);
+  }
+  return isActive;
 };
 
 // Helper para verificar permissoes do usuario
@@ -356,6 +369,10 @@ const canSeeTdap = computed(() => {
 
 const canSeeTreinamento = computed(() => {
   return hasPermission(['treinamento.cursos.view']);
+});
+
+const canSeePlantao = computed(() => {
+  return hasPermission(['plantao.turnos.view']);
 });
 
 const canSeeMeteorologia = computed(() => {

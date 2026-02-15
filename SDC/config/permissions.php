@@ -10,12 +10,12 @@ return [
     */
     'levels' => [
         'super-admin' => 0,
-        'admin'       => 1,
-        'manager'     => 2,
-        'analyst'     => 3,
-        'operator'    => 4,
-        'viewer'      => 5,
-        'user'        => 6,
+        'admin' => 1,
+        'manager' => 2,
+        'analyst' => 3,
+        'operator' => 4,
+        'viewer' => 5,
+        'user' => 6,
     ],
 
     /*
@@ -25,39 +25,39 @@ return [
     */
     'roles' => [
         'super-admin' => [
-            'name'        => 'Super Admin',
+            'name' => 'Super Admin',
             'description' => 'Acesso total e irrestrito ao sistema - Desenvolvimento e Manutencao',
-            'is_active'   => true,
+            'is_active' => true,
         ],
         'admin' => [
-            'name'        => 'Administrador',
+            'name' => 'Administrador',
             'description' => 'Administrador geral do sistema',
-            'is_active'   => true,
+            'is_active' => true,
         ],
         'manager' => [
-            'name'        => 'Gestor',
+            'name' => 'Gestor',
             'description' => 'Gestor de area - Pode aprovar e gerenciar modulos',
-            'is_active'   => true,
+            'is_active' => true,
         ],
         'analyst' => [
-            'name'        => 'Analista',
+            'name' => 'Analista',
             'description' => 'Analista tecnico - Pode criar e editar registros',
-            'is_active'   => true,
+            'is_active' => true,
         ],
         'operator' => [
-            'name'        => 'Operador',
+            'name' => 'Operador',
             'description' => 'Operador de sistema - Pode visualizar e criar registros basicos',
-            'is_active'   => true,
+            'is_active' => true,
         ],
         'viewer' => [
-            'name'        => 'Visualizador',
+            'name' => 'Visualizador',
             'description' => 'Acesso somente leitura - Pode apenas visualizar dados',
-            'is_active'   => true,
+            'is_active' => true,
         ],
         'user' => [
-            'name'        => 'Usuario',
+            'name' => 'Usuario',
             'description' => 'Usuario padrao do sistema',
-            'is_active'   => true,
+            'is_active' => true,
         ],
     ],
 
@@ -71,59 +71,59 @@ return [
     'modules' => [
         'SISTEMA' => [
             'Usuarios' => [
-                'view'   => 'users.view',
+                'view' => 'users.view',
                 'create' => 'users.create',
-                'edit'   => 'users.edit',
+                'edit' => 'users.edit',
                 'delete' => 'users.delete',
             ],
             'Cargos' => [
-                'view'   => 'roles.view',
+                'view' => 'roles.view',
                 'create' => 'roles.create',
-                'edit'   => 'roles.edit',
+                'edit' => 'roles.edit',
                 'delete' => 'roles.delete',
             ],
             'Permissoes' => [
-                'view'   => 'permissions.view',
+                'view' => 'permissions.view',
                 'manage' => 'permissions.manage',
             ],
             'Configuracoes' => [
-                'logs'     => 'system.logs.view',
-                'cache'    => 'system.cache.clear',
+                'logs' => 'system.logs.view',
+                'cache' => 'system.cache.clear',
                 'settings' => 'system.settings.manage',
             ],
         ],
         'PAE' => [
             'Empreendimentos' => [
-                'view'    => 'pae.empreendimentos.view',
-                'create'  => 'pae.empreendimentos.create',
-                'edit'    => 'pae.empreendimentos.edit',
-                'delete'  => 'pae.empreendimentos.delete',
+                'view' => 'pae.empreendimentos.view',
+                'create' => 'pae.empreendimentos.create',
+                'edit' => 'pae.empreendimentos.edit',
+                'delete' => 'pae.empreendimentos.delete',
                 'approve' => 'pae.empreendimentos.approve',
-                'export'  => 'pae.empreendimentos.export',
+                'export' => 'pae.empreendimentos.export',
             ],
             'Protocolos' => [
-                'view'   => 'pae.protocolos.view',
+                'view' => 'pae.protocolos.view',
                 'create' => 'pae.protocolos.create',
-                'edit'   => 'pae.protocolos.edit',
+                'edit' => 'pae.protocolos.edit',
                 'delete' => 'pae.protocolos.delete',
                 'export' => 'pae.protocolos.export',
             ],
         ],
         'RAT' => [
             'Protocolos' => [
-                'view'     => 'rat.protocolos.view',
-                'create'   => 'rat.protocolos.create',
-                'edit'     => 'rat.protocolos.edit',
-                'delete'   => 'rat.protocolos.delete',
+                'view' => 'rat.protocolos.view',
+                'create' => 'rat.protocolos.create',
+                'edit' => 'rat.protocolos.edit',
+                'delete' => 'rat.protocolos.delete',
                 'finalize' => 'rat.protocolos.finalize',
-                'export'   => 'rat.protocolos.export',
+                'export' => 'rat.protocolos.export',
             ],
         ],
         'DEMANDAS' => [
             'Chamados' => [
-                'view'   => 'demandas.chamados.view',
+                'view' => 'demandas.chamados.view',
                 'create' => 'demandas.chamados.create',
-                'edit'   => 'demandas.chamados.edit',
+                'edit' => 'demandas.chamados.edit',
                 'delete' => 'demandas.chamados.delete',
                 'export' => 'demandas.chamados.export',
                 'manage' => 'demandas.chamados.manage',
@@ -131,36 +131,36 @@ return [
         ],
         'DECRETACOES' => [
             'Processos' => [
-                'view'   => 'decretacoes.processos.view',
+                'view' => 'decretacoes.processos.view',
                 'create' => 'decretacoes.processos.create',
-                'edit'   => 'decretacoes.processos.edit',
+                'edit' => 'decretacoes.processos.edit',
                 'delete' => 'decretacoes.processos.delete',
                 'export' => 'decretacoes.processos.export',
             ],
         ],
         'AJUDA_HUMANITARIA' => [
             'Beneficiarios' => [
-                'view'   => 'humanitaria.beneficiarios.view',
+                'view' => 'humanitaria.beneficiarios.view',
                 'create' => 'humanitaria.beneficiarios.create',
-                'edit'   => 'humanitaria.beneficiarios.edit',
+                'edit' => 'humanitaria.beneficiarios.edit',
                 'delete' => 'humanitaria.beneficiarios.delete',
                 'export' => 'humanitaria.beneficiarios.export',
             ],
         ],
         'TDAP' => [
             'Produtos' => [
-                'view'   => 'tdap.products.view',
+                'view' => 'tdap.products.view',
                 'create' => 'tdap.products.create',
-                'edit'   => 'tdap.products.edit',
+                'edit' => 'tdap.products.edit',
                 'delete' => 'tdap.products.delete',
             ],
             'Recebimentos' => [
-                'view'     => 'tdap.recebimentos.view',
-                'create'   => 'tdap.recebimentos.create',
+                'view' => 'tdap.recebimentos.view',
+                'create' => 'tdap.recebimentos.create',
                 'processar' => 'tdap.recebimentos.processar',
             ],
             'Movimentacoes' => [
-                'view'   => 'tdap.movimentacoes.view',
+                'view' => 'tdap.movimentacoes.view',
                 'create' => 'tdap.movimentacoes.create',
             ],
             'Admin' => [
@@ -169,25 +169,34 @@ return [
         ],
         'TREINAMENTO' => [
             'Cursos' => [
-                'view'   => 'treinamento.cursos.view',
+                'view' => 'treinamento.cursos.view',
                 'create' => 'treinamento.cursos.create',
-                'edit'   => 'treinamento.cursos.edit',
+                'edit' => 'treinamento.cursos.edit',
                 'delete' => 'treinamento.cursos.delete',
                 'export' => 'treinamento.cursos.export',
             ],
         ],
+        'PLANTAO' => [
+            'Turnos' => [
+                'view' => 'plantao.turnos.view',
+                'create' => 'plantao.turnos.create',
+                'edit' => 'plantao.turnos.edit',
+                'delete' => 'plantao.turnos.delete',
+                'export' => 'plantao.turnos.export',
+            ],
+        ],
         'BI' => [
             'Dashboards' => [
-                'view'   => 'bi.dashboards.view',
+                'view' => 'bi.dashboards.view',
                 'create' => 'bi.dashboards.create',
                 'export' => 'bi.reports.export',
             ],
         ],
         'INTEGRACOES' => [
             'APIs' => [
-                'view'    => 'integrations.view',
-                'create'  => 'integrations.create',
-                'edit'    => 'integrations.edit',
+                'view' => 'integrations.view',
+                'create' => 'integrations.create',
+                'edit' => 'integrations.edit',
                 'execute' => 'integrations.execute',
             ],
             'Webhooks' => [
@@ -217,6 +226,7 @@ return [
             'humanitaria.*',
             'tdap.*',
             'treinamento.*',
+            'plantao.*',
             'bi.*',
             'integrations.*',
             'webhooks.*',
@@ -269,6 +279,11 @@ return [
             'treinamento.cursos.create',
             'treinamento.cursos.edit',
             'treinamento.cursos.export',
+            // Plantao - gestao completa
+            'plantao.turnos.view',
+            'plantao.turnos.create',
+            'plantao.turnos.edit',
+            'plantao.turnos.export',
             // BI
             'bi.dashboards.view',
             'bi.reports.export',
@@ -311,6 +326,10 @@ return [
             'tdap.movimentacoes.create',
             // Treinamento - view
             'treinamento.cursos.view',
+            // Plantao - view, create, edit
+            'plantao.turnos.view',
+            'plantao.turnos.create',
+            'plantao.turnos.edit',
             // BI
             'bi.dashboards.view',
             'bi.reports.export',
@@ -341,6 +360,9 @@ return [
             'tdap.movimentacoes.view',
             // Treinamento - view
             'treinamento.cursos.view',
+            // Plantao - view, create
+            'plantao.turnos.view',
+            'plantao.turnos.create',
             // BI - view
             'bi.dashboards.view',
         ],
@@ -356,6 +378,7 @@ return [
             'tdap.recebimentos.view',
             'tdap.movimentacoes.view',
             'treinamento.cursos.view',
+            'plantao.turnos.view',
             'bi.dashboards.view',
         ],
         'user' => [
@@ -366,6 +389,7 @@ return [
             'demandas.chamados.view',
             'demandas.chamados.create',
             'treinamento.cursos.view',
+            'plantao.turnos.view',
         ],
     ],
 
