@@ -11,10 +11,8 @@ WORKDIR /var/www
 # Copiar arquivos de dependencias primeiro (melhor cache de camadas)
 COPY package.json package-lock.json* ./
 
-# Instalar dependencias durante o build
-# O build do Docker usa a rede padrao (bridge com NAT), que tem acesso a internet
-# Isso garante binarios nativos corretos para Linux Alpine (musl)
-RUN npm install
+# Instalar dependencias no runtime devido a restricoes de rede durante o build
+# RUN npm install
 
 # O codigo fonte sera montado via volume no runtime
 # node_modules sera copiado para o volume nomeado na primeira execucao

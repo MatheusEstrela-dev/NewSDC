@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout title="Ajuda Humanitaria - Beneficiarios">
+
     <BeneficiarioIndexTemplate
       :beneficiarios="beneficiarios.data || []"
       :statistics="statistics"
@@ -47,13 +47,15 @@
         </div>
       </div>
     </teleport>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import BeneficiarioIndexTemplate from '@/Templates/AjudaHumanitaria/BeneficiarioIndexTemplate.vue';
 import { usePermissions } from '@/Composables/usePermissions';
 

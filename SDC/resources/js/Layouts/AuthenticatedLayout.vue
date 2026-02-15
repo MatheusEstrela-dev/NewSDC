@@ -1,11 +1,11 @@
 <script setup>
-import { ref, provide, defineAsyncComponent } from 'vue';
-import Sidebar from '@/Components/Sidebar.vue';
-import TopBar from '@/Components/TopBar.vue';
-import NavigationHeader from '@/Components/Organisms/Navigation/NavigationHeader.vue';
 import OfflineIndicator from '@/Components/Molecules/OfflineIndicator.vue';
 import PullToRefresh from '@/Components/Molecules/PullToRefresh.vue';
+import NavigationHeader from '@/Components/Organisms/Navigation/NavigationHeader.vue';
+import Sidebar from '@/Components/Sidebar.vue';
+import TopBar from '@/Components/TopBar.vue';
 import { useMobile, useSidebarMobile } from '@/Composables/useMobile';
+import { defineAsyncComponent, provide, ref } from 'vue';
 
 // Modais carregados sob demanda (raramente usados, reduz bundle de ~50KB+ por página)
 const SupportModal = defineAsyncComponent(() => import('@/Components/Organisms/Suporte/SupportModal.vue'));
@@ -70,7 +70,7 @@ provide('openSidebar', openSidebar);
 
       <!-- Page Content -->
       <main class="flex-1 pt-4 bg-slate-50 dark:bg-slate-950 overflow-x-hidden px-4 sm:px-6 lg:px-8">
-        <Transition name="page" mode="out-in" appear>
+        <Transition name="page" appear>
           <slot />
         </Transition>
       </main>

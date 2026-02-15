@@ -1,9 +1,9 @@
-import { ref, computed } from 'vue';
-import { router } from '@inertiajs/vue3';
-import { useTabs } from './useTabs';
-import { useModal } from './useModal';
 import { db } from '@/infrastructure/database/db';
+import { router } from '@inertiajs/vue3';
 import { v4 as uuidv4 } from 'uuid';
+import { ref } from 'vue';
+import { useModal } from './useModal';
+import { useTabs } from './useTabs';
 
 /**
  * Composable principal do RAT
@@ -59,48 +59,50 @@ export function useRat(initialData = {}) {
    */
   async function saveRat(data) {
     const payload = {
-        ...rat.value,
-        recursos: recursos.value,
-        envolvidos: envolvidos.value,
-        vistoria: vistoria.value,
-        anexos: anexos.value,
-        ...data
+      ...rat.value,
+      recursos: recursos.value,
+      envolvidos: envolvidos.value,
+      vistoria: vistoria.value,
+      anexos: anexos.value,
+      ...data
     };
 
     // Garante ID para offline
     if (!payload.id) {
-        payload.id = uuidv4();
-        rat.value.id = payload.id;
+      payload.id = uuidv4();
+      rat.value.id = payload.id;
     }
 
     if (!navigator.onLine) {
-        try {
-            await db.rat_pendentes.add({
-                ...payload,
-                sync_status: 'pending',
-                created_at: new Date().toISOString()
-            });
-            alert('Você está offline. O RAT foi salvo no dispositivo e será enviado quando houver conexão.');
-            // Opcional: Redirecionar para lista ou limpar form
-        } catch (error) {
-            console.error('Erro ao salvar offline:', error);
-            alert('Erro ao salvar no dispositivo.');
-        }
+      try {
+        await db.rat_pendentes.add({
+          ...payload,
+          sync_status: 'pending',
+          created_at: new Date().toISOString()
+        });
+        alert('Você está offline. O RAT foi salvo no dispositivo e será enviado quando houver conexão.');
+        // Opcional: Redirecionar para lista ou limpar form
+      } catch (error) {
+        console.error('Erro ao salvar offline:', error);
+        alert('Erro ao salvar no dispositivo.');
+      }
     } else {
-        // Se estiver online, envia via Inertia (ou axios se preferir não recarregar)
-        console.log('Enviando Online:', payload);
-        
-        // Usa router.post do Inertia para manter o fluxo SPA padrão
-        router.post(route('rat.sync'), payload, {
-            onSuccess: () => {
-                // Limpa ou atualiza estado se necessário
-            },
-            onError: (errors) => {
-                console.error('Erro no envio online:', errors);
-                // Fallback: se falhar por rede (não validação), salva offline?
-                // Por simplicidade, mantemos o erro visível
-            }
-        }); 
+      // Se estiver online, envia via Inertia (ou axios se preferir não recarregar)
+      console.log('Enviando Online:', payload);
+
+      // Usa router.post do Inertia para manter o fluxo SPA padrão
+      router.post(route('rat.sync'), payload, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+          // Limpa ou atualiza estado se necessário
+        },
+        onError: (errors) => {
+          console.error('Erro no envio online:', errors);
+          // Fallback: se falhar por rede (não validação), salva offline?
+          // Por simplicidade, mantemos o erro visível
+        }
+      });
     }
   }
 

@@ -50,7 +50,9 @@ RUN apk add --no-cache \
     # Para debugging
     strace \
     # Para healthcheck
-    fcgi
+    fcgi \
+    # Para drop de privilegios
+    su-exec
 
 # Instalar extensões PHP
 RUN docker-php-ext-configure gd \

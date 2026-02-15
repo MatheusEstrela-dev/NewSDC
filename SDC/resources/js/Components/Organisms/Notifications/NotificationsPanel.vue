@@ -94,7 +94,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import { useNotifications } from '@/Composables/useNotifications';
+import { useNotifications } from '@/composables/useNotifications';
 import NotificationItem from './NotificationItem.vue';
 
 const showPreferences = ref(false);

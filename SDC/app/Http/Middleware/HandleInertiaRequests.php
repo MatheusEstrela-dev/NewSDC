@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -34,10 +35,23 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $user ? $this->getUserData($user) : null,
+                'user' => fn() => $user ? $this->getCachedUserData($user) : null,
             ],
-            'acl' => $this->getAclConfig(),
+            'acl' => fn() => $this->getCachedAclConfig(),
         ];
+    }
+
+    /**
+     * Retorna dados do usuario autenticado com cache de 5 minutos.
+     * Evita queries repetitivas de roles/permissions a cada navegacao SPA.
+     */
+    protected function getCachedUserData($user): array
+    {
+        $cacheKey = "inertia_user_data_{$user->id}";
+
+        return Cache::remember($cacheKey, 60, function () use ($user) {
+            return $this->getUserData($user);
+        });
     }
 
     /**
@@ -89,6 +103,17 @@ class HandleInertiaRequests extends Middleware
         $directPermissions = $user->permissions->pluck('name')->values()->toArray();
 
         return array_values(array_unique(array_merge($rolePermissions, $directPermissions)));
+    }
+
+    /**
+     * Retorna configuracao ACL com cache de 10 minutos.
+     * Dados de config raramente mudam - nao precisam ser lidos do disco a cada request.
+     */
+    protected function getCachedAclConfig(): array
+    {
+        return Cache::remember('inertia_acl_config', 600, function () {
+            return $this->getAclConfig();
+        });
     }
 
     /**

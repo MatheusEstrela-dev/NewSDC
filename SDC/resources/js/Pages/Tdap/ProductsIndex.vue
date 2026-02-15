@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="TDAP - Produtos" />
     <TdapProductsTemplate
       :products="products"
@@ -10,12 +10,14 @@
       :can-edit="can('tdap.products.edit')"
       :can-delete="can('tdap.products.delete')"
     />
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import TdapProductsTemplate from '@/Templates/Tdap/TdapProductsTemplate.vue';
 import { usePermissions } from '@/Composables/usePermissions';
 

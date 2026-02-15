@@ -49,7 +49,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import FormSelect from '@/Components/Form/FormSelect.vue';
-import { useLocationData } from '@/Composables/useLocationData';
+import { useLocationData } from '@/composables/useLocationData';
 
 const props = defineProps({
   modelValue: {

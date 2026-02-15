@@ -3,6 +3,8 @@
 # Instrumentalização completa do ambiente com um único comando
 # ============================================================================
 # Uso:
+#   make start            # Bridge + build-all + up-all (stack ~15 containers, sem Ollama)
+#   make bridge           # Só cria a rede bridge sdc_network
 #   make build-all        # Build completo de toda stack
 #   make up-all           # Sobe toda stack (dev + monitoring)
 #   make dev              # Ambiente dev padrão
@@ -101,6 +103,8 @@ help: ## 📚 Mostra ajuda completa e categorizada
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## 🎨/ {printf "  ${CYAN}%-20s${RESET} %s\n", $$1, substr($$2, 4)}' $(MAKEFILE_LIST)
 	@echo ''
 	@echo '${BOLD}Exemplos de uso:${RESET}'
+	@echo '  ${GREEN}make start${RESET}                 # Bridge + build-all + up-all (sem Ollama)'
+	@echo '  ${GREEN}make bridge${RESET}               # Só inicia a rede bridge'
 	@echo '  ${GREEN}make build-all${RESET}              # Build completo de toda stack'
 	@echo '  ${GREEN}make up-all${RESET}                 # Sobe ambiente completo (dev + monitoring)'
 	@echo '  ${GREEN}make dev-full${RESET}               # Desenvolvimento com todas ferramentas'
@@ -170,12 +174,12 @@ dev: network-init ## 🔧 Ambiente de desenvolvimento padrão
 	@echo "${GREEN}✓ Ambiente de desenvolvimento iniciado!${RESET}"
 	@echo ""
 	@echo "${CYAN}Serviços disponíveis:${RESET}"
-	@echo "  App (Laravel):     ${GREEN}http://localhost:8001${RESET}"
-	@echo "  Nginx:             ${GREEN}http://localhost:8082${RESET}"
-	@echo "  Vite (HMR):        ${GREEN}http://localhost:5173${RESET}"
-	@echo "  Mailhog:           ${GREEN}http://localhost:8026${RESET}"
-	@echo "  MySQL:             ${GREEN}localhost:3307${RESET}"
-	@echo "  Redis:             ${GREEN}localhost:6380${RESET}"
+	@echo "  App (Laravel):     ${GREEN}http://localhost:18001${RESET}"
+	@echo "  Nginx:             ${GREEN}http://localhost:18082${RESET}"
+	@echo "  Vite (HMR):        ${GREEN}http://localhost:15175${RESET}"
+	@echo "  Mailhog:           ${GREEN}http://localhost:18026${RESET}"
+	@echo "  MySQL:             ${GREEN}localhost:13307${RESET}"
+	@echo "  Redis:             ${GREEN}localhost:16380${RESET}"
 
 dev-full: network-init ## 🔧 Desenvolvimento + ferramentas (phpmyadmin, redis-commander)
 	@echo "${YELLOW}→ Iniciando ambiente completo...${RESET}"
@@ -384,15 +388,23 @@ artisan: ## ⚙️  Executar artisan (uso: make artisan CMD="migrate")
 	@$(COMPOSE_DEV) exec app php artisan $(CMD)
 
 # ============================================================================
-# 🌐 NETWORK
+# 🌐 NETWORK & BRIDGE (15 containers, sem Ollama)
 # ============================================================================
 
-network-init: ## 🌐 Inicializa network
-	@echo "${YELLOW}→ Verificando network...${RESET}"
+bridge: ## 📦 Cria a rede bridge sdc_network (para os ~15 containers, sem Ollama)
+	@echo "${YELLOW}→ Iniciando bridge (sdc_network)...${RESET}"
 	@docker network inspect sdc_network >/dev/null 2>&1 || \
-		(echo "${YELLOW}→ Criando network...${RESET}" && \
+		(echo "${YELLOW}→ Criando network bridge...${RESET}" && \
 		 docker network create --driver bridge --subnet 172.26.0.0/16 sdc_network)
-	@echo "${GREEN}✓ Network OK${RESET}"
+	@echo "${GREEN}✓ Bridge sdc_network OK${RESET}"
+
+# Um comando: bridge + build-all + up-all (stack completa sem Ollama)
+start: bridge build-all up-all ## 🚀 Bridge + build all + sobe toda stack (sem Ollama)
+	@echo ""
+	@echo "${BOLD}${GREEN}✓ Stack iniciada (bridge + build + up). Ollama não incluído.${RESET}"
+	@$(MAKE) urls
+
+network-init: bridge ## 🌐 Alias: inicializa network (chama bridge)
 
 network-inspect: ## 🌐 Inspeciona network
 	@docker network inspect sdc_network
@@ -422,18 +434,18 @@ urls: ## 📋 Mostra todas URLs disponíveis
 	@echo "${BOLD}${CYAN}════════════════════════════════════════════════════════════${RESET}"
 	@echo ""
 	@echo "${BOLD}🚀 APLICAÇÃO:${RESET}"
-	@echo "  App (Laravel):     ${GREEN}http://localhost:8001${RESET}"
-	@echo "  Nginx:             ${GREEN}http://localhost:8082${RESET}"
-	@echo "  Vite (HMR):        ${GREEN}http://localhost:5173${RESET}"
+	@echo "  App (Laravel):     ${GREEN}http://localhost:18001${RESET}"
+	@echo "  Nginx:             ${GREEN}http://localhost:18082${RESET}"
+	@echo "  Vite (HMR):        ${GREEN}http://localhost:15175${RESET}"
 	@echo ""
 	@echo "${BOLD}💾 BANCO DE DADOS:${RESET}"
-	@echo "  MySQL:             ${GREEN}localhost:3307${RESET} (user: sdc, pass: secret)"
-	@echo "  Redis:             ${GREEN}localhost:6380${RESET}"
-	@echo "  phpMyAdmin:        ${GREEN}http://localhost:8083${RESET}"
-	@echo "  Redis Commander:   ${GREEN}http://localhost:8084${RESET}"
+	@echo "  MySQL:             ${GREEN}localhost:13307${RESET} (user: sdc, pass: secret)"
+	@echo "  Redis:             ${GREEN}localhost:16380${RESET}"
+	@echo "  phpMyAdmin:        ${GREEN}http://localhost:8086${RESET}"
+	@echo "  Redis Commander:   ${GREEN}http://localhost:8087${RESET}"
 	@echo ""
 	@echo "${BOLD}📧 FERRAMENTAS:${RESET}"
-	@echo "  Mailhog:           ${GREEN}http://localhost:8026${RESET}"
+	@echo "  Mailhog:           ${GREEN}http://localhost:18026${RESET}"
 	@echo ""
 	@echo "${BOLD}📊 MONITORAMENTO:${RESET}"
 	@echo "  Grafana:           ${GREEN}http://localhost:3000${RESET} (admin/admin@123)"

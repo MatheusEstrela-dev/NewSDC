@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="Editar Usuário" />
     <div class="w-full py-6">
 
@@ -270,13 +270,15 @@
         </div>
       </form>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
 import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import { useHierarchy } from '@/Composables/useHierarchy';
 import { route } from 'ziggy-js';
 

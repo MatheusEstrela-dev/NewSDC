@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="Criar Usuário" />
     <div class="w-full py-6">
       <!-- Page Header -->
@@ -164,13 +164,15 @@
         </div>
       </form>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { Head, useForm, router, Link } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   roles: {

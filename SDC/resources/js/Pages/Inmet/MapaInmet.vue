@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout title="Meteorologia - INMET">
+
     <div class="inmet-container dark">
       <!-- Header -->
       <div class="header-section">
@@ -85,11 +85,13 @@
         </table>
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { nextTick, onMounted, ref } from 'vue';

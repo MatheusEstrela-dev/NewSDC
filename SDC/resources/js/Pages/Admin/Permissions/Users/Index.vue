@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="Gerenciamento de Usuários" />
     <div class="w-full py-6">
       
@@ -268,7 +268,7 @@
         </div>
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
@@ -276,6 +276,8 @@ import { reactive } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
 import ButtonGroup from '@/Components/Atoms/Button/ButtonGroup.vue';

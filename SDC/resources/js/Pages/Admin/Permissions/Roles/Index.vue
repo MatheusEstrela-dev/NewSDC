@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="Gerenciamento de Cargos" />
     <div class="w-full py-6">
       
@@ -217,7 +217,7 @@
       @confirm="deleteRole"
       @cancel="showDeleteDialog = false"
     />
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
@@ -225,6 +225,8 @@ import { ref, h } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import StatsCard from '@/Components/Admin/StatsCard.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';

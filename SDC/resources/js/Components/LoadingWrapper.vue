@@ -32,7 +32,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { usePageLoading } from '@/Composables/usePageLoading'
+import { usePageLoading } from '@/composables/usePageLoading'
 import SkeletonDashboard from '@/Components/Skeleton/SkeletonDashboard.vue'
 import SkeletonPae from '@/Components/Skeleton/SkeletonPae.vue'
 import SkeletonCard from '@/Components/Skeleton/SkeletonCard.vue'

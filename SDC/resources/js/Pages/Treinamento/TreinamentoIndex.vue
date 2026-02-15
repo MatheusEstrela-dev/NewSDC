@@ -1,6 +1,8 @@
 <script setup>
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import TreinamentoIndexTemplate from '@/Templates/Treinamento/TreinamentoIndexTemplate.vue';
 import { usePermissions } from '@/Composables/usePermissions';
 
@@ -55,7 +57,7 @@ const handleFilter = (filters) => {
 </script>
 
 <template>
-  <AuthenticatedLayout title="Treinamentos">
+
     <TreinamentoIndexTemplate
       :treinamentos="treinamentos.data"
       :statistics="statistics"
@@ -71,5 +73,5 @@ const handleFilter = (filters) => {
       @delete="handleDelete"
       @filter="handleFilter"
     />
-  </AuthenticatedLayout>
+
 </template>

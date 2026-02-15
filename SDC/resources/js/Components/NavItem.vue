@@ -1,6 +1,8 @@
 <template>
   <Link
     :href="href"
+    prefetch
+    cache-for="30s"
     :class="[
       'nav-item',
       {
@@ -57,8 +59,8 @@
 </template>
 
 <script setup>
-import { computed, useSlots, inject } from 'vue';
 import { Link } from '@inertiajs/vue3';
+import { computed, inject, useSlots } from 'vue';
 
 const slots = useSlots();
 const onNavItemClick = inject('onNavItemClick', null);

@@ -1,26 +1,27 @@
 <template>
-  <AuthenticatedLayout>
-    <Head title="Protocolos PAE" />
+    <div>
+        <Head title="Protocolos PAE" />
 
-    <PaeProtocolosIndexTemplate
-      :use-mock="useMock"
-      :loading="false"
-      :can-create="can('pae.protocolos.create')"
-      :can-edit="can('pae.protocolos.edit')"
-      :can-delete="can('pae.protocolos.delete')"
-      :can-export="can('pae.protocolos.export')"
-    />
-  </AuthenticatedLayout>
+        <PaeProtocolosIndexTemplate
+          :use-mock="useMock"
+          :loading="false"
+          :can-create="can('pae.protocolos.create')"
+          :can-edit="can('pae.protocolos.edit')"
+          :can-delete="can('pae.protocolos.delete')"
+          :can-export="can('pae.protocolos.export')"
+        />
+    </div>
 </template>
 
 <script setup>
-import { Head } from '@inertiajs/vue3';
+import { usePermissions } from '@/Composables/usePermissions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PaeProtocolosIndexTemplate from '@/Templates/Pae/PaeProtocolosIndexTemplate.vue';
-import { usePermissions } from '@/Composables/usePermissions';
+import { Head, usePage } from '@inertiajs/vue3';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 const { can } = usePermissions();
-import { usePage } from '@inertiajs/vue3';
 const page = usePage();
 console.log('DEBUG: User Privileges', {
     user: page.props.auth.user.name,

@@ -1,19 +1,31 @@
-import './bootstrap';
 import '../css/app.css';
+import { initAxios } from './bootstrap';
 
 import { createInertiaApp, router } from '@inertiajs/vue3';
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
-import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 
 const loadPageCSS = (pageName) => {
     const cssMap = {
         'Dashboard': () => import('../css/pages/dashboard/dashboard.css'),
         'Pae': () => import('../css/pages/pae/pae.css'),
+        'Rat': () => Promise.all([
+            import('../css/pages/rat/rat.css'),
+            import('../css/pages/rat/index.css'),
+            import('../css/pages/rat/sections.css'),
+        ]),
+        'RatIndex': () => Promise.all([
+            import('../css/pages/rat/rat.css'),
+            import('../css/pages/rat/index.css'),
+        ]),
+        'Auth/Login': () => import('../css/pages/auth/login.css'),
+        'Auth/Reset': () => import('../css/pages/auth/reset.css'),
     };
 
-    const loader = cssMap[pageName];
+    // Suporte para nomes com subpasta (ex: 'Auth/Login' → tenta 'Auth/Login' e 'Login')
+    const loader = cssMap[pageName] || cssMap[pageName.split('/').pop()];
     if (loader) {
         loader().catch(() => { });
     }
@@ -22,7 +34,7 @@ const loadPageCSS = (pageName) => {
 const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
-            staleTime: 1000 * 60 * 5,
+            staleTime: 1000 * 30, // 30s (SWR optimized)
             gcTime: 1000 * 60 * 30,
             refetchOnWindowFocus: true,
             refetchOnReconnect: true,
@@ -92,6 +104,8 @@ const registerServiceWorker = async () => {
 
 const appName = import.meta.env.VITE_APP_NAME || 'SDC';
 
+await initAxios();
+
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => {
@@ -128,12 +142,12 @@ createInertiaApp({
     progress: {
         color: '#1e40af',
         showSpinner: true,
-        delay: 150, // Evita flash em navegações rápidas (<150ms)
+        delay: 25, // Evita flash em navegações rápidas (<150ms)
     },
 });
 
 Object.defineProperty(window, 'egg', {
-    get: function() {
+    get: function () {
         console.log('%c\u2B50 DESENVOLVIDO POR MATHEUS ESTRELA \u2B50', 'color: #FFD700; font-size: 24px; font-weight: bold; text-shadow: 2px 2px 4px #000;');
         return '\u2B50';
     }

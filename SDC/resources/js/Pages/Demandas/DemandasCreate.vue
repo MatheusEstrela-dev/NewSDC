@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="Nova Demanda" />
 
     <div class="py-12">
@@ -145,12 +145,14 @@
         </div>
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { computed } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';

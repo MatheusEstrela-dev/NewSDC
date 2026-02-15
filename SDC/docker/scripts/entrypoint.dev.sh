@@ -253,11 +253,13 @@ php artisan route:clear 2>/dev/null || true
 php artisan view:clear 2>/dev/null || true
 log_success "Caches limpos"
 
-# Permissões
+# Permissões (em bind mount pode falhar em alguns arquivos, e não deve derrubar o container)
 log_info "Ajustando permissões..."
 cd /var/www
-chown -R www-data:www-data storage bootstrap/cache
-chmod -R 775 storage bootstrap/cache
+{
+    chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || log_warning "chown ignorado (ex.: octane-server-state.json em volume)"
+    chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+} || log_warning "Falha não crítica ao ajustar permissões"
 log_success "Permissões ajustadas"
 
 # Mostrar informações
@@ -293,5 +295,18 @@ echo -e "${BLUE}ℹ️  Modo Watch ativado (File changes trigger reload)${NC}"
 echo ""
 
 # Executar comando
-exec php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=8000 --watch
+# Remover arquivo de estado antigo se existir (para evitar problemas de permissão se criado por root)
+if [ -f "/var/www/storage/logs/octane-server-state.json" ]; then
+    log_info "Removendo octane-server-state.json antigo..."
+    rm -f /var/www/storage/logs/octane-server-state.json
+fi
+
+# Remover arquivo de configuração do RoadRunner se existir (para ser recriado pelo Octane)
+if [ -f "/var/www/.rr.yaml" ]; then
+    log_info "Removendo .rr.yaml antigo..."
+    rm -f /var/www/.rr.yaml
+fi
+
+# Executar comando como www-data para evitar problemas de permissão
+exec su-exec www-data php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=8000 --watch
 

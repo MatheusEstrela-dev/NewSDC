@@ -9,17 +9,6 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Modules\Tdap\Application\UseCases\ListMovimentacoesUseCase;
 
-// DEBUG: Rota temporária para testar serialização
-Route::get('/debug/movimentacoes', function () {
-    return response()->json([
-        'status' => 'OK',
-        'message' => 'Debug route is working',
-        'opcache_enabled' => function_exists('opcache_reset'),
-        'php_version' => PHP_VERSION,
-        'timestamp' => now()->toIso8601String(),
-    ]);
-});
-
 // DEBUG: Rota para testar executeAsDTO (requer container)
 Route::get('/debug/test-dto', function () {
     try {

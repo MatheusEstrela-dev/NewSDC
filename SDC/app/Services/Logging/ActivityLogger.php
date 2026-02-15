@@ -62,14 +62,21 @@ class ActivityLogger
             'source' => self::getCallerInfo(),
         ];
 
-        // Log em arquivo estruturado
-        Log::channel('events')->{$level}($event, $logData);
+        try {
+            // Log em arquivo estruturado
+            Log::channel('events')->{$level}($event, $logData);
 
-        // Log em Redis para visualização em tempo real
-        self::logToRedis($type, $logData);
+            // Log em Redis para visualização em tempo real
+            self::logToRedis($type, $logData);
 
-        // Métricas para Prometheus
-        self::incrementMetric($type, $event);
+            // Métricas para Prometheus
+            self::incrementMetric($type, $event);
+        } catch (\Throwable $e) {
+            // Failsafe: se o log falhar (ex: erro de permissão), não interromper a aplicação
+            if (app()->environment('local', 'testing')) {
+                error_log("ActivityLogger failed: " . $e->getMessage());
+            }
+        }
     }
 
     /**

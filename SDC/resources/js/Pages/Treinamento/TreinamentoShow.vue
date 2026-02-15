@@ -1,6 +1,8 @@
 <script setup>
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
@@ -24,7 +26,7 @@ const goBack = () => {
 </script>
 
 <template>
-  <AuthenticatedLayout :title="treinamento.titulo">
+
     <div class="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
       <!-- Voltar -->
       <button
@@ -156,5 +158,5 @@ const goBack = () => {
         </div>
       </CardBase>
     </div>
-  </AuthenticatedLayout>
+
 </template>

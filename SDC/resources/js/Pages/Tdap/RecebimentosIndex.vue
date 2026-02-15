@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="TDAP - Recebimentos" />
     <TdapRecebimentosTemplate
       :recebimentos="recebimentos"
@@ -10,12 +10,14 @@
       :can-view="can('tdap.recebimentos.view')"
       :can-processar="can('tdap.recebimentos.processar')"
     />
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import TdapRecebimentosTemplate from '@/Templates/Tdap/TdapRecebimentosTemplate.vue';
 import { usePermissions } from '@/Composables/usePermissions';
 

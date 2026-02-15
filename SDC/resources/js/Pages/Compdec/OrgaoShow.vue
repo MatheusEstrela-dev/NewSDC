@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout :title="`Órgão: ${orgao.nome}`">
+
     <div class="orgao-show">
       <!-- Header com ações -->
       <div class="header-section">
@@ -183,12 +183,14 @@
         </CardBase>
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';

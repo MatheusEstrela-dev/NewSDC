@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout title="Órgãos - COMPDEC/REDEC/CEDEC">
+
     <div class="orgaos-index">
       <!-- Header Padronizado -->
       <PageHeader
@@ -133,13 +133,15 @@
         @page-change="handlePageChange"
       />
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';

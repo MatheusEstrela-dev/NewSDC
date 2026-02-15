@@ -1,61 +1,58 @@
 <template>
-  <AuthenticatedLayout>
-    <Head title="Gestão de PAE" />
+    <div>
+        <Head title="Gestão de PAE" />
 
-    <div class="pae-container">
-      <!-- Header -->
-      <PaeHeader :empreendimento="empreendimento" :last-update="lastUpdate" />
+        <div class="pae-container">
+          <!-- Header -->
+          <PaeHeader :empreendimento="empreendimento" :last-update="lastUpdate" />
 
-      <!-- Sistema de Abas -->
-      <PaeTabs :active-tab="currentActiveTab" :tabs="tabConfig" @tab-change="tabs.setActiveTab">
-        <template #default="{ activeTab }">
-          <!-- Aba 1: Formulário PAE -->
-          <div v-if="Number(activeTab) === 1">
-            <PaeForm
-              :empreendimento="empreendimento"
-              :documents="Array.isArray(documents.documents) ? documents.documents : []"
-              @save="handleSave"
-              @save-draft="handleSaveDraft"
-              @archive="handleArchive"
-              @upload="handleUpload"
-              @remove="handleRemove"
-            />
-          </div>
+          <!-- Sistema de Abas -->
+          <PaeTabs :active-tab="currentActiveTab" :tabs="tabConfig" @tab-change="tabs.setActiveTab">
+            <template #default="{ activeTab }">
+              <!-- Aba 1: Formulário PAE -->
+              <div v-if="Number(activeTab) === 1">
+                <PaeForm
+                  :empreendimento="empreendimento"
+                  :documents="Array.isArray(documents.documents) ? documents.documents : []"
+                  @save="handleSave"
+                  @save-draft="handleSaveDraft"
+                  @archive="handleArchive"
+                  @upload="handleUpload"
+                  @remove="handleRemove"
+                />
+              </div>
 
-          <!-- Aba 2: Histórico -->
-          <div v-else-if="Number(activeTab) === 2">
-            <PaeHistory
-              :events="historyEvents"
-              @filter-change="handleFilterChange"
-              @view-event="handleViewEvent"
-            />
-          </div>
+              <!-- Aba 2: Histórico -->
+              <div v-else-if="Number(activeTab) === 2">
+                <PaeHistory
+                  :events="historyEvents"
+                  @filter-change="handleFilterChange"
+                  @view-event="handleViewEvent"
+                />
+              </div>
 
-          <!-- Aba 3: CCPAE -->
-          <div v-else-if="Number(activeTab) === 3">
-            <PaeCommittee
-              :members="committeeMembers"
-              :atas="atas"
-              @add-member="handleAddMember"
-              @add-meeting="handleAddMeeting"
-              @view-ata="handleViewAta"
-            />
-          </div>
+              <!-- Aba 3: CCPAE -->
+              <div v-else-if="Number(activeTab) === 3">
+                <PaeCommittee
+                  :members="committeeMembers"
+                  :atas="atas"
+                  @add-member="handleAddMember"
+                  @add-meeting="handleAddMeeting"
+                  @view-ata="handleViewAta"
+                />
+              </div>
 
-          <!-- Aba 4: Empreendedor -->
-          <div v-else-if="Number(activeTab) === 4">
-            <PaeEntrepreneur :empreendedor="empreendedor" @save="handleSaveEmpreendedor" />
-          </div>
-        </template>
-      </PaeTabs>
+              <!-- Aba 4: Empreendedor -->
+              <div v-else-if="Number(activeTab) === 4">
+                <PaeEntrepreneur :empreendedor="empreendedor" @save="handleSaveEmpreendedor" />
+              </div>
+            </template>
+          </PaeTabs>
+        </div>
     </div>
-  </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { Head } from '@inertiajs/vue3';
-import { computed } from 'vue';
-import '../../css/pages/pae/pae.css';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
@@ -66,8 +63,13 @@ import PaeForm from '@/Components/Pae/PaeForm.vue';
 import PaeHeader from '@/Components/Pae/PaeHeader.vue';
 import PaeHistory from '@/Components/Pae/PaeHistory.vue';
 import PaeTabs from '@/Components/Pae/PaeTabs.vue';
-import { usePae } from '@/Composables/usePae';
+import { usePae } from '@/composables/usePae';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import '../../css/pages/pae/pae.css';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 // Recebe props do Inertia
 const props = defineProps({

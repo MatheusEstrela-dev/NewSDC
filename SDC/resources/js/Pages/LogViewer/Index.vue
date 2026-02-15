@@ -119,7 +119,7 @@ onMounted(() => {
 <template>
     <Head title="Log Viewer Premium" />
 
-    <AuthenticatedLayout>
+
         <div class="h-[calc(100vh-65px)] flex overflow-hidden bg-[#0b0e14] text-gray-300">
             <!-- Sidebar -->
             <LogViewerSidebar 
@@ -152,7 +152,7 @@ onMounted(() => {
                 @close="showDetail = false"
             />
         </div>
-    </AuthenticatedLayout>
+
 </template>
 
 <style>

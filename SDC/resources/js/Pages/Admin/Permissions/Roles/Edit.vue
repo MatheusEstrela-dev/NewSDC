@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="Editar Cargo" />
     <div class="w-full py-6">
       <!-- Page Header -->
@@ -214,13 +214,15 @@
         </div>
       </form>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import { route } from 'ziggy-js';
 
 const props = defineProps({

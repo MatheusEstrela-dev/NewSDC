@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="Detalhes do Cargo" />
     <div class="w-full py-6">
       <!-- Page Header -->
@@ -202,7 +202,7 @@
         </div>
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
@@ -210,6 +210,8 @@ import { computed, h } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import PermissionBadge from '@/Components/Admin/PermissionBadge.vue';
 import StatsCard from '@/Components/Admin/StatsCard.vue';
 

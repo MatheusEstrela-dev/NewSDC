@@ -1,8 +1,8 @@
-import { createSSRApp, h, type DefineComponent } from 'vue';
-import { renderToString } from '@vue/server-renderer';
-import { createInertiaApp } from '@inertiajs/vue3';
 import createServer from '@inertiajs/server';
+import { createInertiaApp } from '@inertiajs/vue3';
+import { renderToString } from '@vue/server-renderer';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { createSSRApp, h, type DefineComponent } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 
 /**
@@ -24,7 +24,7 @@ createServer((page) =>
         resolve: (name) =>
             resolvePageComponent(
                 `./Pages/${name}.vue`,
-                import.meta.glob<DefineComponent>('./Pages/**/*.vue')
+                import.meta.glob<DefineComponent>('./Pages/**/*.vue', { eager: false })
             ),
         setup({ App, props, plugin }) {
             return createSSRApp({

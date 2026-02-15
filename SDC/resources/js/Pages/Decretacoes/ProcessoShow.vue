@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout :title="`Processo #${processo.id}`">
+
     <div class="processo-show-container">
       <!-- Breadcrumb -->
       <nav class="mb-6 flex items-center gap-2 text-sm">
@@ -143,13 +143,15 @@
         <!-- TODO: Adicionar outros tabs (Danos, Documentos, Log) -->
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';

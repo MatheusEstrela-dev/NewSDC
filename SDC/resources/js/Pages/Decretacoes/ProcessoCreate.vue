@@ -1,24 +1,26 @@
 <template>
-  <AuthenticatedLayout title="Novo Processo">
-    <ProcessoCreateTemplate
-      :form="form"
-      :tipos-desastre="tiposDesastre"
-      :cobrades="cobrades"
-      :municipios="municipios"
-      :redecs="redecs"
-      :status-options="statusOptions"
-      :analistas="analistas"
-      @submit="handleSubmit"
-      @cancel="handleCancel"
-    />
-  </AuthenticatedLayout>
+    <div>
+        <Head title="Nova Decretação" />
+        <ProcessoCreateTemplate
+          :form="form"
+          :tipos-desastre="tiposDesastre"
+          :cobrades="cobrades"
+          :municipios="municipios"
+          :redecs="redecs"
+          :status-options="statusOptions"
+          :analistas="analistas"
+          @submit="handleSubmit"
+          @cancel="handleCancel"
+        />
+    </div>
 </template>
 
 <script setup>
-import { router } from '@inertiajs/vue3';
-import { useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ProcessoCreateTemplate from '@/Templates/Decretacoes/ProcessoCreateTemplate.vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   tiposDesastre: {

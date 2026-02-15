@@ -1,30 +1,33 @@
 <template>
-  <AuthenticatedLayout title="Decretacoes">
-    <ProcessoIndexTemplate
-      :processos="processos.data || []"
-      :statistics="statistics"
-      :filters="filters"
-      :filter-options="filterOptions"
-      :pagination="processos"
-      :loading="loading"
-      :can-create="can('decretacoes.processos.create')"
-      :can-edit="can('decretacoes.processos.edit')"
-      :can-delete="can('decretacoes.processos.delete')"
-      :can-export="can('decretacoes.processos.export')"
-      @filter-change="handleFilterChange"
-      @clear-filters="handleClearFilters"
-      @page-change="handlePageChange"
-      @create="handleCreate"
-    />
-  </AuthenticatedLayout>
+    <div>
+        <Head title="Decretações" />
+        <ProcessoIndexTemplate
+          :processos="processos.data || []"
+          :statistics="statistics"
+          :filters="filters"
+          :filter-options="filterOptions"
+          :pagination="processos"
+          :loading="loading"
+          :can-create="can('decretacoes.processos.create')"
+          :can-edit="can('decretacoes.processos.edit')"
+          :can-delete="can('decretacoes.processos.delete')"
+          :can-export="can('decretacoes.processos.export')"
+          @filter-change="handleFilterChange"
+          @clear-filters="handleClearFilters"
+          @page-change="handlePageChange"
+          @create="handleCreate"
+        />
+    </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { usePermissions } from '@/Composables/usePermissions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ProcessoIndexTemplate from '@/Templates/Decretacoes/ProcessoIndexTemplate.vue';
-import { usePermissions } from '@/Composables/usePermissions';
+import { Head, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 const { can } = usePermissions();
 

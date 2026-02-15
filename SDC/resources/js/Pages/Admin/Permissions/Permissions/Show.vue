@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="Detalhes da Permissão" />
     <div class="w-full py-6">
       <!-- Page Header -->
@@ -113,7 +113,7 @@
         </div>
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
@@ -121,6 +121,8 @@ import { h } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import StatsCard from '@/Components/Admin/StatsCard.vue';
 
 const props = defineProps({

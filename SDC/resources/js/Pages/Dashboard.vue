@@ -1,132 +1,132 @@
 <template>
-  <AuthenticatedLayout>
-    <Head title="Dashboard" />
+    <div>
+        <Head title="Dashboard" />
 
-    <div class="dashboard-container p-4 sm:p-6 lg:p-8 w-full mx-auto space-y-8">
-      <!-- Header Padronizado -->
-      <PageHeader
-        title="Painel Gerencial"
-        :description="`Exercício ${currentYear} - Visão consolidada dos processos.`"
-        :icon="HomeIcon"
-        variant="gradient"
-      />
+        <div class="dashboard-container p-4 sm:p-6 lg:p-8 w-full mx-auto space-y-8">
+          <!-- Header Padronizado -->
+          <PageHeader
+            title="Painel Gerencial"
+            :description="`Exercício ${currentYear} - Visão consolidada dos processos.`"
+            :icon="HomeIcon"
+            variant="gradient"
+          />
 
-      <!-- Área de Drop Principal -->
-      <draggable
-        v-model="dashboardItems"
-        item-key="id"
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-6"
-        handle=".drag-handle"
-        ghost-class="ghost-card"
-        :animation="200"
-      >
-        <template #item="{ element }">
-          <div :class="element.colSpan" class="min-h-[100px]">
-            <!-- Wrapper com Handle de Arraste -->
-            <div class="h-full relative group/item">
-              <!-- Botão de Arraste -->
-              <div class="drag-handle absolute top-2 right-2 z-30 p-1.5 rounded-md bg-white/80 dark:bg-slate-800/80 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shadow-sm opacity-0 group-hover/item:opacity-100 transition-opacity cursor-grab active:cursor-grabbing hover:bg-slate-100 dark:hover:bg-slate-700">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </div>
-
-              <!-- Renderização Dinâmica do Widget -->
-              <component 
-                :is="element.component" 
-                v-bind="element.props"
-                class="h-full"
-                @select-module="openModuleModal"
-              />
-            </div>
-          </div>
-        </template>
-      </draggable>
-
-      <!-- Modal de Detalhes do Módulo -->
-      <Modal :show="isModalOpen" @close="closeModal" maxWidth="lg">
-        <div v-if="selectedModule" class="bg-white dark:bg-slate-800 overflow-hidden relative">
-          <!-- Decorative Header Background -->
-          <div class="absolute top-0 left-0 right-0 h-24 bg-gradient-to-br opacity-20" :class="variantGradientClass(selectedModule.variant)"></div>
-          
-          <div class="relative px-6 py-6">
-            <!-- Header -->
-            <div class="flex items-start justify-between mb-6">
-              <div class="flex items-center gap-4">
-                <div class="p-3 rounded-xl shadow-lg ring-1 ring-black/5 dark:ring-white/10" :class="metricIconClasses(selectedModule.variant)">
-                  <component :is="selectedModule.icon" class="w-8 h-8" />
-                </div>
-                <div>
-                  <h2 class="text-xl font-bold text-slate-900 dark:text-white">{{ selectedModule.name }}</h2>
-                  <p class="text-sm text-slate-500 dark:text-slate-400 text-transparent bg-clip-text bg-gradient-to-r from-slate-500 to-slate-400 font-medium">
-                    Visão detalhada
-                  </p>
-                </div>
-              </div>
-              <button @click="closeModal" class="text-slate-400 hover:text-slate-500 transition-colors p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-2 gap-4 mb-6">
-              <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
-                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Total Registros</p>
-                <div class="flex items-end gap-2">
-                  <span class="text-2xl font-bold text-slate-900 dark:text-white">{{ selectedModule.value }}</span>
-                  <span :class="trendClasses(selectedModule.trend)" class="mb-1">
-                    {{ Math.abs(selectedModule.trend) }}%
-                  </span>
-                </div>
-              </div>
-              <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
-                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Status Ativo</p>
-                <div class="flex items-center gap-2 mt-1">
-                  <span class="relative flex h-3 w-3">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" :class="selectedModule.trend > 0 ? 'bg-emerald-400' : 'bg-amber-400'"></span>
-                    <span class="relative inline-flex rounded-full h-3 w-3" :class="selectedModule.trend > 0 ? 'bg-emerald-500' : 'bg-amber-500'"></span>
-                  </span>
-                  <span class="text-sm font-bold text-slate-700 dark:text-slate-300">
-                    {{ selectedModule.trend > 0 ? 'Normal' : 'Atenção' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Content Placeholder -->
-            <div class="space-y-3 mb-6">
-              <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <ClockIcon class="w-4 h-4 text-slate-400" />
-                Últimas Atualizações
-              </h4>
-              <div class="space-y-2">
-                <div v-for="i in 3" :key="i" class="flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
-                  <div class="flex items-center gap-3">
-                    <div class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600"></div>
-                    <span class="text-sm text-slate-600 dark:text-slate-300">Atualização de registro #{{ 1000 + i }}</span>
+          <!-- Área de Drop Principal -->
+          <draggable
+            v-model="dashboardItems"
+            item-key="id"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-6"
+            handle=".drag-handle"
+            ghost-class="ghost-card"
+            :animation="200"
+          >
+            <template #item="{ element }">
+              <div :class="element.colSpan" class="min-h-[100px]">
+                <!-- Wrapper com Handle de Arraste -->
+                <div class="h-full relative group/item">
+                  <!-- Botão de Arraste -->
+                  <div class="drag-handle absolute top-2 right-2 z-30 p-1.5 rounded-md bg-white/80 dark:bg-slate-800/80 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shadow-sm opacity-0 group-hover/item:opacity-100 transition-opacity cursor-grab active:cursor-grabbing hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
                   </div>
-                  <span class="text-xs text-slate-400">{{ i * 15 }} min atrás</span>
+
+                  <!-- Renderização Dinâmica do Widget -->
+                  <component 
+                    :is="element.component" 
+                    v-bind="element.props"
+                    class="h-full"
+                    @select-module="openModuleModal"
+                  />
+                </div>
+              </div>
+            </template>
+          </draggable>
+
+          <!-- Modal de Detalhes do Módulo -->
+          <Modal :show="isModalOpen" @close="closeModal" maxWidth="lg">
+            <div v-if="selectedModule" class="bg-white dark:bg-slate-800 overflow-hidden relative">
+              <!-- Decorative Header Background -->
+              <div class="absolute top-0 left-0 right-0 h-24 bg-gradient-to-br opacity-20" :class="variantGradientClass(selectedModule.variant)"></div>
+              
+              <div class="relative px-6 py-6">
+                <!-- Header -->
+                <div class="flex items-start justify-between mb-6">
+                  <div class="flex items-center gap-4">
+                    <div class="p-3 rounded-xl shadow-lg ring-1 ring-black/5 dark:ring-white/10" :class="metricIconClasses(selectedModule.variant)">
+                      <component :is="selectedModule.icon" class="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h2 class="text-xl font-bold text-slate-900 dark:text-white">{{ selectedModule.name }}</h2>
+                      <p class="text-sm text-slate-500 dark:text-slate-400 text-transparent bg-clip-text bg-gradient-to-r from-slate-500 to-slate-400 font-medium">
+                        Visão detalhada
+                      </p>
+                    </div>
+                  </div>
+                  <button @click="closeModal" class="text-slate-400 hover:text-slate-500 transition-colors p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                  <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Total Registros</p>
+                    <div class="flex items-end gap-2">
+                      <span class="text-2xl font-bold text-slate-900 dark:text-white">{{ selectedModule.value }}</span>
+                      <span :class="trendClasses(selectedModule.trend)" class="mb-1">
+                        {{ Math.abs(selectedModule.trend) }}%
+                      </span>
+                    </div>
+                  </div>
+                  <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Status Ativo</p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" :class="selectedModule.trend > 0 ? 'bg-emerald-400' : 'bg-amber-400'"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3" :class="selectedModule.trend > 0 ? 'bg-emerald-500' : 'bg-amber-500'"></span>
+                      </span>
+                      <span class="text-sm font-bold text-slate-700 dark:text-slate-300">
+                        {{ selectedModule.trend > 0 ? 'Normal' : 'Atenção' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Content Placeholder -->
+                <div class="space-y-3 mb-6">
+                  <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <ClockIcon class="w-4 h-4 text-slate-400" />
+                    Últimas Atualizações
+                  </h4>
+                  <div class="space-y-2">
+                    <div v-for="i in 3" :key="i" class="flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+                      <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+                        <span class="text-sm text-slate-600 dark:text-slate-300">Atualização de registro #{{ 1000 + i }}</span>
+                      </div>
+                      <span class="text-xs text-slate-400">{{ i * 15 }} min atrás</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-3">
+                  <button @click="closeModal" class="flex-1 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all">
+                    Cancelar
+                  </button>
+                  <button class="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 focus:ring-2 focus:ring-offset-2 transition-all shadow-lg shadow-blue-500/20" :class="variantButtonClass(selectedModule.variant)">
+                    Acessar Módulo
+                  </button>
                 </div>
               </div>
             </div>
+          </Modal>
 
-            <!-- Actions -->
-            <div class="flex gap-3">
-              <button @click="closeModal" class="flex-1 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all">
-                Cancelar
-              </button>
-              <button class="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 focus:ring-2 focus:ring-offset-2 transition-all shadow-lg shadow-blue-500/20" :class="variantButtonClass(selectedModule.variant)">
-                Acessar Módulo
-              </button>
-            </div>
-          </div>
         </div>
-      </Modal>
-
     </div>
-  </AuthenticatedLayout>
 </template>
 
 <script setup>
@@ -137,6 +137,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import draggable from '@/lib/vuedraggable-src/vuedraggable.js';
 import { Head } from '@inertiajs/vue3';
 import { defineAsyncComponent, markRaw, ref } from 'vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 // Widgets carregados sob demanda (lazy) para reduzir bundle inicial
 const DashboardMetricCard = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/DashboardMetricCard.vue'));

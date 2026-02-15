@@ -69,7 +69,7 @@
         <div v-show="!isCollapsed" class="nav-section-title">PRINCIPAL</div>
         <NavItem
           :href="route('dashboard')"
-          :active="route().current('dashboard')"
+          :active="isRouteActive('dashboard')"
           icon="dashboard"
           :collapsed="isCollapsed"
         >
@@ -78,7 +78,7 @@
         <NavItem
           v-if="canSeeRat && (route().has('rat.index') || route().has('rat.create'))"
           :href="ratHref"
-          :active="route().current('rat.*')"
+          :active="isRouteActive('rat.*')"
           icon="document"
           :collapsed="isCollapsed"
         >
@@ -87,7 +87,7 @@
         <NavItem
           v-if="canSeeDemandas && route().has('demandas.index')"
           :href="route('demandas.index')"
-          :active="route().current('demandas.*')"
+          :active="isRouteActive('demandas.*')"
           icon="checkbadge"
           :collapsed="isCollapsed"
         >
@@ -96,7 +96,7 @@
         <NavItem
           v-if="canSeePae && (route().has('pae.protocolos.index') || route().has('pae.index'))"
           :href="paeHref"
-          :active="route().current('pae.*')"
+          :active="isRouteActive('pae.*')"
           icon="document"
           :collapsed="isCollapsed"
         >
@@ -112,7 +112,7 @@
         <NavItem
           v-if="canSeeDecretacoes && route().has('decretacoes.index')"
           :href="route('decretacoes.index')"
-          :active="route().current('decretacoes.*')"
+          :active="isRouteActive('decretacoes.*')"
           icon="scale"
           :collapsed="isCollapsed"
         >
@@ -123,7 +123,7 @@
         <NavItem
           v-if="canSeeAjudaHumanitaria && route().has('ajuda-humanitaria.beneficiarios.index')"
           :href="route('ajuda-humanitaria.beneficiarios.index')"
-          :active="route().current('ajuda-humanitaria.*')"
+          :active="isRouteActive('ajuda-humanitaria.*')"
           icon="heart"
           :collapsed="isCollapsed"
         >
@@ -134,7 +134,7 @@
         <NavItem
           v-if="canSeeOrgaos && route().has('compdec.index')"
           :href="route('compdec.index')"
-          :active="route().current('compdec.*')"
+          :active="isRouteActive('compdec.*')"
           icon="building"
           :collapsed="isCollapsed"
         >
@@ -168,7 +168,7 @@
             <NavItem
               v-if="route().has('tdap.dashboard')"
               :href="route('tdap.dashboard')"
-              :active="route().current('tdap.dashboard')"
+              :active="isRouteActive('tdap.dashboard')"
               icon="dot"
               is-submenu
               :collapsed="isCollapsed"
@@ -178,7 +178,7 @@
             <NavItem
               v-if="route().has('tdap.products.index')"
               :href="route('tdap.products.index')"
-              :active="route().current('tdap.products.*')"
+              :active="isRouteActive('tdap.products.*')"
               icon="dot"
               is-submenu
               :collapsed="isCollapsed"
@@ -188,7 +188,7 @@
             <NavItem
               v-if="route().has('tdap.recebimentos.index')"
               :href="route('tdap.recebimentos.index')"
-              :active="route().current('tdap.recebimentos.*')"
+              :active="isRouteActive('tdap.recebimentos.*')"
               icon="dot"
               is-submenu
               :collapsed="isCollapsed"
@@ -198,7 +198,7 @@
             <NavItem
               v-if="route().has('tdap.movimentacoes.index')"
               :href="route('tdap.movimentacoes.index')"
-              :active="route().current('tdap.movimentacoes.*')"
+              :active="isRouteActive('tdap.movimentacoes.*')"
               icon="dot"
               is-submenu
               :collapsed="isCollapsed"
@@ -212,7 +212,7 @@
         <NavItem
           v-if="canSeeTreinamento && route().has('treinamentos.index')"
           :href="route('treinamentos.index')"
-          :active="route().current('treinamentos.*')"
+          :active="isRouteActive('treinamentos.*')"
           icon="academic"
           :collapsed="isCollapsed"
         >
@@ -223,7 +223,7 @@
         <NavItem
           v-if="canSeeMeteorologia && route().has('inmet.index')"
           :href="route('inmet.index', undefined, false)"
-          :active="route().current('inmet.*')"
+          :active="isRouteActive('inmet.*')"
           icon="cloud"
           :collapsed="isCollapsed"
         >
@@ -249,7 +249,7 @@
         <!-- Permissionamento - Link direto sem submenu -->
         <NavItem
           :href="permissionamentoHref"
-          :active="route().current('admin.permissions.*')"
+          :active="isRouteActive('admin.permissions.*')"
           icon="lock"
           :collapsed="isCollapsed"
         >
@@ -268,10 +268,11 @@
 </template>
 
 <script setup>
-import { ref, provide, inject, computed, onMounted, onUnmounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
 import { route } from 'ziggy-js';
 import NavItem from './NavItem.vue';
+
 
 // Tentar injetar o estado do layout, se não existir, criar localmente
 const sidebarCollapsed = inject('sidebarCollapsed', ref(false));
@@ -285,6 +286,13 @@ const isSidebarOpen = inject('isSidebarOpen', ref(false));
 const closeSidebar = inject('closeSidebar', () => {});
 
 const page = usePage();
+
+// Helper para verificar rota ativa com reatividade garantida
+const isRouteActive = (pattern) => {
+  // Acessar page.url garante que esta função seja re-executada quando a URL mudar
+  const _ = page.url; 
+  return route().current(pattern);
+};
 
 // Helper para verificar permissoes do usuario
 const hasPermission = (permissionList) => {

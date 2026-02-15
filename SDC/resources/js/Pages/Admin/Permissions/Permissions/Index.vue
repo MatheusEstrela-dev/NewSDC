@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="Gerenciamento de Permissões" />
     <div class="w-full py-6">
 
@@ -185,7 +185,7 @@
         </div>
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
@@ -193,6 +193,8 @@ import { ref, computed, h } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import StatsCard from '@/Components/Admin/StatsCard.vue';
 import PermissionBadge from '@/Components/Admin/PermissionBadge.vue';
 import { useMobile } from '@/Composables/useMobile';
