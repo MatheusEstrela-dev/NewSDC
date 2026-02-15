@@ -165,7 +165,7 @@ export default defineConfig({
         assetsInlineLimit: 4096,
         cssCodeSplit: true,
         reportCompressedSize: false,
-        target: 'es2015',
+        target: 'esnext',
     },
     optimizeDeps: {
         include: ['vue', '@inertiajs/vue3', 'ziggy-js', '@tanstack/vue-query', 'vuedraggable', 'sortablejs'],
@@ -183,7 +183,7 @@ export default defineConfig({
         cors: true,
         origin: 'http://localhost:5175',
         headers: {
-            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*;",
+            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob: http://localhost:*; connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*;",
         },
     },
     worker: {

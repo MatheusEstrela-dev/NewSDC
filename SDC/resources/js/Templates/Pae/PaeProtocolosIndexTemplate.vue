@@ -78,6 +78,8 @@
       :protocolos="paginatedProtocolos"
       :loading="loading"
       :pagination="paginationToUse"
+      :can-edit="canEdit"
+      :can-delete="canDelete"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -89,6 +91,8 @@
     <PaeProtocolosTable
       v-else-if="viewMode === 'table' && !isMobile"
       :protocolos="paginatedProtocolos"
+      :can-edit="canEdit"
+      :can-delete="canDelete"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -120,34 +124,34 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
-import { router, Link } from '@inertiajs/vue3';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { Link, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
-import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
-import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
-import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 
-import PaeProtocolosStatsCards from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosStatsCards.vue';
+import PrintPaeProtocoloModal from '@/Components/Organisms/Pae/Print/PrintPaeProtocoloModal.vue';
+import PaeHistoricoModal from '@/Components/Organisms/Pae/Protocolos/PaeHistoricoModal.vue';
 import PaeProtocolosFilters from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosFilters.vue';
 import PaeProtocolosGrid from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosGrid.vue';
+import PaeProtocolosStatsCards from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosStatsCards.vue';
 import PaeProtocolosTable from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosTable.vue';
-import PaeHistoricoModal from '@/Components/Organisms/Pae/Protocolos/PaeHistoricoModal.vue';
-import PrintPaeProtocoloModal from '@/Components/Organisms/Pae/Print/PrintPaeProtocoloModal.vue';
 
-import { MockPaeProtocoloRepository } from '@/infrastructure/pae/MockPaeProtocoloRepository';
-import { ListPaeProtocolos } from '@/domain/pae/usecases/ListPaeProtocolos';
 import { GetPaeProtocoloHistorico } from '@/domain/pae/usecases/GetPaeProtocoloHistorico';
+import { ListPaeProtocolos } from '@/domain/pae/usecases/ListPaeProtocolos';
+import { MockPaeProtocoloRepository } from '@/infrastructure/pae/MockPaeProtocoloRepository';
 
 import {
-  paeSituacoes,
-  paeAnalistas,
-  paeEmpreendedores,
-  getMockPaeStats,
-  matchesPaeFilters,
+    getMockPaeStats,
+    matchesPaeFilters,
+    paeAnalistas,
+    paeEmpreendedores,
+    paeSituacoes,
 } from '@/mocks/pae';
 
 import { useMobile } from '@/Composables/useMobile';

@@ -192,7 +192,7 @@ const handleInput = (evt) => {
  */
 const onlyNumbers = (evt) => {
   // Permite teclas de controle (Backspace, Delete, Tab, Setas, Enter, etc)
-  if (evt.key.length > 1) return;
+  if (!evt.key || evt.key.length > 1) return;
   
   // Permite Ctrl+C, Ctrl+V, Ctrl+A, etc
   if (evt.ctrlKey || evt.metaKey) return;

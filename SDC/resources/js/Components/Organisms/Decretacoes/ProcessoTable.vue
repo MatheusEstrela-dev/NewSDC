@@ -79,7 +79,7 @@
                   :show-print="true"
                   :show-edit="canEdit"
                   :show-attachments="false"
-                  :show-delete="false"
+                  :show-delete="canDelete"
                   @view="$emit('view', processo.id)"
                   @print="$emit('print', processo.id)"
                   @edit="$emit('edit', processo.id)"
@@ -104,9 +104,9 @@
 
 <script setup>
 import DocumentIcon from '../../Icons/DocumentTextIcon.vue';
-import TipoProcessoBadge from '../../Molecules/Decretacoes/TipoProcessoBadge.vue';
-import StatusBadge from '../../Molecules/Decretacoes/StatusBadge.vue';
 import PrazoBadge from '../../Molecules/Decretacoes/PrazoBadge.vue';
+import StatusBadge from '../../Molecules/Decretacoes/StatusBadge.vue';
+import TipoProcessoBadge from '../../Molecules/Decretacoes/TipoProcessoBadge.vue';
 import TableActions from '../../Molecules/Table/TableActions.vue';
 
 const props = defineProps({
@@ -124,7 +124,11 @@ const props = defineProps({
   },
   canEdit: {
     type: Boolean,
-    default: true,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
   },
 });
 

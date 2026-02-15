@@ -14,7 +14,7 @@ const props = defineProps({
   tipo: {
     type: String,
     required: true,
-    validator: (value) => ['MUNICIPAL', 'ESTADUAL'].includes(value),
+    // Validator removed to allow other types (fallback logic exists)
   },
 });
 

@@ -52,7 +52,7 @@ Route::middleware('auth')->group(function () {
     // Log Viewer - Sistema Avançado de Visualização de Logs
     Route::get('/log-viewer', function () {
         return Inertia::render('LogViewer/Index');
-    })->middleware('can:logs.view')->name('log-viewer.index');
+    })->middleware('can:system.logs.view')->name('log-viewer.index');
 
     // Redirect Legacy Log Viewer to New Premium Viewer
     Route::get('logs', function () {
@@ -103,6 +103,9 @@ Route::middleware('auth')->group(function () {
 
     // Modulo: IA
     require __DIR__ . '/modules/ia.php';
+
+    // Modulo: Inmet (Meteorologia)
+    require __DIR__ . '/modules/inmet.php';
 });
 
 require __DIR__ . '/auth.php';

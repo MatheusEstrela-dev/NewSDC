@@ -167,21 +167,21 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
-import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import HeartIcon from '@/Components/Icons/HeartIcon.vue';
-import BeneficiarioStatsCards from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioStatsCards.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import BeneficiarioFiltersSection from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioFiltersSection.vue';
 import BeneficiarioGrid from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioGrid.vue';
-import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import BeneficiarioStatsCards from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioStatsCards.vue';
 import PrintBeneficiarioModal from '@/Components/Organisms/AjudaHumanitaria/Print/PrintBeneficiarioModal.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
-import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
-import { useMobile } from '@/Composables/useMobile';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { useExport } from '@/Composables/useExport';
+import { useMobile } from '@/Composables/useMobile';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { ref } from 'vue';
 
 const props = defineProps({
   beneficiarios: {
@@ -202,7 +202,7 @@ const props = defineProps({
   },
   canEdit: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   canCreate: {
     type: Boolean,
@@ -210,7 +210,7 @@ const props = defineProps({
   },
   canDelete: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   canExport: {
     type: Boolean,

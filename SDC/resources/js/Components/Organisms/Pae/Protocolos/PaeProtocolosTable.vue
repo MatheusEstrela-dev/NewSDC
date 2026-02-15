@@ -51,7 +51,8 @@
               <div class="flex items-center justify-end">
                 <TableActions
                   :show-attachments="false"
-                  :show-delete="false"
+                  :show-delete="canDelete"
+                  :show-edit="canEdit"
                   :show-history="true"
                   :show-archive="true"
                   @view="$emit('view', protocolo.id)"
@@ -75,14 +76,22 @@
 </template>
 
 <script setup>
-import StatusPill from '@/Components/Molecules/Pae/Protocolos/StatusPill.vue';
 import PrazosPill from '@/Components/Molecules/Pae/Protocolos/PrazosPill.vue';
+import StatusPill from '@/Components/Molecules/Pae/Protocolos/StatusPill.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 
 defineProps({
   protocolos: {
     type: Array,
     required: true,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
   },
 });
 

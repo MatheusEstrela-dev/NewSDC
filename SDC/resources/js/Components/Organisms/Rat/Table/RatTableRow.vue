@@ -28,8 +28,8 @@
     <TableCell align="right" class="whitespace-nowrap">
       <TableActions
         :show-print="true"
-        :show-edit="can('rat.protocolos.edit')"
-        :show-delete="can('rat.protocolos.delete')"
+        :show-edit="canEdit"
+        :show-delete="canDelete"
         @view="handleView"
         @print="handlePrint"
         @edit="handleEdit"
@@ -43,22 +43,28 @@
 
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import TableDataRow from '../../../Molecules/Table/TableDataRow.vue';
-import TableCell from '../../../Atoms/Table/TableCell.vue';
-import TableActions from '../../../Molecules/Table/TableActions.vue';
 import Badge from '../../../Atoms/Badge/Badge.vue';
 import StatusBadge from '../../../Atoms/Badge/StatusBadge.vue';
-import { usePermissions } from '@/Composables/usePermissions';
+import TableCell from '../../../Atoms/Table/TableCell.vue';
+import TableActions from '../../../Molecules/Table/TableActions.vue';
+import TableDataRow from '../../../Molecules/Table/TableDataRow.vue';
 
 const props = defineProps({
   rat: {
     type: Object,
     required: true,
   },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);
-const { can } = usePermissions();
 
 function formatDateTime(date) {
   if (!date) return 'Data não informada';

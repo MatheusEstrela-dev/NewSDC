@@ -11,11 +11,13 @@
       <p class="text-sm text-slate-500 dark:text-slate-500 mt-2">Tente ajustar os filtros de busca</p>
     </div>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <RatCard
         v-for="rat in rats"
         :key="rat.id"
         :rat="rat"
+        :can-edit="canEdit"
+        :can-delete="canDelete"
         @view="$emit('view', $event)"
         @print="$emit('print', $event)"
         @edit="$emit('edit', $event)"
@@ -28,10 +30,10 @@
 </template>
 
 <script setup>
-import RatCard from '@/Components/Molecules/Rat/RatCard.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import RatCard from '../../../Molecules/Rat/RatCard.vue';
 
-defineProps({
+const props = defineProps({
   rats: {
     type: Array,
     default: () => [],
@@ -43,6 +45,14 @@ defineProps({
   pagination: {
     type: Object,
     default: null,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
   },
 });
 

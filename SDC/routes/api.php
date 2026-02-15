@@ -141,7 +141,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     });
 
     // Log Viewer - Sistema avançado de visualização de logs
-    Route::prefix('logs')->middleware('can:logs.view')->name('api.v1.logs.')->group(function () {
+    Route::prefix('logs')->middleware('can:system.logs.view')->name('api.v1.logs.')->group(function () {
 
         // Buscar logs com filtros avançados (data, tipo, nível, busca)
         Route::get('/', [LogViewerV1Controller::class, 'index'])

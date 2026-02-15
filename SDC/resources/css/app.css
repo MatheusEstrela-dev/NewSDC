@@ -1,8 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Component Styles - devem vir APÓS @tailwind para @apply funcionar */
+/* Component Styles */
 @import './components/forms.css';
 @import './components/atoms/input.css';
 @import './components/beneficiario-card.css';
@@ -13,3 +9,7 @@
 /* Mobile Utilities */
 @import './utilities/mobile.css';
 @import './utilities/touch-feedback.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

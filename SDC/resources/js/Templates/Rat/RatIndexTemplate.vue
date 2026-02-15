@@ -53,6 +53,8 @@
       :rats="ratsToUse"
       :loading="loading"
       :pagination="paginationToUse"
+      :can-edit="canEdit"
+      :can-delete="canDelete"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -66,6 +68,8 @@
       :rats="ratsToUse"
       :loading="loading"
       :pagination="paginationToUse"
+      :can-edit="canEdit"
+      :can-delete="canDelete"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -92,24 +96,24 @@
 </template>
 
 <script setup>
-import { router, Link } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
-import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
-import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
-import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
-import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import RatStatisticsCards from '../../Components/Organisms/Rat/Statistics/RatStatisticsCards.vue';
-import RatFiltersSection from '../../Components/Organisms/Rat/Filters/RatFiltersSection.vue';
-import RatTable from '../../Components/Organisms/Rat/Table/RatTable.vue';
-import RatGrid from '../../Components/Organisms/Rat/Grid/RatGrid.vue';
-import PrintBoletimModal from '../../Components/Organisms/Rat/Print/PrintBoletimModal.vue';
-import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
-import { getMockStatisticsFromRats } from '@/mocks/rat';
+import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { useModalState } from '@/Composables/useModalState';
 import { MESSAGES } from '@/constants/messages';
+import { getMockStatisticsFromRats } from '@/mocks/rat';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { Link, router } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import RatFiltersSection from '../../Components/Organisms/Rat/Filters/RatFiltersSection.vue';
+import RatGrid from '../../Components/Organisms/Rat/Grid/RatGrid.vue';
+import PrintBoletimModal from '../../Components/Organisms/Rat/Print/PrintBoletimModal.vue';
+import RatStatisticsCards from '../../Components/Organisms/Rat/Statistics/RatStatisticsCards.vue';
+import RatTable from '../../Components/Organisms/Rat/Table/RatTable.vue';
 
 const props = defineProps({
   statistics: {

@@ -14,7 +14,7 @@
         </div>
       </div>
 
-      <form @submit.prevent="submit" class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+      <form @submit.prevent="submit" class="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
         <!-- Main Content -->
         <div class="xl:col-span-3 space-y-6">
           <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
@@ -127,8 +127,15 @@
         </div>
 
         <!-- Sidebar Actions -->
-        <div class="xl:col-span-1">
-          <div class="sticky top-6 space-y-6">
+        <div class="xl:col-span-1" ref="sidebarContainer">
+          <div 
+            ref="sidebarContent"
+            :class="[
+              'transition-all duration-300',
+              isSticky ? 'fixed top-24 z-10' : ''
+            ]"
+            :style="isSticky ? { width: sidebarWidth + 'px' } : {}"
+          >
             <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden p-6">
               <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Resumo</h3>
               
@@ -168,9 +175,9 @@
 </template>
 
 <script setup>
-import { Head, useForm, router, Link } from '@inertiajs/vue3';
-import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -206,4 +213,36 @@ const submit = () => {
     }
   });
 };
+
+// Scroll Sticky Logic
+import { onMounted, onUnmounted, ref } from 'vue';
+
+const sidebarContainer = ref(null);
+const sidebarContent = ref(null);
+const isSticky = ref(false);
+const sidebarWidth = ref(0);
+
+const handleScroll = () => {
+  if (!sidebarContainer.value) return;
+  
+  const rect = sidebarContainer.value.getBoundingClientRect();
+  isSticky.value = rect.top < 96;
+};
+
+const updateWidth = () => {
+  if (sidebarContainer.value) {
+    sidebarWidth.value = sidebarContainer.value.clientWidth;
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll);
+  window.addEventListener('resize', updateWidth);
+  updateWidth();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('resize', updateWidth);
+});
 </script>

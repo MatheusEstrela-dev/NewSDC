@@ -39,6 +39,8 @@
             v-for="rat in rats"
             :key="rat.id"
             :rat="rat"
+            :can-edit="canEdit"
+            :can-delete="canDelete"
             @view="handleView"
             @print="handlePrint"
             @edit="handleEdit"
@@ -55,6 +57,8 @@
         v-for="rat in rats"
         :key="rat.id"
         :rat="rat"
+        :can-edit="canEdit"
+        :can-delete="canDelete"
         @view="handleView"
         @print="handlePrint"
         @edit="handleEdit"
@@ -68,14 +72,14 @@
 
 <script setup>
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import TableHeader from '@/Components/Atoms/Table/TableHeader.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import TableHeaderRow from '@/Components/Molecules/Table/TableHeaderRow.vue';
-import TableHeader from '@/Components/Atoms/Table/TableHeader.vue';
-import RatTableRow from './RatTableRow.vue';
-import RatCard from '@/Components/Molecules/Rat/RatCard.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import RatCard from '@/Components/Molecules/Rat/RatCard.vue';
+import TableHeaderRow from '@/Components/Molecules/Table/TableHeaderRow.vue';
 import { useMobile } from '@/Composables/useMobile';
+import RatTableRow from './RatTableRow.vue';
 
 // Detecção mobile
 const { isMobile } = useMobile();
@@ -92,6 +96,14 @@ const props = defineProps({
   pagination: {
     type: Object,
     default: null,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
   },
 });
 

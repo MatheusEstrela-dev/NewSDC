@@ -22,6 +22,7 @@
         :key="processo.id"
         :processo="processo"
         :can-edit="canEdit"
+        :can-delete="canDelete"
         @click="handleView(processo.id)"
         @view="handleView"
         @edit="handleEdit"
@@ -31,11 +32,11 @@
 </template>
 
 <script setup>
-import { router } from '@inertiajs/vue3';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import ProcessoCard from '@/Components/Molecules/Decretacoes/ProcessoCard.vue';
 import DocumentIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import ProcessoCard from '@/Components/Molecules/Decretacoes/ProcessoCard.vue';
+import { router } from '@inertiajs/vue3';
 
 const props = defineProps({
   processos: {
@@ -48,7 +49,11 @@ const props = defineProps({
   },
   canEdit: {
     type: Boolean,
-    default: true,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
   },
 });
 

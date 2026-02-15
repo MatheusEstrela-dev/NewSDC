@@ -59,6 +59,7 @@
           @click="$emit('print', protocolo.id)"
         />
         <ButtonIcon
+          v-if="canEdit"
           :icon="PencilIcon"
           variant="warning"
           size="md"
@@ -80,6 +81,7 @@
           @click="$emit('notifications', protocolo.id)"
         />
         <ButtonIcon
+          v-if="canDelete"
           :icon="ArchiveBoxIcon"
           variant="topaz"
           size="md"
@@ -92,27 +94,35 @@
 </template>
 
 <script setup>
+import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
-import EyeIcon from '@/Components/Icons/EyeIcon.vue';
-import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
-import PencilIcon from '@/Components/Icons/PencilIcon.vue';
-import ClockIcon from '@/Components/Icons/ClockIcon.vue';
-import BellIcon from '@/Components/Icons/BellIcon.vue';
 import ArchiveBoxIcon from '@/Components/Icons/ArchiveBoxIcon.vue';
-import UsersIcon from '@/Components/Icons/UsersIcon.vue';
+import BellIcon from '@/Components/Icons/BellIcon.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
+import ClockIcon from '@/Components/Icons/ClockIcon.vue';
+import EyeIcon from '@/Components/Icons/EyeIcon.vue';
+import PencilIcon from '@/Components/Icons/PencilIcon.vue';
+import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
+import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 
-import StatusPill from './StatusPill.vue';
 import PrazosPill from './PrazosPill.vue';
+import StatusPill from './StatusPill.vue';
 
 const props = defineProps({
   protocolo: {
     type: Object,
     required: true,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
   },
 });
 

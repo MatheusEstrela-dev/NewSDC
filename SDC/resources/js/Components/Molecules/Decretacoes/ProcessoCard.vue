@@ -1,6 +1,7 @@
 <template>
   <CardBase
-    variant="hover"
+    variant="default"
+    :hover="true"
     padding="md"
     class="cursor-pointer transition-all duration-200 hover:scale-[1.01] touch-manipulation sm:p-5"
     @click="$emit('click')"
@@ -73,7 +74,7 @@
         :show-print="true"
         :show-edit="canEdit"
         :show-attachments="false"
-        :show-delete="false"
+        :show-delete="canDelete"
         @view="$emit('view', processo.id)"
         @print="$emit('print', processo.id)"
         @edit="$emit('edit', processo.id)"
@@ -87,10 +88,10 @@ import { computed } from 'vue';
 import CardBase from '../../Atoms/Card/CardBase.vue';
 import Heading from '../../Atoms/Typography/Heading.vue';
 import Text from '../../Atoms/Typography/Text.vue';
-import StatusBadge from './StatusBadge.vue';
-import PrazoBadge from './PrazoBadge.vue';
-import TipoProcessoBadge from './TipoProcessoBadge.vue';
 import TableActions from '../../Molecules/Table/TableActions.vue';
+import PrazoBadge from './PrazoBadge.vue';
+import StatusBadge from './StatusBadge.vue';
+import TipoProcessoBadge from './TipoProcessoBadge.vue';
 
 const props = defineProps({
   processo: {
@@ -99,7 +100,11 @@ const props = defineProps({
   },
   canEdit: {
     type: Boolean,
-    default: true,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
   },
 });
 

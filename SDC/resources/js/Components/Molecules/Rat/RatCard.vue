@@ -35,9 +35,9 @@
     <div class="rat-card-footer">
       <TableActions
         :show-print="true"
-        :show-edit="can('rat.protocolos.edit')"
+        :show-edit="canEdit"
         :show-attachments="!!rat.has_attachments"
-        :show-delete="can('rat.protocolos.delete')"
+        :show-delete="canDelete"
         size="md"
         @view="$emit('view', rat.id)"
         @print="$emit('print', rat.id)"
@@ -58,12 +58,17 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);
-
-import { usePermissions } from '@/Composables/usePermissions';
-const { can } = usePermissions();
 
 
 const formatDateTime = (dateTime) => {

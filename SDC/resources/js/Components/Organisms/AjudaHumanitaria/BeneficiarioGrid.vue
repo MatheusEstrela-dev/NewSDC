@@ -57,11 +57,11 @@ defineProps({
   },
   canEdit: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   canDelete: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   emptyMessage: {
     type: String,

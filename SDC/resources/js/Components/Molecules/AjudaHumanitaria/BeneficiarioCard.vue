@@ -104,10 +104,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import Badge from '../../Atoms/Badge/Badge.vue';
 import Heading from '../../Atoms/Typography/Heading.vue';
 import Text from '../../Atoms/Typography/Text.vue';
-import Badge from '../../Atoms/Badge/Badge.vue';
 import TableActions from '../Table/TableActions.vue';
 
 const props = defineProps({
@@ -117,11 +116,11 @@ const props = defineProps({
   },
   canEdit: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   canDelete: {
     type: Boolean,
-    default: true,
+    default: false,
   },
 });
 

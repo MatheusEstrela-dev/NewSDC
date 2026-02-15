@@ -88,6 +88,7 @@
       :processos="processos"
       :loading="loading"
       :can-edit="canEdit"
+      :can-delete="canDelete"
     />
 
     <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
@@ -95,6 +96,7 @@
       v-else-if="viewMode === 'table' && !isMobile"
       :processos="processos"
       :can-edit="canEdit"
+      :can-delete="canDelete"
       @view="(id) => $emit('view', id)"
       @edit="(id) => $emit('edit', id)"
     />
@@ -110,19 +112,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
-import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import DecretacoesStatsCards from '@/Components/Organisms/Decretacoes/DecretacoesStatsCards.vue';
 import ProcessoFilters from '@/Components/Organisms/Decretacoes/ProcessoFilters.vue';
 import ProcessoGrid from '@/Components/Organisms/Decretacoes/ProcessoGrid.vue';
 import ProcessoTable from '@/Components/Organisms/Decretacoes/ProcessoTable.vue';
-import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { useMobile } from '@/Composables/useMobile';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { ref } from 'vue';
 
 // Detecção mobile
 const { isMobile } = useMobile();
@@ -159,11 +161,11 @@ const props = defineProps({
   },
   canEdit: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   canCreate: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   canExport: {
     type: Boolean,

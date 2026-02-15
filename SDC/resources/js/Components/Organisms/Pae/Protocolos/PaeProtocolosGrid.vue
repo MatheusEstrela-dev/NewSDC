@@ -27,6 +27,8 @@
         v-for="p in protocolos"
         :key="p.id"
         :protocolo="p"
+        :can-edit="canEdit"
+        :can-delete="canDelete"
         @view="$emit('view', $event)"
         @print="$emit('print', $event)"
         @edit="$emit('edit', $event)"
@@ -57,6 +59,14 @@ const props = defineProps({
   pagination: {
     type: Object,
     default: null,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
   },
 });
 

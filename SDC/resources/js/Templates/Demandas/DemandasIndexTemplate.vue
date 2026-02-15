@@ -9,6 +9,8 @@
       :get-tipo-label="getTipoLabel"
       :get-prioridade-label="getPrioridadeLabel"
       :get-status-label="getStatusLabel"
+      :can-edit="canEdit"
+      :can-delete="canDelete"
       @filter-change="handleFilterChange"
       @clear-filters="handleClearFilters"
       @demanda-click="handleDemandaClick"
@@ -39,15 +41,15 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useDemandas } from '@/Composables/useDemandas';
-import { useExport } from '@/Composables/useExport';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import DemandasPageHeader from '@/Components/Organisms/Demandas/Header/DemandasPageHeader.vue';
-import DemandasStatisticsCards from '@/Components/Organisms/Demandas/Statistics/DemandasStatisticsCards.vue';
 import DemandasList from '@/Components/Organisms/Demandas/Lists/DemandasList.vue';
 import NovaDemandaModal from '@/Components/Organisms/Demandas/Modals/NovaDemandaModal.vue';
+import DemandasStatisticsCards from '@/Components/Organisms/Demandas/Statistics/DemandasStatisticsCards.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
-import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import { useDemandas } from '@/Composables/useDemandas';
+import { useExport } from '@/Composables/useExport';
+import { ref } from 'vue';
 
 const props = defineProps({
   statistics: {
@@ -64,6 +66,18 @@ const props = defineProps({
     default: false,
   },
   canExport: {
+    type: Boolean,
+    default: false,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
+  canManage: {
     type: Boolean,
     default: false,
   },

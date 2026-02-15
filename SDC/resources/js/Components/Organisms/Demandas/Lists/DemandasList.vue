@@ -181,18 +181,18 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
+import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
-import WrenchScrewdriverIcon from '@/Components/Icons/WrenchScrewdriverIcon.vue';
 import LifebuoyIcon from '@/Components/Icons/LifebuoyIcon.vue';
 import UserIcon from '@/Components/Icons/UserIcon.vue';
-import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
-import ClockIcon from '@/Components/Icons/ClockIcon.vue';
-import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import WrenchScrewdriverIcon from '@/Components/Icons/WrenchScrewdriverIcon.vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
   demandas: {
@@ -214,6 +214,14 @@ const props = defineProps({
   getStatusLabel: {
     type: Function,
     required: true,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
   },
 });
 
