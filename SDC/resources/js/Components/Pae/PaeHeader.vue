@@ -1,8 +1,8 @@
 <template>
   <div class="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-8 gap-4">
     <div class="flex-1 min-w-0">
-      <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight break-words">Ficha do Empreendimento</h1>
-      <p class="text-lg sm:text-xl text-blue-400 font-light mt-1 flex flex-wrap items-center gap-2">
+      <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight break-words">Ficha do Empreendimento</h1>
+      <p class="text-base sm:text-lg md:text-xl text-blue-400 font-light mt-1 flex flex-wrap items-center gap-2">
         <span class="break-words">{{ empreendimento.nome }}</span>
         <span
           :class="[

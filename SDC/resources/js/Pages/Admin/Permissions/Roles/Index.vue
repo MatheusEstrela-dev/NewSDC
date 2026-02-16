@@ -4,12 +4,12 @@
     <div class="w-full py-6">
       
 
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6 md:mb-8">
         <div>
-          <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Gerenciamento de Cargos</h1>
-          <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Gerencie cargos e suas permissões do sistema</p>
+          <h1 class="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-100">Gerenciamento de Cargos</h1>
+          <p class="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">Gerencie cargos e suas permissões do sistema</p>
         </div>
-        <div v-if="canCreate" class="flex gap-3">
+        <div v-if="canCreate" class="w-full md:w-auto flex justify-center">
           <Link :href="route('admin.permissions.roles.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -19,7 +19,7 @@
         </div>
       </div>
 
-      <div class="border-b border-slate-200 dark:border-slate-700 mb-8 overflow-x-auto">
+      <div class="border-b border-slate-200 dark:border-slate-700 mb-6 md:mb-8 overflow-x-auto scrollbar-hide">
         <div class="flex space-x-1 min-w-max">
           <Link
             :href="route('admin.permissions.users.index')"

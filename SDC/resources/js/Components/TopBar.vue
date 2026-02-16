@@ -1,13 +1,14 @@
 <template>
   <header
-    class="fixed top-0 right-0 left-0 h-16 z-30 transition-all duration-300 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm md:left-20"
+    class="fixed top-0 right-0 left-0 z-30 transition-all duration-300 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm md:left-20"
     :class="{
       'lg:left-[280px]': !isCollapsed,
       'lg:left-20': isCollapsed
     }"
     :data-collapsed="isCollapsed"
+    :style="{ paddingTop: 'max(env(safe-area-inset-top, 0px), 45px)' }"
   >
-    <div class="flex items-center justify-between h-full px-4 sm:px-6 lg:px-8 gap-2 sm:gap-4 lg:gap-8">
+    <div class="flex items-center justify-between h-12 md:h-16 px-3 sm:px-6 lg:px-8 gap-1 sm:gap-4 lg:gap-8">
       <!-- Mobile/Tablet: Hamburger Button (visivel em telas < 1024px) -->
       <div class="flex items-center gap-3 lg:hidden flex-shrink-0">
         <HamburgerButton
@@ -72,17 +73,17 @@
       </button>
 
       <!-- Right Section - User Info & Actions -->
-      <div class="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0 relative z-40">
+      <div class="flex items-center gap-0.5 sm:gap-2 lg:gap-4 flex-shrink-0 relative z-40">
         <!-- Notifications Dropdown -->
         <Dropdown align="right" width="96" contentClasses="p-0 overflow-hidden">
           <template #trigger>
             <button
-              class="relative flex items-center justify-center w-10 h-10 lg:w-10 lg:h-10 rounded-lg transition-all
+              class="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-all
                      text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
                      active:scale-95"
               title="Notificações"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-[18px] h-[18px] sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
               <span
@@ -105,16 +106,16 @@
         <!-- Theme Toggle -->
         <button
           @click="toggleTheme"
-          class="flex items-center justify-center w-10 h-10 rounded-lg transition-all
+          class="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-all
                  text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
                  active:scale-95"
           title="Alternar tema"
         >
-          <svg v-if="isDarkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-if="isDarkMode" class="w-[18px] h-[18px] sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <!-- Sol (tema claro) -->
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
-          <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-else class="w-[18px] h-[18px] sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <!-- Lua (tema escuro) -->
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
           </svg>
@@ -143,7 +144,7 @@
                    border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600
                    active:scale-95"
           >
-            <div class="w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-semibold">
+            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-[10px] sm:text-xs font-semibold">
               {{ userInitials }}
             </div>
             <svg class="hidden sm:block w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -219,17 +220,17 @@
 </template>
 
 <script setup>
-import { ref, computed, inject, Transition, watch, onMounted, onUnmounted } from 'vue';
-import { Link, usePage, router } from '@inertiajs/vue3';
-import { useTheme } from '@/composables/useTheme';
 import { useNotifications } from '@/composables/useNotifications';
-import Dropdown from './Dropdown.vue';
-import NotificationsPanel from './Organisms/Notifications/NotificationsPanel.vue';
-import UserProfileModal from './Organisms/UserProfileModal.vue';
+import { useTheme } from '@/composables/useTheme';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed, inject, onMounted, onUnmounted, ref, Transition, watch } from 'vue';
 import HamburgerButton from './Atoms/Button/HamburgerButton.vue';
-import CommandPalette from './Organisms/CommandPalette.vue';
-import SettingsModal from './Organisms/Settings/SettingsModal.vue';
+import Dropdown from './Dropdown.vue';
 import AiAssistantModal from './Organisms/AiAssistantModal.vue';
+import CommandPalette from './Organisms/CommandPalette.vue';
+import NotificationsPanel from './Organisms/Notifications/NotificationsPanel.vue';
+import SettingsModal from './Organisms/Settings/SettingsModal.vue';
+import UserProfileModal from './Organisms/UserProfileModal.vue';
 
 // Force cache invalidation
 const page = usePage();
@@ -335,8 +336,8 @@ function toggleUserMenu() {
 /* Touch-friendly buttons on mobile */
 @media (max-width: 640px) {
   button {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: 36px;
+    min-height: 36px;
   }
 }
 </style>

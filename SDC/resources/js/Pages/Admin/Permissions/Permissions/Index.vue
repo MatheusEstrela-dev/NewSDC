@@ -4,14 +4,14 @@
     <div class="w-full py-6">
 
 
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6 md:mb-8">
         <div>
-          <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Gerenciamento de Permissões</h1>
-          <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Visualize todas as permissões disponíveis no sistema</p>
+          <h1 class="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-100">Gerenciamento de Permissões</h1>
+          <p class="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">Visualize todas as permissões disponíveis no sistema</p>
         </div>
       </div>
 
-      <div class="border-b border-slate-200 dark:border-slate-700 mb-8 overflow-x-auto">
+      <div class="border-b border-slate-200 dark:border-slate-700 mb-6 md:mb-8 overflow-x-auto scrollbar-hide">
         <div class="flex space-x-1 min-w-max">
           <Link
             :href="route('admin.permissions.users.index')"

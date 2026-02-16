@@ -32,7 +32,7 @@ class Handler extends ExceptionHandler
      * @var array<int, class-string<\Throwable>>
      */
     protected $dontReport = [
-        // Não reportar validações (muito comum)
+            // Não reportar validações (muito comum)
         ValidationException::class,
     ];
 
@@ -99,14 +99,14 @@ class Handler extends ExceptionHandler
             exception: $e,
             context: [
                 'severity' => $severity,
-                'url' => request()->fullUrl(),
-                'method' => request()->method(),
-                'ip' => request()->ip(),
+                'url' => request()?->fullUrl(),
+                'method' => request()?->method(),
+                'ip' => request()?->ip(),
                 'user_id' => auth()->id(),
-                'user_agent' => request()->userAgent(),
-                'input' => request()->except(['password', 'password_confirmation']),
-                'session_id' => session()->getId(),
-                'previous_url' => url()->previous(),
+                'user_agent' => request()?->userAgent(),
+                'input' => request()?->except(['password', 'password_confirmation']),
+                'session_id' => function_exists('session') ? session()->getId() : null,
+                'previous_url' => function_exists('url') ? url()->previous() : null,
             ]
         );
 
@@ -127,7 +127,8 @@ class Handler extends ExceptionHandler
     protected function determineSeverity(Throwable $e): string
     {
         // Erros críticos que podem derrubar o sistema
-        if ($e instanceof \Error ||
+        if (
+            $e instanceof \Error ||
             $e instanceof \ParseError ||
             $e instanceof \TypeError ||
             str_contains($e->getMessage(), 'SQLSTATE') ||

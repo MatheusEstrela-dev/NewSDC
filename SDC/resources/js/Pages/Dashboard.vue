@@ -15,7 +15,7 @@
           <draggable
             v-model="dashboardItems"
             item-key="id"
-            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-6"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6"
             handle=".drag-handle"
             ghost-class="ghost-card"
             :animation="200"

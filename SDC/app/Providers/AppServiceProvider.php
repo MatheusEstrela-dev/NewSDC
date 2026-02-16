@@ -30,6 +30,52 @@ class AppServiceProvider extends ServiceProvider
             \URL::forceScheme('https');
         }
 
+        // Overrides para NativePHP / Mobile / Android
+        // Detectamos pelo ambiente NativePHP ou se o SO for Linux (Android se reporta como Linux, mas checamos caminhos)
+        if (env('NATIVEPHP_RUNNING') || env('NATIVE_PHP') || str_contains(strtolower(php_uname('a')), 'android') || str_contains(__DIR__, '/com.bifrost')) {
+            config(['inertia.ssr.enabled' => false]);
+            config(['octane.server' => null]);
+
+            // Configura MySQL: aponta para o host (PC) com timeout curto
+            // para não travar o boot do app se o DB não for alcançável
+            config([
+                'database.default' => 'mysql',
+                'database.connections.mysql.host' => env('NATIVE_DB_HOST', '10.0.2.2'),
+                'database.connections.mysql.port' => env('NATIVE_DB_PORT', '3307'),
+                'database.connections.mysql.database' => env('DB_DATABASE', 'sdc'),
+                'database.connections.mysql.username' => env('DB_USERNAME', 'sdc'),
+                'database.connections.mysql.password' => env('DB_PASSWORD', 'secret'),
+                'database.connections.mysql.options' => [
+                    \PDO::ATTR_TIMEOUT => 3,
+                    \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                ],
+            ]);
+
+            try {
+                \DB::connection('mysql')->getPdo();
+                \Log::info('NativePHP DB: MySQL connection SUCCESS');
+            } catch (\Throwable $e) {
+                \Log::warning('NativePHP DB: MySQL FAILED, falling back to SQLite', ['error' => $e->getMessage()]);
+
+                config(['database.default' => 'sqlite']);
+                config(['database.connections.sqlite.database' => storage_path('database.sqlite')]);
+
+                if (!file_exists(storage_path('database.sqlite'))) {
+                    touch(storage_path('database.sqlite'));
+                }
+
+                try {
+                    if (!\Schema::hasTable('users')) {
+                        \Artisan::call('migrate', ['--force' => true]);
+                        \Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
+                        \Log::info('NativePHP DB: SQLite migrated and seeded');
+                    }
+                } catch (\Throwable $migError) {
+                    \Log::error('NativePHP DB: SQLite migration failed', ['error' => $migError->getMessage()]);
+                }
+            }
+        }
+
         if (app()->runningInConsole() === false) {
             $requestId = (string) Str::uuid();
 
@@ -45,7 +91,7 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             }
 
-            if (request()) {
+            if (app()->bound('request')) {
                 request()->headers->set('X-Request-ID', $requestId);
             }
         }
@@ -58,8 +104,8 @@ class AppServiceProvider extends ServiceProvider
                     'sql' => $query->sql,
                     'bindings' => $query->bindings,
                     'time_ms' => $query->time,
-                    'url' => request()?->fullUrl(),
-                    'method' => request()?->method(),
+                    'url' => app()->bound('request') ? request()->fullUrl() : null,
+                    'method' => app()->bound('request') ? request()->method() : null,
                     'user_id' => auth()->id(),
                     'threshold_ms' => $threshold,
                     'severity' => $query->time > ($threshold * 2) ? 'critical' : 'warning',

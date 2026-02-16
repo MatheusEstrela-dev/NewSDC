@@ -30,10 +30,11 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
-      <!-- Botao toggle desktop -->
+      <!-- Botao toggle desktop (somente em telas >= 1024px) -->
       <button
+        v-if="isDesktop"
         @click="toggleSidebar"
-        class="sidebar-toggle hidden lg:flex"
+        class="sidebar-toggle"
         :title="isCollapsed ? 'Expandir sidebar' : 'Recolher sidebar'"
       >
         <svg
@@ -555,6 +556,7 @@ provide('sidebarCollapsed', isCollapsed);
   z-index: 50;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   transition: width 0.3s ease, transform 0.3s ease;
+  padding-top: env(safe-area-inset-top, 32px);
 }
 
 .sidebar.is-collapsed {

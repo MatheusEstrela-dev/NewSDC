@@ -108,6 +108,7 @@ import { MESSAGES } from '@/constants/messages';
 import { getMockStatisticsFromRats } from '@/mocks/rat';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { Link, router } from '@inertiajs/vue3';
+import { useMobile } from '@/Composables/useMobile';
 import { computed, ref, watch } from 'vue';
 import RatFiltersSection from '../../Components/Organisms/Rat/Filters/RatFiltersSection.vue';
 import RatGrid from '../../Components/Organisms/Rat/Grid/RatGrid.vue';
@@ -180,7 +181,8 @@ const props = defineProps({
 const perPage = 15;
 const currentPage = ref(1);
 const localFilters = ref({ ...(props.filters || {}) });
-const viewMode = ref('table'); // 'grid' or 'table' - default to table for RAT
+const { isMobile } = useMobile();
+const viewMode = ref(isMobile.value ? 'grid' : 'table'); // grid no mobile, table no desktop
 
 watch(
   () => props.filters,

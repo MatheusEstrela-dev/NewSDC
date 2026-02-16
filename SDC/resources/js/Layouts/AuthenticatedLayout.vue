@@ -66,7 +66,7 @@ provide('openSidebar', openSidebar);
       :data-collapsed="sidebarCollapsed"
     >
       <!-- Navigation Header (Breadcrumb) -->
-      <NavigationHeader class="mt-16 flex-shrink-0" />
+      <NavigationHeader class="mt-12 md:mt-16 flex-shrink-0" :style="{ marginTop: `calc(max(env(safe-area-inset-top, 0px), 45px) + ${isMobile ? '3rem' : '4rem'})` }" />
 
       <!-- Page Content -->
       <main class="flex-1 pt-4 bg-slate-50 dark:bg-slate-950 overflow-x-hidden px-4 sm:px-6 lg:px-8">

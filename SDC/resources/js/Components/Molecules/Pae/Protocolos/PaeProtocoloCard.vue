@@ -42,8 +42,8 @@
       </div>
     </div>
 
-    <div class="mt-5 flex items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
+    <div class="mt-5 flex items-center justify-between gap-2">
+      <div class="flex items-center flex-wrap gap-2 sm:gap-3">
         <ButtonIcon
           :icon="EyeIcon"
           variant="primary"

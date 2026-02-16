@@ -236,7 +236,11 @@ function handleSaveEmpreendedor(data) {
 <style scoped>
 .pae-container {
   @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 1rem;
+  padding: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 /* Responsive padding */

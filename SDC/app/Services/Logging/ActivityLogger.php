@@ -45,15 +45,15 @@ class ActivityLogger
             // Contexto da requisição
             'request_id' => $requestId,
             'user_id' => $userId ?? auth()->id(),
-            'ip_address' => request()?->ip(),
-            'user_agent' => request()?->userAgent(),
-            'url' => request()?->fullUrl(),
-            'http_method' => request()?->method(),
+            'ip_address' => app()->bound('request') ? request()->ip() : null,
+            'user_agent' => app()->bound('request') ? request()->userAgent() : null,
+            'url' => app()->bound('request') ? request()->fullUrl() : null,
+            'http_method' => app()->bound('request') ? request()->method() : null,
 
             // Contexto do ambiente
             'environment' => config('app.env'),
             'app_name' => config('app.name'),
-            'hostname' => gethostname(),
+            'hostname' => function_exists('gethostname') ? gethostname() : (function_exists('php_uname') ? php_uname('n') : 'unknown'),
 
             // Dados do evento
             'data' => $data,
@@ -228,7 +228,11 @@ class ActivityLogger
         self::logEvent('error', 'critical_error', $data, null, 'critical');
 
         // Log também no canal critical separado
-        Log::channel('critical')->critical($message, $data);
+        try {
+            Log::channel('critical')->critical($message, $data);
+        } catch (\Throwable $e) {
+            // Silencioso
+        }
 
         // Notificar equipe (Slack, email, etc)
         // TODO: Implementar notificações via Slack/Discord
