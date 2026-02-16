@@ -6,7 +6,7 @@
       'lg:left-20': isCollapsed
     }"
     :data-collapsed="isCollapsed"
-    :style="{ paddingTop: 'max(env(safe-area-inset-top, 0px), 45px)' }"
+    :style="{ paddingTop: 'max(env(safe-area-inset-top, 0px), var(--inset-top, 12px))' }"
   >
     <div class="flex items-center justify-between h-12 md:h-16 px-3 sm:px-6 lg:px-8 gap-1 sm:gap-4 lg:gap-8">
       <!-- Mobile/Tablet: Hamburger Button (visivel em telas < 1024px) -->
