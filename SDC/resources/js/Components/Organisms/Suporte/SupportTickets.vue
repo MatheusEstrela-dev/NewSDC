@@ -1,17 +1,17 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import TextInput from '@/Components/TextInput.vue';
+import {
+    ArrowLeftIcon,
+    ExclamationTriangleIcon,
+    ListBulletIcon,
+    TicketIcon,
+    XMarkIcon
+} from '@heroicons/vue/24/outline';
 import { useForm } from '@inertiajs/vue3';
 import axios from 'axios';
-import { 
-    XMarkIcon,
-    ArrowLeftIcon,
-    TicketIcon,
-    ListBulletIcon,
-    ExclamationTriangleIcon
-} from '@heroicons/vue/24/outline';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import TextInput from '@/Components/TextInput.vue';
+import { ref } from 'vue';
 
 const emit = defineEmits(['back', 'close']);
 
@@ -84,7 +84,7 @@ const getStatusColor = (status) => {
 </script>
 
 <template>
-    <div class="flex h-full bg-white dark:bg-slate-900 overflow-hidden rounded-xl">
+    <div class="flex h-full bg-white dark:bg-slate-900 overflow-hidden">
         <!-- Sidebar -->
         <aside class="w-64 bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col">
             <div class="p-6 border-b border-slate-200 dark:border-slate-700">

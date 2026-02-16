@@ -180,6 +180,9 @@ export default defineConfig({
             port: 5175,
             protocol: 'ws',
         },
+        watch: {
+            ignored: ['**/storage/**', '**/vendor/**'],
+        },
         cors: true,
         origin: 'http://localhost:5175',
         headers: {

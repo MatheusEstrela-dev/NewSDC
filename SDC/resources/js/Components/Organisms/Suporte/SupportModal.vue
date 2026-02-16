@@ -29,12 +29,12 @@ const close = () => {
         leave-from-class="opacity-100"
         leave-to-class="opacity-0"
     >
-        <div v-if="show" class="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
+        <div v-if="show" class="fixed inset-0 z-[60] flex items-center justify-center sm:p-6">
             <!-- Backdrop -->
             <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="close"></div>
 
             <!-- Modal Panel -->
-            <div class="relative w-full max-w-6xl h-[85vh] transform transition-all shadow-2xl rounded-2xl overflow-hidden ring-1 ring-white/10">
+            <div class="relative w-full max-w-6xl h-full sm:h-[85vh] transform transition-all shadow-2xl rounded-none sm:rounded-2xl overflow-hidden ring-1 ring-white/10">
                 <Transition
                     enter-active-class="transition ease-in-out duration-300 transform"
                     enter-from-class="translate-x-full opacity-0"

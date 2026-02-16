@@ -1,5 +1,5 @@
 <template>
-  <div class="notifications-panel w-96 max-w-[calc(100vw-20px)] bg-slate-900 rounded-xl shadow-2xl border border-slate-700/50 overflow-hidden flex flex-col max-h-[85vh]">
+  <div @click.stop class="notifications-panel w-96 max-w-[calc(100vw-1rem)] bg-slate-900 rounded-xl shadow-2xl border border-slate-700/50 overflow-hidden flex flex-col max-h-[85vh]">
     <!-- Header -->
     <div class="px-4 py-3 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700 flex items-center justify-between sticky top-0 z-10">
       <div class="flex items-center gap-2">
