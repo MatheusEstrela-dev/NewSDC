@@ -11,7 +11,7 @@
           </div>
       </div>
 
-      <form @submit.prevent="submitForm" class="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
+      <form @submit.prevent="submitForm" class="grid grid-cols-1 xl:grid-cols-4 gap-4 sm:gap-6 items-start pb-20 xl:pb-0">
         <!-- Main Content -->
         <div class="xl:col-span-3 space-y-6">
           
@@ -86,10 +86,10 @@
               >
                 <!-- Role Icon - Design Pattern from Roles/Index -->
                 <div
-                  class="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 border transition-colors"
+                  class="w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 border transition-colors"
                   :class="getRoleIconClass(role.hierarchy_level, form.roles.includes(role.id))"
                 >
-                  <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
+                  <svg class="w-5 h-5 sm:w-7 sm:h-7" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" />
                     <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
                   </svg>
@@ -149,7 +149,7 @@
               <div v-for="(groups, moduleName) in aclModules" :key="moduleName" class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
                 <div
                   @click="toggleModule(moduleName)"
-                  class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/30 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900/50 transition-colors select-none"
+                  class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/30 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900/50 active:bg-slate-200 dark:active:bg-slate-800 transition-colors select-none min-h-[48px]"
                 >
                   <div class="flex items-center gap-3">
                     <svg class="w-4 h-4 text-slate-400 transition-transform duration-200" :class="{ 'rotate-90 text-blue-500': expandedModules.includes(moduleName) }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,9 +166,9 @@
                   <!-- Itera sobre grupos dentro do modulo -->
                   <div v-for="(permissions, groupName) in groups" :key="groupName" class="p-4 border-b border-slate-100 dark:border-slate-700 last:border-b-0">
                     <h5 class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wide">{{ groupName }}</h5>
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
                       <!-- Itera sobre acoes/permissoes do grupo -->
-                      <div v-for="(slug, action) in permissions" :key="slug" class="flex items-center gap-1">
+                      <div v-for="(slug, action) in permissions" :key="slug" class="flex items-center gap-2 sm:gap-1 min-h-[40px] sm:min-h-0">
                         <input
                           :id="`perm-${slug}`"
                           type="checkbox"
@@ -176,7 +176,7 @@
                           :checked="isFromRole(slug) || form.direct_permissions.includes(slug)"
                           :disabled="isFromRole(slug) || isImmutablePermission(slug)"
                           @change="toggleExtraPermission(slug, $event)"
-                          class="w-4 h-4 rounded focus:ring-2 dark:ring-offset-slate-800 dark:bg-slate-700 dark:border-slate-600"
+                          class="w-5 h-5 sm:w-4 sm:h-4 rounded focus:ring-2 dark:ring-offset-slate-800 dark:bg-slate-700 dark:border-slate-600 flex-shrink-0"
                           :class="[
                             isFromRole(slug)
                               ? 'text-blue-600 bg-blue-100 border-blue-300 cursor-not-allowed opacity-75'
@@ -186,7 +186,7 @@
                         />
                         <label
                           :for="`perm-${slug}`"
-                          class="text-sm select-none"
+                          class="text-sm select-none flex-1"
                           :class="[
                             isFromRole(slug)
                               ? 'text-blue-700 dark:text-blue-400 cursor-not-allowed'
@@ -199,14 +199,14 @@
                         </label>
                         <span
                           v-if="isFromRole(slug)"
-                          class="text-[10px] px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium"
+                          class="text-[10px] px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium flex-shrink-0"
                           title="Permissao fixa do cargo (nao editavel)"
                         >
                           cargo
                         </span>
                         <span
                           v-else-if="form.direct_permissions.includes(slug)"
-                          class="text-[10px] px-1 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium"
+                          class="text-[10px] px-1 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium flex-shrink-0"
                           title="Permissao extra adicionada"
                         >
                           extra
@@ -220,8 +220,30 @@
           </div>
         </div>
 
-        <!-- Sidebar Actions -->
-        <div class="xl:col-span-1" ref="sidebarContainer">
+        <!-- Mobile Sticky Save Bar -->
+        <div class="xl:hidden fixed bottom-0 inset-x-0 z-30 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-4 py-3 safe-area-bottom">
+          <div class="flex items-center gap-3">
+            <div class="flex-1 text-xs text-slate-500 dark:text-slate-400">
+              <span class="font-medium text-slate-700 dark:text-slate-200">{{ totalPermissionsCount }}</span> permissoes
+              <span class="mx-1">|</span>
+              <span class="font-medium text-slate-700 dark:text-slate-200">{{ selectedRolesCount }}</span> cargos
+            </div>
+            <button
+              type="submit"
+              class="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm disabled:opacity-75 disabled:cursor-not-allowed"
+              :disabled="form.processing"
+            >
+              <svg v-if="form.processing" class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span v-else>Salvar</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sidebar Actions (desktop only) -->
+        <div class="hidden xl:block xl:col-span-1" ref="sidebarContainer">
           <div 
             ref="sidebarContent"
             :class="[

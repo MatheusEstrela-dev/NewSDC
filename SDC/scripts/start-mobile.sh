@@ -60,7 +60,35 @@ fi
 HOST_IP=$(hostname -I | awk '{print $1}')
 echo -e "${YELLOW}Detected Host IP: ${HOST_IP}${NC}"
 
-# 4. Background task to connect the app
+# 4. Start Laravel dev server on port 8000 (required by Jump proxy)
+LARAVEL_PORT=8000
+LARAVEL_PID=""
+
+if ss -tlnp 2>/dev/null | grep -q ":${LARAVEL_PORT} "; then
+    echo -e "${YELLOW}Laravel already running on port ${LARAVEL_PORT}${NC}"
+else
+    echo -e "${GREEN}Starting Laravel dev server on port ${LARAVEL_PORT}...${NC}"
+    php artisan serve --host=0.0.0.0 --port=${LARAVEL_PORT} &>/dev/null &
+    LARAVEL_PID=$!
+    sleep 2
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:${LARAVEL_PORT}/ 2>/dev/null)
+    if echo "$HTTP_CODE" | grep -qE '^[23]'; then
+        echo -e "${GREEN}Laravel dev server ready (PID: ${LARAVEL_PID})${NC}"
+    else
+        echo -e "${RED}Warning: Laravel dev server may not have started correctly (HTTP ${HTTP_CODE})${NC}"
+    fi
+fi
+
+# Cleanup on exit
+cleanup() {
+    if [ -n "$LARAVEL_PID" ]; then
+        echo -e "${YELLOW}Stopping Laravel dev server (PID: ${LARAVEL_PID})...${NC}"
+        kill $LARAVEL_PID 2>/dev/null
+    fi
+}
+trap cleanup EXIT INT TERM
+
+# 5. Background task to connect the app
 (
     sleep 10 # Waiting for artisan serve to be ready
     echo -e "${GREEN}Sending deep link to device...${NC}"
@@ -72,7 +100,7 @@ echo -e "${YELLOW}Detected Host IP: ${HOST_IP}${NC}"
     # The client app listens for this scheme.
 ) &
 
-# 5. Start NativePHP Jump Server
+# 6. Start NativePHP Jump Server
 echo -e "${GREEN}Starting NativePHP Jump Server...${NC}"
 # usage: native:jump --platform=android --ip=... --no-interaction
 php artisan native:jump --platform=android --ip="$HOST_IP" --no-interaction

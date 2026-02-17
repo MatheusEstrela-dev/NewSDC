@@ -14,6 +14,10 @@ const props = defineProps({
         type: String,
         default: 'py-1 bg-white dark:bg-gray-700',
     },
+    mobileFullWidth: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const closeOnEscape = (e) => {
@@ -65,8 +69,12 @@ const open = ref(false);
         >
             <div
                 v-show="open"
-                class="absolute z-50 mt-2 rounded-md shadow-lg max-w-[calc(100vw-1rem)]"
-                :class="[widthClass, alignmentClasses]"
+                class="z-50 mt-2 rounded-md shadow-lg"
+                :class="[
+                    mobileFullWidth ? 'dropdown-mobile-full' : 'absolute max-w-[calc(100vw-1rem)]',
+                    mobileFullWidth ? '' : widthClass,
+                    mobileFullWidth ? '' : alignmentClasses
+                ]"
                 style="display: none"
                 @click="open = false"
             >
@@ -77,3 +85,21 @@ const open = ref(false);
         </Transition>
     </div>
 </template>
+
+<style scoped>
+.dropdown-mobile-full {
+    position: fixed;
+    left: 0.5rem;
+    right: 0.5rem;
+}
+
+@media (min-width: 768px) {
+    .dropdown-mobile-full {
+        position: absolute;
+        left: auto;
+        right: 0;
+        width: 24rem; /* w-96 */
+        max-width: calc(100vw - 1rem);
+    }
+}
+</style>

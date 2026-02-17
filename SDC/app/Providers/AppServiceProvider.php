@@ -38,6 +38,13 @@ class AppServiceProvider extends ServiceProvider
             config(['inertia.ssr.enabled' => false]);
             config(['octane.server' => null]);
 
+            // NativePHP sempre usa assets do build, nunca do dev server.
+            // Remove public/hot para evitar que o Laravel aponte para o Vite dev server.
+            $hotFile = public_path('hot');
+            if (file_exists($hotFile)) {
+                @unlink($hotFile);
+            }
+
             // Configura MySQL: aponta para o host (PC) com timeout curto
             // para não travar o boot do app se o DB não for alcançável
             config([
@@ -53,27 +60,45 @@ class AppServiceProvider extends ServiceProvider
                 ],
             ]);
 
+            $dbOk = false;
+
             try {
                 \DB::connection('mysql')->getPdo();
                 \Log::info('NativePHP DB: MySQL connection SUCCESS');
+                $dbOk = true;
             } catch (\Throwable $e) {
                 \Log::warning('NativePHP DB: MySQL FAILED, falling back to SQLite', ['error' => $e->getMessage()]);
 
-                config(['database.default' => 'sqlite']);
-                config(['database.connections.sqlite.database' => storage_path('database.sqlite')]);
-
-                if (!file_exists(storage_path('database.sqlite'))) {
-                    touch(storage_path('database.sqlite'));
-                }
-
                 try {
-                    if (!\Schema::hasTable('users')) {
-                        \Artisan::call('migrate', ['--force' => true]);
-                        \Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
-                        \Log::info('NativePHP DB: SQLite migrated and seeded');
+                    config(['database.default' => 'sqlite']);
+                    config(['database.connections.sqlite.database' => storage_path('database.sqlite')]);
+
+                    if (!file_exists(storage_path('database.sqlite'))) {
+                        touch(storage_path('database.sqlite'));
                     }
-                } catch (\Throwable $migError) {
-                    \Log::error('NativePHP DB: SQLite migration failed', ['error' => $migError->getMessage()]);
+
+                    // Test SQLite driver is available
+                    \DB::connection('sqlite')->getPdo();
+
+                    try {
+                        if (!\Schema::hasTable('users')) {
+                            \Artisan::call('migrate', ['--force' => true]);
+                            \Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
+                            \Log::info('NativePHP DB: SQLite migrated and seeded');
+                        }
+                    } catch (\Throwable $migError) {
+                        \Log::error('NativePHP DB: SQLite migration failed', ['error' => $migError->getMessage()]);
+                    }
+                    $dbOk = true;
+                } catch (\Throwable $sqliteError) {
+                    // Both MySQL and SQLite failed — run without DB
+                    // Use array driver to prevent any further DB errors
+                    \Log::error('NativePHP DB: ALL DB drivers failed, running without database', [
+                        'mysql_error' => $e->getMessage(),
+                        'sqlite_error' => $sqliteError->getMessage(),
+                    ]);
+                    config(['database.default' => 'sqlite']);
+                    config(['database.connections.sqlite.database' => ':memory:']);
                 }
             }
         }
@@ -99,27 +124,31 @@ class AppServiceProvider extends ServiceProvider
         }
 
         DB::listen(function ($query) {
-            $threshold = config('app.env') === 'production' ? 1000 : 2000;
+            try {
+                $threshold = config('app.env') === 'production' ? 1000 : 2000;
 
-            if ($query->time > $threshold) {
-                Log::channel('queries')->warning('Slow Query Detected', [
-                    'sql' => $query->sql,
-                    'bindings' => $query->bindings,
-                    'time_ms' => $query->time,
-                    'url' => app()->bound('request') ? request()->fullUrl() : null,
-                    'method' => app()->bound('request') ? request()->method() : null,
-                    'user_id' => auth()->id(),
-                    'threshold_ms' => $threshold,
-                    'severity' => $query->time > ($threshold * 2) ? 'critical' : 'warning',
-                ]);
-
-                if ($query->time > ($threshold * 2)) {
-                    Log::channel('critical')->error('Critical Slow Query', [
+                if ($query->time > $threshold) {
+                    Log::channel('queries')->warning('Slow Query Detected', [
                         'sql' => $query->sql,
+                        'bindings' => $query->bindings,
                         'time_ms' => $query->time,
-                        'url' => request()?->fullUrl(),
+                        'url' => app()->bound('request') ? request()->fullUrl() : null,
+                        'method' => app()->bound('request') ? request()->method() : null,
+                        'user_id' => auth()->id(),
+                        'threshold_ms' => $threshold,
+                        'severity' => $query->time > ($threshold * 2) ? 'critical' : 'warning',
                     ]);
+
+                    if ($query->time > ($threshold * 2)) {
+                        Log::channel('critical')->error('Critical Slow Query', [
+                            'sql' => $query->sql,
+                            'time_ms' => $query->time,
+                            'url' => request()?->fullUrl(),
+                        ]);
+                    }
                 }
+            } catch (\Throwable $logError) {
+                // Silently ignore — don't crash the app because of logging
             }
         });
 

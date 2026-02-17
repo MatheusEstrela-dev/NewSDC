@@ -80,8 +80,8 @@
         </select>
       </div>
 
-      <!-- Mobile Cards View -->
-      <div v-if="isMobile" class="space-y-4">
+      <!-- Mobile/Tablet Cards View -->
+      <div v-if="isMobile || isTablet" class="space-y-4">
         <TableMobileCard
           v-for="user in users.data"
           :key="user.id"
@@ -155,8 +155,8 @@
         </div>
       </div>
 
-      <!-- Desktop/Tablet Table View -->
-      <div v-else class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+      <!-- Desktop Table View -->
+      <div v-if="isDesktop" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
             <thead>

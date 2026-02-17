@@ -52,7 +52,7 @@ export default defineConfig({
                 ],
             },
             workbox: {
-                globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+                globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
                 runtimeCaching: [
                     {
                         urlPattern: /^https:\/\/api\..*/i,
@@ -106,6 +106,7 @@ export default defineConfig({
                     },
                 ],
                 navigateFallback: null,
+                navigateFallbackDenylist: [/.*/],
                 cleanupOutdatedCaches: true,
                 skipWaiting: true,
                 clientsClaim: true,
@@ -176,7 +177,7 @@ export default defineConfig({
         port: 5175,
         strictPort: false,
         hmr: {
-            host: 'localhost',
+            host: '192.168.0.5',
             port: 5175,
             protocol: 'ws',
         },
@@ -184,9 +185,9 @@ export default defineConfig({
             ignored: ['**/storage/**', '**/vendor/**'],
         },
         cors: true,
-        origin: 'http://localhost:5175',
+        origin: 'http://192.168.0.5:5175',
         headers: {
-            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob: http://localhost:*; connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*;",
+            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob: http://localhost:* http://192.168.0.5:*; connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:* http://192.168.0.5:*;",
         },
     },
     worker: {

@@ -5,13 +5,13 @@
       
 
 
-      <div class="mb-8">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div class="mb-6 sm:mb-8">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
           <div>
-            <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Detalhes do Usuário</h1>
-            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Visualize informações detalhadas e permissões</p>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100">Detalhes do Usuário</h1>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">Visualize informações detalhadas e permissões</p>
           </div>
-          <Link :href="route('admin.permissions.users.edit', user.id)" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow">
+          <Link :href="route('admin.permissions.users.edit', user.id)" class="inline-flex items-center justify-center gap-2 w-full md:w-auto px-4 py-2.5 md:py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
@@ -26,19 +26,19 @@
           
           <!-- Info Card -->
           <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-            <div class="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
-              <div class="flex items-center gap-6">
-                <div class="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-3xl shadow-md shrink-0">
+            <div class="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+              <div class="flex flex-col sm:flex-row items-center sm:items-center gap-3 sm:gap-6">
+                <div class="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl sm:text-3xl shadow-md shrink-0">
                   {{ userInitials }}
                 </div>
-                <div class="flex-1 min-w-0">
-                  <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1 truncate">{{ user.name }}</h2>
-                  <p class="text-slate-500 dark:text-slate-400 mb-3 truncate">{{ user.email }}</p>
-                  <div class="flex gap-2">
-                    <span 
+                <div class="flex-1 min-w-0 text-center sm:text-left">
+                  <h2 class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1 truncate">{{ user.name }}</h2>
+                  <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 mb-3 truncate">{{ user.email }}</p>
+                  <div class="flex justify-center sm:justify-start gap-2">
+                    <span
                       class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-                      :class="user.email_verified_at 
-                        ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' 
+                      :class="user.email_verified_at
+                        ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
                         : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'"
                     >
                       <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -52,7 +52,7 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 p-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 p-4 sm:p-6">
               <div class="space-y-1">
                 <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">ID</div>
                 <div class="text-sm font-medium text-slate-900 dark:text-slate-100">#{{ user.id }}</div>
@@ -86,10 +86,10 @@
               </span>
             </div>
             
-            <div v-if="user.roles && user.roles.length > 0" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div v-for="role in user.roles" :key="role.id" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-5 hover:shadow-md transition-all duration-200 group">
-                <div class="flex items-start gap-4 mb-4">
-                  <div class="w-12 h-12 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+            <div v-if="user.roles && user.roles.length > 0" class="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <div v-for="role in user.roles" :key="role.id" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4 sm:p-5 hover:shadow-md transition-all duration-200 group">
+                <div class="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
+                  <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex-shrink-0"
                        :class="{
                          'bg-red-50 dark:bg-red-900/20 text-red-500 border-red-200 dark:border-red-800': role.hierarchy_level === 0,
                          'bg-amber-50 dark:bg-amber-900/20 text-amber-500 border-amber-200 dark:border-amber-800': role.hierarchy_level === 1,
@@ -164,8 +164,8 @@
           </div>
         </div>
 
-        <!-- Sidebar -->
-        <div class="xl:col-span-1 space-y-6">
+        <!-- Sidebar (horizontal on mobile, vertical on xl) -->
+        <div class="xl:col-span-1 grid grid-cols-3 xl:grid-cols-1 gap-3 sm:gap-6">
           <StatsCard
             label="Total de Cargos"
             :value="user.roles?.length || 0"

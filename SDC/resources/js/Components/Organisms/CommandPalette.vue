@@ -27,10 +27,10 @@
     >
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-[101] flex items-start justify-center p-4 sm:p-12 md:p-24 pointer-events-none"
+        class="fixed inset-0 z-[101] flex items-start justify-center px-2 sm:px-4 pb-4 pt-[max(env(safe-area-inset-top,0px),2.5rem)] sm:pt-12 sm:px-12 md:p-24 pointer-events-none"
       >
         <div
-          class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden pointer-events-auto flex flex-col max-h-[70vh]"
+          class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden pointer-events-auto flex flex-col max-h-[75vh] sm:max-h-[70vh]"
           @keydown.esc="close"
           @keydown.down.prevent="navigateResults(1)"
           @keydown.up.prevent="navigateResults(-1)"
@@ -60,8 +60,15 @@
               placeholder="Busque por módulos, ações ou configurações..."
               autocomplete="off"
             />
-            <div class="absolute right-4 top-3.5 flex items-center gap-1.5">
-               <span class="text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">ESC</span>
+            <div class="absolute right-3 top-2.5 flex items-center gap-1.5">
+               <button
+                 @click="close"
+                 class="sm:hidden flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors"
+                 aria-label="Fechar"
+               >
+                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+               </button>
+               <span class="hidden sm:inline text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">ESC</span>
             </div>
           </div>
 
@@ -161,8 +168,13 @@
           </div>
 
           <!-- Footer Actions -->
-          <div class="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-            <div class="flex items-center gap-4">
+          <div class="px-4 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <!-- Mobile: simplified footer -->
+            <div class="sm:hidden flex items-center gap-2">
+              <span class="text-slate-400 dark:text-slate-500">Toque para selecionar</span>
+            </div>
+            <!-- Desktop: keyboard shortcuts -->
+            <div class="hidden sm:flex items-center gap-4">
               <span class="flex items-center gap-1">
                 <kbd class="font-sans px-1.5 py-0.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-md text-[10px]">↩</kbd>
                 Selecionar
@@ -178,7 +190,7 @@
               </span>
             </div>
             <div>
-              <span class="text-slate-400 dark:text-slate-600">Intelligent Search v2</span>
+              <span class="text-slate-400 dark:text-slate-600 text-[10px] sm:text-xs">Intelligent Search</span>
             </div>
           </div>
         </div>
@@ -188,24 +200,24 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, computed, onMounted, onUnmounted, markRaw } from 'vue';
-import { router } from '@inertiajs/vue3';
-import { route } from 'ziggy-js';
-import { 
-    DocumentTextIcon, 
-    ClipboardDocumentCheckIcon, 
-    UserIcon, 
-    HomeIcon, 
-    ScaleIcon, 
-    HeartIcon, 
-    BuildingOfficeIcon, 
-    AcademicCapIcon, 
-    CloudIcon, 
-    ShieldCheckIcon,
-    Cog6ToothIcon,
-    ArrowRightOnRectangleIcon,
-    CommandLineIcon
+import {
+  AcademicCapIcon,
+  ArrowRightOnRectangleIcon,
+  BuildingOfficeIcon,
+  ClipboardDocumentCheckIcon,
+  CloudIcon,
+  Cog6ToothIcon,
+  CommandLineIcon,
+  DocumentTextIcon,
+  HeartIcon,
+  HomeIcon,
+  ScaleIcon,
+  ShieldCheckIcon,
+  UserIcon
 } from '@heroicons/vue/24/outline';
+import { router } from '@inertiajs/vue3';
+import { computed, nextTick, ref, watch } from 'vue';
+import { route } from 'ziggy-js';
 
 const props = defineProps({
   isOpen: Boolean,

@@ -3,7 +3,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build",
+        "build": "rm -f public/hot && vite build",
         "build:pwa": "vite build && workbox generateSW workbox-config.js"
     },
     "devDependencies": {

@@ -19,6 +19,7 @@ class SecurityHeaders
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
 
         $isLocal = app()->environment(['local', 'development']);
+        $isNativePHP = env('NATIVEPHP_RUNNING') || env('NATIVE_PHP') || str_contains(strtolower(php_uname('a')), 'android');
 
         $scriptSrc = [
             "'self'",
@@ -50,7 +51,7 @@ class SecurityHeaders
 
         // Em ambiente local, liberamos Vite (HTTP + WebSocket) e fontes externas usadas pelo layout
         // para evitar tela em branco por CSP bloqueando assets.
-        if ($isLocal) {
+        if ($isLocal || $isNativePHP) {
             $viteHosts = [
                 "http://localhost:5173",
                 "http://127.0.0.1:5173",
@@ -73,6 +74,16 @@ class SecurityHeaders
 
             $styleSrc[] = "https://fonts.bunny.net";
             $fontSrc[] = "https://fonts.bunny.net";
+
+            // NativePHP/Jump: allow assets from the Jump host (APP_URL)
+            $appUrl = config('app.url');
+            if ($appUrl && $appUrl !== 'http://localhost') {
+                $scriptSrc[] = $appUrl;
+                $styleSrc[] = $appUrl;
+                $connectSrc[] = $appUrl;
+                $imgSrc[] = $appUrl;
+                $fontSrc[] = $appUrl;
+            }
         }
 
         $csp = implode('; ', [

@@ -46,5 +46,16 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
+        <script>
+            // Force SW cleanup (v3) - unregister old SWs that cache navigation
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                    regs.forEach(function(r) { r.unregister(); });
+                });
+                caches.keys().then(function(names) {
+                    names.forEach(function(name) { caches.delete(name); });
+                });
+            }
+        </script>
     </body>
 </html>

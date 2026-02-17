@@ -73,17 +73,17 @@
       </button>
 
       <!-- Right Section - User Info & Actions -->
-      <div class="flex items-center gap-0.5 sm:gap-2 lg:gap-4 flex-shrink-0 relative z-40">
+      <div class="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0 relative z-40">
         <!-- Notifications Dropdown -->
-        <Dropdown align="right" width="96" contentClasses="p-0 overflow-hidden">
+        <Dropdown align="right" width="96" contentClasses="p-0 overflow-hidden" :mobileFullWidth="true">
           <template #trigger>
             <button
-              class="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-all
+              class="relative flex items-center justify-center w-10 h-10 rounded-lg transition-all
                      text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
                      active:scale-95"
               title="Notificações"
             >
-              <svg class="w-[18px] h-[18px] sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
               <span
@@ -106,16 +106,16 @@
         <!-- Theme Toggle -->
         <button
           @click="toggleTheme"
-          class="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-all
+          class="flex items-center justify-center w-10 h-10 rounded-lg transition-all
                  text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
                  active:scale-95"
           title="Alternar tema"
         >
-          <svg v-if="isDarkMode" class="w-[18px] h-[18px] sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-if="isDarkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <!-- Sol (tema claro) -->
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
-          <svg v-else class="w-[18px] h-[18px] sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <!-- Lua (tema escuro) -->
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
           </svg>
@@ -125,7 +125,7 @@
         <button
           id="settings-btn"
           @click.stop="openSettings"
-          class="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg transition-all
+          class="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg transition-all
                  text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
                  active:scale-95 relative"
           title="Configurações e Preferências"
