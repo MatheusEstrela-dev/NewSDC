@@ -50,7 +50,7 @@ import TableActions from '@/Components/Molecules/Table/TableActions.vue';
             <th class="px-6 py-3.5 font-semibold text-xs uppercase tracking-wider">Plantonista</th>
             <th class="px-6 py-3.5 font-semibold text-xs uppercase tracking-wider">Período</th>
             <th class="px-6 py-3.5 font-semibold text-xs uppercase tracking-wider text-center">Status</th>
-            <th class="px-6 py-3.5 font-semibold text-xs uppercase tracking-wider text-right">Ações</th>
+            <th class="px-6 py-3.5 font-semibold text-xs uppercase tracking-wider text-right w-36 min-w-36">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
@@ -74,17 +74,19 @@ import TableActions from '@/Components/Molecules/Table/TableActions.vue';
                 {{ item.status }}
               </span>
             </td>
-            <td class="px-6 py-4 text-right">
-              <TableActions
-                :show-view="true"
-                :show-edit="canEdit"
-                :show-delete="canDelete"
-                :show-print="false"
-                :show-attachments="false"
-                @view="emit('view', item.id)"
-                @edit="emit('edit', item.id)"
-                @delete="emit('delete', item.id)"
-              />
+            <td class="px-6 py-4 text-right w-36 min-w-36">
+              <div class="flex justify-end">
+                <TableActions
+                  :show-view="true"
+                  :show-edit="canEdit"
+                  :show-delete="canDelete"
+                  :show-print="false"
+                  :show-attachments="false"
+                  @view="emit('view', item.id)"
+                  @edit="emit('edit', item.id)"
+                  @delete="emit('delete', item.id)"
+                />
+              </div>
             </td>
           </tr>
           <tr v-if="!plantoes || plantoes.length === 0">

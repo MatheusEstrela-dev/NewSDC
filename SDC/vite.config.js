@@ -120,6 +120,7 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': path.resolve(__dirname, 'resources/js'),
+            '@/Composables': path.resolve(__dirname, 'resources/js/composables'),
             ziggy: path.resolve(__dirname, 'vendor/tightenco/ziggy/dist/index.esm.js'),
         },
     },

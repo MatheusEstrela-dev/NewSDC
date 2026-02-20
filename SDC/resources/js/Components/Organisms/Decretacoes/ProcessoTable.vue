@@ -25,7 +25,7 @@
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap hidden md:table-cell">Analista</th>
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap">Status</th>
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap hidden lg:table-cell">Vigência</th>
-            <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-right whitespace-nowrap">Ações</th>
+            <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-right whitespace-nowrap w-36 min-w-36">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-700/30">
@@ -72,7 +72,7 @@
             </td>
 
             <!-- Acoes -->
-            <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+            <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 w-36 min-w-36">
               <div class="flex items-center justify-end">
                 <TableActions
                   :show-view="true"

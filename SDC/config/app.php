@@ -180,6 +180,7 @@ return [
         App\Modules\Inmet\InmetServiceProvider::class,
         App\Modules\Suporte\SuporteServiceProvider::class,
         App\Modules\Plantao\PlantaoServiceProvider::class,
+        App\Modules\PlanCon\PlanConServiceProvider::class,
     ])->toArray(),
 
     /*

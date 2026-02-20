@@ -111,7 +111,7 @@
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Status</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Contato</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Município</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Ações</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider w-40 min-w-40">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
@@ -132,19 +132,21 @@
             </td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ beneficiario.telefone || '—' }}</td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ beneficiario.municipio?.nome || beneficiario.municipio || '—' }}</td>
-            <td class="px-4 py-3 text-right">
-              <TableActions
-                :show-view="true"
-                :show-print="true"
-                :show-edit="canEdit"
-                :show-attachments="false"
-                :show-delete="canDelete"
-                size="sm"
-                @view="$emit('view', beneficiario.id)"
-                @print="handlePrint(beneficiario.id)"
-                @edit="$emit('edit', beneficiario.id)"
-                @delete="$emit('delete', beneficiario.id)"
-              />
+            <td class="px-4 py-3 text-right w-40 min-w-40">
+              <div class="flex justify-end">
+                <TableActions
+                  :show-view="true"
+                  :show-print="true"
+                  :show-edit="canEdit"
+                  :show-attachments="false"
+                  :show-delete="canDelete"
+                  size="sm"
+                  @view="$emit('view', beneficiario.id)"
+                  @print="handlePrint(beneficiario.id)"
+                  @edit="$emit('edit', beneficiario.id)"
+                  @delete="$emit('delete', beneficiario.id)"
+                />
+              </div>
             </td>
           </tr>
           <tr v-if="!beneficiarios || beneficiarios.length === 0">

@@ -30,9 +30,9 @@
           <TableHeader class="w-44 whitespace-nowrap">Data/Hora</TableHeader>
           <TableHeader align="center" class="w-24 whitespace-nowrap">Ano</TableHeader>
           <TableHeader align="center" class="w-36 whitespace-nowrap">Status</TableHeader>
-          <TableHeader class="w-56 whitespace-nowrap">Município</TableHeader>
+          <TableHeader class="w-auto whitespace-nowrap">Município</TableHeader>
           <TableHeader class="w-44 whitespace-nowrap">Criado por</TableHeader>
-          <TableHeader align="right" class="w-auto whitespace-nowrap">Ações</TableHeader>
+          <TableHeader align="right" class="w-44 whitespace-nowrap text-right">Ações</TableHeader>
         </TableHeaderRow>
         <tbody>
           <RatTableRow

@@ -25,6 +25,14 @@
       @click="$emit('edit')"
     />
     <ButtonIcon
+      v-if="showUpload"
+      :icon="UploadIcon"
+      variant="warning"
+      :size="size"
+      title="Upload"
+      @click="$emit('upload')"
+    />
+    <ButtonIcon
       v-if="showAttachments"
       :icon="PaperClipIcon"
       variant="success"
@@ -70,6 +78,7 @@ import TrashIcon from '../../Icons/TrashIcon.vue';
 import PaperClipIcon from '../../Icons/PaperClipIcon.vue';
 import ClockIcon from '../../Icons/ClockIcon.vue';
 import ArchiveBoxIcon from '../../Icons/ArchiveBoxIcon.vue';
+import UploadIcon from '../../Icons/UploadIcon.vue';
 
 defineProps({
   showView: {
@@ -100,6 +109,10 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  showUpload: {
+    type: Boolean,
+    default: false,
+  },
   size: {
     type: String,
     default: 'md',
@@ -107,6 +120,6 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'attachments', 'history', 'delete', 'archive']);
+defineEmits(['view', 'print', 'edit', 'attachments', 'history', 'delete', 'archive', 'upload']);
 </script>
 

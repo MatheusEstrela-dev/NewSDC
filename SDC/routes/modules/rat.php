@@ -85,6 +85,11 @@ Route::prefix('rat')->name('rat.')->group(function () {
     //     ->name('update')
     //     ->middleware('can:rat.protocolos.edit');
 
+    // Finalizar RAT
+    Route::patch('/{id}/finalize', [RatIndexController::class, 'finalize'])
+        ->name('finalize')
+        ->middleware('can:rat.protocolos.finalize');
+
     // Visualizar RAT existente (somente leitura)
     Route::get('/{id}', function ($id) {
         // TODO: Buscar RAT do banco de dados pelo ID

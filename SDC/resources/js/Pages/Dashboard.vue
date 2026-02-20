@@ -149,6 +149,8 @@ const PmdaListWidget = defineAsyncComponent(() => import('@/Components/Dashboard
 const TimelineWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/TimelineWidget.vue'));
 const TrendChartWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/TrendChartWidget.vue'));
 const RadarChartWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/RadarChartWidget.vue'));
+const PlanConMunicipiosWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/PlanConMunicipiosWidget.vue'));
+const PlanConSituacaoWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/PlanConSituacaoWidget.vue'));
 
 // Ícones para Métricas (leves, podem ser eager)
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
@@ -272,15 +274,27 @@ const dashboardItems = ref([
   },
 
   // Linha 4 (Tendência + Radar)
-  { 
-    id: 'chart-trend', 
-    component: markRaw(TrendChartWidget), 
-    colSpan: 'col-span-1 lg:col-span-8' 
+  {
+    id: 'chart-trend',
+    component: markRaw(TrendChartWidget),
+    colSpan: 'col-span-1 lg:col-span-8'
   },
-  { 
-    id: 'chart-radar', 
-    component: markRaw(RadarChartWidget), 
-    colSpan: 'col-span-1 lg:col-span-4' 
+  {
+    id: 'chart-radar',
+    component: markRaw(RadarChartWidget),
+    colSpan: 'col-span-1 lg:col-span-4'
+  },
+
+  // Linha 5 (Plano de Contingencia - 2 blocos)
+  {
+    id: 'plancon-municipios',
+    component: markRaw(PlanConMunicipiosWidget),
+    colSpan: 'col-span-1 lg:col-span-6'
+  },
+  {
+    id: 'plancon-situacao',
+    component: markRaw(PlanConSituacaoWidget),
+    colSpan: 'col-span-1 lg:col-span-6'
   },
 ]);
 

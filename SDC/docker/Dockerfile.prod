@@ -35,7 +35,7 @@ RUN apk add --no-cache \
     linux-headers \
     $PHPIZE_DEPS
 
-# Instalar extensões PHP
+# Instalar extensoes PHP
 RUN docker-php-ext-configure gd \
     --with-freetype \
     --with-jpeg \
@@ -52,15 +52,10 @@ RUN docker-php-ext-configure gd \
     zip \
     intl \
     opcache \
+    sockets \
     && pecl install redis-6.0.2 \
     && docker-php-ext-enable redis \
     && apk del .build-deps
-
-# Instalar RoadRunner binary
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
-RUN mkdir -p /var/www && cd /var/www && \
-    composer require laravel/octane spiral/roadrunner-cli spiral/roadrunner-http && \
-    php artisan octane:install --server=roadrunner
 
 
 # Copiar Composer
@@ -100,6 +95,9 @@ RUN rm -f public/hot
 
 # Executar scripts do composer após copiar código
 RUN composer dump-autoload --optimize --classmap-authoritative
+
+# Criar symlink para resolver case-sensitivity (Linux e case-sensitive)
+RUN cd resources/js && ln -sf composables Composables
 
 # Instalar dependencias Node.js e compilar assets
 RUN npm install --no-audit --no-fund && \

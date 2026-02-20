@@ -38,6 +38,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => fn() => $user ? $this->getCachedUserData($user) : null,
             ],
             'acl' => fn() => $this->getCachedAclConfig(),
+            'actionConfigs' => fn() => app(\App\Core\Actions\Services\ActionConfigService::class)->toFrontendConfig(),
         ];
     }
 
