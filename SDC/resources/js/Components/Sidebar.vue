@@ -187,6 +187,17 @@
           Treinamento
         </NavItem>
 
+        <!-- PlanCon (Plano de Contingencia) -->
+        <NavItem
+          v-if="canSeePlanCon && route().has('plancon.index')"
+          :href="route('plancon.index')"
+          :active="isRouteActive('plancon.*')"
+          icon="shield"
+          :collapsed="isCollapsed"
+        >
+          Plano de Contingencia
+        </NavItem>
+
         <!-- Meteorologia -->
         <NavItem
           v-if="route().has('inmet.index')"
@@ -283,6 +294,105 @@ const page = usePage();
 // Mantemos a checagem para uso futuro (ex.: desabilitar links),
 // mas o módulo deve aparecer no sidebar seguindo o padrão do projeto.
 const canSeeAdmin = computed(() => !!page.props?.auth?.user);
+
+// Helper para verificar rota ativa com reatividade garantida
+const isRouteActive = (pattern) => {
+  // Acessar page.url garante que esta função seja re-executada quando a URL mudar
+  const _ = page.url; 
+  const isActive = route().current(pattern);
+  if (pattern === 'plantao.*' || pattern === 'pae.*') {
+    console.log(`Checking pattern: ${pattern}, isActive: ${isActive}, currentRoute: ${route().current()}`);
+  }
+  return isActive;
+};
+
+// Helper para verificar permissoes do usuario
+const hasPermission = (permissionList) => {
+  const user = page.props?.auth?.user;
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+
+  const permissions = user.permissions || [];
+  return permissionList.some(perm => permissions.includes(perm));
+};
+
+const hasRole = (roleList) => {
+  const user = page.props?.auth?.user;
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+
+  const roles = user.roles || [];
+  return roles.some(role => roleList.includes(role.slug || role.name));
+};
+
+// ============================================================================
+// CONTROLE DE VISIBILIDADE POR MODULO
+// Verifica permissao .view de cada modulo conforme config/permissions.php
+// Segue padrao: MODULO.GRUPO.view
+// ============================================================================
+
+// PRINCIPAL
+const canSeeRat = computed(() => {
+  return hasPermission(['rat.protocolos.view']);
+});
+
+const canSeeDemandas = computed(() => {
+  return hasPermission(['demandas.chamados.view']);
+});
+
+const canSeePae = computed(() => {
+  return hasPermission(['pae.protocolos.view', 'pae.empreendimentos.view']);
+});
+
+// MODULOS DE GESTAO
+const canSeeDecretacoes = computed(() => {
+  return hasPermission(['decretacoes.processos.view']);
+});
+
+const canSeeAjudaHumanitaria = computed(() => {
+  return hasPermission(['humanitaria.beneficiarios.view']);
+});
+
+const canSeeOrgaos = computed(() => {
+  // TODO: Adicionar permissao compdec.orgaos.view no config
+  return hasPermission(['users.view']); // Temporario - usar permissao de admin
+});
+
+const canSeeTdap = computed(() => {
+  return hasPermission([
+    'tdap.products.view',
+    'tdap.recebimentos.view',
+    'tdap.movimentacoes.view'
+  ]);
+});
+
+const canSeeTreinamento = computed(() => {
+  return hasPermission(['treinamento.cursos.view']);
+});
+
+const canSeePlanCon = computed(() => {
+  // TODO: Adicionar permissao plancon.planos.view no config
+  return true; // Liberado temporariamente - modulo novo
+});
+
+const canSeePlantao = computed(() => {
+  return hasPermission(['plantao.turnos.view']);
+});
+
+const canSeeMeteorologia = computed(() => {
+  // TODO: Adicionar permissao meteorologia.dados.view no config
+  return true; // Liberado - modulo publico
+});
+
+const canSeeVistoria = computed(() => {
+  // TODO: Adicionar permissao vistoria.registros.view no config
+  return true; // Liberado - modulo em desenvolvimento
+});
+
+// ADMINISTRACAO
+const canSeeAdmin = computed(() => {
+  return hasPermission(['users.view', 'roles.view', 'permissions.view']);
+});
 
 const openSubMenus = ref({
   tdap: false,

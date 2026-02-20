@@ -35,7 +35,7 @@ RUN apk add --no-cache \
     linux-headers \
     $PHPIZE_DEPS
 
-# Instalar extensões PHP
+# Instalar extensoes PHP
 RUN docker-php-ext-configure gd \
     --with-freetype \
     --with-jpeg \
@@ -52,9 +52,11 @@ RUN docker-php-ext-configure gd \
     zip \
     intl \
     opcache \
+    sockets \
     && pecl install redis-6.0.2 \
     && docker-php-ext-enable redis \
     && apk del .build-deps
+
 
 # Copiar Composer
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
@@ -97,15 +99,14 @@ COPY . .
 # Executar scripts do composer após copiar código
 RUN composer dump-autoload --optimize --classmap-authoritative
 
-# Compilar assets do Vite (CRÍTICO para aplicação funcionar)
-RUN if [ -f package.json ]; then \
-        echo "🔨 Compilando assets do Vite..." && \
-        npm run build && \
-        echo "✅ Assets compilados com sucesso!" && \
-        ls -la public/build/ || echo "⚠️ Diretório build não encontrado"; \
-    else \
-        echo "⚠️ package.json não encontrado, pulando build de assets"; \
-    fi
+# Criar symlink para resolver case-sensitivity (Linux e case-sensitive)
+RUN cd resources/js && ln -sf composables Composables
+
+# Instalar dependencias Node.js e compilar assets
+RUN npm install --no-audit --no-fund && \
+    npm run build && \
+    ls -la public/build/ && \
+    test -f public/build/manifest.json || exit 1
 
 # Remover Node.js e npm após compilar assets (reduzir tamanho da imagem)
 RUN apk del nodejs npm || true

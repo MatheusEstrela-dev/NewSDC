@@ -47,6 +47,8 @@ class HandleInertiaRequests extends Middleware
                         : [],
                 ] : null,
             ],
+            'acl' => fn() => $this->getCachedAclConfig(),
+            'actionConfigs' => fn() => app(\App\Core\Actions\Services\ActionConfigService::class)->toFrontendConfig(),
         ];
     }
 }

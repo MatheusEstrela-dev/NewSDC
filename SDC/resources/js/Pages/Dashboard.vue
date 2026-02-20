@@ -105,7 +105,25 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
-// Dados inline para teste (sem dependências externas)
+defineOptions({ layout: AuthenticatedLayout });
+
+// Widgets carregados sob demanda (lazy) para reduzir bundle inicial
+const DashboardMetricCard = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/DashboardMetricCard.vue'));
+const BarChartWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/BarChartWidget.vue'));
+const DonutChartWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/DonutChartWidget.vue'));
+const SparklinesWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/SparklinesWidget.vue'));
+const PmdaListWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/PmdaListWidget.vue'));
+const TimelineWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/TimelineWidget.vue'));
+const TrendChartWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/TrendChartWidget.vue'));
+const RadarChartWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/RadarChartWidget.vue'));
+const PlanConMunicipiosWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/PlanConMunicipiosWidget.vue'));
+const PlanConSituacaoWidget = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/PlanConSituacaoWidget.vue'));
+
+// Ícones para Métricas (leves, podem ser eager)
+import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
+import ClockIcon from '@/Components/Icons/ClockIcon.vue';
+import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
+
 const currentYear = ref(new Date().getFullYear());
 
 const metrics = ref({
@@ -115,12 +133,139 @@ const metrics = ref({
   atendidos: { val: 12, label: 'Atendidos', color: 'bg-indigo-600', icon: '✓✓' },
 });
 
-const pmdaEmAnalise = ref([
-  { id: 1, protocolo: '2025/001', status: 'Análise Técnica', data: '20/01/2025', municipio: 'Belo Horizonte' },
-  { id: 2, protocolo: '2025/002', status: 'Parecer', data: '12/02/2025', municipio: 'Contagem' },
-  { id: 3, protocolo: '2025/005', status: 'Aguard. Doc.', data: '15/02/2025', municipio: 'Betim' },
-  { id: 4, protocolo: '2025/008', status: 'Análise Técnica', data: '18/02/2025', municipio: 'Nova Lima' },
-  { id: 5, protocolo: '2025/012', status: 'Triagem', data: '20/02/2025', municipio: 'Sabará' },
+function openModuleModal(moduleData) {
+  selectedModule.value = moduleData;
+  isModalOpen.value = true;
+}
+
+function closeModal() {
+  isModalOpen.value = false;
+  setTimeout(() => {
+    selectedModule.value = null;
+  }, 300); // Limpa dados após animação de saída
+}
+
+// Helpers de Estilo para o Modal
+const variantIconMap = {
+  info: 'bg-cyan-500/15 dark:bg-cyan-500/15 bg-cyan-100 text-cyan-300 dark:text-cyan-300 text-cyan-700 ring-cyan-500/25 dark:ring-cyan-500/25 ring-cyan-300',
+  success: 'bg-emerald-500/15 dark:bg-emerald-500/15 bg-emerald-100 text-emerald-300 dark:text-emerald-300 text-emerald-700 ring-emerald-500/25 dark:ring-emerald-500/25 ring-emerald-300',
+  warning: 'bg-amber-500/15 dark:bg-amber-500/15 bg-amber-100 text-amber-300 dark:text-amber-300 text-amber-700 ring-amber-500/25 dark:ring-amber-500/25 ring-amber-300',
+  danger: 'bg-red-500/15 dark:bg-red-500/15 bg-red-100 text-red-300 dark:text-red-300 text-red-700 ring-red-500/25 dark:ring-red-500/25 ring-red-300',
+  primary: 'bg-violet-500/15 dark:bg-violet-500/15 bg-violet-100 text-violet-300 dark:text-violet-300 text-violet-700 ring-violet-500/25 dark:ring-violet-500/25 ring-violet-300',
+};
+
+function metricIconClasses(variant) {
+  return variantIconMap[variant] || variantIconMap.info;
+}
+
+function variantGradientClass(variant) {
+  const map = {
+    info: 'from-cyan-400 to-blue-500',
+    success: 'from-emerald-400 to-green-500',
+    warning: 'from-amber-400 to-orange-500',
+    danger: 'from-rose-400 to-red-500',
+    primary: 'from-violet-400 to-purple-500',
+  };
+  return map[variant] || 'from-slate-400 to-slate-500';
+}
+
+function variantButtonClass(variant) {
+  const map = {
+    info: 'bg-cyan-600 hover:bg-cyan-700 focus:ring-cyan-500',
+    success: 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500',
+    warning: 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500',
+    danger: 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500',
+    primary: 'bg-violet-600 hover:bg-violet-700 focus:ring-violet-500',
+  };
+  return map[variant] || 'bg-slate-600';
+}
+
+function trendClasses(trend) {
+  if (trend > 0) return 'text-emerald-500 dark:text-emerald-400 text-sm font-bold bg-emerald-500/10 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-md';
+  if (trend < 0) return 'text-rose-500 dark:text-rose-400 text-sm font-bold bg-rose-500/10 dark:bg-rose-500/10 px-1.5 py-0.5 rounded-md';
+  return 'text-slate-400 dark:text-slate-500 text-sm font-bold bg-slate-500/10 px-1.5 py-0.5 rounded-md';
+}
+
+// Definição dos Itens do Dashboard
+const dashboardItems = ref([
+  // Métricas (Linha 1)
+  { 
+    id: 'metric-1', 
+    component: markRaw(DashboardMetricCard), 
+    colSpan: 'col-span-1 lg:col-span-3', 
+    props: { title: 'Em Edição', value: 24, trend: 12, subtitle: '3 novos hoje', variant: 'info', icon: markRaw(PencilSquareIcon) } 
+  },
+  { 
+    id: 'metric-2', 
+    component: markRaw(DashboardMetricCard), 
+    colSpan: 'col-span-1 lg:col-span-3', 
+    props: { title: 'Em Análise', value: 5, trend: -8, subtitle: 'Tempo médio: 4 dias', variant: 'warning', icon: markRaw(ClockIcon) } 
+  },
+  { 
+    id: 'metric-3', 
+    component: markRaw(DashboardMetricCard), 
+    colSpan: 'col-span-1 lg:col-span-3', 
+    props: { title: 'Aprovados', value: 77, trend: 15, subtitle: '12 esta semana', variant: 'success', icon: markRaw(CheckCircleIcon) } 
+  },
+  { 
+    id: 'metric-4', 
+    component: markRaw(DashboardMetricCard), 
+    colSpan: 'col-span-1 lg:col-span-3', 
+    props: { title: 'Atendidos', value: 12, trend: 5, subtitle: '98% resolução', variant: 'danger', icon: markRaw(CheckCircleIcon) } 
+  },
+  
+  // Gráficos Principais (Linha 2)
+  { 
+    id: 'chart-bar', 
+    component: markRaw(BarChartWidget), 
+    colSpan: 'col-span-1 lg:col-span-6' 
+  },
+  { 
+    id: 'chart-donut', 
+    component: markRaw(DonutChartWidget), 
+    colSpan: 'col-span-1 lg:col-span-6' 
+  },
+
+  // Linha 3 (Sparklines, PMDA, Timeline)
+  { 
+    id: 'sparklines', 
+    component: markRaw(SparklinesWidget), 
+    colSpan: 'col-span-1 lg:col-span-4' 
+  },
+  { 
+    id: 'pmda-list', 
+    component: markRaw(PmdaListWidget), 
+    colSpan: 'col-span-1 lg:col-span-4' 
+  },
+  { 
+    id: 'timeline', 
+    component: markRaw(TimelineWidget), 
+    colSpan: 'col-span-1 lg:col-span-4' 
+  },
+
+  // Linha 4 (Tendência + Radar)
+  {
+    id: 'chart-trend',
+    component: markRaw(TrendChartWidget),
+    colSpan: 'col-span-1 lg:col-span-8'
+  },
+  {
+    id: 'chart-radar',
+    component: markRaw(RadarChartWidget),
+    colSpan: 'col-span-1 lg:col-span-4'
+  },
+
+  // Linha 5 (Plano de Contingencia - 2 blocos)
+  {
+    id: 'plancon-municipios',
+    component: markRaw(PlanConMunicipiosWidget),
+    colSpan: 'col-span-1 lg:col-span-6'
+  },
+  {
+    id: 'plancon-situacao',
+    component: markRaw(PlanConSituacaoWidget),
+    colSpan: 'col-span-1 lg:col-span-6'
+  },
 ]);
 
 const historico = ref([

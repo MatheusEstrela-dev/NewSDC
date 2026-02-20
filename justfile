@@ -185,6 +185,14 @@ info:
     @echo "  - Decretações (Reconhecimento de Desastres)"
     @echo "  - Ajuda Humanitária (Beneficiários, Abrigos, Doações) 🆕"
 
+# Inicia o Bifrost Jump (Bridge para Mobile) com QR Code
+jump:
+    docker exec -it {{docker_app}} php artisan native:jump
+
+# Inicia o Bifrost Jump direto para Android com QR Code (IP fixo)
+jump-android:
+    docker exec -it {{docker_app}} php artisan native:jump --platform=android --http-port=9000 --ip=10.183.11.182
+
 # Reinicia a aplicação completamente
 fresh: down
     cd SDC && docker-compose up -d

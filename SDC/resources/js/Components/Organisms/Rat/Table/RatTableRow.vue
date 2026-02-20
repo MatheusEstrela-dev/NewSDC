@@ -19,19 +19,25 @@
     <TableCell align="center" class="w-36 whitespace-nowrap">
       <StatusBadge :status="rat.status" />
     </TableCell>
-    <TableCell class="w-56 whitespace-nowrap">
+    <TableCell class="w-auto whitespace-nowrap">
       {{ rat.local?.municipio || 'Não informado' }}
     </TableCell>
     <TableCell class="w-44 whitespace-nowrap">
       {{ rat.criado_por || 'Sistema' }}
     </TableCell>
-    <TableCell align="right" class="w-28 whitespace-nowrap">
-      <TableActions
-        @view="handleView"
-        @edit="handleEdit"
-        @attachments="handleAttachments"
-        @delete="handleDelete"
-      />
+    <TableCell align="right" class="w-44 whitespace-nowrap">
+      <div class="flex justify-end">
+        <TableActions
+          :show-print="true"
+          :show-edit="canEdit"
+          :show-delete="canDelete"
+          @view="handleView"
+          @print="handlePrint"
+          @edit="handleEdit"
+          @attachments="handleAttachments"
+          @delete="handleDelete"
+        />
+      </div>
     </TableCell>
   </TableDataRow>
 </template>

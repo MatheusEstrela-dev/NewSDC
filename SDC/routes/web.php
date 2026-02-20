@@ -158,7 +158,25 @@ Route::middleware('auth')->group(function () {
     require __DIR__.'/modules/compdec.php';
 
     // Módulo: Treinamento
-    require __DIR__.'/modules/treinamento.php';
+    require __DIR__ . '/modules/treinamento.php';
+
+    // Módulo: RAT (Registro de Atendimento Técnico)
+    require __DIR__ . '/modules/rat.php';
+
+    // Módulo: Suporte
+    require __DIR__ . '/modules/suporte.php';
+
+    // Modulo: IA
+    require __DIR__ . '/modules/ia.php';
+
+    // Modulo: Inmet (Meteorologia)
+    require __DIR__ . '/modules/inmet.php';
+
+    // Módulo: Plantão Diário
+    require __DIR__ . '/modules/plantao.php';
+
+    // Módulo: PlanCon (Plano de Contingência)
+    require __DIR__ . '/modules/plancon.php';
 });
 
 require __DIR__.'/auth.php';
