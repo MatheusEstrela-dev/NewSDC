@@ -187,15 +187,15 @@
 </template>
 
 <script setup>
-import { router } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-
-defineOptions({ layout: AuthenticatedLayout });
+import Badge from '@/Components/Atoms/Badge/Badge.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
-import Badge from '@/Components/Atoms/Badge/Badge.vue';
-import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { router } from '@inertiajs/vue3';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   orgao: {
@@ -256,7 +256,6 @@ const handleDesvincularUsuario = (userId) => {
 
 <style scoped>
 .orgao-show {
-  padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
 }

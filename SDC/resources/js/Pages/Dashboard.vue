@@ -2,7 +2,7 @@
     <div>
         <Head title="Dashboard" />
 
-        <div class="dashboard-container p-4 sm:p-6 lg:p-8 w-full mx-auto space-y-8">
+        <div class="dashboard-container w-full mx-auto space-y-8">
           <!-- Header Padronizado -->
           <PageHeader
             title="Painel Gerencial"

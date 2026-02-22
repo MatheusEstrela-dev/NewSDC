@@ -156,34 +156,17 @@
             </div>
 
             <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
-              <ButtonGroup size="sm">
-                <ButtonIcon
-                  :icon="EyeIcon"
-                  :href="route('admin.permissions.roles.show', role.id)"
-                  variant="info"
-                  title="Visualizar"
-                  size="sm"
-                  class="!text-blue-600 hover:!bg-blue-50 dark:!text-blue-400 dark:hover:!bg-blue-900/20"
-                />
-                <ButtonIcon
-                  v-if="canEdit && !role.is_immutable"
-                  :icon="PencilSquareIcon"
-                  :href="route('admin.permissions.roles.edit', role.id)"
-                  variant="warning"
-                  title="Editar"
-                  size="sm"
-                  class="!text-amber-600 hover:!bg-amber-50 dark:!text-amber-400 dark:hover:!bg-amber-900/20"
-                />
-                <ButtonIcon
-                  v-if="canDelete && !role.is_immutable && role.users_count === 0"
-                  :icon="TrashIcon"
-                  variant="danger"
-                  title="Excluir"
-                  size="sm"
-                  @click="confirmDelete(role)"
-                  class="!text-red-600 hover:!bg-red-50 dark:!text-red-400 dark:hover:!bg-red-900/20"
-                />
-              </ButtonGroup>
+              <TableActions
+                :show-view="true"
+                :show-edit="canEdit && !role.is_immutable"
+                :show-delete="canDelete && !role.is_immutable && role.users_count === 0"
+                :show-print="false"
+                :show-attachments="false"
+                size="sm"
+                @view="router.get(route('admin.permissions.roles.show', role.id))"
+                @edit="router.get(route('admin.permissions.roles.edit', role.id))"
+                @delete="confirmDelete(role)"
+              />
             </div>
           </div>
         </div>
@@ -221,21 +204,17 @@
 </template>
 
 <script setup>
-import { ref, h } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
-import { route } from 'ziggy-js';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import StatsCard from '@/Components/Admin/StatsCard.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import { usePermissions } from '@/Composables/usePermissions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { h, ref } from 'vue';
+import { route } from 'ziggy-js';
 
 defineOptions({ layout: AuthenticatedLayout });
-import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
-import StatsCard from '@/Components/Admin/StatsCard.vue';
-import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
-import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
-import ButtonGroup from '@/Components/Atoms/Button/ButtonGroup.vue';
-import EyeIcon from '@/Components/Icons/EyeIcon.vue';
-import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
-import TrashIcon from '@/Components/Icons/TrashIcon.vue';
-import { usePermissions } from '@/Composables/usePermissions';
 
 const { can } = usePermissions();
 

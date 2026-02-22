@@ -248,7 +248,6 @@ const openCommandPalette = () => {
 // Pro Mode: Settings Modal State
 const isSettingsOpen = ref(false);
 const openSettings = (event) => {
-    console.log('Settings button clicked', event);
     isSettingsOpen.value = true;
 };
 
@@ -271,10 +270,7 @@ onMounted(() => {
     // Fallback native click listener
     const btn = document.getElementById('settings-btn');
     if (btn) {
-        btn.onclick = (e) => {
-            console.log('Native click detected on settings button');
-            openSettings(e);
-        };
+        btn.onclick = (e) => openSettings(e);
     }
 });
 

@@ -23,13 +23,6 @@ defineOptions({ layout: AuthenticatedLayout });
 
 const { can } = usePermissions();
 const page = usePage();
-console.log('DEBUG: User Privileges', {
-    user: page.props.auth.user.name,
-    roles: page.props.auth.user.roles,
-    permissions: page.props.auth.user.permissions,
-    canCreate: can('pae.protocolos.create'),
-    canView: can('pae.protocolos.view')
-});
 
 // Frontend-only: por enquanto, usar mocks. Depois e so trocar para false ou usar env flag.
 const useMock = true;

@@ -77,7 +77,7 @@
           Visão Geral
         </NavItem>
         <NavItem
-          v-if="canSeeRat && (route().has('rat.index') || route().has('rat.create'))"
+          v-if="canSeeRat && _routes.hasRat"
           :href="ratHref"
           :active="isRouteActive('rat.*')"
           icon="document"
@@ -86,7 +86,7 @@
           RAT
         </NavItem>
         <NavItem
-          v-if="canSeeDemandas && route().has('demandas.index')"
+          v-if="canSeeDemandas && _routes.hasDemandas"
           :href="route('demandas.index')"
           :active="isRouteActive('demandas.*')"
           icon="checkbadge"
@@ -95,7 +95,7 @@
           DEMANDAS
         </NavItem>
         <NavItem
-          v-if="canSeePae && (route().has('pae.protocolos.index') || route().has('pae.index'))"
+          v-if="canSeePae && _routes.hasPae"
           :href="paeHref"
           :active="isRouteActive('pae.*')"
           icon="document"
@@ -104,7 +104,7 @@
           PAE
         </NavItem>
         <NavItem
-          v-if="canSeePlantao && route().has('plantao.index')"
+          v-if="canSeePlantao && _routes.hasPlantao"
           :href="route('plantao.index')"
           :active="isRouteActive('plantao.*')"
           icon="clock"
@@ -120,7 +120,7 @@
 
         <!-- DECRETACOES -->
         <NavItem
-          v-if="canSeeDecretacoes && route().has('decretacoes.index')"
+          v-if="canSeeDecretacoes && _routes.hasDecretacoes"
           :href="route('decretacoes.index')"
           :active="isRouteActive('decretacoes.*')"
           icon="scale"
@@ -131,7 +131,7 @@
 
         <!-- Ajuda Humanitaria -->
         <NavItem
-          v-if="canSeeAjudaHumanitaria && route().has('ajuda-humanitaria.beneficiarios.index')"
+          v-if="canSeeAjudaHumanitaria && _routes.hasHumanitaria"
           :href="route('ajuda-humanitaria.beneficiarios.index')"
           :active="isRouteActive('ajuda-humanitaria.*')"
           icon="heart"
@@ -142,7 +142,7 @@
 
         <!-- COMPDEC / Orgaos -->
         <NavItem
-          v-if="canSeeOrgaos && route().has('compdec.index')"
+          v-if="canSeeOrgaos && _routes.hasCompdec"
           :href="route('compdec.index')"
           :active="isRouteActive('compdec.*')"
           icon="building"
@@ -176,7 +176,7 @@
           </button>
           <div v-show="openSubMenus.tdap && !isCollapsed" class="nav-submenu">
             <NavItem
-              v-if="route().has('tdap.dashboard')"
+              v-if="_routes.hasTdapDashboard"
               :href="route('tdap.dashboard')"
               :active="isRouteActive('tdap.dashboard')"
               icon="dot"
@@ -186,7 +186,7 @@
               Dashboard
             </NavItem>
             <NavItem
-              v-if="route().has('tdap.products.index')"
+              v-if="_routes.hasTdapProducts"
               :href="route('tdap.products.index')"
               :active="isRouteActive('tdap.products.*')"
               icon="dot"
@@ -196,7 +196,7 @@
               Produtos
             </NavItem>
             <NavItem
-              v-if="route().has('tdap.recebimentos.index')"
+              v-if="_routes.hasTdapRecebimentos"
               :href="route('tdap.recebimentos.index')"
               :active="isRouteActive('tdap.recebimentos.*')"
               icon="dot"
@@ -206,7 +206,7 @@
               Recebimentos
             </NavItem>
             <NavItem
-              v-if="route().has('tdap.movimentacoes.index')"
+              v-if="_routes.hasTdapMovimentacoes"
               :href="route('tdap.movimentacoes.index')"
               :active="isRouteActive('tdap.movimentacoes.*')"
               icon="dot"
@@ -220,7 +220,7 @@
 
         <!-- Treinamento -->
         <NavItem
-          v-if="canSeeTreinamento && route().has('treinamentos.index')"
+          v-if="canSeeTreinamento && _routes.hasTreinamentos"
           :href="route('treinamentos.index')"
           :active="isRouteActive('treinamentos.*')"
           icon="academic"
@@ -231,7 +231,7 @@
 
         <!-- PlanCon (Plano de Contingencia) -->
         <NavItem
-          v-if="canSeePlanCon && route().has('plancon.index')"
+          v-if="canSeePlanCon && _routes.hasPlancon"
           :href="route('plancon.index')"
           :active="isRouteActive('plancon.*')"
           icon="shield"
@@ -242,7 +242,7 @@
 
         <!-- Meteorologia -->
         <NavItem
-          v-if="canSeeMeteorologia && route().has('inmet.index')"
+          v-if="canSeeMeteorologia && _routes.hasInmet"
           :href="route('inmet.index', undefined, false)"
           :active="isRouteActive('inmet.*')"
           icon="cloud"
@@ -290,7 +290,7 @@
 
 <script setup>
 import { usePage } from '@inertiajs/vue3';
-import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
+import { computed, inject, onMounted, onUnmounted, provide, ref, shallowRef, watch } from 'vue';
 import { route } from 'ziggy-js';
 import NavItem from './NavItem.vue';
 
@@ -308,127 +308,81 @@ const closeSidebar = inject('closeSidebar', () => {});
 
 const page = usePage();
 
-// Helper para verificar rota ativa com reatividade garantida
-const isRouteActive = (pattern) => {
-  // Acessar page.url garante que esta função seja re-executada quando a URL mudar
-  const _ = page.url; 
-  const isActive = route().current(pattern);
-  if (pattern === 'plantao.*' || pattern === 'pae.*') {
-    console.log(`Checking pattern: ${pattern}, isActive: ${isActive}, currentRoute: ${route().current()}`);
-  }
-  return isActive;
-};
-
-// Helper para verificar permissoes do usuario
-const hasPermission = (permissionList) => {
-  const user = page.props?.auth?.user;
-  if (!user) return false;
-  if (user.is_super_admin) return true;
-
-  const permissions = user.permissions || [];
-  return permissionList.some(perm => permissions.includes(perm));
-};
-
-const hasRole = (roleList) => {
-  const user = page.props?.auth?.user;
-  if (!user) return false;
-  if (user.is_super_admin) return true;
-
-  const roles = user.roles || [];
-  return roles.some(role => roleList.includes(role.slug || role.name));
+// ============================================================================
+// Verificação de rotas existentes — estáticas, calculadas 1x (rotas não mudam)
+// ============================================================================
+const _routes = {
+  hasRat: route().has('rat.index') || route().has('rat.create'),
+  hasDemandas: route().has('demandas.index'),
+  hasPae: route().has('pae.protocolos.index') || route().has('pae.index'),
+  hasPlantao: route().has('plantao.index'),
+  hasDecretacoes: route().has('decretacoes.index'),
+  hasHumanitaria: route().has('ajuda-humanitaria.beneficiarios.index'),
+  hasCompdec: route().has('compdec.index'),
+  hasTdapDashboard: route().has('tdap.dashboard'),
+  hasTdapProducts: route().has('tdap.products.index'),
+  hasTdapRecebimentos: route().has('tdap.recebimentos.index'),
+  hasTdapMovimentacoes: route().has('tdap.movimentacoes.index'),
+  hasTreinamentos: route().has('treinamentos.index'),
+  hasPlancon: route().has('plancon.index'),
+  hasInmet: route().has('inmet.index'),
 };
 
 // ============================================================================
-// CONTROLE DE VISIBILIDADE POR MODULO
-// Verifica permissao .view de cada modulo conforme config/permissions.php
-// Segue padrao: MODULO.GRUPO.view
+// Rotas ativas — recalculadas 1x por navegação em um único computed
+// (em vez de 15+ chamadas individuais route().current() no template)
 // ============================================================================
-
-// PRINCIPAL
-const canSeeRat = computed(() => {
-  return hasPermission(['rat.protocolos.view']);
+const _activeRoutes = computed(() => {
+  const _url = page.url; // dependência reativa única
+  return {
+    'dashboard': route().current('dashboard'),
+    'rat.*': route().current('rat.*'),
+    'demandas.*': route().current('demandas.*'),
+    'pae.*': route().current('pae.*'),
+    'plantao.*': route().current('plantao.*'),
+    'decretacoes.*': route().current('decretacoes.*'),
+    'ajuda-humanitaria.*': route().current('ajuda-humanitaria.*'),
+    'compdec.*': route().current('compdec.*'),
+    'tdap.*': route().current('tdap.*'),
+    'tdap.dashboard': route().current('tdap.dashboard'),
+    'tdap.products.*': route().current('tdap.products.*'),
+    'tdap.recebimentos.*': route().current('tdap.recebimentos.*'),
+    'tdap.movimentacoes.*': route().current('tdap.movimentacoes.*'),
+    'treinamentos.*': route().current('treinamentos.*'),
+    'plancon.*': route().current('plancon.*'),
+    'inmet.*': route().current('inmet.*'),
+    'admin.permissions.*': route().current('admin.permissions.*'),
+  };
 });
 
-const canSeeDemandas = computed(() => {
-  return hasPermission(['demandas.chamados.view']);
-});
+const isRouteActive = (pattern) => _activeRoutes.value[pattern] ?? false;
 
-const canSeePae = computed(() => {
-  return hasPermission(['pae.protocolos.view', 'pae.empreendimentos.view']);
-});
+// ============================================================================
+// Cache estável de permissões — não re-executa em cada navegação.
+// Atualiza apenas quando o ID do usuário muda (login/logout).
+// ============================================================================
+const _permSet = shallowRef(new Set(page.props?.auth?.user?.permissions ?? []));
+const _isSuper = shallowRef(page.props?.auth?.user?.is_super_admin ?? false);
 
-// MODULOS DE GESTAO
-const canSeeDecretacoes = computed(() => {
-  return hasPermission(['decretacoes.processos.view']);
-});
-
-const canSeeAjudaHumanitaria = computed(() => {
-  return hasPermission(['humanitaria.beneficiarios.view']);
-});
-
-const canSeeOrgaos = computed(() => {
-  // TODO: Adicionar permissao compdec.orgaos.view no config
-  return hasPermission(['users.view']); // Temporario - usar permissao de admin
-});
-
-const canSeeTdap = computed(() => {
-  return hasPermission([
-    'tdap.products.view',
-    'tdap.recebimentos.view',
-    'tdap.movimentacoes.view'
-  ]);
-});
-
-const canSeeTreinamento = computed(() => {
-  return hasPermission(['treinamento.cursos.view']);
-});
-
-const canSeePlantao = computed(() => {
-  return hasPermission(['plantao.turnos.view']);
-});
-
-const canSeeMeteorologia = computed(() => {
-  // TODO: Adicionar permissao meteorologia.dados.view no config
-  return true; // Liberado - modulo publico
-});
-
-const canSeeVistoria = computed(() => {
-  // TODO: Adicionar permissao vistoria.registros.view no config
-  return true; // Liberado - modulo em desenvolvimento
-});
-
-// ADMINISTRACAO
-const canSeeAdmin = computed(() => {
-  return hasPermission(['users.view', 'roles.view', 'permissions.view']);
-});
-
-// Helper para verificar rota ativa com reatividade garantida
-const isRouteActive = (pattern) => {
-  // Acessar page.url garante que esta função seja re-executada quando a URL mudar
-  const _ = page.url; 
-  const isActive = route().current(pattern);
-  if (pattern === 'plantao.*' || pattern === 'pae.*') {
-    console.log(`Checking pattern: ${pattern}, isActive: ${isActive}, currentRoute: ${route().current()}`);
+watch(
+  () => page.props?.auth?.user?.id,
+  (newId, prevId) => {
+    if (newId !== prevId) {
+      const user = page.props?.auth?.user;
+      _permSet.value = new Set(user?.permissions ?? []);
+      _isSuper.value = user?.is_super_admin ?? false;
+    }
   }
-  return isActive;
-};
+);
 
-// Helper para verificar permissoes do usuario
 const hasPermission = (permissionList) => {
-  const user = page.props?.auth?.user;
-  if (!user) return false;
-  if (user.is_super_admin) return true;
-
-  const permissions = user.permissions || [];
-  return permissionList.some(perm => permissions.includes(perm));
+  if (_isSuper.value) return true;
+  return permissionList.some(p => _permSet.value.has(p));
 };
 
 const hasRole = (roleList) => {
-  const user = page.props?.auth?.user;
-  if (!user) return false;
-  if (user.is_super_admin) return true;
-
-  const roles = user.roles || [];
+  if (_isSuper.value) return true;
+  const roles = page.props?.auth?.user?.roles ?? [];
   return roles.some(role => roleList.includes(role.slug || role.name));
 };
 
@@ -507,24 +461,19 @@ const openSubMenus = ref({
 });
 
 // Links resilientes (evita tela branca quando uma rota nao existir no Ziggy)
-const ratHref = computed(() => {
-  if (route().has('rat.index')) return route('rat.index');
-  if (route().has('rat.create')) return route('rat.create');
-  return route('dashboard');
-});
+// URLs estáticas — rotas não mudam em runtime, sem necessidade de computed reativo
+const ratHref = route().has('rat.index') ? route('rat.index') :
+                route().has('rat.create') ? route('rat.create') :
+                route('dashboard');
 
-const paeHref = computed(() => {
-  if (route().has('pae.protocolos.index')) return route('pae.protocolos.index');
-  if (route().has('pae.index')) return route('pae.index');
-  return route('dashboard');
-});
+const paeHref = route().has('pae.protocolos.index') ? route('pae.protocolos.index') :
+                route().has('pae.index') ? route('pae.index') :
+                route('dashboard');
 
-const permissionamentoHref = computed(() => {
-  if (route().has('admin.permissions.users.index')) return route('admin.permissions.users.index');
-  if (route().has('admin.permissions.roles.index')) return route('admin.permissions.roles.index');
-  if (route().has('admin.permissions.permissions.index')) return route('admin.permissions.permissions.index');
-  return route('dashboard');
-});
+const permissionamentoHref = route().has('admin.permissions.users.index') ? route('admin.permissions.users.index') :
+                              route().has('admin.permissions.roles.index') ? route('admin.permissions.roles.index') :
+                              route().has('admin.permissions.permissions.index') ? route('admin.permissions.permissions.index') :
+                              route('dashboard');
 
 function toggleSidebar() {
   isCollapsed.value = !isCollapsed.value;
@@ -551,7 +500,7 @@ provide('onNavItemClick', () => {
 // Smooth Scroll Feature - Auto-scroll quando mouse está próximo das bordas
 // ============================================================================
 const sidebarNav = ref(null);
-let scrollInterval = null;
+let rafId = null;
 const scrollSpeed = ref(0);
 const isHovering = ref(false);
 const showTopGradient = ref(false);
@@ -560,7 +509,6 @@ const showBottomGradient = ref(false);
 // Configurações
 const EDGE_THRESHOLD = 60; // Pixels da borda para ativar auto-scroll
 const MAX_SCROLL_SPEED = 8; // Velocidade máxima de scroll (pixels por frame)
-const SCROLL_ACCELERATION = 0.5; // Aceleração do scroll
 
 function onMouseEnter() {
   isHovering.value = true;
@@ -571,29 +519,33 @@ function onMouseLeave() {
   stopAutoScroll();
 }
 
+let cachedRect = null;
+let rectCacheFrame = -1;
+
 function onMouseMove(event) {
   if (!sidebarNav.value || !isHovering.value) return;
 
-  const rect = sidebarNav.value.getBoundingClientRect();
-  const mouseY = event.clientY - rect.top;
-  const containerHeight = rect.height;
+  // Reaproveitar getBoundingClientRect por frame para evitar layout thrashing
+  const currentFrame = performance.now();
+  if (!cachedRect || currentFrame - rectCacheFrame > 100) {
+    cachedRect = sidebarNav.value.getBoundingClientRect();
+    rectCacheFrame = currentFrame;
+  }
 
-  // Calcular a velocidade baseada na proximidade da borda
+  const mouseY = event.clientY - cachedRect.top;
+  const containerHeight = cachedRect.height;
+
   let targetSpeed = 0;
 
-  // Mouse próximo do topo
   if (mouseY < EDGE_THRESHOLD) {
     const intensity = 1 - (mouseY / EDGE_THRESHOLD);
     targetSpeed = -MAX_SCROLL_SPEED * intensity;
-  }
-  // Mouse próximo do fundo
-  else if (mouseY > containerHeight - EDGE_THRESHOLD) {
+  } else if (mouseY > containerHeight - EDGE_THRESHOLD) {
     const distanceFromBottom = containerHeight - mouseY;
     const intensity = 1 - (distanceFromBottom / EDGE_THRESHOLD);
     targetSpeed = MAX_SCROLL_SPEED * intensity;
   }
 
-  // Atualizar velocidade com aceleração suave
   if (targetSpeed !== 0) {
     startAutoScroll(targetSpeed);
   } else {
@@ -604,19 +556,23 @@ function onMouseMove(event) {
 function startAutoScroll(targetSpeed) {
   scrollSpeed.value = targetSpeed;
 
-  if (!scrollInterval) {
-    scrollInterval = setInterval(() => {
+  if (!rafId) {
+    const loop = () => {
       if (sidebarNav.value && scrollSpeed.value !== 0) {
         sidebarNav.value.scrollTop += scrollSpeed.value;
+        rafId = requestAnimationFrame(loop);
+      } else {
+        rafId = null;
       }
-    }, 16); // ~60fps
+    };
+    rafId = requestAnimationFrame(loop);
   }
 }
 
 function stopAutoScroll() {
-  if (scrollInterval) {
-    clearInterval(scrollInterval);
-    scrollInterval = null;
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
   }
   scrollSpeed.value = 0;
 }
@@ -630,10 +586,7 @@ function updateGradients() {
 
   const { scrollTop, scrollHeight, clientHeight } = sidebarNav.value;
 
-  // Mostrar gradiente superior se não estiver no topo
   showTopGradient.value = scrollTop > 10;
-
-  // Mostrar gradiente inferior se não estiver no fundo
   showBottomGradient.value = scrollTop < scrollHeight - clientHeight - 10;
 }
 
@@ -643,7 +596,7 @@ onMounted(() => {
   window.addEventListener('resize', updateGradients);
 });
 
-// Limpar interval ao desmontar componente
+// Limpar RAF ao desmontar componente
 onUnmounted(() => {
   stopAutoScroll();
   window.removeEventListener('resize', updateGradients);

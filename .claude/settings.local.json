@@ -73,7 +73,13 @@
       "Bash(JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./gradlew:*)",
       "Bash(/home/matheus/Android/Sdk/platform-tools/adb install:*)",
       "Bash(./gradlew assembleDebug:*)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(git -C /home/matheus/Documentos/NewSDC/SDC diff HEAD -- vite.config.js)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_fill_form",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "Bash(docker stats:*)"
     ],
     "deny": [],
     "ask": []

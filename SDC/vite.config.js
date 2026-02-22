@@ -112,8 +112,7 @@ export default defineConfig({
                 clientsClaim: true,
             },
             devOptions: {
-                enabled: true,
-                type: 'module',
+                enabled: false,
             },
         }),
     ],
@@ -178,18 +177,15 @@ export default defineConfig({
         port: 5175,
         strictPort: false,
         hmr: {
-            host: '192.168.0.5',
-            port: 5175,
+            host: 'localhost',
+            clientPort: 15175,
             protocol: 'ws',
         },
         watch: {
             ignored: ['**/storage/**', '**/vendor/**'],
         },
         cors: true,
-        origin: 'http://192.168.0.5:5175',
-        headers: {
-            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob: http://localhost:* http://192.168.0.5:*; connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:* http://192.168.0.5:*;",
-        },
+        origin: 'http://localhost:15175',
     },
     worker: {
         format: 'es',

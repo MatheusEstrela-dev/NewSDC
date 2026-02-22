@@ -1,1 +1,0 @@
-import{usePage as t}from"@inertiajs/vue3";function m(){const u=t(),r=n=>{var e;const s=(e=u.props.auth)==null?void 0:e.user;return s?s.is_super_admin?!0:(s.permissions||[]).includes(n):!1};return{can:r,canAny:n=>n.some(s=>r(s)),canAll:n=>n.every(s=>r(s))}}export{m as u};

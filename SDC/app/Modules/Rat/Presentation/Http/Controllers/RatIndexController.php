@@ -16,8 +16,6 @@ use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
-use App\Services\Export\CsvExportService;
-
 class RatIndexController extends Controller
 {
     public function __construct(

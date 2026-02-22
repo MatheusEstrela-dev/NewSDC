@@ -47,12 +47,18 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      ssr:
+        condition: service_started
 
     environment:
       # Laravel
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost
+
+      # Inertia SSR
+      INERTIA_SSR_ENABLED: "true"
+      INERTIA_SSR_URL: "http://ssr:13714"
 
       # Database
       DB_CONNECTION: mysql
@@ -95,11 +101,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
-          memory: 1G
+          cpus: '4'
+          memory: 2G
         reservations:
           cpus: '0.5'
-          memory: 256M
+          memory: 512M
 
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000" ]
@@ -401,11 +407,55 @@ services:
           memory: 512M
 
     healthcheck:
-      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:5175" ]
+      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:5175" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 90s
+
+  # ==========================================================================
+  # Inertia SSR Server (Node.js — renderização server-side das páginas Vue)
+  # ==========================================================================
+  ssr:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.node
+    container_name: newsdc_ssr
+    hostname: ssr
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=newsdc"
+      - "com.docker.compose.service=ssr"
+
+    working_dir: /var/www
+
+    volumes:
+      - ../:/var/www:cached
+      - newsdc_node_modules:/var/www/node_modules
+
+    networks:
+      - sdc_network
+
+    environment:
+      NODE_ENV: production
+      PORT: 13714
+
+    ports:
+      - "13714:13714"
+
+    # Roda o bundle SSR pré-compilado. Após mudanças de código, execute:
+    # docker compose -f docker/docker-compose.yml exec node npm run build
+    # docker compose -f docker/docker-compose.yml restart ssr
+    command: sh -c 'node $$(ls -t bootstrap/ssr/js/ssr-*.js 2>/dev/null | head -n 1 || echo "bootstrap/ssr/js/ssr-CUw4_SZp.js")'
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
   # ==========================================================================
   # MONITORAMENTO - Prometheus

@@ -133,7 +133,9 @@ createInertiaApp({
         // requestIdleCallback executa quando o browser está ocioso (~1-2s após mount)
         const deferInit = window.requestIdleCallback || ((cb) => setTimeout(cb, 2000));
         deferInit(() => {
-            registerServiceWorker();
+            if (import.meta.env.PROD) {
+                registerServiceWorker();
+            }
             SyncService.init();
         });
 

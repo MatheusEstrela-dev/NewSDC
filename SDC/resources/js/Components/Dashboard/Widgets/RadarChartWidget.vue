@@ -14,51 +14,23 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 
-// Props simulação
-const radarMetrics = ref([
-  { label: 'Eficiência', value: 85, fullMark: 100 },
-  { label: 'Tempo Resp.', value: 70, fullMark: 100 },
-  { label: 'Volume', value: 92, fullMark: 100 },
-  { label: 'Qualidade', value: 88, fullMark: 100 },
-  { label: 'Satisfação', value: 78, fullMark: 100 },
-  { label: 'Cobertura', value: 95, fullMark: 100 },
-]);
+const radarMetrics = [
+  { label: 'Eficiência', value: 85 },
+  { label: 'Tempo Resp.', value: 70 },
+  { label: 'Volume', value: 92 },
+  { label: 'Qualidade', value: 88 },
+  { label: 'Satisfação', value: 78 },
+  { label: 'Cobertura', value: 95 },
+];
 
-// Intervalo para animação
-let interval = null;
-
-function updateRadarData() {
-  radarMetrics.value = radarMetrics.value.map(metric => {
-    // Flutuação aleatória entre -5 e +5
-    const change = Math.floor(Math.random() * 11) - 5;
-    let newValue = metric.value + change;
-    
-    // Limites de 0 a 100
-    if (newValue > 100) newValue = 100;
-    if (newValue < 20) newValue = 20;
-
-    return { ...metric, value: newValue };
-  });
-}
-
-onMounted(() => {
-  // Atualiza a cada 2 segundos para dar efeito de "respiração"
-  interval = setInterval(updateRadarData, 2000);
-});
-
-onUnmounted(() => {
-  if (interval) clearInterval(interval);
-});
-
-const radarChartSeries = computed(() => [{
+const radarChartSeries = [{
   name: 'Avaliação',
-  data: radarMetrics.value.map(m => m.value),
-}]);
+  data: radarMetrics.map(m => m.value),
+}];
 
-const radarChartOptions = computed(() => ({
+const radarChartOptions = {
   chart: {
     type: 'radar',
     height: 350,
@@ -66,27 +38,25 @@ const radarChartOptions = computed(() => ({
     animations: {
       enabled: true,
       easing: 'easeinout',
-      speed: 1000,
+      speed: 400,
       animateGradually: {
-        enabled: true,
-        delay: 150
+        enabled: false,
       },
       dynamicAnimation: {
-        enabled: true,
-        speed: 1000
+        enabled: false,
       }
     },
     background: 'transparent',
     fontFamily: 'Inter, sans-serif',
     dropShadow: { enabled: true, blur: 1, left: 1, top: 1, opacity: 0.1 }
   },
-  labels: radarMetrics.value.map(m => m.label),
+  labels: radarMetrics.map(m => m.label),
   stroke: { width: 2, colors: ['#06b6d4'], dashArray: 0 },
   fill: { opacity: 0.2, colors: ['#06b6d4'] },
   markers: { size: 4, colors: ['#fff'], strokeColors: '#06b6d4', strokeWidth: 2, hover: { size: 7 } },
   yaxis: { show: false, min: 0, max: 100 },
   xaxis: {
-    categories: radarMetrics.value.map(m => m.label),
+    categories: radarMetrics.map(m => m.label),
     labels: {
       show: true,
       style: {
@@ -110,5 +80,5 @@ const radarChartOptions = computed(() => ({
     theme: 'dark',
     y: { formatter: (val) => val + '%' }
   }
-}));
+};
 </script>

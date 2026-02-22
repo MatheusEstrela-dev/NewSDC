@@ -1,10 +1,10 @@
 <script setup>
-import { computed } from 'vue';
-import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
+import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import { computed } from 'vue';
 
 const props = defineProps({
   treinamento: {
@@ -23,9 +23,13 @@ const props = defineProps({
 
 const emit = defineEmits(['view', 'edit', 'delete']);
 
-const formatDate = (date) => {
-  if (!date) return null;
-  return new Date(date).toLocaleDateString('pt-BR');
+const formatDate = (dateValue) => {
+  if (!dateValue) return '—';
+  const str = String(dateValue).trim();
+  if (str.includes('/')) return str;
+  const d = new Date(dateValue);
+  if (isNaN(d.getTime())) return str;
+  return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 };
 
 const vagasText = computed(() => {

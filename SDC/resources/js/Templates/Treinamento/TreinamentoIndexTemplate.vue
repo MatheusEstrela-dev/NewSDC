@@ -1,18 +1,27 @@
 <script setup>
-import { ref } from 'vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
-import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
-import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
-import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import TreinamentoStatsCards from '@/Components/Organisms/Treinamento/TreinamentoStatsCards.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import TreinamentoFiltersSection from '@/Components/Organisms/Treinamento/TreinamentoFiltersSection.vue';
 import TreinamentoGrid from '@/Components/Organisms/Treinamento/TreinamentoGrid.vue';
-import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
-import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import TreinamentoStatsCards from '@/Components/Organisms/Treinamento/TreinamentoStatsCards.vue';
 import { useMobile } from '@/Composables/useMobile';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { ref } from 'vue';
+
+// Formatador de data seguro (evita Invalid Date em strings já formatadas dd/mm/yyyy)
+const formatDate = (dateValue) => {
+  if (!dateValue) return '—';
+  const str = String(dateValue).trim();
+  // Se a string já tiver barras, assume-se que está formatada ou parcialmente preenchida
+  if (str.includes('/')) return str;
+  const d = new Date(dateValue);
+  if (isNaN(d.getTime())) return str;
+  return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+};
 
 // Detecção mobile
 const { isMobile } = useMobile();
@@ -106,32 +115,7 @@ function handleExportCsv(params) {
       <template #actions>
         <div class="flex items-center gap-2 sm:gap-3">
           <!-- Toggle Grade/Tabela - Oculto em mobile -->
-          <div class="hidden md:flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
-            <button
-              @click="viewMode = 'grid'"
-              :class="[
-                'px-3 py-1.5 rounded text-xs font-medium transition-all',
-                viewMode === 'grid'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-              ]"
-              title="Visualização em Grade"
-            >
-              Grade
-            </button>
-            <button
-              @click="viewMode = 'table'"
-              :class="[
-                'px-3 py-1.5 rounded text-xs font-medium transition-all',
-                viewMode === 'table'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-              ]"
-              title="Visualização em Tabela"
-            >
-              Tabela
-            </button>
-          </div>
+          <ViewModeToggle v-model="viewMode" />
 
           <!-- Botão Exportar -->
           <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
@@ -219,16 +203,21 @@ function handleExportCsv(params) {
             </td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ treinamento.instrutor || '—' }}</td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
-              {{ treinamento.data_inicio ? new Date(treinamento.data_inicio).toLocaleDateString('pt-BR') : '—' }}
+              {{ formatDate(treinamento.data_inicio) }}
             </td>
-            <td class="px-4 py-3 text-right">
-              <div class="flex items-center justify-end gap-1">
-                <button @click="emit('view', treinamento.id)" class="p-1.5 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-all duration-200" title="Visualizar">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                </button>
-                <button v-if="canEdit" @click="emit('edit', treinamento.id)" class="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all duration-200" title="Editar">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                </button>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end">
+                <TableActions
+                  :show-view="true"
+                  :show-print="false"
+                  :show-edit="canEdit"
+                  :show-attachments="false"
+                  :show-delete="canDelete"
+                  size="sm"
+                  @view="emit('view', treinamento.id)"
+                  @edit="emit('edit', treinamento.id)"
+                  @delete="emit('delete', treinamento.id)"
+                />
               </div>
             </td>
           </tr>

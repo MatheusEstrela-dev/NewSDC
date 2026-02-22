@@ -235,24 +235,10 @@ function handleSaveEmpreendedor(data) {
 
 <style scoped>
 .pae-container {
-  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 0.75rem;
+  @apply w-full min-h-screen bg-transparent;
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
   box-sizing: border-box;
-}
-
-/* Responsive padding */
-@media (min-width: 640px) {
-  .pae-container {
-    padding: 1.5rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .pae-container {
-    padding: 1.5rem 2rem;
-  }
 }
 </style>
