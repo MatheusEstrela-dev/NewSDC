@@ -15,14 +15,13 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.prod
-      target: octane
       args:
         BUILD_DATE: ${BUILD_DATE:-}
         VCS_REF: ${VCS_REF:-}
         VERSION: ${VERSION:-1.0.0}
     image: sdc/app:${VERSION:-latest}
     restart: always
-    
+
     deploy:
       mode: replicated
       replicas: 3
@@ -43,16 +42,16 @@ services:
         reservations:
           cpus: '0.5'
           memory: 256M
-    
+
     networks:
       - sdc_internal
-    
+
     depends_on:
       db-primary:
         condition: service_healthy
       redis-master:
         condition: service_healthy
-    
+
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
@@ -68,14 +67,14 @@ services:
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
       OCTANE_SERVER: roadrunner
-    
+
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-sf", "http://localhost:8000/health" ]
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 30s
-    
+
     logging:
       driver: "json-file"
       options:
@@ -89,10 +88,9 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.prod
-      target: queue
     image: sdc/queue:${VERSION:-latest}
     restart: always
-    
+
     deploy:
       mode: replicated
       replicas: 2
@@ -100,14 +98,14 @@ services:
         limits:
           cpus: '1'
           memory: 512M
-    
+
     networks:
       - sdc_internal
-    
+
     depends_on:
       - db-primary
       - redis-master
-    
+
     environment:
       APP_ENV: production
       DB_HOST: db-primary
@@ -121,10 +119,9 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.prod
-      target: scheduler
     image: sdc/scheduler:${VERSION:-latest}
     restart: always
-    
+
     deploy:
       mode: replicated
       replicas: 1
@@ -132,14 +129,14 @@ services:
         limits:
           cpus: '0.5'
           memory: 256M
-    
+
     networks:
       - sdc_internal
-    
+
     depends_on:
       - db-primary
       - redis-master
-    
+
     environment:
       APP_ENV: production
       DB_HOST: db-primary
@@ -153,7 +150,7 @@ services:
     image: traefik:v3.0
     container_name: sdc_traefik
     restart: always
-    
+
     command:
       - "--api.dashboard=true"
       - "--providers.docker=true"
@@ -165,20 +162,20 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--metrics.prometheus=true"
-    
+
     ports:
       - "80:80"
       - "443:443"
-    
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_letsencrypt:/letsencrypt
       - ./logs/traefik:/var/log/traefik
-    
+
     networks:
       - sdc_external
       - sdc_internal
-    
+
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.dashboard.rule=Host(`traefik.${APP_DOMAIN}`)"
@@ -192,37 +189,33 @@ services:
     container_name: sdc_db_primary
     hostname: db-primary
     restart: always
-    
+
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_DATABASE}
       MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
       TZ: America/Sao_Paulo
-    
+
     volumes:
       - db_primary_data:/var/lib/mysql
       - ./mysql/prod-primary.cnf:/etc/mysql/conf.d/custom.cnf:ro
       - ./logs/mysql:/var/log/mysql
-    
+
     networks:
       - sdc_internal
-    
+
     command: >
-      --default-authentication-plugin=mysql_native_password
-      --server-id=1
-      --log-bin=mysql-bin
-      --gtid-mode=ON
-      --enforce-gtid-consistency=ON
-    
+      --default-authentication-plugin=mysql_native_password --server-id=1 --log-bin=mysql-bin --gtid-mode=ON --enforce-gtid-consistency=ON
+
     deploy:
       resources:
         limits:
           cpus: '2'
           memory: 2G
-    
+
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -236,28 +229,24 @@ services:
     container_name: sdc_redis_master
     hostname: redis-master
     restart: always
-    
+
     command: >
-      redis-server
-      --appendonly yes
-      --maxmemory 1gb
-      --maxmemory-policy allkeys-lru
-      --requirepass ${REDIS_PASSWORD}
-    
+      redis-server --appendonly yes --maxmemory 1gb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
+
     volumes:
       - redis_master_data:/data
-    
+
     networks:
       - sdc_internal
-    
+
     deploy:
       resources:
         limits:
           cpus: '1'
           memory: 1.5G
-    
+
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -271,17 +260,17 @@ services:
     restart: always
     profiles:
       - monitoring
-    
+
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/alerts:/etc/prometheus/alerts:ro
       - prometheus_data:/prometheus
-    
+
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
-    
+
     networks:
       - sdc_internal
       - sdc_monitoring
@@ -295,19 +284,19 @@ services:
     restart: always
     profiles:
       - monitoring
-    
+
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
       GF_USERS_ALLOW_SIGN_UP: "false"
-    
+
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-    
+
     networks:
       - sdc_monitoring
-    
+
     depends_on:
       - prometheus
 
@@ -338,4 +327,3 @@ volumes:
     driver: local
   traefik_letsencrypt:
     driver: local
-

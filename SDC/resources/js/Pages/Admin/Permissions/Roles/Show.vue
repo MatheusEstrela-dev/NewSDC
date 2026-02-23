@@ -1,146 +1,163 @@
 <template>
-  <AuthenticatedLayout>
-    <div class="permissions-container">
-      <div class="page-header">
-        <div class="header-content">
-          <div class="header-left">
-            <Link :href="route('admin.permissions.roles.index')" class="back-link">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-              Voltar
-            </Link>
-            <h1 class="page-title">Detalhes do Cargo</h1>
-            <p class="page-subtitle">Visualize informações e permissões do cargo</p>
+
+    <Head title="Detalhes do Cargo" />
+    <div class="w-full py-6">
+      <!-- Page Header -->
+      <div class="mb-8">
+
+
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Detalhes do Cargo</h1>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Visualize informações e permissões do cargo</p>
           </div>
-          <div class="header-actions">
-            <Link
-              v-if="!role.is_immutable"
-              :href="route('admin.permissions.roles.edit', role.id)"
-              class="btn btn-primary"
-            >
-              <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Editar Cargo
-            </Link>
-          </div>
+          <Link
+            v-if="!role.is_immutable"
+            :href="route('admin.permissions.roles.edit', role.id)"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Editar Cargo
+          </Link>
         </div>
       </div>
 
-      <div class="content-grid">
-        <div class="main-content">
-          <div class="info-card">
-            <div class="card-header">
-              <div class="role-icon-large" :class="`hierarchy-${role.hierarchy_level}`">
-                <svg fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" />
-                  <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
-                </svg>
-              </div>
-              <div class="role-info">
-                <h2 class="role-name">{{ role.name }}</h2>
-                <p class="role-slug">{{ role.slug }}</p>
-                <div class="status-badges">
-                  <span v-if="role.is_active" class="badge badge-success">
-                    <svg class="badge-icon" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                    </svg>
-                    Ativo
-                  </span>
-                  <span v-else class="badge badge-inactive">
-                    <svg class="badge-icon" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                    </svg>
-                    Inativo
-                  </span>
-                  <span v-if="role.is_immutable" class="badge badge-warning">
-                    <svg class="badge-icon" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-                    </svg>
-                    Imutável
-                  </span>
+      <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <!-- Main Content -->
+        <div class="xl:col-span-3 space-y-6">
+          
+          <!-- Info Card -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+              <div class="flex items-center gap-6">
+                <div class="w-24 h-24 rounded-2xl flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                     :class="{
+                       'bg-red-50 dark:bg-red-900/20 text-red-500 border-red-200 dark:border-red-800': role.hierarchy_level === 0,
+                       'bg-amber-50 dark:bg-amber-900/20 text-amber-500 border-amber-200 dark:border-amber-800': role.hierarchy_level === 1,
+                       'bg-blue-50 dark:bg-blue-900/20 text-blue-500 border-blue-200 dark:border-blue-800': role.hierarchy_level === 2,
+                       'bg-purple-50 dark:bg-purple-900/20 text-purple-500 border-purple-200 dark:border-purple-800': role.hierarchy_level === 3,
+                     }"
+                >
+                  <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" />
+                    <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1 truncate">{{ role.name }}</h2>
+                  <p class="font-mono text-sm text-slate-500 dark:text-slate-400 mb-3 truncate">{{ role.slug }}</p>
+                  <div class="flex flex-wrap gap-2">
+                    <span 
+                      class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+                      :class="role.is_active 
+                        ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' 
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path v-if="role.is_active" fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        <path v-else fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                      </svg>
+                      {{ role.is_active ? 'Ativo' : 'Inativo' }}
+                    </span>
+                    <span v-if="role.is_immutable" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300">
+                      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                      </svg>
+                      Imutável
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div class="info-section">
-              <h3 class="info-section-title">Descrição</h3>
-              <p class="info-section-content">{{ role.description }}</p>
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+              <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Descrição</h3>
+              <p class="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">{{ role.description }}</p>
             </div>
 
-            <div class="info-grid">
-              <div class="info-item">
-                <div class="info-label">ID</div>
-                <div class="info-value">#{{ role.id }}</div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 p-6">
+              <div class="space-y-1">
+                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">ID</div>
+                <div class="text-sm font-medium text-slate-900 dark:text-slate-100">#{{ role.id }}</div>
               </div>
-              <div class="info-item">
-                <div class="info-label">Nível de Hierarquia</div>
-                <div class="info-value">{{ role.hierarchy_level }}</div>
+              <div class="space-y-1">
+                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nível de Hierarquia</div>
+                <div class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ role.hierarchy_level }}</div>
               </div>
-              <div class="info-item">
-                <div class="info-label">Criado em</div>
-                <div class="info-value">{{ formatDate(role.created_at) }}</div>
+              <div class="space-y-1">
+                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Criado em</div>
+                <div class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ formatDate(role.created_at) }}</div>
               </div>
-              <div class="info-item">
-                <div class="info-label">Última Atualização</div>
-                <div class="info-value">{{ formatDate(role.updated_at) }}</div>
+              <div class="space-y-1">
+                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Última Atualização</div>
+                <div class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ formatDate(role.updated_at) }}</div>
               </div>
             </div>
           </div>
 
-          <div class="section-card">
-            <div class="section-header">
-              <h3 class="section-title">
-                <svg class="section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <!-- Users with Role Card -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+              <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
                 Usuários com este Cargo
               </h3>
-              <span class="count-badge">{{ role.users?.length || 0 }}</span>
+              <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                {{ role.users?.length || 0 }}
+              </span>
             </div>
-
-            <div v-if="role.users && role.users.length > 0" class="users-list">
+            
+            <div v-if="role.users && role.users.length > 0" class="p-6 space-y-3">
               <Link
                 v-for="user in role.users"
                 :key="user.id"
                 :href="route('admin.permissions.users.show', user.id)"
-                class="user-item"
+                class="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg hover:shadow-md hover:translate-x-1 transition-all duration-200 group"
               >
-                <div class="user-avatar">{{ getUserInitials(user.name) }}</div>
-                <div class="user-info">
-                  <div class="user-name">{{ user.name }}</div>
-                  <div class="user-email">{{ user.email }}</div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
+                  {{ getUserInitials(user.name) }}
                 </div>
-                <svg class="user-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{{ user.name }}</div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400 truncate">{{ user.email }}</div>
+                </div>
+                <svg class="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
               </Link>
             </div>
-
-            <div v-else class="empty-state-small">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <p>Nenhum usuário possui este cargo</p>
+            <div v-else class="p-8 text-center">
+              <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <p class="text-slate-500 dark:text-slate-400">Nenhum usuário possui este cargo.</p>
             </div>
           </div>
 
-          <div class="section-card">
-            <div class="section-header">
-              <h3 class="section-title">
-                <svg class="section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <!-- Permissions Card -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+              <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+                <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 Permissões
               </h3>
-              <span class="count-badge">{{ permissionsCount }}</span>
+              <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                {{ permissionsCount }}
+              </span>
             </div>
 
-            <div v-if="groupedPermissions && Object.keys(groupedPermissions).length > 0" class="permissions-list">
-              <div v-for="(permissions, module) in groupedPermissions" :key="module" class="permission-module">
-                <h4 class="module-name">{{ formatModuleName(module) }}</h4>
-                <div class="permission-badges">
+            <div v-if="groupedPermissions && Object.keys(groupedPermissions).length > 0" class="p-6 space-y-6">
+              <div v-for="(permissions, module) in groupedPermissions" :key="module">
+                <h4 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">{{ formatModuleName(module) }}</h4>
+                <div class="flex flex-wrap gap-2">
                   <PermissionBadge
                     v-for="permission in permissions"
                     :key="permission.id"
@@ -151,17 +168,19 @@
                 </div>
               </div>
             </div>
-
-            <div v-else class="empty-state-small">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              <p>Nenhuma permissão atribuída a este cargo</p>
+             <div v-else class="p-8 text-center">
+              <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <p class="text-slate-500 dark:text-slate-400">Nenhuma permissão atribuída a este cargo.</p>
             </div>
           </div>
         </div>
 
-        <div class="sidebar-content">
+        <!-- Sidebar -->
+        <div class="xl:col-span-1 space-y-6">
           <StatsCard
             label="Total de Usuários"
             :value="role.users?.length || 0"
@@ -183,13 +202,16 @@
         </div>
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { computed, h } from 'vue';
 import { Link } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import PermissionBadge from '@/Components/Admin/PermissionBadge.vue';
 import StatsCard from '@/Components/Admin/StatsCard.vue';
 
@@ -261,439 +283,3 @@ const formatModuleName = (module) => {
   return moduleNames[module] || module.toUpperCase();
 };
 </script>
-
-<style scoped>
-.permissions-container {
-  padding: 2rem;
-  background: #0f172a;
-  min-height: 100vh;
-}
-
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1.5rem;
-}
-
-.header-left {
-  flex: 1;
-}
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #60a5fa;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  margin-bottom: 1rem;
-  transition: all 0.2s;
-}
-
-.back-link:hover {
-  color: #3b82f6;
-  transform: translateX(-4px);
-}
-
-.back-link svg {
-  width: 20px;
-  height: 20px;
-}
-
-.page-title {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  margin-bottom: 0.5rem;
-}
-
-.page-subtitle {
-  font-size: 0.9375rem;
-  color: #94a3b8;
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-.btn-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.content-grid {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 1.5rem;
-}
-
-.main-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.info-card {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  padding: 2rem;
-  border-bottom: 1px solid #334155;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
-}
-
-.role-icon-large {
-  width: 96px;
-  height: 96px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.role-icon-large.hierarchy-0 {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%);
-  color: #f87171;
-}
-
-.role-icon-large.hierarchy-1 {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
-  color: #fbbf24;
-}
-
-.role-icon-large.hierarchy-2 {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%);
-  color: #60a5fa;
-}
-
-.role-icon-large svg {
-  width: 48px;
-  height: 48px;
-}
-
-.role-info {
-  flex: 1;
-}
-
-.role-name {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  margin-bottom: 0.25rem;
-}
-
-.role-slug {
-  font-size: 1rem;
-  color: #94a3b8;
-  font-family: monospace;
-  margin-bottom: 0.75rem;
-}
-
-.status-badges {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.badge-success {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-}
-
-.badge-inactive {
-  background: rgba(148, 163, 184, 0.15);
-  color: #94a3b8;
-}
-
-.badge-warning {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-}
-
-.badge-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.info-section {
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid #334155;
-}
-
-.info-section-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.75rem;
-}
-
-.info-section-content {
-  font-size: 0.9375rem;
-  color: #e2e8f0;
-  line-height: 1.6;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
-  padding: 2rem;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.info-label {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.info-value {
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: #e2e8f0;
-}
-
-.section-card {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 1.5rem;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #f1f5f9;
-  flex: 1;
-}
-
-.section-icon {
-  width: 20px;
-  height: 20px;
-  color: #60a5fa;
-}
-
-.count-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 0.5rem;
-  background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
-  border-radius: 6px;
-  font-size: 0.8125rem;
-  font-weight: 700;
-}
-
-.users-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.user-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  transition: all 0.2s;
-  text-decoration: none;
-}
-
-.user-item:hover {
-  border-color: #475569;
-  transform: translateX(4px);
-  background: rgba(59, 130, 246, 0.05);
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: white;
-  flex-shrink: 0;
-}
-
-.user-info {
-  flex: 1;
-}
-
-.user-name {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: #f1f5f9;
-}
-
-.user-email {
-  font-size: 0.8125rem;
-  color: #94a3b8;
-}
-
-.user-arrow {
-  width: 20px;
-  height: 20px;
-  color: #64748b;
-  transition: all 0.2s;
-}
-
-.user-item:hover .user-arrow {
-  color: #60a5fa;
-  transform: translateX(4px);
-}
-
-.permissions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.permission-module {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.module-name {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: #cbd5e1;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.permission-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.empty-state-small {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  text-align: center;
-  color: #64748b;
-}
-
-.empty-state-small svg {
-  width: 48px;
-  height: 48px;
-  margin-bottom: 0.75rem;
-  opacity: 0.5;
-}
-
-.empty-state-small p {
-  font-size: 0.9375rem;
-  font-weight: 500;
-}
-
-.sidebar-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-@media (max-width: 1280px) {
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar-content {
-    grid-template-columns: repeat(3, 1fr);
-    display: grid;
-  }
-}
-
-@media (max-width: 768px) {
-  .permissions-container {
-    padding: 1rem;
-  }
-
-  .info-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .sidebar-content {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

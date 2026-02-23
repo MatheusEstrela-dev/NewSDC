@@ -11,16 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('orgao_principal_id')
-                ->nullable()
-                ->after('email')
-                ->constrained('orgaos')
-                ->nullOnDelete()
-                ->comment('Órgão principal do usuário (cache para performance)');
+        if (!Schema::hasColumn('users', 'orgao_principal_id')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->foreignId('orgao_principal_id')
+                    ->nullable()
+                    ->after('email')
+                    ->constrained('orgaos')
+                    ->nullOnDelete()
+                    ->comment('Órgão principal do usuário (cache para performance)');
 
-            $table->index('orgao_principal_id');
-        });
+                $table->index('orgao_principal_id');
+            });
+        }
     }
 
     /**

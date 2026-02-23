@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head :title="`Demanda ${task.protocolo}`" />
 
     <div class="py-12">
@@ -260,11 +260,13 @@
         </div>
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({

@@ -1,98 +1,96 @@
 <template>
-  <AuthenticatedLayout>
-    <Head title="Gestão de RAT" />
+    <div>
+        <Head title="Gestão de RAT" />
 
-    <div class="rat-container">
-      <!-- Breadcrumb -->
-      <RatBreadcrumb />
+        <div class="rat-container">
+          <!-- Header -->
+          <RatHeader :rat="rat" :last-update="lastUpdate" />
 
-      <!-- Header -->
-      <RatHeader :rat="rat" :last-update="lastUpdate" />
+          <!-- Sistema de Abas -->
+          <RatTabs :active-tab="currentActiveTab" :tabs="tabConfig" @tab-change="tabs.setActiveTab">
+            <template #default="{ activeTab }">
+              <!-- Aba 1: Dados Gerais -->
+              <div v-if="Number(activeTab) === 1">
+                <RatForm
+                  :rat="rat"
+                  @save="handleSave"
+                  @save-draft="handleSaveDraft"
+                  @cancel="handleCancel"
+                  @update:tem-vistoria="handleToggleVistoria"
+                />
+              </div>
 
-      <!-- Sistema de Abas -->
-      <RatTabs :active-tab="currentActiveTab" :tabs="tabConfig" @tab-change="tabs.setActiveTab">
-        <template #default="{ activeTab }">
-          <!-- Aba 1: Dados Gerais -->
-          <div v-if="Number(activeTab) === 1">
-            <RatForm
-              :rat="rat"
-              @save="handleSave"
-              @save-draft="handleSaveDraft"
-              @cancel="handleCancel"
-              @update:tem-vistoria="handleToggleVistoria"
-            />
-          </div>
+              <!-- Aba 2: Recursos Empregados -->
+              <div v-else-if="Number(activeTab) === 2">
+                <RatResources
+                  :recursos="recursos"
+                  @add="handleAddRecurso"
+                  @remove="handleRemoveRecurso"
+                />
+              </div>
 
-          <!-- Aba 2: Recursos Empregados -->
-          <div v-else-if="Number(activeTab) === 2">
-            <RatResources
-              :recursos="recursos"
-              @add="handleAddRecurso"
-              @remove="handleRemoveRecurso"
-            />
-          </div>
+              <!-- Aba 3: Envolvidos -->
+              <div v-else-if="Number(activeTab) === 3">
+                <RatInvolved
+                  :envolvidos="envolvidos"
+                  @add="handleAddEnvolvido"
+                  @remove="handleRemoveEnvolvido"
+                />
+              </div>
 
-          <!-- Aba 3: Envolvidos -->
-          <div v-else-if="Number(activeTab) === 3">
-            <RatInvolved
-              :envolvidos="envolvidos"
-              @add="handleAddEnvolvido"
-              @remove="handleRemoveEnvolvido"
-            />
-          </div>
+              <!-- Aba 4: Vistoria -->
+              <div v-else-if="Number(activeTab) === 4">
+                <RatInspection
+                  :vistoria="vistoria"
+                  @save="handleSaveVistoria"
+                />
+              </div>
 
-          <!-- Aba 4: Vistoria -->
-          <div v-else-if="Number(activeTab) === 4">
-            <RatInspection
-              :vistoria="vistoria"
-              @save="handleSaveVistoria"
-            />
-          </div>
+              <!-- Aba 5: Histórico -->
+              <div v-else-if="Number(activeTab) === 5">
+                <RatHistory
+                  :events="historyEvents"
+                  @add-observation="handleAddObservation"
+                />
+              </div>
 
-          <!-- Aba 5: Histórico -->
-          <div v-else-if="Number(activeTab) === 5">
-            <RatHistory
-              :events="historyEvents"
-              @add-observation="handleAddObservation"
-            />
-          </div>
-
-          <!-- Aba 6: Anexos -->
-          <div v-else-if="Number(activeTab) === 6">
-            <RatAttachments
-              :anexos="anexos"
-              @add="handleAddAnexo"
-              @remove="handleRemoveAnexo"
-              @update="handleUpdateAnexos"
-            />
-          </div>
-        </template>
-      </RatTabs>
+              <!-- Aba 6: Anexos -->
+              <div v-else-if="Number(activeTab) === 6">
+                <RatAttachments
+                  :anexos="anexos"
+                  @add="handleAddAnexo"
+                  @remove="handleRemoveAnexo"
+                  @update="handleUpdateAnexos"
+                />
+              </div>
+            </template>
+          </RatTabs>
+        </div>
     </div>
-  </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { Head } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
-import '../../css/pages/rat/rat.css';
+import ClipboardIcon from '@/Components/Icons/ClipboardIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
-import UsersIcon from '@/Components/Icons/UsersIcon.vue';
-import ClipboardIcon from '@/Components/Icons/ClipboardIcon.vue';
-import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import PaperClipIcon from '@/Components/Icons/PaperClipIcon.vue';
-import RatBreadcrumb from '@/Components/Rat/RatBreadcrumb.vue';
+import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import UsersIcon from '@/Components/Icons/UsersIcon.vue';
+import RatAttachments from '@/Components/Rat/RatAttachments.vue';
 import RatForm from '@/Components/Rat/RatForm.vue';
 import RatHeader from '@/Components/Rat/RatHeader.vue';
 import RatHistory from '@/Components/Rat/RatHistory.vue';
 import RatInspection from '@/Components/Rat/RatInspection.vue';
 import RatInvolved from '@/Components/Rat/RatInvolved.vue';
 import RatResources from '@/Components/Rat/RatResources.vue';
-import RatAttachments from '@/Components/Rat/RatAttachments.vue';
 import RatTabs from '@/Components/Rat/RatTabs.vue';
 import { useRat } from '@/composables/useRat';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Head } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import '../../css/pages/rat/rat.css';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 // Recebe props do Inertia
 const props = defineProps({
@@ -300,28 +298,7 @@ function handleToggleVistoria(value) {
 
 <style scoped>
 .rat-container {
-  @apply w-full min-h-screen;
-  padding: 1.5rem;
-  background: #0f172a;
-}
-
-/* Responsive padding */
-@media (min-width: 640px) {
-  .rat-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .rat-container {
-    padding: 2rem 2.5rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .rat-container {
-    padding: 2rem 3rem;
-  }
+  @apply w-full min-h-screen bg-transparent;
 }
 </style>
 

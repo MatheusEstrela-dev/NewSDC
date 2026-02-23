@@ -21,8 +21,13 @@
         </div>
 
         <div class="flex items-center gap-3">
-          <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left" @click="handleOpenModal">
-            Nova Demanda
+          <!-- Botão Exportar -->
+          <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="handleOpenExport">
+            <span class="hidden sm:inline">Exportar</span>
+          </Button>
+          <Button v-if="canCreate" variant="primary" size="md" :icon="PlusIcon" icon-position="left" @click="handleOpenModal">
+            <span class="hidden sm:inline">Nova Demanda</span>
+            <span class="sm:hidden">Novo</span>
           </Button>
         </div>
       </div>
@@ -36,10 +41,26 @@ import Text from '../../../Atoms/Typography/Text.vue';
 import Button from '../../../Atoms/Button/Button.vue';
 import PlusIcon from '../../../Icons/PlusIcon.vue';
 import CheckBadgeIcon from '../../../Icons/CheckBadgeIcon.vue';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 
-const emit = defineEmits(['open-modal']);
+const props = defineProps({
+  canCreate: {
+    type: Boolean,
+    default: false,
+  },
+  canExport: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const emit = defineEmits(['open-modal', 'open-export']);
 
 const handleOpenModal = () => {
   emit('open-modal');
+};
+
+const handleOpenExport = () => {
+  emit('open-export');
 };
 </script>

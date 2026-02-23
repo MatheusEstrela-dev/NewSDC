@@ -13,16 +13,29 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Já está dentro do middleware auth do web.php, então não precisa redefinir
+// Ja esta dentro do middleware auth do web.php, entao nao precisa redefinir
 Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function () {
 
-    // Beneficiários
+    // Beneficiarios
     Route::prefix('beneficiarios')->name('beneficiarios.')->group(function () {
-        Route::get('/', BeneficiarioIndexController::class)->name('index');
-        Route::post('/', BeneficiarioStoreController::class)->name('store');
-        Route::get('/{id}', BeneficiarioShowController::class)->name('show');
-        Route::put('/{id}', BeneficiarioUpdateController::class)->name('update');
-        Route::delete('/{id}', BeneficiarioDestroyController::class)->name('destroy');
+        Route::get('/export', \App\Modules\AjudaHumanitaria\Presentation\Http\Controllers\Beneficiarios\BeneficiarioExportController::class)
+            ->name('export')
+            ->middleware('can:humanitaria.beneficiarios.export');
+        Route::get('/', BeneficiarioIndexController::class)
+            ->name('index')
+            ->middleware('can:humanitaria.beneficiarios.view');
+        Route::post('/', BeneficiarioStoreController::class)
+            ->name('store')
+            ->middleware('can:humanitaria.beneficiarios.create');
+        Route::get('/{id}', BeneficiarioShowController::class)
+            ->name('show')
+            ->middleware('can:humanitaria.beneficiarios.view');
+        Route::put('/{id}', BeneficiarioUpdateController::class)
+            ->name('update')
+            ->middleware('can:humanitaria.beneficiarios.edit');
+        Route::delete('/{id}', BeneficiarioDestroyController::class)
+            ->name('destroy')
+            ->middleware('can:humanitaria.beneficiarios.delete');
     });
 
     // TODO: Adicionar rotas de outros recursos

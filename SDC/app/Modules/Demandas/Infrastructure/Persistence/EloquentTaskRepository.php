@@ -41,6 +41,11 @@ class EloquentTaskRepository implements TaskRepositoryInterface
         $query->orderByRaw('CASE WHEN prioridade = 1 THEN 0 ELSE 1 END')
             ->orderBy('created_at', 'desc');
 
+        if ($perPage === -1) {
+            $total = (clone $query)->count();
+            $perPage = $total > 0 ? $total : 1;
+        }
+
         return $query->paginate($perPage);
     }
 

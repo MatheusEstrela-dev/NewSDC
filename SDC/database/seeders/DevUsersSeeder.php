@@ -78,6 +78,12 @@ class DevUsersSeeder extends Seeder
                 'cpf' => '77788899900',
                 'role' => null,
             ],
+            [
+                'name' => 'Analista COMPDEC BH Teste',
+                'email' => 'analista.bh@test.defesa.mg.gov.br',
+                'cpf' => '90000000007',
+                'role' => 'operator',
+            ],
         ];
 
         foreach ($users as $payload) {

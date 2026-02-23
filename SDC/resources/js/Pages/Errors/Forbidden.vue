@@ -1,5 +1,4 @@
 <template>
-  <AuthenticatedLayout>
     <Head :title="title ?? 'Acesso negado'" />
 
     <div class="error-wrap">
@@ -17,17 +16,20 @@
         </div>
       </div>
     </div>
-  </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Head, Link } from '@inertiajs/vue3';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 defineProps({
   title: { type: String, default: null },
   message: { type: String, default: null },
 });
+
+
 </script>
 
 <style scoped>

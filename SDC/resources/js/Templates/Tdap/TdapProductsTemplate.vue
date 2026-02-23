@@ -1,8 +1,15 @@
 <template>
   <div class="tdap-products-container">
-    <TdapProductsPageHeader />
+    <!-- Header Padronizado -->
+    <PageHeader
+      title="Produtos TDAP"
+      description="Gestão de produtos para ajuda humanitária"
+      :icon="CubeIcon"
+      variant="gradient"
+    />
 
-    <CardBase variant="default" padding="lg">
+    <!-- Desktop: Tabela -->
+    <CardBase v-if="!isMobile" variant="default" padding="lg">
       <Heading :level="4" color="default" class="mb-4">Lista de Produtos</Heading>
 
       <div class="overflow-x-auto">
@@ -60,15 +67,42 @@
         </table>
       </div>
     </CardBase>
+
+    <!-- Mobile: Cards -->
+    <div v-else class="grid grid-cols-1 gap-4">
+      <TdapProductCard
+        v-for="product in products"
+        :key="product.id"
+        :product="product"
+      />
+      <div v-if="!products || products.length === 0" class="text-center py-8">
+        <Text size="sm" color="muted">Nenhum produto cadastrado</Text>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="pagination" class="mt-6">
+      <Pagination
+        :pagination="pagination"
+        @page-change="(page) => $emit('page-change', page)"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import TdapProductsPageHeader from '@/Components/Organisms/Tdap/Header/TdapProductsPageHeader.vue';
-import ProductTypeBadge from '@/Components/Atoms/Tdap/ProductTypeBadge.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import ProductTypeBadge from '@/Components/Atoms/Tdap/ProductTypeBadge.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import CubeIcon from '@/Components/Icons/CubeIcon.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import TdapProductCard from '@/Components/Molecules/Tdap/TdapProductCard.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { useMobile } from '@/Composables/useMobile';
+
+// Detecção mobile
+const { isMobile } = useMobile();
 
 const props = defineProps({
   products: {
@@ -79,30 +113,17 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  pagination: {
+    type: Object,
+    default: null,
+  },
 });
+
+const emit = defineEmits(['page-change']);
 </script>
 
 <style scoped>
 .tdap-products-container {
-  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .tdap-products-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .tdap-products-container {
-    padding: 2rem 2.5rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .tdap-products-container {
-    padding: 2rem 3rem;
-  }
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>

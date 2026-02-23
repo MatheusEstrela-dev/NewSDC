@@ -1,13 +1,15 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="TDAP - Dashboard" />
     <TdapDashboardTemplate :statistics="statistics" />
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import TdapDashboardTemplate from '@/Templates/Tdap/TdapDashboardTemplate.vue';
 
 const props = defineProps({

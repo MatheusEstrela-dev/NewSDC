@@ -1,37 +1,55 @@
 <template>
   <div class="demandas-container">
-    <DemandasPageHeader @open-modal="showModal = true" />
+    <DemandasPageHeader :can-create="canCreate" :can-export="canExport" @open-modal="showModal = true" @open-export="showExportModal = true" />
     <DemandasStatisticsCards :statistics="demandasStatistics" />
 
     <DemandasList
       :demandas="demandas"
       :filters="filters"
-      :current-page="currentPage"
-      :total-pages="totalPages"
       :get-tipo-label="getTipoLabel"
       :get-prioridade-label="getPrioridadeLabel"
       :get-status-label="getStatusLabel"
+      :can-edit="canEdit"
+      :can-delete="canDelete"
       @filter-change="handleFilterChange"
       @clear-filters="handleClearFilters"
-      @page-change="handlePageChange"
       @demanda-click="handleDemandaClick"
     />
+
+    <!-- Pagination -->
+    <div v-if="pagination" class="mt-6">
+      <Pagination
+        :pagination="pagination"
+        @page-change="handlePageChange"
+      />
+    </div>
 
     <NovaDemandaModal
       :show="showModal"
       @close="showModal = false"
       @submit="handleCreateDemanda"
     />
+
+    <!-- Modal de Exportação CSV -->
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="Demandas"
+      @close="showExportModal = false"
+      @export="handleExportCsv"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useDemandas } from '@/Composables/useDemandas';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import DemandasPageHeader from '@/Components/Organisms/Demandas/Header/DemandasPageHeader.vue';
-import DemandasStatisticsCards from '@/Components/Organisms/Demandas/Statistics/DemandasStatisticsCards.vue';
 import DemandasList from '@/Components/Organisms/Demandas/Lists/DemandasList.vue';
 import NovaDemandaModal from '@/Components/Organisms/Demandas/Modals/NovaDemandaModal.vue';
+import DemandasStatisticsCards from '@/Components/Organisms/Demandas/Statistics/DemandasStatisticsCards.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import { useDemandas } from '@/Composables/useDemandas';
+import { useExport } from '@/Composables/useExport';
+import { ref } from 'vue';
 
 const props = defineProps({
   statistics: {
@@ -43,6 +61,26 @@ const props = defineProps({
       concluidas: 0,
     }),
   },
+  canCreate: {
+    type: Boolean,
+    default: false,
+  },
+  canExport: {
+    type: Boolean,
+    default: false,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
+  canManage: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Usa o composable de demandas
@@ -51,6 +89,7 @@ const {
   filters,
   currentPage,
   totalPages,
+  pagination,
   statistics: demandasStatistics,
   createDemanda,
   setFilters,
@@ -62,6 +101,11 @@ const {
 } = useDemandas();
 
 const showModal = ref(false);
+
+const { 
+  showExportModal, 
+  handleExport: triggerExport 
+} = useExport('admin.demandas.export');
 
 const handleFilterChange = (newFilters) => {
   setFilters(newFilters);
@@ -86,23 +130,14 @@ const handleCreateDemanda = (demandaData) => {
   console.log('Nova demanda criada:', newDemanda);
   // Futuramente: mostrar toast de sucesso
 };
+
+function handleExportCsv(params) {
+  triggerExport(params, filters.value);
+}
 </script>
 
 <style scoped>
 .demandas-container {
-  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .demandas-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .demandas-container {
-    padding: 2rem 2.5rem;
-  }
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>

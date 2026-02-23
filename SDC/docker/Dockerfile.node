@@ -1,0 +1,18 @@
+# ============================================================================
+# SDC - Node.js / Vite DOCKERFILE (Desenvolvimento)
+# Instala dependencias durante o build (usa rede do Docker com internet)
+# Resolve conflito de binarios nativos Windows/Linux (rollup-linux-x64-musl)
+# ============================================================================
+
+FROM node:20-alpine
+
+WORKDIR /var/www
+
+# Copiar arquivos de dependencias primeiro (melhor cache de camadas)
+COPY package.json package-lock.json* ./
+
+# Instalar dependencias no runtime devido a restricoes de rede durante o build
+# RUN npm install
+
+# O codigo fonte sera montado via volume no runtime
+# node_modules sera copiado para o volume nomeado na primeira execucao

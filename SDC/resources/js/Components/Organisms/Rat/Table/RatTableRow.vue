@@ -44,20 +44,28 @@
 
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import TableDataRow from '../../../Molecules/Table/TableDataRow.vue';
-import TableCell from '../../../Atoms/Table/TableCell.vue';
-import TableActions from '../../../Molecules/Table/TableActions.vue';
 import Badge from '../../../Atoms/Badge/Badge.vue';
 import StatusBadge from '../../../Atoms/Badge/StatusBadge.vue';
+import TableCell from '../../../Atoms/Table/TableCell.vue';
+import TableActions from '../../../Molecules/Table/TableActions.vue';
+import TableDataRow from '../../../Molecules/Table/TableDataRow.vue';
 
 const props = defineProps({
   rat: {
     type: Object,
     required: true,
   },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['view', 'edit', 'attachments', 'delete']);
+const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);
 
 function formatDateTime(date) {
   if (!date) return 'Data não informada';
@@ -80,6 +88,10 @@ function handleView() {
   emit('view', props.rat.id);
 }
 
+function handlePrint() {
+  emit('print', props.rat.id);
+}
+
 function handleEdit() {
   emit('edit', props.rat.id);
 }
@@ -92,4 +104,5 @@ function handleDelete() {
   emit('delete', props.rat.id);
 }
 </script>
+
 

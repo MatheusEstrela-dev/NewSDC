@@ -1,59 +1,62 @@
 <template>
-  <AuthenticatedLayout>
-    <div class="permissions-container">
+
+    <Head title="Gerenciamento de Usuários" />
+    <div class="w-full py-6">
+      
+
       <!-- Page Header -->
-      <div class="page-header">
-        <div class="header-content">
-          <div class="header-left">
-            <h1 class="page-title">Gerenciamento de Usuários</h1>
-            <p class="page-subtitle">Gerencie usuários, cargos e permissões do sistema</p>
-          </div>
-          <div class="header-actions">
-            <Link :href="route('admin.permissions.users.create')" class="btn btn-primary">
-              <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
-              Novo Usuário
-            </Link>
-          </div>
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6 md:mb-8">
+        <div>
+          <h1 class="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-100">Gerenciamento de Usuários</h1>
+          <p class="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">Gerencie usuários, cargos e permissões do sistema</p>
+        </div>
+        <div v-if="canCreate" class="w-full md:w-auto">
+          <Link :href="route('admin.permissions.users.create')" class="inline-flex items-center justify-center gap-2 w-full md:w-auto px-4 py-2.5 md:py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Novo Usuario
+          </Link>
         </div>
       </div>
 
       <!-- Tabs Navigation -->
-      <div class="tabs-container">
-        <Link
-          :href="route('admin.permissions.users.index')"
-          class="tab-item active"
-        >
-          <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-          Usuários
-        </Link>
-        <Link
-          :href="route('admin.permissions.roles.index')"
-          class="tab-item"
-        >
-          <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-          Cargos
-        </Link>
-        <Link
-          :href="route('admin.permissions.permissions.index')"
-          class="tab-item"
-        >
-          <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-          Permissões
-        </Link>
+      <div class="border-b border-slate-200 dark:border-slate-700 mb-6 md:mb-8 overflow-x-auto scrollbar-hide">
+        <div class="flex space-x-1 min-w-max">
+          <Link
+            :href="route('admin.permissions.users.index')"
+            class="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/10 rounded-t-lg"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            Usuários
+          </Link>
+          <Link
+            :href="route('admin.permissions.roles.index')"
+            class="flex items-center gap-2 px-4 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 border-b-2 border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            Cargos
+          </Link>
+          <Link
+            :href="route('admin.permissions.permissions.index')"
+            class="flex items-center gap-2 px-4 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 border-b-2 border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            Permissões
+          </Link>
+        </div>
       </div>
 
       <!-- Filters -->
-      <div class="filters-section">
-        <div class="search-box">
-          <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="flex flex-col md:flex-row gap-4 mb-6">
+        <div class="relative flex-1">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -61,11 +64,15 @@
             v-model="form.search"
             @input="debouncedSearch"
             placeholder="Buscar usuários por nome ou email..."
-            class="search-input"
+            class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
           />
         </div>
 
-        <select v-model="form.role" @change="filter" class="filter-select">
+        <select 
+          v-model="form.role" 
+          @change="filter" 
+          class="min-w-[200px] px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow cursor-pointer"
+        >
           <option value="">Todos os cargos</option>
           <option v-for="role in roles" :key="role.id" :value="role.slug">
             {{ role.name }}
@@ -73,118 +80,233 @@
         </select>
       </div>
 
-      <!-- Users Table -->
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Usuário</th>
-              <th>Email</th>
-              <th>Cargos</th>
-              <th>Permissões Diretas</th>
-              <th>Status</th>
-              <th>Cadastrado em</th>
-              <th class="text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="user in users.data" :key="user.id">
-              <td>
-                <div class="user-info">
-                  <div class="user-avatar">{{ getUserInitials(user.name) }}</div>
-                  <span class="user-name">{{ user.name }}</span>
-                </div>
-              </td>
-              <td>{{ user.email }}</td>
-              <td>
-                <div class="badges-list">
-                  <span
-                    v-for="role in user.roles"
-                    :key="role.id"
-                    class="badge badge-role"
-                  >
-                    {{ role.name }}
-                  </span>
-                  <span v-if="user.roles.length === 0" class="text-muted">Nenhum cargo</span>
-                </div>
-              </td>
-              <td class="text-center">
-                <span class="badge badge-info">{{ user.permissions?.length || 0 }}</span>
-              </td>
-              <td>
-                <span
-                  class="badge"
-                  :class="user.email_verified_at ? 'badge-success' : 'badge-warning'"
-                >
-                  {{ user.email_verified_at ? 'Ativo' : 'Pendente' }}
-                </span>
-              </td>
-              <td>{{ formatDate(user.created_at) }}</td>
-              <td class="text-right">
-                <div class="action-buttons">
-                  <Link
-                    :href="route('admin.permissions.users.show', user.id)"
-                    class="btn-icon"
-                    title="Visualizar"
-                  >
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  </Link>
-                  <Link
-                    :href="route('admin.permissions.users.edit', user.id)"
-                    class="btn-icon"
-                    title="Editar"
-                  >
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </Link>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Mobile/Tablet Cards View -->
+      <div v-if="isMobile || isTablet" class="space-y-4">
+        <TableMobileCard
+          v-for="user in users.data"
+          :key="user.id"
+          :title="user.name"
+          :subtitle="user.email"
+          :data="{
+            email: user.email,
+            status: statusLabel(user.status),
+            created_at: formatDate(user.created_at),
+            roles: user.roles.map(r => r.name).join(', ') || 'Nenhum cargo'
+          }"
+          :fields="[
+            { key: 'roles', label: 'Cargos', fullWidth: true },
+            { key: 'status', label: 'Status' },
+            { key: 'created_at', label: 'Cadastrado' }
+          ]"
+        >
+          <template #actions>
+            <ButtonGroup size="sm">
+              <ButtonIcon
+                :icon="EyeIcon"
+                :href="route('admin.permissions.users.show', user.id)"
+                variant="info"
+                title="Visualizar"
+                size="sm"
+              />
+              <ButtonIcon
+                v-if="canEdit"
+                :icon="PencilSquareIcon"
+                :href="route('admin.permissions.users.edit', user.id)"
+                variant="warning"
+                title="Editar"
+                size="sm"
+              />
+            </ButtonGroup>
+          </template>
+        </TableMobileCard>
 
-        <!-- Empty State -->
-        <div v-if="users.data.length === 0" class="empty-state">
-          <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- Empty State Mobile -->
+        <div v-if="users.data.length === 0" class="flex flex-col items-center justify-center py-12 px-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+          <svg class="w-16 h-16 text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
-          <p class="empty-text">Nenhum usuário encontrado</p>
+          <p class="text-lg font-medium text-slate-900 dark:text-slate-100">Nenhum usuario encontrado</p>
+          <p class="text-slate-500 dark:text-slate-400 mt-1">Tente ajustar os filtros de busca.</p>
+        </div>
+
+        <!-- Mobile Pagination -->
+        <div v-if="users.data.length > 0" class="flex flex-col items-center gap-3 py-4">
+          <div class="text-sm text-slate-600 dark:text-slate-400">
+            {{ users.from }}-{{ users.to }} de {{ users.total }}
+          </div>
+          <div class="flex gap-1 flex-wrap justify-center" v-if="users.links">
+            <template v-for="(link, key) in users.links" :key="key">
+              <Link
+                v-if="link.url"
+                :href="link.url"
+                class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
+                :class="link.active
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'"
+                v-html="link.label"
+              />
+              <span
+                v-else
+                class="px-3 py-1.5 text-sm font-medium text-slate-400 dark:text-slate-600 cursor-not-allowed"
+                v-html="link.label"
+              ></span>
+            </template>
+          </div>
         </div>
       </div>
 
-      <!-- Pagination -->
-      <div v-if="users.data.length > 0" class="pagination-container">
-        <div class="pagination-info">
-          Mostrando {{ users.from }} até {{ users.to }} de {{ users.total }} usuários
+      <!-- Desktop Table View -->
+      <div v-if="isDesktop" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                <th class="px-4 lg:px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Usuario</th>
+                <th class="px-4 lg:px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden sm:table-cell">Email</th>
+                <th class="px-4 lg:px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Cargos</th>
+                <th class="px-4 lg:px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center hidden md:table-cell">Perm. Diretas</th>
+                <th class="px-4 lg:px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                <th class="px-4 lg:px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">Cadastrado em</th>
+                <th class="px-4 lg:px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Acoes</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+              <tr v-for="user in users.data" :key="user.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm flex-shrink-0">
+                      {{ getUserInitials(user.name) }}
+                    </div>
+                    <div class="min-w-0">
+                      <span class="text-sm font-medium text-slate-900 dark:text-slate-100 block truncate">{{ user.name }}</span>
+                      <span class="text-xs text-slate-500 dark:text-slate-400 sm:hidden block truncate">{{ user.email }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400 hidden sm:table-cell">
+                  {{ user.email }}
+                </td>
+                <td class="px-4 lg:px-6 py-4">
+                  <div class="flex flex-wrap gap-1">
+                    <span
+                      v-for="role in user.roles.slice(0, 2)"
+                      :key="role.id"
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                    >
+                      {{ role.name }}
+                    </span>
+                    <span v-if="user.roles.length > 2" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                      +{{ user.roles.length - 2 }}
+                    </span>
+                    <span v-if="user.roles.length === 0" class="text-xs text-slate-400 italic">Nenhum</span>
+                  </div>
+                </td>
+                <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-center hidden md:table-cell">
+                  <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300">
+                    {{ user.permissions?.length || 0 }}
+                  </span>
+                </td>
+                <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
+                  <span
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                    :class="statusClass(user.status)"
+                  >
+                    {{ statusLabel(user.status) }}
+                  </span>
+                </td>
+                <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400 hidden lg:table-cell">
+                  {{ formatDate(user.created_at) }}
+                </td>
+                <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-right">
+                  <ButtonGroup size="sm">
+                    <ButtonIcon
+                      :icon="EyeIcon"
+                      :href="route('admin.permissions.users.show', user.id)"
+                      variant="info"
+                      title="Visualizar"
+                      size="sm"
+                      class="!text-blue-600 hover:!bg-blue-50 dark:!text-blue-400 dark:hover:!bg-blue-900/20"
+                    />
+                    <ButtonIcon
+                      v-if="canEdit"
+                      :icon="PencilSquareIcon"
+                      :href="route('admin.permissions.users.edit', user.id)"
+                      variant="warning"
+                      title="Editar"
+                      size="sm"
+                      class="!text-amber-600 hover:!bg-amber-50 dark:!text-amber-400 dark:hover:!bg-amber-900/20"
+                    />
+                    <ButtonIcon
+                      v-if="canDelete"
+                      :icon="TrashIcon"
+                      variant="danger"
+                      title="Desativar"
+                      size="sm"
+                      confirmMessage="Tem certeza que deseja desativar este usuario?"
+                      @click="deactivateUser(user.id)"
+                      class="!text-red-600 hover:!bg-red-50 dark:!text-red-400 dark:hover:!bg-red-900/20"
+                    />
+                  </ButtonGroup>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Empty State -->
+          <div v-if="users.data.length === 0" class="flex flex-col items-center justify-center py-12 px-4">
+            <svg class="w-16 h-16 text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <p class="text-lg font-medium text-slate-900 dark:text-slate-100">Nenhum usuário encontrado</p>
+            <p class="text-slate-500 dark:text-slate-400 mt-1">Tente ajustar os filtros de busca.</p>
+          </div>
         </div>
-        <div class="pagination-links">
-          <Link
-            v-for="link in users.links"
-            :key="link.label"
-            :href="link.url"
-            :class="['pagination-link', { active: link.active, disabled: !link.url }]"
-            v-html="link.label"
-          />
+
+        <!-- Pagination -->
+        <div class="px-6 py-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
+          <Pagination :pagination="users" @page-change="onPageChange" />
         </div>
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { reactive } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
+import ButtonGroup from '@/Components/Atoms/Button/ButtonGroup.vue';
+import TableMobileCard from '@/Components/Molecules/Table/TableMobileCard.vue';
+import EyeIcon from '@/Components/Icons/EyeIcon.vue';
+import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
+import TrashIcon from '@/Components/Icons/TrashIcon.vue';
+import { useMobile } from '@/Composables/useMobile';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
+
+const canCreate = can('users.create');
+const canEdit = can('users.edit');
+const canDelete = can('users.delete');
 
 const props = defineProps({
   users: Object,
   roles: Array,
   filters: Object,
 });
+
+const { isMobile, isTablet, isDesktop } = useMobile();
+
+const mobileFields = [
+  { key: 'email', label: 'Email' },
+  { key: 'status', label: 'Status' },
+  { key: 'created_at', label: 'Cadastrado' },
+];
 
 const form = reactive({
   search: props.filters.search || '',
@@ -222,346 +344,39 @@ const formatDate = (date) => {
     year: 'numeric',
   });
 };
+
+const statusLabel = (status) => {
+  const labels = {
+    active: 'Ativo',
+    inactive: 'Inativo',
+    suspended: 'Suspenso',
+    pending: 'Pendente',
+    blocked: 'Bloqueado',
+  };
+  return labels[status] || status || 'Desconhecido';
+};
+
+const statusClass = (status) => {
+  const classes = {
+    active: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
+    inactive: 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
+    suspended: 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300',
+    pending: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300',
+    blocked: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300',
+  };
+  return classes[status] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
+};
+
+const deactivateUser = (userId) => {
+  router.delete(route('admin.permissions.users.destroy', userId), {
+    preserveScroll: true,
+  });
+};
+
+const onPageChange = (page) => {
+  router.get(route('admin.permissions.users.index'), { ...form, page }, {
+    preserveState: true,
+    preserveScroll: true,
+  });
+};
 </script>
-
-<style scoped>
-.permissions-container {
-  padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 2rem;
-}
-
-.page-title {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  margin-bottom: 0.5rem;
-}
-
-.page-subtitle {
-  color: #94a3b8;
-  font-size: 0.9375rem;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  border-radius: 8px;
-  transition: all 0.2s;
-  text-decoration: none;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  border: none;
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-.btn-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.tabs-container {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  border-bottom: 2px solid #1e293b;
-  padding-bottom: 0;
-}
-
-.tab-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.875rem 1.5rem;
-  color: #94a3b8;
-  text-decoration: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: all 0.2s;
-  font-weight: 500;
-}
-
-.tab-item:hover {
-  color: #e2e8f0;
-}
-
-.tab-item.active {
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
-}
-
-.tab-icon {
-  width: 20px;
-  height: 20px;
-}
-
-.filters-section {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.search-box {
-  position: relative;
-  flex: 1;
-}
-
-.search-icon {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  color: #64748b;
-  pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 3rem;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  color: #e2e8f0;
-  font-size: 0.9375rem;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-}
-
-.filter-select {
-  padding: 0.75rem 1rem;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  color: #e2e8f0;
-  font-size: 0.9375rem;
-  min-width: 200px;
-}
-
-.table-container {
-  background: #1e293b;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 1.5rem;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.data-table thead {
-  background: #0f172a;
-}
-
-.data-table th {
-  padding: 1rem;
-  text-align: left;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.data-table td {
-  padding: 1rem;
-  border-top: 1px solid #334155;
-  color: #e2e8f0;
-  font-size: 0.9375rem;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.user-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.user-name {
-  font-weight: 500;
-}
-
-.badges-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-}
-
-.badge-role {
-  background: rgba(59, 130, 246, 0.1);
-  color: #60a5fa;
-}
-
-.badge-success {
-  background: rgba(34, 197, 94, 0.1);
-  color: #4ade80;
-}
-
-.badge-warning {
-  background: rgba(251, 146, 60, 0.1);
-  color: #fb923c;
-}
-
-.badge-info {
-  background: rgba(168, 85, 247, 0.1);
-  color: #a78bfa;
-}
-
-.text-muted {
-  color: #64748b;
-  font-size: 0.875rem;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.text-right {
-  text-align: right;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-}
-
-.btn-icon {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-}
-
-.btn-icon:hover {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: #3b82f6;
-  color: #60a5fa;
-}
-
-.btn-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.empty-state {
-  padding: 4rem 2rem;
-  text-align: center;
-}
-
-.empty-icon {
-  width: 64px;
-  height: 64px;
-  color: #475569;
-  margin: 0 auto 1rem;
-}
-
-.empty-text {
-  color: #64748b;
-  font-size: 1.125rem;
-}
-
-.pagination-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: #1e293b;
-  border-radius: 8px;
-}
-
-.pagination-info {
-  color: #94a3b8;
-  font-size: 0.875rem;
-}
-
-.pagination-links {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.pagination-link {
-  padding: 0.5rem 0.75rem;
-  background: transparent;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  color: #e2e8f0;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-}
-
-.pagination-link:hover:not(.disabled) {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: #3b82f6;
-  color: #60a5fa;
-}
-
-.pagination-link.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: white;
-}
-
-.pagination-link.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-</style>

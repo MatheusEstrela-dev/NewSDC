@@ -9,6 +9,7 @@
         :can-edit="canEdit"
         :can-delete="canDelete"
         @view="$emit('view', beneficiario.id)"
+        @print="$emit('print', beneficiario.id)"
         @edit="$emit('edit', beneficiario.id)"
         @delete="$emit('delete', beneficiario.id)"
       />
@@ -56,11 +57,11 @@ defineProps({
   },
   canEdit: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   canDelete: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   emptyMessage: {
     type: String,
@@ -68,5 +69,5 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'edit', 'delete']);
+defineEmits(['view', 'print', 'edit', 'delete']);
 </script>

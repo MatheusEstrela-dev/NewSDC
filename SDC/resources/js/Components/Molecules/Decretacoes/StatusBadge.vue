@@ -64,7 +64,7 @@ const statusConfig = {
 const label = computed(() => statusConfig[props.status]?.label || props.status);
 const badgeClasses = computed(() => {
   return [
-    'px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold inline-block whitespace-nowrap',
+    'px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold inline-block whitespace-nowrap',
     statusConfig[props.status]?.classes || 'bg-slate-500/20 text-slate-300 border border-slate-500/20',
   ].join(' ');
 });

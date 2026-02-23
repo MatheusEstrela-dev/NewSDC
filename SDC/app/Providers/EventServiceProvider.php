@@ -21,37 +21,21 @@ class EventServiceProvider extends ServiceProvider
     ];
 
     /**
+     * The subscriber classes to register.
+     *
+     * @var array<int, class-string>
+     */
+    protected $subscribe = [
+        \App\Listeners\PermissionEventSubscriber::class,
+    ];
+
+    /**
      * Register any events for your application.
      */
     public function boot(): void
     {
         \App\Models\User::observe(\App\Observers\UserObserver::class);
         \App\Models\Role::observe(\App\Observers\RoleObserver::class);
-
-        // Log queries lentas (> 1 segundo) - Sistema Crítico 24/7
-        \DB::listen(function ($query) {
-            $threshold = env('QUERY_SLOW_THRESHOLD', 1000); // 1 segundo padrão
-
-            if ($query->time > $threshold) {
-                \Log::channel('queries')->warning('Slow query detected', [
-                    'sql' => $query->sql,
-                    'bindings' => $query->bindings,
-                    'time' => $query->time . 'ms',
-                    'connection' => $query->connectionName,
-                    'url' => request()->fullUrl(),
-                    'user_id' => auth()->id(),
-                ]);
-
-                \App\Services\Logging\ActivityLogger::logPerformance(
-                    operation: 'slow_query',
-                    duration: $query->time,
-                    metrics: [
-                        'sql' => $query->sql,
-                        'threshold' => $threshold,
-                    ]
-                );
-            }
-        });
 
         // Log jobs falhados automaticamente
         \Queue::failing(function (\Illuminate\Queue\Events\JobFailed $event) {

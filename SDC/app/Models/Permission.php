@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Permission\Models\Permission as SpatiePermission;
 
 class Permission extends SpatiePermission
 {
+    use SoftDeletes;
+
     /**
      * Extende o model do Spatie e adiciona metadados usados no NewSDC.
      *
-     * Importante: o Spatie usa `name` como identificador lógico (permission name).
+     * Importante: o Spatie usa `name` como identificador logico (permission name).
      */
     protected $fillable = [
         'name',

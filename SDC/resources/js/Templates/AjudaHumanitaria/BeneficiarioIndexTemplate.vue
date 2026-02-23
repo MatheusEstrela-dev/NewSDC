@@ -1,43 +1,102 @@
 <template>
   <div class="beneficiarios-container">
-    <!-- Header -->
-    <div class="mb-4 md:mb-6 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-      <div class="flex-1 min-w-0">
-        <Heading :level="2" color="default" class="mb-1 md:mb-2 text-xl md:text-2xl">
-          Beneficiários
-        </Heading>
-        <Text size="sm" color="muted" class="hidden sm:block">
-          Gestão de beneficiários e famílias afetadas por desastres
-        </Text>
-      </div>
+    <!-- Header Padronizado -->
+    <PageHeader
+      title="Beneficiários"
+      description="Gestão de beneficiários e famílias afetadas por desastres"
+      :icon="HeartIcon"
+      variant="gradient"
+    >
+      <template #actions>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Toggle Grade/Tabela - Oculto em mobile -->
+          <div class="hidden md:flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
+            <button
+              @click="viewMode = 'grid'"
+              :class="[
+                'px-3 py-1.5 rounded text-xs font-medium transition-all',
+                viewMode === 'grid'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              ]"
+              title="Visualização em Grade"
+            >
+              Grade
+            </button>
+            <button
+              @click="viewMode = 'table'"
+              :class="[
+                'px-3 py-1.5 rounded text-xs font-medium transition-all',
+                viewMode === 'table'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              ]"
+              title="Visualização em Tabela"
+            >
+              Tabela
+            </button>
+          </div>
 
-      <!-- Botão Novo Beneficiário -->
-      <button
-        @click="$emit('create')"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md self-start md:self-auto"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        <span class="hidden sm:inline">Novo Beneficiário</span>
-        <span class="sm:hidden">Novo</span>
-      </button>
-    </div>
+          <!-- Botão Exportar -->
+          <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+            <span class="hidden sm:inline">Exportar</span>
+          </Button>
+
+          <!-- Botão Criar - Responsivo -->
+          <Button
+            v-if="canCreate"
+            variant="primary"
+            size="md"
+            :icon="PlusIcon"
+            icon-position="left"
+            @click="$emit('create')"
+          >
+            <span class="hidden sm:inline">Novo Beneficiário</span>
+            <span class="sm:hidden">Novo</span>
+          </Button>
+        </div>
+      </template>
+    </PageHeader>
+
+    <!-- Modal de Exportação CSV -->
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="Beneficiários"
+      @close="showExportModal = false"
+      @export="handleExportCsv"
+    />
+
+    <!-- Modal de Impressão do Beneficiário -->
+    <PrintBeneficiarioModal
+      :show="showPrintModal"
+      :beneficiario="selectedBeneficiario"
+      :loading="printLoading"
+      @close="showPrintModal = false"
+    />
 
     <!-- Statistics Cards -->
     <BeneficiarioStatsCards
       :statistics="statistics"
       @filter="handleStatFilter"
-      class="mb-6"
     />
 
-    <!-- Grid de Beneficiários -->
+    <!-- Filters -->
+    <BeneficiarioFiltersSection
+      :filters="localFilters"
+      :municipalities="municipalities"
+      @filter-change="handleFilterChange"
+      @filter-reset="handleFilterReset"
+    />
+
+    <!-- Mobile: Sempre Grade | Desktop: Grade ou Tabela -->
     <BeneficiarioGrid
+      v-if="viewMode === 'grid' || isMobile"
       :beneficiarios="beneficiarios"
       :loading="loading"
       :can-edit="canEdit"
       :can-delete="canDelete"
       @view="(id) => $emit('view', id)"
+      @print="handlePrint"
       @edit="(id) => $emit('edit', id)"
       @delete="(id) => $emit('delete', id)"
     />
@@ -100,23 +159,31 @@
     </div>
 
     <!-- Pagination -->
-    <div v-if="pagination && pagination.last_page > 1" class="mt-6">
-      <div class="flex items-center justify-between px-6 py-4 bg-slate-900/60 dark:bg-slate-900/60 bg-white rounded-lg border border-slate-700/30 dark:border-slate-700/30 border-slate-200">
-        <p class="text-sm text-slate-400 dark:text-slate-400 text-slate-600">
-          Mostrando {{ pagination.from || 0 }} a {{ pagination.to || 0 }} de {{ pagination.total || 0 }} resultados
-        </p>
-        <!-- TODO: Adicionar componente de paginação -->
-      </div>
+    <div v-if="pagination" class="mt-6">
+      <Pagination
+        :pagination="pagination"
+        @page-change="(page) => emit('filter', { page })"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
-import BeneficiarioStatsCards from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioStatsCards.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import HeartIcon from '@/Components/Icons/HeartIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import BeneficiarioFiltersSection from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioFiltersSection.vue';
 import BeneficiarioGrid from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioGrid.vue';
+import BeneficiarioStatsCards from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioStatsCards.vue';
+import PrintBeneficiarioModal from '@/Components/Organisms/AjudaHumanitaria/Print/PrintBeneficiarioModal.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { useExport } from '@/Composables/useExport';
+import { useMobile } from '@/Composables/useMobile';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { ref } from 'vue';
 
 const props = defineProps({
   beneficiarios: {
@@ -137,17 +204,83 @@ const props = defineProps({
   },
   canEdit: {
     type: Boolean,
-    default: true,
+    default: false,
+  },
+  canCreate: {
+    type: Boolean,
+    default: false,
   },
   canDelete: {
     type: Boolean,
-    default: true,
+    default: false,
+  },
+  canExport: {
+    type: Boolean,
+    default: false,
+  },
+  filters: {
+    type: Object,
+    default: () => ({}),
+  },
+  municipalities: {
+    type: Array,
+    default: () => [],
   },
 });
 
-const emit = defineEmits(['create', 'view', 'edit', 'delete', 'filter']);
+const emit = defineEmits(['create', 'view', 'edit', 'delete', 'print', 'filter', 'filter-change', 'filter-reset']);
+
+// Detecção mobile
+const { isMobile } = useMobile();
+
+const viewMode = ref('grid');
+const localFilters = ref({ ...props.filters });
 
 const handleStatFilter = (filter) => {
   emit('filter', filter);
 };
+
+const handleFilterChange = (newFilters) => {
+  localFilters.value = { ...newFilters };
+  emit('filter-change', newFilters);
+};
+
+const handleFilterReset = () => {
+  localFilters.value = {};
+  emit('filter-reset');
+};
+
+// =========================
+// Modal de Exportação CSV (Usando Composable)
+// =========================
+const { 
+  showExportModal, 
+  handleExport: triggerExport 
+} = useExport('ajuda-humanitaria.beneficiarios.export');
+
+function handleExportCsv(params) {
+  triggerExport(params, filters.value);
+}
+
+// =========================
+// Modal de Impressão
+// =========================
+const showPrintModal = ref(false);
+const selectedBeneficiario = ref(null);
+const printLoading = ref(false);
+
+function handlePrint(id) {
+  // Encontrar beneficiário na lista
+  const beneficiario = props.beneficiarios.find(b => b.id === id);
+  if (beneficiario) {
+    selectedBeneficiario.value = beneficiario;
+    showPrintModal.value = true;
+  }
+}
 </script>
+
+<style scoped>
+.beneficiarios-container {
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
+}
+</style>

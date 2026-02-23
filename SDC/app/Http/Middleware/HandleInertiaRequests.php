@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -34,21 +35,99 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $user ? [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'cpf' => $user->cpf ?? null,
-                    'email' => $user->email ?? null,
-                    // Spatie roles/permissions (usado para esconder/mostrar menus no frontend)
-                    'is_super_admin' => method_exists($user, 'hasRole') ? $user->hasRole('super-admin') : false,
-                    'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames()->values() : [],
-                    'permissions' => method_exists($user, 'getAllPermissions')
-                        ? $user->getAllPermissions()->pluck('name')->values()
-                        : [],
-                ] : null,
+                'user' => fn() => $user ? $this->getCachedUserData($user) : null,
             ],
             'acl' => fn() => $this->getCachedAclConfig(),
             'actionConfigs' => fn() => app(\App\Core\Actions\Services\ActionConfigService::class)->toFrontendConfig(),
+        ];
+    }
+
+    /**
+     * Retorna dados do usuario autenticado com cache de 5 minutos.
+     * Evita queries repetitivas de roles/permissions a cada navegacao SPA.
+     */
+    protected function getCachedUserData($user): array
+    {
+        $cacheKey = "inertia_user_data_{$user->id}";
+
+        return Cache::remember($cacheKey, 60, function () use ($user) {
+            return $this->getUserData($user);
+        });
+    }
+
+    /**
+     * Retorna dados do usuario autenticado.
+     */
+    protected function getUserData($user): array
+    {
+        $roles = [];
+        if (method_exists($user, 'roles')) {
+            $roles = $user->roles->map(fn($role) => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'slug' => $role->slug,
+                'hierarchy_level' => $role->hierarchy_level,
+            ])->values()->toArray();
+        }
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'cpf' => $user->cpf ?? null,
+            'email' => $user->email ?? null,
+            'is_super_admin' => method_exists($user, 'hasRole') ? $user->hasRole('super-admin') : false,
+            'roles' => $roles,
+            'role_names' => method_exists($user, 'getRoleNames') ? $user->getRoleNames()->values() : [],
+            'permissions' => $this->getEffectivePermissions($user),
+            'hierarchy_level' => method_exists($user, 'getHierarchyLevel')
+                ? $user->getHierarchyLevel()
+                : 99,
+        ];
+    }
+
+    /**
+     * Retorna as permissoes efetivas do usuario.
+     * LOGICA ADITIVA: Permissoes do CARGO + Permissoes DIRETAS = Efetivas
+     *
+     * Tabelas envolvidas:
+     * - role_has_permissions: permissoes do cargo
+     * - model_has_permissions: permissoes diretas do usuario
+     * - model_has_roles: cargos atribuidos ao usuario
+     */
+    protected function getEffectivePermissions($user): array
+    {
+        if (!method_exists($user, 'permissions') || !method_exists($user, 'getPermissionsViaRoles')) {
+            return [];
+        }
+
+        $rolePermissions = $user->getPermissionsViaRoles()->pluck('name')->values()->toArray();
+        $directPermissions = $user->permissions->pluck('name')->values()->toArray();
+
+        return array_values(array_unique(array_merge($rolePermissions, $directPermissions)));
+    }
+
+    /**
+     * Retorna configuracao ACL com cache de 10 minutos.
+     * Dados de config raramente mudam - nao precisam ser lidos do disco a cada request.
+     */
+    protected function getCachedAclConfig(): array
+    {
+        return Cache::remember('inertia_acl_config', 600, function () {
+            return $this->getAclConfig();
+        });
+    }
+
+    /**
+     * Retorna configuracao ACL do config/permissions.php para o frontend.
+     */
+    protected function getAclConfig(): array
+    {
+        return [
+            'levels' => config('permissions.levels', []),
+            'modules' => config('permissions.modules', []),
+            'protected_roles' => config('permissions.protected_roles', []),
+            'immutable_permissions' => config('permissions.immutable_permissions', []),
+            'default_level' => config('permissions.default_level', 99),
         ];
     }
 }

@@ -65,18 +65,46 @@ const changeClass = computed(() => {
 .stats-card {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  padding: 1.5rem;
+  gap: 1rem;
+  padding: 1rem;
   background: #1e293b;
   border: 1px solid #334155;
   border-radius: 12px;
   transition: all 0.2s;
+  min-height: 100px;
+}
+
+/* Tablet e Desktop */
+@media (min-width: 640px) {
+  .stats-card {
+    gap: 1.25rem;
+    padding: 1.25rem;
+    min-height: 110px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .stats-card {
+    padding: 1.5rem;
+    min-height: 120px;
+  }
 }
 
 .stats-card:hover {
   border-color: #475569;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile: Desabilitar hover effect em touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .stats-card:hover {
+    transform: none;
+  }
+
+  .stats-card:active {
+    transform: scale(0.98);
+  }
 }
 
 .stats-card.primary {
@@ -100,13 +128,28 @@ const changeClass = computed(() => {
 }
 
 .stats-icon-bg {
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 10px;
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+}
+
+@media (min-width: 640px) {
+  .stats-icon-bg {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .stats-icon-bg {
+    width: 56px;
+    height: 56px;
+  }
 }
 
 .stats-card.primary .stats-icon-bg {
@@ -126,9 +169,23 @@ const changeClass = computed(() => {
 }
 
 .stats-icon {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   color: #60a5fa;
+}
+
+@media (min-width: 640px) {
+  .stats-icon {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .stats-icon {
+    width: 28px;
+    height: 28px;
+  }
 }
 
 .stats-card.success .stats-icon {
@@ -150,27 +207,57 @@ const changeClass = computed(() => {
 
 .stats-label {
   color: #94a3b8;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   margin-bottom: 0.25rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
+@media (min-width: 640px) {
+  .stats-label {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .stats-label {
+    font-size: 0.875rem;
+  }
+}
+
 .stats-value {
   color: #f1f5f9;
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.2;
   margin-bottom: 0.25rem;
+}
+
+@media (min-width: 640px) {
+  .stats-value {
+    font-size: 1.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .stats-value {
+    font-size: 2rem;
+  }
 }
 
 .stats-change {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
+}
+
+@media (min-width: 640px) {
+  .stats-change {
+    font-size: 0.8125rem;
+  }
 }
 
 .stats-change.positive {

@@ -13,3 +13,4 @@ class Entrada extends Model
 }
 
 
+

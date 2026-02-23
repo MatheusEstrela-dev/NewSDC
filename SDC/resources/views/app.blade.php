@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
@@ -22,9 +22,10 @@
                     $manifestPath = public_path('build/manifest.json');
                     if (file_exists($manifestPath)) {
                         $manifest = json_decode(file_get_contents($manifestPath), true);
-                        $appCss = $manifest['resources/css/app.css']['file'] ?? null;
                         $appJs = $manifest['resources/js/app.js']['file'] ?? null;
-                        
+                        $appCssArray = $manifest['resources/js/app.js']['css'] ?? [];
+                        $appCss = !empty($appCssArray) ? $appCssArray[0] : null;
+
                         if ($appCss) {
                             echo '<link rel="preload" href="/build/' . $appCss . '" as="style">';
                         }
@@ -45,5 +46,16 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
+        <script>
+            // Force SW cleanup (v3) - unregister old SWs that cache navigation
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                    regs.forEach(function(r) { r.unregister(); });
+                });
+                caches.keys().then(function(names) {
+                    names.forEach(function(name) { caches.delete(name); });
+                });
+            }
+        </script>
     </body>
 </html>

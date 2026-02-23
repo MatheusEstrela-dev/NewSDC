@@ -1,7 +1,12 @@
 <script setup>
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import TreinamentoIndexTemplate from '@/Templates/Treinamento/TreinamentoIndexTemplate.vue';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
 
 const props = defineProps({
   treinamentos: {
@@ -20,13 +25,7 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-  auth: {
-    type: Object,
-    required: true,
-  },
 });
-
-const canManage = props.auth?.user?.permissions?.includes('treinamento.manage') || false;
 
 const handleCreate = () => {
   // TODO: Implementar modal ou página de criação
@@ -58,20 +57,21 @@ const handleFilter = (filters) => {
 </script>
 
 <template>
-  <AuthenticatedLayout title="Treinamentos">
-    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-      <TreinamentoIndexTemplate
-        :treinamentos="treinamentos.data"
-        :statistics="statistics"
-        :pagination="treinamentos.pagination"
-        :filters="filters"
-        :can-manage="canManage"
-        @create="handleCreate"
-        @view="handleView"
-        @edit="handleEdit"
-        @delete="handleDelete"
-        @filter="handleFilter"
-      />
-    </div>
-  </AuthenticatedLayout>
+
+    <TreinamentoIndexTemplate
+      :treinamentos="treinamentos.data"
+      :statistics="statistics"
+      :pagination="treinamentos.pagination"
+      :filters="filters"
+      :can-create="can('treinamento.cursos.create')"
+      :can-edit="can('treinamento.cursos.edit')"
+      :can-delete="can('treinamento.cursos.delete')"
+      :can-export="can('treinamento.cursos.export')"
+      @create="handleCreate"
+      @view="handleView"
+      @edit="handleEdit"
+      @delete="handleDelete"
+      @filter="handleFilter"
+    />
+
 </template>

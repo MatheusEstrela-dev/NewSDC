@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Modules\Compdec\Domain\Entities\Orgao;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -9,27 +10,31 @@ class OrgaosSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     * Idempotente: usa updateOrCreate para não gerar duplicate key ao reexecutar.
      */
     public function run(): void
     {
         // CEDEC - Coordenadoria Estadual de Defesa Civil
-        $cedecId = DB::table('orgaos')->insertGetId([
-            'codigo' => 'CEDEC-SC',
-            'nome' => 'Coordenadoria Estadual de Defesa Civil de Santa Catarina',
-            'tipo' => 'cedec',
-            'municipio_id' => null, // Estadual
-            'orgao_superior_id' => null,
-            'status' => 'ativo',
-            'email' => 'cedec@sc.gov.br',
-            'telefone' => '(48) 3665-2200',
-            'endereco' => 'Av. Governador Ivo Silveira, 2320 - Capoeiras, Florianópolis - SC',
-            'responsavel_nome' => 'Coordenador CEDEC',
-            'responsavel_email' => 'coordenador@cedec.sc.gov.br',
-            'latitude' => -27.5969,
-            'longitude' => -48.5495,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        DB::table('orgaos')->updateOrInsert(
+            ['codigo' => 'CEDEC-SC'],
+            [
+                'nome' => 'Coordenadoria Estadual de Defesa Civil de Santa Catarina',
+                'tipo' => 'cedec',
+                'municipio_id' => null, // Estadual
+                'orgao_superior_id' => null,
+                'status' => 'ativo',
+                'email' => 'cedec@sc.gov.br',
+                'telefone' => '(48) 3665-2200',
+                'endereco' => 'Av. Governador Ivo Silveira, 2320 - Capoeiras, Florianópolis - SC',
+                'responsavel_nome' => 'Coordenador CEDEC',
+                'responsavel_email' => 'coordenador@cedec.sc.gov.br',
+                'latitude' => -27.5969,
+                'longitude' => -48.5495,
+                'updated_at' => now(),
+            ]
+        );
+
+        $cedecId = DB::table('orgaos')->where('codigo', 'CEDEC-SC')->value('id');
 
         // REDEC - Coordenadorias Regionais de Defesa Civil
         $redecs = [
@@ -56,31 +61,33 @@ class OrgaosSeeder extends Seeder
             ],
         ];
 
-        $redecIds = [];
         foreach ($redecs as $redec) {
-            $redecIds[] = DB::table('orgaos')->insertGetId([
-                'codigo' => $redec['codigo'],
-                'nome' => $redec['nome'],
-                'tipo' => 'redec',
-                'municipio_id' => $redec['municipio_id'],
-                'orgao_superior_id' => $cedecId,
-                'status' => 'ativo',
-                'email' => strtolower(str_replace(' ', '', $redec['codigo'])) . '@sc.gov.br',
-                'telefone' => '(48) 3665-' . rand(2000, 2999),
-                'responsavel_nome' => $redec['responsavel_nome'],
-                'responsavel_email' => strtolower(str_replace(' ', '', $redec['codigo'])) . '@cedec.sc.gov.br',
-                'abrangencia' => $redec['abrangencia'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            DB::table('orgaos')->updateOrInsert(
+                ['codigo' => $redec['codigo']],
+                [
+                    'nome' => $redec['nome'],
+                    'tipo' => 'redec',
+                    'municipio_id' => $redec['municipio_id'],
+                    'orgao_superior_id' => $cedecId,
+                    'status' => 'ativo',
+                    'email' => strtolower(str_replace(' ', '', $redec['codigo'])) . '@sc.gov.br',
+                    'telefone' => '(48) 3665-' . rand(2000, 2999),
+                    'responsavel_nome' => $redec['responsavel_nome'],
+                    'responsavel_email' => strtolower(str_replace(' ', '', $redec['codigo'])) . '@cedec.sc.gov.br',
+                    'abrangencia' => $redec['abrangencia'],
+                    'updated_at' => now(),
+                ]
+            );
         }
+
+        $redecIds = DB::table('orgaos')->whereIn('codigo', array_column($redecs, 'codigo'))->pluck('id')->toArray();
 
         // COMPDEC - Coordenadorias Municipais de Defesa Civil
         $compdecs = [
             [
                 'codigo' => 'COMPDEC-FLORIANOPOLIS',
                 'nome' => 'COMPDEC Florianópolis',
-                'municipio_id' => 1,
+                'municipio_id' => null,
                 'redec_id' => $redecIds[0],
                 'responsavel_nome' => 'João da Silva',
                 'responsavel_cpf' => '123.456.789-00',
@@ -90,7 +97,7 @@ class OrgaosSeeder extends Seeder
             [
                 'codigo' => 'COMPDEC-SAO-JOSE',
                 'nome' => 'COMPDEC São José',
-                'municipio_id' => 2,
+                'municipio_id' => null,
                 'redec_id' => $redecIds[0],
                 'responsavel_nome' => 'Maria Santos',
                 'responsavel_cpf' => '987.654.321-00',
@@ -100,7 +107,7 @@ class OrgaosSeeder extends Seeder
             [
                 'codigo' => 'COMPDEC-BLUMENAU',
                 'nome' => 'COMPDEC Blumenau',
-                'municipio_id' => 10,
+                'municipio_id' => null,
                 'redec_id' => $redecIds[1],
                 'responsavel_nome' => 'Carlos Oliveira',
                 'responsavel_cpf' => '456.789.123-00',
@@ -110,7 +117,7 @@ class OrgaosSeeder extends Seeder
             [
                 'codigo' => 'COMPDEC-JOINVILLE',
                 'nome' => 'COMPDEC Joinville',
-                'municipio_id' => 20,
+                'municipio_id' => null,
                 'redec_id' => $redecIds[2],
                 'responsavel_nome' => 'Ana Paula',
                 'responsavel_cpf' => '321.654.987-00',
@@ -120,26 +127,27 @@ class OrgaosSeeder extends Seeder
         ];
 
         foreach ($compdecs as $compdec) {
-            DB::table('orgaos')->insert([
-                'codigo' => $compdec['codigo'],
-                'nome' => $compdec['nome'],
-                'tipo' => 'compdec',
-                'municipio_id' => $compdec['municipio_id'],
-                'orgao_superior_id' => $compdec['redec_id'],
-                'status' => 'ativo',
-                'email' => strtolower(str_replace('-', '', $compdec['codigo'])) . '@defesacivil.sc.gov.br',
-                'telefone' => '(' . rand(47, 49) . ') ' . rand(3000, 3999) . '-' . rand(1000, 9999),
-                'responsavel_nome' => $compdec['responsavel_nome'],
-                'responsavel_cpf' => $compdec['responsavel_cpf'],
-                'responsavel_email' => strtolower(explode(' ', $compdec['responsavel_nome'])[0]) . '@' . strtolower(str_replace('-', '', $compdec['codigo'])) . '.sc.gov.br',
-                'latitude' => $compdec['latitude'] ?? null,
-                'longitude' => $compdec['longitude'] ?? null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            DB::table('orgaos')->updateOrInsert(
+                ['codigo' => $compdec['codigo']],
+                [
+                    'nome' => $compdec['nome'],
+                    'tipo' => 'compdec',
+                    'municipio_id' => $compdec['municipio_id'],
+                    'orgao_superior_id' => $compdec['redec_id'],
+                    'status' => 'ativo',
+                    'email' => strtolower(str_replace('-', '', $compdec['codigo'])) . '@defesacivil.sc.gov.br',
+                    'telefone' => '(' . rand(47, 49) . ') ' . rand(3000, 3999) . '-' . rand(1000, 9999),
+                    'responsavel_nome' => $compdec['responsavel_nome'],
+                    'responsavel_cpf' => $compdec['responsavel_cpf'],
+                    'responsavel_email' => strtolower(explode(' ', $compdec['responsavel_nome'])[0]) . '@' . strtolower(str_replace('-', '', $compdec['codigo'])) . '.sc.gov.br',
+                    'latitude' => $compdec['latitude'] ?? null,
+                    'longitude' => $compdec['longitude'] ?? null,
+                    'updated_at' => now(),
+                ]
+            );
         }
 
-        $this->command->info('✅ Órgãos criados com sucesso!');
+        $this->command->info('✅ Órgãos criados/atualizados com sucesso!');
         $this->command->info('   - 1 CEDEC (Estadual)');
         $this->command->info('   - 3 REDECs (Regionais)');
         $this->command->info('   - 4 COMPDECs (Municipais)');

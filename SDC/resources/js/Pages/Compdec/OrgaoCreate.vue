@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout title="Novo Órgão">
+
     <div class="orgao-create">
       <div class="header-section">
         <Button variant="ghost" @click="handleBack">
@@ -22,18 +22,20 @@
         />
       </CardBase>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
-import { router } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import Heading from '@/Components/Atoms/Typography/Heading.vue';
+import Text from '@/Components/Atoms/Typography/Text.vue';
 import OrgaoForm from '@/Components/Organisms/Compdec/OrgaoForm.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { router } from '@inertiajs/vue3';
+import { reactive, ref } from 'vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   municipios: {
@@ -84,7 +86,6 @@ const handleBack = () => {
 
 <style scoped>
 .orgao-create {
-  padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
 }

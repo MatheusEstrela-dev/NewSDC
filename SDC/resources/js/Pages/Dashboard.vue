@@ -1,109 +1,142 @@
 <template>
-  <AuthenticatedLayout>
-    <Head title="Dashboard" />
+    <div>
+        <Head title="Dashboard" />
 
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-950 p-8">
-      <!-- Banner Ano Fiscal -->
-      <div class="relative px-6 py-5 rounded-2xl shadow-lg mb-8 overflow-hidden bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-800 dark:to-slate-900 from-blue-50 to-indigo-50 border border-blue-100 dark:border-transparent">
-        <div class="relative z-10">
-          <p class="text-xs uppercase font-bold tracking-widest mb-1 text-blue-200/80 dark:text-blue-200/80 text-blue-600">
-            Painel Gerencial
-          </p>
-          <h2 class="text-3xl font-bold tracking-tight text-white dark:text-white text-slate-900">Exercício {{ currentYear }}</h2>
-          <p class="text-sm mt-1 max-w-md text-slate-400 dark:text-slate-400 text-slate-600">
-            Visão consolidada dos processos de transferência e apoio aos municípios mineiros.
-          </p>
-        </div>
-      </div>
+        <div class="dashboard-container w-full mx-auto space-y-8">
+          <!-- Header Padronizado -->
+          <PageHeader
+            title="Painel Gerencial"
+            :description="`Exercício ${currentYear} - Visão consolidada dos processos.`"
+            :icon="HomeIcon"
+            variant="gradient"
+          />
 
-      <!-- Grid de Métricas -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        <div
-          v-for="(metric, key) in metrics"
-          :key="key"
-          class="rounded-xl p-5 shadow-lg border bg-white dark:bg-slate-800/80 border-slate-100 dark:border-slate-700/50"
-        >
-          <div class="flex justify-between items-start mb-4">
-            <div :class="[metric.color, 'w-10 h-10 rounded-lg flex items-center justify-center text-white']">
-              {{ metric.icon }}
-            </div>
-            <span class="text-xs font-bold px-2 py-1 rounded-full text-slate-400 dark:text-slate-400 text-slate-600 bg-slate-50 dark:bg-slate-700/50 bg-slate-100">
-              +2%
-            </span>
-          </div>
-          <div>
-            <p class="text-3xl font-bold mt-1 text-slate-800 dark:text-slate-200 text-slate-900">{{ metric.val }}</p>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 text-slate-600">{{ metric.label }}</p>
-          </div>
-        </div>
-      </div>
+          <!-- Área de Drop Principal -->
+          <draggable
+            v-model="dashboardItems"
+            item-key="id"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6"
+            handle=".drag-handle"
+            ghost-class="ghost-card"
+            :animation="200"
+          >
+            <template #item="{ element }">
+              <div :class="element.colSpan" class="min-h-[100px]">
+                <!-- Wrapper com Handle de Arraste -->
+                <div class="h-full relative group/item">
+                  <!-- Botão de Arraste -->
+                  <div class="drag-handle absolute top-2 right-2 z-30 p-1.5 rounded-md bg-white/80 dark:bg-slate-800/80 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shadow-sm opacity-0 group-hover/item:opacity-100 transition-opacity cursor-grab active:cursor-grabbing hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </div>
 
-      <!-- Conteúdo Principal -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Tabela PMDA -->
-        <div class="lg:col-span-2 rounded-xl shadow-lg border bg-white dark:bg-slate-800/80 border-slate-100 dark:border-slate-700/50">
-          <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-700">
-            <h3 class="font-bold text-lg text-slate-800 dark:text-slate-200 text-slate-900">PMDA em Análise</h3>
-            <p class="text-xs mt-0.5 text-slate-500 dark:text-slate-400 text-slate-600">Processos aguardando intervenção técnica</p>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left">
-              <thead class="text-xs uppercase font-bold border-b bg-slate-50 dark:bg-slate-900/50 bg-slate-100 text-slate-400 dark:text-slate-400 text-slate-600 border-slate-100 dark:border-slate-700">
-                <tr>
-                  <th class="px-6 py-4">Protocolo</th>
-                  <th class="px-6 py-4">Município</th>
-                  <th class="px-6 py-4">Status</th>
-                  <th class="px-6 py-4">Data</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-50 dark:divide-slate-700/50 divide-slate-100">
-                <tr v-for="item in pmdaEmAnalise" :key="item.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 hover:bg-slate-100">
-                  <td class="px-6 py-4 font-medium text-slate-900 dark:text-slate-200 text-slate-900">{{ item.protocolo }}</td>
-                  <td class="px-6 py-4 text-slate-700 dark:text-slate-300 text-slate-700">{{ item.municipio }}</td>
-                  <td class="px-6 py-4">
-                    <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-500/20 bg-blue-100 text-blue-800 dark:text-blue-400 text-blue-800">
-                      {{ item.status }}
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 text-slate-500">{{ item.data }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+                  <!-- Renderização Dinâmica do Widget -->
+                  <component 
+                    :is="element.component" 
+                    v-bind="element.props"
+                    class="h-full"
+                    @select-module="openModuleModal"
+                  />
+                </div>
+              </div>
+            </template>
+          </draggable>
 
-        <!-- Timeline -->
-        <div class="rounded-xl shadow-lg border bg-white dark:bg-slate-800/80 border-slate-100 dark:border-slate-700/50">
-          <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-700">
-            <h3 class="font-bold text-lg text-slate-800 dark:text-slate-200 text-slate-900">Últimas Movimentações</h3>
-          </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div
-                v-for="h in historico"
-                :key="h.id"
-                class="flex gap-4 pb-4 border-b last:border-0 border-slate-100 dark:border-slate-700"
-              >
-                <div class="w-4 h-4 rounded-full bg-blue-500 mt-1"></div>
-                <div class="flex-1">
-                  <p class="font-semibold text-sm text-slate-800 dark:text-slate-200 text-slate-900">{{ h.municipio }}</p>
-                  <p class="text-sm mt-0.5 text-slate-600 dark:text-slate-400 text-slate-700">{{ h.acao }}</p>
-                  <p class="text-xs mt-1 font-mono text-slate-400 dark:text-slate-500 text-slate-500">{{ h.protocolo }}</p>
-                  <span class="text-xs text-slate-500 dark:text-slate-400 text-slate-500">{{ h.data }}</span>
+          <!-- Modal de Detalhes do Módulo -->
+          <Modal :show="isModalOpen" @close="closeModal" maxWidth="lg">
+            <div v-if="selectedModule" class="bg-white dark:bg-slate-800 overflow-hidden relative">
+              <!-- Decorative Header Background -->
+              <div class="absolute top-0 left-0 right-0 h-24 bg-gradient-to-br opacity-20" :class="variantGradientClass(selectedModule.variant)"></div>
+              
+              <div class="relative px-6 py-6">
+                <!-- Header -->
+                <div class="flex items-start justify-between mb-6">
+                  <div class="flex items-center gap-4">
+                    <div class="p-3 rounded-xl shadow-lg ring-1 ring-black/5 dark:ring-white/10" :class="metricIconClasses(selectedModule.variant)">
+                      <component :is="selectedModule.icon" class="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h2 class="text-xl font-bold text-slate-900 dark:text-white">{{ selectedModule.name }}</h2>
+                      <p class="text-sm text-slate-500 dark:text-slate-400 text-transparent bg-clip-text bg-gradient-to-r from-slate-500 to-slate-400 font-medium">
+                        Visão detalhada
+                      </p>
+                    </div>
+                  </div>
+                  <button @click="closeModal" class="text-slate-400 hover:text-slate-500 transition-colors p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                  <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Total Registros</p>
+                    <div class="flex items-end gap-2">
+                      <span class="text-2xl font-bold text-slate-900 dark:text-white">{{ selectedModule.value }}</span>
+                      <span :class="trendClasses(selectedModule.trend)" class="mb-1">
+                        {{ Math.abs(selectedModule.trend) }}%
+                      </span>
+                    </div>
+                  </div>
+                  <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Status Ativo</p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" :class="selectedModule.trend > 0 ? 'bg-emerald-400' : 'bg-amber-400'"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3" :class="selectedModule.trend > 0 ? 'bg-emerald-500' : 'bg-amber-500'"></span>
+                      </span>
+                      <span class="text-sm font-bold text-slate-700 dark:text-slate-300">
+                        {{ selectedModule.trend > 0 ? 'Normal' : 'Atenção' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Content Placeholder -->
+                <div class="space-y-3 mb-6">
+                  <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <ClockIcon class="w-4 h-4 text-slate-400" />
+                    Últimas Atualizações
+                  </h4>
+                  <div class="space-y-2">
+                    <div v-for="i in 3" :key="i" class="flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+                      <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+                        <span class="text-sm text-slate-600 dark:text-slate-300">Atualização de registro #{{ 1000 + i }}</span>
+                      </div>
+                      <span class="text-xs text-slate-400">{{ i * 15 }} min atrás</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-3">
+                  <button @click="closeModal" class="flex-1 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all">
+                    Cancelar
+                  </button>
+                  <button class="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 focus:ring-2 focus:ring-offset-2 transition-all shadow-lg shadow-blue-500/20" :class="variantButtonClass(selectedModule.variant)">
+                    Acessar Módulo
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
+          </Modal>
+
         </div>
-      </div>
     </div>
-  </AuthenticatedLayout>
 </template>
 
 <script setup>
+import HomeIcon from '@/Components/Icons/HomeIcon.vue';
+import Modal from '@/Components/Modal.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import draggable from '@/lib/vuedraggable-src/vuedraggable.js';
 import { Head } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { defineAsyncComponent, markRaw, ref } from 'vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -126,12 +159,9 @@ import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
 
 const currentYear = ref(new Date().getFullYear());
 
-const metrics = ref({
-  emEdicao: { val: 24, label: 'Em Edição', color: 'bg-blue-600', icon: '✏️' },
-  emAnalise: { val: 5, label: 'Em Análise', color: 'bg-amber-500', icon: '⏰' },
-  aprovados: { val: 77, label: 'Aprovados', color: 'bg-emerald-600', icon: '✓' },
-  atendidos: { val: 12, label: 'Atendidos', color: 'bg-indigo-600', icon: '✓✓' },
-});
+// Estado do Modal
+const isModalOpen = ref(false);
+const selectedModule = ref(null);
 
 function openModuleModal(moduleData) {
   selectedModule.value = moduleData;
@@ -268,10 +298,16 @@ const dashboardItems = ref([
   },
 ]);
 
-const historico = ref([
-  { id: 101, protocolo: '2025/001', municipio: 'Belo Horizonte', data: 'Há 2 horas', acao: 'Envio para análise' },
-  { id: 102, protocolo: '2025/002', municipio: 'Contagem', data: 'Ontem', acao: 'Correção de documentos' },
-  { id: 103, protocolo: '2025/005', municipio: 'Betim', data: '15/02/2025', acao: 'Solicitação de vistoria' },
-  { id: 104, protocolo: 'RAT-992', municipio: 'Ouro Preto', data: '10/02/2025', acao: 'Relatório finalizado' },
-]);
 </script>
+
+<style scoped>
+.ghost-card {
+  opacity: 0.5;
+  background: #f1f5f9; /* slate-100 */
+  border: 2px dashed #cbd5e1; /* slate-300 */
+}
+.dark .ghost-card {
+  background: #1e293b; /* slate-800 */
+  border-color: #475569; /* slate-600 */
+}
+</style>

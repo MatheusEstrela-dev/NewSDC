@@ -1,15 +1,15 @@
 <template>
-  <div v-if="pagination && pagination.last_page > 1" class="flex items-center justify-between">
+  <div class="flex items-center justify-between py-3">
     <Text size="sm" color="muted">
-      Mostrando {{ start }} até {{ end }} de {{ pagination.total }} resultados
+      Mostrando {{ start }} até {{ end }} de {{ total }} resultados
     </Text>
     
     <div class="flex items-center gap-2">
       <Button
         variant="secondary"
         size="sm"
-        :disabled="pagination.current_page === 1"
-        @click="$emit('page-change', pagination.current_page - 1)"
+        :disabled="!canGoPrevious"
+        @click="handlePrevious"
       >
         Anterior
       </Button>
@@ -28,8 +28,8 @@
       <Button
         variant="secondary"
         size="sm"
-        :disabled="pagination.current_page === pagination.last_page"
-        @click="$emit('page-change', pagination.current_page + 1)"
+        :disabled="!canGoNext"
+        @click="handleNext"
       >
         Próxima
       </Button>
@@ -51,23 +51,32 @@ const props = defineProps({
 
 const emit = defineEmits(['page-change']);
 
+// Default pagination values when no data
+const currentPage = computed(() => props.pagination?.current_page ?? 1);
+const perPage = computed(() => props.pagination?.per_page ?? 15);
+const total = computed(() => props.pagination?.total ?? 0);
+const lastPage = computed(() => props.pagination?.last_page ?? 1);
+
 const start = computed(() => {
-  if (!props.pagination) return 0;
-  return (props.pagination.current_page - 1) * props.pagination.per_page + 1;
+  if (total.value === 0) return 0;
+  return (currentPage.value - 1) * perPage.value + 1;
 });
 
 const end = computed(() => {
-  if (!props.pagination) return 0;
-  return Math.min(props.pagination.current_page * props.pagination.per_page, props.pagination.total);
+  if (total.value === 0) return 0;
+  return Math.min(currentPage.value * perPage.value, total.value);
 });
 
+const canGoPrevious = computed(() => currentPage.value > 1);
+const canGoNext = computed(() => currentPage.value < lastPage.value);
+
 const visiblePages = computed(() => {
-  if (!props.pagination) return [];
+  const current = currentPage.value;
+  const last = lastPage.value;
   
-  const current = props.pagination.current_page;
-  const last = props.pagination.last_page;
+  if (last <= 1) return [1];
+  
   const delta = 2;
-  
   const range = [];
   const rangeWithDots = [];
   
@@ -85,7 +94,7 @@ const visiblePages = computed(() => {
   
   if (current + delta < last - 1) {
     rangeWithDots.push('...', last);
-  } else {
+  } else if (last > 1) {
     rangeWithDots.push(last);
   }
   
@@ -94,7 +103,7 @@ const visiblePages = computed(() => {
 
 function getPageButtonClasses(page) {
   const base = 'px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200';
-  const isActive = page === props.pagination?.current_page;
+  const isActive = page === currentPage.value;
   
   if (page === '...') {
     return `${base} text-slate-500 cursor-default`;
@@ -108,9 +117,22 @@ function getPageButtonClasses(page) {
 }
 
 function handlePageClick(page) {
-  if (page !== '...' && page !== props.pagination?.current_page) {
+  if (page !== '...' && page !== currentPage.value) {
     emit('page-change', page);
   }
 }
+
+function handlePrevious() {
+  if (canGoPrevious.value) {
+    emit('page-change', currentPage.value - 1);
+  }
+}
+
+function handleNext() {
+  if (canGoNext.value) {
+    emit('page-change', currentPage.value + 1);
+  }
+}
 </script>
+
 

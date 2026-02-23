@@ -64,6 +64,11 @@ class EloquentBeneficiarioRepository implements BeneficiarioRepositoryInterface
         $sortDirection = $filters['sort_direction'] ?? 'desc';
         $query->orderBy($sortField, $sortDirection);
 
+        if ($perPage === -1) {
+            $total = (clone $query)->count();
+            $perPage = $total > 0 ? $total : 1;
+        }
+
         return $query->paginate($perPage);
     }
 
@@ -136,33 +141,32 @@ class EloquentBeneficiarioRepository implements BeneficiarioRepositoryInterface
 
     public function getStatistics(): array
     {
-        $total = Beneficiario::count();
-        $ativos = Beneficiario::where('status', StatusBeneficiario::ATIVO->value)->count();
-        $inativos = Beneficiario::where('status', StatusBeneficiario::INATIVO->value)->count();
-        $falecidos = Beneficiario::where('status', StatusBeneficiario::FALECIDO->value)->count();
+        // Optimized single query for basic stats
+        $stats = Beneficiario::selectRaw("
+            COUNT(*) as total,
+            SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as ativos,
+            SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as inativos,
+            SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as falecidos,
+            SUM(CASE WHEN abrigo_atual_id IS NOT NULL THEN 1 ELSE 0 END) as em_abrigo,
+            SUM(CASE WHEN abrigo_atual_id IS NULL THEN 1 ELSE 0 END) as fora_de_abrigo,
+            SUM(CASE WHEN tipo_cadastro = 'INDIVIDUAL' THEN 1 ELSE 0 END) as individuais,
+            SUM(CASE WHEN tipo_cadastro = 'FAMILIAR' THEN 1 ELSE 0 END) as familiares
+        ", [
+            StatusBeneficiario::ATIVO->value,
+            StatusBeneficiario::INATIVO->value,
+            StatusBeneficiario::FALECIDO->value
+        ])->first()->toArray();
 
+        // Separate query for grouping (cannot be easily combined with single row scalar aggregation without subqueries)
+        // But this handles the bulk of the counts.
         $porSituacao = Beneficiario::selectRaw('situacao_vulnerabilidade, COUNT(*) as count')
                                   ->groupBy('situacao_vulnerabilidade')
                                   ->pluck('count', 'situacao_vulnerabilidade')
                                   ->toArray();
 
-        $emAbrigo = Beneficiario::whereNotNull('abrigo_atual_id')->count();
-        $foraDeAbrigo = Beneficiario::whereNull('abrigo_atual_id')->count();
-
-        $individuais = Beneficiario::where('tipo_cadastro', 'INDIVIDUAL')->count();
-        $familiares = Beneficiario::where('tipo_cadastro', 'FAMILIAR')->count();
-
-        return [
-            'total' => $total,
-            'ativos' => $ativos,
-            'inativos' => $inativos,
-            'falecidos' => $falecidos,
+        return array_merge($stats, [
             'por_situacao' => $porSituacao,
-            'em_abrigo' => $emAbrigo,
-            'fora_de_abrigo' => $foraDeAbrigo,
-            'individuais' => $individuais,
-            'familiares' => $familiares,
-        ];
+        ]);
     }
 
     public function countAtivos(): int

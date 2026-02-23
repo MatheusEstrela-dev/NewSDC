@@ -12,6 +12,7 @@ use Illuminate\Support\ServiceProvider;
  * Service Provider: Módulo Decretações
  *
  * Registra todas as dependências do módulo de reconhecimento de desastres
+ * Seguindo padrão Always-to-DTO
  */
 class DecretacoesServiceProvider extends ServiceProvider
 {
@@ -26,39 +27,27 @@ class DecretacoesServiceProvider extends ServiceProvider
             EloquentProcessoRepository::class
         );
 
-        // Registrar Use Cases (singleton para melhor performance)
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\CreateProcessoUseCase::class);
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\ShowProcessoUseCase::class);
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\UpdateProcessoUseCase::class);
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\DeleteProcessoUseCase::class);
+        // Registrar UseCases ativos (singleton para melhor performance)
         $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\ListProcessosUseCase::class);
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\UpdateDadosDesastreUseCase::class);
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\GetStatisticsUseCase::class);
-        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\ExportProcessosUseCase::class);
+        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\GetDecretacoesStatisticsUseCase::class);
+        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\GetProcessoFormDataUseCase::class);
+        $this->app->singleton(\App\Modules\Decretacoes\Application\UseCases\GetProcessoShowUseCase::class);
+
+        // Registrar Services (singleton)
+        $this->app->singleton(\App\Modules\Decretacoes\Application\Services\ProcessoService::class);
     }
 
     /**
      * Bootstrap services
+     *
+     * NOTA: As rotas do módulo são carregadas via routes/web.php dentro do
+     * middleware group 'auth' (que inclui 'web'). NÃO usar loadRoutesFrom()
+     * aqui, pois isso registra rotas SEM os middlewares web/auth, causando
+     * 403 para todos os usuários (sessão e autenticação ausentes).
+     * Padrão: mesmo que RatServiceProvider.
      */
     public function boot(): void
     {
-        // Carregar rotas do módulo
-        $routesPath = base_path('routes/modules/decretacoes.php');
-        if (file_exists($routesPath)) {
-            $this->loadRoutesFrom($routesPath);
-        }
-
-        // Carregar migrations
-        $this->loadMigrationsFrom(database_path('migrations'));
-
-        // TODO: Registrar observers para eventos de Processo
-        // Processo::observe(ProcessoObserver::class);
-
-        // TODO: Registrar policies
-        // Gate::policy(Processo::class, ProcessoPolicy::class);
-
-        // TODO: Registrar event listeners
-        // Event::listen(ProcessoCriado::class, NotificarRedecListener::class);
-        // Event::listen(ProcessoCriado::class, SincronizarHexagonListener::class);
+        // Rotas carregadas via routes/web.php -> routes/modules/decretacoes.php
     }
 }

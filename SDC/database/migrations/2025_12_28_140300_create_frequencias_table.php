@@ -46,7 +46,6 @@ return new class extends Migration
             $table->unique(['modulo_id', 'user_id', 'data_aula'], 'idx_frequencia_unique');
             $table->index(['modulo_id', 'data_aula']);
             $table->index('user_id');
-            $table->index('status');
         });
     }
 

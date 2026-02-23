@@ -1,17 +1,27 @@
 <template>
-  <div class="flex items-center gap-1">
-    <button
+  <div class="flex items-center gap-2">
+    <ButtonIcon
       v-if="showView"
-      type="button"
-      @click="$emit('view')"
-      class="p-1.5 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-all duration-200"
+      :icon="EyeIcon"
+      variant="primary"
+      :size="size"
       title="Visualizar"
-    >
-      <EyeIcon class="w-4 h-4" />
-    </button>
-    <button
+      @click="$emit('view')"
+    />
+    <ButtonIcon
+      v-if="showPrint"
+      :icon="PrinterIcon"
+      variant="info"
+      :size="size"
+      title="Imprimir"
+      @click="$emit('print')"
+    />
+    <ButtonIcon
       v-if="showEdit"
-      type="button"
+      :icon="PencilIcon"
+      variant="warning"
+      :size="size"
+      title="Editar"
       @click="$emit('edit')"
     />
     <ButtonIcon
@@ -24,27 +34,45 @@
     />
     <ButtonIcon
       v-if="showAttachments"
-      type="button"
-      @click="$emit('attachments')"
-      class="p-1.5 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-all duration-200"
+      :icon="PaperClipIcon"
+      variant="success"
+      :size="size"
       title="Anexos"
-    >
-      <PaperClipIcon className="w-4 h-4" />
-    </button>
-    <button
+      @click="$emit('attachments')"
+    />
+    <ButtonIcon
       v-if="showDelete"
-      type="button"
-      @click="$emit('delete')"
-      class="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200"
+      :icon="TrashIcon"
+      variant="danger"
+      :size="size"
       title="Excluir"
-    >
-      <TrashIcon class="w-4 h-4" />
-    </button>
+      @click="$emit('delete')"
+    />
+
+
+    <ButtonIcon
+      v-if="showHistory"
+      :icon="ClockIcon"
+      variant="success"
+      :size="size"
+      title="Serie Historica"
+      @click="$emit('history')"
+    />
+    <ButtonIcon
+      v-if="showArchive"
+      :icon="ArchiveBoxIcon"
+      variant="topaz"
+      :size="size"
+      title="Arquivar"
+      @click="$emit('archive')"
+    />
   </div>
 </template>
 
 <script setup>
+import ButtonIcon from '../../Atoms/Button/ButtonIcon.vue';
 import EyeIcon from '../../Icons/EyeIcon.vue';
+import PrinterIcon from '../../Icons/PrinterIcon.vue';
 import PencilIcon from '../../Icons/PencilIcon.vue';
 import TrashIcon from '../../Icons/TrashIcon.vue';
 import PaperClipIcon from '../../Icons/PaperClipIcon.vue';
@@ -52,8 +80,12 @@ import ClockIcon from '../../Icons/ClockIcon.vue';
 import ArchiveBoxIcon from '../../Icons/ArchiveBoxIcon.vue';
 import UploadIcon from '../../Icons/UploadIcon.vue';
 
-const props = defineProps({
+defineProps({
   showView: {
+    type: Boolean,
+    default: true,
+  },
+  showPrint: {
     type: Boolean,
     default: true,
   },
@@ -64,6 +96,10 @@ const props = defineProps({
   showAttachments: {
     type: Boolean,
     default: true,
+  },
+  showHistory: {
+    type: Boolean,
+    default: false,
   },
   showDelete: {
     type: Boolean,

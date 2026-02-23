@@ -32,7 +32,7 @@ class Handler extends ExceptionHandler
      * @var array<int, class-string<\Throwable>>
      */
     protected $dontReport = [
-        // Não reportar validações (muito comum)
+            // Não reportar validações (muito comum)
         ValidationException::class,
     ];
 
@@ -99,14 +99,14 @@ class Handler extends ExceptionHandler
             exception: $e,
             context: [
                 'severity' => $severity,
-                'url' => request()->fullUrl(),
-                'method' => request()->method(),
-                'ip' => request()->ip(),
+                'url' => request()?->fullUrl(),
+                'method' => request()?->method(),
+                'ip' => request()?->ip(),
                 'user_id' => auth()->id(),
-                'user_agent' => request()->userAgent(),
-                'input' => request()->except(['password', 'password_confirmation']),
-                'session_id' => session()->getId(),
-                'previous_url' => url()->previous(),
+                'user_agent' => request()?->userAgent(),
+                'input' => request()?->except(['password', 'password_confirmation']),
+                'session_id' => function_exists('session') ? session()->getId() : null,
+                'previous_url' => function_exists('url') ? url()->previous() : null,
             ]
         );
 
@@ -127,7 +127,8 @@ class Handler extends ExceptionHandler
     protected function determineSeverity(Throwable $e): string
     {
         // Erros críticos que podem derrubar o sistema
-        if ($e instanceof \Error ||
+        if (
+            $e instanceof \Error ||
             $e instanceof \ParseError ||
             $e instanceof \TypeError ||
             str_contains($e->getMessage(), 'SQLSTATE') ||
@@ -185,6 +186,11 @@ class Handler extends ExceptionHandler
         }
 
         if ($e instanceof AuthorizationException || ($e instanceof HttpException && $e->getStatusCode() === 403)) {
+            // FIX: Inertia shared props (auth, acl) are lost during exception handling
+            // because the response bypasses the HandleInertiaRequests middleware pipeline.
+            // We must explicitly re-share them so the layout renders correctly (sidebar, avatar).
+            Inertia::share($this->getInertiaSharedData($request));
+
             return Inertia::render('Errors/Forbidden', [
                 'title' => 'Acesso negado',
                 'message' => 'Você não tem permissão para acessar esta página.',
@@ -192,6 +198,9 @@ class Handler extends ExceptionHandler
         }
 
         if ($e instanceof ModelNotFoundException || ($e instanceof HttpException && $e->getStatusCode() === 404)) {
+            // FIX: Same issue - re-share auth/acl for error pages
+            Inertia::share($this->getInertiaSharedData($request));
+
             return Inertia::render('Errors/NotFound', [
                 'title' => 'Não encontrado',
                 'message' => 'O recurso solicitado não foi encontrado.',
@@ -199,6 +208,69 @@ class Handler extends ExceptionHandler
         }
 
         return parent::render($request, $e);
+    }
+
+    /**
+     * Reconstroi os shared props do Inertia para respostas de erro.
+     *
+     * Quando uma exceção é lançada (ex: 403 do middleware can:), a resposta
+     * criada pelo Handler bypassa o pipeline do HandleInertiaRequests,
+     * fazendo com que auth.user e acl fiquem ausentes no frontend.
+     * Este método garante que o layout (sidebar, avatar) renderize corretamente.
+     */
+    protected function getInertiaSharedData(Request $request): array
+    {
+        $user = $request->user();
+
+        return [
+            'auth' => [
+                'user' => $user ? $this->getInertiaUserData($user) : null,
+            ],
+            'acl' => [
+                'levels' => config('permissions.levels', []),
+                'modules' => config('permissions.modules', []),
+                'protected_roles' => config('permissions.protected_roles', []),
+                'immutable_permissions' => config('permissions.immutable_permissions', []),
+                'default_level' => config('permissions.default_level', 99),
+            ],
+        ];
+    }
+
+    /**
+     * Dados do usuario para o Inertia (espelha HandleInertiaRequests::getUserData).
+     */
+    protected function getInertiaUserData($user): array
+    {
+        $roles = [];
+        if (method_exists($user, 'roles')) {
+            $roles = $user->roles->map(fn($role) => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'slug' => $role->slug,
+                'hierarchy_level' => $role->hierarchy_level,
+            ])->values()->toArray();
+        }
+
+        $permissions = [];
+        if (method_exists($user, 'permissions') && method_exists($user, 'getPermissionsViaRoles')) {
+            $rolePermissions = $user->getPermissionsViaRoles()->pluck('name')->values()->toArray();
+            $directPermissions = $user->permissions->pluck('name')->values()->toArray();
+            $permissions = array_values(array_unique(array_merge($rolePermissions, $directPermissions)));
+        }
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'cpf' => $user->cpf ?? null,
+            'email' => $user->email ?? null,
+            'is_super_admin' => method_exists($user, 'hasRole') ? $user->hasRole('super-admin') : false,
+            'roles' => $roles,
+            'role_names' => method_exists($user, 'getRoleNames') ? $user->getRoleNames()->values() : [],
+            'permissions' => $permissions,
+            'hierarchy_level' => method_exists($user, 'getHierarchyLevel')
+                ? $user->getHierarchyLevel()
+                : 99,
+        ];
     }
 
     /**

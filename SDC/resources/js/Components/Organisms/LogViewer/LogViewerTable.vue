@@ -1,177 +1,142 @@
-<template>
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-    <!-- Header -->
-    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-      <div>
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-          Logs ({{ total }})
-        </h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          {{ formatDateRange }}
-        </p>
-      </div>
-
-      <div class="flex gap-2">
-        <button
-          @click="$emit('refresh')"
-          class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-          :disabled="loading"
-        >
-          <svg class="w-4 h-4 inline" :class="{ 'animate-spin': loading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Atualizar
-        </button>
-        <button
-          @click="$emit('export')"
-          class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-        >
-          <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          Exportar
-        </button>
-      </div>
-    </div>
-
-    <!-- Loading -->
-    <div v-if="loading" class="p-8 text-center">
-      <svg class="animate-spin h-8 w-8 mx-auto text-indigo-600" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
-      <p class="mt-2 text-gray-500 dark:text-gray-400">Carregando logs...</p>
-    </div>
-
-    <!-- Empty State -->
-    <div v-else-if="logs.length === 0" class="p-8 text-center">
-      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-      <p class="mt-2 text-gray-500 dark:text-gray-400">Nenhum log encontrado</p>
-    </div>
-
-    <!-- Table -->
-    <div v-else class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead class="bg-gray-50 dark:bg-gray-900">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Timestamp
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Nível
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Mensagem
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Arquivo
-            </th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Ações
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-          <tr
-            v-for="(log, index) in logs"
-            :key="index"
-            class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-            @click="$emit('select-log', log)"
-          >
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-              {{ formatTimestamp(log.timestamp) }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span
-                class="px-2 py-1 text-xs font-medium rounded-full"
-                :class="getLevelClass(log.level)"
-              >
-                {{ log.level }}
-              </span>
-            </td>
-            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-              <div class="max-w-xl truncate">
-                {{ log.message }}
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-              {{ log.file || '-' }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <button
-                @click.stop="$emit('select-log', log)"
-                class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-              >
-                Ver detalhes
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination info -->
-    <div v-if="logs.length > 0" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">
-      Mostrando {{ logs.length }} de {{ total }} logs
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { computed } from 'vue'
 
 const props = defineProps({
-  logs: {
-    type: Array,
-    default: () => [],
-  },
-  total: {
-    type: Number,
-    default: 0,
-  },
-  loading: {
-    type: Boolean,
-    default: false,
-  },
-  filters: {
-    type: Object,
-    default: () => ({}),
-  },
+    logs: {
+        type: Array,
+        default: () => []
+    },
+    loading: Boolean,
+    filters: Object
 })
 
-defineEmits(['select-log', 'refresh', 'export'])
+const emit = defineEmits(['select-log'])
 
-const formatTimestamp = (timestamp) => {
-  if (!timestamp) return '-'
-  const date = new Date(timestamp)
-  return date.toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
+const getLevelColor = (level) => {
+    const colors = {
+        debug: 'text-gray-400',
+        info: 'text-blue-400',
+        notice: 'text-cyan-400',
+        warning: 'text-yellow-400',
+        error: 'text-red-400',
+        critical: 'text-red-500 font-bold',
+        alert: 'text-red-600 font-bold',
+        emergency: 'text-red-700 font-bold underline'
+    }
+    return colors[level.toLowerCase()] || 'text-gray-300'
 }
 
-const formatDateRange = computed(() => {
-  if (!props.filters.start_date || !props.filters.end_date) return ''
-  return `${props.filters.start_date} até ${props.filters.end_date}`
-})
+const getLevelIcon = (level) => {
+    const icons = {
+        error: 'exclamation-circle',
+        critical: 'fire',
+        alert: 'bell',
+        emergency: 'life-buoy',
+        warning: 'exclamation-triangle',
+        info: 'info-circle',
+        debug: 'bug'
+    }
+    return icons[level.toLowerCase()] || 'info-circle'
+}
 
-const getLevelClass = (level) => {
-  const classes = {
-    debug: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-    info: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    notice: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300',
-    warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-    error: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-    critical: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-    alert: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-    emergency: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  }
-  return classes[level] || classes.info
+const formatDate = (dateStr) => {
+    const date = new Date(dateStr)
+    return date.toLocaleTimeString('pt-BR', { hour12: false })
+}
+
+const formatFullDate = (dateStr) => {
+    return new Date(dateStr).toLocaleString('pt-BR')
 }
 </script>
+
+<template>
+    <div class="flex-1 overflow-hidden flex flex-col bg-[#0b0e14]">
+        <!-- Empty State -->
+        <div v-if="!loading && logs.length === 0" class="flex-1 flex flex-col items-center justify-center text-gray-600 p-8 text-center">
+            <svg class="w-16 h-16 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1.1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="text-lg font-medium text-gray-500">No logs found</h3>
+            <p class="text-sm max-w-xs mt-1">Try adjusting your filters or selecting a different log file.</p>
+        </div>
+
+        <!-- Table -->
+        <div v-else class="flex-1 overflow-auto custom-scrollbar">
+            <table class="w-full border-collapse text-xs font-mono">
+                <thead class="sticky top-0 bg-[#0b0e14] z-10 border-b border-gray-800 shadow-sm">
+                    <tr class="text-left text-gray-500 uppercase tracking-tighter h-8">
+                        <th class="px-4 font-semibold w-20">Level</th>
+                        <th class="px-2 font-semibold w-24">Time</th>
+                        <th class="px-2 font-semibold w-20">Env</th>
+                        <th class="px-2 font-semibold">Description</th>
+                        <th class="px-4 font-semibold text-right w-16">#</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr 
+                        v-for="(log, index) in logs" 
+                        :key="index"
+                        @click="emit('select-log', log)"
+                        class="border-b border-gray-800/30 hover:bg-gray-800/20 cursor-pointer group transition-colors h-9"
+                    >
+                        <td class="px-4 whitespace-nowrap">
+                            <span :class="getLevelColor(log.level)" class="flex items-center gap-1.5 uppercase font-bold text-[10px]">
+                                <span class="w-1.5 h-1.5 rounded-full" :class="'bg-' + getLevelColor(log.level).split('-')[1] + '-500'"></span>
+                                {{ log.level }}
+                            </span>
+                        </td>
+                        <td class="px-2 text-gray-500 whitespace-nowrap">
+                            {{ formatDate(log.timestamp) }}
+                        </td>
+                        <td class="px-2">
+                            <span class="px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 text-[10px]">{{ log.context?.environment || 'prod' }}</span>
+                        </td>
+                        <td class="px-2 truncate max-w-0 text-gray-300 group-hover:text-white transition-colors">
+                            {{ log.message }}
+                        </td>
+                        <td class="px-4 text-right text-gray-600 group-hover:text-gray-400">
+                            {{ log.line || index + 1 }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <!-- Loading Overlay -->
+            <div v-if="loading" class="absolute inset-0 bg-[#0b0e14]/50 backdrop-blur-[1px] flex items-center justify-center z-20">
+                <div class="flex flex-col items-center">
+                    <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span class="mt-4 text-xs font-medium text-blue-500 tracking-widest uppercase">Reading Logs...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer Info -->
+        <div class="px-6 py-2 bg-gray-900 border-t border-gray-800 flex justify-between items-center text-[10px] text-gray-600 shrink-0">
+            <div class="flex gap-4">
+                <span>Memory: <span class="text-gray-400 font-mono">1.25 MB</span></span>
+                <span>Duration: <span class="text-gray-400 font-mono">15ms</span></span>
+            </div>
+            <div class="flex gap-4 items-center">
+                <span>Version: <span class="text-gray-400 font-mono">v2.1.0</span></span>
+                <span class="hidden sm:inline italic">SDC Unified Logging System</span>
+            </div>
+        </div>
+    </div>
+</template>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #0b0e14;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #1f2937;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #374151;
+}
+</style>

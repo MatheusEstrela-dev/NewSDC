@@ -41,25 +41,25 @@
     <!-- Info Grid -->
     <div class="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4">
       <div class="min-w-0">
-        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-[10px] sm:text-xs">Contato</Text>
+        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-xs">Contato</Text>
         <Text size="sm" weight="medium" class="text-xs sm:text-sm truncate">
           {{ beneficiario.telefone || '—' }}
         </Text>
       </div>
       <div class="min-w-0">
-        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-[10px] sm:text-xs">Município</Text>
+        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-xs">Município</Text>
         <Text size="sm" weight="medium" class="text-xs sm:text-sm truncate">
           {{ beneficiario.municipio?.nome || '—' }}
         </Text>
       </div>
       <div class="min-w-0">
-        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-[10px] sm:text-xs">Endereço</Text>
+        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-xs">Endereço</Text>
         <Text size="sm" weight="medium" class="text-xs sm:text-sm truncate">
           {{ getEnderecoCurto(beneficiario) }}
         </Text>
       </div>
       <div class="min-w-0">
-        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-[10px] sm:text-xs">Membros Família</Text>
+        <Text size="xs" color="muted" class="mb-0.5 sm:mb-1 text-xs">Membros Família</Text>
         <Text size="sm" weight="medium" class="text-xs sm:text-sm">
           {{ beneficiario.membros_familia_count || 0 }}
         </Text>
@@ -73,13 +73,13 @@
         <span
           v-for="situacao in beneficiario.situacoes_vulnerabilidade.slice(0, 3)"
           :key="situacao"
-          class="px-2 py-0.5 sm:py-1 rounded bg-orange-500/10 text-[10px] sm:text-xs text-orange-400"
+          class="px-2 py-0.5 sm:py-1 rounded bg-orange-500/10 text-xs text-orange-400"
         >
           {{ formatSituacao(situacao) }}
         </span>
         <span
           v-if="beneficiario.situacoes_vulnerabilidade.length > 3"
-          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 text-[10px] sm:text-xs text-slate-400"
+          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 text-xs text-slate-400"
         >
           +{{ beneficiario.situacoes_vulnerabilidade.length - 3 }}
         </span>
@@ -90,10 +90,12 @@
     <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-700/30 dark:border-slate-700/30 border-slate-200">
       <TableActions
         :show-view="true"
+        :show-print="true"
         :show-edit="canEdit"
         :show-attachments="false"
         :show-delete="canDelete"
         @view="$emit('view', beneficiario.id)"
+        @print="$emit('print', beneficiario.id)"
         @edit="$emit('edit', beneficiario.id)"
         @delete="$emit('delete', beneficiario.id)"
       />
@@ -102,10 +104,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import Badge from '../../Atoms/Badge/Badge.vue';
 import Heading from '../../Atoms/Typography/Heading.vue';
 import Text from '../../Atoms/Typography/Text.vue';
-import Badge from '../../Atoms/Badge/Badge.vue';
 import TableActions from '../Table/TableActions.vue';
 
 const props = defineProps({
@@ -115,15 +116,15 @@ const props = defineProps({
   },
   canEdit: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   canDelete: {
     type: Boolean,
-    default: true,
+    default: false,
   },
 });
 
-defineEmits(['click', 'view', 'edit', 'delete']);
+defineEmits(['click', 'view', 'print', 'edit', 'delete']);
 
 // Glow neon effect baseado no status
 const getCardClasses = () => {

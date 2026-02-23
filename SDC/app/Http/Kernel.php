@@ -16,6 +16,7 @@ class Kernel extends HttpKernel
     protected $middleware = [
         // \App\Http\Middleware\TrustHosts::class,
         \App\Http\Middleware\TrustProxies::class,
+        \App\Http\Middleware\ForceRootUrl::class,
         \App\Http\Middleware\ForceHttps::class,
         \Illuminate\Http\Middleware\HandleCors::class,
         \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
@@ -40,13 +41,18 @@ class Kernel extends HttpKernel
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            \App\Http\Middleware\LogSystemActivity::class, // Capture ALL Web requests
+            \App\Http\Middleware\CheckUserActive::class,
         ],
 
         'api' => [
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
+            \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \App\Http\Middleware\LogApiRequests::class, // Log TODAS as requisições API
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\LogApiRequests::class, // Mantendo específico para API
+            \App\Http\Middleware\LogSystemActivity::class, // Capture ALL API requests too (audit)
+            \App\Http\Middleware\CheckUserActive::class,
         ],
     ];
 
@@ -72,5 +78,6 @@ class Kernel extends HttpKernel
         'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+        'hierarchy' => \App\Http\Middleware\CheckHierarchy::class,
     ];
 }

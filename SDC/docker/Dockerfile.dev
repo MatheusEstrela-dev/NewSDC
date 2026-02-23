@@ -33,6 +33,8 @@ RUN apk add --no-cache \
     vim \
     bash \
     shadow \
+    nodejs \
+    npm \
     # Dependências de compilação PHP
     libpng-dev \
     libjpeg-turbo-dev \
@@ -48,7 +50,9 @@ RUN apk add --no-cache \
     # Para debugging
     strace \
     # Para healthcheck
-    fcgi
+    fcgi \
+    # Para drop de privilegios
+    su-exec
 
 # Instalar extensões PHP
 RUN docker-php-ext-configure gd \
@@ -75,7 +79,8 @@ RUN pecl install redis-6.0.2 \
     && docker-php-ext-enable redis xdebug
 
 # Instalar Composer
-COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+# Instalar Composer via downloader para garantir compatibilidade de arquitetura
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
 # Configuração PHP para desenvolvimento
 RUN cp "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
@@ -93,6 +98,12 @@ RUN deluser --remove-home www-data 2>/dev/null || true \
 
 # Diretório de trabalho
 WORKDIR /var/www
+
+# Instalar dependencias PHP durante o build (rede Docker com internet)
+# O volume nomeado newsdc_vendor sera populado com este conteudo na primeira execucao
+COPY composer.json composer.lock* ./
+RUN composer install --no-interaction --prefer-dist --no-scripts --no-autoloader \
+    && composer dump-autoload --optimize --no-scripts
 
 # Scripts de entrada
 COPY docker/scripts/entrypoint.dev.sh /usr/local/bin/entrypoint.sh

@@ -1,19 +1,19 @@
 <template>
-  <AuthenticatedLayout title="Ajuda Humanitária - Beneficiários">
-    <div class="max-w-7xl mx-auto py-6 md:py-8 px-4 sm:px-6 lg:px-8">
-      <BeneficiarioIndexTemplate
-        :beneficiarios="beneficiarios.data || []"
-        :statistics="statistics"
-        :pagination="beneficiarios"
-        :can-edit="true"
-        :can-delete="true"
-        @create="openCreateModal"
-        @view="viewBeneficiario"
-        @edit="editBeneficiario"
-        @delete="deleteBeneficiario"
-        @filter="filterByStatus"
-      />
-    </div>
+
+    <BeneficiarioIndexTemplate
+      :beneficiarios="beneficiarios.data || []"
+      :statistics="statistics"
+      :pagination="beneficiarios"
+      :can-create="can('humanitaria.beneficiarios.create')"
+      :can-edit="can('humanitaria.beneficiarios.edit')"
+      :can-delete="can('humanitaria.beneficiarios.delete')"
+      :can-export="can('humanitaria.beneficiarios.export')"
+      @create="openCreateModal"
+      @view="viewBeneficiario"
+      @edit="editBeneficiario"
+      @delete="deleteBeneficiario"
+      @filter="filterByStatus"
+    />
 
     <!-- Modal de Criar/Editar -->
     <teleport to="body">
@@ -47,14 +47,19 @@
         </div>
       </div>
     </teleport>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import BeneficiarioIndexTemplate from '@/Templates/AjudaHumanitaria/BeneficiarioIndexTemplate.vue';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
 
 const props = defineProps({
   beneficiarios: {

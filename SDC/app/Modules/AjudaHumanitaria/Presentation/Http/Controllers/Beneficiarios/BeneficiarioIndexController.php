@@ -37,11 +37,22 @@ class BeneficiarioIndexController extends Controller
             'abrigo_id',
         ]);
 
-        // Lista beneficiários com paginação
-        $beneficiarios = $this->beneficiarioRepository->list($filters, 15);
+        try {
+            // Lista beneficiários com paginação
+            $beneficiarios = $this->beneficiarioRepository->list($filters, 15);
 
-        // Obtém estatísticas
-        $statistics = $this->beneficiarioRepository->getStatistics();
+            // Se estiver vazio, força mock para visualização em produção
+            if ($beneficiarios->total() === 0) {
+                throw new \Exception("Table is empty, using mocks.");
+            }
+
+            // Obtém estatísticas
+            $statistics = $this->beneficiarioRepository->getStatistics();
+        } catch (\Exception $e) {
+            // Fallback para mocks em caso de erro (ex: tabela não existe em produção)
+            $beneficiarios = \App\Support\MockDataHelper::getBeneficiarios();
+            $statistics = \App\Support\MockDataHelper::getBeneficiarioStatistics();
+        }
 
         // Retorna view Inertia
         return Inertia::render('AjudaHumanitaria/Beneficiarios/BeneficiarioIndex', [

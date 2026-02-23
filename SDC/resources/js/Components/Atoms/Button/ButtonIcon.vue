@@ -1,17 +1,20 @@
 <template>
-  <button
-    :type="type"
+  <component
+    :is="componentTag"
+    :href="href"
+    :type="href ? undefined : type"
     :disabled="disabled"
     :class="buttonClasses"
     :title="title"
-    @click="$emit('click', $event)"
+    @click="handleClick"
   >
-    <component :is="icon" :class="iconSizeClasses" />
-  </button>
+    <component :is="icon" :class="iconClasses" />
+  </component>
 </template>
 
 <script setup>
 import { computed } from 'vue';
+import { Link } from '@inertiajs/vue3';
 
 const props = defineProps({
   icon: {
@@ -21,12 +24,16 @@ const props = defineProps({
   variant: {
     type: String,
     default: 'secondary',
-    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'warning', 'info'].includes(value),
+    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'topaz'].includes(value),
   },
   size: {
     type: String,
     default: 'md',
     validator: (value) => ['sm', 'md', 'lg'].includes(value),
+  },
+  touchTarget: {
+    type: Boolean,
+    default: true,
   },
   disabled: {
     type: Boolean,
@@ -40,9 +47,29 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  href: {
+    type: String,
+    default: null,
+  },
+  confirmMessage: {
+    type: String,
+    default: null,
+  },
 });
 
-defineEmits(['click']);
+const emit = defineEmits(['click']);
+
+const componentTag = computed(() => props.href ? Link : 'button');
+
+const handleClick = (event) => {
+  if (props.confirmMessage) {
+    if (!confirm(props.confirmMessage)) {
+      event.preventDefault();
+      return;
+    }
+  }
+  emit('click', event);
+};
 
 const variantClasses = {
   primary: 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10',
@@ -50,30 +77,44 @@ const variantClasses = {
   success: 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10',
   danger: 'text-red-400 hover:text-red-300 hover:bg-red-500/10',
   warning: 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10',
-  info: 'text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10',
+  info: 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10',
+  topaz: 'text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10',
 };
 
-const sizeClasses = {
-  sm: 'p-1',
-  md: 'p-2',
-  lg: 'p-3',
-};
-
-const iconSizeClasses = {
-  sm: 'w-4 h-4',
-  md: 'w-5 h-5',
-  lg: 'w-6 h-6',
+const SIZE_CONFIG = {
+  sm: {
+    padding: 'p-1',
+    paddingTouch: 'p-1.5',
+    minSize: 'min-w-[28px] min-h-[28px]',
+    icon: 'w-4 h-4',
+  },
+  md: {
+    padding: 'p-1.5',
+    paddingTouch: 'p-2',
+    minSize: 'min-w-[32px] min-h-[32px]',
+    icon: 'w-5 h-5',
+  },
+  lg: {
+    padding: 'p-2',
+    paddingTouch: 'p-2.5',
+    minSize: 'min-w-[40px] min-h-[40px]',
+    icon: 'w-6 h-6',
+  },
 };
 
 const buttonClasses = computed(() => {
-  const base = 'inline-flex items-center justify-center rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
-  
+  const config = SIZE_CONFIG[props.size];
+  const base = 'inline-flex items-center justify-center rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation';
+
   return [
     base,
     variantClasses[props.variant],
-    sizeClasses[props.size],
+    props.touchTarget ? config.paddingTouch : config.padding,
+    props.touchTarget ? config.minSize : '',
     props.disabled ? 'cursor-not-allowed' : 'cursor-pointer',
-  ].join(' ');
+  ].filter(Boolean).join(' ');
 });
+
+const iconClasses = computed(() => SIZE_CONFIG[props.size].icon);
 </script>
 

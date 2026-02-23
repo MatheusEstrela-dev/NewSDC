@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout :title="`Processo #${processo.id}`">
+
     <div class="processo-show-container">
       <!-- Breadcrumb -->
       <nav class="mb-6 flex items-center gap-2 text-sm">
@@ -143,19 +143,21 @@
         <!-- TODO: Adicionar outros tabs (Danos, Documentos, Log) -->
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { router } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import StatusBadge from '@/Components/Molecules/Decretacoes/StatusBadge.vue';
 import PrazoBadge from '@/Components/Molecules/Decretacoes/PrazoBadge.vue';
+import StatusBadge from '@/Components/Molecules/Decretacoes/StatusBadge.vue';
 import TipoProcessoBadge from '@/Components/Molecules/Decretacoes/TipoProcessoBadge.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { router } from '@inertiajs/vue3';
+import { ref } from 'vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   processo: {
@@ -196,19 +198,6 @@ const handlePrint = () => {
 <style scoped>
 .processo-show-container {
   @apply w-full min-h-screen;
-  padding: 1.5rem;
   background: #0f172a;
-}
-
-@media (min-width: 640px) {
-  .processo-show-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .processo-show-container {
-    padding: 2rem 3rem;
-  }
 }
 </style>

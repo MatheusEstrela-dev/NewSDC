@@ -2,7 +2,7 @@
   <div class="w-full">
     <!-- Seletor de Abas -->
     <div class="bg-slate-800/30 rounded-xl p-1.5 mb-6">
-      <nav class="flex gap-1 overflow-x-auto hide-scrollbar" aria-label="Tabs">
+      <nav class="flex gap-1 overflow-x-auto hide-scrollbar scrollbar-hide" aria-label="Tabs">
         <button
           v-for="tab in tabs"
           :key="tab.id"
@@ -55,7 +55,7 @@ defineEmits(['tab-change']);
 
 function getTabClass(tabId) {
   const baseClass =
-    'px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer select-none relative';
+    'px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 flex items-center gap-1.5 sm:gap-2 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer select-none relative';
 
   if (props.activeTab === tabId) {
     return `${baseClass} text-blue-400 bg-blue-500/10 border-b-2 border-blue-400`;

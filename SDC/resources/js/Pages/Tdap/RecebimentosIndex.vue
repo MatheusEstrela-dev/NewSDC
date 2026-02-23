@@ -1,19 +1,27 @@
 <template>
-  <AuthenticatedLayout>
+
     <Head title="TDAP - Recebimentos" />
     <TdapRecebimentosTemplate
       :recebimentos="recebimentos"
       :pagination="pagination"
       :filters="filters"
       :statistics="statistics"
+      :can-create="can('tdap.recebimentos.create')"
+      :can-view="can('tdap.recebimentos.view')"
+      :can-processar="can('tdap.recebimentos.processar')"
     />
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import TdapRecebimentosTemplate from '@/Templates/Tdap/TdapRecebimentosTemplate.vue';
+import { usePermissions } from '@/Composables/usePermissions';
+
+const { can } = usePermissions();
 
 const props = defineProps({
   recebimentos: {

@@ -99,7 +99,7 @@ export function useDemandas() {
     responsavel_id: '',
   });
   const currentPage = ref(1);
-  const perPage = ref(10);
+  const perPage = ref(15);
   const loading = ref(false);
 
   // Computed - Estatísticas
@@ -159,6 +159,20 @@ export function useDemandas() {
 
   const totalPages = computed(() => {
     return Math.ceil(filteredDemandas.value.length / perPage.value);
+  });
+
+  const pagination = computed(() => {
+    const total = filteredDemandas.value.length;
+    const lastPage = Math.max(1, Math.ceil(total / perPage.value));
+    const safePage = Math.min(Math.max(1, currentPage.value), lastPage);
+    return {
+      current_page: safePage,
+      last_page: lastPage,
+      per_page: perPage.value,
+      total,
+      from: total > 0 ? (safePage - 1) * perPage.value + 1 : 0,
+      to: Math.min(safePage * perPage.value, total),
+    };
   });
 
   // Actions
@@ -285,6 +299,7 @@ export function useDemandas() {
     currentPage,
     perPage,
     totalPages,
+    pagination,
     loading,
     statistics,
 

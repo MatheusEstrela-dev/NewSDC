@@ -1,0 +1,350 @@
+<template>
+  <form @submit.prevent="handleSubmit" class="processo-form">
+    <!-- Secao 1: Identificacao do Processo -->
+    <FormSection title="Identificacao do Processo" :cols="3">
+      <FormSelect
+        v-model="form.tipo_desastre_id"
+        label="Tipo de Desastre"
+        :options="tiposDesastre"
+        placeholder="Selecione o tipo..."
+        required
+        :error="form.errors.tipo_desastre_id"
+      />
+
+      <FormSelect
+        v-model="form.cobrade_id"
+        label="COBRADE"
+        :options="cobrades"
+        placeholder="Selecione o COBRADE..."
+        required
+        :error="form.errors.cobrade_id"
+      />
+
+      <FormSelect
+        v-model="form.origem"
+        label="Origem"
+        :options="origensOptions"
+        placeholder="Selecione a origem..."
+        required
+        :error="form.errors.origem"
+      />
+
+      <FormSelect
+        v-model="form.municipio_id"
+        label="Municipio"
+        :options="municipios"
+        placeholder="Selecione o municipio..."
+        required
+        :error="form.errors.municipio_id"
+      />
+
+      <FormSelect
+        v-model="form.redec_id"
+        label="REDEC"
+        :options="redecs"
+        placeholder="Selecione a REDEC..."
+        required
+        :error="form.errors.redec_id"
+      />
+
+      <RadioGroup
+        v-model="form.situacao_anormalidade"
+        name="situacao_anormalidade"
+        label="Situacao de Anormalidade"
+        :options="situacaoOptions"
+        required
+        :error="form.errors.situacao_anormalidade"
+      />
+    </FormSection>
+
+    <!-- Secao 2: Datas e Prazos -->
+    <FormSection title="Datas e Prazos" :cols="4">
+      <FormDateField
+        v-model="form.data_entrada"
+        label="Data de Entrada do Processo"
+        required
+        :error="form.errors.data_entrada"
+      />
+
+      <FormDateField
+        v-model="form.data_ocorrencia"
+        label="Data de Ocorrencia do Desastre"
+        required
+        :error="form.errors.data_ocorrencia"
+      />
+
+      <FormDateField
+        v-model="form.data_vencimento_decreto"
+        label="Data Vencimento do Decreto"
+        required
+        :error="form.errors.data_vencimento_decreto"
+      />
+
+      <FormField
+        :model-value="diasRestantes"
+        label="Dias Restantes da Vigencia"
+        readonly
+        :hint="diasRestantesHint"
+      />
+    </FormSection>
+
+    <!-- Secao 3: Status e Responsavel -->
+    <FormSection title="Status e Responsavel" :cols="3">
+      <FormSelect
+        v-model="form.status"
+        label="Status do Processo"
+        :options="statusOptions"
+        placeholder="Selecione o status..."
+        required
+        :error="form.errors.status"
+      />
+
+      <FormSelect
+        v-model="form.analista_id"
+        label="Analista Responsavel"
+        :options="analistas"
+        placeholder="Selecione o analista..."
+        :error="form.errors.analista_id"
+      />
+
+      <FormField
+        :model-value="protocoloFide"
+        label="N. Protocolo FIDE"
+        readonly
+        hint="Gerado automaticamente"
+      />
+    </FormSection>
+
+    <!-- Secao 4: Decreto Municipal -->
+    <FormSection title="Decreto Municipal" :cols="4" collapsible>
+      <FormField
+        v-model="form.n_decreto_municipal"
+        label="N. Decreto Municipal"
+        placeholder="Ex: 1234/2024"
+        :error="form.errors.n_decreto_municipal"
+      />
+
+      <FormDateField
+        v-model="form.data_decreto_municipal"
+        label="Data do Decreto Municipal"
+        :error="form.errors.data_decreto_municipal"
+      />
+
+      <FormDateField
+        v-model="form.data_publicacao_decreto_municipal"
+        label="Data Publicacao do Decreto"
+        :error="form.errors.data_publicacao_decreto_municipal"
+      />
+
+      <FormField
+        v-model="form.prazo_vigencia_decreto"
+        label="Prazo Vigencia (dias)"
+        type="number"
+        placeholder="Ex: 180"
+        :error="form.errors.prazo_vigencia_decreto"
+      />
+    </FormSection>
+
+    <!-- Secao 5: Reconhecimento Estadual -->
+    <FormSection title="Reconhecimento Estadual" :cols="4" collapsible>
+      <FormField
+        v-model="form.n_decreto_estadual"
+        label="N. Decreto Estadual"
+        placeholder="Ex: 47.123"
+        :error="form.errors.n_decreto_estadual"
+      />
+
+      <FormDateField
+        v-model="form.data_decreto_estadual"
+        label="Data do Decreto Estadual"
+        :error="form.errors.data_decreto_estadual"
+      />
+
+      <FormField
+        v-model="form.n_edicao_domg"
+        label="N. Edicao DOMG"
+        placeholder="Ex: 12345"
+        :error="form.errors.n_edicao_domg"
+      />
+
+      <FormDateField
+        v-model="form.data_publicacao_domg"
+        label="Data Publicacao DOMG"
+        :error="form.errors.data_publicacao_domg"
+      />
+    </FormSection>
+
+    <!-- Secao 6: Reconhecimento Federal -->
+    <FormSection title="Reconhecimento Federal" :cols="4" collapsible>
+      <FormField
+        v-model="form.n_portaria_federal"
+        label="N. Portaria Federal"
+        placeholder="Ex: 123/2024"
+        :error="form.errors.n_portaria_federal"
+      />
+
+      <FormDateField
+        v-model="form.data_portaria_federal"
+        label="Data da Portaria Federal"
+        :error="form.errors.data_portaria_federal"
+      />
+
+      <FormField
+        v-model="form.n_edicao_dou"
+        label="N. Edicao DOU"
+        placeholder="Ex: 456"
+        :error="form.errors.n_edicao_dou"
+      />
+
+      <FormDateField
+        v-model="form.data_publicacao_dou"
+        label="Data Publicacao DOU"
+        :error="form.errors.data_publicacao_dou"
+      />
+    </FormSection>
+
+    <!-- Secao 7: Informacoes Adicionais -->
+    <FormSection title="Informacoes Adicionais" :cols="1">
+      <FormField
+        v-model="form.n_processo_sei"
+        label="N. Processo SEI"
+        placeholder="Ex: SEI-1234.5678.9012"
+        required
+        :error="form.errors.n_processo_sei"
+      />
+
+      <FormTextarea
+        v-model="form.observacoes"
+        label="Observacoes"
+        placeholder="Insira observacoes relevantes sobre o processo..."
+        :rows="4"
+        :error="form.errors.observacoes"
+      />
+    </FormSection>
+
+    <!-- Acoes do Formulario -->
+    <div class="form-actions flex justify-end gap-3 mt-6">
+      <Button
+        type="button"
+        variant="secondary"
+        :disabled="form.processing"
+        @click="handleCancel"
+      >
+        Cancelar
+      </Button>
+      <Button
+        type="submit"
+        variant="primary"
+        :loading="form.processing"
+        :disabled="form.processing"
+      >
+        {{ submitLabel }}
+      </Button>
+    </div>
+  </form>
+</template>
+
+<script setup>
+import { computed } from 'vue';
+import FormSection from '@/Components/Organisms/FormSection.vue';
+import FormField from '@/Components/Molecules/Form/FormField.vue';
+import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
+import FormDateField from '@/Components/Molecules/Form/FormDateField.vue';
+import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
+import RadioGroup from '@/Components/Molecules/Form/RadioGroup.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+
+const props = defineProps({
+  form: {
+    type: Object,
+    required: true,
+  },
+  tiposDesastre: {
+    type: Array,
+    default: () => [],
+  },
+  cobrades: {
+    type: Array,
+    default: () => [],
+  },
+  municipios: {
+    type: Array,
+    default: () => [],
+  },
+  redecs: {
+    type: Array,
+    default: () => [],
+  },
+  statusOptions: {
+    type: Array,
+    default: () => [
+      { value: 'pendente', label: 'Pendente' },
+      { value: 'em_analise', label: 'Em Analise' },
+      { value: 'aprovado', label: 'Aprovado' },
+      { value: 'rejeitado', label: 'Rejeitado' },
+    ],
+  },
+  analistas: {
+    type: Array,
+    default: () => [],
+  },
+  submitLabel: {
+    type: String,
+    default: 'Salvar Processo',
+  },
+  isEditing: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const emit = defineEmits(['submit', 'cancel']);
+
+const origensOptions = [
+  { value: 'municipal', label: 'Municipal' },
+  { value: 'estadual', label: 'Estadual' },
+];
+
+const situacaoOptions = [
+  { value: 'N1', label: 'N1 - Nivel 1' },
+  { value: 'SE', label: 'SE - Situacao de Emergencia' },
+];
+
+const diasRestantes = computed(() => {
+  if (!props.form.data_vencimento_decreto) return '--';
+  const hoje = new Date();
+  const vencimento = new Date(props.form.data_vencimento_decreto);
+  const diff = Math.ceil((vencimento - hoje) / (1000 * 60 * 60 * 24));
+  return diff.toString();
+});
+
+const diasRestantesHint = computed(() => {
+  const dias = parseInt(diasRestantes.value);
+  if (isNaN(dias)) return '';
+  if (dias < 0) return 'Prazo vencido';
+  if (dias <= 15) return 'Prazo proximo ao vencimento';
+  return '';
+});
+
+const protocoloFide = computed(() => {
+  const tipo = props.form.origem === 'estadual' ? 'E' : 'F';
+  const municipio = props.form.municipio_id || 'XXXX';
+  const ano = new Date().getFullYear();
+  const sequencia = props.isEditing ? props.form.sequencia || 'XXXX' : 'AUTO';
+  return `MG-${tipo}-${municipio}-${ano}-${sequencia}`;
+});
+
+function handleSubmit() {
+  emit('submit', props.form);
+}
+
+function handleCancel() {
+  emit('cancel');
+}
+</script>
+
+<style scoped>
+.processo-form {
+  @apply space-y-4;
+}
+</style>

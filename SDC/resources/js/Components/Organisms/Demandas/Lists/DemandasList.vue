@@ -177,66 +177,22 @@
       </div>
     </CardBase>
 
-    <!-- Paginação -->
-    <div v-if="totalPages > 1" class="mt-6 flex items-center justify-center gap-2">
-      <button
-        @click="handlePageChange(currentPage - 1)"
-        :disabled="currentPage === 1"
-        class="px-4 py-2 rounded-lg
-               bg-slate-800 dark:bg-slate-800 bg-white
-               border border-slate-700 dark:border-slate-700 border-slate-300
-               text-slate-300 dark:text-slate-300 text-slate-700
-               hover:bg-slate-700 dark:hover:bg-slate-700 hover:bg-slate-100
-               disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-      >
-        Anterior
-      </button>
-
-      <div class="flex items-center gap-2">
-        <button
-          v-for="page in visiblePages"
-          :key="page"
-          @click="handlePageChange(page)"
-          :class="[
-            'px-4 py-2 rounded-lg border transition-all',
-            page === currentPage
-              ? 'bg-red-500 border-red-500 text-white'
-              : 'bg-slate-800 dark:bg-slate-800 bg-white border-slate-700 dark:border-slate-700 border-slate-300 text-slate-300 dark:text-slate-300 text-slate-700 hover:bg-slate-700 dark:hover:bg-slate-700 hover:bg-slate-100'
-          ]"
-        >
-          {{ page }}
-        </button>
-      </div>
-
-      <button
-        @click="handlePageChange(currentPage + 1)"
-        :disabled="currentPage === totalPages"
-        class="px-4 py-2 rounded-lg
-               bg-slate-800 dark:bg-slate-800 bg-white
-               border border-slate-700 dark:border-slate-700 border-slate-300
-               text-slate-300 dark:text-slate-300 text-slate-700
-               hover:bg-slate-700 dark:hover:bg-slate-700 hover:bg-slate-100
-               disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-      >
-        Próxima
-      </button>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
+import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
-import WrenchScrewdriverIcon from '@/Components/Icons/WrenchScrewdriverIcon.vue';
 import LifebuoyIcon from '@/Components/Icons/LifebuoyIcon.vue';
 import UserIcon from '@/Components/Icons/UserIcon.vue';
-import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
-import ClockIcon from '@/Components/Icons/ClockIcon.vue';
-import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import WrenchScrewdriverIcon from '@/Components/Icons/WrenchScrewdriverIcon.vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
   demandas: {
@@ -246,14 +202,6 @@ const props = defineProps({
   filters: {
     type: Object,
     default: () => ({}),
-  },
-  currentPage: {
-    type: Number,
-    default: 1,
-  },
-  totalPages: {
-    type: Number,
-    default: 1,
   },
   getTipoLabel: {
     type: Function,
@@ -267,9 +215,17 @@ const props = defineProps({
     type: Function,
     required: true,
   },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['filter-change', 'clear-filters', 'page-change', 'demanda-click']);
+const emit = defineEmits(['filter-change', 'clear-filters', 'demanda-click']);
 
 const localFilters = ref({ ...props.filters });
 
@@ -285,23 +241,6 @@ const hasActiveFilters = computed(() => {
   return Object.values(localFilters.value).some(value => value !== '');
 });
 
-const visiblePages = computed(() => {
-  const pages = [];
-  const maxVisible = 5;
-  let start = Math.max(1, props.currentPage - Math.floor(maxVisible / 2));
-  let end = Math.min(props.totalPages, start + maxVisible - 1);
-
-  if (end - start < maxVisible - 1) {
-    start = Math.max(1, end - maxVisible + 1);
-  }
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i);
-  }
-
-  return pages;
-});
-
 const handleFilterChange = () => {
   emit('filter-change', localFilters.value);
 };
@@ -315,10 +254,6 @@ const handleClearFilters = () => {
     responsavel_id: '',
   };
   emit('clear-filters');
-};
-
-const handlePageChange = (page) => {
-  emit('page-change', page);
 };
 
 const handleDemandaClick = (demanda) => {

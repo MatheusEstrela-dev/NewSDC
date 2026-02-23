@@ -1,6 +1,43 @@
 <template>
   <div class="rat-index-container">
-    <RatPageHeader />
+    <!-- Header Padronizado -->
+
+
+    <PageHeader
+      :title="MESSAGES.rat.title"
+      :description="MESSAGES.rat.description"
+      :icon="DocumentTextIcon"
+      variant="gradient"
+    >
+      <template #actions>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
+          <ViewModeToggle v-model="viewMode" />
+
+          <!-- Botão Exportar -->
+          <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+            <span class="hidden sm:inline">Exportar</span>
+          </Button>
+
+          <!-- Botao Criar - Responsivo -->
+          <Link v-if="canCreate" :href="route('rat.create')">
+            <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
+              <span class="hidden sm:inline">Novo RAT</span>
+              <span class="sm:hidden">Novo</span>
+            </Button>
+          </Link>
+        </div>
+      </template>
+    </PageHeader>
+
+    <!-- Modal de Exportação CSV -->
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="RAT"
+      @close="showExportModal = false"
+      @export="handleExportCsv"
+    />
+
     <RatStatisticsCards :statistics="statisticsToUse" />
     <RatFiltersSection
       :filters="filtersToUse"
@@ -10,27 +47,74 @@
       @filter-change="handleFilterChange"
       @filter-reset="handleFilterReset"
     />
-    <RatTable
+    <!-- Grid View -->
+    <RatGrid
+      v-if="viewMode === 'grid'"
       :rats="ratsToUse"
       :loading="loading"
       :pagination="paginationToUse"
+      :can-edit="canEdit"
+      :can-delete="canDelete"
       @view="handleView"
+      @print="handlePrint"
       @edit="handleEdit"
       @attachments="handleAttachments"
       @delete="handleDelete"
-      @page-change="handlePageChange"
+    />
+
+    <!-- Table View -->
+    <RatTable
+      v-else
+      :rats="ratsToUse"
+      :loading="loading"
+      :pagination="paginationToUse"
+      :can-edit="canEdit"
+      :can-delete="canDelete"
+      @view="handleView"
+      @print="handlePrint"
+      @edit="handleEdit"
+      @attachments="handleAttachments"
+      @delete="handleDelete"
+    />
+
+    <!-- Pagination -->
+    <div v-if="paginationToUse" class="mt-6">
+      <Pagination
+        :pagination="paginationToUse"
+        @page-change="handlePageChange"
+      />
+    </div>
+
+    <!-- Modal de Impressao do Boletim -->
+    <PrintBoletimModal
+      :show="showPrintModal"
+      :ocorrencia="selectedOcorrencia"
+      :loading="printLoading"
+      @close="closePrintModal"
     />
   </div>
 </template>
 
 <script setup>
-import { router } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
-import RatPageHeader from '../../Components/Organisms/Rat/Header/RatPageHeader.vue';
-import RatStatisticsCards from '../../Components/Organisms/Rat/Statistics/RatStatisticsCards.vue';
-import RatFiltersSection from '../../Components/Organisms/Rat/Filters/RatFiltersSection.vue';
-import RatTable from '../../Components/Organisms/Rat/Table/RatTable.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { useModalState } from '@/Composables/useModalState';
+import { MESSAGES } from '@/constants/messages';
 import { getMockStatisticsFromRats } from '@/mocks/rat';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { Link, router } from '@inertiajs/vue3';
+import { useMobile } from '@/Composables/useMobile';
+import { computed, ref, watch } from 'vue';
+import RatFiltersSection from '../../Components/Organisms/Rat/Filters/RatFiltersSection.vue';
+import RatGrid from '../../Components/Organisms/Rat/Grid/RatGrid.vue';
+import PrintBoletimModal from '../../Components/Organisms/Rat/Print/PrintBoletimModal.vue';
+import RatStatisticsCards from '../../Components/Organisms/Rat/Statistics/RatStatisticsCards.vue';
+import RatTable from '../../Components/Organisms/Rat/Table/RatTable.vue';
 
 const props = defineProps({
   statistics: {
@@ -69,6 +153,26 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canCreate: {
+    type: Boolean,
+    default: false,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
+  canExport: {
+    type: Boolean,
+    default: false,
+  },
+  canFinalize: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // =========================
@@ -77,6 +181,8 @@ const props = defineProps({
 const perPage = 15;
 const currentPage = ref(1);
 const localFilters = ref({ ...(props.filters || {}) });
+const { isMobile } = useMobile();
+const viewMode = ref(isMobile.value ? 'grid' : 'table'); // grid no mobile, table no desktop
 
 watch(
   () => props.filters,
@@ -198,10 +304,54 @@ function handleAttachments(id) {
 }
 
 function handleDelete(id) {
-  if (confirm('Tem certeza que deseja excluir este RAT?')) {
+  if (confirm(MESSAGES.confirmations.deleteRat)) {
     // TODO: Implementar delete
     console.log('Delete RAT:', id);
   }
+}
+
+// =========================
+// Modal de Impressao (usando composable)
+// =========================
+const {
+  isOpen: showPrintModal,
+  data: selectedOcorrencia,
+  loading: printLoading,
+  close: closePrintModal,
+  openWithLoading
+} = useModalState();
+
+async function handlePrint(id) {
+  await openWithLoading(
+    async () => {
+      const url = route('rat.show.json', id);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Erro ao carregar dados: ${response.status} ${response.statusText}`);
+      }
+      return response.json();
+    },
+    {
+      onError: (error) => {
+        alert(MESSAGES.errors.loadData('RAT') + ': ' + error.message);
+      }
+    }
+  );
+}
+
+// =========================
+// Modal de Exportação CSV (Usando Composable)
+// =========================
+import { useExport } from '@/Composables/useExport';
+
+const { 
+  showExportModal, 
+  handleExport: triggerExport 
+} = useExport('rat.export');
+
+function handleExportCsv(params) {
+  // Passamos os filtros atuais da tela para serem combinados com os filtros do modal
+  triggerExport(params, filtersToUse.value);
 }
 
 function handlePageChange(page) {
@@ -216,26 +366,7 @@ function handlePageChange(page) {
 
 <style scoped>
 .rat-index-container {
-  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .rat-index-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .rat-index-container {
-    padding: 2rem 2.5rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .rat-index-container {
-    padding: 2rem 3rem;
-  }
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>
 

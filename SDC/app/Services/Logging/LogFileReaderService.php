@@ -86,9 +86,10 @@ class LogFileReaderService
         $level = $filters['level'] ?? null;
         $search = $filters['search'] ?? null;
         $limit = $filters['limit'] ?? 1000;
+        $specificFile = $filters['file'] ?? null;
 
-        // Busca arquivos de log no intervalo de datas
-        $logFiles = $this->getLogFilesInRange($startDate, $endDate, $type);
+        // Busca arquivos de log no intervalo de datas ou o arquivo específico
+        $logFiles = $this->getLogFilesInRange($startDate, $endDate, $type, $specificFile);
 
         $allLogs = collect();
 
@@ -133,8 +134,20 @@ class LogFileReaderService
     /**
      * Busca arquivos de log no intervalo de datas
      */
-    protected function getLogFilesInRange(Carbon $startDate, Carbon $endDate, ?string $type = null): array
+    protected function getLogFilesInRange(Carbon $startDate, Carbon $endDate, ?string $type = null, ?string $file = null): array
     {
+        if ($file) {
+            $filePath = $this->logPath . '/' . $file;
+            if (file_exists($filePath)) {
+                return [
+                    [
+                        'path' => $filePath,
+                        'name' => basename($filePath),
+                    ]
+                ];
+            }
+        }
+
         $allFiles = $this->listLogFiles($type);
         $relevantFiles = [];
 

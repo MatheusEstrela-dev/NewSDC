@@ -1,767 +1,567 @@
 # ============================================================================
-# SDC - Justfile para Gerenciamento de Banco de Dados
-# Comandos facilitados para migrations, rollback, seeds e manutenção
+# SDC - JUSTFILE COMPLETO (Docker + DB + Módulos)
+# Cross-Platform: Windows / Linux / macOS
 # ============================================================================
+# Uso: just <comando> ou just --list
 
-# Variáveis de ambiente
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+set shell := ["bash", "-uc"]
+
+export DOCKER_BUILDKIT := "1"
+export COMPOSE_DOCKER_CLI_BUILD := "1"
+
+# Variáveis
 compose := "docker compose -f docker/docker-compose.yml"
 compose_prod := "docker compose -f docker/docker-compose.prod.yml"
 app := compose + " exec app"
-app_prod := compose_prod + " exec app"
 db := compose + " exec db"
-db_prod := compose_prod + " exec db"
 
-# Define ambiente padrão (dev ou prod)
-env := env_var_or_default("ENV", "dev")
-
-# Escolhe comando baseado no ambiente
-_app := if env == "prod" { app_prod } else { app }
-_db := if env == "prod" { db_prod } else { db }
-_compose := if env == "prod" { compose_prod } else { compose }
+# Receita padrão
+@default: help
 
 # ============================================================================
-# 📋 HELP & INFO
+# 📚 HELP
 # ============================================================================
 
-# Lista todos os comandos disponíveis (default)
-@default:
-    just --list
-
-# Mostra ajuda detalhada com exemplos
-help:
-    @echo "🗄️  SDC - Gerenciamento de Banco de Dados"
-    @echo ""
-    @echo "📚 CATEGORIAS:"
-    @echo "  Migrations   - Criar, executar e reverter migrations"
-    @echo "  Seeds        - Popular banco com dados"
-    @echo "  Backup       - Backup e restore"
-    @echo "  Manutenção   - Otimizar, reparar e limpar"
-    @echo "  Informações  - Status e estatísticas"
-    @echo ""
-    @echo "🎯 USO:"
-    @echo "  just <comando>              # Desenvolvimento"
-    @echo "  ENV=prod just <comando>     # Produção"
-    @echo ""
-    @echo "📖 EXEMPLOS:"
-    @echo "  just migrate                # Executar migrations pendentes"
-    @echo "  just rollback 3             # Reverter últimas 3 migrations"
-    @echo "  just fresh                  # Resetar banco com seeds"
-    @echo "  just backup manual          # Criar backup manual"
-    @echo "  ENV=prod just status        # Ver status em produção"
-    @echo ""
-    @echo "💡 TIP: Use 'just --list' para ver todos os comandos"
-
-# Mostra informações do ambiente atual
-info:
-    @echo "🔍 INFORMAÇÕES DO AMBIENTE"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo "Ambiente:      {{env}}"
-    @echo "Docker Compose: {{_compose}}"
-    @echo "Container App:  {{_app}}"
-    @echo "Container DB:   {{_db}}"
-    @echo ""
-    {{_compose}} ps
-
-# ============================================================================
-# 🔄 MIGRATIONS
-# ============================================================================
-
-# Executar migrations pendentes
-migrate:
-    @echo "🔄 Executando migrations..."
-    {{_app}} php artisan migrate --force
-    @echo "✅ Migrations concluídas!"
-
-# Executar APENAS as migrations do sistema de permissionamento (v2.0)
-migrate-permissions:
-    @echo "🔐 Executando migrations do sistema de permissionamento..."
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo ""
-    @echo "📋 Migrations incluídas:"
-    @echo "  - 2025_12_10_000001_create_roles_table.php"
-    @echo "  - 2025_12_10_000002_create_permissions_table.php"
-    @echo "  - 2025_12_10_000003_create_role_user_table.php"
-    @echo "  - 2025_12_10_000004_create_permission_role_table.php"
-    @echo "  - 2025_12_23_000001_create_permission_audit_log_table.php"
-    @echo ""
-    {{_app}} php artisan migrate --path=database/migrations/2025_12_10_000001_create_roles_table.php --force
-    {{_app}} php artisan migrate --path=database/migrations/2025_12_10_000002_create_permissions_table.php --force
-    {{_app}} php artisan migrate --path=database/migrations/2025_12_10_000003_create_role_user_table.php --force
-    {{_app}} php artisan migrate --path=database/migrations/2025_12_10_000004_create_permission_role_table.php --force
-    {{_app}} php artisan migrate --path=database/migrations/2025_12_23_000001_create_permission_audit_log_table.php --force
-    @echo ""
-    @echo "✅ Migrations de permissionamento concluídas!"
-    @echo ""
-    @echo "💡 Próximos passos:"
-    @echo "  1. Execute: just seed-permissions"
-    @echo "  2. Limpe o cache: just cache-clear"
-    @echo "  3. Verifique: just permissions-status"
-
-# Executar migrations com output detalhado
-migrate-verbose:
-    @echo "🔄 Executando migrations (verbose)..."
-    {{_app}} php artisan migrate --force -vvv
-
-# Verificar status das migrations (quais já foram executadas)
-migrate-status:
-    @echo "📊 Status das Migrations:"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    {{_app}} php artisan migrate:status
-
-# Criar nova migration
-migrate-create name:
-    @echo "📝 Criando migration: {{name}}"
-    {{_app}} php artisan make:migration {{name}}
-    @echo "✅ Migration criada em database/migrations/"
-
-# Criar migration para tabela específica
-migrate-table name table:
-    @echo "📝 Criando migration para tabela: {{table}}"
-    {{_app}} php artisan make:migration {{name}} --create={{table}}
-    @echo "✅ Migration criada!"
-
-# Modificar tabela existente
-migrate-modify name table:
-    @echo "📝 Criando migration para modificar: {{table}}"
-    {{_app}} php artisan make:migration {{name}} --table={{table}}
-    @echo "✅ Migration criada!"
+# 📚 Mostra ajuda categorizada
+@help:
+    echo ""
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║     SDC - Sistema de Defesa Civil - Just Command Runner           ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "📦 BUILD & SETUP:"
+    echo "  build-all       Build completo de toda stack"
+    echo "  build-dev       Build apenas desenvolvimento"
+    echo "  build-prod      Build apenas produção"
+    echo "  build-clean     Build limpo (sem cache)"
+    echo ""
+    echo "🚀 AMBIENTE COMPLETO:"
+    echo "  up-all          Sobe TODA stack"
+    echo "  down-all        Para TODA stack"
+    echo "  restart-all     Reinicia TODA stack"
+    echo ""
+    echo "🔧 DESENVOLVIMENTO:"
+    echo "  dev             Ambiente de desenvolvimento"
+    echo "  dev-full        Dev + ferramentas (phpmyadmin)"
+    echo "  dev-minimal     Apenas app + db + redis"
+    echo "  dev-build       Rebuild desenvolvimento"
+    echo "  dev-logs        Logs (follow)"
+    echo ""
+    echo "🏭 PRODUÇÃO:"
+    echo "  prod            Ambiente de produção"
+    echo "  prod-build      Build e deploy produção"
+    echo "  prod-logs       Logs produção"
+    echo "  prod-down       Para produção"
+    echo ""
+    echo "📊 MONITORAMENTO:"
+    echo "  monitor         Sobe monitoramento"
+    echo "  monitor-down    Para monitoramento"
+    echo ""
+    echo "🐚 ACESSO:"
+    echo "  shell           Shell app (www-data)"
+    echo "  shell-root      Shell app (root)"
+    echo "  shell-db        MySQL CLI"
+    echo "  shell-redis     Redis CLI"
+    echo ""
+    echo "🗑️ LIMPEZA:"
+    echo "  clean           Para containers"
+    echo "  clean-volumes   Remove volumes (APAGA DADOS!)"
+    echo "  clean-images    Remove tudo"
+    echo "  nuke            DESTRUIÇÃO TOTAL"
+    echo ""
+    echo "💾 BANCO DE DADOS:"
+    echo "  db-migrate      Executar migrations"
+    echo "  db-rollback     Rollback migrations"
+    echo "  db-fresh        Fresh + seed"
+    echo "  db-seed         Executar seeds"
+    echo "  db-backup       Backup do banco"
+    echo ""
+    echo "🎨 FRONTEND:"
+    echo "  npm-install     Install npm"
+    echo "  npm-dev         Vite dev server"
+    echo "  npm-build       Build produção"
+    echo ""
+    echo "⚙️ ARTISAN:"
+    echo "  cache-clear     Limpa caches"
+    echo "  cache-optimize  Otimiza caches"
+    echo "  artisan CMD     Executar artisan"
+    echo ""
+    echo "🧪 TESTES:"
+    echo "  test            Executar testes"
+    echo "  test-coverage   Testes com coverage"
+    echo ""
+    echo "📋 STATUS:"
+    echo "  status          Status dos containers"
+    echo "  urls            URLs disponíveis"
+    echo "  logs            Logs de todos"
+    echo "  health          Healthcheck"
+    echo "  info            Informações"
+    echo ""
+    echo "🔄 WORKFLOWS:"
+    echo "  setup           Setup inicial completo"
+    echo "  reset           Reset completo"
+    echo "  deploy-prod     Deploy produção"
+    echo ""
 
 # ============================================================================
-# ⏮️ ROLLBACK
+# 🌐 NETWORK
 # ============================================================================
 
-# Reverter última batch de migrations
-rollback:
-    @echo "⏮️  Revertendo última batch de migrations..."
-    {{_app}} php artisan migrate:rollback --force
-    @echo "✅ Rollback concluído!"
+@network-init:
+    echo "→ Verificando network..."
+    docker network inspect sdc_network > /dev/null 2>&1 || docker network create --driver bridge --subnet 172.26.0.0/16 sdc_network
+    echo "✓ Network OK"
 
-# Reverter N batches de migrations
-rollback-steps steps:
-    @echo "⏮️  Revertendo {{steps}} batches de migrations..."
-    {{_app}} php artisan migrate:rollback --step={{steps}} --force
-    @echo "✅ Rollback de {{steps}} batches concluído!"
+@network-inspect:
+    docker network inspect sdc_network
 
-# Reverter TODAS as migrations
-rollback-all:
-    @echo "⚠️  ATENÇÃO: Revertendo TODAS as migrations!"
-    @echo "Pressione Ctrl+C para cancelar..."
-    sleep 3
-    {{_app}} php artisan migrate:reset --force
-    @echo "✅ Todas as migrations revertidas!"
-
-# Reverter e executar novamente última batch
-migrate-refresh:
-    @echo "🔄 Refresh da última batch..."
-    {{_app}} php artisan migrate:refresh --force
-    @echo "✅ Refresh concluído!"
-
-# Reverter e executar novamente N batches
-migrate-refresh-steps steps:
-    @echo "🔄 Refresh de {{steps}} batches..."
-    {{_app}} php artisan migrate:refresh --step={{steps}} --force
-    @echo "✅ Refresh de {{steps}} batches concluído!"
+@network-clean:
+    docker network rm sdc_network 2>/dev/null || true
 
 # ============================================================================
-# 🌱 SEEDS
+# 🚀 BUILD & UP
 # ============================================================================
 
-# Executar todos os seeders
-seed:
-    @echo "🌱 Executando seeders..."
-    {{_app}} php artisan db:seed --force
-    @echo "✅ Seeds concluídos!"
+@build-all:
+    echo "════════════════════════════════════════════════════════════"
+    echo "  BUILD COMPLETO DE TODA A STACK"
+    echo "════════════════════════════════════════════════════════════"
+    {{compose}} build --parallel
+    echo "✓ BUILD COMPLETO FINALIZADO!"
 
-# Executar seeder específico
-seed-class class:
-    @echo "🌱 Executando seeder: {{class}}"
-    {{_app}} php artisan db:seed --class={{class}} --force
-    @echo "✅ Seeder {{class}} concluído!"
+@build-dev:
+    echo "→ Build de desenvolvimento..."
+    {{compose}} build --parallel
+    echo "✓ Build concluído"
 
-# Executar seeder de roles e permissions
-seed-permissions:
-    @echo "🔐 Populando roles e permissions..."
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    {{_app}} php artisan db:seed --class=RolesAndPermissionsSeeder --force
-    @echo ""
-    @echo "✅ Roles e permissions criados!"
-    @echo ""
-    @echo "📊 Resumo:"
-    just permissions-count
+@build-prod:
+    echo "→ Build de produção..."
+    {{compose_prod}} build --parallel
+    echo "✓ Build concluído"
 
-# Criar novo seeder
-seed-create name:
-    @echo "📝 Criando seeder: {{name}}"
-    {{_app}} php artisan make:seeder {{name}}
-    @echo "✅ Seeder criado em database/seeders/"
+@build-clean:
+    echo "→ Build limpo (sem cache)..."
+    {{compose}} build --no-cache --parallel
+    echo "✓ Build limpo concluído"
 
-# ============================================================================
-# 🔥 FRESH (PERIGOSO!)
-# ============================================================================
+@up-all: network-init
+    echo "════════════════════════════════════════════════════════════"
+    echo "  SUBINDO STACK COMPLETA"
+    echo "════════════════════════════════════════════════════════════"
+    {{compose}} --profile tools up -d
+    echo "✓ Stack completa iniciada!"
+    just urls
 
-# Dropar tudo, recriar e popular (DESENVOLVIMENTO)
-fresh:
-    @echo "🔥 ATENÇÃO: Dropando TODAS as tabelas!"
-    @echo "Ambiente: {{env}}"
-    @echo "Pressione Ctrl+C para cancelar..."
-    sleep 3
-    {{_app}} php artisan migrate:fresh --seed --force
-    @echo "✅ Banco de dados resetado com seeds!"
+@down-all:
+    echo "→ Parando todos os serviços..."
+    {{compose}} --profile tools down
+    echo "✓ Todos os serviços parados"
 
-# Fresh sem seeds
-fresh-no-seed:
-    @echo "🔥 Dropando e recriando banco (sem seeds)..."
-    {{_app}} php artisan migrate:fresh --force
-    @echo "✅ Banco de dados resetado!"
-
-# Fresh em PRODUÇÃO (requer confirmação dupla)
-fresh-prod:
-    @echo "🚨 PERIGO: FRESH EM PRODUÇÃO! 🚨"
-    @echo "Isso irá DELETAR TODOS OS DADOS!"
-    @echo ""
-    @read -p "Digite 'CONFIRMO' para continuar: " confirm; \
-    if [ "$$confirm" != "CONFIRMO" ]; then \
-        echo "❌ Cancelado!"; exit 1; \
-    fi
-    @echo "Última chance! Pressione Ctrl+C..."
-    sleep 5
-    ENV=prod {{_app_prod}} php artisan migrate:fresh --seed --force
-    @echo "✅ Produção resetada!"
+@restart-all:
+    just down-all
+    just up-all
 
 # ============================================================================
-# 💾 BACKUP & RESTORE
+# 🔧 DESENVOLVIMENTO
 # ============================================================================
 
-# Criar backup manual do banco de dados
-backup name="manual":
-    @echo "💾 Criando backup: {{name}}"
-    mkdir -p storage/backups
-    {{_db}} mysqldump -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE > storage/backups/backup-{{name}}-$(date +%Y%m%d-%H%M%S).sql
-    @echo "✅ Backup criado em storage/backups/"
+@dev: network-init
+    echo "→ Iniciando ambiente de desenvolvimento..."
+    {{compose}} up -d app nginx db redis mailhog queue node
+    echo "✓ Ambiente de desenvolvimento iniciado!"
+    echo ""
+    echo "Serviços disponíveis:"
+    echo "  App (Laravel):  http://localhost:8001"
+    echo "  Nginx:          http://localhost:8082"
+    echo "  Vite (HMR):     http://localhost:5173"
+    echo "  Mailhog:        http://localhost:8026"
+    echo "  MySQL:          localhost:3307"
+    echo "  Redis:          localhost:6380"
 
-# Criar backup antes de migration arriscada
-backup-before-migrate:
-    @echo "💾 Criando backup de segurança..."
-    just backup "pre-migration"
-    @echo "🔄 Executando migrations..."
-    just migrate
+@dev-full: network-init
+    echo "→ Iniciando ambiente completo..."
+    {{compose}} --profile tools up -d
+    echo "✓ Ambiente completo iniciado!"
+    just urls
 
-# Listar backups disponíveis
-backup-list:
-    @echo "📋 Backups Disponíveis:"
-    @ls -lh storage/backups/*.sql 2>/dev/null || echo "Nenhum backup encontrado"
+@dev-minimal: network-init
+    echo "→ Iniciando ambiente mínimo..."
+    {{compose}} up -d app db redis
+    echo "✓ Ambiente mínimo iniciado!"
 
-# Restaurar backup específico
-backup-restore file:
-    @echo "⚠️  ATENÇÃO: Restaurando backup!"
-    @echo "Arquivo: {{file}}"
-    @echo "Isso irá SOBRESCREVER o banco atual!"
-    @echo "Pressione Ctrl+C para cancelar..."
-    sleep 3
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE < {{file}}
-    @echo "✅ Backup restaurado!"
+@dev-build:
+    echo "→ Rebuild desenvolvimento..."
+    {{compose}} down
+    {{compose}} build
+    {{compose}} up -d
+    echo "✓ Rebuild concluído"
 
-# Criar backup automático (para cron)
-backup-auto:
-    #!/usr/bin/env bash
-    TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-    BACKUP_DIR="storage/backups"
-    mkdir -p $BACKUP_DIR
+dev-logs:
+    {{compose}} logs -f
 
-    echo "💾 Backup automático: $TIMESTAMP"
-    {{_db}} mysqldump -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE > $BACKUP_DIR/backup-auto-$TIMESTAMP.sql
-
-    # Manter apenas últimos 7 backups
-    ls -t $BACKUP_DIR/backup-auto-*.sql | tail -n +8 | xargs -r rm
-    echo "✅ Backup concluído e rotacionado!"
+@dev-ps:
+    {{compose}} ps
 
 # ============================================================================
-# 🔧 MANUTENÇÃO
+# 🏭 PRODUÇÃO
 # ============================================================================
 
-# Otimizar todas as tabelas
-optimize:
-    @echo "⚡ Otimizando tabelas..."
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "USE $$MYSQL_DATABASE; OPTIMIZE TABLE $({{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -Nse 'SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema=\"$$MYSQL_DATABASE\"');"
-    @echo "✅ Otimização concluída!"
+@prod:
+    echo "→ Iniciando produção..."
+    {{compose_prod}} up -d
+    echo "✓ Ambiente de produção iniciado!"
 
-# Reparar tabelas corrompidas
-repair:
-    @echo "🔧 Reparando tabelas..."
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "USE $$MYSQL_DATABASE; REPAIR TABLE $({{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -Nse 'SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema=\"$$MYSQL_DATABASE\"');"
-    @echo "✅ Reparo concluído!"
+@prod-build:
+    echo "→ Build de produção..."
+    {{compose_prod}} build --no-cache
+    {{compose_prod}} up -d
+    echo "✓ Deploy de produção concluído"
 
-# Analisar tabelas
-analyze:
-    @echo "📊 Analisando tabelas..."
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "USE $$MYSQL_DATABASE; ANALYZE TABLE $({{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -Nse 'SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema=\"$$MYSQL_DATABASE\"');"
-    @echo "✅ Análise concluída!"
+prod-logs:
+    {{compose_prod}} logs -f
 
-# Verificar integridade das tabelas
-check:
-    @echo "🔍 Verificando integridade..."
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "USE $$MYSQL_DATABASE; CHECK TABLE $({{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -Nse 'SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema=\"$$MYSQL_DATABASE\"');"
-    @echo "✅ Verificação concluída!"
+@prod-down:
+    {{compose_prod}} down
 
-# Limpar cache do Laravel
-cache-clear:
-    @echo "🧹 Limpando caches do Laravel..."
-    {{_app}} php artisan cache:clear
-    {{_app}} php artisan config:clear
-    {{_app}} php artisan route:clear
-    {{_app}} php artisan view:clear
-    @echo "✅ Caches limpos!"
-
-# Otimizar para produção
-cache-optimize:
-    @echo "⚡ Otimizando caches para produção..."
-    {{_app}} php artisan config:cache
-    {{_app}} php artisan route:cache
-    {{_app}} php artisan view:cache
-    {{_app}} php artisan event:cache
-    @echo "✅ Otimização concluída!"
+@prod-scale n="3":
+    {{compose_prod}} up -d --scale queue={{n}}
 
 # ============================================================================
-# 📊 INFORMAÇÕES & STATUS
+# 📊 MONITORAMENTO
 # ============================================================================
 
-# Ver status completo do banco de dados
-status:
-    @echo "📊 STATUS DO BANCO DE DADOS"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo ""
-    @echo "🔄 Migrations:"
-    just migrate-status
-    @echo ""
-    @echo "💾 Tamanho do Banco:"
-    just db-size
-    @echo ""
-    @echo "📋 Tabelas:"
-    just tables
+@monitor: network-init
+    echo "→ Iniciando monitoramento..."
+    {{compose}} up -d prometheus grafana alertmanager node-exporter cadvisor mysql-exporter redis-exporter nginx-exporter blackbox-exporter
+    echo "✓ Monitoramento iniciado!"
+    echo ""
+    echo "Dashboards:"
+    echo "  Grafana:      http://localhost:3000 (admin/admin@123)"
+    echo "  Prometheus:   http://localhost:9090"
+    echo "  Alertmanager: http://localhost:9093"
+    echo "  cAdvisor:     http://localhost:8080"
 
-# Listar todas as tabelas
-tables:
-    @echo "📋 Tabelas no Banco:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "USE $$MYSQL_DATABASE; SHOW TABLES;"
+@monitor-down:
+    echo "→ Parando monitoramento..."
+    {{compose}} stop prometheus grafana alertmanager node-exporter cadvisor mysql-exporter redis-exporter nginx-exporter blackbox-exporter
+    echo "✓ Monitoramento parado"
 
-# Contar registros de todas as tabelas
-count:
-    @echo "🔢 Contagem de Registros:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT table_name AS 'Tabela', table_rows AS 'Registros' FROM information_schema.tables WHERE table_schema = '$$MYSQL_DATABASE' ORDER BY table_rows DESC;"
+monitor-logs:
+    {{compose}} logs -f prometheus grafana alertmanager
 
-# Ver tamanho do banco de dados
-db-size:
-    @echo "💾 Tamanho do Banco de Dados:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "SELECT table_schema AS 'Database', ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'Size (MB)' FROM information_schema.tables WHERE table_schema = '$$MYSQL_DATABASE' GROUP BY table_schema;"
-
-# Ver tamanho de cada tabela
-table-sizes:
-    @echo "📊 Tamanho das Tabelas:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT table_name AS 'Tabela', ROUND(((data_length + index_length) / 1024 / 1024), 2) AS 'Size (MB)' FROM information_schema.TABLES WHERE table_schema = '$$MYSQL_DATABASE' ORDER BY (data_length + index_length) DESC;"
-
-# Descrever estrutura de uma tabela
-describe table:
-    @echo "📋 Estrutura da Tabela: {{table}}"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "DESCRIBE {{table}};"
-
-# Ver índices de uma tabela
-indexes table:
-    @echo "🔑 Índices da Tabela: {{table}}"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SHOW INDEXES FROM {{table}};"
+@monitor-restart:
+    just monitor-down
+    just monitor
 
 # ============================================================================
-# 🐚 ACESSO DIRETO
+# 🐚 ACESSO & DEBUG
 # ============================================================================
 
-# Acesso direto ao MySQL CLI
-mysql:
-    @echo "🐚 Acessando MySQL CLI..."
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE
-
-# Executar query SQL direta
-query sql:
-    @echo "🔍 Executando query..."
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "{{sql}}"
-
-# Acesso ao shell do container app
 shell:
-    @echo "🐚 Acessando shell do container..."
-    {{_compose}} exec app bash
+    {{compose}} exec app bash
 
-# Acesso ao shell do container db
-db-shell:
-    @echo "🐚 Acessando shell do banco..."
-    {{_compose}} exec db bash
+shell-root:
+    {{compose}} exec -u root app bash
+
+shell-db:
+    {{compose}} exec db mysql -u root -proot sdc
+
+shell-redis:
+    {{compose}} exec redis redis-cli
+
+shell-queue:
+    {{compose}} exec queue bash
+
+shell-node:
+    {{compose}} exec node sh
+
+# ============================================================================
+# 🗑️ LIMPEZA
+# ============================================================================
+
+@clean:
+    echo "→ Limpando containers..."
+    {{compose}} down
+    echo "✓ Containers removidos"
+
+@clean-volumes:
+    echo "⚠️ ATENÇÃO: Isso vai APAGAR todos os dados!"
+    sleep 3
+    {{compose}} down -v
+    echo "✓ Containers e volumes removidos"
+
+@clean-images:
+    echo "⚠️ ATENÇÃO: Isso vai remover TUDO!"
+    sleep 5
+    {{compose}} down -v --rmi all
+    echo "✓ Tudo removido"
+
+@clean-system:
+    echo "→ Limpando sistema Docker..."
+    docker system prune -af --volumes
+    echo "✓ Sistema limpo"
+
+@nuke:
+    just clean-images
+    just clean-system
+    echo "💣 NUKE EXECUTADO!"
+
+# ============================================================================
+# 💾 BANCO DE DADOS
+# ============================================================================
+
+@db-migrate:
+    {{app}} php artisan migrate --force
+
+@db-rollback:
+    {{app}} php artisan migrate:rollback --force
+
+@db-fresh:
+    echo "⚠️ Isso vai APAGAR todos os dados!"
+    sleep 3
+    {{app}} php artisan migrate:fresh --seed --force
+
+@db-seed:
+    {{app}} php artisan db:seed --force
+
+@db-backup:
+    echo "→ Criando backup..."
+    mkdir -p storage/backups
+    {{db}} mysqldump -u root -proot sdc > storage/backups/backup-`date +%Y%m%d-%H%M%S`.sql
+    echo "✓ Backup criado em storage/backups/"
+
+@db-restore file:
+    echo "→ Restaurando backup: {{file}}"
+    {{compose}} exec -T db mysql -u root -proot sdc < {{file}}
+    echo "✓ Backup restaurado"
+
+# ============================================================================
+# 🎨 FRONTEND
+# ============================================================================
+
+@npm-install:
+    {{compose}} exec node npm install --legacy-peer-deps
+
+@npm-update:
+    {{compose}} exec node npm update
+
+npm-dev:
+    {{compose}} exec node npm run dev
+
+@npm-build:
+    {{compose}} exec node npm run build
+
+@npm-clean:
+    {{compose}} exec node sh -c "rm -rf node_modules/.vite && npm cache clean --force"
+
+# ============================================================================
+# ⚙️ LARAVEL ARTISAN
+# ============================================================================
+
+@cache-clear:
+    echo "→ Limpando caches..."
+    {{app}} php artisan cache:clear
+    {{app}} php artisan config:clear
+    {{app}} php artisan route:clear
+    {{app}} php artisan view:clear
+    echo "✓ Caches limpos"
+
+@cache-optimize:
+    echo "→ Otimizando caches..."
+    {{app}} php artisan config:cache
+    {{app}} php artisan route:cache
+    {{app}} php artisan view:cache
+    {{app}} php artisan event:cache
+    echo "✓ Caches otimizados"
+
+@artisan +cmd:
+    {{app}} php artisan {{cmd}}
+
+# ============================================================================
+# 📋 STATUS & INFO
+# ============================================================================
+
+@status:
+    echo "════════════════════════════════════════════════════════════"
+    echo "  STATUS COMPLETO DA STACK"
+    echo "════════════════════════════════════════════════════════════"
+    {{compose}} ps
+    echo ""
+    echo "Containers ativos:"
+    docker ps --filter "name=newsdc" --format "table {{{{.Names}}}}\t{{{{.Status}}}}\t{{{{.Ports}}}}"
+
+ps: status
+
+@urls:
+    echo "════════════════════════════════════════════════════════════"
+    echo "  URLS E PORTAS DISPONÍVEIS"
+    echo "════════════════════════════════════════════════════════════"
+    echo ""
+    echo "🚀 APLICAÇÃO:"
+    echo "  App (Laravel):     http://localhost:8001"
+    echo "  Nginx:             http://localhost:8082"
+    echo "  Vite (HMR):        http://localhost:5173"
+    echo ""
+    echo "💾 BANCO DE DADOS:"
+    echo "  MySQL:             localhost:3307 (user: sdc, pass: secret)"
+    echo "  Redis:             localhost:6380"
+    echo "  phpMyAdmin:        http://localhost:8083"
+    echo "  Redis Commander:   http://localhost:8084"
+    echo ""
+    echo "📧 FERRAMENTAS:"
+    echo "  Mailhog:           http://localhost:8026"
+    echo ""
+    echo "📊 MONITORAMENTO:"
+    echo "  Grafana:           http://localhost:3000 (admin/admin@123)"
+    echo "  Prometheus:        http://localhost:9090"
+    echo "  Alertmanager:      http://localhost:9093"
+    echo "  cAdvisor:          http://localhost:8080"
+
+logs:
+    {{compose}} logs -f
+
+logs-app:
+    {{compose}} logs -f app
+
+logs-nginx:
+    {{compose}} logs -f nginx
+
+logs-db:
+    {{compose}} logs -f db
+
+logs-queue:
+    {{compose}} logs -f queue
 
 # ============================================================================
 # 🧪 TESTES
 # ============================================================================
 
-# Executar migrations no banco de testes
-test-migrate:
-    @echo "🧪 Executando migrations no banco de testes..."
-    {{_app}} php artisan migrate --database=testing --force
-    @echo "✅ Migrations de teste concluídas!"
+@test:
+    {{app}} php artisan test
 
-# Resetar banco de testes
-test-fresh:
-    @echo "🧪 Resetando banco de testes..."
-    {{_app}} php artisan migrate:fresh --database=testing --seed --force
-    @echo "✅ Banco de testes resetado!"
+@test-coverage:
+    {{app}} php artisan test --coverage
+
+@test-filter filter:
+    {{app}} php artisan test --filter={{filter}}
 
 # ============================================================================
-# 🚀 WORKFLOWS COMPLETOS
+# 🔄 WORKFLOWS COMPLETOS
 # ============================================================================
 
-# Setup inicial completo do banco
-setup:
-    @echo "🚀 SETUP INICIAL DO BANCO DE DADOS"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    just migrate
-    just seed
+@setup:
+    just build-all
+    just up-all
+    just db-migrate
     just cache-optimize
-    @echo ""
-    @echo "✅ Setup concluído!"
-    just status
+    echo ""
+    echo "════════════════════════════════════════════════════════════"
+    echo "  ✓ SETUP COMPLETO FINALIZADO!"
+    echo "════════════════════════════════════════════════════════════"
+    just urls
 
-# Deploy seguro em produção
-deploy:
-    @echo "🚀 DEPLOY EM PRODUÇÃO"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo "1. Criando backup..."
-    ENV=prod just backup "pre-deploy"
-    @echo ""
-    @echo "2. Executando migrations..."
-    ENV=prod just migrate
-    @echo ""
-    @echo "3. Otimizando caches..."
-    ENV=prod just cache-optimize
-    @echo ""
-    @echo "✅ Deploy concluído!"
-    ENV=prod just status
+@reset:
+    just clean-volumes
+    just build-all
+    just up-all
+    just db-migrate
+    just db-seed
+    echo "✓ RESET COMPLETO FINALIZADO!"
+    just urls
 
-# Manutenção completa do banco
-maintenance:
-    @echo "🔧 MANUTENÇÃO COMPLETA"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    just backup "pre-maintenance"
-    just check
-    just analyze
-    just optimize
-    just cache-optimize
-    @echo ""
-    @echo "✅ Manutenção concluída!"
-    just db-size
-
-# Diagnóstico completo
-diagnose:
-    @echo "🔍 DIAGNÓSTICO COMPLETO"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo ""
-    just info
-    @echo ""
-    just status
-    @echo ""
-    just table-sizes
-    @echo ""
-    just count
-    @echo ""
-    @echo "✅ Diagnóstico concluído!"
+@deploy-prod:
+    echo "→ DEPLOY PRODUÇÃO"
+    git pull origin main
+    just prod-build
+    {{compose_prod}} exec app php artisan migrate --force
+    {{compose_prod}} exec app php artisan config:cache
+    {{compose_prod}} exec app php artisan route:cache
+    {{compose_prod}} exec app php artisan view:cache
+    echo "✓ DEPLOY CONCLUÍDO!"
 
 # ============================================================================
-# 🗑️ LIMPEZA (PERIGOSO!)
+# 🏥 HEALTHCHECK
 # ============================================================================
 
-# Dropar banco e recriar do zero
-nuke:
-    @echo "💣 ATENÇÃO: DESTRUINDO BANCO DE DADOS!"
-    @echo "Ambiente: {{env}}"
-    @echo "Isso é IRREVERSÍVEL!"
-    @echo ""
-    @read -p "Digite 'DESTRUIR' para confirmar: " confirm; \
-    if [ "$$confirm" != "DESTRUIR" ]; then \
-        echo "❌ Cancelado!"; exit 1; \
-    fi
-    @echo ""
-    @echo "Última chance! Pressione Ctrl+C..."
-    sleep 5
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD -e "DROP DATABASE IF EXISTS $$MYSQL_DATABASE; CREATE DATABASE $$MYSQL_DATABASE;"
-    just migrate
-    @echo "✅ Banco recriado do zero!"
+@health:
+    echo "Verificando saúde dos serviços..."
+    echo ""
+    echo -n "App:         "
+    curl -sf http://localhost:8001 > /dev/null && echo "✓ OK" || echo "✗ FALHOU"
+    echo -n "Nginx:       "
+    curl -sf http://localhost:8082 > /dev/null && echo "✓ OK" || echo "✗ FALHOU"
+    echo -n "Vite:        "
+    curl -sf http://localhost:5173 > /dev/null && echo "✓ OK" || echo "✗ FALHOU"
+    echo -n "Grafana:     "
+    curl -sf http://localhost:3000/api/health > /dev/null && echo "✓ OK" || echo "✗ FALHOU"
+    echo -n "Prometheus:  "
+    curl -sf http://localhost:9090/-/healthy > /dev/null && echo "✓ OK" || echo "✗ FALHOU"
 
 # ============================================================================
-# 🔐 SISTEMA DE PERMISSIONAMENTO (v2.0)
+# 📝 INFO
 # ============================================================================
 
-# Status completo do sistema de permissionamento
-permissions-status:
-    @echo "🔐 STATUS DO SISTEMA DE PERMISSIONAMENTO"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo ""
-    @echo "📊 Contadores:"
-    just permissions-count
-    @echo ""
-    @echo "👥 Roles por Hierarquia:"
-    just permissions-roles
-    @echo ""
-    @echo "🔑 Permissions por Módulo:"
-    just permissions-by-module
-    @echo ""
-    @echo "📝 Logs de Auditoria (últimos 10):"
-    just permissions-audit
+@info:
+    echo "════════════════════════════════════════════════════════════"
+    echo "  INFORMAÇÕES DO AMBIENTE"
+    echo "════════════════════════════════════════════════════════════"
+    echo ""
+    echo "Docker:"
+    docker version --format '  Versão: {{{{.Server.Version}}}}'
+    echo ""
+    echo "Docker Compose:"
+    docker compose version
+    echo ""
+    echo "Just:"
+    just --version
+    echo ""
+    echo "Uso de recursos:"
+    docker system df
 
-# Contar roles, permissions e usuários
-permissions-count:
-    @echo "📊 Contadores do Sistema:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'Roles' AS Tipo, COUNT(*) AS Total FROM roles WHERE is_active = 1 UNION ALL SELECT 'Permissions' AS Tipo, COUNT(*) AS Total FROM permissions WHERE is_active = 1 UNION ALL SELECT 'Users' AS Tipo, COUNT(*) AS Total FROM users WHERE email_verified_at IS NOT NULL UNION ALL SELECT 'Role Assignments' AS Tipo, COUNT(*) AS Total FROM role_user UNION ALL SELECT 'Audit Logs' AS Tipo, COUNT(*) AS Total FROM permission_audit_log;"
-
-# Listar todos os roles
-permissions-roles:
-    @echo "👥 Roles Cadastrados:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT id, name AS 'Nome', slug AS 'Slug', hierarchy_level AS 'Nível', is_active AS 'Ativo', (SELECT COUNT(*) FROM role_user WHERE role_id = roles.id) AS 'Usuários' FROM roles ORDER BY hierarchy_level;"
-
-# Listar permissions por módulo
-permissions-by-module:
-    @echo "🔑 Permissions por Módulo:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT COALESCE(module, 'general') AS 'Módulo', COUNT(*) AS 'Total', SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) AS 'Ativas', SUM(CASE WHEN is_immutable = 1 THEN 1 ELSE 0 END) AS 'Imutáveis' FROM permissions GROUP BY module ORDER BY Total DESC;"
-
-# Listar permissions de um módulo específico
-permissions-module module:
-    @echo "🔑 Permissions do Módulo: {{module}}"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT id, name AS 'Nome', slug AS 'Slug', description AS 'Descrição', is_active AS 'Ativo', is_immutable AS 'Imutável' FROM permissions WHERE module = '{{module}}' ORDER BY name;"
-
-# Ver últimos logs de auditoria
-permissions-audit limit="10":
-    @echo "📝 Últimos {{limit}} Logs de Auditoria:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT pal.id, u.name AS 'Usuário', pal.action AS 'Ação', pal.entity_type AS 'Entidade', pal.entity_id AS 'ID', pal.ip_address AS 'IP', DATE_FORMAT(pal.created_at, '%Y-%m-%d %H:%i:%s') AS 'Data/Hora' FROM permission_audit_log pal LEFT JOIN users u ON pal.user_id = u.id ORDER BY pal.created_at DESC LIMIT {{limit}};"
-
-# Ver logs de auditoria de um usuário específico
-permissions-audit-user user_id:
-    @echo "📝 Logs de Auditoria do Usuário: {{user_id}}"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT id, action AS 'Ação', entity_type AS 'Entidade', entity_id AS 'ID', ip_address AS 'IP', DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS 'Data/Hora' FROM permission_audit_log WHERE user_id = {{user_id}} ORDER BY created_at DESC LIMIT 20;"
-
-# Ver permissions de um role específico
-permissions-role role_slug:
-    @echo "🔑 Permissions do Role: {{role_slug}}"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT p.id, p.name AS 'Permission', p.slug AS 'Slug', p.module AS 'Módulo' FROM permissions p INNER JOIN permission_role pr ON p.id = pr.permission_id INNER JOIN roles r ON pr.role_id = r.id WHERE r.slug = '{{role_slug}}' ORDER BY p.module, p.name;"
-
-# Ver roles de um usuário específico
-permissions-user user_id:
-    @echo "👤 Roles do Usuário: {{user_id}}"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT r.id, r.name AS 'Role', r.slug AS 'Slug', r.hierarchy_level AS 'Nível', DATE_FORMAT(ru.created_at, '%Y-%m-%d %H:%i:%s') AS 'Atribuído em' FROM roles r INNER JOIN role_user ru ON r.id = ru.role_id WHERE ru.user_id = {{user_id}} ORDER BY r.hierarchy_level;"
-
-# Verificar integridade do sistema de permissionamento
-permissions-check:
-    @echo "🔍 VERIFICAÇÃO DE INTEGRIDADE"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo ""
-    @echo "1. Verificando tabelas..."
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'OK' AS Status FROM roles LIMIT 1;" > /dev/null 2>&1 && echo "  ✅ Tabela 'roles' existe" || echo "  ❌ Tabela 'roles' não encontrada"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'OK' AS Status FROM permissions LIMIT 1;" > /dev/null 2>&1 && echo "  ✅ Tabela 'permissions' existe" || echo "  ❌ Tabela 'permissions' não encontrada"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'OK' AS Status FROM role_user LIMIT 1;" > /dev/null 2>&1 && echo "  ✅ Tabela 'role_user' existe" || echo "  ❌ Tabela 'role_user' não encontrada"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'OK' AS Status FROM permission_role LIMIT 1;" > /dev/null 2>&1 && echo "  ✅ Tabela 'permission_role' existe" || echo "  ❌ Tabela 'permission_role' não encontrada"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'OK' AS Status FROM permission_audit_log LIMIT 1;" > /dev/null 2>&1 && echo "  ✅ Tabela 'permission_audit_log' existe" || echo "  ❌ Tabela 'permission_audit_log' não encontrada"
-    @echo ""
-    @echo "2. Verificando integridade referencial..."
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT COUNT(*) AS 'Roles órfãos' FROM role_user ru LEFT JOIN roles r ON ru.role_id = r.id WHERE r.id IS NULL;"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT COUNT(*) AS 'Users órfãos' FROM role_user ru LEFT JOIN users u ON ru.user_id = u.id WHERE u.id IS NULL;"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT COUNT(*) AS 'Permissions órfãs' FROM permission_role pr LEFT JOIN permissions p ON pr.permission_id = p.id WHERE p.id IS NULL;"
-    @echo ""
-    @echo "✅ Verificação concluída!"
-
-# Setup completo do sistema de permissionamento
-permissions-setup:
-    @echo "🚀 SETUP DO SISTEMA DE PERMISSIONAMENTO v2.0"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo ""
-    @echo "1️⃣  Criando backup..."
-    just backup "pre-permissions-setup"
-    @echo ""
-    @echo "2️⃣  Executando migrations..."
-    just migrate-permissions
-    @echo ""
-    @echo "3️⃣  Populando roles e permissions..."
-    just seed-permissions
-    @echo ""
-    @echo "4️⃣  Limpando caches..."
-    just cache-clear
-    @echo ""
-    @echo "5️⃣  Verificando integridade..."
-    just permissions-check
-    @echo ""
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo "✅ SETUP CONCLUÍDO COM SUCESSO!"
-    @echo ""
-    @echo "📊 Status Final:"
-    just permissions-status
-
-# Documentação do sistema de permissionamento
-permissions-docs:
-    @echo "📚 DOCUMENTAÇÃO DO SISTEMA DE PERMISSIONAMENTO"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo ""
-    @echo "📄 Documentos Disponíveis:"
-    @echo "  - Doc/PERMISSION_SYSTEM_ARCHITECTURE.md"
-    @echo "  - Doc/RESUMO_EXECUTIVO_PERMISSIONAMENTO.md"
-    @echo ""
-    @echo "🔧 Comandos Disponíveis:"
-    @echo "  just permissions-setup          # Setup completo"
-    @echo "  just permissions-status         # Ver status"
-    @echo "  just permissions-check          # Verificar integridade"
-    @echo "  just migrate-permissions        # Executar migrations"
-    @echo "  just seed-permissions           # Popular dados"
-    @echo "  just permissions-roles          # Listar roles"
-    @echo "  just permissions-by-module      # Listar por módulo"
-    @echo "  just permissions-audit          # Ver logs auditoria"
-    @echo ""
-    @echo "📊 Consultas Específicas:"
-    @echo "  just permissions-role <slug>    # Permissions de um role"
-    @echo "  just permissions-user <id>      # Roles de um usuário"
-    @echo "  just permissions-module <mod>   # Permissions de um módulo"
-    @echo ""
-    @echo "📖 Para mais informações, consulte a documentação completa."
+@version:
+    echo "Versões instaladas:"
+    echo "Docker:          `docker --version`"
+    echo "Docker Compose:  `docker compose version`"
+    echo "Just:            `just --version`"
 
 # ============================================================================
-# 📦 MÓDULO TDAP - GESTÃO DE DEPÓSITO
+# 🔧 MENU INTERATIVO
 # ============================================================================
 
-# Executar migrations do módulo TDAP
-migrate-tdap:
-    @echo "📦 Executando migrations do TDAP..."
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo ""
-    @echo "📋 Migrations incluídas:"
-    @echo "  - 2025_01_26_000001_create_tdap_products_table.php"
-    @echo "  - 2025_01_26_000002_create_tdap_product_lotes_table.php"
-    @echo "  - 2025_01_26_000003_create_tdap_product_compositions_table.php"
-    @echo "  - 2025_01_26_000004_create_tdap_recebimentos_table.php"
-    @echo "  - 2025_01_26_000005_create_tdap_recebimento_itens_table.php"
-    @echo "  - 2025_01_26_000006_create_tdap_movimentacoes_table.php"
-    @echo ""
-    {{_app}} php artisan migrate --path=database/migrations/2025_01_26_000001_create_tdap_products_table.php --force
-    {{_app}} php artisan migrate --path=database/migrations/2025_01_26_000002_create_tdap_product_lotes_table.php --force
-    {{_app}} php artisan migrate --path=database/migrations/2025_01_26_000003_create_tdap_product_compositions_table.php --force
-    {{_app}} php artisan migrate --path=database/migrations/2025_01_26_000004_create_tdap_recebimentos_table.php --force
-    {{_app}} php artisan migrate --path=database/migrations/2025_01_26_000005_create_tdap_recebimento_itens_table.php --force
-    {{_app}} php artisan migrate --path=database/migrations/2025_01_26_000006_create_tdap_movimentacoes_table.php --force
-    @echo ""
-    @echo "✅ Migrations do TDAP executadas com sucesso!"
-    @echo ""
-    @echo "💡 Próximos passos:"
-    @echo "  1. Execute: just seed-tdap"
-    @echo "  2. Acesse: http://localhost:8001/tdap"
+@menu:
+    echo "════════════════════════════════════════════════════════════"
+    echo "  SDC - MENU INTERATIVO"
+    echo "════════════════════════════════════════════════════════════"
+    echo ""
+    echo "  1) Desenvolvimento (dev)"
+    echo "  2) Desenvolvimento Completo (dev-full)"
+    echo "  3) Build Completo (build-all)"
+    echo "  4) Status (status)"
+    echo "  5) URLs disponíveis (urls)"
+    echo "  6) Shell App (shell)"
+    echo "  7) Logs (logs)"
+    echo "  8) Healthcheck (health)"
+    echo "  9) Parar tudo (down-all)"
+    echo "  0) Ajuda (help)"
+    echo ""
 
-# Reverter migrations do TDAP
-rollback-tdap:
-    @echo "⏮️  Revertendo migrations do TDAP..."
-    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_01_26_000006_create_tdap_movimentacoes_table.php --force
-    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_01_26_000005_create_tdap_recebimento_itens_table.php --force
-    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_01_26_000004_create_tdap_recebimentos_table.php --force
-    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_01_26_000003_create_tdap_product_compositions_table.php --force
-    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_01_26_000002_create_tdap_product_lotes_table.php --force
-    {{_app}} php artisan migrate:rollback --path=database/migrations/2025_01_26_000001_create_tdap_products_table.php --force
-    @echo "✅ Migrations do TDAP revertidas!"
+@run choice:
+    #!/usr/bin/env bash
+    case "{{choice}}" in
+        1) just dev ;;
+        2) just dev-full ;;
+        3) just build-all ;;
+        4) just status ;;
+        5) just urls ;;
+        6) just shell ;;
+        7) just logs ;;
+        8) just health ;;
+        9) just down-all ;;
+        0) just help ;;
+        *) echo "Opção inválida" ;;
+    esac
 
-# Popular dados de exemplo do TDAP
-seed-tdap:
-    @echo "🌱 Criando produtos de exemplo no TDAP..."
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    {{_app}} php artisan tinker --execute="App\Modules\Tdap\Domain\Entities\Product::create(['codigo' => 'CB-001', 'nome' => 'Cesta Básica Tipo 1', 'descricao' => 'Cesta básica completa com itens essenciais', 'tipo' => 'cesta_basica', 'grupo_risco' => 'ALIMENTO', 'estoque_minimo' => 50, 'estoque_maximo' => 500, 'dias_alerta_validade' => 30, 'volume_unitario_m3' => 0.05, 'peso_unitario_kg' => 15]);"
-    {{_app}} php artisan tinker --execute="App\Modules\Tdap\Domain\Entities\Product::create(['codigo' => 'KL-001', 'nome' => 'Kit Limpeza Completo', 'descricao' => 'Kit com produtos de limpeza e higiene', 'tipo' => 'kit_limpeza', 'grupo_risco' => 'QUIMICO', 'estoque_minimo' => 30, 'estoque_maximo' => 300, 'dias_alerta_validade' => 90, 'volume_unitario_m3' => 0.03, 'peso_unitario_kg' => 5]);"
-    {{_app}} php artisan tinker --execute="App\Modules\Tdap\Domain\Entities\Product::create(['codigo' => 'COL-001', 'nome' => 'Colchão Solteiro', 'descricao' => 'Colchão solteiro D28', 'tipo' => 'colchao', 'grupo_risco' => 'GERAL', 'estoque_minimo' => 20, 'estoque_maximo' => 200, 'volume_unitario_m3' => 0.5, 'peso_unitario_kg' => 8]);"
-    {{_app}} php artisan tinker --execute="App\Modules\Tdap\Domain\Entities\Product::create(['codigo' => 'CB-002', 'nome' => 'Cesta Básica Tipo 2', 'descricao' => 'Cesta básica reforçada', 'tipo' => 'cesta_basica', 'grupo_risco' => 'ALIMENTO', 'estoque_minimo' => 30, 'estoque_maximo' => 300, 'dias_alerta_validade' => 30, 'volume_unitario_m3' => 0.06, 'peso_unitario_kg' => 20]);"
-    {{_app}} php artisan tinker --execute="App\Modules\Tdap\Domain\Entities\Product::create(['codigo' => 'KL-002', 'nome' => 'Kit Higiene Pessoal', 'descricao' => 'Kit com itens de higiene pessoal', 'tipo' => 'kit_limpeza', 'grupo_risco' => 'QUIMICO', 'estoque_minimo' => 40, 'estoque_maximo' => 400, 'dias_alerta_validade' => 180, 'volume_unitario_m3' => 0.02, 'peso_unitario_kg' => 3]);"
-    @echo ""
-    @echo "✅ 5 produtos de exemplo criados!"
-    @echo ""
-    @echo "📊 Produtos cadastrados:"
-    just tdap-products
-
-# Listar produtos do TDAP
-tdap-products:
-    @echo "📦 Produtos Cadastrados no TDAP:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT id, codigo AS 'Código', nome AS 'Nome', tipo AS 'Tipo', grupo_risco AS 'Grupo Risco', estoque_minimo AS 'Est. Mín', estoque_maximo AS 'Est. Máx' FROM tdap_products ORDER BY tipo, codigo;"
-
-# Listar tabelas do TDAP
-tdap-tables:
-    @echo "📋 Tabelas do Módulo TDAP:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SHOW TABLES LIKE 'tdap%';"
-
-# Status completo do TDAP
-tdap-status:
-    @echo "📊 STATUS DO MÓDULO TDAP"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo ""
-    @echo "📦 Produtos:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT tipo AS 'Tipo', COUNT(*) AS 'Quantidade' FROM tdap_products GROUP BY tipo UNION ALL SELECT 'TOTAL', COUNT(*) FROM tdap_products;"
-    @echo ""
-    @echo "📦 Lotes:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT COUNT(*) AS 'Total Lotes', SUM(quantidade_atual) AS 'Quantidade Total' FROM tdap_product_lotes;" 2>/dev/null || echo "Nenhum lote cadastrado"
-    @echo ""
-    @echo "📥 Recebimentos:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT status AS 'Status', COUNT(*) AS 'Quantidade' FROM tdap_recebimentos GROUP BY status;" 2>/dev/null || echo "Nenhum recebimento cadastrado"
-    @echo ""
-    @echo "🔄 Movimentações:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT tipo AS 'Tipo', COUNT(*) AS 'Quantidade' FROM tdap_movimentacoes GROUP BY tipo;" 2>/dev/null || echo "Nenhuma movimentação registrada"
-
-# Contar registros das tabelas do TDAP
-tdap-count:
-    @echo "🔢 Contagem de Registros do TDAP:"
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "SELECT 'Produtos' AS Tabela, COUNT(*) AS Registros FROM tdap_products UNION ALL SELECT 'Lotes', COUNT(*) FROM tdap_product_lotes UNION ALL SELECT 'Composições', COUNT(*) FROM tdap_product_compositions UNION ALL SELECT 'Recebimentos', COUNT(*) FROM tdap_recebimentos UNION ALL SELECT 'Itens Recebimento', COUNT(*) FROM tdap_recebimento_itens UNION ALL SELECT 'Movimentações', COUNT(*) FROM tdap_movimentacoes;"
-
-# Setup completo do TDAP
-tdap-setup:
-    @echo "🚀 SETUP DO MÓDULO TDAP"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo ""
-    @echo "1️⃣  Executando migrations..."
-    just migrate-tdap
-    @echo ""
-    @echo "2️⃣  Populando produtos de exemplo..."
-    just seed-tdap
-    @echo ""
-    @echo "3️⃣  Limpando caches..."
-    just cache-clear
-    @echo ""
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo "✅ SETUP DO TDAP CONCLUÍDO!"
-    @echo ""
-    @echo "📊 Status Final:"
-    just tdap-status
-    @echo ""
-    @echo "🌐 Acesse: http://localhost:8001/tdap"
-
-# Limpar todos os dados do TDAP (CUIDADO!)
-tdap-clean:
-    @echo "⚠️  ATENÇÃO: Limpando TODOS os dados do TDAP!"
-    @echo "Pressione Ctrl+C para cancelar..."
-    sleep 3
-    {{_db}} mysql -u root -p$$MYSQL_ROOT_PASSWORD $$MYSQL_DATABASE -e "TRUNCATE TABLE tdap_movimentacoes; TRUNCATE TABLE tdap_recebimento_itens; TRUNCATE TABLE tdap_recebimentos; TRUNCATE TABLE tdap_product_lotes; TRUNCATE TABLE tdap_product_compositions; TRUNCATE TABLE tdap_products;"
-    @echo "✅ Dados do TDAP limpos!"
-
-# Documentação do TDAP
-tdap-docs:
-    @echo "📚 DOCUMENTAÇÃO DO MÓDULO TDAP"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo ""
-    @echo "📄 Documento:"
-    @echo "  - app/Modules/Tdap/README.md"
-    @echo ""
-    @echo "🔧 Comandos Disponíveis:"
-    @echo "  just tdap-setup          # Setup completo do TDAP"
-    @echo "  just migrate-tdap        # Executar migrations"
-    @echo "  just rollback-tdap       # Reverter migrations"
-    @echo "  just seed-tdap           # Popular produtos exemplo"
-    @echo "  just tdap-status         # Ver status completo"
-    @echo "  just tdap-products       # Listar produtos"
-    @echo "  just tdap-count          # Contar registros"
-    @echo "  just tdap-clean          # Limpar todos os dados"
-    @echo ""
-    @echo "📊 Funcionalidades:"
-    @echo "  - Gestão de Produtos (Cestas, Kits, Colchões)"
-    @echo "  - Controle de Lotes (FEFO/FIFO)"
-    @echo "  - Recebimento de Materiais (Modal TDPA)"
-    @echo "  - Movimentações de Estoque"
-    @echo "  - Dashboard com Alertas"
-    @echo ""
-    @echo "🌐 Acesso: http://localhost:8001/tdap"
+# ============================================================================
+# FIM
+# ============================================================================

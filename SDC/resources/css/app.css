@@ -1,9 +1,14 @@
-/* Component Styles - @import deve vir antes de @tailwind */
+/* Component Styles */
 @import './components/forms.css';
+@import './components/atoms/input.css';
 @import './components/beneficiario-card.css';
 
 /* Page Styles */
 @import './pages/rat/sections.css';
+
+/* Mobile Utilities */
+@import './utilities/mobile.css';
+@import './utilities/touch-feedback.css';
 
 @tailwind base;
 @tailwind components;

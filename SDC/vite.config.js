@@ -2,13 +2,13 @@ import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
 import path from 'path';
 import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
     plugins: [
         laravel({
             input: 'resources/js/app.js',
-            // SSR desabilitado temporariamente para build de produção
-            // ssr: 'resources/js/ssr.ts',
+            ssr: 'resources/js/ssr.ts',
             refresh: true,
         }),
         vue({
@@ -17,6 +17,102 @@ export default defineConfig({
                     base: null,
                     includeAbsolute: false,
                 },
+            },
+        }),
+        VitePWA({
+            registerType: 'autoUpdate',
+            includeAssets: ['favicon.ico', 'robots.txt', 'imgs/**/*'],
+            manifest: {
+                name: 'SDC - Sistema de Defesa Civil',
+                short_name: 'SDC',
+                description: 'Sistema de Defesa Civil do Estado de Minas Gerais',
+                theme_color: '#1e40af',
+                background_color: '#ffffff',
+                display: 'standalone',
+                orientation: 'portrait',
+                scope: '/',
+                start_url: '/',
+                icons: [
+                    {
+                        src: '/imgs/pwa-192x192.png',
+                        sizes: '192x192',
+                        type: 'image/png',
+                    },
+                    {
+                        src: '/imgs/pwa-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                    },
+                    {
+                        src: '/imgs/pwa-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                        purpose: 'maskable',
+                    },
+                ],
+            },
+            workbox: {
+                globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
+                runtimeCaching: [
+                    {
+                        urlPattern: /^https:\/\/api\..*/i,
+                        handler: 'StaleWhileRevalidate',
+                        options: {
+                            cacheName: 'api-cache',
+                            expiration: {
+                                maxEntries: 100,
+                                maxAgeSeconds: 60 * 60 * 24,
+                            },
+                            cacheableResponse: {
+                                statuses: [0, 200],
+                            },
+                        },
+                    },
+                    {
+                        urlPattern: /\/api\/.*/i,
+                        handler: 'StaleWhileRevalidate',
+                        options: {
+                            cacheName: 'internal-api-cache',
+                            expiration: {
+                                maxEntries: 200,
+                                maxAgeSeconds: 60 * 5,
+                            },
+                            cacheableResponse: {
+                                statuses: [0, 200],
+                            },
+                        },
+                    },
+                    {
+                        urlPattern: /\.(png|jpg|jpeg|svg|gif|webp|avif)$/i,
+                        handler: 'CacheFirst',
+                        options: {
+                            cacheName: 'images-cache',
+                            expiration: {
+                                maxEntries: 100,
+                                maxAgeSeconds: 60 * 60 * 24 * 30,
+                            },
+                        },
+                    },
+                    {
+                        urlPattern: /\.(woff|woff2|ttf|eot)$/i,
+                        handler: 'CacheFirst',
+                        options: {
+                            cacheName: 'fonts-cache',
+                            expiration: {
+                                maxEntries: 20,
+                                maxAgeSeconds: 60 * 60 * 24 * 365,
+                            },
+                        },
+                    },
+                ],
+                navigateFallback: null,
+                navigateFallbackDenylist: [/.*/],
+                cleanupOutdatedCaches: true,
+                skipWaiting: true,
+                clientsClaim: true,
+            },
+            devOptions: {
+                enabled: false,
             },
         }),
     ],
@@ -28,72 +124,71 @@ export default defineConfig({
         },
     },
     build: {
-        // Code splitting otimizado
         rollupOptions: {
             output: {
                 manualChunks: (id) => {
-                    // Separar vendor chunks para carregamento paralelo
                     if (id.includes('node_modules')) {
+                        // Framework core (~80KB) - carregado em toda página
                         if (id.includes('vue') || id.includes('@inertiajs')) {
                             return 'vendor-vue';
                         }
+                        // Data fetching (~30KB)
+                        if (id.includes('@tanstack')) {
+                            return 'vendor-query';
+                        }
+                        // Charts (~500KB) - só carregado em páginas com gráficos
+                        if (id.includes('apexcharts') || id.includes('vue3-apexcharts')) {
+                            return 'vendor-charts';
+                        }
+                        // Maps (~200KB) - só carregado em páginas com mapa
+                        if (id.includes('leaflet')) {
+                            return 'vendor-maps';
+                        }
+                        // Drag & Drop (~40KB) - só Dashboard
+                        if (id.includes('vuedraggable') || id.includes('sortablejs')) {
+                            return 'vendor-dnd';
+                        }
+                        // Routing
                         if (id.includes('ziggy')) {
                             return 'vendor-utils';
                         }
-                        // Outros node_modules em chunk separado
                         return 'vendor-other';
                     }
                 },
-                // Otimizar nomes de chunks
                 chunkFileNames: 'js/[name]-[hash].js',
                 entryFileNames: 'js/[name]-[hash].js',
                 assetFileNames: 'assets/[name]-[hash].[ext]',
             },
         },
-        // Otimizações de build - usar esbuild (mais rápido que terser)
         minify: 'esbuild',
-        // Chunk size warnings
         chunkSizeWarningLimit: 1000,
-        // Source maps desabilitados em produção para melhor performance
         sourcemap: false,
-        // Otimizar assets
-        assetsInlineLimit: 4096, // Inline assets < 4kb
-        // Otimizar para carregamento paralelo
-        cssCodeSplit: true, // Separar CSS por chunk
-        reportCompressedSize: false, // Desabilitar para builds mais rápidos
-        // Otimizações adicionais para produção
-        target: 'es2015', // Suporte a navegadores modernos
-        terserOptions: {
-            compress: {
-                drop_console: false, // Manter console em dev, remover em prod se necessário
-                drop_debugger: true,
-            },
-        },
+        assetsInlineLimit: 4096,
+        cssCodeSplit: true,
+        reportCompressedSize: false,
+        target: 'esnext',
     },
-    // Otimizações de dependências
     optimizeDeps: {
-        include: ['vue', '@inertiajs/vue3', 'ziggy-js'],
-        exclude: [],
+        include: ['vue', '@inertiajs/vue3', 'ziggy-js', '@tanstack/vue-query', 'vuedraggable', 'sortablejs'],
+        exclude: ['virtual:pwa-register'],
     },
     server: {
         host: '0.0.0.0',
-        port: 5173,
-        strictPort: true,
-        // Configuração otimizada para Docker
-        watch: {
-            usePolling: true,
-            interval: 300, // Reduzido de 1000ms para 300ms para detecção mais rápida
-            ignored: ['**/node_modules/**', '**/vendor/**', '**/storage/**', '**/public/**'],
-        },
+        port: 5175,
+        strictPort: false,
         hmr: {
             host: 'localhost',
-            port: 5173,
+            clientPort: 15175,
             protocol: 'ws',
-            clientPort: 5173,
-            overlay: true, // Mostrar erros na tela
         },
-        // Configurações adicionais para HMR
+        watch: {
+            ignored: ['**/storage/**', '**/vendor/**'],
+        },
         cors: true,
-        origin: 'http://localhost:5173',
+        origin: 'http://localhost:15175',
+    },
+    worker: {
+        format: 'es',
     },
 });
+// Force reload

@@ -3,22 +3,14 @@
 namespace App\Policies;
 
 use App\Models\User;
-use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 
-class UserPolicy
+/**
+ * Policy para gerenciamento de usuarios.
+ * Estende BasePolicy para herdar super-admin bypass e helpers de hierarquia.
+ */
+class UserPolicy extends BasePolicy
 {
-    use HandlesAuthorization;
-
-    public function before(User $user, string $ability): ?bool
-    {
-        if ($user->hasRole('super-admin')) {
-            return true;
-        }
-
-        return null;
-    }
-
     public function viewAny(User $user): bool
     {
         return $user->can('users.view');
@@ -38,13 +30,17 @@ class UserPolicy
         return $user->can('users.create');
     }
 
-    public function update(User $user, User $model): bool
+    public function update(User $user, User $model): Response
     {
         if ($user->id === $model->id) {
-            return true;
+            return Response::allow();
         }
 
-        return $user->can('users.edit');
+        if (!$this->canManageTarget($user, $model)) {
+            return $this->denyHierarchy('editar');
+        }
+
+        return $this->checkPermissionOrDeny($user, 'users.edit');
     }
 
     public function delete(User $user, User $model): Response
@@ -53,38 +49,58 @@ class UserPolicy
             return Response::deny('Voce nao pode deletar sua propria conta.');
         }
 
-        if ($model->hasRole('super-admin')) {
-            return Response::deny('Super Admins nao podem ser deletados.');
+        if ($this->isSuperAdmin($model)) {
+            return $this->denyProtected('Super Admin');
         }
 
-        return $user->can('users.delete')
-            ? Response::allow()
-            : Response::deny('Voce nao tem permissao para deletar usuarios.');
+        if (!$this->canManageTarget($user, $model)) {
+            return $this->denyHierarchy('deletar');
+        }
+
+        return $this->checkPermissionOrDeny($user, 'users.delete');
     }
 
-    public function restore(User $user, User $model): bool
+    public function restore(User $user, User $model): Response
     {
-        return $user->hasAnyRole(['super-admin', 'admin']);
+        if (!$user->hasAnyRole(['super-admin', 'admin'])) {
+            return Response::deny('Apenas administradores podem restaurar usuarios.');
+        }
+
+        if (!$this->canManageTarget($user, $model)) {
+            return $this->denyHierarchy('restaurar');
+        }
+
+        return Response::allow();
     }
 
     public function forceDelete(User $user, User $model): bool
     {
-        return $user->hasRole('super-admin');
+        return $this->isSuperAdmin($user);
     }
 
-    public function assignRole(User $user, User $model): bool
+    public function assignRole(User $user, User $model): Response
     {
-        return $user->can('roles.edit');
+        if (!$user->can('roles.edit')) {
+            return $this->denyPermission('roles.edit');
+        }
+
+        if (!$this->canManageTarget($user, $model)) {
+            return $this->denyHierarchy('atribuir roles a');
+        }
+
+        return Response::allow();
     }
 
     public function removeRole(User $user, User $model): Response
     {
-        if ($model->hasRole('super-admin')) {
-            return Response::deny('Nao e possivel remover role de Super Admin.');
+        if ($this->isSuperAdmin($model)) {
+            return $this->denyProtected('Super Admin');
         }
 
-        return $user->can('roles.edit')
-            ? Response::allow()
-            : Response::deny('Voce nao tem permissao para gerenciar roles.');
+        if (!$this->canManageTarget($user, $model)) {
+            return $this->denyHierarchy('remover roles de');
+        }
+
+        return $this->checkPermissionOrDeny($user, 'roles.edit');
     }
 }

@@ -45,15 +45,15 @@ class ActivityLogger
             // Contexto da requisição
             'request_id' => $requestId,
             'user_id' => $userId ?? auth()->id(),
-            'ip_address' => request()?->ip(),
-            'user_agent' => request()?->userAgent(),
-            'url' => request()?->fullUrl(),
-            'http_method' => request()?->method(),
+            'ip_address' => app()->bound('request') ? request()->ip() : null,
+            'user_agent' => app()->bound('request') ? request()->userAgent() : null,
+            'url' => app()->bound('request') ? request()->fullUrl() : null,
+            'http_method' => app()->bound('request') ? request()->method() : null,
 
             // Contexto do ambiente
             'environment' => config('app.env'),
             'app_name' => config('app.name'),
-            'hostname' => gethostname(),
+            'hostname' => function_exists('gethostname') ? gethostname() : (function_exists('php_uname') ? php_uname('n') : 'unknown'),
 
             // Dados do evento
             'data' => $data,
@@ -62,14 +62,21 @@ class ActivityLogger
             'source' => self::getCallerInfo(),
         ];
 
-        // Log em arquivo estruturado
-        Log::channel('events')->{$level}($event, $logData);
+        try {
+            // Log em arquivo estruturado
+            Log::channel('events')->{$level}($event, $logData);
 
-        // Log em Redis para visualização em tempo real
-        self::logToRedis($type, $logData);
+            // Log em Redis para visualização em tempo real
+            self::logToRedis($type, $logData);
 
-        // Métricas para Prometheus
-        self::incrementMetric($type, $event);
+            // Métricas para Prometheus
+            self::incrementMetric($type, $event);
+        } catch (\Throwable $e) {
+            // Failsafe: se o log falhar (ex: erro de permissão), não interromper a aplicação
+            if (app()->environment('local', 'testing')) {
+                error_log("ActivityLogger failed: " . $e->getMessage());
+            }
+        }
     }
 
     /**
@@ -121,7 +128,11 @@ class ActivityLogger
             'user_id' => $userId,
         ], $extra);
 
-        self::logEvent('api', 'request', $data, $userId,
+        self::logEvent(
+            'api',
+            'request',
+            $data,
+            $userId,
             $statusCode >= 500 ? 'error' : ($statusCode >= 400 ? 'warning' : 'info')
         );
     }
@@ -217,7 +228,11 @@ class ActivityLogger
         self::logEvent('error', 'critical_error', $data, null, 'critical');
 
         // Log também no canal critical separado
-        Log::channel('critical')->critical($message, $data);
+        try {
+            Log::channel('critical')->critical($message, $data);
+        } catch (\Throwable $e) {
+            // Silencioso
+        }
 
         // Notificar equipe (Slack, email, etc)
         // TODO: Implementar notificações via Slack/Discord
@@ -359,7 +374,8 @@ class ActivityLogger
         ?string $type = null,
         ?string $level = null,
         ?string $search = null,
-        int $limit = 1000
+        int $limit = 1000,
+        ?string $file = null
     ): array {
         $logReader = app(\App\Services\Logging\LogFileReaderService::class);
 
@@ -370,6 +386,7 @@ class ActivityLogger
             'level' => $level,
             'search' => $search,
             'limit' => $limit,
+            'file' => $file
         ]);
 
         return $logs->toArray();
@@ -381,7 +398,8 @@ class ActivityLogger
     public static function getLogStatistics(
         \Carbon\Carbon $startDate,
         \Carbon\Carbon $endDate,
-        ?string $type = null
+        ?string $type = null,
+        ?string $file = null
     ): array {
         $logReader = app(\App\Services\Logging\LogFileReaderService::class);
 
@@ -389,6 +407,7 @@ class ActivityLogger
             'start_date' => $startDate,
             'end_date' => $endDate,
             'type' => $type,
+            'file' => $file
         ]);
     }
 }

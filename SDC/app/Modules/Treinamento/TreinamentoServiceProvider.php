@@ -32,16 +32,14 @@ class TreinamentoServiceProvider extends ServiceProvider
 
     /**
      * Bootstrap services
+     *
+     * NOTA: As rotas do módulo são carregadas via routes/web.php dentro do
+     * middleware group 'auth' (que inclui 'web'). NÃO usar loadRoutesFrom()
+     * aqui, pois isso registra rotas SEM os middlewares web/auth, causando
+     * 403 para todos os usuários. Padrão: mesmo que RatServiceProvider.
      */
     public function boot(): void
     {
-        // Carregar rotas do módulo
-        $routesPath = base_path('routes/modules/treinamento.php');
-        if (file_exists($routesPath)) {
-            $this->loadRoutesFrom($routesPath);
-        }
-
-        // Carregar migrations
-        $this->loadMigrationsFrom(database_path('migrations'));
+        // Rotas carregadas via routes/web.php -> routes/modules/treinamento.php
     }
 }

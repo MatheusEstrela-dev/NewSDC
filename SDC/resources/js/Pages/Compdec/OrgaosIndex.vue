@@ -1,95 +1,62 @@
 <template>
-  <AuthenticatedLayout title="Órgãos - COMPDEC/REDEC/CEDEC">
-    <div class="orgaos-index">
-      <!-- Header com Estatísticas -->
-      <div class="header-section">
-        <div class="header-title">
-          <Heading level="1">Órgãos de Defesa Civil</Heading>
-          <Text variant="muted">Gestão de COMPDEC, REDEC e CEDEC</Text>
-        </div>
 
-        <Button
-          v-if="canManage"
-          variant="primary"
-          @click="handleCreate"
-        >
-          <PlusIcon class="w-5 h-5" />
-          Novo Órgão
-        </Button>
-      </div>
+    <div class="orgaos-index">
+      <!-- Header Padronizado -->
+      <PageHeader
+        title="Órgãos de Defesa Civil"
+        description="Gestão de COMPDEC, REDEC e CEDEC"
+        :icon="BuildingOfficeIcon"
+        variant="gradient"
+      >
+        <template #actions>
+          <Button
+            v-if="canManage"
+            variant="primary"
+            size="md"
+            :icon="PlusIcon"
+            icon-position="left"
+            @click="handleCreate"
+          >
+            Novo Órgão
+          </Button>
+        </template>
+      </PageHeader>
 
       <!-- Cards de Estatísticas -->
-      <div class="stats-grid" v-if="statistics">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" v-if="statistics">
         <StatCard
           title="Total de Órgãos"
           :value="statistics.total"
-          icon="building"
-          color="blue"
+          variant="info"
+          :icon="BuildingOfficeIcon"
         />
         <StatCard
           title="COMPDECs"
           :value="statistics.por_tipo.compdec || 0"
-          icon="building"
-          color="green"
+          variant="success"
+          :icon="BuildingOfficeIcon"
         />
         <StatCard
           title="REDECs"
           :value="statistics.por_tipo.redec || 0"
-          icon="building"
-          color="yellow"
+          variant="warning"
+          :icon="BuildingOfficeIcon"
         />
         <StatCard
           title="Ativos"
           :value="statistics.ativos"
-          icon="check"
-          color="green"
+          variant="success"
+          :icon="CheckCircleIcon"
         />
       </div>
 
-      <!-- Filtros -->
-      <div class="filters-section">
-        <div class="filters-grid">
-          <SelectInput
-            v-model="localFilters.tipo"
-            label="Tipo de Órgão"
-            :options="[
-              { value: '', label: 'Todos' },
-              { value: 'compdec', label: 'COMPDEC' },
-              { value: 'redec', label: 'REDEC' },
-              { value: 'cedec', label: 'CEDEC' }
-            ]"
-            @update:modelValue="applyFilters"
-          />
-
-          <SelectInput
-            v-model="localFilters.status"
-            label="Status"
-            :options="[
-              { value: '', label: 'Todos' },
-              { value: 'ativo', label: 'Ativo' },
-              { value: 'inativo', label: 'Inativo' },
-              { value: 'em_implantacao', label: 'Em Implantação' },
-              { value: 'suspenso', label: 'Suspenso' }
-            ]"
-            @update:modelValue="applyFilters"
-          />
-
-          <TextInput
-            v-model="localFilters.search"
-            label="Buscar"
-            placeholder="Nome ou código..."
-            @update:modelValue="debouncedSearch"
-          />
-
-          <Button
-            v-if="hasActiveFilters"
-            variant="outline"
-            @click="clearFilters"
-          >
-            Limpar Filtros
-          </Button>
-        </div>
-      </div>
+      <!-- Filtros Padronizados -->
+      <OrgaosFiltersSection
+        :filters="localFilters"
+        :municipalities="filterOptions?.municipalities || []"
+        @filter-change="handleFilterChange"
+        @filter-reset="handleFilterReset"
+      />
 
       <!-- Tabela de Órgãos -->
       <div class="table-container">
@@ -141,24 +108,15 @@
                 <Text variant="muted">{{ orgao.usuarios_count || 0 }}</Text>
               </td>
               <td class="actions-column">
-                <div class="action-buttons">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    @click="handleView(orgao.id)"
-                    title="Ver detalhes"
-                  >
-                    Ver
-                  </Button>
-                  <Button
-                    v-if="canManage"
-                    variant="ghost"
-                    size="sm"
-                    @click="handleEdit(orgao.id)"
-                    title="Editar"
-                  >
-                    Editar
-                  </Button>
+                <div class="flex items-center justify-end">
+                  <TableActions
+                    :show-view="true"
+                    :show-edit="canManage"
+                    :show-attachments="false"
+                    :show-delete="false"
+                    @view="handleView(orgao.id)"
+                    @edit="handleEdit(orgao.id)"
+                  />
                 </div>
               </td>
             </tr>
@@ -175,22 +133,26 @@
         @page-change="handlePageChange"
       />
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
+import Text from '@/Components/Atoms/Typography/Text.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
-import SelectInput from '@/Components/Atoms/Input/SelectInput.vue';
-import TextInput from '@/Components/Atoms/Input/TextInput.vue';
+import OrgaosFiltersSection from '@/Components/Organisms/Compdec/OrgaosFiltersSection.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
-import { PlusIcon } from '@heroicons/vue/24/outline';
+import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
+import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 
 const props = defineProps({
   orgaos: {
@@ -251,6 +213,15 @@ const clearFilters = () => {
   applyFilters();
 };
 
+const handleFilterChange = (newFilters) => {
+  localFilters.value = { ...newFilters };
+  applyFilters();
+};
+
+const handleFilterReset = () => {
+  clearFilters();
+};
+
 const handlePageChange = (page) => {
   loading.value = true;
   router.get(route('compdec.index'), {
@@ -281,29 +252,7 @@ const handleEdit = (id) => {
 <style scoped>
 .orgaos-index {
   @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-}
-
-.header-title {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  /* Padding removed for global alignment */
 }
 
 .filters-section {

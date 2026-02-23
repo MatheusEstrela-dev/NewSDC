@@ -41,12 +41,11 @@
 </template>
 
 <script setup>
-import { computed, ref, Transition } from 'vue';
+import { computed, ref, Transition, onMounted } from 'vue';
 import CardBase from '../../Atoms/Card/CardBase.vue';
 import Heading from '../../Atoms/Typography/Heading.vue';
 import FunnelIcon from '../../Icons/FunnelIcon.vue';
 import ChevronDownIcon from '../../Icons/ChevronDownIcon.vue';
-
 const props = defineProps({
   title: {
     type: String,
@@ -59,11 +58,18 @@ const props = defineProps({
   },
   defaultCollapsed: {
     type: Boolean,
-    default: false,
+    default: true,
   },
 });
 
-const isCollapsed = ref(props.defaultCollapsed);
+const getInitialCollapsed = () => {
+  if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    return true;
+  }
+  return props.defaultCollapsed;
+};
+
+const isCollapsed = ref(getInitialCollapsed());
 
 const gridClasses = computed(() => {
   const gridCols = {

@@ -1,8 +1,15 @@
 <template>
   <div class="tdap-movimentacoes-container">
-    <TdapMovimentacoesPageHeader />
+    <!-- Header Padronizado -->
+    <PageHeader
+      title="Movimentações TDAP"
+      description="Controle de movimentações de estoque"
+      :icon="ArrowsRightLeftIcon"
+      variant="gradient"
+    />
 
-    <CardBase variant="default" padding="lg" class="bg-slate-800/60 border-slate-700/50">
+    <!-- Desktop: Tabela -->
+    <CardBase v-if="!isMobile" variant="default" padding="lg" class="bg-slate-800/60 border-slate-700/50">
       <Heading :level="4" color="white" class="mb-4">Movimentações de Estoque</Heading>
 
       <div class="overflow-x-auto">
@@ -62,15 +69,42 @@
         </table>
       </div>
     </CardBase>
+
+    <!-- Mobile: Cards -->
+    <div v-else class="grid grid-cols-1 gap-4">
+      <TdapMovimentacaoCard
+        v-for="mov in movimentacoes"
+        :key="mov.id"
+        :movimentacao="mov"
+      />
+      <div v-if="!movimentacoes || movimentacoes.length === 0" class="text-center py-8 bg-slate-800/60 border border-slate-700/50 rounded-lg">
+        <Text size="sm" color="muted">Nenhuma movimentação registrada</Text>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="pagination" class="mt-6">
+      <Pagination
+        :pagination="pagination"
+        @page-change="(page) => $emit('page-change', page)"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import TdapMovimentacoesPageHeader from '@/Components/Organisms/Tdap/Header/TdapMovimentacoesPageHeader.vue';
-import MovimentacaoTypeBadge from '@/Components/Atoms/Tdap/MovimentacaoTypeBadge.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import MovimentacaoTypeBadge from '@/Components/Atoms/Tdap/MovimentacaoTypeBadge.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import ArrowsRightLeftIcon from '@/Components/Icons/ArrowsRightLeftIcon.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import TdapMovimentacaoCard from '@/Components/Molecules/Tdap/TdapMovimentacaoCard.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { useMobile } from '@/Composables/useMobile';
+
+// Detecção mobile
+const { isMobile } = useMobile();
 
 const props = defineProps({
   movimentacoes: {
@@ -81,7 +115,13 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  pagination: {
+    type: Object,
+    default: null,
+  },
 });
+
+const emit = defineEmits(['page-change']);
 
 const formatDate = (date) => {
   if (!date) return '-';
@@ -97,26 +137,7 @@ const formatDate = (date) => {
 
 <style scoped>
 .tdap-movimentacoes-container {
-  @apply w-full min-h-screen;
-  padding: 1.5rem;
+  @apply w-full pb-8;
   background: #0f172a;
-}
-
-@media (min-width: 640px) {
-  .tdap-movimentacoes-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .tdap-movimentacoes-container {
-    padding: 2rem 2.5rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .tdap-movimentacoes-container {
-    padding: 2rem 3rem;
-  }
 }
 </style>

@@ -1,10 +1,12 @@
 <script setup>
-import { router } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import Heading from '@/Components/Atoms/Typography/Heading.vue';
+import Text from '@/Components/Atoms/Typography/Text.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { router } from '@inertiajs/vue3';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   treinamento: {
@@ -13,9 +15,13 @@ const props = defineProps({
   },
 });
 
-const formatDate = (date) => {
-  if (!date) return null;
-  return new Date(date).toLocaleDateString('pt-BR');
+const formatDate = (dateValue) => {
+  if (!dateValue) return null;
+  const str = String(dateValue).trim();
+  if (str.includes('/')) return str;
+  const d = new Date(dateValue);
+  if (isNaN(d.getTime())) return str;
+  return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 };
 
 const goBack = () => {
@@ -24,7 +30,7 @@ const goBack = () => {
 </script>
 
 <template>
-  <AuthenticatedLayout :title="treinamento.titulo">
+
     <div class="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
       <!-- Voltar -->
       <button
@@ -156,5 +162,5 @@ const goBack = () => {
         </div>
       </CardBase>
     </div>
-  </AuthenticatedLayout>
+
 </template>

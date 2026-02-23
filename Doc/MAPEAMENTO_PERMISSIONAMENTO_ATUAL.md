@@ -474,3 +474,4 @@ sequenceDiagram
 **Baseado em:** Análise do código-fonte do NewSDC/SDC  
 **Status:** SISTEMA ATUAL EM PRODUÇÃO
 
+

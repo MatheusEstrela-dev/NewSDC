@@ -45,9 +45,47 @@ class EloquentProcessoRepository implements ProcessoRepositoryInterface
 
     public function paginate(int $perPage = 15): LengthAwarePaginator
     {
-        return Processo::with(['municipios'])
-                       ->orderBy('data_entrada', 'desc')
-                       ->paginate($perPage);
+        $query = Processo::with(['municipios'])
+                       ->orderBy('data_entrada', 'desc');
+
+        if ($perPage === -1) {
+            $total = (clone $query)->count();
+            $perPage = $total > 0 ? $total : 1;
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    public function findAll(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = Processo::query()->with(['municipios']);
+
+        if (isset($filters['search'])) {
+            $query->where(function($q) use ($filters) {
+                $q->where('n_protocolo_fide', 'like', "%{$filters['search']}%")
+                  ->orWhere('analista', 'like', "%{$filters['search']}%")
+                  ->orWhere('observacoes', 'like', "%{$filters['search']}%");
+            });
+        }
+
+        if (isset($filters['processo'])) {
+            $query->where('processo', $filters['processo']);
+        }
+
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (isset($filters['vigencia_status'])) {
+            match($filters['vigencia_status']) {
+                'vigente' => $query->vigentes(),
+                'vencido' => $query->vencidos(),
+                'proximo_vencer' => $query->proximosVencer(),
+                default => null
+            };
+        }
+
+        return $query->orderBy('data_entrada', 'desc')->paginate($perPage);
     }
 
     public function filterBy(array $filters): Collection
@@ -80,5 +118,10 @@ class EloquentProcessoRepository implements ProcessoRepositoryInterface
         }
 
         return $query->orderBy('data_entrada', 'desc')->get();
+    }
+
+    public function count(): int
+    {
+        return Processo::count();
     }
 }

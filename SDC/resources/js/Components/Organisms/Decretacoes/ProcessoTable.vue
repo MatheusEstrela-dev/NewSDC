@@ -9,15 +9,15 @@
         </h3>
         <p class="text-xs text-slate-400 mt-0.5 hidden sm:block">{{ subtitle }}</p>
       </div>
-      <span class="bg-slate-700/50 text-slate-300 text-[10px] sm:text-xs font-bold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded border border-slate-600/50 flex-shrink-0 ml-2">
+      <span class="bg-slate-700/50 text-slate-300 text-xs font-bold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded border border-slate-600/50 flex-shrink-0 ml-2">
         {{ processos.length }}
       </span>
     </div>
 
     <!-- Tabela -->
     <div class="overflow-x-auto -mx-px">
-      <table class="w-full text-sm min-w-[640px]">
-        <thead class="text-[10px] sm:text-xs text-slate-400 uppercase font-semibold bg-slate-800/80 border-b border-slate-700/50">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-slate-400 uppercase font-semibold bg-slate-800/80 border-b border-slate-700/50">
           <tr>
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap">Protocolo</th>
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap">Tipo</th>
@@ -37,7 +37,7 @@
             <!-- Protocolo -->
             <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
               <div class="font-medium text-slate-200 text-xs sm:text-sm whitespace-nowrap">{{ processo.n_protocolo_fide }}</div>
-              <div class="text-[10px] sm:text-xs text-slate-500 whitespace-nowrap">{{ formatDate(processo.data_entrada) }}</div>
+              <div class="text-xs text-slate-500 whitespace-nowrap">{{ formatDate(processo.data_entrada) }}</div>
             </td>
 
             <!-- Tipo -->
@@ -48,7 +48,7 @@
             <!-- Desastre -->
             <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 hidden sm:table-cell">
               <div class="text-slate-300 font-medium text-xs sm:text-sm max-w-[150px] truncate">{{ processo.tipo_desastre_nome || '—' }}</div>
-              <div v-if="processo.tipo_desastre_cobrade" class="text-[10px] sm:text-xs text-slate-500">
+              <div v-if="processo.tipo_desastre_cobrade" class="text-xs text-slate-500">
                 COBRADE: {{ processo.tipo_desastre_cobrade }}
               </div>
             </td>
@@ -76,10 +76,12 @@
               <div class="flex items-center justify-end">
                 <TableActions
                   :show-view="true"
+                  :show-print="true"
                   :show-edit="canEdit"
                   :show-attachments="false"
-                  :show-delete="false"
+                  :show-delete="canDelete"
                   @view="$emit('view', processo.id)"
+                  @print="$emit('print', processo.id)"
                   @edit="$emit('edit', processo.id)"
                 />
               </div>
@@ -102,9 +104,9 @@
 
 <script setup>
 import DocumentIcon from '../../Icons/DocumentTextIcon.vue';
-import TipoProcessoBadge from '../../Molecules/Decretacoes/TipoProcessoBadge.vue';
-import StatusBadge from '../../Molecules/Decretacoes/StatusBadge.vue';
 import PrazoBadge from '../../Molecules/Decretacoes/PrazoBadge.vue';
+import StatusBadge from '../../Molecules/Decretacoes/StatusBadge.vue';
+import TipoProcessoBadge from '../../Molecules/Decretacoes/TipoProcessoBadge.vue';
 import TableActions from '../../Molecules/Table/TableActions.vue';
 
 const props = defineProps({
@@ -122,11 +124,15 @@ const props = defineProps({
   },
   canEdit: {
     type: Boolean,
-    default: true,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
   },
 });
 
-defineEmits(['view', 'edit']);
+defineEmits(['view', 'print', 'edit']);
 
 const formatDate = (date) => {
   if (!date) return '—';

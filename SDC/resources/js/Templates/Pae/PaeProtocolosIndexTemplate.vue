@@ -1,6 +1,65 @@
 <template>
   <div class="pae-protocolos-container">
-    <PaeProtocolosHeader />
+    <!-- Header Padronizado com Toggle -->
+    <PageHeader
+      title="Protocolos PAE"
+      description="Gerencie os protocolos de análise de PAE"
+      :icon="ClipboardDocumentListIcon"
+      variant="gradient"
+    >
+      <template #actions>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Toggle Grade/Tabela - Oculto em mobile -->
+          <div class="hidden md:flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
+            <button
+              @click="viewMode = 'grid'"
+              :class="[
+                'px-3 py-1.5 rounded text-xs font-medium transition-all',
+                viewMode === 'grid'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              ]"
+              title="Visualização em Grade"
+            >
+              Grade
+            </button>
+            <button
+              @click="viewMode = 'table'"
+              :class="[
+                'px-3 py-1.5 rounded text-xs font-medium transition-all',
+                viewMode === 'table'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              ]"
+              title="Visualização em Tabela"
+            >
+              Tabela
+            </button>
+          </div>
+
+          <!-- Botao Exportar -->
+          <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
+            <span class="hidden sm:inline">Exportar</span>
+          </Button>
+
+          <!-- Botao Novo Protocolo - Responsivo -->
+          <Link v-if="canCreate" :href="route('pae.index')">
+            <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
+              <span class="hidden sm:inline">Novo Protocolo</span>
+              <span class="sm:hidden">Novo</span>
+            </Button>
+          </Link>
+        </div>
+      </template>
+    </PageHeader>
+
+    <!-- Modal de Exportação CSV -->
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="PAE"
+      @close="showExportModal = false"
+      @export="handleExportCsv"
+    />
 
     <PaeProtocolosStatsCards :stats="statsToUse" />
 
@@ -13,15 +72,41 @@
       @filter-reset="handleFilterReset"
     />
 
+    <!-- Mobile: Sempre Grade | Desktop: Grade ou Tabela -->
     <PaeProtocolosGrid
+      v-if="viewMode === 'grid' || isMobile"
       :protocolos="paginatedProtocolos"
       :loading="loading"
       :pagination="paginationToUse"
+      :can-edit="canEdit"
+      :can-delete="canDelete"
       @view="handleView"
+      @print="handlePrint"
       @edit="handleEdit"
       @history="handleHistory"
-      @page-change="handlePageChange"
+      @archive="handleArchive"
     />
+
+    <!-- Desktop: Tabela (somente quando selecionada e nao mobile) -->
+    <PaeProtocolosTable
+      v-else-if="viewMode === 'table' && !isMobile"
+      :protocolos="paginatedProtocolos"
+      :can-edit="canEdit"
+      :can-delete="canDelete"
+      @view="handleView"
+      @print="handlePrint"
+      @edit="handleEdit"
+      @history="handleHistory"
+      @archive="handleArchive"
+    />
+
+    <!-- Pagination -->
+    <div v-if="paginationToUse" class="mt-6">
+      <Pagination
+        :pagination="paginationToUse"
+        @page-change="handlePageChange"
+      />
+    </div>
 
     <PaeHistoricoModal
       :open="historicoModalOpen"
@@ -29,30 +114,47 @@
       :historico="historicoPayload"
       @close="closeHistorico"
     />
+
+    <PrintPaeProtocoloModal
+      :show="printModalOpen"
+      :protocolo="selectedProtocoloPrint"
+      @close="closePrint"
+    />
   </div>
 </template>
 
 <script setup>
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
-import { router } from '@inertiajs/vue3';
 
-import PaeProtocolosHeader from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosHeader.vue';
-import PaeProtocolosStatsCards from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosStatsCards.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+
+import PrintPaeProtocoloModal from '@/Components/Organisms/Pae/Print/PrintPaeProtocoloModal.vue';
+import PaeHistoricoModal from '@/Components/Organisms/Pae/Protocolos/PaeHistoricoModal.vue';
 import PaeProtocolosFilters from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosFilters.vue';
 import PaeProtocolosGrid from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosGrid.vue';
-import PaeHistoricoModal from '@/Components/Organisms/Pae/Protocolos/PaeHistoricoModal.vue';
+import PaeProtocolosStatsCards from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosStatsCards.vue';
+import PaeProtocolosTable from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosTable.vue';
 
-import { MockPaeProtocoloRepository } from '@/infrastructure/pae/MockPaeProtocoloRepository';
-import { ListPaeProtocolos } from '@/domain/pae/usecases/ListPaeProtocolos';
 import { GetPaeProtocoloHistorico } from '@/domain/pae/usecases/GetPaeProtocoloHistorico';
+import { ListPaeProtocolos } from '@/domain/pae/usecases/ListPaeProtocolos';
+import { MockPaeProtocoloRepository } from '@/infrastructure/pae/MockPaeProtocoloRepository';
 
 import {
-  paeSituacoes,
-  paeAnalistas,
-  paeEmpreendedores,
-  getMockPaeStats,
-  matchesPaeFilters,
+    getMockPaeStats,
+    matchesPaeFilters,
+    paeAnalistas,
+    paeEmpreendedores,
+    paeSituacoes,
 } from '@/mocks/pae';
+
+import { useMobile } from '@/Composables/useMobile';
 
 const props = defineProps({
   loading: {
@@ -63,7 +165,29 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canCreate: {
+    type: Boolean,
+    default: false,
+  },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
+  canExport: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+// Detecção mobile
+const { isMobile } = useMobile();
+
+// Estado da visualização (mobile sempre será grade)
+const viewMode = ref('grid');
 
 // Data source (mock por enquanto)
 const repository = new MockPaeProtocoloRepository();
@@ -71,7 +195,7 @@ const listUsecase = new ListPaeProtocolos(repository);
 const historicoUsecase = new GetPaeProtocoloHistorico(repository);
 
 // Local state (modo mock: tudo local)
-const perPage = 12;
+const perPage = 15;
 const currentPage = ref(1);
 const filters = ref({
   buscar: '',
@@ -144,8 +268,35 @@ function handleView(id) {
 }
 
 function handleEdit(id) {
-  // TODO: quando existir edição por protocolo, trocar para rota correta.
+  // TODO: quando existir edicao por protocolo, trocar para rota correta.
   router.visit(route('pae.index'));
+}
+
+async function handleArchive(id) {
+  const protocolo = (allProtocolos.value || []).find((p) => p.id === id);
+  if (!protocolo) return;
+
+  const confirmed = confirm(
+    `Deseja arquivar o protocolo #${protocolo.protocoloNumero}?\n\nEsta acao pode ser revertida posteriormente.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    // TODO: Implementar chamada real a API quando disponivel
+    // await router.delete(route('api.pae.protocolos.archive', id));
+
+    // Por enquanto, remove localmente do array (mock)
+    const index = allProtocolos.value.findIndex((p) => p.id === id);
+    if (index !== -1) {
+      allProtocolos.value.splice(index, 1);
+    }
+
+    alert('Protocolo arquivado com sucesso!');
+  } catch (error) {
+    console.error('Erro ao arquivar protocolo:', error);
+    alert('Erro ao arquivar protocolo. Tente novamente.');
+  }
 }
 
 // Modal de histórico
@@ -164,24 +315,43 @@ function closeHistorico() {
   selectedProtocolo.value = null;
   historicoPayload.value = null;
 }
+
+// Modal de Impressão
+const printModalOpen = ref(false);
+const selectedProtocoloPrint = ref(null);
+
+function handlePrint(id) {
+  const protocolo = (allProtocolos.value || []).find((p) => p.id === id) || null;
+  if (protocolo) {
+    selectedProtocoloPrint.value = protocolo;
+    printModalOpen.value = true;
+  }
+}
+
+function closePrint() {
+  printModalOpen.value = false;
+  selectedProtocoloPrint.value = null;
+}
+
+// =========================
+// Modal de Exportação CSV (Usando Composable)
+// =========================
+import { useExport } from '@/Composables/useExport';
+
+const { 
+  showExportModal, 
+  handleExport: triggerExport 
+} = useExport('pae.export');
+
+function handleExportCsv(params) {
+  // Passamos os filtros atuais da tela para serem combinados com os filtros do modal
+  triggerExport(params, filters.value);
+}
 </script>
 
 <style scoped>
 .pae-protocolos-container {
-  @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  padding: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .pae-protocolos-container {
-    padding: 1.5rem 2rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .pae-protocolos-container {
-    padding: 2rem 2.5rem;
-  }
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>
 

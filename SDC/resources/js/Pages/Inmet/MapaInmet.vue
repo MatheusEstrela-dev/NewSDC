@@ -1,5 +1,5 @@
 <template>
-  <AuthenticatedLayout title="Meteorologia - INMET">
+
     <div class="inmet-container dark">
       <!-- Header -->
       <div class="header-section">
@@ -57,16 +57,16 @@
         <table class="dark-table">
           <thead>
             <tr>
-              <th>Código</th>
+              <th class="hidden md:table-cell">Código</th>
               <th>Estação / Município</th>
               <th>Chuva (mm)</th>
               <th>Nível</th>
-              <th>Data/Hora</th>
+              <th class="hidden sm:table-cell">Data/Hora</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="leitura in leituras" :key="leitura.codigo_estacao">
-              <td class="code-cell">{{ leitura.codigo_estacao }}<br><span class="sub-text">Automática</span></td>
+              <td class="code-cell hidden md:table-cell">{{ leitura.codigo_estacao }}<br><span class="sub-text">Automática</span></td>
               <td>
                 <div class="station-name">{{ leitura.nome_estacao }}</div>
                 <div class="municipio-name">{{ leitura.municipio }}</div>
@@ -79,20 +79,22 @@
                   {{ leitura.nivel_label }}
                 </span>
               </td>
-              <td class="time-cell">{{ leitura.data_hora }}</td>
+              <td class="time-cell hidden sm:table-cell">{{ leitura.data_hora }}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
-  </AuthenticatedLayout>
+
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { nextTick, onMounted, ref } from 'vue';
 
 const props = defineProps({
   leituras: Array,
@@ -171,10 +173,15 @@ function getMarkerColor(nivel) {
 /* Dark Mode Base */
 .inmet-container {
   background-color: #111315; /* Cor de fundo bem escura */
-  min-height: 100vh;
+  min-height: calc(100vh - 64px); /* Account for topbar height */
   color: #e5e7eb;
   font-family: 'Inter', sans-serif;
   padding: 20px;
+  width: 100%; /* Ensure it doesn't overflow */
+  max-width: 100%; /* Prevent any overflow */
+  box-sizing: border-box; /* Include padding in width calculation */
+  margin: 0; /* Remove any default margins */
+  position: relative; /* Establish positioning context */
 }
 
 /* Header */
@@ -210,10 +217,12 @@ function getMarkerColor(nivel) {
 .map-wrapper {
   position: relative;
   height: 600px;
+  width: 100%; /* Ensure it doesn't overflow container */
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #374151;
   margin-bottom: 24px;
+  box-sizing: border-box; /* Include border in width calculation */
 }
 
 #map {
@@ -229,7 +238,7 @@ function getMarkerColor(nivel) {
   border: 1px solid #374151;
   border-radius: 8px;
   padding: 16px;
-  z-index: 1000;
+  z-index: 10;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
 }
@@ -317,6 +326,9 @@ function getMarkerColor(nivel) {
   border-radius: 8px;
   border: 1px solid #374151;
   overflow: hidden;
+  width: 100%; /* Ensure it doesn't overflow container */
+  box-sizing: border-box; /* Include border in width calculation */
+  overflow-x: auto; /* Allow horizontal scroll if needed */
 }
 
 .dark-table {
@@ -389,4 +401,90 @@ function getMarkerColor(nivel) {
   color: #6b7280;
   font-size: 12px;
 }
+
+/* Base Responsive Container */
+.inmet-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .inmet-container {
+    padding: 12px 8px;
+    height: auto;
+    min-height: calc(100dvh - 3rem - env(safe-area-inset-top, 0px));
+    padding-bottom: 24px;
+  }
+
+  .header-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .search-input {
+    width: 100%;
+    max-width: 100%;
+    font-size: 16px; /* Prevent iOS auto-zoom on focus */
+  }
+
+  .map-wrapper {
+    height: 55dvh; /* Dynamic height based on viewport */
+    max-height: 450px;
+    margin: 0 -8px 16px -8px;
+    width: calc(100% + 16px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  /* Reposition Overlays for Mobile */
+  .stats-overlay {
+    top: auto;
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    transform: none;
+    background: rgba(26, 29, 33, 0.98);
+    /* Make it collapsible or compact */
+    padding: 12px;
+  }
+  
+  .stats-overlay .stat-row {
+     display: inline-block;
+     margin-right: 12px;
+     margin-bottom: 4px;
+  }
+
+  .legend-overlay {
+    position: static; /* Move out of map flow */
+    width: 100%;
+    margin-bottom: 20px;
+    background: #1a1d21;
+    border: 1px solid #374151;
+  }
+
+  /* Table adjustments */
+  .table-container {
+    margin: 0 -12px;
+    width: calc(100% + 24px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  .dark-table th, .dark-table td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  
+  .station-name {
+    font-size: 13px;
+  }
+}
+
 </style>

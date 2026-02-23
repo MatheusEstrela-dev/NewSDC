@@ -1,6 +1,8 @@
 <template>
   <Link
     :href="href"
+    prefetch
+    cache-for="30s"
     :class="[
       'nav-item',
       {
@@ -10,6 +12,7 @@
       }
     ]"
     :title="collapsed ? tooltipText : ''"
+    @click="handleClick"
   >
     <svg v-if="icon === 'dashboard'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -39,6 +42,9 @@
     <svg v-else-if="icon === 'academic'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
     </svg>
+    <svg v-else-if="icon === 'clock'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
     <svg v-else-if="icon === 'cloud'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
     </svg>
@@ -59,10 +65,11 @@
 </template>
 
 <script setup>
-import { computed, useSlots } from 'vue';
 import { Link } from '@inertiajs/vue3';
+import { computed, inject, useSlots } from 'vue';
 
 const slots = useSlots();
+const onNavItemClick = inject('onNavItemClick', null);
 
 const props = defineProps({
   href: {
@@ -91,12 +98,35 @@ const tooltipText = computed(() => {
   if (!props.collapsed || !slots.default) return '';
   const slotContent = slots.default();
   if (slotContent && slotContent[0] && slotContent[0].children) {
-    return typeof slotContent[0].children === 'string' 
-      ? slotContent[0].children 
+    return typeof slotContent[0].children === 'string'
+      ? slotContent[0].children
       : slotContent[0].children.toString();
   }
   return '';
 });
+
+function handleClick(event) {
+  createRipple(event);
+  if (onNavItemClick) {
+    onNavItemClick();
+  }
+}
+
+function createRipple(event) {
+  const button = event.currentTarget;
+  const circle = document.createElement('span');
+  const diameter = Math.max(button.clientWidth, button.clientHeight);
+  const radius = diameter / 2;
+
+  circle.style.width = circle.style.height = `${diameter}px`;
+  circle.style.left = `${event.clientX - button.getBoundingClientRect().left - radius}px`;
+  circle.style.top = `${event.clientY - button.getBoundingClientRect().top - radius}px`;
+  circle.classList.add('ripple');
+
+  button.appendChild(circle);
+
+  setTimeout(() => circle.remove(), 600);
+}
 </script>
 
 <style scoped>
@@ -107,10 +137,27 @@ const tooltipText = computed(() => {
   padding: 0.75rem 1.25rem;
   color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   font-size: 0.9375rem;
   justify-content: flex-start;
+  overflow: hidden;
+}
+
+.nav-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 100%;
+  background: #3b82f6;
+  transition: width 0.3s ease;
+  z-index: 1;
+}
+
+.nav-item:hover::before {
+  width: 4px;
 }
 
 .nav-item.is-collapsed {
@@ -121,6 +168,11 @@ const tooltipText = computed(() => {
 .nav-item:hover {
   background: rgba(255, 255, 255, 0.05);
   color: white;
+  padding-left: calc(1.25rem + 4px);
+}
+
+.nav-item.is-collapsed:hover {
+  padding-left: 0.75rem;
 }
 
 .nav-item.is-active {
@@ -163,6 +215,90 @@ const tooltipText = computed(() => {
   background: #3b82f6;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+/* Tablet (768px - 1023px): Estilo controlado pelo parent Sidebar */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Estado collapsed padrao */
+  :global(.sidebar:not(.is-mobile-open)) .nav-item {
+    padding: 0.75rem;
+    justify-content: center;
+  }
+
+  :global(.sidebar:not(.is-mobile-open)) .nav-item-text {
+    display: none;
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  :global(.sidebar:not(.is-mobile-open)) .nav-item-dot {
+    display: none;
+  }
+
+  :global(.sidebar:not(.is-mobile-open)) .nav-item.is-submenu {
+    padding: 0.75rem;
+  }
+
+  :global(.sidebar:not(.is-mobile-open)) .nav-item.is-active {
+    border-left: none;
+    padding: 0.75rem;
+    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.35);
+    border-radius: 12px;
+    margin: 0 0.5rem;
+  }
+
+  :global(.sidebar:not(.is-mobile-open)) .nav-item-icon {
+    margin: 0;
+  }
+
+  /* Estado expandido quando drawer aberto */
+  :global(.sidebar.is-mobile-open) .nav-item {
+    padding: 0.75rem 1.25rem;
+    justify-content: flex-start;
+    gap: 0.75rem;
+  }
+
+  :global(.sidebar.is-mobile-open) .nav-item-text {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  :global(.sidebar.is-mobile-open) .nav-item-dot {
+    display: block;
+  }
+
+  :global(.sidebar.is-mobile-open) .nav-item.is-submenu {
+    padding-left: 2.5rem;
+  }
+
+  :global(.sidebar.is-mobile-open) .nav-item.is-active {
+    border-left: 3px solid #3b82f6;
+    padding-left: calc(1.25rem - 3px);
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  :global(.sidebar.is-mobile-open) .nav-item.is-submenu.is-active {
+    padding-left: calc(2.5rem - 3px);
+  }
+}
+
+:global(.ripple) {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+  background-color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
 }
 </style>
 

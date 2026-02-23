@@ -110,7 +110,7 @@ class HealthCheckController extends Controller
             'system' => [
                 'memory_usage_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
                 'memory_peak_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
-                'cpu_load' => sys_getloadavg(),
+                'cpu_load' => function_exists('sys_getloadavg') ? sys_getloadavg() : [0, 0, 0],
                 'php_version' => PHP_VERSION,
                 'laravel_version' => app()->version(),
             ],
@@ -324,11 +324,11 @@ class HealthCheckController extends Controller
         try {
             $totalRequests = (int) (Redis::get('metrics:total_requests') ?? 0);
             $totalErrors = (int) (Redis::get('metrics:total_errors') ?? 0);
-            
+
             if ($totalRequests === 0) {
                 return 0.0;
             }
-            
+
             return round(($totalErrors / $totalRequests) * 100, 2);
         } catch (\Exception $e) {
             return 0.0;
@@ -344,11 +344,11 @@ class HealthCheckController extends Controller
             $hits = (int) (Redis::get('metrics:cache_hits') ?? 0);
             $misses = (int) (Redis::get('metrics:cache_misses') ?? 0);
             $total = $hits + $misses;
-            
+
             if ($total === 0) {
                 return 0.0;
             }
-            
+
             return round(($hits / $total) * 100, 2);
         } catch (\Exception $e) {
             return 0.0;
@@ -362,12 +362,12 @@ class HealthCheckController extends Controller
     {
         try {
             $result = DB::select("SHOW STATUS WHERE Variable_name IN ('Threads_connected', 'Max_used_connections', 'Threads_running')");
-            
+
             $connections = [];
             foreach ($result as $row) {
                 $connections[strtolower($row->Variable_name)] = (int) $row->Value;
             }
-            
+
             return [
                 'active' => $connections['threads_connected'] ?? 0,
                 'max_used' => $connections['max_used_connections'] ?? 0,
@@ -396,7 +396,7 @@ class HealthCheckController extends Controller
                     ->where('last_activity', '>', now()->subMinutes(config('session.lifetime', 120))->timestamp)
                     ->count();
             }
-            
+
             // Se usar Redis para sessões, tenta contar chaves
             if (config('session.driver') === 'redis') {
                 try {
@@ -409,7 +409,7 @@ class HealthCheckController extends Controller
                     return 0;
                 }
             }
-            
+
             return 0;
         } catch (\Exception $e) {
             return 0;
@@ -432,9 +432,9 @@ class HealthCheckController extends Controller
             }
 
             // Detecta o nome da rede do container atual
-            $containerName = gethostname();
+            $containerName = function_exists('gethostname') ? gethostname() : (function_exists('php_uname') ? php_uname('n') : 'android-device');
             $networkName = $this->detectDockerNetwork($containerName);
-            
+
             $containers = $this->getDockerContainers($networkName);
 
             // Verifica se todos os containers essenciais estão rodando
@@ -470,15 +470,15 @@ class HealthCheckController extends Controller
             // Tenta obter a rede do container atual
             $command = "docker inspect -f '{{range \$net, \$conf := .NetworkSettings.Networks}}{{\$net}}{{end}}' {$containerName} 2>/dev/null";
             $network = trim(shell_exec($command) ?: '');
-            
+
             if ($network) {
                 return $network;
             }
-            
+
             // Fallback: tenta encontrar rede com padrão comum
             $command = "docker network ls --format '{{.Name}}' | grep -E '(sdc|dev)' | head -1 2>/dev/null";
             $network = trim(shell_exec($command) ?: '');
-            
+
             return $network ?: 'sdc-dev_sdc_network';
         } catch (\Exception $e) {
             return 'sdc-dev_sdc_network';
@@ -491,18 +491,18 @@ class HealthCheckController extends Controller
     private function getDockerContainers(string $networkName): array
     {
         $containers = [];
-        
+
         try {
             // Primeiro tenta buscar pela rede específica
             $command = "docker ps --filter network={$networkName} --format '{{.Names}}|{{.Status}}|{{.Image}}' 2>/dev/null";
             $output = shell_exec($command);
-            
+
             // Se não encontrar, busca containers com prefixo sdc
             if (!$output || trim($output) === '') {
                 $command = "docker ps --filter 'name=sdc' --format '{{.Names}}|{{.Status}}|{{.Image}}' 2>/dev/null";
                 $output = shell_exec($command);
             }
-            
+
             // Último fallback: todos os containers
             if (!$output || trim($output) === '') {
                 $command = "docker ps --format '{{.Names}}|{{.Status}}|{{.Image}}' 2>/dev/null";
@@ -511,29 +511,29 @@ class HealthCheckController extends Controller
 
             if ($output && trim($output) !== '') {
                 $lines = array_filter(explode("\n", trim($output)));
-                
+
                 foreach ($lines as $line) {
                     $parts = explode('|', $line);
                     if (count($parts) >= 3) {
                         $name = $parts[0];
                         $status = $parts[1];
                         $image = $parts[2];
-                        
+
                         // Obtém IP do container
                         $ipCommand = "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' {$name} 2>/dev/null";
                         $ip = trim(shell_exec($ipCommand) ?: '');
-                        
+
                         // Se não encontrou IP, tenta buscar o primeiro IP disponível
                         if (empty($ip)) {
                             $ipCommand = "docker inspect -f '{{range \$key, \$value := .NetworkSettings.Networks}}{{if \$value.IPAddress}}{{\$value.IPAddress}}{{break}}{{end}}{{end}}' {$name} 2>/dev/null";
                             $ip = trim(shell_exec($ipCommand) ?: 'N/A');
                         }
-                        
+
                         $ip = $ip ?: 'N/A';
-                        
+
                         // Determina status
                         $containerStatus = str_contains(strtolower($status), 'up') ? 'running' : 'stopped';
-                        
+
                         $containers[] = [
                             'name' => $name,
                             'status' => $containerStatus,
@@ -560,9 +560,9 @@ class HealthCheckController extends Controller
             // Verifica diretamente via HTTP usando hostnames do Docker
             $grafanaStatus = $this->checkServiceHttp('grafana', 'http://grafana:3000/api/health');
             $prometheusStatus = $this->checkServiceHttp('prometheus', 'http://prometheus:9090/-/healthy');
-            
+
             $allOnline = $grafanaStatus['online'] && $prometheusStatus['online'];
-            
+
             return [
                 'status' => $allOnline ? 'ok' : ($grafanaStatus['online'] || $prometheusStatus['online'] ? 'warning' : 'error'),
                 'grafana' => $grafanaStatus,
@@ -599,7 +599,7 @@ class HealthCheckController extends Controller
 
             // Tenta fazer requisição HTTP ao serviço
             $start = microtime(true);
-            
+
             $ch = curl_init($url);
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
@@ -610,14 +610,14 @@ class HealthCheckController extends Controller
                 CURLOPT_SSL_VERIFYHOST => false,
                 CURLOPT_NOBODY => true, // HEAD request apenas
             ]);
-            
+
             curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
             curl_close($ch);
-            
+
             $latency = round((microtime(true) - $start) * 1000, 2);
-            
+
             if ($httpCode >= 200 && $httpCode < 400) {
                 $result['online'] = true;
                 $result['latency_ms'] = $latency;

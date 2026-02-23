@@ -1,4 +1,4 @@
-FROM php:8.2-fpm-alpine
+FROM php:8.3-fpm-alpine
 
 # Argumentos de build
 ARG UID=1000
@@ -53,9 +53,9 @@ COPY docker/supervisor/supervisord.conf /etc/supervisord.conf
 COPY docker/supervisor/laravel-worker.conf /etc/supervisor/conf.d/laravel-worker.conf
 
 # Criar diretórios necessários
-RUN mkdir -p /var/www/storage/logs \
-    && chown -R www-data:www-data /var/www/storage \
-    && chmod -R 775 /var/www/storage
+RUN mkdir -p /var/www/storage/logs /var/log/supervisor \
+    && chown -R www-data:www-data /var/www/storage /var/log/supervisor \
+    && chmod -R 775 /var/www/storage /var/log/supervisor
 
 # Comando de inicialização
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

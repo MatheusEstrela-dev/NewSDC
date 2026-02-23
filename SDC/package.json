@@ -3,7 +3,9 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build",
+        "build": "rm -f public/hot && vite build",
+        "build:ssr": "rm -rf public/hot bootstrap/ssr/* && vite build && vite build --ssr",
+        "ssr": "node $(ls -t bootstrap/ssr/js/ssr-*.js | head -n 1)",
         "build:pwa": "vite build && workbox generateSW workbox-config.js"
     },
     "devDependencies": {
@@ -21,13 +23,24 @@
         "tailwindcss": "^3.2.1",
         "vite": "^5.0.0",
         "vite-plugin-pwa": "^0.21.1",
-        "vite-plugin-qrcode": "^0.3.0",
         "vue": "^3.4.0",
         "workbox-window": "^7.3.0"
     },
     "dependencies": {
         "@heroicons/vue": "^2.2.0",
+        "@tanstack/vue-query": "^5.62.16",
+        "@vueuse/core": "^14.2.0",
+        "apexcharts": "^5.3.6",
+        "dexie": "^3.2.4",
+        "idb-keyval": "^6.2.1",
         "leaflet": "^1.9.4",
+        "uuid": "^9.0.1",
+        "vue3-apexcharts": "^1.10.0",
+        "vuedraggable": "^4.1.0",
         "ziggy-js": "^2.6.0"
+    },
+    "optionalDependencies": {
+        "@esbuild/linux-x64": "^0.27.3",
+        "@rollup/rollup-linux-x64-musl": "^4.57.1"
     }
 }

@@ -15,3 +15,4 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->name('health.dashboard');
 
 });
+

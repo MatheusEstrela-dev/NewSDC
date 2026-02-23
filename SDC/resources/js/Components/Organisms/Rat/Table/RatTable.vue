@@ -21,9 +21,10 @@
         Tente ajustar os filtros de busca ou crie um novo RAT
       </Text>
     </div>
-    
-    <div v-else class="overflow-x-auto">
-      <table class="w-full table-fixed">
+
+    <!-- Desktop: Tabela -->
+    <div v-else-if="!isMobile" class="overflow-x-auto">
+      <table class="w-full">
         <TableHeaderRow>
           <TableHeader class="w-48 whitespace-nowrap">Número RAT</TableHeader>
           <TableHeader class="w-44 whitespace-nowrap">Data/Hora</TableHeader>
@@ -38,7 +39,10 @@
             v-for="rat in rats"
             :key="rat.id"
             :rat="rat"
+            :can-edit="canEdit"
+            :can-delete="canDelete"
             @view="handleView"
+            @print="handlePrint"
             @edit="handleEdit"
             @attachments="handleAttachments"
             @delete="handleDelete"
@@ -46,22 +50,39 @@
         </tbody>
       </table>
     </div>
-    
-    <div v-if="pagination && pagination.last_page > 1" class="px-6 py-4 border-t border-slate-200 dark:border-slate-700/50">
-      <Pagination :pagination="pagination" @page-change="handlePageChange" />
+
+    <!-- Mobile: Cards -->
+    <div v-else class="divide-y divide-slate-200 dark:divide-slate-700/50">
+      <RatCard
+        v-for="rat in rats"
+        :key="rat.id"
+        :rat="rat"
+        :can-edit="canEdit"
+        :can-delete="canDelete"
+        @view="handleView"
+        @print="handlePrint"
+        @edit="handleEdit"
+        @attachments="handleAttachments"
+        @delete="handleDelete"
+        class="m-4 first:mt-0 last:mb-0"
+      />
     </div>
   </CardBase>
 </template>
 
 <script setup>
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import TableHeader from '@/Components/Atoms/Table/TableHeader.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import TableHeaderRow from '@/Components/Molecules/Table/TableHeaderRow.vue';
-import TableHeader from '@/Components/Atoms/Table/TableHeader.vue';
-import RatTableRow from './RatTableRow.vue';
-import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import RatCard from '@/Components/Molecules/Rat/RatCard.vue';
+import TableHeaderRow from '@/Components/Molecules/Table/TableHeaderRow.vue';
+import { useMobile } from '@/Composables/useMobile';
+import RatTableRow from './RatTableRow.vue';
+
+// Detecção mobile
+const { isMobile } = useMobile();
 
 const props = defineProps({
   rats: {
@@ -76,12 +97,24 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['view', 'edit', 'attachments', 'delete', 'page-change']);
+const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);
 
 function handleView(id) {
   emit('view', id);
+}
+
+function handlePrint(id) {
+  emit('print', id);
 }
 
 function handleEdit(id) {
@@ -94,10 +127,6 @@ function handleAttachments(id) {
 
 function handleDelete(id) {
   emit('delete', id);
-}
-
-function handlePageChange(page) {
-  emit('page-change', page);
 }
 </script>
 
