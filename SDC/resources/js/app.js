@@ -34,9 +34,9 @@ const loadPageCSS = (pageName) => {
 const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
-            staleTime: 1000 * 30, // 30s (SWR optimized)
-            gcTime: 1000 * 60 * 30,
-            refetchOnWindowFocus: true,
+            staleTime: 1000 * 60 * 5, // 5 minutos - evita polling excessivo
+            gcTime: 1000 * 60 * 30,   // 30 minutos garbage collection
+            refetchOnWindowFocus: false, // Desabilitado - evita burst de requisicoes
             refetchOnReconnect: true,
             retry: 1,
             retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),

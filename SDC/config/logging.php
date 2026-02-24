@@ -149,6 +149,33 @@ return [
             'processors' => [PsrLogMessageProcessor::class],
         ],
 
+        // Canal para webhooks (recebimento e envio)
+        'webhooks' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/webhooks/webhooks.log'),
+            'level' => 'info',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
+        // Canal para circuit breaker events
+        'circuit_breaker' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/circuit_breaker.log'),
+            'level' => 'warning',
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
+        // Canal para rate limiting events
+        'rate_limit' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/rate_limit.log'),
+            'level' => 'warning',
+            'days' => 7,
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

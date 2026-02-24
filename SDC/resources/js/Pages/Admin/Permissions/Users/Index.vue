@@ -1,7 +1,7 @@
 <template>
 
     <Head title="Gerenciamento de Usuários" />
-    <div class="w-full py-6">
+    <div>
       
 
       <!-- Page Header -->
@@ -100,23 +100,17 @@
           ]"
         >
           <template #actions>
-            <ButtonGroup size="sm">
-              <ButtonIcon
-                :icon="EyeIcon"
-                :href="route('admin.permissions.users.show', user.id)"
-                variant="info"
-                title="Visualizar"
-                size="sm"
-              />
-              <ButtonIcon
-                v-if="canEdit"
-                :icon="PencilSquareIcon"
-                :href="route('admin.permissions.users.edit', user.id)"
-                variant="warning"
-                title="Editar"
-                size="sm"
-              />
-            </ButtonGroup>
+            <TableActions
+              :show-view="true"
+              :show-print="false"
+              :show-edit="canEdit"
+              :show-attachments="false"
+              :show-delete="canDelete"
+              size="sm"
+              @view="router.get(route('admin.permissions.users.show', user.id))"
+              @edit="router.get(route('admin.permissions.users.edit', user.id))"
+              @delete="deactivateUser(user.id)"
+            />
           </template>
         </TableMobileCard>
 
@@ -218,35 +212,17 @@
                   {{ formatDate(user.created_at) }}
                 </td>
                 <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-right">
-                  <ButtonGroup size="sm">
-                    <ButtonIcon
-                      :icon="EyeIcon"
-                      :href="route('admin.permissions.users.show', user.id)"
-                      variant="info"
-                      title="Visualizar"
-                      size="sm"
-                      class="!text-blue-600 hover:!bg-blue-50 dark:!text-blue-400 dark:hover:!bg-blue-900/20"
-                    />
-                    <ButtonIcon
-                      v-if="canEdit"
-                      :icon="PencilSquareIcon"
-                      :href="route('admin.permissions.users.edit', user.id)"
-                      variant="warning"
-                      title="Editar"
-                      size="sm"
-                      class="!text-amber-600 hover:!bg-amber-50 dark:!text-amber-400 dark:hover:!bg-amber-900/20"
-                    />
-                    <ButtonIcon
-                      v-if="canDelete"
-                      :icon="TrashIcon"
-                      variant="danger"
-                      title="Desativar"
-                      size="sm"
-                      confirmMessage="Tem certeza que deseja desativar este usuario?"
-                      @click="deactivateUser(user.id)"
-                      class="!text-red-600 hover:!bg-red-50 dark:!text-red-400 dark:hover:!bg-red-900/20"
-                    />
-                  </ButtonGroup>
+                  <TableActions
+                    :show-view="true"
+                    :show-print="false"
+                    :show-edit="canEdit"
+                    :show-attachments="false"
+                    :show-delete="canDelete"
+                    size="sm"
+                    @view="router.get(route('admin.permissions.users.show', user.id))"
+                    @edit="router.get(route('admin.permissions.users.edit', user.id))"
+                    @delete="deactivateUser(user.id)"
+                  />
                 </td>
               </tr>
             </tbody>
@@ -279,12 +255,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
-import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
-import ButtonGroup from '@/Components/Atoms/Button/ButtonGroup.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import TableMobileCard from '@/Components/Molecules/Table/TableMobileCard.vue';
-import EyeIcon from '@/Components/Icons/EyeIcon.vue';
-import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
-import TrashIcon from '@/Components/Icons/TrashIcon.vue';
 import { useMobile } from '@/Composables/useMobile';
 import { usePermissions } from '@/Composables/usePermissions';
 

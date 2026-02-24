@@ -9,33 +9,8 @@
     >
       <template #actions>
         <div class="flex items-center gap-2 sm:gap-3">
-          <!-- Toggle Grade/Tabela - Oculto em mobile -->
-          <div class="hidden md:flex items-center gap-1 bg-white dark:bg-slate-800/50 rounded-lg p-1 border border-slate-300 dark:border-slate-700/50">
-            <button
-              @click="viewMode = 'grid'"
-              :class="[
-                'px-3 py-1.5 rounded text-xs font-medium transition-all',
-                viewMode === 'grid'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-              ]"
-              title="Visualização em Grade"
-            >
-              Grade
-            </button>
-            <button
-              @click="viewMode = 'table'"
-              :class="[
-                'px-3 py-1.5 rounded text-xs font-medium transition-all',
-                viewMode === 'table'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-              ]"
-              title="Visualização em Tabela"
-            >
-              Tabela
-            </button>
-          </div>
+          <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
+          <ViewModeToggle v-model="viewMode" />
 
           <!-- Botão Exportar -->
           <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
@@ -116,6 +91,7 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import DecretacoesStatsCards from '@/Components/Organisms/Decretacoes/DecretacoesStatsCards.vue';
 import ProcessoFilters from '@/Components/Organisms/Decretacoes/ProcessoFilters.vue';
 import ProcessoGrid from '@/Components/Organisms/Decretacoes/ProcessoGrid.vue';

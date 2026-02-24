@@ -1,7 +1,7 @@
 <template>
 
     <Head title="Detalhes do Cargo" />
-    <div class="w-full py-6">
+    <div>
       <!-- Page Header -->
       <div class="mb-8">
 

@@ -3,20 +3,33 @@
 namespace App\Services\Webhook;
 
 use App\Enums\RequestPriority;
+use App\Exceptions\CircuitBreakerOpenException;
 use App\Jobs\ProcessWebhook;
+use App\Jobs\ProcessInboundWebhook;
 use App\Models\WebhookLog;
+use App\Models\WebhookEvent;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
- * Serviço de Webhooks
+ * Servico de Webhooks
  * Gerencia envio e recebimento de webhooks com alta performance
+ * Integrado com Circuit Breaker, Signature Validator e Idempotencia
  */
 class WebhookService
 {
+    public function __construct(
+        protected CircuitBreakerService $circuitBreaker,
+        protected WebhookSignatureValidator $signatureValidator
+    ) {}
+
     /**
-     * Envia um webhook para uma URL específica
-     * Usa filas para não bloquear a requisição principal
+     * Envia um webhook para uma URL especifica (outbound)
+     * Usa filas para nao bloquear a requisicao principal
+     * Verifica Circuit Breaker antes de enviar
+     *
+     * @throws CircuitBreakerOpenException
      */
     public function send(
         string $url,
@@ -25,13 +38,29 @@ class WebhookService
         RequestPriority $priority = RequestPriority::NORMAL,
         ?int $userId = null
     ): void {
+        $serviceKey = $this->getServiceKeyFromUrl($url);
+
+        // Verifica Circuit Breaker
+        if ($this->circuitBreaker->isOpen($serviceKey)) {
+            Log::channel('webhooks')->warning('Webhook blocked by circuit breaker', [
+                'url' => $url,
+                'service' => $serviceKey,
+            ]);
+            throw new CircuitBreakerOpenException($serviceKey);
+        }
+
+        // Adiciona assinatura ao header
+        $signature = $this->signatureValidator->generateSignature(json_encode($payload));
+        $headers['X-Webhook-Signature'] = $signature;
+
         ProcessWebhook::dispatch($url, $payload, $headers, $userId)
             ->onQueue($priority->queue())
             ->delay(now()->addSeconds($priority->backoff()));
     }
 
     /**
-     * Envia webhook de forma síncrona (apenas para testes ou casos críticos)
+     * Envia webhook de forma sincrona (apenas para testes ou casos criticos)
+     * Integrado com Circuit Breaker
      */
     public function sendSync(
         string $url,
@@ -39,8 +68,22 @@ class WebhookService
         array $headers = [],
         int $timeout = 30
     ): array {
+        $serviceKey = $this->getServiceKeyFromUrl($url);
+        $startTime = microtime(true);
+
+        // Verifica Circuit Breaker
+        if ($this->circuitBreaker->isOpen($serviceKey)) {
+            return [
+                'success' => false,
+                'error' => 'Circuit breaker is open for service: ' . $serviceKey,
+                'circuit_breaker_status' => $this->circuitBreaker->getStatus($serviceKey),
+            ];
+        }
+
         try {
-            $startTime = microtime(true);
+            // Adiciona assinatura
+            $signature = $this->signatureValidator->generateSignature(json_encode($payload));
+            $headers['X-Webhook-Signature'] = $signature;
 
             $response = Http::timeout($timeout)
                 ->withHeaders(array_merge([
@@ -52,7 +95,10 @@ class WebhookService
 
             $duration = round((microtime(true) - $startTime) * 1000, 2);
 
-            $this->logWebhook($url, $payload, $response->status(), $response->body(), $duration);
+            $this->logOutboundWebhook($url, $payload, $response->status(), $response->body(), $duration);
+
+            // Registra sucesso no circuit breaker
+            $this->circuitBreaker->recordSuccess($serviceKey);
 
             return [
                 'success' => $response->successful(),
@@ -63,11 +109,15 @@ class WebhookService
         } catch (\Exception $e) {
             $duration = round((microtime(true) - $startTime) * 1000, 2);
 
-            $this->logWebhook($url, $payload, 0, $e->getMessage(), $duration, false);
+            $this->logOutboundWebhook($url, $payload, 0, $e->getMessage(), $duration, false);
 
-            Log::error('Webhook failed', [
+            // Registra falha no circuit breaker
+            $this->circuitBreaker->recordFailure($serviceKey);
+
+            Log::channel('webhooks')->error('Webhook sync failed', [
                 'url' => $url,
                 'error' => $e->getMessage(),
+                'service' => $serviceKey,
             ]);
 
             return [
@@ -79,48 +129,94 @@ class WebhookService
     }
 
     /**
-     * Processa webhook recebido
+     * Recebe webhook de sistema externo (inbound)
+     * Controller "burro" - apenas valida e enfileira
+     * Retorna imediatamente para responder 202 Accepted
+     *
+     * @param array $payload Dados validados do webhook
+     * @param string $source Origem do webhook (header X-Webhook-Source)
+     * @param string $traceId UUID para rastreamento
+     * @return array Status do enfileiramento
      */
-    public function receive(array $payload, string $source): array
+    public function receive(array $payload, string $source, string $traceId): array
     {
-        // Valida assinatura/autenticação do webhook
-        if (!$this->validateWebhookSignature($payload, $source)) {
-            throw new \Exception('Invalid webhook signature');
+        // Gera external_event_id unico se nao fornecido
+        $externalEventId = $payload['event_id'] ?? $payload['id'] ?? $traceId;
+        $eventType = $payload['type'] ?? 'unknown';
+
+        // Verifica idempotencia - evita processamento duplicado
+        $existingEvent = WebhookEvent::where('external_event_id', $externalEventId)
+            ->where('provider', $source)
+            ->first();
+
+        if ($existingEvent && $existingEvent->isProcessedOrProcessing()) {
+            Log::channel('webhooks')->info('Webhook already processed (idempotency)', [
+                'external_event_id' => $externalEventId,
+                'provider' => $source,
+                'status' => $existingEvent->status,
+            ]);
+
+            return [
+                'status' => 'already_processed',
+                'event_id' => $existingEvent->id,
+                'original_status' => $existingEvent->status,
+            ];
         }
 
-        // Processa o webhook conforme o tipo
-        return $this->processWebhookByType($payload);
+        // Cria ou atualiza registro de evento
+        $event = WebhookEvent::updateOrCreate(
+            [
+                'external_event_id' => $externalEventId,
+                'provider' => $source,
+            ],
+            [
+                'event_type' => $eventType,
+                'payload' => $payload,
+                'status' => WebhookEvent::STATUS_PENDING,
+            ]
+        );
+
+        // Despacha job para processamento assincrono
+        ProcessInboundWebhook::dispatch($event)
+            ->onQueue(config('webhooks.queue.inbound', 'webhooks'));
+
+        Log::channel('webhooks')->info('Webhook received and queued', [
+            'event_id' => $event->id,
+            'external_event_id' => $externalEventId,
+            'provider' => $source,
+            'type' => $eventType,
+            'trace_id' => $traceId,
+        ]);
+
+        return [
+            'status' => 'queued',
+            'event_id' => $event->id,
+            'trace_id' => $traceId,
+        ];
     }
 
     /**
-     * Valida assinatura do webhook para segurança
+     * Valida assinatura de webhook recebido
+     * Usado pelo controller antes de chamar receive()
      */
-    private function validateWebhookSignature(array $payload, string $source): bool
+    public function validateSignature(string $rawPayload, string $signature, string $provider = 'default'): bool
     {
-        // Implementar validação de assinatura HMAC
-        // Exemplo: verificar header X-Webhook-Signature
-        return true; // Placeholder
+        return $this->signatureValidator->validate($rawPayload, $signature, $provider);
     }
 
     /**
-     * Processa webhook baseado no tipo
+     * Extrai chave do servico a partir da URL para o circuit breaker
      */
-    private function processWebhookByType(array $payload): array
+    protected function getServiceKeyFromUrl(string $url): string
     {
-        $type = $payload['type'] ?? 'unknown';
-
-        return match($type) {
-            'payment.completed' => $this->handlePaymentCompleted($payload),
-            'user.created' => $this->handleUserCreated($payload),
-            'data.sync' => $this->handleDataSync($payload),
-            default => $this->handleGenericWebhook($payload),
-        };
+        $parsed = parse_url($url);
+        return $parsed['host'] ?? 'unknown';
     }
 
     /**
-     * Loga webhook para auditoria e debugging
+     * Loga webhook de saida para auditoria
      */
-    private function logWebhook(
+    private function logOutboundWebhook(
         string $url,
         array $payload,
         int $statusCode,
@@ -131,40 +227,18 @@ class WebhookService
         try {
             WebhookLog::create([
                 'url' => $url,
-                'payload' => $payload,
+                'payload' => config('webhooks.logging.log_payloads', false) ? $payload : [],
                 'status_code' => $statusCode,
                 'response' => $response,
                 'duration_ms' => $duration,
                 'success' => $success,
+                'direction' => 'outbound',
                 'created_at' => now(),
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to log webhook', ['error' => $e->getMessage()]);
+            Log::channel('webhooks')->error('Failed to log outbound webhook', [
+                'error' => $e->getMessage(),
+            ]);
         }
-    }
-
-    // Handlers específicos por tipo de webhook
-    private function handlePaymentCompleted(array $payload): array
-    {
-        // Implementar lógica de pagamento completado
-        return ['status' => 'processed', 'type' => 'payment.completed'];
-    }
-
-    private function handleUserCreated(array $payload): array
-    {
-        // Implementar lógica de usuário criado
-        return ['status' => 'processed', 'type' => 'user.created'];
-    }
-
-    private function handleDataSync(array $payload): array
-    {
-        // Implementar lógica de sincronização
-        return ['status' => 'processed', 'type' => 'data.sync'];
-    }
-
-    private function handleGenericWebhook(array $payload): array
-    {
-        // Handler genérico
-        return ['status' => 'processed', 'type' => 'generic'];
     }
 }

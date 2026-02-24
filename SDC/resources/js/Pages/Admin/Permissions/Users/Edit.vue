@@ -1,7 +1,7 @@
 <template>
 
     <Head title="Editar Usuário" />
-    <div class="w-full py-6">
+    <div>
 
 
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">

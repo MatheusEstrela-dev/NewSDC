@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'default' => env('QUEUE_CONNECTION', 'sync'),
+    'default' => env('QUEUE_CONNECTION', 'redis'),
 
     /*
     |--------------------------------------------------------------------------
@@ -108,6 +108,16 @@ return [
             'queue' => 'low',
             'retry_after' => 300,
             'block_for' => 10,
+            'after_commit' => false,
+        ],
+
+        // Dead Letter Queue - webhooks falhos para analise manual
+        'dead-letter' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'dead-letter',
+            'retry_after' => 86400,
+            'block_for' => null,
             'after_commit' => false,
         ],
 

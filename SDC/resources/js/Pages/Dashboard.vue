@@ -2,7 +2,7 @@
     <div>
         <Head title="Dashboard" />
 
-        <div class="dashboard-container w-full mx-auto space-y-8">
+        <div class="dashboard-container">
           <!-- Header Padronizado -->
           <PageHeader
             title="Painel Gerencial"
@@ -15,7 +15,7 @@
           <draggable
             v-model="dashboardItems"
             item-key="id"
-            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6 mt-6"
             handle=".drag-handle"
             ghost-class="ghost-card"
             :animation="200"
@@ -301,6 +301,10 @@ const dashboardItems = ref([
 </script>
 
 <style scoped>
+.dashboard-container {
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
+}
+
 .ghost-card {
   opacity: 0.5;
   background: #f1f5f9; /* slate-100 */

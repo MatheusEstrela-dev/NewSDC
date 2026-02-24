@@ -8,6 +8,28 @@ export const initAxios = async () => {
     const axios = (await import('axios')).default;
     window.axios = axios;
     window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+
+    // Interceptor para Rate Limit (429)
+    window.axios.interceptors.response.use(
+        (response) => response,
+        (error) => {
+            if (error.response && error.response.status === 429) {
+                const retryAfter = error.response.headers['retry-after'] || 60;
+
+                // Dispara evento customizado para UI handling
+                window.dispatchEvent(new CustomEvent('rate-limit-exceeded', {
+                    detail: {
+                        retryAfter: parseInt(retryAfter, 10),
+                        message: error.response.data?.message || 'Limite de requisicoes excedido. Aguarde antes de tentar novamente.',
+                    },
+                }));
+
+                console.warn('[Rate Limit] Limite excedido. Retry em:', retryAfter, 'segundos');
+            }
+
+            return Promise.reject(error);
+        }
+    );
 };
 
 /**

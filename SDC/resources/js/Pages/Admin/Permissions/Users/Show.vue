@@ -1,7 +1,7 @@
 <template>
 
     <Head title="Detalhes do Usuário" />
-    <div class="w-full py-6">
+    <div>
       
 
 

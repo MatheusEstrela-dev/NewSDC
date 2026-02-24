@@ -186,6 +186,7 @@ export default defineConfig({
         },
         cors: true,
         origin: 'http://localhost:15175',
+        allowedHosts: ['node', 'localhost', '127.0.0.1'],
     },
     worker: {
         format: 'es',

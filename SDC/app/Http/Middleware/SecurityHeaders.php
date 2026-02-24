@@ -55,7 +55,7 @@ class SecurityHeaders
             // para evitar tela em branco por CSP bloqueando assets.
             if ($isLocal || $isNativePHP) {
                 // Vite ports: internal (5173/5175) and host-mapped (15175) for Docker
-                $vitePorts = [5173, 5175, 15175];
+                $vitePorts = [5173, 5175, 5176, 15175];
                 $viteHosts = [];
                 foreach ($vitePorts as $p) {
                     $viteHosts[] = "http://localhost:{$p}";
@@ -69,6 +69,8 @@ class SecurityHeaders
                     "http://127.0.0.1:5173",
                     "http://localhost:5175",
                     "http://127.0.0.1:5175",
+                    "http://localhost:5176",
+                    "http://127.0.0.1:5176",
                     "http://localhost:15175",
                     "http://127.0.0.1:15175",
                 ]);

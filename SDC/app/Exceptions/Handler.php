@@ -2,6 +2,7 @@
 
 namespace App\Exceptions;
 
+use App\Exceptions\CircuitBreakerOpenException;
 use App\Services\Logging\ActivityLogger;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -84,6 +85,15 @@ class Handler extends ExceptionHandler
                 level: 'warning'
             );
         });
+
+        // Log para Circuit Breaker Open
+        $this->reportable(function (CircuitBreakerOpenException $e) {
+            \Log::channel('circuit_breaker')->warning('Circuit breaker exception thrown', [
+                'service' => $e->getService(),
+                'message' => $e->getMessage(),
+                'url' => request()?->fullUrl(),
+            ]);
+        })->stop();
     }
 
     /**
@@ -321,6 +331,10 @@ class Handler extends ExceptionHandler
             return 422;
         }
 
+        if ($e instanceof CircuitBreakerOpenException) {
+            return 503;
+        }
+
         return 500;
     }
 
@@ -343,6 +357,10 @@ class Handler extends ExceptionHandler
 
         if ($e instanceof AuthorizationException) {
             return 'Forbidden';
+        }
+
+        if ($e instanceof CircuitBreakerOpenException) {
+            return 'Service temporarily unavailable. Please try again later.';
         }
 
         if (config('app.debug')) {

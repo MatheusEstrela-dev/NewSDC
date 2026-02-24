@@ -264,7 +264,7 @@
       </div>
 
       <!-- ADMINISTRACAO - Visivel apenas para usuarios com permissao -->
-      <div v-if="canSeeAdmin" class="nav-section">
+      <div v-if="canSeeAdminSection" class="nav-section">
         <div v-show="!isCollapsed" class="nav-section-title">ADMINISTRACAO</div>
 
         <!-- Permissionamento - Link direto sem submenu -->
@@ -451,7 +451,7 @@ const canSeeVistoria = computed(() => {
 });
 
 // ADMINISTRACAO
-const canSeeAdmin = computed(() => {
+const canSeeAdminSection = computed(() => {
   return hasPermission(['users.view', 'roles.view', 'permissions.view']);
 });
 

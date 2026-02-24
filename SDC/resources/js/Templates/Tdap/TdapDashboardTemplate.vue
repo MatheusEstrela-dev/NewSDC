@@ -88,5 +88,6 @@ function handleNavigate(routeName) {
 <style scoped>
 .tdap-dashboard-container {
   @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
+  padding: 0 !important;
 }
 </style>

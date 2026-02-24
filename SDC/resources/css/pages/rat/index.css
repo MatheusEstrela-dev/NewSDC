@@ -1,8 +1,5 @@
 /* Rat Index Page Styles */
-.rat-index-container {
-  @apply w-full min-h-screen;
-  background: #0f172a;
-}
+/* .rat-index-container is now styled via scoped CSS in RatIndexTemplate.vue (matching PAE pattern) */
 
 /* Statistics Cards Grid */
 .rat-statistics-grid {
@@ -35,4 +32,3 @@
 .rat-empty-state-description {
   @apply text-sm text-slate-500 mb-6;
 }
-
