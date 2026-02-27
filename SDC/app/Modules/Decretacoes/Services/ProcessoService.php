@@ -12,7 +12,7 @@ class ProcessoService extends BaseService
 {
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Processo::query()->with(['anexos', 'logs']);
+        $query = Processo::query()->with(['anexos', 'logs', 'municipios']);
 
         if (!empty($filters['search'])) {
             $query->where(function ($q) use ($filters) {

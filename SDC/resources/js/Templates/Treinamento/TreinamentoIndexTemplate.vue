@@ -11,6 +11,7 @@ import TreinamentoStatsCards from '@/Components/Organisms/Treinamento/Treinament
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { ref } from 'vue';
+import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 
 // Formatador de data seguro (evita Invalid Date em strings já formatadas dd/mm/yyyy)
 const formatDate = (dateValue) => {
