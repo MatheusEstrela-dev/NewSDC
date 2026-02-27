@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Modules\Rat\Domain\Entities\Rat;
+use App\Modules\Rat\Models\Rat;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 

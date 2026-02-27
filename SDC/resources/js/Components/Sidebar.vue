@@ -619,7 +619,7 @@ provide('sidebarCollapsed', isCollapsed);
   z-index: 50;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   transition: width 0.3s ease, transform 0.3s ease;
-  padding-top: env(safe-area-inset-top, 32px);
+  /* padding-top safe-area is now handled by .sidebar-header */
 }
 
 .sidebar.is-collapsed {
@@ -743,13 +743,15 @@ provide('sidebarCollapsed', isCollapsed);
 }
 
 .sidebar-header {
-  padding: 1.5rem 1.25rem;
+  padding: 0 1.25rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
   position: relative;
+  height: 77px;
+  box-sizing: border-box;
 }
 
 .logo-container {

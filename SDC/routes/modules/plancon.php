@@ -1,14 +1,11 @@
 <?php
 
-use App\Modules\PlanCon\Presentation\Http\Controllers\MunicipiosComPlanoController;
-use App\Modules\PlanCon\Presentation\Http\Controllers\MunicipiosSemPlanoController;
-use App\Modules\PlanCon\Presentation\Http\Controllers\PlanConIndexController;
-use App\Modules\PlanCon\Presentation\Http\Controllers\PlanConStatsController;
+use App\Modules\PlanCon\Controllers\PlanConController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('plancon')->name('plancon.')->group(function () {
-    Route::get('/', PlanConIndexController::class)->name('index');
-    Route::get('/stats', PlanConStatsController::class)->name('stats');
-    Route::get('/municipios/com-plano', MunicipiosComPlanoController::class)->name('municipios.com');
-    Route::get('/municipios/sem-plano', MunicipiosSemPlanoController::class)->name('municipios.sem');
+    Route::get('/', [PlanConController::class, 'index'])->name('index');
+    Route::get('/stats', [PlanConController::class, 'stats'])->name('stats');
+    Route::get('/municipios/com-plano', [PlanConController::class, 'municipiosComPlano'])->name('municipios.com');
+    Route::get('/municipios/sem-plano', [PlanConController::class, 'municipiosSemPlano'])->name('municipios.sem');
 });

@@ -32,13 +32,13 @@
         />
         <StatCard
           title="COMPDECs"
-          :value="statistics.por_tipo.compdec || 0"
+          :value="statistics?.por_tipo?.compdec || 0"
           variant="success"
           :icon="BuildingOfficeIcon"
         />
         <StatCard
           title="REDECs"
-          :value="statistics.por_tipo.redec || 0"
+          :value="statistics?.por_tipo?.redec || 0"
           variant="warning"
           :icon="BuildingOfficeIcon"
         />

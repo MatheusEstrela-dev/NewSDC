@@ -1,8 +1,8 @@
 <?php
 
-use App\Modules\Treinamento\Presentation\Http\Controllers\TreinamentoIndexController;
-use App\Modules\Treinamento\Presentation\Http\Controllers\TreinamentoShowController;
-use App\Modules\Treinamento\Presentation\Http\Controllers\TreinamentoStoreController;
+use App\Modules\Treinamento\Controllers\TreinamentoIndexController;
+use App\Modules\Treinamento\Controllers\TreinamentoShowController;
+use App\Modules\Treinamento\Controllers\TreinamentoStoreController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,7 +18,7 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
     Route::get('/', TreinamentoIndexController::class)
         ->name('index')
         ->middleware('can:treinamento.cursos.view');
-    Route::get('/export', \App\Modules\Treinamento\Presentation\Http\Controllers\TreinamentoExportController::class)
+    Route::get('/export', \App\Modules\Treinamento\Controllers\TreinamentoExportController::class)
         ->name('export')
         ->middleware('can:treinamento.cursos.export');
     Route::get('/{id}', TreinamentoShowController::class)

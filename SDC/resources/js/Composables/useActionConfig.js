@@ -71,14 +71,7 @@ export function useActionConfig(moduleName) {
             return false;
         }
 
-        // 1. Verificação de Permissão (Slug)
         if (config.permission && !can(config.permission)) {
-            return false;
-        }
-
-        // 2. Verificação de Nível (Peso do Cargo)
-        // Exemplo: Deletar exige nível <= 2 (Manager)
-        if (action === 'delete' && userLevel.value > 2) {
             return false;
         }
 

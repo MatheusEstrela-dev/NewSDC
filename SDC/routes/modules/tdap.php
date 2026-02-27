@@ -1,10 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Modules\Tdap\Presentation\Http\Controllers\TdapDashboardController;
-use App\Modules\Tdap\Presentation\Http\Controllers\TdapProductsController;
-use App\Modules\Tdap\Presentation\Http\Controllers\TdapRecebimentosController;
-use App\Modules\Tdap\Presentation\Http\Controllers\TdapMovimentacoesController;
+use App\Modules\Tdap\Controllers\TdapDashboardController;
+use App\Modules\Tdap\Controllers\TdapProductsController;
+use App\Modules\Tdap\Controllers\TdapRecebimentosController;
+use App\Modules\Tdap\Controllers\TdapMovimentacoesController;
 
 /*
 |--------------------------------------------------------------------------
