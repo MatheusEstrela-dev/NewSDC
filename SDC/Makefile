@@ -361,6 +361,9 @@ npm-dev: ## 🎨 Vite dev server
 npm-build: ## 🎨 Build produção
 	@$(COMPOSE_DEV) exec node npm run build
 
+npm-build-vite: ## 🎨 Build produção usando npx vite build
+	@$(COMPOSE_DEV) exec node npx vite build
+
 npm-clean: ## 🎨 Limpar node_modules e cache
 	@$(COMPOSE_DEV) exec node sh -c "rm -rf node_modules/.vite && npm cache clean --force"
 

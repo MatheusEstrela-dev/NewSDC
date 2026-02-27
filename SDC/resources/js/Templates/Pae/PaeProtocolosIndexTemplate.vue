@@ -163,7 +163,7 @@ const props = defineProps({
 const { isMobile } = useMobile();
 
 // Estado da visualização (mobile sempre será grade)
-const viewMode = ref('grid');
+const viewMode = ref('table');
 
 // Data source (mock por enquanto)
 const repository = new MockPaeProtocoloRepository();

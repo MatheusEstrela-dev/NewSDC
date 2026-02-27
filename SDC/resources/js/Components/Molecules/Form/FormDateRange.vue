@@ -5,7 +5,7 @@
     </Label>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <Label v-if="startLabel" :for-id="startId" :size="'sm'" color="muted">
+        <Label v-if="startLabel" :for-id="startId" :size="'sm'" color="muted" class="mb-1.5 transition-colors duration-200">
           {{ startLabel }}
         </Label>
         <DateInput
@@ -19,7 +19,7 @@
         />
       </div>
       <div>
-        <Label v-if="endLabel" :for-id="endId" :size="'sm'" color="muted">
+        <Label v-if="endLabel" :for-id="endId" :size="'sm'" color="muted" class="mb-1.5 transition-colors duration-200">
           {{ endLabel }}
         </Label>
         <DateInput

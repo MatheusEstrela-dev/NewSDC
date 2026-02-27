@@ -7,10 +7,12 @@ import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import AbrirPlantaoModal from '@/Components/Organisms/Plantao/AbrirPlantaoModal.vue';
-import PlantaoGrid from '@/Components/Organisms/Plantao/PlantaoGrid.vue'; // New import
+import PlantaoFiltersSection from '@/Components/Organisms/Plantao/PlantaoFiltersSection.vue';
+import PlantaoGrid from '@/Components/Organisms/Plantao/PlantaoGrid.vue';
 import PlantaoStatsCards from '@/Components/Organisms/Plantao/PlantaoStatsCards.vue';
 import PlantaoTable from '@/Components/Organisms/Plantao/PlantaoTable.vue';
 import { useExport } from '@/Composables/useExport';
+import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { ref } from 'vue';
 
@@ -55,8 +57,9 @@ const props = defineProps({
 
 const emit = defineEmits(['view', 'edit', 'filter', 'abrir-plantao']);
 
-const viewMode = ref('grid');
+const viewMode = ref('table');
 const showAbrirModal = ref(false);
+const { isMobile } = useMobile();
 
 const handleStatFilter = (statId) => {
   const statusMap = {
@@ -126,6 +129,13 @@ const handleExportCsv = (params) => {
       :statistics="statistics"
       class="mb-6"
       @filter="handleStatFilter"
+    />
+
+    <!-- Filtros -->
+    <PlantaoFiltersSection
+      :filters="filters"
+      @filter-change="emit('filter', $event)"
+      @filter-reset="emit('filter', {})"
     />
 
     <!-- Grid (Mobile ou Desktop selecionado) -->

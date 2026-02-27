@@ -1,8 +1,8 @@
 <template>
-  <CardBase variant="default" padding="lg" class="overflow-hidden">
+  <CardBase variant="default" padding="sm" class="overflow-hidden mb-2">
     <button
       type="button"
-      class="w-full flex items-center justify-between gap-3 mb-4 pb-3 text-left group transition-all duration-300
+      class="w-full flex items-center justify-between gap-3 mb-2 pb-2 text-left group transition-all duration-300
              border-b border-slate-700/30 dark:border-slate-700/30 border-slate-200
              hover:border-primary-500/30 dark:hover:border-primary-500/30 hover:border-primary-300"
       @click="isCollapsed = !isCollapsed"

@@ -37,7 +37,6 @@
     
     <FormDateRange
       class="md:col-span-2"
-      label="Período"
       start-label="Data Início"
       end-label="Data Fim"
       :model-value="{ start: filters.data_inicio || '', end: filters.data_fim || '' }"
@@ -53,7 +52,7 @@
       @update:model-value="updateFilter('ano', $event)"
     />
     
-    <div class="md:col-span-1 lg:col-span-4 flex justify-end items-end pt-6">
+    <div class="md:col-span-1 lg:col-span-4 flex justify-end items-end pt-1">
       <FilterActions @search="handleSearch" @clear="handleClear" />
     </div>
   </FilterSection>

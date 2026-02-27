@@ -209,7 +209,7 @@ const emit = defineEmits(['create', 'view', 'edit', 'delete', 'print', 'filter',
 // Detecção mobile
 const { isMobile } = useMobile();
 
-const viewMode = ref('grid');
+const viewMode = ref('table');
 const localFilters = ref({ ...props.filters });
 
 const handleStatFilter = (filter) => {

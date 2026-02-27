@@ -88,22 +88,6 @@ const fieldProps = computed(() => {
 <style scoped>
 .filter-field {
   @apply w-full;
-  animation: fadeInUp 0.3s ease-out;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.filter-field:hover {
-  animation: none;
 }
 </style>
 

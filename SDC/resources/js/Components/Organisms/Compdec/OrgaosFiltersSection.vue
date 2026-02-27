@@ -35,7 +35,7 @@
       @update:model-value="updateFilter('municipio', $event)"
     />
     
-    <div class="md:col-span-2 lg:col-span-4 flex justify-end items-end pt-6">
+    <div class="md:col-span-2 lg:col-span-4 flex justify-end items-end pt-1">
       <FilterActions @search="handleSearch" @clear="handleClear" />
     </div>
   </FilterSection>

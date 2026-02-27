@@ -47,7 +47,6 @@
     <!-- Período de Datas -->
     <FormDateRange
       class="md:col-span-2"
-      label="Período"
       start-label="Data Início"
       end-label="Data Fim"
       :model-value="{ start: localFilters.data_inicio || '', end: localFilters.data_fim || '' }"
@@ -55,7 +54,7 @@
     />
 
     <!-- Ações -->
-    <div class="md:col-span-2 lg:col-span-4 flex justify-end items-end pt-6">
+    <div class="md:col-span-2 lg:col-span-4 flex justify-end items-end pt-1">
       <FilterActions @search="applyFilters" @clear="clearFilters" />
     </div>
   </FilterSection>

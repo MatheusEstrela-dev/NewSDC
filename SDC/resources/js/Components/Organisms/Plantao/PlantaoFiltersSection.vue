@@ -1,19 +1,20 @@
 <template>
   <FilterSection title="Filtros de Pesquisa" :columns="4" class="mb-6">
     <FilterField
-      label="Nome"
+      label="Plantonista"
       type="text"
-      :model-value="filters.nome || ''"
-      placeholder="Nome do beneficiário"
-      @update:model-value="updateFilter('nome', $event)"
+      :model-value="filters.plantonista_nome || ''"
+      placeholder="Nome do plantonista"
+      @update:model-value="updateFilter('plantonista_nome', $event)"
     />
     
     <FilterField
-      label="CPF"
-      type="text"
-      :model-value="filters.cpf || ''"
-      placeholder="000.000.000-00"
-      @update:model-value="updateFilter('cpf', $event)"
+      label="Período (Turno)"
+      type="select"
+      :model-value="filters.periodo || ''"
+      :options="periodoOptions"
+      placeholder="Todos"
+      @update:model-value="updateFilter('periodo', $event)"
     />
     
     <FilterField
@@ -25,27 +26,8 @@
       @update:model-value="updateFilter('status', $event)"
     />
     
-    <FilterField
-      label="Município"
-      type="select"
-      :model-value="filters.municipio || ''"
-      :options="municipalities"
-      placeholder="Todos"
-      @update:model-value="updateFilter('municipio', $event)"
-    />
-    
-    <FilterField
-      label="Situação"
-      type="select"
-      :model-value="filters.situacao || ''"
-      :options="situacaoOptions"
-      placeholder="Todas"
-      @update:model-value="updateFilter('situacao', $event)"
-    />
-    
     <FormDateRange
-      class="md:col-span-2"
-      label="Período de Cadastro"
+      class="md:col-span-1"
       start-label="Data Início"
       end-label="Data Fim"
       :model-value="{ start: filters.data_inicio || '', end: filters.data_fim || '' }"
@@ -69,27 +51,21 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-  municipalities: {
-    type: Array,
-    default: () => [],
-  },
 });
 
 const emit = defineEmits(['filter-change', 'filter-reset']);
 
+const periodoOptions = [
+  { value: '', label: 'Todos' },
+  { value: 'DIURNO', label: 'Diurno' },
+  { value: 'NOTURNO', label: 'Noturno' },
+  { value: 'EXTRAORDINARIO', label: 'Extraordinário' },
+];
+
 const statusOptions = [
   { value: '', label: 'Todos' },
   { value: 'ATIVO', label: 'Ativo' },
-  { value: 'INATIVO', label: 'Inativo' },
-  { value: 'PENDENTE', label: 'Pendente' },
-];
-
-const situacaoOptions = [
-  { value: '', label: 'Todas' },
-  { value: 'EM_ABRIGO', label: 'Em Abrigo' },
-  { value: 'FORA_ABRIGO', label: 'Fora de Abrigo' },
-  { value: 'DESALOJADO', label: 'Desalojado' },
-  { value: 'DESABRIGADO', label: 'Desabrigado' },
+  { value: 'FINALIZADO', label: 'Finalizado' },
 ];
 
 function updateFilter(key, value) {

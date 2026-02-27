@@ -156,7 +156,7 @@ const props = defineProps({
 const emit = defineEmits(['filter-change', 'clear-filters', 'page-change', 'view', 'edit', 'create']);
 
 const localFilters = ref({ ...props.filters });
-const viewMode = ref('grid');
+const viewMode = ref('table');
 
 const handleApplyFilters = (filters) => {
   emit('filter-change', filters);

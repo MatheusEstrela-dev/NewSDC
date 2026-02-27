@@ -64,7 +64,7 @@ const props = defineProps({
 
 const emit = defineEmits(['create', 'view', 'edit', 'delete', 'filter', 'filter-change', 'filter-reset']);
 
-const viewMode = ref('grid');
+const viewMode = ref('table');
 const localFilters = ref({ ...props.filters });
 
 const handleStatFilter = (statId) => {
