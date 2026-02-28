@@ -72,7 +72,7 @@ export HOST_GID
 help: ## 📚 Mostra ajuda completa e categorizada
 	@echo ''
 	@echo '${BOLD}${CYAN}╔════════════════════════════════════════════════════════════════════╗${RESET}'
-	@echo '${BOLD}${CYAN}║     SDC - Sistema de Defesa Civil - Docker Management Tool        ║${RESET}'
+	@echo '${BOLD}${CYAN}║     SDC - Sistema de Defesa Civil - Docker Management Tool         ║${RESET}'
 	@echo '${BOLD}${CYAN}╚════════════════════════════════════════════════════════════════════╝${RESET}'
 	@echo ''
 	@echo '${BOLD}📦 BUILD & SETUP:${RESET}'
@@ -148,7 +148,7 @@ up-all: network-init ## 🚀 Sobe TODA stack (app + db + redis + monitoring + to
 	@echo "${BOLD}${CYAN}════════════════════════════════════════════════════════════${RESET}"
 	@echo ""
 	@echo "${YELLOW}→ Iniciando todos os serviços...${RESET}"
-	@$(COMPOSE_DEV) --profile tools up -d
+	@$(COMPOSE_DEV) --profile tools --profile ollama up -d
 	@echo ""
 	@echo "${GREEN}✓ Stack completa iniciada!${RESET}"
 	@echo ""
@@ -156,7 +156,7 @@ up-all: network-init ## 🚀 Sobe TODA stack (app + db + redis + monitoring + to
 
 down-all: ## 🚀 Para TODA stack
 	@echo "${YELLOW}→ Parando todos os serviços...${RESET}"
-	@$(COMPOSE_DEV) --profile tools down
+	@$(COMPOSE_DEV) --profile tools --profile ollama down
 	@echo "${GREEN}✓ Todos os serviços parados${RESET}"
 
 restart-all: ## 🚀 Reinicia TODA stack
@@ -402,7 +402,7 @@ bridge: ## 📦 Cria a rede bridge sdc_network (para os ~15 containers, sem Olla
 	@echo "${GREEN}✓ Bridge sdc_network OK${RESET}"
 
 # Um comando: bridge + build-all + up-all (stack completa sem Ollama)
-start: bridge build-all up-all ## 🚀 Bridge + build all + sobe toda stack (sem Ollama)
+start: bridge build-all up-all ## 🚀 Bridge + build all + sobe toda stack (COM Ollama)
 	@echo ""
 	@echo "${BOLD}${GREEN}✓ Stack iniciada (bridge + build + up). Ollama não incluído.${RESET}"
 	@$(MAKE) urls
@@ -419,7 +419,7 @@ network-clean: ## 🌐 Remove network
 # 📱 MOBILE DEV (NativePHP)
 # ============================================================================
 
-mobile-dev: ## 📱 Inicia ambiente mobile (Expo-like)
+mobile-dev: ## 📱 Inicia NativePHP Jump Server (QR Code)
 	@./scripts/start-mobile.sh
 
 # ============================================================================
