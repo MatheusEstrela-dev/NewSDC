@@ -11,6 +11,7 @@ use App\Models\Decreto\DesastreGrupo;
 use App\Models\Decreto\EntradaDecreto;
 use App\Models\Decreto\EntradaDesastre;
 use App\Models\Decreto\EntradaProcesso;
+use App\Models\Municipio;
 use App\Modules\Decretacoes\DTOs\ProcessoDTO;
 use App\Modules\Decretacoes\Models\Processo;
 use App\Modules\Shared\BaseService;
@@ -21,18 +22,60 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * ProcessoService - Consolidated service for Decretacoes module.
- *
- * This service consolidates the following services:
- * - ProcessoService (CRUD)
- * - ProcessoFilterService (filtering logic)
- * - ProcessoStatisticsService (statistics)
- * - ProcessoSyncService (municipality sync)
- * - ProcessoExportService (PowerBI export)
- * - EntradaProcessoService (auxiliary/orchestrator methods)
+ * ProcessoService - Servico consolidado do modulo Decretacoes.
+ * Arquitetura: Request -> DTO -> Controller -> Service -> Model
  */
 class ProcessoService extends BaseService
 {
+    // Categorias de danos (IDs do banco)
+    private const CATEGORIA_DANOS_HUMANOS = 1;
+
+    // Mapeamento de item_id para tipo de dano humano
+    private const DANOS_HUMANOS_MAP = [
+        1 => 'obitos',
+        2 => 'feridos',
+        3 => 'feridos',
+        4 => 'desabrigados',
+        5 => 'desalojados',
+        6 => 'desaparecidos',
+        7 => 'outros_afetados',
+    ];
+
+    // Categorias de exportacao
+    private const CAT_DANOS_MATERIAIS = 'DANOS MATERIAIS';
+    private const CAT_PREJUIZOS_PUBLICOS = 'PREJUIZOS ECONOMICOS PUBLICOS';
+    private const CAT_PREJUIZOS_PRIVADOS = 'PREJUIZOS ECONOMICOS PRIVADOS';
+
+    // Tipos de decreto validos
+    private const TIPOS_DECRETO_VALIDOS = ['SE', 'ECP'];
+
+    // Parametros de filtro
+    private const FILTER_PARAMS = [
+        'search', 'data_entrada', 'data_entrada_inicio', 'data_entrada_fim',
+        'processo', 'reconhecimento', 'analista', 'situacao_anormalidade',
+        'data_decreto_inicio', 'data_decreto_fim', 'vigencia_status',
+        'tipo_desastre_id', 'municipio_id', 'n_protocolo_fide'
+    ];
+
+    private const FILTER_LABELS = [
+        'search' => 'Busca',
+        'data_entrada' => 'Data Entrada',
+        'data_entrada_inicio' => 'Data Entrada Inicio',
+        'data_entrada_fim' => 'Data Entrada Fim',
+        'processo' => 'Tipo Processo',
+        'reconhecimento' => 'Status',
+        'analista' => 'Analista',
+        'situacao_anormalidade' => 'Situacao',
+        'data_decreto_inicio' => 'Data Decreto Inicio',
+        'data_decreto_fim' => 'Data Decreto Fim',
+        'vigencia_status' => 'Vigencia',
+        'tipo_desastre_id' => 'Tipo Desastre',
+        'municipio_id' => 'Municipio',
+        'n_protocolo_fide' => 'Protocolo FIDE'
+    ];
+
+    private ?Collection $classificacaoDesastresCache = null;
+
     public function __construct(
         private readonly HexagonIntegrationService $hexagonService
     ) {
@@ -162,53 +205,25 @@ class ProcessoService extends BaseService
     public function getActiveFiltersSummary(Request $request): array
     {
         $activeFilters = [];
+        $cobrade = $this->getClassificacaoDesastres();
 
-        $filterLabels = [
-            'search' => 'Busca',
-            'data_entrada' => 'Data Entrada',
-            'data_entrada_inicio' => 'Data Entrada Inicio',
-            'data_entrada_fim' => 'Data Entrada Fim',
-            'processo' => 'Tipo Processo',
-            'reconhecimento' => 'Status',
-            'analista' => 'Analista',
-            'situacao_anormalidade' => 'Situacao',
-            'data_decreto_inicio' => 'Data Decreto Inicio',
-            'data_decreto_fim' => 'Data Decreto Fim',
-            'vigencia_status' => 'Vigencia',
-            'tipo_desastre_id' => 'Tipo Desastre',
-            'municipio_id' => 'Municipio',
-            'n_protocolo_fide' => 'Protocolo FIDE'
-        ];
-
-        $cobrade = collect(include app_path('Enums/classificacao_desastres.php'));
-
-        foreach ($filterLabels as $param => $label) {
-            if ($request->filled($param)) {
-                $value = $request->input($param);
-                $entry = [
-                    'param' => $param,
-                    'label' => $label,
-                    'value' => $value,
-                ];
-
-                if ($param === 'tipo_desastre_id') {
-                    $match = $cobrade->firstWhere('id', (int) $value);
-                    if ($match) {
-                        $labelParts = array_filter([
-                            $match['cobrade'] ?? null,
-                            $match['a_definicao']
-                                ?? $match['subtipo']
-                                ?? $match['tipo']
-                                ?? $match['subgrupo']
-                                ?? $match['grupo']
-                                ?? null,
-                        ]);
-                        $entry['display_value'] = implode(' - ', $labelParts);
-                    }
-                }
-
-                $activeFilters[] = $entry;
+        foreach (self::FILTER_LABELS as $param => $label) {
+            if (!$request->filled($param)) {
+                continue;
             }
+
+            $value = $request->input($param);
+            $entry = [
+                'param' => $param,
+                'label' => $label,
+                'value' => $value,
+            ];
+
+            if ($param === 'tipo_desastre_id') {
+                $entry['display_value'] = $this->getDesastreDisplayValue($cobrade, (int) $value);
+            }
+
+            $activeFilters[] = $entry;
         }
 
         return $activeFilters;
@@ -219,13 +234,7 @@ class ProcessoService extends BaseService
      */
     public function hasActiveFilters(Request $request): bool
     {
-        $filterParams = [
-            'search', 'data_entrada', 'data_entrada_inicio', 'data_entrada_fim', 'processo', 'reconhecimento',
-            'analista', 'situacao_anormalidade', 'data_decreto_inicio',
-            'data_decreto_fim', 'vigencia_status', 'tipo_desastre_id', 'municipio_id', 'n_protocolo_fide'
-        ];
-
-        return $request->hasAny($filterParams);
+        return $request->hasAny(self::FILTER_PARAMS);
     }
 
     /**
@@ -289,7 +298,7 @@ class ProcessoService extends BaseService
     /**
      * Sync municipalities for a processo.
      */
-    public function syncMunicipalities(EntradaProcesso $processo, array $municipios): void
+    private function syncMunicipalities(EntradaProcesso $processo, array $municipios): void
     {
         $municipios = array_map('intval', $municipios);
 
@@ -326,7 +335,7 @@ class ProcessoService extends BaseService
     /**
      * Sync informacoes decreto for a processo.
      */
-    public function syncInformacoesDecreto(EntradaProcesso $processo, ?string $informacoesDecreto): void
+    private function syncInformacoesDecreto(EntradaProcesso $processo, ?string $informacoesDecreto): void
     {
         EntradaDecreto::where('entrada_processos_id', $processo->id)->delete();
 
@@ -384,18 +393,28 @@ class ProcessoService extends BaseService
     /**
      * Build a row for Power BI export.
      */
-    private function buildExportRow(EntradaProcesso $entrada, $municipio, array $municipioTotals, array $danosHumanos): array
+    private function buildExportRow(EntradaProcesso $entrada, ?object $municipio, array $municipioTotals, array $danosHumanos): array
     {
-        $row = [
+        $row = $this->buildBaseExportRow($entrada, $municipio);
+        $row = array_merge($row, $this->buildDanosHumanosRow($danosHumanos));
+        $row['danos_humanos_quantidade'] = $this->sumDanosHumanos($row);
+        $row = array_merge($row, $this->buildDanosMateriaispRow($municipioTotals));
+
+        return $row;
+    }
+
+    private function buildBaseExportRow(EntradaProcesso $entrada, ?object $municipio): array
+    {
+        return [
             'id' => $entrada->id,
             'uf' => 'MG',
-            'municipio' => $municipio ? ($municipio->p_nome ?? $municipio->nome) : null,
-            'codigo_ibge' => $municipio->Codmundv ?? null,
-            'macroregiao' => $municipio->macroregiao ?? null,
-            'latitude' => $municipio->latitude ?? null,
-            'longitude' => $municipio->longitude ?? null,
-            'latitude_dec' => $municipio->latitude_dec ?? null,
-            'longitude_dec' => $municipio->longitude_dec ?? null,
+            'municipio' => $municipio?->p_nome ?? $municipio?->nome,
+            'codigo_ibge' => $municipio?->Codmundv,
+            'macroregiao' => $municipio?->macroregiao,
+            'latitude' => $municipio?->latitude,
+            'longitude' => $municipio?->longitude,
+            'latitude_dec' => $municipio?->latitude_dec,
+            'longitude_dec' => $municipio?->longitude_dec,
             'data_registro' => $entrada->data_entrada,
             'data_criacao' => $entrada->created_at,
             'deletado' => $entrada->trashed(),
@@ -413,6 +432,12 @@ class ProcessoService extends BaseService
             'tipo_decreto' => $this->mapearTipoDecreto($entrada->situacao_anormalidade),
             'processo' => $entrada->processo,
             'analista' => $entrada->analista,
+        ];
+    }
+
+    private function buildDanosHumanosRow(array $danosHumanos): array
+    {
+        return [
             'obitos' => $danosHumanos['obitos'] ?? 0,
             'feridos' => $danosHumanos['feridos'] ?? 0,
             'desalojados' => $danosHumanos['desalojados'] ?? 0,
@@ -420,20 +445,23 @@ class ProcessoService extends BaseService
             'desaparecidos' => $danosHumanos['desaparecidos'] ?? 0,
             'outros_afetados' => $danosHumanos['outros_afetados'] ?? 0,
         ];
+    }
 
-        $row['danos_humanos_quantidade'] = array_sum([
-            $row['obitos'], $row['feridos'], $row['desalojados'],
-            $row['desabrigados'], $row['desaparecidos'], $row['outros_afetados']
-        ]);
+    private function sumDanosHumanos(array $row): int
+    {
+        return $row['obitos'] + $row['feridos'] + $row['desalojados']
+             + $row['desabrigados'] + $row['desaparecidos'] + $row['outros_afetados'];
+    }
 
-        $row['danos_materiais_danificadas'] = $municipioTotals['DANOS MATERIAIS']['Quantidades danificadas'] ?? 0;
-        $row['danos_materiais_destruidas'] = $municipioTotals['DANOS MATERIAIS']['Quantidades destruidas'] ?? 0;
-        $row['danos_materiais_valor'] = $municipioTotals['DANOS MATERIAIS']['Valor (R$)'] ?? 0;
-
-        $row['prejuizos_publicos_valor'] = $municipioTotals['PREJUIZOS ECONOMICOS PUBLICOS']['Valor do prejuizo (R$)'] ?? 0;
-        $row['prejuizos_privados_valor'] = $municipioTotals['PREJUIZOS ECONOMICOS PRIVADOS']['Valor do prejuizo (R$)'] ?? 0;
-
-        return $row;
+    private function buildDanosMateriaispRow(array $municipioTotals): array
+    {
+        return [
+            'danos_materiais_danificadas' => $municipioTotals[self::CAT_DANOS_MATERIAIS]['Quantidades danificadas'] ?? 0,
+            'danos_materiais_destruidas' => $municipioTotals[self::CAT_DANOS_MATERIAIS]['Quantidades destruidas'] ?? 0,
+            'danos_materiais_valor' => $municipioTotals[self::CAT_DANOS_MATERIAIS]['Valor (R$)'] ?? 0,
+            'prejuizos_publicos_valor' => $municipioTotals[self::CAT_PREJUIZOS_PUBLICOS]['Valor do prejuizo (R$)'] ?? 0,
+            'prejuizos_privados_valor' => $municipioTotals[self::CAT_PREJUIZOS_PRIVADOS]['Valor do prejuizo (R$)'] ?? 0,
+        ];
     }
 
     /**
@@ -479,7 +507,7 @@ class ProcessoService extends BaseService
     /**
      * Calculate danos humanos for processos.
      */
-    private function calculateDanosHumanos($processoIds): Collection
+    private function calculateDanosHumanos(Collection $processoIds): Collection
     {
         $danosHumanos = DB::table('dec_entrada_desastres as ed')
             ->join('dec_entrada_categoria_desastres as ecd', 'ed.entrada_categoria_desastre_id', '=', 'ecd.id')
@@ -487,33 +515,22 @@ class ProcessoService extends BaseService
             ->join('dec_desastre_items as di', 'dic.desastre_item_id', '=', 'di.id')
             ->join('dec_desastre_categorias as dc', 'di.categoria_id', '=', 'dc.id')
             ->whereIn('ecd.entrada_processo_id', $processoIds)
-            ->where('dc.id', 1)
+            ->where('dc.id', self::CATEGORIA_DANOS_HUMANOS)
             ->whereNull('ed.deleted_at')
             ->select(
                 'ed.municipio_id',
                 'di.id as item_id',
-                'di.titulo as item_titulo',
                 DB::raw('CAST(COALESCE(ed.valor, 0) AS UNSIGNED) as valor_numerico')
             )
             ->get();
 
         return $danosHumanos->groupBy('municipio_id')->map(function ($municipioItems) {
-            $result = [
-                'obitos' => 0, 'feridos' => 0, 'desalojados' => 0,
-                'desabrigados' => 0, 'desaparecidos' => 0, 'outros_afetados' => 0,
-            ];
+            $result = array_fill_keys(array_unique(array_values(self::DANOS_HUMANOS_MAP)), 0);
 
             foreach ($municipioItems as $item) {
-                $itemId = (int) $item->item_id;
-                $valor = (int) $item->valor_numerico;
-
-                switch ($itemId) {
-                    case 1: $result['obitos'] += $valor; break;
-                    case 2: case 3: $result['feridos'] += $valor; break;
-                    case 4: $result['desabrigados'] += $valor; break;
-                    case 5: $result['desalojados'] += $valor; break;
-                    case 6: $result['desaparecidos'] += $valor; break;
-                    case 7: $result['outros_afetados'] += $valor; break;
+                $key = self::DANOS_HUMANOS_MAP[(int) $item->item_id] ?? null;
+                if ($key) {
+                    $result[$key] += (int) $item->valor_numerico;
                 }
             }
 
@@ -524,9 +541,9 @@ class ProcessoService extends BaseService
     /**
      * Map situacao anormalidade to tipo decreto.
      */
-    protected function mapearTipoDecreto($situacaoAnormalidade): ?string
+    private function mapearTipoDecreto(?string $situacaoAnormalidade): ?string
     {
-        return in_array($situacaoAnormalidade, ['SE', 'ECP'], true) ? $situacaoAnormalidade : null;
+        return in_array($situacaoAnormalidade, self::TIPOS_DECRETO_VALIDOS, true) ? $situacaoAnormalidade : null;
     }
 
     // =========================================================================
@@ -538,12 +555,9 @@ class ProcessoService extends BaseService
      */
     public function prepareProcessoForEdit(EntradaProcesso $processo): EntradaProcesso
     {
-        $classificacaoDesastres = collect(include(app_path('Enums/classificacao_desastres.php')))
-            ->sortBy('a_definicao')
-            ->values();
-
         if ($processo->tipo_desastre_id) {
-            $processo->desastre = $classificacaoDesastres->firstWhere('id', $processo->tipo_desastre_id);
+            $processo->desastre = $this->getClassificacaoDesastres()
+                ->firstWhere('id', $processo->tipo_desastre_id);
         }
 
         return $processo;
@@ -700,5 +714,42 @@ class ProcessoService extends BaseService
                 'total_qtd' => $item->total_qtd,
             ]);
         });
+    }
+
+    // =========================================================================
+    // REGION: Private Helper Methods
+    // =========================================================================
+
+    /**
+     * Get classificacao desastres with caching.
+     */
+    private function getClassificacaoDesastres(): Collection
+    {
+        if ($this->classificacaoDesastresCache === null) {
+            $this->classificacaoDesastresCache = collect(include app_path('Enums/classificacao_desastres.php'))
+                ->sortBy('a_definicao')
+                ->values();
+        }
+
+        return $this->classificacaoDesastresCache;
+    }
+
+    /**
+     * Get display value for desastre type.
+     */
+    private function getDesastreDisplayValue(Collection $cobrade, int $tipoDesastreId): ?string
+    {
+        $match = $cobrade->firstWhere('id', $tipoDesastreId);
+
+        if (!$match) {
+            return null;
+        }
+
+        $labelParts = array_filter([
+            $match['cobrade'] ?? null,
+            $match['a_definicao'] ?? $match['subtipo'] ?? $match['tipo'] ?? $match['subgrupo'] ?? $match['grupo'] ?? null,
+        ]);
+
+        return implode(' - ', $labelParts) ?: null;
     }
 }
