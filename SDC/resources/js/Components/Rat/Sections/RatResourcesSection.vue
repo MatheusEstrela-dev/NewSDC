@@ -65,8 +65,8 @@
       </div>
 
       <!-- Dados de Deslocamento -->
-      <div class="mt-6 pt-6 border-t border-slate-700/30">
-        <h4 class="text-sm font-medium text-slate-300 mb-4">Dados de Deslocamento</h4>
+      <div class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200 dark:border-slate-700/30">
+        <h4 class="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 sm:mb-4">Dados de Deslocamento</h4>
         <div class="rat-grid-3">
           <FormField
             label="Data/Hora de Saída"
@@ -100,8 +100,8 @@
       </div>
 
       <!-- Dados Operacionais -->
-      <div class="mt-6 pt-6 border-t border-slate-700/30">
-        <h4 class="text-sm font-medium text-slate-300 mb-4">Dados Operacionais</h4>
+      <div class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200 dark:border-slate-700/30">
+        <h4 class="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 sm:mb-4">Dados Operacionais</h4>
         <div class="rat-grid-3">
           <FormField
             label="Quantidade"
@@ -142,26 +142,26 @@
         />
       </div>
 
-      <!-- Agentes/Integrantes da Guarnição -->
-      <div class="mt-6 pt-6 border-t border-slate-700/30">
-        <div class="flex items-center justify-between mb-4">
-          <h4 class="text-sm font-medium text-slate-300">Agentes / Integrantes da Guarnição</h4>
+      <!-- Agentes/Integrantes da Guarnicao -->
+      <div class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200 dark:border-slate-700/30">
+        <div class="flex items-center justify-between mb-3 sm:mb-4 gap-2">
+          <h4 class="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">Agentes / Integrantes</h4>
           <button
             @click="toggleFormularioAgente"
             type="button"
-            class="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-all"
+            class="px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-all whitespace-nowrap"
           >
-            {{ mostrarFormularioAgente ? 'Cancelar' : '+ Adicionar Agente' }}
+            {{ mostrarFormularioAgente ? 'Cancelar' : '+ Agente' }}
           </button>
         </div>
 
-        <!-- Formulário Inline -->
-        <div v-if="mostrarFormularioAgente" class="mb-6 p-6 rounded-lg bg-slate-950/50 border-2 border-blue-500/30">
-          <h5 class="text-base font-semibold text-blue-400 mb-4">
+        <!-- Formulario Inline -->
+        <div v-if="mostrarFormularioAgente" class="mb-4 sm:mb-6 p-3 sm:p-6 rounded-lg bg-slate-50 dark:bg-slate-950/50 border-2 border-blue-500/30">
+          <h5 class="text-sm sm:text-base font-semibold text-blue-600 dark:text-blue-400 mb-3 sm:mb-4">
             {{ agenteEditIndex !== null ? 'Editar Agente' : 'Novo Agente' }}
           </h5>
 
-          <div class="space-y-4">
+          <div class="space-y-3 sm:space-y-4">
             <div class="rat-grid-2">
               <FormField
                 label="Nome Completo"
@@ -169,7 +169,7 @@
                 required
               />
               <FormField
-                label="Matrícula / MASP"
+                label="Matricula / MASP"
                 v-model="novoAgente.matricula"
                 required
               />
@@ -180,14 +180,14 @@
                 v-model="novoAgente.cargo"
               />
               <FormSelect
-                label="Função no Atendimento"
+                label="Funcao no Atendimento"
                 v-model="novoAgente.funcao"
                 :options="funcaoOptions"
               />
             </div>
             <div class="rat-grid-2">
               <FormSelect
-                label="Órgão"
+                label="Orgao"
                 v-model="novoAgente.orgao"
                 :options="orgaoOptions"
               />
@@ -196,100 +196,101 @@
                 v-model="novoAgente.unidade"
               />
             </div>
-            <div class="flex items-center gap-3 p-4 rounded-lg bg-slate-950/50 border border-slate-700/30">
+            <div class="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-700/30">
               <input
                 type="checkbox"
                 id="condutor-check"
                 v-model="novoAgente.condutor"
-                class="w-4 h-4 rounded bg-slate-800 border-slate-600 text-blue-500 focus:ring-2 focus:ring-blue-500"
+                class="w-5 h-5 sm:w-4 sm:h-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500 focus:ring-2 focus:ring-blue-500"
               />
-              <label for="condutor-check" class="text-sm text-slate-300 cursor-pointer">
-                Este agente é o condutor do veículo
+              <label for="condutor-check" class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+                Este agente e o condutor do veiculo
               </label>
             </div>
           </div>
 
-          <div class="flex gap-3 mt-6">
+          <div class="flex gap-2 sm:gap-3 mt-4 sm:mt-6">
             <button
               @click="cancelarFormularioAgente"
               type="button"
-              class="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all border border-slate-700"
+              class="flex-1 px-3 sm:px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-300 dark:border-slate-700"
             >
               Cancelar
             </button>
             <button
               @click="salvarAgente"
               type="button"
-              class="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-all"
+              class="flex-1 px-3 sm:px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-all"
             >
               {{ agenteEditIndex !== null ? 'Atualizar' : 'Adicionar' }}
             </button>
           </div>
         </div>
 
-        <!-- Lista de Agentes -->
-        <div v-if="localData.agentes && localData.agentes.length > 0" class="space-y-3">
+        <!-- Lista de Agentes - Cards Mobile -->
+        <div v-if="localData.agentes && localData.agentes.length > 0" class="space-y-2 sm:space-y-3">
           <div
             v-for="(agente, index) in localData.agentes"
             :key="index"
-            class="p-4 rounded-lg bg-slate-950/50 border border-slate-700/30 flex items-start justify-between gap-4"
+            class="p-3 sm:p-4 rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-700/30"
           >
-            <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-              <div>
-                <span class="text-slate-500">Nome:</span>
-                <span class="text-slate-200 ml-2">{{ agente.nome }}</span>
+            <!-- Mobile: Layout vertical compacto -->
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <!-- Nome e Matricula - sempre visiveis -->
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-sm sm:text-base font-medium text-slate-800 dark:text-slate-200 truncate">{{ agente.nome }}</span>
+                  <span v-if="agente.condutor" class="px-1.5 py-0.5 text-xs rounded bg-emerald-500/20 text-emerald-400">Condutor</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">{{ agente.matricula }}</p>
+
+                <!-- Detalhes - grid responsivo -->
+                <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 text-xs">
+                  <div v-if="agente.cargo">
+                    <span class="text-slate-500">Cargo:</span>
+                    <span class="text-slate-700 dark:text-slate-300 ml-1">{{ agente.cargo }}</span>
+                  </div>
+                  <div v-if="agente.funcao">
+                    <span class="text-slate-500">Funcao:</span>
+                    <span class="text-slate-700 dark:text-slate-300 ml-1">{{ agente.funcao }}</span>
+                  </div>
+                  <div v-if="agente.orgao">
+                    <span class="text-slate-500">Orgao:</span>
+                    <span class="text-slate-700 dark:text-slate-300 ml-1">{{ agente.orgao }}</span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span class="text-slate-500">Matrícula:</span>
-                <span class="text-slate-200 ml-2">{{ agente.matricula }}</span>
+
+              <!-- Botoes de acao - maiores para touch -->
+              <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                <button
+                  @click="editarAgente(index)"
+                  type="button"
+                  class="p-2 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-all"
+                  title="Editar agente"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button
+                  @click="removerAgente(index)"
+                  type="button"
+                  class="p-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
+                  title="Remover agente"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
               </div>
-              <div>
-                <span class="text-slate-500">PG/Cargo:</span>
-                <span class="text-slate-200 ml-2">{{ agente.cargo }}</span>
-              </div>
-              <div>
-                <span class="text-slate-500">Função:</span>
-                <span class="text-slate-200 ml-2">{{ agente.funcao }}</span>
-              </div>
-              <div>
-                <span class="text-slate-500">Órgão:</span>
-                <span class="text-slate-200 ml-2">{{ agente.orgao }}</span>
-              </div>
-              <div>
-                <span class="text-slate-500">Condutor:</span>
-                <span :class="agente.condutor ? 'text-emerald-400' : 'text-slate-500'" class="ml-2">
-                  {{ agente.condutor ? 'Sim' : 'Não' }}
-                </span>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                @click="editarAgente(index)"
-                type="button"
-                class="text-blue-400 hover:text-blue-300 transition-colors flex-shrink-0"
-                title="Editar agente"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              <button
-                @click="removerAgente(index)"
-                type="button"
-                class="text-red-400 hover:text-red-300 transition-colors flex-shrink-0"
-                title="Remover agente"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
             </div>
           </div>
         </div>
 
         <!-- Empty State -->
-        <div v-else class="text-center py-8 text-slate-500 text-sm">
-          Nenhum agente adicionado. Clique em "Adicionar Agente" para incluir integrantes da guarnição.
+        <div v-else class="text-center py-6 sm:py-8 text-slate-500 text-xs sm:text-sm">
+          Nenhum agente adicionado. Clique em "+ Agente" para incluir integrantes.
         </div>
       </div>
     </div>

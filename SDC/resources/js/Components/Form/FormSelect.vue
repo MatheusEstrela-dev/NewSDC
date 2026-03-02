@@ -107,18 +107,18 @@ const handleChange = (event) => {
 }
 
 .form-label {
-  @apply block text-sm font-medium text-slate-300 mb-2;
+  @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2;
 }
 
 .form-select {
-  @apply w-full px-4 py-2.5 pr-10 rounded-lg bg-slate-900/50 text-slate-200
+  @apply w-full px-4 py-2.5 pr-10 rounded-lg bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-slate-200
     transition-all duration-200 appearance-none cursor-pointer
-    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950;
+    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-950;
 }
 
 .form-select-normal {
-  @apply border border-slate-700/50
-    hover:border-slate-600
+  @apply border border-slate-300 dark:border-slate-700/50
+    hover:border-slate-400 dark:hover:border-slate-600
     focus:border-blue-500 focus:ring-blue-500/20;
 }
 
@@ -135,7 +135,7 @@ const handleChange = (event) => {
 }
 
 .form-select-disabled {
-  @apply bg-slate-900/20 cursor-not-allowed text-slate-500 opacity-60;
+  @apply bg-slate-100 dark:bg-slate-900/20 cursor-not-allowed text-slate-400 dark:text-slate-500 opacity-60;
 }
 
 .form-error {
@@ -148,6 +148,6 @@ const handleChange = (event) => {
 
 /* Estilo para opções no dropdown */
 .form-select option {
-  @apply bg-slate-900 text-slate-200;
+  @apply bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-200;
 }
 </style>

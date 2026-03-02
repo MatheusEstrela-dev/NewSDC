@@ -34,8 +34,8 @@
             </svg>
           </div>
           <div class="flex-1">
-            <h4 class="text-sm font-medium text-blue-400 mb-2">Dicas para um bom histórico:</h4>
-            <ul class="text-xs text-slate-400 space-y-1">
+            <h4 class="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">Dicas para um bom histórico:</h4>
+            <ul class="text-xs text-slate-500 dark:text-slate-400 space-y-1">
               <li>• Seja objetivo e claro na descrição dos fatos</li>
               <li>• Utilize ordem cronológica dos acontecimentos</li>
               <li>• Mencione todos os recursos e agentes envolvidos</li>
@@ -51,8 +51,8 @@
       <!-- Informações Complementares -->
       <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Condições Climáticas -->
-        <div class="p-4 rounded-lg bg-slate-950/30 border border-slate-700/30">
-          <label class="block text-sm font-medium text-slate-300 mb-3">
+        <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-slate-700/30">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
             Condições Climáticas
           </label>
           <div class="space-y-2">
@@ -61,48 +61,48 @@
                 type="checkbox"
                 id="clima-chuva"
                 v-model="localData.clima.chuva"
-                class="w-4 h-4 rounded bg-slate-800 border-slate-600 text-blue-500"
+                class="w-4 h-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500"
               />
-              <label for="clima-chuva" class="text-sm text-slate-400">Chuva</label>
+              <label for="clima-chuva" class="text-sm text-slate-600 dark:text-slate-400">Chuva</label>
             </div>
             <div class="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="clima-vento"
                 v-model="localData.clima.vento_forte"
-                class="w-4 h-4 rounded bg-slate-800 border-slate-600 text-blue-500"
+                class="w-4 h-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500"
               />
-              <label for="clima-vento" class="text-sm text-slate-400">Vento Forte</label>
+              <label for="clima-vento" class="text-sm text-slate-600 dark:text-slate-400">Vento Forte</label>
             </div>
             <div class="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="clima-nevoeiro"
                 v-model="localData.clima.nevoeiro"
-                class="w-4 h-4 rounded bg-slate-800 border-slate-600 text-blue-500"
+                class="w-4 h-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500"
               />
-              <label for="clima-nevoeiro" class="text-sm text-slate-400">Nevoeiro</label>
+              <label for="clima-nevoeiro" class="text-sm text-slate-600 dark:text-slate-400">Nevoeiro</label>
             </div>
             <div class="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="clima-tempestade"
                 v-model="localData.clima.tempestade"
-                class="w-4 h-4 rounded bg-slate-800 border-slate-600 text-blue-500"
+                class="w-4 h-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500"
               />
-              <label for="clima-tempestade" class="text-sm text-slate-400">Tempestade</label>
+              <label for="clima-tempestade" class="text-sm text-slate-600 dark:text-slate-400">Tempestade</label>
             </div>
           </div>
         </div>
 
         <!-- Resultado da Operação -->
-        <div class="p-4 rounded-lg bg-slate-950/30 border border-slate-700/30">
-          <label class="block text-sm font-medium text-slate-300 mb-3">
+        <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-slate-700/30">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
             Resultado da Operação
           </label>
           <select
             v-model="localData.resultado"
-            class="w-full px-3 py-2 rounded-lg bg-slate-900/50 text-slate-200 border border-slate-700/50 hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+            class="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-200 border border-slate-300 dark:border-slate-700/50 hover:border-slate-400 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
           >
             <option value="">Selecione...</option>
             <option value="sucesso_total">Sucesso Total</option>
@@ -116,7 +116,7 @@
             <label class="block text-xs text-slate-500 mb-2">Grau de Risco</label>
             <select
               v-model="localData.grau_risco"
-              class="w-full px-3 py-2 rounded-lg bg-slate-900/50 text-slate-200 border border-slate-700/50 hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
+              class="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-200 border border-slate-300 dark:border-slate-700/50 hover:border-slate-400 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
             >
               <option value="">Selecione...</option>
               <option value="baixo">Baixo</option>
@@ -130,7 +130,7 @@
 
       <!-- Métricas da Operação -->
       <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="p-4 rounded-lg bg-slate-950/30 border border-slate-700/30">
+        <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-slate-700/30">
           <label class="block text-xs text-slate-500 mb-2">Pessoas Atendidas</label>
           <input
             type="number"
@@ -139,7 +139,7 @@
             class="w-full px-3 py-2 rounded-lg bg-slate-900/50 text-slate-200 border border-slate-700/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
           />
         </div>
-        <div class="p-4 rounded-lg bg-slate-950/30 border border-slate-700/30">
+        <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-slate-700/30">
           <label class="block text-xs text-slate-500 mb-2">Vítimas Resgatadas</label>
           <input
             type="number"
@@ -148,7 +148,7 @@
             class="w-full px-3 py-2 rounded-lg bg-slate-900/50 text-slate-200 border border-slate-700/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
           />
         </div>
-        <div class="p-4 rounded-lg bg-slate-950/30 border border-slate-700/30">
+        <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-slate-700/30">
           <label class="block text-xs text-slate-500 mb-2">Imóveis Vistoriados</label>
           <input
             type="number"
@@ -157,7 +157,7 @@
             class="w-full px-3 py-2 rounded-lg bg-slate-900/50 text-slate-200 border border-slate-700/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
           />
         </div>
-        <div class="p-4 rounded-lg bg-slate-950/30 border border-slate-700/30">
+        <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-slate-700/30">
           <label class="block text-xs text-slate-500 mb-2">Famílias Desalojadas</label>
           <input
             type="number"
@@ -170,7 +170,7 @@
 
       <!-- Encaminhamentos -->
       <div class="mt-6">
-        <label class="block text-sm font-medium text-slate-300 mb-3">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
           Encaminhamentos Realizados
         </label>
         <FormField

@@ -8,13 +8,11 @@
    ============================================ */
 
 .rat-section-card {
-  @apply bg-slate-900/50 border border-slate-700/50 rounded-xl p-6
-    backdrop-blur-sm transition-all duration-200
-    hover:border-slate-600/50;
+  @apply bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 backdrop-blur-sm transition-all duration-200 shadow-sm dark:shadow-none hover:border-slate-300 dark:hover:border-slate-600/50;
 }
 
 .rat-section-header {
-  @apply flex items-center gap-3 mb-6 pb-4 border-b border-slate-700/30;
+  @apply flex items-center gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-slate-700/30;
 }
 
 .rat-section-icon {
@@ -22,27 +20,27 @@
 }
 
 .rat-section-icon-default {
-  @apply bg-blue-500/20 text-blue-400;
+  @apply bg-blue-500/20 text-blue-600 dark:text-blue-400;
 }
 
 .rat-section-icon-success {
-  @apply bg-emerald-500/20 text-emerald-400;
+  @apply bg-emerald-500/20 text-emerald-600 dark:text-emerald-400;
 }
 
 .rat-section-icon-warning {
-  @apply bg-amber-500/20 text-amber-400;
+  @apply bg-amber-500/20 text-amber-600 dark:text-amber-400;
 }
 
 .rat-section-icon-danger {
-  @apply bg-red-500/20 text-red-400;
+  @apply bg-red-500/20 text-red-600 dark:text-red-400;
 }
 
 .rat-section-icon-purple {
-  @apply bg-purple-500/20 text-purple-400;
+  @apply bg-purple-500/20 text-purple-600 dark:text-purple-400;
 }
 
 .rat-section-title {
-  @apply text-lg font-semibold text-slate-200;
+  @apply text-lg font-semibold text-slate-800 dark:text-slate-200;
 }
 
 .rat-section-content {
@@ -54,12 +52,7 @@
    ============================================ */
 
 .location-map-button {
-  @apply w-full px-4 py-2.5 rounded-lg
-    bg-emerald-500/10 text-emerald-400 border border-emerald-500/30
-    hover:bg-emerald-500/20 hover:border-emerald-500/50
-    transition-all duration-200 text-sm font-medium
-    flex items-center justify-center gap-2
-    focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-950;
+  @apply w-full px-4 py-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-950;
 }
 
 .location-map-icon {
@@ -91,15 +84,15 @@
 }
 
 .communication-badge-phone {
-  @apply bg-blue-500/20 text-blue-400;
+  @apply bg-blue-500/20 text-blue-600 dark:text-blue-400;
 }
 
 .communication-badge-emergency {
-  @apply bg-red-500/20 text-red-400;
+  @apply bg-red-500/20 text-red-600 dark:text-red-400;
 }
 
 .communication-badge-app {
-  @apply bg-purple-500/20 text-purple-400;
+  @apply bg-purple-500/20 text-purple-600 dark:text-purple-400;
 }
 
 /* ============================================
@@ -133,22 +126,76 @@
 }
 
 /* ============================================
-   Responsive
+   Responsive - Mobile First
    ============================================ */
 
-@media (max-width: 768px) {
+/* Mobile pequeno (< 480px) */
+@media (max-width: 480px) {
   .rat-section-card {
-    @apply p-4;
+    @apply p-3 rounded-lg;
   }
 
   .rat-section-header {
-    @apply flex-col items-start gap-2;
+    @apply flex-row items-center gap-2 mb-4 pb-3;
+  }
+
+  .rat-section-icon {
+    @apply w-8 h-8;
+  }
+
+  .rat-section-title {
+    @apply text-base;
+  }
+
+  .rat-section-content {
+    @apply space-y-4;
   }
 
   .rat-grid-2,
   .rat-grid-3,
   .rat-grid-4 {
-    @apply grid-cols-1;
+    @apply grid-cols-1 gap-4;
+  }
+}
+
+/* Mobile padrao (481px - 640px) */
+@media (min-width: 481px) and (max-width: 640px) {
+  .rat-section-card {
+    @apply p-4;
+  }
+
+  .rat-section-header {
+    @apply flex-row items-center gap-3 mb-5 pb-3;
+  }
+
+  .rat-section-content {
+    @apply space-y-4;
+  }
+
+  .rat-grid-2,
+  .rat-grid-3,
+  .rat-grid-4 {
+    @apply grid-cols-1 gap-4;
+  }
+}
+
+/* Tablet (641px - 768px) */
+@media (min-width: 641px) and (max-width: 768px) {
+  .rat-section-card {
+    @apply p-5;
+  }
+
+  .rat-section-header {
+    @apply flex-row items-center gap-3;
+  }
+
+  .rat-grid-2 {
+    @apply grid-cols-2 gap-5;
+  }
+
+  .rat-grid-3,
+  .rat-grid-4 {
+    @apply grid-cols-2 gap-5;
   }
 }
 
@@ -157,22 +204,21 @@
    ============================================ */
 
 .rat-section-card:focus-within {
-  @apply border-slate-600/80 ring-2 ring-slate-600/20;
+  @apply border-slate-300 dark:border-slate-600/80 ring-2 ring-slate-200 dark:ring-slate-600/20;
 }
 
-/* Scrollbar customizado para selects longos */
 .rat-section-card select::-webkit-scrollbar {
   @apply w-2;
 }
 
 .rat-section-card select::-webkit-scrollbar-track {
-  @apply bg-slate-900;
+  @apply bg-slate-100 dark:bg-slate-900;
 }
 
 .rat-section-card select::-webkit-scrollbar-thumb {
-  @apply bg-slate-600 rounded;
+  @apply bg-slate-300 dark:bg-slate-600 rounded;
 }
 
 .rat-section-card select::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-500;
+  @apply bg-slate-400 dark:bg-slate-500;
 }

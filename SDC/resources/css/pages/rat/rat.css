@@ -1,11 +1,19 @@
 /**
  * Estilos específicos para o módulo RAT
  * Utiliza Tailwind CSS e variáveis CSS para um design consistente
- * Baseado no padrão do PAE
+ * Suporte a Light e Dark theme
  */
 
 :root {
   --rat-primary: #3b82f6;
+  --rat-bg: #f8fafc;
+  --rat-card-bg: #ffffff;
+  --rat-border: #e2e8f0;
+  --rat-text: #0f172a;
+  --rat-text-muted: #64748b;
+}
+
+.dark {
   --rat-bg: #0f172a;
   --rat-card-bg: #1e293b;
   --rat-border: #334155;
@@ -32,7 +40,7 @@
 
 /* Campos Readonly */
 .form-input-readonly {
-  @apply w-full bg-slate-800/50 border border-slate-700/30 rounded-lg px-4 py-2.5 text-slate-400 cursor-default outline-none;
+  @apply w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/30 rounded-lg px-4 py-2.5 text-slate-500 dark:text-slate-400 cursor-default outline-none;
 }
 
 /* Select Fields */
@@ -52,12 +60,18 @@
   @apply border-blue-500 dark:border-blue-500 bg-white dark:bg-slate-900;
 }
 
-/* Fix for date inputs in Webkit browsers */
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+/* Fix for date inputs in Webkit browsers - only invert in dark mode */
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
   opacity: 0.6;
   cursor: pointer;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator:hover,
@@ -71,16 +85,16 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #1e293b;
+  @apply bg-slate-100 dark:bg-slate-800;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #334155;
+  @apply bg-slate-300 dark:bg-slate-600;
   border-radius: 20px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #475569;
+  @apply bg-slate-400 dark:bg-slate-500;
 }
 
 /* Hide Scrollbar */
@@ -137,21 +151,21 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 
 /* RAT Specific Styles */
 .rat-container {
-  @apply min-h-screen bg-slate-900 text-slate-100 font-sans antialiased;
+  @apply min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans antialiased;
   width: 100%;
   margin: 0;
 }
 
 .rat-card {
-  @apply bg-slate-800 rounded-lg shadow-lg border border-slate-700/50 overflow-hidden;
+  @apply bg-white dark:bg-slate-800 rounded-lg shadow-sm dark:shadow-lg border border-slate-200 dark:border-slate-700/50 overflow-hidden;
 }
 
 .rat-card-header {
-  @apply px-6 py-4 border-b border-slate-700 bg-slate-800/50;
+  @apply px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50;
 }
 
 .rat-card-title {
-  @apply text-lg font-semibold text-white flex items-center gap-2;
+  @apply text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2;
 }
 
 .rat-card-title::before {

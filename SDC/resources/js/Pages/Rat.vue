@@ -84,7 +84,7 @@ import RatInspection from '@/Components/Rat/RatInspection.vue';
 import RatInvolved from '@/Components/Rat/RatInvolved.vue';
 import RatResources from '@/Components/Rat/RatResources.vue';
 import RatTabs from '@/Components/Rat/RatTabs.vue';
-import { useRat } from '@/composables/useRat';
+import { useRat } from '@/composables/rat';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';

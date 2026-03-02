@@ -165,18 +165,18 @@ const applyMask = (value, mask) => {
 }
 
 .form-label {
-  @apply block text-sm font-medium text-slate-300 mb-2;
+  @apply block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 sm:mb-2;
 }
 
 .form-input {
-  @apply w-full px-4 py-2.5 rounded-lg bg-slate-900/50 text-slate-200
-    placeholder-slate-500 transition-all duration-200
-    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950;
+  @apply w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base rounded-lg bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-slate-200
+    placeholder-slate-400 dark:placeholder-slate-500 transition-all duration-200
+    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-950;
 }
 
 .form-input-normal {
-  @apply border border-slate-700/50
-    hover:border-slate-600
+  @apply border border-slate-300 dark:border-slate-700/50
+    hover:border-slate-400 dark:hover:border-slate-600
     focus:border-blue-500 focus:ring-blue-500/20;
 }
 
@@ -193,18 +193,26 @@ const applyMask = (value, mask) => {
 }
 
 .form-input-readonly {
-  @apply bg-slate-900/30 cursor-not-allowed text-slate-400;
+  @apply bg-slate-100 dark:bg-slate-900/30 cursor-not-allowed text-slate-500 dark:text-slate-400;
 }
 
 .form-input-disabled {
-  @apply bg-slate-900/20 cursor-not-allowed text-slate-500 opacity-60;
+  @apply bg-slate-100 dark:bg-slate-900/20 cursor-not-allowed text-slate-400 dark:text-slate-500 opacity-60;
 }
 
 .form-error {
-  @apply mt-1.5 text-xs text-red-400 flex items-center gap-1;
+  @apply mt-1 sm:mt-1.5 text-xs text-red-400 flex items-center gap-1;
 }
 
 .form-hint {
-  @apply mt-1.5 text-xs text-slate-500;
+  @apply mt-1 sm:mt-1.5 text-xs text-slate-500;
+}
+
+/* Mobile touch-friendly sizing */
+@media (max-width: 640px) {
+  .form-input {
+    min-height: 2.75rem;
+    font-size: 16px; /* Previne zoom no iOS */
+  }
 }
 </style>

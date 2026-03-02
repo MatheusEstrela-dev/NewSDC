@@ -15,15 +15,15 @@
 
     <div class="rat-section-content">
       <!-- Formulário Inline - Sempre visível por padrão -->
-      <div class="mb-6 p-6 rounded-lg bg-slate-950/50 border-2 border-purple-500/30">
-        <h4 class="text-base font-semibold text-purple-400 mb-4">
+      <div class="mb-6 p-6 rounded-lg bg-slate-50 dark:bg-slate-950/50 border-2 border-purple-500/30">
+        <h4 class="text-base font-semibold text-purple-600 dark:text-purple-400 mb-4">
           {{ envolvidoEditIndex !== null ? 'Editar Envolvido' : 'Novo Envolvido' }}
         </h4>
 
         <div class="space-y-6">
           <!-- Dados Pessoais -->
           <div>
-            <h5 class="text-sm font-medium text-slate-300 mb-4 pb-2 border-b border-slate-700/30">Dados Pessoais</h5>
+            <h5 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4 pb-2 border-b border-slate-200 dark:border-slate-700/30">Dados Pessoais</h5>
             <div class="space-y-4">
               <div class="rat-grid-2">
                 <FormSelect
@@ -93,7 +93,7 @@
 
           <!-- Endereço -->
           <div>
-            <h5 class="text-sm font-medium text-slate-300 mb-4 pb-2 border-b border-slate-700/30">Endereço</h5>
+            <h5 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4 pb-2 border-b border-slate-200 dark:border-slate-700/30">Endereço</h5>
             <div class="space-y-4">
               <div class="rat-grid-3">
                 <FormField
@@ -137,7 +137,7 @@
 
           <!-- Contato -->
           <div>
-            <h5 class="text-sm font-medium text-slate-300 mb-4 pb-2 border-b border-slate-700/30">Contato</h5>
+            <h5 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4 pb-2 border-b border-slate-200 dark:border-slate-700/30">Contato</h5>
             <div class="rat-grid-2">
               <FormField
                 label="Telefone"
@@ -153,12 +153,12 @@
           </div>
 
           <!-- Ações -->
-          <div class="flex gap-3 pt-4 border-t border-slate-700/30">
+          <div class="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700/30">
             <button
               v-if="envolvidoEditIndex !== null"
               @click="cancelarFormulario"
               type="button"
-              class="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all border border-slate-700"
+              class="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-300 dark:border-slate-700"
             >
               Cancelar Edição
             </button>
@@ -182,13 +182,13 @@
         <div
           v-for="(envolvido, index) in localData"
           :key="index"
-          class="p-5 rounded-lg bg-slate-950/50 border border-slate-700/30 hover:border-slate-600/50 transition-all"
+          class="p-5 rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-700/30 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all"
         >
           <div class="flex items-start justify-between gap-4">
             <div class="flex-1">
               <!-- Nome e Tipo -->
               <div class="flex items-center gap-3 mb-3">
-                <h4 class="text-base font-semibold text-slate-200">{{ envolvido.nome }}</h4>
+                <h4 class="text-base font-semibold text-slate-800 dark:text-slate-200">{{ envolvido.nome }}</h4>
                 <span class="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400">
                   {{ envolvido.tipo_pessoa }}
                 </span>
@@ -198,23 +198,23 @@
               <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-3">
                 <div v-if="envolvido.cpf">
                   <span class="text-slate-500">CPF:</span>
-                  <span class="text-slate-300 ml-2">{{ envolvido.cpf }}</span>
+                  <span class="text-slate-700 dark:text-slate-300 ml-2">{{ envolvido.cpf }}</span>
                 </div>
                 <div v-if="envolvido.data_nascimento">
                   <span class="text-slate-500">Data Nasc.:</span>
-                  <span class="text-slate-300 ml-2">{{ formatarData(envolvido.data_nascimento) }}</span>
+                  <span class="text-slate-700 dark:text-slate-300 ml-2">{{ formatarData(envolvido.data_nascimento) }}</span>
                 </div>
                 <div v-if="envolvido.sexo">
                   <span class="text-slate-500">Sexo:</span>
-                  <span class="text-slate-300 ml-2">{{ envolvido.sexo }}</span>
+                  <span class="text-slate-700 dark:text-slate-300 ml-2">{{ envolvido.sexo }}</span>
                 </div>
                 <div v-if="envolvido.telefone">
                   <span class="text-slate-500">Telefone:</span>
-                  <span class="text-slate-300 ml-2">{{ envolvido.telefone }}</span>
+                  <span class="text-slate-700 dark:text-slate-300 ml-2">{{ envolvido.telefone }}</span>
                 </div>
                 <div v-if="envolvido.ocupacao">
                   <span class="text-slate-500">Ocupação:</span>
-                  <span class="text-slate-300 ml-2">{{ envolvido.ocupacao }}</span>
+                  <span class="text-slate-700 dark:text-slate-300 ml-2">{{ envolvido.ocupacao }}</span>
                 </div>
               </div>
 
@@ -266,7 +266,7 @@
 </template>
 
 <script setup>
-import { useCep } from '@/composables/useCep';
+import { useCep } from '@/composables/location';
 import { ref, watch } from 'vue';
 import FormField from '../../Form/FormField.vue';
 import FormSelect from '../../Form/FormSelect.vue';

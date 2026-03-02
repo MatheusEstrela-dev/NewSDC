@@ -32,7 +32,7 @@
  */
 import { computed } from 'vue';
 import TableActions from './TableActions.vue';
-import { useActionConfig } from '@/composables/useActionConfig';
+import { useActionConfig } from '@/composables/ui';
 
 const props = defineProps({
   module: {

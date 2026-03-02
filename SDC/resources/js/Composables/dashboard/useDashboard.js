@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
-import { useModal } from './useModal';
-import { useNavigation } from './useNavigation';
+import { useModal } from '../core/useModal';
+import { useNavigation } from '../useNavigation';
 
 /**
  * Composable principal do Dashboard

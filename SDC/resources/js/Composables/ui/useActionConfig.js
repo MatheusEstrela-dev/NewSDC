@@ -1,6 +1,6 @@
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
-import { usePermissions } from './usePermissions';
+import { usePermissions } from '../auth/usePermissions';
 import {
     ActionTypes,
     ActionDefaults,

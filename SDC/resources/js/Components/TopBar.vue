@@ -221,7 +221,7 @@
 
 <script setup>
 import { useNotifications } from '@/composables/useNotifications';
-import { useTheme } from '@/composables/useTheme';
+import { useTheme } from '@/composables/ui';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed, inject, onMounted, onUnmounted, ref, Transition, watch } from 'vue';
 import HamburgerButton from './Atoms/Button/HamburgerButton.vue';

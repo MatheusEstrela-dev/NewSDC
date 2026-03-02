@@ -2,8 +2,8 @@ import { db } from '@/infrastructure/database/db';
 import { router } from '@inertiajs/vue3';
 import { v4 as uuidv4 } from 'uuid';
 import { ref } from 'vue';
-import { useModal } from './useModal';
-import { useTabs } from './useTabs';
+import { useModal } from '../core/useModal';
+import { useTabs } from '../core/useTabs';
 
 /**
  * Composable principal do RAT

@@ -138,7 +138,7 @@
 <script setup>
 import FormField from '@/Components/Form/FormField.vue';
 import FormSelect from '@/Components/Form/FormSelect.vue';
-import { useCep } from '@/composables/useCep';
+import { useCep } from '@/composables/location';
 import { computed } from 'vue';
 
 const props = defineProps({

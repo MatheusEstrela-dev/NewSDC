@@ -39,8 +39,8 @@
  */
 import { computed, markRaw } from 'vue';
 import Button from './Button.vue';
-import { useActionConfig } from '@/composables/useActionConfig';
-import { usePermissions } from '@/composables/usePermissions';
+import { useActionConfig } from '@/composables/ui';
+import { usePermissions } from '@/composables/auth';
 
 import PlusIcon from '../../Icons/PlusIcon.vue';
 import EyeIcon from '../../Icons/EyeIcon.vue';

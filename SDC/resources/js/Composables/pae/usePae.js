@@ -1,8 +1,8 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
-import { useTabs } from './useTabs';
-import { useDocuments } from './useDocuments';
-import { useModal } from './useModal';
+import { useTabs } from '../core/useTabs';
+import { useDocuments } from '../useDocuments';
+import { useModal } from '../core/useModal';
 
 /**
  * Composable principal do PAE

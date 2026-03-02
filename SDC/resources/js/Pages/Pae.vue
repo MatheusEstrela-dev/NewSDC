@@ -63,7 +63,7 @@ import PaeForm from '@/Components/Pae/PaeForm.vue';
 import PaeHeader from '@/Components/Pae/PaeHeader.vue';
 import PaeHistory from '@/Components/Pae/PaeHistory.vue';
 import PaeTabs from '@/Components/Pae/PaeTabs.vue';
-import { usePae } from '@/composables/usePae';
+import { usePae } from '@/composables/pae';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
