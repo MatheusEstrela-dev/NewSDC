@@ -1,0 +1,297 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Decretacoes\Resources;
+
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/**
+ * Resource para Processo - substitui o ProcessoMapper.
+ *
+ * FLUXO DE DADOS (SAIDA):
+ *   Processo (Model) -> ProcessoResource -> JSON (API/Frontend)
+ *
+ * PROTECAO: Usa safeGet() para nao quebrar se coluna for removida.
+ * Se remover uma coluna do banco, apenas este arquivo precisa ser ajustado.
+ *
+ * USO:
+ *   return ProcessoResource::make($processo);           // Um registro
+ *   return ProcessoResource::collection($processos);   // Collection
+ */
+class ProcessoResource extends JsonResource
+{
+    /**
+     * Transforma o resource em array para resposta JSON.
+     *
+     * DESTINO: API REST / Frontend (Inertia/Vue)
+     *
+     * @param Request $request Request HTTP atual
+     * @return array Dados formatados para o frontend
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'processo' => $this->safeGet('processo'),
+            'tipo_decreto' => $this->safeGet('tipo_decreto'),
+            'status' => $this->safeGet('status'),
+            'protocolo_fide' => $this->safeGet('n_protocolo_fide'),
+            'decreto_municipal' => $this->safeGet('decreto_municipal'),
+
+            // Datas - formatadas para API (ISO) e para exibicao (BR)
+            'data_entrada' => $this->formatDate('data_entrada'),
+            'data_entrada_formatada' => $this->formatDate('data_entrada', 'd/m/Y'),
+            'data_ocorrencia' => $this->formatDate('data_ocorrencia_desastre'),
+            'data_decreto_municipal' => $this->formatDate('data_decreto_municipal'),
+            'data_publicacao_mg' => $this->formatDate('data_publicacao_mg'),
+
+            // Vigencia - campos calculados
+            'prazo_vigencia' => $this->safeGetInt('prazo_vigencia'),
+            'data_vencimento' => $this->getDataVencimento()?->format('Y-m-d'),
+            'data_vencimento_formatada' => $this->getDataVencimento()?->format('d/m/Y'),
+            'dias_restantes' => $this->getDiasRestantes(),
+            'vigente' => $this->isVigente(),
+            'proximo_vencer' => $this->isProximoVencer(),
+
+            // Desastre
+            'tipo_desastre_id' => $this->safeGetInt('tipo_desastre_id'),
+            'tipo_desastre_nome' => $this->safeGet('tipo_desastre_nome') ?? $this->safeGet('tipo_desastre'),
+            'tipo_desastre_cobrade' => $this->getTipoDesastreCobrade(),
+
+            // Outros campos
+            'reconhecimento' => $this->safeGet('reconhecimento'),
+            'observacoes' => $this->safeGet('observacoes'),
+            'orgao_responsavel_id' => $this->safeGetInt('orgao_responsavel_id'),
+
+            // Relacionamentos - carregados sob demanda
+            'municipios' => $this->whenLoaded('municipios', fn() => $this->mapMunicipios()),
+            'desastres' => $this->whenLoaded('desastres', fn() => $this->mapDesastres()),
+            'municipios_count' => $this->when(
+                $this->relationLoaded('municipios'),
+                fn() => $this->municipios->count()
+            ),
+
+            // Timestamps
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Formato reduzido para listagens (tabelas, cards).
+     *
+     * DESTINO: Listagens no frontend (index, dashboard)
+     *
+     * @return array Dados minimos para exibicao em lista
+     */
+    public function toListArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'processo' => $this->safeGet('processo'),
+            'tipo_decreto' => $this->safeGet('tipo_decreto'),
+            'status' => $this->safeGet('status'),
+            'protocolo_fide' => $this->safeGet('n_protocolo_fide'),
+            'data_entrada_formatada' => $this->formatDate('data_entrada', 'd/m/Y'),
+            'data_vencimento_formatada' => $this->getDataVencimento()?->format('d/m/Y'),
+            'dias_restantes' => $this->getDiasRestantes(),
+            'vigente' => $this->isVigente(),
+            'proximo_vencer' => $this->isProximoVencer(),
+            'tipo_desastre_nome' => $this->safeGet('tipo_desastre_nome') ?? $this->safeGet('tipo_desastre'),
+            'municipios_count' => $this->relationLoaded('municipios') ? $this->municipios->count() : 0,
+        ];
+    }
+
+    // =========================================================================
+    // METODOS SAFE - Protegem contra colunas removidas do banco
+    // =========================================================================
+
+    /**
+     * Obtem valor com fallback seguro.
+     * Nao quebra se a coluna nao existir no banco.
+     *
+     * @param string $key Nome da coluna
+     * @param mixed $default Valor padrao se coluna nao existir
+     * @return mixed Valor da coluna ou default
+     */
+    protected function safeGet(string $key, mixed $default = null): mixed
+    {
+        try {
+            return $this->resource->getAttribute($key) ?? $default;
+        } catch (\Throwable) {
+            return $default;
+        }
+    }
+
+    /**
+     * Obtem valor como inteiro com fallback.
+     *
+     * @param string $key Nome da coluna
+     * @param int|null $default Valor padrao
+     * @return int|null Valor convertido para int
+     */
+    protected function safeGetInt(string $key, ?int $default = null): ?int
+    {
+        $value = $this->safeGet($key);
+        return $value !== null ? (int) $value : $default;
+    }
+
+    /**
+     * Formata data com fallback seguro.
+     *
+     * @param string $key Nome da coluna de data
+     * @param string $format Formato de saida (padrao: Y-m-d)
+     * @return string|null Data formatada ou null
+     */
+    protected function formatDate(string $key, string $format = 'Y-m-d'): ?string
+    {
+        $value = $this->safeGet($key);
+        if ($value === null) {
+            return null;
+        }
+        try {
+            $date = $value instanceof Carbon ? $value : Carbon::parse($value);
+            return $date->format($format);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    // =========================================================================
+    // METODOS CALCULADOS - Logica de negocios para vigencia
+    // =========================================================================
+
+    /**
+     * Calcula data de vencimento do decreto.
+     * Formula: data_publicacao_mg + prazo_vigencia (dias)
+     *
+     * @return Carbon|null Data de vencimento ou null se dados insuficientes
+     */
+    protected function getDataVencimento(): ?Carbon
+    {
+        $dataPublicacao = $this->safeGet('data_publicacao_mg');
+        $prazo = $this->safeGetInt('prazo_vigencia');
+
+        if (!$dataPublicacao || !$prazo) {
+            return null;
+        }
+
+        try {
+            $date = $dataPublicacao instanceof Carbon ? $dataPublicacao : Carbon::parse($dataPublicacao);
+            return $date->copy()->addDays($prazo);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Calcula dias restantes ate vencimento.
+     *
+     * @return int|null Dias restantes (0 se vencido) ou null se sem data
+     */
+    protected function getDiasRestantes(): ?int
+    {
+        $dataVencimento = $this->getDataVencimento();
+        if (!$dataVencimento) {
+            return null;
+        }
+
+        $hoje = Carbon::today();
+        return $dataVencimento->lt($hoje) ? 0 : $hoje->diffInDays($dataVencimento);
+    }
+
+    /**
+     * Verifica se o decreto esta vigente.
+     *
+     * @return bool True se ainda nao venceu
+     */
+    public function isVigente(): bool
+    {
+        $diasRestantes = $this->getDiasRestantes();
+        return $diasRestantes !== null && $diasRestantes > 0;
+    }
+
+    /**
+     * Verifica se o decreto esta proximo de vencer (30 dias).
+     *
+     * @return bool True se vence em ate 30 dias
+     */
+    public function isProximoVencer(): bool
+    {
+        $diasRestantes = $this->getDiasRestantes();
+        return $diasRestantes !== null && $diasRestantes > 0 && $diasRestantes <= 30;
+    }
+
+    /**
+     * Obtem codigo COBRADE do tipo de desastre.
+     * Busca no enum de classificacao de desastres.
+     *
+     * @return string|null Codigo COBRADE ou null
+     */
+    protected function getTipoDesastreCobrade(): ?string
+    {
+        $tipoDesastreId = $this->safeGetInt('tipo_desastre_id');
+        if (!$tipoDesastreId) {
+            return null;
+        }
+
+        try {
+            $cobrade = include app_path('Enums/classificacao_desastres.php');
+            foreach ($cobrade as $item) {
+                if (($item['id'] ?? null) == $tipoDesastreId) {
+                    return $item['cobrade'] ?? null;
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return null;
+    }
+
+    // =========================================================================
+    // MAPEAMENTO DE RELACIONAMENTOS
+    // =========================================================================
+
+    /**
+     * Mapeia municipios para array simplificado.
+     *
+     * DESTINO: Frontend (lista de municipios do processo)
+     *
+     * @return array Lista de municipios com id, nome e codigo_ibge
+     */
+    protected function mapMunicipios(): array
+    {
+        try {
+            return $this->municipios->map(fn($m) => [
+                'id' => $m->id,
+                'nome' => $m->nome,
+                'codigo_ibge' => $m->codigo_ibge ?? null,
+            ])->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Mapeia desastres para array simplificado.
+     *
+     * DESTINO: Frontend (lista de desastres do processo)
+     *
+     * @return array Lista de desastres com id, categoria_id e descricao
+     */
+    protected function mapDesastres(): array
+    {
+        try {
+            return $this->desastres->map(fn($d) => [
+                'id' => $d->id,
+                'categoria_id' => $d->categoria_id ?? null,
+                'descricao' => $d->descricao ?? null,
+            ])->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+}

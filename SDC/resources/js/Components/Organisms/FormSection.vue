@@ -8,10 +8,10 @@
       ]"
       @click="collapsible && toggleCollapse()"
     >
-      <div v-if="icon" class="form-section-icon text-blue-400">
+      <div v-if="icon" class="form-section-icon text-blue-500 dark:text-blue-400">
         <component :is="icon" class="w-5 h-5" />
       </div>
-      <h3 class="text-lg font-semibold text-slate-200">
+      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200">
         {{ title }}
       </h3>
       <span v-if="subtitle" class="text-sm text-slate-500">
@@ -19,7 +19,7 @@
       </span>
       <div v-if="collapsible" class="ml-auto">
         <svg
-          :class="['w-5 h-5 text-slate-400 transition-transform', collapsed && 'rotate-180']"
+          :class="['w-5 h-5 text-slate-500 dark:text-slate-400 transition-transform', collapsed && 'rotate-180']"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -83,10 +83,10 @@ const gridClass = computed(() => {
 
 <style scoped>
 .form-section {
-  @apply p-5 md:p-6 lg:p-8 bg-slate-800/50 rounded-xl border border-slate-700/50 mb-4;
+  @apply p-5 md:p-6 lg:p-8 bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50 mb-4 shadow-sm dark:shadow-none;
 }
 
 .form-section.collapsible .form-section-header:hover {
-  @apply bg-slate-700/30 -mx-5 md:-mx-6 lg:-mx-8 -mt-5 md:-mt-6 lg:-mt-8 px-5 md:px-6 lg:px-8 pt-5 md:pt-6 lg:pt-8 pb-4 mb-0 rounded-t-xl;
+  @apply bg-slate-50 dark:bg-slate-700/30 -mx-5 md:-mx-6 lg:-mx-8 -mt-5 md:-mt-6 lg:-mt-8 px-5 md:px-6 lg:px-8 pt-5 md:pt-6 lg:pt-8 pb-4 mb-0 rounded-t-xl transition-colors;
 }
 </style>

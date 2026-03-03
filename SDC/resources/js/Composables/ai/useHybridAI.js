@@ -1,7 +1,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 
 // Import URL instead of constructor to manual bypass CORS
-import AIWorkerUrl from '../Workers/ai.worker.js?url';
+import AIWorkerUrl from '../../Workers/ai.worker.js?url';
 
 export function useHybridAI() {
     const isReady = ref(false);

@@ -107,15 +107,6 @@ const stateClass = computed(() => {
 const inputClasses = computed(() => {
   return [
     'atom-input',
-    // Fallback classes quando .atom-input CSS não carrega
-    'rounded-lg',
-    'bg-slate-900/50',
-    'border',
-    'border-slate-700',
-    'text-slate-200',
-    'w-full',
-    'px-4',
-    'py-2',
     stateClass.value,
     sizeClasses[props.size],
     props.disabled ? 'atom-input-disabled' : '',

@@ -10,7 +10,7 @@
         </Heading>
 
         <!-- Breakdown ECP/SE -->
-        <div v-if="showBreakdown" class="breakdown mt-2 pt-2 border-t border-slate-700/50 flex gap-4">
+        <div v-if="showBreakdown" class="breakdown mt-2 pt-2 border-t border-slate-200 dark:border-slate-700/50 flex gap-4">
           <div class="breakdown-item flex flex-col">
             <span class="text-[10px] sm:text-xs font-medium text-slate-500 uppercase">ECP</span>
             <span :class="['text-sm sm:text-base font-bold', ecp > 0 ? 'text-cyan-400' : 'text-slate-400']">
@@ -82,22 +82,22 @@ function formatNumber(num) {
 }
 
 const variantAccentClasses = {
-  info: 'bg-cyan-500/15 text-cyan-300 ring-1 ring-cyan-500/25',
-  success: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/25',
-  warning: 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/25',
-  danger: 'bg-red-500/15 text-red-300 ring-1 ring-red-500/25',
+  info: 'bg-cyan-100 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 ring-1 ring-cyan-300 dark:ring-cyan-500/25',
+  success: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-300 dark:ring-emerald-500/25',
+  warning: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-300 dark:ring-amber-500/25',
+  danger: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-500/25',
 };
 
 const variantBorderClasses = {
-  info: 'border-cyan-500/25',
-  success: 'border-emerald-500/25',
-  warning: 'border-amber-500/25',
-  danger: 'border-red-500/25',
+  info: 'border-cyan-200 dark:border-cyan-500/25',
+  success: 'border-emerald-200 dark:border-emerald-500/25',
+  warning: 'border-amber-200 dark:border-amber-500/25',
+  danger: 'border-red-200 dark:border-red-500/25',
 };
 
 const cardClasses = computed(() => {
   const base =
-    'rounded-lg sm:rounded-xl border backdrop-blur-sm px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] touch-manipulation bg-slate-900/60 hover:bg-slate-900/80';
+    'rounded-lg sm:rounded-xl border backdrop-blur-sm px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] touch-manipulation bg-white dark:bg-slate-900/60 hover:bg-slate-50 dark:hover:bg-slate-900/80';
   const cursor = props.clickable ? 'cursor-pointer' : '';
   return [base, variantBorderClasses[props.variant], cursor].filter(Boolean).join(' ');
 });

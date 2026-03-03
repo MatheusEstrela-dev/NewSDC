@@ -4,15 +4,22 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Services;
 
-use App\Http\Resources\Decretacoes\HexagonDecretoResource;
-use App\Models\Decreto\EntradaProcesso;
+use App\Modules\Decretacoes\Models\Processo;
+use App\Modules\Decretacoes\Resources\HexagonDecretoResource;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class HexagonIntegrationService
 {
-    public function updateHexagonService(EntradaProcesso $processo): void
-    {       
+    private string $apiUrl;
+
+    public function __construct()
+    {
+        $this->apiUrl = config('services.hexagon.url', 'http://ComOnCallQA/HxGN.DecretoAPI/CEDECDecretos/api/Decretos');
+    }
+
+    public function updateHexagonService(Processo $processo): void
+    {
         $processo->load('municipios');
 
         if ($this->hasRequiredDataForHexagon($processo)) {
@@ -20,7 +27,7 @@ class HexagonIntegrationService
         }
     }
 
-    private function sendToHexagonAPI(EntradaProcesso $processo): void
+    private function sendToHexagonAPI(Processo $processo): void
     {
         try {
             $resource = new HexagonDecretoResource($processo);
@@ -30,7 +37,7 @@ class HexagonIntegrationService
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
                 ])
-                ->post('http://ComOnCallQA/HxGN.DecretoAPI/CEDECDecretos/api/Decretos', $data);
+                ->post($this->apiUrl, $data);
 
             if ($response->successful()) {
                 Log::info('Hexagon API: Decreto enviado com sucesso', [
@@ -52,28 +59,28 @@ class HexagonIntegrationService
         }
     }
 
-    private function hasRequiredDataForHexagon(EntradaProcesso $processo): bool
+    private function hasRequiredDataForHexagon(Processo $processo): bool
     {
         if ($processo->municipios->isEmpty()) {
             return false;
         }
-        
+
         $municipio = $processo->municipios->first();
-        
+
         $processoFields = ['n_protocolo_fide', 'data_publicacao_mg', 'prazo_vigencia'];
         foreach ($processoFields as $field) {
             if (empty($processo->{$field})) {
                 return false;
             }
         }
-        
+
         $municipioFields = ['Codmundv', 'nome', 'macroregiao', 'rpm'];
         foreach ($municipioFields as $field) {
             if (empty($municipio->{$field})) {
                 return false;
             }
         }
-        
+
         return true;
     }
 }

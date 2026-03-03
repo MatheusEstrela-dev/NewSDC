@@ -6,7 +6,7 @@ import {
     ActionDefaults,
     ActionToPropMap,
     getActionDefault
-} from '../domain/actions/ActionTypes';
+} from '../../domain/actions/ActionTypes';
 
 /**
  * Composable para gerenciamento de configuracao de acoes de um modulo.

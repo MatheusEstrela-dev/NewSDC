@@ -36,8 +36,8 @@ const sizeClasses = {
 };
 
 const colorClasses = {
-  default: 'text-slate-300',
-  muted: 'text-slate-500',
+  default: 'text-slate-700 dark:text-slate-300',
+  muted: 'text-slate-500 dark:text-slate-400',
 };
 
 const weightClasses = 'font-medium';

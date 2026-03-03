@@ -1,7 +1,7 @@
 <template>
   <div class="w-full">
     <!-- Seletor de Abas -->
-    <div class="bg-slate-800/30 rounded-xl p-1.5 mb-6">
+    <div class="bg-slate-100 dark:bg-slate-800/30 rounded-xl p-1.5 mb-6">
       <nav class="flex gap-1 overflow-x-auto hide-scrollbar scrollbar-hide" aria-label="Tabs">
         <button
           v-for="tab in tabs"
@@ -14,7 +14,7 @@
           <span 
             v-if="tab.badge" 
             class="ml-1.5 px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0"
-            :class="activeTab === tab.id ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-700 text-slate-400'"
+            :class="activeTab === tab.id ? 'bg-blue-500/20 text-blue-600 dark:text-blue-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'"
           >
             {{ tab.badge }}
           </span>
@@ -61,7 +61,7 @@ function getTabClass(tabId) {
     return `${baseClass} text-blue-400 bg-blue-500/10 border-b-2 border-blue-400`;
   }
 
-  return `${baseClass} text-slate-400 hover:text-white hover:bg-slate-700/50`;
+  return `${baseClass} text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700/50`;
 }
 </script>
 

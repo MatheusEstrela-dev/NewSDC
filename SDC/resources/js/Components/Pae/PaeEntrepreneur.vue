@@ -1,10 +1,10 @@
 <template>
   <div
-    class="bg-slate-800 rounded-lg shadow-lg border border-slate-700/50 max-w-4xl mx-auto animate-fade-in-up"
+    class="bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700/50 max-w-4xl mx-auto animate-fade-in-up"
   >
-    <div class="px-6 py-4 border-b border-slate-700 bg-slate-800/50">
-      <h3 class="text-lg font-semibold text-white">Dados do Empreendedor</h3>
-      <p class="text-sm text-slate-400">Informações de cadastro da empresa responsável.</p>
+    <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Dados do Empreendedor</h3>
+      <p class="text-sm text-slate-500 dark:text-slate-400">Informações de cadastro da empresa responsável.</p>
     </div>
     <form @submit.prevent="handleSubmit" class="p-6 space-y-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -15,8 +15,8 @@
         <FormField label="Endereço Completo" v-model="localData.endereco" />
       </div>
 
-      <div class="border-t border-slate-700 pt-6">
-        <h4 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+      <div class="border-t border-slate-200 dark:border-slate-700 pt-6">
+        <h4 class="text-base font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
           <UsersIcon class="w-4 h-4 text-blue-500" />
           Responsável Técnico
         </h4>

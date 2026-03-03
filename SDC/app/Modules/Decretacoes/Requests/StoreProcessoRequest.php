@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Requests;
 
-use App\Modules\Decretacoes\DTOs\ProcessoDTO;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreProcessoRequest extends FormRequest
@@ -17,20 +16,21 @@ class StoreProcessoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'numero_processo' => 'sometimes|string|max:100',
-            'municipio' => 'sometimes|string|max:255',
-            'tipo_decreto' => 'sometimes|string',
-            'municipios' => 'required|array',
-            'municipios.*' => 'integer|exists:cedec_municipio,id',
             'data_entrada' => 'required|date',
-            'processo' => 'required|string',
-            'tipo_desastre_id' => 'required|integer',
-            'informacoes_decreto' => 'nullable|string',
+            'processo' => 'required|string|in:MUNICIPAL,ESTADUAL',
+            'municipios' => 'required|array|min:1',
+            'municipios.*' => 'integer|exists:cedec_municipio,id',
+            'tipo_desastre_id' => 'nullable|integer',
+            'tipo_desastre' => 'nullable|string|in:SE,ECP',
+            'data_ocorrencia_desastre' => 'nullable|date',
+            'n_protocolo_fide' => 'nullable|string|max:100',
+            'decreto_municipal' => 'nullable|string|max:255',
+            'data_decreto_municipal' => 'nullable|date',
+            'data_publicacao_mg' => 'nullable|date',
+            'prazo_vigencia' => 'nullable|integer|min:1|max:365',
+            'analista' => 'nullable|string|max:255',
+            'observacoes' => 'nullable|string',
+            'informacoes_decreto' => 'nullable|json',
         ];
-    }
-
-    public function toDTO(): ProcessoDTO
-    {
-        return ProcessoDTO::fromRequest($this);
     }
 }

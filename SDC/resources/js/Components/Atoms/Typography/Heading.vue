@@ -32,9 +32,9 @@ const sizeClasses = {
 };
 
 const colorClasses = {
-  default: 'text-slate-200 dark:text-slate-200 text-slate-900',
-  primary: 'text-blue-400 dark:text-blue-400 text-blue-600',
-  muted: 'text-slate-400 dark:text-slate-400 text-slate-600',
+  default: 'text-slate-900 dark:text-slate-200',
+  primary: 'text-blue-600 dark:text-blue-400',
+  muted: 'text-slate-600 dark:text-slate-400',
   white: 'text-white',
 };
 

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <label class="block text-sm font-medium text-slate-300 mb-2">{{ label }}</label>
+    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{{ label }}</label>
     <div class="relative">
       <input
         :type="type"

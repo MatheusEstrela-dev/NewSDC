@@ -4,57 +4,48 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Services;
 
-use App\Models\Decreto\DecretoMunicipio;
-use App\Models\Decreto\EntradaCategoriaDesastre;
-use App\Models\Decreto\EntradaDesastre;
-use App\Models\Decreto\EntradaProcesso;
-use App\Modules\Decretacoes\DTOs\CampoData;
-use App\Modules\Decretacoes\DTOs\DesastreData;
-use App\Modules\Decretacoes\DTOs\DesastreSubmissionDTO;
-use App\Modules\Decretacoes\DTOs\ItemData;
-use App\Modules\Decretacoes\DTOs\MunicipioData;
+use App\Modules\Decretacoes\Models\DecretoMunicipio;
+use App\Modules\Decretacoes\Models\EntradaCategoriaDesastre;
+use App\Modules\Decretacoes\Models\EntradaDesastre;
+use App\Modules\Decretacoes\Models\Processo;
+use App\Modules\Decretacoes\DTO\CampoData;
+use App\Modules\Decretacoes\DTO\DesastreData;
+use App\Modules\Decretacoes\DTO\DesastreSubmissionDTO;
+use App\Modules\Decretacoes\DTO\ItemData;
+use App\Modules\Decretacoes\DTO\MunicipioData;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Consolidated service for processing disaster (desastre) data submissions.
+ * Service consolidado para processamento de dados de desastres.
  *
- * This service handles:
- * - Processing disaster submissions from form data
- * - Syncing municipality protocols
- * - Persisting disaster fields with deduplication
- * - Value formatting for different field types
+ * FLUXO DE DADOS:
+ *   DesastreSubmissionDTO -> DesastreDataService -> Multiplos Models -> Banco
+ *
+ * RESPONSABILIDADES:
+ * - Processar submissoes de dados de desastre do formulario
+ * - Persistir dados hierarquicos (Municipio > Categoria > Desastre > Campo)
+ * - Gerenciar transacoes e rollback
+ * - Remover duplicatas mantendo valor mais recente
  */
-class DesastreService
+class DesastreDataService
 {
     /**
-     * Process all disaster data from form submission.
+     * Processa todos os dados de desastre de uma submissao.
      *
-     * @param array $data Form data array
-     * @param EntradaProcesso $processo
-     * @return array{success: bool, message: string}
-     */
-    public function processDesastresData(array $data, EntradaProcesso $processo): array
-    {
-        $dto = DesastreSubmissionDTO::fromArray($data);
-
-        return $this->processSubmission($dto, $processo);
-    }
-
-    /**
-     * Process the disaster submission DTO.
+     * FLUXO: DTO -> Transacao -> Processamento por municipio -> Commit/Rollback
      *
-     * @param DesastreSubmissionDTO $submissionDto
-     * @param EntradaProcesso $processo
-     * @return array{success: bool, message: string}
+     * @param DesastreSubmissionDTO $dto Dados completos da submissao
+     * @param Processo $processo Processo pai
+     * @return array{success: bool, message: string} Resultado da operacao
      */
-    private function processSubmission(DesastreSubmissionDTO $submissionDto, EntradaProcesso $processo): array
+    public function processDesastresData(DesastreSubmissionDTO $dto, Processo $processo): array
     {
         try {
             DB::beginTransaction();
 
-            foreach ($submissionDto->municipios as $municipioData) {
+            foreach ($dto->municipios as $municipioData) {
                 $this->processMunicipio($municipioData, $processo);
             }
 
@@ -67,7 +58,7 @@ class DesastreService
         } catch (Throwable $e) {
             DB::rollBack();
 
-            Log::error('Error processing disaster data', [
+            Log::error('Erro ao processar dados de desastre', [
                 'error' => $e->getMessage(),
                 'processo_id' => $processo->id,
                 'trace' => $e->getTraceAsString(),
@@ -81,9 +72,14 @@ class DesastreService
     }
 
     /**
-     * Process a single municipality with its categories and disasters.
+     * Processa um municipio individual.
+     *
+     * FLUXO: MunicipioData -> Sync protocolo -> Iteracao categorias/desastres
+     *
+     * @param MunicipioData $municipioData Dados do municipio
+     * @param Processo $processo Processo pai
      */
-    private function processMunicipio(MunicipioData $municipioData, EntradaProcesso $processo): void
+    private function processMunicipio(MunicipioData $municipioData, Processo $processo): void
     {
         $this->syncMunicipioProtocolo($municipioData, $processo);
 
@@ -95,9 +91,17 @@ class DesastreService
     }
 
     /**
-     * Process a single disaster with its items and fields.
+     * Processa um desastre individual.
+     *
+     * FLUXO: DesastreData -> EntradaCategoriaDesastre (upsert) -> Campos
+     *
+     * DESTINO: Tabela dec_entrada_categoria_desastres
+     *
+     * @param MunicipioData $municipioData Dados do municipio
+     * @param DesastreData $desastreData Dados do desastre
+     * @param Processo $processo Processo pai
      */
-    private function processDesastre(MunicipioData $municipioData, DesastreData $desastreData, EntradaProcesso $processo): void
+    private function processDesastre(MunicipioData $municipioData, DesastreData $desastreData, Processo $processo): void
     {
         $entradaCategoria = EntradaCategoriaDesastre::updateOrCreate(
             [
@@ -110,26 +114,27 @@ class DesastreService
             ]
         );
 
-        // Update the DTO with the generated ID for field persistence
+        // Atualiza o ID no DTO para uso nos campos filhos
         $desastreData->entradaCategoriaDesastreId = $entradaCategoria->id;
 
         foreach ($desastreData->items as $itemData) {
             foreach ($itemData->campos as $campoData) {
-                $this->persistDesastreCampo(
-                    $municipioData,
-                    $desastreData,
-                    $itemData,
-                    $campoData,
-                    $processo
-                );
+                $this->persistDesastreCampo($municipioData, $desastreData, $itemData, $campoData, $processo);
             }
         }
     }
 
     /**
-     * Sync municipality protocol (FIDE) if provided.
+     * Sincroniza protocolo FIDE do municipio.
+     *
+     * FLUXO: MunicipioData.nProtocoloFide -> DecretoMunicipio (upsert)
+     *
+     * DESTINO: Tabela dec_decreto_municipios
+     *
+     * @param MunicipioData $municipioData Dados do municipio
+     * @param Processo $processo Processo pai
      */
-    private function syncMunicipioProtocolo(MunicipioData $municipioData, EntradaProcesso $processo): void
+    private function syncMunicipioProtocolo(MunicipioData $municipioData, Processo $processo): void
     {
         if ($municipioData->nProtocoloFide === null) {
             return;
@@ -147,20 +152,31 @@ class DesastreService
     }
 
     /**
-     * Persist a disaster field with deduplication and timestamp sync.
+     * Persiste campo de desastre com deduplicacao e sincronizacao de timestamp.
+     *
+     * FLUXO: CampoData -> Formatacao -> EntradaDesastre (upsert) -> Deduplicacao -> Sync timestamp
+     *
+     * DESTINO: Tabela dec_entrada_desastres
+     *
+     * @param MunicipioData $municipioData Dados do municipio
+     * @param DesastreData $desastreData Dados do desastre
+     * @param ItemData $itemData Dados do item
+     * @param CampoData $campoData Dados do campo
+     * @param Processo $processo Processo pai
      */
     private function persistDesastreCampo(
         MunicipioData $municipioData,
         DesastreData $desastreData,
         ItemData $itemData,
         CampoData $campoData,
-        EntradaProcesso $processo
+        Processo $processo
     ): void {
         if ($campoData->valor === null) {
             return;
         }
 
-        $formattedValue = $this->formatValue($campoData->valor, $campoData->tipo);
+        // Formata valor baseado no tipo (number, currency, etc)
+        $formattedValue = $campoData->getFormattedValue();
 
         $searchCriteria = [
             'municipio_id'                  => $municipioData->id,
@@ -180,10 +196,10 @@ class DesastreService
             $values
         );
 
-        // Deduplicate entries
+        // Remove duplicatas mantendo o mais recente
         $entradaDesastre = $this->deduplicate($searchCriteria);
 
-        // Update municipio timestamp
+        // Sincroniza timestamp do municipio
         if ($entradaDesastre) {
             DecretoMunicipio::where('entrada_processos_id', $processo->id)
                 ->where('municipio_id', $municipioData->id)
@@ -192,7 +208,16 @@ class DesastreService
     }
 
     /**
-     * Remove duplicate entries, keeping the most recent non-zero value.
+     * Remove entradas duplicadas, mantendo o valor mais recente nao-zero.
+     *
+     * LOGICA:
+     * 1. Busca todas entradas com mesmos criterios
+     * 2. Prioriza entradas com valor != 0
+     * 3. Mantem a mais recente (por updated_at, depois por id)
+     * 4. Remove as demais
+     *
+     * @param array $searchCriteria Criterios de busca
+     * @return EntradaDesastre|null Entrada mantida ou null
      */
     private function deduplicate(array $searchCriteria): ?EntradaDesastre
     {
@@ -205,10 +230,11 @@ class DesastreService
             return $entradas->first();
         }
 
+        // Prioriza entradas com valor nao-zerado
         $entradasNaoZeradas = $entradas->reject(fn($entrada) => $this->isZeroOrNull($entrada->valor));
         $entradaMantida = $entradasNaoZeradas->first() ?? $entradas->first();
 
-        // Remove duplicates
+        // Remove duplicatas
         $entradas->filter(fn($entrada) => $entrada->id !== $entradaMantida->id)
             ->each(fn($duplicado) => $duplicado->delete());
 
@@ -216,7 +242,10 @@ class DesastreService
     }
 
     /**
-     * Check if a value is zero or null.
+     * Verifica se valor e zero ou null.
+     *
+     * @param mixed $value Valor a verificar
+     * @return bool True se zero ou null
      */
     private function isZeroOrNull(mixed $value): bool
     {
@@ -227,25 +256,5 @@ class DesastreService
         $trimmed = trim((string) $value);
 
         return is_numeric($trimmed) && (float) $trimmed === 0.0;
-    }
-
-    /**
-     * Format a value based on its type.
-     *
-     * @param mixed $value The value to format
-     * @param string $type The type: 'number', 'currency', or other
-     * @return mixed The formatted value
-     */
-    private function formatValue(mixed $value, string $type): mixed
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return match ($type) {
-            'number'   => (int) str_replace('.', '', (string) $value),
-            'currency' => (float) str_replace(',', '.', str_replace('.', '', (string) $value)),
-            default    => $value,
-        };
     }
 }

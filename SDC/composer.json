@@ -37,7 +37,11 @@
             "App\\Core\\": "core/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        }
+        },
+        "classmap": [
+            "app/Modules/Decretacoes/Models/DecretacoesModels.php",
+            "app/Modules/Decretacoes/DTOs/DecretacoesDTO.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

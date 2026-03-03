@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Decretacoes\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Decretacoes\DTOs\ProcessoDTO;
+use App\Modules\Decretacoes\Requests\DesastreDataRequest;
 use App\Modules\Decretacoes\Requests\StoreProcessoRequest;
 use App\Modules\Decretacoes\Requests\UpdateProcessoRequest;
-use App\Modules\Decretacoes\Services\DesastreService;
-use App\Modules\Decretacoes\Services\ProcessoService;
+use App\Modules\Decretacoes\Services\DesastreDataService;
+use App\Modules\Decretacoes\Services\EntradaProcessoService;
+use App\Modules\Decretacoes\DTO\DesastreSubmissionDTO;
+use App\Modules\Decretacoes\DTO\ProcessoRequestDTO;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,28 +19,38 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Unified controller for Decretacoes module.
+ * Controller unificado para o modulo de Decretacoes.
  *
- * This controller consolidates functionality from:
- * - ProcessoController (web CRUD operations)
- * - EntradaProcessoController (API operations)
+ * FLUXO DE DADOS:
+ *   Request (HTTP) -> Controller -> Service -> Model -> Banco
+ *   Banco -> Model -> Resource -> Controller -> Response (JSON/Inertia)
  *
- * It provides both web (Inertia) and API (JSON) endpoints.
+ * RESPONSABILIDADES:
+ * - Receber requests HTTP (Web e API)
+ * - Validar entrada via FormRequests
+ * - Converter para DTOs
+ * - Delegar para Services
+ * - Retornar respostas formatadas
  */
 class DecretacoesController extends Controller
 {
     public function __construct(
-        private readonly ProcessoService $processoService,
-        private readonly DesastreService $desastreService
+        private readonly EntradaProcessoService $processoService,
+        private readonly DesastreDataService $desastreService
     ) {
     }
 
     // =========================================================================
-    // WEB ROUTES (Inertia)
+    // ROTAS WEB (Inertia/Vue)
     // =========================================================================
 
     /**
-     * List processos with filters.
+     * Lista processos com filtros.
+     *
+     * FLUXO: Request -> Service.list() -> Inertia (ProcessoIndex.vue)
+     *
+     * @param Request $request Filtros de busca (search, status, tipo_decreto)
+     * @return Response Pagina Inertia com lista paginada
      */
     public function index(Request $request): Response
     {
@@ -54,7 +66,12 @@ class DecretacoesController extends Controller
     }
 
     /**
-     * Show processo details.
+     * Exibe detalhes de um processo.
+     *
+     * FLUXO: ID -> Service.findById() -> Inertia (ProcessoShow.vue)
+     *
+     * @param int $id ID do processo
+     * @return Response Pagina Inertia com detalhes
      */
     public function show(int $id): Response
     {
@@ -70,7 +87,11 @@ class DecretacoesController extends Controller
     }
 
     /**
-     * Show create processo form.
+     * Exibe formulario de criacao de processo.
+     *
+     * FLUXO: Service.getFilterOptions() -> Inertia (ProcessoCreate.vue)
+     *
+     * @return Response Pagina Inertia com formulario vazio
      */
     public function create(): Response
     {
@@ -82,7 +103,12 @@ class DecretacoesController extends Controller
     }
 
     /**
-     * Show edit processo form.
+     * Exibe formulario de edicao de processo.
+     *
+     * FLUXO: ID -> Service.findById() -> Inertia (ProcessoEdit.vue)
+     *
+     * @param int $id ID do processo
+     * @return Response Pagina Inertia com formulario preenchido
      */
     public function edit(int $id): Response
     {
@@ -101,11 +127,16 @@ class DecretacoesController extends Controller
     }
 
     /**
-     * Store a new processo.
+     * Cria novo processo.
+     *
+     * FLUXO: Request -> ProcessoRequestDTO -> Service.createProcesso() -> Redirect
+     *
+     * @param StoreProcessoRequest $request Dados validados do formulario
+     * @return RedirectResponse Redireciona para pagina de detalhes
      */
     public function store(StoreProcessoRequest $request): RedirectResponse
     {
-        $dto = ProcessoDTO::fromRequest($request);
+        $dto = ProcessoRequestDTO::fromRequest($request);
         $processo = $this->processoService->createProcesso($dto);
 
         return redirect()->route('decretacoes.processos.show', $processo->id)
@@ -113,18 +144,29 @@ class DecretacoesController extends Controller
     }
 
     /**
-     * Update an existing processo.
+     * Atualiza processo existente.
+     *
+     * FLUXO: Request -> ProcessoRequestDTO -> Service.updateProcesso() -> Redirect
+     *
+     * @param UpdateProcessoRequest $request Dados validados do formulario
+     * @param int $id ID do processo
+     * @return RedirectResponse Redireciona de volta com mensagem
      */
     public function update(UpdateProcessoRequest $request, int $id): RedirectResponse
     {
-        $dto = ProcessoDTO::fromRequest($request);
+        $dto = ProcessoRequestDTO::fromRequest($request);
         $this->processoService->updateProcesso($dto, $id);
 
         return redirect()->back()->with('success', 'Processo atualizado com sucesso!');
     }
 
     /**
-     * Delete a processo.
+     * Remove processo.
+     *
+     * FLUXO: ID -> Service.delete() -> Redirect para lista
+     *
+     * @param int $id ID do processo
+     * @return RedirectResponse Redireciona para lista
      */
     public function destroy(int $id): RedirectResponse
     {
@@ -135,9 +177,15 @@ class DecretacoesController extends Controller
     }
 
     /**
-     * Store disaster data for a processo.
+     * Salva dados de desastres de um processo.
+     *
+     * FLUXO: Request -> DesastreSubmissionDTO -> DesastreDataService -> Banco
+     *
+     * @param DesastreDataRequest $request Dados de desastres validados
+     * @param int $processoId ID do processo pai
+     * @return RedirectResponse Redireciona com mensagem de sucesso/erro
      */
-    public function storeDesastres(Request $request, int $processoId): RedirectResponse
+    public function storeDesastres(DesastreDataRequest $request, int $processoId): RedirectResponse
     {
         $processo = $this->processoService->findById($processoId);
 
@@ -145,10 +193,8 @@ class DecretacoesController extends Controller
             abort(404, 'Processo nao encontrado');
         }
 
-        $result = $this->desastreService->processDesastresData(
-            $request->all(),
-            $processo
-        );
+        $dto = DesastreSubmissionDTO::fromArray($request->all());
+        $result = $this->desastreService->processDesastresData($dto, $processo);
 
         if (!$result['success']) {
             return redirect()->back()->with('error', $result['message']);
@@ -158,11 +204,16 @@ class DecretacoesController extends Controller
     }
 
     // =========================================================================
-    // API ROUTES (JSON)
+    // ROTAS API (JSON)
     // =========================================================================
 
     /**
-     * API: List processos with filters.
+     * API: Lista processos com filtros.
+     *
+     * FLUXO: Request -> Service.getFilteredProcessos() -> JSON
+     *
+     * @param Request $request Filtros de busca
+     * @return JsonResponse Lista paginada em JSON
      */
     public function apiIndex(Request $request): JsonResponse
     {
@@ -178,7 +229,12 @@ class DecretacoesController extends Controller
     }
 
     /**
-     * API: Show processo details.
+     * API: Exibe detalhes de um processo.
+     *
+     * FLUXO: ID -> Service.findById() -> JSON
+     *
+     * @param int $id ID do processo
+     * @return JsonResponse Dados do processo em JSON
      */
     public function apiShow(int $id): JsonResponse
     {
@@ -198,7 +254,14 @@ class DecretacoesController extends Controller
     }
 
     /**
-     * Export data for PowerBI.
+     * Exporta dados normalizados para PowerBI.
+     *
+     * FLUXO: Request -> Service.getNormalizedDataForPowerBI() -> JSON
+     *
+     * DESTINO: Integracao com PowerBI para dashboards externos
+     *
+     * @param Request $request Filtros opcionais
+     * @return JsonResponse Dados normalizados para BI
      */
     public function exportPowerBI(Request $request): JsonResponse
     {

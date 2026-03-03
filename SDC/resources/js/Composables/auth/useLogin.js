@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
-import { applyCpfMask, isValidCpfFormat, removeCpfMask } from '../utils/cpfMask';
+import { applyCpfMask, isValidCpfFormat, removeCpfMask } from '../../utils/cpfMask';
 
 /**
  * Composable para gerenciar o estado e lógica do formulário de login
