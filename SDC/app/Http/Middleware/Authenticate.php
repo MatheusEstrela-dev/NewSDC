@@ -12,15 +12,6 @@ class Authenticate extends Middleware
      */
     protected function redirectTo(Request $request): ?string
     {
-        return route('login');
-    }
-
-    /**
-     * Handle an unauthenticated user.
-     */
-    protected function unauthenticated($request, array $guards)
-    {
-        // Always redirect to login for web requests, never return 401
-        return redirect()->guest(route('login'));
+        return $request->expectsJson() ? null : route('login');
     }
 }
