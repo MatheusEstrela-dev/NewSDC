@@ -100,7 +100,7 @@ class User extends Authenticatable
      */
     public function orgaoPrincipal(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_principal_id');
+        return $this->belongsTo(\App\Modules\Compdec\Models\Orgao::class, 'orgao_principal_id');
     }
 
     /**
@@ -108,7 +108,7 @@ class User extends Authenticatable
      */
     public function orgaos(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->belongsToMany(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_user')
+        return $this->belongsToMany(\App\Modules\Compdec\Models\Orgao::class, 'orgao_user')
             ->withPivot('funcao', 'is_principal')
             ->withTimestamps();
     }
