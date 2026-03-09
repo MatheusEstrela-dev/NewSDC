@@ -51,6 +51,7 @@ class SecurityHeaders
             "'unsafe-inline'",
             "'unsafe-eval'",
             "blob:",
+            "https://cdn.jsdelivr.net",
         ];
 
         $styleSrc = [
@@ -71,6 +72,7 @@ class SecurityHeaders
 
         $connectSrc = [
             "'self'",
+            "https://cdn.jsdelivr.net",
         ];
 
         // Em ambiente local, liberamos Vite (HTTP + WebSocket) e fontes externas usadas pelo layout
@@ -97,7 +99,9 @@ class SecurityHeaders
                 "http://127.0.0.1:15175",
             ]);
 
-            $connectSrc = array_merge($connectSrc, $viteHosts);
+            $connectSrc = array_merge($connectSrc, $viteHosts, [
+                'https://servicodados.ibge.gov.br',
+            ]);
 
             $styleSrc[] = "https://fonts.bunny.net";
             $fontSrc[] = "https://fonts.bunny.net";
@@ -125,6 +129,11 @@ class SecurityHeaders
             }
         }
 
+        $workerSrc = "'self' blob: data: https://cdn.jsdelivr.net";
+        if ($isLocal || $isNativePHP) {
+            $workerSrc .= " http://localhost:15175 http://127.0.0.1:15175 http://localhost:5175 http://127.0.0.1:5175";
+        }
+
         return implode('; ', [
             "default-src 'self'",
             'script-src ' . implode(' ', array_unique($scriptSrc)),
@@ -133,7 +142,7 @@ class SecurityHeaders
             'font-src ' . implode(' ', array_unique($fontSrc)),
             'connect-src ' . implode(' ', array_unique($connectSrc)),
             "frame-ancestors 'self'",
-            "worker-src 'self' blob:",
+            "worker-src {$workerSrc}",
         ]);
     }
 }

@@ -24,6 +24,11 @@ class Rat extends Model
         'local',
         'endereco',
         'comunicacao',
+        'recursos',
+        'envolvidos',
+        'vistoria',
+        'historico',
+        'anexos',
         'orgao_emissor_id',
         'created_by',
         'updated_by',
@@ -34,6 +39,11 @@ class Rat extends Model
         'local' => 'array',
         'endereco' => 'array',
         'comunicacao' => 'array',
+        'recursos' => 'array',
+        'envolvidos' => 'array',
+        'vistoria' => 'array',
+        'historico' => 'array',
+        'anexos' => 'array',
         'tem_vistoria' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -63,10 +73,28 @@ class Rat extends Model
     }
 
     /**
-     * Orgao emissor do RAT (COMPDEC responsavel)
+     * Orgao emissor do RAT (COMPDEC responsavel).
      */
     public function orgaoEmissor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(\App\Modules\Compdec\Models\Orgao::class, 'orgao_emissor_id');
     }
+
+    /**
+     * Usuário que criou o RAT.
+     */
+    public function creator(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
+    }
+
+    /**
+     * Usuário que realizou a última atualização do RAT.
+     */
+    public function updater(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'updated_by');
+    }
 }
+
+

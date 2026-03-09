@@ -1,13 +1,15 @@
 <?php
 
+use App\Modules\Rat\Controllers\RatAttachmentController;
 use App\Modules\Rat\Controllers\RatController;
+use App\Modules\Rat\Controllers\RatDataController;
+use App\Modules\Rat\Controllers\RatFinalizeController;
+use App\Modules\Rat\Controllers\RatWriteController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::prefix('rat')->name('rat.')->group(function () {
-    Route::post('/sync', [RatController::class, 'sync'])->name('sync');
-
-    Route::get('/export', [RatController::class, 'export'])
+    // Exportação CSV e dados JSON — separados no RatDataController (SRP)
+    Route::get('/export', [RatDataController::class, 'export'])
         ->name('export')
         ->middleware('can:rat.protocolos.export');
 
@@ -19,15 +21,28 @@ Route::prefix('rat')->name('rat.')->group(function () {
         ->name('create')
         ->middleware('can:rat.protocolos.create');
 
-    Route::get('/{id}/json', [RatController::class, 'showJson'])
+    Route::post('/', [RatController::class, 'store'])
+        ->name('store')
+        ->middleware('can:rat.protocolos.create');
+
+    Route::get('/{id}/json', [RatDataController::class, 'showJson'])
         ->name('show.json')
         ->middleware('can:rat.protocolos.view');
 
-    Route::get('/{id}/edit', [RatController::class, 'edit'])
+    Route::get('/{id}/edit', [RatController::class, 'show'])
         ->name('edit')
         ->middleware('can:rat.protocolos.edit');
 
-    Route::patch('/{id}/finalize', [RatController::class, 'finalize'])
+    Route::put('/{id}', [RatWriteController::class, 'update'])
+        ->name('update')
+        ->middleware('can:rat.protocolos.edit');
+
+    Route::patch('/{id}/draft', [RatWriteController::class, 'draft'])
+        ->name('draft')
+        ->middleware('can:rat.protocolos.edit');
+
+    // Finalização: SRP — ação única delegada ao RatFinalizeController (invokable)
+    Route::patch('/{id}/finalize', RatFinalizeController::class)
         ->name('finalize')
         ->middleware('can:rat.protocolos.finalize');
 
@@ -38,4 +53,14 @@ Route::prefix('rat')->name('rat.')->group(function () {
     Route::delete('/{id}', [RatController::class, 'destroy'])
         ->name('destroy')
         ->middleware('can:rat.protocolos.delete');
+
+    // Gerenciamento de anexos (upload multipart + remoção)
+    Route::post('/{id}/attachments', [RatAttachmentController::class, 'store'])
+        ->name('attachments.store')
+        ->middleware('can:rat.protocolos.edit');
+
+    Route::delete('/{id}/attachments/{anexoId}', [RatAttachmentController::class, 'destroy'])
+        ->name('attachments.destroy')
+        ->middleware('can:rat.protocolos.edit');
 });
+

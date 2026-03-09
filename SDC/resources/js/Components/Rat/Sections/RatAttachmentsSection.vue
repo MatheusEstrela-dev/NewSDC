@@ -84,6 +84,20 @@
       </div>
 
       <!-- Lista de Arquivos Adicionados -->
+      <!-- Erro de upload -->
+      <div v-if="uploadError" class="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-400">
+        {{ uploadError }}
+      </div>
+
+      <!-- Indicador de upload em progresso -->
+      <div v-if="uploading" class="mt-4 flex items-center gap-2 text-sm text-blue-400">
+        <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+        </svg>
+        Enviando arquivo...
+      </div>
+
       <div v-if="localData.anexos && localData.anexos.length > 0" class="mt-6 space-y-3">
         <h4 class="text-sm font-medium text-slate-300 mb-4">
           Arquivos Anexados ({{ localData.anexos.length }})
@@ -164,9 +178,17 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  uploading: {
+    type: Boolean,
+    default: false,
+  },
+  uploadError: {
+    type: String,
+    default: null,
+  },
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'upload-file', 'remove-file']);
 
 const fileInput = ref(null);
 const isDragging = ref(false);
@@ -223,13 +245,13 @@ async function processFiles(files) {
   const newAnexos = [];
 
   for (const file of validFiles) {
-    const anexoId = Date.now() + Math.random();
+    const tempId   = Date.now() + Math.random();
     
     // Armazenar arquivo no Map (não reativo)
-    fileMap.set(anexoId, file);
+    fileMap.set(tempId, file);
     
     const anexo = {
-      id: anexoId,
+      id: tempId,
       nome: file.name,
       name: file.name,
       tamanho: file.size,
@@ -250,11 +272,13 @@ async function processFiles(files) {
         });
         anexo.preview = preview;
       } catch (error) {
-        console.warn('Erro ao criar preview da imagem:', error);
+        anexo.preview = null;
       }
     }
 
     newAnexos.push(anexo);
+    // Notifica o parent para fazer upload real
+    emit('upload-file', { file, tempId });
   }
 
   // Adicionar todos os anexos de uma vez
@@ -277,7 +301,6 @@ async function handleDrop(event) {
     try {
       await processFiles(files);
     } catch (error) {
-      console.error('Erro ao processar arquivos:', error);
       alert('Erro ao processar arquivos. Tente novamente.');
     }
   }
@@ -290,7 +313,6 @@ async function handleFileSelect(event) {
     try {
       await processFiles(files);
     } catch (error) {
-      console.error('Erro ao processar arquivos:', error);
       alert('Erro ao processar arquivos. Tente novamente.');
     }
   }
@@ -305,6 +327,8 @@ function removeFile(index) {
   const anexo = localData.value.anexos[index];
   if (anexo && anexo.id) {
     fileMap.delete(anexo.id);
+    // Notifica o parent (RatAttachments) para chamar DELETE na API
+    emit('remove-file', anexo.id);
   }
   const updatedAnexos = localData.value.anexos.filter((_, i) => i !== index);
   localData.value.anexos = updatedAnexos;

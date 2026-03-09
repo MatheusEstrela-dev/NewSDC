@@ -1,5 +1,7 @@
 <template>
-  <div class="rat-section-card">
+  <div class="space-y-6">
+    <!-- Card 1: Dados do Recurso -->
+    <div class="rat-section-card">
     <!-- Header -->
     <div class="rat-section-header">
       <div class="rat-section-icon rat-section-icon-default">
@@ -64,9 +66,23 @@
         />
       </div>
 
-      <!-- Dados de Deslocamento -->
-      <div class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200 dark:border-slate-700/30">
-        <h4 class="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 sm:mb-4">Dados de Deslocamento</h4>
+      </div>
+    </div>
+
+    <!-- Card 2: Dados de Deslocamento -->
+    <div class="rat-section-card">
+      <div class="rat-section-header">
+        <div class="rat-section-icon rat-section-icon-default">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="rat-section-title">Dados de Deslocamento</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Datas, horários e localização</p>
+        </div>
+      </div>
+      <div class="rat-section-content">
         <div class="rat-grid-3">
           <FormField
             label="Data/Hora de Saída"
@@ -85,7 +101,7 @@
             placeholder="0"
           />
         </div>
-        <div class="rat-grid-2 mt-4">
+        <div class="rat-grid-2">
           <FormField
             label="Local de Origem"
             v-model="localData.local_origem"
@@ -98,10 +114,22 @@
           />
         </div>
       </div>
+    </div>
 
-      <!-- Dados Operacionais -->
-      <div class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200 dark:border-slate-700/30">
-        <h4 class="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 sm:mb-4">Dados Operacionais</h4>
+    <!-- Card 3: Dados Operacionais -->
+    <div class="rat-section-card">
+      <div class="rat-section-header">
+        <div class="rat-section-icon rat-section-icon-default">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="rat-section-title">Dados Operacionais</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Capacidade, condição e responsável pelo recurso</p>
+        </div>
+      </div>
+      <div class="rat-section-content">
         <div class="rat-grid-3">
           <FormField
             label="Quantidade"
@@ -141,12 +169,23 @@
           class="mt-4"
         />
       </div>
+    </div>
 
-      <!-- Agentes/Integrantes da Guarnicao -->
-      <div class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200 dark:border-slate-700/30">
-        <div class="flex items-center justify-between mb-3 sm:mb-4 gap-2">
-          <h4 class="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">Agentes / Integrantes</h4>
-          <button
+    <!-- Card 4: Agentes/Integrantes -->
+    <div class="rat-section-card">
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-200 dark:border-slate-700/30">
+        <div class="flex items-center gap-3">
+          <div class="rat-section-icon rat-section-icon-default">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="rat-section-title">Agentes / Integrantes</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Guarnição envolvida no atendimento</p>
+          </div>
+        </div>
+        <button
             @click="toggleFormularioAgente"
             type="button"
             class="px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-all whitespace-nowrap"
@@ -199,11 +238,11 @@
             <div class="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-700/30">
               <input
                 type="checkbox"
-                id="condutor-check"
+                :id="`condutor-check-${uid}`"
                 v-model="novoAgente.condutor"
                 class="w-5 h-5 sm:w-4 sm:h-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500 focus:ring-2 focus:ring-blue-500"
               />
-              <label for="condutor-check" class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+              <label :for="`condutor-check-${uid}`" class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
                 Este agente e o condutor do veiculo
               </label>
             </div>
@@ -292,13 +331,13 @@
         <div v-else class="text-center py-6 sm:py-8 text-slate-500 text-xs sm:text-sm">
           Nenhum agente adicionado. Clique em "+ Agente" para incluir integrantes.
         </div>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { getCurrentInstance, ref, watch } from 'vue';
+const uid = getCurrentInstance().uid;
 import FormField from '../../Form/FormField.vue';
 import FormSelect from '../../Form/FormSelect.vue';
 

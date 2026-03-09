@@ -83,14 +83,10 @@ export function useRat(initialData = {}) {
         alert('Você está offline. O RAT foi salvo no dispositivo e será enviado quando houver conexão.');
         // Opcional: Redirecionar para lista ou limpar form
       } catch (error) {
-        console.error('Erro ao salvar offline:', error);
         alert('Erro ao salvar no dispositivo.');
       }
     } else {
-      // Se estiver online, envia via Inertia (ou axios se preferir não recarregar)
-      console.log('Enviando Online:', payload);
-
-      // Usa router.post do Inertia para manter o fluxo SPA padrão
+      // Se estiver online, envia via Inertia
       router.post(route('rat.sync'), payload, {
         preserveScroll: true,
         preserveState: true,
@@ -98,7 +94,6 @@ export function useRat(initialData = {}) {
           // Limpa ou atualiza estado se necessário
         },
         onError: (errors) => {
-          console.error('Erro no envio online:', errors);
           // Fallback: se falhar por rede (não validação), salva offline?
           // Por simplicidade, mantemos o erro visível
         }
@@ -111,15 +106,14 @@ export function useRat(initialData = {}) {
    */
   async function saveDraft(data) {
     // TODO: Implementar chamada à API
-    console.log('Salvar rascunho:', data || rat.value);
     // router.post('/rat/draft', rat.value);
   }
 
   /**
-   * Cancela o RAT
+   * Cancela o RAT e retorna para a listagem
    */
   function cancelRat() {
-    router.visit('/dashboard');
+    router.visit(route('rat.index'));
   }
 
   /**

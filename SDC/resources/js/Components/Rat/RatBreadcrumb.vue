@@ -23,18 +23,18 @@
     </nav>
 
     <!-- Back Button -->
-    <Link
-      :href="route('rat.index')"
+    <button
+      @click="router.visit(route('rat.index'))"
       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 hover:border-slate-600 transition-all duration-200"
     >
       <ArrowLeftIcon class="w-4 h-4" />
       Voltar
-    </Link>
+    </button>
   </div>
 </template>
 
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import ChevronRightIcon from '../Icons/ChevronRightIcon.vue';

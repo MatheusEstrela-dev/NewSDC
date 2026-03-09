@@ -26,6 +26,8 @@
                   :recursos="recursos"
                   @add="handleAddRecurso"
                   @remove="handleRemoveRecurso"
+                  @update="handleUpdateRecurso"
+                  @save="handleSaveFromSubTab"
                 />
               </div>
 
@@ -35,6 +37,8 @@
                   :envolvidos="envolvidos"
                   @add="handleAddEnvolvido"
                   @remove="handleRemoveEnvolvido"
+                  @update="handleUpdateEnvolvidos"
+                  @save="handleSaveFromSubTab"
                 />
               </div>
 
@@ -42,7 +46,8 @@
               <div v-else-if="Number(activeTab) === 4">
                 <RatInspection
                   :vistoria="vistoria"
-                  @save="handleSaveVistoria"
+                  @save="handleSaveFromSubTab"
+                  @update="handleUpdateVistoria"
                 />
               </div>
 
@@ -51,16 +56,20 @@
                 <RatHistory
                   :events="historyEvents"
                   @add-observation="handleAddObservation"
+                  @update="handleUpdateHistorico"
+                  @save="handleSaveFromSubTab"
                 />
               </div>
 
               <!-- Aba 6: Anexos -->
               <div v-else-if="Number(activeTab) === 6">
                 <RatAttachments
+                  :rat-id="rat?.id"
                   :anexos="anexos"
                   @add="handleAddAnexo"
                   @remove="handleRemoveAnexo"
                   @update="handleUpdateAnexos"
+                  @save="handleSaveFromSubTab"
                 />
               </div>
             </template>
@@ -84,7 +93,7 @@ import RatInspection from '@/Components/Rat/RatInspection.vue';
 import RatInvolved from '@/Components/Rat/RatInvolved.vue';
 import RatResources from '@/Components/Rat/RatResources.vue';
 import RatTabs from '@/Components/Rat/RatTabs.vue';
-import { useRat } from '@/composables/rat';
+import { useRat } from '@/Composables/useRat';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -148,11 +157,11 @@ const {
   cancelRat,
 } = useRat({
   rat: props.rat,
-  recursos: props.recursos,
-  envolvidos: props.envolvidos,
-  vistoria: props.vistoria,
-  historyEvents: props.historyEvents,
-  anexos: props.anexos,
+  recursos: props.rat?.recursos ?? props.recursos ?? [],
+  envolvidos: props.rat?.envolvidos ?? props.envolvidos ?? [],
+  vistoria: props.rat?.vistoria ?? props.vistoria ?? {},
+  historyEvents: props.rat?.historico ?? props.historyEvents ?? [],
+  anexos: props.rat?.anexos ?? props.anexos ?? [],
   activeTab: initialTab,
 });
 
@@ -165,37 +174,40 @@ const rat = computed(() => {
 });
 
 const recursos = computed(() => {
-  if (props.recursos && Array.isArray(props.recursos) && props.recursos.length > 0) {
-    return props.recursos;
+  if (recursosState.value && (Array.isArray(recursosState.value) ? recursosState.value.length > 0 : Object.keys(recursosState.value).length > 0)) {
+    return recursosState.value;
   }
+  if (Array.isArray(props.rat?.recursos) && props.rat.recursos.length > 0) return props.rat.recursos;
+  if (props.rat?.recursos && !Array.isArray(props.rat.recursos) && Object.keys(props.rat.recursos).length > 0) return props.rat.recursos;
+  if (props.recursos?.length > 0) return props.recursos;
   return recursosState.value || [];
 });
 
 const envolvidos = computed(() => {
-  if (props.envolvidos && Array.isArray(props.envolvidos) && props.envolvidos.length > 0) {
-    return props.envolvidos;
-  }
+  if (envolvidosState.value?.length > 0) return envolvidosState.value;
+  if (Array.isArray(props.rat?.envolvidos) && props.rat.envolvidos.length > 0) return props.rat.envolvidos;
+  if (props.envolvidos?.length > 0) return props.envolvidos;
   return envolvidosState.value || [];
 });
 
 const vistoria = computed(() => {
-  if (props.vistoria && props.vistoria.id) {
-    return props.vistoria;
-  }
+  if (vistoriaState.value && Object.keys(vistoriaState.value).length > 0) return vistoriaState.value;
+  if (props.rat?.vistoria && Object.keys(props.rat.vistoria).length > 0) return props.rat.vistoria;
+  if (props.vistoria?.id) return props.vistoria;
   return vistoriaState.value || {};
 });
 
 const historyEvents = computed(() => {
-  if (props.historyEvents && Array.isArray(props.historyEvents) && props.historyEvents.length > 0) {
-    return props.historyEvents;
-  }
+  if (historyEventsState.value?.length > 0) return historyEventsState.value;
+  if (Array.isArray(props.rat?.historico) && props.rat.historico.length > 0) return props.rat.historico;
+  if (props.historyEvents?.length > 0) return props.historyEvents;
   return historyEventsState.value || [];
 });
 
 const anexos = computed(() => {
-  if (props.anexos && Array.isArray(props.anexos) && props.anexos.length > 0) {
-    return props.anexos;
-  }
+  if (anexosState.value?.length > 0) return anexosState.value;
+  if (Array.isArray(props.rat?.anexos) && props.rat.anexos.length > 0) return props.rat.anexos;
+  if (props.anexos?.length > 0) return props.anexos;
   return anexosState.value || [];
 });
 
@@ -237,14 +249,22 @@ function handleCancel() {
 }
 
 function handleAddRecurso(recurso) {
+  if (!Array.isArray(recursosState.value)) {
+    recursosState.value = [];
+  }
   recursosState.value.push(recurso);
 }
 
 function handleRemoveRecurso(id) {
+  if (!Array.isArray(recursosState.value)) return;
   const index = recursosState.value.findIndex(r => r.id === id);
   if (index > -1) {
     recursosState.value.splice(index, 1);
   }
+}
+
+function handleUpdateRecurso(data) {
+  recursosState.value = data;
 }
 
 function handleAddEnvolvido(envolvido) {
@@ -258,15 +278,43 @@ function handleRemoveEnvolvido(id) {
   }
 }
 
+function handleUpdateEnvolvidos(data) {
+  envolvidosState.value = Array.isArray(data) ? data : [];
+}
+
 function handleSaveVistoria(data) {
-  Object.assign(vistoriaState.value, data);
+  vistoriaState.value = { ...vistoriaState.value, ...data };
+}
+
+function handleUpdateVistoria(data) {
+  vistoriaState.value = { ...vistoriaState.value, ...data };
+}
+
+function handleUpdateHistorico(data) {
+  historyEventsState.value = data;
 }
 
 function handleAddObservation(observation) {
+  if (!Array.isArray(historyEventsState.value)) {
+    historyEventsState.value = [];
+  }
   historyEventsState.value.unshift({
     id: Date.now(),
     ...observation,
     created_at: new Date().toISOString(),
+  });
+}
+
+/**
+ * Salva o estado atual de todas as abas usando os dados já salvos do formulário principal.
+ * Chamado pelos botões Salvar das abas secundárias (Recursos, Envolvidos, Vistoria, Histórico).
+ */
+function handleSaveFromSubTab() {
+  saveRat({
+    dadosGerais: props.rat?.dados_gerais ?? {},
+    comunicacao: props.rat?.comunicacao ?? {},
+    local:       props.rat?.local ?? {},
+    endereco:    props.rat?.endereco ?? {},
   });
 }
 

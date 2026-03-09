@@ -128,26 +128,30 @@
     <!-- Secao: Endereco Detalhado -->
     <RatAddressSection
       v-model="localData.endereco"
+      @location-updated="handleLocationUpdated"
     />
 
     <!-- Footer Actions - Sticky Mobile Optimized -->
     <div class="rat-actions-footer">
       <div class="max-w-full mx-auto flex items-center justify-center gap-2 sm:gap-3 px-3 py-3 sm:px-6 sm:py-4">
         <button
+          type="button"
           @click="$emit('cancel')"
           class="px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200 border border-transparent hover:border-slate-300 dark:hover:border-slate-700"
         >
           Cancelar
         </button>
         <button
-          @click="$emit('save-draft', localData)"
+          type="button"
+          @click="$emit('save-draft', localData.value)"
           class="px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 dark:hover:border-slate-600 transition-all duration-200"
         >
           <span class="hidden sm:inline">Salvar Rascunho</span>
           <span class="sm:hidden">Salvar</span>
         </button>
         <button
-          @click="$emit('save', localData)"
+          type="button"
+          @click="$emit('save', localData.value)"
           class="px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-600/25 transition-all duration-200 flex items-center gap-1.5 sm:gap-2"
         >
           <CheckCircleIcon class="w-4 h-4" />
@@ -181,11 +185,11 @@ const emit = defineEmits(['save', 'save-draft', 'cancel', 'update:tem-vistoria']
 
 const localData = ref({
   dadosGerais: {
-    data_fato: props.rat.dadosGerais?.data_fato || '',
-    data_inicio_atividade: props.rat.dadosGerais?.data_inicio_atividade || '',
-    data_termino_atividade: props.rat.dadosGerais?.data_termino_atividade || '',
-    nat_cobrade_id: props.rat.dadosGerais?.nat_cobrade_id || '',
-    nat_nome_operacao: props.rat.dadosGerais?.nat_nome_operacao || '',
+    data_fato: props.rat.dados_gerais?.data_fato || '',
+    data_inicio_atividade: props.rat.dados_gerais?.data_inicio_atividade || '',
+    data_termino_atividade: props.rat.dados_gerais?.data_termino_atividade || '',
+    nat_cobrade_id: props.rat.dados_gerais?.nat_cobrade_id || '',
+    nat_nome_operacao: props.rat.dados_gerais?.nat_nome_operacao || '',
     tem_vistoria: props.rat.tem_vistoria || false,
   },
   comunicacao: {
@@ -225,13 +229,21 @@ function toggleVistoria() {
   emit('update:tem-vistoria', localData.value.dadosGerais.tem_vistoria);
 }
 
+function handleLocationUpdated({ uf, municipio }) {
+  if (uf) {
+    localData.value.local.uf = uf;
+  }
+  // municipio is a city name string; municipio_id requires a lookup — leave for manual selection
+}
+
 watch(
   () => props.rat,
   (newVal) => {
-    if (newVal && newVal.dadosGerais) {
+    if (newVal && newVal.dados_gerais) {
       localData.value.dadosGerais = {
         ...localData.value.dadosGerais,
-        ...newVal.dadosGerais,
+        ...newVal.dados_gerais,
+        tem_vistoria: newVal.tem_vistoria ?? localData.value.dadosGerais.tem_vistoria,
       };
     }
   },

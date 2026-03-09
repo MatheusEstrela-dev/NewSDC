@@ -7,6 +7,8 @@ use App\Modules\Rat\Application\Services\RatService;
 use App\Modules\Rat\Config\RatActionsConfig;
 use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
 use App\Modules\Rat\Infrastructure\Persistence\EloquentRatRepository;
+use App\Modules\Rat\Services\RatAttachmentService;
+use App\Modules\Rat\Services\RatProtocoloService;
 use Illuminate\Support\ServiceProvider;
 
 class RatServiceProvider extends ServiceProvider
@@ -18,11 +20,9 @@ class RatServiceProvider extends ServiceProvider
             EloquentRatRepository::class
         );
 
-        $this->app->singleton(RatService::class, function ($app) {
-            return new RatService(
-                $app->make(RatRepositoryInterface::class)
-            );
-        });
+        $this->app->singleton(RatService::class);
+        $this->app->singleton(RatProtocoloService::class);
+        $this->app->singleton(RatAttachmentService::class);
     }
 
     public function boot(): void
@@ -41,4 +41,7 @@ class RatServiceProvider extends ServiceProvider
         }
     }
 }
+
+
+
 
