@@ -23,8 +23,6 @@ export const initAxios = async () => {
                         message: error.response.data?.message || 'Limite de requisicoes excedido. Aguarde antes de tentar novamente.',
                     },
                 }));
-
-                console.warn('[Rate Limit] Limite excedido. Retry em:', retryAfter, 'segundos');
             }
 
             return Promise.reject(error);

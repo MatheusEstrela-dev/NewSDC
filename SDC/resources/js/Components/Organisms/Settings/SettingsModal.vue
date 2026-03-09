@@ -357,7 +357,6 @@ const closeOnEscape = (e) => {
 };
 
 onMounted(() => {
-    console.log('SettingsModal Mounted!');
     document.addEventListener('keydown', closeOnEscape);
 });
 
@@ -368,10 +367,8 @@ onUnmounted(() => {
 
 const save = async () => {
     isSaving.value = true;
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     isSaving.value = false;
     emit('close');
-    // In real app: Show toast success
 };
 </script>

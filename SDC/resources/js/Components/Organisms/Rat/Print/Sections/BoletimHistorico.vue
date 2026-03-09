@@ -1,10 +1,22 @@
 <script setup>
-defineProps({
+const props = defineProps({
   historico: {
-    type: String,
-    default: '',
+    type: [String, Array],
+    default: null,
   },
 });
+
+function buildHistoricoText(val) {
+  if (Array.isArray(val)) {
+    return val
+      .map(h => (typeof h === 'object' ? (h.descricao || h.observacao || JSON.stringify(h)) : String(h)))
+      .filter(Boolean)
+      .join('\n');
+  }
+  return typeof val === 'string' ? val : '';
+}
+
+const historicoText = buildHistoricoText(props.historico);
 </script>
 
 <template>
@@ -14,7 +26,7 @@ defineProps({
     <table class="bos-table">
       <tr>
         <td class="field-value historico-text" style="min-height: 150px; padding: 20px; vertical-align: top;">
-          {{ historico || 'NAO DESCRITO' }}
+          {{ historicoText || 'NAO DESCRITO' }}
         </td>
       </tr>
     </table>

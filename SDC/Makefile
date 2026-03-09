@@ -396,9 +396,7 @@ artisan: ## ⚙️  Executar artisan (uso: make artisan CMD="migrate")
 
 bridge: ## 📦 Cria a rede bridge sdc_network (para os ~15 containers, sem Ollama)
 	@echo "${YELLOW}→ Iniciando bridge (sdc_network)...${RESET}"
-	@docker network inspect sdc_network >/dev/null 2>&1 || \
-		(echo "${YELLOW}→ Criando network bridge...${RESET}" && \
-		 docker network create --driver bridge --subnet 172.26.0.0/16 sdc_network)
+	-@docker network create --driver bridge --subnet 172.26.0.0/16 sdc_network 2>/dev/null || true
 	@echo "${GREEN}✓ Bridge sdc_network OK${RESET}"
 
 # Um comando: bridge + build-all + up-all (stack completa sem Ollama)

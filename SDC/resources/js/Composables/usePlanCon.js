@@ -66,7 +66,6 @@ export function usePlanCon(initialStats = {}) {
       const data = await response.json();
       updateStats(data);
     } catch (error) {
-      console.error('Failed to refresh PlanCon stats:', error);
     } finally {
       isLoading.value = false;
     }
