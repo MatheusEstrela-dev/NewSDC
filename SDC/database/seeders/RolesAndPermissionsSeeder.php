@@ -69,13 +69,15 @@ class RolesAndPermissionsSeeder extends Seeder
         foreach ($levels as $slug => $hierarchyLevel) {
             $metadata = $rolesMetadata[$slug] ?? [];
 
+            $displayName = $metadata['name'] ?? ucfirst($slug);
+
             Role::updateOrCreate(
                 [
-                    'name' => $slug,
+                    'slug' => $slug,
                     'guard_name' => $guard,
                 ],
                 [
-                    'name' => $slug,
+                    'name' => $displayName,
                     'guard_name' => $guard,
                     'slug' => $slug,
                     'hierarchy_level' => $hierarchyLevel,

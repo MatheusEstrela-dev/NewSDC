@@ -1,12 +1,14 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Head } from '@inertiajs/vue3'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import MinimalLayout from '@/Layouts/MinimalLayout.vue'
 import LogViewerSidebar from '@/Components/Molecules/LogViewer/LogViewerSidebar.vue'
 import LogViewerTopbar from '@/Components/Molecules/LogViewer/LogViewerTopbar.vue'
 import LogViewerTable from '@/Components/Organisms/LogViewer/LogViewerTable.vue'
 import LogViewerDetail from '@/Components/Organisms/LogViewer/LogViewerDetail.vue'
 import axios from 'axios'
+
+defineOptions({ layout: MinimalLayout })
 
 // State
 const logs = ref([])
@@ -117,10 +119,9 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head title="Log Viewer Premium" />
+    <Head title="Logger - SDC" />
 
-
-        <div class="h-[calc(100vh-65px)] flex overflow-hidden bg-[#0b0e14] text-gray-300">
+        <div class="flex h-full overflow-hidden bg-[#0b0e14] text-gray-300">
             <!-- Sidebar -->
             <LogViewerSidebar 
                 :files="files" 
@@ -155,9 +156,6 @@ onMounted(() => {
 
 </template>
 
-<style>
-/* Reset global para o Log Viewer preencher a tela */
-body {
-    overflow: hidden;
-}
+<style scoped>
+/* LogViewer preenche o espaco disponivel */
 </style>
