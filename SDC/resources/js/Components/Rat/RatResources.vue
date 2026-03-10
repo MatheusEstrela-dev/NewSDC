@@ -1,9 +1,9 @@
 <template>
   <div class="animate-fade-in-up pb-6">
-    <RatResourcesSection v-model="localRecurso" />
+    <RatResourcesSection v-model="localRecurso" :view-only="viewOnly" />
 
     <!-- Footer de ações -->
-    <div class="rat-actions-footer mt-4">
+    <div v-if="!viewOnly" class="rat-actions-footer mt-4">
       <div class="max-w-full mx-auto flex items-center justify-center gap-2 sm:gap-3 px-3 py-3 sm:px-6 sm:py-4">
         <button
           type="button"
@@ -28,6 +28,10 @@ const props = defineProps({
   recursos: {
     type: [Array, Object],
     default: () => ({}),
+  },
+  viewOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 

@@ -35,6 +35,18 @@ class RatWriteService
         });
     }
 
+    /** Cria um RAT com dados do formulário em uma única transação. */
+    public function createWithData(array $data): Rat
+    {
+        return DB::transaction(function () use ($data) {
+            $protocolo = $this->protocoloService->generate();
+            $rat = $this->repository->create($this->buildInitialData($protocolo));
+            return $this->repository->update($rat->id, array_merge($data, [
+                'status' => Status::RASCUNHO->value,
+            ]));
+        });
+    }
+
     /** Persiste todos os campos editáveis e avança o status para EM_ANDAMENTO. */
     public function update(string $id, array $data): Rat
     {

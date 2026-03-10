@@ -4,13 +4,14 @@
       v-model="localAnexos"
       :uploading="uploading"
       :upload-error="uploadError"
+      :view-only="viewOnly"
       @update:modelValue="handleUpdate"
       @upload-file="handleUploadFile"
       @remove-file="handleRemoveFile"
     />
 
     <!-- Footer de ações — padrão das demais abas -->
-    <div class="rat-actions-footer mt-4">
+    <div v-if="!viewOnly" class="rat-actions-footer mt-4">
       <div class="max-w-full mx-auto flex items-center justify-center gap-2 sm:gap-3 px-3 py-3 sm:px-6 sm:py-4">
         <button
           type="button"
@@ -35,11 +36,15 @@ import RatAttachmentsSection from './Sections/RatAttachmentsSection.vue';
 const props = defineProps({
   ratId: {
     type: String,
-    required: true,
+    default: null,
   },
   anexos: {
     type: Array,
     default: () => [],
+  },
+  viewOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 

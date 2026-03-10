@@ -16,6 +16,7 @@
     </div>
 
     <!-- Form Grid -->
+    <fieldset :disabled="props.viewOnly" style="border:none;padding:0;margin:0;min-width:0;">
     <div class="rat-section-content">
       <!-- Linha 1: Tipo e Categoria -->
       <div class="rat-grid-2">
@@ -67,6 +68,7 @@
       </div>
 
       </div>
+    </fieldset>
     </div>
 
     <!-- Card 2: Dados de Deslocamento -->
@@ -82,6 +84,7 @@
           <p class="text-xs text-slate-500 mt-0.5">Datas, horários e localização</p>
         </div>
       </div>
+      <fieldset :disabled="props.viewOnly" style="border:none;padding:0;margin:0;min-width:0;">
       <div class="rat-section-content">
         <div class="rat-grid-3">
           <FormField
@@ -113,8 +116,7 @@
             placeholder="Local de chegada"
           />
         </div>
-      </div>
-    </div>
+      </div>      </fieldset>    </div>
 
     <!-- Card 3: Dados Operacionais -->
     <div class="rat-section-card">
@@ -129,6 +131,7 @@
           <p class="text-xs text-slate-500 mt-0.5">Capacidade, condição e responsável pelo recurso</p>
         </div>
       </div>
+      <fieldset :disabled="props.viewOnly" style="border:none;padding:0;margin:0;min-width:0;">
       <div class="rat-section-content">
         <div class="rat-grid-3">
           <FormField
@@ -169,6 +172,7 @@
           class="mt-4"
         />
       </div>
+      </fieldset>
     </div>
 
     <!-- Card 4: Agentes/Integrantes -->
@@ -185,8 +189,7 @@
             <p class="text-xs text-slate-500 mt-0.5">Guarnição envolvida no atendimento</p>
           </div>
         </div>
-        <button
-            @click="toggleFormularioAgente"
+        <button            v-if="!props.viewOnly"            @click="toggleFormularioAgente"
             type="button"
             class="px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-all whitespace-nowrap"
           >
@@ -301,7 +304,7 @@
               </div>
 
               <!-- Botoes de acao - maiores para touch -->
-              <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+              <div v-if="!props.viewOnly" class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                 <button
                   @click="editarAgente(index)"
                   type="button"
@@ -345,6 +348,10 @@ const props = defineProps({
   modelValue: {
     type: Object,
     default: () => ({}),
+  },
+  viewOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 

@@ -7,6 +7,7 @@ namespace App\Modules\Rat\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Rat\Application\Services\RatService;
 use App\Modules\Rat\Http\Requests\ListRatRequest;
+use App\Modules\Rat\Http\Requests\UpdateRatRequest;
 use App\Modules\Rat\Http\Resources\RatListResource;
 use App\Modules\Rat\Http\Resources\RatResource;
 use Illuminate\Http\RedirectResponse;
@@ -44,23 +45,31 @@ class RatController extends Controller
     }
 
     /**
-     * Cria um novo RAT em branco e redireciona para a página de edição.
+     * Página de Criação de um novo RAT (formulário em branco).
      */
-    public function create(): RedirectResponse
+    public function create(): Response
     {
-        $rat = $this->service->createNew();
-
-        return redirect()->route('rat.show', $rat->id);
+        return Inertia::render('Rat/Create');
     }
 
     /**
-     * Cria um novo RAT via POST (formulário) e redireciona para a página de edição.
+     * Cria um novo RAT via POST com dados do formulário e redireciona para a página de edição.
      */
-    public function store(): RedirectResponse
+    public function store(UpdateRatRequest $request): RedirectResponse
     {
-        $rat = $this->service->createNew();
+        $data     = $request->safe()->except('finalize');
+        $finalize = (bool) $request->input('finalize', false);
 
-        return redirect()->route('rat.show', $rat->id);
+        $rat = $this->service->createWithData($data);
+
+        if ($finalize) {
+            $this->service->finalize($rat->id);
+            return redirect()->route('rat.show', $rat->id)
+                ->with('success', 'RAT criado e finalizado com sucesso!');
+        }
+
+        return redirect()->route('rat.edit', $rat->id)
+            ->with('success', 'RAT criado com sucesso!');
     }
 
     /**
@@ -71,9 +80,9 @@ class RatController extends Controller
         $rat = $this->service->findById($id);
         abort_if(is_null($rat), 404, 'RAT não encontrado.');
 
-        return Inertia::render('Rat', [
-            'rat'      => new RatResource($rat),
-            'viewOnly' => true,
+        return Inertia::render('Rat/Show', [
+            'rat'        => new RatResource($rat),
+            'lastUpdate' => $rat->updated_at?->toIso8601String(),
         ]);
     }
 
@@ -85,9 +94,9 @@ class RatController extends Controller
         $rat = $this->service->findById($id);
         abort_if(is_null($rat), 404, 'RAT não encontrado.');
 
-        return Inertia::render('Rat', [
-            'rat'      => new RatResource($rat),
-            'viewOnly' => false,
+        return Inertia::render('Rat/Edit', [
+            'rat'        => new RatResource($rat),
+            'lastUpdate' => $rat->updated_at?->toIso8601String(),
         ]);
     }
 

@@ -194,9 +194,10 @@ const aplicarResultadoCep = (resultado) => {
   });
 };
 
-// Dispara busca automaticamente ao atingir 8 dígitos
+// Dispara busca automaticamente ao atingir 8 dígitos (escuta a prop diretamente
+// para evitar o cache da computed que impede detecção de mudanças de propriedade)
 watch(
-  () => localData.value?.cep,
+  () => props.modelValue?.cep,
   async (newCep) => {
     if (!newCep) return;
     const cepLimpo = newCep.replace(/\D/g, '');

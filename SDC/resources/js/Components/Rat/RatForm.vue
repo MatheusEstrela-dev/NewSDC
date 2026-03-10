@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-4 sm:space-y-6 rat-form-content">
+  <fieldset :disabled="viewOnly" style="border: none; padding: 0; margin: 0; min-width: 0;" :class="['space-y-4 sm:space-y-6 rat-form-content', viewOnly ? 'pb-10' : '']">  
     <!-- Secao: Atendimento -->
     <RatCollapsibleSection
       section-id="atendimento"
@@ -132,26 +132,18 @@
     />
 
     <!-- Footer Actions - Sticky Mobile Optimized -->
-    <div class="rat-actions-footer">
-      <div class="max-w-full mx-auto flex items-center justify-center gap-2 sm:gap-3 px-3 py-3 sm:px-6 sm:py-4">
+    <div v-if="!viewOnly" class="rat-actions-footer">
+      <div class="max-w-full mx-auto flex items-center justify-center gap-2 sm:gap-3 px-3 pt-3 pb-6 sm:px-6 sm:pt-4 sm:pb-6">
         <button
           type="button"
-          @click="$emit('cancel')"
-          class="px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200 border border-transparent hover:border-slate-300 dark:hover:border-slate-700"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          @click="$emit('save-draft', localData.value)"
+          @click="$emit('save-draft', localData)"
           class="px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 dark:hover:border-slate-600 transition-all duration-200"
         >
-          <span class="hidden sm:inline">Salvar Rascunho</span>
-          <span class="sm:hidden">Salvar</span>
+          Salvar
         </button>
         <button
           type="button"
-          @click="$emit('save', localData.value)"
+          @click="$emit('finalize', localData)"
           class="px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-600/25 transition-all duration-200 flex items-center gap-1.5 sm:gap-2"
         >
           <CheckCircleIcon class="w-4 h-4" />
@@ -160,7 +152,8 @@
         </button>
       </div>
     </div>
-  </div>
+
+  </fieldset>
 </template>
 
 <script setup>
@@ -179,9 +172,13 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  viewOnly: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['save', 'save-draft', 'cancel', 'update:tem-vistoria']);
+const emit = defineEmits(['save', 'save-draft', 'cancel', 'finalize', 'update:tem-vistoria', 'update:formData']);
 
 const localData = ref({
   dadosGerais: {
@@ -249,27 +246,18 @@ watch(
   },
   { deep: true }
 );
+
+// Propaga estado atual do formulário para o componente pai
+watch(
+  localData,
+  (newVal) => {
+    emit('update:formData', { ...newVal });
+  },
+  { deep: true, immediate: true }
+);
 </script>
 
 <style scoped>
-.rat-actions-footer {
-  position: sticky;
-  bottom: 0;
-  width: 100%;
-  @apply bg-white/95 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-700/50;
-  backdrop-filter: blur(8px);
-  z-index: 30;
-  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06);
-  margin-top: 1rem;
-}
-
-/* Mobile: footer mais compacto */
-@media (max-width: 640px) {
-  .rat-actions-footer {
-    margin-top: 0.75rem;
-  }
-}
-
 /* Espacamento minimo para nao sobrepor conteudo */
 .rat-form-content {
   padding-bottom: 0.5rem;

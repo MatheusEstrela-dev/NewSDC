@@ -52,8 +52,22 @@ export default defineConfig({
                 ],
             },
             workbox: {
-                globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
+                globPatterns: ['**/*.{ico,png,svg,woff,woff2}'],
                 runtimeCaching: [
+                    {
+                        urlPattern: /\/build\/.*\.(js|css)$/i,
+                        handler: 'NetworkFirst',
+                        options: {
+                            cacheName: 'build-assets',
+                            expiration: {
+                                maxEntries: 200,
+                                maxAgeSeconds: 60 * 60 * 24 * 7,
+                            },
+                            cacheableResponse: {
+                                statuses: [0, 200],
+                            },
+                        },
+                    },
                     {
                         urlPattern: /^https:\/\/api\..*/i,
                         handler: 'StaleWhileRevalidate',

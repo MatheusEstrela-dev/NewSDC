@@ -58,6 +58,9 @@ class UpdateRatRequest extends FormRequest
 
             // Sub-entidades livres (arrays JSON)
             'recursos'   => ['nullable', 'array'],
+
+            // Flag de criação+finalização em uma etapa
+            'finalize'   => ['nullable', 'boolean'],
             'envolvidos' => ['nullable', 'array'],
             'vistoria'   => ['nullable', 'array'],
             'historico'  => ['nullable', 'array'],

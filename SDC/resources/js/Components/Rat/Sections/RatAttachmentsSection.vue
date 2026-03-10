@@ -15,8 +15,9 @@
 
     <!-- Content -->
     <div class="rat-section-content">
-      <!-- Área de Drag and Drop -->
+      <!-- Área de Drag and Drop - somente no modo edição -->
       <div
+        v-if="!props.viewOnly"
         @drop.prevent="handleDrop"
         @dragover.prevent="isDragging = true"
         @dragleave.prevent="isDragging = false"
@@ -140,6 +141,7 @@
               <DownloadIcon class="w-5 h-5" />
             </button>
             <button
+              v-if="!props.viewOnly"
               @click="removeFile(index)"
               type="button"
               class="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
@@ -157,7 +159,7 @@
         class="mt-6 p-6 rounded-lg bg-slate-950/30 border border-slate-700/30 text-center"
       >
         <p class="text-sm text-slate-500">
-          Nenhum arquivo anexado ainda. Adicione arquivos usando a área acima.
+          {{ props.viewOnly ? 'Nenhum arquivo anexado.' : 'Nenhum arquivo anexado ainda. Adicione arquivos usando a área acima.' }}
         </p>
       </div>
     </div>
@@ -185,6 +187,10 @@ const props = defineProps({
   uploadError: {
     type: String,
     default: null,
+  },
+  viewOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 

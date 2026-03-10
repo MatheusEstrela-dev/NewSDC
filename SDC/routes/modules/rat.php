@@ -112,7 +112,7 @@ Route::prefix('rat')->name('rat.')->group(function () {
         ->name('show.json')
         ->middleware('can:rat.protocolos.view');
 
-    Route::get('/{id}/edit', [RatController::class, 'show'])
+    Route::get('/{id}/edit', [RatController::class, 'edit'])
         ->name('edit')
         ->middleware('can:rat.protocolos.edit');
 

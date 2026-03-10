@@ -16,12 +16,10 @@
    ============================================ */
 
 .rat-actions-footer {
-  position: sticky;
-  bottom: 0;
+  position: static;
   width: 100%;
-  @apply bg-white/95 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-700/50;
-  backdrop-filter: blur(8px);
-  z-index: 30;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  @apply bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700/50;
   box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06);
   margin-top: 1rem;
 }

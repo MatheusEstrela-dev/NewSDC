@@ -40,6 +40,22 @@ class RatService
     }
 
     /**
+     * Cria um novo RAT com dados do formulário (rascunho com protocolo automático).
+     */
+    public function createWithData(array $data): Rat
+    {
+        return $this->writeService->createWithData($data);
+    }
+
+    /**
+     * Finaliza um RAT existente.
+     */
+    public function finalize(string $id): Rat
+    {
+        return $this->writeService->finalize($id);
+    }
+
+    /**
      * Dados completos para a página de índice: lista + estatísticas + opções de filtro.
      */
     public function getIndexData(RatFilterDTO $filters): array
