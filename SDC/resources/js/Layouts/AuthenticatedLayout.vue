@@ -69,7 +69,7 @@ provide('openSidebar', openSidebar);
       <NavigationHeader class="mt-12 md:mt-16 flex-shrink-0" :style="{ marginTop: `calc(max(env(safe-area-inset-top, 0px), var(--inset-top, 12px)) + ${isMobile ? '3rem' : '4rem'})` }" />
 
       <!-- Page Content -->
-      <main class="flex-1 pt-4 bg-slate-50 dark:bg-slate-950 overflow-x-hidden px-4 sm:px-6 lg:px-8">
+      <main class="flex-1 pt-4 bg-slate-50 dark:bg-slate-950 [overflow-x:clip] px-4 sm:px-6 lg:px-8">
         <Transition name="page" appear>
           <slot />
         </Transition>

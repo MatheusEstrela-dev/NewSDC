@@ -15,8 +15,8 @@
     </div>
 
     <div class="rat-section-content">
-      <!-- Formulário Inline - Sempre visível por padrão -->
-      <div class="mb-6 p-6 rounded-lg bg-slate-50 dark:bg-slate-950/50 border-2 border-purple-500/30">
+      <!-- Formulário Inline - Somente no modo edição -->
+      <div v-if="!props.viewOnly" class="mb-6 p-6 rounded-lg bg-slate-50 dark:bg-slate-950/50 border-2 border-purple-500/30">
         <h4 class="text-base font-semibold text-purple-600 dark:text-purple-400 mb-4">
           {{ envolvidoEditIndex !== null ? 'Editar Envolvido' : 'Novo Envolvido' }}
         </h4>
@@ -244,7 +244,7 @@
             </div>
 
             <!-- Ações -->
-            <div class="flex gap-2">
+            <div v-if="!props.viewOnly" class="flex gap-2">
               <button
                 @click="editarEnvolvido(index)"
                 type="button"
@@ -289,6 +289,10 @@ const props = defineProps({
   modelValue: {
     type: Array,
     default: () => [],
+  },
+  viewOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 

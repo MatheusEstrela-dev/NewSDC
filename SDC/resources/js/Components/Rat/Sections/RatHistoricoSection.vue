@@ -1,5 +1,6 @@
 <template>
   <div class="space-y-6">
+    <fieldset :disabled="props.viewOnly" style="border:none;padding:0;margin:0;min-width:0;">
     <div class="rat-section-card">
     <!-- Header -->
     <div class="rat-section-header">
@@ -211,6 +212,7 @@
       </div>
     </div>
     </div>
+    </fieldset>
   </div>
 </template>
 
@@ -223,6 +225,10 @@ const props = defineProps({
   modelValue: {
     type: Object,
     default: () => ({}),
+  },
+  viewOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 

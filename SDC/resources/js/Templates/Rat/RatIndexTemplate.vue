@@ -329,8 +329,8 @@ function handleEdit(id) {
 }
 
 function handleAttachments(id) {
-  // Abrir diretamente na aba "Anexos" (id 6) no detalhe do RAT
-  router.visit(`${route('rat.show', id)}?tab=6`);
+  // Abrir diretamente na aba "Anexos" (id 6) no formulário de edição
+  router.visit(`${route('rat.edit', id)}?tab=6`);
 }
 
 function handleDelete(id) {

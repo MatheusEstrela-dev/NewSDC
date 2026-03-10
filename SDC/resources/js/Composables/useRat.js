@@ -73,6 +73,29 @@ export function useRat({
     }
 
     /**
+     * Finaliza o RAT — salva todos os dados e muda status para FINALIZADO.
+     * @param {Object} formData  - dados do formulário principal
+     */
+    function finalizarRat(formData = {}) {
+        const data = {
+            dadosGerais: formData.dadosGerais  ?? {},
+            comunicacao: formData.comunicacao  ?? {},
+            local:       formData.local        ?? {},
+            endereco:    formData.endereco      ?? {},
+            recursos:    recursos.value,
+            envolvidos:  envolvidos.value,
+            vistoria:    vistoria.value,
+            historico:   historico.value,
+        };
+        if (!rat.value?.id) {
+            // Página de criação: cria e finaliza em uma única requisição
+            router.post(route('rat.store'), { ...data, finalize: true }, { preserveScroll: true });
+            return;
+        }
+        router.patch(route('rat.finalize', rat.value.id), data, { preserveScroll: true });
+    }
+
+    /**
      * Cancela e retorna para a listagem.
      */
     function cancelarRat() {
@@ -89,6 +112,7 @@ export function useRat({
         tabs,
         salvarRat,
         salvarRascunho,
+        finalizarRat,
         cancelarRat,
     };
 }

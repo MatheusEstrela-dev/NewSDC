@@ -4,7 +4,7 @@
 
         <div class="rat-container">
           <!-- Header -->
-          <RatHeader :rat="rat" :last-update="lastUpdate" />
+          <RatHeader :rat="rat" :last-update="lastUpdate" :view-only="props.viewOnly" />
 
           <!-- Sistema de Abas -->
           <RatTabs :active-tab="currentActiveTab" :tabs="tabConfig" @tab-change="tabs.setActiveTab">
@@ -13,10 +13,13 @@
               <div v-if="Number(activeTab) === 1">
                 <RatForm
                   :rat="rat"
+                  :view-only="props.viewOnly"
                   @save="handleSave"
                   @save-draft="handleSaveDraft"
+                  @finalize="handleFinalize"
                   @cancel="handleCancel"
                   @update:tem-vistoria="handleToggleVistoria"
+                  @update:form-data="handleFormDataUpdate"
                 />
               </div>
 
@@ -24,6 +27,7 @@
               <div v-else-if="Number(activeTab) === 2">
                 <RatResources
                   :recursos="recursos"
+                  :view-only="props.viewOnly"
                   @add="handleAddRecurso"
                   @remove="handleRemoveRecurso"
                   @update="handleUpdateRecurso"
@@ -35,6 +39,7 @@
               <div v-else-if="Number(activeTab) === 3">
                 <RatInvolved
                   :envolvidos="envolvidos"
+                  :view-only="props.viewOnly"
                   @add="handleAddEnvolvido"
                   @remove="handleRemoveEnvolvido"
                   @update="handleUpdateEnvolvidos"
@@ -46,6 +51,7 @@
               <div v-else-if="Number(activeTab) === 4">
                 <RatInspection
                   :vistoria="vistoria"
+                  :view-only="props.viewOnly"
                   @save="handleSaveFromSubTab"
                   @update="handleUpdateVistoria"
                 />
@@ -55,6 +61,7 @@
               <div v-else-if="Number(activeTab) === 5">
                 <RatHistory
                   :events="historico"
+                  :view-only="props.viewOnly"
                   @add-observation="handleAddObservation"
                   @update="handleUpdateHistorico"
                   @save="handleSaveFromSubTab"
@@ -66,6 +73,7 @@
                 <RatAttachments
                   :rat-id="rat?.id"
                   :anexos="anexos"
+                  :view-only="props.viewOnly"
                   @add="handleAddAnexo"
                   @remove="handleRemoveAnexo"
                   @update="handleUpdateAnexos"
@@ -106,6 +114,10 @@ const props = defineProps({
   rat: {
     type: Object,
     default: () => ({}),
+  },
+  viewOnly: {
+    type: Boolean,
+    default: false,
   },
   recursos: {
     type: Array,
@@ -154,6 +166,7 @@ const {
   tabs,
   salvarRat,
   salvarRascunho,
+  finalizarRat,
   cancelarRat,
 } = useRat({
   rat: props.rat,
@@ -222,6 +235,9 @@ const currentActiveTab = computed(() => {
 // Estado local para controlar visibilidade da aba Vistoria
 const temVistoria = ref(props.rat?.tem_vistoria || false);
 
+// Rastreia o estado atual do formulário principal (aba Dados Gerais)
+const currentFormData = ref(null);
+
 // Configuração das abas
 const tabConfig = computed(() => {
   const tabs = [
@@ -244,8 +260,17 @@ function handleSaveDraft(data) {
   salvarRascunho(data);
 }
 
+function handleFinalize(data) {
+  finalizarRat(data);
+}
+
 function handleCancel() {
   cancelarRat();
+}
+
+// Sincroniza dados do formulário principal para uso nas abas secundárias
+function handleFormDataUpdate(data) {
+  currentFormData.value = data;
 }
 
 function handleAddRecurso(recurso) {
@@ -306,16 +331,17 @@ function handleAddObservation(observation) {
 }
 
 /**
- * Salva o estado atual de todas as abas usando os dados já salvos do formulário principal.
- * Chamado pelos botões Salvar das abas secundárias (Recursos, Envolvidos, Vistoria, Histórico).
+ * Salva o RAT a partir de uma aba secundária (Recursos, Envolvidos, Vistoria, Histórico, Anexos).
+ * Usa os dados mais recentes do formulário principal se já foram preenchidos.
  */
 function handleSaveFromSubTab() {
-  salvarRat({
+  const formData = currentFormData.value ?? {
     dadosGerais: props.rat?.dados_gerais ?? {},
-    comunicacao: props.rat?.comunicacao ?? {},
-    local:       props.rat?.local ?? {},
-    endereco:    props.rat?.endereco ?? {},
-  });
+    comunicacao: props.rat?.comunicacao  ?? {},
+    local:       props.rat?.local        ?? {},
+    endereco:    props.rat?.endereco     ?? {},
+  };
+  salvarRat(formData);
 }
 
 function handleAddAnexo(anexo) {

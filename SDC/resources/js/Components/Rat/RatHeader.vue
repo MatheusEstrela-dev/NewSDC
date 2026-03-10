@@ -60,12 +60,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isCreate: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const pageTitle = computed(() => {
+  if (props.isCreate) return 'Novo RAT';
   if (props.viewOnly) return 'Visualizar RAT';
-  if (props.rat?.protocolo || props.rat?.id) return 'Editar RAT';
-  return 'Novo RAT';
+  return 'Editar RAT';
 });
 
 const formattedLastUpdate = computed(() => {
