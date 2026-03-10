@@ -1,15 +1,10 @@
 # RAT — Refatoração Completa: Backend Clean Code + SOLID + Correções Frontend
 
-**Autora:** Barbara Costa  
-**Data:** 09 de março de 2026  
-**Branch:** `feat/rat-backend`  
-**Stack:** Laravel 12 · PHP 8.3 · Octane/RoadRunner · Vue 3 · Inertia.js · Vite
-
 ---
 
 ## 1. Contexto e Objetivo
 
-O módulo **RAT (Relatório de Atendimento de Tristeza)** precisava de uma refatoração completa do backend seguindo os princípios de **Clean Code** e **SOLID**, além de correções em bugs críticos do frontend (formulário, botões de salvar, sub-abas). O objetivo central foi:
+O módulo **RAT ** precisava de uma refatoração completa do backend seguindo os princípios de **Clean Code** e **SOLID**, além de correções em bugs críticos do frontend (formulário, botões de salvar, sub-abas). O objetivo central foi:
 
 - Garantir que cada classe tenha **responsabilidade única (SRP)**
 - Limitar cada método público a **no máximo 10 linhas** (exceto queries de banco de dados)
