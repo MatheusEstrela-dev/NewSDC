@@ -13,7 +13,7 @@
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
           <h1 class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Novo RAT
+            {{ pageTitle }}
           </h1>
           <span v-if="rat.status" :class="['px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-xs font-semibold border whitespace-nowrap', getStatusClass(rat.status)]">
             {{ getStatusLabel(rat.status) }}
@@ -56,6 +56,16 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  viewOnly: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const pageTitle = computed(() => {
+  if (props.viewOnly) return 'Visualizar RAT';
+  if (props.rat?.protocolo || props.rat?.id) return 'Editar RAT';
+  return 'Novo RAT';
 });
 
 const formattedLastUpdate = computed(() => {

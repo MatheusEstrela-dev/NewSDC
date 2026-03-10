@@ -64,14 +64,31 @@ class RatController extends Controller
     }
 
     /**
-     * Página de detalhe/edição de um RAT.
+     * Página de visualização somente leitura de um RAT.
      */
     public function show(string $id): Response
     {
         $rat = $this->service->findById($id);
         abort_if(is_null($rat), 404, 'RAT não encontrado.');
 
-        return Inertia::render('Rat', ['rat' => new RatResource($rat)]);
+        return Inertia::render('Rat', [
+            'rat'      => new RatResource($rat),
+            'viewOnly' => true,
+        ]);
+    }
+
+    /**
+     * Página de edição de um RAT.
+     */
+    public function edit(string $id): Response
+    {
+        $rat = $this->service->findById($id);
+        abort_if(is_null($rat), 404, 'RAT não encontrado.');
+
+        return Inertia::render('Rat', [
+            'rat'      => new RatResource($rat),
+            'viewOnly' => false,
+        ]);
     }
 
     /** Remove permanentemente o RAT e redireciona para a listagem. */
