@@ -25,17 +25,8 @@ class RatControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // APP_ENV=local no .env do container derruba runningUnitTests(),
-        // por isso desabilitamos CSRF explicitamente nos testes.
         $this->withoutMiddleware(VerifyCsrfToken::class);
-        // Limpa cache do Spatie para que permissões criadas/revertidas não causem
-        // foreign-key violation quando o auto-increment não é revertido no MySQL.
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
-
-    // -----------------------------------------------------------------------
-    // Autenticação: usuário reutilizado em todos os testes
-    // -----------------------------------------------------------------------
 
     /** Lista de permissões usadas neste test case. */
     private const PERMISSIONS = [
@@ -49,11 +40,15 @@ class RatControllerTest extends TestCase
 
     private function actingAsAdmin(): static
     {
-        // Garante que as permissões existem (cria se ausentes)
+        // Cria permissões dentro da transação do teste (serão revertidas no rollback)
+        // firstOrCreate: se já existem no banco (de seed) apenas busca, não recria.
         foreach (self::PERMISSIONS as $perm) {
-            Permission::findOrCreate($perm, 'web');
+            \Spatie\Permission\Models\Permission::firstOrCreate(
+                ['name' => $perm, 'guard_name' => 'web']
+            );
         }
-        app()['cache']->forget('spatie.permission.cache');
+        // Atualiza apenas o cache em memória da request atual, sem afetar o Redis global
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
         $user = User::factory()->create();
         $user->givePermissionTo(self::PERMISSIONS);

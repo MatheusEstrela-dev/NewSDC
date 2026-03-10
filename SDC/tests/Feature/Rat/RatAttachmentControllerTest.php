@@ -25,15 +25,16 @@ class RatAttachmentControllerTest extends TestCase
     {
         parent::setUp();
         $this->withoutMiddleware(VerifyCsrfToken::class);
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     private function actingAsAdmin(): static
     {
         foreach (['rat.protocolos.view', 'rat.protocolos.edit'] as $perm) {
-            Permission::findOrCreate($perm, 'web');
+            \Spatie\Permission\Models\Permission::firstOrCreate(
+                ['name' => $perm, 'guard_name' => 'web']
+            );
         }
-        app()['cache']->forget('spatie.permission.cache');
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
         $user = User::factory()->create();
         $user->givePermissionTo(['rat.protocolos.view', 'rat.protocolos.edit']);

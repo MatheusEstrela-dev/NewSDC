@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use App\Modules\Rat\Models\Rat;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -11,6 +12,17 @@ class RatMockSeeder extends Seeder
     public function run(): void
     {
         $this->command->info('Criando RATs mockados...');
+
+        // Map integer IDs to real UUIDs from the database
+        $userIds = User::orderBy('created_at')->pluck('id')->values();
+        $userMap = [
+            1 => $userIds->get(0),
+            2 => $userIds->get(1),
+            3 => $userIds->get(2),
+            4 => $userIds->get(3),
+            5 => $userIds->get(4),
+            6 => $userIds->get(5),
+        ];
 
         $rats = [
             // ── Em Andamento (ativos) ───────────────────────────────────
@@ -287,6 +299,13 @@ class RatMockSeeder extends Seeder
         foreach ($rats as $ratData) {
             $daysAgo = $ratData['days_ago'];
             unset($ratData['days_ago']);
+
+            // Replace integer created_by with actual UUID
+            if (isset($ratData['created_by']) && isset($userMap[$ratData['created_by']])) {
+                $ratData['created_by'] = $userMap[$ratData['created_by']];
+            } else {
+                $ratData['created_by'] = $userIds->first();
+            }
 
             Rat::updateOrCreate(
                 ['protocolo' => $ratData['protocolo']],

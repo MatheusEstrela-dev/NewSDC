@@ -24,7 +24,6 @@ class RatWriteAndFinalizeControllerTest extends TestCase
     {
         parent::setUp();
         $this->withoutMiddleware(VerifyCsrfToken::class);
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     private const PERMISSIONS = [
@@ -35,10 +34,14 @@ class RatWriteAndFinalizeControllerTest extends TestCase
 
     private function actingAsAdmin(): static
     {
+        $registrar = app(\Spatie\Permission\PermissionRegistrar::class);
+        $registrar->forgetCachedPermissions();
+
         foreach (self::PERMISSIONS as $perm) {
-            Permission::findOrCreate($perm, 'web');
+            \Spatie\Permission\Models\Permission::firstOrCreate(
+                ['name' => $perm, 'guard_name' => 'web']
+            );
         }
-        app()['cache']->forget('spatie.permission.cache');
 
         $user = User::factory()->create();
         $user->givePermissionTo(self::PERMISSIONS);
