@@ -11,8 +11,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * SRP : recebe requisições HTTP de anexos e delega ao RatAttachmentService.
- * DIP : depende do serviço, sem acesso direto a Storage ou Str.
+ * Recebe requisições HTTP de anexos e delega ao RatAttachmentService.
+ * Depende do serviço, sem acesso direto a Storage ou Str.
  *
  * 2 métodos públicos: store · destroy
  */

@@ -10,10 +10,10 @@ use App\Modules\Rat\Models\Rat;
 use Illuminate\Support\Facades\DB;
 
 /**
- * SRP : persiste alterações em RATs — criação, atualização, rascunho e finalização.
- * DIP : depende de RatRepositoryInterface e RatProtocoloService (abstrações).
+ * Persiste alterações em RATs — criação, atualização, rascunho e finalização.
+ * Depende de RatRepositoryInterface e RatProtocoloService (abstrações).
  *
- * 4 métodos públicos:
+ * 4 métodos púблicos:
  *   create()    — cria RAT em branco com protocolo único (transação)
  *   update()    — persiste dados com status EM_ANDAMENTO
  *   saveDraft() — persiste dados mantendo status RASCUNHO

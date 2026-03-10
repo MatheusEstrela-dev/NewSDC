@@ -13,8 +13,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 /**
  * Implementação Eloquent do repositório de RAT.
  *
- * SRP : acesso a dados via Eloquent — sem lógica de negócio.
- * DIP : implementa RatRepositoryInterface; services dependem da abstração.
+ * Responsabilidade única: acesso a dados via Eloquent — sem lógica de negócio.
+ * Inversão de Dependência: implementa RatRepositoryInterface; services dependem da abstração.
  */
 class EloquentRatRepository implements RatRepositoryInterface
 {

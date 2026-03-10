@@ -8,7 +8,7 @@ use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 
 /**
- * SRP: gera números de protocolo únicos e sequenciais para RATs.
+ * Gera números de protocolo únicos e sequenciais para RATs.
  *
  * Formato: RAT-AAAA-NNNNN  (ex.: RAT-2026-00042)
  * Usa SELECT ... FOR UPDATE dentro de transação para garantir unicidade

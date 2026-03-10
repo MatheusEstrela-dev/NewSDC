@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * SRP: gerencia upload e remoção de arquivos anexos de um RAT.
+ * Gerencia upload e remoção de arquivos anexos de um RAT.
  *
  * Responsável por:
  *  - Persistir arquivos no disco (storage/app/public/rat/{id}/)

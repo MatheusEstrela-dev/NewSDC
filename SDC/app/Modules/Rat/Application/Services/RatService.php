@@ -15,8 +15,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * Orquestrador da camada de aplicação do módulo RAT.
  *
- * SRP : coordena casos de uso sem lógica de negócio própria.
- * DIP : depende de interfaces e services especializados.
+ * Responsabilidade única: coordena casos de uso sem lógica de negócio própria.
+ * Inversão de Dependência: depende de interfaces e services especializados.
  *
  * 5 métodos públicos: createNew · getIndexData · findById · delete · export
  * Finalização  → RatWriteService (chamado diretamente pelo RatFinalizeController).

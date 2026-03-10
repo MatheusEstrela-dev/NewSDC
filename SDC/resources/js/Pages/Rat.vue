@@ -54,7 +54,7 @@
               <!-- Aba 5: Histórico -->
               <div v-else-if="Number(activeTab) === 5">
                 <RatHistory
-                  :events="historyEvents"
+                  :events="historico"
                   @add-observation="handleAddObservation"
                   @update="handleUpdateHistorico"
                   @save="handleSaveFromSubTab"
@@ -119,7 +119,7 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-  historyEvents: {
+  historico: {
     type: Array,
     default: () => [],
   },
@@ -149,18 +149,18 @@ const {
   recursos: recursosState,
   envolvidos: envolvidosState,
   vistoria: vistoriaState,
-  historyEvents: historyEventsState,
+  historico: historicoEstado,
   anexos: anexosState,
   tabs,
-  saveRat,
-  saveDraft,
-  cancelRat,
+  salvarRat,
+  salvarRascunho,
+  cancelarRat,
 } = useRat({
   rat: props.rat,
   recursos: props.rat?.recursos ?? props.recursos ?? [],
   envolvidos: props.rat?.envolvidos ?? props.envolvidos ?? [],
   vistoria: props.rat?.vistoria ?? props.vistoria ?? {},
-  historyEvents: props.rat?.historico ?? props.historyEvents ?? [],
+  historico: props.rat?.historico ?? props.historico ?? [],
   anexos: props.rat?.anexos ?? props.anexos ?? [],
   activeTab: initialTab,
 });
@@ -197,11 +197,11 @@ const vistoria = computed(() => {
   return vistoriaState.value || {};
 });
 
-const historyEvents = computed(() => {
-  if (historyEventsState.value?.length > 0) return historyEventsState.value;
+const historico = computed(() => {
+  if (historicoEstado.value?.length > 0) return historicoEstado.value;
   if (Array.isArray(props.rat?.historico) && props.rat.historico.length > 0) return props.rat.historico;
-  if (props.historyEvents?.length > 0) return props.historyEvents;
-  return historyEventsState.value || [];
+  if (props.historico?.length > 0) return props.historico;
+  return historicoEstado.value || [];
 });
 
 const anexos = computed(() => {
@@ -237,15 +237,15 @@ const tabConfig = computed(() => {
 
 // Handlers
 function handleSave(data) {
-  saveRat(data);
+  salvarRat(data);
 }
 
 function handleSaveDraft(data) {
-  saveDraft(data);
+  salvarRascunho(data);
 }
 
 function handleCancel() {
-  cancelRat();
+  cancelarRat();
 }
 
 function handleAddRecurso(recurso) {
@@ -291,14 +291,14 @@ function handleUpdateVistoria(data) {
 }
 
 function handleUpdateHistorico(data) {
-  historyEventsState.value = data;
+  historicoEstado.value = data;
 }
 
 function handleAddObservation(observation) {
-  if (!Array.isArray(historyEventsState.value)) {
-    historyEventsState.value = [];
+  if (!Array.isArray(historicoEstado.value)) {
+    historicoEstado.value = [];
   }
-  historyEventsState.value.unshift({
+  historicoEstado.value.unshift({
     id: Date.now(),
     ...observation,
     created_at: new Date().toISOString(),
@@ -310,7 +310,7 @@ function handleAddObservation(observation) {
  * Chamado pelos botões Salvar das abas secundárias (Recursos, Envolvidos, Vistoria, Histórico).
  */
 function handleSaveFromSubTab() {
-  saveRat({
+  salvarRat({
     dadosGerais: props.rat?.dados_gerais ?? {},
     comunicacao: props.rat?.comunicacao ?? {},
     local:       props.rat?.local ?? {},

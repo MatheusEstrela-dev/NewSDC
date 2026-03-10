@@ -9,8 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Responsabilidade única: construir filtros de query para RAT.
- *
- * SOLID - SRP: só aplica filtros, sem acesso direto ao Model.
+ * Só aplica filtros, sem acesso direto ao Model.
  */
 class RatFilterService
 {

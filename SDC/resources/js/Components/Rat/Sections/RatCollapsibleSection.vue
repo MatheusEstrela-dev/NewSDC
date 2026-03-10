@@ -1,14 +1,14 @@
 <template>
-  <div class="rat-section-card" :class="{ 'rat-section-collapsed': !isExpanded }">
+  <div class="rat-section-card" :class="{ 'rat-section-collapsed': !estaExpandido }">
     <!-- Header clicavel -->
     <div
       class="rat-section-header cursor-pointer select-none"
-      @click="toggle"
+      @click="alternar"
       role="button"
-      :aria-expanded="isExpanded"
+      :aria-expanded="estaExpandido"
       tabindex="0"
-      @keydown.enter="toggle"
-      @keydown.space.prevent="toggle"
+      @keydown.enter="alternar"
+      @keydown.space.prevent="alternar"
     >
       <div :class="['rat-section-icon', iconClass]">
         <slot name="icon">
@@ -24,7 +24,7 @@
       </div>
 
       <!-- Indicador de status quando colapsado -->
-      <div v-if="!isExpanded && statusText" class="hidden sm:block text-xs text-slate-400 mr-2">
+      <div v-if="!estaExpandido && statusText" class="hidden sm:block text-xs text-slate-400 mr-2">
         {{ statusText }}
       </div>
 
@@ -32,7 +32,7 @@
       <div class="flex-shrink-0 ml-2">
         <svg
           class="w-5 h-5 text-slate-400 transition-transform duration-200"
-          :class="{ 'rotate-180': isExpanded }"
+          :class="{ 'rotate-180': estaExpandido }"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -51,7 +51,7 @@
       leave-from-class="opacity-100 max-h-[2000px]"
       leave-to-class="opacity-0 max-h-0"
     >
-      <div v-show="isExpanded" class="rat-section-content overflow-hidden">
+      <div v-show="estaExpandido" class="rat-section-content overflow-hidden">
         <slot></slot>
       </div>
     </Transition>
@@ -88,7 +88,7 @@ const props = defineProps({
   },
 });
 
-const { isExpanded, toggle } = useCollapsible(props.sectionId, props.defaultExpanded);
+const { estaExpandido, alternar } = useCollapsible(props.sectionId, props.defaultExpanded);
 </script>
 
 <style scoped>

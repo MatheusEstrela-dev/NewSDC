@@ -1,0 +1,9 @@
+
+<?php echo e($slot); ?>
+
+
+
+<?php
+    \Native\Mobile\Edge\Edge::endContext($contextIndex, $type, $props);
+?>
+<?php /**PATH /var/www/vendor/nativephp/mobile/resources/jump/views/native-placeholder-with-children.blade.php ENDPATH**/ ?>

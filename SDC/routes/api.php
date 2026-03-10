@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\V1\Integration\DynamicIntegrationController;
 use App\Http\Controllers\Api\HealthCheckController;
 use App\Http\Controllers\Api\LogViewerController;
 use App\Http\Controllers\Api\V1\LogViewerController as LogViewerV1Controller;
+use App\Http\Controllers\Api\RatNovoController;
+use App\Http\Controllers\Api\RatAuditController;
 
 /*
 |--------------------------------------------------------------------------
@@ -75,6 +77,19 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Módulo RAT
     Route::prefix('rat')->name('api.v1.rat.')->group(function () {
         Route::apiResource('protocolos', ProtocoloController::class);
+    });
+
+    // Módulo RAT — Nova Estrutura (RatOcorrencia + relatos polimórficos)
+    Route::prefix('rat-novo')->name('api.v1.rat-novo.')->group(function () {
+        Route::get('/', [RatNovoController::class, 'index'])->name('index');
+        Route::get('/{id}', [RatNovoController::class, 'show'])->name('show');
+        Route::get('/{id}/power-bi', [RatNovoController::class, 'powerBiData'])->name('power-bi');
+    });
+
+    // Módulo RAT — Auditoria
+    Route::prefix('rat-audit')->name('api.v1.rat-audit.')->group(function () {
+        Route::get('/', [RatAuditController::class, 'index'])->name('index');
+        Route::get('/{id}', [RatAuditController::class, 'show'])->name('show');
     });
 
     // Integração entre Módulos

@@ -9,10 +9,9 @@ use App\Modules\Rat\Services\RatWriteService;
 use Illuminate\Http\RedirectResponse;
 
 /**
- * Single-action controller — SRP: finaliza um RAT.
+ * Controlador de ação única — Responsabilidade única: finaliza um RAT.
  *
- * Única responsabilidade: receber PATCH /rat/{id}/finalize,
- * delegar ao RatWriteService e redirecionar.
+ * Recebe PATCH /rat/{id}/finalize, delega ao RatWriteService e redireciona.
  */
 class RatFinalizeController extends Controller
 {

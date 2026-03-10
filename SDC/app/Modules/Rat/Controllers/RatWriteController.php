@@ -12,8 +12,8 @@ use Illuminate\Http\RedirectResponse;
 /**
  * Controller de escrita do módulo RAT — atualização e rascunho.
  *
- * SOLID - SRP: só lida com operações de escrita (PUT/PATCH).
- * SOLID - DIP: depende de RatWriteService, não do repositório diretamente.
+ * Responsabilidade única: lida apenas com operações de escrita (PUT/PATCH).
+ * Inversão de Dependência: depende de RatWriteService, não do repositório diretamente.
  */
 class RatWriteController extends Controller
 {

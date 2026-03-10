@@ -9,8 +9,7 @@ use App\Modules\Rat\Models\Rat;
 
 /**
  * Responsabilidade única: calcular estatísticas de RATs do banco real.
- *
- * SOLID - SRP: só calcula contagens, sem filtros ou CRUD.
+ * Só calcula contagens, sem filtros ou CRUD.
  */
 class RatStatisticsService
 {

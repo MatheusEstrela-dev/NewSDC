@@ -14,8 +14,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * Controller de extração de dados do módulo RAT.
  *
- * SOLID - SRP: responsável pelos endpoints de dados (JSON para print e export CSV).
- * Separado do RatController para manter cada controller com ≤ 5 métodos públicos.
+ * Responsabilidade única: endpoints de dados (JSON para impressão e export CSV).
+ * Separado do RatController para manter cada controller com no máximo 5 métodos púблicos.
  */
 class RatDataController extends Controller
 {

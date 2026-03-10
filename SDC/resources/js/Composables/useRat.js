@@ -13,7 +13,7 @@ export function useRat({
     recursos: initialRecursos = [],
     envolvidos: initialEnvolvidos = [],
     vistoria: initialVistoria = {},
-    historyEvents: initialHistoryEvents = [],
+    historico: historicoInicial = [],
     anexos: initialAnexos = [],
     activeTab = 1,
 } = {}) {
@@ -22,7 +22,7 @@ export function useRat({
     const recursos      = ref(Array.isArray(initialRecursos) ? [...initialRecursos] : (initialRecursos ?? {}));
     const envolvidos    = ref([...(Array.isArray(initialEnvolvidos) ? initialEnvolvidos : [])]);
     const vistoria      = ref({ ...(initialVistoria ?? {}) });
-    const historyEvents = ref(Array.isArray(initialHistoryEvents) ? [...initialHistoryEvents] : (initialHistoryEvents ?? {}));
+    const historico = ref(Array.isArray(historicoInicial) ? [...historicoInicial] : (historicoInicial ?? {}));
     const anexos        = ref([...(Array.isArray(initialAnexos) ? initialAnexos : [])]);
 
     // Sistema de abas
@@ -32,7 +32,7 @@ export function useRat({
      * Finaliza o RAT (status → em_andamento), persistindo todos os dados.
      * @param {Object} formData  - dados do formulário principal (dadosGerais, comunicacao, local, endereco)
      */
-    function saveRat(formData = {}) {
+    function salvarRat(formData = {}) {
         const data = {
             dadosGerais: formData.dadosGerais  ?? {},
             comunicacao: formData.comunicacao  ?? {},
@@ -41,7 +41,7 @@ export function useRat({
             recursos:    recursos.value,
             envolvidos:  envolvidos.value,
             vistoria:    vistoria.value,
-            historico:   historyEvents.value,
+            historico:   historico.value,
         };
         if (!rat.value?.id) {
             router.post(route('rat.store'), data, { preserveScroll: true });
@@ -54,7 +54,7 @@ export function useRat({
      * Salva o RAT como rascunho (status mantido em rascunho).
      * @param {Object} formData  - dados do formulário principal
      */
-    function saveDraft(formData = {}) {
+    function salvarRascunho(formData = {}) {
         const data = {
             dadosGerais: formData.dadosGerais  ?? {},
             comunicacao: formData.comunicacao  ?? {},
@@ -63,7 +63,7 @@ export function useRat({
             recursos:    recursos.value,
             envolvidos:  envolvidos.value,
             vistoria:    vistoria.value,
-            historico:   historyEvents.value,
+            historico:   historico.value,
         };
         if (!rat.value?.id) {
             router.post(route('rat.store'), data, { preserveScroll: true });
@@ -75,7 +75,7 @@ export function useRat({
     /**
      * Cancela e retorna para a listagem.
      */
-    function cancelRat() {
+    function cancelarRat() {
         router.visit(route('rat.index'));
     }
 
@@ -84,11 +84,11 @@ export function useRat({
         recursos,
         envolvidos,
         vistoria,
-        historyEvents,
+        historico,
         anexos,
         tabs,
-        saveRat,
-        saveDraft,
-        cancelRat,
+        salvarRat,
+        salvarRascunho,
+        cancelarRat,
     };
 }

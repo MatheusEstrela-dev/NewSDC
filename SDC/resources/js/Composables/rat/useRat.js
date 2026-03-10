@@ -7,8 +7,8 @@ import { useTabs } from '../core/useTabs';
 
 /**
  * Composable principal do RAT
- * Orchestrates outros composables e gerencia dados do RAT
- * Single Responsibility: Coordenar lógica do RAT
+ * Orquestra outros composables e gerencia dados do RAT
+ * Responsabilidade Única: Coordenar lógica do RAT
  */
 export function useRat(initialData = {}) {
   const tabs = useTabs(initialData.activeTab || 1);
@@ -40,7 +40,7 @@ export function useRat(initialData = {}) {
   const vistoria = ref(initialData.vistoria || {});
 
   // Histórico de eventos
-  const historyEvents = ref(initialData.historyEvents || [
+  const historico = ref(initialData.historico || [
     {
       id: 1,
       tipo: 'criacao',
@@ -57,7 +57,7 @@ export function useRat(initialData = {}) {
   /**
    * Salva o RAT
    */
-  async function saveRat(data) {
+  async function salvarRat(data) {
     const payload = {
       ...rat.value,
       recursos: recursos.value,
@@ -87,24 +87,28 @@ export function useRat(initialData = {}) {
       }
     } else {
       // Se estiver online, envia via Inertia
-      router.post(route('rat.sync'), payload, {
-        preserveScroll: true,
-        preserveState: true,
-        onSuccess: () => {
-          // Limpa ou atualiza estado se necessário
-        },
-        onError: (errors) => {
-          // Fallback: se falhar por rede (não validação), salva offline?
-          // Por simplicidade, mantemos o erro visível
-        }
-      });
+      if (!rat.value?.id) {
+        router.post(route('rat.store'), payload, {
+          preserveScroll: true,
+          preserveState: true,
+          onSuccess: () => {},
+          onError: () => {},
+        });
+      } else {
+        router.put(route('rat.update', rat.value.id), payload, {
+          preserveScroll: true,
+          preserveState: true,
+          onSuccess: () => {},
+          onError: () => {},
+        });
+      }
     }
   }
 
   /**
    * Salva como rascunho
    */
-  async function saveDraft(data) {
+  async function salvarRascunho(data) {
     // TODO: Implementar chamada à API
     // router.post('/rat/draft', rat.value);
   }
@@ -112,14 +116,14 @@ export function useRat(initialData = {}) {
   /**
    * Cancela o RAT e retorna para a listagem
    */
-  function cancelRat() {
+  function cancelarRat() {
     router.visit(route('rat.index'));
   }
 
   /**
    * Adiciona recurso
    */
-  function addRecurso(recurso) {
+  function adicionarRecurso(recurso) {
     recursos.value.push({
       id: Date.now(),
       ...recurso,
@@ -129,7 +133,7 @@ export function useRat(initialData = {}) {
   /**
    * Remove recurso
    */
-  function removeRecurso(id) {
+  function removerRecurso(id) {
     const index = recursos.value.findIndex(r => r.id === id);
     if (index > -1) {
       recursos.value.splice(index, 1);
@@ -139,7 +143,7 @@ export function useRat(initialData = {}) {
   /**
    * Adiciona envolvido
    */
-  function addEnvolvido(envolvido) {
+  function adicionarEnvolvido(envolvido) {
     envolvidos.value.push({
       id: Date.now(),
       ...envolvido,
@@ -149,7 +153,7 @@ export function useRat(initialData = {}) {
   /**
    * Remove envolvido
    */
-  function removeEnvolvido(id) {
+  function removerEnvolvido(id) {
     const index = envolvidos.value.findIndex(e => e.id === id);
     if (index > -1) {
       envolvidos.value.splice(index, 1);
@@ -159,15 +163,15 @@ export function useRat(initialData = {}) {
   /**
    * Salva vistoria
    */
-  function saveVistoria(data) {
+  function salvarVistoria(data) {
     Object.assign(vistoria.value, data);
   }
 
   /**
    * Adiciona observação ao histórico
    */
-  function addObservation(observation) {
-    historyEvents.value.unshift({
+  function adicionarObservacao(observation) {
+    historico.value.unshift({
       id: Date.now(),
       tipo: 'observacao',
       titulo: 'Nova observação',
@@ -180,7 +184,7 @@ export function useRat(initialData = {}) {
   /**
    * Adiciona anexo
    */
-  function addAnexo(anexo) {
+  function adicionarAnexo(anexo) {
     anexos.value.push({
       id: Date.now(),
       ...anexo,
@@ -190,7 +194,7 @@ export function useRat(initialData = {}) {
   /**
    * Remove anexo
    */
-  function removeAnexo(id) {
+  function removerAnexo(id) {
     const index = anexos.value.findIndex(a => a.id === id);
     if (index > -1) {
       anexos.value.splice(index, 1);
@@ -203,25 +207,25 @@ export function useRat(initialData = {}) {
     recursos,
     envolvidos,
     vistoria,
-    historyEvents,
+    historico,
     anexos,
 
     // Composables
     tabs,
     modal,
 
-    // Methods
-    saveRat,
-    saveDraft,
-    cancelRat,
-    addRecurso,
-    removeRecurso,
-    addEnvolvido,
-    removeEnvolvido,
-    saveVistoria,
-    addObservation,
-    addAnexo,
-    removeAnexo,
+    // Métodos
+    salvarRat,
+    salvarRascunho,
+    cancelarRat,
+    adicionarRecurso,
+    removerRecurso,
+    adicionarEnvolvido,
+    removerEnvolvido,
+    salvarVistoria,
+    adicionarObservacao,
+    adicionarAnexo,
+    removerAnexo,
   };
 }
 

@@ -16,8 +16,8 @@ use Inertia\Response;
 /**
  * Controller web do módulo RAT — rotas de navegação e ações de escrita.
  *
- * SOLID - SRP: só responde às ações web (index, show, destroy, finalize).
- * SOLID - DIP: depende do RatService (camada de aplicação), não de infraestrutura.
+ * Responsabilidade única: responde às ações web (index, show, destroy, finalize).
+ * Inversão de Dependência: depende do RatService (camada de aplicação), não de infraestrutura.
  */
 class RatController extends Controller
 {
