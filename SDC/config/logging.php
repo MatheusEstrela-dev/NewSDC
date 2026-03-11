@@ -3,7 +3,6 @@
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
-use Monolog\Processor\PsrLogMessageProcessor;
 
 return [
 
@@ -31,10 +30,7 @@ return [
     |
     */
 
-    'deprecations' => [
-        'channel' => env('LOG_DEPRECATIONS_CHANNEL', 'null'),
-        'trace' => false,
-    ],
+    'deprecations' => env('LOG_DEPRECATIONS_CHANNEL', 'null'),
 
     /*
     |--------------------------------------------------------------------------
@@ -54,126 +50,32 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => env('APP_ENV') === 'production'
-                ? ['json_stderr', 'daily']
-                : ['daily', 'stderr', 'events'],
+            'channels' => ['daily', 'db'],
             'ignore_exceptions' => false,
         ],
 
         'single' => [
             'driver' => 'single',
-            'path' => storage_path('logs/laravel.log'),
+            'path' => storage_path('logs/laravel_single.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'replace_placeholders' => true,
         ],
 
+        
+
+        # log do usuário
+        'usuario' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/usuario.log'),
+            'level' => 'info',
+        ],
+        
+        # diario da aplicação
         'daily' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/laravel.log'),
+            'path' => storage_path('logs/laravel_diario.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 14,
-            'replace_placeholders' => true,
-        ],
-
-        // Canal JSON para produção (Docker/Kubernetes/Loki)
-        'json_stderr' => [
-            'driver' => 'monolog',
-            'level' => env('LOG_LEVEL', 'debug'),
-            'handler' => StreamHandler::class,
-            'formatter' => Monolog\Formatter\JsonFormatter::class,
-            'with' => [
-                'stream' => 'php://stderr',
-            ],
-            'processors' => [
-                PsrLogMessageProcessor::class,
-                Monolog\Processor\IntrospectionProcessor::class,
-                Monolog\Processor\WebProcessor::class,
-                Monolog\Processor\MemoryUsageProcessor::class,
-            ],
-        ],
-
-        // Canal para eventos do sistema (ActivityLogger)
-        'events' => [
-            'driver' => env('APP_ENV') === 'production' ? 'monolog' : 'daily',
-            'path' => storage_path('logs/events.log'),
-            'level' => env('LOG_LEVEL', 'debug'),
-            'days' => 30,
-            'replace_placeholders' => true,
-            'formatter' => env('APP_ENV') === 'production'
-                ? Monolog\Formatter\JsonFormatter::class
-                : null,
-            'handler' => env('APP_ENV') === 'production'
-                ? StreamHandler::class
-                : null,
-            'processors' => env('APP_ENV') === 'production'
-                ? [PsrLogMessageProcessor::class]
-                : [],
-        ],
-
-        // Canal para erros críticos (sistema 24/7)
-        'critical' => [
-            'driver' => 'monolog',
-            'level' => 'critical',
-            'handler' => StreamHandler::class,
-            'formatter' => Monolog\Formatter\JsonFormatter::class,
-            'with' => [
-                'stream' => storage_path('logs/critical.log'),
-            ],
-            'processors' => [
-                PsrLogMessageProcessor::class,
-                Monolog\Processor\IntrospectionProcessor::class,
-            ],
-        ],
-
-        // Canal para queries lentas (JSON estruturado)
-        'queries' => [
-            'driver' => 'monolog',
-            'level' => 'debug',
-            'handler' => StreamHandler::class,
-            'formatter' => Monolog\Formatter\JsonFormatter::class,
-            'with' => [
-                'stream' => storage_path('logs/queries.log'),
-            ],
-            'processors' => [PsrLogMessageProcessor::class],
-        ],
-
-        // Canal para jobs falhados (JSON estruturado)
-        'jobs' => [
-            'driver' => 'monolog',
-            'level' => 'error',
-            'handler' => StreamHandler::class,
-            'formatter' => Monolog\Formatter\JsonFormatter::class,
-            'with' => [
-                'stream' => storage_path('logs/jobs.log'),
-            ],
-            'processors' => [PsrLogMessageProcessor::class],
-        ],
-
-        // Canal para webhooks (recebimento e envio)
-        'webhooks' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/webhooks/webhooks.log'),
-            'level' => 'info',
-            'days' => 30,
-            'replace_placeholders' => true,
-        ],
-
-        // Canal para circuit breaker events
-        'circuit_breaker' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/circuit_breaker.log'),
-            'level' => 'warning',
-            'days' => 14,
-            'replace_placeholders' => true,
-        ],
-
-        // Canal para rate limiting events
-        'rate_limit' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/rate_limit.log'),
-            'level' => 'warning',
-            'days' => 7,
-            'replace_placeholders' => true,
+            'permission' => 0644,
         ],
 
         'slack' => [
@@ -182,19 +84,16 @@ return [
             'username' => 'Laravel Log',
             'emoji' => ':boom:',
             'level' => env('LOG_LEVEL', 'critical'),
-            'replace_placeholders' => true,
         ],
 
         'papertrail' => [
             'driver' => 'monolog',
             'level' => env('LOG_LEVEL', 'debug'),
-            'handler' => env('LOG_PAPERTRAIL_HANDLER', SyslogUdpHandler::class),
+            'handler' => SyslogUdpHandler::class,
             'handler_with' => [
                 'host' => env('PAPERTRAIL_URL'),
                 'port' => env('PAPERTRAIL_PORT'),
-                'connectionString' => 'tls://'.env('PAPERTRAIL_URL').':'.env('PAPERTRAIL_PORT'),
             ],
-            'processors' => [PsrLogMessageProcessor::class],
         ],
 
         'stderr' => [
@@ -205,20 +104,16 @@ return [
             'with' => [
                 'stream' => 'php://stderr',
             ],
-            'processors' => [PsrLogMessageProcessor::class],
         ],
 
         'syslog' => [
             'driver' => 'syslog',
             'level' => env('LOG_LEVEL', 'debug'),
-            'facility' => LOG_USER,
-            'replace_placeholders' => true,
         ],
 
         'errorlog' => [
             'driver' => 'errorlog',
             'level' => env('LOG_LEVEL', 'debug'),
-            'replace_placeholders' => true,
         ],
 
         'null' => [
@@ -226,9 +121,32 @@ return [
             'handler' => NullHandler::class,
         ],
 
-        'emergency' => [
-            'path' => storage_path('logs/laravel.log'),
+        // Log to MySQL
+        'db' => [
+            'driver' => 'custom',
+            'handler' => App\Models\Logging\LogHandler::class,
+            'via' => App\Logging\LogCustomMessage::class,
+            'level' => 'info',
         ],
+
+        
+
+        # navegação do usuário
+        'navegacao' => [
+            'driver' => 'daily',
+            'tap' => [App\Logging\CustomLogFilenames::class],
+            'path' => storage_path('logs/user/navegacao.log'),
+            'level' => 'info',
+        ],
+
+        # registro de login de usuario
+        'login' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/login.log'),
+            'level' => 'info',
+        ],
+
+
     ],
 
 ];
