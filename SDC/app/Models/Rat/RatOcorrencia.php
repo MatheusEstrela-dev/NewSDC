@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Rat\RatOcorrenciaHistorico;
 
 /**
  * Entidade principal da nova estrutura de RAT.
@@ -65,6 +66,13 @@ class RatOcorrencia extends Model
     public function ocorrenciaOrigem(): BelongsTo
     {
         return $this->belongsTo(self::class, 'ocorrencia_origem_id');
+    }
+
+    /** Timeline de eventos desta ocorrência (imutável, crescente). */
+    public function historico(): HasMany
+    {
+        return $this->hasMany(RatOcorrenciaHistorico::class, 'ocorrencia_id')
+                    ->orderBy('created_at', 'asc');
     }
 
     // -------------------------------------------------------------------------

@@ -11,6 +11,7 @@ use App\Modules\Rat\Services\RatAttachmentService;
 use App\Modules\Rat\Services\RatProtocoloService;
 use App\Services\Rat\RatAuditService;
 use App\Services\Rat\RatBiService;
+use App\Services\Rat\RatHistoricoService;
 use App\Services\Rat\RatNovoService;
 use App\Services\Rat\RatOcorrenciaService;
 use App\Services\Rat\RatRecursoService;
@@ -40,6 +41,9 @@ class RatServiceProvider extends ServiceProvider
         $this->app->singleton(RatBiService::class);
         $this->app->singleton(RatRecursoService::class);
         $this->app->singleton(RatTrackingService::class);
+
+        // Histórico dedicado por ocorrência (timeline estruturada)
+        $this->app->singleton(RatHistoricoService::class);
     }
 
     public function boot(): void
@@ -58,7 +62,4 @@ class RatServiceProvider extends ServiceProvider
         }
     }
 }
-
-
-
 

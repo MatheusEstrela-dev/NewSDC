@@ -14,6 +14,9 @@ class DatabaseSeeder extends Seeder
         // 1. Roles e Permissões (base do sistema)
         $this->call(RolesAndPermissionsSeeder::class);
 
+        // 1b. Permissões específicas do módulo RAT (roles + 9 permissões)
+        $this->call(RatPermissionsSeeder::class);
+
         // 2. Órgãos (hierarquia CEDEC > REDEC > COMPDEC)
         $this->call(OrgaosSeeder::class);
 

@@ -3,6 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Pae\EmpreendimentoController;
+use App\Http\Controllers\Api\V1\Rat\HistoricoController as RatHistoricoApiController;
+use App\Http\Controllers\Api\V1\Rat\OcorrenciaController as RatOcorrenciaApiController;
 use App\Http\Controllers\Api\V1\Rat\ProtocoloController;
 use App\Http\Controllers\Api\V1\Integracao\IntegracaoController;
 use App\Http\Controllers\Api\V1\PowerBI\TokenController;
@@ -74,9 +76,26 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::apiResource('empreendimentos', EmpreendimentoController::class);
     });
 
-    // Módulo RAT
+    // Módulo RAT — Protocolos legados
     Route::prefix('rat')->name('api.v1.rat.')->group(function () {
         Route::apiResource('protocolos', ProtocoloController::class);
+    });
+
+    // Módulo RAT — Ocorrências (nova estrutura polimórfica, acesso mobile/API)
+    // Requer permissão: rat.api.access
+    Route::prefix('rat/ocorrencias')->name('api.v1.rat.ocorrencias.')->middleware('can:rat.api.access')->group(function () {
+        Route::get('/',            [RatOcorrenciaApiController::class, 'index'])  ->name('index');
+        Route::post('/',           [RatOcorrenciaApiController::class, 'store'])  ->name('store');
+        Route::get('/{id}',        [RatOcorrenciaApiController::class, 'show'])   ->name('show');
+        Route::put('/{id}',        [RatOcorrenciaApiController::class, 'update']) ->name('update');
+        Route::patch('/{id}/finalizar', [RatOcorrenciaApiController::class, 'finalize'])->name('finalize');
+        Route::delete('/{id}',     [RatOcorrenciaApiController::class, 'destroy'])->name('destroy');
+    });
+
+    // Módulo RAT — Histórico de ocorrência (timeline)
+    Route::prefix('rat/ocorrencias/{id}/historico')->name('api.v1.rat.historico.')->middleware('can:rat.historico.view')->group(function () {
+        Route::get('/',        [RatHistoricoApiController::class, 'index']) ->name('index');
+        Route::get('/recent',  [RatHistoricoApiController::class, 'recent'])->name('recent');
     });
 
     // Módulo RAT — Nova Estrutura (RatOcorrencia + relatos polimórficos)
@@ -98,8 +117,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('pae/{paeId}/rat', [IntegracaoController::class, 'getRatByPae'])->name('pae.rat');
     });
 
-    // BI - Dados de Entrada
-    Route::prefix('bi')->name('api.v1.bi.')->group(function () {
+    // BI - Dados de Entrada (requer permissão: rat.bi.view)
+    Route::prefix('bi')->name('api.v1.bi.')->middleware('can:rat.bi.view')->group(function () {
         Route::get('entrada', [EntradaController::class, 'index'])->name('entrada.index');
         Route::get('entrada/{id}', [EntradaController::class, 'show'])->name('entrada.show');
     });

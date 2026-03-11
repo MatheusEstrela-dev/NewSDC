@@ -1,9 +1,13 @@
 <?php
 
-use App\Http\Controllers\Compdec\RatController as CompdecRatController;
 use App\Http\Controllers\Compdec\BoRatController;
 use App\Http\Controllers\Compdec\RatAlvoController;
+use App\Http\Controllers\Compdec\RatController as CompdecRatController;
+use App\Http\Controllers\Compdec\RatDadosGeraisController;
+use App\Http\Controllers\Compdec\RatEnvolvidosController;
 use App\Http\Controllers\Compdec\RatOcorrenciaController;
+use App\Http\Controllers\Compdec\RatRecursoController;
+use App\Http\Controllers\Compdec\RatVistoriaController;
 use App\Models\Rat\RatOcorrencia;
 use App\Modules\Rat\Controllers\RatAttachmentController;
 use App\Modules\Rat\Controllers\RatController;
@@ -52,6 +56,73 @@ Route::prefix('compdec/rat')->name('compdec.rat.')->group(function () {
     Route::patch('/ocorrencias/{ocorrencia}/finalizar', [RatOcorrenciaController::class, 'finalize'])
         ->name('ocorrencias.finalize')
         ->middleware('can:rat.protocolos.finalize');
+
+    // ========================================================================
+    // Relatos polimórficos por ocorrência
+    // Permissão: rat.relatos.manage (create/edit/delete) + rat.protocolos.view (read)
+    // ========================================================================
+    Route::prefix('/ocorrencias/{ocorrencia}')->name('ocorrencias.')->group(function () {
+
+        // Dados Gerais
+        Route::get('/dados-gerais', [RatDadosGeraisController::class, 'show'])
+            ->name('dados-gerais.show')
+            ->middleware('can:rat.protocolos.view');
+
+        Route::post('/dados-gerais', [RatDadosGeraisController::class, 'store'])
+            ->name('dados-gerais.store')
+            ->middleware('can:rat.relatos.manage');
+
+        Route::put('/dados-gerais/{dadosGerais}', [RatDadosGeraisController::class, 'update'])
+            ->name('dados-gerais.update')
+            ->middleware('can:rat.relatos.manage');
+
+        // Envolvidos
+        Route::get('/envolvidos', [RatEnvolvidosController::class, 'index'])
+            ->name('envolvidos.index')
+            ->middleware('can:rat.protocolos.view');
+
+        Route::post('/envolvidos', [RatEnvolvidosController::class, 'store'])
+            ->name('envolvidos.store')
+            ->middleware('can:rat.relatos.manage');
+
+        Route::put('/envolvidos/{envolvido}', [RatEnvolvidosController::class, 'update'])
+            ->name('envolvidos.update')
+            ->middleware('can:rat.relatos.manage');
+
+        Route::delete('/envolvidos/{envolvido}', [RatEnvolvidosController::class, 'destroy'])
+            ->name('envolvidos.destroy')
+            ->middleware('can:rat.relatos.manage');
+
+        // Recursos empregados
+        Route::get('/recursos', [RatRecursoController::class, 'index'])
+            ->name('recursos.index')
+            ->middleware('can:rat.protocolos.view');
+
+        Route::post('/recursos', [RatRecursoController::class, 'store'])
+            ->name('recursos.store')
+            ->middleware('can:rat.relatos.manage');
+
+        Route::put('/recursos/{recurso}', [RatRecursoController::class, 'update'])
+            ->name('recursos.update')
+            ->middleware('can:rat.relatos.manage');
+
+        Route::delete('/recursos/{recurso}', [RatRecursoController::class, 'destroy'])
+            ->name('recursos.destroy')
+            ->middleware('can:rat.relatos.manage');
+
+        // Vistoria técnica
+        Route::get('/vistoria', [RatVistoriaController::class, 'show'])
+            ->name('vistoria.show')
+            ->middleware('can:rat.protocolos.view');
+
+        Route::post('/vistoria', [RatVistoriaController::class, 'store'])
+            ->name('vistoria.store')
+            ->middleware('can:rat.relatos.manage');
+
+        Route::put('/vistoria/{vistoria}', [RatVistoriaController::class, 'update'])
+            ->name('vistoria.update')
+            ->middleware('can:rat.relatos.manage');
+    });
 
     // Controller principal (listagem, criação, edição, exportação)
     Route::get('/export', [CompdecRatController::class, 'exportRats'])

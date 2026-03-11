@@ -20,10 +20,9 @@
 9. [Controllers](#9-controllers)
 10. [Rotas Registradas](#10-rotas-registradas)
 11. [Permissionamento e Policy](#11-permissionamento-e-policy)
-12. [Multi-Tenancy (Base)](#12-multi-tenancy-base)
-13. [Conexões de Banco de Dados](#13-conexões-de-banco-de-dados)
-14. [Fluxo Completo de uma Requisição](#14-fluxo-completo-de-uma-requisição)
-15. [Diagrama de Relacionamentos](#15-diagrama-de-relacionamentos)
+12. [Conexões de Banco de Dados](#12-conexões-de-banco-de-dados)
+13. [Fluxo Completo de uma Requisição](#13-fluxo-completo-de-uma-requisição)
+14. [Diagrama de Relacionamentos](#14-diagrama-de-relacionamentos)
 
 ---
 
@@ -91,8 +90,6 @@ app/
 │   │   ├── RatOcorrenciaController.php ← ocorrências + relatos polimórficos
 │   │   ├── BoRatController.php         ← boletim de ocorrência
 │   │   └── RatAlvoController.php       ← alvos/endereços
-│   ├── Middleware/
-│   │   └── SetTenant.php               ← resolve tenant por request
 │   └── Requests/Rat/
 │       ├── BoRequest.php
 │       ├── RatDadosGeraisRequest.php
@@ -104,7 +101,6 @@ app/
 │       └── RatVistoriaRequest.php
 │
 ├── Models/
-│   ├── Tenant.php                      ← modelo de multi-tenancy
 │   └── Rat/
 │       ├── RatOcorrencia.php           ← entidade principal
 │       ├── RatOcorrenciaRelato.php     ← pivô polimórfico
@@ -132,9 +128,6 @@ app/
 │   ├── RatBiService.php                ← dashboards e métricas
 │   ├── RatAuditService.php             ← auditoria de ações
 │   └── RatTrackingService.php          ← status e linha do tempo
-│
-└── Traits/
-    └── HasTenant.php                   ← GlobalScope de multi-tenancy
 
 database/migrations/
 ├── 2026_02_10_100001_create_rat_ocorrencia_relatos_table.php
@@ -151,8 +144,7 @@ database/migrations/
 ├── 2026_02_10_134052_create_rat_relato_vistoria_table.php
 ├── 2026_02_10_134152_create_rat_veiculos_table.php
 ├── 2026_03_09_200001_drop_rat_legacy_tables.php
-├── 2026_03_10_000002_recreate_rat_polymorphic_tables.php
-└── 2026_03_11_000001_create_tenants_table.php
+└── 2026_03_10_000002_recreate_rat_polymorphic_tables.php
 
 routes/
 └── modules/rat.php                     ← todas as 30 rotas RAT
@@ -215,15 +207,6 @@ ocorrencia_id   FK -> rat_ocorrencias(id) SET NULL
 conteudo_id     BIGINT UNSIGNED NULLABLE
 conteudo_type   VARCHAR(191) NULLABLE   -- FQCN do Model
 created_by      VARCHAR(191) NULLABLE
-created_at, updated_at, deleted_at
-```
-
-### Migration `2026_03_11_000001_create_tenants_table.php`
-
-Cria tabela base de multi-tenancy:
-```sql
-id, nome, slug (UNIQUE), database (nullable), dominio (nullable),
-ativo BOOLEAN DEFAULT 1, config JSON NULLABLE,
 created_at, updated_at, deleted_at
 ```
 
@@ -743,60 +726,7 @@ Estende `BasePolicy` — super-admin recebe `true` automaticamente no `before()`
 
 ---
 
-## 12. Multi-Tenancy (Base)
-
-Implementação própria — sem pacotes externos. Funciona de forma não invasiva.
-
-### `Tenant` Model — `app/Models/Tenant.php`
-
-```php
-class Tenant extends Model
-{
-    use SoftDeletes;
-    protected $table     = 'tenants';
-    protected $fillable  = ['nome', 'slug', 'database', 'dominio', 'ativo', 'config'];
-    protected $casts     = ['ativo' => 'boolean', 'config' => 'array'];
-}
-```
-
-**Resolução em ordem de prioridade** (`resolveFromRequest()`):
-1. Header HTTP `X-Tenant: {slug}` → API/mobile
-2. Subdomínio da request → ex: `compdec.newsdc.gov.br`
-3. `tenant_id` do usuário autenticado
-
-**`getDatabaseConnection()`**: se o tenant tiver banco próprio, configura `database.connections.tenancy.database` em runtime e retorna `'tenancy'`.
-
----
-
-### `SetTenant` Middleware — `app/Http/Middleware/SetTenant.php`
-
-Registrado nos grupos **`web`** e **`api`** do Kernel. Por request:
-1. Resolve o tenant via `Tenant::resolveFromRequest()`
-2. Vincula ao container: `app()->instance('tenant', $tenant)`
-3. Reconfigura conexão `tenancy` se tenant tem banco próprio
-4. Salva `tenant_id` na sessão
-
----
-
-### `HasTenant` Trait — `app/Traits/HasTenant.php`
-
-Adiciona isolamento automático por `tenant_id` a qualquer Model:
-
-```php
-class MinhaEntidade extends Model {
-    use HasTenant;  // adiciona WHERE tenant_id = ? em todas as queries
-}
-```
-
-- `bootHasTenant()` → `GlobalScope('tenant')` + preenche `tenant_id` no evento `creating`
-- `tenant()` → `belongsTo(Tenant::class)`
-- `semFiltroTenant()` → scope para super-admin acessar dados cross-tenant
-
-> O módulo RAT atual **não usa `HasTenant`** — está disponível para quando o isolamento por tenant for ativado.
-
----
-
-## 13. Conexões de Banco de Dados
+## 12. Conexões de Banco de Dados
 
 **Arquivo:** `config/database.php`
 
@@ -805,7 +735,6 @@ class MinhaEntidade extends Model {
 | `mysql` (padrão) | Banco principal da aplicação | `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` |
 | `legacy` | Integração/migração do banco legado | `DB_LEGACY_HOST`, `DB_LEGACY_DATABASE`, `DB_LEGACY_USERNAME` |
 | `carga` | Queries analíticas/BI/ETL — réplica de leitura, `strict: false` | `DB_CARGA_HOST`, `DB_CARGA_DATABASE`, `DB_CARGA_USERNAME` |
-| `tenancy` | Banco por tenant, configurado em runtime pelo `SetTenant` | `DB_TENANCY_HOST`, `DB_TENANCY_DATABASE` |
 
 **Usar a conexão `carga`:**
 ```php
@@ -814,24 +743,22 @@ DB::connection('carga')->table('rat_ocorrencias')->...;
 
 ---
 
-## 14. Fluxo Completo de uma Requisição
+## 13. Fluxo Completo de uma Requisição
 
 ### Criar nova ocorrência — `POST /compdec/rat`
 
 ```
 1. HTTP  POST /compdec/rat
          |
-2. Kernel-> SetTenant::handle() -> resolve tenant (se houver)
+2. Gate  -> can:rat.protocolos.create (Spatie Permission)
          |
-3. Gate  -> can:rat.protocolos.create (Spatie Permission)
-         |
-4. RatController::store(BoRequest $request)
+3. RatController::store(BoRequest $request)
          |   BoRequest::rules() valida numero_bos, historico, prazo_edicao...
          |
-5. RatBoDTO::fromArray($request->validated())
+4. RatBoDTO::fromArray($request->validated())
          |   array -> objeto readonly tipado
          |
-6. RatOcorrenciaService::manageOcorrencia(RatBoDTO)
+5. RatOcorrenciaService::manageOcorrencia(RatBoDTO)
          |   DB::transaction() {
          |     gera numero_bos "2026-00001" se vazio
          |     status = 0 (Rascunho)
@@ -839,12 +766,12 @@ DB::connection('carga')->table('rat_ocorrencias')->...;
          |     RatOcorrencia::create($data)
          |   }
          |
-7. RatRelatoService::manageRelatos($ocorrencia, $relatos)
+6. RatRelatoService::manageRelatos($ocorrencia, $relatos)
          |   (se payload contiver relatos)
          |   delete relatos existentes
          |   RatOcorrenciaRelato::create([conteudo_id, conteudo_type])
          |
-8. redirect()->route('compdec.rat.show', $id)
+7. redirect()->route('compdec.rat.show', $id)
          +-- with('success', 'Ocorrencia RAT criada com sucesso!')
 ```
 
@@ -871,12 +798,9 @@ DB::connection('carga')->table('rat_ocorrencias')->...;
 
 ---
 
-## 15. Diagrama de Relacionamentos
+## 14. Diagrama de Relacionamentos
 
 ```
-tenants
-  +-- id, nome, slug (UNIQUE), database, dominio, ativo, config
-
 rat_ocorrencias                        <- RatOcorrencia
   |  id, numero_bos, status, prazo_edicao, historico
   |  ocorrencia_origem_id (auto-FK), created_by
@@ -925,9 +849,7 @@ rat_bem_afetado / rat_encaminhamento / rat_orgao_acionado / rat_patologia
 | DTOs | **3** | Tipagem estrita HTTP -> Service |
 | Rotas | **30** | Todas com `can:` middleware |
 | Policy | **1** | `RatPolicy` — 6 métodos |
-| Conexões DB | **4** | mysql, legacy, carga, tenancy |
-| Middleware Tenant | **1** | `SetTenant` em web + api |
-| Trait Tenancy | **1** | `HasTenant` pronto para uso |
+| Conexões DB | **3** | mysql, legacy, carga |
 
 ---
 
