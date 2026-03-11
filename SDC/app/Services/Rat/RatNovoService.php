@@ -43,8 +43,7 @@ class RatNovoService
      */
     public function extractDadosGerais(RatOcorrencia $ocorrencia): array
     {
-        return $ocorrencia->relatosMorph()
-            ->get()
+        return $ocorrencia->relatosMorph
             ->map(fn($r) => $r->conteudo)
             ->filter(fn($c) => $c instanceof RatRelatoDadosGerais)
             ->map(fn(RatRelatoDadosGerais $dg) => [
@@ -64,8 +63,7 @@ class RatNovoService
      */
     public function extractEnvolvidos(RatOcorrencia $ocorrencia): array
     {
-        return $ocorrencia->relatosMorph()
-            ->get()
+        return $ocorrencia->relatosMorph
             ->map(fn($r) => $r->conteudo)
             ->filter(fn($c) => $c instanceof RatRelatoEnvolvidos)
             ->map(fn(RatRelatoEnvolvidos $e) => [
@@ -83,8 +81,7 @@ class RatNovoService
      */
     public function extractRecursos(RatOcorrencia $ocorrencia): array
     {
-        return $ocorrencia->relatosMorph()
-            ->get()
+        return $ocorrencia->relatosMorph
             ->map(fn($r) => $r->conteudo)
             ->filter(fn($c) => $c instanceof RatRelatoRecurso)
             ->map(fn(RatRelatoRecurso $rc) => [

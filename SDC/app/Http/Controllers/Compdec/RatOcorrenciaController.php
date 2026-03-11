@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Compdec;
 
 use App\DTOs\Rat\RatBoDTO;
-use App\DTOs\Rat\RatDadosGeraisDTO;
 use App\DTOs\Rat\RatOcorrenciaFiltroDTO;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Rat\RatDadosGeraisRequest;
+use App\Models\Rat\RatOcorrencia;
 use App\Services\Rat\RatOcorrenciaService;
 use App\Services\Rat\RatRelatoService;
 use Illuminate\Http\RedirectResponse;
@@ -42,10 +42,8 @@ class RatOcorrenciaController extends Controller
     }
 
     /** Detalhe completo com relatos polimórficos. */
-    public function show(int $id): Response
+    public function show(RatOcorrencia $ocorrencia): Response
     {
-        $ocorrencia = $this->ocorrenciaService->findOrFail($id);
-
         return Inertia::render('Compdec/Rat/Ocorrencia/Show', [
             'ocorrencia' => $ocorrencia->load('relatosMorph'),
         ]);
@@ -54,7 +52,6 @@ class RatOcorrenciaController extends Controller
     /** Cria ocorrência e seus relatos iniciais em transação. */
     public function store(RatDadosGeraisRequest $request): RedirectResponse
     {
-        $dto        = RatDadosGeraisDTO::fromArray($request->validated());
         $boDto      = RatBoDTO::fromArray($request->only(['numero_bos', 'historico', 'prazo_edicao', 'ocorrencia_origem_id']));
         $ocorrencia = $this->ocorrenciaService->manageOcorrencia($boDto);
 
@@ -68,9 +65,9 @@ class RatOcorrenciaController extends Controller
     }
 
     /** Finaliza a ocorrência. */
-    public function finalize(int $id): RedirectResponse
+    public function finalize(RatOcorrencia $ocorrencia): RedirectResponse
     {
-        $ocorrencia = $this->ocorrenciaService->finalizar($id);
+        $this->ocorrenciaService->finalizar($ocorrencia->id);
 
         return redirect()
             ->route('compdec.rat.ocorrencias.show', $ocorrencia->id)

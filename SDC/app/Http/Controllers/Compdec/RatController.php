@@ -8,8 +8,11 @@ use App\DTOs\Rat\RatBoDTO;
 use App\DTOs\Rat\RatOcorrenciaFiltroDTO;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Rat\BoRequest;
+use App\Models\Rat\RatOcorrencia;
 use App\Services\Rat\RatOcorrenciaService;
+use App\Services\Rat\RatRelatoService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,12 +22,13 @@ use Inertia\Response;
  * Responsabilidade única: coordena ações HTTP para RatOcorrencia.
  * Inversão de Dependência: depende de RatOcorrenciaService (serviço de domínio).
  *
- * Métodos públicos: index · create · store · show · edit · update · destroy · exportarOcorrencias
+ * Métodos públicos: index · create · store · show · edit · update · destroy · finalize · exportRats
  */
 class RatController extends Controller
 {
     public function __construct(
-        private readonly RatOcorrenciaService $service
+        private readonly RatOcorrenciaService $service,
+        private readonly RatRelatoService $relatoService,
     ) {}
 
     /** Listagem paginada de ocorrências com filtros. */
@@ -52,15 +56,19 @@ class RatController extends Controller
             RatBoDTO::fromArray($request->validated())
         );
 
+        if ($request->has('relatos')) {
+            $this->relatoService->manageRelatos($ocorrencia, $request->input('relatos'));
+        }
+
         return redirect()
             ->route('compdec.rat.show', $ocorrencia->id)
             ->with('success', 'Ocorrência RAT criada com sucesso!');
     }
 
     /** Visualização detalhada de uma ocorrência. */
-    public function show(int $id): Response
+    public function show(RatOcorrencia $ocorrencia): Response
     {
-        $ocorrencia = $this->service->findOrFail($id);
+        $ocorrencia->load('relatosMorph');
 
         return Inertia::render('Compdec/Rat/Show', [
             'ocorrencia' => $ocorrencia,
@@ -68,9 +76,9 @@ class RatController extends Controller
     }
 
     /** Formulário de edição. */
-    public function edit(int $id): Response
+    public function edit(RatOcorrencia $ocorrencia): Response
     {
-        $ocorrencia = $this->service->findOrFail($id);
+        $ocorrencia->load('relatosMorph');
 
         return Inertia::render('Compdec/Rat/Edit', [
             'ocorrencia' => $ocorrencia,
@@ -78,15 +86,15 @@ class RatController extends Controller
     }
 
     /** Atualiza dados da ocorrência. */
-    public function update(BoRequest $request, int $id): RedirectResponse
+    public function update(BoRequest $request, RatOcorrencia $ocorrencia): RedirectResponse
     {
         $this->service->manageOcorrencia(
             RatBoDTO::fromArray($request->validated()),
-            $id
+            $ocorrencia->id
         );
 
         return redirect()
-            ->route('compdec.rat.show', $id)
+            ->route('compdec.rat.show', $ocorrencia->id)
             ->with('success', 'Ocorrência atualizada com sucesso!');
     }
 
@@ -94,19 +102,29 @@ class RatController extends Controller
      * Oculta a ocorrência via soft delete (dados preservados no banco).
      * Cascateia o soft delete para todos os relatos e conteúdos relacionados.
      */
-    public function destroy(int $id): RedirectResponse
+    public function destroy(RatOcorrencia $ocorrencia): RedirectResponse
     {
-        $this->service->findOrFail($id)->delete();
+        $ocorrencia->delete();
 
         return redirect()
             ->route('compdec.rat.index')
             ->with('success', 'Ocorrência ocultada com sucesso!');
     }
 
-    /** Exportação CSV de ocorrências filtradas. */
-    public function exportRats(): \Symfony\Component\HttpFoundation\StreamedResponse
+    /** Finaliza a ocorrência — muda status para Finalizado (1). */
+    public function finalize(RatOcorrencia $ocorrencia): RedirectResponse
     {
-        $filtro   = RatOcorrenciaFiltroDTO::fromArray(request()->only(['status', 'numero_bos']), 9999);
+        $this->service->finalizar($ocorrencia->id);
+
+        return redirect()
+            ->route('compdec.rat.show', $ocorrencia->id)
+            ->with('success', 'Ocorrência finalizada com sucesso!');
+    }
+
+    /** Exportação CSV de ocorrências filtradas. */
+    public function exportRats(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $filtro   = RatOcorrenciaFiltroDTO::fromArray($request->only(['status', 'numero_bos']), 9999);
         $filename = 'rat-ocorrencias-' . now()->format('Y-m-d') . '.csv';
 
         return response()->streamDownload(function () use ($filtro) {

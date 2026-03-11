@@ -270,7 +270,7 @@
         </div>
       </div>
 
-      <!-- Empty State - Só aparece quando não há envolvidos e não está editando -->
+      <!-- Estado Vazio - Só aparece quando não há envolvidos e não está editando -->
       <div v-if="localData.length === 0 && envolvidoEditIndex === null" class="text-center py-8 mt-4">
         <p class="text-slate-500 text-sm">Nenhuma pessoa registrada ainda. Preencha o formulário acima para adicionar.</p>
       </div>

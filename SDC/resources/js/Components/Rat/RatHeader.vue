@@ -24,7 +24,7 @@
         </p>
       </div>
 
-      <!-- Last Update - visivel apenas em sm+ -->
+      <!-- Última Atualização - visível apenas em sm+ -->
       <div class="hidden sm:flex items-center gap-2 text-sm bg-slate-100 dark:bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700/50 flex-shrink-0">
         <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

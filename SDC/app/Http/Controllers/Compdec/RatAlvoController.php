@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Compdec;
 
 use App\DTOs\Rat\RatOcorrenciaFiltroDTO;
 use App\Http\Controllers\Controller;
+use App\Models\Rat\RatOcorrencia;
 use App\Services\Rat\RatOcorrenciaService;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -40,10 +41,8 @@ class RatAlvoController extends Controller
     /**
      * Detalhes dos alvos de uma ocorrência específica.
      */
-    public function show(int $id): Response
+    public function show(RatOcorrencia $ocorrencia): Response
     {
-        $ocorrencia = $this->service->findOrFail($id);
-
         return Inertia::render('Compdec/Rat/Alvo/Show', [
             'ocorrencia' => $ocorrencia,
         ]);

@@ -211,7 +211,7 @@
                 required
               />
               <FormField
-                label="Matricula / MASP"
+                label="Matrícula / MASP"
                 v-model="novoAgente.matricula"
                 required
               />
@@ -222,14 +222,14 @@
                 v-model="novoAgente.cargo"
               />
               <FormSelect
-                label="Funcao no Atendimento"
+                label="Função no Atendimento"
                 v-model="novoAgente.funcao"
                 :options="funcaoOptions"
               />
             </div>
             <div class="rat-grid-2">
               <FormSelect
-                label="Orgao"
+                label="Órgão"
                 v-model="novoAgente.orgao"
                 :options="orgaoOptions"
               />
@@ -246,7 +246,7 @@
                 class="w-5 h-5 sm:w-4 sm:h-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500 focus:ring-2 focus:ring-blue-500"
               />
               <label :for="`condutor-check-${uid}`" class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
-                Este agente e o condutor do veiculo
+                Este agente é o condutor do veículo
               </label>
             </div>
           </div>
@@ -293,11 +293,11 @@
                     <span class="text-slate-700 dark:text-slate-300 ml-1">{{ agente.cargo }}</span>
                   </div>
                   <div v-if="agente.funcao">
-                    <span class="text-slate-500">Funcao:</span>
+                    <span class="text-slate-500">Função:</span>
                     <span class="text-slate-700 dark:text-slate-300 ml-1">{{ agente.funcao }}</span>
                   </div>
                   <div v-if="agente.orgao">
-                    <span class="text-slate-500">Orgao:</span>
+                    <span class="text-slate-500">Órgão:</span>
                     <span class="text-slate-700 dark:text-slate-300 ml-1">{{ agente.orgao }}</span>
                   </div>
                 </div>
@@ -330,7 +330,7 @@
           </div>
         </div>
 
-        <!-- Empty State -->
+        <!-- Estado Vazio -->
         <div v-else class="text-center py-6 sm:py-8 text-slate-500 text-xs sm:text-sm">
           Nenhum agente adicionado. Clique em "+ Agente" para incluir integrantes.
         </div>

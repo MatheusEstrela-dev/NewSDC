@@ -47,7 +47,7 @@
       @filter-change="handleFilterChange"
       @filter-reset="handleFilterReset"
     />
-    <!-- Grid View -->
+    <!-- Visualização em Grade -->
     <RatGrid
       v-if="viewMode === 'grid'"
       :rats="ratsToUse"
@@ -62,7 +62,7 @@
       @delete="handleDelete"
     />
 
-    <!-- Table View -->
+    <!-- Visualização em Tabela -->
     <RatTable
       v-else
       :rats="ratsToUse"
@@ -190,7 +190,7 @@ const props = defineProps({
 });
 
 // =========================
-// Frontend-only behavior
+// Comportamento apenas no frontend
 // =========================
 const perPage = 15;
 const currentPage = ref(1);

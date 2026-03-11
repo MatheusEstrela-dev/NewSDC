@@ -4,7 +4,7 @@
     <RatCollapsibleSection
       section-id="atendimento"
       title="Atendimento"
-      subtitle="Data e horario do fato e atividades"
+      subtitle="Data e horário do fato e atividades"
       icon-class="rat-section-icon-default"
       :default-expanded="true"
     >
@@ -21,13 +21,13 @@
           required
         />
         <FormField
-          label="Inicio da Atividade"
+          label="Início da Atividade"
           type="datetime-local"
           v-model="localData.dadosGerais.data_inicio_atividade"
           required
         />
         <FormField
-          label="Termino da Atividade"
+          label="Término da Atividade"
           type="datetime-local"
           v-model="localData.dadosGerais.data_termino_atividade"
         />
@@ -42,8 +42,8 @@
     <!-- Secao: Natureza da Ocorrencia -->
     <RatCollapsibleSection
       section-id="natureza"
-      title="Natureza da Ocorrencia"
-      subtitle="Classificacao COBRADE e identificacao da operacao"
+      title="Natureza da Ocorrência"
+      subtitle="Classificação COBRADE e identificação da operação"
       icon-class="rat-section-icon-success"
     >
       <template #icon>
@@ -61,7 +61,7 @@
         <FormField
           label="Nome da Operacao (Opcional)"
           v-model="localData.dadosGerais.nat_nome_operacao"
-          placeholder="Ex: Operacao Chuvas de Verao"
+          placeholder="Ex: Operação Chuvas de Verão"
         />
       </div>
     </RatCollapsibleSection>
@@ -69,8 +69,8 @@
     <!-- Secao: Configuracoes do RAT -->
     <RatCollapsibleSection
       section-id="configuracoes"
-      title="Configuracoes do RAT"
-      subtitle="Configuracoes gerais e unidade responsavel"
+      title="Configurações do RAT"
+      subtitle="Configurações gerais e unidade responsável"
       icon-class="rat-section-icon-purple"
     >
       <template #icon>
@@ -88,10 +88,10 @@
             </div>
             <div>
               <p class="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200">
-                Realizou Vistoria Imobiliaria?
+                Realizou Vistoria Imobiliária?
               </p>
               <p class="text-xs text-slate-500 mt-0.5 hidden sm:block">
-                Habilita a aba de vistoria tecnica
+                Habilita a aba de vistoria técnica
               </p>
             </div>
           </div>

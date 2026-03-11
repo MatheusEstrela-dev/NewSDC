@@ -4,6 +4,7 @@ use App\Http\Controllers\Compdec\RatController as CompdecRatController;
 use App\Http\Controllers\Compdec\BoRatController;
 use App\Http\Controllers\Compdec\RatAlvoController;
 use App\Http\Controllers\Compdec\RatOcorrenciaController;
+use App\Models\Rat\RatOcorrencia;
 use App\Modules\Rat\Controllers\RatAttachmentController;
 use App\Modules\Rat\Controllers\RatController;
 use App\Modules\Rat\Controllers\RatDataController;
@@ -31,7 +32,7 @@ Route::prefix('compdec/rat')->name('compdec.rat.')->group(function () {
         ->name('alvos.index')
         ->middleware('can:rat.protocolos.view');
 
-    Route::get('/alvos/{id}', [RatAlvoController::class, 'show'])
+    Route::get('/alvos/{ocorrencia}', [RatAlvoController::class, 'show'])
         ->name('alvos.show')
         ->middleware('can:rat.protocolos.view');
 
@@ -40,7 +41,7 @@ Route::prefix('compdec/rat')->name('compdec.rat.')->group(function () {
         ->name('ocorrencias.index')
         ->middleware('can:rat.protocolos.view');
 
-    Route::get('/ocorrencias/{id}', [RatOcorrenciaController::class, 'show'])
+    Route::get('/ocorrencias/{ocorrencia}', [RatOcorrenciaController::class, 'show'])
         ->name('ocorrencias.show')
         ->middleware('can:rat.protocolos.view');
 
@@ -48,7 +49,7 @@ Route::prefix('compdec/rat')->name('compdec.rat.')->group(function () {
         ->name('ocorrencias.store')
         ->middleware('can:rat.protocolos.create');
 
-    Route::patch('/ocorrencias/{id}/finalizar', [RatOcorrenciaController::class, 'finalize'])
+    Route::patch('/ocorrencias/{ocorrencia}/finalizar', [RatOcorrenciaController::class, 'finalize'])
         ->name('ocorrencias.finalize')
         ->middleware('can:rat.protocolos.finalize');
 
@@ -69,19 +70,23 @@ Route::prefix('compdec/rat')->name('compdec.rat.')->group(function () {
         ->name('store')
         ->middleware('can:rat.protocolos.create');
 
-    Route::get('/{id}', [CompdecRatController::class, 'show'])
+    Route::patch('/{ocorrencia}/finalizar', [CompdecRatController::class, 'finalize'])
+        ->name('finalize')
+        ->middleware('can:rat.protocolos.finalize');
+
+    Route::get('/{ocorrencia}', [CompdecRatController::class, 'show'])
         ->name('show')
         ->middleware('can:rat.protocolos.view');
 
-    Route::get('/{id}/edit', [CompdecRatController::class, 'edit'])
+    Route::get('/{ocorrencia}/edit', [CompdecRatController::class, 'edit'])
         ->name('edit')
         ->middleware('can:rat.protocolos.edit');
 
-    Route::put('/{id}', [CompdecRatController::class, 'update'])
+    Route::put('/{ocorrencia}', [CompdecRatController::class, 'update'])
         ->name('update')
         ->middleware('can:rat.protocolos.edit');
 
-    Route::delete('/{id}', [CompdecRatController::class, 'destroy'])
+    Route::delete('/{ocorrencia}', [CompdecRatController::class, 'destroy'])
         ->name('destroy')
         ->middleware('can:rat.protocolos.delete');
 });
