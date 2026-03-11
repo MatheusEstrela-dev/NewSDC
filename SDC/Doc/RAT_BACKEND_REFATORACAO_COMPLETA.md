@@ -1,527 +1,934 @@
-**Autora:** Barbara Costa  
+# RAT — Documentação Completa da Arquitetura Backend
+
+**Autora:** Barbara Costa
+**Última atualização:** 11/03/2026
+**Branch:** `feat/rat-backend`
+**Status:** ✅ Implementação completa e operacional
 
 ---
 
-# Fase 2 — Nova Arquitetura Polimórfica 
+## Índice
 
-**Data:** 10/03/2026  
-**Status:** ✅ 35/35 arquivos implementados e funcionais  
-**Rotas totais registradas:** 44 (web + API)  
-**Validação:** `php artisan route:cache` — sucesso no container `newsdc_app`
+1. [Visão Geral](#1-visão-geral)
+2. [Estrutura de Arquivos](#2-estrutura-de-arquivos)
+3. [Banco de Dados — 15 Tabelas RAT](#3-banco-de-dados--15-tabelas-rat)
+4. [Migrations](#4-migrations)
+5. [Models — Hierarquia Completa](#5-models--hierarquia-completa)
+6. [DTOs](#6-dtos)
+7. [Form Requests (Validação)](#7-form-requests-validação)
+8. [Services — Camada de Negócio](#8-services--camada-de-negócio)
+9. [Controllers](#9-controllers)
+10. [Rotas Registradas](#10-rotas-registradas)
+11. [Permissionamento e Policy](#11-permissionamento-e-policy)
+12. [Multi-Tenancy (Base)](#12-multi-tenancy-base)
+13. [Conexões de Banco de Dados](#13-conexões-de-banco-de-dados)
+14. [Fluxo Completo de uma Requisição](#14-fluxo-completo-de-uma-requisição)
+15. [Diagrama de Relacionamentos](#15-diagrama-de-relacionamentos)
 
 ---
 
-## Arquitetura da Nova Estrutura
+## 1. Visão Geral
+
+O módulo RAT (Relatório de Atendimento a Emergência) foi refatorado para uma arquitetura **polimórfica limpa**, seguindo o padrão "Padrão Ouro":
 
 ```
 Requisição HTTP
       │
   Controller  ──→  FormRequest (validação de entrada)
       │
-   Service     ──→  Model / Repositório
+   DTO         ──→  tipagem estrita entre HTTP e domínio
       │
-  RatOcorrencia  (entidade principal — tabela rat_ocorrencias)
+   Service     ──→  regras de negócio em transação DB
       │
-  RatOcorrenciaRelato  (pivô polimórfico)
-      ├── RatRelatoDadosGerais       — dados gerais do fato
-      ├── RatRelatoEnvolvidos        — vítimas / agentes
-      ├── RatRelatoRecurso           — recursos empregados
-      │       └── RatRecursosEmpregado
-      │               └── RatRecursosComponentesGuarnicao
-      └── RatRelatoVistoria          — inspeção técnica
-```
----
-
-## Controllers Criados — 6/6
-
-### `Compdec/RatController.php`
-Controller principal CRUD da nova estrutura. Depende de `RatOcorrenciaService`.  
-Usa `BoRequest` para validar `store()` e `update()` (campos reais de `rat_ocorrencias`).
-
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `index()` | GET `/compdec/rat` | Lista paginada de ocorrências |
-| `create()` | GET `/compdec/rat/create` | Formulário de criação (Inertia) |
-| `store()` | POST `/compdec/rat` | Persiste nova ocorrência |
-| `show()` | GET `/compdec/rat/{id}` | Exibe ocorrência (Inertia) |
-| `edit()` | GET `/compdec/rat/{id}/edit` | Formulário de edição (Inertia) |
-| `update()` | PUT `/compdec/rat/{id}` | Atualiza ocorrência |
-| `destroy()` | DELETE `/compdec/rat/{id}` | Remove ocorrência |
-| `exportarOcorrencias()` | GET `/compdec/rat/export` | Exporta listagem |
-
-### `Compdec/BoRatController.php`
-Boletim de Ocorrência (BO) vinculado às ocorrências RAT.
-
-| Método | Rota |
-|--------|------|
-| `index()` | GET `/compdec/rat/bo` |
-| `store()` | POST `/compdec/rat/bo` |
-
-### `Compdec/RatAlvoController.php`
-Alvos associados às ocorrências.
-
-| Método | Rota |
-|--------|------|
-| `index()` | GET `/compdec/rat/alvos` |
-| `show()` | GET `/compdec/rat/alvos/{id}` |
-
-### `Compdec/RatOcorrenciaController.php`
-Coordena ocorrências com seus relatos polimórficos. Depende de `RatOcorrenciaService` e `RatRelatoService`.
-
-| Método | Rota |
-|--------|------|
-| `index()` | GET `/compdec/rat/ocorrencias` |
-| `show()` | GET `/compdec/rat/ocorrencias/{id}` |
-| `store()` | POST `/compdec/rat/ocorrencias` |
-| `finalize()` | PATCH `/compdec/rat/ocorrencias/{id}/finalizar` |
-
-### `Api/RatAuditController.php`
-Endpoints da API para trilha de auditoria.
-
-| Método | Rota |
-|--------|------|
-| `index()` | GET `/api/v1/rat-audit` |
-| `show()` | GET `/api/v1/rat-audit/{id}` |
-
-### `Api/RatNovoController.php`
-Endpoints da API para integração Power BI.
-
-| Método | Rota |
-|--------|------|
-| `index()` | GET `/api/v1/rat-novo` |
-| `show()` | GET `/api/v1/rat-novo/{id}` |
-| `powerBiData()` | GET `/api/v1/rat-novo/{id}/power-bi` |
-
----
-
-## Services Criados — 7/7
-
-Localização: `app/Services/Rat/`
-
-| Serviço | Principais Métodos | Responsabilidade |
-|---------|-------------------|------------------|
-| `RatOcorrenciaService` | `manageOcorrencia()`, `finalizar()`, `paginate()`, `findOrFail()` | Regras de negócio da ocorrência principal |
-| `RatRelatoService` | `manageRelatos()`, `attachRelato()`, `detachRelato()` | Gerencia relatos polimórficos vinculados |
-| `RatNovoService` | `getNormalizedDataForPowerBI()`, `extractDadosGerais()`, `extractEnvolvidos()`, `extractRecursos()` | Normalização de dados para Power BI |
-| `RatBiService` | `getOcorrenciasPorStatus()`, `getOcorrenciasPorMes()`, `getEnvolvidosPorTipo()`, `getRecursosPorTipo()` | Agregações para dashboard gerencial |
-| `RatRecursoService` | `createRecurso()`, `addEmpregado()`, `addComponenteGuarnicao()`, `removeEmpregado()` | Gestão de recursos empregados e guarnição |
-| `RatAuditService` | `log()`, `history()` | Trilha de auditoria (`table_name` / `row_id`) |
-| `RatTrackingService` | `getTimeline()`, `getOcorrenciasAtivas()`, `isPrazoVencido()` | Monitoramento e alertas de prazo |
-
----
-
-## Models Criados — 12/12
-
-### Núcleo
-
-**`app/Models/Rat/RatOcorrencia.php`** — Entidade principal (`rat_ocorrencias`)
-
-| Campo | Descrição |
-|-------|-----------|
-| `numero_bos` | Número do Boletim de Ocorrência |
-| `sequencial_ano` | Sequencial anual |
-| `status` | 0=Rascunho / 1=Finalizado |
-| `prazo_edicao` | Prazo limite de edição |
-| `historico` | Observações gerais |
-| `ocorrencia_origem_id` | Auto-referência para divisões de BO |
-| `created_by` / `updated_by` | Rastreamento de usuário |
-
-Relacionamentos: `relatos()`, `relatosMorph()`, `ocorrenciaOrigem()`
-
-**`app/Models/Rat/RatOcorrenciaRelato.php`** — Pivô polimórfico  
-Campos: `ocorrencia_id`, `conteudo_type`, `conteudo_id`  
-Relacionamentos: `ocorrencia()` → BelongsTo, `conteudo()` → morphTo
-
-**`app/Models/Rat/RatRedec.php`** — Tabela de referência REDEC  
-**`app/Models/Rat/RatVeiculo.php`** — Veículos (soft delete habilitado)
-
-### Relatos — Conteúdo Polimórfico (`app/Models/Rat/Relatos/`)
-
-| Model | Campos Principais |
-|-------|-------------------|
-| `RatRelato.php` (base abstrata) | `ocorrenciaRelato()` → morphOne |
-| `RatRelatoDadosGerais.php` | `data_fato`, `nat_cobrade_id`, `nat_nome_operacao`, `local_municipio`, `local_estadouf` |
-| `RatRelatoEnvolvidos.php` | `g_tipo_pessoa`, `g_lesao_grau`, `p_nome_completo`, `p_cpf`, `p_data_nascimento`, `p_sexo` |
-| `RatRelatoRecurso.php` | `recurso_tipo`, `viatura_placa`, `viatura_saida`, `viatura_chegada`; → `recursosEmpregados()` |
-| `RatRelatoVistoria.php` | `v_solicitante_nome`, `v_tipo_imovel`, `v_estado_conservacao`, `v_latitude`, `v_longitude` |
-
-### Recursos — Hierarquia Aninhada (`app/Models/Rat/Recursos/`)
-
-| Model | Relacionamentos |
-|-------|----------------|
-| `RatRecurso.php` (base abstrata) | Soft delete habilitado |
-| `RatRecursosEmpregado.php` | `relatoRecurso()` → BelongsTo; `componentesGuarnicao()` → HasMany |
-| `RatRecursosComponentesGuarnicao.php` | `recursoEmpregado()` → BelongsTo; campos: `nome_completo`, `matricula` |
-
----
-
-## Requests Criados — 8/8
-
-Localização: `app/Http/Requests/Rat/`
-
-| Request | Campos Validados |
-|---------|-----------------|
-| `BoRequest.php` | `numero_bos` (required), `historico`, `prazo_edicao`, `ocorrencia_origem_id` |
-| `RatDadosGeraisRequest.php` | `data_fato` (required), `nat_cobrade_id` (required), localização, endereço |
-| `RatEnvolvidosRequest.php` | `g_tipo_pessoa` (required), `p_nome_completo` (required), CPF, nascimento, sexo, endereço |
-| `RatEnvolvidosUpdateRequest.php` | Todos os campos `sometimes` (atualização parcial) |
-| `RatHistoricoRequest.php` | Array `eventos.*`: tipo, título, descrição, data; requer permissão `rat.protocolos.edit` |
-| `RatRecursosRequest.php` | `recurso_tipo` (viatura\|pe\|aereo\|aquatico\|outro), viatura, guarnição aninhada |
-| `RatRecursosUpdateRequest.php` | Todos os campos `sometimes` (atualização parcial) |
-| `RatVistoriaRequest.php` | `v_solicitante_nome` (required), tipo imóvel, moradores, lat (`between:-90,90`), lon (`between:-180,180`) |
-
----
-
-## Correções de Comunicação Front ↔ Back ↔ Banco
-
-| # | Problema | Arquivo | Correção |
-|---|----------|---------|---------|
-| 1 | `RatController` usava `RatDadosGeraisRequest` (campos de relato) em vez dos campos reais de `rat_ocorrencias` | `Compdec/RatController.php` | Trocado para `BoRequest` em `store()` e `update()` |
-| 2 | `powerBiData()` chamava `findOrFail()` 3× no mesmo ID | `Api/RatNovoController.php` | Unificado em uma única query reutilizando `$ocorrencia` |
-| 3 | Vue Create/Edit usavam `data_hora_fato` e `descricao` (inexistentes em `rat_ocorrencias`) | `Pages/Compdec/Rat/Create.vue` e `Edit.vue` | Corrigidos para `prazo_edicao` e `historico` |
-| 4 | `RatAuditService` usava `auditable_type/auditable_id` (colunas inexistentes) | `Services/Rat/RatAuditService.php` | Corrigido para `table_name/row_id` |
-| 5 | `RatHistoricoRequest` validava string em vez de array de eventos | `Requests/Rat/RatHistoricoRequest.php` | Corrigido para validação de array `eventos.*` |
-| 6 | Composable chamava rota `rat.sync` inexistente | `Composables/rat/useRat.js` | Corrigido para `rat.store` / `rat.update` |
-
----
-
-### Composables renomeados
-
-| Arquivo | Antes → Depois |
-|---------|---------------|
-| `Composables/useRat.js` | `historyEvents` → `historico`, `saveRat` → `salvarRat`, `saveDraft` → `salvarRascunho`, `cancelRat` → `cancelarRat` |
-| `Composables/rat/useRat.js` | + `addRecurso` → `adicionarRecurso`, `removeRecurso` → `removerRecurso`, `addEnvolvido` → `adicionarEnvolvido`, `removeEnvolvido` → `removerEnvolvido`, `saveVistoria` → `salvarVistoria`, `addObservation` → `adicionarObservacao`, `addAnexo` → `adicionarAnexo`, `removeAnexo` → `removerAnexo` |
-| `Composables/rat/useRatFilters.js` | `hasActiveFilters` → `temFiltrosAtivos`, `updateFilter` → `atualizarFiltro`, `resetFilters` → `limparFiltros`, `applyFilters` → `aplicarFiltros`, `clearFilters` → `limparTodosFiltros` |
-| `Composables/rat/useRatStatistics.js` | `formattedStatistics` → `estatisticasFormatadas`, `updateStatistics` → `atualizarEstatisticas` |
-| `Composables/rat/useCollapsible.js` | `isExpanded` → `estaExpandido`, `toggle` → `alternar`, `expand` → `expandir`, `collapse` → `recolher`, `loadState` → `carregarEstado`, `saveState` → `salvarEstado`, `expandAll` → `expandirTodos`, `collapseAll` → `recolherTodos`, `toggleAll` → `alternarTodos` |
-
-### Callers atualizados
-
-- `Pages/Rat.vue` — prop `historico`, estado `historicoEstado`, chamadas `salvarRat/salvarRascunho/cancelarRat`, computed `historico`, template `:events="historico"`
-- `Components/Rat/Sections/RatCollapsibleSection.vue` — `estaExpandido`, `alternar` em script e template
-
----
-
-## Rotas da Nova Estrutura (acréscimo ao total de 44)
-
-### Web — Nova Estrutura (`/compdec/rat`)
-```
-GET|HEAD   compdec/rat                                compdec.rat.index
-POST       compdec/rat                                compdec.rat.store
-GET|HEAD   compdec/rat/create                         compdec.rat.create
-GET|HEAD   compdec/rat/export                         compdec.rat.export
-GET|HEAD   compdec/rat/{id}                           compdec.rat.show
-GET|HEAD   compdec/rat/{id}/edit                      compdec.rat.edit
-PUT        compdec/rat/{id}                           compdec.rat.update
-DELETE     compdec/rat/{id}                           compdec.rat.destroy
-GET|HEAD   compdec/rat/bo                             compdec.rat.bo.index
-POST       compdec/rat/bo                             compdec.rat.bo.store
-GET|HEAD   compdec/rat/alvos                          compdec.rat.alvos.index
-GET|HEAD   compdec/rat/alvos/{id}                     compdec.rat.alvos.show
-GET|HEAD   compdec/rat/ocorrencias                    compdec.rat.ocorrencias.index
-POST       compdec/rat/ocorrencias                    compdec.rat.ocorrencias.store
-GET|HEAD   compdec/rat/ocorrencias/{id}               compdec.rat.ocorrencias.show
-PATCH      compdec/rat/ocorrencias/{id}/finalizar     compdec.rat.ocorrencias.finalizar
+   Model       ──→  entidades Eloquent com SoftDeletes
+      │
+   Database    ──→  MySQL InnoDB (ACID garantido)
 ```
 
-### API v1 — Nova Estrutura (`/api/v1`)
+### Princípio do Polimorfismo
+
+Uma `RatOcorrencia` (protocolo) pode ter **N relatos** de tipos diferentes.
+O vínculo é feito pela tabela pivô `rat_ocorrencia_relatos`, que armazena
+`conteudo_id` + `conteudo_type` (morphTo do Eloquent):
+
 ```
-GET|HEAD   api/v1/rat-novo                            api.v1.rat-novo.index
-GET|HEAD   api/v1/rat-novo/{id}                       api.v1.rat-novo.show
-GET|HEAD   api/v1/rat-novo/{id}/power-bi              api.v1.rat-novo.power-bi
-GET|HEAD   api/v1/rat-audit                           api.v1.rat-audit.index
-GET|HEAD   api/v1/rat-audit/{id}                      api.v1.rat-audit.show
+RatOcorrencia (rat_ocorrencias)
+      │  hasMany
+      ▼
+RatOcorrenciaRelato (rat_ocorrencia_relatos)
+      │  morphTo('conteudo')
+      ├──→ RatRelatoDadosGerais   (rat_relato_dados_gerais)
+      ├──→ RatRelatoEnvolvidos    (rat_relato_envolvidos)
+      ├──→ RatRelatoRecurso       (rat_relato_recursos)
+      │         │  hasMany
+      │         └──→ RatRecursosEmpregado (rat_recursos_empregados)
+      │                   │  hasMany
+      │                   └──→ RatRecursosComponentesGuarnicao
+      └──→ RatRelatoVistoria      (rat_relato_vistoria)
+```
+
+### Cascade Soft Delete
+
+- `RatOcorrencia::delete()` → cascateia para todos os `RatOcorrenciaRelato`
+- `RatOcorrenciaRelato::delete()` → cascateia para o conteúdo polimórfico
+- `RatRelatoRecurso::delete()` → cascateia para `RatRecursosEmpregado` e componentes
+- Dados **nunca são apagados fisicamente** — apenas `deleted_at` é preenchido
+
+---
+
+## 2. Estrutura de Arquivos
+
+```
+app/
+├── DTOs/Rat/
+│   ├── RatBoDTO.php
+│   ├── RatDadosGeraisDTO.php
+│   └── RatOcorrenciaFiltroDTO.php
+│
+├── Http/
+│   ├── Controllers/Compdec/
+│   │   ├── RatController.php           ← CRUD principal (nova estrutura)
+│   │   ├── RatOcorrenciaController.php ← ocorrências + relatos polimórficos
+│   │   ├── BoRatController.php         ← boletim de ocorrência
+│   │   └── RatAlvoController.php       ← alvos/endereços
+│   ├── Middleware/
+│   │   └── SetTenant.php               ← resolve tenant por request
+│   └── Requests/Rat/
+│       ├── BoRequest.php
+│       ├── RatDadosGeraisRequest.php
+│       ├── RatEnvolvidosRequest.php
+│       ├── RatEnvolvidosUpdateRequest.php
+│       ├── RatHistoricoRequest.php
+│       ├── RatRecursosRequest.php
+│       ├── RatRecursosUpdateRequest.php
+│       └── RatVistoriaRequest.php
+│
+├── Models/
+│   ├── Tenant.php                      ← modelo de multi-tenancy
+│   └── Rat/
+│       ├── RatOcorrencia.php           ← entidade principal
+│       ├── RatOcorrenciaRelato.php     ← pivô polimórfico
+│       ├── RatRedec.php                ← regiões REDEC (lookup)
+│       ├── RatVeiculo.php              ← veículos cadastrados
+│       ├── Relatos/
+│       │   ├── RatRelato.php           ← base abstrata (SoftDeletes + morphOne)
+│       │   ├── RatRelatoDadosGerais.php
+│       │   ├── RatRelatoEnvolvidos.php
+│       │   ├── RatRelatoRecurso.php
+│       │   └── RatRelatoVistoria.php
+│       └── Recursos/
+│           ├── RatRecurso.php          ← base abstrata (SoftDeletes)
+│           ├── RatRecursosEmpregado.php
+│           └── RatRecursosComponentesGuarnicao.php
+│
+├── Policies/
+│   └── RatPolicy.php                   ← autorização granular por recurso
+│
+├── Services/Rat/
+│   ├── RatOcorrenciaService.php        ← CRUD + finalização + paginação
+│   ├── RatRelatoService.php            ← gerenciamento de relatos polimórficos
+│   ├── RatRecursoService.php           ← recursos empregados e guarnições
+│   ├── RatNovoService.php              ← extração de dados (Power BI / API)
+│   ├── RatBiService.php                ← dashboards e métricas
+│   ├── RatAuditService.php             ← auditoria de ações
+│   └── RatTrackingService.php          ← status e linha do tempo
+│
+└── Traits/
+    └── HasTenant.php                   ← GlobalScope de multi-tenancy
+
+database/migrations/
+├── 2026_02_10_100001_create_rat_ocorrencia_relatos_table.php
+├── 2026_02_10_100002_create_rat_relato_recursos_table.php
+├── 2026_02_10_100003_create_rat_recursos_empregados_table.php
+├── 2026_02_10_100004_create_rat_recursos_componentes_guarnicao_table.php
+├── 2026_02_10_131610_create_rat_bem_afetado_table.php
+├── 2026_02_10_131811_create_rat_encaminhamento_table.php
+├── 2026_02_10_132344_create_rat_acionado_table.php
+├── 2026_02_10_132614_create_rat_patologia_table.php
+├── 2026_02_10_133127_create_rat_redec_table.php
+├── 2026_02_10_133300_create_rat_dados_gerais_table.php
+├── 2026_02_10_133452_create_rat_relato_envolvidos_table.php
+├── 2026_02_10_134052_create_rat_relato_vistoria_table.php
+├── 2026_02_10_134152_create_rat_veiculos_table.php
+├── 2026_03_09_200001_drop_rat_legacy_tables.php
+├── 2026_03_10_000002_recreate_rat_polymorphic_tables.php
+└── 2026_03_11_000001_create_tenants_table.php
+
+routes/
+└── modules/rat.php                     ← todas as 30 rotas RAT
 ```
 
 ---
 
-## Resumo Quantitativo — Fase 2
+## 3. Banco de Dados — 15 Tabelas RAT
 
-| Categoria | Quantidade |
-|-----------|-----------|
-| Controllers novos criados | 6 |
-| Services novos criados | 7 |
-| Models novos criados | 12 |
-| Requests novos criados | 8 |
-| Composables JS renomeados para PT | 5 |
-| Páginas Vue criadas (Compdec/Rat) | 9 |
-| Bugs de comunicação corrigidos | 6 |
-| Docblocks PHP traduzidos | 15 arquivos |
-| Rotas totais ativas | 44 |
+| # | Tabela | Propósito |
+|---|--------|-----------|
+| 1 | `rats` | Tabela legada (UUID + JSON) — mantida para compatibilidade |
+| 2 | `rat_ocorrencias` | **Entidade principal** — protocolo/BOS |
+| 3 | `rat_ocorrencia_relatos` | **Pivô polimórfico** — conecta ocorrência ➺ conteúdo |
+| 4 | `rat_relato_dados_gerais` | Tipo: dados gerais da ocorrência |
+| 5 | `rat_relato_envolvidos` | Tipo: envolvidos (vítimas, agentes) |
+| 6 | `rat_relato_recursos` | Tipo: recursos empregados |
+| 7 | `rat_recursos_empregados` | Sub: viatura/pessoal por relato de recurso |
+| 8 | `rat_recursos_componentes_guarnicao` | Sub: membros da guarnição |
+| 9 | `rat_relato_vistoria` | Tipo: vistoria técnica de imóvel |
+| 10 | `rat_redec` | Lookup: Regiões de Defesa Civil |
+| 11 | `rat_veiculos` | Catálogo: veículos cadastrados |
+| 12 | `rat_bem_afetado` | Bens afetados na ocorrência |
+| 13 | `rat_encaminhamento` | Encaminhamentos realizados |
+| 14 | `rat_orgao_acionado` | Órgãos acionados |
+| 15 | `rat_patologia` | Patologias identificadas na vistoria |
 
----
-
-*Fase 2 documentada em 10/03/2026 — Módulo RAT, Barbara Costa*
-
----
-
----
-
-# Fase 3 — Recriação das Tabelas, Seeders e DTOs
-
-**Data:** 10/03/2026  
-**Status:** ✅ Banco restaurado · Seeders populados · Fluxo Controller → DTO → Service → Model → DB completo  
-**Validação:** `php artisan optimize` — `config ✓ events ✓ routes ✓ views ✓`
+> **Todas as tabelas usam `InnoDB` (ACID) e `softDeletes` — nenhum dado é apagado fisicamente.**
 
 ---
 
-## Problema Crítico Identificado e Resolvido
+## 4. Migrations
 
-A migration `2026_03_09_200001_drop_rat_legacy_tables` (Fase 1, batch 4) havia listado como "legadas" 9 tabelas que **pertencem à nova arquitetura polimórfica** da Fase 2. Todas foram deletadas do banco, tornando todos os endpoints `Compdec/Rat` inoperantes (HTTP 500 — table not found).
+### Migration principal — `2026_03_10_000002_recreate_rat_polymorphic_tables.php`
 
-**Tabelas que foram incorretamente deletadas:**
+Recria as 9 tabelas do núcleo polimórfico. Cada tabela tem:
+- `engine = 'InnoDB'` explícito
+- `charset = 'utf8mb4'` / `collation = 'utf8mb4_unicode_ci'`
+- `$table->softDeletes()`
+- FKs com `onDelete('set null')` — cascade via Eloquent `booted()`, não via DB
 
-| Tabela | Impacto |
-|--------|---------|
-| `rat_ocorrencias` | Entidade principal — `RatOcorrencia` model |
-| `rat_ocorrencia_relatos` | Pivô polimórfico — `RatOcorrenciaRelato` model |
-| `rat_relato_recursos` | Recursos do relato — `RatRelatoRecurso` model |
-| `rat_recursos_empregados` | Viaturas/pés — `RatRecursosEmpregado` model |
-| `rat_recursos_componentes_guarnicao` | Guarnição — `RatRecursosComponentesGuarnicao` model |
-| `rat_relato_envolvidos` | Pessoas envolvidas — `RatRelatoEnvolvidos` model |
-| `rat_relato_vistoria` | Inspeção técnica — `RatRelatoVistoria` model |
-| `rat_veiculos` | Cadastro de veículos — `RatVeiculo` model |
-| `rat_redec` | Referência REDEC — `RatRedec` model |
+#### Tabela `rat_ocorrencias`
+```sql
+id                    BIGINT UNSIGNED AUTO_INCREMENT PK
+numero_bos            VARCHAR(50) UNIQUE NULLABLE    -- ex: "2026-00001"
+sequencial_ano        BIGINT UNSIGNED NULLABLE
+status                TINYINT DEFAULT 0              -- 0=Rascunho, 1=Finalizado
+prazo_edicao          TIMESTAMP NULLABLE
+historico             TEXT NULLABLE
+ocorrencia_origem_id  FK -> rat_ocorrencias(id) SET NULL
+created_by            VARCHAR(191) NULLABLE
+updated_by            VARCHAR(191) NULLABLE
+created_at, updated_at, deleted_at
+```
 
-**Tabelas que sobreviveram (não estavam na lista de drop):**
+#### Tabela `rat_ocorrencia_relatos` (pivô)
+```sql
+id              BIGINT UNSIGNED AUTO_INCREMENT PK
+ocorrencia_id   FK -> rat_ocorrencias(id) SET NULL
+conteudo_id     BIGINT UNSIGNED NULLABLE
+conteudo_type   VARCHAR(191) NULLABLE   -- FQCN do Model
+created_by      VARCHAR(191) NULLABLE
+created_at, updated_at, deleted_at
+```
 
-| Tabela | Status |
-|--------|--------|
-| `rats` | ✅ Intacta — tabela legada Fase 1 |
-| `rat_relato_dados_gerais` | ✅ Intacta — nome diferente de `rat_dados_gerais` |
+### Migration `2026_03_11_000001_create_tenants_table.php`
 
----
-
-## 1. Migration de Recriação
-
-**Arquivo criado:** `database/migrations/2026_03_10_000002_recreate_rat_polymorphic_tables.php`  
-**Batch:** 5 · **Duração:** 2s · **Status:** ✅ DONE
-
-Recria todas as 9 tabelas na **ordem correta de dependência de FK**, usando `if (! Schema::hasTable(...))` para ser idempotente:
-
-1. `rat_redec` — tabela de referência (sem FKs externas)
-2. `rat_ocorrencias` — entidade principal; FK auto-referenciada `ocorrencia_origem_id` → `rat_ocorrencias.id` ON DELETE SET NULL
-3. `rat_ocorrencia_relatos` — pivô polimórfico; FK `ocorrencia_id` → `rat_ocorrencias.id` ON DELETE SET NULL
-4. `rat_relato_recursos` — recursos por relato (sem FKs de entrada)
-5. `rat_recursos_empregados` — FK `relato_recurso_id` → `rat_relato_recursos.id` ON DELETE CASCADE
-6. `rat_recursos_componentes_guarnicao` — referencia `recurso_empregado_id` e `relato_recurso_id`
-7. `rat_relato_envolvidos` — pessoas; soft delete; campo `created_by` (nullable para compatibilidade)
-8. `rat_relato_vistoria` — 117 colunas (patologias, bens, órgãos, encaminhamentos, geo)
-9. `rat_veiculos` — único por placa; soft delete
-
-**Resultado confirmado (colunas por tabela):**
-
-| Tabela | Colunas |
-|--------|---------|
-| `rat_ocorrencias` | 12 |
-| `rat_ocorrencia_relatos` | 8 |
-| `rat_relato_recursos` | 28 |
-| `rat_recursos_empregados` | 16 |
-| `rat_recursos_componentes_guarnicao` | 17 |
-| `rat_relato_envolvidos` | 54 |
-| `rat_relato_vistoria` | 117 |
-| `rat_veiculos` | 8 |
-| `rat_redec` | 5 |
-
-**Migration inválida deletada:** `2026_03_10_000001_add_fk_rat_ocorrencia_relatos_ocorrencia_id.php`  
-(Criada anteriormente e falhada porque a tabela não existia — removida do repositório.)
+Cria tabela base de multi-tenancy:
+```sql
+id, nome, slug (UNIQUE), database (nullable), dominio (nullable),
+ativo BOOLEAN DEFAULT 1, config JSON NULLABLE,
+created_at, updated_at, deleted_at
+```
 
 ---
 
-## 2. Soft Delete em Cascata — Booted Events
+## 5. Models — Hierarquia Completa
 
-Adicionado `booted()` em 3 models para garantir o comportamento conforme o whiteboard ("banco não vai excluir nada — o front exclui meio que camuflado mas os dados permanecem"):
+### 5.1 `RatOcorrencia` — Entidade Principal
+**Arquivo:** `app/Models/Rat/RatOcorrencia.php`
 
-### `RatOcorrencia` → cascateia para relatos
 ```php
-protected static function booted(): void
+class RatOcorrencia extends Model
 {
-    static::deleting(function (self $ocorrencia): void {
-        $ocorrencia->relatos()->each->delete();
-    });
+    use SoftDeletes;
+    protected $table = 'rat_ocorrencias';
+    protected $fillable = [
+        'numero_bos', 'sequencial_ano', 'status', 'prazo_edicao',
+        'historico', 'ocorrencia_origem_id', 'created_by', 'updated_by',
+    ];
+    protected $casts = ['status' => 'integer', 'prazo_edicao' => 'datetime'];
 }
 ```
 
-### `RatOcorrenciaRelato` → cascateia para conteúdo polimórfico
+**Relacionamentos:**
+- `relatos()` → `hasMany(RatOcorrenciaRelato::class, 'ocorrencia_id')`
+- `relatosMorph()` → hasMany com `->with('conteudo')` (eager load polimórfico)
+- `ocorrenciaOrigem()` → `belongsTo(self::class, 'ocorrencia_origem_id')` (BOS pai)
+
+**Helpers:**
+- `isRascunho(): bool` — `status === 0`
+- `isFinalizado(): bool` — `status === 1`
+
+**Cascade booted:**
 ```php
-protected static function booted(): void
-{
-    static::deleting(function (self $relato): void {
-        $relato->conteudo?->delete();
-    });
-}
+static::deleting(function (self $ocorrencia): void {
+    $ocorrencia->relatos()->each->delete();
+});
 ```
-
-### `RatRelatoRecurso` → cascateia para recursos empregados
-```php
-protected static function booted(): void
-{
-    parent::booted();
-    static::deleting(function (self $recurso): void {
-        $recurso->recursosEmpregados()->each->delete();
-    });
-}
-```
-
-**Docblock `destroy()` corrigido** em `Compdec/RatController.php`:
-- Antes: `/** Remove a ocorrência permanentemente. */`
-- Depois: `/** Oculta a ocorrência via soft delete (dados preservados no banco). Cascateia o soft delete para todos os relatos e conteúdos relacionados. */`
-- Flash message: `'Ocorrência removida com sucesso!'` → `'Ocorrência ocultada com sucesso!'`
-
-**Models com SoftDeletes ativo:** `RatOcorrencia`, `RatOcorrenciaRelato`, `RatRelatoRecurso` (base), `RatVeiculo`, `RatRedec`
 
 ---
 
-## 3. Seeders
-
-### `RatRedecSeeder.php` — **NOVO**
-**Arquivo:** `database/seeders/RatRedecSeeder.php`
-
-Popula `rat_redec` com as **14 Regiões de Defesa Civil de Minas Gerais**. Idempotente via `updateOrInsert` na `sigla`.
-
-| Sigla | Região |
-|-------|--------|
-| 1ª REDEC | Metropolitana de Belo Horizonte |
-| 2ª REDEC | Vale do Paraopeba |
-| 3ª REDEC | Campo das Vertentes |
-| 4ª REDEC | Zona da Mata |
-| 5ª REDEC | Triângulo Norte |
-| 6ª REDEC | Triângulo Sul |
-| 7ª REDEC | Norte de Minas |
-| 8ª REDEC | Vale do Rio Doce |
-| 9ª REDEC | Mucuri |
-| 10ª REDEC | Oeste de Minas |
-| 11ª REDEC | Sul de Minas |
-| 12ª REDEC | Circuito das Águas |
-| 13ª REDEC | Serrana do Sul |
-| 14ª REDEC | Jequitinhonha |
-
-**Executado:** `php artisan db:seed --class=RatRedecSeeder` → `14 REDECs de Minas Gerais inseridas.` ✅
-
-### `DatabaseSeeder.php` — **ATUALIZADO**
-Adicionada chamada ao `RatRedecSeeder` após o `RatMockSeeder`, com guarda `Schema::hasTable('rat_redec')`:
+### 5.2 `RatOcorrenciaRelato` — Pivô Polimórfico
+**Arquivo:** `app/Models/Rat/RatOcorrenciaRelato.php`
 
 ```php
-// 6b. REDECs de Minas Gerais (tabela de referência rat_redec)
-if (\Illuminate\Support\Facades\Schema::hasTable('rat_redec')) {
-    $this->call(RatRedecSeeder::class);
-} else {
-    $this->command->warn('Tabela "rat_redec" não encontrada - RatRedecSeeder pulado.');
+class RatOcorrenciaRelato extends Model
+{
+    use SoftDeletes;
+    protected $table = 'rat_ocorrencia_relatos';
+    protected $fillable = ['ocorrencia_id', 'conteudo_id', 'conteudo_type', 'created_by'];
+}
+```
+
+**Relacionamentos:**
+- `ocorrencia()` → `belongsTo(RatOcorrencia::class)`
+- `conteudo()` → `morphTo('conteudo')` — resolve para o tipo concreto
+
+**Cascade booted:**
+```php
+static::deleting(function (self $relato): void {
+    $relato->conteudo?->delete();
+});
+```
+
+---
+
+### 5.3 `RatRelato` — Classe Base Abstrata
+**Arquivo:** `app/Models/Rat/Relatos/RatRelato.php`
+
+Todos os tipos de relato estendem esta classe:
+```php
+abstract class RatRelato extends Model
+{
+    use SoftDeletes;
+
+    public function ocorrenciaRelato(): MorphOne
+    {
+        return $this->morphOne(RatOcorrenciaRelato::class, 'conteudo');
+    }
 }
 ```
 
 ---
 
-## 4. DTOs — Fluxo Controller → DTO → Service → Model → DB
+### 5.4 Tipos Concretos de Relato
 
-Implementado o padrão completo do whiteboard "Padrão Ouro". Os DTOs ficam em `app/DTOs/Rat/`, seguindo o padrão `readonly class` já adotado pelo `RatFilterDTO` legado.
+#### `RatRelatoDadosGerais`
+**Tabela:** `rat_relato_dados_gerais`
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `data_fato` | datetime | Data/hora do fato |
+| `nat_codigo` | string | Código/rat_codigo |
+| `nat_cobrade_id` | integer | Código COBRADE |
+| `nat_ocorrencia` | string | Tipo de ocorrência |
+| `nat_nome_operacao` | string | Nome da operação |
+| `local_municipio` | string | Município |
+| `local_estadouf` | string | UF |
+| `local_cep` / `local_logradoura_1` / `local_bairro` | string | Endereço completo |
+| `uni_responsavel_*` | string | Unidade responsável |
+| `com_ocorrencia_data` | datetime | Data de comunicação |
+
+---
+
+#### `RatRelatoEnvolvidos`
+**Tabela:** `rat_relato_envolvidos`
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `g_tipo_pessoa` | string | Tipo da pessoa envolvida |
+| `g_lesao_grau` | string | Grau da lesão |
+| `g_envolvido_tipo` | string | Tipo de envolvido |
+| `p_nome_completo` | string | Nome completo / razão social |
+| `p_cpf` | string | CPF |
+| `p_sexo` | string | Sexo |
+| `p_data_nascimento` | date | Data de nascimento |
+| `p_end_cep` | string | CEP |
+| `g_envolvido_presenca` | boolean | Presença confirmada |
+| `p_turista` | boolean | É turista? |
+| `p_situacao_rua` | boolean | Situação de rua? |
+
+---
+
+#### `RatRelatoRecurso`
+**Tabela:** `rat_relato_recursos`
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `seq` | integer | Sequencial do recurso |
+| `recurso_tipo` | string | `viatura|pe|aereo|aquatico|outro` |
+| `recurso_problemas` | boolean | Houve problemas? |
+| `viatura_tipo` / `viatura_placa` | string | Identificação da viatura |
+| `viatura_saida` / `viatura_chegada` | datetime | Horários |
+| `viatura_km` | decimal(2) | Quilometragem |
+| `viatura_quantidade` | integer | Quantidade |
+
+**Relacionamento extra:**
+- `recursosEmpregados()` → `hasMany(RatRecursosEmpregado::class, 'relato_recurso_id')`
+
+**Cascade booted:**
+```php
+static::deleting(fn($r) => $r->recursosEmpregados()->each->delete());
+```
+
+---
+
+#### `RatRelatoVistoria`
+**Tabela:** `rat_relato_vistoria`
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `v_solicitante_nome` / `v_solicitante_cpf` | string | Solicitante |
+| `v_tipo_imovel` | string | Tipo de imóvel |
+| `v_tipo_construcao` | string | Tipo de construção |
+| `v_estado_conservacao` | string | Estado de conservação |
+| `v_numero_pavimentos` | integer | Nº pavimentos |
+| `v_numero_moradores` | integer | Nº moradores |
+| `v_ha_idosos` / `v_ha_criancas` | boolean | Grupos vulneráveis |
+| `v_latitude` / `v_longitude` | decimal(8) | Geolocalização |
+
+---
+
+### 5.5 Sub-models de Recursos
+
+#### `RatRecurso` (Abstrata)
+`app/Models/Rat/Recursos/RatRecurso.php` — base com `SoftDeletes`
+
+#### `RatRecursosEmpregado`
+**Tabela:** `rat_recursos_empregados`
+
+Campos principais: `relato_recurso_id`, `recurso_tipo`, `viatura_placa`, `viatura_tipo`
+
+Relacionamentos:
+- `relatoRecurso()` → `belongsTo(RatRelatoRecurso::class)`
+- `componentesGuarnicao()` → `hasMany(RatRecursosComponentesGuarnicao::class, 'recurso_empregado_id')`
+
+#### `RatRecursosComponentesGuarnicao`
+**Tabela:** `rat_recursos_componentes_guarnicao`
+
+Campos principais: `recurso_empregado_id`, `relato_recurso_id`, `nome_completo`, `matricula`, `masp`, `corporacao`, `pg_cargo`, `funcao`, `is_condutor` (boolean)
+
+---
+
+### 5.6 Models de Referência
+
+#### `RatRedec` — `app/Models/Rat/RatRedec.php`
+**Tabela:** `rat_redec` — lookup de Regiões de Defesa Civil
+Campos: `nome VARCHAR(100)`, `sigla VARCHAR(10)`
+Sem SoftDeletes (tabela de referência imutável).
+
+#### `RatVeiculo` — `app/Models/Rat/RatVeiculo.php`
+**Tabela:** `rat_veiculos`
+Campos: `placa` (único), `modelo`, `marca`, `ativo` (boolean)
+Usa `SoftDeletes`.
+
+---
+
+## 6. DTOs
+
+DTOs são classes `readonly` (PHP 8.1+) que garantem tipagem estrita entre HTTP e Services.
 
 ### `RatBoDTO`
 **Arquivo:** `app/DTOs/Rat/RatBoDTO.php`
 
-Representa os dados de criação/atualização de um Boletim de Ocorrência.
-
-| Campo DTO | Campo DB | Tipo |
-|-----------|----------|------|
-| `numeroBos` | `numero_bos` | `?string` |
-| `historico` | `historico` | `?string` |
-| `prazoEdicao` | `prazo_edicao` | `?string` |
-| `ocorrenciaOrigemId` | `ocorrencia_origem_id` | `?int` |
-| `status` | `status` | `?int` |
-| `criadoPor` | `created_by` | `?int` |
-
 ```php
-// Uso no controller:
-$ocorrencia = $this->service->manageOcorrencia(
-    RatBoDTO::fromArray($request->validated())
-);
+readonly class RatBoDTO
+{
+    public function __construct(
+        public ?string $numeroBos           = null,
+        public ?string $historico           = null,
+        public ?string $prazoEdicao         = null,
+        public ?int    $ocorrenciaOrigemId  = null,
+        public ?int    $status              = null,
+        public ?int    $criadoPor           = null,
+    ) {}
+
+    public static function fromArray(array $data): self { ... }
+
+    // toArray() exclui valores null -- nao sobrescreve defaults do banco
+    public function toArray(): array { ... }
+}
 ```
+
+| Propriedade DTO | Campo no banco |
+|-----------------|----------------|
+| `numeroBos` | `numero_bos` |
+| `historico` | `historico` |
+| `prazoEdicao` | `prazo_edicao` |
+| `ocorrenciaOrigemId` | `ocorrencia_origem_id` |
+| `status` | `status` |
+| `criadoPor` | `created_by` |
+
+---
 
 ### `RatOcorrenciaFiltroDTO`
 **Arquivo:** `app/DTOs/Rat/RatOcorrenciaFiltroDTO.php`
 
-Encapsula critérios de listagem/paginação.
-
-| Campo DTO | Campo HTTP | Tipo | Default |
-|-----------|------------|------|---------|
-| `status` | `status` | `?int` | `null` |
-| `numeroBos` | `numero_bos` | `?string` | `null` |
-| `porPagina` | `per_page` | `int` | `15` |
-
 ```php
-// Uso no controller:
-$filtro = RatOcorrenciaFiltroDTO::fromArray(request()->only(['status', 'numero_bos']));
-$ocorrencias = $this->service->paginate($filtro);
+readonly class RatOcorrenciaFiltroDTO
+{
+    public function __construct(
+        public ?int    $status    = null,
+        public ?string $numeroBos = null,
+        public int     $porPagina = 15,
+    ) {}
+
+    public static function fromArray(array $data, int $porPagina = 15): self { ... }
+}
 ```
+
+---
 
 ### `RatDadosGeraisDTO`
 **Arquivo:** `app/DTOs/Rat/RatDadosGeraisDTO.php`
 
-22 campos da tabela `rat_relato_dados_gerais`, mapeados pelos campos de `RatDadosGeraisRequest`. `toArray()` exclui campos nulos para não sobrescrever defaults do banco.
+Dados para criar/atualizar registros em `rat_relato_dados_gerais`.
 
 ---
 
-## 5. Service e Controllers Atualizados
+## 7. Form Requests (Validação)
 
-### `RatOcorrenciaService` — assinaturas com DTOs
+**Localização:** `app/Http/Requests/Rat/`
 
-| Método (antes) | Método (depois) |
-|----------------|-----------------|
-| `manageOcorrencia(array $data, ?int $id)` | `manageOcorrencia(RatBoDTO $dto, ?int $id)` |
-| `paginate(array $filters, int $perPage)` | `paginate(RatOcorrenciaFiltroDTO $filtro)` |
+| Arquivo | Campos obrigatórios | Uso |
+|---------|---------------------|-----|
+| `BoRequest.php` | `numero_bos` | Criar/atualizar `RatOcorrencia` |
+| `RatDadosGeraisRequest.php` | `data_fato`, `nat_cobrade_id` | Criar `RatRelatoDadosGerais` |
+| `RatEnvolvidosRequest.php` | `g_tipo_pessoa`, `p_nome_completo` | Criar `RatRelatoEnvolvidos` |
+| `RatEnvolvidosUpdateRequest.php` | — (todos `sometimes`) | Atualizar envolvidos |
+| `RatHistoricoRequest.php` | `eventos` (array) | Atualizar histórico |
+| `RatRecursosRequest.php` | `recurso_tipo` (enum) | Criar relato de recursos |
+| `RatRecursosUpdateRequest.php` | — (todos `sometimes`) | Atualizar recursos |
+| `RatVistoriaRequest.php` | `v_solicitante_nome` | Criar `RatRelatoVistoria` |
 
-A lógica interna permanece idêntica — apenas a assinatura pública é tipada.
-
-### Controllers atualizados (4)
-
-| Controller | Mudanças |
-|------------|---------|
-| `Compdec/RatController` | `index()` usa `RatOcorrenciaFiltroDTO`; `store()` e `update()` usam `RatBoDTO`; `exportRats()` usa `RatOcorrenciaFiltroDTO` com `porPagina=9999` |
-| `Compdec/BoRatController` | `index()` usa `RatOcorrenciaFiltroDTO`; `store()` usa `RatBoDTO` |
-| `Compdec/RatOcorrenciaController` | `index()` usa `RatOcorrenciaFiltroDTO`; `store()` usa `RatBoDTO` + `RatDadosGeraisDTO` |
-| `Compdec/RatAlvoController` | `index()` usa `RatOcorrenciaFiltroDTO` com `status=0` |
+Regras especiais:
+- `RatVistoriaRequest`: `v_latitude` com `between:-90,90`; `v_longitude` com `between:-180,180`
+- `RatRecursosRequest`: `recurso_tipo` validado como `in:viatura,pe,aereo,aquatico,outro`
+- `RatHistoricoRequest`: valida array `eventos.*` com `tipo`, `titulo`, `descricao`, `data`
 
 ---
 
-## 6. Fluxo Completo Atualizado — Nova Arquitetura
+## 8. Services — Camada de Negócio
+
+### 8.1 `RatOcorrenciaService`
+**Arquivo:** `app/Services/Rat/RatOcorrenciaService.php`
+
+| Método | Assinatura | O que faz |
+|--------|-----------|-----------|
+| `manageOcorrencia()` | `(RatBoDTO, ?int $id): RatOcorrencia` | Cria ou atualiza em transação DB; gera `numero_bos` automático |
+| `finalizar()` | `(int $id): RatOcorrencia` | Muda `status` → 1; `abort_if` já finalizado (422) |
+| `paginate()` | `(RatOcorrenciaFiltroDTO): LengthAwarePaginator` | Lista com filtro de status e numero_bos |
+| `findOrFail()` | `(int $id): RatOcorrencia` | Carrega com `relatosMorph` eager |
+
+**Geração de número BOS:**
+```php
+private function generateNumeroBos(): string
+{
+    $year = date('Y');
+    $seq  = RatOcorrencia::whereYear('created_at', $year)->count() + 1;
+    return sprintf('%d-%05d', $year, $seq);  // ex: "2026-00001"
+}
+```
+
+---
+
+### 8.2 `RatRelatoService`
+**Arquivo:** `app/Services/Rat/RatRelatoService.php`
+
+| Método | O que faz |
+|--------|-----------|
+| `manageRelatos(RatOcorrencia, array)` | Substitui todos os relatos (delete + re-insert em transação) |
+| `attachRelato(RatOcorrencia, string, int)` | Vincula conteúdo já criado à ocorrência via pivô |
+| `detachRelato(int $relatoId)` | Soft-deleta a entrada pivô pelo ID |
+
+---
+
+### 8.3 `RatRecursoService`
+**Arquivo:** `app/Services/Rat/RatRecursoService.php`
+
+| Método | O que faz |
+|--------|-----------|
+| `createRecurso(array)` | Cria `RatRelatoRecurso` |
+| `addEmpregado(int, array)` | Adiciona `RatRecursosEmpregado` ao relato de recurso |
+| `addComponenteGuarnicao(int, array)` | Adiciona `RatRecursosComponentesGuarnicao` ao empregado |
+| `removeEmpregado(int)` | Remove empregado **e seus componentes** em transação |
+
+---
+
+### 8.4 `RatNovoService`
+**Arquivo:** `app/Services/Rat/RatNovoService.php`
+
+Extração de dados normalizados para Power BI / API externa.
+
+| Método | O que retorna |
+|--------|--------------|
+| `getNormalizedDataForPowerBI(Request)` | Array `{ocorrencia, dados_gerais, envolvidos, recursos}` |
+| `extractDadosGerais(RatOcorrencia)` | `data_fato`, `rat_codigo`, `cobrade_id`, `municipio`, `uf`, `nome_operacao` |
+| `extractEnvolvidos(RatOcorrencia)` | Array de todos os envolvidos da ocorrência |
+| `extractRecursos(RatOcorrencia)` | Array de recursos com suas guarnições |
+
+---
+
+### 8.5 `RatBiService`
+**Arquivo:** `app/Services/Rat/RatBiService.php`
+
+| Método | O que retorna |
+|--------|--------------|
+| `getOcorrenciasPorStatus()` | Collection: `[{status: 'Rascunho', total: N}, ...]` |
+| `getOcorrenciasPorMes()` | Contagem mensal do ano corrente |
+| `getEnvolvidosPorTipo()` | Distribuição por tipo de pessoa |
+| `getRecursosPorTipo()` | Distribuição por tipo de recurso |
+
+---
+
+### 8.6 `RatAuditService`
+**Arquivo:** `app/Services/Rat/RatAuditService.php`
+
+```php
+$auditService->log('rat.criado', 'rat_ocorrencias', $ocorrencia->id, $payload);
+$auditService->history($ocorrenciaId);  // histórico paginado
+```
+
+Campos gravados: `user_id`, `event`, `table_name`, `row_id`, `new_values`, `ip_address`, `user_agent`.
+
+---
+
+### 8.7 `RatTrackingService`
+**Arquivo:** `app/Services/Rat/RatTrackingService.php`
+
+| Método | O que faz |
+|--------|-----------|
+| `getTimeline(RatOcorrencia)` | Linha do tempo: criação, finalização, alterações |
+| `getOcorrenciasAtivas()` | Rascunhos com prazo de edição vencendo |
+| `isPrazoVencido(RatOcorrencia)` | Retorna `true` se `prazo_edicao < now()` |
+
+---
+
+## 9. Controllers
+
+### 9.1 `RatController`
+**Arquivo:** `app/Http/Controllers/Compdec/RatController.php`
+**Injeta:** `RatOcorrenciaService`, `RatRelatoService`
+
+| Método | HTTP | Rota | Middleware |
+|--------|------|------|------------|
+| `index()` | GET | `/compdec/rat` | `can:rat.protocolos.view` |
+| `create()` | GET | `/compdec/rat/create` | `can:rat.protocolos.create` |
+| `store()` | POST | `/compdec/rat` | `can:rat.protocolos.create` |
+| `show()` | GET | `/compdec/rat/{id}` | `can:rat.protocolos.view` |
+| `edit()` | GET | `/compdec/rat/{id}/edit` | `can:rat.protocolos.edit` |
+| `update()` | PUT | `/compdec/rat/{id}` | `can:rat.protocolos.edit` |
+| `destroy()` | DELETE | `/compdec/rat/{id}` | `can:rat.protocolos.delete` |
+| `finalize()` | PATCH | `/compdec/rat/{id}/finalizar` | `can:rat.protocolos.finalize` |
+| `exportRats()` | GET | `/compdec/rat/export` | `can:rat.protocolos.export` |
+
+**Exportação CSV:** `streamDownload`, encoding UTF-8 BOM, separador `;`, filename `rat-ocorrencias-YYYY-MM-DD.csv`
+
+---
+
+### 9.2 `RatOcorrenciaController`
+**Arquivo:** `app/Http/Controllers/Compdec/RatOcorrenciaController.php`
+**Injeta:** `RatOcorrenciaService`, `RatRelatoService`
+
+| Método | HTTP | Rota | Middleware |
+|--------|------|------|------------|
+| `index()` | GET | `/compdec/rat/ocorrencias` | `can:rat.protocolos.view` |
+| `show()` | GET | `/compdec/rat/ocorrencias/{id}` | `can:rat.protocolos.view` |
+| `store()` | POST | `/compdec/rat/ocorrencias` | `can:rat.protocolos.create` |
+| `finalize()` | PATCH | `/compdec/rat/ocorrencias/{id}/finalizar` | `can:rat.protocolos.finalize` |
+
+Renderiza views Inertia em `Compdec/Rat/Ocorrencia/`.
+
+---
+
+### 9.3 `BoRatController`
+**Arquivo:** `app/Http/Controllers/Compdec/BoRatController.php`
+
+| Método | HTTP | Rota | Middleware |
+|--------|------|------|------------|
+| `index()` | GET | `/compdec/rat/bo` | `can:rat.protocolos.view` |
+| `store()` | POST | `/compdec/rat/bo` | `can:rat.protocolos.create` |
+
+---
+
+### 9.4 `RatAlvoController`
+**Arquivo:** `app/Http/Controllers/Compdec/RatAlvoController.php`
+
+| Método | HTTP | Rota | Middleware |
+|--------|------|------|------------|
+| `index()` | GET | `/compdec/rat/alvos` | `can:rat.protocolos.view` |
+| `show()` | GET | `/compdec/rat/alvos/{id}` | `can:rat.protocolos.view` |
+
+---
+
+## 10. Rotas Registradas
+
+**Arquivo:** `routes/modules/rat.php`
+
+### Nova Estrutura — prefix `compdec/rat`, name `compdec.rat.`
 
 ```
-[Usuário faz requisição HTTP]
-        ↓
-[FormRequest → validated()]
-  BoRequest / RatDadosGeraisRequest / RatVistoriaRequest ...
-        ↓ fromArray($request->validated())
-[DTO → tipagem estrita]
-  RatBoDTO / RatOcorrenciaFiltroDTO / RatDadosGeraisDTO
-        ↓ dto passado ao Service
-[RatOcorrenciaService / RatRelatoService]
-  DB::transaction() + dto->toArray() → array filtrado sem nulos
-        ↓
-[Model Eloquent — RatOcorrencia, RatOcorrenciaRelato ...]
-  create($data) / update($data)
-        ↓
-[MySQL — tabelas rat_ocorrencias, rat_ocorrencia_relatos ...]
-  Soft delete preserva dados; cascade via booted() events
+GET    /compdec/rat                              compdec.rat.index
+GET    /compdec/rat/create                       compdec.rat.create
+POST   /compdec/rat                              compdec.rat.store
+GET    /compdec/rat/export                       compdec.rat.export
+GET    /compdec/rat/{id}                         compdec.rat.show
+GET    /compdec/rat/{id}/edit                    compdec.rat.edit
+PUT    /compdec/rat/{id}                         compdec.rat.update
+DELETE /compdec/rat/{id}                         compdec.rat.destroy
+PATCH  /compdec/rat/{id}/finalizar               compdec.rat.finalize
+GET    /compdec/rat/bo                           compdec.rat.bo.index
+POST   /compdec/rat/bo                           compdec.rat.bo.store
+GET    /compdec/rat/alvos                        compdec.rat.alvos.index
+GET    /compdec/rat/alvos/{id}                   compdec.rat.alvos.show
+GET    /compdec/rat/ocorrencias                  compdec.rat.ocorrencias.index
+GET    /compdec/rat/ocorrencias/{id}             compdec.rat.ocorrencias.show
+POST   /compdec/rat/ocorrencias                  compdec.rat.ocorrencias.store
+PATCH  /compdec/rat/ocorrencias/{id}/finalizar   compdec.rat.ocorrencias.finalize
+```
+
+### Estrutura Legada — prefix `rat`, name `rat.`
+
+```
+GET    /rat                         rat.index
+GET    /rat/create                  rat.create
+POST   /rat                         rat.store
+GET    /rat/export                  rat.export
+GET    /rat/{id}                    rat.show
+GET    /rat/{id}/json               rat.show.json
+GET    /rat/{id}/edit               rat.edit
+PUT    /rat/{id}                    rat.update
+PATCH  /rat/{id}/draft              rat.draft
+PATCH  /rat/{id}/finalize           rat.finalize
+DELETE /rat/{id}                    rat.destroy
+POST   /rat/{id}/attachments             rat.attachments.store
+DELETE /rat/{id}/attachments/{id}        rat.attachments.destroy
+```
+
+**Total: 30 rotas RAT** — todas com middleware `can:` middleware
+
+---
+
+## 11. Permissionamento e Policy
+
+### Padrão de Slug — `modulo.recurso.acao`
+
+```
+rat.protocolos.view
+rat.protocolos.create
+rat.protocolos.edit
+rat.protocolos.delete
+rat.protocolos.finalize
+rat.protocolos.export
+```
+
+O modelo `Permission` (`app/Models/Permission.php`), que estende Spatie, possui campos `slug`, `module` e `group`.
+
+### `RatPolicy`
+**Arquivo:** `app/Policies/RatPolicy.php`
+
+Estende `BasePolicy` — super-admin recebe `true` automaticamente no `before()`.
+
+| Método | Regra de negócio |
+|--------|-----------------|
+| `viewAny($user)` | Requer `rat.protocolos.view` |
+| `view($user, $ocorrencia)` | Requer `rat.protocolos.view` |
+| `create($user)` | Requer `rat.protocolos.create` |
+| `update($user, $ocorrencia)` | **Criador pode editar seu próprio rascunho sem permissão extra.** Outros precisam de `rat.protocolos.edit` |
+| `delete($user, $ocorrencia)` | Requer `rat.protocolos.delete` |
+| `finalize($user, $ocorrencia)` | Requer `rat.protocolos.finalize`; rejeita com mensagem se já finalizado |
+| `export($user)` | Requer `rat.protocolos.export` |
+
+**Registrada em** `app/Providers/AuthServiceProvider.php`:
+```php
+\App\Models\Rat\RatOcorrencia::class => \App\Policies\RatPolicy::class,
 ```
 
 ---
 
-## 7. Resumo Quantitativo — Fase 3
+## 12. Multi-Tenancy (Base)
 
-| Categoria | Quantidade |
-|-----------|-----------|
-| Migration de recriação criada e executada | 1 |
-| Tabelas polimórficas recriadas no banco | 9 |
-| Migration inválida deletada | 1 |
-| Models com cascade soft delete adicionado | 3 |
-| Seeder novo criado (`RatRedecSeeder`) | 1 |
-| REDECs inseridas em `rat_redec` | 14 |
-| `DatabaseSeeder` atualizado | 1 |
-| DTOs novos criados (`app/DTOs/Rat/`) | 3 |
-| Service atualizado com assinaturas DTO | 1 |
-| Controllers atualizados para usar DTOs | 4 |
-| Cache final: `php artisan optimize` | ✅ |
+Implementação própria — sem pacotes externos. Funciona de forma não invasiva.
+
+### `Tenant` Model — `app/Models/Tenant.php`
+
+```php
+class Tenant extends Model
+{
+    use SoftDeletes;
+    protected $table     = 'tenants';
+    protected $fillable  = ['nome', 'slug', 'database', 'dominio', 'ativo', 'config'];
+    protected $casts     = ['ativo' => 'boolean', 'config' => 'array'];
+}
+```
+
+**Resolução em ordem de prioridade** (`resolveFromRequest()`):
+1. Header HTTP `X-Tenant: {slug}` → API/mobile
+2. Subdomínio da request → ex: `compdec.newsdc.gov.br`
+3. `tenant_id` do usuário autenticado
+
+**`getDatabaseConnection()`**: se o tenant tiver banco próprio, configura `database.connections.tenancy.database` em runtime e retorna `'tenancy'`.
 
 ---
 
-*Fase 3 documentada em 10/03/2026 — Módulo RAT, Barbara Costa*
+### `SetTenant` Middleware — `app/Http/Middleware/SetTenant.php`
+
+Registrado nos grupos **`web`** e **`api`** do Kernel. Por request:
+1. Resolve o tenant via `Tenant::resolveFromRequest()`
+2. Vincula ao container: `app()->instance('tenant', $tenant)`
+3. Reconfigura conexão `tenancy` se tenant tem banco próprio
+4. Salva `tenant_id` na sessão
+
+---
+
+### `HasTenant` Trait — `app/Traits/HasTenant.php`
+
+Adiciona isolamento automático por `tenant_id` a qualquer Model:
+
+```php
+class MinhaEntidade extends Model {
+    use HasTenant;  // adiciona WHERE tenant_id = ? em todas as queries
+}
+```
+
+- `bootHasTenant()` → `GlobalScope('tenant')` + preenche `tenant_id` no evento `creating`
+- `tenant()` → `belongsTo(Tenant::class)`
+- `semFiltroTenant()` → scope para super-admin acessar dados cross-tenant
+
+> O módulo RAT atual **não usa `HasTenant`** — está disponível para quando o isolamento por tenant for ativado.
+
+---
+
+## 13. Conexões de Banco de Dados
+
+**Arquivo:** `config/database.php`
+
+| Conexão | Propósito | Variáveis de ambiente |
+|---------|-----------|-----------------------|
+| `mysql` (padrão) | Banco principal da aplicação | `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` |
+| `legacy` | Integração/migração do banco legado | `DB_LEGACY_HOST`, `DB_LEGACY_DATABASE`, `DB_LEGACY_USERNAME` |
+| `carga` | Queries analíticas/BI/ETL — réplica de leitura, `strict: false` | `DB_CARGA_HOST`, `DB_CARGA_DATABASE`, `DB_CARGA_USERNAME` |
+| `tenancy` | Banco por tenant, configurado em runtime pelo `SetTenant` | `DB_TENANCY_HOST`, `DB_TENANCY_DATABASE` |
+
+**Usar a conexão `carga`:**
+```php
+DB::connection('carga')->table('rat_ocorrencias')->...;
+```
+
+---
+
+## 14. Fluxo Completo de uma Requisição
+
+### Criar nova ocorrência — `POST /compdec/rat`
+
+```
+1. HTTP  POST /compdec/rat
+         |
+2. Kernel-> SetTenant::handle() -> resolve tenant (se houver)
+         |
+3. Gate  -> can:rat.protocolos.create (Spatie Permission)
+         |
+4. RatController::store(BoRequest $request)
+         |   BoRequest::rules() valida numero_bos, historico, prazo_edicao...
+         |
+5. RatBoDTO::fromArray($request->validated())
+         |   array -> objeto readonly tipado
+         |
+6. RatOcorrenciaService::manageOcorrencia(RatBoDTO)
+         |   DB::transaction() {
+         |     gera numero_bos "2026-00001" se vazio
+         |     status = 0 (Rascunho)
+         |     created_by = auth()->id()
+         |     RatOcorrencia::create($data)
+         |   }
+         |
+7. RatRelatoService::manageRelatos($ocorrencia, $relatos)
+         |   (se payload contiver relatos)
+         |   delete relatos existentes
+         |   RatOcorrenciaRelato::create([conteudo_id, conteudo_type])
+         |
+8. redirect()->route('compdec.rat.show', $id)
+         +-- with('success', 'Ocorrencia RAT criada com sucesso!')
+```
+
+### Soft Delete com Cascade — `DELETE /compdec/rat/{id}`
+
+```
+1. RatPolicy::delete($user, $ocorrencia) -> verifica rat.protocolos.delete
+         |
+2. RatController::destroy($ocorrencia)
+         |   $ocorrencia->delete()
+         |
+3. RatOcorrencia::booted() -> evento deleting
+         |   $ocorrencia->relatos()->each->delete()
+         |
+4. Para cada RatOcorrenciaRelato:
+         |   booted() -> evento deleting -> $relato->conteudo?->delete()
+         |
+5. Se conteudo e RatRelatoRecurso:
+         |   booted() -> evento deleting -> $recurso->recursosEmpregados()->each->delete()
+         |
+6. Resultado: deleted_at preenchido em TODA a cadeia.
+             Dados preservados fisicamente no banco.
+```
+
+---
+
+## 15. Diagrama de Relacionamentos
+
+```
+tenants
+  +-- id, nome, slug (UNIQUE), database, dominio, ativo, config
+
+rat_ocorrencias                        <- RatOcorrencia
+  |  id, numero_bos, status, prazo_edicao, historico
+  |  ocorrencia_origem_id (auto-FK), created_by
+  |  SoftDeletes + InnoDB
+  |
+  +--[hasMany] rat_ocorrencia_relatos   <- RatOcorrenciaRelato
+       |  id, ocorrencia_id, conteudo_id, conteudo_type
+       |  SoftDeletes
+       |
+       +--[morphTo] rat_relato_dados_gerais  <- RatRelatoDadosGerais
+       |   data_fato, nat_cobrade_id, local_municipio, local_estadouf
+       |
+       +--[morphTo] rat_relato_envolvidos    <- RatRelatoEnvolvidos
+       |   g_tipo_pessoa, p_nome_completo, p_cpf, p_data_nascimento
+       |
+       +--[morphTo] rat_relato_recursos      <- RatRelatoRecurso
+       |   seq, recurso_tipo, viatura_placa
+       |   |
+       |   +--[hasMany] rat_recursos_empregados  <- RatRecursosEmpregado
+       |        relato_recurso_id, recurso_tipo, viatura_placa
+       |        |
+       |        +--[hasMany] rat_recursos_componentes_guarnicao
+       |             recurso_empregado_id, nome_completo
+       |             matricula, masp, corporacao, is_condutor
+       |
+       +--[morphTo] rat_relato_vistoria       <- RatRelatoVistoria
+            v_solicitante_nome, v_tipo_imovel
+            v_estado_conservacao, v_latitude, v_longitude
+
+rat_redec      <- RatRedec     (nome, sigla -- 14 REDECs de MG)
+rat_veiculos   <- RatVeiculo   (placa, modelo, marca, ativo)
+rat_bem_afetado / rat_encaminhamento / rat_orgao_acionado / rat_patologia
+```
+
+---
+
+## Resumo Executivo
+
+| Componente | Contagem | Detalhe |
+|------------|----------|---------|
+| Tabelas RAT | **15** | InnoDB + SoftDeletes em todas |
+| Models | **12** | Incluindo bases abstratas |
+| Services | **7** | Um por responsabilidade |
+| Controllers | **4** | Namespace `Compdec` |
+| Form Requests | **8** | Validação na borda HTTP |
+| DTOs | **3** | Tipagem estrita HTTP -> Service |
+| Rotas | **30** | Todas com `can:` middleware |
+| Policy | **1** | `RatPolicy` — 6 métodos |
+| Conexões DB | **4** | mysql, legacy, carga, tenancy |
+| Middleware Tenant | **1** | `SetTenant` em web + api |
+| Trait Tenancy | **1** | `HasTenant` pronto para uso |
+
+---
+
+*Documentado em 11/03/2026 — Módulo RAT, Barbara Costa*
