@@ -83,6 +83,47 @@ return [
             ]) : [],
         ],
 
+        // Conexão para carga/queries otimizadas (leitura intensiva, ETL, BI)
+        // Aponta para réplica de leitura ou banco dedicado a carga de dados
+        'carga' => [
+            'driver' => 'mysql',
+            'host' => env('DB_CARGA_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_CARGA_PORT', '3306'),
+            'database' => env('DB_CARGA_DATABASE', env('DB_DATABASE', 'forge')),
+            'username' => env('DB_CARGA_USERNAME', env('DB_USERNAME', 'forge')),
+            'password' => env('DB_CARGA_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('DB_CARGA_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false, // modo relaxado para queries analíticas/BI
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        // Conexão de tenancy: database por tenant (configurada em runtime pelo SetTenant middleware)
+        'tenancy' => [
+            'driver' => 'mysql',
+            'host' => env('DB_TENANCY_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_TENANCY_PORT', '3306'),
+            'database' => env('DB_TENANCY_DATABASE', ''),
+            'username' => env('DB_TENANCY_USERNAME', env('DB_USERNAME', 'forge')),
+            'password' => env('DB_TENANCY_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('DB_TENANCY_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),
