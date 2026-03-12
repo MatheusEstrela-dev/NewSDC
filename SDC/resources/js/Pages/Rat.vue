@@ -11,7 +11,7 @@
             <template #default="{ activeTab }">
               <!-- Aba 1: Dados Gerais -->
               <div v-if="Number(activeTab) === 1">
-                <RatForm
+                <RatDadosGeraisForm
                   :rat="rat"
                   :view-only="props.viewOnly"
                   @save="handleSave"
@@ -94,7 +94,7 @@ import PaperClipIcon from '@/Components/Icons/PaperClipIcon.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import RatAttachments from '@/Components/Rat/RatAttachments.vue';
-import RatForm from '@/Components/Rat/RatForm.vue';
+import RatDadosGeraisForm from '@/Components/Rat/RatDadosGeraisForm.vue';
 import RatHeader from '@/Components/Rat/RatHeader.vue';
 import RatHistory from '@/Components/Rat/RatHistory.vue';
 import RatInspection from '@/Components/Rat/RatInspection.vue';
@@ -183,7 +183,7 @@ const rat = computed(() => {
   if (props.rat && props.rat.id) {
     return props.rat;
   }
-  return ratState.value;
+  return ratState.value || { id: null, status: 'rascunho' };
 });
 
 const recursos = computed(() => {
