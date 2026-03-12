@@ -241,25 +241,15 @@ class ProcessoFilter
     {
         return [
             'status_options' => \App\Modules\Decretacoes\Enums\StatusProcesso::toSelectOptions(),
-            'analistas' => Processo::distinct('analista')
-                ->whereNotNull('analista')
-                ->where('analista', '!=', '')
-                ->pluck('analista')
-                ->sort()
-                ->values(),
+            'analistas' => \App\Modules\Decretacoes\Enums\MockAnalista::toSelectOptions(),
             'reconhecimentos' => Processo::distinct('reconhecimento')
                 ->whereNotNull('reconhecimento')
                 ->where('reconhecimento', '!=', '')
                 ->pluck('reconhecimento')
                 ->sort()
                 ->values(),
-            'municipios' => DecretoMunicipio::select('cedec_municipio.p_nome', DB::raw('count(dec_decreto_municipios.municipio_id) as total'), 'cedec_municipio.id')
-                ->groupBy('dec_decreto_municipios.municipio_id')
-                ->join('cedec_municipio', 'cedec_municipio.id', '=', 'dec_decreto_municipios.municipio_id')
-                ->join('dec_entrada_processos', 'dec_entrada_processos.id', '=', 'dec_decreto_municipios.entrada_processos_id')
-                ->whereNull('dec_entrada_processos.deleted_at')
-                ->get()
-                ->values(),
+            'municipios' => \App\Modules\Decretacoes\Enums\MockMunicipio::toSelectOptions(),
+            'redecs' => \App\Modules\Decretacoes\Enums\MockRedec::toSelectOptions(),
             'tipos_desastre' => collect(include app_path('Enums/classificacao_desastres.php'))
                 ->map(function ($item) {
                     $label = $item['a_definicao']

@@ -14,17 +14,12 @@ return new class extends Migration
             $table->text('informacao')->nullable();
             $table->text('descricao')->nullable();
 
-            $table->unsignedInteger('desastre_grupo_id')->nullable();
+            $table->unsignedBigInteger('desastre_grupo_id')->nullable();
 
             $table->timestamps();
-
-            // Se existir a tabela desastre_grupos, ideal adicionar foreign key:
-            /*
-            $table->foreign('desastre_grupo_id')
-                  ->references('id')
-                  ->on('desastre_grupos')
-                  ->nullOnDelete();
-            */
+            // FK para dec_desastre_grupos nao pode ser declarada aqui pois
+            // dec_desastre_grupos e criada em migration posterior (100002).
+            // O index garante performance sem violar a ordem de execucao.
         });
     }
 

@@ -2,38 +2,66 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     /**
      * Run the migrations.
+     *
+     * Usa DB::table() diretamente para evitar o scope de SoftDeletes do modelo Role,
+     * que adiciona "AND roles.deleted_at IS NULL" antes da coluna existir.
      */
     public function up(): void
     {
         try {
-            // Garante que as roles existam antes de atribuir
             $guard = config('auth.defaults.guard', 'web');
-            $superAdminRole = \App\Models\Role::firstOrCreate(
-                ['name' => 'super-admin', 'guard_name' => $guard],
-                ['hierarchy_level' => 0]
-            );
+            $now   = now();
 
-            // Busca ou cria o usuário principal
-            $user = \App\Models\User::updateOrCreate(
-                ['cpf' => '12345678900'],
-                [
-                    'name' => 'Admin Geral',
-                    'email' => 'admin@defesa.mg.gov.br',
-                    'password' => \Illuminate\Support\Facades\Hash::make('password'),
-                    'email_verified_at' => now(),
-                ]
-            );
+            // Cria a role via query builder (sem SoftDeletes scope)
+            $roleId = DB::table('roles')->where('name', 'super-admin')->where('guard_name', $guard)->value('id');
+            if (!$roleId) {
+                $roleId = DB::table('roles')->insertGetId([
+                    'name'            => 'super-admin',
+                    'guard_name'      => $guard,
+                    'hierarchy_level' => 0,
+                    'created_at'      => $now,
+                    'updated_at'      => $now,
+                ]);
+            }
 
-            if ($user) {
-                $user->assignRole($superAdminRole);
+            // Cria ou atualiza o usuário principal
+            $userId = DB::table('users')->where('cpf', '12345678900')->value('id');
+            if (!$userId) {
+                $userId = DB::table('users')->insertGetId([
+                    'name'              => 'Admin Geral',
+                    'email'             => 'admin@defesa.mg.gov.br',
+                    'cpf'               => '12345678900',
+                    'password'          => Hash::make('password'),
+                    'email_verified_at' => $now,
+                    'created_at'        => $now,
+                    'updated_at'        => $now,
+                ]);
+            }
+
+            // Vincula role ao usuário (tabela pivot model_has_roles)
+            if ($userId && $roleId) {
+                $exists = DB::table('model_has_roles')
+                    ->where('role_id', $roleId)
+                    ->where('model_id', $userId)
+                    ->where('model_type', \App\Models\User::class)
+                    ->exists();
+
+                if (!$exists) {
+                    DB::table('model_has_roles')->insert([
+                        'role_id'    => $roleId,
+                        'model_id'   => $userId,
+                        'model_type' => \App\Models\User::class,
+                    ]);
+                }
             }
         } catch (\Exception $e) {
-            // Ignora erros para não travar o deploy se a tabela ainda não existir
             \Illuminate\Support\Facades\Log::error('Erro ao atribuir role na migração: ' . $e->getMessage());
         }
     }

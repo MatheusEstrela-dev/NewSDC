@@ -52,9 +52,13 @@ services:
       APP_DEBUG: "true"
       APP_URL: http://localhost
 
-      # Inertia SSR
-      INERTIA_SSR_ENABLED: "true"
+      # Inertia SSR (usar .env do host para controlar)
+      INERTIA_SSR_ENABLED: ${INERTIA_SSR_ENABLED:-false}
       INERTIA_SSR_URL: "http://ssr:13714"
+
+      # Telescope (dev mode - captura tudo)
+      TELESCOPE_ENABLED: "true"
+      TELESCOPE_PATH: "telescope"
 
       # Database
       DB_CONNECTION: mysql

@@ -10,8 +10,13 @@ return new class extends Migration
         Schema::create('dec_entrada_decretos', function (Blueprint $table) {
             $table->id();
 
-            $table->unsignedInteger('entrada_processos_id');
-            $table->unsignedInteger('decreto_categoria_id');
+            $table->foreignId('entrada_processos_id')
+                ->constrained('dec_entrada_processos')
+                ->onDelete('cascade');
+
+            $table->foreignId('decreto_categoria_id')
+                ->constrained('dec_decreto_categorias')
+                ->onDelete('cascade');
 
             $table->string('observacao', 191)->nullable();
 
