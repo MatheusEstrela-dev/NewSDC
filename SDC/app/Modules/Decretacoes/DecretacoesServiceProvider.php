@@ -22,11 +22,10 @@ class DecretacoesServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Require consolidated files (since they don't follow PSR-4 file-per-class naming)
+        // Carrega modelos e DTOs consolidados (nao seguem padrao PSR-4 de 1 arquivo por classe)
         require_once __DIR__ . '/Models/DecretacoesModels.php';
         require_once __DIR__ . '/DTO/DecretacoesDTO.php';
 
-        // Register services as singletons
         $this->app->singleton(HexagonIntegrationService::class);
         $this->app->singleton(DesastreDataService::class);
         $this->app->singleton(ProcessoQueryService::class);

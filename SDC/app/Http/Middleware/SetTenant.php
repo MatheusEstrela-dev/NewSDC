@@ -28,19 +28,19 @@ class SetTenant
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $tenant = Tenant::resolveFromRequest($request);
+        try {
+            $tenant = Tenant::resolveFromRequest($request);
 
-        if ($tenant) {
-            // Vincula o tenant ao container para uso no HasTenant trait
-            app()->instance('tenant', $tenant);
+            if ($tenant) {
+                app()->instance('tenant', $tenant);
+                $tenant->getDatabaseConnection();
 
-            // Se o tenant usa banco próprio, reconfigura a conexão tenancy
-            $tenant->getDatabaseConnection();
-
-            // Compartilha o tenant com todas as views Inertia
-            if ($request->hasSession()) {
-                $request->session()->put('tenant_id', $tenant->id);
+                if ($request->hasSession()) {
+                    $request->session()->put('tenant_id', $tenant->id);
+                }
             }
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Tabela tenants ainda nao existe (migration pendente) — continua sem tenant
         }
 
         return $next($request);

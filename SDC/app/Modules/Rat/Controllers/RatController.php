@@ -49,7 +49,7 @@ class RatController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Rat/Create');
+        return Inertia::render('Rat');
     }
 
     /**
@@ -80,7 +80,7 @@ class RatController extends Controller
         $rat = $this->service->findById($id);
         abort_if(is_null($rat), 404, 'RAT não encontrado.');
 
-        return Inertia::render('Rat/Show', [
+        return Inertia::render('Rat', [
             'rat'        => new RatResource($rat),
             'lastUpdate' => $rat->updated_at?->toIso8601String(),
         ]);
@@ -94,7 +94,7 @@ class RatController extends Controller
         $rat = $this->service->findById($id);
         abort_if(is_null($rat), 404, 'RAT não encontrado.');
 
-        return Inertia::render('Rat/Edit', [
+        return Inertia::render('Rat', [
             'rat'        => new RatResource($rat),
             'lastUpdate' => $rat->updated_at?->toIso8601String(),
         ]);

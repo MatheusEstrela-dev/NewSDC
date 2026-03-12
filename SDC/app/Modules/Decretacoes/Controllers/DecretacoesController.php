@@ -97,8 +97,15 @@ class DecretacoesController extends Controller
     {
         $filterOptions = $this->processoService->getFilterOptions();
 
+        // getFilterOptions() retorna: analistas, reconhecimentos, municipios, tipos_desastre, status_options
+        // O ProcessoCreate.vue espera props separadas no top-level
         return Inertia::render('Decretacoes/ProcessoCreate', [
-            'filterOptions' => $filterOptions,
+            'tiposDesastre' => $filterOptions['tipos_desastre'] ?? [],
+            'cobrades'      => $filterOptions['tipos_desastre'] ?? [], // cobrade vem dos tipos de desastre
+            'municipios'    => $filterOptions['municipios'] ?? [],
+            'redecs'        => [], // TODO: carregar REDECs quando disponivel
+            'statusOptions' => $filterOptions['status_options'] ?? [],
+            'analistas'     => $filterOptions['analistas'] ?? [],
         ]);
     }
 

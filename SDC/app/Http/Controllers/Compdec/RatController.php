@@ -46,7 +46,7 @@ class RatController extends Controller
     /** Formulário de criação de nova ocorrência. */
     public function create(): Response
     {
-        return Inertia::render('Compdec/Rat/Create');
+        return Inertia::render('Rat');
     }
 
     /** Persiste nova ocorrência e redireciona para visualização. */
@@ -70,8 +70,9 @@ class RatController extends Controller
     {
         $ocorrencia->load('relatosMorph');
 
-        return Inertia::render('Compdec/Rat/Show', [
-            'ocorrencia' => $ocorrencia,
+        return Inertia::render('Rat', [
+            'rat' => $ocorrencia,
+            'viewOnly' => true,
         ]);
     }
 
@@ -80,8 +81,9 @@ class RatController extends Controller
     {
         $ocorrencia->load('relatosMorph');
 
-        return Inertia::render('Compdec/Rat/Edit', [
-            'ocorrencia' => $ocorrencia,
+        return Inertia::render('Rat', [
+            'rat' => $ocorrencia,
+            'viewOnly' => false,
         ]);
     }
 
