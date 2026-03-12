@@ -1,15 +1,10 @@
 <template>
     <div>
-        <Head title="Novo RAT" />
+        <Head title="Editar RAT" />
 
         <div class="rat-container">
           <!-- Header -->
-          <RatHeader
-            :rat="emptyRat"
-            :last-update="null"
-            :view-only="false"
-            :is-create="true"
-          />
+          <RatHeader :rat="rat" :last-update="lastUpdate" :view-only="false" />
 
           <!-- Sistema de Abas -->
           <RatTabs :active-tab="currentActiveTab" :tabs="tabConfig" @tab-change="tabs.setActiveTab">
@@ -17,7 +12,7 @@
               <!-- Aba 1: Dados Gerais -->
               <div v-if="Number(activeTab) === 1">
                 <RatForm
-                  :rat="null"
+                  :rat="rat"
                   :view-only="false"
                   @save="handleSave"
                   @save-draft="handleSaveDraft"
@@ -76,7 +71,7 @@
               <!-- Aba 6: Anexos -->
               <div v-else-if="Number(activeTab) === 6">
                 <RatAttachments
-                  :rat-id="null"
+                  :rat-id="rat?.id"
                   :anexos="anexos"
                   :view-only="false"
                   @add="handleAddAnexo"
@@ -99,7 +94,7 @@ import PaperClipIcon from '@/Components/Icons/PaperClipIcon.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import RatAttachments from '@/Components/Rat/RatAttachments.vue';
-import RatForm from '@/Components/Rat/RatForm.vue';
+import RatDadosGeraisForm from '@/Components/Rat/RatDadosGeraisForm.vue';
 import RatHeader from '@/Components/Rat/RatHeader.vue';
 import RatHistory from '@/Components/Rat/RatHistory.vue';
 import RatInspection from '@/Components/Rat/RatInspection.vue';
@@ -114,11 +109,21 @@ import '../../../css/pages/rat/rat.css';
 
 defineOptions({ layout: AuthenticatedLayout });
 
-// Objeto RAT vazio para o header (sem protocolo, sem status)
-const emptyRat = { id: null, protocolo: null, status: 'rascunho' };
+const props = defineProps({
+  rat: { type: Object, default: () => ({}) },
+  lastUpdate: { type: String, default: null },
+});
+
+const initialTab = (() => {
+  try {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    const n = Number(tab);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  } catch { return 1; }
+})();
 
 const {
-  rat,
+  rat: ratState,
   recursos: recursosState,
   envolvidos: envolvidosState,
   vistoria: vistoriaState,
@@ -130,20 +135,36 @@ const {
   finalizarRat,
   cancelarRat,
 } = useRat({
-  rat: null,
-  recursos: [],
-  envolvidos: [],
-  vistoria: {},
-  historico: [],
-  anexos: [],
-  activeTab: 1,
+  rat: props.rat,
+  recursos: props.rat?.recursos ?? [],
+  envolvidos: props.rat?.envolvidos ?? [],
+  vistoria: props.rat?.vistoria ?? {},
+  historico: props.rat?.historico ?? [],
+  anexos: props.rat?.anexos ?? [],
+  activeTab: initialTab,
 });
 
-const recursos = computed(() => recursosState.value || []);
-const envolvidos = computed(() => envolvidosState.value || []);
-const vistoria = computed(() => vistoriaState.value || {});
-const historico = computed(() => historicoEstado.value || []);
-const anexos = computed(() => anexosState.value || []);
+const rat = computed(() => (props.rat?.id ? props.rat : ratState.value));
+const recursos = computed(() => {
+  if (recursosState.value?.length > 0) return recursosState.value;
+  return props.rat?.recursos ?? [];
+});
+const envolvidos = computed(() => {
+  if (envolvidosState.value?.length > 0) return envolvidosState.value;
+  return props.rat?.envolvidos ?? [];
+});
+const vistoria = computed(() => {
+  if (vistoriaState.value && Object.keys(vistoriaState.value).length > 0) return vistoriaState.value;
+  return props.rat?.vistoria ?? {};
+});
+const historico = computed(() => {
+  if (historicoEstado.value?.length > 0) return historicoEstado.value;
+  return props.rat?.historico ?? [];
+});
+const anexos = computed(() => {
+  if (anexosState.value?.length > 0) return anexosState.value;
+  return props.rat?.anexos ?? [];
+});
 
 const currentActiveTab = computed(() => {
   const tabValue = tabs.activeTab;
@@ -153,7 +174,7 @@ const currentActiveTab = computed(() => {
   return Number(tabValue);
 });
 
-const temVistoria = ref(false);
+const temVistoria = ref(props.rat?.tem_vistoria || false);
 const currentFormData = ref(null);
 
 const tabConfig = computed(() => [
@@ -162,19 +183,23 @@ const tabConfig = computed(() => [
   { id: 3, label: 'Envolvidos', icon: UsersIcon, badge: envolvidos.value?.length > 0 ? envolvidos.value.length : null },
   { id: 4, label: 'Vistoria', icon: ClipboardIcon, hidden: !temVistoria.value },
   { id: 5, label: 'Histórico', icon: ClockIcon },
-  { id: 6, label: 'Anexos', icon: PaperClipIcon },
+  { id: 6, label: 'Anexos', icon: PaperClipIcon, badge: (anexos.value?.length > 0) ? anexos.value.length : null },
 ]);
 
 function handleSave(data) { salvarRat(data); }
 function handleSaveDraft(data) { salvarRascunho(data); }
 function handleFinalize(data) { finalizarRat(data); }
 function handleCancel() { cancelarRat(); }
-
 function handleFormDataUpdate(data) { currentFormData.value = data; }
 function handleToggleVistoria(value) { temVistoria.value = value; }
 
 function handleSaveFromSubTab() {
-  const formData = currentFormData.value ?? { dadosGerais: {}, comunicacao: {}, local: {}, endereco: {} };
+  const formData = currentFormData.value ?? {
+    dadosGerais: props.rat?.dados_gerais ?? {},
+    comunicacao: props.rat?.comunicacao ?? {},
+    local: props.rat?.local ?? {},
+    endereco: props.rat?.endereco ?? {},
+  };
   salvarRascunho(formData);
 }
 

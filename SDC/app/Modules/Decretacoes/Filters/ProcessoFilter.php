@@ -240,6 +240,7 @@ class ProcessoFilter
     public static function getFilterOptions(): array
     {
         return [
+            'status_options' => \App\Modules\Decretacoes\Enums\StatusProcesso::toSelectOptions(),
             'analistas' => Processo::distinct('analista')
                 ->whereNotNull('analista')
                 ->where('analista', '!=', '')

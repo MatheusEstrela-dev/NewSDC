@@ -102,6 +102,60 @@ export function useRat({
         router.visit(route('rat.index'));
     }
 
+    // Recursos
+    function adicionarRecurso(recurso) {
+        if (!Array.isArray(recursos.value)) recursos.value = [];
+        recursos.value.push(recurso);
+    }
+    function removerRecurso(id) {
+        if (!Array.isArray(recursos.value)) return;
+        const i = recursos.value.findIndex(r => r.id === id);
+        if (i > -1) recursos.value.splice(i, 1);
+    }
+    function atualizarRecursos(data) {
+        recursos.value = data;
+    }
+
+    // Envolvidos
+    function adicionarEnvolvido(e) {
+        envolvidos.value.push(e);
+    }
+    function removerEnvolvido(id) {
+        const i = envolvidos.value.findIndex(e => e.id === id);
+        if (i > -1) envolvidos.value.splice(i, 1);
+    }
+    function atualizarEnvolvidos(data) {
+        envolvidos.value = Array.isArray(data) ? data : [];
+    }
+
+    // Vistoria
+    function atualizarVistoria(data) {
+        vistoria.value = { ...vistoria.value, ...data };
+    }
+
+    // Historico
+    function adicionarObservacao(obs) {
+        if (!Array.isArray(historico.value)) historico.value = [];
+        historico.value.unshift({ id: Date.now(), ...obs, created_at: new Date().toISOString() });
+    }
+    function atualizarHistorico(data) {
+        historico.value = data;
+    }
+
+    // Anexos
+    function adicionarAnexo(anexo) {
+        if (!anexos.value) anexos.value = [];
+        anexos.value.push(anexo);
+    }
+    function removerAnexo(id) {
+        if (!anexos.value) return;
+        const i = anexos.value.findIndex(a => a.id === id);
+        if (i > -1) anexos.value.splice(i, 1);
+    }
+    function atualizarAnexos(data) {
+        anexos.value = data;
+    }
+
     return {
         rat,
         recursos,
@@ -114,5 +168,17 @@ export function useRat({
         salvarRascunho,
         finalizarRat,
         cancelarRat,
+        adicionarRecurso,
+        removerRecurso,
+        atualizarRecursos,
+        adicionarEnvolvido,
+        removerEnvolvido,
+        atualizarEnvolvidos,
+        atualizarVistoria,
+        adicionarObservacao,
+        atualizarHistorico,
+        adicionarAnexo,
+        removerAnexo,
+        atualizarAnexos,
     };
 }

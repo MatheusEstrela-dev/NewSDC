@@ -71,7 +71,7 @@ import PaperClipIcon from '@/Components/Icons/PaperClipIcon.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import RatAttachments from '@/Components/Rat/RatAttachments.vue';
-import RatForm from '@/Components/Rat/RatForm.vue';
+import RatDadosGeraisForm from '@/Components/Rat/RatDadosGeraisForm.vue';
 import RatHeader from '@/Components/Rat/RatHeader.vue';
 import RatHistory from '@/Components/Rat/RatHistory.vue';
 import RatInspection from '@/Components/Rat/RatInspection.vue';

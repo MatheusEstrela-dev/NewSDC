@@ -66,7 +66,11 @@ class RatController extends Controller
      */
     public function create(): Response
     {
+<<<<<<< HEAD
         return Inertia::render('Compdec/Rat/Create');
+=======
+        return Inertia::render('Rat');
+>>>>>>> origin/dev
     }
 
     /**
@@ -97,8 +101,26 @@ class RatController extends Controller
             abort(404, 'Ocorrência não encontrada');
         }
 
+<<<<<<< HEAD
         return Inertia::render('Compdec/Rat/Show', [
             'ocorrencia' => new RatResource($ocorrencia),
+=======
+        return redirect()->route('rat.edit', $rat->id)
+            ->with('success', 'RAT criado com sucesso!');
+    }
+
+    /**
+     * Página de visualização somente leitura de um RAT.
+     */
+    public function show(string $id): Response
+    {
+        $rat = $this->service->findById($id);
+        abort_if(is_null($rat), 404, 'RAT não encontrado.');
+
+        return Inertia::render('Rat', [
+            'rat'        => new RatResource($rat),
+            'lastUpdate' => $rat->updated_at?->toIso8601String(),
+>>>>>>> origin/dev
         ]);
     }
 
@@ -111,12 +133,18 @@ class RatController extends Controller
     {
         $ocorrencia = $this->queryService->findById($id);
 
+<<<<<<< HEAD
         if (!$ocorrencia) {
             abort(404, 'Ocorrência não encontrada');
         }
 
         return Inertia::render('Compdec/Rat/Edit', [
             'ocorrencia' => new RatResource($ocorrencia),
+=======
+        return Inertia::render('Rat', [
+            'rat'        => new RatResource($rat),
+            'lastUpdate' => $rat->updated_at?->toIso8601String(),
+>>>>>>> origin/dev
         ]);
     }
 
