@@ -5,69 +5,106 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Rat\Application\Services\RatService;
-use App\Modules\Rat\Http\Requests\ListRatRequest;
-use App\Modules\Rat\Http\Requests\UpdateRatRequest;
-use App\Modules\Rat\Http\Resources\RatListResource;
-use App\Modules\Rat\Http\Resources\RatResource;
+use App\Modules\Rat\DTO\RatBoDTO;
+use App\Modules\Rat\DTO\RatFilterDTO;
+use App\Modules\Rat\Requests\ListRatRequest;
+use App\Modules\Rat\Requests\StoreRatRequest;
+use App\Modules\Rat\Requests\UpdateRatRequest;
+use App\Modules\Rat\Resources\RatListResource;
+use App\Modules\Rat\Resources\RatResource;
+use App\Modules\Rat\Services\RatQueryService;
+use App\Modules\Rat\Services\RatStatisticsService;
+use App\Modules\Rat\Services\RatWriteService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Controller web do módulo RAT — rotas de navegação e ações de escrita.
+ * Controller CRUD principal do módulo RAT.
  *
- * Responsabilidade única: responde às ações web (index, show, destroy, finalize).
- * Inversão de Dependência: depende do RatService (camada de aplicação), não de infraestrutura.
+ * FLUXO DE DADOS:
+ *   Request (HTTP) -> Controller -> Service -> Model -> Banco
+ *   Banco -> Model -> Resource -> Controller -> Response (Inertia)
+ *
+ * RESPONSABILIDADES:
+ * - Receber requests HTTP
+ * - Validar entrada via FormRequests
+ * - Converter para DTOs
+ * - Delegar para Services
+ * - Retornar respostas Inertia
  */
 class RatController extends Controller
 {
     public function __construct(
-        private readonly RatService $service
+        private readonly RatWriteService     $writeService,
+        private readonly RatQueryService     $queryService,
+        private readonly RatStatisticsService $statsService,
     ) {}
 
     /**
-     * Listagem paginada com filtros e estatísticas reais do banco.
+     * Lista ocorrências com filtros e estatísticas.
+     *
+     * FLUXO: Request -> RatFilterDTO -> RatQueryService -> Inertia (Rat/Index)
      */
     public function index(ListRatRequest $request): Response
     {
-        $filters = $request->toFilterDTO();
-        $data    = $this->service->getIndexData($filters);
+        $filters    = $request->toFilterDTO();
+        $ocorrencias = $this->queryService->list($filters);
+        $statistics = $this->statsService->getStatistics();
 
-        return Inertia::render('RatIndex', [
-            'rats'           => RatListResource::collection($data['rats']),
-            'statistics'     => $data['statistics'],
-            'municipalities' => $this->buildMunicipalityOptions($data['municipalities']),
-            'cobradeTypes'   => [],
-            'years'          => $this->buildYearOptions(),
-            'filters'        => $request->validated(),
+        return Inertia::render('Compdec/Rat/Index', [
+            'ocorrencias' => RatListResource::collection($ocorrencias),
+            'statistics'  => $statistics->toArray(),
+            'filters'     => $filters->toArray(),
         ]);
     }
 
     /**
-     * Página de Criação de um novo RAT (formulário em branco).
+     * Formulário de criação de nova ocorrência.
+     *
+     * FLUXO: Inertia (Rat/Create)
      */
     public function create(): Response
     {
+<<<<<<< HEAD
+        return Inertia::render('Compdec/Rat/Create');
+=======
         return Inertia::render('Rat');
+>>>>>>> origin/dev
     }
 
     /**
-     * Cria um novo RAT via POST com dados do formulário e redireciona para a página de edição.
+     * Cria uma nova ocorrência RAT.
+     *
+     * FLUXO: StoreRatRequest -> RatBoDTO -> RatWriteService -> Redirect
      */
-    public function store(UpdateRatRequest $request): RedirectResponse
+    public function store(StoreRatRequest $request): RedirectResponse
     {
-        $data     = $request->safe()->except('finalize');
-        $finalize = (bool) $request->input('finalize', false);
+        $dto        = RatBoDTO::fromArray($request->validated());
+        $ocorrencia = $this->writeService->createWithData($dto);
 
-        $rat = $this->service->createWithData($data);
+        return redirect()
+            ->route('compdec.rat.show', $ocorrencia->id)
+            ->with('success', 'Ocorrência RAT criada com sucesso!');
+    }
 
-        if ($finalize) {
-            $this->service->finalize($rat->id);
-            return redirect()->route('rat.show', $rat->id)
-                ->with('success', 'RAT criado e finalizado com sucesso!');
+    /**
+     * Visualização detalhada de uma ocorrência.
+     *
+     * FLUXO: ID -> RatQueryService -> Inertia (Rat/Show)
+     */
+    public function show(int $id): Response
+    {
+        $ocorrencia = $this->queryService->findById($id);
+
+        if (!$ocorrencia) {
+            abort(404, 'Ocorrência não encontrada');
         }
 
+<<<<<<< HEAD
+        return Inertia::render('Compdec/Rat/Show', [
+            'ocorrencia' => new RatResource($ocorrencia),
+=======
         return redirect()->route('rat.edit', $rat->id)
             ->with('success', 'RAT criado com sucesso!');
     }
@@ -83,57 +120,60 @@ class RatController extends Controller
         return Inertia::render('Rat', [
             'rat'        => new RatResource($rat),
             'lastUpdate' => $rat->updated_at?->toIso8601String(),
+>>>>>>> origin/dev
         ]);
     }
 
     /**
-     * Página de edição de um RAT.
+     * Formulário de edição.
+     *
+     * FLUXO: ID -> RatQueryService -> Inertia (Rat/Edit)
      */
-    public function edit(string $id): Response
+    public function edit(int $id): Response
     {
-        $rat = $this->service->findById($id);
-        abort_if(is_null($rat), 404, 'RAT não encontrado.');
+        $ocorrencia = $this->queryService->findById($id);
 
+<<<<<<< HEAD
+        if (!$ocorrencia) {
+            abort(404, 'Ocorrência não encontrada');
+        }
+
+        return Inertia::render('Compdec/Rat/Edit', [
+            'ocorrencia' => new RatResource($ocorrencia),
+=======
         return Inertia::render('Rat', [
             'rat'        => new RatResource($rat),
             'lastUpdate' => $rat->updated_at?->toIso8601String(),
+>>>>>>> origin/dev
         ]);
     }
 
-    /** Remove permanentemente o RAT e redireciona para a listagem. */
-    public function destroy(string $id): RedirectResponse
+    /**
+     * Atualiza dados de uma ocorrência.
+     *
+     * FLUXO: UpdateRatRequest -> RatBoDTO -> RatWriteService -> Redirect
+     */
+    public function update(UpdateRatRequest $request, int $id): RedirectResponse
     {
-        $this->service->delete($id);
+        $dto = RatBoDTO::fromArray($request->validated());
+        $this->writeService->update($id, $dto);
 
-        return redirect()->route('rat.index')
-            ->with('success', 'RAT removido com sucesso!');
+        return redirect()
+            ->route('compdec.rat.show', $id)
+            ->with('success', 'Ocorrência atualizada com sucesso!');
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers privados de apresentação (não contam no limite de 5 públicos)
-    // -------------------------------------------------------------------------
-
-    private function buildMunicipalityOptions(array $items): array
+    /**
+     * Remove ocorrência (soft delete).
+     *
+     * FLUXO: ID -> RatWriteService.delete() -> Redirect
+     */
+    public function destroy(int $id): RedirectResponse
     {
-        $options = [['value' => '', 'label' => 'Todos']];
+        $this->writeService->delete($id);
 
-        foreach ($items as $item) {
-            $options[] = ['value' => $item, 'label' => $item];
-        }
-
-        return $options;
-    }
-
-    private function buildYearOptions(): array
-    {
-        $current = now()->year;
-        $options = [['value' => '', 'label' => 'Todos']];
-
-        for ($year = $current; $year >= $current - 5; $year--) {
-            $options[] = ['value' => (string) $year, 'label' => (string) $year];
-        }
-
-        return $options;
+        return redirect()
+            ->route('compdec.rat.index')
+            ->with('success', 'Ocorrência removida com sucesso!');
     }
 }
-

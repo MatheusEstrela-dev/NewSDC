@@ -1,73 +1,53 @@
-<?php
+﻿<?php
 
 declare(strict_types=1);
 
 namespace App\Modules\Rat\Services;
 
-use App\Modules\Rat\DTOs\RatFilterDTO;
+use App\Modules\Rat\DTO\RatFilterDTO;
 use App\Modules\Rat\Models\Rat;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Responsabilidade única: exportar RATs para CSV.
- *
- * SOLID - SRP: só lida com lógica de exportação de dados.
+ * Responsabilidade única: exportar ocorrências RAT para CSV.
  */
 class RatExportService
 {
-    public function __construct(
-        private readonly RatFilterService $filterService
-    ) {}
-
-    /**
-     * Gera download CSV com todos os RATs que atendem os filtros.
-     */
     public function exportToCsv(RatFilterDTO $filters): StreamedResponse
     {
-        $query = Rat::with('creator:id,name')->orderBy('created_at', 'desc');
-        $this->filterService->apply($query, $filters);
-        $rats = $query->get();
+        $query = Rat::orderBy('created_at', 'desc');
 
-        $filename = 'rats-' . now()->format('Y-m-d') . '.csv';
-
-        return response()->streamDownload(
-            fn() => $this->writeCsv($rats),
-            $filename,
-            ['Content-Type' => 'text/csv; charset=UTF-8']
-        );
-    }
-
-    /**
-     * Escreve o conteúdo CSV no buffer de saída — operação de I/O,
-     * isenta do limite de 10 linhas por convenção.
-     */
-    private function writeCsv(iterable $rats): void
-    {
-        $handle = fopen('php://output', 'w');
-        fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM para UTF-8 no Excel
-        fputcsv($handle, $this->buildHeaders(), ';');
-
-        foreach ($rats as $rat) {
-            fputcsv($handle, $this->buildRow($rat), ';');
+        if ($filters->numeroBos) {
+            $query->where('numero_bos', 'like', '%' . $filters->numeroBos . '%');
+        }
+        if ($filters->status !== null) {
+            $query->where('status', $filters->status);
+        }
+        if ($filters->dataInicio) {
+            $query->whereDate('created_at', '>=', $filters->dataInicio);
+        }
+        if ($filters->dataFim) {
+            $query->whereDate('created_at', '<=', $filters->dataFim);
         }
 
-        fclose($handle);
-    }
+        $ocorrencias = $query->get(['id', 'numero_bos', 'status', 'historico', 'prazo_edicao', 'created_at']);
+        $filename    = 'rat-ocorrencias-' . now()->format('Y-m-d') . '.csv';
 
-    private function buildHeaders(): array
-    {
-        return ['ID', 'Protocolo', 'Status', 'Município', 'Criado por', 'Data Criação'];
-    }
-
-    private function buildRow(Rat $rat): array
-    {
-        return [
-            $rat->id,
-            $rat->protocolo ?? '',
-            $rat->status,
-            $rat->local['municipio'] ?? '',
-            $rat->creator?->name ?? 'Sistema',
-            $rat->created_at?->format('d/m/Y H:i') ?? '',
-        ];
+        return response()->streamDownload(function () use ($ocorrencias) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
+            fputcsv($handle, ['ID', 'Número BO', 'Status', 'Histórico', 'Prazo Edição', 'Criado em'], ';');
+            foreach ($ocorrencias as $oc) {
+                fputcsv($handle, [
+                    $oc->id,
+                    $oc->numero_bos ?? '',
+                    $oc->status_label,
+                    $oc->historico ?? '',
+                    $oc->prazo_edicao?->format('d/m/Y H:i') ?? '',
+                    $oc->created_at?->format('d/m/Y H:i') ?? '',
+                ], ';');
+            }
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 }

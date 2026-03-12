@@ -1,6 +1,6 @@
-<template>
+﻿<template>
     <div>
-        <Head :title="`RAT — Editar Ocorrência #${ocorrencia?.id}`" />
+        <Head :title="`RAT  Editar Ocorrência #${ocorrencia?.id}`" />
 
         <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-3xl mx-auto">
             <div class="mb-6">
@@ -16,31 +16,32 @@
                         v-model="form.numero_bos"
                         type="text"
                         class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+                        placeholder="Ex.: 2025/001234"
                     />
                     <p v-if="form.errors.numero_bos" class="mt-1 text-sm text-red-600">{{ form.errors.numero_bos }}</p>
                 </div>
 
-                <!-- Data/Hora do Fato -->
+                <!-- Prazo de Edição -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Data/Hora do Fato <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Prazo de Edição</label>
                     <input
-                        v-model="form.data_hora_fato"
+                        v-model="form.prazo_edicao"
                         type="datetime-local"
-                        required
                         class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
                     />
-                    <p v-if="form.errors.data_hora_fato" class="mt-1 text-sm text-red-600">{{ form.errors.data_hora_fato }}</p>
+                    <p v-if="form.errors.prazo_edicao" class="mt-1 text-sm text-red-600">{{ form.errors.prazo_edicao }}</p>
                 </div>
 
-                <!-- Descrição -->
+                <!-- Histórico / Observações -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Histórico / Observações</label>
                     <textarea
-                        v-model="form.descricao"
+                        v-model="form.historico"
                         rows="4"
                         class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+                        placeholder="Registre observações sobre a ocorrência..."
                     ></textarea>
-                    <p v-if="form.errors.descricao" class="mt-1 text-sm text-red-600">{{ form.errors.descricao }}</p>
+                    <p v-if="form.errors.historico" class="mt-1 text-sm text-red-600">{{ form.errors.historico }}</p>
                 </div>
 
                 <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
@@ -53,7 +54,7 @@
                         :disabled="form.processing"
                         class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                     >
-                        {{ form.processing ? 'Salvando…' : 'Salvar Alterações' }}
+                        {{ form.processing ? 'Salvando' : 'Salvar Alterações' }}
                     </button>
                 </div>
             </form>
