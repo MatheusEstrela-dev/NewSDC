@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
+use App\Modules\Rat\Models\Rat;
 use App\Modules\Demandas\Models\Task;
 use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Decretacoes\Models\Processo;
@@ -11,9 +11,7 @@ use Illuminate\Support\Collection;
 
 class GlobalSearchService
 {
-    public function __construct(
-        protected RatRepositoryInterface $ratRepository,
-    ) {}
+    public function __construct() {}
 
     public function search(string $query, int $limitPerCategory = 5): array
     {
@@ -54,17 +52,18 @@ class GlobalSearchService
     protected function searchRats(string $query, int $limit): array
     {
         try {
-            $paginator = $this->ratRepository->findAll(['search' => $query], $limit);
-            return collect($paginator->items())->map(function ($item) {
+            $rats = Rat::where('numero_bos', 'like', "%{$query}%")
+                ->orWhere('historico', 'like', "%{$query}%")
+                ->limit($limit)
+                ->get();
+            return $rats->map(function ($item) {
                 return [
-                    'id' => $item->id,
-                    'title' => $item->protocolo,
-                    'subtitle' => 'RAT - ' . ($item->status ?? 'N/A'),
-                    // Using JSON endpoint/dashboard as fallback since rat.show doesn't exist in module routes yet
-                    // Ideally this should point to the RAT view page
-                    'url' => route('rat.show.json', $item->id), 
-                    'type' => 'rat',
-                    'icon' => 'document'
+                    'id'       => $item->id,
+                    'title'    => $item->numero_bos ?? 'RAT #' . $item->id,
+                    'subtitle' => 'RAT - ' . $item->status_label,
+                    'url'      => route('compdec.rat.show', $item->id),
+                    'type'     => 'rat',
+                    'icon'     => 'document',
                 ];
             })->toArray();
         } catch (\Throwable $e) {

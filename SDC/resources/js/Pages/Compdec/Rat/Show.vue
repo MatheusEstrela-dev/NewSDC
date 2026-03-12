@@ -23,7 +23,7 @@
             <!-- Status badge -->
             <div class="mb-6">
                 <span :class="statusClass(ocorrencia?.status)" class="inline-flex rounded-full px-3 py-1 text-sm font-semibold">
-                    {{ ocorrencia?.status ?? '—' }}
+                    {{ ocorrencia?.status_label ?? '—' }}
                 </span>
             </div>
 
@@ -59,16 +59,16 @@ const displayFields = computed(() => ({
     'Número BO':       props.ocorrencia?.numero_bos,
     'Prazo de Edição':  props.ocorrencia?.prazo_edicao
         ? new Date(props.ocorrencia.prazo_edicao).toLocaleString('pt-BR') : null,
-    'Status':            props.ocorrencia?.status,
+    'Status':            props.ocorrencia?.status_label,
+    'Histórico':         props.ocorrencia?.historico,
     'Criado em':         props.ocorrencia?.created_at ? new Date(props.ocorrencia.created_at).toLocaleString('pt-BR') : null,
     'Atualizado em':     props.ocorrencia?.updated_at ? new Date(props.ocorrencia.updated_at).toLocaleString('pt-BR') : null,
 }));
 
 function statusClass(status) {
     const map = {
-        finalizado:    'bg-green-100 text-green-800',
-        em_andamento:  'bg-yellow-100 text-yellow-800',
-        rascunho:      'bg-gray-100 text-gray-700',
+        1: 'bg-green-100 text-green-800',
+        0: 'bg-gray-100 text-gray-700',
     };
     return map[status] ?? 'bg-gray-100 text-gray-700';
 }

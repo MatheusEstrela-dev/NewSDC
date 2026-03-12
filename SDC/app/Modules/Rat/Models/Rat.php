@@ -1,100 +1,66 @@
-<?php
+﻿<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Rat\Models;
 
-use App\Modules\Rat\Enums\Localizacao;
-use App\Modules\Rat\Enums\Protocolo;
-use App\Modules\Rat\Enums\Status;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Model da ocorrência RAT (tabela rat_ocorrencias).
+ * Estrutura plana: sem UUID, sem JSON columns.
+ */
 class Rat extends Model
 {
-    use HasUuids;
+    use SoftDeletes;
 
-    public $incrementing = false;
-    protected $keyType = 'string';
+    protected $table = 'rat_ocorrencias';
 
     protected $fillable = [
-        'id',
-        'protocolo',
-        'status',
-        'tem_vistoria',
-        'dados_gerais',
-        'local',
-        'endereco',
-        'comunicacao',
-        'recursos',
-        'envolvidos',
-        'vistoria',
-        'historico',
-        'anexos',
-        'orgao_emissor_id',
+        'numero_bos',
+        'sequencial_ano',
         'created_by',
+        'status',
+        'prazo_edicao',
         'updated_by',
+        'ocorrencia_origem_id',
+        'historico',
     ];
 
     protected $casts = [
-        'dados_gerais' => 'array',
-        'local' => 'array',
-        'endereco' => 'array',
-        'comunicacao' => 'array',
-        'recursos' => 'array',
-        'envolvidos' => 'array',
-        'vistoria' => 'array',
-        'historico' => 'array',
-        'anexos' => 'array',
-        'tem_vistoria' => 'boolean',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'status'               => 'integer',
+        'sequencial_ano'       => 'integer',
+        'ocorrencia_origem_id' => 'integer',
+        'prazo_edicao'         => 'datetime',
+        'created_at'           => 'datetime',
+        'updated_at'           => 'datetime',
     ];
 
-    public function getProtocolo(): ?Protocolo
+    // -------------------------------------------------------------------------
+    // Accessors
+    // -------------------------------------------------------------------------
+
+    public function getStatusLabelAttribute(): string
     {
-        return $this->protocolo ? new Protocolo($this->protocolo) : null;
+        return match ($this->status) {
+            1       => 'Finalizado',
+            default => 'Rascunho',
+        };
     }
 
-    public function getStatus(): Status
+    public function isFinalized(): bool
     {
-        return Status::tryFrom($this->status ?? 'rascunho') ?? Status::RASCUNHO;
+        return $this->status === 1;
     }
 
-    public function getLocalizacao(): ?Localizacao
-    {
-        if (!$this->local) {
-            return null;
-        }
+    // -------------------------------------------------------------------------
+    // Relationships
+    // -------------------------------------------------------------------------
 
-        return new Localizacao(
-            $this->local['municipio'] ?? null,
-            $this->local['uf'] ?? null,
-            $this->local['pais_id'] ?? 1
-        );
-    }
-
-    /**
-     * Orgao emissor do RAT (COMPDEC responsavel).
-     */
-    public function orgaoEmissor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    /** Ocorrência de origem (BOS pai). */
+    public function ocorrenciaOrigem(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(\App\Modules\Compdec\Models\Orgao::class, 'orgao_emissor_id');
-    }
-
-    /**
-     * Usuário que criou o RAT.
-     */
-    public function creator(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(\App\Models\User::class, 'created_by');
-    }
-
-    /**
-     * Usuário que realizou a última atualização do RAT.
-     */
-    public function updater(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(\App\Models\User::class, 'updated_by');
+        return $this->belongsTo(self::class, 'ocorrencia_origem_id');
     }
 }
-
-
