@@ -64,6 +64,7 @@
       :loading="loading"
       :can-edit="canEdit"
       :can-delete="canDelete"
+      @print="handlePrint"
     />
 
     <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
@@ -73,6 +74,7 @@
       :can-edit="canEdit"
       :can-delete="canDelete"
       @view="(id) => $emit('view', id)"
+      @print="handlePrint"
       @edit="(id) => $emit('edit', id)"
     />
 
@@ -83,6 +85,13 @@
         @page-change="handlePageChange"
       />
     </div>
+
+    <!-- Modal de Impressao -->
+    <PrintDecretacaoModal
+      :show="printModalOpen"
+      :processo="selectedProcesso"
+      @close="closePrintModal"
+    />
   </div>
 </template>
 
@@ -93,6 +102,7 @@ import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import DecretacoesStatsCards from '@/Components/Organisms/Decretacoes/DecretacoesStatsCards.vue';
+import PrintDecretacaoModal from '@/Components/Organisms/Decretacoes/Print/PrintDecretacaoModal.vue';
 import ProcessoFilters from '@/Components/Organisms/Decretacoes/ProcessoFilters.vue';
 import ProcessoGrid from '@/Components/Organisms/Decretacoes/ProcessoGrid.vue';
 import ProcessoTable from '@/Components/Organisms/Decretacoes/ProcessoTable.vue';
@@ -100,7 +110,7 @@ import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 // Detecção mobile
 const { isMobile } = useMobile();
@@ -188,6 +198,27 @@ const {
 
 function handleExportCsv(params) {
   triggerExport(params, localFilters.value);
+}
+
+// =========================
+// Modal de Impressao
+// =========================
+const printModalOpen = ref(false);
+const selectedProcessoId = ref(null);
+
+const selectedProcesso = computed(() => {
+  if (!selectedProcessoId.value) return null;
+  return props.processos.find(p => p.id === selectedProcessoId.value) || null;
+});
+
+function handlePrint(id) {
+  selectedProcessoId.value = id;
+  printModalOpen.value = true;
+}
+
+function closePrintModal() {
+  printModalOpen.value = false;
+  selectedProcessoId.value = null;
 }
 </script>
 

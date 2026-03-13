@@ -11,7 +11,7 @@
             <template #default="{ activeTab }">
               <!-- Aba 1: Dados Gerais -->
               <div v-if="Number(activeTab) === 1">
-                <RatForm
+                <RatDadosGeraisForm
                   :rat="props.rat"
                   :view-only="true"
                 />
