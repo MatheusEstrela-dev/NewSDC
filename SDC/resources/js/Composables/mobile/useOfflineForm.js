@@ -44,6 +44,7 @@ export function useOfflineForm(initialData, table = 'rat_pendentes', routeName) 
                     options.onSuccess();
                 }
             } catch (error) {
+                console.error('Erro ao salvar offline:', error);
                 if (options.onError) {
                     options.onError(error);
                 }

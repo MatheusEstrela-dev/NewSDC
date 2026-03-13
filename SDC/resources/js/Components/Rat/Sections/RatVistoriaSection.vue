@@ -1,5 +1,4 @@
 <template>
-  <fieldset :disabled="props.viewOnly" style="border:none;padding:0;margin:0;min-width:0;">
   <div class="space-y-6">
     <!-- Identificação do Solicitante -->
     <div class="rat-section-card">
@@ -189,29 +188,29 @@
           <div class="flex items-center gap-2 mt-6">
             <input
               type="checkbox"
-              :id="`ha-idosos-${uid}`"
+              id="ha-idosos"
               v-model="localData.moradores.ha_idosos"
               class="w-4 h-4 rounded bg-slate-800 border-slate-600 text-blue-500"
             />
-            <label :for="`ha-idosos-${uid}`" class="text-sm text-slate-300">Há Idosos?</label>
+            <label for="ha-idosos" class="text-sm text-slate-300">Há Idosos?</label>
           </div>
           <div class="flex items-center gap-2 mt-6">
             <input
               type="checkbox"
-              :id="`ha-criancas-${uid}`"
+              id="ha-criancas"
               v-model="localData.moradores.ha_criancas"
               class="w-4 h-4 rounded bg-slate-800 border-slate-600 text-blue-500"
             />
-            <label :for="`ha-criancas-${uid}`" class="text-sm text-slate-300">Há Crianças?</label>
+            <label for="ha-criancas" class="text-sm text-slate-300">Há Crianças?</label>
           </div>
           <div class="flex items-center gap-2 mt-6">
             <input
               type="checkbox"
-              :id="`ha-pcd-${uid}`"
+              id="ha-pcd"
               v-model="localData.moradores.ha_pcd"
               class="w-4 h-4 rounded bg-slate-800 border-slate-600 text-blue-500"
             />
-            <label :for="`ha-pcd-${uid}`" class="text-sm text-slate-300">Há PCD?</label>
+            <label for="ha-pcd" class="text-sm text-slate-300">Há PCD?</label>
           </div>
         </div>
       </div>
@@ -278,12 +277,10 @@
       </div>
     </div>
   </div>
-  </fieldset>
 </template>
 
 <script setup>
-import { getCurrentInstance, ref, watch } from 'vue';
-const uid = getCurrentInstance().uid;
+import { ref, watch } from 'vue';
 import FormField from '../../Form/FormField.vue';
 import FormSelect from '../../Form/FormSelect.vue';
 
@@ -291,10 +288,6 @@ const props = defineProps({
   modelValue: {
     type: Object,
     default: () => ({}),
-  },
-  viewOnly: {
-    type: Boolean,
-    default: false,
   },
 });
 

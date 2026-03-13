@@ -7,8 +7,8 @@ import { useTabs } from '../core/useTabs';
 
 /**
  * Composable principal do RAT
- * Orquestra outros composables e gerencia dados do RAT
- * Responsabilidade Única: Coordenar lógica do RAT
+ * Orchestrates outros composables e gerencia dados do RAT
+ * Single Responsibility: Coordenar lógica do RAT
  */
 export function useRat(initialData = {}) {
   const tabs = useTabs(initialData.activeTab || 1);
@@ -40,7 +40,7 @@ export function useRat(initialData = {}) {
   const vistoria = ref(initialData.vistoria || {});
 
   // Histórico de eventos
-  const historico = ref(initialData.historico || [
+  const historyEvents = ref(initialData.historyEvents || [
     {
       id: 1,
       tipo: 'criacao',
@@ -57,7 +57,7 @@ export function useRat(initialData = {}) {
   /**
    * Salva o RAT
    */
-  async function salvarRat(data) {
+  async function saveRat(data) {
     const payload = {
       ...rat.value,
       recursos: recursos.value,
@@ -83,47 +83,49 @@ export function useRat(initialData = {}) {
         alert('Você está offline. O RAT foi salvo no dispositivo e será enviado quando houver conexão.');
         // Opcional: Redirecionar para lista ou limpar form
       } catch (error) {
+        console.error('Erro ao salvar offline:', error);
         alert('Erro ao salvar no dispositivo.');
       }
     } else {
-      // Se estiver online, envia via Inertia
-      if (!rat.value?.id) {
-        router.post(route('rat.store'), payload, {
-          preserveScroll: true,
-          preserveState: true,
-          onSuccess: () => {},
-          onError: () => {},
-        });
-      } else {
-        router.put(route('rat.update', rat.value.id), payload, {
-          preserveScroll: true,
-          preserveState: true,
-          onSuccess: () => {},
-          onError: () => {},
-        });
-      }
+      // Se estiver online, envia via Inertia (ou axios se preferir não recarregar)
+      console.log('Enviando Online:', payload);
+
+      // Usa router.post do Inertia para manter o fluxo SPA padrão
+      router.post(route('rat.sync'), payload, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+          // Limpa ou atualiza estado se necessário
+        },
+        onError: (errors) => {
+          console.error('Erro no envio online:', errors);
+          // Fallback: se falhar por rede (não validação), salva offline?
+          // Por simplicidade, mantemos o erro visível
+        }
+      });
     }
   }
 
   /**
    * Salva como rascunho
    */
-  async function salvarRascunho(data) {
+  async function saveDraft(data) {
     // TODO: Implementar chamada à API
+    console.log('Salvar rascunho:', data || rat.value);
     // router.post('/rat/draft', rat.value);
   }
 
   /**
-   * Cancela o RAT e retorna para a listagem
+   * Cancela o RAT
    */
-  function cancelarRat() {
-    router.visit(route('rat.index'));
+  function cancelRat() {
+    router.visit('/dashboard');
   }
 
   /**
    * Adiciona recurso
    */
-  function adicionarRecurso(recurso) {
+  function addRecurso(recurso) {
     recursos.value.push({
       id: Date.now(),
       ...recurso,
@@ -133,7 +135,7 @@ export function useRat(initialData = {}) {
   /**
    * Remove recurso
    */
-  function removerRecurso(id) {
+  function removeRecurso(id) {
     const index = recursos.value.findIndex(r => r.id === id);
     if (index > -1) {
       recursos.value.splice(index, 1);
@@ -143,7 +145,7 @@ export function useRat(initialData = {}) {
   /**
    * Adiciona envolvido
    */
-  function adicionarEnvolvido(envolvido) {
+  function addEnvolvido(envolvido) {
     envolvidos.value.push({
       id: Date.now(),
       ...envolvido,
@@ -153,7 +155,7 @@ export function useRat(initialData = {}) {
   /**
    * Remove envolvido
    */
-  function removerEnvolvido(id) {
+  function removeEnvolvido(id) {
     const index = envolvidos.value.findIndex(e => e.id === id);
     if (index > -1) {
       envolvidos.value.splice(index, 1);
@@ -163,15 +165,15 @@ export function useRat(initialData = {}) {
   /**
    * Salva vistoria
    */
-  function salvarVistoria(data) {
+  function saveVistoria(data) {
     Object.assign(vistoria.value, data);
   }
 
   /**
    * Adiciona observação ao histórico
    */
-  function adicionarObservacao(observation) {
-    historico.value.unshift({
+  function addObservation(observation) {
+    historyEvents.value.unshift({
       id: Date.now(),
       tipo: 'observacao',
       titulo: 'Nova observação',
@@ -184,7 +186,7 @@ export function useRat(initialData = {}) {
   /**
    * Adiciona anexo
    */
-  function adicionarAnexo(anexo) {
+  function addAnexo(anexo) {
     anexos.value.push({
       id: Date.now(),
       ...anexo,
@@ -194,7 +196,7 @@ export function useRat(initialData = {}) {
   /**
    * Remove anexo
    */
-  function removerAnexo(id) {
+  function removeAnexo(id) {
     const index = anexos.value.findIndex(a => a.id === id);
     if (index > -1) {
       anexos.value.splice(index, 1);
@@ -207,25 +209,25 @@ export function useRat(initialData = {}) {
     recursos,
     envolvidos,
     vistoria,
-    historico,
+    historyEvents,
     anexos,
 
     // Composables
     tabs,
     modal,
 
-    // Métodos
-    salvarRat,
-    salvarRascunho,
-    cancelarRat,
-    adicionarRecurso,
-    removerRecurso,
-    adicionarEnvolvido,
-    removerEnvolvido,
-    salvarVistoria,
-    adicionarObservacao,
-    adicionarAnexo,
-    removerAnexo,
+    // Methods
+    saveRat,
+    saveDraft,
+    cancelRat,
+    addRecurso,
+    removeRecurso,
+    addEnvolvido,
+    removeEnvolvido,
+    saveVistoria,
+    addObservation,
+    addAnexo,
+    removeAnexo,
   };
 }
 

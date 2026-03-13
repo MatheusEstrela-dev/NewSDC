@@ -12,7 +12,6 @@
       :readonly="readonly"
       :required="required"
       :error="!!error"
-      :maxlength="maxlength"
       :size="size"
       @update:model-value="$emit('update:modelValue', $event)"
       @blur="$emit('blur', $event)"
@@ -64,10 +63,6 @@ const props = defineProps({
   error: {
     type: String,
     default: '',
-  },
-  maxlength: {
-    type: [String, Number],
-    default: null,
   },
   hint: {
     type: String,

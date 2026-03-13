@@ -84,12 +84,6 @@ class DevUsersSeeder extends Seeder
                 'cpf' => '90000000007',
                 'role' => 'operator',
             ],
-            [
-                'name' => 'Meu Usuario',
-                'email' => 'meuusuario@defesa.mg.gov.br',
-                'cpf' => '12345678900',
-                'role' => 'super-admin',
-            ],
         ];
 
         foreach ($users as $payload) {

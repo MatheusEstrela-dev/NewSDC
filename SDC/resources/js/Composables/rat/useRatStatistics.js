@@ -8,7 +8,7 @@ export function useRatStatistics(initialStatistics = {}) {
     esteAno: initialStatistics.esteAno || 0,
   });
 
-  const estatisticasFormatadas = computed(() => {
+  const formattedStatistics = computed(() => {
     return {
       total: statistics.value.total.toLocaleString('pt-BR'),
       hoje: statistics.value.hoje.toLocaleString('pt-BR'),
@@ -17,14 +17,14 @@ export function useRatStatistics(initialStatistics = {}) {
     };
   });
 
-  function atualizarEstatisticas(newStatistics) {
+  function updateStatistics(newStatistics) {
     statistics.value = { ...statistics.value, ...newStatistics };
   }
 
   return {
     statistics,
-    estatisticasFormatadas,
-    atualizarEstatisticas,
+    formattedStatistics,
+    updateStatistics,
   };
 }
 

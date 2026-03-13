@@ -8,19 +8,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('dec_decreto_municipios', function (Blueprint $table) {
-            $table->id();
-
-            $table->foreignId('entrada_processos_id')
-                ->constrained('dec_entrada_processos')
-                ->onDelete('cascade');
-
+            $table->id(); // bigint unsigned auto increment
+            
+            $table->unsignedInteger('entrada_processos_id'); 
             $table->string('n_protocolo_fide', 100)->nullable();
-
-            $table->unsignedBigInteger('municipio_id');
+            $table->unsignedInteger('municipio_id');
 
             $table->timestamps();
 
-            $table->index('municipio_id');
+            // Se essas tabelas existirem, o ideal é já criar foreign keys:
+            // $table->foreign('entrada_processos_id')->references('id')->on('entrada_processos');
+            // $table->foreign('municipio_id')->references('id')->on('municipios');
         });
     }
 

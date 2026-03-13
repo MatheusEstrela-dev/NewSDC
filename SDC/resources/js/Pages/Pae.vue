@@ -207,7 +207,7 @@ function handleRemove(id) {
 
 function handleFilterChange(filter) {
   // TODO: Implementar filtro
-
+  console.log('Filtro:', filter);
 }
 
 function handleViewEvent(event) {
@@ -216,12 +216,12 @@ function handleViewEvent(event) {
 
 function handleAddMember() {
   // TODO: Abrir modal para adicionar membro
-
+  console.log('Adicionar membro');
 }
 
 function handleAddMeeting() {
   // TODO: Abrir modal para adicionar reunião
-
+  console.log('Adicionar reunião');
 }
 
 function handleViewAta(ata) {

@@ -6,7 +6,6 @@
     :disabled="disabled"
     :readonly="readonly"
     :required="required"
-    :maxlength="maxlength"
     :class="inputClasses"
     @input="$emit('update:modelValue', $event.target.value)"
     @blur="$emit('blur', $event)"
@@ -45,10 +44,6 @@ const props = defineProps({
   error: {
     type: Boolean,
     default: false,
-  },
-  maxlength: {
-    type: [String, Number],
-    default: null,
   },
   size: {
     type: String,

@@ -41,7 +41,12 @@ const props = defineProps({
   },
   statusOptions: {
     type: Array,
-    default: () => [],
+    default: () => [
+      { value: 'pendente', label: 'Pendente' },
+      { value: 'em_analise', label: 'Em Analise' },
+      { value: 'aprovado', label: 'Aprovado' },
+      { value: 'rejeitado', label: 'Rejeitado' },
+    ],
   },
   analistas: {
     type: Array,

@@ -7,28 +7,28 @@ const STORAGE_KEY = 'rat-sections-state';
  * Composable para gerenciar secoes colapsaveis com persistencia em localStorage
  * @param {string} sectionId - Identificador unico da secao
  * @param {boolean} defaultExpanded - Estado inicial padrao (true = expandido)
- * @returns {Object} - estaExpandido, alternar, expandir, recolher
+ * @returns {Object} - isExpanded, toggle, expand, collapse
  */
 export function useCollapsible(sectionId, defaultExpanded = true) {
   const { isMobile } = useMobile();
-  const estaExpandido = ref(defaultExpanded);
+  const isExpanded = ref(defaultExpanded);
 
   /**
    * Carrega estado salvo do localStorage
    */
-  const carregarEstado = () => {
+  const loadState = () => {
     try {
       const savedState = localStorage.getItem(STORAGE_KEY);
       if (savedState) {
         const state = JSON.parse(savedState);
         if (typeof state[sectionId] === 'boolean') {
-          estaExpandido.value = state[sectionId];
+          isExpanded.value = state[sectionId];
           return;
         }
       }
       // Em mobile, iniciar colapsado por padrao (exceto se for a primeira secao)
       if (isMobile.value && sectionId !== 'atendimento') {
-        estaExpandido.value = false;
+        isExpanded.value = false;
       }
     } catch {
       // Falha silenciosa - usa valor padrao
@@ -38,11 +38,11 @@ export function useCollapsible(sectionId, defaultExpanded = true) {
   /**
    * Salva estado no localStorage
    */
-  const salvarEstado = () => {
+  const saveState = () => {
     try {
       const savedState = localStorage.getItem(STORAGE_KEY);
       const state = savedState ? JSON.parse(savedState) : {};
-      state[sectionId] = estaExpandido.value;
+      state[sectionId] = isExpanded.value;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
       // Falha silenciosa
@@ -52,52 +52,52 @@ export function useCollapsible(sectionId, defaultExpanded = true) {
   /**
    * Alterna estado expandido/colapsado
    */
-  const alternar = () => {
-    estaExpandido.value = !estaExpandido.value;
-    salvarEstado();
+  const toggle = () => {
+    isExpanded.value = !isExpanded.value;
+    saveState();
   };
 
   /**
    * Expande a secao
    */
-  const expandir = () => {
-    estaExpandido.value = true;
-    salvarEstado();
+  const expand = () => {
+    isExpanded.value = true;
+    saveState();
   };
 
   /**
    * Colapsa a secao
    */
-  const recolher = () => {
-    estaExpandido.value = false;
-    salvarEstado();
+  const collapse = () => {
+    isExpanded.value = false;
+    saveState();
   };
 
   onMounted(() => {
-    carregarEstado();
+    loadState();
   });
 
   // Atualiza quando muda de mobile para desktop
   watch(isMobile, (newValue, oldValue) => {
     if (oldValue === true && newValue === false) {
       // Mudou de mobile para desktop - expandir todas
-      estaExpandido.value = true;
-      salvarEstado();
+      isExpanded.value = true;
+      saveState();
     }
   });
 
   return {
-    estaExpandido,
-    alternar,
-    expandir,
-    recolher,
+    isExpanded,
+    toggle,
+    expand,
+    collapse,
   };
 }
 
 /**
  * Composable para gerenciar multiplas secoes colapsaveis
  * @param {Array} sectionIds - Array de IDs das secoes
- * @returns {Object} - sections, expandirTodos, recolherTodos, alternarTodos
+ * @returns {Object} - sections, expandAll, collapseAll, toggleAll
  */
 export function useCollapsibleSections(sectionIds) {
   const sections = {};
@@ -107,27 +107,27 @@ export function useCollapsibleSections(sectionIds) {
     sections[id] = useCollapsible(id, index === 0);
   });
 
-  const expandirTodos = () => {
-    Object.values(sections).forEach(section => section.expandir());
+  const expandAll = () => {
+    Object.values(sections).forEach(section => section.expand());
   };
 
-  const recolherTodos = () => {
-    Object.values(sections).forEach(section => section.recolher());
+  const collapseAll = () => {
+    Object.values(sections).forEach(section => section.collapse());
   };
 
-  const alternarTodos = () => {
-    const todosExpandidos = Object.values(sections).every(s => s.estaExpandido.value);
-    if (todosExpandidos) {
-      recolherTodos();
+  const toggleAll = () => {
+    const allExpanded = Object.values(sections).every(s => s.isExpanded.value);
+    if (allExpanded) {
+      collapseAll();
     } else {
-      expandirTodos();
+      expandAll();
     }
   };
 
   return {
     sections,
-    expandirTodos,
-    recolherTodos,
-    alternarTodos,
+    expandAll,
+    collapseAll,
+    toggleAll,
   };
 }

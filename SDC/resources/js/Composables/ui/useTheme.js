@@ -47,9 +47,12 @@ export function useTheme() {
    * Alterna entre dark/light mode
    */
   function toggleTheme() {
+    console.log('🎨 Toggle theme called! Current:', isDarkMode.value);
     isDarkMode.value = !isDarkMode.value;
+    console.log('🎨 New theme:', isDarkMode.value ? 'dark' : 'light');
     localStorage.setItem('theme', isDarkMode.value ? 'dark' : 'light');
     applyTheme();
+    console.log('🎨 HTML class:', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
   }
 
   return {

@@ -197,15 +197,11 @@ ensure_composer_dependencies() {
         echo "$current_fp" > "$fingerprint_file" 2>/dev/null || true
         log_success "Dependências Composer instaladas/atualizadas"
     else
-        log_warning "Composer install falhou (provavelmente sem rede/proxy). Tentando gerar autoloader local..."
-        if composer dump-autoload --optimize 2>&1; then
-            log_success "Autoloader gerado com sucesso"
-            echo "$current_fp" > "$fingerprint_file" 2>/dev/null || true
-        elif [ -f "$vendor_autoload" ]; then
-            log_warning "Falha no dump-autoload, mas vendor/autoload.php existe. Continuando..."
+        if [ -f "$vendor_autoload" ]; then
+            log_warning "Composer install falhou (sem rede?), mas vendor/autoload.php existe. Continuando com dependências do build..."
             echo "$current_fp" > "$fingerprint_file" 2>/dev/null || true
         else
-            log_error "Composer install e dump-autoload falharam. vendor/autoload.php não existe."
+            log_error "Composer install falhou e vendor/autoload.php não existe."
             log_error "Verifique a conexão de rede dos containers ou rebuild a imagem: docker compose build app"
             exit 1
         fi

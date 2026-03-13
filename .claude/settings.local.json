@@ -79,8 +79,7 @@
       "mcp__plugin_playwright_playwright__browser_fill_form",
       "mcp__plugin_playwright_playwright__browser_snapshot",
       "mcp__plugin_playwright_playwright__browser_take_screenshot",
-      "Bash(docker stats:*)",
-      "Bash(git add:*)"
+      "Bash(docker stats:*)"
     ],
     "deny": [],
     "ask": []

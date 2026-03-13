@@ -5,36 +5,31 @@ import { useTabs } from './core/useTabs';
 /**
  * Composable central do módulo RAT.
  *
- * Gerencia estado reativo de rat, recursos, envolvidos, vistoria,
- * histórico, anexos e abas. Provê funções de navegação/persistência.
+ * Gerencia estado reativo de recursos, envolvidos, vistoria, historico e abas.
+ * Provê saveRat, saveDraft, finalizeRat, cancelRat para comunicação com o backend.
+ *
+ * Imagens são enviadas diretamente via API (POST /rat/{id}/imagens) — não passam por aqui.
  */
 export function useRat({
     rat: initialRat = null,
-    recursos: initialRecursos = [],
+    recursos: initialRecursos = {},
     envolvidos: initialEnvolvidos = [],
     vistoria: initialVistoria = {},
-    historico: historicoInicial = [],
-    anexos: initialAnexos = [],
+    historico: initialHistorico = {},
     activeTab = 1,
 } = {}) {
-    // Estado reativo derivado dos props Inertia
-    const rat           = ref(initialRat ?? null);
-    const recursos      = ref(Array.isArray(initialRecursos) ? [...initialRecursos] : (initialRecursos ?? {}));
-    const envolvidos    = ref([...(Array.isArray(initialEnvolvidos) ? initialEnvolvidos : [])]);
-    const vistoria      = ref({ ...(initialVistoria ?? {}) });
-    const historico = ref(Array.isArray(historicoInicial) ? [...historicoInicial] : (historicoInicial ?? {}));
-    const anexos        = ref([...(Array.isArray(initialAnexos) ? initialAnexos : [])]);
+    const rat        = ref(initialRat ?? null);
+    const recursos   = ref(initialRecursos ?? {});
+    const envolvidos = ref(Array.isArray(initialEnvolvidos) ? [...initialEnvolvidos] : []);
+    const vistoria   = ref(typeof initialVistoria === 'object' && initialVistoria !== null ? { ...initialVistoria } : {});
+    const historico  = ref(typeof initialHistorico === 'object' && !Array.isArray(initialHistorico) && initialHistorico !== null ? { ...initialHistorico } : {});
 
-    // Sistema de abas
     const tabs = useTabs(activeTab);
 
-    /**
-     * Finaliza o RAT (status → em_andamento), persistindo todos os dados.
-     * @param {Object} formData  - dados do formulário principal (dadosGerais, comunicacao, local, endereco)
-     */
-    function salvarRat(formData = {}) {
-        const data = {
-            dadosGerais: formData.dadosGerais  ?? {},
+    /** Constrói o payload com todos os dados editáveis do RAT. */
+    function buildPayload(formData = {}) {
+        return {
+            dadosGerais: formData.dadosGerais ?? {},
             comunicacao: formData.comunicacao  ?? {},
             local:       formData.local        ?? {},
             endereco:    formData.endereco      ?? {},
@@ -43,6 +38,14 @@ export function useRat({
             vistoria:    vistoria.value,
             historico:   historico.value,
         };
+    }
+
+    /**
+     * Persiste todos os dados e avança status para EM_ANDAMENTO.
+     * Usa PUT /rat/{id} ou POST /rat se novo.
+     */
+    function saveRat(formData = {}) {
+        const data = buildPayload(formData);
         if (!rat.value?.id) {
             router.post(route('rat.store'), data, { preserveScroll: true });
         } else {
@@ -51,20 +54,11 @@ export function useRat({
     }
 
     /**
-     * Salva o RAT como rascunho (status mantido em rascunho).
-     * @param {Object} formData  - dados do formulário principal
+     * Salva dados mantendo status RASCUNHO.
+     * Usa PATCH /rat/{id}/draft ou POST /rat se novo.
      */
-    function salvarRascunho(formData = {}) {
-        const data = {
-            dadosGerais: formData.dadosGerais  ?? {},
-            comunicacao: formData.comunicacao  ?? {},
-            local:       formData.local        ?? {},
-            endereco:    formData.endereco      ?? {},
-            recursos:    recursos.value,
-            envolvidos:  envolvidos.value,
-            vistoria:    vistoria.value,
-            historico:   historico.value,
-        };
+    function saveDraft(formData = {}) {
+        const data = buildPayload(formData);
         if (!rat.value?.id) {
             router.post(route('rat.store'), data, { preserveScroll: true });
         } else {
@@ -73,87 +67,21 @@ export function useRat({
     }
 
     /**
-     * Finaliza o RAT — salva todos os dados e muda status para FINALIZADO.
-     * @param {Object} formData  - dados do formulário principal
+     * Salva dados e finaliza o RAT (status → FINALIZADO).
+     * Usa PATCH /rat/{id}/finalize.
      */
-    function finalizarRat(formData = {}) {
-        const data = {
-            dadosGerais: formData.dadosGerais  ?? {},
-            comunicacao: formData.comunicacao  ?? {},
-            local:       formData.local        ?? {},
-            endereco:    formData.endereco      ?? {},
-            recursos:    recursos.value,
-            envolvidos:  envolvidos.value,
-            vistoria:    vistoria.value,
-            historico:   historico.value,
-        };
+    function finalizeRat(formData = {}) {
+        const data = buildPayload(formData);
         if (!rat.value?.id) {
-            // Página de criação: cria e finaliza em uma única requisição
             router.post(route('rat.store'), { ...data, finalize: true }, { preserveScroll: true });
-            return;
+        } else {
+            router.patch(route('rat.finalize', rat.value.id), data, { preserveScroll: true });
         }
-        router.patch(route('rat.finalize', rat.value.id), data, { preserveScroll: true });
     }
 
-    /**
-     * Cancela e retorna para a listagem.
-     */
-    function cancelarRat() {
+    /** Cancela e retorna para a listagem. */
+    function cancelRat() {
         router.visit(route('rat.index'));
-    }
-
-    // Recursos
-    function adicionarRecurso(recurso) {
-        if (!Array.isArray(recursos.value)) recursos.value = [];
-        recursos.value.push(recurso);
-    }
-    function removerRecurso(id) {
-        if (!Array.isArray(recursos.value)) return;
-        const i = recursos.value.findIndex(r => r.id === id);
-        if (i > -1) recursos.value.splice(i, 1);
-    }
-    function atualizarRecursos(data) {
-        recursos.value = data;
-    }
-
-    // Envolvidos
-    function adicionarEnvolvido(e) {
-        envolvidos.value.push(e);
-    }
-    function removerEnvolvido(id) {
-        const i = envolvidos.value.findIndex(e => e.id === id);
-        if (i > -1) envolvidos.value.splice(i, 1);
-    }
-    function atualizarEnvolvidos(data) {
-        envolvidos.value = Array.isArray(data) ? data : [];
-    }
-
-    // Vistoria
-    function atualizarVistoria(data) {
-        vistoria.value = { ...vistoria.value, ...data };
-    }
-
-    // Historico
-    function adicionarObservacao(obs) {
-        if (!Array.isArray(historico.value)) historico.value = [];
-        historico.value.unshift({ id: Date.now(), ...obs, created_at: new Date().toISOString() });
-    }
-    function atualizarHistorico(data) {
-        historico.value = data;
-    }
-
-    // Anexos
-    function adicionarAnexo(anexo) {
-        if (!anexos.value) anexos.value = [];
-        anexos.value.push(anexo);
-    }
-    function removerAnexo(id) {
-        if (!anexos.value) return;
-        const i = anexos.value.findIndex(a => a.id === id);
-        if (i > -1) anexos.value.splice(i, 1);
-    }
-    function atualizarAnexos(data) {
-        anexos.value = data;
     }
 
     return {
@@ -162,23 +90,12 @@ export function useRat({
         envolvidos,
         vistoria,
         historico,
-        anexos,
         tabs,
-        salvarRat,
-        salvarRascunho,
-        finalizarRat,
-        cancelarRat,
-        adicionarRecurso,
-        removerRecurso,
-        atualizarRecursos,
-        adicionarEnvolvido,
-        removerEnvolvido,
-        atualizarEnvolvidos,
-        atualizarVistoria,
-        adicionarObservacao,
-        atualizarHistorico,
-        adicionarAnexo,
-        removerAnexo,
-        atualizarAnexos,
+        saveRat,
+        saveDraft,
+        finalizeRat,
+        cancelRat,
     };
 }
+
+

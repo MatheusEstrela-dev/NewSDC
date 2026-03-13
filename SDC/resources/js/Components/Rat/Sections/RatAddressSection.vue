@@ -139,7 +139,7 @@
 import FormField from '@/Components/Form/FormField.vue';
 import FormSelect from '@/Components/Form/FormSelect.vue';
 import { useCep } from '@/composables/location';
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps({
   modelValue: {
@@ -177,35 +177,6 @@ const localData = computed({
 
 const { buscarCep, isLoading: isLoadingCep } = useCep();
 
-// Função central de busca CEP reutilizada por watcher e blur
-const aplicarResultadoCep = (resultado) => {
-  if (!resultado) return;
-  localData.value = {
-    ...localData.value,
-    logradouro: resultado.logradouro || localData.value.logradouro,
-    bairro:     resultado.bairro     || localData.value.bairro,
-    complemento: resultado.complemento || localData.value.complemento,
-    latitude:   resultado.latitude,
-    longitude:  resultado.longitude,
-  };
-  emit('location-updated', {
-    uf:        resultado.uf,
-    municipio: resultado.localidade,
-  });
-};
-
-// Dispara busca automaticamente ao atingir 8 dígitos (escuta a prop diretamente
-// para evitar o cache da computed que impede detecção de mudanças de propriedade)
-watch(
-  () => props.modelValue?.cep,
-  async (newCep) => {
-    if (!newCep) return;
-    const cepLimpo = newCep.replace(/\D/g, '');
-    if (cepLimpo.length !== 8) return;
-    aplicarResultadoCep(await buscarCep(cepLimpo));
-  }
-);
-
 const tipoLocalizacaoOptions = [
   { value: 'urbana', label: 'Área Urbana' },
   { value: 'rural', label: 'Área Rural' },
@@ -220,9 +191,26 @@ const tipoLocalizacaoOptions = [
 
 const handleCepBlur = async () => {
   if (!localData.value.cep) return;
+
   const cepLimpo = localData.value.cep.replace(/\D/g, '');
   if (cepLimpo.length !== 8) return;
-  aplicarResultadoCep(await buscarCep(cepLimpo));
+
+  const resultado = await buscarCep(cepLimpo);
+
+  if (resultado) {
+    localData.value = {
+      ...localData.value,
+      logradouro: resultado.logradouro || localData.value.logradouro,
+      bairro: resultado.bairro || localData.value.bairro,
+      latitude: resultado.latitude,
+      longitude: resultado.longitude,
+    };
+
+    emit('location-updated', {
+      uf: resultado.uf,
+      municipio: resultado.localidade,
+    });
+  }
 };
 
 const viewOnMap = () => {

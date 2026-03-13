@@ -120,12 +120,14 @@ const handlePageChange = (page) => {
 };
 
 const handleDemandaClick = (demanda) => {
+  console.log('Demanda clicada:', demanda);
   // Futuramente: abrir modal de detalhes ou navegar para página de detalhes
 };
 
 const handleCreateDemanda = (demandaData) => {
   const newDemanda = createDemanda(demandaData);
   showModal.value = false;
+  console.log('Nova demanda criada:', newDemanda);
   // Futuramente: mostrar toast de sucesso
 };
 

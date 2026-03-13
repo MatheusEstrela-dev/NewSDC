@@ -2,17 +2,20 @@
 
 namespace App\Services;
 
-use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
-use App\Modules\Demandas\Models\Task;
-use App\Modules\Compdec\Models\Orgao;
-use App\Modules\Decretacoes\Models\Processo;
-use App\Modules\Treinamento\Models\Treinamento;
+use App\Modules\Rat\Models\Rat;
+use App\Modules\Demandas\Domain\Repositories\TaskRepositoryInterface;
+use App\Modules\Compdec\Domain\Repositories\OrgaoRepositoryInterface;
+use App\Modules\Decretacoes\Domain\Repositories\ProcessoRepositoryInterface;
+use App\Modules\Treinamento\Domain\Repositories\TreinamentoRepositoryInterface;
 use Illuminate\Support\Collection;
 
 class GlobalSearchService
 {
     public function __construct(
-        protected RatRepositoryInterface $ratRepository,
+        protected TaskRepositoryInterface $taskRepository,
+        protected ProcessoRepositoryInterface $processoRepository,
+        protected OrgaoRepositoryInterface $orgaoRepository,
+        protected TreinamentoRepositoryInterface $treinamentoRepository
     ) {}
 
     public function search(string $query, int $limitPerCategory = 5): array
@@ -54,17 +57,18 @@ class GlobalSearchService
     protected function searchRats(string $query, int $limit): array
     {
         try {
-            $paginator = $this->ratRepository->findAll(['search' => $query], $limit);
-            return collect($paginator->items())->map(function ($item) {
+            $items = Rat::where('protocolo', 'like', "%{$query}%")
+                ->limit($limit)
+                ->get();
+
+            return $items->map(function ($item) {
                 return [
-                    'id' => $item->id,
-                    'title' => $item->protocolo,
+                    'id'       => $item->id,
+                    'title'    => $item->protocolo,
                     'subtitle' => 'RAT - ' . ($item->status ?? 'N/A'),
-                    // Using JSON endpoint/dashboard as fallback since rat.show doesn't exist in module routes yet
-                    // Ideally this should point to the RAT view page
-                    'url' => route('rat.show.json', $item->id), 
-                    'type' => 'rat',
-                    'icon' => 'document'
+                    'url'      => route('rat.show', $item->id),
+                    'type'     => 'rat',
+                    'icon'     => 'document',
                 ];
             })->toArray();
         } catch (\Throwable $e) {
@@ -75,11 +79,8 @@ class GlobalSearchService
     protected function searchDemandas(string $query, int $limit): array
     {
         try {
-            $tasks = Task::where('titulo', 'like', "%{$query}%")
-                ->orWhere('descricao', 'like', "%{$query}%")
-                ->limit($limit)
-                ->get();
-            return $tasks->map(function ($item) {
+            $paginator = $this->taskRepository->findAll(['search' => $query], $limit);
+            return collect($paginator->items())->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'title' => $item->titulo ?? $item->protocolo,
@@ -97,15 +98,16 @@ class GlobalSearchService
     protected function searchOrgaos(string $query, int $limit): array
     {
         try {
-            $orgaos = Orgao::where('nome', 'like', "%{$query}%")
-                ->limit($limit)
-                ->get();
-            return $orgaos->map(function ($item) {
+            $paginator = $this->orgaoRepository->findAll(['search' => $query], $limit);
+            return collect($paginator->items())->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'title' => $item->nome,
-                    'subtitle' => 'Órgão',
-                    'url' => route('compdec.show', $item->id),
+                    'subtitle' => $item->municipio->nome ?? 'Órgão',
+                    // Assuming compdec.show uses ID, or route name might be different.
+                    // If compdec.show fails, we might need to check compdec.php.
+                    // But usually module routes are straightforward.
+                    'url' => route('compdec.show', $item->id), 
                     'type' => 'orgao',
                     'icon' => 'building'
                 ];
@@ -118,10 +120,8 @@ class GlobalSearchService
     protected function searchProcessos(string $query, int $limit): array
     {
         try {
-            $processos = Processo::where('n_protocolo_fide', 'like', "%{$query}%")
-                ->limit($limit)
-                ->get();
-            return $processos->map(function ($item) {
+            $paginator = $this->processoRepository->findAll(['search' => $query], $limit);
+            return collect($paginator->items())->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'title' => 'FIDE: ' . ($item->n_protocolo_fide ?? 'N/A'),
@@ -139,10 +139,8 @@ class GlobalSearchService
     protected function searchTreinamentos(string $query, int $limit): array
     {
         try {
-            $treinamentos = Treinamento::where('titulo', 'like', "%{$query}%")
-                ->limit($limit)
-                ->get();
-            return $treinamentos->map(function ($item) {
+            $paginator = $this->treinamentoRepository->findAll(['search' => $query], $limit);
+            return collect($paginator->items())->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'title' => $item->titulo,

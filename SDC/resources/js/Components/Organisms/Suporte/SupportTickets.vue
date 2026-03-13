@@ -55,6 +55,7 @@ const fetchTickets = async () => {
         const response = await axios.get(route('suporte.index'));
         tickets.value = response.data.data;
     } catch (error) {
+        console.error('Erro ao buscar tickets:', error);
     } finally {
         loadingTickets.value = false;
     }
@@ -67,7 +68,7 @@ const submitTicket = async () => {
         activeTab.value = 'list';
         fetchTickets();
     } catch (error) {
-        submitStatus.value = 'error';
+        console.error('Erro ao enviar ticket:', error);
     }
 };
 

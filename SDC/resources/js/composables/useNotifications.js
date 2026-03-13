@@ -70,6 +70,7 @@ export function useNotifications() {
       }
       
     } catch (error) {
+      console.error('Failed to fetch notifications:', error);
     } finally {
       isLoading.value = false;
     }
@@ -86,6 +87,7 @@ export function useNotifications() {
     try {
         // await window.axios.put(`/notifications/${id}/read`);
     } catch (e) {
+        console.error(e);
     }
   };
 

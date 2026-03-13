@@ -1,7 +1,5 @@
 <template>
-  <div class="space-y-6">
-    <fieldset :disabled="props.viewOnly" style="border:none;padding:0;margin:0;min-width:0;">
-    <div class="rat-section-card">
+  <div class="rat-section-card">
     <!-- Header -->
     <div class="rat-section-header">
       <div class="rat-section-icon rat-section-icon-default">
@@ -49,23 +47,9 @@
           </div>
         </div>
       </div>
-    </div>
-    </div>
 
-    <!-- Card 2: Condições e Resultado -->
-    <div class="rat-section-card">
-      <div class="rat-section-header">
-        <div class="rat-section-icon rat-section-icon-default">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 005-5v-2a5 5 0 00-5-5H7a4 4 0 00-4 4M3 9a4 4 0 014-4h9"/></svg>
-        </div>
-        <div>
-          <h3 class="rat-section-title">Condições e Resultado</h3>
-          <p class="text-xs text-slate-500 mt-0.5">Clima e resultado da operação</p>
-        </div>
-      </div>
-      <div class="rat-section-content">
       <!-- Informações Complementares -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Condições Climáticas -->
         <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-slate-700/30">
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
@@ -75,38 +59,38 @@
             <div class="flex items-center gap-2">
               <input
                 type="checkbox"
-                :id="`clima-chuva-${uid}`"
+                id="clima-chuva"
                 v-model="localData.clima.chuva"
                 class="w-4 h-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500"
               />
-              <label :for="`clima-chuva-${uid}`" class="text-sm text-slate-600 dark:text-slate-400">Chuva</label>
+              <label for="clima-chuva" class="text-sm text-slate-600 dark:text-slate-400">Chuva</label>
             </div>
             <div class="flex items-center gap-2">
               <input
                 type="checkbox"
-                :id="`clima-vento-${uid}`"
+                id="clima-vento"
                 v-model="localData.clima.vento_forte"
                 class="w-4 h-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500"
               />
-              <label :for="`clima-vento-${uid}`" class="text-sm text-slate-600 dark:text-slate-400">Vento Forte</label>
+              <label for="clima-vento" class="text-sm text-slate-600 dark:text-slate-400">Vento Forte</label>
             </div>
             <div class="flex items-center gap-2">
               <input
                 type="checkbox"
-                :id="`clima-nevoeiro-${uid}`"
+                id="clima-nevoeiro"
                 v-model="localData.clima.nevoeiro"
                 class="w-4 h-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500"
               />
-              <label :for="`clima-nevoeiro-${uid}`" class="text-sm text-slate-600 dark:text-slate-400">Nevoeiro</label>
+              <label for="clima-nevoeiro" class="text-sm text-slate-600 dark:text-slate-400">Nevoeiro</label>
             </div>
             <div class="flex items-center gap-2">
               <input
                 type="checkbox"
-                :id="`clima-tempestade-${uid}`"
+                id="clima-tempestade"
                 v-model="localData.clima.tempestade"
                 class="w-4 h-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500"
               />
-              <label :for="`clima-tempestade-${uid}`" class="text-sm text-slate-600 dark:text-slate-400">Tempestade</label>
+              <label for="clima-tempestade" class="text-sm text-slate-600 dark:text-slate-400">Tempestade</label>
             </div>
           </div>
         </div>
@@ -143,23 +127,9 @@
           </div>
         </div>
       </div>
-    </div>
-    </div>
 
-    <!-- Card 3: Métricas e Encaminhamentos -->
-    <div class="rat-section-card">
-      <div class="rat-section-header">
-        <div class="rat-section-icon rat-section-icon-default">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        </div>
-        <div>
-          <h3 class="rat-section-title">Métricas e Encaminhamentos</h3>
-          <p class="text-xs text-slate-500 mt-0.5">Estatísticas da operação e encaminhamentos realizados</p>
-        </div>
-      </div>
-      <div class="rat-section-content">
       <!-- Métricas da Operação -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-slate-700/30">
           <label class="block text-xs text-slate-500 mb-2">Pessoas Atendidas</label>
           <input
@@ -211,24 +181,17 @@
         />
       </div>
     </div>
-    </div>
-    </fieldset>
   </div>
 </template>
 
 <script setup>
-import { getCurrentInstance, ref, watch } from 'vue';
-const uid = getCurrentInstance().uid;
+import { ref, watch } from 'vue';
 import FormField from '../../Form/FormField.vue';
 
 const props = defineProps({
   modelValue: {
     type: Object,
     default: () => ({}),
-  },
-  viewOnly: {
-    type: Boolean,
-    default: false,
   },
 });
 

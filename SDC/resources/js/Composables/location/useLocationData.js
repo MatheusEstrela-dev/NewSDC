@@ -86,6 +86,7 @@ export function useLocationData() {
         codigo_ibge: municipio.id,
       })).sort((a, b) => a.nome.localeCompare(b.nome));
     } catch (error) {
+      console.error('Erro ao carregar municípios:', error);
       municipios.value = [];
     } finally {
       isLoadingMunicipios.value = false;
@@ -116,6 +117,7 @@ export function useLocationData() {
         codigo_ibge: data.id,
       };
     } catch (error) {
+      console.error('Erro ao buscar município:', error);
       return null;
     }
   };

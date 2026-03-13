@@ -34,6 +34,7 @@ async function loadPyodideAndPackages() {
         pythonReady = true;
         postMessage({ type: 'READY' });
     } catch (e) {
+        console.error("Failed to load Pyodide:", e);
         postMessage({ type: 'ERROR', message: e.toString() });
     }
 }

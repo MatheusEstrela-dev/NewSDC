@@ -1,50 +1,11 @@
-APP_NAME=SDC
-APP_ENV=local
-APP_KEY=base64:I/dA3xaVSuraVwivOf6ljrY5V4/+c05H27s/bzOfF78=
-APP_DEBUG=true
-APP_URL=http://localhost:8001
+* text=auto eol=lf
 
-LOG_CHANNEL=stack
-LOG_DEPRECATIONS_CHANNEL=null
-LOG_LEVEL=debug
+*.blade.php diff=html
+*.css diff=css
+*.html diff=html
+*.md diff=markdown
+*.php diff=php
 
-DB_CONNECTION=mysql
-DB_HOST=db
-DB_PORT=3306
-DB_DATABASE=sdc
-DB_USERNAME=sdc
-DB_PASSWORD=secret
-
-CACHE_DRIVER=redis
-SESSION_DRIVER=redis
-QUEUE_CONNECTION=redis
-
-REDIS_HOST=redis
-REDIS_PASSWORD=null
-REDIS_PORT=6379
-
-MAIL_MAILER=smtp
-MAIL_HOST=mailhog
-MAIL_PORT=1025
-MAIL_USERNAME=null
-MAIL_PASSWORD=null
-MAIL_ENCRYPTION=null
-MAIL_FROM_ADDRESS="noreply@localhost"
-MAIL_FROM_NAME="${APP_NAME}"
-
-AI_DRIVER=ollama
-OLLAMA_HOST=http://ollama:11434
-OLLAMA_MODEL=llama3
-OLLAMA_TIMEOUT=300
-
-OCTANE_SERVER=roadrunner
-
-INERTIA_SSR_ENABLED=false
-
-# Log Viewer Configuration
-HARD_LOG_ENTRIES=true
-SANCTUM_STATEFUL_DOMAINS=localhost:8001,127.0.0.1:8001
-CORS_ALLOWED_ORIGINS=http://localhost:8001,http://127.0.0.1:8001
-SESSION_DOMAIN=localhost
-SESSION_SECURE_COOKIE=false
-SESSION_SAME_SITE=lax
+/.github export-ignore
+CHANGELOG.md export-ignore
+.styleci.yml export-ignore

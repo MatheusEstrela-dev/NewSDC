@@ -5,6 +5,8 @@ export const SyncService = {
     async syncPendente() {
         if (!navigator.onLine) return;
 
+        console.log('Iniciando sincronização de dados...');
+        
         try {
             const pendentes = await db.rat_pendentes
                 .where('sync_status')
@@ -12,6 +14,7 @@ export const SyncService = {
                 .toArray();
 
             if (pendentes.length === 0) {
+                console.log('Nenhum dado pendente para sincronizar.');
                 return;
             }
 
@@ -22,12 +25,16 @@ export const SyncService = {
                     
                     // Se sucesso, remove do banco local
                     await db.rat_pendentes.delete(rat.id);
+                    console.log(`RAT ${rat.id} sincronizado com sucesso!`);
                     
                     // Opcional: Disparar evento para atualizar a UI
                     window.dispatchEvent(new CustomEvent('rat-synced', { detail: rat.id }));
                 } catch (error) {
+                    console.error(`Falha ao sincronizar RAT ${rat.id}:`, error);
+
                     // Tratamento específico para Erro 422 (Validação) ou 403 (Permissão)
-                    if (error.response && [403, 422].includes(error.response.status)) {;
+                    if (error.response && [403, 422].includes(error.response.status)) {
+                        console.warn(`RAT ${rat.id} rejeitado pelo servidor. Marcando como erro.`);
                         
                         // Atualiza o status no Dexie para 'error' para não tentar enviar novamente infinitamente
                         await db.rat_pendentes.update(rat.id, { 
@@ -42,12 +49,13 @@ export const SyncService = {
                 }
             }
         } catch (error) {
-            // sync error handled silently
+            console.error("Erro geral na sincronização:", error);
         }
     },
 
     init() {
         window.addEventListener('online', () => {
+            console.log('Conexão restabelecida via SyncService.');
             this.syncPendente();
         });
         

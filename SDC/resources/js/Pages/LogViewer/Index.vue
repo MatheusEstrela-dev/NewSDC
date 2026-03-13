@@ -46,6 +46,7 @@ const loadFiles = async () => {
             selectedFile.value = files.value[0].name
         }
     } catch (error) {
+        console.error('Error loading files:', error)
     }
 }
 
@@ -68,6 +69,7 @@ const loadLogs = async () => {
         // Carrega estatísticas se necessário
         loadStatistics()
     } catch (error) {
+        console.error('Error loading logs:', error)
     } finally {
         loading.value = false
     }
@@ -80,7 +82,7 @@ const loadStatistics = async () => {
         })
         statistics.value = response.data.statistics
     } catch (error) {
-        statistics.value = null
+        console.error('Error loading statistics:', error)
     }
 }
 
