@@ -1,1 +1,0 @@
-function r(s){const e=s.replace(/\D/g,"").slice(0,11);return e.length<=3?e:e.length<=6?`${e.slice(0,3)}.${e.slice(3)}`:e.length<=9?`${e.slice(0,3)}.${e.slice(3,6)}.${e.slice(6)}`:`${e.slice(0,3)}.${e.slice(3,6)}.${e.slice(6,9)}-${e.slice(9,11)}`}function l(s){return s.replace(/\D/g,"")}function i(s){return l(s).length===11}export{r as a,i,l as r};
