@@ -64,7 +64,7 @@
                             <td class="px-4 py-3 text-sm text-gray-700">{{ oc.numero_bos ?? '—' }}</td>
                             <td class="px-4 py-3">
                                 <span :class="statusClass(oc.status)" class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium">
-                                    {{ oc.status_label ?? '—' }}
+                                    {{ oc.status ?? '—' }}
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-500">{{ formatDate(oc.created_at) }}</td>
@@ -122,8 +122,9 @@ function applyFilters() {
 
 function statusClass(status) {
     const map = {
-        1: 'bg-green-100 text-green-800',
-        0: 'bg-gray-100 text-gray-700',
+        finalizado:  'bg-green-100 text-green-800',
+        em_andamento: 'bg-yellow-100 text-yellow-800',
+        rascunho:    'bg-gray-100 text-gray-700',
     };
     return map[status] ?? 'bg-gray-100 text-gray-700';
 }

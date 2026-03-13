@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Services;
 
-use App\Modules\Rat\DTO\RatStatisticsDTO;
+use App\Modules\Rat\DTOs\RatStatisticsDTO;
 use App\Modules\Rat\Models\Rat;
 
 /**
