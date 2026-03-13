@@ -93,11 +93,10 @@ const registerServiceWorker = async () => {
                     }
                 },
                 onOfflineReady() {
-                    console.log('App ready to work offline');
                 },
             });
         } catch (e) {
-            console.error('Service Worker registration failed:', e);
+            // Service Worker registration failed silently
         }
     }
 };
@@ -150,7 +149,6 @@ createInertiaApp({
 
 Object.defineProperty(window, 'egg', {
     get: function () {
-        console.log('%c\u2B50 DESENVOLVIDO POR MATHEUS ESTRELA \u2B50', 'color: #FFD700; font-size: 24px; font-weight: bold; text-shadow: 2px 2px 4px #000;');
         return '\u2B50';
     }
 });

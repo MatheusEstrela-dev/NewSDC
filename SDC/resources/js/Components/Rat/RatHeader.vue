@@ -13,7 +13,7 @@
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
           <h1 class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Novo RAT
+            {{ pageTitle }}
           </h1>
           <span v-if="rat.status" :class="['px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-xs font-semibold border whitespace-nowrap', getStatusClass(rat.status)]">
             {{ getStatusLabel(rat.status) }}
@@ -24,7 +24,7 @@
         </p>
       </div>
 
-      <!-- Last Update - visivel apenas em sm+ -->
+      <!-- Última Atualização - visível apenas em sm+ -->
       <div class="hidden sm:flex items-center gap-2 text-sm bg-slate-100 dark:bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700/50 flex-shrink-0">
         <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -56,6 +56,20 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  viewOnly: {
+    type: Boolean,
+    default: false,
+  },
+  isCreate: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const pageTitle = computed(() => {
+  if (props.isCreate) return 'Novo RAT';
+  if (props.viewOnly) return 'Visualizar RAT';
+  return 'Editar RAT';
 });
 
 const formattedLastUpdate = computed(() => {

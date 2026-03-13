@@ -270,7 +270,6 @@ async function handleArchive(id) {
 
     alert('Protocolo arquivado com sucesso!');
   } catch (error) {
-    console.error('Erro ao arquivar protocolo:', error);
     alert('Erro ao arquivar protocolo. Tente novamente.');
   }
 }

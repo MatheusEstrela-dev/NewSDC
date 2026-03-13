@@ -78,7 +78,6 @@ export function usePullToRefresh(options = {}) {
       try {
         await onRefresh();
       } catch (error) {
-        console.error('Pull to refresh error:', error);
       } finally {
         isRefreshing.value = false;
         pullDistance.value = 0;

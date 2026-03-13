@@ -55,7 +55,6 @@ export function useCep() {
           }
         }
       } catch (coordError) {
-        console.warn('Não foi possível obter coordenadas:', coordError);
         // Continua mesmo sem coordenadas
       }
 
@@ -74,7 +73,6 @@ export function useCep() {
       };
     } catch (err) {
       error.value = err.message || 'Erro ao buscar CEP';
-      console.error('Erro ao buscar CEP:', err);
       return null;
     } finally {
       isLoading.value = false;

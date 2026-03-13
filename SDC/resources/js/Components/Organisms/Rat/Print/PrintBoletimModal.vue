@@ -36,11 +36,13 @@ const dadosGerais = computed(() => {
 });
 
 const envolvidos = computed(() => {
-  return props.ocorrencia?.envolvidos || [];
+  const e = props.ocorrencia?.envolvidos;
+  return Array.isArray(e) ? e : [];
 });
 
 const recursos = computed(() => {
-  return props.ocorrencia?.recursos || [];
+  const r = props.ocorrencia?.recursos;
+  return Array.isArray(r) ? r : [];
 });
 
 const vistoria = computed(() => {

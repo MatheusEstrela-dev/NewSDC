@@ -41,14 +41,35 @@ class ProcessoRequestDTO
     /**
      * Cria DTO a partir do Request HTTP.
      *
+     * Mapeia os campos do frontend (ProcessoForm.vue) para as colunas do modelo Processo.
+     *
      * @param Request $request Request vindo do Controller
      * @return self DTO pronto para ser processado pelo Service
      */
     public static function fromRequest(Request $request): self
     {
+        $municipioId = $request->input('municipio_id');
+
+        $mapped = [
+            'data_entrada'             => $request->input('data_entrada') ?: null,
+            'processo'                 => strtoupper($request->input('origem', '')),
+            'tipo_desastre_id'         => $request->input('cobrade_id') ?: ($request->input('tipo_desastre_id') ?: null),
+            'tipo_desastre'            => $request->input('situacao_anormalidade') ?: null,
+            'data_ocorrencia_desastre' => $request->input('data_ocorrencia') ?: null,
+            'analista'                 => $request->input('analista_id') ?: null,
+            'n_protocolo_fide'         => $request->input('n_protocolo_fide') ?: null,
+            'decreto_municipal'        => $request->input('n_decreto_municipal') ?: null,
+            'data_decreto_municipal'   => $request->input('data_decreto_municipal') ?: null,
+            'data_publicacao_mg'       => $request->input('data_publicacao_domg') ?: null,
+            'prazo_vigencia'           => $request->input('prazo_vigencia_decreto') ?: null,
+            'portaria_reconhecimento_fed' => $request->input('n_portaria_federal') ?: null,
+            'processo_inserido_sei'    => $request->input('n_processo_sei') ?: null,
+            'observacoes'              => $request->input('observacoes') ?: null,
+        ];
+
         return new self(
-            allData: $request->all(),
-            municipios: $request->input('municipios', []),
+            allData: array_filter($mapped, fn($v) => $v !== null),
+            municipios: $municipioId ? [(int) $municipioId] : [],
             informacoesDecreto: $request->input('informacoes_decreto'),
         );
     }

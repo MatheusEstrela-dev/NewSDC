@@ -1,5 +1,8 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 
+// Import URL instead of constructor to manual bypass CORS
+import AIWorkerUrl from '../../Workers/ai.worker.js?url';
+
 export function useHybridAI() {
     const isReady = ref(false);
     const isThinking = ref(false);
@@ -10,12 +13,11 @@ export function useHybridAI() {
     const initWorker = () => {
         try {
             if (typeof Worker !== 'undefined') {
-                // Use new URL + import.meta.url so Vite emits the worker as a real
-                // file chunk — avoids the data: URL that the CSP worker-src blocks.
-                worker.value = new Worker(
-                    new URL('../../Workers/ai.worker.js', import.meta.url),
-                    { type: 'module' }
-                );
+                const blobContent = `import "${AIWorkerUrl}";`;
+                const blob = new Blob([blobContent], { type: 'application/javascript' });
+                const workerUrl = URL.createObjectURL(blob);
+
+                worker.value = new Worker(workerUrl, { type: 'module' });
 
                 worker.value.onmessage = (e) => {
                     const { type, message } = e.data;

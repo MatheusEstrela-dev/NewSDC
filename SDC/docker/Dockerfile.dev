@@ -102,8 +102,7 @@ WORKDIR /var/www
 # Instalar dependencias PHP durante o build (rede Docker com internet)
 # O volume nomeado newsdc_vendor sera populado com este conteudo na primeira execucao
 COPY composer.json composer.lock* ./
-RUN composer install --no-interaction --prefer-dist --no-scripts --no-autoloader \
-    && composer dump-autoload --optimize --no-scripts
+RUN composer install --no-interaction --prefer-dist --no-scripts --no-autoloader
 
 # Scripts de entrada
 COPY docker/scripts/entrypoint.dev.sh /usr/local/bin/entrypoint.sh

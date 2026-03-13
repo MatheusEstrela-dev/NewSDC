@@ -1,5 +1,6 @@
 <template>
-  <div class="rat-section-card">
+  <div class="space-y-6">
+    <div class="rat-section-card">
     <!-- Header -->
     <div class="rat-section-header">
       <div class="rat-section-icon rat-section-icon-purple">
@@ -14,8 +15,8 @@
     </div>
 
     <div class="rat-section-content">
-      <!-- Formulário Inline - Sempre visível por padrão -->
-      <div class="mb-6 p-6 rounded-lg bg-slate-50 dark:bg-slate-950/50 border-2 border-purple-500/30">
+      <!-- Formulário Inline - Somente no modo edição -->
+      <div v-if="!props.viewOnly" class="mb-6 p-6 rounded-lg bg-slate-50 dark:bg-slate-950/50 border-2 border-purple-500/30">
         <h4 class="text-base font-semibold text-purple-600 dark:text-purple-400 mb-4">
           {{ envolvidoEditIndex !== null ? 'Editar Envolvido' : 'Novo Envolvido' }}
         </h4>
@@ -174,10 +175,22 @@
       </div>
 
       <!-- Lista de Envolvidos -->
-      <div v-if="localData.length > 0" class="space-y-4">
-        <p class="text-sm text-slate-400 mb-4">
-          {{ localData.length }} pessoa(s) registrada(s)
-        </p>
+    </div>
+  </div>
+
+    <!-- Card 2: Pessoas Registradas -->
+    <div v-if="localData.length > 0" class="rat-section-card">
+      <div class="rat-section-header">
+        <div class="rat-section-icon rat-section-icon-purple">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        </div>
+        <div class="flex-1">
+          <h3 class="rat-section-title">Pessoas Registradas</h3>
+          <p class="text-xs text-slate-500 mt-0.5">{{ localData.length }} pessoa(s) registrada(s)</p>
+        </div>
+      </div>
+      <div class="rat-section-content">
+      <div class="space-y-4">
 
         <div
           v-for="(envolvido, index) in localData"
@@ -231,7 +244,7 @@
             </div>
 
             <!-- Ações -->
-            <div class="flex gap-2">
+            <div v-if="!props.viewOnly" class="flex gap-2">
               <button
                 @click="editarEnvolvido(index)"
                 type="button"
@@ -257,10 +270,11 @@
         </div>
       </div>
 
-      <!-- Empty State - Só aparece quando não há envolvidos e não está editando -->
+      <!-- Estado Vazio - Só aparece quando não há envolvidos e não está editando -->
       <div v-if="localData.length === 0 && envolvidoEditIndex === null" class="text-center py-8 mt-4">
         <p class="text-slate-500 text-sm">Nenhuma pessoa registrada ainda. Preencha o formulário acima para adicionar.</p>
       </div>
+    </div>
     </div>
   </div>
 </template>
@@ -275,6 +289,10 @@ const props = defineProps({
   modelValue: {
     type: Array,
     default: () => [],
+  },
+  viewOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 

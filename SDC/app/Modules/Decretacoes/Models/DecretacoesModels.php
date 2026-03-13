@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 /**
@@ -105,7 +106,7 @@ class Processo extends Model
             'id',
             'id',
             'municipio_id'
-        )->orderBy('populacao', 'desc');
+        )->orderBy('nome', 'asc');
     }
 
     public function decretoMunicipios(): HasMany
@@ -258,9 +259,10 @@ class Processo extends Model
     protected function logChange(string $action): void
     {
         ProcessoLog::create([
-            'entrada_processo_id' => $this->id,
+            'uuid'                 => (string) Str::uuid(),
+            'entrada_processo_id'  => $this->id,
             'entrada_processo_data' => $this->toArray(),
-            'action' => $action,
+            'action'               => $action,
         ]);
     }
 }
@@ -454,7 +456,7 @@ class EntradaDesastre extends Model
  */
 class ProcessoLog extends Model
 {
-    protected $table = 'dec_entrada_processos_log';
+    protected $table = 'dec_entrada_processo_logs';
 
     protected $fillable = [
         'entrada_processo_id',

@@ -46,18 +46,13 @@ class SecurityHeaders
 
     private function generateCspDirectives(bool $isLocal, bool $isNativePHP): string
     {
-        // CDNs usados globalmente (ex: Pyodide via ai.worker.js)
-        $cdnHosts = [
-            'https://cdn.jsdelivr.net',
-            'https://servicodados.ibge.gov.br',
-        ];
-
-        $scriptSrc = array_merge([
+        $scriptSrc = [
             "'self'",
             "'unsafe-inline'",
             "'unsafe-eval'",
             "blob:",
-        ], $cdnHosts);
+            "https://cdn.jsdelivr.net",
+        ];
 
         $styleSrc = [
             "'self'",
@@ -75,7 +70,10 @@ class SecurityHeaders
             "data:",
         ];
 
-        $connectSrc = array_merge(["'self'"], $cdnHosts);
+        $connectSrc = [
+            "'self'",
+            "https://cdn.jsdelivr.net",
+        ];
 
         // Em ambiente local, liberamos Vite (HTTP + WebSocket) e fontes externas usadas pelo layout
         // para evitar tela em branco por CSP bloqueando assets.
@@ -101,7 +99,9 @@ class SecurityHeaders
                 "http://127.0.0.1:15175",
             ]);
 
-            $connectSrc = array_merge($connectSrc, $viteHosts);
+            $connectSrc = array_merge($connectSrc, $viteHosts, [
+                'https://servicodados.ibge.gov.br',
+            ]);
 
             $styleSrc[] = "https://fonts.bunny.net";
             $fontSrc[] = "https://fonts.bunny.net";
@@ -129,12 +129,9 @@ class SecurityHeaders
             }
         }
 
-        $workerSrc = ["'self'", 'blob:', 'https://cdn.jsdelivr.net'];
+        $workerSrc = "'self' blob: data: https://cdn.jsdelivr.net";
         if ($isLocal || $isNativePHP) {
-            foreach ([5173, 5175, 5176, 15175] as $p) {
-                $workerSrc[] = "http://localhost:{$p}";
-                $workerSrc[] = "http://127.0.0.1:{$p}";
-            }
+            $workerSrc .= " http://localhost:15175 http://127.0.0.1:15175 http://localhost:5175 http://127.0.0.1:5175";
         }
 
         return implode('; ', [
@@ -145,7 +142,7 @@ class SecurityHeaders
             'font-src ' . implode(' ', array_unique($fontSrc)),
             'connect-src ' . implode(' ', array_unique($connectSrc)),
             "frame-ancestors 'self'",
-            'worker-src ' . implode(' ', array_unique($workerSrc)),
+            "worker-src {$workerSrc}",
         ]);
     }
 }

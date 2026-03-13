@@ -33,9 +33,12 @@ return new class extends Migration
                   ->default(0)
                   ->comment('Permissao Editar analisar Decreto');
 
+            // Comentado pois cedec_usuario não existe nas migrations atuais
+            /*
             $table->foreign('id_usuario')
                   ->references('id')
                   ->on('cedec_usuario');
+            */
 
             $table->index('id_usuario', 'fk_id_usuario_idx');
         });

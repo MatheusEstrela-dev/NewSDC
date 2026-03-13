@@ -33,19 +33,19 @@ class RatAttachmentController extends Controller
             ],
         ]);
 
-        $rat    = Rat::findOrFail($id);
-        $imagem = $this->attachmentService->store($rat, $request->file('file'));
+        $rat   = Rat::findOrFail($id);
+        $anexo = $this->attachmentService->store($rat, $request->file('file'));
 
-        return response()->json($imagem, 201);
+        return response()->json($anexo, 201);
     }
 
-    /** DELETE /rat/{id}/attachments/{imagemId} */
-    public function destroy(string $id, string $imagemId): JsonResponse
+    /** DELETE /rat/{id}/attachments/{anexoId} */
+    public function destroy(string $id, string $anexoId): JsonResponse
     {
         $rat = Rat::findOrFail($id);
-        $this->attachmentService->destroy($rat, $imagemId);
+        $this->attachmentService->destroy($rat, $anexoId);
 
-        return response()->json(['message' => 'Imagem removida com sucesso.']);
+        return response()->json(['message' => 'Anexo removido com sucesso.']);
     }
 }
 

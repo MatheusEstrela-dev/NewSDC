@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Core\IA\Services;
 
 use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
-use App\Modules\Rat\Infrastructure\Persistence\EloquentRatRepository;
 use Illuminate\Support\Facades\Log;
 
 class RagService
@@ -15,7 +14,7 @@ class RagService
 
     public function __construct(?RatRepositoryInterface $ratRepository = null)
     {
-        $this->ratRepository = $ratRepository ?? app(EloquentRatRepository::class);
+        $this->ratRepository = $ratRepository ?? app(RatRepositoryInterface::class);
     }
 
     public function enrichMessage(string $message): string

@@ -109,13 +109,11 @@ export function setupInertiaLoadingInterceptors() {
     // Evento de erro
     router.on('error', (errors) => {
         stopLoading()
-        console.error('Erro ao carregar página:', errors)
     })
 
     // Evento de exceção
     router.on('exception', (error) => {
         stopLoading()
-        console.error('Exceção ao navegar:', error)
     })
 }
 
@@ -135,7 +133,6 @@ export function useAsyncLoading() {
             const result = await asyncFn()
             return result
         } catch (error) {
-            console.error('Erro durante operação assíncrona:', error)
             throw error
         } finally {
             await stopLoading()

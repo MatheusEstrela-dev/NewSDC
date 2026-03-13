@@ -4,7 +4,7 @@ import { router } from '@inertiajs/vue3';
 export function useRatFilters(initialFilters = {}) {
   const filters = ref({ ...initialFilters });
 
-  const hasActiveFilters = computed(() => {
+  const temFiltrosAtivos = computed(() => {
     return Object.values(filters.value).some(value => {
       if (Array.isArray(value)) return value.length > 0;
       if (typeof value === 'object' && value !== null) {
@@ -14,27 +14,27 @@ export function useRatFilters(initialFilters = {}) {
     });
   });
 
-  function updateFilter(key, value) {
+  function atualizarFiltro(key, value) {
     filters.value[key] = value;
   }
 
-  function updateFilters(newFilters) {
+  function atualizarFiltros(newFilters) {
     filters.value = { ...filters.value, ...newFilters };
   }
 
-  function resetFilters() {
+  function limparFiltros() {
     filters.value = {};
   }
 
-  function applyFilters() {
+  function aplicarFiltros() {
     router.get(route('rat.index'), filters.value, {
       preserveState: true,
       preserveScroll: true,
     });
   }
 
-  function clearFilters() {
-    resetFilters();
+  function limparTodosFiltros() {
+    limparFiltros();
     router.get(route('rat.index'), {}, {
       preserveState: false,
       preserveScroll: false,
@@ -43,12 +43,12 @@ export function useRatFilters(initialFilters = {}) {
 
   return {
     filters,
-    hasActiveFilters,
-    updateFilter,
-    updateFilters,
-    resetFilters,
-    applyFilters,
-    clearFilters,
+    temFiltrosAtivos,
+    atualizarFiltro,
+    atualizarFiltros,
+    limparFiltros,
+    aplicarFiltros,
+    limparTodosFiltros,
   };
 }
 

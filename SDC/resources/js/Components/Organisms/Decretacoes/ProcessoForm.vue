@@ -108,10 +108,13 @@
       />
 
       <FormField
-        :model-value="protocoloFide"
+        v-model="protocoloFideModel"
         label="N. Protocolo FIDE"
-        readonly
-        hint="Gerado automaticamente"
+        :placeholder="protocoloFidePlaceholder"
+        :error="protocoloFideError"
+        :maxlength="protocoloFideMaxLength"
+        @focus="initProtocoloFide"
+        @blur="protocoloFideTouched = true"
       />
     </FormSection>
 
@@ -245,7 +248,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import FormSection from '@/Components/Organisms/FormSection.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
@@ -277,12 +280,7 @@ const props = defineProps({
   },
   statusOptions: {
     type: Array,
-    default: () => [
-      { value: 'pendente', label: 'Pendente' },
-      { value: 'em_analise', label: 'Em Analise' },
-      { value: 'aprovado', label: 'Aprovado' },
-      { value: 'rejeitado', label: 'Rejeitado' },
-    ],
+    default: () => [],
   },
   analistas: {
     type: Array,
@@ -326,15 +324,94 @@ const diasRestantesHint = computed(() => {
   return '';
 });
 
-const protocoloFide = computed(() => {
-  const tipo = props.form.origem === 'estadual' ? 'E' : 'F';
-  const municipio = props.form.municipio_id || 'XXXX';
-  const ano = new Date().getFullYear();
-  const sequencia = props.isEditing ? props.form.sequencia || 'XXXX' : 'AUTO';
-  return `MG-${tipo}-${municipio}-${ano}-${sequencia}`;
+
+const PREFIXO = 'MG-F-';
+const protocoloFideTouched = ref(false);
+
+const protocoloFidePlaceholder = computed(() => {
+  return props.form.origem === 'estadual'
+    ? 'MG-F-31-14120-20251110'
+    : 'MG-F-3136520-14120-20251110';
+});
+
+const protocoloFideMaxLength = computed(() => {
+  return props.form.origem === 'estadual' ? 22 : 27;
+});
+
+function aplicarMascara(nums, isEstadual) {
+  if (isEstadual) {
+    if (nums.length <= 2) return nums;
+    if (nums.length <= 7) return nums.replace(/^(\d{2})(\d+)/, '$1-$2');
+    return nums.replace(/^(\d{2})(\d{1,5})(\d+)/, '$1-$2-$3');
+  } else {
+    if (nums.length <= 7) return nums;
+    if (nums.length <= 12) return nums.replace(/^(\d{7})(\d+)/, '$1-$2');
+    return nums.replace(/^(\d{7})(\d{1,5})(\d+)/, '$1-$2-$3');
+  }
+}
+
+const protocoloFideModel = computed({
+  get() {
+    return props.form.n_protocolo_fide;
+  },
+  set(val) {
+    if (!val || val.length < PREFIXO.length) {
+      props.form.n_protocolo_fide = PREFIXO;
+      return;
+    }
+
+    const isEstadual = props.form.origem === 'estadual';
+    const MAX_DIGITS = isEstadual ? 15 : 20;
+    const MAX_TOTAL = isEstadual ? 22 : 27;
+
+    let nums = val.replace(/^MG-?F?-?/i, '').replace(/\D/g, '');
+    nums = nums.substring(0, MAX_DIGITS);
+
+    let result = PREFIXO + aplicarMascara(nums, isEstadual);
+    props.form.n_protocolo_fide = result.substring(0, MAX_TOTAL);
+  },
+});
+
+function initProtocoloFide() {
+  if (!props.form.n_protocolo_fide) {
+    props.form.n_protocolo_fide = PREFIXO;
+  }
+}
+
+watch(() => props.form.origem, () => {
+  protocoloFideTouched.value = false;
+  if (props.form.n_protocolo_fide && props.form.n_protocolo_fide !== PREFIXO) {
+    const isEstadual = props.form.origem === 'estadual';
+    const MAX_DIGITS = isEstadual ? 15 : 20;
+    const MAX_TOTAL = isEstadual ? 22 : 27;
+    let nums = props.form.n_protocolo_fide.replace(/^MG-?F?-?/i, '').replace(/\D/g, '');
+    nums = nums.substring(0, MAX_DIGITS);
+    let result = PREFIXO + aplicarMascara(nums, isEstadual);
+    props.form.n_protocolo_fide = result.substring(0, MAX_TOTAL);
+  }
+});
+
+const REGEX_MUNICIPAL = /^MG-F-\d{7}-\d{4,5}-\d{8}$/;
+const REGEX_ESTADUAL = /^MG-F-\d{2}-\d{4,5}-\d{8}$/;
+
+const protocoloFideError = computed(() => {
+  const valor = props.form.n_protocolo_fide;
+  if (!protocoloFideTouched.value || !valor || valor === PREFIXO) return '';
+
+  const isEstadual = props.form.origem === 'estadual';
+
+  if (isEstadual) {
+    return REGEX_ESTADUAL.test(valor)
+      ? ''
+      : 'Formato invalido. Ex: MG-F-31-14120-20251110';
+  }
+  return REGEX_MUNICIPAL.test(valor)
+    ? ''
+    : 'Formato invalido. Ex: MG-F-3136520-14120-20251110';
 });
 
 function handleSubmit() {
+  if (protocoloFideError.value) return;
   emit('submit', props.form);
 }
 

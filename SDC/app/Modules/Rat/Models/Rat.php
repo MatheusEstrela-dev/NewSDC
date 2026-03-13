@@ -5,7 +5,6 @@ namespace App\Modules\Rat\Models;
 use App\Modules\Rat\Enums\Localizacao;
 use App\Modules\Rat\Enums\Protocolo;
 use App\Modules\Rat\Enums\Status;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
@@ -29,6 +28,7 @@ class Rat extends Model
         'envolvidos',
         'vistoria',
         'historico',
+        'anexos',
         'orgao_emissor_id',
         'created_by',
         'updated_by',
@@ -36,16 +36,17 @@ class Rat extends Model
 
     protected $casts = [
         'dados_gerais' => 'array',
-        'local'        => 'array',
-        'endereco'     => 'array',
-        'comunicacao'  => 'array',
-        'recursos'     => 'array',
-        'envolvidos'   => 'array',
-        'vistoria'     => 'array',
-        'historico'    => 'array',
+        'local' => 'array',
+        'endereco' => 'array',
+        'comunicacao' => 'array',
+        'recursos' => 'array',
+        'envolvidos' => 'array',
+        'vistoria' => 'array',
+        'historico' => 'array',
+        'anexos' => 'array',
         'tem_vistoria' => 'boolean',
-        'created_at'   => 'datetime',
-        'updated_at'   => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function getProtocolo(): ?Protocolo
@@ -72,68 +73,28 @@ class Rat extends Model
     }
 
     /**
-     * Orgao emissor do RAT (COMPDEC responsavel)
+     * Orgao emissor do RAT (COMPDEC responsavel).
      */
     public function orgaoEmissor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(\App\Modules\Compdec\Models\Orgao::class, 'orgao_emissor_id');
     }
 
-    public function imagens(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(RatImagem::class, 'rat_id');
-    }
-
+    /**
+     * Usuário que criou o RAT.
+     */
     public function creator(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class, 'created_by');
     }
 
+    /**
+     * Usuário que realizou a última atualização do RAT.
+     */
     public function updater(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class, 'updated_by');
     }
-
-    // -------------------------------------------------------------------------
-    // Eloquent Scopes
-    // -------------------------------------------------------------------------
-
-    public function scopeRascunho(Builder $query): Builder
-    {
-        return $query->where('status', Status::RASCUNHO->value);
-    }
-
-    public function scopeFinalizado(Builder $query): Builder
-    {
-        return $query->where('status', Status::FINALIZADO->value);
-    }
-
-    public function scopeEmAndamento(Builder $query): Builder
-    {
-        return $query->where('status', Status::EM_ANDAMENTO->value);
-    }
-
-    public function scopeArquivado(Builder $query): Builder
-    {
-        return $query->where('status', Status::ARQUIVADO->value);
-    }
-
-    // -------------------------------------------------------------------------
-    // Behavior methods
-    // -------------------------------------------------------------------------
-
-    public function isRascunho(): bool
-    {
-        return $this->status === Status::RASCUNHO->value;
-    }
-
-    public function isFinalizado(): bool
-    {
-        return $this->status === Status::FINALIZADO->value;
-    }
-
-    public function canBeFinalized(): bool
-    {
-        return !$this->isFinalizado();
-    }
 }
+
+

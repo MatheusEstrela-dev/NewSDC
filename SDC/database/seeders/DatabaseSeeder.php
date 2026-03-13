@@ -14,6 +14,9 @@ class DatabaseSeeder extends Seeder
         // 1. Roles e Permissões (base do sistema)
         $this->call(RolesAndPermissionsSeeder::class);
 
+        // 1b. Permissões específicas do módulo RAT (roles + 9 permissões)
+        $this->call(RatPermissionsSeeder::class);
+
         // 2. Órgãos (hierarquia CEDEC > REDEC > COMPDEC)
         $this->call(OrgaosSeeder::class);
 
@@ -44,11 +47,18 @@ class DatabaseSeeder extends Seeder
         // 5. Usuários com hierarquias diversas (30 usuários em todos os níveis)
         $this->call(MockUsersHierarchySeeder::class);
 
-        // 6. RATs mock (15 registros com status variados)
+        // 6. RATs mock (15 registros com status variados — tabela legada)
         if (\Illuminate\Support\Facades\Schema::hasTable('rats')) {
             $this->call(RatMockSeeder::class);
         } else {
             $this->command->warn('Tabela "rats" não encontrada - RatMockSeeder pulado.');
+        }
+
+        // 6b. REDECs de Minas Gerais (tabela de referência rat_redec)
+        if (\Illuminate\Support\Facades\Schema::hasTable('rat_redec')) {
+            $this->call(RatRedecSeeder::class);
+        } else {
+            $this->command->warn('Tabela "rat_redec" não encontrada - RatRedecSeeder pulado.');
         }
 
         // 7. Orgaos de teste (hierarquia completa para testes)

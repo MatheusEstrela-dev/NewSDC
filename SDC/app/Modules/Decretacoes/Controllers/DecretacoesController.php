@@ -97,8 +97,15 @@ class DecretacoesController extends Controller
     {
         $filterOptions = $this->processoService->getFilterOptions();
 
+        // getFilterOptions() retorna: analistas, reconhecimentos, municipios, tipos_desastre, status_options
+        // O ProcessoCreate.vue espera props separadas no top-level
         return Inertia::render('Decretacoes/ProcessoCreate', [
-            'filterOptions' => $filterOptions,
+            'tiposDesastre' => $filterOptions['tipos_desastre'] ?? [],
+            'cobrades'      => $filterOptions['tipos_desastre'] ?? [], // cobrade vem dos tipos de desastre
+            'municipios'    => $filterOptions['municipios'] ?? [],
+            'redecs'        => $filterOptions['redecs'] ?? [], 
+            'statusOptions' => $filterOptions['status_options'] ?? [],
+            'analistas'     => $filterOptions['analistas'] ?? [],
         ]);
     }
 
@@ -139,7 +146,7 @@ class DecretacoesController extends Controller
         $dto = ProcessoRequestDTO::fromRequest($request);
         $processo = $this->processoService->createProcesso($dto);
 
-        return redirect()->route('decretacoes.processos.show', $processo->id)
+        return redirect()->route('decretacoes.show', $processo->id)
             ->with('success', 'Processo cadastrado com sucesso!');
     }
 
@@ -172,7 +179,7 @@ class DecretacoesController extends Controller
     {
         $this->processoService->delete($id);
 
-        return redirect()->route('decretacoes.processos.index')
+        return redirect()->route('decretacoes.index')
             ->with('success', 'Processo removido com sucesso!');
     }
 

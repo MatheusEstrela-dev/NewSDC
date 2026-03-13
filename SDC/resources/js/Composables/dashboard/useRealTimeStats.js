@@ -33,7 +33,6 @@ export function useRealTimeStats(options = {}) {
    */
   async function fetchStats() {
     if (!endpoint) {
-      console.warn('[useRealTimeStats] Endpoint nao configurado');
       return;
     }
 
@@ -48,7 +47,6 @@ export function useRealTimeStats(options = {}) {
       lastUpdate.value = new Date();
     } catch (err) {
       error.value = err.message || 'Erro ao carregar estatisticas';
-      console.error('[useRealTimeStats] Erro:', err);
     } finally {
       loading.value = false;
     }

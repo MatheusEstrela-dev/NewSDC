@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Services;
 
-use App\Modules\Rat\Models\Rat;
+use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Gera números de protocolo únicos e sequenciais para RATs.
@@ -15,6 +16,10 @@ use App\Modules\Rat\Models\Rat;
  */
 class RatProtocoloService
 {
+    public function __construct(
+        private readonly RatRepositoryInterface $repository,
+    ) {}
+
     /**
      * Gera o próximo protocolo disponível para o ano corrente.
      * Deve ser chamado dentro de uma transação DB para garantir atomicidade.
@@ -22,22 +27,8 @@ class RatProtocoloService
     public function generate(): string
     {
         $year     = (int) date('Y');
-        $sequence = $this->getLatestSequence($year) + 1;
+        $sequence = $this->repository->getLatestSequence($year) + 1;
 
         return sprintf('RAT-%d-%05d', $year, $sequence);
-    }
-
-    private function getLatestSequence(int $year): int
-    {
-        $latest = Rat::where('protocolo', 'like', "RAT-{$year}-%")
-            ->lockForUpdate()
-            ->orderByDesc('protocolo')
-            ->value('protocolo');
-
-        if (!$latest) {
-            return 0;
-        }
-
-        return (int) substr($latest, strrpos($latest, '-') + 1);
     }
 }

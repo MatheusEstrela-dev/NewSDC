@@ -29,7 +29,6 @@ const props = defineProps({
 
 const handleCreate = () => {
   // TODO: Implementar modal ou página de criação
-  console.log('Criar novo treinamento');
 };
 
 const handleView = (id) => {
@@ -38,13 +37,11 @@ const handleView = (id) => {
 
 const handleEdit = (id) => {
   // TODO: Implementar edição
-  console.log('Editar treinamento', id);
 };
 
 const handleDelete = (id) => {
   if (confirm('Tem certeza que deseja excluir este treinamento?')) {
     // TODO: Implementar exclusão
-    console.log('Deletar treinamento', id);
   }
 };
 

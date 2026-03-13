@@ -47,14 +47,14 @@
       @filter-change="handleFilterChange"
       @filter-reset="handleFilterReset"
     />
-    <!-- Grid View -->
+    <!-- Visualização em Grade -->
     <RatGrid
       v-if="viewMode === 'grid'"
       :rats="ratsToUse"
       :loading="loading"
       :pagination="paginationToUse"
-      :can-edit="canEdit"
-      :can-delete="canDelete"
+      :can-edit="canEdit && !useMock"
+      :can-delete="canDelete && !useMock"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -62,14 +62,14 @@
       @delete="handleDelete"
     />
 
-    <!-- Table View -->
+    <!-- Visualização em Tabela -->
     <RatTable
       v-else
       :rats="ratsToUse"
       :loading="loading"
       :pagination="paginationToUse"
-      :can-edit="canEdit"
-      :can-delete="canDelete"
+      :can-edit="canEdit && !useMock"
+      :can-delete="canDelete && !useMock"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -92,11 +92,25 @@
       :loading="printLoading"
       @close="closePrintModal"
     />
+
+    <!-- Modal de confirmação de exclusão -->
+    <ConfirmDialog
+      :is-open="showDeleteModal"
+      variant="danger"
+      title="Excluir RAT"
+      message="Tem certeza que deseja excluir este RAT?"
+      description="Esta ação não pode ser desfeita."
+      confirm-text="Excluir"
+      cancel-text="Cancelar"
+      @confirm="confirmDelete"
+      @cancel="showDeleteModal = false"
+    />
   </div>
 </template>
 
 <script setup>
 import Button from '@/Components/Atoms/Button/Button.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
@@ -176,13 +190,17 @@ const props = defineProps({
 });
 
 // =========================
-// Frontend-only behavior
+// Comportamento apenas no frontend
 // =========================
 const perPage = 15;
 const currentPage = ref(1);
 const localFilters = ref({ ...(props.filters || {}) });
 const { isMobile } = useMobile();
 const viewMode = ref(isMobile.value ? 'grid' : 'table'); // grid no mobile, table no desktop
+
+// Estado para confirmação de exclusão
+const showDeleteModal = ref(false);
+const deletingRatId = ref(null);
 
 watch(
   () => props.filters,
@@ -243,7 +261,19 @@ const filteredRats = computed(() => {
 });
 
 const statisticsToUse = computed(() => {
-  if (!props.useMock) return props.statistics;
+  // Usa estatísticas do backend quando dados reais estão presentes.
+  // Fallback para mock apenas quando não há dados no backend.
+  const backendStats = props.statistics;
+  const hasBackendStats = backendStats && typeof backendStats.total === 'number';
+
+  if (!props.useMock && hasBackendStats) {
+    return {
+      total:   backendStats.total   ?? 0,
+      hoje:    backendStats.hoje    ?? 0,
+      esteMes: backendStats.esteMes ?? 0,
+      esteAno: backendStats.esteAno ?? 0,
+    };
+  }
   return getMockStatisticsFromRats(filteredRats.value);
 });
 
@@ -295,19 +325,30 @@ function handleView(id) {
 }
 
 function handleEdit(id) {
-  router.visit(route('rat.show', id));
+  router.visit(route('rat.edit', id));
 }
 
 function handleAttachments(id) {
-  // Abrir diretamente na aba "Anexos" (id 6) no detalhe do RAT
-  router.visit(`${route('rat.show', id)}?tab=6`);
+  // Abrir diretamente na aba "Anexos" (id 6) no formulário de edição
+  router.visit(`${route('rat.edit', id)}?tab=6`);
 }
 
 function handleDelete(id) {
-  if (confirm(MESSAGES.confirmations.deleteRat)) {
-    // TODO: Implementar delete
-    console.log('Delete RAT:', id);
-  }
+  deletingRatId.value = id;
+  showDeleteModal.value = true;
+}
+
+function confirmDelete() {
+  if (!deletingRatId.value) return;
+  showDeleteModal.value = false;
+  router.delete(route('rat.destroy', deletingRatId.value), {
+    onSuccess: () => { deletingRatId.value = null; },
+    onError: (errors) => {
+      console.error('Erro ao excluir RAT:', errors);
+      alert('Não foi possível excluir o RAT. Verifique suas permissões e tente novamente.');
+      deletingRatId.value = null;
+    },
+  });
 }
 
 // =========================

@@ -52,9 +52,13 @@ services:
       APP_DEBUG: "true"
       APP_URL: http://localhost
 
-      # Inertia SSR
-      INERTIA_SSR_ENABLED: "true"
+      # Inertia SSR (usar .env do host para controlar)
+      INERTIA_SSR_ENABLED: ${INERTIA_SSR_ENABLED:-false}
       INERTIA_SSR_URL: "http://ssr:13714"
+
+      # Telescope (dev mode - captura tudo)
+      TELESCOPE_ENABLED: "true"
+      TELESCOPE_PATH: "telescope"
 
       # Database
       DB_CONNECTION: mysql
@@ -381,13 +385,13 @@ services:
       NODE_ENV: development
       VITE_HOST: 0.0.0.0
       VITE_PORT: 5175
-      NODE_OPTIONS: "--max-old-space-size=1536"
+      NODE_OPTIONS: "--max-old-space-size=4096"
 
     ports:
       - "15175:5175" # Vite dev server
 
-    # Instala dependencias apenas se node_modules nao existir (evita reinstalar a cada restart)
-    command: sh -c "[ -d node_modules/@vitejs ] || npm install ; rm -rf node_modules/.vite && npm run dev -- --host 0.0.0.0 --port 5175"
+    # npm install sera feito no runtime para aproveitar as configuracoes de DNS
+    command: sh -c "npm install && rm -rf node_modules/.vite && npm run dev -- --host 0.0.0.0 --port 5175"
 
     deploy:
       resources:
@@ -399,7 +403,7 @@ services:
           memory: 512M
 
     healthcheck:
-      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:5175/@vite/client" ]
+      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:5175" ]
       interval: 30s
       timeout: 10s
       retries: 3

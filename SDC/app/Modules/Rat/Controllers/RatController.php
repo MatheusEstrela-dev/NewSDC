@@ -5,83 +5,135 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Rat\Application\Services\RatService;
 use App\Modules\Rat\Http\Requests\ListRatRequest;
+use App\Modules\Rat\Http\Requests\UpdateRatRequest;
+use App\Modules\Rat\Http\Resources\RatListResource;
 use App\Modules\Rat\Http\Resources\RatResource;
-use App\Modules\Rat\Services\RatService;
-use App\Modules\Rat\Enums\Status;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Controller web do módulo RAT — rotas de navegação e ações de escrita.
+ *
+ * Responsabilidade única: responde às ações web (index, show, destroy, finalize).
+ * Inversão de Dependência: depende do RatService (camada de aplicação), não de infraestrutura.
+ */
 class RatController extends Controller
 {
     public function __construct(
-        private readonly RatService $ratService
-    ) {
-    }
+        private readonly RatService $service
+    ) {}
 
+    /**
+     * Listagem paginada com filtros e estatísticas reais do banco.
+     */
     public function index(ListRatRequest $request): Response
     {
-        $filters    = $request->toFilterDTO();
-        $rats       = $this->ratService->list($filters);
-        $statistics = $this->ratService->getStatistics();
+        $filters = $request->toFilterDTO();
+        $data    = $this->service->getIndexData($filters);
 
         return Inertia::render('RatIndex', [
-            'rats'          => $rats,
-            'statistics'    => $statistics,
-            'filters'       => $filters->toArray(),
-            'filterOptions' => [
-                'status' => Status::toSelectArray(),
-            ],
+            'rats'           => RatListResource::collection($data['rats']),
+            'statistics'     => $data['statistics'],
+            'municipalities' => $this->buildMunicipalityOptions($data['municipalities']),
+            'cobradeTypes'   => [],
+            'years'          => $this->buildYearOptions(),
+            'filters'        => $request->validated(),
         ]);
     }
 
-    public function show(string $id): Response
-    {
-        $rat = $this->ratService->findById($id);
-        abort_if(is_null($rat), 404, 'RAT não encontrado');
-
-        return Inertia::render('Rat', [
-            'rat' => RatResource::make($rat),
-        ]);
-    }
-
-    public function showJson(string $id): JsonResponse
-    {
-        $rat = $this->ratService->findById($id);
-        abort_if(is_null($rat), 404, 'RAT não encontrado');
-
-        return response()->json(RatResource::make($rat));
-    }
-
+    /**
+     * Página de Criação de um novo RAT (formulário em branco).
+     */
     public function create(): Response
     {
         return Inertia::render('Rat');
     }
 
-    public function edit(string $id): Response
+    /**
+     * Cria um novo RAT via POST com dados do formulário e redireciona para a página de edição.
+     */
+    public function store(UpdateRatRequest $request): RedirectResponse
     {
-        $rat = $this->ratService->findById($id);
-        abort_if(is_null($rat), 404, 'RAT não encontrado');
+        $data     = $request->safe()->except('finalize');
+        $finalize = (bool) $request->input('finalize', false);
+
+        $rat = $this->service->createWithData($data);
+
+        if ($finalize) {
+            $this->service->finalize($rat->id);
+            return redirect()->route('rat.show', $rat->id)
+                ->with('success', 'RAT criado e finalizado com sucesso!');
+        }
+
+        return redirect()->route('rat.edit', $rat->id)
+            ->with('success', 'RAT criado com sucesso!');
+    }
+
+    /**
+     * Página de visualização somente leitura de um RAT.
+     */
+    public function show(string $id): Response
+    {
+        $rat = $this->service->findById($id);
+        abort_if(is_null($rat), 404, 'RAT não encontrado.');
 
         return Inertia::render('Rat', [
-            'rat' => RatResource::make($rat),
+            'rat'        => new RatResource($rat),
+            'lastUpdate' => $rat->updated_at?->toIso8601String(),
         ]);
     }
 
+    /**
+     * Página de edição de um RAT.
+     */
+    public function edit(string $id): Response
+    {
+        $rat = $this->service->findById($id);
+        abort_if(is_null($rat), 404, 'RAT não encontrado.');
+
+        return Inertia::render('Rat', [
+            'rat'        => new RatResource($rat),
+            'lastUpdate' => $rat->updated_at?->toIso8601String(),
+        ]);
+    }
+
+    /** Remove permanentemente o RAT e redireciona para a listagem. */
     public function destroy(string $id): RedirectResponse
     {
-        $this->ratService->delete($id);
+        $this->service->delete($id);
 
         return redirect()->route('rat.index')
             ->with('success', 'RAT removido com sucesso!');
     }
 
-    public function export(ListRatRequest $request): JsonResponse
-    {
-        $data = $this->ratService->export($request->toFilterDTO());
+    // -------------------------------------------------------------------------
+    // Helpers privados de apresentação (não contam no limite de 5 públicos)
+    // -------------------------------------------------------------------------
 
-        return response()->json($data);
+    private function buildMunicipalityOptions(array $items): array
+    {
+        $options = [['value' => '', 'label' => 'Todos']];
+
+        foreach ($items as $item) {
+            $options[] = ['value' => $item, 'label' => $item];
+        }
+
+        return $options;
+    }
+
+    private function buildYearOptions(): array
+    {
+        $current = now()->year;
+        $options = [['value' => '', 'label' => 'Todos']];
+
+        for ($year = $current; $year >= $current - 5; $year--) {
+            $options[] = ['value' => (string) $year, 'label' => (string) $year];
+        }
+
+        return $options;
     }
 }
+
