@@ -12,7 +12,7 @@
       :checked="modelValue === value"
       :disabled="disabled"
       :required="required"
-      class="w-4 h-4 text-blue-600 bg-slate-900/50 border-slate-600 focus:ring-blue-500 focus:ring-2 focus:ring-offset-0 dark:focus:ring-offset-slate-900"
+      class="w-4 h-4 text-emerald-600 bg-slate-900/50 border-slate-600 focus:ring-emerald-500 focus:ring-2 focus:ring-offset-0 dark:focus:ring-offset-slate-900"
       @change="$emit('update:modelValue', value)"
     />
     <span

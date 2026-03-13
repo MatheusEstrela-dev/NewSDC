@@ -61,7 +61,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['save', 'save-draft', 'cancel', 'finalize', 'update:tem-vistoria', 'update:formData']);
+const emit = defineEmits(['save-draft', 'finalize', 'update:tem-vistoria', 'update:form-data']);
 
 const localData = ref({
   dadosGerais: {
@@ -127,7 +127,7 @@ watch(
 watch(
   localData,
   (newVal) => {
-    emit('update:formData', { ...newVal });
+    emit('update:form-data', { ...newVal });
   },
   { deep: true, immediate: true }
 );

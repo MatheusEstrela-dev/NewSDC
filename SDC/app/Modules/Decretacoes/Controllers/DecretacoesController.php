@@ -54,14 +54,23 @@ class DecretacoesController extends Controller
      */
     public function index(Request $request): Response
     {
-        $filters = $request->only(['search', 'status', 'tipo_decreto']);
+        $filters = $request->only([
+            'search',
+            'status',
+            'processo',
+            'vigencia_status',
+            'data_inicio',
+            'data_fim',
+        ]);
         $processos = $this->processoService->list($filters, 15);
         $statistics = $this->processoService->getStatistics();
+        $filterOptions = $this->processoService->getFilterOptions();
 
         return Inertia::render('Decretacoes/ProcessoIndex', [
             'processos' => $processos,
             'statistics' => $statistics,
             'filters' => $filters,
+            'filterOptions' => $filterOptions,
         ]);
     }
 
@@ -128,8 +137,13 @@ class DecretacoesController extends Controller
         $filterOptions = $this->processoService->getFilterOptions();
 
         return Inertia::render('Decretacoes/ProcessoEdit', [
-            'processo' => $processo,
-            'filterOptions' => $filterOptions,
+            'processo'      => $processo,
+            'tiposDesastre' => $filterOptions['tipos_desastre'] ?? [],
+            'cobrades'      => $filterOptions['tipos_desastre'] ?? [],
+            'municipios'    => $filterOptions['municipios'] ?? [],
+            'redecs'        => $filterOptions['redecs'] ?? [],
+            'statusOptions' => $filterOptions['status_options'] ?? [],
+            'analistas'     => $filterOptions['analistas'] ?? [],
         ]);
     }
 
@@ -181,6 +195,32 @@ class DecretacoesController extends Controller
 
         return redirect()->route('decretacoes.index')
             ->with('success', 'Processo removido com sucesso!');
+    }
+
+    /**
+     * Exibe formulario de edicao de dados de desastres.
+     *
+     * FLUXO: ID -> Service.findById() -> Service.loadMunicipiosWithDesastreData() -> Inertia
+     *
+     * @param int $id ID do processo
+     * @return Response Pagina Inertia com formulario de desastres preenchido
+     */
+    public function editDesastres(int $id): Response
+    {
+        $processo = $this->processoService->findById($id);
+
+        if (!$processo) {
+            abort(404, 'Processo nao encontrado');
+        }
+
+        $municipiosWithDesastres = $this->processoService->loadMunicipiosWithDesastreData($processo);
+        $filterOptions = $this->processoService->getFilterOptions();
+
+        return Inertia::render('Decretacoes/ProcessoDesastresEdit', [
+            'processo' => $processo,
+            'municipios' => $municipiosWithDesastres,
+            'filterOptions' => $filterOptions,
+        ]);
     }
 
     /**

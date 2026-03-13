@@ -95,12 +95,15 @@ class ProcessoFilter
 
     protected function filterByDateRange(): self
     {
-        if ($this->request->filled('data_entrada_inicio')) {
-            $this->builder->whereDate('data_entrada', '>=', $this->request->input('data_entrada_inicio'));
+        $dataInicio = $this->request->input('data_entrada_inicio') ?? $this->request->input('data_inicio');
+        $dataFim = $this->request->input('data_entrada_fim') ?? $this->request->input('data_fim');
+
+        if ($dataInicio) {
+            $this->builder->whereDate('data_entrada', '>=', $dataInicio);
         }
 
-        if ($this->request->filled('data_entrada_fim')) {
-            $this->builder->whereDate('data_entrada', '<=', $this->request->input('data_entrada_fim'));
+        if ($dataFim) {
+            $this->builder->whereDate('data_entrada', '<=', $dataFim);
         }
 
         return $this;
@@ -172,6 +175,12 @@ class ProcessoFilter
                 case 'vencido':
                     $this->builder->whereNotNull('data_publicacao_mg')
                                  ->whereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) < CURDATE()');
+                    break;
+
+                case 'proximo_vencer':
+                    $this->builder->whereNotNull('data_publicacao_mg')
+                                 ->whereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()')
+                                 ->whereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)');
                     break;
 
                 case 'sem_data':

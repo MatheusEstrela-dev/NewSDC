@@ -59,6 +59,15 @@ class SecurityHeaders
             "'unsafe-inline'",
         ];
 
+        // Allow app URL
+        $appUrl = config('app.url');
+        if ($appUrl) {
+            $scriptSrc[] = $appUrl;
+            $styleSrc[] = $appUrl;
+            $connectSrc[] = $appUrl;
+            $imgSrc[] = $appUrl;
+        }
+
         $imgSrc = [
             "'self'",
             "data:",
@@ -89,14 +98,13 @@ class SecurityHeaders
             }
 
             $scriptSrc = array_merge($scriptSrc, [
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "http://localhost:5175",
-                "http://127.0.0.1:5175",
-                "http://localhost:5176",
-                "http://127.0.0.1:5176",
-                "http://localhost:15175",
-                "http://127.0.0.1:15175",
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+            ]);
+
+            $styleSrc = array_merge($styleSrc, [
+                "http://localhost:*",
+                "http://127.0.0.1:*",
             ]);
 
             $connectSrc = array_merge($connectSrc, $viteHosts, [
