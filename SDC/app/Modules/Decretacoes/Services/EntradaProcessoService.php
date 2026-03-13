@@ -213,6 +213,19 @@ class EntradaProcessoService
         return $this->exportService->getNormalizedDataForPowerBI($request);
     }
 
+    /**
+     * Carrega municipios com dados de desastres para edicao.
+     *
+     * DELEGADO PARA: ProcessoQueryService
+     *
+     * @param Processo $processo Processo pai
+     * @return array Municipios com dados de desastres hierarquicos
+     */
+    public function loadMunicipiosWithDesastreData(Processo $processo): array
+    {
+        return $this->queryService->loadMunicipiosWithDesastreData($processo);
+    }
+
     // =========================================================================
     // HELPERS DE SINCRONIZACAO (PRIVADOS)
     // =========================================================================

@@ -19,11 +19,12 @@
       <table class="w-full text-sm">
         <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
           <tr>
-            <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap">Protocolo</th>
+            <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap">Data</th>
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap">Tipo</th>
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap hidden sm:table-cell">Desastre</th>
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap hidden md:table-cell">Analista</th>
-            <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap">Status</th>
+            <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap">Reconhecimento</th>
+            <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap">Nº Protocolo S2ID</th>
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap hidden lg:table-cell">Vigência</th>
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-right whitespace-nowrap w-36 min-w-36">Ações</th>
           </tr>
@@ -36,8 +37,8 @@
           >
             <!-- Protocolo -->
             <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-              <div class="font-medium text-slate-800 dark:text-slate-200 text-xs sm:text-sm whitespace-nowrap">{{ processo.n_protocolo_fide }}</div>
-              <div class="text-xs text-slate-500 whitespace-nowrap">{{ formatDate(processo.data_entrada) }}</div>
+              <div class="font-medium text-slate-800 dark:text-slate-200 text-xs sm:text-sm whitespace-nowrap">{{ formatDate(processo.data_entrada) }}</div>
+              <div class="text-xs text-slate-500 whitespace-nowrap">{{ processo.n_protocolo_fide }}</div>
             </td>
 
             <!-- Tipo -->
@@ -58,9 +59,14 @@
               {{ processo.analista || '—' }}
             </td>
 
-            <!-- Status -->
+            <!-- Reconhecimento -->
             <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
               <StatusBadge :status="processo.status" />
+            </td>
+
+            <!-- Nº Protocolo S2ID -->
+            <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
+              {{ processo.n_protocolo_fide || '—' }}
             </td>
 
             <!-- Vigência -->
@@ -80,9 +86,13 @@
                   :show-edit="canEdit"
                   :show-attachments="false"
                   :show-delete="canDelete"
-                  @view="$emit('view', processo.id)"
+                  :show-warning="true"
+                  :show-options="true"
+                  @view="openDetailModal(processo)"
                   @print="$emit('print', processo.id)"
-                  @edit="$emit('edit', processo.id)"
+                  @edit="openEditChoiceModal(processo.id)"
+                  @warning="$emit('warning', processo.id)"
+                  @options="$emit('options', processo.id)"
                 />
               </div>
             </td>
@@ -99,20 +109,39 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Modal de Detalhes -->
+    <DecretacaoDetailModal
+      :show="showDetailModal"
+      :processo="selectedProcesso"
+      @close="closeDetailModal"
+      @generate-report="handleGenerateReport"
+    />
+
+    <!-- Modal de Escolha de Edicao -->
+    <EditChoiceModal
+      :show="showEditChoiceModal"
+      :processo-id="selectedProcessoIdForEdit"
+      @close="closeEditChoiceModal"
+    />
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import DocumentIcon from '../../Icons/DocumentTextIcon.vue';
 import PrazoBadge from '../../Molecules/Decretacoes/PrazoBadge.vue';
 import StatusBadge from '../../Molecules/Decretacoes/StatusBadge.vue';
 import TipoProcessoBadge from '../../Molecules/Decretacoes/TipoProcessoBadge.vue';
 import TableActions from '../../Molecules/Table/TableActions.vue';
+import Pagination from '../../Molecules/Navigation/Pagination.vue';
+import DecretacaoDetailModal from './Details/DecretacaoDetailModal.vue';
+import EditChoiceModal from './EditChoiceModal.vue';
 
 const props = defineProps({
   title: {
     type: String,
-    default: 'Processos de Decretação',
+    default: 'Processos de Decretacao',
   },
   subtitle: {
     type: String,
@@ -132,10 +161,40 @@ const props = defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit']);
+const emit = defineEmits(['view', 'print', 'edit', 'generate-report', 'warning', 'options']);
+
+const showDetailModal = ref(false);
+const selectedProcesso = ref(null);
+const showEditChoiceModal = ref(false);
+const selectedProcessoIdForEdit = ref(null);
+
+const openDetailModal = (processo) => {
+  selectedProcesso.value = processo;
+  showDetailModal.value = true;
+};
+
+const closeDetailModal = () => {
+  showDetailModal.value = false;
+  selectedProcesso.value = null;
+};
+
+const handleGenerateReport = (processo) => {
+  emit('generate-report', processo);
+  closeDetailModal();
+};
 
 const formatDate = (date) => {
   if (!date) return '—';
   return new Date(date).toLocaleDateString('pt-BR');
+};
+
+const openEditChoiceModal = (id) => {
+  selectedProcessoIdForEdit.value = id;
+  showEditChoiceModal.value = true;
+};
+
+const closeEditChoiceModal = () => {
+  showEditChoiceModal.value = false;
+  selectedProcessoIdForEdit.value = null;
 };
 </script>

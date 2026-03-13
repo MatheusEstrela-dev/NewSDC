@@ -23,19 +23,38 @@
         :processo="processo"
         :can-edit="canEdit"
         :can-delete="canDelete"
-        @click="handleView(processo.id)"
-        @view="handleView"
+        @click="openDetailModal(processo)"
+        @view="(id) => openDetailModalById(id)"
+        @print="(id) => emit('print', id)"
         @edit="handleEdit"
       />
     </div>
+
+    <!-- Modal de Detalhes -->
+    <DecretacaoDetailModal
+      :show="showDetailModal"
+      :processo="selectedProcesso"
+      @close="closeDetailModal"
+      @generate-report="handleGenerateReport"
+    />
+
+    <!-- Modal de Escolha de Edicao -->
+    <EditChoiceModal
+      :show="showEditChoiceModal"
+      :processo-id="selectedProcessoIdForEdit"
+      @close="closeEditChoiceModal"
+    />
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import DocumentIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import ProcessoCard from '@/Components/Molecules/Decretacoes/ProcessoCard.vue';
+import DecretacaoDetailModal from './Details/DecretacaoDetailModal.vue';
+import EditChoiceModal from './EditChoiceModal.vue';
 import { router } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -57,11 +76,42 @@ const props = defineProps({
   },
 });
 
-const handleView = (id) => {
-  router.visit(`/decretacoes/${id}`);
+const emit = defineEmits(['print', 'generate-report']);
+
+const showDetailModal = ref(false);
+const selectedProcesso = ref(null);
+const showEditChoiceModal = ref(false);
+const selectedProcessoIdForEdit = ref(null);
+
+const openDetailModal = (processo) => {
+  selectedProcesso.value = processo;
+  showDetailModal.value = true;
+};
+
+const openDetailModalById = (id) => {
+  const processo = props.processos.find((p) => p.id === id);
+  if (processo) {
+    openDetailModal(processo);
+  }
+};
+
+const closeDetailModal = () => {
+  showDetailModal.value = false;
+  selectedProcesso.value = null;
+};
+
+const handleGenerateReport = (processo) => {
+  emit('generate-report', processo);
+  closeDetailModal();
 };
 
 const handleEdit = (id) => {
-  router.visit(`/decretacoes/${id}/edit`);
+  selectedProcessoIdForEdit.value = id;
+  showEditChoiceModal.value = true;
+};
+
+const closeEditChoiceModal = () => {
+  showEditChoiceModal.value = false;
+  selectedProcessoIdForEdit.value = null;
 };
 </script>
