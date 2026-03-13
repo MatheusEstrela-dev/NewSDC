@@ -13,21 +13,20 @@
 .atom-input-normal {
   @apply border border-slate-300 dark:border-slate-700/50;
   @apply hover:border-slate-400 dark:hover:border-slate-600;
-  @apply focus:border-blue-500 focus:ring-blue-500/20;
+  @apply focus:border-emerald-500 focus:ring-emerald-500/20;
 }
 
-/* Estado Preenchido (filled) */
+/* Estado Preenchido (filled) - Mesmo estilo do normal */
 .atom-input-filled {
-  @apply border-2 border-emerald-500/60;
-  @apply hover:border-emerald-500/80;
+  @apply border border-emerald-500/80 dark:border-emerald-500/60;
+  @apply hover:border-emerald-400 dark:hover:border-emerald-600;
   @apply focus:border-emerald-500 focus:ring-emerald-500/20;
-  @apply shadow-sm shadow-emerald-500/10;
 }
 
 /* Estado de Erro */
 .atom-input-error {
-  @apply border border-red-500/50;
-  @apply focus:border-red-500 focus:ring-red-500/20;
+  @apply border border-red-500;
+  @apply focus:border-red-600 focus:ring-red-500/30;
 }
 
 /* Estado Readonly */

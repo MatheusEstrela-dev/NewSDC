@@ -25,6 +25,14 @@
       @click="$emit('edit')"
     />
     <ButtonIcon
+      v-if="showWarning"
+      :icon="ExclamationIcon"
+      variant="vibrant-warning"
+      :size="size"
+      title="Aviso"
+      @click="$emit('warning')"
+    />
+    <ButtonIcon
       v-if="showUpload"
       :icon="UploadIcon"
       variant="warning"
@@ -43,7 +51,7 @@
     <ButtonIcon
       v-if="showDelete"
       :icon="TrashIcon"
-      variant="danger"
+      variant="vibrant-danger"
       :size="size"
       title="Excluir"
       @click="$emit('delete')"
@@ -66,6 +74,14 @@
       title="Arquivar"
       @click="$emit('archive')"
     />
+    <ButtonIcon
+      v-if="showOptions"
+      :icon="EllipsisVerticalIcon"
+      variant="secondary"
+      :size="size"
+      title="Opções"
+      @click="$emit('options')"
+    />
   </div>
 </template>
 
@@ -79,6 +95,8 @@ import PaperClipIcon from '../../Icons/PaperClipIcon.vue';
 import ClockIcon from '../../Icons/ClockIcon.vue';
 import ArchiveBoxIcon from '../../Icons/ArchiveBoxIcon.vue';
 import UploadIcon from '../../Icons/UploadIcon.vue';
+import ExclamationIcon from '../../Icons/ExclamationIcon.vue';
+import EllipsisVerticalIcon from '../../Icons/EllipsisVerticalIcon.vue';
 
 defineProps({
   showView: {
@@ -113,6 +131,14 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  showWarning: {
+    type: Boolean,
+    default: false,
+  },
+  showOptions: {
+    type: Boolean,
+    default: false,
+  },
   size: {
     type: String,
     default: 'md',
@@ -120,6 +146,6 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'attachments', 'history', 'delete', 'archive', 'upload']);
+defineEmits(['view', 'print', 'edit', 'attachments', 'history', 'delete', 'archive', 'upload', 'warning', 'options']);
 </script>
 

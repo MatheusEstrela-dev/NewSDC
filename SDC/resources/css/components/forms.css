@@ -26,9 +26,9 @@
 }
 
 .form-input-normal {
-  @apply border border-slate-300 dark:border-slate-700/50
-    hover:border-slate-400 dark:hover:border-slate-600
-    focus:border-blue-500 focus:ring-blue-500/20;
+  @apply border border-slate-300 dark:border-slate-700/50;
+  @apply hover:border-slate-400 dark:hover:border-slate-600;
+  @apply focus:border-emerald-500 focus:ring-emerald-500/20;
 }
 
 .form-input-filled {
@@ -39,8 +39,8 @@
 }
 
 .form-input-error {
-  @apply border border-red-500/50
-    focus:border-red-500 focus:ring-red-500/20;
+  @apply border border-red-500;
+  @apply focus:border-red-600 focus:ring-red-500/30;
 }
 
 .form-input-readonly {
@@ -62,9 +62,9 @@
 }
 
 .form-select-normal {
-  @apply border border-slate-300 dark:border-slate-700/50
-    hover:border-slate-400 dark:hover:border-slate-600
-    focus:border-blue-500 focus:ring-blue-500/20;
+  @apply border border-slate-300 dark:border-slate-700/50;
+  @apply hover:border-slate-400 dark:hover:border-slate-600;
+  @apply focus:border-emerald-500 focus:ring-emerald-500/20;
 }
 
 .form-select-filled {
@@ -75,8 +75,8 @@
 }
 
 .form-select-error {
-  @apply border border-red-500/50
-    focus:border-red-500 focus:ring-red-500/20;
+  @apply border border-red-500;
+  @apply focus:border-red-600 focus:ring-red-500/30;
 }
 
 .form-select-disabled {
