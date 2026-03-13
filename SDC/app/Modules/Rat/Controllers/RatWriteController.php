@@ -1,37 +1,45 @@
-﻿<?php
+<?php
 
 declare(strict_types=1);
 
 namespace App\Modules\Rat\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Rat\DTO\RatBoDTO;
-use App\Modules\Rat\Requests\UpdateRatRequest;
+use App\Modules\Rat\Http\Requests\UpdateRatRequest;
 use App\Modules\Rat\Services\RatWriteService;
 use Illuminate\Http\RedirectResponse;
 
 /**
- * Controller de escrita complementar do módulo RAT.
- * Lida com salvar como rascunho explicitamente (PATCH).
+ * Controller de escrita do módulo RAT — atualização e rascunho.
  *
- * FLUXO: PATCH compdec/rat/{id}/draft -> RatBoDTO -> RatWriteService.saveDraft() -> Redirect
+ * Responsabilidade única: lida apenas com operações de escrita (PUT/PATCH).
+ * Inversão de Dependência: depende de RatWriteService, não do repositório diretamente.
  */
 class RatWriteController extends Controller
 {
     public function __construct(
-        private readonly RatWriteService $writeService,
+        private readonly RatWriteService $writeService
     ) {}
 
     /**
-     * Salva rascunho mantendo status = 0.
+     * Atualiza todos os dados do RAT e muda status para Em Andamento.
      */
-    public function draft(UpdateRatRequest $request, int $id): RedirectResponse
+    public function update(UpdateRatRequest $request, string $id): RedirectResponse
     {
-        $dto        = RatBoDTO::fromArray($request->validated());
-        $ocorrencia = $this->writeService->saveDraft($id, $dto);
+        $this->writeService->update($id, $request->validated());
 
-        return redirect()
-            ->route('compdec.rat.edit', $ocorrencia->id)
+        return redirect()->route('rat.edit', $id)
+            ->with('success', 'RAT atualizado com sucesso!');
+    }
+
+    /**
+     * Salva rascunho sem alterar o status.
+     */
+    public function draft(UpdateRatRequest $request, string $id): RedirectResponse
+    {
+        $this->writeService->saveDraft($id, $request->validated());
+
+        return redirect()->route('rat.edit', $id)
             ->with('success', 'Rascunho salvo com sucesso!');
     }
 }

@@ -1,119 +1,98 @@
-﻿<?php
+<?php
 
 declare(strict_types=1);
 
 namespace App\Modules\Rat\Services;
 
-use App\Modules\Rat\DTO\RatBoDTO;
+use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
+use App\Modules\Rat\Enums\Status;
 use App\Modules\Rat\Models\Rat;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Persiste alterações em ocorrências RAT (rat_ocorrencias).
+ * Persiste alterações em RATs — criação, atualização, rascunho e finalização.
+ * Depende de RatRepositoryInterface e RatProtocoloService (abstrações).
  *
- * FLUXO: Controller -> RatWriteService -> Rat (Model) -> rat_ocorrencias
- *
- * Métodos públicos:
- *   create()          cria ocorrência em branco com numero_bos gerado
- *   createWithData()  cria com dados do DTO
- *   update()          persiste dados do DTO
- *   saveDraft()       persiste dados mantendo status = 0 (rascunho)
- *   finalize()        muda status para 1 (finalizado)
- *   delete()          remove ocorrência
+ * 4 métodos púблicos:
+ *   create()    — cria RAT em branco com protocolo único (transação)
+ *   update()    — persiste dados com status EM_ANDAMENTO
+ *   saveDraft() — persiste dados mantendo status RASCUNHO
+ *   finalize()  — muda status para FINALIZADO (com guard clauses)
  */
 class RatWriteService
 {
-    /** Cria uma ocorrência em branco com numero_bos sequencial único. */
+    public function __construct(
+        private readonly RatRepositoryInterface $repository,
+        private readonly RatProtocoloService    $protocoloService,
+    ) {}
+
+    /** Cria um RAT em branco com protocolo sequencial único dentro de transação atômica. */
     public function create(): Rat
     {
         return DB::transaction(function () {
-            $year = (int) date('Y');
-            $seq  = $this->getLatestSequence($year) + 1;
-            $bos  = sprintf('BOS-%d-%05d', $year, $seq);
-
-            return Rat::create([
-                'numero_bos'     => $bos,
-                'sequencial_ano' => $seq,
-                'status'         => 0,
-                'created_by'     => (string) auth()->id(),
-                'updated_by'     => (string) auth()->id(),
-            ]);
+            $protocolo = $this->protocoloService->generate();
+            return $this->repository->create($this->buildInitialData($protocolo));
         });
     }
 
-    /** Cria uma ocorrência com dados fornecidos pelo DTO. */
-    public function createWithData(RatBoDTO $dto): Rat
+    /** Cria um RAT com dados do formulário em uma única transação. */
+    public function createWithData(array $data): Rat
     {
-        return DB::transaction(function () use ($dto) {
-            $year = (int) date('Y');
-            $seq  = $this->getLatestSequence($year) + 1;
-
-            $data = array_merge($dto->toArray(), [
-                'status'     => 0,
-                'created_by' => (string) auth()->id(),
-                'updated_by' => (string) auth()->id(),
-            ]);
-
-            if (empty($data['numero_bos'])) {
-                $data['numero_bos']     = sprintf('BOS-%d-%05d', $year, $seq);
-                $data['sequencial_ano'] = $seq;
-            }
-
-            return Rat::create($data);
+        return DB::transaction(function () use ($data) {
+            $protocolo = $this->protocoloService->generate();
+            $rat = $this->repository->create($this->buildInitialData($protocolo));
+            return $this->repository->update($rat->id, array_merge($data, [
+                'status' => Status::RASCUNHO->value,
+            ]));
         });
     }
 
-    /** Persiste dados de uma ocorrência existente. */
-    public function update(int $id, RatBoDTO $dto): Rat
+    /** Persiste todos os campos editáveis e avança o status para EM_ANDAMENTO. */
+    public function update(string $id, array $data): Rat
     {
-        $rat = Rat::findOrFail($id);
+        return $this->repository->update($id, array_merge($data, [
+            'status' => Status::EM_ANDAMENTO->value,
+        ]));
+    }
 
-        $allowed = ['numero_bos', 'historico', 'prazo_edicao', 'ocorrencia_origem_id', 'status'];
-        $payload = array_intersect_key($dto->toArray(), array_flip($allowed));
-        $payload['updated_by'] = (string) auth()->id();
+    /** Persiste os dados mantendo o status RASCUNHO. */
+    public function saveDraft(string $id, array $data): Rat
+    {
+        return $this->repository->update($id, array_merge($data, [
+            'status' => Status::RASCUNHO->value,
+        ]));
+    }
 
-        $rat->update(array_filter($payload, fn ($v) => $v !== null));
+    /** Finaliza o RAT — aborta se já finalizado. */
+    public function finalize(string $id): Rat
+    {
+        $rat = $this->repository->findById($id);
+        abort_if(is_null($rat), 404, 'RAT não encontrado.');
+        abort_if($rat->status === Status::FINALIZADO->value, 422, 'RAT já está finalizado.');
 
+        $this->repository->updateStatus($id, Status::FINALIZADO->value);
         return $rat->fresh();
     }
 
-    /** Persiste dados mantendo status = 0 (rascunho). */
-    public function saveDraft(int $id, RatBoDTO $dto): Rat
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
+    private function buildInitialData(string $protocolo): array
     {
-        $rat = Rat::findOrFail($id);
-
-        $payload = array_merge(
-            array_filter($dto->toArray(), fn ($v) => $v !== null),
-            ['status' => 0, 'updated_by' => (string) auth()->id()]
-        );
-
-        $rat->update($payload);
-
-        return $rat->fresh();
-    }
-
-    /** Finaliza a ocorrência — aborta se já finalizada. */
-    public function finalize(int $id): Rat
-    {
-        $rat = Rat::findOrFail($id);
-        abort_if($rat->isFinalized(), 422, 'Ocorrência já está finalizada.');
-
-        $rat->update(['status' => 1, 'updated_by' => (string) auth()->id()]);
-
-        return $rat->fresh();
-    }
-
-    /** Remove ocorrência (soft delete). */
-    public function delete(int $id): void
-    {
-        Rat::findOrFail($id)->delete();
-    }
-
-    /** Retorna o maior sequencial_ano para o ano (usado para gerar BOS). */
-    private function getLatestSequence(int $year): int
-    {
-        return (int) Rat::whereYear('created_at', $year)
-            ->lockForUpdate()
-            ->max('sequencial_ano');
+        return [
+            'protocolo'    => $protocolo,
+            'status'       => Status::RASCUNHO->value,
+            'dados_gerais' => [],
+            'local'        => [],
+            'endereco'     => [],
+            'comunicacao'  => [],
+            'recursos'     => [],
+            'envolvidos'   => [],
+            'vistoria'     => [],
+            'historico'    => [],
+            'anexos'       => [],
+        ];
     }
 }
+

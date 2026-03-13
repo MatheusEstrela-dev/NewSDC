@@ -1,18 +1,18 @@
-﻿<?php
+<?php
 
 declare(strict_types=1);
 
 namespace App\Modules\Rat\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Rat\Http\Requests\UpdateRatRequest;
 use App\Modules\Rat\Services\RatWriteService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 
 /**
- * Controlador de ação única — finaliza uma ocorrência RAT.
+ * Controlador de ação única — Responsabilidade única: finaliza um RAT.
  *
- * FLUXO: PATCH compdec/rat/{id}/finalizar -> RatWriteService.finalize() -> Redirect
+ * Recebe PATCH /rat/{id}/finalize, delega ao RatWriteService e redireciona.
  */
 class RatFinalizeController extends Controller
 {
@@ -20,12 +20,17 @@ class RatFinalizeController extends Controller
         private readonly RatWriteService $writeService,
     ) {}
 
-    public function __invoke(Request $request, int $id): RedirectResponse
+    public function __invoke(UpdateRatRequest $request, string $id): RedirectResponse
     {
-        $ocorrencia = $this->writeService->finalize($id);
+        // Persiste os dados do formulário antes de finalizar
+        if ($request->hasAny(['dadosGerais', 'comunicacao', 'local', 'endereco', 'recursos', 'envolvidos', 'vistoria', 'historico'])) {
+            $this->writeService->saveDraft($id, $request->validated());
+        }
+
+        $rat = $this->writeService->finalize($id);
 
         return redirect()
-            ->route('compdec.rat.show', $ocorrencia->id)
-            ->with('success', 'Ocorrência finalizada com sucesso!');
+            ->route('rat.show', $rat->id)
+            ->with('success', 'RAT finalizado com sucesso!');
     }
 }
