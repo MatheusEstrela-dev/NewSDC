@@ -4,7 +4,7 @@
       v-for="filter in quickFilters"
       :key="filter.key"
       type="button"
-      class="px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors duration-200"
+      class="px-3 py-1.5 text-sm font-medium rounded-lg border transition-all duration-200"
       :class="isActive(filter.key)
         ? 'bg-primary-500 text-white border-primary-500 shadow-md'
         : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20'"

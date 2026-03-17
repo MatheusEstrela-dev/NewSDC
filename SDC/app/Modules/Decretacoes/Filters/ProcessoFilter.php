@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Filters;
 
-use App\Models\Municipio;
 use App\Modules\Decretacoes\Models\DecretoMunicipio;
 use App\Modules\Decretacoes\Models\Processo;
 use Illuminate\Database\Eloquent\Builder;
@@ -75,8 +74,9 @@ class ProcessoFilter
                 $q->where('analista', 'like', "%$search%")
                   ->orWhere('n_protocolo_fide', 'like', "%$search%")
                   ->orWhereHas('municipios', function ($q2) use ($search) {
-                      $q2->where('municipios.nome', 'like', "%$search%")
-                         ->orWhere('municipios.codigo_ibge', 'like', "%$search%");
+                      $q2->where('cedec_municipio.p_nome', 'like', "%$search%")
+                         ->orWhere('cedec_municipio.nome', 'like', "%$search%")
+                         ->orWhere('cedec_municipio.id', 'like', "%$search%");
                   });
             });
         }
@@ -196,7 +196,7 @@ class ProcessoFilter
     {
         if ($this->request->filled('municipio_id')) {
             $this->builder->whereHas('municipios', function ($q) {
-                $q->where('municipios.id', $this->request->input('municipio_id'));
+                $q->where('cedec_municipio.id', $this->request->input('municipio_id'));
             });
         }
 
@@ -252,14 +252,14 @@ class ProcessoFilter
 
         return [
             'status_options' => \App\Modules\Decretacoes\Enums\StatusProcesso::toSelectOptions(),
-            'analistas' => self::getAnalistasOptions(),
+            'analistas' => \App\Modules\Decretacoes\Enums\MockAnalista::toSelectOptions(),
             'reconhecimentos' => Processo::distinct('reconhecimento')
                 ->whereNotNull('reconhecimento')
                 ->where('reconhecimento', '!=', '')
                 ->pluck('reconhecimento')
                 ->sort()
                 ->values(),
-            'municipios' => self::getMunicipiosOptions(),
+            'municipios' => \App\Modules\Decretacoes\Enums\MockMunicipio::toSelectOptions(),
             'redecs' => \App\Modules\Decretacoes\Enums\MockRedec::toSelectOptions(),
             'situacoes_anormalidade' => [
                 ['value' => 'ECP', 'label' => 'ECP - Estado de Calamidade Publica'],
@@ -297,38 +297,6 @@ class ProcessoFilter
             'tipos_desastre_hierarquico' => self::buildCobradeHierarchy($tiposDesastre),
             'cobrade_quick_filters' => self::getCobradeQuickFilters(),
         ];
-    }
-
-    /**
-     * Get municipios from database for select options.
-     */
-    protected static function getMunicipiosOptions(): array
-    {
-        return Municipio::query()
-            ->select('id', 'nome', 'codigo_ibge')
-            ->orderBy('nome')
-            ->get()
-            ->map(fn ($m) => [
-                'id' => $m->id,
-                'label' => $m->nome,
-                'codigo_ibge' => $m->codigo_ibge,
-            ])
-            ->toArray();
-    }
-
-    /**
-     * Get analistas from database for select options.
-     */
-    protected static function getAnalistasOptions(): array
-    {
-        return Processo::query()
-            ->distinct()
-            ->whereNotNull('analista')
-            ->where('analista', '!=', '')
-            ->pluck('analista')
-            ->sort()
-            ->values()
-            ->toArray();
     }
 
     /**
