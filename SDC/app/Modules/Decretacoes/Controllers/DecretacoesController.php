@@ -56,11 +56,21 @@ class DecretacoesController extends Controller
     {
         $filters = $request->only([
             'search',
-            'status',
-            'processo',
-            'vigencia_status',
+            'data_entrada',
+            'data_entrada_inicio',
+            'data_entrada_fim',
             'data_inicio',
             'data_fim',
+            'processo',
+            'reconhecimento',
+            'analista',
+            'situacao_anormalidade',
+            'data_decreto_inicio',
+            'data_decreto_fim',
+            'vigencia_status',
+            'tipo_desastre_id',
+            'municipio_id',
+            'n_protocolo_fide',
         ]);
         $processos = $this->processoService->list($filters, 15);
         $statistics = $this->processoService->getStatistics();

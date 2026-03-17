@@ -88,6 +88,7 @@ class EntradaProcessoService
             $processo = Processo::create($dto->allData);
             $this->syncMunicipalities($processo, $dto->municipios);
             $this->syncInformacoesDecreto($processo, $dto->informacoesDecreto);
+
             return $processo;
         });
     }

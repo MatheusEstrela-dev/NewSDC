@@ -17,10 +17,18 @@ class CheckUserActive
     public function handle(Request $request, Closure $next): Response
     {
         if (Auth::check()) {
-            // Check session cache first to avoid DB query every time
-            if (!$request->session()->has('user_last_active_check') || 
-                now()->diffInMinutes($request->session()->get('user_last_active_check')) > 5) {
-                
+            $shouldCheck = true;
+            $lastCheck = $request->session()->get('user_last_active_check');
+
+            if ($lastCheck instanceof \Carbon\Carbon) {
+                $shouldCheck = now()->diffInMinutes($lastCheck) > 5;
+            } elseif (is_int($lastCheck)) {
+                $shouldCheck = (time() - $lastCheck) > 300;
+            } else {
+                $request->session()->forget('user_last_active_check');
+            }
+
+            if ($shouldCheck) {
                 if (!Auth::user()->active) {
                     Auth::logout();
                     $request->session()->invalidate();
@@ -30,9 +38,8 @@ class CheckUserActive
                         'email' => 'Sua conta foi desativada por falta de atualização cadastral (prazo de 6 meses excedido). Entre em contato com o suporte para reativação.',
                     ]);
                 }
-                
-                // Update check time
-                $request->session()->put('user_last_active_check', now());
+
+                $request->session()->put('user_last_active_check', time());
             }
         }
 

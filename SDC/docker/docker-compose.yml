@@ -60,10 +60,10 @@ services:
       TELESCOPE_ENABLED: "true"
       TELESCOPE_PATH: "telescope"
 
-      # Database
+      # Database (usa .env ou fallback para container local)
       DB_CONNECTION: mysql
-      DB_HOST: db
-      DB_PORT: 3306
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
       DB_DATABASE: ${DB_DATABASE:-sdc}
       DB_USERNAME: ${DB_USERNAME:-sdc}
       DB_PASSWORD: ${DB_PASSWORD:-secret}
@@ -87,9 +87,9 @@ services:
       XDEBUG_MODE: debug,develop,coverage
       XDEBUG_CONFIG: client_host=host.docker.internal
 
-      # Migrations e Seeders
-      RUN_MIGRATIONS: "true"
-      RUN_SEEDERS: "true"
+      # Migrations e Seeders (usa .env, default true para dev)
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      RUN_SEEDERS: ${RUN_SEEDERS:-true}
 
     # Command é gerido pelo entrypoint.sh agora (Octane)
     # command: php artisan serve --host=0.0.0.0 --port=8000

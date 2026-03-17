@@ -57,7 +57,6 @@ class Processo extends Model
         'data_ocorrencia_desastre' => 'date',
         'data_decreto_municipal' => 'date',
         'data_publicacao_mg' => 'date',
-        'data_publicacao_diario' => 'date',
         'prazo_vigencia' => 'integer',
         'tipo_desastre_id' => 'integer',
     ];
@@ -79,8 +78,12 @@ class Processo extends Model
         parent::boot();
 
         static::creating(function ($model) {
-            if (Auth::check() && !$model->created_by) {
-                $model->created_by = Auth::id();
+            if (!$model->created_by) {
+                if (Auth::check()) {
+                    $model->created_by = Auth::id();
+                } else {
+                    throw new \RuntimeException('Usuario nao autenticado para criar processo de decretacao.');
+                }
             }
         });
 
