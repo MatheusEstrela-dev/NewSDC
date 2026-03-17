@@ -56,6 +56,11 @@ use App\Http\Controllers\Controller;
  *     description="Endpoints otimizados para alta carga (100k+ usuários)"
  * )
  *
+ * @OA\Tag(
+ *     name="Decretacoes",
+ *     description="Endpoints do modulo de Decretacoes — listagem, detalhe, export Power BI e recebimento externo"
+ * )
+ *
  * @OA\Schema(
  *     schema="ErrorResponse",
  *     type="object",

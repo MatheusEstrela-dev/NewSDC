@@ -81,5 +81,7 @@ class Kernel extends HttpKernel
         'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'hierarchy' => \App\Http\Middleware\CheckHierarchy::class,
+        'api-rate-limiter'     => \App\Http\Middleware\ApiRateLimiter::class,
+        'decretacoes.api.auth' => \App\Http\Middleware\DecretacoesApiAuth::class,
     ];
 }

@@ -81,5 +81,82 @@
  *         @OA\Property(property="endpoints", type="object")
  *     )
  * )
+ *
+ * @OA\Schema(
+ *     schema="ProcessoDecretacaoItem",
+ *     type="object",
+ *     title="Processo de Decretacao",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="municipio_id", type="integer", example=123),
+ *     @OA\Property(property="processo", type="string", example="MUNICIPAL"),
+ *     @OA\Property(property="reconhecimento", type="string", example="SE"),
+ *     @OA\Property(property="tipo_desastre_id", type="integer", example=5),
+ *     @OA\Property(property="situacao_anormalidade", type="string", example="SE"),
+ *     @OA\Property(property="data_entrada", type="string", format="date", example="2025-01-15"),
+ *     @OA\Property(property="n_protocolo_fide", type="string", nullable=true, example="2025.001.001"),
+ *     @OA\Property(property="analista", type="string", nullable=true, example="joao.silva"),
+ *     @OA\Property(property="created_at", type="string", format="date-time"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time")
+ * )
+ *
+ * @OA\Schema(
+ *     schema="ProcessoDecretacaoList",
+ *     type="object",
+ *     title="Lista Paginada de Processos",
+ *     @OA\Property(property="success", type="boolean", example=true),
+ *     @OA\Property(
+ *         property="data",
+ *         type="object",
+ *         @OA\Property(
+ *             property="data",
+ *             type="array",
+ *             @OA\Items(ref="#/components/schemas/ProcessoDecretacaoItem")
+ *         ),
+ *         @OA\Property(
+ *             property="meta",
+ *             type="object",
+ *             @OA\Property(property="current_page", type="integer", example=1),
+ *             @OA\Property(property="last_page", type="integer", example=5),
+ *             @OA\Property(property="per_page", type="integer", example=15),
+ *             @OA\Property(property="total", type="integer", example=75)
+ *         )
+ *     )
+ * )
+ *
+ * @OA\Schema(
+ *     schema="ReceiveProcessoRequest",
+ *     type="object",
+ *     title="Request de Recepcao de Processo Externo",
+ *     required={"data_entrada", "origem", "municipio_id"},
+ *     @OA\Property(property="data_entrada", type="string", format="date", example="2025-01-15"),
+ *     @OA\Property(property="origem", type="string", enum={"municipal", "estadual"}, example="municipal"),
+ *     @OA\Property(property="municipio_id", type="integer", example=123),
+ *     @OA\Property(property="cobrade_id", type="integer", nullable=true, example=5),
+ *     @OA\Property(property="situacao_anormalidade", type="string", nullable=true, enum={"N1", "SE"}, example="SE"),
+ *     @OA\Property(property="n_protocolo_fide", type="string", nullable=true, example="2025.001.001"),
+ *     @OA\Property(property="observacoes", type="string", nullable=true)
+ * )
+ *
+ * @OA\Schema(
+ *     schema="DecretacaoPowerBIExport",
+ *     type="object",
+ *     title="Export Power BI Decretacoes",
+ *     @OA\Property(property="success", type="boolean", example=true),
+ *     @OA\Property(
+ *         property="data",
+ *         type="array",
+ *         @OA\Items(
+ *             type="object",
+ *             @OA\Property(property="municipio_id", type="integer"),
+ *             @OA\Property(property="municipio_nome", type="string"),
+ *             @OA\Property(property="tipo_decreto", type="string"),
+ *             @OA\Property(property="data_entrada", type="string", format="date"),
+ *             @OA\Property(property="obitos", type="integer"),
+ *             @OA\Property(property="feridos", type="integer"),
+ *             @OA\Property(property="desabrigados", type="integer"),
+ *             @OA\Property(property="desalojados", type="integer")
+ *         )
+ *     )
+ * )
  */
 

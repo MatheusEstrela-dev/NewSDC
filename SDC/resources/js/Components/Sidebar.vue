@@ -277,6 +277,19 @@
           Permissionamento
         </NavItem>
       </div>
+
+      <!-- INTEGRACOES -->
+      <div class="nav-section">
+        <div v-show="!isCollapsed" class="nav-section-title">INTEGRACOES</div>
+        <NavItem
+          href="/api/documentation"
+          :active="false"
+          icon="code"
+          :collapsed="isCollapsed"
+        >
+          API Docs
+        </NavItem>
+      </div>
     </nav>
 
     <!-- Gradiente inferior -->
