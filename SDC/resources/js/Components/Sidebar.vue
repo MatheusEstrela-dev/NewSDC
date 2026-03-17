@@ -276,16 +276,6 @@
         >
           Permissionamento
         </NavItem>
-
-        <NavItem
-          v-if="canSeeLogs"
-          :href="route('log-viewer.index')"
-          :active="isRouteActive('log-viewer.*')"
-          icon="document"
-          :collapsed="isCollapsed"
-        >
-          Logs
-        </NavItem>
       </div>
 
       <!-- INTEGRACOES -->
@@ -300,8 +290,6 @@
           API Docs
         </NavItem>
       </div>
-
-
     </nav>
 
     <!-- Gradiente inferior -->
@@ -377,7 +365,6 @@ const _activeRoutes = computed(() => {
     'plancon.*': route().current('plancon.*'),
     'inmet.*': route().current('inmet.*'),
     'admin.permissions.*': route().current('admin.permissions.*'),
-    'log-viewer.*': route().current('log-viewer.*'),
   };
 });
 
@@ -478,17 +465,7 @@ const canSeeVistoria = computed(() => {
 
 // ADMINISTRACAO
 const canSeeAdminSection = computed(() => {
-  return hasPermission(['users.view', 'roles.view', 'permissions.view', 'system.logs.view']);
-});
-
-const canSeeLogs = computed(() => {
-  return hasPermission(['system.logs.view']);
-});
-
-// DEBUG - apenas em dev ou super admin
-const canSeeDebug = computed(() => {
-  const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
-  return isDev || _isSuper.value;
+  return hasPermission(['users.view', 'roles.view', 'permissions.view']);
 });
 
 const openSubMenus = ref({
@@ -654,14 +631,12 @@ provide('sidebarCollapsed', isCollapsed);
   top: 0;
   z-index: 50;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
-  will-change: transform;
+  transition: width 0.3s ease, transform 0.3s ease;
   /* padding-top safe-area is now handled by .sidebar-header */
 }
 
 .sidebar.is-collapsed {
   width: 80px;
-  /* No width transition - instant change prevents CLS */
 }
 
 /* Tablet (768px - 1023px): Sidebar collapsed por padrao, expande quando drawer abre */
@@ -669,7 +644,7 @@ provide('sidebarCollapsed', isCollapsed);
   .sidebar {
     width: 80px;
     transform: translateX(0);
-    transition: transform 0.3s ease;
+    transition: width 0.3s ease, transform 0.3s ease;
   }
 
   /* Quando drawer abre em tablet, expandir completamente */
