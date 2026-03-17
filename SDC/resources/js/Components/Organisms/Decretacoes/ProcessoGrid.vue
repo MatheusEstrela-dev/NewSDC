@@ -27,6 +27,7 @@
         @view="(id) => openDetailModalById(id)"
         @print="(id) => emit('print', id)"
         @edit="handleEdit"
+        @delete="(id) => emit('delete', id)"
       />
     </div>
 
@@ -76,7 +77,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['print', 'generate-report']);
+const emit = defineEmits(['print', 'generate-report', 'delete']);
 
 const showDetailModal = ref(false);
 const selectedProcesso = ref(null);

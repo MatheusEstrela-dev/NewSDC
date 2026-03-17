@@ -78,6 +78,7 @@
         @view="$emit('view', processo.id)"
         @print="$emit('print', processo.id)"
         @edit="$emit('edit', processo.id)"
+        @delete="$emit('delete', processo.id)"
       />
     </div>
   </CardBase>
@@ -108,7 +109,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['click', 'view', 'print', 'edit']);
+defineEmits(['click', 'view', 'print', 'edit', 'delete']);
 
 const municipiosCount = computed(() => {
   if (!props.processo.municipios?.length) return '—';

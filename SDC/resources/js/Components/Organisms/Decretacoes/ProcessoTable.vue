@@ -91,6 +91,7 @@
                   @view="openDetailModal(processo)"
                   @print="$emit('print', processo.id)"
                   @edit="openEditChoiceModal(processo.id)"
+                  @delete="$emit('delete', processo.id)"
                   @warning="$emit('warning', processo.id)"
                   @options="$emit('options', processo.id)"
                 />
@@ -161,7 +162,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['view', 'print', 'edit', 'generate-report', 'warning', 'options']);
+const emit = defineEmits(['view', 'print', 'edit', 'generate-report', 'warning', 'options', 'delete']);
 
 const showDetailModal = ref(false);
 const selectedProcesso = ref(null);

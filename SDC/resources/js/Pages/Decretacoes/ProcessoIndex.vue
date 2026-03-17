@@ -16,6 +16,7 @@
           @clear-filters="handleClearFilters"
           @page-change="handlePageChange"
           @create="handleCreate"
+          @delete="handleDelete"
         />
     </div>
 </template>
@@ -90,5 +91,12 @@ const handlePageChange = (page) => {
 
 const handleCreate = () => {
   router.visit(route('decretacoes.create'));
+};
+
+const handleDelete = (id) => {
+  router.delete(route('decretacoes.destroy', id), {
+    preserveState: false,
+    preserveScroll: true,
+  });
 };
 </script>

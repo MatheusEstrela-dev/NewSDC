@@ -95,6 +95,13 @@ class Processo extends Model
             $model->logChange('updated');
         });
 
+        static::deleting(function ($model) {
+            $model->desastres()->each(function ($desastre) {
+                $desastre->entradas()->delete();
+            });
+            $model->desastres()->delete();
+        });
+
         static::deleted(function ($model) {
             $model->logChange('deleted');
         });
@@ -375,6 +382,8 @@ class DesastreItemCampo extends Model
  */
 class EntradaCategoriaDesastre extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'dec_entrada_categoria_desastres';
 
     protected $fillable = [

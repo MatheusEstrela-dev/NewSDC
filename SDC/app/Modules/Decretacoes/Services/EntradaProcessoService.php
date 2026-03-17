@@ -121,15 +121,29 @@ class EntradaProcessoService
     }
 
     /**
-     * Remove processo.
+     * Remove processo (soft delete).
      *
      * @param int $id ID do processo
-     * @return bool True se removido, false se nao encontrado
+     * @return array Resultado com success e message
      */
-    public function delete(int $id): bool
+    public function delete(int $id): array
     {
         $processo = Processo::find($id);
-        return $processo ? $processo->delete() : false;
+
+        if (!$processo) {
+            return ['success' => false, 'message' => 'Processo nao encontrado.'];
+        }
+
+        if (!$processo->podeSerExcluido()) {
+            return [
+                'success' => false,
+                'message' => 'Este processo nao pode ser excluido. Somente processos com status "Registro" podem ser removidos.'
+            ];
+        }
+
+        $processo->delete();
+
+        return ['success' => true, 'message' => 'Processo removido com sucesso!'];
     }
 
     // =========================================================================

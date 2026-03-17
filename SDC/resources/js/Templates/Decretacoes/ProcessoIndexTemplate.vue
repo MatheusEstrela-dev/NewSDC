@@ -65,6 +65,7 @@
       :can-edit="canEdit"
       :can-delete="canDelete"
       @print="handlePrint"
+      @delete="handleDelete"
     />
 
     <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
@@ -76,6 +77,7 @@
       @view="(id) => $emit('view', id)"
       @print="handlePrint"
       @edit="(id) => $emit('edit', id)"
+      @delete="handleDelete"
     />
 
     <!-- Pagination -->
@@ -92,6 +94,20 @@
       :processo="selectedProcesso"
       @close="closePrintModal"
     />
+
+    <!-- Modal de Confirmacao de Exclusao -->
+    <ConfirmDialog
+      :is-open="showDeleteConfirm"
+      title="Excluir Processo"
+      message="Tem certeza que deseja excluir este processo?"
+      description="Esta acao ira marcar o processo como excluido. Os dados serao preservados para auditoria."
+      variant="danger"
+      confirm-text="Excluir"
+      cancel-text="Cancelar"
+      :loading="deleteLoading"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>
 
@@ -101,6 +117,7 @@ import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import DecretacoesStatsCards from '@/Components/Organisms/Decretacoes/DecretacoesStatsCards.vue';
 import PrintDecretacaoModal from '@/Components/Organisms/Decretacoes/Print/PrintDecretacaoModal.vue';
 import ProcessoFilters from '@/Components/Organisms/Decretacoes/ProcessoFilters.vue';
@@ -163,7 +180,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['filter-change', 'clear-filters', 'page-change', 'view', 'edit', 'create']);
+const emit = defineEmits(['filter-change', 'clear-filters', 'page-change', 'view', 'edit', 'create', 'delete']);
 
 const localFilters = ref({ ...props.filters });
 const viewMode = ref('table');
@@ -219,6 +236,33 @@ function handlePrint(id) {
 function closePrintModal() {
   printModalOpen.value = false;
   selectedProcessoId.value = null;
+}
+
+// =========================
+// Modal de Confirmacao de Exclusao
+// =========================
+const showDeleteConfirm = ref(false);
+const deleteLoading = ref(false);
+const processoIdToDelete = ref(null);
+
+function handleDelete(id) {
+  processoIdToDelete.value = id;
+  showDeleteConfirm.value = true;
+}
+
+function confirmDelete() {
+  if (processoIdToDelete.value) {
+    deleteLoading.value = true;
+    emit('delete', processoIdToDelete.value);
+    deleteLoading.value = false;
+    showDeleteConfirm.value = false;
+    processoIdToDelete.value = null;
+  }
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false;
+  processoIdToDelete.value = null;
 }
 </script>
 

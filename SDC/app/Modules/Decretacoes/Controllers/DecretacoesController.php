@@ -192,19 +192,23 @@ class DecretacoesController extends Controller
     }
 
     /**
-     * Remove processo.
+     * Remove processo (soft delete).
      *
-     * FLUXO: ID -> Service.delete() -> Redirect para lista
+     * FLUXO: ID -> Service.delete() -> Redirect para lista ou erro
      *
      * @param int $id ID do processo
-     * @return RedirectResponse Redireciona para lista
+     * @return RedirectResponse Redireciona para lista ou volta com erro
      */
     public function destroy(int $id): RedirectResponse
     {
-        $this->processoService->delete($id);
+        $result = $this->processoService->delete($id);
+
+        if (!$result['success']) {
+            return redirect()->back()->with('error', $result['message']);
+        }
 
         return redirect()->route('decretacoes.index')
-            ->with('success', 'Processo removido com sucesso!');
+            ->with('success', $result['message']);
     }
 
     /**
