@@ -10,8 +10,7 @@ import { computed } from 'vue';
 const props = defineProps({
   status: {
     type: String,
-    required: false,
-    default: null,
+    required: true,
   },
 });
 
@@ -19,14 +18,6 @@ const statusConfig = {
   'Registro': {
     label: 'Registro',
     classes: 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
-  },
-  'TEMPORARIO': {
-    label: 'TEMPORARIO',
-    classes: 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-  },
-  'Envio Direto para União': {
-    label: 'Envio Direto para Uniao',
-    classes: 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
   },
   'Aguardando Análise do Estado': {
     label: 'Aguardando Analise',
@@ -82,14 +73,11 @@ const statusConfig = {
   },
 };
 
-const label = computed(() => {
-  if (!props.status) return 'N/A';
-  return statusConfig[props.status]?.label || props.status;
-});
+const label = computed(() => statusConfig[props.status]?.label || props.status);
 const badgeClasses = computed(() => {
   return [
     'px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold inline-block whitespace-nowrap',
-    props.status ? (statusConfig[props.status]?.classes || 'bg-slate-500/20 text-slate-300 border border-slate-500/20') : 'bg-slate-500/20 text-slate-400 border border-slate-500/20',
+    statusConfig[props.status]?.classes || 'bg-slate-500/20 text-slate-300 border border-slate-500/20',
   ].join(' ');
 });
 </script>

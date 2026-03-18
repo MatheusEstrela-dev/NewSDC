@@ -59,7 +59,7 @@ function handleClose() {
 
 <template>
   <Modal :show="show" max-width="5xl" @close="handleClose">
-    <div v-if="processo" class="flex flex-col max-h-[90vh] overflow-y-auto scrollbar-hide">
+    <div v-if="processo" class="flex flex-col max-h-[90vh]">
       <!-- Header -->
       <div class="bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 px-6 py-4 border-b border-slate-200 dark:border-slate-700/50">
         <div class="flex items-center justify-between">
@@ -145,12 +145,12 @@ function handleClose() {
       </div>
 
       <!-- Tabs Navigation -->
-      <nav class="flex items-center gap-1 px-6 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50 overflow-x-auto scrollbar-hide">
+      <nav class="flex items-center gap-1 px-6 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50 overflow-x-auto">
         <button
           v-for="tab in tabs"
           :key="tab.id"
           type="button"
-          class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+          class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap"
           :class="activeTab === tab.id
             ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30'
             : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50'"
@@ -168,7 +168,7 @@ function handleClose() {
       </nav>
 
       <!-- Tab Content -->
-      <div class="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900/50 scrollbar-hide">
+      <div class="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900/50">
         <!-- Loading Skeleton -->
         <div v-if="loading" class="space-y-4">
           <div class="animate-pulse space-y-4">
@@ -209,13 +209,3 @@ function handleClose() {
     </div>
   </Modal>
 </template>
-
-<style scoped>
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-</style>

@@ -127,29 +127,29 @@ const dhDetails = computed(() => {
 
           <!-- Detailed human damage -->
           <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/50">
-            <div class="flex flex-col items-start gap-1">
-              <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Obitos</span>
-              <span class="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded-lg font-bold text-sm">{{ formatNumber(dhDetails.obitos) }}</span>
+            <div class="flex flex-col">
+              <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Óbitos</span>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatNumber(dhDetails.obitos) }}</span>
             </div>
-            <div class="flex flex-col items-start gap-1">
+            <div class="flex flex-col">
               <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Feridos</span>
-              <span class="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded-lg font-bold text-sm">{{ formatNumber(dhDetails.feridos) }}</span>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatNumber(dhDetails.feridos) }}</span>
             </div>
-            <div class="flex flex-col items-start gap-1">
+            <div class="flex flex-col">
               <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Desalojados</span>
-              <span class="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded-lg font-bold text-sm">{{ formatNumber(dhDetails.desalojados) }}</span>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatNumber(dhDetails.desalojados) }}</span>
             </div>
-            <div class="flex flex-col items-start gap-1">
+            <div class="flex flex-col">
               <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Desabrigados</span>
-              <span class="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded-lg font-bold text-sm">{{ formatNumber(dhDetails.desabrigados) }}</span>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatNumber(dhDetails.desabrigados) }}</span>
             </div>
-            <div class="flex flex-col items-start gap-1">
+            <div class="flex flex-col">
               <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Desaparecidos</span>
-              <span class="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded-lg font-bold text-sm">{{ formatNumber(dhDetails.desaparecidos) }}</span>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatNumber(dhDetails.desaparecidos) }}</span>
             </div>
-            <div class="flex flex-col items-start gap-1">
+            <div class="flex flex-col">
               <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Outros Afetados</span>
-              <span class="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded-lg font-bold text-sm">{{ formatNumber(dhDetails.outros_afetados) }}</span>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatNumber(dhDetails.outros_afetados) }}</span>
             </div>
           </div>
         </div>
@@ -196,16 +196,16 @@ const dhDetails = computed(() => {
       </div>
 
       <!-- Prejuizos Economicos Privados -->
-      <div class="p-5 bg-white dark:bg-slate-800/50 rounded-xl border border-red-200 dark:border-red-700/50 shadow-sm">
+      <div class="p-5 bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm">
         <div class="flex items-center gap-3 mb-4">
-          <div class="p-2 bg-red-100 dark:bg-red-500/20 rounded-lg">
-            <BanknotesIcon class="w-5 h-5 text-red-500 dark:text-red-400" />
+          <div class="p-2 bg-purple-100 dark:bg-purple-500/20 rounded-lg">
+            <BanknotesIcon class="w-5 h-5 text-purple-500 dark:text-purple-400" />
           </div>
           <span class="text-sm font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wide">Prejuizos Economicos Privados</span>
         </div>
         <div class="flex items-baseline gap-2">
           <span class="text-slate-500 dark:text-slate-400 text-sm">Valor do prejuizo (R$):</span>
-          <span class="px-3 py-1 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-300 rounded-lg font-semibold">
+          <span class="px-3 py-1 bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300 rounded-lg font-semibold">
             {{ formatCurrency(totalPrejuizosPrivados) }}
           </span>
         </div>

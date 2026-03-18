@@ -323,7 +323,10 @@ class ProcessoQueryService
             ->join('dec_entrada_desastres as ed', 'ecd.id', '=', 'ed.entrada_categoria_desastre_id')
             ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
             ->join('dec_desastre_categorias as dc', 'ecd.categoria_id', '=', 'dc.id')
-            ->leftJoin('municipios as m', 'ed.municipio_id', '=', 'm.id')
+            ->leftJoin('municipios as m', function ($join) {
+                $join->on('ed.municipio_id', '=', 'm.id')
+                     ->orWhereRaw("m.codigo_ibge LIKE CONCAT('31', ed.municipio_id, '_')");
+            })
             ->whereIn('ecd.entrada_processo_id', $processoIds)
             ->whereIn('dic.tipo', ['number', 'currency'])
             ->select(
@@ -596,7 +599,10 @@ class ProcessoQueryService
             ->join('dec_entrada_desastres as ed', 'ecd.id', '=', 'ed.entrada_categoria_desastre_id')
             ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
             ->join('dec_desastre_categorias as dc', 'ecd.categoria_id', '=', 'dc.id')
-            ->leftJoin('municipios as m', 'ed.municipio_id', '=', 'm.id')
+            ->leftJoin('municipios as m', function ($join) {
+                $join->on('ed.municipio_id', '=', 'm.id')
+                     ->orWhereRaw("m.codigo_ibge LIKE CONCAT('31', ed.municipio_id, '_')");
+            })
             ->whereIn('ecd.entrada_processo_id', $processoIds)
             ->whereIn('dic.tipo', ['number', 'currency'])
             ->select(
@@ -690,7 +696,10 @@ class ProcessoQueryService
             ->join('dec_entrada_desastres as ed', 'ecd.id', '=', 'ed.entrada_categoria_desastre_id')
             ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
             ->join('dec_desastre_categorias as dc', 'ecd.categoria_id', '=', 'dc.id')
-            ->leftJoin('municipios as m', 'ed.municipio_id', '=', 'm.id')
+            ->leftJoin('municipios as m', function ($join) {
+                $join->on('ed.municipio_id', '=', 'm.id')
+                     ->orWhereRaw("m.codigo_ibge LIKE CONCAT('31', ed.municipio_id, '_')");
+            })
             ->whereIn('ecd.entrada_processo_id', $processoIds)
             ->whereIn('dic.tipo', ['number', 'currency'])
             ->select(

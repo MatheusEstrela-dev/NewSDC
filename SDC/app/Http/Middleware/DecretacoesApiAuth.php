@@ -19,6 +19,10 @@ class DecretacoesApiAuth
 
     public function handle(Request $request, Closure $next): Response
     {
+        if ($this->authenticateViaWebSession($request)) {
+            return $next($request);
+        }
+
         if ($this->authenticateViaSanctum($request)) {
             return $next($request);
         }
@@ -31,6 +35,17 @@ class DecretacoesApiAuth
             'error'   => 'Unauthorized',
             'message' => 'Valid Bearer token or X-PowerBI-Token required.',
         ], 401);
+    }
+
+    private function authenticateViaWebSession(Request $request): bool
+    {
+        $user = Auth::guard('web')->user();
+
+        if ($user) {
+            return true;
+        }
+
+        return false;
     }
 
     private function authenticateViaSanctum(Request $request): bool
