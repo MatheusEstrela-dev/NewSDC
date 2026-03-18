@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Infrastructure\Persistence;
 
+use App\Models\Rat\RatOcorrencia;
+use App\Models\Rat\Relatos\RatRelatoDadosGerais;
 use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
 use App\Modules\Rat\DTOs\RatFilterDTO;
 use App\Modules\Rat\Models\Rat;
@@ -11,10 +13,10 @@ use App\Modules\Rat\Services\RatFilterService;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
- * Implementação Eloquent do repositório de RAT.
+ * Implementacao Eloquent do repositorio de RAT.
  *
- * Responsabilidade única: acesso a dados via Eloquent — sem lógica de negócio.
- * Inversão de Dependência: implementa RatRepositoryInterface; services dependem da abstração.
+ * Usa tabelas polimorficas (rat_ocorrencias + relatos) como fonte de dados.
+ * Adapta para o formato esperado pelo frontend (compativel com estrutura Rat legada).
  */
 class EloquentRatRepository implements RatRepositoryInterface
 {
@@ -24,82 +26,156 @@ class EloquentRatRepository implements RatRepositoryInterface
 
     public function create(array $data): Rat
     {
-        return Rat::create(array_merge([
-            'created_by' => auth()->id(),
-            'updated_by' => auth()->id(),
-        ], $data));
+        $ocorrencia = RatOcorrencia::create([
+            'numero_bos'  => $this->generateProtocolo(),
+            'status'      => 0,
+            'created_by'  => auth()->id(),
+            'updated_by'  => auth()->id(),
+        ]);
+
+        return $this->toRatModel($ocorrencia);
     }
 
     public function findById(string $id): ?Rat
     {
-        return Rat::with(['creator:id,name', 'updater:id,name', 'orgaoEmissor'])->find($id);
+        $ocorrencia = RatOcorrencia::with(['relatosMorph'])->find($id);
+
+        if (!$ocorrencia) {
+            return null;
+        }
+
+        return $this->toRatModel($ocorrencia);
     }
 
     public function paginate(RatFilterDTO $filters): LengthAwarePaginator
     {
-        $query = Rat::with('creator:id,name')->orderBy('created_at', 'desc');
-        $this->filterService->apply($query, $filters);
+        $query = RatOcorrencia::with(['relatosMorph'])
+            ->orderBy('created_at', 'desc');
 
-        return $query->paginate($filters->perPage);
+        if ($filters->status !== null && $filters->status !== '') {
+            $statusInt = match($filters->status) {
+                'rascunho', '0' => 0,
+                'finalizado', '1' => 1,
+                default => (int) $filters->status,
+            };
+            $query->where('status', $statusInt);
+        }
+
+        if ($filters->protocolo) {
+            $query->where('numero_bos', 'like', "%{$filters->protocolo}%");
+        }
+
+        if ($filters->ano) {
+            $query->whereYear('created_at', $filters->ano);
+        }
+
+        $paginator = $query->paginate($filters->perPage);
+
+        $paginator->getCollection()->transform(fn($oc) => $this->toRatModel($oc));
+
+        return $paginator;
     }
 
     public function getMunicipalities(): array
     {
-        return Rat::whereNotNull('local')
-            ->get(['local'])
-            ->map(fn(Rat $rat) => $rat->local['municipio'] ?? null)
-            ->filter()->unique()->sort()->values()->toArray();
+        return RatRelatoDadosGerais::whereNotNull('local_municipio')
+            ->distinct()
+            ->pluck('local_municipio')
+            ->filter()
+            ->sort()
+            ->values()
+            ->toArray();
     }
 
     public function delete(string $id): void
     {
-        Rat::where('id', $id)->delete();
+        RatOcorrencia::where('id', $id)->delete();
     }
 
     public function updateStatus(string $id, string $status): void
     {
-        Rat::where('id', $id)->update(['status' => $status, 'updated_by' => auth()->id()]);
+        RatOcorrencia::where('id', $id)->update([
+            'status'     => $status === 'finalizado' ? 1 : 0,
+            'updated_by' => auth()->id(),
+        ]);
     }
 
     public function update(string $id, array $data): Rat
     {
-        $rat         = Rat::findOrFail($id);
-        $dadosGerais = $data['dadosGerais'] ?? null;
+        $ocorrencia = RatOcorrencia::findOrFail($id);
+        $ocorrencia->update(['updated_by' => auth()->id()]);
 
-        $rat->update(array_filter([
-            'dados_gerais' => $dadosGerais,
-            'comunicacao'  => $data['comunicacao'] ?? null,
-            'local'        => $data['local']        ?? null,
-            'endereco'     => $data['endereco']     ?? null,
-            'tem_vistoria' => isset($dadosGerais['tem_vistoria'])
-                ? (bool) $dadosGerais['tem_vistoria'] : null,
-            'recursos'     => $data['recursos']     ?? null,
-            'envolvidos'   => $data['envolvidos']   ?? null,
-            'vistoria'     => $data['vistoria']     ?? null,
-            'historico'    => $data['historico']    ?? null,
-            'status'       => $data['status']       ?? null,
-            'updated_by'   => auth()->id(),
-            // 'anexos' é gerenciado exclusivamente pelo RatAttachmentService
-        ], fn($v) => !is_null($v)));
-
-        return $rat->fresh(['creator', 'updater', 'orgaoEmissor']);
+        return $this->toRatModel($ocorrencia->fresh(['relatosMorph']));
     }
 
-    /**
-     * Retorna o maior número de sequência já usado no protocolo para o ano dado.
-     * Chamado com lockForUpdate() dentro de uma transação ativa.
-     */
     public function getLatestSequence(int $year): int
     {
-        $latest = Rat::where('protocolo', 'like', "RAT-{$year}-%")
+        $latest = RatOcorrencia::where('numero_bos', 'like', "RAT-{$year}-%")
             ->lockForUpdate()
-            ->orderByDesc('protocolo')
-            ->value('protocolo');
+            ->orderByDesc('numero_bos')
+            ->value('numero_bos');
 
         if (!$latest) {
             return 0;
         }
 
         return (int) substr($latest, strrpos($latest, '-') + 1);
+    }
+
+    private function generateProtocolo(): string
+    {
+        $year = now()->year;
+        $seq  = $this->getLatestSequence($year) + 1;
+
+        return sprintf('RAT-%d-%06d', $year, $seq);
+    }
+
+    private function toRatModel(RatOcorrencia $ocorrencia): Rat
+    {
+        $dadosGerais = null;
+        $recursos    = [];
+        $envolvidos  = [];
+        $vistoria    = null;
+
+        foreach ($ocorrencia->relatosMorph ?? [] as $relato) {
+            $conteudo = $relato->conteudo;
+            if (!$conteudo) continue;
+
+            $type = class_basename($conteudo);
+            match ($type) {
+                'RatRelatoDadosGerais' => $dadosGerais = $conteudo->toArray(),
+                'RatRelatoRecurso'     => $recursos[] = $conteudo->toArray(),
+                'RatRelatoEnvolvidos'  => $envolvidos[] = $conteudo->toArray(),
+                'RatRelatoVistoria'    => $vistoria = $conteudo->toArray(),
+                default                => null,
+            };
+        }
+
+        $rat = new Rat();
+        $rat->id          = $ocorrencia->id;
+        $rat->protocolo   = $ocorrencia->numero_bos;
+        $rat->status      = $ocorrencia->status === 1 ? 'finalizado' : 'rascunho';
+        $rat->tem_vistoria = $vistoria !== null;
+        $rat->dados_gerais = $dadosGerais ?? [];
+        $rat->local        = [
+            'municipio' => $dadosGerais['local_municipio'] ?? null,
+            'uf'        => $dadosGerais['local_uf'] ?? 'MG',
+        ];
+        $rat->endereco     = [
+            'logradouro' => $dadosGerais['local_logradouro'] ?? null,
+            'numero'     => $dadosGerais['local_numero'] ?? null,
+            'bairro'     => $dadosGerais['local_bairro'] ?? null,
+            'cep'        => $dadosGerais['local_cep'] ?? null,
+        ];
+        $rat->comunicacao  = [];
+        $rat->recursos     = $recursos;
+        $rat->envolvidos   = $envolvidos;
+        $rat->vistoria     = $vistoria ?? [];
+        $rat->historico    = [];
+        $rat->anexos       = [];
+        $rat->created_at   = $ocorrencia->created_at;
+        $rat->updated_at   = $ocorrencia->updated_at;
+
+        return $rat;
     }
 }

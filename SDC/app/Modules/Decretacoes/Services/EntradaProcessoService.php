@@ -69,7 +69,13 @@ class EntradaProcessoService
      */
     public function findById(int $id): ?Processo
     {
-        return Processo::with(['logs', 'municipios'])->find($id);
+        $processo = Processo::with(['logs', 'municipios'])->find($id);
+        
+        if ($processo) {
+            $processo->totais = $this->queryService->calculateTotaisForProcesso($id);
+        }
+        
+        return $processo;
     }
 
     /**
@@ -226,6 +232,18 @@ class EntradaProcessoService
     public function getNormalizedDataForPowerBI(\Illuminate\Http\Request $request): array
     {
         return $this->exportService->getNormalizedDataForPowerBI($request);
+    }
+
+    /**
+     * Enriquece processos do paginador com totais de desastres (batch).
+     *
+     * DELEGADO PARA: ProcessoQueryService
+     *
+     * @param \Illuminate\Pagination\LengthAwarePaginator $paginator Paginador com processos
+     */
+    public function enrichWithTotais(\Illuminate\Pagination\LengthAwarePaginator $paginator): void
+    {
+        $this->queryService->enrichPaginatorWithTotais($paginator);
     }
 
     /**

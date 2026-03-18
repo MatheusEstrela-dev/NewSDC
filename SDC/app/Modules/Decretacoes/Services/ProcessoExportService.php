@@ -16,8 +16,8 @@ class ProcessoExportService
 {
     // Categorias de exportacao
     private const CAT_DANOS_MATERIAIS = 'DANOS MATERIAIS';
-    private const CAT_PREJUIZOS_PUBLICOS = 'PREJUIZOS ECONOMICOS PUBLICOS';
-    private const CAT_PREJUIZOS_PRIVADOS = 'PREJUIZOS ECONOMICOS PRIVADOS';
+    private const CAT_PREJUIZOS_PUBLICOS = 'PREJUÍZOS ECONÔMICOS PÚBLICOS';
+    private const CAT_PREJUIZOS_PRIVADOS = 'PREJUÍZOS ECONÔMICOS PRIVADOS';
     private const CATEGORIA_DANOS_HUMANOS = 1;
 
     // Mapeamento de item_id para tipo de dano humano
@@ -90,7 +90,7 @@ class ProcessoExportService
         return [
             'id' => $entrada->id,
             'uf' => 'MG',
-            'municipio' => $municipio?->p_nome ?? $municipio?->nome,
+            'municipio' => $municipio?->nome ?? $municipio?->p_nome,
             'codigo_ibge' => $municipio?->Codmundv,
             'macroregiao' => $municipio?->macroregiao,
             'latitude' => $municipio?->latitude,
@@ -139,10 +139,10 @@ class ProcessoExportService
     {
         return [
             'danos_materiais_danificadas' => $municipioTotals[self::CAT_DANOS_MATERIAIS]['Quantidades danificadas'] ?? 0,
-            'danos_materiais_destruidas' => $municipioTotals[self::CAT_DANOS_MATERIAIS]['Quantidades destruidas'] ?? 0,
+            'danos_materiais_destruidas' => $municipioTotals[self::CAT_DANOS_MATERIAIS]['Quantidades destruídas'] ?? $municipioTotals[self::CAT_DANOS_MATERIAIS]['Quantidades destruidas'] ?? 0,
             'danos_materiais_valor' => $municipioTotals[self::CAT_DANOS_MATERIAIS]['Valor (R$)'] ?? 0,
-            'prejuizos_publicos_valor' => $municipioTotals[self::CAT_PREJUIZOS_PUBLICOS]['Valor do prejuizo (R$)'] ?? 0,
-            'prejuizos_privados_valor' => $municipioTotals[self::CAT_PREJUIZOS_PRIVADOS]['Valor do prejuizo (R$)'] ?? 0,
+            'prejuizos_publicos_valor' => $municipioTotals[self::CAT_PREJUIZOS_PUBLICOS]['Valor do prejuízo (R$)'] ?? $municipioTotals[self::CAT_PREJUIZOS_PUBLICOS]['Valor do prejuizo (R$)'] ?? 0,
+            'prejuizos_privados_valor' => $municipioTotals[self::CAT_PREJUIZOS_PRIVADOS]['Valor do prejuízo (R$)'] ?? $municipioTotals[self::CAT_PREJUIZOS_PRIVADOS]['Valor do prejuizo (R$)'] ?? 0,
         ];
     }
 
@@ -157,7 +157,10 @@ class ProcessoExportService
             ->join('dec_entrada_desastres as ed', 'ecd.id', '=', 'ed.entrada_categoria_desastre_id')
             ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
             ->join('dec_desastre_categorias as dc', 'ecd.categoria_id', '=', 'dc.id')
-            ->join('cedec_municipio as m', 'ed.municipio_id', '=', 'm.id')
+            ->leftJoin('municipios as m', function ($join) {
+                $join->on('ed.municipio_id', '=', 'm.id')
+                     ->orWhereRaw("m.codigo_ibge LIKE CONCAT('31', ed.municipio_id, '_')");
+            })
             ->whereIn('ecd.entrada_processo_id', $processoIds)
             ->whereIn('dic.tipo', ['number', 'currency'])
             ->select(

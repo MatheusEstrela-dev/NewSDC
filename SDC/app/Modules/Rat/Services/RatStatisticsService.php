@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Services;
 
+use App\Models\Rat\RatOcorrencia;
 use App\Modules\Rat\DTOs\RatStatisticsDTO;
-use App\Modules\Rat\Models\Rat;
 
 /**
- * Responsabilidade única: calcular estatísticas de RATs do banco real.
- * Só calcula contagens, sem filtros ou CRUD.
+ * Responsabilidade unica: calcular estatisticas de RATs do banco real.
+ * Usa tabela rat_ocorrencias (polimorficas).
  */
 class RatStatisticsService
 {
     /**
-     * Retorna estatísticas consolidadas do banco de dados real.
+     * Retorna estatisticas consolidadas do banco de dados real.
      */
     public function getStatistics(): RatStatisticsDTO
     {
@@ -28,24 +28,24 @@ class RatStatisticsService
 
     private function countTotal(): int
     {
-        return Rat::count();
+        return RatOcorrencia::count();
     }
 
     private function countToday(): int
     {
-        return Rat::whereDate('created_at', today())->count();
+        return RatOcorrencia::whereDate('created_at', today())->count();
     }
 
     private function countThisMonth(): int
     {
-        return Rat::whereMonth('created_at', now()->month)
+        return RatOcorrencia::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->count();
     }
 
     private function countThisYear(): int
     {
-        return Rat::whereYear('created_at', now()->year)->count();
+        return RatOcorrencia::whereYear('created_at', now()->year)->count();
     }
 }
 

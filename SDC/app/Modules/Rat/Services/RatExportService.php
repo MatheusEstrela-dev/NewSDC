@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Services;
 
+use App\Models\Rat\RatOcorrencia;
+use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
 use App\Modules\Rat\DTOs\RatFilterDTO;
-use App\Modules\Rat\Models\Rat;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Responsabilidade única: exportar RATs para CSV.
- *
- * SOLID - SRP: só lida com lógica de exportação de dados.
+ * Responsabilidade unica: exportar RATs para CSV.
+ * Usa tabela rat_ocorrencias (polimorficas).
  */
 class RatExportService
 {
     public function __construct(
-        private readonly RatFilterService $filterService
+        private readonly RatRepositoryInterface $repository
     ) {}
 
     /**
@@ -24,9 +24,15 @@ class RatExportService
      */
     public function exportToCsv(RatFilterDTO $filters): StreamedResponse
     {
-        $query = Rat::with('creator:id,name')->orderBy('created_at', 'desc');
-        $this->filterService->apply($query, $filters);
-        $rats = $query->get();
+        $filtersAll = new RatFilterDTO(
+            protocolo: $filters->protocolo,
+            status: $filters->status,
+            ano: $filters->ano,
+            municipio: $filters->municipio,
+            perPage: 9999
+        );
+
+        $rats = $this->repository->paginate($filtersAll)->items();
 
         $filename = 'rats-' . now()->format('Y-m-d') . '.csv';
 
@@ -37,14 +43,10 @@ class RatExportService
         );
     }
 
-    /**
-     * Escreve o conteúdo CSV no buffer de saída — operação de I/O,
-     * isenta do limite de 10 linhas por convenção.
-     */
     private function writeCsv(iterable $rats): void
     {
         $handle = fopen('php://output', 'w');
-        fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM para UTF-8 no Excel
+        fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
         fputcsv($handle, $this->buildHeaders(), ';');
 
         foreach ($rats as $rat) {
@@ -56,17 +58,16 @@ class RatExportService
 
     private function buildHeaders(): array
     {
-        return ['ID', 'Protocolo', 'Status', 'Município', 'Criado por', 'Data Criação'];
+        return ['ID', 'Protocolo', 'Status', 'Municipio', 'Data Criacao'];
     }
 
-    private function buildRow(Rat $rat): array
+    private function buildRow($rat): array
     {
         return [
             $rat->id,
             $rat->protocolo ?? '',
-            $rat->status,
+            $rat->status ?? '',
             $rat->local['municipio'] ?? '',
-            $rat->creator?->name ?? 'Sistema',
             $rat->created_at?->format('d/m/Y H:i') ?? '',
         ];
     }

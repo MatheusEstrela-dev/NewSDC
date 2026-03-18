@@ -226,7 +226,13 @@ use App\Http\Controllers\Api\V1\Decretacoes\DecretacoesApiController;
 
 Route::prefix('v1/decretacoes')
     ->name('api.v1.decretacoes.')
-    ->middleware(['decretacoes.api.auth', 'api-rate-limiter:pro'])
+    ->middleware([
+        \Illuminate\Cookie\Middleware\EncryptCookies::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        'decretacoes.api.auth',
+        'api-rate-limiter:pro'
+    ])
     ->group(function () {
         Route::get('/',                [DecretacoesApiController::class, 'index'])->name('index');
         Route::get('/export/power-bi', [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');

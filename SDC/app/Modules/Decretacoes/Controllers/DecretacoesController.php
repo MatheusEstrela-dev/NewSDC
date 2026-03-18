@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Modules\Decretacoes\Resources\ProcessoResource;
 
 /**
  * Controller unificado para o modulo de Decretacoes.
@@ -73,6 +74,11 @@ class DecretacoesController extends Controller
             'n_protocolo_fide',
         ]);
         $processos = $this->processoService->list($filters, 15);
+
+        // Enriquece processos com totais de desastres (batch - 2 queries)
+        // Entrega direta via Inertia, sem necessidade de chamada API separada
+        $this->processoService->enrichWithTotais($processos);
+
         $statistics = $this->processoService->getStatistics();
         $filterOptions = $this->processoService->getFilterOptions();
 
@@ -101,7 +107,7 @@ class DecretacoesController extends Controller
         }
 
         return Inertia::render('Decretacoes/ProcessoShow', [
-            'processo' => $processo,
+            'processo' => ProcessoResource::make($processo),
         ]);
     }
 
@@ -147,7 +153,7 @@ class DecretacoesController extends Controller
         $filterOptions = $this->processoService->getFilterOptions();
 
         return Inertia::render('Decretacoes/ProcessoEdit', [
-            'processo'      => $processo,
+            'processo'      => ProcessoResource::make($processo),
             'tiposDesastre' => $filterOptions['tipos_desastre'] ?? [],
             'cobrades'      => $filterOptions['tipos_desastre'] ?? [],
             'municipios'    => $filterOptions['municipios'] ?? [],

@@ -61,7 +61,8 @@
 
             <!-- Reconhecimento -->
             <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-              <StatusBadge :status="processo.status" />
+              <StatusBadge v-if="processo.reconhecimento" :status="processo.reconhecimento" />
+              <span v-else class="text-slate-400 text-xs">—</span>
             </td>
 
             <!-- Nº Protocolo S2ID -->
@@ -115,6 +116,7 @@
     <DecretacaoDetailModal
       :show="showDetailModal"
       :processo="selectedProcesso"
+      :loading="loadingDetail"
       @close="closeDetailModal"
       @generate-report="handleGenerateReport"
     />
@@ -130,6 +132,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import axios from 'axios';
 import DocumentIcon from '../../Icons/DocumentTextIcon.vue';
 import PrazoBadge from '../../Molecules/Decretacoes/PrazoBadge.vue';
 import StatusBadge from '../../Molecules/Decretacoes/StatusBadge.vue';
@@ -166,12 +169,27 @@ const emit = defineEmits(['view', 'print', 'edit', 'generate-report', 'warning',
 
 const showDetailModal = ref(false);
 const selectedProcesso = ref(null);
+const loadingDetail = ref(false);
 const showEditChoiceModal = ref(false);
 const selectedProcessoIdForEdit = ref(null);
 
-const openDetailModal = (processo) => {
+const openDetailModal = async (processo) => {
   selectedProcesso.value = processo;
   showDetailModal.value = true;
+  loadingDetail.value = true;
+
+  try {
+    const response = await axios.get(`/api/v1/decretacoes/${processo.id}`, { withCredentials: true });
+    console.log('API Response:', response.data);
+    if (response.data.success && response.data.data) {
+      console.log('Totais:', response.data.data.totais);
+      selectedProcesso.value = response.data.data;
+    }
+  } catch (error) {
+    console.error('Erro ao carregar detalhes do processo:', error);
+  } finally {
+    loadingDetail.value = false;
+  }
 };
 
 const closeDetailModal = () => {

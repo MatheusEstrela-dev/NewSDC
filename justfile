@@ -272,3 +272,29 @@ setup:
     cd SDC && npm install
     just build
     @echo "✅ Setup completo finalizado!"
+
+# ==================== ENV SWITCH ====================
+
+# Troca para ambiente LOCAL (Docker)
+env-local:
+    cp SDC/.env SDC/.env.prod.bak
+    cp SDC/.env.local SDC/.env
+    cp SDC/.env.local SDC/docker/.env
+    cd SDC/docker && docker compose up -d --force-recreate app
+    @echo "Ambiente: LOCAL (Docker)"
+
+# Troca para ambiente PROD (Google Cloud DB)
+env-prod:
+    cp SDC/.env SDC/.env.local
+    cp SDC/.env.prod SDC/.env
+    cp SDC/.env.prod SDC/docker/.env
+    cd SDC/docker && docker compose up -d --force-recreate app
+    @echo "Ambiente: PROD (Google Cloud)"
+
+# Switch rapido entre LOCAL <-> PROD
+switch:
+    @if grep -qE "DB_HOST=(db|localhost|127.0.0.1|newsdc_db)" SDC/.env; then just env-prod; else just env-local; fi
+
+# Mostra qual ambiente esta ativo
+env-status:
+    @grep "DB_HOST=" SDC/.env | head -1

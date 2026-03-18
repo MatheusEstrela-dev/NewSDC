@@ -35,6 +35,7 @@
     <DecretacaoDetailModal
       :show="showDetailModal"
       :processo="selectedProcesso"
+      :loading="loadingDetail"
       @close="closeDetailModal"
       @generate-report="handleGenerateReport"
     />
@@ -50,6 +51,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import axios from 'axios';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import DocumentIcon from '@/Components/Icons/DocumentTextIcon.vue';
@@ -81,18 +83,35 @@ const emit = defineEmits(['print', 'generate-report', 'delete']);
 
 const showDetailModal = ref(false);
 const selectedProcesso = ref(null);
+const loadingDetail = ref(false);
 const showEditChoiceModal = ref(false);
 const selectedProcessoIdForEdit = ref(null);
 
-const openDetailModal = (processo) => {
+const openDetailModal = async (processo) => {
+  // Dados ja carregados via Inertia (entrega direta, como no SDC legado)
   selectedProcesso.value = processo;
   showDetailModal.value = true;
+
+  // Se totais nao foram pre-carregados, tenta carregar via API como fallback
+  if (!processo.totais) {
+    loadingDetail.value = true;
+    try {
+      const response = await axios.get(`/api/v1/decretacoes/${processo.id}`, { withCredentials: true });
+      if (response.data.success && response.data.data) {
+        selectedProcesso.value = response.data.data;
+      }
+    } catch (error) {
+      console.warn('Fallback API nao disponivel, usando dados pre-carregados:', error.message);
+    } finally {
+      loadingDetail.value = false;
+    }
+  }
 };
 
-const openDetailModalById = (id) => {
+const openDetailModalById = async (id) => {
   const processo = props.processos.find((p) => p.id === id);
   if (processo) {
-    openDetailModal(processo);
+    await openDetailModal(processo);
   }
 };
 

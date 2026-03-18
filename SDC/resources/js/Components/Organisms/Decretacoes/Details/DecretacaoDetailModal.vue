@@ -69,6 +69,9 @@ function handleClose() {
             </div>
             <div>
               <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Detalhes da Decretacao</h2>
+              <p class="text-sm text-slate-500 dark:text-slate-400">
+                Protocolo: <span class="font-semibold text-blue-600 dark:text-blue-400">{{ processo.protocolo_fide || processo.n_protocolo_fide || 'N/A' }}</span>
+              </p>
             </div>
           </div>
           <button
@@ -80,47 +83,63 @@ function handleClose() {
           </button>
         </div>
 
+        <!-- Info Rapida: Protocolo + Tipo + Reconhecimento -->
+        <div class="mt-3 flex flex-wrap items-center gap-3">
+          <span class="px-3 py-1.5 bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-semibold border border-blue-200 dark:border-blue-500/30">
+            {{ processo.protocolo_fide || processo.n_protocolo_fide || 'Sem Protocolo' }}
+          </span>
+          <span
+            class="px-2.5 py-1 text-xs font-bold rounded-md border"
+            :class="tipoReconhecimentoBadge.class"
+          >
+            {{ tipoReconhecimentoBadge.label }}
+          </span>
+          <span v-if="processo.data_entrada_formatada" class="text-sm text-slate-500 dark:text-slate-400">
+            Entrada: {{ processo.data_entrada_formatada }}
+          </span>
+          <span v-if="processo.vigente" class="px-2 py-1 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300 rounded text-xs font-medium">
+            Vigente
+          </span>
+          <span v-else-if="processo.dias_restantes === 0" class="px-2 py-1 bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 rounded text-xs font-medium">
+            Vencido
+          </span>
+        </div>
+
         <!-- Tipo Desastre -->
         <div class="mt-4 p-4 bg-white dark:bg-slate-700/30 rounded-xl border border-slate-200 dark:border-slate-600/30 shadow-sm">
           <div class="flex items-center gap-3">
             <ExclamationTriangleIcon class="w-5 h-5 text-amber-500 dark:text-amber-400 flex-shrink-0" />
-            <span class="text-slate-800 dark:text-white font-medium">{{ processo.tipo_desastre?.nome || 'N/A' }}</span>
-            <span
-              class="px-2.5 py-1 text-xs font-bold rounded-md border"
-              :class="tipoReconhecimentoBadge.class"
-            >
-              {{ tipoReconhecimentoBadge.label }}
-            </span>
+            <span class="text-slate-800 dark:text-white font-medium">{{ processo.tipo_desastre_info?.nome || processo.tipo_desastre?.nome || processo.tipo_desastre_nome || 'N/A' }}</span>
           </div>
           <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-sm">
             <div>
               <span class="text-slate-500 dark:text-slate-400">COBRADE:</span>
-              <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre?.cobrade || 'N/A' }}</span>
+              <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre_info?.cobrade || processo.tipo_desastre?.cobrade || processo.tipo_desastre_cobrade || 'N/A' }}</span>
             </div>
             <div>
               <span class="text-slate-500 dark:text-slate-400">Categoria:</span>
-              <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre?.categoria || 'N/A' }}</span>
+              <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre_info?.categoria || processo.tipo_desastre?.categoria || 'N/A' }}</span>
             </div>
             <div>
               <span class="text-slate-500 dark:text-slate-400">Grupo:</span>
-              <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre?.grupo || 'N/A' }}</span>
+              <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre_info?.grupo || processo.tipo_desastre?.grupo || 'N/A' }}</span>
             </div>
             <div>
               <span class="text-slate-500 dark:text-slate-400">Subgrupo:</span>
-              <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre?.subgrupo || 'N/A' }}</span>
+              <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre_info?.subgrupo || processo.tipo_desastre?.subgrupo || 'N/A' }}</span>
             </div>
             <div>
               <span class="text-slate-500 dark:text-slate-400">Tipo:</span>
-              <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre?.tipo || 'N/A' }}</span>
+              <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre_info?.tipo || processo.tipo_desastre?.tipo || 'N/A' }}</span>
             </div>
             <div>
               <span class="text-slate-500 dark:text-slate-400">Subtipo:</span>
-              <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre?.subtipo || 'N/A' }}</span>
+              <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre_info?.subtipo || processo.tipo_desastre?.subtipo || 'N/A' }}</span>
             </div>
           </div>
-          <div v-if="processo.tipo_desastre?.definicao" class="mt-2 text-sm">
+          <div v-if="processo.tipo_desastre_info?.definicao || processo.tipo_desastre?.definicao" class="mt-2 text-sm">
             <span class="text-slate-500 dark:text-slate-400">Definicao:</span>
-            <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre.definicao }}</span>
+            <span class="ml-1 text-slate-700 dark:text-slate-200">{{ processo.tipo_desastre_info?.definicao || processo.tipo_desastre?.definicao }}</span>
           </div>
         </div>
       </div>
@@ -150,7 +169,22 @@ function handleClose() {
 
       <!-- Tab Content -->
       <div class="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900/50">
+        <!-- Loading Skeleton -->
+        <div v-if="loading" class="space-y-4">
+          <div class="animate-pulse space-y-4">
+            <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
+            <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+            <div class="grid grid-cols-2 gap-4 mt-6">
+              <div class="h-24 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+              <div class="h-24 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+              <div class="h-24 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+              <div class="h-24 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+            </div>
+          </div>
+        </div>
+
         <Transition
+          v-else
           mode="out-in"
           enter-active-class="transition-opacity duration-200"
           enter-from-class="opacity-0"

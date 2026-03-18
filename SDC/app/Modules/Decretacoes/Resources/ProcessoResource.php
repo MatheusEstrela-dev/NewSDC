@@ -56,10 +56,19 @@ class ProcessoResource extends JsonResource
             'vigente' => $this->isVigente(),
             'proximo_vencer' => $this->isProximoVencer(),
 
-            // Desastre
+            // Desastre - dados basicos
             'tipo_desastre_id' => $this->safeGetInt('tipo_desastre_id'),
             'tipo_desastre_nome' => $this->safeGet('tipo_desastre_nome') ?? $this->safeGet('tipo_desastre'),
             'tipo_desastre_cobrade' => $this->getTipoDesastreCobrade(),
+
+            // Desastre - dados completos (quando carregados)
+            'tipo_desastre' => $this->safeGet('tipo_desastre_completo'),
+
+            // Totais de desastres (quando carregados)
+            'totais' => $this->safeGet('totais'),
+
+            // Pedidos de ajuda humanitaria (quando carregados)
+            'pedidos_ah' => $this->formatPedidosAh(),
 
             // Outros campos
             'reconhecimento' => $this->safeGet('reconhecimento'),
@@ -94,13 +103,19 @@ class ProcessoResource extends JsonResource
             'processo' => $this->safeGet('processo'),
             'tipo_decreto' => $this->safeGet('tipo_decreto'),
             'status' => $this->safeGet('status'),
+            'reconhecimento' => $this->safeGet('reconhecimento'),
             'protocolo_fide' => $this->safeGet('n_protocolo_fide'),
+            'n_protocolo_fide' => $this->safeGet('n_protocolo_fide'),
+            'data_entrada' => $this->formatDate('data_entrada'),
             'data_entrada_formatada' => $this->formatDate('data_entrada', 'd/m/Y'),
+            'data_vencimento' => $this->getDataVencimento()?->format('Y-m-d'),
             'data_vencimento_formatada' => $this->getDataVencimento()?->format('d/m/Y'),
             'dias_restantes' => $this->getDiasRestantes(),
             'vigente' => $this->isVigente(),
             'proximo_vencer' => $this->isProximoVencer(),
             'tipo_desastre_nome' => $this->safeGet('tipo_desastre_nome') ?? $this->safeGet('tipo_desastre'),
+            'tipo_desastre_cobrade' => $this->getTipoDesastreCobrade(),
+            'analista' => $this->safeGet('analista'),
             'municipios_count' => $this->relationLoaded('municipios') ? $this->municipios->count() : 0,
         ];
     }
@@ -293,5 +308,40 @@ class ProcessoResource extends JsonResource
         } catch (\Throwable) {
             return [];
         }
+    }
+
+    /**
+     * Formata pedidos de ajuda humanitaria para o frontend.
+     *
+     * DESTINO: Tab de Pedidos AH no modal de detalhes
+     *
+     * @return array Lista de pedidos formatados
+     */
+    protected function formatPedidosAh(): array
+    {
+        $pedidosAh = $this->safeGet('pedidos_ah');
+
+        if (!$pedidosAh || !is_iterable($pedidosAh)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($pedidosAh as $codigo => $items) {
+            if (!is_iterable($items)) {
+                continue;
+            }
+            foreach ($items as $item) {
+                $result[] = [
+                    'id' => $codigo,
+                    'numero' => $item['codigo'] ?? $codigo,
+                    'tipo' => $item['descricao_item'] ?? 'Ajuda Humanitaria',
+                    'status' => $item['status'] ?? 'N/A',
+                    'tp_item' => $item['tp_item'] ?? null,
+                    'quantidade' => $item['total_qtd'] ?? 0,
+                ];
+            }
+        }
+
+        return $result;
     }
 }

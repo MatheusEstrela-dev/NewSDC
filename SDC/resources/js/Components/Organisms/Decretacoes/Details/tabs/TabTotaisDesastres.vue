@@ -89,52 +89,23 @@ function setViewMode(mode) {
     selectedMunicipioId.value = municipiosDisponiveis.value[0].municipio_id;
   }
 }
+
+const dhDetails = computed(() => {
+  const dh = totaisSelecionados.value?.danos_humanos || {};
+  return {
+    obitos: dh.obitos || 0,
+    feridos: dh.feridos || 0,
+    desalojados: dh.desalojados || 0,
+    desabrigados: dh.desabrigados || 0,
+    desaparecidos: dh.desaparecidos || 0,
+    outros_afetados: dh.outros_afetados || 0,
+  };
+});
 </script>
 
 <template>
   <div class="space-y-6">
-    <!-- Toggle View Mode -->
-    <div class="flex items-center gap-2">
-      <button
-        type="button"
-        class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all"
-        :class="viewMode === 'geral'
-          ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30'
-          : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 border border-transparent'"
-        @click="setViewMode('geral')"
-      >
-        <GlobeAmericasIcon class="w-4 h-4" />
-        Total Geral
-      </button>
-      <button
-        v-if="municipiosDisponiveis.length > 0"
-        type="button"
-        class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all"
-        :class="viewMode === 'municipio'
-          ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30'
-          : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 border border-transparent'"
-        @click="setViewMode('municipio')"
-      >
-        <MapPinIcon class="w-4 h-4" />
-        Por Municipio
-      </button>
-    </div>
-
-    <!-- Municipio Selector -->
-    <div v-if="viewMode === 'municipio' && municipiosDisponiveis.length > 0" class="w-full md:w-64">
-      <select
-        v-model="selectedMunicipioId"
-        class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      >
-        <option
-          v-for="mun in municipiosDisponiveis"
-          :key="mun.municipio_id"
-          :value="mun.municipio_id"
-        >
-          {{ mun.municipio_nome }}
-        </option>
-      </select>
-    </div>
+    <!-- Cards Grid -->
 
     <!-- Cards Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -146,11 +117,41 @@ function setViewMode(mode) {
           </div>
           <span class="text-sm font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wide">Danos Humanos</span>
         </div>
-        <div class="flex items-baseline gap-2">
-          <span class="text-slate-500 dark:text-slate-400 text-sm">Quantidade:</span>
-          <span class="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded-lg font-semibold">
-            {{ formatNumber(totalDanosHumanos) }}
-          </span>
+        <div class="space-y-4">
+          <div class="flex items-baseline gap-2">
+            <span class="text-slate-500 dark:text-slate-400 text-sm">Quantidade Total:</span>
+            <span class="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded-lg font-bold">
+              {{ formatNumber(totalDanosHumanos) }}
+            </span>
+          </div>
+
+          <!-- Detailed human damage -->
+          <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+            <div class="flex flex-col">
+              <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Óbitos</span>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatNumber(dhDetails.obitos) }}</span>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Feridos</span>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatNumber(dhDetails.feridos) }}</span>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Desalojados</span>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatNumber(dhDetails.desalojados) }}</span>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Desabrigados</span>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatNumber(dhDetails.desabrigados) }}</span>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Desaparecidos</span>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatNumber(dhDetails.desaparecidos) }}</span>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Outros Afetados</span>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatNumber(dhDetails.outros_afetados) }}</span>
+            </div>
+          </div>
         </div>
       </div>
 
