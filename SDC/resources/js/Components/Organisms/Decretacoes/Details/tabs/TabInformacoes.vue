@@ -77,13 +77,14 @@ const municipiosFormatted = computed(() => {
 
     <!-- Status e Analista -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <!-- Status do Processo -->
+      <!-- Status do Processo (Reconhecimento) -->
       <div class="p-4 bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm">
         <div class="flex items-center gap-3 mb-2">
           <DocumentTextIcon class="w-5 h-5 text-slate-500 dark:text-slate-400" />
           <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Status do Processo</span>
         </div>
-        <StatusBadge :status="processo.status" />
+        <StatusBadge v-if="processo.reconhecimento" :status="processo.reconhecimento" />
+        <span v-else class="text-slate-500 dark:text-slate-400 text-sm">N/A</span>
       </div>
 
       <!-- Analista Responsavel -->

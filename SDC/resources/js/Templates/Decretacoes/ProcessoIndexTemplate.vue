@@ -72,6 +72,7 @@
     <ProcessoTable
       v-else-if="viewMode === 'table' && !isMobile"
       :processos="processos"
+      :total="pagination?.total"
       :can-edit="canEdit"
       :can-delete="canDelete"
       @view="(id) => $emit('view', id)"

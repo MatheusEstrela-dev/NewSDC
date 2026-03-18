@@ -256,7 +256,7 @@ class EntradaProcessoService
      */
     public function loadMunicipiosWithDesastreData(Processo $processo): array
     {
-        return $this->queryService->loadMunicipiosWithDesastreData($processo);
+        return $this->queryService->loadMunicipiosWithDesastreData($processo)->toArray();
     }
 
     // =========================================================================

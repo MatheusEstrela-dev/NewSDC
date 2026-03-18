@@ -74,9 +74,8 @@ class ProcessoFilter
                 $q->where('analista', 'like', "%$search%")
                   ->orWhere('n_protocolo_fide', 'like', "%$search%")
                   ->orWhereHas('municipios', function ($q2) use ($search) {
-                      $q2->where('cedec_municipio.p_nome', 'like', "%$search%")
-                         ->orWhere('cedec_municipio.nome', 'like', "%$search%")
-                         ->orWhere('cedec_municipio.id', 'like', "%$search%");
+                      $q2->where('municipios.nome', 'like', "%$search%")
+                         ->orWhere('municipios.codigo_ibge', 'like', "%$search%");
                   });
             });
         }
@@ -196,7 +195,7 @@ class ProcessoFilter
     {
         if ($this->request->filled('municipio_id')) {
             $this->builder->whereHas('municipios', function ($q) {
-                $q->where('cedec_municipio.id', $this->request->input('municipio_id'));
+                $q->where('municipios.id', $this->request->input('municipio_id'));
             });
         }
 

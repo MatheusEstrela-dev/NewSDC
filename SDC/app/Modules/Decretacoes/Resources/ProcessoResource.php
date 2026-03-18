@@ -63,6 +63,7 @@ class ProcessoResource extends JsonResource
 
             // Desastre - dados completos (quando carregados)
             'tipo_desastre' => $this->safeGet('tipo_desastre_completo'),
+            'tipo_desastre_info' => $this->safeGet('tipo_desastre_completo'),
 
             // Totais de desastres (quando carregados)
             'totais' => $this->safeGet('totais'),
@@ -71,17 +72,17 @@ class ProcessoResource extends JsonResource
             'pedidos_ah' => $this->formatPedidosAh(),
 
             // Outros campos
+            'analista' => $this->safeGet('analista'),
             'reconhecimento' => $this->safeGet('reconhecimento'),
             'observacoes' => $this->safeGet('observacoes'),
             'orgao_responsavel_id' => $this->safeGetInt('orgao_responsavel_id'),
+            'n_protocolo_fide' => $this->safeGet('n_protocolo_fide'),
+            'processo_inserido_sei' => $this->safeGet('processo_inserido_sei'),
 
-            // Relacionamentos - carregados sob demanda
-            'municipios' => $this->whenLoaded('municipios', fn() => $this->mapMunicipios()),
-            'desastres' => $this->whenLoaded('desastres', fn() => $this->mapDesastres()),
-            'municipios_count' => $this->when(
-                $this->relationLoaded('municipios'),
-                fn() => $this->municipios->count()
-            ),
+            // Relacionamentos - sempre incluidos (Model tem $with)
+            'municipios' => $this->mapMunicipios(),
+            'desastres' => $this->mapDesastres(),
+            'municipios_count' => $this->municipios ? $this->municipios->count() : 0,
 
             // Timestamps
             'created_at' => $this->created_at?->toIso8601String(),

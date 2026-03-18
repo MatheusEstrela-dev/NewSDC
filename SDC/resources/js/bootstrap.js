@@ -8,6 +8,7 @@ export const initAxios = async () => {
     const axios = (await import('axios')).default;
     window.axios = axios;
     window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+    window.axios.defaults.withCredentials = true;
 
     // Interceptor para Rate Limit (429)
     window.axios.interceptors.response.use(

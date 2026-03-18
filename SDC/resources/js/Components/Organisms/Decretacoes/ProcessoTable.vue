@@ -9,8 +9,8 @@
         </h3>
         <p class="text-xs text-slate-400 mt-0.5 hidden sm:block">{{ subtitle }}</p>
       </div>
-      <span class="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-xs font-bold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded border border-slate-200 dark:border-slate-600/50 flex-shrink-0 ml-2">
-        {{ processos.length }}
+      <span class="bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 text-xs font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-blue-200 dark:border-blue-500/30 flex-shrink-0 ml-2">
+        {{ total ?? processos.length }}
       </span>
     </div>
 
@@ -154,6 +154,10 @@ const props = defineProps({
   processos: {
     type: Array,
     default: () => [],
+  },
+  total: {
+    type: Number,
+    default: null,
   },
   canEdit: {
     type: Boolean,
