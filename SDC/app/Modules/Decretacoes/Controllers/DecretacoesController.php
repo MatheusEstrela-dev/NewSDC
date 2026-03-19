@@ -107,7 +107,7 @@ class DecretacoesController extends Controller
         }
 
         return Inertia::render('Decretacoes/ProcessoShow', [
-            'processo' => ProcessoResource::make($processo),
+            'processo' => ProcessoResource::make($processo)->resolve(),
         ]);
     }
 
@@ -153,7 +153,7 @@ class DecretacoesController extends Controller
         $filterOptions = $this->processoService->getFilterOptions();
 
         return Inertia::render('Decretacoes/ProcessoEdit', [
-            'processo'      => ProcessoResource::make($processo),
+            'processo'      => ProcessoResource::make($processo)->resolve(),
             'tiposDesastre' => $filterOptions['tipos_desastre'] ?? [],
             'cobrades'      => $filterOptions['tipos_desastre'] ?? [],
             'municipios'    => $filterOptions['municipios'] ?? [],

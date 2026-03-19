@@ -87,16 +87,19 @@ class ProcessoExportService
 
     private function buildBaseExportRow(Processo $entrada, ?object $municipio): array
     {
+        $lat = $municipio?->latitude;
+        $lng = $municipio?->longitude;
+
         return [
             'id' => $entrada->id,
             'uf' => 'MG',
-            'municipio' => $municipio?->nome ?? $municipio?->p_nome,
-            'codigo_ibge' => $municipio?->Codmundv,
-            'macroregiao' => $municipio?->macroregiao,
-            'latitude' => $municipio?->latitude,
-            'longitude' => $municipio?->longitude,
-            'latitude_dec' => $municipio?->latitude_dec,
-            'longitude_dec' => $municipio?->longitude_dec,
+            'municipio' => $municipio?->nome,
+            'codigo_ibge' => $municipio?->codigo_ibge,
+            'macroregiao' => $municipio?->mesorregiao ?? $municipio?->regiao,
+            'latitude' => $lat !== null ? (string) intval($lat) . '.' : null,
+            'longitude' => $lng !== null ? (string) intval($lng) . '.' : null,
+            'latitude_dec' => $lat !== null ? (float) $lat : null,
+            'longitude_dec' => $lng !== null ? (float) $lng : null,
             'data_registro' => $entrada->data_entrada,
             'data_criacao' => $entrada->created_at,
             'deletado' => $entrada->trashed(),

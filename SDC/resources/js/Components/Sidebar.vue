@@ -276,6 +276,16 @@
         >
           Permissionamento
         </NavItem>
+
+        <NavItem
+          v-if="canSeeLogs"
+          :href="route('log-viewer.index')"
+          :active="isRouteActive('log-viewer.*')"
+          icon="document"
+          :collapsed="isCollapsed"
+        >
+          Logs
+        </NavItem>
       </div>
 
       <!-- INTEGRACOES -->
@@ -290,6 +300,8 @@
           API Docs
         </NavItem>
       </div>
+
+
     </nav>
 
     <!-- Gradiente inferior -->
@@ -365,6 +377,7 @@ const _activeRoutes = computed(() => {
     'plancon.*': route().current('plancon.*'),
     'inmet.*': route().current('inmet.*'),
     'admin.permissions.*': route().current('admin.permissions.*'),
+    'log-viewer.*': route().current('log-viewer.*'),
   };
 });
 
@@ -465,7 +478,17 @@ const canSeeVistoria = computed(() => {
 
 // ADMINISTRACAO
 const canSeeAdminSection = computed(() => {
-  return hasPermission(['users.view', 'roles.view', 'permissions.view']);
+  return hasPermission(['users.view', 'roles.view', 'permissions.view', 'system.logs.view']);
+});
+
+const canSeeLogs = computed(() => {
+  return hasPermission(['system.logs.view']);
+});
+
+// DEBUG - apenas em dev ou super admin
+const canSeeDebug = computed(() => {
+  const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
+  return isDev || _isSuper.value;
 });
 
 const openSubMenus = ref({

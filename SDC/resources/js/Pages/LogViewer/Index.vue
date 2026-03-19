@@ -1,72 +1,33 @@
 <script setup>
-import { ref, watch, computed } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { ref, onMounted, watch, computed } from 'vue'
+import { Head } from '@inertiajs/vue3'
 import SidebarOnlyLayout from '@/Layouts/SidebarOnlyLayout.vue'
 import LogViewerTopbar from '@/Components/Molecules/LogViewer/LogViewerTopbar.vue'
 import LogViewerTable from '@/Components/Organisms/LogViewer/LogViewerTable.vue'
 import LogViewerDetail from '@/Components/Organisms/LogViewer/LogViewerDetail.vue'
+import axios from 'axios'
 
 defineOptions({ layout: SidebarOnlyLayout })
 
-const props = defineProps({
-    initialLogs: {
-        type: Array,
-        default: () => []
-    },
-    initialStats: {
-        type: Object,
-        default: () => ({})
-    },
-    availableLayers: {
-        type: Array,
-        default: () => []
-    },
-    availableLevels: {
-        type: Array,
-        default: () => []
-    },
-    availableTypes: {
-        type: Array,
-        default: () => []
-    }
-})
+const BACKEND_API = import.meta.env.VITE_SDC_API_URL || 'http://localhost:8000'
 
+const logs = ref([])
+const layers = ref([])
+const levels = ref([])
+const statistics = ref({})
 const loading = ref(false)
 const selectedLog = ref(null)
 const showDetail = ref(false)
 
-const urlParams = new URLSearchParams(window.location.search)
-
 const filters = ref({
-    search: urlParams.get('search') || '',
-    level: urlParams.get('level') || '',
-    layer: urlParams.get('layer') || '',
-    type: urlParams.get('type') || 'laravel',
-    date_from: urlParams.get('date_from') || '',
-    date_to: urlParams.get('date_to') || '',
-    errors_only: urlParams.get('errors_only') === '1',
-    limit: parseInt(urlParams.get('limit')) || 100
+    search: '',
+    level: '',
+    layer: '',
+    date_from: '',
+    date_to: '',
+    errors_only: false,
+    limit: 100
 })
-
-// Funções de Gestão (Engrenagem)
-const handleAction = (action, params = {}) => {
-    loading.value = true
-    
-    if (action === 'download') {
-        const url = window.route('log-viewer.download', { file: params.file || 'laravel.log' })
-        window.open(url, '_blank')
-        loading.value = false
-        return
-    }
-
-    router.post(window.route(`log-viewer.${action}`), params, {
-        onEnter: () => loading.value = true,
-        onFinish: () => {
-            loading.value = false
-            reloadData()
-        }
-    })
-}
 
 const debounce = (fn, delay) => {
     let timeoutId
@@ -76,28 +37,53 @@ const debounce = (fn, delay) => {
     }
 }
 
-// ÚNICA função para carregar dados via backend
-const reloadData = () => {
+const loadLogs = async () => {
     loading.value = true
-    const query = { ...filters.value }
-    if (query.errors_only) {
-        query.errors_only = '1'
-    } else {
-        delete query.errors_only
-    }
-    
-    Object.keys(query).forEach(key => {
-        if (query[key] === '' || query[key] === null) {
-            delete query[key]
-        }
-    })
+    try {
+        const params = new URLSearchParams()
+        if (filters.value.level) params.append('level', filters.value.level)
+        if (filters.value.layer) params.append('layer', filters.value.layer)
+        if (filters.value.search) params.append('search', filters.value.search)
+        if (filters.value.date_from) params.append('date_from', filters.value.date_from)
+        if (filters.value.date_to) params.append('date_to', filters.value.date_to)
+        if (filters.value.errors_only) params.append('errors_only', '1')
+        params.append('limit', filters.value.limit)
 
-    router.get(window.route('log-viewer.index'), query, {
-        preserveState: true,
-        preserveScroll: true,
-        only: ['initialLogs', 'initialStats'],
-        onFinish: () => loading.value = false
-    })
+        const response = await axios.get(`${BACKEND_API}/api/v1/logs?${params.toString()}`)
+        logs.value = response.data.logs?.data || response.data.logs || []
+    } catch (error) {
+        console.error('Erro ao carregar logs:', error)
+        logs.value = []
+    } finally {
+        loading.value = false
+    }
+}
+
+const loadStats = async () => {
+    try {
+        const response = await axios.get(`${BACKEND_API}/api/v1/logs/stats`)
+        statistics.value = response.data.stats || {}
+    } catch (error) {
+        statistics.value = {}
+    }
+}
+
+const loadLayers = async () => {
+    try {
+        const response = await axios.get(`${BACKEND_API}/api/v1/logs/layers`)
+        layers.value = response.data.layers || []
+    } catch (error) {
+        layers.value = []
+    }
+}
+
+const loadLevels = async () => {
+    try {
+        const response = await axios.get(`${BACKEND_API}/api/v1/logs/levels`)
+        levels.value = response.data.levels || []
+    } catch (error) {
+        levels.value = ['debug', 'info', 'warning', 'error', 'critical']
+    }
 }
 
 const selectLog = (log) => {
@@ -105,24 +91,22 @@ const selectLog = (log) => {
     showDetail.value = true
 }
 
-const debouncedReload = debounce(() => reloadData(), 300)
+const debouncedLoadLogs = debounce(() => loadLogs(), 300)
 
-watch(() => filters.value.search, () => debouncedReload())
-watch(() => filters.value.level, () => reloadData())
-watch(() => filters.value.layer, () => reloadData())
-watch(() => filters.value.type, () => reloadData())
-watch(() => filters.value.errors_only, () => reloadData())
-watch(() => filters.value.date_from, () => reloadData())
-watch(() => filters.value.date_to, () => reloadData())
+watch(() => filters.value.search, () => debouncedLoadLogs())
+watch(() => filters.value.level, () => loadLogs())
+watch(() => filters.value.layer, () => loadLogs())
+watch(() => filters.value.errors_only, () => loadLogs())
 
-const errorCount = computed(() => {
-    const byLevel = props.initialStats?.by_level || {}
-    return (byLevel.error || 0) + (byLevel.critical || 0) + (byLevel.emergency || 0) + (byLevel.alert || 0)
-})
-const totalCount = computed(() => props.initialStats?.total_logs || 0)
-const todayCount = computed(() => {
-    const today = new Date().toISOString().split('T')[0]
-    return props.initialStats?.by_day?.[today] || 0
+const errorCount = computed(() => statistics.value?.errors_today || 0)
+const totalCount = computed(() => statistics.value?.total || 0)
+const todayCount = computed(() => statistics.value?.today || 0)
+
+onMounted(() => {
+    loadLayers()
+    loadLevels()
+    loadStats()
+    loadLogs()
 })
 </script>
 
@@ -147,30 +131,57 @@ const todayCount = computed(() => {
                 </span>
             </div>
 
-            <div class="ml-auto flex items-center gap-6">
-                <!-- Data Range Info (Read-only or small indicators if needed) -->
-                <div v-if="filters.date_from || filters.date_to" class="text-[10px] text-gray-500 flex gap-2">
-                    <span v-if="filters.date_from">Desde: {{ filters.date_from }}</span>
-                    <span v-if="filters.date_to">Até: {{ filters.date_to }}</span>
-                </div>
+            <!-- Filtro por Layer -->
+            <div class="ml-auto flex items-center gap-3">
+                <select
+                    v-model="filters.layer"
+                    class="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-gray-300 focus:ring-1 focus:ring-blue-500"
+                >
+                    <option value="">Todas as camadas</option>
+                    <option v-for="layer in layers" :key="layer" :value="layer">{{ layer }}</option>
+                </select>
+
+                <!-- Date Range -->
+                <input
+                    type="date"
+                    v-model="filters.date_from"
+                    @change="loadLogs"
+                    class="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-gray-300"
+                    placeholder="Data inicial"
+                />
+                <span class="text-gray-600">-</span>
+                <input
+                    type="date"
+                    v-model="filters.date_to"
+                    @change="loadLogs"
+                    class="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-gray-300"
+                    placeholder="Data final"
+                />
+
+                <!-- Errors Only -->
+                <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        v-model="filters.errors_only"
+                        class="rounded bg-gray-800 border-gray-600 text-red-500"
+                    />
+                    Apenas erros
+                </label>
             </div>
         </div>
 
-        <!-- Topbar com Level + Search + Gestão -->
+        <!-- Topbar com Level + Search -->
         <LogViewerTopbar
             v-model:filters="filters"
-            :stats="initialStats"
+            :stats="statistics"
             :loading="loading"
-            :levels="availableLevels"
-            :layers="availableLayers"
-            :types="availableTypes"
-            @refresh="reloadData"
-            @action="handleAction"
+            :levels="levels"
+            @refresh="loadLogs"
         />
 
         <!-- Tabela -->
         <LogViewerTable
-            :logs="initialLogs"
+            :logs="logs"
             :loading="loading"
             :filters="filters"
             @select-log="selectLog"
