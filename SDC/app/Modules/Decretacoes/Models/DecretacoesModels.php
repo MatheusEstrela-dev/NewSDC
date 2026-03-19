@@ -50,6 +50,13 @@ class Processo extends Model
         'area_afetada_geom',
         'orgao_responsavel_id',
         'created_by',
+        // Campos adicionais para edicao
+        'redec_id',
+        'n_decreto_estadual',
+        'n_edicao_domg',
+        'data_decreto_estadual',
+        'data_publicacao_domg',
+        'data_portaria_federal',
     ];
 
     protected $casts = [
@@ -59,6 +66,7 @@ class Processo extends Model
         'data_publicacao_mg' => 'date',
         'prazo_vigencia' => 'integer',
         'tipo_desastre_id' => 'integer',
+        'redec_id' => 'integer',
     ];
 
     protected $appends = [

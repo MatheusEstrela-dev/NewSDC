@@ -28,12 +28,22 @@ class HexagonDecretoResource extends JsonResource
         $diasVigenciaRestante = null;
 
         if ($this->data_publicacao_mg && $this->prazo_vigencia) {
-            $dataExpiracaoCarbon = Carbon::parse($this->data_publicacao_mg)
-                                  ->addDays($this->prazo_vigencia);
+            try {
+                $dataPub = $this->data_publicacao_mg;
+                if ($dataPub instanceof Carbon) {
+                    $dataExpiracaoCarbon = $dataPub->copy()->addDays($this->prazo_vigencia);
+                } elseif (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})/', $dataPub, $m)) {
+                    $dataExpiracaoCarbon = Carbon::createFromFormat('d/m/Y', $m[0])->addDays($this->prazo_vigencia);
+                } else {
+                    $dataExpiracaoCarbon = Carbon::parse($dataPub)->addDays($this->prazo_vigencia);
+                }
 
-            $dataExpiracao = $dataExpiracaoCarbon->format('Y-m-d');
-
-            $diasVigenciaRestante = Carbon::now()->diffInDays($dataExpiracaoCarbon, false);
+                $dataExpiracao = $dataExpiracaoCarbon->format('Y-m-d');
+                $diasVigenciaRestante = Carbon::now()->diffInDays($dataExpiracaoCarbon, false);
+            } catch (\Throwable) {
+                $dataExpiracao = null;
+                $diasVigenciaRestante = null;
+            }
         }
 
         return [

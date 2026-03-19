@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Filters;
 
+use App\Models\Municipio;
 use App\Modules\Decretacoes\Models\DecretoMunicipio;
 use App\Modules\Decretacoes\Models\Processo;
 use Illuminate\Database\Eloquent\Builder;
@@ -251,14 +252,14 @@ class ProcessoFilter
 
         return [
             'status_options' => \App\Modules\Decretacoes\Enums\StatusProcesso::toSelectOptions(),
-            'analistas' => \App\Modules\Decretacoes\Enums\MockAnalista::toSelectOptions(),
+            'analistas' => self::getAnalistasOptions(),
             'reconhecimentos' => Processo::distinct('reconhecimento')
                 ->whereNotNull('reconhecimento')
                 ->where('reconhecimento', '!=', '')
                 ->pluck('reconhecimento')
                 ->sort()
                 ->values(),
-            'municipios' => \App\Modules\Decretacoes\Enums\MockMunicipio::toSelectOptions(),
+            'municipios' => self::getMunicipiosOptions(),
             'redecs' => \App\Modules\Decretacoes\Enums\MockRedec::toSelectOptions(),
             'situacoes_anormalidade' => [
                 ['value' => 'ECP', 'label' => 'ECP - Estado de Calamidade Publica'],
@@ -296,6 +297,38 @@ class ProcessoFilter
             'tipos_desastre_hierarquico' => self::buildCobradeHierarchy($tiposDesastre),
             'cobrade_quick_filters' => self::getCobradeQuickFilters(),
         ];
+    }
+
+    /**
+     * Get municipios from database for select options.
+     */
+    protected static function getMunicipiosOptions(): array
+    {
+        return Municipio::query()
+            ->select('id', 'nome', 'codigo_ibge')
+            ->orderBy('nome')
+            ->get()
+            ->map(fn ($m) => [
+                'id' => $m->id,
+                'label' => $m->nome,
+                'codigo_ibge' => $m->codigo_ibge,
+            ])
+            ->toArray();
+    }
+
+    /**
+     * Get analistas from database for select options.
+     */
+    protected static function getAnalistasOptions(): array
+    {
+        return Processo::query()
+            ->distinct()
+            ->whereNotNull('analista')
+            ->where('analista', '!=', '')
+            ->pluck('analista')
+            ->sort()
+            ->values()
+            ->toArray();
     }
 
     /**

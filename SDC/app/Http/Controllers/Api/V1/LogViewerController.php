@@ -279,7 +279,7 @@ class LogViewerController extends Controller
      *     path="/api/v1/logs/recent",
      *     summary="Logs recentes (Redis)",
      *     description="Retorna logs recentes armazenados no Redis (tempo real)",
-     *     operationId="logsRecent",
+     *     operationId="logsRecentV1",
      *     tags={"Log Viewer V1"},
      *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(

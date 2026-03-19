@@ -1,6 +1,6 @@
 <template>
     <div>
-        <Head :title="`Editar Processo - ${processo?.n_protocolo_fide || 'Processo'}`" />
+        <Head :title="`Editar Processo - ${processo?.data?.n_protocolo_fide || processo?.n_protocolo_fide || 'Processo'}`" />
         <ProcessoCreateTemplate
           :form="form"
           :tipos-desastre="tiposDesastre"
@@ -61,40 +61,45 @@ const formatDate = (date) => {
   return d.toISOString().split('T')[0];
 };
 
+const processoData = props.processo?.data || props.processo;
+console.log('[DEBUG_ProcessoEdit] Props Processo recebido:', props.processo);
+console.log('[DEBUG_ProcessoEdit] ProcessoData resolvido:', processoData);
+
 const form = useForm({
-  tipo_desastre_id: props.processo?.tipo_desastre_id || '',
-  cobrade_id: props.processo?.tipo_desastre_id || '',
-  origem: props.processo?.processo || '',
-  municipio_id: props.processo?.municipios?.[0]?.id || '',
-  redec_id: props.processo?.redec_id || '',
-  situacao_anormalidade: props.processo?.tipo_desastre || props.processo?.situacao_anormalidade || '',
-  data_entrada: formatDate(props.processo?.data_entrada),
-  data_ocorrencia: formatDate(props.processo?.data_ocorrencia_desastre),
-  data_vencimento_decreto: formatDate(props.processo?.data_vencimento),
-  status: props.processo?.status || 'pendente',
-  analista_id: props.processo?.analista || '',
-  n_protocolo_fide: props.processo?.n_protocolo_fide || '',
-  n_decreto_municipal: props.processo?.decreto_municipal || '',
-  data_decreto_municipal: formatDate(props.processo?.data_decreto_municipal),
-  data_publicacao_decreto_municipal: formatDate(props.processo?.data_publicacao_mg),
-  prazo_vigencia_decreto: props.processo?.prazo_vigencia || '',
-  n_decreto_estadual: props.processo?.n_decreto_estadual || '',
-  data_decreto_estadual: formatDate(props.processo?.data_decreto_estadual),
-  n_edicao_domg: props.processo?.n_edicao_domg || '',
-  data_publicacao_domg: formatDate(props.processo?.data_publicacao_mg),
-  n_portaria_federal: props.processo?.portaria_reconhecimento_fed || '',
-  data_portaria_federal: formatDate(props.processo?.data_portaria_federal),
-  n_edicao_dou: props.processo?.portaria_diario_oficial || '',
-  data_publicacao_dou: formatDate(props.processo?.data_publicacao_diario),
-  n_processo_sei: props.processo?.processo_inserido_sei || '',
-  observacoes: props.processo?.observacoes || '',
+  tipo_desastre_id: processoData?.tipo_desastre_id || '',
+  cobrade_id: processoData?.cobrade_id || processoData?.tipo_desastre_id || '',
+  origem: processoData?.origem || processoData?.processo || '',
+  municipio_id: processoData?.municipio_id || processoData?.municipios?.[0]?.id || '',
+  redec_id: processoData?.redec_id || '',
+  situacao_anormalidade: processoData?.situacao_anormalidade || processoData?.tipo_desastre || '',
+  data_entrada: formatDate(processoData?.data_entrada),
+  data_ocorrencia: formatDate(processoData?.data_ocorrencia_desastre || processoData?.data_ocorrencia),
+  data_vencimento_decreto: formatDate(processoData?.data_vencimento),
+  status: processoData?.status || 'pendente',
+  analista_id: processoData?.analista || '',
+  n_protocolo_fide: processoData?.n_protocolo_fide || processoData?.protocolo_fide || '',
+  n_decreto_municipal: processoData?.decreto_municipal || '',
+  data_decreto_municipal: formatDate(processoData?.data_decreto_municipal),
+  data_publicacao_decreto_municipal: formatDate(processoData?.data_publicacao_mg),
+  prazo_vigencia_decreto: processoData?.prazo_vigencia || '',
+  n_decreto_estadual: processoData?.n_decreto_estadual || '',
+  data_decreto_estadual: formatDate(processoData?.data_decreto_estadual),
+  n_edicao_domg: processoData?.n_edicao_domg || '',
+  data_publicacao_domg: formatDate(processoData?.data_publicacao_domg || processoData?.data_publicacao_mg),
+  n_portaria_federal: processoData?.n_portaria_federal || processoData?.portaria_reconhecimento_fed || '',
+  data_portaria_federal: formatDate(processoData?.data_portaria_federal),
+  n_edicao_dou: processoData?.n_edicao_dou || processoData?.portaria_diario_oficial || '',
+  data_publicacao_dou: formatDate(processoData?.data_publicacao_diario),
+  n_processo_sei: processoData?.processo_inserido_sei || '',
+  observacoes: processoData?.observacoes || '',
 });
 
 function handleSubmit() {
-  form.put(route('decretacoes.update', props.processo.id), {
+  const pId = processoData?.id;
+  form.put(route('decretacoes.update', pId), {
     preserveScroll: true,
     onSuccess: () => {
-      router.visit(route('decretacoes.show', props.processo.id));
+      router.visit(route('decretacoes.show', pId));
     },
   });
 }

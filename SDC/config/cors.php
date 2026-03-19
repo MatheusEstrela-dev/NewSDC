@@ -23,6 +23,9 @@ return [
         'https://newsdc2027.azurewebsites.net',
         'http://localhost:3000',
         'http://localhost:5173',
+        'http://localhost:18001',
+        'http://127.0.0.1:18001',
+        '*',
     ],
 
     'allowed_origins_patterns' => [],
@@ -34,6 +37,7 @@ return [
         'Accept',
         'Origin',
         'X-CSRF-TOKEN',
+        'X-PowerBI-Token',
     ],
 
     'exposed_headers' => [

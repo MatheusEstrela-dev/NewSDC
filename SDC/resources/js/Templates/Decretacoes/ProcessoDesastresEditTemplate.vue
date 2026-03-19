@@ -100,42 +100,53 @@
                     </Text>
 
                     <!-- Campos do Desastre -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div v-if="desastre.items && desastre.items.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       <div
                         v-for="(item, iIndex) in desastre.items"
                         :key="item.id"
                       >
-                        <div
-                          v-for="(campo, fIndex) in item.campos"
-                          :key="campo.id"
-                          class="mb-2"
-                        >
-                          <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                            {{ campo.titulo }}
-                          </label>
-                          <input
-                            v-if="campo.tipo === 'number'"
-                            type="number"
-                            v-model="localMunicipios[mIndex].categorias[cIndex].desastres[dIndex].items[iIndex].campos[fIndex].valor"
-                            class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                            :placeholder="campo.titulo"
-                          />
-                          <input
-                            v-else-if="campo.tipo === 'currency'"
-                            type="text"
-                            v-model="localMunicipios[mIndex].categorias[cIndex].desastres[dIndex].items[iIndex].campos[fIndex].valor"
-                            class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                            placeholder="R$ 0,00"
-                          />
-                          <input
-                            v-else
-                            type="text"
-                            v-model="localMunicipios[mIndex].categorias[cIndex].desastres[dIndex].items[iIndex].campos[fIndex].valor"
-                            class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                            :placeholder="campo.titulo"
-                          />
+                        <template v-if="item.campos && item.campos.length > 0">
+                          <div
+                            v-for="(campo, fIndex) in item.campos"
+                            :key="campo.id"
+                            class="mb-2"
+                          >
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                              {{ campo.titulo }}
+                            </label>
+                            <input
+                              v-if="campo.tipo === 'number'"
+                              type="number"
+                              v-model="localMunicipios[mIndex].categorias[cIndex].desastres[dIndex].items[iIndex].campos[fIndex].valor"
+                              class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                              :placeholder="campo.titulo"
+                            />
+                            <input
+                              v-else-if="campo.tipo === 'currency'"
+                              type="text"
+                              v-model="localMunicipios[mIndex].categorias[cIndex].desastres[dIndex].items[iIndex].campos[fIndex].valor"
+                              class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                              placeholder="R$ 0,00"
+                            />
+                            <input
+                              v-else
+                              type="text"
+                              v-model="localMunicipios[mIndex].categorias[cIndex].desastres[dIndex].items[iIndex].campos[fIndex].valor"
+                              class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                              :placeholder="campo.titulo"
+                            />
+                          </div>
+                        </template>
+                        <div v-else class="py-2">
+                          <Text size="xs" color="muted" class="italic">Nenhum campo registrado para este sub-item.</Text>
                         </div>
                       </div>
+                    </div>
+                    <div v-else class="py-2 border-l-2 border-slate-200 dark:border-slate-700 pl-3">
+                      <Text size="sm" color="muted" class="italic flex items-center gap-2">
+                        <ExclamationTriangleIcon class="w-4 h-4" />
+                        Nenhum dado registrado para este item.
+                      </Text>
                     </div>
                   </div>
                 </div>
