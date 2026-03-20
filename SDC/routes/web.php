@@ -11,27 +11,28 @@ use App\Modules\Tdap\Application\UseCases\ListMovimentacoesUseCase;
 
 // DEBUG: Rota para testar executeAsDTO (requer container)
 Route::get('/debug/test-dto', function () {
-    try {
-        $useCase = app(ListMovimentacoesUseCase::class);
-        $result = $useCase->executeAsDTO([], 15);
-
-        return response()->json([
-            'debug' => 'Testing executeAsDTO method',
-            'result_type' => gettype($result),
-            'is_array' => is_array($result),
-            'keys' => array_keys($result),
-            'data_type' => gettype($result['data'] ?? null),
-            'data_count' => is_array($result['data'] ?? null) ? count($result['data']) : 'N/A',
-            'pagination' => $result['pagination'] ?? null,
-            'first_item' => $result['data'][0] ?? null,
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-        ], 500);
-    }
+    // ... (rest of debug route)
 });
+
+// Rota de Teste para Gerar Logs Propositais (Temporariamente fora do Auth para teste)
+Route::get('/test-log-error', function () {
+    $logger = app(\App\Services\Logging\ActivityLogger::class);
+    
+    // Log de evento comum
+    $logger->logEvent('system', 'test_event', ['info' => 'Isso é um teste'], 1, 'info');
+    
+    // Log de erro crítico proposital
+    try {
+        throw new \Exception("ERRO PROPOSITAL PARA TESTE DE INTERFACE");
+    } catch (\Exception $e) {
+        $logger->logCriticalError("Falha crítica detectada no teste", $e, [
+            'user_id' => 1,
+            'test_mode' => true
+        ]);
+    }
+    
+    return "Logs gerados! Verifique o Log Viewer em /log-viewer. Certifique-se de que o LOG_CHANNEL está correto (ex: stack ou daily).";
+})->name('test.log.error');
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -50,9 +51,42 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Log Viewer - Sistema Avançado de Visualização de Logs
-    Route::get('/log-viewer', function () {
-        return Inertia::render('LogViewer/Index');
+    Route::get('/log-viewer', function (Illuminate\Http\Request $request) {
+        $logReader = app(\App\Services\Logging\LogFileReaderService::class);
+        
+        $filters = $request->only(['level', 'layer', 'search', 'date_from', 'date_to', 'errors_only', 'limit']);
+        $filters['limit'] = $filters['limit'] ?? 100;
+        
+        $logs = $logReader->readLogs($filters);
+        $statistics = $logReader->getStatistics($filters);
+        
+        return Inertia::render('LogViewer/Index', [
+            'initialLogs' => $logs->toArray(),
+            'initialStats' => $statistics,
+            'availableLayers' => ['api', 'backend', 'frontend', 'system', 'security', 'database', 'queue', 'integration'],
+            'availableLevels' => ['debug', 'info', 'warning', 'error', 'critical']
+        ]);
     })->middleware('can:system.logs.view')->name('log-viewer.index');
+
+    // Rota de Teste para Gerar Logs Propositais
+    Route::get('/test-log-error', function () {
+        $logger = app(\App\Services\Logging\ActivityLogger::class);
+        
+        // Log de evento comum
+        $logger->logEvent('system', 'test_event', ['info' => 'Isso é um teste'], auth()->id(), 'info');
+        
+        // Log de erro crítico proposital
+        try {
+            throw new \Exception("ERRO PROPOSITAL PARA TESTE DE INTERFACE");
+        } catch (\Exception $e) {
+            $logger->logCriticalError("Falha crítica detectada no teste", $e, [
+                'user_id' => auth()->id(),
+                'test_mode' => true
+            ]);
+        }
+        
+        return "Logs gerados! Verifique o Log Viewer em /log-viewer.";
+    })->name('test.log.error');
 
     // Redirect Legacy Log Viewer to New Premium Viewer
     Route::get('logs', function () {

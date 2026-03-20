@@ -7,6 +7,7 @@ use App\Services\Logging\ActivityLogger;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -33,8 +34,7 @@ class Handler extends ExceptionHandler
      * @var array<int, class-string<\Throwable>>
      */
     protected $dontReport = [
-            // Não reportar validações (muito comum)
-        ValidationException::class,
+        // Capturar absolutamente TUDO: removido ValidationException
     ];
 
     /**
@@ -94,6 +94,60 @@ class Handler extends ExceptionHandler
                 'url' => request()?->fullUrl(),
             ]);
         })->stop();
+
+        // Log especifico para erros de SQL (QueryException)
+        $this->reportable(function (QueryException $e) {
+            $this->logQueryException($e);
+        });
+    }
+
+    /**
+     * Log detalhado de erros SQL com query e bindings
+     */
+    protected function logQueryException(QueryException $e): void
+    {
+        try {
+            $sql = $e->getSql();
+            $bindings = $e->getBindings();
+            $errorInfo = $e->errorInfo ?? [];
+
+            $sanitizedBindings = array_map(function ($binding) {
+                if (is_string($binding) && mb_strlen($binding) > 100) {
+                    return mb_substr($binding, 0, 100) . '...[truncated]';
+                }
+                if (is_object($binding)) {
+                    return get_class($binding);
+                }
+                return $binding;
+            }, $bindings);
+
+            $context = [
+                'sql_query' => mb_substr($sql, 0, 2000),
+                'sql_bindings' => $sanitizedBindings,
+                'sql_error_code' => $errorInfo[0] ?? null,
+                'sql_driver_code' => $errorInfo[1] ?? null,
+                'sql_driver_message' => $errorInfo[2] ?? null,
+                'connection' => $e->getConnectionName() ?? 'default',
+                'severity' => 'critical',
+                'url' => request()?->fullUrl(),
+                'method' => request()?->method(),
+                'ip' => request()?->ip(),
+                'user_id' => auth()->id(),
+            ];
+
+            ActivityLogger::logEvent(
+                type: 'error',
+                event: 'sql_error',
+                data: $context,
+                level: 'critical'
+            );
+
+            \Log::channel('critical')->critical('SQL Error: ' . $e->getMessage(), $context);
+            \Log::channel('queries')->error('Query Failed', $context);
+
+        } catch (\Throwable $logError) {
+            \Log::channel('daily')->error('Falha ao logar QueryException: ' . $logError->getMessage());
+        }
     }
 
     /**

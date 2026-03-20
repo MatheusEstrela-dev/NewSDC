@@ -109,6 +109,9 @@ class SecurityHeaders
 
             $connectSrc = array_merge($connectSrc, $viteHosts, [
                 'https://servicodados.ibge.gov.br',
+                'http://host.docker.internal:8000',
+                'http://localhost:18001',
+                'http://127.0.0.1:18001',
             ]);
 
             $styleSrc[] = "https://fonts.bunny.net";

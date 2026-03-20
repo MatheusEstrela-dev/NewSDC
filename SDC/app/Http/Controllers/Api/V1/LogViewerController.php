@@ -360,6 +360,36 @@ class LogViewerController extends Controller
 
     /**
      * @OA\Get(
+     *     path="/api/v1/logs/layers",
+     *     summary="Camadas de log disponíveis",
+     *     description="Retorna lista de camadas (layers) disponíveis para filtragem",
+     *     operationId="logsLayers",
+     *     tags={"Log Viewer V1"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Camadas de log"
+     *     )
+     * )
+     */
+    public function layers(): JsonResponse
+    {
+        return response()->json([
+            'layers' => [
+                'api',
+                'backend',
+                'frontend',
+                'system',
+                'security',
+                'database',
+                'queue',
+                'integration'
+            ],
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * @OA\Get(
      *     path="/api/v1/logs/levels",
      *     summary="Níveis de log disponíveis",
      *     description="Retorna lista de níveis de severidade disponíveis",

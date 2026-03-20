@@ -31,6 +31,22 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        RateLimiter::for('default', function (Request $request) {
+            return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('premium', function (Request $request) {
+            return Limit::perMinute(300)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('enterprise', function (Request $request) {
+            return Limit::perMinute(1000)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('webhook', function (Request $request) {
+            return Limit::perMinute(500)->by($request->ip());
+        });
+
         /**
          * Bindings explícitos para resources que ainda não têm persistência real.
          *

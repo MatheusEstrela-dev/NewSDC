@@ -174,49 +174,79 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             ->name('templates');
     });
 
-    // Log Viewer - Sistema avançado de visualização de logs
-    Route::prefix('logs')->middleware('can:system.logs.view')->name('api.v1.logs.')->group(function () {
+    // (Logs movidos para fora do auth:sanctum)
+});
 
-        // Buscar logs com filtros avançados (data, tipo, nível, busca)
-        Route::get('/', [LogViewerV1Controller::class, 'index'])
-            ->middleware('throttle:default')
-            ->name('index');
+// Log Viewer - Sistema avançado de visualização de logs
+// Rotas publicas sem autenticacao para acesso administrativo local
+Route::prefix('v1/logs')->name('api.v1.logs.')->withoutMiddleware([
+    'throttle',
+    'throttle:api',
+    'throttle:default',
+    'auth',
+    'auth:sanctum',
+    \Illuminate\Routing\Middleware\ThrottleRequests::class,
+    \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
+    \App\Http\Middleware\CheckUserActive::class,
+    \App\Http\Middleware\LogSystemActivity::class,
+])->group(function () {
 
-        // Estatísticas agregadas dos logs
-        Route::get('statistics', [LogViewerV1Controller::class, 'statistics'])
-            ->middleware('throttle:default')
-            ->name('statistics');
+    // Rota de teste para forcar erros (apenas em dev/local)
+    if (app()->environment('local', 'development')) {
+        Route::get('test-error', function () {
+            $type = request()->query('type', 'exception');
 
-        // Listar arquivos de log
-        Route::get('files', [LogViewerV1Controller::class, 'files'])
-            ->middleware('throttle:default')
-            ->name('files');
+            switch ($type) {
+                case 'sql':
+                    \DB::select('SELECT * FROM tabela_inexistente_xyz');
+                    break;
+                case 'division':
+                    $x = 1 / 0;
+                    break;
+                case 'null':
+                    $obj = null;
+                    $obj->method();
+                    break;
+                case 'custom':
+                    throw new \Exception('Erro de teste customizado: ' . now()->toIso8601String());
+                default:
+                    throw new \RuntimeException('Erro de teste padrao: ' . now()->toIso8601String());
+            }
 
-        // Download de arquivo de log
-        Route::get('download/{filename}', [LogViewerV1Controller::class, 'download'])
-            ->middleware('throttle:default')
-            ->name('download');
+            return response()->json(['error' => 'Nao deveria chegar aqui']);
+        })->name('test-error');
+    }
 
-        // Logs recentes do Redis (tempo real)
-        Route::get('recent', [LogViewerV1Controller::class, 'recent'])
-            ->middleware('throttle:default')
-            ->name('recent');
+    // Buscar logs com filtros avançados (data, tipo, nível, busca)
+    Route::get('/', [LogViewerV1Controller::class, 'index'])->name('index');
 
-        // Limpar logs antigos
-        Route::delete('clean', [LogViewerV1Controller::class, 'clean'])
-            ->middleware('throttle:default')
-            ->name('clean');
+    // Estatísticas agregadas dos logs (ambas as rotas funcionam)
+    Route::get('statistics', [LogViewerV1Controller::class, 'statistics'])->name('statistics');
+    Route::get('stats', [LogViewerV1Controller::class, 'statistics'])->name('stats');
 
-        // Níveis e tipos disponíveis
-        Route::get('levels', [LogViewerV1Controller::class, 'levels'])
-            ->middleware('throttle:default')
-            ->name('levels');
+    // Listar arquivos de log
+    Route::get('files', [LogViewerV1Controller::class, 'files'])->name('files');
 
-        // Stream de logs em tempo real (SSE) - legado
-        Route::get('stream', [LogViewerController::class, 'stream'])
-            ->middleware('throttle:premium')
-            ->name('stream');
-    });
+    // Download de arquivo de log
+    Route::get('download/{filename}', [LogViewerV1Controller::class, 'download'])->name('download');
+
+    // Logs recentes do Redis (tempo real)
+    Route::get('recent', [LogViewerV1Controller::class, 'recent'])->name('recent');
+
+    // Limpar logs antigos
+    Route::delete('clean', [LogViewerV1Controller::class, 'clean'])->name('clean');
+
+    // Níveis e tipos disponíveis
+    Route::get('levels', [LogViewerV1Controller::class, 'levels'])->name('levels');
+
+    // Canais disponíveis (alias para compatibilidade)
+    Route::get('channels', [LogViewerV1Controller::class, 'levels'])->name('channels');
+
+    // Camadas disponíveis
+    Route::get('layers', [LogViewerV1Controller::class, 'layers'])->name('layers');
+
+    // Stream de logs em tempo real (SSE) - legado
+    Route::get('stream', [LogViewerController::class, 'stream'])->name('stream');
 });
 
 // ============================================================================

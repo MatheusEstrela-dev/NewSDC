@@ -18,14 +18,14 @@ class LogFileReaderService
     protected string $logPath;
 
     /**
-     * Tipos de log disponíveis
+     * Tipos de log disponíveis (multiplos padroes por tipo)
      */
     protected array $logTypes = [
-        'laravel' => 'laravel-*.log',
-        'events' => 'events-*.log',
-        'critical' => 'critical-*.log',
-        'queries' => 'queries-*.log',
-        'jobs' => 'jobs-*.log',
+        'laravel' => ['laravel.log', 'laravel-*.log'],
+        'events' => ['events.log', 'events-*.log'],
+        'critical' => ['critical.log', 'critical-*.log'],
+        'queries' => ['queries.log', 'queries-*.log'],
+        'jobs' => ['jobs.log', 'jobs-*.log'],
     ];
 
     public function __construct()
@@ -41,16 +41,28 @@ class LogFileReaderService
         $files = [];
 
         if ($type && isset($this->logTypes[$type])) {
-            $pattern = $this->logTypes[$type];
-            $files = glob($this->logPath . '/' . $pattern);
+            $patterns = $this->logTypes[$type];
+            foreach ((array) $patterns as $pattern) {
+                $found = glob($this->logPath . '/' . $pattern);
+                if ($found) {
+                    $files = array_merge($files, $found);
+                }
+            }
         } else {
-            foreach ($this->logTypes as $logType => $pattern) {
-                $typeFiles = glob($this->logPath . '/' . $pattern);
-                foreach ($typeFiles as $file) {
-                    $files[] = $file;
+            foreach ($this->logTypes as $logType => $patterns) {
+                foreach ((array) $patterns as $pattern) {
+                    $typeFiles = glob($this->logPath . '/' . $pattern);
+                    if ($typeFiles) {
+                        foreach ($typeFiles as $file) {
+                            $files[] = $file;
+                        }
+                    }
                 }
             }
         }
+
+        // Remove duplicatas
+        $files = array_unique($files);
 
         // Ordena por data de modificação (mais recente primeiro)
         usort($files, function ($a, $b) {
@@ -151,29 +163,47 @@ class LogFileReaderService
         $allFiles = $this->listLogFiles($type);
         $relevantFiles = [];
 
-        // Adiciona arquivo atual sempre
-        foreach ($allFiles as $file) {
-            if (!str_contains($file['name'], '-2')) {
-                $relevantFiles[] = $file;
-            }
-        }
-
         // Adiciona arquivos do intervalo de datas
         $currentDate = $startDate->copy();
+        $datePatterns = [];
+        
         while ($currentDate->lte($endDate)) {
-            $dateStr = $currentDate->format('Y-m-d');
-
-            foreach ($allFiles as $file) {
-                if (str_contains($file['name'], $dateStr)) {
-                    $relevantFiles[] = $file;
-                }
-            }
-
+            $datePatterns[] = $currentDate->format('Y-m-d');
             $currentDate->addDay();
         }
 
-        // Remove duplicatas
-        return collect($relevantFiles)->unique('path')->values()->toArray();
+        foreach ($allFiles as $file) {
+            $isHistorical = false;
+            foreach ($datePatterns as $pattern) {
+                if (str_contains($file['name'], $pattern)) {
+                    $relevantFiles[] = $file;
+                    $isHistorical = true;
+                    break;
+                }
+            }
+
+            // Se não é um arquivo com data no nome, mas é o arquivo principal do tipo (ex: laravel.log, events.log)
+            // adicionamos ele também se a data atual (hoje) estiver no intervalo
+            if (!$isHistorical) {
+                $baseName = $file['name'];
+                // Remove extensões e verifica se o nome base corresponde ao tipo
+                $cleanName = str_replace('.log', '', $baseName);
+                
+                // Se for o arquivo "vivo" (sem data no nome)
+                if (!preg_match('/\d{4}-\d{2}-\d{2}/', $cleanName)) {
+                    $relevantFiles[] = $file;
+                }
+            }
+        }
+
+        // Remove duplicatas e ordena por data de modificação (mais recentes primeiro)
+        return collect($relevantFiles)
+            ->unique('path')
+            ->sortByDesc(function($file) {
+                return filemtime($file['path']);
+            })
+            ->values()
+            ->toArray();
     }
 
     /**
@@ -194,29 +224,30 @@ class LogFileReaderService
 
         $currentLog = null;
         $lineNumber = 0;
+        
+        // Proteção contra arquivos gigantes (ex: loop infinito ou Out Of Memory)
+        $maxLines = 20000; 
 
+        // Lê a partir do final do arquivo se possível (simulação simples com tail/fseek é complexa em PHP, usaremos limite)
         while (($line = fgets($handle)) !== false) {
             $lineNumber++;
-
-            // Tenta fazer parse como JSON
-            $jsonLog = $this->parseJsonLine($line);
-            if ($jsonLog) {
-                if ($currentLog) {
-                    $logs->push($currentLog);
-                }
-                $currentLog = $jsonLog;
-                $currentLog['line'] = $lineNumber;
-                $currentLog['file'] = basename($filePath);
-                continue;
+            
+            if ($lineNumber > $maxLines) {
+                break; // Evita estourar a memória
             }
+            
+            $trimmedLine = trim($line);
 
-            // Tenta fazer parse como log Laravel padrão
+            // Tenta fazer parse como início de um novo log (JSON ou Laravel)
+            $jsonLog = $this->parseJsonLine($line);
             $laravelLog = $this->parseLaravelLogLine($line);
-            if ($laravelLog) {
+
+            if ($jsonLog || $laravelLog) {
                 if ($currentLog) {
+                    $this->finalizeLog($currentLog);
                     $logs->push($currentLog);
                 }
-                $currentLog = $laravelLog;
+                $currentLog = $jsonLog ?: $laravelLog;
                 $currentLog['line'] = $lineNumber;
                 $currentLog['file'] = basename($filePath);
                 continue;
@@ -224,15 +255,18 @@ class LogFileReaderService
 
             // Se não é início de novo log, adiciona à mensagem do log atual
             if ($currentLog) {
-                $currentLog['message'] .= "\n" . trim($line);
-                if (isset($currentLog['context']['full_message'])) {
-                    $currentLog['context']['full_message'] .= "\n" . trim($line);
+                if ($trimmedLine !== '') {
+                    // Limita o tamanho da mensagem para evitar OOM em stack traces gigantes
+                    if (strlen($currentLog['message']) < 10000) {
+                        $currentLog['message'] .= "\n" . $trimmedLine;
+                    }
                 }
             }
         }
 
         // Adiciona último log
         if ($currentLog) {
+            $this->finalizeLog($currentLog);
             $logs->push($currentLog);
         }
 
@@ -263,36 +297,77 @@ class LogFileReaderService
     }
 
     /**
+     * Finaliza o processamento de um log, extraindo JSON se necessário
+     */
+    protected function finalizeLog(array &$log): void
+    {
+        if ($log['format'] === 'laravel') {
+            $message = $log['message'];
+            $jsonObjects = $this->extractJsonObjects($message);
+            
+            foreach ($jsonObjects as $json) {
+                $decoded = json_decode($json, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $log['context'] = array_merge($log['context'], $decoded);
+                    $message = str_replace($json, '', $message);
+                }
+            }
+
+            $log['message'] = trim($message);
+            $log['context']['full_message'] = $log['message'];
+        }
+    }
+
+    /**
+     * Extrai objetos JSON do texto usando um contador de chaves
+     */
+    protected function extractJsonObjects(string $text): array
+    {
+        $objects = [];
+        $length = strlen($text);
+        $stack = 0;
+        $start = -1;
+
+        for ($i = 0; $i < $length; $i++) {
+            if ($text[$i] === '{') {
+                if ($stack === 0) {
+                    $start = $i;
+                }
+                $stack++;
+            } elseif ($text[$i] === '}') {
+                $stack--;
+                if ($stack === 0 && $start !== -1) {
+                    $objects[] = substr($text, $start, $i - $start + 1);
+                    $start = -1;
+                }
+            }
+        }
+
+        return $objects;
+    }
+
+    /**
      * Parse de linha de log Laravel padrão
      * Formato: [2025-12-27 15:30:45] local.ERROR: Mensagem {context}
      */
     protected function parseLaravelLogLine(string $line): ?array
     {
-        // Regex para log Laravel
-        if (preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.(\w+): (.*)/', $line, $matches)) {
+        // Regex para log Laravel (suporta milissegundos opcionais e qualquer string de ambiente)
+        // Formato: [2025-12-27 15:30:45] local.ERROR: Mensagem {context}
+        // Formato: [2025-12-27 15:30:45.123] production.CRITICAL: Mensagem
+        if (preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?)\] (\w+)\.(\w+): (.*)/', $line, $matches)) {
             $timestamp = $matches[1];
             $environment = $matches[2];
             $level = strtolower($matches[3]);
-            $messageWithContext = $matches[4];
-
-            // Tenta extrair contexto JSON
-            $context = [];
-            if (preg_match('/\{.*\}$/s', $messageWithContext, $contextMatch)) {
-                $contextJson = json_decode($contextMatch[0], true);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    $context = $contextJson;
-                    $messageWithContext = trim(str_replace($contextMatch[0], '', $messageWithContext));
-                }
-            }
+            $message = $matches[4];
 
             return [
                 'timestamp' => Carbon::parse($timestamp)->toIso8601String(),
                 'level' => $level,
-                'message' => trim($messageWithContext),
-                'context' => array_merge($context, [
+                'message' => trim($message),
+                'context' => [
                     'environment' => $environment,
-                    'full_message' => $messageWithContext,
-                ]),
+                ],
                 'format' => 'laravel',
             ];
         }
@@ -305,10 +380,13 @@ class LogFileReaderService
      */
     protected function detectLogType(string $filename): string
     {
-        foreach ($this->logTypes as $type => $pattern) {
-            $regex = '/^' . str_replace('*', '.*', $pattern) . '$/';
-            if (preg_match($regex, $filename)) {
-                return $type;
+        foreach ($this->logTypes as $type => $patterns) {
+            foreach ((array) $patterns as $pattern) {
+                $regex = '/^' . str_replace('*', '.*', preg_quote($pattern, '/')) . '$/';
+                $regex = str_replace('\.\*', '.*', $regex);
+                if (preg_match($regex, $filename)) {
+                    return $type;
+                }
             }
         }
 

@@ -25,7 +25,7 @@ return [
     */
     'roles' => [
         'super-admin' => [
-            'name' => 'Super Admin',
+            'name' => 'Desenvolvedor',
             'description' => 'Acesso total e irrestrito ao sistema - Desenvolvimento e Manutencao',
             'is_active' => true,
         ],
