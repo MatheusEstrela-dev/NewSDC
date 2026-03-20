@@ -58,10 +58,9 @@ provide('openSidebar', openSidebar);
 
     <!-- Main Content Area -->
     <div
-      class="flex-1 flex flex-col min-h-screen transition-all duration-300 ml-0 md:ml-20"
+      class="flex-1 flex flex-col min-h-screen ml-0 md:ml-20 lg:ml-[280px]"
       :class="{
-        'lg:ml-[280px]': !sidebarCollapsed,
-        'lg:ml-20': sidebarCollapsed
+        'lg:!ml-20': sidebarCollapsed
       }"
       :data-collapsed="sidebarCollapsed"
     >
@@ -70,9 +69,7 @@ provide('openSidebar', openSidebar);
 
       <!-- Page Content -->
       <main class="flex-1 pt-4 bg-slate-50 dark:bg-slate-950 [overflow-x:clip] px-4 sm:px-6 lg:px-8">
-        <Transition name="page" appear>
-          <slot />
-        </Transition>
+        <slot />
       </main>
 
       <!-- Footer -->
@@ -81,9 +78,12 @@ provide('openSidebar', openSidebar);
           <img
             src="https://www.mg.gov.br/sites/default/files/styles/large/public/media/image/2025/02/logo-defesa-civil-2.png?itok=NhfQmxcj"
             alt="MG Logo"
-            class="h-5 sm:h-6"
+            width="120"
+            height="24"
+            class="h-5 sm:h-6 w-auto"
             loading="lazy"
             decoding="async"
+            style="aspect-ratio: 5/1;"
           />
           <span class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 text-center sm:text-left">
             CEDEC - Defesa Civil de Minas Gerais
@@ -135,21 +135,6 @@ provide('openSidebar', openSidebar);
   .flex-1.flex.flex-col {
     margin-left: 0 !important;
   }
-}
-
-/* Page transitions (SPA feel) */
-.page-enter-active {
-  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
-}
-.page-leave-active {
-  transition: opacity 0.1s ease-in;
-}
-.page-enter-from {
-  opacity: 0;
-  transform: translateY(4px);
-}
-.page-leave-to {
-  opacity: 0;
 }
 
 /* Ajustes para dispositivos muito pequenos */

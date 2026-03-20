@@ -29,7 +29,19 @@ class SetTenant
     public function handle(Request $request, Closure $next): Response
     {
         try {
-            $tenant = Tenant::resolveFromRequest($request);
+            $tenant = null;
+
+            if ($request->hasSession()) {
+                $tenant = $request->session()->get('resolved_tenant');
+            }
+
+            if (!$tenant) {
+                $tenant = Tenant::resolveFromRequest($request);
+
+                if ($tenant && $request->hasSession()) {
+                    $request->session()->put('resolved_tenant', $tenant);
+                }
+            }
 
             if ($tenant) {
                 app()->instance('tenant', $tenant);
@@ -40,7 +52,7 @@ class SetTenant
                 }
             }
         } catch (\Illuminate\Database\QueryException $e) {
-            // Tabela tenants ainda nao existe (migration pendente) — continua sem tenant
+            // Tabela tenants ainda nao existe (migration pendente) -- continua sem tenant
         }
 
         return $next($request);

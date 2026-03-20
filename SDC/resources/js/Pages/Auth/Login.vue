@@ -8,6 +8,9 @@
           src="https://www.mg.gov.br/sites/default/files/styles/large/public/media/image/2025/02/logo-defesa-civil-2.png?itok=NhfQmxcj"
           alt="Logo Defesa Civil"
           class="main-logo"
+          width="200"
+          height="60"
+          style="aspect-ratio: 10/3;"
         />
         <div class="system-title">Sistema Integrado de Defesa Civil</div>
       </header>

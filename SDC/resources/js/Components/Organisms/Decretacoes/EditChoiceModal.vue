@@ -27,7 +27,7 @@
             <!-- Opcao: Editar Processo -->
             <button
                 @click="handleEditProcesso"
-                class="w-full p-4 flex items-start gap-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all group text-left"
+                class="w-full p-4 flex items-start gap-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group text-left"
             >
                 <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
                     <DocumentTextIcon class="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -46,7 +46,7 @@
             <!-- Opcao: Editar Dados do Desastre -->
             <button
                 @click="handleEditDesastres"
-                class="w-full p-4 flex items-start gap-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all group text-left"
+                class="w-full p-4 flex items-start gap-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors group text-left"
             >
                 <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
                     <ExclamationTriangleIcon class="w-6 h-6 text-amber-600 dark:text-amber-400" />

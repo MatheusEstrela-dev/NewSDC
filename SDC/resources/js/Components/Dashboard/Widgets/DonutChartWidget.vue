@@ -24,7 +24,7 @@
             :stroke="segment.color"
             :stroke-dasharray="segment.dashArray"
             :stroke-dashoffset="segment.dashOffset"
-            class="transition-all duration-300 ease-out cursor-pointer origin-center hover:opacity-100"
+            class="transition-colors duration-300 ease-out cursor-pointer origin-center hover:opacity-100"
             :class="[
               hoveredSegment === index ? 'scale-110 opacity-100 brightness-110 drop-shadow-[0_0_8px_rgba(0,0,0,0.5)]' : 'scale-100 opacity-90 hover:scale-105'
             ]"
@@ -52,7 +52,7 @@
         <div
           v-for="(mod, index) in moduleDistribution"
           :key="mod.name"
-          class="flex items-center justify-between gap-3 group cursor-pointer transition-all duration-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 p-2 rounded-lg"
+          class="flex items-center justify-between gap-3 group cursor-pointer transition-colors duration-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 p-2 rounded-lg"
           :class="{'bg-slate-50 dark:bg-slate-800/50 scale-[1.02] shadow-sm ring-1 ring-slate-100 dark:ring-slate-700': hoveredSegment === index}"
           @mouseenter="hoveredSegment = index"
           @mouseleave="hoveredSegment = null"

@@ -80,7 +80,9 @@
       "mcp__plugin_playwright_playwright__browser_snapshot",
       "mcp__plugin_playwright_playwright__browser_take_screenshot",
       "Bash(docker stats:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Read(//c/Users/x24679188/Downloads/**)",
+      "Bash(gzip -dk \"C:/Users/x24679188/Downloads/Trace-20260320T152629.json.gz\")"
     ],
     "deny": [],
     "ask": []

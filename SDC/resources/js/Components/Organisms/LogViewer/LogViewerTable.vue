@@ -42,16 +42,25 @@ const getLevelBg = (level) => {
     return colors[strLevel] || 'bg-gray-500'
 }
 
-const getLayerColor = (layer) => {
+const getLayerColor = (layer, logType) => {
     if (!layer) return 'bg-gray-700 text-gray-400'
+    // Container Docker — cor especial por tipo de serviço
+    if (logType === 'docker') {
+        if (layer.includes('nginx'))   return 'bg-green-900/50 text-green-300'
+        if (layer.includes('redis'))   return 'bg-red-900/50 text-red-300'
+        if (layer.includes('db') || layer.includes('mysql')) return 'bg-yellow-900/50 text-yellow-300'
+        if (layer.includes('queue'))   return 'bg-orange-900/50 text-orange-300'
+        if (layer.includes('app'))     return 'bg-blue-900/50 text-blue-300'
+        return 'bg-cyan-900/40 text-cyan-300'
+    }
     const colors = {
         'Controller': 'bg-blue-900/50 text-blue-300',
-        'Service': 'bg-purple-900/50 text-purple-300',
+        'Service':    'bg-purple-900/50 text-purple-300',
         'Repository': 'bg-green-900/50 text-green-300',
-        'Model': 'bg-yellow-900/50 text-yellow-300',
+        'Model':      'bg-yellow-900/50 text-yellow-300',
         'Middleware': 'bg-orange-900/50 text-orange-300',
-        'Request': 'bg-cyan-900/50 text-cyan-300',
-        'DTO': 'bg-pink-900/50 text-pink-300',
+        'Request':    'bg-cyan-900/50 text-cyan-300',
+        'DTO':        'bg-pink-900/50 text-pink-300',
     }
     return colors[layer] || 'bg-gray-700 text-gray-400'
 }
@@ -71,6 +80,48 @@ const formatDate = (dateStr) => {
 const getShortClass = (className) => {
     if (!className) return ''
     return String(className).split('\\').pop()
+}
+
+const getFilePath = (log) => {
+    return log.file_path || log.file || null
+}
+
+const getFileName = (log) => {
+    const path = getFilePath(log)
+    if (!path) return null
+    return String(path).split('/').pop().split('\\').pop()
+}
+
+const getVSCodeLink = (log) => {
+    const filePath = getFilePath(log)
+    const line = log.line || 1
+    if (!filePath) return null
+    return `vscode://file/${filePath}:${line}`
+}
+
+const formatMs = (ms) => {
+    if (!ms) return null
+    if (ms >= 1000) return (ms / 1000).toFixed(1) + 's'
+    return Math.round(ms) + 'ms'
+}
+
+const timeBadgeClass = (ms, threshold) => {
+    const t = threshold || 2000
+    if (ms < t / 2)   return 'bg-green-900/50 text-green-400'
+    if (ms < t)       return 'bg-yellow-900/50 text-yellow-400'
+    if (ms < t * 2)   return 'bg-orange-900/50 text-orange-400'
+    return                    'bg-red-900/50 text-red-400'
+}
+
+const queryTypeBadge = (type) => {
+    const map = {
+        'SELECT': 'text-blue-400',
+        'INSERT': 'text-green-400',
+        'UPDATE': 'text-yellow-400',
+        'DELETE': 'text-red-400',
+        'DROP':   'text-red-300',
+    }
+    return map[type] || 'text-gray-400'
 }
 </script>
 
@@ -92,10 +143,12 @@ const getShortClass = (className) => {
                     <tr class="text-left text-gray-500 uppercase tracking-tighter h-8">
                         <th class="px-3 font-semibold w-20">Level</th>
                         <th class="px-2 font-semibold w-24">Layer</th>
-                        <th class="px-2 font-semibold w-48">Origem</th>
+                        <th class="px-2 font-semibold w-44">Origem</th>
+                        <th class="px-2 font-semibold w-36">Arquivo</th>
+                        <th class="px-2 font-semibold w-12">Linha</th>
                         <th class="px-2 font-semibold">Mensagem</th>
-                        <th class="px-2 font-semibold w-20 text-right">Data</th>
-                        <th class="px-3 font-semibold w-16 text-right">Hora</th>
+                        <th class="px-2 font-semibold w-16 text-right">Data</th>
+                        <th class="px-3 font-semibold w-14 text-right">Hora</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -115,18 +168,21 @@ const getShortClass = (className) => {
 
                         <!-- Layer -->
                         <td class="px-2">
-                            <span
-                                v-if="log.layer"
+                            <span v-if="log.query_type"
+                                class="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                                :class="queryTypeBadge(log.query_type)">
+                                {{ log.query_type }}
+                            </span>
+                            <span v-else-if="log.layer"
                                 class="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                                :class="getLayerColor(log.layer)"
-                            >
+                                :class="getLayerColor(log.layer, log.log_type)">
                                 {{ log.layer }}
                             </span>
                             <span v-else class="text-gray-600">-</span>
                         </td>
 
                         <!-- Origem (Class.method) -->
-                        <td class="px-2 text-gray-400 truncate max-w-[200px]">
+                        <td class="px-2 text-gray-400 truncate max-w-[180px]" :title="log.class">
                             <span v-if="log.class || log.method">
                                 <span class="text-gray-300">{{ getShortClass(log.class) }}</span>
                                 <span v-if="log.method" class="text-gray-500">.{{ log.method }}()</span>
@@ -134,8 +190,33 @@ const getShortClass = (className) => {
                             <span v-else class="text-gray-600">-</span>
                         </td>
 
+                        <!-- Arquivo (com link clicavel para VSCode) -->
+                        <td class="px-2 text-gray-400 truncate max-w-[150px]">
+                            <a
+                                v-if="getFileName(log)"
+                                :href="getVSCodeLink(log)"
+                                :title="getFilePath(log)"
+                                class="text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer"
+                                @click.stop
+                            >
+                                {{ getFileName(log) }}
+                            </a>
+                            <span v-else class="text-gray-600">-</span>
+                        </td>
+
+                        <!-- Linha -->
+                        <td class="px-2 text-gray-500 font-mono text-[10px]">
+                            <span v-if="log.line" class="text-yellow-400">:{{ log.line }}</span>
+                            <span v-else class="text-gray-600">-</span>
+                        </td>
+
                         <!-- Mensagem -->
                         <td class="px-2 truncate max-w-0 text-gray-300 group-hover:text-white transition-colors">
+                            <span v-if="log.time_ms"
+                                class="inline-flex items-center mr-2 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold shrink-0"
+                                :class="timeBadgeClass(log.time_ms, log.threshold_ms)">
+                                {{ formatMs(log.time_ms) }}
+                            </span>
                             {{ log.message }}
                         </td>
 

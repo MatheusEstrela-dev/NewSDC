@@ -75,7 +75,7 @@ return [
             'replace_placeholders' => true,
         ],
 
-        // Canal JSON para produção (Docker/Kubernetes/Loki)
+        // Canal JSON para producao (Docker/Kubernetes/Loki)
         'json_stderr' => [
             'driver' => 'monolog',
             'level' => env('LOG_LEVEL', 'debug'),
@@ -92,6 +92,31 @@ return [
             ],
         ],
 
+        // Canal para logs de containers Docker (stdout para coleta)
+        'docker' => [
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => StreamHandler::class,
+            'formatter' => Monolog\Formatter\JsonFormatter::class,
+            'with' => [
+                'stream' => 'php://stdout',
+            ],
+            'processors' => [
+                PsrLogMessageProcessor::class,
+                Monolog\Processor\IntrospectionProcessor::class,
+                Monolog\Processor\WebProcessor::class,
+                Monolog\Processor\MemoryUsageProcessor::class,
+                Monolog\Processor\HostnameProcessor::class,
+            ],
+        ],
+
+        // Canal agregado para producao (Docker + arquivo + critico)
+        'production' => [
+            'driver' => 'stack',
+            'channels' => ['docker', 'daily', 'critical'],
+            'ignore_exceptions' => false,
+        ],
+
         // Canal para eventos do sistema (ActivityLogger)
         'events' => [
             'driver' => env('APP_ENV') === 'production' ? 'monolog' : 'daily',
@@ -105,6 +130,9 @@ return [
             'handler' => env('APP_ENV') === 'production'
                 ? StreamHandler::class
                 : null,
+            'with' => [
+                'stream' => storage_path('logs/events.log'),
+            ],
             'processors' => env('APP_ENV') === 'production'
                 ? [PsrLogMessageProcessor::class]
                 : [],

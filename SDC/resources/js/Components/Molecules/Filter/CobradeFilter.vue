@@ -49,10 +49,10 @@
 
         <!-- Subgrupos -->
         <Transition
-          enter-active-class="transition-all duration-200 ease-out"
+          enter-active-class="transition-colors duration-200 ease-out"
           enter-from-class="opacity-0 max-h-0"
           enter-to-class="opacity-100 max-h-screen"
-          leave-active-class="transition-all duration-150 ease-in"
+          leave-active-class="transition-colors duration-150 ease-in"
           leave-from-class="opacity-100 max-h-screen"
           leave-to-class="opacity-0 max-h-0"
         >
@@ -84,10 +84,10 @@
 
               <!-- Items -->
               <Transition
-                enter-active-class="transition-all duration-150 ease-out"
+                enter-active-class="transition-colors duration-150 ease-out"
                 enter-from-class="opacity-0 max-h-0"
                 enter-to-class="opacity-100 max-h-screen"
-                leave-active-class="transition-all duration-100 ease-in"
+                leave-active-class="transition-colors duration-100 ease-in"
                 leave-from-class="opacity-100 max-h-screen"
                 leave-to-class="opacity-0 max-h-0"
               >

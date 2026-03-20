@@ -1,9 +1,8 @@
 <template>
   <header
-    class="fixed top-0 right-0 left-0 z-30 transition-all duration-300 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm md:left-20"
+    class="fixed top-0 right-0 left-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm md:left-20 lg:left-[280px]"
     :class="{
-      'lg:left-[280px]': !isCollapsed,
-      'lg:left-20': isCollapsed
+      'lg:!left-20': isCollapsed
     }"
     :data-collapsed="isCollapsed"
     :style="{ paddingTop: 'max(env(safe-area-inset-top, 0px), var(--inset-top, 12px))' }"
@@ -46,7 +45,7 @@
         <button
           type="button"
           @click="showAiAssistant = true"
-          class="relative z-50 flex flex-shrink-0 items-center justify-center w-10 h-10 rounded-lg transition-all
+          class="relative z-50 flex flex-shrink-0 items-center justify-center w-10 h-10 rounded-lg transition-colors
                  hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 group"
           title="Assistente IA - Defesa Civil"
         >
@@ -62,7 +61,7 @@
 
       <!-- Mobile Only: Search Icon Button (< 768px) -->
       <button
-        class="flex md:hidden items-center justify-center w-10 h-10 rounded-lg transition-all
+        class="flex md:hidden items-center justify-center w-10 h-10 rounded-lg transition-colors
                text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
         title="Buscar"
         @click="openCommandPalette"
@@ -78,7 +77,7 @@
         <Dropdown align="right" width="96" contentClasses="p-0 overflow-hidden" :mobileFullWidth="true">
           <template #trigger>
             <button
-              class="relative flex items-center justify-center w-10 h-10 rounded-lg transition-all
+              class="relative flex items-center justify-center w-10 h-10 rounded-lg transition-colors
                      text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
                      active:scale-95"
               title="Notificações"
@@ -106,7 +105,7 @@
         <!-- Theme Toggle -->
         <button
           @click="toggleTheme"
-          class="flex items-center justify-center w-10 h-10 rounded-lg transition-all
+          class="flex items-center justify-center w-10 h-10 rounded-lg transition-colors
                  text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
                  active:scale-95"
           title="Alternar tema"
@@ -125,7 +124,7 @@
         <button
           id="settings-btn"
           @click.stop="openSettings"
-          class="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg transition-all
+          class="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg transition-colors
                  text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
                  active:scale-95 relative"
           title="Configurações e Preferências"
@@ -140,7 +139,7 @@
         <div class="relative user-menu">
           <button
             @click="toggleUserMenu"
-            class="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg transition-all
+            class="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg transition-colors
                    border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600
                    active:scale-95"
           >
@@ -185,7 +184,7 @@
             <div class="h-px bg-slate-200 dark:bg-slate-700 my-2"></div>
             <button
               @click="showProfileModal = true; showUserMenu = false"
-              class="w-full flex items-center gap-3 px-4 py-3 text-sm transition-all
+              class="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors
                      text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white"
             >
               <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,7 +196,7 @@
               :href="route('logout')"
               method="post"
               as="button"
-              class="w-full flex items-center gap-3 px-4 py-3 text-sm transition-all
+              class="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors
                      text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300"
             >
               <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

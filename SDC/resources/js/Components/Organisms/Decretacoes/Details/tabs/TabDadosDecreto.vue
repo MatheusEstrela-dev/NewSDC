@@ -83,7 +83,7 @@ const progressClass = computed(() => {
           <div class="pt-2">
             <div class="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
               <div
-                class="h-full transition-all duration-500 rounded-full"
+                class="h-full transition-colors duration-500 rounded-full"
                 :class="progressClass"
                 :style="{ width: progressPercent + '%' }"
               />

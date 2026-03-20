@@ -49,7 +49,11 @@ class HandleInertiaRequests extends Middleware
     {
         $cacheKey = "inertia_user_data_{$user->id}";
 
-        return Cache::remember($cacheKey, 60, function () use ($user) {
+        return Cache::remember($cacheKey, 300, function () use ($user) {
+            // Eager load roles+permissions se nao carregados
+            if (!$user->relationLoaded('roles')) {
+                $user->load(['roles.permissions', 'permissions']);
+            }
             return $this->getUserData($user);
         });
     }
@@ -95,12 +99,16 @@ class HandleInertiaRequests extends Middleware
      */
     protected function getEffectivePermissions($user): array
     {
-        if (!method_exists($user, 'permissions') || !method_exists($user, 'getPermissionsViaRoles')) {
+        if (!method_exists($user, 'permissions') || !method_exists($user, 'roles')) {
             return [];
         }
 
-        $rolePermissions = $user->getPermissionsViaRoles()->pluck('name')->values()->toArray();
-        $directPermissions = $user->permissions->pluck('name')->values()->toArray();
+        // Usar relationships ja eager-loaded para evitar N+1
+        $rolePermissions = $user->roles
+            ->flatMap(fn($role) => $role->permissions->pluck('name'))
+            ->toArray();
+
+        $directPermissions = $user->permissions->pluck('name')->toArray();
 
         return array_values(array_unique(array_merge($rolePermissions, $directPermissions)));
     }

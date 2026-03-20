@@ -45,22 +45,9 @@ class LoginRequest extends FormRequest
         $cpf = preg_replace('/\D/', '', $this->string('cpf'));
         $password = $this->string('password');
 
-        $user = \App\Models\User::where('cpf', $cpf)->first();
-
-        // LOG DE DEBUG SUPER VISÍVEL
-        \Log::warning('MOBILE_DEBUG: Autenticando no Celular...', [
-            'cpf' => $cpf,
-            'user_found' => (bool) $user,
-            'is_android' => str_contains(strtolower(php_uname('a')), 'android'),
-        ]);
-
-        // BYPASS EMERGENCIAL PARA O CELULAR (CPF 12345678900)
-        if ($user && ($cpf === '12345678900') && (env('NATIVEPHP_RUNNING') || env('NATIVE_PHP') || str_contains(strtolower(php_uname('a')), 'android'))) {
-            \Log::warning('MOBILE_DEBUG: Aplicando BYPASS para CPF 12345678900');
-            Auth::login($user, $this->boolean('remember'));
-            RateLimiter::clear($this->throttleKey());
-            return;
-        }
+        $user = \App\Models\User::with(['roles.permissions', 'permissions'])
+            ->where('cpf', $cpf)
+            ->first();
 
         if (!$user || !Hash::check($password, $user->password)) {
             RateLimiter::hit($this->throttleKey());

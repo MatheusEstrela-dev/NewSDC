@@ -114,10 +114,10 @@
 
                 <!-- Actions -->
                 <div class="flex gap-3">
-                  <button @click="closeModal" class="flex-1 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all">
+                  <button @click="closeModal" class="flex-1 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors">
                     Cancelar
                   </button>
-                  <button class="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 focus:ring-2 focus:ring-offset-2 transition-all shadow-lg shadow-blue-500/20" :class="variantButtonClass(selectedModule.variant)">
+                  <button class="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 focus:ring-2 focus:ring-offset-2 transition-colors shadow-lg shadow-blue-500/20" :class="variantButtonClass(selectedModule.variant)">
                     Acessar Módulo
                   </button>
                 </div>

@@ -3,7 +3,7 @@
     <div
       v-for="mod in moduleSparklines"
       :key="mod.name"
-      class="rounded-xl shadow-lg border bg-white dark:bg-slate-900/60 border-slate-100 dark:border-slate-800/50 p-4 transition-all duration-300 cursor-pointer group overflow-hidden relative"
+      class="rounded-xl shadow-lg border bg-white dark:bg-slate-900/60 border-slate-100 dark:border-slate-800/50 p-4 transition-colors duration-300 cursor-pointer group overflow-hidden relative"
       @click="$emit('select-module', mod)"
     >
       <!-- Background Decoration -->
@@ -31,7 +31,7 @@
           </div>
         </div>
         <!-- Mini Sparkline SVG Animado -->
-        <svg class="w-20 h-10 flex-shrink-0 drop-shadow-sm group-hover:drop-shadow-[0_0_8px_rgba(var(--spark-color),0.5)] transition-all duration-500" viewBox="0 0 80 32" fill="none" :style="`--spark-color: ${mod.variant === 'info' ? '6,182,212' : mod.variant === 'warning' ? '245,158,11' : '239,68,68'}`">
+        <svg class="w-20 h-10 flex-shrink-0 drop-shadow-sm group-hover:drop-shadow-[0_0_8px_rgba(var(--spark-color),0.5)] transition-colors duration-500" viewBox="0 0 80 32" fill="none" :style="`--spark-color: ${mod.variant === 'info' ? '6,182,212' : mod.variant === 'warning' ? '245,158,11' : '239,68,68'}`">
           <polyline
             :points="sparklinePoints(mod.data)"
             fill="none"
@@ -82,7 +82,7 @@ const variantIconMap = {
 
 function sparklineIconClasses(variant) {
   return [
-    'w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300',
+    'w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300',
     variantIconMap[variant] || variantIconMap.info
   ];
 }

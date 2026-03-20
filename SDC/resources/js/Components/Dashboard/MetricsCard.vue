@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-white rounded-xl p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 hover:border-blue-200 hover:shadow-lg transition-all duration-300 group cursor-default relative overflow-hidden"
+    class="bg-white rounded-xl p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 hover:border-blue-200 hover:shadow-lg transition-colors duration-300 group cursor-default relative overflow-hidden"
   >
     <!-- Decoration -->
     <div
@@ -35,7 +35,7 @@
       <button
         v-if="showAction"
         @click.prevent="$emit('view-details', metric)"
-        class="mt-4 text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 group/link opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0"
+        class="mt-4 text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 group/link opacity-0 group-hover:opacity-100 transition-colors translate-y-2 group-hover:translate-y-0"
       >
         Analisar dados
         <ArrowRightIcon class="w-3 h-3 transition-transform group-hover/link:translate-x-1" />

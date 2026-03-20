@@ -59,14 +59,14 @@ const variantIconMap = {
 
 function metricCardClasses(variant) {
   return [
-    'transition-all duration-300',
+    'transition-colors duration-300',
     variantBorderMap[variant] || variantBorderMap.info
   ];
 }
 
 function metricIconClasses(variant) {
   return [
-    'p-2 sm:p-2.5 rounded-lg sm:rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg',
+    'p-2 sm:p-2.5 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg',
     variantIconMap[variant] || variantIconMap.info
   ];
 }

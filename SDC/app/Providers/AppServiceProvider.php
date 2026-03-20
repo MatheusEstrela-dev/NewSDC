@@ -123,32 +123,38 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
-        DB::listen(function ($query) {
+        // Slow query detection - threshold em ms
+        $slowQueryThreshold = config('app.env') === 'production' ? 1000 : 2000;
+
+        DB::listen(function ($query) use ($slowQueryThreshold) {
+            if ($query->time <= $slowQueryThreshold) {
+                return;
+            }
+
             try {
-                $threshold = config('app.env') === 'production' ? 1000 : 2000;
+                $caller = $this->getQueryCaller();
 
-                if ($query->time > $threshold) {
-                    Log::channel('queries')->warning('Slow Query Detected', [
-                        'sql' => $query->sql,
-                        'bindings' => $query->bindings,
+                Log::channel('queries')->warning('Slow Query Detected', [
+                    'sql'          => $query->sql,
+                    'time_ms'      => $query->time,
+                    'connection'   => $query->connection->getName(),
+                    'url'          => app()->bound('request') ? request()->fullUrl() : null,
+                    'user_id'      => auth()->id(),
+                    'class'        => $caller['class'] ?? null,
+                    'method'       => $caller['method'] ?? null,
+                    'file'         => $caller['file'] ?? null,
+                    'line'         => $caller['line'] ?? null,
+                ]);
+
+                if ($query->time > ($slowQueryThreshold * 2)) {
+                    Log::channel('critical')->error('Critical Slow Query', [
+                        'sql'     => $query->sql,
                         'time_ms' => $query->time,
-                        'url' => app()->bound('request') ? request()->fullUrl() : null,
-                        'method' => app()->bound('request') ? request()->method() : null,
-                        'user_id' => auth()->id(),
-                        'threshold_ms' => $threshold,
-                        'severity' => $query->time > ($threshold * 2) ? 'critical' : 'warning',
+                        'url'     => request()?->fullUrl(),
                     ]);
-
-                    if ($query->time > ($threshold * 2)) {
-                        Log::channel('critical')->error('Critical Slow Query', [
-                            'sql' => $query->sql,
-                            'time_ms' => $query->time,
-                            'url' => request()?->fullUrl(),
-                        ]);
-                    }
                 }
             } catch (\Throwable $logError) {
-                // Silently ignore — don't crash the app because of logging
+                // Silently ignore
             }
         });
 
@@ -175,5 +181,39 @@ class AppServiceProvider extends ServiceProvider
                     'cpf_coordenador' => $notifiable->cpf ?? null,
                 ]);
         });
+    }
+
+    private function getQueryCaller(): array
+    {
+        $basePath = base_path();
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 20);
+
+        foreach ($trace as $frame) {
+            $file = $frame['file'] ?? '';
+            if (!str_starts_with($file, $basePath)) {
+                continue;
+            }
+            if (str_contains($file, 'vendor/') || str_contains($file, 'vendor\\')) {
+                continue;
+            }
+            if (str_contains($file, 'AppServiceProvider')) {
+                continue;
+            }
+            $class = $frame['class'] ?? '';
+            if (str_contains($class, 'Illuminate\\Database')) {
+                continue;
+            }
+
+            $relative = str_replace([$basePath . DIRECTORY_SEPARATOR, '\\'], ['', '/'], $file);
+            return [
+                'class'     => $class ?: null,
+                'method'    => $frame['function'] ?? null,
+                'file_path' => $relative,
+                'file'      => basename($file),
+                'line'      => $frame['line'] ?? null,
+            ];
+        }
+
+        return [];
     }
 }

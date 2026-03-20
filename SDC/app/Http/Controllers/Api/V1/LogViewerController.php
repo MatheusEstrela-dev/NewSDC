@@ -361,8 +361,8 @@ class LogViewerController extends Controller
     /**
      * @OA\Get(
      *     path="/api/v1/logs/layers",
-     *     summary="Camadas de log disponíveis",
-     *     description="Retorna lista de camadas (layers) disponíveis para filtragem",
+     *     summary="Camadas de log disponiveis",
+     *     description="Retorna lista de camadas (layers) detectadas nos logs reais + estaticas",
      *     operationId="logsLayers",
      *     tags={"Log Viewer V1"},
      *     @OA\Response(
@@ -373,19 +373,193 @@ class LogViewerController extends Controller
      */
     public function layers(): JsonResponse
     {
+        // Layers estaticos padrao (arquitetura Laravel)
+        $staticLayers = [
+            'Controller',
+            'Service',
+            'Repository',
+            'Model',
+            'Middleware',
+            'Request',
+            'Job',
+            'Event',
+            'Listener',
+            'Command',
+            'DTO',
+            'Resource',
+            'Policy',
+            'System',
+        ];
+
+        // Busca layers dinamicos dos logs recentes
+        $dynamicLayers = [];
+        try {
+            $recentLogs = $this->logReader->readLogs(['limit' => 500]);
+            $dynamicLayers = $recentLogs
+                ->pluck('layer')
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+        } catch (\Exception $e) {
+            // Silencioso - usa apenas layers estaticos
+        }
+
+        // Merge e remove duplicatas
+        $allLayers = array_values(array_unique(array_merge($staticLayers, $dynamicLayers)));
+        sort($allLayers);
+
         return response()->json([
-            'layers' => [
-                'api',
-                'backend',
-                'frontend',
-                'system',
-                'security',
-                'database',
-                'queue',
-                'integration'
-            ],
+            'layers' => $allLayers,
+            'static' => $staticLayers,
+            'dynamic' => $dynamicLayers,
             'timestamp' => now()->toIso8601String(),
         ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/logs/docker",
+     *     summary="Logs de containers Docker",
+     *     description="Retorna logs de containers Docker via stdout/stderr",
+     *     operationId="logsDocker",
+     *     tags={"Log Viewer V1"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="container",
+     *         in="query",
+     *         description="Nome ou ID do container",
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="tail",
+     *         in="query",
+     *         description="Numero de linhas do final",
+     *         @OA\Schema(type="integer", default=100)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Logs do Docker"
+     *     )
+     * )
+     */
+    public function docker(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'container' => 'nullable|string|max:100',
+            'tail' => 'nullable|integer|min:1|max:5000',
+        ]);
+
+        $container = $validated['container'] ?? env('DOCKER_CONTAINER_NAME', 'sdc-app');
+        $tail = $validated['tail'] ?? 100;
+
+        // Verifica se Docker esta disponivel
+        if (!$this->isDockerAvailable()) {
+            return response()->json([
+                'error' => 'Docker nao disponivel neste ambiente',
+                'environment' => config('app.env'),
+                'logs' => [],
+            ], 200);
+        }
+
+        try {
+            $logs = $this->getDockerLogs($container, $tail);
+
+            return response()->json([
+                'logs' => $logs,
+                'total' => count($logs),
+                'container' => $container,
+                'source' => 'docker',
+                'timestamp' => now()->toIso8601String(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Erro ao buscar logs do Docker',
+                'message' => $e->getMessage(),
+                'logs' => [],
+            ], 200);
+        }
+    }
+
+    /**
+     * Verifica se Docker CLI esta disponivel
+     */
+    private function isDockerAvailable(): bool
+    {
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            exec('where docker 2>nul', $output, $returnCode);
+        } else {
+            exec('which docker 2>/dev/null', $output, $returnCode);
+        }
+        return $returnCode === 0;
+    }
+
+    /**
+     * Busca logs de um container Docker
+     */
+    private function getDockerLogs(string $container, int $tail): array
+    {
+        $command = sprintf(
+            'docker logs --tail %d --timestamps %s 2>&1',
+            $tail,
+            escapeshellarg($container)
+        );
+
+        exec($command, $output, $returnCode);
+
+        if ($returnCode !== 0) {
+            throw new \RuntimeException(implode("\n", $output));
+        }
+
+        $logs = [];
+        foreach ($output as $line) {
+            $parsed = $this->parseDockerLogLine($line);
+            if ($parsed) {
+                $logs[] = $parsed;
+            }
+        }
+
+        return array_reverse($logs);
+    }
+
+    /**
+     * Parse de linha de log Docker
+     */
+    private function parseDockerLogLine(string $line): ?array
+    {
+        // Formato Docker: 2025-12-27T15:30:45.123456789Z <mensagem>
+        if (preg_match('/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z)\s+(.+)$/s', $line, $matches)) {
+            $message = $matches[2];
+
+            // Tenta extrair JSON da mensagem
+            $jsonData = json_decode($message, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return array_merge([
+                    'timestamp' => $matches[1],
+                    'source' => 'docker',
+                ], $jsonData);
+            }
+
+            // Detecta nivel baseado em keywords
+            $level = 'info';
+            if (stripos($message, 'error') !== false || stripos($message, 'exception') !== false) {
+                $level = 'error';
+            } elseif (stripos($message, 'warning') !== false || stripos($message, 'warn') !== false) {
+                $level = 'warning';
+            } elseif (stripos($message, 'critical') !== false || stripos($message, 'fatal') !== false) {
+                $level = 'critical';
+            }
+
+            return [
+                'timestamp' => $matches[1],
+                'level' => $level,
+                'message' => $message,
+                'source' => 'docker',
+                'layer' => 'System',
+            ];
+        }
+
+        return null;
     }
 
     /**

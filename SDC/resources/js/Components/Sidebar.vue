@@ -654,12 +654,14 @@ provide('sidebarCollapsed', isCollapsed);
   top: 0;
   z-index: 50;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  transition: width 0.3s ease, transform 0.3s ease;
+  transition: transform 0.3s ease;
+  will-change: transform;
   /* padding-top safe-area is now handled by .sidebar-header */
 }
 
 .sidebar.is-collapsed {
   width: 80px;
+  /* No width transition - instant change prevents CLS */
 }
 
 /* Tablet (768px - 1023px): Sidebar collapsed por padrao, expande quando drawer abre */
@@ -667,7 +669,7 @@ provide('sidebarCollapsed', isCollapsed);
   .sidebar {
     width: 80px;
     transform: translateX(0);
-    transition: width 0.3s ease, transform 0.3s ease;
+    transition: transform 0.3s ease;
   }
 
   /* Quando drawer abre em tablet, expandir completamente */

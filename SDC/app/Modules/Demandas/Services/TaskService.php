@@ -12,7 +12,7 @@ class TaskService extends BaseService
 {
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Task::query()->with(['comments', 'attachments']);
+        $query = Task::query();
 
         if (!empty($filters['search'])) {
             $query->where(function ($q) use ($filters) {

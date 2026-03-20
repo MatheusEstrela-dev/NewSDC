@@ -22,14 +22,14 @@
           <!-- Ícone/Dot Timeline -->
           <div class="relative flex-shrink-0 mt-1">
             <div 
-              :class="['w-8 h-8 rounded-xl flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-slate-950 transition-all duration-300 group-hover/item:scale-110 group-hover/item:rotate-3', timelineBgColor(h.type)]"
+              :class="['w-8 h-8 rounded-xl flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-slate-950 transition-colors duration-300 group-hover/item:scale-110 group-hover/item:rotate-3', timelineBgColor(h.type)]"
             >
               <component :is="timelineIcon(h.type)" class="w-4 h-4 text-white" />
             </div>
           </div>
           
           <!-- Conteúdo Card -->
-          <div class="flex-1 bg-slate-50 dark:bg-slate-800/40 rounded-xl p-3 border border-slate-100 dark:border-slate-700/50 hover:border-slate-200 dark:hover:border-slate-600 transition-all duration-300 group-hover/item:translate-x-1 group-hover/item:shadow-md hover:bg-white dark:hover:bg-slate-800">
+          <div class="flex-1 bg-slate-50 dark:bg-slate-800/40 rounded-xl p-3 border border-slate-100 dark:border-slate-700/50 hover:border-slate-200 dark:hover:border-slate-600 transition-colors duration-300 group-hover/item:translate-x-1 group-hover/item:shadow-md hover:bg-white dark:hover:bg-slate-800">
             <div class="flex items-center justify-between mb-1">
               <span class="font-bold text-sm text-slate-800 dark:text-slate-200 group-hover/item:text-blue-500 transition-colors">{{ h.municipio }}</span>
               <span class="text-[10px] font-medium text-slate-400 dark:text-slate-500">{{ h.data }}</span>

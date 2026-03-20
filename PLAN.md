@@ -1,68 +1,179 @@
-# Plano: Corrigir Erro de Import e Validar Widgets Drag & Drop no Dashboard
+# Plano: Renderizar Dados Corretos em Detalhes da Decretacao
 
-## Diagnóstico do Erro
+## Problema Identificado
 
-O erro no screenshot é:
+O modal "Detalhes da Decretacao" exibe **N/A** e **valores zerados** porque:
+
+1. O modal recebe dados da **lista paginada** (formato compacto) ao inves dos dados completos
+2. `ProcessoGrid.vue` passa o objeto `processo` diretamente da lista para o modal
+3. Os dados completos (totais, pedidos_ah, municipios com detalhes) **NAO estao presentes** nos dados da lista
+
+### Fluxo Atual (Problematico)
 ```
-[plugin:vite:import-analysis] Failed to resolve import "vuedraggable" from "resources/js/Pages/Dashboard.vue"
-```
-
-**Causa raiz**: O `Dashboard.vue` no container Docker ainda usa o import antigo `import draggable from 'vuedraggable'`, mas no código local (editado) já foi alterado para `import draggable from '@/lib/vuedraggable-src/vuedraggable.js'`.
-
-### Estado atual verificado:
-- ✅ `vuedraggable@4.1.0` está no `package.json` e instalado em `node_modules/`
-- ✅ `sortablejs` está instalado (dependência transitiva)
-- ✅ Cópia local do source em `resources/js/lib/vuedraggable-src/` existe e é válida
-- ✅ `vite.config.js` tem alias `@` → `resources/js` configurado
-- ✅ Todos os 8 widgets existem e são componentes Vue válidos:
-  - `DashboardMetricCard.vue`, `BarChartWidget.vue`, `DonutChartWidget.vue`
-  - `RadarChartWidget.vue`, `TrendChartWidget.vue`, `SparklinesWidget.vue`
-  - `PmdaListWidget.vue`, `TimelineWidget.vue`
-- ✅ Todos os ícones (`HomeIcon`, `CheckCircleIcon`, `ClockIcon`, `PencilSquareIcon`) existem
-- ✅ `PageHeader.vue` existe
-
-## Plano de Ação
-
-### Passo 1 — Simplificar o import do vuedraggable
-Trocar o import local por import direto do pacote npm (que JÁ está instalado):
-
-```js
-// DE (atual - via cópia local):
-import draggable from '@/lib/vuedraggable-src/vuedraggable.js';
-
-// PARA (direto do npm - mais limpo e manutenível):
-import draggable from 'vuedraggable';
+Lista (ProcessosIndexResource) -> processo parcial -> DecretacaoDetailModal -> N/A
 ```
 
-**Justificativa**: O pacote `vuedraggable@4.1.0` já está no `package.json` e `node_modules/`. Usar a cópia local é redundante e propenso a erros de resolução. O import direto é o padrão recomendado.
-
-> Se `vuedraggable` falhar no Vite (bug conhecido com vue-next), usaremos o import alternativo: `import draggable from 'vuedraggable/src/vuedraggable'`
-
-### Passo 2 — Garantir que node_modules está sincronizado no container
-Executar `npm install` dentro do container Docker para garantir que o `vuedraggable` e `sortablejs` estão instalados.
-
-### Passo 3 — Remover a cópia local desnecessária
-Após confirmar que o import direto funciona:
-- Remover `/resources/js/lib/vuedraggable-src/` (cópia desnecessária do source)
-- Remover `/resources/js/lib/vuedraggable.umd.min.js` (backup desnecessário)
-
-### Passo 4 — Limpar comentários desnecessários no Dashboard.vue
-Remover os comentários de decisão (linhas 58-63) que são anotações de desenvolvimento e não deveriam estar no código final:
-
-```js
-// Estas linhas serão removidas:
-// Precisarei criar este se não existir, ou usar um genérico aqui
-// Nota: Vou criar um DashboardMetricCard.vue inline...
-// Decisão: Vou criar um `MetricWidget.vue` simples agora também?
-// Melhor: Como já tenho os outros...
-// Vou usar um componente placeholder "MetricWidget" aqui...
+### Fluxo Correto (Solucao)
+```
+Lista -> clique -> fetch /api/v1/decretacoes/{id} -> dados completos -> DecretacaoDetailModal -> dados reais
 ```
 
-### Passo 5 — Reiniciar o Vite dev server
-Reiniciar o servidor Vite para que as mudanças sejam capturadas corretamente pelo HMR.
+---
 
-## Resultado Esperado
-- Dashboard carrega sem erros
-- Widgets renderizam corretamente no grid 12-colunas
-- Drag & drop funciona via handles (ícone de arrastar)
-- Ghost card com estilo visual durante arraste
+## Arquivos a Modificar
+
+### Backend (PHP)
+
+| Arquivo | Acao |
+|---------|------|
+| `app/Modules/Decretacoes/Services/ProcessoQueryService.php` | Adicionar metodo para carregar totais e pedidos_ah |
+| `app/Modules/Decretacoes/Resources/ProcessoResource.php` | Incluir totais e pedidos_ah na resposta |
+| `app/Http/Controllers/Api/V1/Decretacoes/DecretacoesApiController.php` | Garantir que show() retorna dados completos |
+
+### Frontend (Vue)
+
+| Arquivo | Acao |
+|---------|------|
+| `resources/js/Components/Organisms/Decretacoes/ProcessoGrid.vue` | Modificar openDetailModal para fazer fetch da API |
+| `resources/js/Components/Organisms/Decretacoes/Details/DecretacaoDetailModal.vue` | Adicionar loading state e receber dados da API |
+| `resources/js/Components/Organisms/Decretacoes/Details/tabs/TabTotaisDesastres.vue` | Ajustar binding de dados |
+| `resources/js/Components/Organisms/Decretacoes/Details/tabs/TabPedidoAH.vue` | Ajustar binding de dados |
+
+---
+
+## Etapas de Implementacao
+
+### Etapa 1: Backend - Carregar Totais de Desastres
+
+Modificar `ProcessoQueryService.php` para calcular e retornar os totais:
+
+```php
+public function getProcessoWithFullData(int $id): array
+{
+    $processo = Processo::with(['municipios', 'desastres'])->findOrFail($id);
+
+    // Carregar totais de desastres
+    $totais = $this->getTotalDesastresCountFromEntradas($id);
+
+    // Carregar pedidos de ajuda humanitaria
+    $pedidosAh = $this->getPedidoAhData($processo->decreto_municipal);
+
+    return [
+        'processo' => $processo,
+        'totais' => $totais,
+        'pedidos_ah' => $pedidosAh
+    ];
+}
+```
+
+### Etapa 2: Backend - Atualizar ProcessoResource
+
+Incluir os novos campos na resposta da API:
+
+```php
+public function toArray($request): array
+{
+    return [
+        // ... campos existentes ...
+        'totais' => $this->totais ?? $this->calculateTotais(),
+        'pedidos_ah' => $this->pedidos_ah ?? [],
+    ];
+}
+```
+
+### Etapa 3: Frontend - Fetch de Dados no Modal
+
+Modificar `ProcessoGrid.vue`:
+
+```javascript
+const openDetailModal = async (processo) => {
+    loadingDetail.value = true;
+    showDetailModal.value = true;
+    selectedProcesso.value = processo; // dados parciais primeiro
+
+    try {
+        const response = await axios.get(`/api/v1/decretacoes/${processo.id}`);
+        selectedProcesso.value = response.data.data; // dados completos
+    } catch (error) {
+        console.error('Erro ao carregar detalhes:', error);
+    } finally {
+        loadingDetail.value = false;
+    }
+};
+```
+
+### Etapa 4: Frontend - Loading State no Modal
+
+Adicionar skeleton/loading no `DecretacaoDetailModal.vue` enquanto busca dados.
+
+---
+
+## Estrutura de Dados Esperada
+
+### Totais de Desastres (processo.totais)
+```json
+{
+    "geral": {
+        "danos_humanos": {
+            "total": 15,
+            "desabrigados": 10,
+            "desalojados": 5
+        },
+        "danos_materiais": {
+            "quantidade": 8,
+            "valor": 150000.00
+        },
+        "prejuizos_publicos": {
+            "valor": 500000.00
+        },
+        "prejuizos_privados": {
+            "valor": 200000.00
+        }
+    },
+    "por_municipio": [...]
+}
+```
+
+### Pedidos AH (processo.pedidos_ah)
+```json
+[
+    {
+        "id": 1,
+        "numero": "AH-2026-001",
+        "tipo": "Kit higiene",
+        "quantidade": 50,
+        "status": "aprovado",
+        "data_solicitacao": "2026-03-01"
+    }
+]
+```
+
+---
+
+## Verificacao de Integridade
+
+- [ ] Endpoint `/api/v1/decretacoes/{id}` retorna totais e pedidos_ah
+- [ ] Modal exibe loading enquanto busca dados
+- [ ] TabTotaisDesastres renderiza dados corretamente
+- [ ] TabPedidoAH renderiza lista de pedidos
+- [ ] TabInformacoes exibe municipios com detalhes
+- [ ] TabDadosDecreto exibe datas e vigencia
+
+---
+
+## Risco e Mitigacao
+
+| Risco | Mitigacao |
+|-------|-----------|
+| Performance (muitos dados) | Carregar apenas quando necessario (lazy load) |
+| Dados nulos | Usar optional chaining e valores default |
+| Cache desatualizado | Sempre buscar dados frescos da API |
+
+---
+
+## Ordem de Execucao
+
+1. **Backend primeiro**: Garantir que a API retorna os dados corretos
+2. **Testar endpoint**: Verificar resposta com Postman/curl
+3. **Frontend**: Implementar fetch e loading state
+4. **Teste e2e**: Abrir modal e verificar dados

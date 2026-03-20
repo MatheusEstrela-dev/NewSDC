@@ -3,7 +3,7 @@
     <!-- Header -->
     <button
       type="button"
-      class="w-full flex items-center justify-between gap-3 pb-3 text-left group transition-all duration-300
+      class="w-full flex items-center justify-between gap-3 pb-3 text-left group transition-colors duration-300
              border-b border-slate-700/30 dark:border-slate-700/30 border-slate-200
              hover:border-primary-500/30 dark:hover:border-primary-500/30"
       @click="isExpanded = !isExpanded"
@@ -52,10 +52,10 @@
 
     <!-- Filter Content -->
     <Transition
-      enter-active-class="transition-all duration-300 ease-out"
+      enter-active-class="transition-colors duration-300 ease-out"
       enter-from-class="opacity-0 max-h-0"
       enter-to-class="opacity-100 max-h-[2000px]"
-      leave-active-class="transition-all duration-200 ease-in"
+      leave-active-class="transition-colors duration-200 ease-in"
       leave-from-class="opacity-100 max-h-[2000px]"
       leave-to-class="opacity-0 max-h-0"
     >
@@ -106,10 +106,10 @@
           </button>
 
           <Transition
-            enter-active-class="transition-all duration-200"
+            enter-active-class="transition-colors duration-200"
             enter-from-class="opacity-0 max-h-0"
             enter-to-class="opacity-100 max-h-[500px]"
-            leave-active-class="transition-all duration-150"
+            leave-active-class="transition-colors duration-150"
             leave-from-class="opacity-100 max-h-[500px]"
             leave-to-class="opacity-0 max-h-0"
           >
@@ -197,10 +197,10 @@
           </button>
 
           <Transition
-            enter-active-class="transition-all duration-200"
+            enter-active-class="transition-colors duration-200"
             enter-from-class="opacity-0 max-h-0"
             enter-to-class="opacity-100 max-h-[600px]"
-            leave-active-class="transition-all duration-150"
+            leave-active-class="transition-colors duration-150"
             leave-from-class="opacity-100 max-h-[600px]"
             leave-to-class="opacity-0 max-h-0"
           >

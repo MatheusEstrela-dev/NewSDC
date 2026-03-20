@@ -3,7 +3,7 @@
     variant="default"
     :hover="true"
     padding="md"
-    class="cursor-pointer transition-all duration-200 hover:scale-[1.01] touch-manipulation sm:p-5"
+    class="cursor-pointer transition-colors duration-200 hover:scale-[1.01] touch-manipulation sm:p-5"
     @click="$emit('click')"
   >
     <!-- Header -->

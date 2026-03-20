@@ -4,65 +4,121 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Services;
 
-use App\Modules\Decretacoes\Models\DecretoMunicipio;
 use App\Modules\Decretacoes\Models\Processo;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Service responsible for Processo statistics and dashboard metrics.
  *
- * Calcula estatisticas para os 5 cards do dashboard de Decretacoes:
- * - Total de Eventos
- * - Registros
- * - Decretacoes
- * - Municipios Atingidos
- * - Decretacoes Vigentes
- *
- * Cada card tem breakdown por tipo de desastre (ECP/SE).
+ * Consolidado: 15 queries -> 3 queries via conditional aggregation.
  */
 class ProcessoStatsService
 {
     /**
      * Get dashboard statistics for DecretacoesStatsCards component.
      *
-     * Retorna estrutura compativel com o componente Vue:
-     * - totalEventos, totalEventosEcp, totalEventosSe
-     * - registros, registrosEcp, registrosSe
-     * - decretacoes, decretacoesEcp, decretacoesSe
-     * - municipiosAtingidos, municipiosAtingidosEcp, municipiosAtingidosSe
-     * - decretacoesVigentes, decretacoesVigentesEcp, decretacoesVigentesSe
+     * 1 query principal (conditional aggregation) + 1 municipios + 1 vigentes
      *
      * @return array<string, int>
      */
     public function getDashboardStatistics(): array
     {
-        $baseQuery = Processo::query();
+        $stats = $this->getConsolidatedCounts();
+        $municipios = $this->getMunicipiosAtingidosCounts();
+        $vigentes = $this->getVigentesCounts();
+
+        return array_merge($stats, $municipios, $vigentes);
+    }
+
+    /**
+     * 1 query: total_eventos, registros, decretacoes (com breakdown ECP/SE).
+     * Substitui 9 queries separadas.
+     */
+    private function getConsolidatedCounts(): array
+    {
+        $table = (new Processo())->getTable();
+
+        $row = DB::table($table)
+            ->whereNull('deleted_at')
+            ->selectRaw("
+                COUNT(*) as total_eventos,
+                COUNT(CASE WHEN tipo_desastre = 'ECP' THEN 1 END) as total_eventos_ecp,
+                COUNT(CASE WHEN tipo_desastre = 'SE' THEN 1 END) as total_eventos_se,
+                COUNT(CASE WHEN reconhecimento = 'Registro' THEN 1 END) as registros,
+                COUNT(CASE WHEN reconhecimento = 'Registro' AND tipo_desastre = 'ECP' THEN 1 END) as registros_ecp,
+                COUNT(CASE WHEN reconhecimento = 'Registro' AND tipo_desastre = 'SE' THEN 1 END) as registros_se,
+                COUNT(CASE WHEN reconhecimento != 'Registro' THEN 1 END) as decretacoes,
+                COUNT(CASE WHEN reconhecimento != 'Registro' AND tipo_desastre = 'ECP' THEN 1 END) as decretacoes_ecp,
+                COUNT(CASE WHEN reconhecimento != 'Registro' AND tipo_desastre = 'SE' THEN 1 END) as decretacoes_se
+            ")
+            ->first();
 
         return [
-            // Total de Eventos
-            'totalEventos'    => $this->getTotalEventos($baseQuery),
-            'totalEventosEcp' => $this->getTotalEventos($baseQuery, 'ECP'),
-            'totalEventosSe'  => $this->getTotalEventos($baseQuery, 'SE'),
+            'totalEventos'    => (int) $row->total_eventos,
+            'totalEventosEcp' => (int) $row->total_eventos_ecp,
+            'totalEventosSe'  => (int) $row->total_eventos_se,
+            'registros'       => (int) $row->registros,
+            'registrosEcp'    => (int) $row->registros_ecp,
+            'registrosSe'     => (int) $row->registros_se,
+            'decretacoes'     => (int) $row->decretacoes,
+            'decretacoesEcp'  => (int) $row->decretacoes_ecp,
+            'decretacoesSe'   => (int) $row->decretacoes_se,
+        ];
+    }
 
-            // Registros (reconhecimento = 'Registro')
-            'registros'    => $this->getRegistros($baseQuery),
-            'registrosEcp' => $this->getRegistros($baseQuery, 'ECP'),
-            'registrosSe'  => $this->getRegistros($baseQuery, 'SE'),
+    /**
+     * 1 query: municipios atingidos (distinct municipio_id via subquery).
+     */
+    private function getMunicipiosAtingidosCounts(): array
+    {
+        $table = (new Processo())->getTable();
 
-            // Decretacoes (reconhecimento != 'Registro')
-            'decretacoes'    => $this->getDecretacoes($baseQuery),
-            'decretacoesEcp' => $this->getDecretacoes($baseQuery, 'ECP'),
-            'decretacoesSe'  => $this->getDecretacoes($baseQuery, 'SE'),
+        $rows = DB::select("
+            SELECT
+                COUNT(DISTINCT dm.municipio_id) as total,
+                COUNT(DISTINCT CASE WHEN p.tipo_desastre = 'ECP' THEN dm.municipio_id END) as ecp,
+                COUNT(DISTINCT CASE WHEN p.tipo_desastre = 'SE' THEN dm.municipio_id END) as se
+            FROM dec_decreto_municipios dm
+            INNER JOIN {$table} p ON p.id = dm.entrada_processos_id
+            WHERE p.deleted_at IS NULL
+              AND p.reconhecimento != 'Registro'
+        ");
 
-            // Municipios Atingidos (distinct municipio_id)
-            'municipiosAtingidos'    => $this->getMunicipiosAtingidos($baseQuery),
-            'municipiosAtingidosEcp' => $this->getMunicipiosAtingidos($baseQuery, 'ECP'),
-            'municipiosAtingidosSe'  => $this->getMunicipiosAtingidos($baseQuery, 'SE'),
+        $row = $rows[0];
 
-            // Decretacoes Vigentes
-            'decretacoesVigentes'    => $this->getDecretacoesVigentes($baseQuery),
-            'decretacoesVigentesEcp' => $this->getDecretacoesVigentes($baseQuery, 'ECP'),
-            'decretacoesVigentesSe'  => $this->getDecretacoesVigentes($baseQuery, 'SE'),
+        return [
+            'municipiosAtingidos'    => (int) $row->total,
+            'municipiosAtingidosEcp' => (int) $row->ecp,
+            'municipiosAtingidosSe'  => (int) $row->se,
+        ];
+    }
+
+    /**
+     * 1 query: decretacoes vigentes (com breakdown ECP/SE).
+     */
+    private function getVigentesCounts(): array
+    {
+        $table = (new Processo())->getTable();
+
+        $row = DB::table($table)
+            ->whereNull('deleted_at')
+            ->where('reconhecimento', '!=', 'Registro')
+            ->where('reconhecimento', 'like', 'Reconhecido pelo Estado%')
+            ->where(function ($q) {
+                $q->whereNull('data_publicacao_mg')
+                  ->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
+            })
+            ->selectRaw("
+                COUNT(*) as total,
+                COUNT(CASE WHEN tipo_desastre = 'ECP' THEN 1 END) as ecp,
+                COUNT(CASE WHEN tipo_desastre = 'SE' THEN 1 END) as se
+            ")
+            ->first();
+
+        return [
+            'decretacoesVigentes'    => (int) $row->total,
+            'decretacoesVigentesEcp' => (int) $row->ecp,
+            'decretacoesVigentesSe'  => (int) $row->se,
         ];
     }
 
@@ -73,108 +129,28 @@ class ProcessoStatsService
      */
     public function getStatistics(): array
     {
+        $table = (new Processo())->getTable();
+
+        $row = DB::table($table)
+            ->whereNull('deleted_at')
+            ->selectRaw("
+                COUNT(*) as total,
+                COUNT(CASE WHEN reconhecimento = 'Registro' THEN 1 END) as em_analise,
+                COUNT(CASE WHEN reconhecimento LIKE 'Reconhecido%' THEN 1 END) as aprovados,
+                COUNT(CASE WHEN reconhecimento = 'Nao reconhecido' THEN 1 END) as rejeitados
+            ")
+            ->first();
+
         return [
-            'total'      => Processo::count(),
-            'em_analise' => Processo::where('reconhecimento', 'Registro')->count(),
-            'aprovados'  => Processo::where('reconhecimento', 'like', 'Reconhecido%')->count(),
-            'rejeitados' => Processo::where('reconhecimento', 'Nao reconhecido')->count(),
+            'total'      => (int) $row->total,
+            'em_analise' => (int) $row->em_analise,
+            'aprovados'  => (int) $row->aprovados,
+            'rejeitados' => (int) $row->rejeitados,
         ];
     }
 
     /**
-     * Total de Eventos: conta todos os processos.
-     */
-    private function getTotalEventos(Builder $baseQuery, ?string $tipoDesastre = null): int
-    {
-        $query = clone $baseQuery;
-
-        if ($tipoDesastre) {
-            $query->where('tipo_desastre', $tipoDesastre);
-        }
-
-        return $query->count();
-    }
-
-    /**
-     * Registros: conta processos com reconhecimento = 'Registro'.
-     */
-    private function getRegistros(Builder $baseQuery, ?string $tipoDesastre = null): int
-    {
-        $query = clone $baseQuery;
-        $query->where('reconhecimento', 'Registro');
-
-        if ($tipoDesastre) {
-            $query->where('tipo_desastre', $tipoDesastre);
-        }
-
-        return $query->count();
-    }
-
-    /**
-     * Decretacoes: conta processos com reconhecimento != 'Registro'.
-     */
-    private function getDecretacoes(Builder $baseQuery, ?string $tipoDesastre = null): int
-    {
-        $query = clone $baseQuery;
-        $query->where('reconhecimento', '!=', 'Registro');
-
-        if ($tipoDesastre) {
-            $query->where('tipo_desastre', $tipoDesastre);
-        }
-
-        return $query->count();
-    }
-
-    /**
-     * Municipios Atingidos: conta municipios distintos com decretacoes.
-     */
-    private function getMunicipiosAtingidos(Builder $baseQuery, ?string $tipoDesastre = null): int
-    {
-        $query = clone $baseQuery;
-        $query->where('reconhecimento', '!=', 'Registro');
-
-        if ($tipoDesastre) {
-            $query->where('tipo_desastre', $tipoDesastre);
-        }
-
-        $processoIds = $query->pluck('id');
-
-        return DecretoMunicipio::whereIn('entrada_processos_id', $processoIds)
-            ->distinct('municipio_id')
-            ->count('municipio_id');
-    }
-
-    /**
-     * Decretacoes Vigentes: conta processos vigentes reconhecidos pelo estado.
-     *
-     * Vigente = data_publicacao_mg NULL ou data_publicacao_mg + prazo_vigencia >= hoje
-     * + reconhecimento LIKE 'Reconhecido pelo Estado%'
-     */
-    private function getDecretacoesVigentes(Builder $baseQuery, ?string $tipoDesastre = null): int
-    {
-        $query = clone $baseQuery;
-
-        // Vigencia: data_publicacao_mg NULL ou dentro do prazo
-        $query->where(function ($q) {
-            $q->whereNull('data_publicacao_mg')
-              ->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
-        });
-
-        // Reconhecido pelo estado
-        $query->where('reconhecimento', '!=', 'Registro')
-              ->where('reconhecimento', 'like', 'Reconhecido pelo Estado%');
-
-        if ($tipoDesastre) {
-            $query->where('tipo_desastre', $tipoDesastre);
-        }
-
-        return $query->count();
-    }
-
-    /**
      * Get the count of valid (vigentes) processos.
-     *
-     * @return int
      */
     public function getVigentesCount(): int
     {

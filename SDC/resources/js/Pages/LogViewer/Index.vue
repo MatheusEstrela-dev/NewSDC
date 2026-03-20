@@ -24,6 +24,10 @@ const props = defineProps({
     availableLevels: {
         type: Array,
         default: () => []
+    },
+    availableTypes: {
+        type: Array,
+        default: () => []
     }
 })
 
@@ -37,11 +41,32 @@ const filters = ref({
     search: urlParams.get('search') || '',
     level: urlParams.get('level') || '',
     layer: urlParams.get('layer') || '',
+    type: urlParams.get('type') || 'laravel',
     date_from: urlParams.get('date_from') || '',
     date_to: urlParams.get('date_to') || '',
     errors_only: urlParams.get('errors_only') === '1',
     limit: parseInt(urlParams.get('limit')) || 100
 })
+
+// Funções de Gestão (Engrenagem)
+const handleAction = (action, params = {}) => {
+    loading.value = true
+    
+    if (action === 'download') {
+        const url = window.route('log-viewer.download', { file: params.file || 'laravel.log' })
+        window.open(url, '_blank')
+        loading.value = false
+        return
+    }
+
+    router.post(window.route(`log-viewer.${action}`), params, {
+        onEnter: () => loading.value = true,
+        onFinish: () => {
+            loading.value = false
+            reloadData()
+        }
+    })
+}
 
 const debounce = (fn, delay) => {
     let timeoutId
@@ -85,7 +110,10 @@ const debouncedReload = debounce(() => reloadData(), 300)
 watch(() => filters.value.search, () => debouncedReload())
 watch(() => filters.value.level, () => reloadData())
 watch(() => filters.value.layer, () => reloadData())
+watch(() => filters.value.type, () => reloadData())
 watch(() => filters.value.errors_only, () => reloadData())
+watch(() => filters.value.date_from, () => reloadData())
+watch(() => filters.value.date_to, () => reloadData())
 
 const errorCount = computed(() => {
     const byLevel = props.initialStats?.by_level || {}
@@ -119,53 +147,25 @@ const todayCount = computed(() => {
                 </span>
             </div>
 
-            <!-- Filtro por Layer -->
-            <div class="ml-auto flex items-center gap-3">
-                <select
-                    v-model="filters.layer"
-                    @change="reloadData"
-                    class="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-gray-300 focus:ring-1 focus:ring-blue-500"
-                >
-                    <option value="">Todas as camadas</option>
-                    <option v-for="layer in availableLayers" :key="layer" :value="layer">{{ layer }}</option>
-                </select>
-
-                <!-- Date Range -->
-                <input
-                    type="date"
-                    v-model="filters.date_from"
-                    @change="reloadData"
-                    class="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-gray-300"
-                    placeholder="Data inicial"
-                />
-                <span class="text-gray-600">-</span>
-                <input
-                    type="date"
-                    v-model="filters.date_to"
-                    @change="reloadData"
-                    class="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-gray-300"
-                    placeholder="Data final"
-                />
-
-                <!-- Errors Only -->
-                <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                    <input
-                        type="checkbox"
-                        v-model="filters.errors_only"
-                        class="rounded bg-gray-800 border-gray-600 text-red-500"
-                    />
-                    Apenas erros
-                </label>
+            <div class="ml-auto flex items-center gap-6">
+                <!-- Data Range Info (Read-only or small indicators if needed) -->
+                <div v-if="filters.date_from || filters.date_to" class="text-[10px] text-gray-500 flex gap-2">
+                    <span v-if="filters.date_from">Desde: {{ filters.date_from }}</span>
+                    <span v-if="filters.date_to">Até: {{ filters.date_to }}</span>
+                </div>
             </div>
         </div>
 
-        <!-- Topbar com Level + Search -->
+        <!-- Topbar com Level + Search + Gestão -->
         <LogViewerTopbar
             v-model:filters="filters"
             :stats="initialStats"
             :loading="loading"
             :levels="availableLevels"
+            :layers="availableLayers"
+            :types="availableTypes"
             @refresh="reloadData"
+            @action="handleAction"
         />
 
         <!-- Tabela -->

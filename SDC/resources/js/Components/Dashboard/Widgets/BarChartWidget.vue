@@ -10,7 +10,7 @@
           v-for="period in ['6M', '12M']"
           :key="period"
           :class="[
-            'px-2.5 py-1 text-xs font-medium rounded-md transition-all',
+            'px-2.5 py-1 text-xs font-medium rounded-md transition-colors',
             barPeriod === period
               ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
@@ -25,7 +25,7 @@
       <!-- Custom Tooltip for Bars -->
       <div 
         v-if="hoveredBarIndex !== null"
-        class="absolute z-50 pointer-events-none bg-slate-900/95 text-white px-3 py-1.5 rounded-lg shadow-xl border border-slate-700 text-xs transition-all duration-200 whitespace-nowrap"
+        class="absolute z-50 pointer-events-none bg-slate-900/95 text-white px-3 py-1.5 rounded-lg shadow-xl border border-slate-700 text-xs transition-colors duration-200 whitespace-nowrap"
         :style="{ 
           left: `${(30 + hoveredBarIndex * ((600 - 60) / (activeBarData.length - 1))) / 6}%`, 
           top: `${200 - (activeBarData[hoveredBarIndex].value / maxBarValue) * 160 - 40}px`,
@@ -63,7 +63,7 @@
             :height="(item.value / maxBarValue) * 160"
             rx="4"
             fill="url(#barGradient)"
-            class="transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) cursor-pointer"
+            class="transition-colors duration-500 cubic-bezier(0.4, 0, 0.2, 1) cursor-pointer"
             :class="[
               hoveredBarIndex === index ? 'opacity-100 filter url(#glow)' : 'opacity-80 hover:opacity-100'
             ]"

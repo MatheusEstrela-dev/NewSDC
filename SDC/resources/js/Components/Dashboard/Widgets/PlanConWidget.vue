@@ -23,7 +23,7 @@
               :stroke="segment.color"
               :stroke-dasharray="segment.dashArray"
               :stroke-dashoffset="segment.dashOffset"
-              class="transition-all duration-300"
+              class="transition-colors duration-300"
             />
           </svg>
           <div class="absolute inset-0 flex items-center justify-center">
@@ -62,7 +62,7 @@
               :stroke="segment.color"
               :stroke-dasharray="segment.dashArray"
               :stroke-dashoffset="segment.dashOffset"
-              class="transition-all duration-300"
+              class="transition-colors duration-300"
             />
           </svg>
           <div class="absolute inset-0 flex items-center justify-center">

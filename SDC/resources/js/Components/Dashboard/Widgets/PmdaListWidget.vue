@@ -13,7 +13,7 @@
       <div
         v-for="item in pmdaEmAnalise"
         :key="item.id"
-        class="px-4 sm:px-5 py-3 hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all duration-300 group cursor-pointer"
+        class="px-4 sm:px-5 py-3 hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-colors duration-300 group cursor-pointer"
       >
         <div class="flex items-center justify-between gap-3 mb-1">
           <span class="font-bold text-sm text-slate-900 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{{ item.protocolo }}</span>

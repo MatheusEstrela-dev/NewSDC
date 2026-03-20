@@ -50,7 +50,6 @@ class Kernel extends HttpKernel
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\SetTenant::class,
             \App\Http\Middleware\LogApiRequests::class, // Mantendo específico para API
             \App\Http\Middleware\LogSystemActivity::class, // Capture ALL API requests too (audit)

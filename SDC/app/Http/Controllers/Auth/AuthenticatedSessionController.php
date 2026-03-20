@@ -9,6 +9,7 @@ use App\Providers\RouteServiceProvider;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -37,6 +38,9 @@ class AuthenticatedSessionController extends Controller
 
         $user = Auth::user();
         $user->recordLogin($request->ip(), $request->userAgent());
+
+        // Invalidar cache do usuario para garantir dados frescos no dashboard
+        Cache::forget("inertia_user_data_{$user->id}");
 
         AuditLog::logLogin($user->id);
 

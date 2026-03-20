@@ -106,7 +106,7 @@ const SIZE_CONFIG = {
 
 const buttonClasses = computed(() => {
   const config = SIZE_CONFIG[props.size];
-  const base = 'inline-flex items-center justify-center rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation';
+  const base = 'inline-flex items-center justify-center rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation';
 
   return [
     base,
