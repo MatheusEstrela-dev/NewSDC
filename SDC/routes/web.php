@@ -14,6 +14,26 @@ Route::get('/debug/test-dto', function () {
     // ... (rest of debug route)
 });
 
+// Rota de Teste para Gerar Logs Propositais (Temporariamente fora do Auth para teste)
+Route::get('/test-log-error', function () {
+    $logger = app(\App\Services\Logging\ActivityLogger::class);
+    
+    // Log de evento comum
+    $logger->logEvent('system', 'test_event', ['info' => 'Isso é um teste'], 1, 'info');
+    
+    // Log de erro crítico proposital
+    try {
+        throw new \Exception("ERRO PROPOSITAL PARA TESTE DE INTERFACE");
+    } catch (\Exception $e) {
+        $logger->logCriticalError("Falha crítica detectada no teste", $e, [
+            'user_id' => 1,
+            'test_mode' => true
+        ]);
+    }
+    
+    return "Logs gerados! Verifique o Log Viewer em /log-viewer. Certifique-se de que o LOG_CHANNEL está correto (ex: stack ou daily).";
+})->name('test.log.error');
+
 Route::get('/', function () {
     return redirect()->route('login');
 });
@@ -30,17 +50,43 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Log Viewer - Sistema Avancado de Visualizacao de Logs
-    Route::prefix('log-viewer')->group(function () {
-        Route::get('/', [\App\Http\Controllers\LogViewerController::class, 'index'])->name('log-viewer.index');
-        Route::post('/clear', [\App\Http\Controllers\LogViewerController::class, 'clear'])->name('log-viewer.clear');
-        Route::post('/clean', [\App\Http\Controllers\LogViewerController::class, 'cleanOldLogs'])->name('log-viewer.clean');
-        Route::get('/download', [\App\Http\Controllers\LogViewerController::class, 'download'])->name('log-viewer.download');
-        Route::post('/test', [\App\Http\Controllers\LogViewerController::class, 'generateTestLogs'])->name('log-viewer.test');
-    })->middleware('can:system.logs.view');
+    // Log Viewer - Sistema Avançado de Visualização de Logs
+    Route::get('/log-viewer', function (Illuminate\Http\Request $request) {
+        $logReader = app(\App\Services\Logging\LogFileReaderService::class);
+        
+        $filters = $request->only(['level', 'layer', 'search', 'date_from', 'date_to', 'errors_only', 'limit']);
+        $filters['limit'] = $filters['limit'] ?? 100;
+        
+        $logs = $logReader->readLogs($filters);
+        $statistics = $logReader->getStatistics($filters);
+        
+        return Inertia::render('LogViewer/Index', [
+            'initialLogs' => $logs->toArray(),
+            'initialStats' => $statistics,
+            'availableLayers' => ['api', 'backend', 'frontend', 'system', 'security', 'database', 'queue', 'integration'],
+            'availableLevels' => ['debug', 'info', 'warning', 'error', 'critical']
+        ]);
+    })->middleware('can:system.logs.view')->name('log-viewer.index');
 
-    // Rota de Teste para Gerar Logs Propositais (mantida para compatibilidade)
-    Route::get('/test-log-error', [\App\Http\Controllers\LogViewerController::class, 'generateTestLogs'])->name('test.log.error');
+    // Rota de Teste para Gerar Logs Propositais
+    Route::get('/test-log-error', function () {
+        $logger = app(\App\Services\Logging\ActivityLogger::class);
+        
+        // Log de evento comum
+        $logger->logEvent('system', 'test_event', ['info' => 'Isso é um teste'], auth()->id(), 'info');
+        
+        // Log de erro crítico proposital
+        try {
+            throw new \Exception("ERRO PROPOSITAL PARA TESTE DE INTERFACE");
+        } catch (\Exception $e) {
+            $logger->logCriticalError("Falha crítica detectada no teste", $e, [
+                'user_id' => auth()->id(),
+                'test_mode' => true
+            ]);
+        }
+        
+        return "Logs gerados! Verifique o Log Viewer em /log-viewer.";
+    })->name('test.log.error');
 
     // Redirect Legacy Log Viewer to New Premium Viewer
     Route::get('logs', function () {

@@ -271,27 +271,6 @@ Route::prefix('v1/decretacoes')
     });
 
 // ============================================================================
-// DECRETACOES API — Autenticacao dupla (Sanctum + Power BI token)
-// ============================================================================
-use App\Http\Controllers\Api\V1\Decretacoes\DecretacoesApiController;
-
-Route::prefix('v1/decretacoes')
-    ->name('api.v1.decretacoes.')
-    ->middleware([
-        \Illuminate\Cookie\Middleware\EncryptCookies::class,
-        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-        \Illuminate\Session\Middleware\StartSession::class,
-        'decretacoes.api.auth',
-        'api-rate-limiter:pro'
-    ])
-    ->group(function () {
-        Route::get('/',                [DecretacoesApiController::class, 'index'])->name('index');
-        Route::get('/export/power-bi', [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');
-        Route::post('/receive',        [DecretacoesApiController::class, 'receive'])->name('receive');
-        Route::get('/{id}',            [DecretacoesApiController::class, 'show'])->name('show');
-    });
-
-// ============================================================================
 // IA INTEGRATION CORE
 // ============================================================================
 
