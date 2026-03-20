@@ -1,32 +1,46 @@
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
-import { Head } from '@inertiajs/vue3'
+import { ref, watch, computed } from 'vue'
+import { Head, router } from '@inertiajs/vue3'
 import SidebarOnlyLayout from '@/Layouts/SidebarOnlyLayout.vue'
 import LogViewerTopbar from '@/Components/Molecules/LogViewer/LogViewerTopbar.vue'
 import LogViewerTable from '@/Components/Organisms/LogViewer/LogViewerTable.vue'
 import LogViewerDetail from '@/Components/Organisms/LogViewer/LogViewerDetail.vue'
-import axios from 'axios'
 
 defineOptions({ layout: SidebarOnlyLayout })
 
-const BACKEND_API = import.meta.env.VITE_SDC_API_URL || 'http://localhost:8000'
+const props = defineProps({
+    initialLogs: {
+        type: Array,
+        default: () => []
+    },
+    initialStats: {
+        type: Object,
+        default: () => ({})
+    },
+    availableLayers: {
+        type: Array,
+        default: () => []
+    },
+    availableLevels: {
+        type: Array,
+        default: () => []
+    }
+})
 
-const logs = ref([])
-const layers = ref([])
-const levels = ref([])
-const statistics = ref({})
 const loading = ref(false)
 const selectedLog = ref(null)
 const showDetail = ref(false)
 
+const urlParams = new URLSearchParams(window.location.search)
+
 const filters = ref({
-    search: '',
-    level: '',
-    layer: '',
-    date_from: '',
-    date_to: '',
-    errors_only: false,
-    limit: 100
+    search: urlParams.get('search') || '',
+    level: urlParams.get('level') || '',
+    layer: urlParams.get('layer') || '',
+    date_from: urlParams.get('date_from') || '',
+    date_to: urlParams.get('date_to') || '',
+    errors_only: urlParams.get('errors_only') === '1',
+    limit: parseInt(urlParams.get('limit')) || 100
 })
 
 const debounce = (fn, delay) => {
@@ -37,53 +51,28 @@ const debounce = (fn, delay) => {
     }
 }
 
-const loadLogs = async () => {
+// ÚNICA função para carregar dados via backend
+const reloadData = () => {
     loading.value = true
-    try {
-        const params = new URLSearchParams()
-        if (filters.value.level) params.append('level', filters.value.level)
-        if (filters.value.layer) params.append('layer', filters.value.layer)
-        if (filters.value.search) params.append('search', filters.value.search)
-        if (filters.value.date_from) params.append('date_from', filters.value.date_from)
-        if (filters.value.date_to) params.append('date_to', filters.value.date_to)
-        if (filters.value.errors_only) params.append('errors_only', '1')
-        params.append('limit', filters.value.limit)
-
-        const response = await axios.get(`${BACKEND_API}/api/v1/logs?${params.toString()}`)
-        logs.value = response.data.logs?.data || response.data.logs || []
-    } catch (error) {
-        console.error('Erro ao carregar logs:', error)
-        logs.value = []
-    } finally {
-        loading.value = false
+    const query = { ...filters.value }
+    if (query.errors_only) {
+        query.errors_only = '1'
+    } else {
+        delete query.errors_only
     }
-}
+    
+    Object.keys(query).forEach(key => {
+        if (query[key] === '' || query[key] === null) {
+            delete query[key]
+        }
+    })
 
-const loadStats = async () => {
-    try {
-        const response = await axios.get(`${BACKEND_API}/api/v1/logs/stats`)
-        statistics.value = response.data.stats || {}
-    } catch (error) {
-        statistics.value = {}
-    }
-}
-
-const loadLayers = async () => {
-    try {
-        const response = await axios.get(`${BACKEND_API}/api/v1/logs/layers`)
-        layers.value = response.data.layers || []
-    } catch (error) {
-        layers.value = []
-    }
-}
-
-const loadLevels = async () => {
-    try {
-        const response = await axios.get(`${BACKEND_API}/api/v1/logs/levels`)
-        levels.value = response.data.levels || []
-    } catch (error) {
-        levels.value = ['debug', 'info', 'warning', 'error', 'critical']
-    }
+    router.get(window.route('log-viewer.index'), query, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ['initialLogs', 'initialStats'],
+        onFinish: () => loading.value = false
+    })
 }
 
 const selectLog = (log) => {
@@ -91,22 +80,21 @@ const selectLog = (log) => {
     showDetail.value = true
 }
 
-const debouncedLoadLogs = debounce(() => loadLogs(), 300)
+const debouncedReload = debounce(() => reloadData(), 300)
 
-watch(() => filters.value.search, () => debouncedLoadLogs())
-watch(() => filters.value.level, () => loadLogs())
-watch(() => filters.value.layer, () => loadLogs())
-watch(() => filters.value.errors_only, () => loadLogs())
+watch(() => filters.value.search, () => debouncedReload())
+watch(() => filters.value.level, () => reloadData())
+watch(() => filters.value.layer, () => reloadData())
+watch(() => filters.value.errors_only, () => reloadData())
 
-const errorCount = computed(() => statistics.value?.errors_today || 0)
-const totalCount = computed(() => statistics.value?.total || 0)
-const todayCount = computed(() => statistics.value?.today || 0)
-
-onMounted(() => {
-    loadLayers()
-    loadLevels()
-    loadStats()
-    loadLogs()
+const errorCount = computed(() => {
+    const byLevel = props.initialStats?.by_level || {}
+    return (byLevel.error || 0) + (byLevel.critical || 0) + (byLevel.emergency || 0) + (byLevel.alert || 0)
+})
+const totalCount = computed(() => props.initialStats?.total_logs || 0)
+const todayCount = computed(() => {
+    const today = new Date().toISOString().split('T')[0]
+    return props.initialStats?.by_day?.[today] || 0
 })
 </script>
 
@@ -135,17 +123,18 @@ onMounted(() => {
             <div class="ml-auto flex items-center gap-3">
                 <select
                     v-model="filters.layer"
+                    @change="reloadData"
                     class="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-gray-300 focus:ring-1 focus:ring-blue-500"
                 >
                     <option value="">Todas as camadas</option>
-                    <option v-for="layer in layers" :key="layer" :value="layer">{{ layer }}</option>
+                    <option v-for="layer in availableLayers" :key="layer" :value="layer">{{ layer }}</option>
                 </select>
 
                 <!-- Date Range -->
                 <input
                     type="date"
                     v-model="filters.date_from"
-                    @change="loadLogs"
+                    @change="reloadData"
                     class="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-gray-300"
                     placeholder="Data inicial"
                 />
@@ -153,7 +142,7 @@ onMounted(() => {
                 <input
                     type="date"
                     v-model="filters.date_to"
-                    @change="loadLogs"
+                    @change="reloadData"
                     class="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-gray-300"
                     placeholder="Data final"
                 />
@@ -173,15 +162,15 @@ onMounted(() => {
         <!-- Topbar com Level + Search -->
         <LogViewerTopbar
             v-model:filters="filters"
-            :stats="statistics"
+            :stats="initialStats"
             :loading="loading"
-            :levels="levels"
-            @refresh="loadLogs"
+            :levels="availableLevels"
+            @refresh="reloadData"
         />
 
         <!-- Tabela -->
         <LogViewerTable
-            :logs="logs"
+            :logs="initialLogs"
             :loading="loading"
             :filters="filters"
             @select-log="selectLog"

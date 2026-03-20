@@ -12,6 +12,7 @@ const emit = defineEmits(['select-log'])
 
 const getLevelColor = (level) => {
     if (!level) return 'text-gray-400'
+    const strLevel = String(level).toLowerCase()
     const colors = {
         debug: 'text-gray-400',
         info: 'text-blue-400',
@@ -22,11 +23,12 @@ const getLevelColor = (level) => {
         alert: 'text-red-600 font-bold',
         emergency: 'text-red-700 font-bold'
     }
-    return colors[level.toLowerCase()] || 'text-gray-400'
+    return colors[strLevel] || 'text-gray-400'
 }
 
 const getLevelBg = (level) => {
     if (!level) return 'bg-gray-500'
+    const strLevel = String(level).toLowerCase()
     const colors = {
         debug: 'bg-gray-500',
         info: 'bg-blue-500',
@@ -37,7 +39,7 @@ const getLevelBg = (level) => {
         alert: 'bg-red-600',
         emergency: 'bg-red-700'
     }
-    return colors[level.toLowerCase()] || 'bg-gray-500'
+    return colors[strLevel] || 'bg-gray-500'
 }
 
 const getLayerColor = (layer) => {
@@ -68,7 +70,7 @@ const formatDate = (dateStr) => {
 
 const getShortClass = (className) => {
     if (!className) return ''
-    return className.split('\\').pop()
+    return String(className).split('\\').pop()
 }
 </script>
 
@@ -139,12 +141,12 @@ const getShortClass = (className) => {
 
                         <!-- Data -->
                         <td class="px-2 text-right text-gray-500 whitespace-nowrap">
-                            {{ formatDate(log.created_at) }}
+                            {{ formatDate(log.timestamp || log.created_at) }}
                         </td>
 
                         <!-- Hora -->
                         <td class="px-3 text-right text-gray-500 whitespace-nowrap">
-                            {{ formatTime(log.created_at) }}
+                            {{ formatTime(log.timestamp || log.created_at) }}
                         </td>
                     </tr>
                 </tbody>
