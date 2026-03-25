@@ -16,6 +16,14 @@ return new class extends Migration
 
             $table->string('name', 150);
             $table->string('email', 191)->unique();
+
+            // 🔗 Órgão principal
+            $table->foreignId('orgao_principal_id')
+                ->nullable()
+                ->constrained('orgaos')
+                ->nullOnDelete()
+                ->comment('Órgão principal do usuário (cache para performance)');
+
             $table->char('cpf', 11)->unique();
             $table->string('password');
 
@@ -38,6 +46,19 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            // 👇 Auditoria (auto-relacionamento)
+            $table->foreignId('created_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
+            $table->foreignId('updated_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
+            // 📊 Índices
+            $table->index('orgao_principal_id');
             $table->index(['status', 'last_login_at'], 'idx_users_inactivity');
             $table->index(['active', 'name'], 'idx_active_users_search');
         });
