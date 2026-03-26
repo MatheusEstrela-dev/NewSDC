@@ -138,43 +138,31 @@ return [
                 : [],
         ],
 
-        // Canal para erros críticos (sistema 24/7)
+        // Canal para erros criticos (sistema 24/7)
         'critical' => [
-            'driver' => 'monolog',
+            'driver' => 'daily',
+            'path' => storage_path('logs/critical.log'),
             'level' => 'critical',
-            'handler' => StreamHandler::class,
-            'formatter' => Monolog\Formatter\JsonFormatter::class,
-            'with' => [
-                'stream' => storage_path('logs/critical.log'),
-            ],
-            'processors' => [
-                PsrLogMessageProcessor::class,
-                Monolog\Processor\IntrospectionProcessor::class,
-            ],
+            'days' => 30,
+            'replace_placeholders' => true,
         ],
 
-        // Canal para queries lentas (JSON estruturado)
+        // Canal para queries lentas
         'queries' => [
-            'driver' => 'monolog',
+            'driver' => 'daily',
+            'path' => storage_path('logs/queries.log'),
             'level' => 'debug',
-            'handler' => StreamHandler::class,
-            'formatter' => Monolog\Formatter\JsonFormatter::class,
-            'with' => [
-                'stream' => storage_path('logs/queries.log'),
-            ],
-            'processors' => [PsrLogMessageProcessor::class],
+            'days' => 7,
+            'replace_placeholders' => true,
         ],
 
-        // Canal para jobs falhados (JSON estruturado)
+        // Canal para jobs falhados
         'jobs' => [
-            'driver' => 'monolog',
+            'driver' => 'daily',
+            'path' => storage_path('logs/jobs.log'),
             'level' => 'error',
-            'handler' => StreamHandler::class,
-            'formatter' => Monolog\Formatter\JsonFormatter::class,
-            'with' => [
-                'stream' => storage_path('logs/jobs.log'),
-            ],
-            'processors' => [PsrLogMessageProcessor::class],
+            'days' => 14,
+            'replace_placeholders' => true,
         ],
 
         // Canal para webhooks (recebimento e envio)
@@ -255,7 +243,9 @@ return [
         ],
 
         'emergency' => [
-            'path' => storage_path('logs/laravel.log'),
+            'driver' => 'daily',
+            'path' => storage_path('logs/emergency.log'),
+            'days' => 30,
         ],
     ],
 

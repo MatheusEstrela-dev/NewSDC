@@ -81,7 +81,7 @@ services:
       # ===== CACHE (Performance) =====
       - jenkins_cache_m2:/var/jenkins_home/.m2
       - jenkins_cache_gradle:/var/jenkins_home/.gradle
-      - jenkins_cache_npm:/var/jenkins_home/.npm
+      - jenkins_cache_bun:/var/jenkins_home/.bun
 
       # ===== BACKUP (Read-only) =====
       - jenkins_backups:/backups:ro
@@ -476,7 +476,7 @@ volumes:
   jenkins_cache_gradle:
     driver: local
 
-  jenkins_cache_npm:
+  jenkins_cache_bun:
     driver: local
 
   # Agent Workdir

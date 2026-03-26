@@ -9,6 +9,7 @@ use App\Modules\Decretacoes\Models\DecretoMunicipio;
 use App\Modules\Decretacoes\Models\Processo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ProcessoFilter
@@ -71,12 +72,20 @@ class ProcessoFilter
     {
         if ($this->request->filled('search')) {
             $search = $this->request->input('search');
-            $this->builder->where(function ($q) use ($search) {
+            $table = $this->builder->getModel()->getTable();
+
+            $this->builder->where(function ($q) use ($search, $table) {
                 $q->where('analista', 'like', "%$search%")
                   ->orWhere('n_protocolo_fide', 'like', "%$search%")
-                  ->orWhereHas('municipios', function ($q2) use ($search) {
-                      $q2->where('municipios.nome', 'like', "%$search%")
-                         ->orWhere('municipios.codigo_ibge', 'like', "%$search%");
+                  ->orWhereExists(function ($sub) use ($search, $table) {
+                      $sub->select(DB::raw(1))
+                          ->from('dec_decreto_municipios as dm')
+                          ->join('municipios as m', 'm.id', '=', 'dm.municipio_id')
+                          ->whereColumn('dm.entrada_processos_id', "{$table}.id")
+                          ->where(function ($w) use ($search) {
+                              $w->where('m.nome', 'like', "%$search%")
+                                ->orWhere('m.codigo_ibge', 'like', "%$search%");
+                          });
                   });
             });
         }
@@ -195,8 +204,14 @@ class ProcessoFilter
     protected function filterByMunicipio(): self
     {
         if ($this->request->filled('municipio_id')) {
-            $this->builder->whereHas('municipios', function ($q) {
-                $q->where('municipios.id', $this->request->input('municipio_id'));
+            $municipioId = $this->request->input('municipio_id');
+            $table = $this->builder->getModel()->getTable();
+
+            $this->builder->whereExists(function ($sub) use ($municipioId, $table) {
+                $sub->select(DB::raw(1))
+                    ->from('dec_decreto_municipios as dm')
+                    ->whereColumn('dm.entrada_processos_id', "{$table}.id")
+                    ->where('dm.municipio_id', $municipioId);
             });
         }
 
@@ -206,10 +221,18 @@ class ProcessoFilter
     protected function filterByProtocoloFide(): self
     {
         if ($this->request->filled('n_protocolo_fide')) {
-            $this->builder->whereHas('decretoMunicipios', function ($q) {
-                $q->where('n_protocolo_fide', 'like', $this->request->input('n_protocolo_fide') . '%');
-            })
-            ->orWhere('n_protocolo_fide', 'like', $this->request->input('n_protocolo_fide') . '%');
+            $protocolo = $this->request->input('n_protocolo_fide');
+            $table = $this->builder->getModel()->getTable();
+
+            $this->builder->where(function ($q) use ($protocolo, $table) {
+                $q->where('n_protocolo_fide', 'like', $protocolo . '%')
+                  ->orWhereExists(function ($sub) use ($protocolo, $table) {
+                      $sub->select(DB::raw(1))
+                          ->from('dec_decreto_municipios as dm')
+                          ->whereColumn('dm.entrada_processos_id', "{$table}.id")
+                          ->where('dm.n_protocolo_fide', 'like', $protocolo . '%');
+                  });
+            });
         }
 
         return $this;
@@ -301,34 +324,40 @@ class ProcessoFilter
 
     /**
      * Get municipios from database for select options.
+     * Cached for 24 hours (data rarely changes).
      */
     protected static function getMunicipiosOptions(): array
     {
-        return Municipio::query()
-            ->select('id', 'nome', 'codigo_ibge')
-            ->orderBy('nome')
-            ->get()
-            ->map(fn ($m) => [
-                'id' => $m->id,
-                'label' => $m->nome,
-                'codigo_ibge' => $m->codigo_ibge,
-            ])
-            ->toArray();
+        return Cache::remember('decretacoes.filter.municipios', 86400, function () {
+            return Municipio::query()
+                ->select('id', 'nome', 'codigo_ibge')
+                ->orderBy('nome')
+                ->get()
+                ->map(fn ($m) => [
+                    'id' => $m->id,
+                    'label' => $m->nome,
+                    'codigo_ibge' => $m->codigo_ibge,
+                ])
+                ->toArray();
+        });
     }
 
     /**
      * Get analistas from database for select options.
+     * Cached for 1 hour.
      */
     protected static function getAnalistasOptions(): array
     {
-        return Processo::query()
-            ->distinct()
-            ->whereNotNull('analista')
-            ->where('analista', '!=', '')
-            ->pluck('analista')
-            ->sort()
-            ->values()
-            ->toArray();
+        return Cache::remember('decretacoes.filter.analistas', 3600, function () {
+            return Processo::query()
+                ->distinct()
+                ->whereNotNull('analista')
+                ->where('analista', '!=', '')
+                ->pluck('analista')
+                ->sort()
+                ->values()
+                ->toArray();
+        });
     }
 
     /**

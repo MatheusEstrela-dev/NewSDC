@@ -89,7 +89,7 @@ echo.
 echo IMPORTANTE - VITE DEVE SER EXECUTADO NO HOST:
 echo   1. Abra um novo terminal
 echo   2. Navegue para: C:\Users\x24679188\Documents\GitHub\NewSDC\SDC
-echo   3. Execute: npm run dev
+echo   3. Execute: bun run dev
 echo   4. Vite estara em: http://localhost:5173
 echo.
 echo COMANDOS UTEIS:

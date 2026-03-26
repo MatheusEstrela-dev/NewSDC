@@ -24,11 +24,11 @@ echo "✅ Caches limpos"
 # Verifica Vite
 echo ""
 echo "🔍 Verificando Vite dev server..."
-if docker exec newsdc_node ps aux | grep -q "[v]ite"; then
-    echo "✅ Vite está rodando na porta 5173"
+if docker exec newsdc_bun ps aux | grep -q "[v]ite"; then
+    echo "✅ Vite esta rodando na porta 5175"
 else
-    echo "❌ Vite não está rodando!"
-    echo "   Execute: docker-compose restart newsdc_node"
+    echo "❌ Vite nao esta rodando!"
+    echo "   Execute: docker compose restart bun"
 fi
 
 echo ""
@@ -41,5 +41,5 @@ echo "   2. Salve (Ctrl+S)"
 echo "   3. Hard refresh no navegador (Ctrl+Shift+R)"
 echo "   4. As próximas mudanças serão automáticas!"
 echo ""
-echo "⚠️  IMPORTANTE: NÃO execute 'npm run build' em dev!"
+echo "⚠️  IMPORTANTE: NAO execute 'bun run build' em dev!"
 echo ""

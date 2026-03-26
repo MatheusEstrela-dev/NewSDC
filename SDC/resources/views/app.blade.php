@@ -9,7 +9,6 @@
         <!-- Preconnect para recursos externos -->
         <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
         <link rel="dns-prefetch" href="https://fonts.bunny.net">
-        <link rel="dns-prefetch" href="https://www.mg.gov.br">
 
         <!-- Fonts com display=optional para não bloquear renderização -->
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=optional" rel="stylesheet" media="print" onload="this.media='all'">

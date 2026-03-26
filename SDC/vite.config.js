@@ -52,7 +52,7 @@ export default defineConfig({
                 ],
             },
             workbox: {
-                globPatterns: ['**/*.{ico,png,svg,woff,woff2}'],
+                globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
                 runtimeCaching: [
                     {
                         urlPattern: /\/build\/.*\.(js|css)$/i,
@@ -119,8 +119,8 @@ export default defineConfig({
                         },
                     },
                 ],
-                navigateFallback: null,
-                navigateFallbackDenylist: [/.*/],
+                navigateFallback: '/index.html',
+                navigateFallbackDenylist: [/^\/api\//, /^\/sanctum\//, /^\/broadcasting\//],
                 cleanupOutdatedCaches: true,
                 skipWaiting: true,
                 clientsClaim: true,
@@ -142,30 +142,28 @@ export default defineConfig({
             output: {
                 manualChunks: (id) => {
                     if (id.includes('node_modules')) {
-                        // Framework core (~80KB) - carregado em toda página
-                        if (id.includes('vue') || id.includes('@inertiajs')) {
+                        // Lazy chunks (nao preload) - Charts, Maps, DnD
+                        if (
+                            id.includes('apexcharts') ||
+                            id.includes('leaflet') ||
+                            id.includes('vuedraggable') || id.includes('sortablejs')
+                        ) {
+                            return undefined;
+                        }
+                        // Framework core (Vue + Inertia + Query + Ziggy)
+                        if (
+                            id.includes('vue') ||
+                            id.includes('@inertiajs') ||
+                            id.includes('@tanstack') ||
+                            id.includes('ziggy')
+                        ) {
                             return 'vendor-vue';
                         }
-                        // Data fetching (~30KB)
-                        if (id.includes('@tanstack')) {
-                            return 'vendor-query';
+                        // Icons separados (lazy load)
+                        if (id.includes('@heroicons')) {
+                            return 'vendor-icons';
                         }
-                        // Charts (~500KB) - só carregado em páginas com gráficos
-                        if (id.includes('apexcharts') || id.includes('vue3-apexcharts')) {
-                            return 'vendor-charts';
-                        }
-                        // Maps (~200KB) - só carregado em páginas com mapa
-                        if (id.includes('leaflet')) {
-                            return 'vendor-maps';
-                        }
-                        // Drag & Drop (~40KB) - só Dashboard
-                        if (id.includes('vuedraggable') || id.includes('sortablejs')) {
-                            return 'vendor-dnd';
-                        }
-                        // Routing
-                        if (id.includes('ziggy')) {
-                            return 'vendor-utils';
-                        }
+                        // Resto agrupado
                         return 'vendor-other';
                     }
                 },
@@ -183,7 +181,7 @@ export default defineConfig({
         target: 'esnext',
     },
     optimizeDeps: {
-        include: ['vue', '@inertiajs/vue3', 'ziggy-js', '@tanstack/vue-query', 'vuedraggable', 'sortablejs'],
+        include: ['vue', '@inertiajs/vue3', 'ziggy-js', '@tanstack/vue-query'],
         exclude: ['virtual:pwa-register'],
     },
     server: {
@@ -196,11 +194,13 @@ export default defineConfig({
             protocol: 'ws',
         },
         watch: {
+            usePolling: true,
+            interval: 1000,
             ignored: ['**/storage/**', '**/vendor/**'],
         },
         cors: true,
         origin: 'http://localhost:15175',
-        allowedHosts: ['node', 'localhost', '127.0.0.1'],
+        allowedHosts: ['bun', 'node', 'localhost', '127.0.0.1'],
     },
     worker: {
         format: 'es',

@@ -170,7 +170,7 @@ restart-all: ## 🚀 Reinicia TODA stack
 
 dev: network-init ## 🔧 Ambiente de desenvolvimento padrão
 	@echo "${YELLOW}→ Iniciando ambiente de desenvolvimento...${RESET}"
-	@$(COMPOSE_DEV) up -d app nginx db redis mailhog queue node
+	@$(COMPOSE_DEV) up -d app nginx db redis mailhog queue bun
 	@echo "${GREEN}✓ Ambiente de desenvolvimento iniciado!${RESET}"
 	@echo ""
 	@echo "${CYAN}Serviços disponíveis:${RESET}"
@@ -281,8 +281,8 @@ shell-redis: ## 🐚 Redis CLI
 shell-queue: ## 🐚 Shell queue worker
 	@$(COMPOSE_DEV) exec queue bash
 
-shell-node: ## 🐚 Shell node container
-	@$(COMPOSE_DEV) exec node sh
+shell-bun: ## 🐚 Shell container frontend (Bun)
+	@$(COMPOSE_DEV) exec bun sh
 
 # ============================================================================
 # 🗑️ LIMPEZA & MANUTENÇÃO
@@ -346,26 +346,26 @@ db-restore: ## 💾 Restore backup (uso: make db-restore FILE=arquivo.sql)
 	@echo "${GREEN}✓ Backup restaurado${RESET}"
 
 # ============================================================================
-# 🎨 FRONTEND (Node.js + Vite)
+# 🎨 FRONTEND (Bun + Vite)
 # ============================================================================
 
-npm-install: ## 🎨 Install dependências npm
-	@$(COMPOSE_DEV) exec node npm install --legacy-peer-deps
+bun-install: ## 🎨 Install dependencias com Bun
+	@$(COMPOSE_DEV) exec bun bun install
 
-npm-update: ## 🎨 Update dependências npm
-	@$(COMPOSE_DEV) exec node npm update
+bun-update: ## 🎨 Update dependencias com Bun
+	@$(COMPOSE_DEV) exec bun bun update
 
-npm-dev: ## 🎨 Vite dev server
-	@$(COMPOSE_DEV) exec node npm run dev
+bun-dev: ## 🎨 Vite dev server
+	@$(COMPOSE_DEV) exec bun bun run dev
 
-npm-build: ## 🎨 Build produção
-	@$(COMPOSE_DEV) exec node npm run build
+bun-build: ## 🎨 Build producao
+	@$(COMPOSE_DEV) exec bun bun run build
 
-npm-build-vite: ## 🎨 Build produção usando npx vite build
-	@$(COMPOSE_DEV) exec node npx vite build
+bun-build-vite: ## 🎨 Build producao usando bunx vite build
+	@$(COMPOSE_DEV) exec bun bunx vite build
 
-npm-clean: ## 🎨 Limpar node_modules e cache
-	@$(COMPOSE_DEV) exec node sh -c "rm -rf node_modules/.vite && npm cache clean --force"
+bun-clean: ## 🎨 Limpar node_modules e cache
+	@$(COMPOSE_DEV) exec bun sh -c "rm -rf node_modules/.vite node_modules/.cache"
 
 # ============================================================================
 # ⚙️  LARAVEL ARTISAN

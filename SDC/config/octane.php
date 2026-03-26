@@ -105,8 +105,8 @@ return [
         OperationTerminated::class => [
             FlushOnce::class,
             FlushTemporaryContainerInstances::class,
-            // DisconnectFromDatabases::class,
-            // CollectGarbage::class,
+            // DisconnectFromDatabases removido - mantemos conexoes persistentes
+            CollectGarbage::class,
         ],
 
         WorkerErrorOccurred::class => [
@@ -132,10 +132,16 @@ return [
 
     'warm' => [
         ...Octane::defaultServicesToWarm(),
+        \App\Services\Rat\RatBiService::class,
+        \App\Services\Rat\RatStatisticsService::class,
+        \App\Modules\Decretacoes\Services\ProcessoStatsService::class,
+        \App\Modules\Decretacoes\Services\ProcessoQueryService::class,
+        \App\Modules\Decretacoes\Filters\ProcessoFilter::class,
     ],
 
     'flush' => [
-        //
+        \App\Services\Rat\RatOcorrenciaService::class,
+        \App\Modules\Decretacoes\Services\EntradaProcessoService::class,
     ],
 
     /*

@@ -61,11 +61,11 @@ RUN usermod -aG docker jenkins
 
 # ===== INSTALAR FERRAMENTAS ADICIONAIS PARA BUILDS =====
 
-# Node.js e NPM (para builds frontend)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
-    npm install -g npm@latest && \
-    node --version && npm --version
+# Bun (para builds frontend)
+RUN curl -fsSL https://bun.sh/install | bash \
+    && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
+    && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx \
+    && bun --version
 
 # PHP e Composer (para projetos Laravel/PHP)
 RUN apt-get update && apt-get install -y \

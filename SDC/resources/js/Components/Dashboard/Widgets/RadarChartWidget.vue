@@ -8,13 +8,13 @@
     </div>
     
     <div class="p-4 flex items-center justify-center relative flex-1 min-h-[300px]">
-       <VueApexCharts type="radar" height="100%" width="100%" :options="radarChartOptions" :series="radarChartSeries" />
+       <LazyChart type="radar" height="100%" width="100%" :options="radarChartOptions" :series="radarChartSeries" />
     </div>
   </div>
 </template>
 
 <script setup>
-import VueApexCharts from 'vue3-apexcharts';
+import LazyChart from '@/Components/Common/LazyChart.vue';
 
 const radarMetrics = [
   { label: 'Eficiência', value: 85 },

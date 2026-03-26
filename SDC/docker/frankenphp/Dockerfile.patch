@@ -1,0 +1,28 @@
+# ============================================================================
+# SDC - DOCKERFILE FRANKENPHP PATCH
+# Aplica FrankenPHP 1.12.1 + correcoes sobre imagem existente
+# Uso: docker build -f docker/frankenphp/Dockerfile.patch -t newsdc-frankenphp-app:latest .
+# ============================================================================
+
+FROM newsdc-frankenphp-app:latest
+
+# Copiar binario FrankenPHP 1.12.1 (compativel com Octane 2.13+)
+COPY docker/frankenphp/frankenphp-linux-x86_64 /usr/local/bin/frankenphp
+RUN chmod +x /usr/local/bin/frankenphp \
+    && ln -sf /usr/local/bin/frankenphp /app/frankenphp
+
+# Copiar entrypoint corrigido
+COPY docker/frankenphp/scripts/entrypoint.sh /start.sh
+RUN chmod +x /start.sh
+
+# Copiar migration consolidada (sem duplicata)
+COPY database/migrations/2026_03_20_200000_add_performance_indexes.php /app/database/migrations/
+RUN rm -f /app/database/migrations/2026_03_23_000001_add_performance_indexes_to_decretacoes.php
+
+# Health check HTTPS
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -sfk https://localhost/health || exit 1
+
+EXPOSE 80 443 2019
+
+CMD ["/start.sh"]

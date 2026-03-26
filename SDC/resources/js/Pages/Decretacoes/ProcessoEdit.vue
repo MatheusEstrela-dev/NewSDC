@@ -62,13 +62,11 @@ const formatDate = (date) => {
 };
 
 const processoData = props.processo?.data || props.processo;
-console.log('[DEBUG_ProcessoEdit] Props Processo recebido:', props.processo);
-console.log('[DEBUG_ProcessoEdit] ProcessoData resolvido:', processoData);
 
 const form = useForm({
   tipo_desastre_id: processoData?.tipo_desastre_id || '',
   cobrade_id: processoData?.cobrade_id || processoData?.tipo_desastre_id || '',
-  origem: processoData?.origem || processoData?.processo || '',
+  origem: processoData?.origem || (processoData?.processo?.toLowerCase()) || '',
   municipio_id: processoData?.municipio_id || processoData?.municipios?.[0]?.id || '',
   redec_id: processoData?.redec_id || '',
   situacao_anormalidade: processoData?.situacao_anormalidade || processoData?.tipo_desastre || '',

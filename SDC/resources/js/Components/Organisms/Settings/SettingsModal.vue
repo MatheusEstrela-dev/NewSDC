@@ -243,6 +243,124 @@
                      </div>
                  </div>
 
+                 <!-- Tab: Seguranca -->
+                 <div v-if="currentTab === 'security'" class="space-y-8">
+                     <!-- Secao: Alterar E-mail -->
+                     <section>
+                         <h4 class="text-sm font-medium text-slate-900 dark:text-white uppercase tracking-wider mb-4">Alterar E-mail</h4>
+                         <div class="space-y-4 max-w-lg">
+                             <div class="space-y-1">
+                                 <label class="text-sm font-medium text-slate-700 dark:text-slate-300">E-mail</label>
+                                 <input
+                                     type="email"
+                                     v-model="emailForm.email"
+                                     class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-colors"
+                                     :class="emailForm.errors.email ? 'border-red-500 dark:border-red-500' : emailForm.email ? 'border-green-500 dark:border-green-500' : 'border-slate-200 dark:border-slate-700'"
+                                     placeholder="seu@email.com"
+                                 >
+                                 <p v-if="emailForm.errors.email" class="text-sm text-red-500 mt-1">{{ emailForm.errors.email }}</p>
+                             </div>
+                             <div class="flex items-center gap-3">
+                                 <button
+                                     @click="updateEmail"
+                                     :disabled="emailForm.processing"
+                                     class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                 >
+                                     <span v-if="emailForm.processing">Salvando...</span>
+                                     <span v-else>Salvar E-mail</span>
+                                 </button>
+                                 <Transition enter-active-class="transition ease-in-out" enter-from-class="opacity-0" leave-active-class="transition ease-in-out" leave-to-class="opacity-0">
+                                     <p v-if="emailForm.recentlySuccessful" class="text-sm text-green-600 dark:text-green-400">E-mail atualizado com sucesso.</p>
+                                 </Transition>
+                             </div>
+                         </div>
+                     </section>
+
+                     <!-- Secao: Alterar Senha -->
+                     <section>
+                         <h4 class="text-sm font-medium text-slate-900 dark:text-white uppercase tracking-wider mb-4">Alterar Senha</h4>
+                         <div class="space-y-4 max-w-lg">
+                             <div class="space-y-1">
+                                 <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Senha Atual</label>
+                                 <div class="relative">
+                                     <input
+                                         :type="showCurrentPassword ? 'text' : 'password'"
+                                         v-model="passwordForm.current_password"
+                                         class="w-full px-3 py-2 pr-10 bg-slate-50 dark:bg-slate-800 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-colors"
+                                         :class="passwordForm.errors.current_password ? 'border-red-500 dark:border-red-500' : passwordForm.current_password ? 'border-green-500 dark:border-green-500' : 'border-slate-200 dark:border-slate-700'"
+                                         placeholder="Digite sua senha atual"
+                                     >
+                                     <button
+                                         type="button"
+                                         @click="showCurrentPassword = !showCurrentPassword"
+                                         class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                     >
+                                         <EyeSlashIcon v-if="showCurrentPassword" class="w-5 h-5" />
+                                         <EyeIcon v-else class="w-5 h-5" />
+                                     </button>
+                                 </div>
+                                 <p v-if="passwordForm.errors.current_password" class="text-sm text-red-500 mt-1">{{ passwordForm.errors.current_password }}</p>
+                             </div>
+                             <div class="space-y-1">
+                                 <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Nova Senha</label>
+                                 <div class="relative">
+                                     <input
+                                         :type="showNewPassword ? 'text' : 'password'"
+                                         v-model="passwordForm.password"
+                                         class="w-full px-3 py-2 pr-10 bg-slate-50 dark:bg-slate-800 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-colors"
+                                         :class="passwordForm.errors.password ? 'border-red-500 dark:border-red-500' : passwordForm.password ? 'border-green-500 dark:border-green-500' : 'border-slate-200 dark:border-slate-700'"
+                                         placeholder="Digite a nova senha"
+                                     >
+                                     <button
+                                         type="button"
+                                         @click="showNewPassword = !showNewPassword"
+                                         class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                     >
+                                         <EyeSlashIcon v-if="showNewPassword" class="w-5 h-5" />
+                                         <EyeIcon v-else class="w-5 h-5" />
+                                     </button>
+                                 </div>
+                                 <p v-if="passwordForm.errors.password" class="text-sm text-red-500 mt-1">{{ passwordForm.errors.password }}</p>
+                             </div>
+                             <div class="space-y-1">
+                                 <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Confirmar Nova Senha</label>
+                                 <div class="relative">
+                                     <input
+                                         :type="showConfirmPassword ? 'text' : 'password'"
+                                         v-model="passwordForm.password_confirmation"
+                                         class="w-full px-3 py-2 pr-10 bg-slate-50 dark:bg-slate-800 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-colors"
+                                         :class="passwordForm.errors.password_confirmation || passwordMismatch ? 'border-red-500 dark:border-red-500' : passwordForm.password_confirmation && !passwordMismatch ? 'border-green-500 dark:border-green-500' : 'border-slate-200 dark:border-slate-700'"
+                                         placeholder="Confirme a nova senha"
+                                     >
+                                     <button
+                                         type="button"
+                                         @click="showConfirmPassword = !showConfirmPassword"
+                                         class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                     >
+                                         <EyeSlashIcon v-if="showConfirmPassword" class="w-5 h-5" />
+                                         <EyeIcon v-else class="w-5 h-5" />
+                                     </button>
+                                 </div>
+                                 <p v-if="passwordMismatch" class="text-sm text-red-500 mt-1">As senhas nao coincidem.</p>
+                                 <p v-else-if="passwordForm.errors.password_confirmation" class="text-sm text-red-500 mt-1">{{ passwordForm.errors.password_confirmation }}</p>
+                             </div>
+                             <div class="flex items-center gap-3">
+                                 <button
+                                     @click="updatePassword"
+                                     :disabled="passwordForm.processing"
+                                     class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                 >
+                                     <span v-if="passwordForm.processing">Alterando...</span>
+                                     <span v-else>Alterar Senha</span>
+                                 </button>
+                                 <Transition enter-active-class="transition ease-in-out" enter-from-class="opacity-0" leave-active-class="transition ease-in-out" leave-to-class="opacity-0">
+                                     <p v-if="passwordForm.recentlySuccessful" class="text-sm text-green-600 dark:text-green-400">Senha alterada com sucesso.</p>
+                                 </Transition>
+                             </div>
+                         </div>
+                     </section>
+                 </div>
+
               </div>
 
               <!-- Footer -->
@@ -276,14 +394,16 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { usePage } from '@inertiajs/vue3';
-import { 
-    UserIcon, 
-    BellIcon, 
-    ComputerDesktopIcon, 
-    MapIcon, 
-    CpuChipIcon, 
-    ShieldCheckIcon 
+import { usePage, useForm } from '@inertiajs/vue3';
+import {
+    UserIcon,
+    BellIcon,
+    ComputerDesktopIcon,
+    MapIcon,
+    CpuChipIcon,
+    ShieldCheckIcon,
+    EyeIcon,
+    EyeSlashIcon
 } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -326,6 +446,26 @@ const form = ref({
     regions: ['bh'],
 });
 
+const emailForm = useForm({
+    name: page.props.auth?.user?.name || '',
+    email: page.props.auth?.user?.email || '',
+});
+
+const passwordForm = useForm({
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+});
+
+const showCurrentPassword = ref(false);
+const showNewPassword = ref(false);
+const showConfirmPassword = ref(false);
+
+const passwordMismatch = computed(() =>
+    passwordForm.password_confirmation.length > 0
+    && passwordForm.password !== passwordForm.password_confirmation
+);
+
 const notificationModules = ref([
     { id: 'rat', name: 'Relatórios (RAT)', description: 'Alertas sobre novos relatórios, vistorias e aprovações.', icon: 'DocumentTextIcon', channels: { bell: true, email: true, push: false } },
     { id: 'pae', name: 'Planos (PAE)', description: 'Vencimentos de prazos e atualizações de status.', icon: 'MapIcon', channels: { bell: true, email: false, push: true } },
@@ -364,6 +504,21 @@ onUnmounted(() => {
     document.removeEventListener('keydown', closeOnEscape);
     document.body.style.overflow = null;
 });
+
+const updateEmail = () => {
+    emailForm.patch(route('profile.update'), {
+        preserveScroll: true,
+    });
+};
+
+const updatePassword = () => {
+    passwordForm.put(route('password.update'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            passwordForm.reset();
+        },
+    });
+};
 
 const save = async () => {
     isSaving.value = true;

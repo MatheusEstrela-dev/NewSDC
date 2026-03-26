@@ -33,8 +33,7 @@ RUN apk add --no-cache \
     vim \
     bash \
     shadow \
-    nodejs \
-    npm \
+    unzip \
     # Dependências de compilação PHP
     libpng-dev \
     libjpeg-turbo-dev \
@@ -54,7 +53,12 @@ RUN apk add --no-cache \
     # Para drop de privilegios
     su-exec
 
-# Instalar extensões PHP
+# Instalar Bun (runtime JavaScript)
+RUN curl -fsSL https://bun.sh/install | bash \
+    && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
+    && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx
+
+# Instalar extensoes PHP
 RUN docker-php-ext-configure gd \
     --with-freetype \
     --with-jpeg \

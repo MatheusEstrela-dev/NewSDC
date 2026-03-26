@@ -57,6 +57,7 @@ class SecurityHeaders
         $styleSrc = [
             "'self'",
             "'unsafe-inline'",
+            "https://fonts.bunny.net",
         ];
 
         // Allow app URL
@@ -77,6 +78,7 @@ class SecurityHeaders
         $fontSrc = [
             "'self'",
             "data:",
+            "https://fonts.bunny.net",
         ];
 
         $connectSrc = [

@@ -72,6 +72,56 @@ const getShortClass = (className) => {
     if (!className) return ''
     return String(className).split('\\').pop()
 }
+
+const getStatusCode = (log) => {
+    return log.data?.status_code || log.status_code || null
+}
+
+const getStatusCodeColor = (code) => {
+    if (!code) return 'text-gray-500'
+    const numCode = parseInt(code)
+    if (numCode >= 500) return 'text-red-400 font-bold'
+    if (numCode >= 400) return 'text-orange-400'
+    if (numCode >= 300) return 'text-yellow-400'
+    if (numCode >= 200) return 'text-green-400'
+    return 'text-gray-400'
+}
+
+const getDuration = (log) => {
+    const ms = log.data?.duration_ms || log.duration_ms
+    if (!ms) return null
+    return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms/1000).toFixed(1)}s`
+}
+
+const getDurationColor = (log) => {
+    const ms = log.data?.duration_ms || log.duration_ms
+    if (!ms) return 'text-gray-500'
+    if (ms > 2000) return 'text-red-400'
+    if (ms > 500) return 'text-yellow-400'
+    return 'text-green-400'
+}
+
+const getHttpMethod = (log) => {
+    return log.data?.method || log.http_method || null
+}
+
+const getMethodColor = (method) => {
+    if (!method) return 'text-gray-500'
+    const colors = {
+        'GET': 'text-green-400',
+        'POST': 'text-blue-400',
+        'PUT': 'text-yellow-400',
+        'PATCH': 'text-orange-400',
+        'DELETE': 'text-red-400',
+    }
+    return colors[method.toUpperCase()] || 'text-gray-400'
+}
+
+const getRoute = (log) => {
+    const route = log.data?.route || log.route
+    if (!route) return null
+    return route.length > 25 ? route.slice(0, 22) + '...' : route
+}
 </script>
 
 <template>
@@ -90,10 +140,13 @@ const getShortClass = (className) => {
             <table class="w-full border-collapse text-xs font-mono">
                 <thead class="sticky top-0 bg-[#0b0e14] z-10 border-b border-gray-800 shadow-sm">
                     <tr class="text-left text-gray-500 uppercase tracking-tighter h-8">
-                        <th class="px-3 font-semibold w-20">Level</th>
-                        <th class="px-2 font-semibold w-24">Layer</th>
-                        <th class="px-2 font-semibold w-48">Origem</th>
-                        <th class="px-2 font-semibold">Mensagem</th>
+                        <th class="px-3 font-semibold w-16">Level</th>
+                        <th class="px-2 font-semibold w-14">Status</th>
+                        <th class="px-2 font-semibold w-14">Method</th>
+                        <th class="px-2 font-semibold w-16">Tempo</th>
+                        <th class="px-2 font-semibold w-20">Layer</th>
+                        <th class="px-2 font-semibold w-40">Origem</th>
+                        <th class="px-2 font-semibold">Mensagem / Rota</th>
                         <th class="px-2 font-semibold w-20 text-right">Data</th>
                         <th class="px-3 font-semibold w-16 text-right">Hora</th>
                     </tr>
@@ -113,6 +166,30 @@ const getShortClass = (className) => {
                             </span>
                         </td>
 
+                        <!-- Status Code -->
+                        <td class="px-2 whitespace-nowrap">
+                            <span v-if="getStatusCode(log)" :class="getStatusCodeColor(getStatusCode(log))" class="text-[11px] font-mono font-bold">
+                                {{ getStatusCode(log) }}
+                            </span>
+                            <span v-else class="text-gray-600">-</span>
+                        </td>
+
+                        <!-- HTTP Method -->
+                        <td class="px-2 whitespace-nowrap">
+                            <span v-if="getHttpMethod(log)" :class="getMethodColor(getHttpMethod(log))" class="text-[10px] font-bold">
+                                {{ getHttpMethod(log) }}
+                            </span>
+                            <span v-else class="text-gray-600">-</span>
+                        </td>
+
+                        <!-- Duration -->
+                        <td class="px-2 whitespace-nowrap">
+                            <span v-if="getDuration(log)" :class="getDurationColor(log)" class="text-[10px] font-mono">
+                                {{ getDuration(log) }}
+                            </span>
+                            <span v-else class="text-gray-600">-</span>
+                        </td>
+
                         <!-- Layer -->
                         <td class="px-2">
                             <span
@@ -126,7 +203,7 @@ const getShortClass = (className) => {
                         </td>
 
                         <!-- Origem (Class.method) -->
-                        <td class="px-2 text-gray-400 truncate max-w-[200px]">
+                        <td class="px-2 text-gray-400 truncate max-w-[160px]">
                             <span v-if="log.class || log.method">
                                 <span class="text-gray-300">{{ getShortClass(log.class) }}</span>
                                 <span v-if="log.method" class="text-gray-500">.{{ log.method }}()</span>
@@ -134,9 +211,12 @@ const getShortClass = (className) => {
                             <span v-else class="text-gray-600">-</span>
                         </td>
 
-                        <!-- Mensagem -->
+                        <!-- Mensagem / Rota -->
                         <td class="px-2 truncate max-w-0 text-gray-300 group-hover:text-white transition-colors">
-                            {{ log.message }}
+                            <div class="flex flex-col">
+                                <span>{{ log.message }}</span>
+                                <span v-if="getRoute(log)" class="text-[9px] text-cyan-400/70">{{ getRoute(log) }}</span>
+                            </div>
                         </td>
 
                         <!-- Data -->

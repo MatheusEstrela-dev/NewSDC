@@ -50,6 +50,9 @@ class DecretacoesController extends Controller
      *
      * FLUXO: Request -> Service.list() -> Inertia (ProcessoIndex.vue)
      *
+     * PERFORMANCE: Usa Inertia::lazy() para carregar estatisticas sob demanda,
+     * reduzindo o TTFB da carga inicial.
+     *
      * @param Request $request Filtros de busca (search, status, tipo_decreto)
      * @return Response Pagina Inertia com lista paginada
      */
@@ -79,14 +82,12 @@ class DecretacoesController extends Controller
         // Entrega direta via Inertia, sem necessidade de chamada API separada
         $this->processoService->enrichWithTotais($processos);
 
-        $statistics = $this->processoService->getStatistics();
-        $filterOptions = $this->processoService->getFilterOptions();
-
         return Inertia::render('Decretacoes/ProcessoIndex', [
             'processos' => $processos,
-            'statistics' => $statistics,
             'filters' => $filters,
-            'filterOptions' => $filterOptions,
+            // Lazy: carregados apenas quando componente Vue solicitar via partial reload
+            'statistics' => $this->processoService->getStatistics(),
+            'filterOptions' => Inertia::lazy(fn () => $this->processoService->getFilterOptions()),
         ]);
     }
 

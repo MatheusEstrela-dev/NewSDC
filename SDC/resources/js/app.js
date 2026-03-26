@@ -50,30 +50,44 @@ const queryClient = new QueryClient({
 const prefetchedRoutes = new Set();
 
 const setupPrefetching = () => {
+    let hoverTimer = null;
+
+    const shouldPrefetch = () => {
+        if (!navigator.connection) return true;
+        const conn = navigator.connection;
+        return conn.effectiveType === '4g' && !conn.saveData;
+    };
+
+    const doPrefetch = (href) => {
+        if (!href || href.startsWith('#') || href.startsWith('http') || prefetchedRoutes.has(href)) {
+            return;
+        }
+        if (!shouldPrefetch()) return;
+
+        prefetchedRoutes.add(href);
+        router.prefetch(href, { method: 'get' });
+    };
+
     document.addEventListener('mouseover', (e) => {
         const link = e.target.closest('a[href]');
         if (!link) return;
 
-        const href = link.getAttribute('href');
-        if (!href || href.startsWith('#') || href.startsWith('http') || prefetchedRoutes.has(href)) {
-            return;
-        }
+        clearTimeout(hoverTimer);
+        hoverTimer = setTimeout(() => {
+            doPrefetch(link.getAttribute('href'));
+        }, 150);
+    }, { passive: true });
 
-        prefetchedRoutes.add(href);
-        router.prefetch(href, { method: 'get' });
+    document.addEventListener('mouseout', (e) => {
+        if (e.target.closest('a[href]')) {
+            clearTimeout(hoverTimer);
+        }
     }, { passive: true });
 
     document.addEventListener('touchstart', (e) => {
         const link = e.target.closest('a[href]');
         if (!link) return;
-
-        const href = link.getAttribute('href');
-        if (!href || href.startsWith('#') || href.startsWith('http') || prefetchedRoutes.has(href)) {
-            return;
-        }
-
-        prefetchedRoutes.add(href);
-        router.prefetch(href, { method: 'get' });
+        doPrefetch(link.getAttribute('href'));
     }, { passive: true });
 };
 
@@ -86,11 +100,17 @@ const registerServiceWorker = async () => {
             registerSW({
                 immediate: true,
                 onRegistered(registration) {
-                    if (registration) {
-                        setInterval(() => {
-                            registration.update();
-                        }, 1000 * 60 * 60);
-                    }
+                    if (!registration) return;
+
+                    // Check for SW updates on Inertia page navigation
+                    router.on('navigate', () => {
+                        registration.update();
+                    });
+
+                    // Fallback: check every 2 hours
+                    setInterval(() => {
+                        registration.update();
+                    }, 1000 * 60 * 120);
                 },
                 onOfflineReady() {
                 },

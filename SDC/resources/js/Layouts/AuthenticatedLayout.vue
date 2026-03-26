@@ -75,16 +75,19 @@ provide('openSidebar', openSidebar);
       <!-- Footer -->
       <footer class="flex flex-col sm:flex-row justify-between items-center gap-4 px-4 sm:px-6 lg:px-8 py-6 mt-auto bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
         <div class="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
-          <img
-            src="https://www.mg.gov.br/sites/default/files/styles/large/public/media/image/2025/02/logo-defesa-civil-2.png?itok=NhfQmxcj"
-            alt="MG Logo"
-            width="120"
-            height="24"
-            class="h-5 sm:h-6 w-auto"
-            loading="lazy"
-            decoding="async"
-            style="aspect-ratio: 5/1;"
-          />
+          <picture>
+            <source srcset="/imgs/logo-defesa-civil.webp" type="image/webp" />
+            <img
+              src="/imgs/logo-defesa-civil.png"
+              alt="MG Logo"
+              width="120"
+              height="24"
+              class="h-5 sm:h-6 w-auto"
+              loading="lazy"
+              decoding="async"
+              style="aspect-ratio: 5/1;"
+            />
+          </picture>
           <span class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 text-center sm:text-left">
             CEDEC - Defesa Civil de Minas Gerais
           </span>

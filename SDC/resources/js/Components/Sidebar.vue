@@ -9,11 +9,14 @@
     <!-- Header -->
     <div class="sidebar-header">
       <div class="logo-container">
-        <img
-          src="/imgs/flag.png"
-          alt="SDC Logo"
-          class="logo-image"
-        />
+        <picture>
+          <source srcset="/imgs/flag.webp" type="image/webp" />
+          <img
+            src="/imgs/flag.png"
+            alt="SDC Logo"
+            class="logo-image"
+          />
+        </picture>
         <div v-show="!isCollapsed || (isMobile || isTablet)" class="logo-text">
           <div class="logo-title">SDC MG</div>
           <div class="logo-subtitle">SISTEMA INTEGRADO</div>

@@ -1,8 +1,8 @@
 /* Input Atom Styles - Design System Padronizado */
 
 /* Base Input */
-.atom-input {
-  @apply w-full rounded-lg transition-all duration-200 outline-none;
+.atom-input.atom-input {
+  @apply w-full rounded-xl transition-all duration-200 outline-none;
   @apply bg-white dark:bg-slate-900/50;
   @apply text-slate-900 dark:text-slate-200;
   @apply placeholder-slate-400 dark:placeholder-slate-500;
@@ -10,27 +10,27 @@
 }
 
 /* Estado Normal */
-.atom-input-normal {
+.atom-input.atom-input-normal {
   @apply border border-slate-300 dark:border-slate-700/50;
   @apply hover:border-slate-400 dark:hover:border-slate-600;
   @apply focus:border-emerald-500 focus:ring-emerald-500/20;
 }
 
 /* Estado Preenchido (filled) - Mesmo estilo do normal */
-.atom-input-filled {
+.atom-input.atom-input-filled {
   @apply border border-emerald-500/80 dark:border-emerald-500/60;
   @apply hover:border-emerald-400 dark:hover:border-emerald-600;
   @apply focus:border-emerald-500 focus:ring-emerald-500/20;
 }
 
 /* Estado de Erro */
-.atom-input-error {
+.atom-input.atom-input-error {
   @apply border border-red-500;
   @apply focus:border-red-600 focus:ring-red-500/30;
 }
 
 /* Estado Readonly */
-.atom-input-readonly {
+.atom-input.atom-input-readonly {
   @apply bg-slate-100 dark:bg-slate-800/50;
   @apply border border-slate-300 dark:border-slate-700/30;
   @apply text-slate-600 dark:text-slate-400;
@@ -38,20 +38,20 @@
 }
 
 /* Estado Disabled */
-.atom-input-disabled {
+.atom-input.atom-input-disabled {
   @apply opacity-50 cursor-not-allowed;
 }
 
 /* Tamanhos */
-.atom-input-sm {
+.atom-input.atom-input-sm {
   @apply px-3 py-1.5 text-sm;
 }
 
-.atom-input-md {
+.atom-input.atom-input-md {
   @apply px-4 py-2.5 text-sm;
 }
 
-.atom-input-lg {
+.atom-input.atom-input-lg {
   @apply px-5 py-3 text-base;
 }
 

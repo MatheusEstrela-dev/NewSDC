@@ -1,0 +1,91 @@
+# ============================================================================
+# SDC - Docker Compose FrankenPHP
+#
+# Uso (requer projeto principal rodando):
+#   docker compose -f docker/frankenphp/docker-compose.yml up -d
+#
+# Benchmark TTFB:
+#   curl -w "TTFB: %{time_starttransfer}s\n" -o /dev/null -s http://localhost:19080
+#
+# HTTPS + HTTP/2 + HTTP/3:
+#   Requer FrankenPHP >= 1.5.0. Para habilitar:
+#   1. Rebuildar imagem com: docker build -f docker/frankenphp/Dockerfile -t newsdc-frankenphp-app:latest .
+#   2. Alterar OCTANE_HTTPS para "true", PORT para 443
+#   3. Alterar porta principal para 19443:443
+# ============================================================================
+
+name: newsdc-frankenphp
+
+services:
+  # ==========================================================================
+  # APP - FrankenPHP com Laravel Octane
+  # Conecta aos containers existentes (newsdc_db, newsdc_redis)
+  # ==========================================================================
+  app:
+    image: newsdc-frankenphp-app:latest
+    container_name: newsdc_frankenphp
+    hostname: frankenphp
+    restart: unless-stopped
+
+    env_file:
+      - ../.env
+
+    environment:
+      # Laravel
+      APP_NAME: SDC
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: https://localhost:19443
+
+      # Octane - FrankenPHP
+      OCTANE_SERVER: frankenphp
+      OCTANE_HTTPS: "true"
+
+      # FrankenPHP Config - Otimizado para performance
+      FRANKENPHP_WORKERS: ${FRANKENPHP_WORKERS:-8}
+      FRANKENPHP_MAX_REQUESTS: ${FRANKENPHP_MAX_REQUESTS:-1000}
+      PORT: 443
+
+      # Cache otimizado
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+
+      # Redis local (container)
+      REDIS_HOST: newsdc_redis
+      REDIS_PORT: 6379
+
+      # DB usa credenciais do .env (Google Cloud SQL)
+
+    ports:
+      - "19443:443"     # HTTPS (FrankenPHP Octane + HTTP/2 + HTTP/3)
+      - "19080:80"      # HTTP redirect
+      - "2020:2019"     # Caddy Admin API
+
+    volumes:
+      # Logs persistentes
+      - ../storage/logs:/app/storage/logs
+
+    networks:
+      - sdc_network
+
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+    healthcheck:
+      test: ["CMD", "curl", "-sfk", "https://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+# ==========================================================================
+# NETWORKS - Usa rede externa do projeto principal
+# ==========================================================================
+networks:
+  sdc_network:
+    external: true

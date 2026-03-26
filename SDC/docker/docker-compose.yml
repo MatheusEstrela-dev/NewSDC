@@ -10,63 +10,64 @@ name: newsdc
 
 services:
   # ==========================================================================
-  # PHP Application (Laravel)
+  # PHP Application (Laravel + FrankenPHP/Octane)
   # ==========================================================================
   app:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.dev
-      args:
-        UID: ${HOST_UID:-1000}
-        GID: ${HOST_GID:-1000}
+    image: newsdc-frankenphp-app:latest
     container_name: newsdc_app
     hostname: app
     restart: unless-stopped
-    working_dir: /var/www
     labels:
       - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=app"
 
     volumes:
-      # Código fonte
-      - ../:/var/www:cached
-      # Volumes nomeados para dependências (performance)
-      - newsdc_vendor:/var/www/vendor
-      # Logs
-      - ./logs/php:/var/log/php
+      # Logs persistentes
+      - ../storage/logs:/app/storage/logs
+      # Entrypoint e Caddyfile atualizados (sem precisar rebuild)
+      - ./frankenphp/scripts/entrypoint.sh:/start.sh:ro
+      - ./frankenphp/Caddyfile.dev:/app/docker/Caddyfile.dev:ro
+      # Certificados Caddy (persistir CA interna entre restarts)
+      - newsdc_caddy_data:/data/caddy
+      - newsdc_caddy_config:/config/caddy
 
     networks:
       - sdc_network
 
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
       ssr:
         condition: service_started
 
+    env_file:
+      - ../.env.local
+
     environment:
       # Laravel
-      APP_ENV: local
-      APP_DEBUG: "true"
-      APP_URL: http://localhost
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: https://localhost:18443
 
-      # Inertia SSR (usar .env do host para controlar)
+      # Octane FrankenPHP - HTTPS + HTTP/2 + HTTP/3 (QUIC)
+      # FrankenPHP 1.12.1 + Caddy 2.11.2 = HTTPS nativo com auto-cert
+      OCTANE_SERVER: frankenphp
+      OCTANE_HTTPS: "true"
+      FRANKENPHP_WORKERS: ${FRANKENPHP_WORKERS:-4}
+      FRANKENPHP_MAX_REQUESTS: ${FRANKENPHP_MAX_REQUESTS:-500}
+      PORT: 443
+
+      # Inertia SSR
       INERTIA_SSR_ENABLED: ${INERTIA_SSR_ENABLED:-false}
       INERTIA_SSR_URL: "http://ssr:13714"
 
-      # Telescope (dev mode - captura tudo)
-      TELESCOPE_ENABLED: "true"
-      TELESCOPE_PATH: "telescope"
-
-      # Database (usa .env ou fallback para container local)
+      # Database (usa .env)
       DB_CONNECTION: mysql
       DB_HOST: ${DB_HOST:-db}
       DB_PORT: ${DB_PORT:-3306}
       DB_DATABASE: ${DB_DATABASE:-sdc}
       DB_USERNAME: ${DB_USERNAME:-sdc}
-      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      DB_PASSWORD: ${DB_PASSWORD:-}
 
       # Redis
       REDIS_HOST: redis
@@ -83,20 +84,10 @@ services:
       MAIL_HOST: mailhog
       MAIL_PORT: 1025
 
-      # Xdebug
-      XDEBUG_MODE: debug,develop,coverage
-      XDEBUG_CONFIG: client_host=host.docker.internal
-
-      # Migrations e Seeders (usa .env, default true para dev)
-      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
-      RUN_SEEDERS: ${RUN_SEEDERS:-true}
-
-    # Command é gerido pelo entrypoint.sh agora (Octane)
-    # command: php artisan serve --host=0.0.0.0 --port=8000
-
     ports:
-      - "18001:8000"
-      - "19001:9000"
+      - "18443:443"      # HTTPS + HTTP/2 (TCP)
+      - "18443:443/udp"  # HTTP/3 QUIC (UDP)
+      - "18001:80"       # HTTP -> redirect HTTPS
 
     deploy:
       resources:
@@ -108,45 +99,11 @@ services:
           memory: 512M
 
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000" ]
+      test: [ "CMD", "curl", "-sfk", "https://localhost/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
-
-  # ==========================================================================
-  # Nginx (Reverse Proxy)
-  # ==========================================================================
-  nginx:
-    image: nginx:1.25-alpine
-    container_name: newsdc_nginx
-    hostname: nginx
-    restart: unless-stopped
-    labels:
-      - "com.docker.compose.project=newsdc"
-      - "com.docker.compose.service=nginx"
-
-    ports:
-      - "18082:80"
-      - "18443:443"
-
-    volumes:
-      - ../:/var/www:ro
-      - ./nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./logs/nginx:/var/log/nginx
-
-    networks:
-      - sdc_network
-
-    depends_on:
-      - app
-
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -sf http://localhost/health || exit 1" ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
   # ==========================================================================
   # MySQL 8.0
@@ -357,25 +314,24 @@ services:
           memory: 128M
 
   # ==========================================================================
-  # Node.js + Vite (Frontend Development Server)
+  # Bun + Vite (Frontend Development Server)
   # ==========================================================================
-  node:
+  bun:
     build:
       context: ..
       dockerfile: docker/Dockerfile.node
-    container_name: newsdc_node
-    hostname: node
+    container_name: newsdc_bun
+    hostname: bun
     restart: unless-stopped
     labels:
       - "com.docker.compose.project=newsdc"
-      - "com.docker.compose.service=node"
+      - "com.docker.compose.service=bun"
 
     working_dir: /var/www
 
     volumes:
       - ../:/var/www:cached
       # Volume nomeado para node_modules (evita conflito Windows/Linux)
-      # Na primeira execucao, Docker copia o conteudo da imagem para o volume
       - newsdc_node_modules:/var/www/node_modules
 
     networks:
@@ -385,13 +341,12 @@ services:
       NODE_ENV: development
       VITE_HOST: 0.0.0.0
       VITE_PORT: 5175
-      NODE_OPTIONS: "--max-old-space-size=4096"
 
     ports:
       - "15175:5175" # Vite dev server
 
-    # npm install sera feito no runtime para aproveitar as configuracoes de DNS
-    command: sh -c "npm install && rm -rf node_modules/.vite && npm run dev -- --host 0.0.0.0 --port 5175"
+    # bun install no runtime para aproveitar as configuracoes de DNS
+    command: sh -c "bun install && rm -rf node_modules/.vite && bun run dev -- --host 0.0.0.0 --port 5175"
 
     deploy:
       resources:
@@ -403,14 +358,14 @@ services:
           memory: 512M
 
     healthcheck:
-      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:5175" ]
+      test: [ "CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5175/@vite/client || exit 0" ]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 90s
+      start_period: 60s
 
   # ==========================================================================
-  # Inertia SSR Server (Node.js — renderização server-side das páginas Vue)
+  # Inertia SSR Server (Bun — renderizacao server-side das paginas Vue)
   # ==========================================================================
   ssr:
     build:
@@ -439,10 +394,10 @@ services:
     ports:
       - "13714:13714"
 
-    # Roda o bundle SSR pré-compilado. Após mudanças de código, execute:
-    # docker compose -f docker/docker-compose.yml exec node npm run build
+    # Roda o bundle SSR pre-compilado com Bun. Apos mudancas de codigo, execute:
+    # docker compose -f docker/docker-compose.yml exec bun bun run build
     # docker compose -f docker/docker-compose.yml restart ssr
-    command: sh -c 'node $$(ls -t bootstrap/ssr/js/ssr-*.js 2>/dev/null | head -n 1 || echo "bootstrap/ssr/js/ssr-CUw4_SZp.js")'
+    command: sh -c 'bun $$(ls -t bootstrap/ssr/js/ssr-*.js 2>/dev/null | head -n 1 || echo "bootstrap/ssr/js/ssr-CUw4_SZp.js")'
 
     deploy:
       resources:
@@ -452,6 +407,44 @@ services:
         reservations:
           cpus: '0.1'
           memory: 128M
+
+  # ==========================================================================
+  # Secrets Management - HashiCorp Vault
+  # ==========================================================================
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: newsdc_vault
+    hostname: vault
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=newsdc"
+      - "com.docker.compose.service=vault"
+
+    cap_add:
+      - IPC_LOCK
+
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_TOKEN:-sdc-dev-token}
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+      VAULT_ADDR: "http://0.0.0.0:8200"
+      VAULT_API_ADDR: "http://vault:8200"
+
+    ports:
+      - "18200:8200"
+
+    volumes:
+      - newsdc_vault_data:/vault/file
+      - newsdc_vault_logs:/vault/logs
+
+    networks:
+      - sdc_network
+
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # ==========================================================================
   # MONITORAMENTO - Prometheus
@@ -661,23 +654,6 @@ services:
       - sdc_network
 
   # ==========================================================================
-  # MONITORAMENTO - Nginx Exporter
-  # ==========================================================================
-  nginx-exporter:
-    image: nginx/nginx-prometheus-exporter:1.0.0
-    container_name: newsdc_nginx_exporter
-    hostname: nginx-exporter
-    restart: unless-stopped
-    labels:
-      - "com.docker.compose.project=newsdc"
-    command:
-      - '-nginx.scrape-uri=http://newsdc_nginx:80/nginx_status'
-    ports:
-      - "19113:9113"
-    networks:
-      - sdc_network
-
-  # ==========================================================================
   # MONITORAMENTO - Blackbox Exporter
   # ==========================================================================
   blackbox-exporter:
@@ -740,6 +716,14 @@ volumes:
   newsdc_grafana_data:
     driver: local
   newsdc_alertmanager_data:
+    driver: local
+  newsdc_caddy_data:
+    driver: local
+  newsdc_caddy_config:
+    driver: local
+  newsdc_vault_data:
+    driver: local
+  newsdc_vault_logs:
     driver: local
   ollama_data:
     driver: local

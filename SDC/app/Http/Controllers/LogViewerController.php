@@ -35,7 +35,7 @@ class LogViewerController extends Controller
 
         $logs = $this->logReader->readLogs($filters);
 
-        // Calcula estatísticas antes de aplicar filtros de display
+        // Calcula estatisticas reutilizando os logs ja carregados (evita double-read)
         $statistics = $this->logReader->getStatistics($filters, $logs);
 
         // Filtra por layer se especificado no controller (extra filter)

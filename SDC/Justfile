@@ -116,9 +116,12 @@ db := compose + " exec db"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "artisan CMD" "Executar artisan"
     echo ""
     printf "{{BOLD}}🧪 TESTES:{{RESET}}\n"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test" "Executar testes"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test" "Executar testes unitarios"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-coverage" "Testes com coverage"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-filter F" "Testes filtrados"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-e2e" "E2E Playwright (dotenvx vault)"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-e2e-crud" "E2E apenas CRUD Decretacoes"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-e2e-ui" "E2E modo UI interativo"
     echo ""
     printf "{{BOLD}}📋 STATUS & INFO:{{RESET}}\n"
     printf "  {{CYAN}}%-18s{{RESET}} %s\n" "status" "Status dos containers"
@@ -593,7 +596,7 @@ logs-queue:
 # 🧪 TESTES
 # ============================================================================
 
-# 🧪 Executar testes
+# 🧪 Executar testes unitarios (PHPUnit)
 @test:
     {{app}} php artisan test
 
@@ -604,6 +607,24 @@ logs-queue:
 # 🧪 Testes filtrados (uso: just test-filter NomeDoTeste)
 @test-filter filter:
     {{app}} php artisan test --filter={{filter}}
+
+# 🧪 E2E - Testes Playwright (dotenvx injeta vault em runtime)
+@test-e2e:
+    printf "{{YELLOW}}-> Executando testes E2E (Playwright + dotenvx vault)...{{RESET}}\n"
+    printf "{{CYAN}}   dotenvx decripta .env + .env.test e injeta no processo{{RESET}}\n"
+    npx dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test
+    printf "{{GREEN}}✓ Testes E2E concluidos{{RESET}}\n"
+
+# 🧪 E2E - Apenas CRUD de Decretacoes
+@test-e2e-crud:
+    printf "{{YELLOW}}-> Executando testes CRUD Decretacoes...{{RESET}}\n"
+    npx dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test tests/e2e/decretacoes-crud.spec.js
+    printf "{{GREEN}}✓ Testes CRUD concluidos{{RESET}}\n"
+
+# 🧪 E2E - Modo UI interativo do Playwright
+@test-e2e-ui:
+    printf "{{YELLOW}}-> Abrindo Playwright UI...{{RESET}}\n"
+    npx dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test --ui
 
 # ============================================================================
 # 🔄 WORKFLOWS COMPLETOS
@@ -634,16 +655,18 @@ logs-queue:
     echo ""
     just urls
 
-# 🔄 Deploy completo produção
+# 🔄 Deploy completo producao (dotenvx vault injeta secrets via DOTENV_PRIVATE_KEY)
+# Em prod: export DOTENV_PRIVATE_KEY="<chave>" antes de rodar, ou setar no CI/CD
 @deploy-prod:
-    printf "{{BOLD}}{{CYAN}}→ DEPLOY PRODUÇÃO{{RESET}}\n"
+    printf "{{BOLD}}{{CYAN}}-> DEPLOY PRODUCAO{{RESET}}\n"
     git pull origin main
     just prod-build
-    {{compose_prod}} exec app php artisan migrate --force
-    {{compose_prod}} exec app php artisan config:cache
-    {{compose_prod}} exec app php artisan route:cache
-    {{compose_prod}} exec app php artisan view:cache
-    printf "{{BOLD}}{{GREEN}}✓ DEPLOY CONCLUÍDO!{{RESET}}\n"
+    printf "{{YELLOW}}-> Injetando env via dotenvx vault...{{RESET}}\n"
+    npx dotenvx run -f .env -- {{compose_prod}} exec app php artisan migrate --force
+    npx dotenvx run -f .env -- {{compose_prod}} exec app php artisan config:cache
+    npx dotenvx run -f .env -- {{compose_prod}} exec app php artisan route:cache
+    npx dotenvx run -f .env -- {{compose_prod}} exec app php artisan view:cache
+    printf "{{BOLD}}{{GREEN}}✓ DEPLOY CONCLUIDO!{{RESET}}\n"
 
 # ============================================================================
 # 🏥 HEALTHCHECK

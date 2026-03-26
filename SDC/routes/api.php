@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\LogViewerController;
 use App\Http\Controllers\Api\V1\LogViewerController as LogViewerV1Controller;
 use App\Http\Controllers\Api\RatNovoController;
 use App\Http\Controllers\Api\RatAuditController;
+use App\Http\Controllers\Api\V1\Decretacoes\DecretacoesApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -252,7 +253,6 @@ Route::prefix('v1/logs')->name('api.v1.logs.')->withoutMiddleware([
 // ============================================================================
 // DECRETACOES API — Autenticacao dupla (Sanctum + Power BI token)
 // ============================================================================
-use App\Http\Controllers\Api\V1\Decretacoes\DecretacoesApiController;
 
 Route::prefix('v1/decretacoes')
     ->name('api.v1.decretacoes.')

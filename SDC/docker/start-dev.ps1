@@ -103,7 +103,7 @@ Write-Host ""
 Write-Host "IMPORTANTE - VITE DEVE SER EXECUTADO NO HOST:" -ForegroundColor Yellow
 Write-Host "  1. Abra um novo terminal" -ForegroundColor White
 Write-Host "  2. Navegue para: C:\Users\x24679188\Documents\GitHub\NewSDC\SDC" -ForegroundColor White
-Write-Host "  3. Execute: npm run dev" -ForegroundColor White
+Write-Host "  3. Execute: bun run dev" -ForegroundColor White
 Write-Host "  4. Vite estara em: http://localhost:5173" -ForegroundColor White
 Write-Host ""
 Write-Host "COMANDOS UTEIS:" -ForegroundColor Cyan

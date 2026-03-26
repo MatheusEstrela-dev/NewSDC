@@ -61,11 +61,11 @@ RUN curl -L "https://github.com/docker/compose/releases/latest/download/docker-c
 RUN groupadd -g ${DOCKER_GID} docker || groupmod -g ${DOCKER_GID} docker && \
     usermod -aG docker jenkins
 
-# ===== INSTALAR NODE.JS E NPM =====
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
-    apt-get install -y nodejs && \
-    npm install -g npm@latest && \
-    node --version && npm --version
+# ===== INSTALAR BUN =====
+RUN curl -fsSL https://bun.sh/install | bash \
+    && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
+    && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx \
+    && bun --version
 
 # ===== INSTALAR PHP E COMPOSER =====
 # Adicionar repositório sury.org para PHP 8.2

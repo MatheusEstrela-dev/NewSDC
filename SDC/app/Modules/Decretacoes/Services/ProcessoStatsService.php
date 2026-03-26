@@ -7,9 +7,11 @@ namespace App\Modules\Decretacoes\Services;
 use App\Modules\Decretacoes\Models\DecretoMunicipio;
 use App\Modules\Decretacoes\Models\Processo;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Service responsible for Processo statistics and dashboard metrics.
+ * Cache: 30 minutos para estatisticas de dashboard.
  *
  * Calcula estatisticas para os 5 cards do dashboard de Decretacoes:
  * - Total de Eventos
@@ -22,8 +24,12 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class ProcessoStatsService
 {
+    private const CACHE_TTL = 1800;
+    private const CACHE_PREFIX = 'decretacoes.stats.';
+
     /**
      * Get dashboard statistics for DecretacoesStatsCards component.
+     * Cached for 30 minutes.
      *
      * Retorna estrutura compativel com o componente Vue:
      * - totalEventos, totalEventosEcp, totalEventosSe
@@ -36,9 +42,10 @@ class ProcessoStatsService
      */
     public function getDashboardStatistics(): array
     {
-        $baseQuery = Processo::query();
+        return Cache::remember(self::CACHE_PREFIX . 'dashboard', self::CACHE_TTL, function () {
+            $baseQuery = Processo::query();
 
-        return [
+            return [
             // Total de Eventos
             'totalEventos'    => $this->getTotalEventos($baseQuery),
             'totalEventosEcp' => $this->getTotalEventos($baseQuery, 'ECP'),
@@ -63,7 +70,8 @@ class ProcessoStatsService
             'decretacoesVigentes'    => $this->getDecretacoesVigentes($baseQuery),
             'decretacoesVigentesEcp' => $this->getDecretacoesVigentes($baseQuery, 'ECP'),
             'decretacoesVigentesSe'  => $this->getDecretacoesVigentes($baseQuery, 'SE'),
-        ];
+            ];
+        });
     }
 
     /**
@@ -178,9 +186,18 @@ class ProcessoStatsService
      */
     public function getVigentesCount(): int
     {
-        return Processo::where(function ($q) {
-            $q->whereNull('data_publicacao_mg')
-              ->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
-        })->count();
+        return Cache::remember(self::CACHE_PREFIX . 'vigentes', self::CACHE_TTL, function () {
+            return Processo::where(function ($q) {
+                $q->whereNull('data_publicacao_mg')
+                  ->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
+            })->count();
+        });
+    }
+
+    /** Limpa todo o cache de estatisticas de Decretacoes. */
+    public function clearCache(): void
+    {
+        Cache::forget(self::CACHE_PREFIX . 'dashboard');
+        Cache::forget(self::CACHE_PREFIX . 'vigentes');
     }
 }

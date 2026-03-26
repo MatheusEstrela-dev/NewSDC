@@ -22,13 +22,18 @@ use App\Http\Controllers\Controller;
  * )
  *
  * @OA\Server(
- *     url="http://localhost:18001",
- *     description="Servidor de Desenvolvimento (Docker)"
+ *     url="https://localhost:19443",
+ *     description="Servidor de Desenvolvimento (FrankenPHP HTTPS)"
+ * )
+ *
+ * @OA\Server(
+ *     url="http://localhost:19080",
+ *     description="Servidor de Desenvolvimento (HTTP)"
  * )
  *
  * @OA\Server(
  *     url="https://api.sdc.gov.br",
- *     description="Servidor de Produção"
+ *     description="Servidor de Producao"
  * )
  *
  * @OA\SecurityScheme(

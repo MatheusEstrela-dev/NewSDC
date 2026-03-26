@@ -4,7 +4,6 @@ namespace App\Services\Logging;
 
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\File;
 
 /**
  * Serviço para leitura e análise de arquivos de log
@@ -182,16 +181,16 @@ class LogFileReaderService
                 }
             }
 
-            // Se não é um arquivo com data no nome, mas é o arquivo principal do tipo (ex: laravel.log, events.log)
-            // adicionamos ele também se a data atual (hoje) estiver no intervalo
+            // Arquivo base (sem data no nome, ex: laravel.log) contem os logs do dia atual.
+            // So inclui se hoje estiver dentro do intervalo solicitado.
             if (!$isHistorical) {
-                $baseName = $file['name'];
-                // Remove extensões e verifica se o nome base corresponde ao tipo
-                $cleanName = str_replace('.log', '', $baseName);
-                
-                // Se for o arquivo "vivo" (sem data no nome)
+                $cleanName = str_replace('.log', '', $file['name']);
+
                 if (!preg_match('/\d{4}-\d{2}-\d{2}/', $cleanName)) {
-                    $relevantFiles[] = $file;
+                    $today = Carbon::today()->format('Y-m-d');
+                    if (in_array($today, $datePatterns)) {
+                        $relevantFiles[] = $file;
+                    }
                 }
             }
         }
@@ -215,30 +214,16 @@ class LogFileReaderService
             return collect();
         }
 
+        $fileSize = filesize($filePath);
+        $maxReadBytes = 2 * 1024 * 1024; // 2MB max do final do arquivo
+        $maxEntries = 500;
+
+        $lines = $this->tailFile($filePath, $maxReadBytes);
+
         $logs = collect();
-        $handle = fopen($filePath, 'r');
-
-        if (!$handle) {
-            return collect();
-        }
-
         $currentLog = null;
-        $lineNumber = 0;
-        
-        // Proteção contra arquivos gigantes (ex: loop infinito ou Out Of Memory)
-        $maxLines = 20000; 
 
-        // Lê a partir do final do arquivo se possível (simulação simples com tail/fseek é complexa em PHP, usaremos limite)
-        while (($line = fgets($handle)) !== false) {
-            $lineNumber++;
-            
-            if ($lineNumber > $maxLines) {
-                break; // Evita estourar a memória
-            }
-            
-            $trimmedLine = trim($line);
-
-            // Tenta fazer parse como início de um novo log (JSON ou Laravel)
+        foreach ($lines as $lineNumber => $line) {
             $jsonLog = $this->parseJsonLine($line);
             $laravelLog = $this->parseLaravelLogLine($line);
 
@@ -253,26 +238,50 @@ class LogFileReaderService
                 continue;
             }
 
-            // Se não é início de novo log, adiciona à mensagem do log atual
             if ($currentLog) {
-                if ($trimmedLine !== '') {
-                    // Limita o tamanho da mensagem para evitar OOM em stack traces gigantes
-                    if (strlen($currentLog['message']) < 10000) {
-                        $currentLog['message'] .= "\n" . $trimmedLine;
-                    }
+                $trimmedLine = trim($line);
+                if ($trimmedLine !== '' && strlen($currentLog['message']) < 5000) {
+                    $currentLog['message'] .= "\n" . $trimmedLine;
                 }
             }
         }
 
-        // Adiciona último log
         if ($currentLog) {
             $this->finalizeLog($currentLog);
             $logs->push($currentLog);
         }
 
+        return $logs->take(-$maxEntries)->values();
+    }
+
+    /**
+     * Le as ultimas linhas de um arquivo sem carregar tudo em memoria
+     */
+    protected function tailFile(string $filePath, int $maxBytes): array
+    {
+        $fileSize = filesize($filePath);
+        $handle = fopen($filePath, 'r');
+
+        if (!$handle) {
+            return [];
+        }
+
+        $offset = max(0, $fileSize - $maxBytes);
+        fseek($handle, $offset);
+
+        if ($offset > 0) {
+            fgets($handle);
+        }
+
+        $lines = [];
+        $lineNumber = 0;
+        while (($line = fgets($handle)) !== false) {
+            $lines[++$lineNumber] = $line;
+        }
+
         fclose($handle);
 
-        return $logs;
+        return $lines;
     }
 
     /**
@@ -286,13 +295,48 @@ class LogFileReaderService
             return null;
         }
 
-        // Normaliza estrutura
+        // Monolog format: dados estao em 'context'
+        $ctx = $decoded['context'] ?? [];
+        // ActivityLogger coloca metricas em context.data
+        $data = $ctx['data'] ?? $decoded['data'] ?? [];
+
+        // Normaliza level (Monolog usa numeros: 200=INFO, 300=WARNING, etc)
+        $level = $decoded['level_name'] ?? $decoded['level'] ?? $decoded['severity'] ?? 'info';
+        if (is_numeric($level)) {
+            $levelMap = [100 => 'debug', 200 => 'info', 250 => 'notice', 300 => 'warning', 400 => 'error', 500 => 'critical', 550 => 'alert', 600 => 'emergency'];
+            $level = $levelMap[$level] ?? 'info';
+        }
+
+        // Normaliza estrutura preservando campos importantes
         return [
-            'timestamp' => $decoded['timestamp'] ?? $decoded['datetime'] ?? now()->toIso8601String(),
-            'level' => $decoded['level'] ?? $decoded['severity'] ?? 'info',
-            'message' => $decoded['message'] ?? $decoded['event_name'] ?? '',
-            'context' => $decoded['context'] ?? $decoded['data'] ?? $decoded,
+            'timestamp' => $ctx['timestamp'] ?? $decoded['datetime'] ?? $decoded['timestamp'] ?? now()->toIso8601String(),
+            'level' => strtolower($level),
+            'message' => $decoded['message'] ?? $ctx['event_name'] ?? '',
+            'context' => $ctx,
             'format' => 'json',
+
+            // Campos do ActivityLogger (dentro de context)
+            'class' => $ctx['class'] ?? $decoded['class'] ?? null,
+            'method' => $ctx['method'] ?? $decoded['method'] ?? null,
+            'file' => $ctx['file'] ?? $ctx['file_path'] ?? $decoded['file'] ?? null,
+            'line' => $ctx['line'] ?? $decoded['line'] ?? null,
+            'layer' => $ctx['layer'] ?? $decoded['layer'] ?? null,
+            'url' => $ctx['url'] ?? $decoded['url'] ?? null,
+            'http_method' => $ctx['http_method'] ?? $data['method'] ?? null,
+            'ip_address' => $ctx['ip_address'] ?? $data['ip'] ?? null,
+            'user_id' => $ctx['user_id'] ?? $data['user_id'] ?? null,
+            'request_id' => $ctx['request_id'] ?? null,
+
+            // Campos dentro de 'data' (metricas de requisicao)
+            'data' => $data,
+            'status_code' => $data['status_code'] ?? null,
+            'duration_ms' => $data['duration_ms'] ?? $ctx['time_ms'] ?? null,
+            'route' => $data['route'] ?? null,
+
+            // Campos de Slow Query (queries.log)
+            'sql' => $ctx['sql'] ?? null,
+            'time_ms' => $ctx['time_ms'] ?? null,
+            'connection' => $ctx['connection'] ?? null,
         ];
     }
 
@@ -394,7 +438,15 @@ class LogFileReaderService
     }
 
     /**
-     * Formata bytes para formato legível
+     * Retorna os tipos de log disponiveis
+     */
+    public function getAvailableTypes(): array
+    {
+        return $this->logTypes;
+    }
+
+    /**
+     * Formata bytes para formato legivel
      */
     protected function formatBytes(int $bytes, int $precision = 2): string
     {
@@ -410,9 +462,9 @@ class LogFileReaderService
     /**
      * Obtém estatísticas dos logs
      */
-    public function getStatistics(array $filters = []): array
+    public function getStatistics(array $filters = [], ?Collection $logs = null): array
     {
-        $logs = $this->readLogs($filters);
+        $logs = $logs ?? $this->readLogs($filters);
 
         $stats = [
             'total_logs' => $logs->count(),

@@ -1,18 +1,17 @@
 # ============================================================================
-# SDC - Node.js / Vite DOCKERFILE (Desenvolvimento)
-# Instala dependencias durante o build (usa rede do Docker com internet)
-# Resolve conflito de binarios nativos Windows/Linux (rollup-linux-x64-musl)
+# SDC - Bun / Vite DOCKERFILE (Desenvolvimento)
+# Migrado de Node.js 20 para Bun para performance de install/build
 # ============================================================================
 
-FROM node:20-alpine
+FROM oven/bun:1-alpine
 
 WORKDIR /var/www
 
-# Copiar arquivos de dependencias primeiro (melhor cache de camadas)
-COPY package.json package-lock.json* ./
+# Bun precisa de bash e wget para scripts e healthcheck
+RUN apk add --no-cache bash wget
 
-# Instalar dependencias no runtime devido a restricoes de rede durante o build
-# RUN npm install
+# Copiar arquivos de dependencias primeiro (melhor cache de camadas)
+COPY package.json bun.lock* package-lock.json* ./
 
 # O codigo fonte sera montado via volume no runtime
-# node_modules sera copiado para o volume nomeado na primeira execucao
+# node_modules sera populado via bun install no primeiro start

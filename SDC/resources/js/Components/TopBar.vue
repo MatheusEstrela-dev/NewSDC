@@ -50,11 +50,14 @@
           title="Assistente IA - Defesa Civil"
         >
           <div class="w-9 h-9 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 group-hover:border-blue-400 dark:group-hover:border-blue-500 transition-colors bg-white">
-            <img 
+            <picture>
+              <source srcset="/imgs/logo_dc.webp" type="image/webp" />
+              <img
                 src="/imgs/logo_dc.png"
                 alt="AI"
                 class="w-full h-full object-contain p-0.5"
-            />
+              />
+            </picture>
           </div>
         </button>
       </div>

@@ -199,7 +199,10 @@ const close = () => {
                             <div class="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full scale-150 animate-pulse"></div>
                             <!-- Simple Logo Placeholder or SVG -->
                             <div class="relative w-24 h-24 bg-slate-800 rounded-2xl flex items-center justify-center shadow-2xl border border-slate-700">
-                                <img src="/imgs/logo_dc.png" alt="SDC Logo" class="w-16 h-16 object-contain" />
+                                <picture>
+                                    <source srcset="/imgs/logo_dc.webp" type="image/webp" />
+                                    <img src="/imgs/logo_dc.png" alt="SDC Logo" class="w-16 h-16 object-contain" />
+                                </picture>
                             </div>
                         </div>
 

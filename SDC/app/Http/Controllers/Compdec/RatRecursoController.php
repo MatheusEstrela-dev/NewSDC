@@ -35,15 +35,15 @@ class RatRecursoController extends Controller
 
     /**
      * Lista todos os recursos de uma ocorrência com suas guarnições.
+     * Otimizado: query direta com eager loading (evita N+1).
      */
     public function index(RatOcorrencia $ocorrencia): Response
     {
-        $recursos = $ocorrencia->relatosMorph()
-            ->get()
-            ->map(fn($relato) => $relato->conteudo)
-            ->filter(fn($conteudo) => $conteudo instanceof RatRelatoRecurso)
-            ->each(fn($recurso) => $recurso->load('recursosEmpregados.componentesGuarnicao'))
-            ->values();
+        $recursos = RatRelatoRecurso::whereHas('ocorrenciaRelato', fn($q) =>
+                $q->where('ocorrencia_id', $ocorrencia->id)
+            )
+            ->with('recursosEmpregados.componentesGuarnicao')
+            ->get();
 
         return Inertia::render('Compdec/Rat/Recursos/Listar', [
             'ocorrencia' => $ocorrencia,

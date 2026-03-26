@@ -61,8 +61,11 @@ RUN docker-php-ext-configure gd \
 # Copiar Composer
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
-# Instalar Node.js para compilar assets (temporário - será removido após build)
-RUN apk add --no-cache nodejs npm
+# Instalar Bun para compilar assets (temporario - sera removido apos build)
+RUN apk add --no-cache curl bash unzip \
+    && curl -fsSL https://bun.sh/install | bash \
+    && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
+    && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx
 
 # Configuração PHP
 RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
@@ -73,7 +76,7 @@ WORKDIR /var/www
 
 # Copiar arquivos de dependências primeiro (para cache do Docker)
 COPY composer.json composer.lock* ./
-COPY package.json package-lock.json* ./
+COPY package.json bun.lock* ./
 
 # Verificar se composer.json existe
 RUN test -f composer.json || (echo "ERRO: composer.json não encontrado!" && ls -la && exit 1)
@@ -99,14 +102,14 @@ RUN composer dump-autoload --optimize --classmap-authoritative
 # Criar symlink para resolver case-sensitivity (Linux e case-sensitive)
 RUN cd resources/js && ln -sf composables Composables
 
-# Instalar dependencias Node.js e compilar assets
-RUN npm install --no-audit --no-fund && \
-    npm run build && \
+# Instalar dependencias e compilar assets com Bun
+RUN bun install --frozen-lockfile && \
+    bun run build && \
     ls -la public/build/ && \
     test -f public/build/manifest.json || exit 1
 
-# Remover Node.js e npm após compilar assets (reduzir tamanho da imagem)
-RUN apk del nodejs npm || true
+# Remover Bun apos compilar assets (reduzir tamanho da imagem)
+RUN rm -rf /root/.bun /usr/local/bin/bun /usr/local/bin/bunx
 
 # Criar diretórios
 RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \

@@ -62,7 +62,7 @@ const sizeClasses = {
 };
 
 const inputClasses = computed(() => {
-  const base = 'w-full rounded-lg border transition-colors duration-200 outline-none focus:ring-2';
+  const base = 'w-full rounded-xl border transition-colors duration-200 outline-none focus:ring-2';
   const bgClass = 'bg-slate-900/50 border-slate-700 text-slate-200 placeholder-slate-500';
   const errorClass = props.error ? 'border-red-500 focus:ring-red-500/20' : 'focus:border-blue-500 focus:ring-blue-500/20';
   const disabledClass = props.disabled ? 'opacity-50 cursor-not-allowed' : '';

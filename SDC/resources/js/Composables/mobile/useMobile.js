@@ -15,37 +15,48 @@ const BREAKPOINTS = {
  * Composable para deteccao de tipo de dispositivo
  * @returns {Object} - isMobile, isTablet, isDesktop, screenWidth
  */
-export function useMobile() {
-  const screenWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024);
+// Singleton: um unico listener compartilhado entre todas as instancias
+const sharedScreenWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024);
+let resizeListenerCount = 0;
+let throttledResizeHandler = null;
 
-  const isMobile = computed(() => screenWidth.value < BREAKPOINTS.md);
-  const isTablet = computed(() => screenWidth.value >= BREAKPOINTS.md && screenWidth.value < BREAKPOINTS.lg);
-  const isDesktop = computed(() => screenWidth.value >= BREAKPOINTS.lg);
-
-  let resizeHandler = null;
-
-  onMounted(() => {
-    if (typeof window === 'undefined') return;
-
-    resizeHandler = () => {
-      screenWidth.value = window.innerWidth;
+function addSharedResizeListener() {
+  resizeListenerCount++;
+  if (resizeListenerCount === 1 && typeof window !== 'undefined') {
+    let rafId = null;
+    throttledResizeHandler = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        sharedScreenWidth.value = window.innerWidth;
+        rafId = null;
+      });
     };
+    window.addEventListener('resize', throttledResizeHandler, { passive: true });
+    sharedScreenWidth.value = window.innerWidth;
+  }
+}
 
-    window.addEventListener('resize', resizeHandler, { passive: true });
-    resizeHandler();
-  });
+function removeSharedResizeListener() {
+  resizeListenerCount--;
+  if (resizeListenerCount === 0 && throttledResizeHandler && typeof window !== 'undefined') {
+    window.removeEventListener('resize', throttledResizeHandler);
+    throttledResizeHandler = null;
+  }
+}
 
-  onUnmounted(() => {
-    if (resizeHandler && typeof window !== 'undefined') {
-      window.removeEventListener('resize', resizeHandler);
-    }
-  });
+export function useMobile() {
+  const isMobile = computed(() => sharedScreenWidth.value < BREAKPOINTS.md);
+  const isTablet = computed(() => sharedScreenWidth.value >= BREAKPOINTS.md && sharedScreenWidth.value < BREAKPOINTS.lg);
+  const isDesktop = computed(() => sharedScreenWidth.value >= BREAKPOINTS.lg);
+
+  onMounted(() => addSharedResizeListener());
+  onUnmounted(() => removeSharedResizeListener());
 
   return {
     isMobile,
     isTablet,
     isDesktop,
-    screenWidth,
+    screenWidth: sharedScreenWidth,
   };
 }
 
