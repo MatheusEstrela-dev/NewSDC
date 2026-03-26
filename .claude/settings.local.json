@@ -82,7 +82,18 @@
       "Bash(docker stats:*)",
       "Bash(git add:*)",
       "Read(//c/Users/x24679188/Downloads/**)",
-      "Bash(gzip -dk \"C:/Users/x24679188/Downloads/Trace-20260320T152629.json.gz\")"
+      "Bash(gzip -dk \"C:/Users/x24679188/Downloads/Trace-20260320T152629.json.gz\")",
+      "Bash(find /c/Users/x24679188/Documents/Github/NewSDC -maxdepth 2 -type f \\\\\\(-name Dockerfile* -o -name docker-compose* \\\\\\) ! -path */vendor/* ! -path */node_modules/* ! -path */storage/app/*)",
+      "Bash(find /c/Users/x24679188/Documents/Github/NewSDC/SDC -type f \\\\\\(-name Dockerfile* -o -name docker-compose* -o -name *.sh -o -name Makefile -o -name *.env* -o -name *.yml -o -name *.yaml -o -name .github -type d \\\\\\))",
+      "Bash(xargs -I {} bash -c \"echo \"\"=== {} ===\"\" && head -50 \"\"{}\"\"\")",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker history:*)",
+      "Bash(docker run:*)",
+      "Bash(docker build:*)",
+      "Bash(openssl req:*)",
+      "Bash(docker cp:*)",
+      "Bash(docker volume:*)"
     ],
     "deny": [],
     "ask": []
