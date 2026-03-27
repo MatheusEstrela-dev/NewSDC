@@ -6,7 +6,7 @@ namespace App\Modules\Rat\Models\Relatos;
 
 /**
  * Vistoria Técnica de uma ocorrência RAT.
- * 
+ *
  * Campos conforme a aba "Vistoria" do formulário:
  * - Tipo de Documento
  * - Verso

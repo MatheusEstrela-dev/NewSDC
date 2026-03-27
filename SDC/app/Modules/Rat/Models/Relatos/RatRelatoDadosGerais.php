@@ -6,7 +6,7 @@ namespace App\Modules\Rat\Models\Relatos;
 
 /**
  * Dados Gerais de uma ocorrência RAT.
- * 
+ *
  * Campos conforme a aba "Dados Gerais" do formulário:
  * - Tipo de Recurso
  * - Categoria

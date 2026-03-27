@@ -6,7 +6,7 @@ namespace App\Modules\Rat\Models\Relatos;
 
 /**
  * Recursos Empregados em uma ocorrência RAT.
- * 
+ *
  * Campos conforme a aba "Recursos Empregados" do formulário:
  * - Nome do Recurso
  * - Tipo (Helicóptero, Bombeiro, Viaturas, etc)

@@ -6,7 +6,7 @@ namespace App\Modules\Rat\Models\Relatos;
 
 /**
  * Envolvidos de uma ocorrência RAT.
- * 
+ *
  * Campos conforme a aba "Envolvidos" do formulário:
  * - Tipo de Pessoa
  * - Nome Completo

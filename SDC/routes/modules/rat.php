@@ -21,7 +21,7 @@ Route::prefix('rat')->name('rat.')->group(function () {
     // ====================================================================
     // OCORRÊNCIAS — CRUD Principal
     // ====================================================================
-    
+
     // Lista todas as ocorrências
     Route::get('/', [RatOcorrenciaController::class, 'index'])
         ->name('index')
@@ -65,7 +65,7 @@ Route::prefix('rat')->name('rat.')->group(function () {
     // ====================================================================
     // DADOS GERAIS — CRUD
     // ====================================================================
-    
+
     Route::prefix('{ocorrencia}/dados-gerais')->name('dados-gerais.')->group(function () {
         Route::get('/', [RatDadosGeraisController::class, 'show'])
             ->name('show')
@@ -83,7 +83,7 @@ Route::prefix('rat')->name('rat.')->group(function () {
     // ====================================================================
     // ENVOLVIDOS — CRUD
     // ====================================================================
-    
+
     Route::prefix('{ocorrencia}/envolvidos')->name('envolvidos.')->group(function () {
         Route::get('/', [RatEnvolvidosController::class, 'index'])
             ->name('index')
@@ -113,7 +113,7 @@ Route::prefix('rat')->name('rat.')->group(function () {
     // ====================================================================
     // RECURSOS — CRUD
     // ====================================================================
-    
+
     Route::prefix('{ocorrencia}/recursos')->name('recursos.')->group(function () {
         Route::get('/', [RatRecursoController::class, 'index'])
             ->name('index')
@@ -143,7 +143,7 @@ Route::prefix('rat')->name('rat.')->group(function () {
     // ====================================================================
     // VISTORIAS — CRUD
     // ====================================================================
-    
+
     Route::prefix('{ocorrencia}/vistorias')->name('vistorias.')->group(function () {
         Route::get('/', [RatVistoriaController::class, 'show'])
             ->name('show')
@@ -173,7 +173,7 @@ Route::prefix('rat')->name('rat.')->group(function () {
     // ====================================================================
     // HISTÓRICO
     // ====================================================================
-    
+
     Route::get('/{ocorrencia}/historico', [RatHistoricoController::class, 'show'])
         ->name('historico.show')
         ->middleware('can:rat.protocolos.view');
@@ -181,7 +181,7 @@ Route::prefix('rat')->name('rat.')->group(function () {
     // ====================================================================
     // ALVOS (Endereços/Locais de Interesse)
     // ====================================================================
-    
+
     Route::prefix('alvos')->name('alvos.')->group(function () {
         Route::get('/', [RatAlvoController::class, 'index'])
             ->name('index')
@@ -195,7 +195,7 @@ Route::prefix('rat')->name('rat.')->group(function () {
     // ====================================================================
     // BOLETIM DE OCORRÊNCIA
     // ====================================================================
-    
+
     Route::prefix('bo')->name('bo.')->group(function () {
         Route::get('/', [RatBoController::class, 'index'])
             ->name('index')

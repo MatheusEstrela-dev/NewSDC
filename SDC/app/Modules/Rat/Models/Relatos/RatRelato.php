@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 /**
  * Classe base para todos os relatos polimórficos de uma ocorrência RAT.
- * 
+ *
  * Cada relato (Dados Gerais, Envolvidos, Recursos, Vistoria) herda dessa classe.
  */
 class RatRelato extends Model
