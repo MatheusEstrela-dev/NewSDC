@@ -152,7 +152,7 @@ class EloquentRatRepository implements RatRepositoryInterface
         }
 
         $rat = new Rat();
-        $rat->id          = $ocorrencia->id;
+        $rat->id          = (string) $ocorrencia->id;
         $rat->protocolo   = $ocorrencia->numero_bos;
         $rat->status      = $ocorrencia->status === 1 ? 'finalizado' : 'rascunho';
         $rat->tem_vistoria = $vistoria !== null;

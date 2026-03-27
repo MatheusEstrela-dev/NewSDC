@@ -31,6 +31,9 @@ services:
       - newsdc_caddy_data:/data/caddy
       - newsdc_caddy_config:/config/caddy
 
+    secrets:
+      - db_password
+
     networks:
       - sdc_network
 
@@ -61,13 +64,12 @@ services:
       INERTIA_SSR_ENABLED: ${INERTIA_SSR_ENABLED:-false}
       INERTIA_SSR_URL: "http://ssr:13714"
 
-      # Database (usa .env)
+      # Database (credenciais via Docker secrets)
       DB_CONNECTION: mysql
       DB_HOST: ${DB_HOST:-db}
       DB_PORT: ${DB_PORT:-3306}
       DB_DATABASE: ${DB_DATABASE:-sdc}
       DB_USERNAME: ${DB_USERNAME:-sdc}
-      DB_PASSWORD: ${DB_PASSWORD:-}
 
       # Redis
       REDIS_HOST: redis
@@ -117,11 +119,15 @@ services:
       - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=db"
 
+    secrets:
+      - db_password
+      - db_root_password
+
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
       MYSQL_DATABASE: ${DB_DATABASE:-sdc}
       MYSQL_USER: ${DB_USERNAME:-sdc}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
       TZ: America/Sao_Paulo
 
     volumes:
@@ -269,6 +275,9 @@ services:
       - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=queue"
 
+    secrets:
+      - db_password
+
     volumes:
       - ../:/var/www:cached
       - newsdc_vendor:/var/www/vendor
@@ -291,7 +300,6 @@ services:
       DB_PORT: 3306
       DB_DATABASE: ${DB_DATABASE:-sdc}
       DB_USERNAME: ${DB_USERNAME:-sdc}
-      DB_PASSWORD: ${DB_PASSWORD:-secret}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       CACHE_DRIVER: redis
@@ -695,6 +703,16 @@ services:
   # ==========================================================================
   # Networks
   # ==========================================================================
+
+# ==========================================================================
+# Secrets (dev = environment var; prod = Vault/external)
+# ==========================================================================
+secrets:
+  db_password:
+    environment: DB_PASSWORD
+  db_root_password:
+    environment: DB_ROOT_PASSWORD
+
 networks:
   sdc_network:
     external: true

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->unsignedBigInteger('municipio_id');
 
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('municipio_id');
         });

@@ -5,8 +5,9 @@ namespace App\Modules\Rat\Models;
 use App\Modules\Rat\Enums\Localizacao;
 use App\Modules\Rat\Enums\Protocolo;
 use App\Modules\Rat\Enums\Status;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Rat extends Model
 {
@@ -70,6 +71,14 @@ class Rat extends Model
             $this->local['uf'] ?? null,
             $this->local['pais_id'] ?? 1
         );
+    }
+
+    /**
+     * Anexos (arquivos/imagens) vinculados a este RAT.
+     */
+    public function anexos(): HasMany
+    {
+        return $this->hasMany(RatAnexo::class, 'rat_id');
     }
 
     /**

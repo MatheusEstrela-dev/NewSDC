@@ -86,7 +86,7 @@ class DecretacoesController extends Controller
             'processos' => $processos,
             'filters' => $filters,
             // Lazy: carregados apenas quando componente Vue solicitar via partial reload
-            'statistics' => $this->processoService->getStatistics(),
+            'statistics' => $this->processoService->getStatistics($filters),
             'filterOptions' => Inertia::lazy(fn () => $this->processoService->getFilterOptions()),
         ]);
     }
@@ -292,7 +292,7 @@ class DecretacoesController extends Controller
             'data' => $data,
             'active_filters' => $this->processoService->getActiveFiltersSummary($request),
             'has_filters' => $this->processoService->hasActiveFilters($request),
-            'statistics' => $this->processoService->getStatistics(),
+            'statistics' => $this->processoService->getStatistics($request->all()),
         ]);
     }
 

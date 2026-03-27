@@ -329,6 +329,8 @@ class ProcessoQueryService
             })
             ->whereIn('ecd.entrada_processo_id', $processoIds)
             ->whereIn('dic.tipo', ['number', 'currency'])
+            ->whereNull('ecd.deleted_at')
+            ->whereNull('ed.deleted_at')
             ->select(
                 'ecd.entrada_processo_id',
                 'm.nome as municipio',
@@ -605,6 +607,8 @@ class ProcessoQueryService
             })
             ->whereIn('ecd.entrada_processo_id', $processoIds)
             ->whereIn('dic.tipo', ['number', 'currency'])
+            ->whereNull('ecd.deleted_at')
+            ->whereNull('ed.deleted_at')
             ->select(
                 'ecd.entrada_processo_id',
                 'ed.municipio_id',
@@ -625,6 +629,8 @@ class ProcessoQueryService
             ->join('dec_desastre_categorias as dc', 'di.categoria_id', '=', 'dc.id')
             ->whereIn('ecd.entrada_processo_id', $processoIds)
             ->where('dc.id', self::CAT_DANOS_HUMANOS_ID)
+            ->whereNull('ecd.deleted_at')
+            ->whereNull('ed.deleted_at')
             ->select(
                 'ecd.entrada_processo_id',
                 'ed.municipio_id',
@@ -702,6 +708,8 @@ class ProcessoQueryService
             })
             ->whereIn('ecd.entrada_processo_id', $processoIds)
             ->whereIn('dic.tipo', ['number', 'currency'])
+            ->whereNull('ecd.deleted_at')
+            ->whereNull('ed.deleted_at')
             ->select(
                 'ed.municipio_id',
                 'm.nome as municipio_nome',
@@ -752,6 +760,8 @@ class ProcessoQueryService
             ->join('dec_desastre_categorias as dc', 'di.categoria_id', '=', 'dc.id')
             ->whereIn('ecd.entrada_processo_id', $processoIds)
             ->where('dc.id', self::CAT_DANOS_HUMANOS_ID)
+            ->whereNull('ecd.deleted_at')
+            ->whereNull('ed.deleted_at')
             ->select(
                 'ed.municipio_id',
                 'di.id as item_id',

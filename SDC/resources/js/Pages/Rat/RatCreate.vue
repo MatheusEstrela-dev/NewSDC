@@ -15,7 +15,7 @@
         <RatDadosGeraisForm
           :rat="null"
           :view-only="false"
-          @save-draft="salvarRascunho"
+          @save-draft="salvarComAnexos"
           @finalize="finalizarRat"
           @update:tem-vistoria="temVistoria = $event"
           @update:form-data="currentFormData = $event"
@@ -29,7 +29,7 @@
           @add="adicionarRecurso"
           @remove="removerRecurso"
           @update="atualizarRecursos"
-          @save="() => salvarRascunho(currentFormData.value)"
+          @save="() => salvarComAnexos(currentFormData)"
         />
       </div>
 
@@ -40,7 +40,7 @@
           @add="adicionarEnvolvido"
           @remove="removerEnvolvido"
           @update="atualizarEnvolvidos"
-          @save="() => salvarRascunho(currentFormData.value)"
+          @save="() => salvarComAnexos(currentFormData)"
         />
       </div>
 
@@ -49,7 +49,7 @@
           :vistoria="vistoria"
           :view-only="false"
           @update="atualizarVistoria"
-          @save="() => salvarRascunho(currentFormData.value)"
+          @save="() => salvarComAnexos(currentFormData)"
         />
       </div>
 
@@ -59,7 +59,7 @@
           :view-only="false"
           @add-observation="adicionarObservacao"
           @update="atualizarHistorico"
-          @save="() => salvarRascunho(currentFormData.value)"
+          @save="() => salvarComAnexos(currentFormData)"
         />
       </div>
 
@@ -71,7 +71,8 @@
           @add="adicionarAnexo"
           @remove="removerAnexo"
           @update="atualizarAnexos"
-          @save="() => salvarRascunho(currentFormData.value)"
+          @update:pending-files="pendingAttachmentFiles = $event"
+          @save="() => salvarComAnexos(currentFormData)"
         />
       </div>
     </template>
@@ -80,7 +81,7 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import ClipboardIcon from '@/Components/Icons/ClipboardIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
@@ -128,6 +129,82 @@ const {
 
 const temVistoria = ref(false);
 const currentFormData = ref({ dadosGerais: {}, comunicacao: {}, local: {}, endereco: {} });
+
+/** Arquivos pendentes vindos do componente RatAttachments. */
+const pendingAttachmentFiles = ref([]);
+
+/**
+ * Salva o RAT via axios (sem Inertia) para controlar o fluxo de upload.
+ * 1. POST /rat via axios (sem seguir redirect)
+ * 2. Extrai o ID do RAT da URL de redirect
+ * 3. Faz upload dos anexos pendentes
+ * 4. Navega para a pagina de edicao via Inertia
+ */
+async function salvarComAnexos(formData) {
+  const filesToUpload = [...pendingAttachmentFiles.value];
+  console.log('[salvarComAnexos] pendingFiles:', filesToUpload.length, 'formData keys:', Object.keys(formData || {}));
+
+  if (filesToUpload.length === 0) {
+    console.log('[salvarComAnexos] no pending files, using salvarRascunho');
+    salvarRascunho(formData);
+    return;
+  }
+
+  const data = {
+    dadosGerais: formData.dadosGerais ?? {},
+    comunicacao: formData.comunicacao ?? {},
+    local:       formData.local ?? {},
+    endereco:    formData.endereco ?? {},
+    recursos:    recursos.value,
+    envolvidos:  envolvidos.value,
+    vistoria:    vistoria.value,
+    historico:   historico.value,
+  };
+
+  const ax = window.axios || (await import('axios')).default;
+
+  try {
+    const response = await ax.post(route('rat.store'), data);
+
+    const finalUrl = response.request?.responseURL || '';
+    const idMatch = finalUrl.match(/\/rat\/(\d+)/);
+    const newRatId = idMatch?.[1] ?? null;
+
+    if (newRatId) {
+      for (const { file } of filesToUpload) {
+        const form = new FormData();
+        form.append('file', file);
+        const categoria = file.type?.startsWith('image/') ? 'imagem' : 'documento';
+        form.append('categoria', categoria);
+        await ax.post(route('rat.anexos.store', { id: newRatId }), form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+      pendingAttachmentFiles.value = [];
+      router.visit(route('rat.edit', newRatId));
+    }
+  } catch (e) {
+    const finalUrl = e.request?.responseURL || e.response?.request?.responseURL || '';
+    const idMatch = finalUrl.match(/\/rat\/(\d+)/);
+    const newRatId = idMatch?.[1] ?? null;
+
+    if (newRatId) {
+      for (const { file } of filesToUpload) {
+        const form = new FormData();
+        form.append('file', file);
+        const categoria = file.type?.startsWith('image/') ? 'imagem' : 'documento';
+        form.append('categoria', categoria);
+        await ax.post(route('rat.anexos.store', { id: newRatId }), form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+      pendingAttachmentFiles.value = [];
+      router.visit(route('rat.edit', newRatId));
+    } else {
+      console.error('Erro ao salvar RAT:', e);
+    }
+  }
+}
 
 const currentActiveTab = computed(() => {
   const t = tabs.activeTab;

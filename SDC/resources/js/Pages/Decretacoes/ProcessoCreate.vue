@@ -61,6 +61,7 @@ const form = useForm({
   data_vencimento_decreto: '',
   status: 'pendente',
   analista_id: '',
+  n_protocolo_fide: '',
   n_decreto_municipal: '',
   data_decreto_municipal: '',
   data_publicacao_decreto_municipal: '',

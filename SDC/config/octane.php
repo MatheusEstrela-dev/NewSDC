@@ -105,7 +105,7 @@ return [
         OperationTerminated::class => [
             FlushOnce::class,
             FlushTemporaryContainerInstances::class,
-            // DisconnectFromDatabases removido - mantemos conexoes persistentes
+            DisconnectFromDatabases::class,
             CollectGarbage::class,
         ],
 

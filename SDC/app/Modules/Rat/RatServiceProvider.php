@@ -7,6 +7,7 @@ use App\Modules\Rat\Application\Services\RatService;
 use App\Modules\Rat\Config\RatActionsConfig;
 use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
 use App\Modules\Rat\Infrastructure\Persistence\EloquentRatRepository;
+use App\Modules\Rat\Services\RatAnexoService;
 use App\Modules\Rat\Services\RatAttachmentService;
 use App\Modules\Rat\Services\RatProtocoloService;
 use App\Services\Rat\RatAuditService;
@@ -32,6 +33,7 @@ class RatServiceProvider extends ServiceProvider
         $this->app->singleton(RatService::class);
         $this->app->singleton(RatProtocoloService::class);
         $this->app->singleton(RatAttachmentService::class);
+        $this->app->singleton(RatAnexoService::class);
 
         // Nova estrutura (RatOcorrencia + relatos polimórficos)
         $this->app->singleton(RatOcorrenciaService::class);

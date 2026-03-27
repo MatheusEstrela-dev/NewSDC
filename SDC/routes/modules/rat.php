@@ -9,6 +9,7 @@ use App\Http\Controllers\Compdec\RatOcorrenciaController;
 use App\Http\Controllers\Compdec\RatRecursoController;
 use App\Http\Controllers\Compdec\RatVistoriaController;
 use App\Models\Rat\RatOcorrencia;
+use App\Modules\Rat\Controllers\RatAnexoController;
 use App\Modules\Rat\Controllers\RatAttachmentController;
 use App\Modules\Rat\Controllers\RatController;
 use App\Modules\Rat\Controllers\RatDataController;
@@ -122,6 +123,7 @@ Route::prefix('compdec/rat')->name('compdec.rat.')->group(function () {
         Route::put('/vistoria/{vistoria}', [RatVistoriaController::class, 'update'])
             ->name('vistoria.update')
             ->middleware('can:rat.relatos.manage');
+
     });
 
     // Controller principal (listagem, criação, edição, exportação)
@@ -213,13 +215,30 @@ Route::prefix('rat')->name('rat.')->group(function () {
         ->name('destroy')
         ->middleware('can:rat.protocolos.delete');
 
-    // Gerenciamento de anexos (upload multipart + remoção)
-    Route::post('/{id}/attachments', [RatAttachmentController::class, 'store'])
+    // Anexos legado (redireciona para novo controller relacional)
+    Route::post('/{id}/attachments', [RatAnexoController::class, 'store'])
         ->name('attachments.store')
         ->middleware('can:rat.protocolos.edit');
 
-    Route::delete('/{id}/attachments/{anexoId}', [RatAttachmentController::class, 'destroy'])
+    Route::delete('/{id}/attachments/{anexo}', [RatAnexoController::class, 'destroy'])
         ->name('attachments.destroy')
+        ->middleware('can:rat.protocolos.edit');
+
+    // Gerenciamento de anexos (tabela relacional rat_anexos)
+    Route::get('/{id}/anexos', [RatAnexoController::class, 'index'])
+        ->name('anexos.index')
+        ->middleware('can:rat.protocolos.view');
+
+    Route::post('/{id}/anexos', [RatAnexoController::class, 'store'])
+        ->name('anexos.store')
+        ->middleware('can:rat.protocolos.edit');
+
+    Route::get('/{id}/anexos/{anexo}', [RatAnexoController::class, 'show'])
+        ->name('anexos.show')
+        ->middleware('can:rat.protocolos.view');
+
+    Route::delete('/{id}/anexos/{anexo}', [RatAnexoController::class, 'destroy'])
+        ->name('anexos.destroy')
         ->middleware('can:rat.protocolos.edit');
 });
 

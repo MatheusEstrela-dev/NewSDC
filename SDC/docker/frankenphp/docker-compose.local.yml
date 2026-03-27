@@ -1,0 +1,169 @@
+# ============================================================================
+# SDC - Docker Compose FrankenPHP (Dual: Local + Cloud)
+#
+# Sobe a instancia LOCAL automaticamente (banco container db).
+# A instancia CLOUD fica parada mas disponivel na mesma rede.
+#
+# Uso:
+#   docker compose -f docker/frankenphp/docker-compose.local.yml up -d
+#   -> Sobe apenas o LOCAL (banco container db)
+#
+#   docker compose -f docker/frankenphp/docker-compose.local.yml --profile cloud up -d
+#   -> Sobe LOCAL + CLOUD (ambos simultaneos)
+#
+#   docker compose -f docker/frankenphp/docker-compose.local.yml --profile cloud up -d app-cloud
+#   -> Sobe apenas o CLOUD
+#
+# Acesso:
+#   LOCAL: https://localhost:19444
+#   CLOUD: https://localhost:19443
+# ============================================================================
+
+name: newsdc-frankenphp-local
+
+services:
+  # ==========================================================================
+  # LOCAL - FrankenPHP com banco de dados local (container db)
+  # Sobe automaticamente com "docker compose up"
+  # ==========================================================================
+  app-local:
+    image: newsdc-frankenphp-app:latest
+    container_name: newsdc_frankenphp_local
+    hostname: frankenphp-local
+    restart: unless-stopped
+
+    env_file:
+      - ../../.env.local
+
+    environment:
+      # Laravel
+      APP_NAME: "SDC Local"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: https://localhost:19444
+
+      # Octane - FrankenPHP
+      OCTANE_SERVER: frankenphp
+      OCTANE_HTTPS: "true"
+
+      # FrankenPHP Config
+      FRANKENPHP_WORKERS: ${FRANKENPHP_WORKERS:-4}
+      FRANKENPHP_MAX_REQUESTS: ${FRANKENPHP_MAX_REQUESTS:-500}
+      PORT: 443
+
+      # Cache/Session (Redis compartilhado)
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: newsdc_redis
+      REDIS_PORT: 6379
+
+      # DB Local (container db na mesma rede)
+      DB_CONNECTION: mysql
+      DB_HOST: newsdc_db
+      DB_PORT: 3306
+      DB_DATABASE: sdc
+      DB_USERNAME: sdc
+      DB_PASSWORD: secret
+
+    ports:
+      - "19444:443"     # HTTPS (FrankenPHP Octane)
+      - "19081:80"      # HTTP redirect
+      - "2021:2019"     # Caddy Admin API
+
+    volumes:
+      - ../../app:/app/app
+      - ../../routes:/app/routes
+      - ../../config:/app/config
+      - ../../database/migrations:/app/database/migrations
+      - ../../tests:/app/tests
+      - ../storage/logs:/app/storage/logs
+
+    networks:
+      - sdc_network
+
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+    healthcheck:
+      test: ["CMD", "curl", "-sfk", "https://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ==========================================================================
+  # CLOUD - FrankenPHP com Google Cloud SQL
+  # Parado por default. Ativar com: --profile cloud
+  # ==========================================================================
+  app-cloud:
+    image: newsdc-frankenphp-app:latest
+    container_name: newsdc_frankenphp
+    hostname: frankenphp
+    restart: unless-stopped
+    profiles:
+      - cloud
+
+    env_file:
+      - ../../.env.prod
+
+    environment:
+      # Laravel
+      APP_NAME: SDC
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: https://localhost:19443
+
+      # Octane - FrankenPHP
+      OCTANE_SERVER: frankenphp
+      OCTANE_HTTPS: "true"
+
+      # FrankenPHP Config
+      FRANKENPHP_WORKERS: ${FRANKENPHP_WORKERS:-8}
+      FRANKENPHP_MAX_REQUESTS: ${FRANKENPHP_MAX_REQUESTS:-1000}
+      PORT: 443
+
+      # Cache/Session (Redis compartilhado)
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: newsdc_redis
+      REDIS_PORT: 6379
+
+      # DB usa credenciais do docker/.env (Google Cloud SQL)
+
+    ports:
+      - "19443:443"     # HTTPS (FrankenPHP Octane + HTTP/2 + HTTP/3)
+      - "19080:80"      # HTTP redirect
+      - "2020:2019"     # Caddy Admin API
+
+    volumes:
+      - ../storage/logs:/app/storage/logs
+
+    networks:
+      - sdc_network
+
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+    healthcheck:
+      test: ["CMD", "curl", "-sfk", "https://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+# ==========================================================================
+# NETWORKS - Usa rede externa do projeto principal
+# ==========================================================================
+networks:
+  sdc_network:
+    external: true

@@ -57,6 +57,8 @@ class Processo extends Model
         'data_decreto_estadual',
         'data_publicacao_domg',
         'data_portaria_federal',
+        'n_edicao_dou',
+        'data_publicacao_dou',
     ];
 
     protected $casts = [
@@ -64,6 +66,10 @@ class Processo extends Model
         'data_ocorrencia_desastre' => 'date',
         'data_decreto_municipal' => 'date',
         'data_publicacao_mg' => 'date',
+        'data_decreto_estadual' => 'date',
+        'data_publicacao_domg' => 'date',
+        'data_portaria_federal' => 'date',
+        'data_publicacao_dou' => 'date',
         'prazo_vigencia' => 'integer',
         'tipo_desastre_id' => 'integer',
         'redec_id' => 'integer',
@@ -108,10 +114,17 @@ class Processo extends Model
                 $desastre->entradas()->delete();
             });
             $model->desastres()->delete();
+            $model->decretoMunicipios()->delete();
         });
 
         static::deleted(function ($model) {
             $model->logChange('deleted');
+            // Invalida cache de estatisticas quando um processo e removido
+            try {
+                app(\App\Modules\Decretacoes\Services\ProcessoStatsService::class)->clearCache();
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Erro ao limpar cache de estatisticas: ' . $e->getMessage());
+            }
         });
     }
 
@@ -270,8 +283,7 @@ class Processo extends Model
 
     public function podeSerExcluido(): bool
     {
-        $status = $this->reconhecimento ?? '';
-        return in_array($status, ['Registro', '']);
+        return true;
     }
 
     protected function logChange(string $action): void
@@ -285,11 +297,13 @@ class Processo extends Model
     }
 }
 
-/**
+/*
  * DecretoMunicipio model.
  */
 class DecretoMunicipio extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'dec_decreto_municipios';
 
     protected $fillable = [

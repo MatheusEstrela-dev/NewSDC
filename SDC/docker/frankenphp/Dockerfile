@@ -73,6 +73,11 @@ RUN composer install \
 # Copiar codigo da aplicacao
 COPY . .
 
+# Substituir FrankenPHP pelo binario v1.12.1 (base image vem com versao antiga)
+RUN cp /app/docker/frankenphp/frankenphp-linux-x86_64 /usr/local/bin/frankenphp \
+    && chmod +x /usr/local/bin/frankenphp \
+    && ln -sf /usr/local/bin/frankenphp /app/frankenphp
+
 # Remover arquivo hot do Vite dev server
 RUN rm -f public/hot
 

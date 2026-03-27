@@ -51,18 +51,33 @@ class ProcessoRequestDTO
         $municipioId = $request->input('municipio_id');
 
         $mapped = [
+            // Identificacao do Processo
             'data_entrada'             => $request->input('data_entrada') ?: null,
             'processo'                 => strtoupper($request->input('origem', '')),
             'tipo_desastre_id'         => $request->input('cobrade_id') ?: ($request->input('tipo_desastre_id') ?: null),
             'tipo_desastre'            => $request->input('situacao_anormalidade') ?: null,
             'data_ocorrencia_desastre' => $request->input('data_ocorrencia') ?: null,
+            'redec_id'                 => $request->input('redec_id') ?: null,
+            // Status e Responsavel
+            'status'                   => $request->input('status') ?: null,
             'analista'                 => $request->input('analista_id') ?: null,
             'n_protocolo_fide'         => $request->input('n_protocolo_fide') ?: null,
+            // Decreto Municipal
             'decreto_municipal'        => $request->input('n_decreto_municipal') ?: null,
             'data_decreto_municipal'   => $request->input('data_decreto_municipal') ?: null,
-            'data_publicacao_mg'       => $request->input('data_publicacao_domg') ?: null,
+            'data_publicacao_mg'       => $request->input('data_publicacao_decreto_municipal') ?: null,
             'prazo_vigencia'           => $request->input('prazo_vigencia_decreto') ?: null,
+            // Reconhecimento Estadual
+            'n_decreto_estadual'       => $request->input('n_decreto_estadual') ?: null,
+            'data_decreto_estadual'    => $request->input('data_decreto_estadual') ?: null,
+            'n_edicao_domg'            => $request->input('n_edicao_domg') ?: null,
+            'data_publicacao_domg'     => $request->input('data_publicacao_domg') ?: null,
+            // Reconhecimento Federal
             'portaria_reconhecimento_fed' => $request->input('n_portaria_federal') ?: null,
+            'data_portaria_federal'    => $request->input('data_portaria_federal') ?: null,
+            'n_edicao_dou'             => $request->input('n_edicao_dou') ?: null,
+            'data_publicacao_dou'      => $request->input('data_publicacao_dou') ?: null,
+            // Informacoes Adicionais
             'processo_inserido_sei'    => $request->input('n_processo_sei') ?: null,
             'observacoes'              => $request->input('observacoes') ?: null,
         ];

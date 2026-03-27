@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes;
 
+use App\Modules\Decretacoes\Models\Processo;
+use App\Modules\Decretacoes\Observers\ProcessoObserver;
 use App\Modules\Decretacoes\Services\DesastreDataService;
 use App\Modules\Decretacoes\Services\EntradaProcessoService;
 use App\Modules\Decretacoes\Services\HexagonIntegrationService;
@@ -52,6 +54,6 @@ class DecretacoesServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Rotas carregadas via routes/web.php -> routes/modules/decretacoes.php
+        Processo::observe(ProcessoObserver::class);
     }
 }

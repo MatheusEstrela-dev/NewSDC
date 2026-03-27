@@ -52,9 +52,10 @@ export function useRat({
 
     /**
      * Salva o RAT como rascunho (status mantido em rascunho).
-     * @param {Object} formData  - dados do formulário principal
+     * @param {Object} formData       - dados do formulario principal
+     * @param {Object} routerOptions  - opcoes extras do Inertia router (onSuccess, onError, etc.)
      */
-    function salvarRascunho(formData = {}) {
+    function salvarRascunho(formData = {}, routerOptions = {}) {
         const data = {
             dadosGerais: formData.dadosGerais  ?? {},
             comunicacao: formData.comunicacao  ?? {},
@@ -65,18 +66,20 @@ export function useRat({
             vistoria:    vistoria.value,
             historico:   historico.value,
         };
+        const options = { preserveScroll: true, ...routerOptions };
         if (!rat.value?.id) {
-            router.post(route('rat.store'), data, { preserveScroll: true });
+            router.post(route('rat.store'), data, options);
         } else {
-            router.patch(route('rat.draft', rat.value.id), data, { preserveScroll: true });
+            router.patch(route('rat.draft', rat.value.id), data, options);
         }
     }
 
     /**
      * Finaliza o RAT — salva todos os dados e muda status para FINALIZADO.
-     * @param {Object} formData  - dados do formulário principal
+     * @param {Object} formData       - dados do formulario principal
+     * @param {Object} routerOptions  - opcoes extras do Inertia router (onSuccess, onError, etc.)
      */
-    function finalizarRat(formData = {}) {
+    function finalizarRat(formData = {}, routerOptions = {}) {
         const data = {
             dadosGerais: formData.dadosGerais  ?? {},
             comunicacao: formData.comunicacao  ?? {},
@@ -87,12 +90,12 @@ export function useRat({
             vistoria:    vistoria.value,
             historico:   historico.value,
         };
+        const options = { preserveScroll: true, ...routerOptions };
         if (!rat.value?.id) {
-            // Página de criação: cria e finaliza em uma única requisição
-            router.post(route('rat.store'), { ...data, finalize: true }, { preserveScroll: true });
+            router.post(route('rat.store'), { ...data, finalize: true }, options);
             return;
         }
-        router.patch(route('rat.finalize', rat.value.id), data, { preserveScroll: true });
+        router.patch(route('rat.finalize', rat.value.id), data, options);
     }
 
     /**

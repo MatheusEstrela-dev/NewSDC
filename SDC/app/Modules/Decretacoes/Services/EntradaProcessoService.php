@@ -110,7 +110,7 @@ class EntradaProcessoService
      */
     public function updateProcesso(ProcessoRequestDTO $dto, int $id): Processo
     {
-        return DB::transaction(function () use ($dto, $id) {
+        $processo = DB::transaction(function () use ($dto, $id) {
             $processo = Processo::findOrFail($id);
             $processo->fill($dto->allData);
             $this->syncMunicipalities($processo, $dto->municipios);
@@ -161,11 +161,12 @@ class EntradaProcessoService
      *
      * DELEGADO PARA: ProcessoStatsService
      *
+     * @param array $filters Filtros opcionais 
      * @return array Estatisticas formatadas
      */
-    public function getStatistics(): array
+    public function getStatistics(array $filters = []): array
     {
-        return $this->statsService->getDashboardStatistics();
+        return $this->statsService->getDashboardStatistics($filters);
     }
 
     /**

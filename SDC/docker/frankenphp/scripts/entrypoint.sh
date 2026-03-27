@@ -11,6 +11,16 @@ cd /app
 echo "=== SDC FrankenPHP Entrypoint ==="
 echo "Ambiente: ${APP_ENV:-production}"
 
+# ── Docker Secrets ──
+# Le arquivos de /run/secrets/ e exporta como variaveis de ambiente
+for secret_file in /run/secrets/*; do
+    if [ -f "$secret_file" ]; then
+        var_name=$(basename "$secret_file" | tr '[:lower:]' '[:upper:]')
+        export "$var_name"="$(cat "$secret_file")"
+        echo "Secret carregada: $var_name"
+    fi
+done
+
 # Criar .env minimo se nao existir (usa variaveis de ambiente do container)
 if [ ! -f .env ]; then
     echo "Criando .env minimo..."
@@ -101,10 +111,14 @@ fi
 # Permissoes (apenas diretorios principais, sem recursao em volumes montados)
 chmod 775 storage storage/framework storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache 2>/dev/null || true
 
-# Criar rota de health check se nao existir
-if ! grep -q "Route::get('/health'" routes/web.php 2>/dev/null; then
-    echo "// Health check" >> routes/web.php
-    echo "Route::get('/health', fn() => response('OK', 200));" >> routes/web.php
+# Criar rota de health check SEM middleware (evita dependencia de DB/session no health check)
+if ! grep -q "health.*withoutMiddleware" routes/web.php 2>/dev/null; then
+    # Remove health check antigo se existir (com middleware web que causa timeout)
+    sed -i '/\/\/ Health check/d' routes/web.php 2>/dev/null || true
+    sed -i "/Route::get('\/health', fn() => response('OK', 200));/d" routes/web.php 2>/dev/null || true
+    echo "" >> routes/web.php
+    echo "// Health check - sem middleware para evitar dependencia de DB/session" >> routes/web.php
+    echo "Route::get('/health', fn() => response()->json(['status' => 'ok', 'timestamp' => now()->toIso8601String()]))->withoutMiddleware('web');" >> routes/web.php
 fi
 
 echo "=== Iniciando FrankenPHP ==="
