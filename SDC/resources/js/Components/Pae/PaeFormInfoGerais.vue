@@ -73,8 +73,8 @@
 
 <script setup>
 import { reactive, watch } from 'vue';
-import FormField from './FormField.vue';
-import FormSelect from './FormSelect.vue';
+import FormField from '@/Components/Molecules/Form/FormField.vue';
+import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
 import PaeCard from './PaeCard.vue';
 
 const props = defineProps({
