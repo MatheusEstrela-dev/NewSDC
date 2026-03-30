@@ -5,6 +5,12 @@
         <div class="pae-container">
             <PaeHeader :empreendimento="empreendimento" :last-update="props.lastUpdate" />
 
+            <PaeBreadcrumb
+                v-if="props.formulario"
+                :situacao="props.formulario.status ?? 'novo'"
+                :num-protocolo="props.formulario.num_protocolo ?? ''"
+            />
+
             <PaeForm
                 :empreendimento="empreendimento"
                 :municipios="props.municipios"
@@ -15,6 +21,7 @@
 </template>
 
 <script setup>
+import PaeBreadcrumb from '@/Components/Pae/PaeBreadcrumb.vue';
 import PaeForm from '@/Components/Pae/PaeForm.vue';
 import PaeHeader from '@/Components/Pae/PaeHeader.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
