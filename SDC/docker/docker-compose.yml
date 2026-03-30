@@ -13,7 +13,7 @@ services:
   # PHP Application (Laravel + FrankenPHP/Octane)
   # ==========================================================================
   app:
-    image: newsdc-frankenphp-app:latest
+    image: newsdc-app:latest
     container_name: newsdc_app
     hostname: app
     restart: unless-stopped
@@ -23,17 +23,17 @@ services:
 
     volumes:
       # Codigo fonte montado como volume: permite hot reload em dev
-      - ../:/app:cached
+      - ../:/var/www:cached
       # Logs persistentes
-      - ../storage/logs:/app/storage/logs
+      - ../storage/logs:/var/www/storage/logs
       # Entrypoint e Caddyfile atualizados (sem precisar rebuild)
       - ./frankenphp/scripts/entrypoint.sh:/start.sh:ro
-      - ./frankenphp/Caddyfile.dev:/app/docker/Caddyfile.dev:ro
+      - ./frankenphp/Caddyfile.dev:/var/www/docker/Caddyfile.dev:ro
       # Certificados Caddy (persistir CA interna entre restarts)
       - newsdc_caddy_data:/data/caddy
       - newsdc_caddy_config:/config/caddy
 
-    working_dir: /app
+    working_dir: /var/www
 
     networks:
       - sdc_network
@@ -273,12 +273,12 @@ services:
       - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=queue"
 
-    working_dir: /app
+    working_dir: /var/www
 
     volumes:
-      - ../:/app:cached
-      - newsdc_vendor:/app/vendor
-      - ./logs/queue:/app/storage/logs
+      - ../:/var/www:cached
+      - newsdc_vendor:/var/www/vendor
+      - ./logs/queue:/var/www/storage/logs
 
     networks:
       - sdc_network

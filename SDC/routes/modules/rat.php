@@ -9,112 +9,75 @@ use Illuminate\Support\Facades\Route;
 // ============================================================================
 
 Route::prefix('compdec/rat')->name('compdec.rat.')->group(function () {
+    // ========================================================================
+    // Compdec Flow (Web / Inertia)
+    // ========================================================================
+    Route::get('/', [RatUnifiedController::class, 'index'])->name('index');
+    Route::get('/create', [RatUnifiedController::class, 'create'])->name('create');
+    Route::post('/store', [RatUnifiedController::class, 'store'])->name('store');
+    Route::get('/{ocorrencia}', [RatUnifiedController::class, 'show'])->name('show');
+    Route::get('/{ocorrencia}/edit', [RatUnifiedController::class, 'edit'])->name('edit');
+    Route::put('/{ocorrencia}', [RatUnifiedController::class, 'update'])->name('update');
+    Route::delete('/{ocorrencia}', [RatUnifiedController::class, 'destroy'])->name('destroy');
+    Route::patch('/{ocorrencia}/finalize', [RatUnifiedController::class, 'finalize'])->name('finalize');
+    Route::post('/{ocorrencia}/draft', [RatUnifiedController::class, 'draft'])->name('draft');
 
     // Boletim de Ocorrência
-    Route::get('/bo', [RatUnifiedController::class, 'indexBo'])
-        ->name('bo.index')
-        ->middleware('can:rat.protocolos.view');
+    Route::get('/bo', [RatUnifiedController::class, 'indexBo'])->name('bo.index');
+    Route::post('/bo', [RatUnifiedController::class, 'storeBo'])->name('bo.store');
 
-    Route::post('/bo', [RatUnifiedController::class, 'storeBo'])
-        ->name('bo.store')
-        ->middleware('can:rat.protocolos.create');
+    // Auditoria
+    Route::get('/audit', [RatUnifiedController::class, 'auditIndex'])->name('audit.index');
+    Route::get('/audit/{id}', [RatUnifiedController::class, 'auditShow'])->name('audit.show');
 
-    // Ocorrências - Listagem e Show
-    Route::get('/ocorrencias/{id}', [RatUnifiedController::class, 'showBo'])
-        ->name('ocorrencias.show')
-        ->middleware('can:rat.protocolos.view');
+    // Integrações e Dados Especializados
+    Route::get('/{id}/normalized', [RatUnifiedController::class, 'normalizedData'])->name('normalized');
+    Route::get('/{id}/power-bi', [RatUnifiedController::class, 'powerBiData'])->name('power-bi');
+    Route::get('/{id}/json', [RatUnifiedController::class, 'showJson'])->name('show-json');
+    Route::get('/export-rats', [RatUnifiedController::class, 'exportRats'])->name('export-rats');
 
     // ========================================================================
-    // Relatos polimórficos por ocorrência
+    // Relatos polimórficos por ocorrência (API)
     // ========================================================================
     Route::prefix('/ocorrencias/{ocorrencia}')->name('ocorrencias.')->group(function () {
+        Route::get('/dados-gerais', [RatUnifiedController::class, 'showDadosGerais'])->name('dados-gerais.show');
+        Route::post('/dados-gerais', [RatUnifiedController::class, 'storeDadosGerais'])->name('dados-gerais.store');
+        Route::put('/dados-gerais/{id}', [RatUnifiedController::class, 'updateDadosGerais'])->name('dados-gerais.update');
 
-        // Dados Gerais
-        Route::get('/dados-gerais', [RatUnifiedController::class, 'showDadosGerais'])
-            ->name('dados-gerais.show')
-            ->middleware('can:rat.protocolos.view');
+        Route::get('/envolvidos', [RatUnifiedController::class, 'indexEnvolvidos'])->name('envolvidos.index');
+        Route::post('/envolvidos', [RatUnifiedController::class, 'storeEnvolvidos'])->name('envolvidos.store');
+        Route::put('/envolvidos/{id}', [RatUnifiedController::class, 'updateEnvolvidos'])->name('envolvidos.update');
+        Route::delete('/envolvidos/{id}', [RatUnifiedController::class, 'destroyEnvolvidos'])->name('envolvidos.destroy');
 
-        Route::post('/dados-gerais', [RatUnifiedController::class, 'storeDadosGerais'])
-            ->name('dados-gerais.store')
-            ->middleware('can:rat.relatos.manage');
+        Route::get('/recursos', [RatUnifiedController::class, 'indexRecursos'])->name('recursos.index');
+        Route::post('/recursos', [RatUnifiedController::class, 'storeRecursos'])->name('recursos.store');
+        Route::put('/recursos/{id}', [RatUnifiedController::class, 'updateRecursos'])->name('recursos.update');
+        Route::delete('/recursos/{id}', [RatUnifiedController::class, 'destroyRecursos'])->name('recursos.destroy');
 
-        Route::put('/dados-gerais/{id}', [RatUnifiedController::class, 'updateDadosGerais'])
-            ->name('dados-gerais.update')
-            ->middleware('can:rat.relatos.manage');
+        Route::get('/vistoria', [RatUnifiedController::class, 'showVistoria'])->name('vistoria.show');
+        Route::post('/vistoria', [RatUnifiedController::class, 'storeVistoria'])->name('vistoria.store');
+        Route::put('/vistoria/{id}', [RatUnifiedController::class, 'updateVistoria'])->name('vistoria.update');
 
-        // Envolvidos
-        Route::get('/envolvidos', [RatUnifiedController::class, 'indexEnvolvidos'])
-            ->name('envolvidos.index')
-            ->middleware('can:rat.protocolos.view');
+        Route::get('/historico', [RatUnifiedController::class, 'showHistorico'])->name('historico.show');
+        Route::post('/historico', [RatUnifiedController::class, 'storeHistorico'])->name('historico.store');
 
-        Route::post('/envolvidos', [RatUnifiedController::class, 'storeEnvolvidos'])
-            ->name('envolvidos.store')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::put('/envolvidos/{id}', [RatUnifiedController::class, 'updateEnvolvidos'])
-            ->name('envolvidos.update')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::delete('/envolvidos/{id}', [RatUnifiedController::class, 'destroyEnvolvidos'])
-            ->name('envolvidos.destroy')
-            ->middleware('can:rat.relatos.manage');
-
-        // Recursos empregados
-        Route::get('/recursos', [RatUnifiedController::class, 'indexRecursos'])
-            ->name('recursos.index')
-            ->middleware('can:rat.protocolos.view');
-
-        Route::post('/recursos', [RatUnifiedController::class, 'storeRecursos'])
-            ->name('recursos.store')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::put('/recursos/{id}', [RatUnifiedController::class, 'updateRecursos'])
-            ->name('recursos.update')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::delete('/recursos/{id}', [RatUnifiedController::class, 'destroyRecursos'])
-            ->name('recursos.destroy')
-            ->middleware('can:rat.relatos.manage');
-
-        // Vistoria técnica
-        Route::get('/vistoria', [RatUnifiedController::class, 'showVistoria'])
-            ->name('vistoria.show')
-            ->middleware('can:rat.protocolos.view');
-
-        Route::post('/vistoria', [RatUnifiedController::class, 'storeVistoria'])
-            ->name('vistoria.store')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::put('/vistoria/{id}', [RatUnifiedController::class, 'updateVistoria'])
-            ->name('vistoria.update')
-            ->middleware('can:rat.relatos.manage');
-
-        // Histórico
-        Route::get('/historico', [RatUnifiedController::class, 'showHistorico'])
-            ->name('historico.show')
-            ->middleware('can:rat.protocolos.view');
-
-        Route::post('/historico', [RatUnifiedController::class, 'storeHistorico'])
-            ->name('historico.store')
-            ->middleware('can:rat.relatos.manage');
-
-        // Anexos
-        Route::post('/attachments', [RatUnifiedController::class, 'storeAttachment'])
-            ->name('attachments.store')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::delete('/attachments/{id}', [RatUnifiedController::class, 'destroyAttachment'])
-            ->name('attachments.destroy')
-            ->middleware('can:rat.relatos.manage');
+        Route::post('/attachments', [RatUnifiedController::class, 'storeAttachment'])->name('attachments.store');
+        Route::delete('/attachments/{id}', [RatUnifiedController::class, 'destroyAttachment'])->name('attachments.destroy');
     });
 
     // Exportação e Estatísticas
-    Route::get('/export', [RatUnifiedController::class, 'export'])
-        ->name('export')
-        ->middleware('can:rat.protocolos.export');
+    Route::get('/export', [RatUnifiedController::class, 'export'])->name('export');
+    Route::get('/statistics', [RatUnifiedController::class, 'statistics'])->name('statistics');
 
-    Route::get('/statistics', [RatUnifiedController::class, 'statistics'])
-        ->name('statistics')
-        ->middleware('can:rat.protocolos.view');
+    // ========================================================================
+    // V1 Mobile API (Backward Compatibility)
+    // ========================================================================
+    Route::prefix('v1')->group(function () {
+        Route::get('/ocorrencias/{id}/historico', [RatUnifiedController::class, 'v1Timeline']);
+        Route::get('/ocorrencias/{id}/historico/recent', [RatUnifiedController::class, 'v1Recent']);
+        Route::post('/ocorrencias', [RatUnifiedController::class, 'v1Store']);
+        Route::get('/protocolos', [RatUnifiedController::class, 'protocolProxyIndex']);
+    });
 });
+
 

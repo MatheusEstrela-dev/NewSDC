@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Log\Context\Repository as ContextRepository;
@@ -29,7 +32,7 @@ class AppServiceProvider extends ServiceProvider
 
 
         if (app()->environment('production')) {
-            \URL::forceScheme('https');
+            URL::forceScheme('https');
         }
 
         // Overrides para NativePHP / Mobile / Android
@@ -63,11 +66,11 @@ class AppServiceProvider extends ServiceProvider
             $dbOk = false;
 
             try {
-                \DB::connection('mysql')->getPdo();
-                \Log::info('NativePHP DB: MySQL connection SUCCESS');
+                DB::connection('mysql')->getPdo();
+                Log::info('NativePHP DB: MySQL connection SUCCESS');
                 $dbOk = true;
             } catch (\Throwable $e) {
-                \Log::warning('NativePHP DB: MySQL FAILED, falling back to SQLite', ['error' => $e->getMessage()]);
+                Log::warning('NativePHP DB: MySQL FAILED, falling back to SQLite', ['error' => $e->getMessage()]);
 
                 try {
                     config(['database.default' => 'sqlite']);
@@ -81,13 +84,13 @@ class AppServiceProvider extends ServiceProvider
                     \DB::connection('sqlite')->getPdo();
 
                     try {
-                        if (!\Schema::hasTable('users')) {
-                            \Artisan::call('migrate', ['--force' => true]);
-                            \Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
-                            \Log::info('NativePHP DB: SQLite migrated and seeded');
+                        if (!Schema::hasTable('users')) {
+                            Artisan::call('migrate', ['--force' => true]);
+                            Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
+                            Log::info('NativePHP DB: SQLite migrated and seeded');
                         }
                     } catch (\Throwable $migError) {
-                        \Log::error('NativePHP DB: SQLite migration failed', ['error' => $migError->getMessage()]);
+                        Log::error('NativePHP DB: SQLite migration failed', ['error' => $migError->getMessage()]);
                     }
                     $dbOk = true;
                 } catch (\Throwable $sqliteError) {
@@ -139,7 +142,7 @@ class AppServiceProvider extends ServiceProvider
                     'time_ms'      => $query->time,
                     'connection'   => $query->connection->getName(),
                     'url'          => app()->bound('request') ? request()->fullUrl() : null,
-                    // 'user_id'      => app()->bound('auth') && auth()->check() ? auth()->id() : null, // Temporarily disabled
+                    // 'user_id'      => app()->bound('auth') && auth()->check() ? auth()->id() : null,
                     'user_id'      => null,
                     'class'        => $caller['class'] ?? null,
                     'method'       => $caller['method'] ?? null,

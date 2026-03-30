@@ -156,35 +156,24 @@ return [
     */
 
     'providers' => ServiceProvider::defaultProviders()->merge([
-        /*
-         * Package Service Providers...
-         */
-        Illuminate\Hashing\HashServiceProvider::class,
-
-        /*
-         * Application Service Providers...
-         */
-        App\Providers\QuickBootServiceProvider::class,
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
-        // App\Providers\BroadcastServiceProvider::class,
-        App\Providers\EventServiceProvider::class,
-        App\Providers\RouteServiceProvider::class,
-        // App\Providers\OctaneServiceProvider::class, // Disabled - using php artisan serve instead of Octane
-        // App\Providers\TelescopeServiceProvider::class, // Disabled - testing auth binding issue
+        // App\Providers\EventServiceProvider::class,
+        // App\Providers\RouteServiceProvider::class,
+        // App\Providers\OctaneServiceProvider::class,
+        // App\Providers\TelescopeServiceProvider::class,
 
         // Module Service Providers
-        App\Modules\Rat\RatServiceProvider::class,
-        App\Modules\Demandas\DemandasServiceProvider::class,
-        App\Modules\Tdap\TdapServiceProvider::class,
-        App\Modules\Decretacoes\DecretacoesServiceProvider::class,
-        App\Modules\AjudaHumanitaria\AjudaHumanitariaServiceProvider::class,
-        App\Modules\Compdec\CompdecServiceProvider::class,
-        App\Modules\Treinamento\TreinamentoServiceProvider::class,
-        App\Modules\Inmet\InmetServiceProvider::class,
-        App\Modules\Suporte\SuporteServiceProvider::class,
-        App\Modules\Plantao\PlantaoServiceProvider::class,
-        App\Modules\PlanCon\PlanConServiceProvider::class,
+        // App\Modules\Rat\RatServiceProvider::class,
+        // App\Modules\Demandas\DemandasServiceProvider::class,
+        // App\Modules\Tdap\TdapServiceProvider::class,
+        // App\Modules\Decretacoes\DecretacoesServiceProvider::class,
+        // App\Modules\AjudaHumanitaria\AjudaHumanitariaServiceProvider::class,
+        // App\Modules\Compdec\CompdecServiceProvider::class,
+        // App\Modules\Treinamento\TreinamentoServiceProvider::class,
+        // App\Modules\Inmet\InmetServiceProvider::class,
+        // App\Modules\Suporte\SuporteServiceProvider::class,
+        // App\Modules\PlanCon\PlanConServiceProvider::class,
     ])->toArray(),
 
     /*

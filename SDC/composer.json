@@ -42,11 +42,7 @@
             "App\\Core\\": "core/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        },
-        "classmap": [
-            "app/Modules/Decretacoes/Models/DecretacoesModels.php",
-            "app/Modules/Decretacoes/DTO/DecretacoesDTO.php"
-        ]
+        }
     },
     "autoload-dev": {
         "psr-4": {
@@ -70,7 +66,10 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [
+                "laravel/telescope",
+                "nativephp/mobile"
+            ]
         }
     },
     "config": {

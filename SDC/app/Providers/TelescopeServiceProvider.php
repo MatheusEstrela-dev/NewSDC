@@ -8,6 +8,7 @@ class TelescopeServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        /*
         if (!class_exists(\Laravel\Telescope\Telescope::class)) {
             return;
         }
@@ -24,15 +25,18 @@ class TelescopeServiceProvider extends ServiceProvider
                    $entry->isScheduledTask() ||
                    $entry->hasMonitoredTag();
         });
+        */
     }
 
     public function boot(): void
     {
+        /*
         if (!class_exists(\Laravel\Telescope\Telescope::class)) {
             return;
         }
 
         $this->gate();
+        */
     }
 
     protected function hideSensitiveRequestDetails(): void
