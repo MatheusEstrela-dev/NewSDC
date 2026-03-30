@@ -9,6 +9,9 @@
         :readonly="readonly"
         :class="[
           readonly ? 'form-input-readonly' : 'form-input',
+          (modelValue !== '' && modelValue !== null && modelValue !== undefined && !readonly) 
+            ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-100 dark:border-emerald-500 focus:ring-emerald-500 focus:border-emerald-500' 
+            : '',
           icon ? 'pl-10' : '',
           inputClass,
         ]"

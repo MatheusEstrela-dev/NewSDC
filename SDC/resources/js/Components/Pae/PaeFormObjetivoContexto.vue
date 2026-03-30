@@ -5,7 +5,10 @@
         v-model="local.objetivo"
         rows="6"
         placeholder="Descreva o objetivo da análise..."
-        class="w-full bg-transparent border border-slate-300 dark:border-slate-600 rounded-lg p-4 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+        :class="[
+          'w-full bg-transparent border rounded-lg p-4 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500',
+          local.objetivo ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-500' : 'border-slate-300 dark:border-slate-600'
+        ]"
       />
     </PaeCard>
 
@@ -14,7 +17,10 @@
         v-model="local.contextualizacao"
         rows="8"
         placeholder="Contextualize a análise técnica..."
-        class="w-full bg-transparent border border-slate-300 dark:border-slate-600 rounded-lg p-4 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+        :class="[
+          'w-full bg-transparent border rounded-lg p-4 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500',
+          local.contextualizacao ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-500' : 'border-slate-300 dark:border-slate-600'
+        ]"
       />
     </PaeCard>
 

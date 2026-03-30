@@ -5,7 +5,13 @@
       <select
         :value="modelValue"
         @change="$emit('update:modelValue', $event.target.value)"
-        :class="['form-select', icon ? 'pl-10' : '']"
+        :class="[
+          'form-select',
+          (modelValue !== '' && modelValue !== null && modelValue !== undefined) 
+            ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-100 dark:border-emerald-500 focus:ring-emerald-500 focus:border-emerald-500' 
+            : '',
+          icon ? 'pl-10' : '',
+        ]"
       >
         <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>
         <option v-for="option in options" :key="option.value" :value="option.value">

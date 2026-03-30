@@ -21,7 +21,10 @@
               v-model="item.text"
               rows="3"
               :placeholder="`Digite a conclusão ${index + 1}...`"
-              class="w-full bg-transparent border border-slate-300 dark:border-slate-600 rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+              :class="[
+                'w-full bg-transparent border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500',
+                item.text ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-500' : 'border-slate-300 dark:border-slate-600'
+              ]"
             />
 
             <div v-if="item.children.length" class="ml-4 space-y-2">
@@ -37,7 +40,10 @@
                   v-model="child.text"
                   rows="2"
                   :placeholder="`Sub-item ${index + 1}.${childIndex + 1}...`"
-                  class="flex-1 bg-transparent border border-slate-300 dark:border-slate-600 rounded-lg p-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+                  :class="[
+                    'flex-1 bg-transparent border rounded-lg p-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500',
+                    child.text ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-500' : 'border-slate-300 dark:border-slate-600'
+                  ]"
                 />
                 <button
                   type="button"
