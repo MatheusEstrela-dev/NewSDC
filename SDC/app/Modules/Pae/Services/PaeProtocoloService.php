@@ -1,0 +1,152 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Pae\Services;
+
+use App\Models\User;
+use App\Modules\Pae\Enums\PaeProtocoloStatus;
+use App\Modules\Pae\Models\PaeProtocolo;
+use App\Modules\Pae\Models\PaeTramitacao;
+use App\Modules\Pae\Models\PaeTimeline;
+use App\Modules\Shared\BaseService;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\ValidationException;
+
+class PaeProtocoloService extends BaseService
+{
+    public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = PaeProtocolo::query()
+            ->with(['analistaAtual', 'usuario'])
+            ->ativo();
+
+        $query = $this->applySearch($query, $filters['search'] ?? null, [
+            'num_protocolo', 'sigibar', 'sei_numero', 'empnto_search',
+        ]);
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['analista_id'])) {
+            $query->where('analista_atual_id', $filters['analista_id']);
+        }
+
+        if (!empty($filters['data_inicio'])) {
+            $query->where('dt_entrada', '>=', $filters['data_inicio']);
+        }
+
+        if (!empty($filters['data_fim'])) {
+            $query->where('dt_entrada', '<=', $filters['data_fim']);
+        }
+
+        return $query->orderBy('dt_entrada', 'desc')->paginate($perPage);
+    }
+
+    public function findById(int $id): ?PaeProtocolo
+    {
+        return PaeProtocolo::with(['analistaAtual', 'tramitacoes.usuario', 'timeline.usuario'])->find($id);
+    }
+
+    public function create(array $data, User $user): PaeProtocolo
+    {
+        $protocolo = PaeProtocolo::create([
+            ...$data,
+            'status' => PaeProtocoloStatus::NOVO->value,
+            'user_id' => $user->id,
+            'created_by' => $user->id,
+            'dt_entrada' => now()->toDateString(),
+        ]);
+
+        $this->registrarTimeline($protocolo, 'criacao', 'Protocolo criado no sistema SDC.', $user);
+
+        return $protocolo;
+    }
+
+    public function changeStatus(
+        PaeProtocolo $protocolo,
+        PaeProtocoloStatus $novo,
+        User $user,
+        string $obs = ''
+    ): PaeProtocolo {
+        if (!$protocolo->validarTransicaoStatus($novo)) {
+            throw ValidationException::withMessages([
+                'status' => "Transição inválida: {$protocolo->status->getLabel()} → {$novo->getLabel()}.",
+            ]);
+        }
+
+        $statusAnterior = $protocolo->status;
+
+        $protocolo->update([
+            'status' => $novo->value,
+            'updated_by' => $user->id,
+        ]);
+
+        PaeTramitacao::create([
+            'protocolo_id' => $protocolo->id,
+            'user_id' => $user->id,
+            'status' => $novo->value,
+            'obs' => $obs ?: null,
+        ]);
+
+        $this->registrarTimeline(
+            $protocolo,
+            'status_alterado',
+            "Status alterado de '{$statusAnterior->getLabel()}' para '{$novo->getLabel()}'. {$obs}",
+            $user
+        );
+
+        return $protocolo->fresh();
+    }
+
+    public function atribuir(PaeProtocolo $protocolo, User $analista, User $user): PaeProtocolo
+    {
+        $protocolo->update([
+            'analista_atual_id' => $analista->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $this->registrarTimeline(
+            $protocolo,
+            'atribuicao',
+            "Protocolo atribuído ao analista {$analista->name}.",
+            $user
+        );
+
+        return $this->changeStatus($protocolo, PaeProtocoloStatus::NOTIFICACAO, $user, 'Atribuição de analista.');
+    }
+
+    public function getStatistics(): array
+    {
+        return [
+            'total' => PaeProtocolo::ativo()->count(),
+            'novo' => PaeProtocolo::ativo()->where('status', PaeProtocoloStatus::NOVO->value)->count(),
+            'analise' => PaeProtocolo::ativo()->where('status', PaeProtocoloStatus::ANALISE->value)->count(),
+            'aprovado' => PaeProtocolo::ativo()->where('status', PaeProtocoloStatus::APROVADO->value)->count(),
+            'ccpae' => PaeProtocolo::ativo()->where('status', PaeProtocoloStatus::CCPAE->value)->count(),
+            'ativo_3_anos' => PaeProtocolo::ativo()->where('status', PaeProtocoloStatus::ATIVO_3_ANOS->value)->count(),
+            'vencidos' => PaeProtocolo::ativo()
+                ->whereNotNull('limite_analise')
+                ->where('limite_analise', '<', now()->toDateString())
+                ->whereNotIn('status', [
+                    PaeProtocoloStatus::APROVADO->value,
+                    PaeProtocoloStatus::CCPAE->value,
+                    PaeProtocoloStatus::ATIVO_3_ANOS->value,
+                    PaeProtocoloStatus::REPROVADO->value,
+                    PaeProtocoloStatus::REVOGADO->value,
+                ])
+                ->count(),
+        ];
+    }
+
+    private function registrarTimeline(PaeProtocolo $protocolo, string $evento, string $descricao, User $user): void
+    {
+        PaeTimeline::create([
+            'protocolo_id' => $protocolo->id,
+            'evento' => $evento,
+            'descricao' => $descricao,
+            'user_id' => $user->id,
+        ]);
+    }
+}
