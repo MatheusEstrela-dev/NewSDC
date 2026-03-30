@@ -24,9 +24,20 @@ function isSameDay(dateISO, today = new Date()) {
 
 export const paeSituacoes = [
   { value: '', label: 'Todas as situações' },
-  { value: 'aguardando_analise', label: 'Aguardando Análise' },
-  { value: 'em_edicao', label: 'Em edição' },
-  { value: 'finalizado', label: 'Finalizado' },
+  { value: 'novo', label: 'Novo' },
+  { value: 'entrada_processo', label: 'Entrada do Processo' },
+  { value: 'criacao_sdc', label: 'Criação no SDC' },
+  { value: 'gerenciamento', label: 'Gerenciamento' },
+  { value: 'notificacao', label: 'Notificação' },
+  { value: 'analise', label: 'Análise' },
+  { value: 'aprovado', label: 'Aprovado' },
+  { value: 'reprovado', label: 'Reprovado' },
+  { value: 'ccpae', label: 'CCPAE' },
+  { value: 'ativo_3_anos', label: 'Ativo (3 anos)' },
+  { value: 'suspenso', label: 'Suspenso' },
+  { value: 'revogado', label: 'Revogado' },
+  { value: 'esperar_tratativa', label: 'Aguardando Tratativa' },
+  { value: 'dilacao', label: 'Dilatação' },
 ];
 
 export const paeAnalistas = [
@@ -48,7 +59,11 @@ export function getMockPaeProtocolos(count = 48) {
   const year = now.getFullYear();
   const base = new Date(now.getTime() - 70 * 24 * 60 * 60 * 1000);
 
-  const situacoes = ['aguardando_analise', 'em_edicao', 'finalizado'];
+  const situacoes = [
+    'novo', 'gerenciamento', 'notificacao', 'analise',
+    'aprovado', 'ccpae', 'ativo_3_anos', 'suspenso',
+    'esperar_tratativa', 'dilacao', 'reprovado', 'revogado',
+  ];
   const empreendedores = ['SAMARCO', 'VALE S.A.', 'ANGLO AMERICAN'];
   const estruturas = ['Dique 1', 'Dique 2', 'Dique 3', 'Barragem A', 'Barragem B'];
   const analistas = ['DEMETRIO DA SILVA PASSOS', 'ANA PAULA', 'CARLOS SILVA'];
@@ -65,8 +80,9 @@ export function getMockPaeProtocolos(count = 48) {
     // limite análise: entre +15 e +45 dias após entrada
     const limiteISO = addDaysISO(entradaISO, 15 + (i % 31));
 
-    const vencido = situacao !== 'finalizado' && new Date(limiteISO) < now;
-    const proximo = !vencido && situacao !== 'finalizado' && (new Date(limiteISO) - now) / (1000 * 60 * 60 * 24) <= 10;
+    const ativo = !['aprovado', 'ccpae', 'ativo_3_anos', 'reprovado', 'revogado'].includes(situacao);
+    const vencido = ativo && new Date(limiteISO) < now;
+    const proximo = !vencido && ativo && (new Date(limiteISO) - now) / (1000 * 60 * 60 * 24) <= 10;
 
     const protocoloNumero = `${pad2((i % 28) + 1)}.${pad2(((i + 3) % 12) + 1)}.${year}.${pad3(id)}`;
 
@@ -93,9 +109,10 @@ export function getMockPaeStats(protocolosFiltrados = []) {
   const now = new Date();
   const total = protocolosFiltrados.length;
 
-  const historico = protocolosFiltrados.filter((p) => p.situacao === 'finalizado').length;
+  const historico = protocolosFiltrados.filter((p) => ['aprovado', 'ccpae', 'ativo_3_anos'].includes(p.situacao)).length;
   const vencidos = protocolosFiltrados.filter(
-    (p) => p.situacao !== 'finalizado' && new Date(p.limiteAnaliseISO) < now
+    (p) => !['aprovado', 'ccpae', 'ativo_3_anos', 'reprovado', 'revogado'].includes(p.situacao) &&
+           new Date(p.limiteAnaliseISO) < now
   ).length;
   const ccpae = protocolosFiltrados.filter((p) => p.ccpae).length;
 
