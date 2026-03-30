@@ -22,7 +22,7 @@
 }
 
 .form-input:focus {
-  @apply border-green-500 dark:border-green-500 bg-white dark:bg-slate-900 shadow-[0_0_0_1px_rgba(34,197,94,0.4)];
+  @apply border-blue-500 dark:border-blue-500 bg-white dark:bg-slate-900 shadow-[0_0_0_1px_rgba(59,130,246,0.5)];
 }
 
 .form-input::placeholder {
@@ -48,7 +48,7 @@
 }
 
 .form-select:focus {
-  @apply border-green-500 dark:border-green-500 bg-white dark:bg-slate-900 shadow-[0_0_0_1px_rgba(34,197,94,0.4)];
+  @apply border-blue-500 dark:border-blue-500 bg-white dark:bg-slate-900;
 }
 
 /* Fix for date inputs in Webkit browsers */
