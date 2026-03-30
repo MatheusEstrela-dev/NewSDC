@@ -22,6 +22,8 @@ services:
       - "com.docker.compose.service=app"
 
     volumes:
+      # Codigo fonte montado como volume: permite hot reload em dev
+      - ../:/app:cached
       # Logs persistentes
       - ../storage/logs:/app/storage/logs
       # Entrypoint e Caddyfile atualizados (sem precisar rebuild)
@@ -30,6 +32,8 @@ services:
       # Certificados Caddy (persistir CA interna entre restarts)
       - newsdc_caddy_data:/data/caddy
       - newsdc_caddy_config:/config/caddy
+
+    working_dir: /app
 
     networks:
       - sdc_network
@@ -269,10 +273,12 @@ services:
       - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=queue"
 
+    working_dir: /app
+
     volumes:
-      - ../:/var/www:cached
-      - newsdc_vendor:/var/www/vendor
-      - ./logs/queue:/var/www/storage/logs
+      - ../:/app:cached
+      - newsdc_vendor:/app/vendor
+      - ./logs/queue:/app/storage/logs
 
     networks:
       - sdc_network

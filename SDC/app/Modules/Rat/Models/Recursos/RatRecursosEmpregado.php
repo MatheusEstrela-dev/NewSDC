@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Models\Rat\Recursos;
+namespace App\Modules\Rat\Models\Recursos;
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\Rat\Relatos\RatRelatoRecurso;
+use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
+use App\Modules\Rat\Models\Relatos\RatRelato;
+use App\Models\Rat\Recursos\RatRecursosComponentesGuarnicao;
 
 /**
  * Recurso empregado em atendimento (viatura, pessoal a pé, etc.).
@@ -33,6 +35,18 @@ class RatRecursosEmpregado extends RatRecurso
         'viatura_padrao',
         'viatura_orgao',
         'viatura_descricao',
+        'viatura_saida',
+        'viatura_chegada',
+        'viatura_km',
+        'viatura_local_origem',
+        'viatura_local_destino',
+        'viatura_quantidade',
+        'viatura_capacidade',
+        'viatura_condicao',
+        'viatura_operador',
+        'operador_masp',
+        'operador_is_condutor',
+        'viatura_contato',
         'created_by',
         'updated_by',
     ];

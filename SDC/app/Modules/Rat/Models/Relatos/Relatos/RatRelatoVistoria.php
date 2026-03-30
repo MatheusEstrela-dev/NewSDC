@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Models\Rat\Relatos;
+namespace App\Modules\Rat\Models\Relatos;
+
+use App\Modules\Rat\Models\Relatos\RatRelato;
 
 /**
  * Vistoria técnica realizada durante uma ocorrência RAT.
@@ -56,6 +58,91 @@ class RatRelatoVistoria extends RatRelato
         'v_cep',
         'v_latitude',
         'v_longitude',
+        // Infraestrutura
+        'v_abastecimento_agua',
+        'v_esgotamento_sanitario',
+        'v_drenagem_superficial',
+        'v_sistema_viario_acesso',
+        'v_tipo_revestimento',
+        'v_condicoes_acesso',
+        'v_numero_moradias_terreno',
+        'v_distancia_encosta',
+        // Aspectos Técnicos
+        'v_material_construtivo',
+        'v_conservacao_estrutural',
+        'v_elementos_estruturais',
+        'v_elementos_construtivos',
+        'v_agentes_potencializadores',
+        'v_processos_geodinamicos',
+        'v_danos_estruturais',
+        'v_manutencao_uso_ocupacao',
+        'v_historico',
+        'v_tipo_destinacao',
+        'v_tipo_localizacao',
+        // Encaminhamentos
+        'v_enc_interdicao_parcial',
+        'v_enc_interdicao_total',
+        'v_enc_remocao_temporaria',
+        'v_enc_remocao_definitiva',
+        'v_enc_isolamento_area',
+        'v_enc_desocupacao_abrigo',
+        'v_enc_notificacao_responsavel',
+        'v_enc_contratacao_responsavel',
+        'v_enc_comunicacao_orgaos',
+        'v_enc_apoio_social',
+        'v_enc_outros',
+        'v_enc_outros_descricao',
+        // Patologias
+        'v_patologia_rachaduras',
+        'v_patologia_trincas',
+        'v_patologia_fissuras_estruturais',
+        'v_patologia_deformacoes_estruturais',
+        'v_patologia_infiltracoes',
+        'v_patologia_corrosao_armaduras',
+        'v_patologia_desagregacao',
+        'v_patologia_eflorescencia',
+        'v_patologia_desplacamento',
+        'v_patologia_fundacoes',
+        'v_patologia_instabilidade_talude',
+        'v_patologia_movimentacao_solo',
+        'v_patologia_tombamento_muralhas',
+        'v_patologia_inundacoes',
+        'v_patologia_alagamentos',
+        'v_patologia_enxurradas',
+        'v_patologia_madeira',
+        'v_patologia_elementos_nao_estruturais',
+        'v_patologia_falha_drenagem',
+        'v_patologia_queda_arvores',
+        'v_patologia_outros',
+        'v_patologia_outros_descricao',
+        // Bens Afetados
+        'v_bens_residencia',
+        'v_bens_muros',
+        'v_bens_vias_publicas',
+        'v_bens_pontes',
+        'v_bens_viadutos',
+        'v_bens_comercios',
+        'v_bens_galpoes',
+        'v_bens_predios_publicos',
+        'v_bens_edificios_publicos',
+        'v_bens_outros',
+        'v_bens_outros_descricao',
+        'v_bens_afetados',
+        // Órgãos Acionados
+        'v_orgao_copasa',
+        'v_orgao_cemig',
+        'v_orgao_secretaria_municipal',
+        'v_orgao_defesa_civil_estadual',
+        'v_orgao_dnit',
+        'v_orgao_pm',
+        'v_orgao_bm',
+        'v_orgao_crea',
+        'v_orgao_emater',
+        'v_orgao_seapa',
+        'v_orgao_outros',
+        'v_orgao_outros_descricao',
+        'v_orgaos_acionados',
+        'v_orgaos_acionados_outros',
     ];
 
     protected $casts = [

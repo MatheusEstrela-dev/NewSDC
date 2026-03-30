@@ -1,209 +1,120 @@
 <?php
 
-use App\Modules\Rat\Controllers\RatBoController;
-use App\Modules\Rat\Controllers\RatAlvoController;
-use App\Modules\Rat\Controllers\RatOcorrenciaController;
-use App\Modules\Rat\Controllers\RatDadosGeraisController;
-use App\Modules\Rat\Controllers\RatEnvolvidosController;
-use App\Modules\Rat\Controllers\RatRecursoController;
-use App\Modules\Rat\Controllers\RatVistoriaController;
-use App\Modules\Rat\Controllers\RatHistoricoController;
+use App\Models\Rat\RatOcorrencia;
+use App\Modules\Rat\Controllers\RatUnifiedController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================================================
-// RAT — Nova Estrutura: RatOcorrencia + Relatos Polimórficos
-// Controllers localizados em: app\Modules\Rat\Controllers
-// Models localizados em: app\Modules\Rat\Models
+// RAT — Estrutura Unificada: RatOcorrencia + relatos polimórficos
 // ============================================================================
 
-Route::prefix('rat')->name('rat.')->group(function () {
+Route::prefix('compdec/rat')->name('compdec.rat.')->group(function () {
 
-    // ====================================================================
-    // OCORRÊNCIAS — CRUD Principal
-    // ====================================================================
-
-    // Lista todas as ocorrências
-    Route::get('/', [RatOcorrenciaController::class, 'index'])
-        ->name('index')
+    // Boletim de Ocorrência
+    Route::get('/bo', [RatUnifiedController::class, 'indexBo'])
+        ->name('bo.index')
         ->middleware('can:rat.protocolos.view');
 
-    // Formulário de criação
-    Route::get('/create', [RatOcorrenciaController::class, 'create'])
-        ->name('create')
+    Route::post('/bo', [RatUnifiedController::class, 'storeBo'])
+        ->name('bo.store')
         ->middleware('can:rat.protocolos.create');
 
-    // Salva nova ocorrência
-    Route::post('/', [RatOcorrenciaController::class, 'store'])
-        ->name('store')
-        ->middleware('can:rat.protocolos.create');
-
-    // Exibe uma ocorrência
-    Route::get('/{ocorrencia}', [RatOcorrenciaController::class, 'show'])
-        ->name('show')
+    // Ocorrências - Listagem e Show
+    Route::get('/ocorrencias/{id}', [RatUnifiedController::class, 'showBo'])
+        ->name('ocorrencias.show')
         ->middleware('can:rat.protocolos.view');
 
-    // Formulário de edição
-    Route::get('/{ocorrencia}/edit', [RatOcorrenciaController::class, 'edit'])
-        ->name('edit')
-        ->middleware('can:rat.protocolos.edit');
+    // ========================================================================
+    // Relatos polimórficos por ocorrência
+    // ========================================================================
+    Route::prefix('/ocorrencias/{ocorrencia}')->name('ocorrencias.')->group(function () {
 
-    // Atualiza uma ocorrência
-    Route::put('/{ocorrencia}', [RatOcorrenciaController::class, 'update'])
-        ->name('update')
-        ->middleware('can:rat.protocolos.edit');
-
-    // Remove uma ocorrência
-    Route::delete('/{ocorrencia}', [RatOcorrenciaController::class, 'destroy'])
-        ->name('destroy')
-        ->middleware('can:rat.protocolos.delete');
-
-    // Finaliza uma ocorrência
-    Route::patch('/{ocorrencia}/finalize', [RatOcorrenciaController::class, 'finalize'])
-        ->name('finalize')
-        ->middleware('can:rat.protocolos.finalize');
-
-    // ====================================================================
-    // DADOS GERAIS — CRUD
-    // ====================================================================
-
-    Route::prefix('{ocorrencia}/dados-gerais')->name('dados-gerais.')->group(function () {
-        Route::get('/', [RatDadosGeraisController::class, 'show'])
-            ->name('show')
+        // Dados Gerais
+        Route::get('/dados-gerais', [RatUnifiedController::class, 'showDadosGerais'])
+            ->name('dados-gerais.show')
             ->middleware('can:rat.protocolos.view');
 
-        Route::post('/', [RatDadosGeraisController::class, 'store'])
-            ->name('store')
+        Route::post('/dados-gerais', [RatUnifiedController::class, 'storeDadosGerais'])
+            ->name('dados-gerais.store')
             ->middleware('can:rat.relatos.manage');
 
-        Route::put('/{dadosGerais}', [RatDadosGeraisController::class, 'update'])
-            ->name('update')
+        Route::put('/dados-gerais/{id}', [RatUnifiedController::class, 'updateDadosGerais'])
+            ->name('dados-gerais.update')
+            ->middleware('can:rat.relatos.manage');
+
+        // Envolvidos
+        Route::get('/envolvidos', [RatUnifiedController::class, 'indexEnvolvidos'])
+            ->name('envolvidos.index')
+            ->middleware('can:rat.protocolos.view');
+
+        Route::post('/envolvidos', [RatUnifiedController::class, 'storeEnvolvidos'])
+            ->name('envolvidos.store')
+            ->middleware('can:rat.relatos.manage');
+
+        Route::put('/envolvidos/{id}', [RatUnifiedController::class, 'updateEnvolvidos'])
+            ->name('envolvidos.update')
+            ->middleware('can:rat.relatos.manage');
+
+        Route::delete('/envolvidos/{id}', [RatUnifiedController::class, 'destroyEnvolvidos'])
+            ->name('envolvidos.destroy')
+            ->middleware('can:rat.relatos.manage');
+
+        // Recursos empregados
+        Route::get('/recursos', [RatUnifiedController::class, 'indexRecursos'])
+            ->name('recursos.index')
+            ->middleware('can:rat.protocolos.view');
+
+        Route::post('/recursos', [RatUnifiedController::class, 'storeRecursos'])
+            ->name('recursos.store')
+            ->middleware('can:rat.relatos.manage');
+
+        Route::put('/recursos/{id}', [RatUnifiedController::class, 'updateRecursos'])
+            ->name('recursos.update')
+            ->middleware('can:rat.relatos.manage');
+
+        Route::delete('/recursos/{id}', [RatUnifiedController::class, 'destroyRecursos'])
+            ->name('recursos.destroy')
+            ->middleware('can:rat.relatos.manage');
+
+        // Vistoria técnica
+        Route::get('/vistoria', [RatUnifiedController::class, 'showVistoria'])
+            ->name('vistoria.show')
+            ->middleware('can:rat.protocolos.view');
+
+        Route::post('/vistoria', [RatUnifiedController::class, 'storeVistoria'])
+            ->name('vistoria.store')
+            ->middleware('can:rat.relatos.manage');
+
+        Route::put('/vistoria/{id}', [RatUnifiedController::class, 'updateVistoria'])
+            ->name('vistoria.update')
+            ->middleware('can:rat.relatos.manage');
+
+        // Histórico
+        Route::get('/historico', [RatUnifiedController::class, 'showHistorico'])
+            ->name('historico.show')
+            ->middleware('can:rat.protocolos.view');
+
+        Route::post('/historico', [RatUnifiedController::class, 'storeHistorico'])
+            ->name('historico.store')
+            ->middleware('can:rat.relatos.manage');
+
+        // Anexos
+        Route::post('/attachments', [RatUnifiedController::class, 'storeAttachment'])
+            ->name('attachments.store')
+            ->middleware('can:rat.relatos.manage');
+
+        Route::delete('/attachments/{id}', [RatUnifiedController::class, 'destroyAttachment'])
+            ->name('attachments.destroy')
             ->middleware('can:rat.relatos.manage');
     });
 
-    // ====================================================================
-    // ENVOLVIDOS — CRUD
-    // ====================================================================
+    // Exportação e Estatísticas
+    Route::get('/export', [RatUnifiedController::class, 'export'])
+        ->name('export')
+        ->middleware('can:rat.protocolos.export');
 
-    Route::prefix('{ocorrencia}/envolvidos')->name('envolvidos.')->group(function () {
-        Route::get('/', [RatEnvolvidosController::class, 'index'])
-            ->name('index')
-            ->middleware('can:rat.protocolos.view');
-
-        Route::get('/create', [RatEnvolvidosController::class, 'create'])
-            ->name('create')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::post('/', [RatEnvolvidosController::class, 'store'])
-            ->name('store')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::get('/{envolvido}/edit', [RatEnvolvidosController::class, 'edit'])
-            ->name('edit')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::put('/{envolvido}', [RatEnvolvidosController::class, 'update'])
-            ->name('update')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::delete('/{envolvido}', [RatEnvolvidosController::class, 'destroy'])
-            ->name('destroy')
-            ->middleware('can:rat.relatos.manage');
-    });
-
-    // ====================================================================
-    // RECURSOS — CRUD
-    // ====================================================================
-
-    Route::prefix('{ocorrencia}/recursos')->name('recursos.')->group(function () {
-        Route::get('/', [RatRecursoController::class, 'index'])
-            ->name('index')
-            ->middleware('can:rat.protocolos.view');
-
-        Route::get('/create', [RatRecursoController::class, 'create'])
-            ->name('create')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::post('/', [RatRecursoController::class, 'store'])
-            ->name('store')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::get('/{recurso}/edit', [RatRecursoController::class, 'edit'])
-            ->name('edit')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::put('/{recurso}', [RatRecursoController::class, 'update'])
-            ->name('update')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::delete('/{recurso}', [RatRecursoController::class, 'destroy'])
-            ->name('destroy')
-            ->middleware('can:rat.relatos.manage');
-    });
-
-    // ====================================================================
-    // VISTORIAS — CRUD
-    // ====================================================================
-
-    Route::prefix('{ocorrencia}/vistorias')->name('vistorias.')->group(function () {
-        Route::get('/', [RatVistoriaController::class, 'show'])
-            ->name('show')
-            ->middleware('can:rat.protocolos.view');
-
-        Route::get('/create', [RatVistoriaController::class, 'create'])
-            ->name('create')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::post('/', [RatVistoriaController::class, 'store'])
-            ->name('store')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::get('/{vistoria}/edit', [RatVistoriaController::class, 'edit'])
-            ->name('edit')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::put('/{vistoria}', [RatVistoriaController::class, 'update'])
-            ->name('update')
-            ->middleware('can:rat.relatos.manage');
-
-        Route::delete('/{vistoria}', [RatVistoriaController::class, 'destroy'])
-            ->name('destroy')
-            ->middleware('can:rat.relatos.manage');
-    });
-
-    // ====================================================================
-    // HISTÓRICO
-    // ====================================================================
-
-    Route::get('/{ocorrencia}/historico', [RatHistoricoController::class, 'show'])
-        ->name('historico.show')
+    Route::get('/statistics', [RatUnifiedController::class, 'statistics'])
+        ->name('statistics')
         ->middleware('can:rat.protocolos.view');
-
-    // ====================================================================
-    // ALVOS (Endereços/Locais de Interesse)
-    // ====================================================================
-
-    Route::prefix('alvos')->name('alvos.')->group(function () {
-        Route::get('/', [RatAlvoController::class, 'index'])
-            ->name('index')
-            ->middleware('can:rat.protocolos.view');
-
-        Route::get('/{ocorrencia}', [RatAlvoController::class, 'show'])
-            ->name('show')
-            ->middleware('can:rat.protocolos.view');
-    });
-
-    // ====================================================================
-    // BOLETIM DE OCORRÊNCIA
-    // ====================================================================
-
-    Route::prefix('bo')->name('bo.')->group(function () {
-        Route::get('/', [RatBoController::class, 'index'])
-            ->name('index')
-            ->middleware('can:rat.protocolos.view');
-
-        Route::post('/', [RatBoController::class, 'store'])
-            ->name('store')
-            ->middleware('can:rat.protocolos.create');
-    });
 });
 

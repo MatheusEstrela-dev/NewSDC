@@ -4,46 +4,61 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models\Relatos;
 
+use App\Models\Rat\Recursos\RatRecursosEmpregado;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
 /**
- * Recursos Empregados em uma ocorrência RAT.
- *
- * Campos conforme a aba "Recursos Empregados" do formulário:
- * - Nome do Recurso
- * - Tipo (Helicóptero, Bombeiro, Viaturas, etc)
- * - Placa/Identificação
- * - Capacidade
- * - Compatibilidade
+ * RatRelatoRecurso - Relato de recursos empregados na ocorrência
  */
 class RatRelatoRecurso extends RatRelato
 {
+    use HasFactory;
+
     protected $table = 'rat_relato_recursos';
 
     protected $fillable = [
-        'nome_recurso',
-        'tipo_recurso',
-        'placa_identificacao',
-        'capacidade',
-        'compatibilidade',
-        'valor_diaria',
-        'quantidade',
-        'periodo_utilizacao_inicio',
-        'periodo_utilizacao_fim',
-        'observacoes',
-        'proprietario',
-        'contato_proprietario',
-        'telefone_proprietario',
-        'situacao_recurso',
+        'ocorrencia_id',
+        'seq',
+        'recurso_tipo',
+        'recurso_problemas',
+        'recurso_descricao',
+        'viatura_tipo',
+        'viatura_placa',
+        'viatura_prefixo',
+        'viatura_padrao',
+        'viatura_orgao',
+        'viatura_descricao',
+        'viatura_saida',
+        'viatura_chegada',
+        'viatura_km',
+        'viatura_local_origem',
+        'viatura_local_destino',
+        'viatura_quantidade',
+        'viatura_capacidade',
+        'viatura_condicao',
+        'viatura_operador',
+        'operador_masp',
+        'operador_is_condutor',
+        'viatura_contato',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
-        'capacidade' => 'integer',
-        'quantidade' => 'integer',
-        'valor_diaria' => 'float',
-        'periodo_utilizacao_inicio' => 'datetime',
-        'periodo_utilizacao_fim' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'viatura_saida' => 'datetime',
+        'viatura_chegada' => 'datetime',
+        'viatura_km' => 'decimal:2',
+        'recurso_problemas' => 'boolean',
+        'operador_is_condutor' => 'boolean',
+        'viatura_quantidade' => 'integer',
     ];
+
+    /**
+     * Relação: Empregos dete recurso (detalhes da viatura/pessoal)
+     */
+    public function empregados(): HasMany
+    {
+        return $this->hasMany(RatRecursosEmpregado::class, 'relato_recurso_id');
+    }
 }

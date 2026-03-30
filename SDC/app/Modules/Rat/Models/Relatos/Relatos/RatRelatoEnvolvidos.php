@@ -2,7 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Models\Rat\Relatos;
+namespace App\Modules\Rat\Models\Relatos;
+
+use App\Modules\Rat\Models\Relatos\RatRelato;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Envolvidos (vítimas, agentes, etc.) em uma ocorrência RAT.
@@ -30,7 +34,7 @@ class RatRelatoEnvolvidos extends RatRelato
         'g_envolvido_uf',
         'g_envolvido_matricula',
         'g_envolvido_servico',
-        // Dados pessoais
+        // Dados pessoais e documentos
         'p_tipo',
         'p_tipo_selecionado',
         'p_numero',
@@ -44,13 +48,36 @@ class RatRelatoEnvolvidos extends RatRelato
         'p_ocupacao_atual',
         'p_escolaridade',
         'p_cor_raca',
+        'p_cor_raca_cod',
         'p_sexo',
+        'p_sexo_selecionado',
         'p_estado_civil',
+        'p_orientacao_sexual',
+        'p_identidade_genero',
+        'p_nome_social',
         'p_nacionalidade',
+        'p_pais_origem',
+        'p_naturalidade_uf',
+        'p_turista',
+        'p_situacao_rua',
         // Endereço
         'p_end_cep',
         'p_end_pais',
         'p_end_estado_uf',
+        'p_end_municipio',
+        'p_end_bairro',
+        'p_end_logradouro',
+        'p_end_numero',
+        'p_end_complemento',
+        'p_end_km',
+        'p_end_ibge',
+        // Contato
+        'p_telefone_residencial',
+        'p_telefone_comercial',
+        'p_email',
+        'p_motivo_ausencia_contato',
+        // Auditoria
+        'created_by',
     ];
 
     protected $casts = [

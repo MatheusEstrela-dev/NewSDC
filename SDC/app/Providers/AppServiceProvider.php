@@ -139,7 +139,8 @@ class AppServiceProvider extends ServiceProvider
                     'time_ms'      => $query->time,
                     'connection'   => $query->connection->getName(),
                     'url'          => app()->bound('request') ? request()->fullUrl() : null,
-                    'user_id'      => app()->bound('auth') && auth()->check() ? auth()->id() : null,
+                    // 'user_id'      => app()->bound('auth') && auth()->check() ? auth()->id() : null, // Temporarily disabled
+                    'user_id'      => null,
                     'class'        => $caller['class'] ?? null,
                     'method'       => $caller['method'] ?? null,
                     'file'         => $caller['file'] ?? null,

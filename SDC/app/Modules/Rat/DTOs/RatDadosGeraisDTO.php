@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\DTOs\Rat;
+namespace App\Modules\Rat\DTOs;
 
 /**
  * DTO de entrada para criar/atualizar os dados gerais de uma ocorrência RAT
@@ -44,7 +44,17 @@ readonly class RatDadosGeraisDTO
         public ?string $localCep                = null,
         public ?string $localLogradouro         = null,
         public ?string $localBairro             = null,
+        public ?string $localComplemento        = null,
+        public ?string $localNumero             = null,
+        public ?string $localKm                 = null,
         public ?string $localCruzamento         = null,
+        public ?string $localPontoReferencia    = null,
+        public ?float  $localLatitude           = null,
+        public ?float  $localLongitude          = null,
+        public ?string $localOcorrenciaTipo     = null,
+        public ?string $localOcorrenciaEstradas = null,
+        public ?string $localUnidadeMilitar     = null,
+        public ?bool   $temVistoria             = false,
     ) {}
 
     /**
@@ -78,7 +88,21 @@ readonly class RatDadosGeraisDTO
             localCep:                 $data['local_cep']                  ?? null,
             localLogradouro:          $data['local_logradoura_1']         ?? null,
             localBairro:              $data['local_bairro']               ?? null,
+            localComplemento:         $data['local_complemento']          ?? null,
+            localNumero:              $data['local_numero']               ?? null,
+            localKm:                  $data['local_km']                   ?? null,
             localCruzamento:          $data['local_cruzamento']           ?? null,
+            localPontoReferencia:    $data['local_ponto_referencia']     ?? null,
+            localLatitude:           isset($data['local_latitude'])
+                                          ? (float) $data['local_latitude']
+                                          : null,
+            localLongitude:          isset($data['local_longitude'])
+                                          ? (float) $data['local_longitude']
+                                          : null,
+            localOcorrenciaTipo:     $data['local_ocorrencia_tipo']      ?? null,
+            localOcorrenciaEstradas: $data['local_ocorrencia_estradas_rodovias'] ?? null,
+            localUnidadeMilitar:     $data['local_unidade_militar']      ?? null,
+            temVistoria:             (bool) ($data['tem_vistoria']       ?? false),
         );
     }
 
@@ -110,7 +134,17 @@ readonly class RatDadosGeraisDTO
             'local_cep'                   => $this->localCep,
             'local_logradoura_1'          => $this->localLogradouro,
             'local_bairro'                => $this->localBairro,
+            'local_complemento'           => $this->localComplemento,
+            'local_numero'                => $this->localNumero,
+            'local_km'                    => $this->localKm,
             'local_cruzamento'            => $this->localCruzamento,
+            'local_ponto_referencia'      => $this->localPontoReferencia,
+            'local_latitude'              => $this->localLatitude,
+            'local_longitude'             => $this->localLongitude,
+            'local_ocorrencia_tipo'       => $this->localOcorrenciaTipo,
+            'local_ocorrencia_estradas_rodovias' => $this->localOcorrenciaEstradas,
+            'local_unidade_militar'       => $this->localUnidadeMilitar,
+            'tem_vistoria'                => $this->temVistoria,
         ], fn ($v) => $v !== null);
     }
 }

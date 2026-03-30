@@ -159,17 +159,19 @@ return [
         /*
          * Package Service Providers...
          */
+        Illuminate\Hashing\HashServiceProvider::class,
 
         /*
          * Application Service Providers...
          */
+        App\Providers\QuickBootServiceProvider::class,
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        App\Providers\OctaneServiceProvider::class,
-        App\Providers\TelescopeServiceProvider::class,
+        // App\Providers\OctaneServiceProvider::class, // Disabled - using php artisan serve instead of Octane
+        // App\Providers\TelescopeServiceProvider::class, // Disabled - testing auth binding issue
 
         // Module Service Providers
         App\Modules\Rat\RatServiceProvider::class,
@@ -198,6 +200,7 @@ return [
 
     'aliases' => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
+        'Auth' => Illuminate\Auth\AuthManager::class,
     ])->toArray(),
 
 ];
