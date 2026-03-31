@@ -18,15 +18,16 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
   }
 
   const infoGerais = ref({
-    barragem:                formulario?.barragem                ?? empreendimento?.nome            ?? '',
-    municipio_id:            formulario?.municipio_id             ?? empreendimento?.municipio_id    ?? '',
-    coordenador_pae:         formulario?.coordenador_pae          ?? empreendimento?.coordenador     ?? '',
-    email:                   formulario?.email                    ?? empreendimento?.email_coord     ?? '',
+    barragem:                formulario?.barragem                ?? empreendimento?.nome               ?? '',
+    municipio_id:            formulario?.municipio_id             ?? empreendimento?.municipio_id       ?? '',
+    pae_empnto_id:           formulario?.pae_empnto_id            ?? empreendimento?.id                 ?? '',
+    coordenador_pae:         formulario?.coordenador_pae          ?? empreendimento?.coordenador        ?? '',
+    email:                   formulario?.email                    ?? empreendimento?.email_coord        ?? '',
     coordenador_mun_def_civ: formulario?.coordenador_mun_def_civ  ?? '',
     coordenador_mun_compdec: formulario?.coordenador_mun_compdec  ?? '',
     empreendedor_res:        formulario?.empreendedor_res         ?? empreendimento?.empreendedor?.nome ?? '',
-    metodo_construtivo:      formulario?.metodo_construtivo       ?? empreendimento?.m_construcao   ?? '',
-    numero_zas:              formulario?.numero_zas               ?? empreendimento?.pop_zas         ?? '',
+    metodo_construtivo:      formulario?.metodo_construtivo       ?? empreendimento?.m_construcao      ?? '',
+    numero_zas:              formulario?.numero_zas               ?? empreendimento?.pop_zas            ?? '',
     nivel_emergencia:        formulario?.nivel_emergencia         ?? '',
   });
 
@@ -49,9 +50,15 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
 
   function saveInfoGerais(id) {
     saving.value = true;
-    router.put(`/pae/formulario/${id}/infogerais`, infoGerais.value, {
-      onFinish: () => { saving.value = false; },
-    });
+    if (!id) {
+      router.post('/pae/formulario', infoGerais.value, {
+        onFinish: () => { saving.value = false; },
+      });
+    } else {
+      router.put(`/pae/formulario/${id}/infogerais`, infoGerais.value, {
+        onFinish: () => { saving.value = false; },
+      });
+    }
   }
 
   function saveObjetivoContexto(id) {
