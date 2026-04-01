@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Rat;
 
-use App\DTOs\Rat\RatBoDTO;
-use App\DTOs\Rat\RatOcorrenciaFiltroDTO;
+use App\Modules\Rat\DTOs\RatBoDTO;
+use App\Modules\Rat\DTOs\RatOcorrenciaFiltroDTO;
 use App\Models\Rat\RatOcorrencia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;

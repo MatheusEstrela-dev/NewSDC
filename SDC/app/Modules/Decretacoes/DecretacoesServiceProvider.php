@@ -23,7 +23,7 @@ class DecretacoesServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Carrega modelos e DTOs consolidados (nao seguem padrao PSR-4 de 1 arquivo por classe)
-        require_once __DIR__ . '/Models/DecretacoesModels.php';
+        require_once __DIR__ . '/Models/DecretoesModels.php';
         require_once __DIR__ . '/DTO/DecretacoesDTO.php';
 
         $this->app->singleton(HexagonIntegrationService::class);

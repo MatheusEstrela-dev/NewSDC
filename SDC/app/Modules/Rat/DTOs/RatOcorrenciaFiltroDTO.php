@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\DTOs\Rat;
+namespace App\Modules\Rat\DTOs;
 
 /**
  * DTO de filtro para listagem/paginação de ocorrências RAT.

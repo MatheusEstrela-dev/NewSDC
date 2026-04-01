@@ -47,7 +47,7 @@ class ActivityLogger
 
             // Contexto da requisicao
             'request_id' => $requestId,
-            'user_id' => $userId ?? auth()->id(),
+            'user_id' => $userId ?? (app()->bound('auth') ? auth()->id() : null),
             'ip_address' => app()->bound('request') ? request()->ip() : null,
             'user_agent' => app()->bound('request') ? request()->userAgent() : null,
             'url' => app()->bound('request') ? request()->fullUrl() : null,

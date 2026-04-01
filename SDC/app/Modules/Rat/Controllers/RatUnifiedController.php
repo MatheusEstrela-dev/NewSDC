@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Controllers;
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
-use App\DTOs\Rat\RatBoDTO;
-use App\DTOs\Rat\RatOcorrenciaFiltroDTO;
+use App\Modules\Rat\DTOs\RatBoDTO;
+use App\Modules\Rat\DTOs\RatOcorrenciaFiltroDTO;
 use App\Modules\Rat\DTOs\RatDadosGeraisDTO;
 use App\Modules\Rat\DTOs\RatEnvolvidoDTO;
 use App\Modules\Rat\DTOs\RatRecursoDTO;
@@ -155,7 +155,7 @@ class RatUnifiedController extends BaseController
     public function show(int $id): Response
     {
         $ocorrencia = $this->appDataService->findById((string) $id);
-        
+
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
         return Inertia::render('Rat', [
@@ -571,7 +571,7 @@ class RatUnifiedController extends BaseController
         ]);
 
         $rat = $this->appDataService->findById((string) $ocorrenciaId);
-        
+
         abort_if(!$rat, 404, 'Ocorrência não encontrada.');
 
         $attachment = $this->attachmentService->store($rat, $request->file('arquivo'));

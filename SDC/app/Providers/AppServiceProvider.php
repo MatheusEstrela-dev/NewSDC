@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
-use Illuminate\Log\Context\Repository as ContextRepository;
+use Illuminate\Support\Facades\Context;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,8 +36,10 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // Overrides para NativePHP / Mobile / Android
-        // Detectamos pelo ambiente NativePHP ou se o SO for Linux (Android se reporta como Linux, mas checamos caminhos)
-        if (env('NATIVEPHP_RUNNING') || env('NATIVE_PHP') || str_contains(strtolower(php_uname('a')), 'android') || str_contains(__DIR__, '/com.bifrost')) {
+        $isNative = env('NATIVEPHP_RUNNING') || env('NATIVE_PHP') || str_contains(strtolower(php_uname('a')), 'android') || str_contains(__DIR__, '/com.bifrost');
+        $isDocker = file_exists('/.dockerenv');
+
+        if ($isNative && !$isDocker) {
             config(['inertia.ssr.enabled' => false]);
             config(['octane.server' => null]);
 
@@ -81,7 +83,7 @@ class AppServiceProvider extends ServiceProvider
                     }
 
                     // Test SQLite driver is available
-                    \DB::connection('sqlite')->getPdo();
+                    DB::connection('mysql')->getPdo();
 
                     try {
                         if (!Schema::hasTable('users')) {
@@ -96,7 +98,7 @@ class AppServiceProvider extends ServiceProvider
                 } catch (\Throwable $sqliteError) {
                     // Both MySQL and SQLite failed — run without DB
                     // Use array driver to prevent any further DB errors
-                    \Log::error('NativePHP DB: ALL DB drivers failed, running without database', [
+                    Log::error('NativePHP DB: ALL DB drivers failed, running without database', [
                         'mysql_error' => $e->getMessage(),
                         'sqlite_error' => $sqliteError->getMessage(),
                     ]);
@@ -142,8 +144,6 @@ class AppServiceProvider extends ServiceProvider
                     'time_ms'      => $query->time,
                     'connection'   => $query->connection->getName(),
                     'url'          => app()->bound('request') ? request()->fullUrl() : null,
-                    // 'user_id'      => app()->bound('auth') && auth()->check() ? auth()->id() : null,
-                    'user_id'      => null,
                     'class'        => $caller['class'] ?? null,
                     'method'       => $caller['method'] ?? null,
                     'file'         => $caller['file'] ?? null,

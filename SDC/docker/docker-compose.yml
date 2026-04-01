@@ -91,7 +91,7 @@ services:
     ports:
       - "18443:443"      # HTTPS + HTTP/2 (TCP)
       - "18443:443/udp"  # HTTP/3 QUIC (UDP)
-      - "18001:80"       # HTTP -> redirect HTTPS
+      - "8001:80"       # HTTP -> redirect HTTPS
 
     deploy:
       resources:

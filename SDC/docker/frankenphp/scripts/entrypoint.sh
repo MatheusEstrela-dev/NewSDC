@@ -1,15 +1,28 @@
 #!/bin/sh
 # ============================================================================
-# SDC - Entrypoint FrankenPHP (Producao)
+# SDC - Entrypoint FrankenPHP (Desenvolvimento)
 # Inicializa aplicacao Laravel com Octane FrankenPHP
+# Volume montado em /var/www
 # ============================================================================
 
 set -e
 
-cd /app
+# Use /var/www (mounted volume) ao invés de /app
+WORKDIR="${WORKDIR:-/var/www}"
+cd "$WORKDIR"
 
 echo "=== SDC FrankenPHP Entrypoint ==="
 echo "Ambiente: ${APP_ENV:-production}"
+echo "Working dir: $WORKDIR"
+
+# Regenerar autoloader (importante para volumes montados em dev)
+if [ -f "$WORKDIR/composer.json" ]; then
+    echo "Regenerando Composer autoloader..."
+    composer dump-autoload --working-dir="$WORKDIR" --no-interaction 2>&1 || {
+        echo "Aviso: Composer dump-autoload falhou, tentando install..."
+        composer install --working-dir="$WORKDIR" --no-interaction 2>&1
+    }
+fi
 
 # Criar .env minimo se nao existir (usa variaveis de ambiente do container)
 if [ ! -f .env ]; then
@@ -125,9 +138,9 @@ echo "Versao: $(frankenphp version 2>&1)"
 
 # Criar symlink em base_path para que o Octane encontre sem tentar download
 # O Octane procura em base_path() primeiro via ExecutableFinder
-if [ ! -f /app/frankenphp ] && [ -f "$FRANKENPHP_BIN" ]; then
-    ln -sf "$FRANKENPHP_BIN" /app/frankenphp
-    echo "Symlink criado: /app/frankenphp -> $FRANKENPHP_BIN"
+if [ ! -f "$WORKDIR/frankenphp" ] && [ -f "$FRANKENPHP_BIN" ]; then
+    ln -sf "$FRANKENPHP_BIN" "$WORKDIR/frankenphp"
+    echo "Symlink criado: $WORKDIR/frankenphp -> $FRANKENPHP_BIN"
 fi
 
 # Garantir que o binario esta no PATH
@@ -140,14 +153,14 @@ if [ "${OCTANE_HTTPS:-true}" = "true" ]; then
     echo "Certificado auto-gerado pelo Caddy (CA interna em /data/caddy/pki/)"
 
     # Usar Caddyfile customizado se existir (controle total de TLS e redirect)
-    if [ -f /app/docker/Caddyfile.dev ]; then
-        echo "Usando Caddyfile customizado: /app/docker/Caddyfile.dev"
+    if [ -f "$WORKDIR/docker/Caddyfile.dev" ]; then
+        echo "Usando Caddyfile customizado: $WORKDIR/docker/Caddyfile.dev"
         # Com Caddyfile customizado, o TLS e redirect sao controlados pelo Caddyfile
         # Nao passar --https/--http-redirect para evitar conflito com auto_https do Caddy
         exec php artisan octane:frankenphp \
             --host=localhost \
             --port=${PORT:-443} \
-            --caddyfile=/app/docker/Caddyfile.dev \
+            --caddyfile="$WORKDIR/docker/Caddyfile.dev" \
             --workers=${FRANKENPHP_WORKERS:-auto} \
             --max-requests=${FRANKENPHP_MAX_REQUESTS:-500} \
             --no-interaction

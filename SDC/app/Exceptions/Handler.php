@@ -132,7 +132,7 @@ class Handler extends ExceptionHandler
                 'url' => request()?->fullUrl(),
                 'method' => request()?->method(),
                 'ip' => request()?->ip(),
-                'user_id' => auth()->id(),
+                'user_id' => app()->bound('auth') ? auth()->id() : null,
             ];
 
             ActivityLogger::logEvent(
@@ -158,30 +158,40 @@ class Handler extends ExceptionHandler
         // Determina severidade baseada no tipo de erro
         $severity = $this->determineSeverity($e);
 
-        ActivityLogger::logCriticalError(
-            message: $this->getExceptionMessage($e),
-            exception: $e,
-            context: [
-                'severity' => $severity,
-                'url' => request()?->fullUrl(),
-                'method' => request()?->method(),
-                'ip' => request()?->ip(),
-                'user_id' => auth()->id(),
-                'user_agent' => request()?->userAgent(),
-                'input' => request()?->except(['password', 'password_confirmation']),
-                'session_id' => function_exists('session') ? session()->getId() : null,
-                'previous_url' => function_exists('url') ? url()->previous() : null,
-            ]
-        );
+        try {
+            ActivityLogger::logCriticalError(
+                message: $this->getExceptionMessage($e),
+                exception: $e,
+                context: [
+                    'severity' => $severity,
+                    'url' => request()?->fullUrl(),
+                    'method' => request()?->method(),
+                    'ip' => request()?->ip(),
+                    'user_id' => app()->bound('auth') ? auth()->id() : null,
+                    'user_agent' => request()?->userAgent(),
+                    'input' => request()?->except(['password', 'password_confirmation']),
+                    'session_id' => app()->bound('session') ? session()->getId() : null,
+                    'previous_url' => app()->bound('router') ? url()->previous() : null,
+                ]
+            );
+        } catch (\Throwable $logError) {
+            // Fallback: Se ActivityLogger falhar, continue a execução
+            error_log('ActivityLogger failed: ' . $logError->getMessage());
+        }
 
         // Log em canal separado se for crítico
         if ($severity === 'critical') {
-            \Log::channel('critical')->critical($e->getMessage(), [
-                'exception' => get_class($e),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+            try {
+                \Log::channel('critical')->critical($e->getMessage(), [
+                    'exception' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+            } catch (\Throwable $logError) {
+                // Fallback: Se o log falhar, use error_log como último recurso
+                error_log('Log channel failed: ' . $logError->getMessage());
+            }
         }
     }
 

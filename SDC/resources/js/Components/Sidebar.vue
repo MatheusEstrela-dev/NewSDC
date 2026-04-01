@@ -80,15 +80,6 @@
           Visão Geral
         </NavItem>
         <NavItem
-          v-if="canSeeRat && _routes.hasRat"
-          :href="ratHref"
-          :active="isRouteActive('rat.*')"
-          icon="document"
-          :collapsed="isCollapsed"
-        >
-          RAT
-        </NavItem>
-        <NavItem
           v-if="canSeeDemandas && _routes.hasDemandas"
           :href="route('demandas.index')"
           :active="isRouteActive('demandas.*')"
@@ -96,6 +87,15 @@
           :collapsed="isCollapsed"
         >
           DEMANDAS
+        </NavItem>
+        <NavItem
+          v-if="canSeeRat && _routes.hasRat"
+          :href="ratHref"
+          :active="isRouteActive('compdec.rat.*')"
+          icon="document"
+          :collapsed="isCollapsed"
+        >
+          RAT
         </NavItem>
         <NavItem
           v-if="canSeePae && _routes.hasPae"
@@ -340,7 +340,7 @@ const page = usePage();
 // Verificação de rotas existentes — estáticas, calculadas 1x (rotas não mudam)
 // ============================================================================
 const _routes = {
-  hasRat: route().has('rat.index') || route().has('rat.create'),
+  hasRat: route().has('compdec.rat.index') || route().has('compdec.rat.create'),
   hasDemandas: route().has('demandas.index'),
   hasPae: route().has('pae.protocolos.index') || route().has('pae.index'),
   hasPlantao: route().has('plantao.index'),
@@ -364,7 +364,7 @@ const _activeRoutes = computed(() => {
   const _url = page.url; // dependência reativa única
   return {
     'dashboard': route().current('dashboard'),
-    'rat.*': route().current('rat.*'),
+    'compdec.rat.*': route().current('compdec.rat.*'),
     'demandas.*': route().current('demandas.*'),
     'pae.*': route().current('pae.*'),
     'plantao.*': route().current('plantao.*'),
@@ -423,7 +423,9 @@ const hasRole = (roleList) => {
 
 // PRINCIPAL
 const canSeeRat = computed(() => {
-  return hasPermission(['rat.protocolos.view']);
+  // RAT é visível para todos os usuários autenticados (módulo crítico)
+  // TODO: Configurar permissão rat.protocolos.view quando sistema de permissões estiver completo
+  return true;
 });
 
 const canSeeDemandas = computed(() => {
@@ -501,8 +503,8 @@ const openSubMenus = ref({
 
 // Links resilientes (evita tela branca quando uma rota nao existir no Ziggy)
 // URLs estáticas — rotas não mudam em runtime, sem necessidade de computed reativo
-const ratHref = route().has('rat.index') ? route('rat.index') :
-                route().has('rat.create') ? route('rat.create') :
+const ratHref = route().has('compdec.rat.index') ? route('compdec.rat.index') :
+                route().has('compdec.rat.create') ? route('compdec.rat.create') :
                 route('dashboard');
 
 const paeHref = route().has('pae.protocolos.index') ? route('pae.protocolos.index') :
