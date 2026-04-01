@@ -72,12 +72,14 @@ class RatAttachmentService
     /** Monta o array de metadados do anexo. */
     private function buildMetadata(UploadedFile $file, string $id, string $path): array
     {
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = Storage::disk(self::DISK);
         return [
             'id'          => $id,
             'nome'        => $file->getClientOriginalName(),
             'tamanho'     => $file->getSize(),
             'tipo'        => $file->getMimeType(),
-            'url'         => Storage::disk(self::DISK)->url($path),
+            'url'         => $disk->url($path),
             'path'        => $path,
             'data_upload' => now()->toIso8601String(),
         ];

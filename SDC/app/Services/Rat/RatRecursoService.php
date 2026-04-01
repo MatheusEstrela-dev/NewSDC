@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Rat;
 
-use App\Models\Rat\Relatos\RatRelatoRecurso;
-use App\Models\Rat\Recursos\RatRecursosEmpregado;
-use App\Models\Rat\Recursos\RatRecursosComponentesGuarnicao;
+use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
+use App\Modules\Rat\Models\Recursos\RatRecursosEmpregado;
+use App\Modules\Rat\Models\Recursos\RatRecursosComponentesGuarnicao;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -29,18 +29,22 @@ class RatRecursoService
     /** Adiciona um recurso empregado a um relato de recurso. */
     public function addEmpregado(int $relatoRecursoId, array $data): RatRecursosEmpregado
     {
+        /** @var \Illuminate\Contracts\Auth\Guard $auth */
+        $auth = auth();
         return RatRecursosEmpregado::create(array_merge($data, [
             'relato_recurso_id' => $relatoRecursoId,
-            'created_by'        => auth()->id(),
+            'created_by'        => $auth->id(),
         ]));
     }
 
     /** Adiciona um componente à guarnição de um recurso empregado. */
     public function addComponenteGuarnicao(int $recursoEmpregadoId, array $data): RatRecursosComponentesGuarnicao
     {
+        /** @var \Illuminate\Contracts\Auth\Guard $auth */
+        $auth = auth();
         return RatRecursosComponentesGuarnicao::create(array_merge($data, [
             'recurso_empregado_id' => $recursoEmpregadoId,
-            'created_by'           => auth()->id(),
+            'created_by'           => $auth->id(),
         ]));
     }
 

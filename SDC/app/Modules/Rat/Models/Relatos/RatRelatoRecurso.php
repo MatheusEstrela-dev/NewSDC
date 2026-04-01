@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models\Relatos;
 
-use App\Models\Rat\Recursos\RatRecursosEmpregado;
+use App\Modules\Rat\Models\Recursos\RatRecursosEmpregado;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 

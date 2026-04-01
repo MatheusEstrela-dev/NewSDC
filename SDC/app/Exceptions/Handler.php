@@ -4,8 +4,10 @@ namespace App\Exceptions;
 
 use App\Exceptions\CircuitBreakerOpenException;
 use App\Services\Logging\ActivityLogger;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
@@ -88,7 +90,7 @@ class Handler extends ExceptionHandler
 
         // Log para Circuit Breaker Open
         $this->reportable(function (CircuitBreakerOpenException $e) {
-            \Log::channel('circuit_breaker')->warning('Circuit breaker exception thrown', [
+            Log::channel('circuit_breaker')->warning('Circuit breaker exception thrown', [
                 'service' => $e->getService(),
                 'message' => $e->getMessage(),
                 'url' => request()?->fullUrl(),
@@ -107,6 +109,12 @@ class Handler extends ExceptionHandler
     protected function logQueryException(QueryException $e): void
     {
         try {
+            $userId = null;
+            if (app()->bound('auth')) {
+                /** @var Guard $auth */
+                $auth = auth();
+                $userId = (int) $auth->id();
+            }
             $sql = $e->getSql();
             $bindings = $e->getBindings();
             $errorInfo = $e->errorInfo ?? [];
@@ -132,7 +140,7 @@ class Handler extends ExceptionHandler
                 'url' => request()?->fullUrl(),
                 'method' => request()?->method(),
                 'ip' => request()?->ip(),
-                'user_id' => app()->bound('auth') ? auth()->id() : null,
+                'user_id' => $userId,
             ];
 
             ActivityLogger::logEvent(
@@ -142,11 +150,11 @@ class Handler extends ExceptionHandler
                 level: 'critical'
             );
 
-            \Log::channel('critical')->critical('SQL Error: ' . $e->getMessage(), $context);
-            \Log::channel('queries')->error('Query Failed', $context);
+            Log::channel('critical')->critical('SQL Error: ' . $e->getMessage(), $context);
+            Log::channel('queries')->error('Query Failed', $context);
 
         } catch (\Throwable $logError) {
-            \Log::channel('daily')->error('Falha ao logar QueryException: ' . $logError->getMessage());
+            Log::channel('daily')->error('Falha ao logar QueryException: ' . $logError->getMessage());
         }
     }
 
@@ -158,6 +166,13 @@ class Handler extends ExceptionHandler
         // Determina severidade baseada no tipo de erro
         $severity = $this->determineSeverity($e);
 
+        $userId = null;
+        if (app()->bound('auth')) {
+            /** @var Guard $auth */
+            $auth = auth();
+            $userId = (int) $auth->id();
+        }
+
         try {
             ActivityLogger::logCriticalError(
                 message: $this->getExceptionMessage($e),
@@ -167,7 +182,7 @@ class Handler extends ExceptionHandler
                     'url' => request()?->fullUrl(),
                     'method' => request()?->method(),
                     'ip' => request()?->ip(),
-                    'user_id' => app()->bound('auth') ? auth()->id() : null,
+                    'user_id' => $userId,
                     'user_agent' => request()?->userAgent(),
                     'input' => request()?->except(['password', 'password_confirmation']),
                     'session_id' => app()->bound('session') ? session()->getId() : null,
@@ -182,7 +197,7 @@ class Handler extends ExceptionHandler
         // Log em canal separado se for crítico
         if ($severity === 'critical') {
             try {
-                \Log::channel('critical')->critical($e->getMessage(), [
+                Log::channel('critical')->critical($e->getMessage(), [
                     'exception' => get_class($e),
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),

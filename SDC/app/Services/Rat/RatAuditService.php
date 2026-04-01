@@ -26,8 +26,10 @@ class RatAuditService
      */
     public function log(string $event, string $tableName, int $rowId, array $payload = []): void
     {
+        /** @var \Illuminate\Contracts\Auth\Guard $auth */
+        $auth = auth();
         AuditLog::create([
-            'user_id'    => auth()->id(),
+            'user_id'    => $auth->id(),
             'event'      => $event,
             'table_name' => $tableName,
             'row_id'     => $rowId,

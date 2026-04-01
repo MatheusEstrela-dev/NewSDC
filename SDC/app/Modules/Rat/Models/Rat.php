@@ -74,11 +74,12 @@ class Rat extends Model
 
     /**
      * Orgao emissor do RAT (COMPDEC responsavel).
+     * @deprecated Aguardando criação de Orgao model
      */
-    public function orgaoEmissor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(\App\Modules\Compdec\Models\Orgao::class, 'orgao_emissor_id');
-    }
+    // public function orgaoEmissor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    // {
+    //     return $this->belongsTo(\App\Modules\Compdec\Models\Orgao::class, 'orgao_emissor_id');
+    // }
 
     /**
      * Usuário que criou o RAT.

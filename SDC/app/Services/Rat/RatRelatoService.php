@@ -40,11 +40,13 @@ class RatRelatoService
      */
     public function attachRelato(RatOcorrencia $ocorrencia, string $conteudoType, int $conteudoId): RatOcorrenciaRelato
     {
+        /** @var \Illuminate\Contracts\Auth\Guard $auth */
+        $auth = auth();
         return RatOcorrenciaRelato::create([
             'ocorrencia_id' => $ocorrencia->id,
             'conteudo_type' => $conteudoType,
             'conteudo_id'   => $conteudoId,
-            'created_by'    => auth()->id(),
+            'created_by'    => $auth->id(),
         ]);
     }
 

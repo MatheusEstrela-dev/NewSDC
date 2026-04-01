@@ -31,9 +31,11 @@ class RatHistoricoService
      */
     public function log(RatOcorrencia $ocorrencia, string $evento, array $carga = []): void
     {
+        /** @var \Illuminate\Contracts\Auth\Guard $auth */
+        $auth = auth();
         RatOcorrenciaHistorico::create([
             'ocorrencia_id' => $ocorrencia->id,
-            'user_id'       => auth()->id(),
+            'user_id'       => $auth->id(),
             'evento'        => $evento,
             'payload'       => empty($carga) ? null : $carga,
             'ip_address'    => request()->ip(),
