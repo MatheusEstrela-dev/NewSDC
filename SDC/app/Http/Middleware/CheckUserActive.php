@@ -16,7 +16,7 @@ class CheckUserActive
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check()) {
+        if (Auth::check() && $request->hasSession()) {
             $shouldCheck = true;
             $lastCheck = $request->session()->get('user_last_active_check');
 

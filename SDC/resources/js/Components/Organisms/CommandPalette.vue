@@ -88,7 +88,7 @@
 
             <!-- Empty State -->
             <div
-              v-else-if="!hasResults && query.length >= 2"
+              v-else-if="!hasResults && query.length >= 3"
               class="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400"
             >
               <svg class="w-10 h-10 mb-3 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -98,7 +98,7 @@
             </div>
 
              <!-- Initial State (Quick Actions / Recent) -->
-             <div v-else-if="query.length < 2" class="p-2">
+             <div v-else-if="query.length < 3" class="p-2">
                  <div class="px-3 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                     Sugestões Rápidas
                  </div>
@@ -298,7 +298,7 @@ const quickActions = computed(() => [
 
 const flattenedResults = computed(() => {
     // If empty query, return quick actions
-    if (query.value.length < 2) return quickActions.value;
+    if (query.value.length < 3) return quickActions.value;
 
     let flat = [];
     const priorityOrder = ['actions', 'navigation', 'admin', 'db_results'];
@@ -329,7 +329,7 @@ const handleInput = () => {
   isLoading.value = true;
   activeIndex.value = 0;
 
-  if (query.value.length < 2) {
+  if (query.value.length < 3) {
     results.value = {};
     isLoading.value = false;
     return;
@@ -415,15 +415,12 @@ const handleInput = () => {
   // Only if backend is reachable (we wrap in try/catch)
   searchTimeout = setTimeout(async () => {
     try {
-      // Simulate/Real API call
-      // const response = await window.axios.get(route('global.search'), { params: { query: query.value } });
-      // Merge results... 
-      // For now, we stick to local results as requested by user environment constraints
-      
-      // If we had DB results, we would append them:
-      // results.value.db_results = response.data;
+      const response = await window.axios.get(route('global.search'), {
+        params: { q: query.value }
+      });
+      results.value = { ...results.value, db_results: response.data.results };
     } catch (error) {
-      // console.error('API Search skipped');
+      // Falha silenciosa — resultados locais continuam visíveis
     } finally {
       isLoading.value = false;
     }

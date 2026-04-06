@@ -1,27 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Services\GlobalSearchService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class GlobalSearchController extends Controller
 {
-    public function __construct(
-        protected GlobalSearchService $searchService
-    ) {}
-
-    public function index(Request $request): JsonResponse
+    public function __construct(private readonly GlobalSearchService $searchService)
     {
-        $query = $request->input('query');
-        
-        if (empty($query) || strlen($query) < 3) {
-            return response()->json([]);
-        }
+    }
 
-        $results = $this->searchService->search($query);
+    public function search(Request $request): JsonResponse
+    {
+        $request->validate([
+            'q' => ['required', 'string', 'min:3', 'max:100'],
+        ]);
 
-        return response()->json($results);
+        $query = $request->string('q')->toString();
+
+        return response()->json([
+            'query'   => $query,
+            'results' => $this->searchService->search($query),
+        ]);
     }
 }

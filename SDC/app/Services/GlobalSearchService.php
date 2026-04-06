@@ -1,159 +1,106 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
-use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
-use App\Modules\Demandas\Models\Task;
-use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Decretacoes\Models\Processo;
-use App\Modules\Treinamento\Models\Treinamento;
-use Illuminate\Support\Collection;
+use App\Modules\Rat\Models\Rat;
+use App\Modules\Demandas\Models\Task;
+use App\Modules\Pae\Models\PaeProtocolo;
+use Illuminate\Support\Facades\Cache;
 
 class GlobalSearchService
 {
-    public function __construct(
-        protected RatRepositoryInterface $ratRepository,
-    ) {}
+    private const LIMIT = 5;
+    private const CACHE_TTL = 60;
 
-    public function search(string $query, int $limitPerCategory = 5): array
+    public function search(string $query): array
     {
-        if (strlen($query) < 2) {
-            return [];
-        }
+        $normalized = strtolower(trim($query));
+        $key = 'global_search:' . md5($normalized);
 
-        $results = [
-            'actions' => $this->searchActions($query),
-            'rats' => $this->searchRats($query, $limitPerCategory),
-            'demandas' => $this->searchDemandas($query, $limitPerCategory),
-            'orgaos' => $this->searchOrgaos($query, $limitPerCategory),
-            'processos' => $this->searchProcessos($query, $limitPerCategory),
-            'treinamentos' => $this->searchTreinamentos($query, $limitPerCategory),
-        ];
-
-        // Filter out empty categories
-        return array_filter($results, fn($category) => !empty($category) && count($category) > 0);
+        return Cache::store('redis')
+            ->tags(['global_search'])
+            ->remember($key, self::CACHE_TTL, fn () => $this->runSearch($query));
     }
 
-    protected function searchActions(string $query): array
+    private function runSearch(string $query): array
     {
-        $actions = [
-            ['id' => 'act_1', 'title' => 'Novo RAT', 'subtitle' => 'Criar novo relatório', 'url' => route('rat.create'), 'icon' => 'document', 'tag' => 'Criar'],
-            ['id' => 'act_2', 'title' => 'Nova Demanda', 'subtitle' => 'Abrir chamado técnico', 'url' => route('demandas.create'), 'icon' => 'checkbadge', 'tag' => 'Criar'],
-            ['id' => 'act_3', 'title' => 'Meu Perfil', 'subtitle' => 'Gerenciar conta', 'url' => route('profile.edit'), 'icon' => 'user', 'tag' => 'Config'],
-            ['id' => 'act_4', 'title' => 'Dashboard', 'subtitle' => 'Ir para página inicial', 'url' => route('dashboard'), 'icon' => 'home', 'tag' => 'Nav'],
-            ['id' => 'act_5', 'title' => 'Log Viewer', 'subtitle' => 'Logs do sistema', 'url' => route('log-viewer.index'), 'icon' => 'bolt', 'tag' => 'Admin'],
-            ['id' => 'act_6', 'title' => 'Sair', 'subtitle' => 'Fazer logout', 'url' => route('logout'), 'icon' => 'logout', 'tag' => 'Auth'],
+        return [
+            'decretacoes' => $this->searchDecretacoes($query),
+            'rat'         => $this->searchRat($query),
+            'demandas'    => $this->searchDemandas($query),
+            'pae'         => $this->searchPae($query),
         ];
+    }
 
-        return collect($actions)
-            ->filter(fn($action) => str_contains(strtolower($action['title']), strtolower($query)) || str_contains(strtolower($action['subtitle']), strtolower($query)))
-            ->values()
+    private function searchDecretacoes(string $query): array
+    {
+        return Processo::without(['municipios', 'desastres'])
+            ->select(['id', 'n_protocolo_fide', 'tipo_desastre'])
+            ->where('n_protocolo_fide', 'like', $query . '%')
+            ->limit(self::LIMIT)
+            ->get()
+            ->map(fn ($p) => [
+                'id'       => $p->id,
+                'title'    => $p->n_protocolo_fide,
+                'subtitle' => $p->tipo_desastre ?? 'Decretacao',
+                'url'      => route('decretacoes.show', $p->id),
+                'icon'     => 'scale',
+                'tag'      => 'DECRETO',
+            ])
             ->toArray();
     }
 
-    protected function searchRats(string $query, int $limit): array
+    private function searchRat(string $query): array
     {
-        try {
-            $paginator = $this->ratRepository->findAll(['search' => $query], $limit);
-            return collect($paginator->items())->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'title' => $item->protocolo,
-                    'subtitle' => 'RAT - ' . ($item->status ?? 'N/A'),
-                    // Using JSON endpoint/dashboard as fallback since rat.show doesn't exist in module routes yet
-                    // Ideally this should point to the RAT view page
-                    'url' => route('rat.show.json', $item->id), 
-                    'type' => 'rat',
-                    'icon' => 'document'
-                ];
-            })->toArray();
-        } catch (\Throwable $e) {
-            return [];
-        }
+        return Rat::select(['id', 'protocolo', 'status'])
+            ->where('protocolo', 'like', $query . '%')
+            ->limit(self::LIMIT)
+            ->get()
+            ->map(fn ($r) => [
+                'id'       => $r->id,
+                'title'    => $r->protocolo,
+                'subtitle' => ucfirst($r->status ?? 'RAT'),
+                'url'      => route('rat.show', $r->id),
+                'icon'     => 'document',
+                'tag'      => 'RAT',
+            ])
+            ->toArray();
     }
 
-    protected function searchDemandas(string $query, int $limit): array
+    private function searchDemandas(string $query): array
     {
-        try {
-            $tasks = Task::where('titulo', 'like', "%{$query}%")
-                ->orWhere('descricao', 'like', "%{$query}%")
-                ->limit($limit)
-                ->get();
-            return $tasks->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'title' => $item->titulo ?? $item->protocolo,
-                    'subtitle' => 'Demanda',
-                    'url' => route('demandas.show', $item->id),
-                    'type' => 'demanda',
-                    'icon' => 'checkbadge'
-                ];
-            })->toArray();
-        } catch (\Throwable $e) {
-            return [];
-        }
+        return Task::select(['id', 'protocolo', 'titulo', 'status'])
+            ->where('titulo', 'like', '%' . $query . '%')
+            ->limit(self::LIMIT)
+            ->get()
+            ->map(fn ($t) => [
+                'id'       => $t->id,
+                'title'    => $t->titulo,
+                'subtitle' => $t->protocolo . ' · ' . ($t->status instanceof \BackedEnum ? $t->status->value : $t->status),
+                'url'      => route('demandas.show', $t->id),
+                'icon'     => 'checkbadge',
+                'tag'      => 'DEMANDA',
+            ])
+            ->toArray();
     }
 
-    protected function searchOrgaos(string $query, int $limit): array
+    private function searchPae(string $query): array
     {
-        try {
-            $orgaos = Orgao::where('nome', 'like', "%{$query}%")
-                ->limit($limit)
-                ->get();
-            return $orgaos->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'title' => $item->nome,
-                    'subtitle' => 'Órgão',
-                    'url' => route('compdec.show', $item->id),
-                    'type' => 'orgao',
-                    'icon' => 'building'
-                ];
-            })->toArray();
-        } catch (\Throwable $e) {
-            return [];
-        }
-    }
-
-    protected function searchProcessos(string $query, int $limit): array
-    {
-        try {
-            $processos = Processo::where('n_protocolo_fide', 'like', "%{$query}%")
-                ->limit($limit)
-                ->get();
-            return $processos->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'title' => 'FIDE: ' . ($item->n_protocolo_fide ?? 'N/A'),
-                    'subtitle' => 'Processo',
-                    'url' => route('decretacoes.show', $item->id),
-                    'type' => 'processo',
-                    'icon' => 'folder'
-                ];
-            })->toArray();
-        } catch (\Throwable $e) {
-            return [];
-        }
-    }
-
-    protected function searchTreinamentos(string $query, int $limit): array
-    {
-        try {
-            $treinamentos = Treinamento::where('titulo', 'like', "%{$query}%")
-                ->limit($limit)
-                ->get();
-            return $treinamentos->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'title' => $item->titulo,
-                    'subtitle' => 'Treinamento - ' . ($item->status ?? 'N/A'),
-                    'url' => route('treinamentos.show', $item->id),
-                    'type' => 'treinamento',
-                    'icon' => 'academic-cap'
-                ];
-            })->toArray();
-        } catch (\Throwable $e) {
-            return [];
-        }
+        return PaeProtocolo::select(['id', 'num_protocolo', 'sei_numero', 'status'])
+            ->where('num_protocolo', 'like', $query . '%')
+            ->limit(self::LIMIT)
+            ->get()
+            ->map(fn ($p) => [
+                'id'       => $p->id,
+                'title'    => $p->num_protocolo,
+                'subtitle' => $p->sei_numero ? 'SEI: ' . $p->sei_numero : 'PAE',
+                'url'      => route('pae.protocolos.index'),
+                'icon'     => 'document',
+                'tag'      => 'PAE',
+            ])
+            ->toArray();
     }
 }

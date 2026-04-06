@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\LogViewerController as LogViewerV1Controller;
 use App\Http\Controllers\Api\RatNovoController;
 use App\Http\Controllers\Api\RatAuditController;
 use App\Http\Controllers\Api\V1\Decretacoes\DecretacoesApiController;
+use App\Http\Controllers\GlobalSearchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,6 +33,15 @@ use App\Http\Controllers\Api\V1\Decretacoes\DecretacoesApiController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// ============================================================================
+// GLOBAL SEARCH
+// ============================================================================
+
+Route::middleware(['auth:sanctum'])
+    ->get('/global-search', [GlobalSearchController::class, 'search'])
+    ->middleware('throttle:30,1')
+    ->name('global.search');
 
 // ============================================================================
 // MONITORING & HEALTH CHECK (Rotas Públicas)
