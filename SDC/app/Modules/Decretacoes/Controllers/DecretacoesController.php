@@ -92,23 +92,25 @@ class DecretacoesController extends Controller
     }
 
     /**
-     * Exibe detalhes de um processo.
+     * Redireciona para o index com filtro de busca pelo protocolo.
      *
-     * FLUXO: ID -> Service.findById() -> Inertia (ProcessoShow.vue)
+     * A visualizacao de detalhes e feita via modal (DecretacaoDetailModal)
+     * na pagina de listagem. Esta rota redireciona para o index com o
+     * parametro de busca preenchido para abrir o processo correto.
      *
      * @param int $id ID do processo
-     * @return Response Pagina Inertia com detalhes
+     * @return RedirectResponse
      */
-    public function show(int $id): Response
+    public function show(int $id): RedirectResponse
     {
         $processo = $this->processoService->findById($id);
 
         if (!$processo) {
-            abort(404, 'Processo nao encontrado');
+            return redirect()->route('decretacoes.index');
         }
 
-        return Inertia::render('Decretacoes/ProcessoShow', [
-            'processo' => ProcessoResource::make($processo)->resolve(),
+        return redirect()->route('decretacoes.index', [
+            'search' => $processo->n_protocolo_fide,
         ]);
     }
 
