@@ -46,7 +46,7 @@ class GlobalSearchService
                 'id'       => $p->id,
                 'title'    => $p->n_protocolo_fide,
                 'subtitle' => $p->tipo_desastre ?? 'Decretacao',
-                'url'      => route('decretacoes.show', $p->id),
+                'url'      => route('decretacoes.index') . '?search=' . urlencode($p->n_protocolo_fide),
                 'icon'     => 'scale',
                 'tag'      => 'DECRETO',
             ])
