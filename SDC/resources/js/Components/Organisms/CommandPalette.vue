@@ -416,9 +416,17 @@ const handleInput = () => {
   searchTimeout = setTimeout(async () => {
     try {
       const response = await window.axios.get(route('global.search'), {
-        params: { q: query.value }
+        params: { q: query.value },
+        timeout: 8000,
       });
-      results.value = { ...results.value, db_results: response.data.results };
+      const r = response.data.results ?? {};
+      const dbResults = [
+        ...(r.decretacoes ?? []),
+        ...(r.rat        ?? []),
+        ...(r.demandas   ?? []),
+        ...(r.pae        ?? []),
+      ];
+      results.value = { ...results.value, db_results: dbResults };
     } catch (error) {
       // Falha silenciosa — resultados locais continuam visíveis
     } finally {
