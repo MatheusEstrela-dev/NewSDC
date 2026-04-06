@@ -99,7 +99,9 @@ Route::middleware('auth')->group(function () {
     })->name('health.dashboard');
 
     // Global Search
-    Route::get('/global-search', [GlobalSearchController::class, 'search'])->name('global.search.web');
+    Route::get('/global-search', [GlobalSearchController::class, 'search'])
+        ->middleware('throttle:30,1')
+        ->name('global.search');
 
     // Permissionamento (Admin)
     require __DIR__ . '/modules/permissions.php';

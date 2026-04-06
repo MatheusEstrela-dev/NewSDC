@@ -35,13 +35,13 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // ============================================================================
-// GLOBAL SEARCH
+// GLOBAL SEARCH (API - para uso externo/sanctum)
 // ============================================================================
 
 Route::middleware(['auth:sanctum'])
     ->get('/global-search', [GlobalSearchController::class, 'search'])
     ->middleware('throttle:30,1')
-    ->name('global.search');
+    ->name('api.global.search');
 
 // ============================================================================
 // MONITORING & HEALTH CHECK (Rotas Públicas)
