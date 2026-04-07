@@ -19,7 +19,7 @@ use App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais;
 use App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos;
 use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
 use App\Models\Rat\Recursos\RatRecursosEmpregado;
-use App\Models\Rat\Recursos\RatRecursosComponentesGuarnicao;
+use App\Modules\Rat\Models\Recursos\RatRecursosComponentesGuarnicao;
 use App\Modules\Rat\Models\Relatos\RatRelatoVistoria;
 use Illuminate\Support\Facades\DB;
 
@@ -92,9 +92,11 @@ class RatWriteService
     public function saveDadosGerais(string $ocorrenciaId, RatDadosGeraisDTO $dto): RatRelatoDadosGerais
     {
         return DB::transaction(function () use ($ocorrenciaId, $dto) {
+            /** @var \Illuminate\Contracts\Auth\Guard $auth */
+            $auth = auth();
             $dadosGerais = RatRelatoDadosGerais::updateOrCreate(
                 ['id' => $this->getRelatoId($ocorrenciaId, RatRelatoDadosGerais::class)],
-                array_merge($dto->toArray(), ['created_by' => auth()->id()])
+                array_merge($dto->toArray(), ['created_by' => $auth->id()])
             );
 
             $this->ensureRelatoLink($ocorrenciaId, $dadosGerais);
@@ -106,9 +108,11 @@ class RatWriteService
     public function saveEnvolvido(string $ocorrenciaId, RatEnvolvidoDTO $dto): RatRelatoEnvolvidos
     {
         return DB::transaction(function () use ($ocorrenciaId, $dto) {
+            /** @var \Illuminate\Contracts\Auth\Guard $auth */
+            $auth = auth();
             $envolvido = RatRelatoEnvolvidos::updateOrCreate(
                 ['id' => $dto->id],
-                array_merge($dto->toArray(), ['created_by' => auth()->id()])
+                array_merge($dto->toArray(), ['created_by' => $auth->id()])
             );
 
             $this->ensureRelatoLink($ocorrenciaId, $envolvido);
@@ -120,10 +124,12 @@ class RatWriteService
     public function saveRecurso(string $ocorrenciaId, RatRecursoDTO $dto): RatRelatoRecurso
     {
         return DB::transaction(function () use ($ocorrenciaId, $dto) {
+            /** @var \Illuminate\Contracts\Auth\Guard $auth */
+            $auth = auth();
             // 1. Salva o relato de recurso principal
             $recurso = RatRelatoRecurso::updateOrCreate(
                 ['id' => $dto->id],
-                array_merge($dto->toArray(), ['created_by' => auth()->id()])
+                array_merge($dto->toArray(), ['created_by' => $auth->id()])
             );
 
             $this->ensureRelatoLink($ocorrenciaId, $recurso);
@@ -135,7 +141,7 @@ class RatWriteService
                         ['id' => $agenteDto->id],
                         array_merge($agenteDto->toArray(), [
                             'relato_recurso_id' => $recurso->id,
-                            'created_by' => auth()->id()
+                            'created_by' => $auth->id()
                         ])
                     );
                 }
@@ -159,9 +165,11 @@ class RatWriteService
     public function saveVistoria(string $ocorrenciaId, RatVistoriaDTO $dto): RatRelatoVistoria
     {
         return DB::transaction(function () use ($ocorrenciaId, $dto) {
+            /** @var \Illuminate\Contracts\Auth\Guard $auth */
+            $auth = auth();
             $vistoria = RatRelatoVistoria::updateOrCreate(
                 ['id' => $this->getRelatoId($ocorrenciaId, RatRelatoVistoria::class)],
-                array_merge($dto->toArray(), ['created_by' => auth()->id()])
+                array_merge($dto->toArray(), ['created_by' => $auth->id()])
             );
 
             $this->ensureRelatoLink($ocorrenciaId, $vistoria);
@@ -176,12 +184,14 @@ class RatWriteService
     /** Garante que existe um link na tabela pivô para este relato. */
     private function ensureRelatoLink(string $ocorrenciaId, $model): void
     {
+        /** @var \Illuminate\Contracts\Auth\Guard $auth */
+        $auth = auth();
         RatOcorrenciaRelato::firstOrCreate([
             'ocorrencia_id' => $ocorrenciaId,
             'conteudo_id'   => $model->id,
             'conteudo_type' => get_class($model),
         ], [
-            'created_by' => auth()->id(),
+            'created_by' => $auth->id(),
         ]);
     }
 

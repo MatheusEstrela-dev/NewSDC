@@ -44,7 +44,10 @@ class RatOcorrenciaService
             }
 
             $data['status']     = $data['status']     ?? self::STATUS_RASCUNHO;
-            $data['created_by'] = $data['created_by'] ?? auth()->id();
+            /** @var \Illuminate\Contracts\Auth\Guard $auth */
+            $auth = auth();
+            $userId = $auth->id() ?? null;
+            $data['created_by'] = $data['created_by'] ?? $userId;
 
             return RatOcorrencia::create($data);
         });

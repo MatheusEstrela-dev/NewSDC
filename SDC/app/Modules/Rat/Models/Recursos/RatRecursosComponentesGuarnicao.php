@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Models\Rat\Recursos;
+namespace App\Modules\Rat\Models\Recursos;
 
+use App\Models\Rat\Recursos\RatRecurso;
+use App\Modules\Rat\Models\Recursos\RatRecursosEmpregado;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**

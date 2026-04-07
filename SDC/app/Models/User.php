@@ -99,21 +99,23 @@ class User extends Authenticatable
 
     /**
      * Órgão principal do usuário (cache de performance)
+     * @deprecated Aguardando criação de Orgao model
      */
-    public function orgaoPrincipal(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_principal_id');
-    }
+    // public function orgaoPrincipal(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    // {
+    //     return $this->belongsTo(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_principal_id');
+    // }
 
     /**
      * Todos os órgãos vinculados ao usuário
+     * @deprecated Aguardando criação de Orgao model
      */
-    public function orgaos(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
-    {
-        return $this->belongsToMany(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_user')
-            ->withPivot('funcao', 'is_principal')
-            ->withTimestamps();
-    }
+    // public function orgaos(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    // {
+    //     return $this->belongsToMany(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_user')
+    //         ->withPivot('funcao', 'is_principal')
+    //         ->withTimestamps();
+    // }
 
     /**
      * Verifica se o usuário pertence a um órgão específico

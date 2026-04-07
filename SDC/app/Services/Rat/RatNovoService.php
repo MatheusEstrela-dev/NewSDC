@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Services\Rat;
 
 use App\Models\Rat\RatOcorrencia;
-use App\Models\Rat\Relatos\RatRelatoDadosGerais;
-use App\Models\Rat\Relatos\RatRelatoEnvolvidos;
-use App\Models\Rat\Relatos\RatRelatoRecurso;
+use App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais;
+use App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos;
+use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
 use Illuminate\Http\Request;
 
 /**

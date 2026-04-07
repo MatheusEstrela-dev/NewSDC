@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models\Recursos;
 
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Rat\Recursos\RatRecurso;
 use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
 use App\Modules\Rat\Models\Relatos\RatRelato;
-use App\Models\Rat\Recursos\RatRecursosComponentesGuarnicao;
+use App\Modules\Rat\Models\Recursos\RatRecursosComponentesGuarnicao;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Recurso empregado em atendimento (viatura, pessoal a pé, etc.).

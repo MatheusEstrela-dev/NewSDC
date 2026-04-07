@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Infrastructure\Persistence;
 
 use App\Models\Rat\RatOcorrencia;
-use App\Models\Rat\Relatos\RatRelatoDadosGerais;
 use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
 use App\Modules\Rat\DTOs\RatFilterDTO;
 use App\Modules\Rat\Models\Rat;
+use App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais;
 use App\Modules\Rat\Services\RatFilterService;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -26,11 +26,13 @@ class EloquentRatRepository implements RatRepositoryInterface
 
     public function create(array $data): Rat
     {
+        /** @var \Illuminate\Contracts\Auth\Guard $auth */
+        $auth = auth();
         $ocorrencia = RatOcorrencia::create([
             'numero_bos'  => $this->generateProtocolo(),
             'status'      => 0,
-            'created_by'  => auth()->id(),
-            'updated_by'  => auth()->id(),
+            'created_by'  => $auth->id(),
+            'updated_by'  => $auth->id(),
         ]);
 
         return $this->toRatModel($ocorrencia);
@@ -94,16 +96,20 @@ class EloquentRatRepository implements RatRepositoryInterface
 
     public function updateStatus(string $id, string $status): void
     {
+        /** @var \Illuminate\Contracts\Auth\Guard $auth */
+        $auth = auth();
         RatOcorrencia::where('id', $id)->update([
             'status'     => $status === 'finalizado' ? 1 : 0,
-            'updated_by' => auth()->id(),
+            'updated_by' => $auth->id(),
         ]);
     }
 
     public function update(string $id, array $data): Rat
     {
+        /** @var \Illuminate\Contracts\Auth\Guard $auth */
+        $auth = auth();
         $ocorrencia = RatOcorrencia::findOrFail($id);
-        $ocorrencia->update(['updated_by' => auth()->id()]);
+        $ocorrencia->update(['updated_by' => $auth->id()]);
 
         return $this->toRatModel($ocorrencia->fresh(['relatosMorph']));
     }
