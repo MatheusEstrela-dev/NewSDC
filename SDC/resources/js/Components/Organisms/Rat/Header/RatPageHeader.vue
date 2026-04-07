@@ -23,7 +23,7 @@
         </div>
 
         <div class="flex items-center gap-3">
-          <Link :href="route('rat.create')">
+          <Link :href="route('compdec.rat.create')">
             <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
               Novo RAT
             </Button>

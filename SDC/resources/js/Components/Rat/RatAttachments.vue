@@ -87,7 +87,7 @@ async function handleUploadFile({ file, tempId }) {
 
   try {
     const axios    = window.axios || (await import('axios')).default;
-    const response = await axios.post(route('rat.attachments.store', props.ratId), form, {
+    const response = await axios.post(route('compdec.rat.ocorrencias.attachments.store', props.ratId), form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
@@ -118,7 +118,7 @@ async function handleRemoveFile(anexoId) {
   if (!isTemp) {
     try {
       const axios = window.axios || (await import('axios')).default;
-      await axios.delete(route('rat.attachments.destroy', { id: props.ratId, anexoId }));
+      await axios.delete(route('compdec.rat.ocorrencias.attachments.destroy', { id: props.ratId, anexoId }));
     } catch (err) {
       // removal error handled silently
     }

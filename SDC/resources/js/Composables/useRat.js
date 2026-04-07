@@ -44,9 +44,9 @@ export function useRat({
             historico:   historico.value,
         };
         if (!rat.value?.id) {
-            router.post(route('rat.store'), data, { preserveScroll: true });
+            router.post(route('compdec.rat.store'), data, { preserveScroll: true });
         } else {
-            router.put(route('rat.update', rat.value.id), data, { preserveScroll: true });
+            router.put(route('compdec.rat.update', rat.value.id), data, { preserveScroll: true });
         }
     }
 
@@ -66,9 +66,9 @@ export function useRat({
             historico:   historico.value,
         };
         if (!rat.value?.id) {
-            router.post(route('rat.store'), data, { preserveScroll: true });
+            router.post(route('compdec.rat.store'), data, { preserveScroll: true });
         } else {
-            router.patch(route('rat.draft', rat.value.id), data, { preserveScroll: true });
+            router.patch(route('compdec.rat.draft', rat.value.id), data, { preserveScroll: true });
         }
     }
 
@@ -89,17 +89,17 @@ export function useRat({
         };
         if (!rat.value?.id) {
             // Página de criação: cria e finaliza em uma única requisição
-            router.post(route('rat.store'), { ...data, finalize: true }, { preserveScroll: true });
+            router.post(route('compdec.rat.store'), { ...data, finalize: true }, { preserveScroll: true });
             return;
         }
-        router.patch(route('rat.finalize', rat.value.id), data, { preserveScroll: true });
+        router.patch(route('compdec.rat.finalize', rat.value.id), data, { preserveScroll: true });
     }
 
     /**
      * Cancela e retorna para a listagem.
      */
     function cancelarRat() {
-        router.visit(route('rat.index'));
+        router.visit(route('compdec.rat.index'));
     }
 
     // Recursos

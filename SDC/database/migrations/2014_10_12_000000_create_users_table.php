@@ -17,11 +17,9 @@ return new class extends Migration
             $table->string('name', 150);
             $table->string('email', 191)->unique();
 
-            // 🔗 Órgão principal
-            $table->foreignId('orgao_principal_id')
+            // 🔗 Órgão principal (FK adicionada em migration posterior)
+            $table->unsignedBigInteger('orgao_principal_id')
                 ->nullable()
-                ->constrained('orgaos')
-                ->nullOnDelete()
                 ->comment('Órgão principal do usuário (cache para performance)');
 
             $table->char('cpf', 11)->unique();

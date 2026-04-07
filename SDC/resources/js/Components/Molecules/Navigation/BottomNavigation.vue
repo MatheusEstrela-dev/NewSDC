@@ -31,11 +31,11 @@ const navigationItems = computed(() => {
     },
     {
       name: 'RAT',
-      href: route().has('rat.index') ? route('rat.index') : route('dashboard'),
+      href: route().has('compdec.rat.index') ? route('compdec.rat.index') : route('dashboard'),
       icon: DocumentTextIcon,
       iconActive: DocumentTextIconSolid,
-      active: route().current('rat.*'),
-      show: route().has('rat.index') || route().has('rat.create'),
+      active: route().current('compdec.rat.*'),
+      show: route().has('compdec.rat.index') || route().has('compdec.rat.create'),
     },
     {
       name: 'Demandas',

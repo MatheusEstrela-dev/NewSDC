@@ -17,10 +17,10 @@ Route::get('/debug/test-dto', function () {
 // Rota de Teste para Gerar Logs Propositais (Temporariamente fora do Auth para teste)
 Route::get('/test-log-error', function () {
     $logger = app(\App\Services\Logging\ActivityLogger::class);
-    
+
     // Log de evento comum
     $logger->logEvent('system', 'test_event', ['info' => 'Isso é um teste'], 1, 'info');
-    
+
     // Log de erro crítico proposital
     try {
         throw new \Exception("ERRO PROPOSITAL PARA TESTE DE INTERFACE");
@@ -30,7 +30,7 @@ Route::get('/test-log-error', function () {
             'test_mode' => true
         ]);
     }
-    
+
     return "Logs gerados! Verifique o Log Viewer em /log-viewer. Certifique-se de que o LOG_CHANNEL está correto (ex: stack ou daily).";
 })->name('test.log.error');
 
@@ -53,13 +53,13 @@ Route::middleware('auth')->group(function () {
     // Log Viewer - Sistema Avançado de Visualização de Logs
     Route::get('/log-viewer', function (Illuminate\Http\Request $request) {
         $logReader = app(\App\Services\Logging\LogFileReaderService::class);
-        
+
         $filters = $request->only(['level', 'layer', 'search', 'date_from', 'date_to', 'errors_only', 'limit']);
         $filters['limit'] = $filters['limit'] ?? 100;
-        
+
         $logs = $logReader->readLogs($filters);
         $statistics = $logReader->getStatistics($filters);
-        
+
         return Inertia::render('LogViewer/Index', [
             'initialLogs' => $logs->toArray(),
             'initialStats' => $statistics,
@@ -69,22 +69,25 @@ Route::middleware('auth')->group(function () {
     })->middleware('can:system.logs.view')->name('log-viewer.index');
 
     // Rota de Teste para Gerar Logs Propositais
-    Route::get('/test-log-error', function () {
+    Route::get('/test-log-error', function (Illuminate\Http\Request $request) {
         $logger = app(\App\Services\Logging\ActivityLogger::class);
-        
+        /** @var \App\Models\User|null $user */
+        $user = $request->user();
+        $userId = $user?->id;
+
         // Log de evento comum
-        $logger->logEvent('system', 'test_event', ['info' => 'Isso é um teste'], auth()->id(), 'info');
-        
+        $logger->logEvent('system', 'test_event', ['info' => 'Isso é um teste'], $userId, 'info');
+
         // Log de erro crítico proposital
         try {
             throw new \Exception("ERRO PROPOSITAL PARA TESTE DE INTERFACE");
         } catch (\Exception $e) {
             $logger->logCriticalError("Falha crítica detectada no teste", $e, [
-                'user_id' => auth()->id(),
+                'user_id' => $userId,
                 'test_mode' => true
             ]);
         }
-        
+
         return "Logs gerados! Verifique o Log Viewer em /log-viewer.";
     })->name('test.log.error');
 
@@ -129,9 +132,6 @@ Route::middleware('auth')->group(function () {
     // Módulo: Treinamento
     require __DIR__ . '/modules/treinamento.php';
 
-    // Módulo: RAT (Registro de Atendimento Técnico)
-    require __DIR__ . '/modules/rat.php';
-
     // Módulo: Suporte
     require __DIR__ . '/modules/suporte.php';
 
@@ -143,9 +143,12 @@ Route::middleware('auth')->group(function () {
 
     // Módulo: Plantão Diário
     require __DIR__ . '/modules/plantao.php';
-
-    // Módulo: PlanCon (Plano de Contingência)
-    require __DIR__ . '/modules/plancon.php';
 });
+
+// ⚠️ RAT temporariamente fora do grupo 'auth' para testes
+// ⚠️ PlanCon também temporariamente fora do grupo 'auth' para testes
+// TODO: Remover isto e adicionar auth() depois de testes
+require __DIR__ . '/modules/rat.php';
+require __DIR__ . '/modules/plancon.php';
 
 require __DIR__ . '/auth.php';

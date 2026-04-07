@@ -88,14 +88,14 @@ export function useRat(initialData = {}) {
     } else {
       // Se estiver online, envia via Inertia
       if (!rat.value?.id) {
-        router.post(route('rat.store'), payload, {
+        router.post(route('compdec.rat.store'), payload, {
           preserveScroll: true,
           preserveState: true,
           onSuccess: () => {},
           onError: () => {},
         });
       } else {
-        router.put(route('rat.update', rat.value.id), payload, {
+        router.put(route('compdec.rat.update', rat.value.id), payload, {
           preserveScroll: true,
           preserveState: true,
           onSuccess: () => {},
@@ -117,7 +117,7 @@ export function useRat(initialData = {}) {
    * Cancela o RAT e retorna para a listagem
    */
   function cancelarRat() {
-    router.visit(route('rat.index'));
+    router.visit(route('compdec.rat.index'));
   }
 
   /**

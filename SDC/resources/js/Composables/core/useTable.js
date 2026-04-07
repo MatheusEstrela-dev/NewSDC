@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 
-export function useTable(initialPagination = null, routeName = 'rat.index') {
+export function useTable(initialPagination = null, routeName = 'compdec.rat.index') {
   const pagination = ref(initialPagination);
   const sortColumn = ref(null);
   const sortDirection = ref('desc');
@@ -24,7 +24,7 @@ export function useTable(initialPagination = null, routeName = 'rat.index') {
 
   function goToPage(page) {
     if (page < 1 || page > totalPages.value) return;
-    
+
     router.get(route(routeName), { page }, {
       preserveState: true,
       preserveScroll: true,

@@ -22,6 +22,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Contracts\HierarchyServiceInterface::class,
             \App\Services\Auth\HierarchyService::class
         );
+
+        // RAT Repository Binding
+        $this->app->singleton(
+            \App\Modules\Rat\Domain\Repositories\RatRepositoryInterface::class,
+            \App\Modules\Rat\Infrastructure\Repositories\RatRepository::class
+        );
     }
 
     /**

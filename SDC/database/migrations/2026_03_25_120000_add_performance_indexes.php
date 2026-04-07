@@ -75,6 +75,15 @@ return new class extends Migration
 
     private function hasIndex(string $table, string $indexName): bool
     {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'sqlite') {
+            // SQLite: use pragma index_list
+            $indexes = DB::select("PRAGMA index_list({$table})");
+            return collect($indexes)->some(fn($idx) => $idx->name === $indexName);
+        }
+
+        // MySQL: use SHOW INDEX
         $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$indexName]);
         return count($indexes) > 0;
     }

@@ -20,7 +20,7 @@
           </Button>
 
           <!-- Botao Criar - Responsivo -->
-          <Link v-if="canCreate" :href="route('rat.create')">
+          <Link v-if="canCreate" :href="route('compdec.rat.create')">
             <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
               <span class="hidden sm:inline">Novo RAT</span>
               <span class="sm:hidden">Novo</span>
@@ -307,7 +307,7 @@ function handleFilterChange(newFilters) {
     return;
   }
 
-  router.get(route('rat.index'), newFilters, { preserveState: true, preserveScroll: true });
+  router.get(route('compdec.rat.index'), newFilters, { preserveState: true, preserveScroll: true });
 }
 
 function handleFilterReset() {
@@ -317,20 +317,20 @@ function handleFilterReset() {
     return;
   }
 
-  router.get(route('rat.index'), {}, { preserveState: false, preserveScroll: false });
+  router.get(route('compdec.rat.index'), {}, { preserveState: false, preserveScroll: false });
 }
 
 function handleView(id) {
-  router.visit(route('rat.show', id));
+  router.visit(route('compdec.rat.show', id));
 }
 
 function handleEdit(id) {
-  router.visit(route('rat.edit', id));
+  router.visit(route('compdec.rat.edit', id));
 }
 
 function handleAttachments(id) {
   // Abrir diretamente na aba "Anexos" (id 6) no formulário de edição
-  router.visit(`${route('rat.edit', id)}?tab=6`);
+  router.visit(`${route('compdec.rat.edit', id)}?tab=6`);
 }
 
 function handleDelete(id) {
@@ -365,7 +365,7 @@ const {
 async function handlePrint(id) {
   await openWithLoading(
     async () => {
-      const url = route('rat.show.json', id);
+      const url = route('compdec.rat.show-json', id);
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Erro ao carregar dados: ${response.status} ${response.statusText}`);
@@ -385,9 +385,9 @@ async function handlePrint(id) {
 // =========================
 import { useExport } from '@/Composables/useExport';
 
-const { 
-  showExportModal, 
-  handleExport: triggerExport 
+const {
+  showExportModal,
+  handleExport: triggerExport
 } = useExport('rat.export');
 
 function handleExportCsv(params) {
@@ -401,7 +401,7 @@ function handlePageChange(page) {
     return;
   }
 
-  router.get(route('rat.index'), { ...props.filters, page }, { preserveState: true, preserveScroll: true });
+  router.get(route('compdec.rat.index'), { ...props.filters, page }, { preserveState: true, preserveScroll: true });
 }
 </script>
 

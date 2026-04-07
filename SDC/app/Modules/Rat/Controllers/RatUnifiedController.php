@@ -52,30 +52,6 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/**
- * RatUnifiedController — Controlador único do módulo RAT.
- *
- * Consolidação de toda a lógica HTTP do módulo em um único arquivo.
- * Responsável por orquestrar chamadas às camadas de Service e DTO,
- * sem conter regras de negócio.
- *
- * ┌─────────────────────────────────────────────────────────────────────────┐
- * │  Fluxo padrão: Request → DTO → Service → Model → Response              │
- * └─────────────────────────────────────────────────────────────────────────┘
- *
- * Seções:
- *  1. Web CRUD (Inertia/Compdec)
- *  2. Boletim de Ocorrência (JSON)
- *  3. Dados Gerais
- *  4. Envolvidos
- *  5. Recursos Empregados
- *  6. Vistoria Técnica
- *  7. Histórico
- *  8. Anexos
- *  9. Auditoria
- * 10. Exportação e Estatísticas
- * 11. Integrações (PowerBI / API V1 Mobile)
- */
 class RatUnifiedController extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
@@ -94,10 +70,6 @@ class RatUnifiedController extends BaseController
         private readonly RatNovoService       $novoService,
         private readonly RatHistoricoService  $historicoService,
     ) {}
-
-    // =========================================================================
-    // 1. WEB CRUD (Inertia / Compdec Flow)
-    // =========================================================================
 
     /**
      * Lista paginada de ocorrências RAT com filtros opcionais.
@@ -154,7 +126,7 @@ class RatUnifiedController extends BaseController
      */
     public function show(int $id): Response
     {
-        $ocorrencia = $this->appDataService->findById((string) $id);
+        $ocorrencia = $this->appDataService->findById((string)$id);
 
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
@@ -170,7 +142,7 @@ class RatUnifiedController extends BaseController
      */
     public function edit(int $id): Response
     {
-        $ocorrencia = $this->appDataService->findById((string) $id);
+        $ocorrencia = $this->appDataService->findById((string)$id);
 
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
@@ -233,18 +205,14 @@ class RatUnifiedController extends BaseController
      * Salva rascunho via Modules WriteService (fluxo alternativo).
      * POST /compdec/rat/{ocorrencia}/draft
      */
-    public function draft(UpdateRatRequest $request, string $id): RedirectResponse
+    public function draft(UpdateRatRequest $request, int $id): RedirectResponse
     {
-        $this->writeService->saveDraft($id, $request->validated());
+        $this->writeService->saveDraft((string)$id, $request->validated());
 
         return redirect()
             ->route('compdec.rat.edit', $id)
             ->with('success', 'Rascunho salvo com sucesso!');
     }
-
-    // =========================================================================
-    // 2. BOLETIM DE OCORRÊNCIA (JSON)
-    // =========================================================================
 
     /**
      * Lista Boletins de Ocorrência paginados com filtros.
@@ -311,10 +279,6 @@ class RatUnifiedController extends BaseController
         ]);
     }
 
-    // =========================================================================
-    // 3. DADOS GERAIS
-    // =========================================================================
-
     /**
      * Retorna os dados gerais de uma ocorrência.
      * GET /compdec/rat/ocorrencias/{ocorrencia}/dados-gerais
@@ -353,10 +317,6 @@ class RatUnifiedController extends BaseController
     {
         return $this->storeDadosGerais($request, $ocorrenciaId);
     }
-
-    // =========================================================================
-    // 4. ENVOLVIDOS
-    // =========================================================================
 
     /**
      * Lista todos os envolvidos de uma ocorrência.
@@ -413,10 +373,6 @@ class RatUnifiedController extends BaseController
             'message' => 'Envolvido removido com sucesso.',
         ]);
     }
-
-    // =========================================================================
-    // 5. RECURSOS EMPREGADOS
-    // =========================================================================
 
     /**
      * Lista os recursos empregados de uma ocorrência.
@@ -475,10 +431,6 @@ class RatUnifiedController extends BaseController
         ]);
     }
 
-    // =========================================================================
-    // 6. VISTORIA TÉCNICA
-    // =========================================================================
-
     /**
      * Retorna a vistoria técnica de uma ocorrência.
      * GET /compdec/rat/ocorrencias/{ocorrencia}/vistoria
@@ -518,10 +470,6 @@ class RatUnifiedController extends BaseController
         return $this->storeVistoria($request, $ocorrenciaId);
     }
 
-    // =========================================================================
-    // 7. HISTÓRICO
-    // =========================================================================
-
     /**
      * Retorna o histórico de eventos de uma ocorrência.
      * GET /compdec/rat/ocorrencias/{ocorrencia}/historico
@@ -553,10 +501,6 @@ class RatUnifiedController extends BaseController
             'message' => 'Histórico salvo com sucesso.',
         ]);
     }
-
-    // =========================================================================
-    // 8. ANEXOS
-    // =========================================================================
 
     /**
      * Faz upload de um arquivo e vincula à ocorrência.
@@ -598,10 +542,6 @@ class RatUnifiedController extends BaseController
         ]);
     }
 
-    // =========================================================================
-    // 9. AUDITORIA
-    // =========================================================================
-
     /**
      * Lista logs de auditoria globais do módulo RAT.
      * GET /compdec/rat/audit
@@ -631,10 +571,6 @@ class RatUnifiedController extends BaseController
 
         return response()->json($history);
     }
-
-    // =========================================================================
-    // 10. EXPORTAÇÃO E ESTATÍSTICAS
-    // =========================================================================
 
     /**
      * Exporta RATs em formato solicitado (pdf, excel, csv).
@@ -690,10 +626,6 @@ class RatUnifiedController extends BaseController
             'data'    => $this->statisticsService->getStatistics()->toArray(),
         ]);
     }
-
-    // =========================================================================
-    // 11. INTEGRAÇÕES (PowerBI / API V1 Mobile)
-    // =========================================================================
 
     /**
      * Retorna dados normalizados de uma ocorrência para PowerBI.

@@ -262,36 +262,36 @@ const safeRoute = (name, fallback = '') => {
 const navigationIndex = computed(() => [
     // Principal
     { id: 'nav_dash', title: 'Visão Geral', subtitle: 'Dashboard Principal', url: safeRoute('dashboard'), icon: 'dashboard', category: 'navigation', keywords: ['home', 'inicio', 'painel'] },
-    { id: 'nav_rat', title: 'RAT', subtitle: 'Relatório de Atendimento Técnico', url: safeRoute('rat.index'), icon: 'document', category: 'navigation', keywords: ['vistoria', 'relatorio', 'tecnico'] },
+    { id: 'nav_rat', title: 'RAT', subtitle: 'Relatório de Atendimento Técnico', url: safeRoute('compdec.rat.index'), icon: 'document', category: 'navigation', keywords: ['vistoria', 'relatorio', 'tecnico'] },
     { id: 'nav_dem', title: 'Demandas', subtitle: 'Gestão de Chamados e Tarefas', url: safeRoute('demandas.index'), icon: 'checkbadge', category: 'navigation', keywords: ['chamado', 'ticket', 'tarefa'] },
     { id: 'nav_pae', title: 'PAE', subtitle: 'Plano de Ação de Emergência', url: safeRoute('pae.index', safeRoute('pae.protocolos.index')), icon: 'document', category: 'navigation', keywords: ['plano', 'emergencia', 'protocolo'] },
-    
+
     // Módulos de Gestão
     { id: 'nav_dec', title: 'Decretações', subtitle: 'Gestão de Decretos (SEAD)', url: safeRoute('decretacoes.index'), icon: 'scale', category: 'navigation', keywords: ['decreto', 'legal', 'calamidade'] },
     { id: 'nav_hum', title: 'Ajuda Humanitária', subtitle: 'Beneficiários e Entregas', url: safeRoute('ajuda-humanitaria.beneficiarios.index'), icon: 'heart', category: 'navigation', keywords: ['donativo', 'cesta', 'social'] },
     { id: 'nav_org', title: 'Órgãos', subtitle: 'Cadastro de COMPDEC e Parceiros', url: safeRoute('compdec.index'), icon: 'building', category: 'navigation', keywords: ['municipio', 'prefeitura', 'contato'] },
-    
+
     // TDAP
     { id: 'nav_tdap_dash', title: 'TDAP Dashboard', subtitle: 'Visão Geral TDAP', url: safeRoute('tdap.dashboard'), icon: 'document', category: 'navigation', keywords: ['tdap', 'cartao', 'pagamento'] },
     { id: 'nav_tdap_prod', title: 'TDAP Produtos', subtitle: 'Gestão de Produtos', url: safeRoute('tdap.products.index'), icon: 'document', category: 'navigation', keywords: ['tdap', 'item', 'estoque'] },
-    
+
     // Outros
     { id: 'nav_treino', title: 'Treinamentos', subtitle: 'Cursos e Capacitações', url: safeRoute('treinamentos.index'), icon: 'academic', category: 'navigation', keywords: ['curso', 'aula', 'ead'] },
     { id: 'nav_meteo', title: 'Meteorologia', subtitle: 'Alertas e Previsão (INMET)', url: safeRoute('inmet.index'), icon: 'cloud', category: 'navigation', keywords: ['clima', 'tempo', 'chuva'] },
-    
+
     // Admin
     { id: 'adm_users', title: 'Usuários', subtitle: 'Gestão de Acesso', url: safeRoute('admin.permissions.users.index'), icon: 'shield', category: 'admin', keywords: ['admin', 'permissoes', 'login'] },
     { id: 'adm_roles', title: 'Cargos e Funções', subtitle: 'Definição de Papéis', url: safeRoute('admin.permissions.roles.index'), icon: 'shield', category: 'admin', keywords: ['admin', 'roles', 'cargos'] },
 
     // Actions
-    { id: 'act_rat', title: 'Novo RAT', subtitle: 'Criar Relatório', url: safeRoute('rat.create'), icon: 'document', category: 'actions', keywords: ['criar', 'novo', 'adicionar'] },
+    { id: 'act_rat', title: 'Novo RAT', subtitle: 'Criar Relatório', url: safeRoute('compdec.rat.create'), icon: 'document', category: 'actions', keywords: ['criar', 'novo', 'adicionar'] },
     { id: 'act_dem', title: 'Nova Demanda', subtitle: 'Abrir Chamado', url: safeRoute('demandas.create'), icon: 'checkbadge', category: 'actions', keywords: ['criar', 'novo', 'adicionar'] },
     { id: 'act_logout', title: 'Sair do Sistema', subtitle: 'Fazer Logout', url: safeRoute('logout'), icon: 'logout', category: 'actions', method: 'post', keywords: ['sair', 'logoff'] },
 ]);
 
 // Mock Quick Actions
 const quickActions = computed(() => [
-  { id: 'qa_rat', title: 'Novo RAT', subtitle: 'Criar Relatório de Atendimento', url: safeRoute('rat.create'), icon: 'document', type: 'action' },
+  { id: 'qa_rat', title: 'Novo RAT', subtitle: 'Criar Relatório de Atendimento', url: safeRoute('compdec.rat.create'), icon: 'document', type: 'action' },
   { id: 'qa_dem', title: 'Nova Demanda', subtitle: 'Abrir um chamado', url: safeRoute('demandas.nova'), icon: 'checkbadge', type: 'action' },
   { id: 'qa_prof', title: 'Meu Perfil', subtitle: 'Configurações da conta', url: '/profile?open_profile=true', icon: 'user', type: 'action' }, // Link especial para abrir modal
 ]);
@@ -302,7 +302,7 @@ const flattenedResults = computed(() => {
 
     let flat = [];
     const priorityOrder = ['actions', 'navigation', 'admin', 'db_results'];
-    
+
     priorityOrder.forEach(cat => {
         if (results.value[cat]) {
             flat = [...flat, ...results.value[cat]];
@@ -337,12 +337,12 @@ const handleInput = () => {
 
   // 1. Perform Client-Side Search (Instant)
   const q = query.value.toLowerCase();
-  
+
   // A. Protocol / ID Detection (Extremely Performant - Regex)
   const numericMatch = q.match(/^(\d+)$/);
   const ratMatch = q.match(/^rat[\s-]?(\d+)$/i);
   const demMatch = q.match(/^dem[\s-]?(\d+)$/i);
-  
+
   const directActions = [];
 
   // Se digitar apenas números (ex: "1050")
@@ -352,7 +352,7 @@ const handleInput = () => {
           id: `goto_rat_${id}`,
           title: `Abrir RAT #${id}`,
           subtitle: 'Navegação Direta por ID',
-          url: safeRoute('rat.show', `/rat/${id}`), // Fallback manual URL if route missing
+          url: safeRoute('compdec.rat.show', `/compdec/rat/${id}`), // Fallback manual URL if route missing
           icon: 'bolt',
           category: 'actions',
           tag: 'JUMP TO'
@@ -367,7 +367,7 @@ const handleInput = () => {
           tag: 'JUMP TO'
       });
   }
-  
+
   // Se digitar padrão específico (ex: "RAT 500")
   if (ratMatch) {
       const id = ratMatch[1];
@@ -375,7 +375,7 @@ const handleInput = () => {
           id: `goto_rat_specific_${id}`,
           title: `Acessar RAT #${id}`,
           subtitle: 'Ir para Relatório Técnico',
-          url: safeRoute('rat.show', `/rat/${id}`),
+          url: safeRoute('compdec.rat.show', `/compdec/rat/${id}`),
           icon: 'document',
           category: 'actions',
           tag: 'RAT'
@@ -397,7 +397,7 @@ const handleInput = () => {
 
   // B. Navigation & Keyword Search
   const localResults = navigationIndex.value.filter(item => {
-      return item.title.toLowerCase().includes(q) || 
+      return item.title.toLowerCase().includes(q) ||
              item.subtitle.toLowerCase().includes(q) ||
              item.keywords.some(k => k.includes(q));
   });
@@ -417,9 +417,9 @@ const handleInput = () => {
     try {
       // Simulate/Real API call
       // const response = await window.axios.get(route('global.search'), { params: { query: query.value } });
-      // Merge results... 
+      // Merge results...
       // For now, we stick to local results as requested by user environment constraints
-      
+
       // If we had DB results, we would append them:
       // results.value.db_results = response.data;
     } catch (error) {
