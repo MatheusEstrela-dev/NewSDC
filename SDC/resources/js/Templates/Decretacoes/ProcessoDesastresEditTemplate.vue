@@ -43,127 +43,24 @@
       </div>
     </div>
 
-    <!-- Formulario de Desastres -->
+    <!-- Formulario -->
     <form @submit.prevent="handleSubmit">
-      <!-- Municipios (Accordion) -->
+      <!-- Municipios -->
       <div class="space-y-4 mb-6">
-        <div
+        <MunicipioDesastreSection
           v-for="(municipio, mIndex) in localMunicipios"
           :key="municipio.id"
-          class="bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700/50 overflow-hidden"
-        >
-          <!-- Header do Municipio -->
-          <button
-            type="button"
-            @click="toggleMunicipio(mIndex)"
-            class="w-full px-4 py-3 flex items-center justify-between bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
-          >
-            <div class="flex items-center gap-3">
-              <MapPinIcon class="w-5 h-5 text-primary-500" />
-              <span class="font-semibold text-slate-800 dark:text-slate-200">
-                {{ municipio.nome || `Municipio ${municipio.id}` }}
-              </span>
-              <span v-if="municipio.n_protocolo_fide" class="text-xs text-slate-500">
-                ({{ municipio.n_protocolo_fide }})
-              </span>
-            </div>
-            <ChevronDownIcon
-              :class="['w-5 h-5 text-slate-400 transition-transform', { 'rotate-180': expandedMunicipios.includes(mIndex) }]"
-            />
-          </button>
-
-          <!-- Conteudo do Municipio -->
-          <div v-show="expandedMunicipios.includes(mIndex)" class="p-4 border-t border-slate-200 dark:border-slate-700/50">
-            <!-- Categorias -->
-            <div v-if="municipio.categorias && municipio.categorias.length > 0" class="space-y-4">
-              <div
-                v-for="(categoria, cIndex) in municipio.categorias"
-                :key="categoria.id"
-                class="border border-slate-200 dark:border-slate-700/50 rounded-lg"
-              >
-                <!-- Header da Categoria -->
-                <div class="px-4 py-2 bg-slate-100 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50">
-                  <span class="font-medium text-sm text-slate-700 dark:text-slate-300">
-                    {{ categoria.nome || `Categoria ${categoria.id}` }}
-                  </span>
-                </div>
-
-                <!-- Desastres/Items -->
-                <div class="p-4">
-                  <div
-                    v-for="(desastre, dIndex) in categoria.desastres"
-                    :key="desastre.id"
-                    class="mb-4 last:mb-0"
-                  >
-                    <Text size="sm" class="font-medium text-slate-600 dark:text-slate-400 mb-2">
-                      {{ desastre.descricao || `Item ${desastre.id}` }}
-                    </Text>
-
-                    <!-- Campos do Desastre -->
-                    <div v-if="desastre.items && desastre.items.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      <div
-                        v-for="(item, iIndex) in desastre.items"
-                        :key="item.id"
-                      >
-                        <template v-if="item.campos && item.campos.length > 0">
-                          <div
-                            v-for="(campo, fIndex) in item.campos"
-                            :key="campo.id"
-                            class="mb-2"
-                          >
-                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                              {{ campo.titulo }}
-                            </label>
-                            <input
-                              v-if="campo.tipo === 'number'"
-                              type="number"
-                              v-model="localMunicipios[mIndex].categorias[cIndex].desastres[dIndex].items[iIndex].campos[fIndex].valor"
-                              class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                              :placeholder="campo.titulo"
-                            />
-                            <input
-                              v-else-if="campo.tipo === 'currency'"
-                              type="text"
-                              v-model="localMunicipios[mIndex].categorias[cIndex].desastres[dIndex].items[iIndex].campos[fIndex].valor"
-                              class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                              placeholder="R$ 0,00"
-                            />
-                            <input
-                              v-else
-                              type="text"
-                              v-model="localMunicipios[mIndex].categorias[cIndex].desastres[dIndex].items[iIndex].campos[fIndex].valor"
-                              class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                              :placeholder="campo.titulo"
-                            />
-                          </div>
-                        </template>
-                        <div v-else class="py-2">
-                          <Text size="xs" color="muted" class="italic">Nenhum campo registrado para este sub-item.</Text>
-                        </div>
-                      </div>
-                    </div>
-                    <div v-else class="py-2 border-l-2 border-slate-200 dark:border-slate-700 pl-3">
-                      <Text size="sm" color="muted" class="italic flex items-center gap-2">
-                        <ExclamationTriangleIcon class="w-4 h-4" />
-                        Nenhum dado registrado para este item.
-                      </Text>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Empty State -->
-            <div v-else class="text-center py-8">
-              <ExclamationTriangleIcon class="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <Text size="sm" color="muted">Nenhuma categoria de desastre disponivel</Text>
-            </div>
-          </div>
-        </div>
+          :municipio="municipio"
+          :m-index="mIndex"
+          @update:municipio="localMunicipios[mIndex] = $event"
+        />
       </div>
 
-      <!-- Empty State Geral -->
-      <div v-if="!localMunicipios || localMunicipios.length === 0" class="bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700/50 p-12 text-center">
+      <!-- Empty State -->
+      <div
+        v-if="!localMunicipios || localMunicipios.length === 0"
+        class="bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700/50 p-12 text-center"
+      >
         <MapPinIcon class="w-16 h-16 text-slate-400 mx-auto mb-4" />
         <Heading level="h3" color="muted">Nenhum municipio vinculado</Heading>
         <Text size="sm" color="muted" class="mt-2">
@@ -175,8 +72,8 @@
       <div class="flex items-center justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700/50">
         <button
           type="button"
-          @click="$emit('cancel')"
           class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          @click="$emit('cancel')"
         >
           Cancelar
         </button>
@@ -185,9 +82,7 @@
           :disabled="form.processing"
           class="px-6 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 rounded-lg transition-colors flex items-center gap-2"
         >
-          <span v-if="form.processing" class="animate-spin">
-            <ArrowPathIcon class="w-4 h-4" />
-          </span>
+          <ArrowPathIcon v-if="form.processing" class="w-4 h-4 animate-spin" />
           Salvar Alteracoes
         </button>
       </div>
@@ -196,16 +91,13 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
+import { ExclamationTriangleIcon, MapPinIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import StatusBadge from '@/Components/Molecules/Decretacoes/StatusBadge.vue';
-import {
-  ExclamationTriangleIcon,
-  MapPinIcon,
-  ChevronDownIcon,
-  ArrowPathIcon,
-} from '@heroicons/vue/24/outline';
+import MunicipioDesastreSection from '@/Components/Organisms/Decretacoes/MunicipioDesastreSection.vue';
+import { formatOnLoad } from '@/composables/ui/useDesastreMask';
 
 const props = defineProps({
   processo: {
@@ -224,25 +116,19 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'cancel']);
 
-const localMunicipios = ref([...props.municipios]);
-const expandedMunicipios = ref([0]);
+const localMunicipios = ref(JSON.parse(JSON.stringify(props.municipios)));
 
-watch(() => props.municipios, (newVal) => {
-  localMunicipios.value = [...newVal];
+watch(() => props.municipios, (val) => {
+  localMunicipios.value = JSON.parse(JSON.stringify(val));
 }, { deep: true });
 
-function toggleMunicipio(index) {
-  const idx = expandedMunicipios.value.indexOf(index);
-  if (idx > -1) {
-    expandedMunicipios.value.splice(idx, 1);
-  } else {
-    expandedMunicipios.value.push(index);
-  }
-}
+onMounted(() => {
+  formatOnLoad(localMunicipios.value);
+});
 
 function handleSubmit() {
   props.form.municipios = localMunicipios.value;
-  emit('submit', props.form);
+  emit('submit');
 }
 </script>
 

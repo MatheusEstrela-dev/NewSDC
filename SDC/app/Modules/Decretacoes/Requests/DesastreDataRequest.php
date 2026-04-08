@@ -41,7 +41,7 @@ class DesastreDataRequest extends FormRequest
             'municipios.*.categorias.*.desastres.*.items.*.campos.*.id' => 'required|integer',
             'municipios.*.categorias.*.desastres.*.items.*.campos.*.titulo' => 'required|string',
             'municipios.*.categorias.*.desastres.*.items.*.campos.*.valor' => 'nullable',
-            'municipios.*.categorias.*.desastres.*.items.*.campos.*.tipo' => 'required|string|in:number,currency,text',
+            'municipios.*.categorias.*.desastres.*.items.*.campos.*.tipo' => 'required|string|in:number,currency,text,radio,select,textarea',
         ];
     }
 }
