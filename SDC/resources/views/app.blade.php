@@ -14,30 +14,6 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=optional" rel="stylesheet" media="print" onload="this.media='all'">
         <noscript><link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=optional" rel="stylesheet"></noscript>
 
-        <!-- Preload de recursos críticos (apenas em produção) -->
-        @if(app()->environment('production'))
-            @php
-                try {
-                    $manifestPath = public_path('build/manifest.json');
-                    if (file_exists($manifestPath)) {
-                        $manifest = json_decode(file_get_contents($manifestPath), true);
-                        $appJs = $manifest['resources/js/app.js']['file'] ?? null;
-                        $appCssArray = $manifest['resources/js/app.js']['css'] ?? [];
-                        $appCss = !empty($appCssArray) ? $appCssArray[0] : null;
-
-                        if ($appCss) {
-                            echo '<link rel="preload" href="/build/' . $appCss . '" as="style">';
-                        }
-                        if ($appJs) {
-                            echo '<link rel="modulepreload" href="/build/' . $appJs . '" as="script">';
-                        }
-                    }
-                } catch (\Exception $e) {
-                    // Ignorar erros de manifest em dev
-                }
-            @endphp
-        @endif
-
         <!-- Scripts -->
         @routes
         @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])

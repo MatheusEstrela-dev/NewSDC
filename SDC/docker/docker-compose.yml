@@ -13,6 +13,9 @@ services:
   # PHP Application (Laravel + FrankenPHP/Octane)
   # ==========================================================================
   app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
     image: newsdc-app:latest
     container_name: newsdc_app
     hostname: app
@@ -346,13 +349,13 @@ services:
     environment:
       NODE_ENV: development
       VITE_HOST: 0.0.0.0
-      VITE_PORT: 5175
+      VITE_PORT: 8081
 
     ports:
-      - "15175:5175" # Vite dev server
+      - "8081:8081" # Vite dev server
 
     # bun install no runtime para aproveitar as configuracoes de DNS
-    command: sh -c "bun install && rm -rf node_modules/.vite && bun run dev -- --host 0.0.0.0 --port 5175"
+    command: sh -c "bun install && rm -rf node_modules/.vite && bun run dev -- --host 0.0.0.0 --port 8081"
 
     deploy:
       resources:
@@ -364,7 +367,7 @@ services:
           memory: 512M
 
     healthcheck:
-      test: [ "CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5175/@vite/client || exit 0" ]
+      test: [ "CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8081/@vite/client || exit 0" ]
       interval: 30s
       timeout: 10s
       retries: 3

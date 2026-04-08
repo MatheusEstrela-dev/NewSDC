@@ -186,11 +186,11 @@ export default defineConfig({
     },
     server: {
         host: '0.0.0.0',
-        port: 5175,
+        port: 8081,
         strictPort: false,
         hmr: {
             host: 'localhost',
-            clientPort: 15175,
+            clientPort: 18081,
             protocol: 'ws',
         },
         watch: {

@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::createIfNotExists('dec_cobrade', function (Blueprint $table) {
+        Schema::create('dec_cobrade', function (Blueprint $table) {
            $table->increments('id')->comment('Identificador do Cobrade');
             $table->string('codigo', 45)->nullable()->comment('codigo do cobrade');
             $table->string('descricao', 45)->nullable()->comment('Descrição do cobrade');
