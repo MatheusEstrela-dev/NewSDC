@@ -25,8 +25,8 @@ RUN install-php-extensions \
     sockets \
     redis
 
-# Copiar Composer
-COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+# Instalar Composer via apk (evita pull do DockerHub bloqueado por proxy)
+RUN apk add --no-cache composer
 
 # Instalar Bun para build de assets (temporario)
 RUN apk add --no-cache curl bash unzip \
@@ -112,9 +112,9 @@ RUN test -f /app/composer.json && \
 # Expor portas (HTTP, HTTPS, Admin API Caddy)
 EXPOSE 80 443 2019
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -sfk https://localhost/health || exit 1
+# Health check — HTTP puro (TLS terminado pelo Azure na borda)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD curl -sf http://localhost:${PORT:-80}/health || exit 1
 
 # Comando padrao
 CMD ["/start.sh"]

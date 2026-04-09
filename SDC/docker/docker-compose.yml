@@ -24,9 +24,11 @@ services:
     volumes:
       # Logs persistentes
       - ../storage/logs:/app/storage/logs
+      # Assets frontend (Vite build) montados para refletir builds locais
+      - ../public/build:/app/public/build:ro
       # Entrypoint e Caddyfile atualizados (sem precisar rebuild)
       - ./frankenphp/scripts/entrypoint.sh:/start.sh:ro
-      - ./frankenphp/Caddyfile.dev:/app/docker/Caddyfile.dev:ro
+      - ./frankenphp/Caddyfile.dev:/app/Caddyfile:ro
       # Certificados Caddy (persistir CA interna entre restarts)
       - newsdc_caddy_data:/data/caddy
       - newsdc_caddy_config:/config/caddy
@@ -50,15 +52,14 @@ services:
       # Laravel
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
-      APP_URL: https://localhost:18443
+      APP_URL: http://localhost:18001
 
-      # Octane FrankenPHP - HTTPS + HTTP/2 + HTTP/3 (QUIC)
-      # FrankenPHP 1.12.1 + Caddy 2.11.2 = HTTPS nativo com auto-cert
+      # Octane FrankenPHP - HTTP para dev local (TLS desnecessario em local)
       OCTANE_SERVER: frankenphp
-      OCTANE_HTTPS: "true"
+      OCTANE_HTTPS: "false"
       FRANKENPHP_WORKERS: ${FRANKENPHP_WORKERS:-4}
       FRANKENPHP_MAX_REQUESTS: ${FRANKENPHP_MAX_REQUESTS:-500}
-      PORT: 443
+      PORT: 80
 
       # Inertia SSR
       INERTIA_SSR_ENABLED: ${INERTIA_SSR_ENABLED:-false}
@@ -87,9 +88,7 @@ services:
       MAIL_PORT: 1025
 
     ports:
-      - "18443:443"      # HTTPS + HTTP/2 (TCP)
-      - "18443:443/udp"  # HTTP/3 QUIC (UDP)
-      - "18001:80"       # HTTP -> redirect HTTPS
+      - "18001:80"       # HTTP dev local
 
     deploy:
       resources:
