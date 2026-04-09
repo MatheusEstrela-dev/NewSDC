@@ -236,7 +236,29 @@ class ProcessoQueryService
     {
         $processoId = $processo->id;
 
-        return $processo->municipios->transform(function ($municipio) use ($processoId) {
+        // Municipios via dec_decreto_municipios (fluxo novo)
+        $municipioIdsDecreto = $processo->municipios->pluck('id');
+
+        // Municipios via dec_entrada_desastres (dados legados sem dec_decreto_municipios)
+        $municipioIdsEntradas = DB::table('dec_entrada_desastres')
+            ->where('entrada_processo_id', $processoId)
+            ->whereNull('deleted_at')
+            ->distinct()
+            ->pluck('municipio_id');
+
+        $allIds = $municipioIdsDecreto->merge($municipioIdsEntradas)->unique()->values();
+
+        if ($allIds->isEmpty()) {
+            return collect();
+        }
+
+        $municipios = DB::table('cedec_municipio')
+            ->whereIn('id', $allIds)
+            ->orderBy('nome', 'asc')
+            ->get()
+            ->map(fn($m) => (object) (array) $m);
+
+        return collect($municipios)->transform(function ($municipio) use ($processoId) {
             $municipioId = $municipio->id;
 
             // Carrega protocolo FIDE do municipio

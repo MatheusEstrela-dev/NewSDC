@@ -70,21 +70,21 @@
 
       <!-- Acoes -->
       <div class="flex items-center justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700/50">
-        <button
+        <Button
           type="button"
-          class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          variant="secondary"
           @click="$emit('cancel')"
         >
           Cancelar
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
+          variant="primary"
+          :loading="form.processing"
           :disabled="form.processing"
-          class="px-6 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 rounded-lg transition-colors flex items-center gap-2"
         >
-          <ArrowPathIcon v-if="form.processing" class="w-4 h-4 animate-spin" />
           Salvar Alteracoes
-        </button>
+        </Button>
       </div>
     </form>
   </div>
@@ -92,9 +92,10 @@
 
 <script setup>
 import { ref, watch, onMounted } from 'vue';
-import { ExclamationTriangleIcon, MapPinIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
+import { ExclamationTriangleIcon, MapPinIcon } from '@heroicons/vue/24/outline';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import StatusBadge from '@/Components/Molecules/Decretacoes/StatusBadge.vue';
 import MunicipioDesastreSection from '@/Components/Organisms/Decretacoes/MunicipioDesastreSection.vue';
 import { formatOnLoad } from '@/composables/ui/useDesastreMask';

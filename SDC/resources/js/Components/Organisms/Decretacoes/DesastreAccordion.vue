@@ -7,7 +7,7 @@
       @click="isExpanded = !isExpanded"
     >
       <div class="flex items-center gap-3 flex-1 min-w-0">
-        <span class="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate">
+        <span class="font-semibold text-base text-slate-700 dark:text-slate-200 truncate">
           {{ desastre.titulo }}
         </span>
         <DesastreTotalBadge :desastre="localDesastre" />
@@ -20,13 +20,13 @@
     <!-- Body -->
     <div v-show="isExpanded" class="p-4 border-t border-slate-200 dark:border-slate-700/50 space-y-4">
       <!-- Informacao -->
-      <p v-if="desastre.informacao" class="text-xs text-slate-500 dark:text-slate-400 italic">
+      <p v-if="desastre.informacao" class="text-sm text-slate-500 dark:text-slate-400 italic">
         {{ desastre.informacao }}
       </p>
 
       <!-- Descricao -->
       <div>
-        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+        <label class="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
           Descricao do Desastre
         </label>
         <textarea
@@ -42,10 +42,10 @@
         <table class="w-full text-sm border-collapse">
           <thead>
             <tr class="bg-slate-100 dark:bg-slate-800/50">
-              <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 w-1/3 border-b border-slate-200 dark:border-slate-700/50">
+              <th class="px-3 py-2 text-left text-sm font-semibold text-slate-500 dark:text-slate-400 w-1/3 border-b border-slate-200 dark:border-slate-700/50">
                 Item
               </th>
-              <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700/50">
+              <th class="px-3 py-2 text-left text-sm font-semibold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700/50">
                 Campos
               </th>
             </tr>
@@ -57,7 +57,7 @@
               class="border-b border-slate-100 dark:border-slate-700/30 last:border-0"
             >
               <td class="px-3 py-3 align-top">
-                <p class="font-medium text-slate-700 dark:text-slate-300 text-xs">{{ item.titulo }}</p>
+                <p class="font-medium text-slate-700 dark:text-slate-300 text-sm">{{ item.titulo }}</p>
                 <p v-if="item.observacao" class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                   {{ item.observacao }}
                 </p>

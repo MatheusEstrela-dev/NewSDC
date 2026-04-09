@@ -2,7 +2,7 @@
   <div>
     <label
       v-if="campo.tipo !== 'radio'"
-      class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1"
+      class="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1"
     >
       {{ campo.titulo }}
     </label>

@@ -14,6 +14,7 @@ use App\Modules\Decretacoes\DTO\DesastreSubmissionDTO;
 use App\Modules\Decretacoes\DTO\ProcessoRequestDTO;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -333,13 +334,28 @@ class DecretacoesController extends Controller
      * @param Request $request Filtros opcionais
      * @return JsonResponse Dados normalizados para BI
      */
-    public function exportPowerBI(Request $request): JsonResponse
+    public function exportPowerBI(Request $request): StreamedResponse
     {
         $data = $this->processoService->getNormalizedDataForPowerBI($request);
 
-        return response()->json([
-            'success' => true,
-            'data' => $data,
+        $filename = 'decretacoes_' . now()->format('Y-m-d_H-i-s') . '.csv';
+
+        return response()->streamDownload(function () use ($data) {
+            $handle = fopen('php://output', 'w');
+
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            if (!empty($data)) {
+                fputcsv($handle, array_keys($data[0]), ';');
+            }
+
+            foreach ($data as $row) {
+                fputcsv($handle, array_values($row), ';');
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 }
