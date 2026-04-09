@@ -7,9 +7,12 @@ namespace App\Modules\Pae\Services;
 use App\Models\User;
 use App\Modules\Pae\DTOs\PaeFormInfoGeraisDTO;
 use App\Modules\Pae\DTOs\PaeFormObjetivoDTO;
+use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeForm;
 use App\Modules\Pae\Models\PaeFormApontamento;
 use App\Modules\Pae\Models\PaeFormConclusaoItem;
+use App\Modules\Pae\Models\PaeProtocolo;
+use App\Modules\Pae\Models\PaeTimeline;
 use App\Modules\Shared\BaseService;
 
 class PaeFormularioService extends BaseService
@@ -53,10 +56,45 @@ class PaeFormularioService extends BaseService
 
     public function finalizar(PaeForm $form, User $user): void
     {
-        $form->update([
-            'status'     => 'FINALIZADO',
-            'updated_by' => $user->id,
+        if ($form->pae_protocolo_id) {
+            $form->update([
+                'status'     => 'FINALIZADO',
+                'updated_by' => $user->id,
+            ]);
+            return;
+        }
+
+        $protocolo = PaeProtocolo::create([
+            'num_protocolo'  => $this->gerarNumProtocolo(),
+            'status'         => PaeProtocoloStatus::NOVO->value,
+            'user_id'        => $user->id,
+            'created_by'     => $user->id,
+            'dt_entrada'     => now()->toDateString(),
+            'arquivado'      => false,
+            'empnto_search'  => $form->emp_responsavel_nome,
+            'pae_empnto_id'  => $form->pae_empnto_id,
         ]);
+
+        PaeTimeline::create([
+            'protocolo_id' => $protocolo->id,
+            'evento'       => 'criacao',
+            'descricao'    => 'Protocolo gerado a partir do formulário PAE.',
+            'user_id'      => $user->id,
+        ]);
+
+        $form->update([
+            'pae_protocolo_id' => $protocolo->id,
+            'status'           => 'FINALIZADO',
+            'updated_by'       => $user->id,
+        ]);
+    }
+
+    private function gerarNumProtocolo(): string
+    {
+        $ano = now()->format('Y');
+        $ultimo = PaeProtocolo::whereYear('created_at', $ano)->count();
+        $seq = str_pad((string) ($ultimo + 1), 3, '0', STR_PAD_LEFT);
+        return now()->format('d.m.Y') . '.' . $seq;
     }
 
     public function formatForView(PaeForm $form): array

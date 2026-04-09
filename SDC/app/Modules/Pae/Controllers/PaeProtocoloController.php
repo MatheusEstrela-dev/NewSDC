@@ -9,6 +9,8 @@ use App\Modules\Pae\Services\PaeProtocoloService;
 use App\Services\Export\CsvExportService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -24,14 +26,40 @@ class PaeProtocoloController extends Controller
     {
         $filters = $request->only(['search', 'status', 'analista_id', 'data_inicio', 'data_fim']);
 
+        $user = $request->user();
+        $podeVerTodos = $user->can('pae.protocolos.atribuir')
+            || $user->hasAnyRole(['Gestor', 'Administrador', 'admin', 'super-admin', 'Desenvolvedor']);
+
+        if (!$podeVerTodos) {
+            $filters['restringir_ao_analista'] = $user->id;
+        }
+
         $protocolos = $this->service->list($filters);
-        $statistics = $this->service->getStatistics();
+        $statistics = $this->service->getStatistics($podeVerTodos ? null : $user->id);
+
+        $analistas = DB::table('users')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($u) => ['value' => (string) $u->id, 'label' => $u->name])
+            ->prepend(['value' => '', 'label' => 'Todos os analistas'])
+            ->values();
+
+        $empreendedores = \Illuminate\Support\Facades\DB::table('pae_empdors')
+            ->orderBy('nome')
+            ->get(['id', 'nome'])
+            ->map(fn ($e) => ['value' => (string) $e->id, 'label' => $e->nome])
+            ->prepend(['value' => '', 'label' => 'Todos os empreendedores'])
+            ->values();
 
         return \Inertia\Inertia::render('PaeProtocolosIndex', [
-            'protocolos' => $protocolos,
-            'statistics' => $statistics,
-            'filters' => $filters,
-            'statusOptions' => PaeProtocoloStatus::toSelectArray(),
+            'protocolos'     => $protocolos,
+            'statistics'     => $statistics,
+            'filters'        => $filters,
+            'statusOptions'  => PaeProtocoloStatus::toSelectArray(),
+            'analistas'      => $analistas,
+            'empreendedores' => $empreendedores,
+            'canAtribuir'    => $podeVerTodos,
+            'podeVerTodos'   => $podeVerTodos,
         ]);
     }
 
@@ -51,7 +79,41 @@ class PaeProtocoloController extends Controller
             ->with('success', "Protocolo {$protocolo->num_protocolo} criado com sucesso.");
     }
 
-    public function changeStatus(Request $request, PaeProtocolo $protocolo): JsonResponse
+    public function historico(PaeProtocolo $paeProtocolo): JsonResponse
+    {
+        $protocolo = $paeProtocolo->load(['timeline.usuario', 'tramitacoes.usuario']);
+
+        $eventoMap = [
+            'criacao'        => ['tipo' => 'criacao',      'titulo' => 'Protocolo Criado'],
+            'status_alterado'=> ['tipo' => 'status',       'titulo' => 'Status Alterado'],
+            'atribuicao'     => ['tipo' => 'atribuicao',   'titulo' => 'Analista Atribuído'],
+            'notificacao'    => ['tipo' => 'notificacao',  'titulo' => 'Notificação Enviada'],
+            'analise'        => ['tipo' => 'analise',      'titulo' => 'Análise Realizada'],
+            'edicao'         => ['tipo' => 'edicao',       'titulo' => 'Protocolo Atualizado'],
+        ];
+
+        $timeline = $protocolo->timeline->map(function ($item) use ($eventoMap) {
+            $map = $eventoMap[$item->evento] ?? ['tipo' => $item->evento, 'titulo' => ucfirst($item->evento)];
+            return [
+                'id'          => $item->id,
+                'tipo'        => $map['tipo'],
+                'titulo'      => $map['titulo'],
+                'descricao'   => $item->descricao,
+                'dataISO'     => $item->created_at?->toIso8601String(),
+                'data'        => $item->created_at?->format('d/m/Y, H:i'),
+                'responsavel' => $item->usuario?->name ?? 'Sistema',
+            ];
+        });
+
+        return response()->json([
+            'protocolo'    => $protocolo->num_protocolo,
+            'analises'     => $protocolo->tramitacoes->count(),
+            'notificacoes' => $protocolo->tramitacoes->where('status', 'notificacao')->count(),
+            'timeline'     => $timeline,
+        ]);
+    }
+
+    public function changeStatus(Request $request, PaeProtocolo $paeProtocolo): JsonResponse
     {
         $data = $request->validate([
             'novo_status' => ['required', 'string', Rule::in(array_keys(PaeProtocoloStatus::toSelectArray()))],
@@ -60,8 +122,8 @@ class PaeProtocoloController extends Controller
 
         $novoStatus = PaeProtocoloStatus::from($data['novo_status']);
 
-        $protocolo = $this->service->changeStatus(
-            $protocolo,
+        $paeProtocolo = $this->service->changeStatus(
+            $paeProtocolo,
             $novoStatus,
             $request->user(),
             $data['obs'] ?? ''
@@ -70,11 +132,31 @@ class PaeProtocoloController extends Controller
         return response()->json([
             'message' => "Status atualizado para {$novoStatus->getLabel()}.",
             'protocolo' => [
-                'id' => $protocolo->id,
-                'status' => $protocolo->status->value,
-                'status_label' => $protocolo->status->getLabel(),
+                'id' => $paeProtocolo->id,
+                'status' => $paeProtocolo->status->value,
+                'status_label' => $paeProtocolo->status->getLabel(),
             ],
         ]);
+    }
+
+    public function assign(Request $request, PaeProtocolo $paeProtocolo): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'analista_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $analista = \App\Models\User::findOrFail($data['analista_id']);
+
+        $this->service->atribuir($paeProtocolo, $analista, $request->user());
+
+        return redirect()->back()->with('success', "Analista {$analista->name} atribuído com sucesso.");
+    }
+
+    public function destroy(PaeProtocolo $paeProtocolo): \Illuminate\Http\RedirectResponse
+    {
+        $this->service->delete($paeProtocolo);
+
+        return redirect()->back()->with('success', 'Protocolo arquivado/excluído com sucesso.');
     }
 
     public function export(Request $request): StreamedResponse

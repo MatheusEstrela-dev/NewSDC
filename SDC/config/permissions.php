@@ -106,6 +106,7 @@ return [
                 'create' => 'pae.protocolos.create',
                 'edit' => 'pae.protocolos.edit',
                 'delete' => 'pae.protocolos.delete',
+                'atribuir' => 'pae.protocolos.atribuir',
                 'export' => 'pae.protocolos.export',
             ],
         ],
@@ -242,6 +243,7 @@ return [
             'pae.protocolos.view',
             'pae.protocolos.create',
             'pae.protocolos.edit',
+            'pae.protocolos.atribuir',
             'pae.protocolos.export',
             // RAT - CRUD completo exceto delete
             'rat.protocolos.view',
@@ -301,6 +303,7 @@ return [
             'pae.protocolos.view',
             'pae.protocolos.create',
             'pae.protocolos.edit',
+            'pae.protocolos.atribuir',
             // RAT - view, create, edit
             'rat.protocolos.view',
             'rat.protocolos.create',

@@ -55,11 +55,16 @@
                   :show-edit="canEdit"
                   :show-history="true"
                   :show-archive="true"
+                  :show-options="true"
+                  :show-assign="canAtribuir"
                   @view="$emit('view', protocolo.id)"
                   @print="$emit('print', protocolo.id)"
                   @edit="$emit('edit', protocolo.id)"
                   @history="$emit('history', protocolo.id)"
                   @archive="$emit('archive', protocolo.id)"
+                  @delete="$emit('delete', protocolo.id)"
+                  @options="$emit('options', protocolo.id)"
+                  @assign="$emit('assign', protocolo.id)"
                 />
               </div>
             </td>
@@ -93,7 +98,11 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  canAtribuir: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'archive']);
+defineEmits(['view', 'print', 'edit', 'history', 'archive', 'delete', 'options', 'assign']);
 </script>

@@ -21,7 +21,7 @@ class UpdateProcessoRequest extends FormRequest
             'municipio_id'                      => 'sometimes|integer',
             'cobrade_id'                        => 'nullable|integer',
             'tipo_desastre_id'                  => 'nullable|integer',
-            'situacao_anormalidade'             => 'nullable|string|in:N1,SE',
+            'situacao_anormalidade'             => 'nullable|string|in:N1,SE,ECP',
             'data_ocorrencia'                   => 'nullable|date',
             'data_vencimento_decreto'           => 'nullable|date',
             'analista_id'                       => 'nullable|string|max:255',

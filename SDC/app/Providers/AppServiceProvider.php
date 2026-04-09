@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Log\Context\Repository as ContextRepository;
+use Laravel\Octane\Events\RequestReceived;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,6 +31,13 @@ class AppServiceProvider extends ServiceProvider
 
         if (app()->environment('production')) {
             \URL::forceScheme('https');
+        }
+
+        // Spatie permissions: reset cache entre requests no Octane
+        if (class_exists(\Laravel\Octane\Events\RequestReceived::class)) {
+            $this->app['events']->listen(RequestReceived::class, function () {
+                app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+            });
         }
 
         // Overrides para NativePHP / Mobile / Android

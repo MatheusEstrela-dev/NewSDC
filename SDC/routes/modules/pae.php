@@ -43,9 +43,21 @@ Route::prefix('pae')->name('pae.')->group(function () {
         ->name('protocolos.store')
         ->middleware('can:pae.protocolos.create');
 
+    Route::get('/protocolo/{paeProtocolo}/historico', [PaeProtocoloController::class, 'historico'])
+        ->name('protocolos.historico')
+        ->middleware('can:pae.protocolos.view');
+
     Route::post('/protocolo/{paeProtocolo}/status', [PaeProtocoloController::class, 'changeStatus'])
         ->name('protocolos.status')
         ->middleware('can:pae.protocolos.edit');
+
+    Route::put('/protocolo/{paeProtocolo}/assign', [PaeProtocoloController::class, 'assign'])
+        ->name('protocolo.assign')
+        ->middleware('can:pae.protocolos.atribuir');
+
+    Route::delete('/protocolos/{paeProtocolo}', [PaeProtocoloController::class, 'destroy'])
+        ->name('protocolos.destroy')
+        ->middleware('can:pae.protocolos.delete');
 
     Route::get('/export', [PaeProtocoloController::class, 'export'])
         ->name('export')

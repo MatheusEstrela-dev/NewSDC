@@ -330,6 +330,7 @@ const origensOptions = [
 const situacaoOptions = [
   { value: 'N1', label: 'N1 - Nivel 1' },
   { value: 'SE', label: 'SE - Situacao de Emergencia' },
+  { value: 'ECP', label: 'ECP - Estado de Calamidade Publica' },
 ];
 
 const isRegistro = computed(() => props.form.status === 'Registro');

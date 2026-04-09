@@ -18,8 +18,12 @@ class PaeProtocoloService extends BaseService
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = PaeProtocolo::query()
-            ->with(['analistaAtual', 'usuario'])
+            ->with(['analistaAtual:id,name', 'empreendimento:id,nome'])
             ->ativo();
+
+        if (!empty($filters['restringir_ao_analista'])) {
+            $query->where('analista_atual_id', $filters['restringir_ao_analista']);
+        }
 
         $query = $this->applySearch($query, $filters['search'] ?? null, [
             'num_protocolo', 'sigibar', 'sei_numero', 'empnto_search',
@@ -102,31 +106,57 @@ class PaeProtocoloService extends BaseService
 
     public function atribuir(PaeProtocolo $protocolo, User $analista, User $user): PaeProtocolo
     {
+        $analistaJaAtribuido = $protocolo->analista_atual_id === $analista->id;
+        $statusAnterior = $protocolo->status;
+        $statusJaNotificacao = $statusAnterior === PaeProtocoloStatus::NOTIFICACAO;
+
+        if ($analistaJaAtribuido) {
+            return $protocolo;
+        }
+
         $protocolo->update([
             'analista_atual_id' => $analista->id,
+            'status' => PaeProtocoloStatus::NOTIFICACAO->value,
             'updated_by' => $user->id,
         ]);
 
-        $this->registrarTimeline(
-            $protocolo,
-            'atribuicao',
-            "Protocolo atribuído ao analista {$analista->name}.",
-            $user
-        );
+        if (!$statusJaNotificacao) {
+            PaeTramitacao::create([
+                'protocolo_id' => $protocolo->id,
+                'user_id' => $user->id,
+                'status' => PaeProtocoloStatus::NOTIFICACAO->value,
+                'obs' => "Analista {$analista->name} atribuído.",
+            ]);
+        }
 
-        return $this->changeStatus($protocolo, PaeProtocoloStatus::NOTIFICACAO, $user, 'Atribuição de analista.');
+        $descricao = $analistaJaAtribuido
+            ? "Analista reatribuído: {$analista->name}."
+            : "Protocolo atribuído ao analista {$analista->name}. Status: {$statusAnterior->getLabel()} → Notificação.";
+
+        $this->registrarTimeline($protocolo, 'atribuicao', $descricao, $user);
+
+        return $protocolo->fresh();
     }
 
-    public function getStatistics(): array
+    public function delete(PaeProtocolo $paeProtocolo): void
     {
+        $paeProtocolo->delete();
+    }
+
+    public function getStatistics(?int $analistaId = null): array
+    {
+        $base = fn() => $analistaId
+            ? PaeProtocolo::ativo()->where('analista_atual_id', $analistaId)
+            : PaeProtocolo::ativo();
+
         return [
-            'total' => PaeProtocolo::ativo()->count(),
-            'novo' => PaeProtocolo::ativo()->where('status', PaeProtocoloStatus::NOVO->value)->count(),
-            'analise' => PaeProtocolo::ativo()->where('status', PaeProtocoloStatus::ANALISE->value)->count(),
-            'aprovado' => PaeProtocolo::ativo()->where('status', PaeProtocoloStatus::APROVADO->value)->count(),
-            'ccpae' => PaeProtocolo::ativo()->where('status', PaeProtocoloStatus::CCPAE->value)->count(),
-            'ativo_3_anos' => PaeProtocolo::ativo()->where('status', PaeProtocoloStatus::ATIVO_3_ANOS->value)->count(),
-            'vencidos' => PaeProtocolo::ativo()
+            'total' => $base()->count(),
+            'novo' => $base()->where('status', PaeProtocoloStatus::NOVO->value)->count(),
+            'analise' => $base()->where('status', PaeProtocoloStatus::ANALISE->value)->count(),
+            'aprovado' => $base()->where('status', PaeProtocoloStatus::APROVADO->value)->count(),
+            'ccpae' => $base()->where('status', PaeProtocoloStatus::CCPAE->value)->count(),
+            'ativo_3_anos' => $base()->where('status', PaeProtocoloStatus::ATIVO_3_ANOS->value)->count(),
+            'vencidos' => $base()
                 ->whereNotNull('limite_analise')
                 ->where('limite_analise', '<', now()->toDateString())
                 ->whereNotIn('status', [
