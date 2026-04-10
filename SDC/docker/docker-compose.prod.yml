@@ -289,6 +289,10 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
       GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: https://grafana.${APP_DOMAIN}
+      GF_SERVER_DOMAIN: grafana.${APP_DOMAIN}
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
 
     volumes:
       - grafana_data:/var/lib/grafana
@@ -296,9 +300,24 @@ services:
 
     networks:
       - sdc_monitoring
+      - sdc_external
 
     depends_on:
       - prometheus
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=sdc_external"
+      # Rota principal: grafana.seudominio.com
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${APP_DOMAIN}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.grafana.service=grafana"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      # Middleware: IP allowlist (apenas acesso interno/VPN)
+      - "traefik.http.routers.grafana.middlewares=grafana-ipallowlist"
+      - "traefik.http.middlewares.grafana-ipallowlist.ipallowlist.sourcerange=${GRAFANA_ALLOWED_IPS:-127.0.0.1/32}"
 
 # ==========================================================================
 # Networks
