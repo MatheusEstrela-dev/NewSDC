@@ -109,6 +109,7 @@ class PaeFormularioService extends BaseService
 
         return [
             'id'                      => $form->id,
+            'pae_protocolo_id'        => $form->pae_protocolo_id,
             'barragem'                => $form->barragem_nome,
             'municipio_id'            => $form->municipio_id,
             'pae_empnto_id'           => $form->pae_empnto_id,
