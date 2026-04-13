@@ -105,4 +105,53 @@ class PaeFormularioControllerTest extends TestCase
 
         $this->assertDatabaseMissing('pae_form_apontamentos', ['pae_form_id' => $form->id]);
     }
+
+    public function test_show_com_protocolo_id_retorna_prop_protocolo(): void
+    {
+        $perm = Permission::firstOrCreate(
+            ['name' => 'pae.empreendimentos.view', 'guard_name' => 'web']
+        );
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo($perm);
+
+        $protocolo = \App\Modules\Pae\Models\PaeProtocolo::create([
+            'num_protocolo' => '13.04.2026.001',
+            'status'        => 'novo',
+            'user_id'       => $user->id,
+            'created_by'    => $user->id,
+            'dt_entrada'    => now()->toDateString(),
+            'arquivado'     => false,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get("/pae/protocolo?protocolo_id={$protocolo->id}");
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('Pae')
+            ->has('protocolo')
+            ->where('protocolo.id', $protocolo->id)
+            ->where('protocolo.num_protocolo', '13.04.2026.001')
+            ->where('protocolo.status', 'novo')
+        );
+    }
+
+    public function test_show_sem_protocolo_id_retorna_protocolo_null(): void
+    {
+        $perm = Permission::firstOrCreate(
+            ['name' => 'pae.empreendimentos.view', 'guard_name' => 'web']
+        );
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo($perm);
+
+        $response = $this->actingAs($user)->get('/pae/protocolo');
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('Pae')
+            ->where('protocolo', null)
+        );
+    }
 }
