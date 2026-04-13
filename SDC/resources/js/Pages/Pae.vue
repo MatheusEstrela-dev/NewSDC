@@ -3,12 +3,16 @@
         <Head title="Gestão de PAE" />
 
         <div class="pae-container">
-            <PaeHeader :empreendimento="empreendimento" :last-update="props.lastUpdate" />
+            <PaeHeader
+                :empreendimento="empreendimento"
+                :last-update="props.lastUpdate"
+                :protocolo="props.protocolo"
+            />
 
             <PaeBreadcrumb
-                v-if="props.formulario"
-                :situacao="props.formulario.status ?? 'novo'"
-                :num-protocolo="props.formulario.num_protocolo ?? ''"
+                v-if="props.protocolo"
+                :situacao="props.protocolo.status"
+                :num-protocolo="props.protocolo.num_protocolo"
             />
 
             <PaeForm
@@ -45,6 +49,10 @@ const props = defineProps({
         default: () => ({}),
     },
     formulario: {
+        type: Object,
+        default: null,
+    },
+    protocolo: {
         type: Object,
         default: null,
     },
