@@ -258,9 +258,9 @@ function mapProtocolo(p) {
   return {
     id: p.id,
     protocoloNumero: p.num_protocolo ?? p.protocoloNumero ?? '',
-    empreendedor: p.empnto_search ?? p.empreendedor ?? 'N/A',
-    estrutura: p.empnto_search ?? p.estrutura ?? '',
-    analista: p.analistaAtual?.name ?? p.analista ?? 'Não atribuído',
+    empreendedor: p.empreendimento?.empdor?.nome ?? p.empreendedor ?? 'N/A',
+    estrutura: p.empreendimento?.nome ?? p.estrutura ?? '',
+    analista: p.analista_atual?.name ?? p.analistaAtual?.name ?? p.analista ?? 'Não atribuído',
     situacao,
     dataEntrada: normalizeDateBR(p.dt_entrada ?? p.dataEntrada),
     limiteAnalise: normalizeDateBR(limiteISO ?? p.limiteAnalise),
@@ -364,13 +364,11 @@ function handlePageChange(page) {
 }
 
 function handleView(id) {
-  // TODO: quando existir página real de detalhes do protocolo PAE, trocar para rota correta.
-  router.visit(route('pae.index'));
+  router.visit(route('pae.index', { protocolo_id: id }));
 }
 
 function handleEdit(id) {
-  // TODO: quando existir edicao por protocolo, trocar para rota correta.
-  router.visit(route('pae.index'));
+  router.visit(route('pae.index', { protocolo_id: id }));
 }
 
 // Modal de Confirmacao de Exclusao / Arquivamento
