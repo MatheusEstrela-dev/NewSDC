@@ -15,6 +15,10 @@ Route::prefix('pae')->name('pae.')->group(function () {
         ->name('index')
         ->middleware('can:pae.empreendimentos.view');
 
+    Route::get('/protocolo/{paeProtocolo}/edit', [PaeFormularioController::class, 'edit'])
+        ->name('protocolo.edit')
+        ->middleware('can:pae.empreendimentos.edit');
+
     Route::post('/formulario', [PaeFormularioController::class, 'store'])
         ->name('formulario.store')
         ->middleware('can:pae.empreendimentos.create');
@@ -38,6 +42,10 @@ Route::prefix('pae')->name('pae.')->group(function () {
     Route::put('/formulario/{paeForm}/finalizar', [PaeFormularioController::class, 'finalizar'])
         ->name('formulario.finalizar')
         ->middleware('can:pae.empreendimentos.edit');
+
+    Route::get('/protocolo/proximo-numero', [PaeProtocoloController::class, 'proximoNumero'])
+        ->name('protocolos.proximo-numero')
+        ->middleware('can:pae.protocolos.create');
 
     Route::post('/protocolo', [PaeProtocoloController::class, 'store'])
         ->name('protocolos.store')

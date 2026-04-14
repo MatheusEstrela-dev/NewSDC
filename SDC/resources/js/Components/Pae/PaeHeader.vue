@@ -1,17 +1,6 @@
 <template>
   <div class="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-8 gap-4">
     <div class="flex-1 min-w-0">
-      <div v-if="protocolo" class="flex items-center gap-2 mb-2">
-        <span class="text-xs font-mono font-semibold text-slate-400 uppercase tracking-wider">
-          #{{ protocolo.num_protocolo }}
-        </span>
-        <span
-          v-if="protocolo.status"
-          :class="['px-2 py-0.5 rounded text-xs font-bold border', statusClass]"
-        >
-          {{ statusLabel }}
-        </span>
-      </div>
       <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight break-words">Ficha do Empreendimento</h1>
       <p class="text-base sm:text-lg md:text-xl text-blue-400 font-light mt-1 flex flex-wrap items-center gap-2">
         <span class="break-words">{{ empreendimento.nome }}</span>
@@ -27,16 +16,24 @@
     </div>
     <div class="text-left md:text-right flex-shrink-0">
       <span class="text-xs text-slate-500 uppercase tracking-wider font-bold block mb-1">
-        Última Atualização
+        Protocolo
       </span>
-      <span class="text-sm text-slate-600 dark:text-slate-300 font-mono break-all md:break-normal">{{ lastUpdate }}</span>
+      <span v-if="protocolo" class="text-lg font-mono font-bold text-slate-700 dark:text-slate-200">
+        #{{ protocolo.num_protocolo }}
+      </span>
+      <span v-else class="text-sm text-slate-400 font-mono">—</span>
+      <span
+        v-if="protocolo?.status"
+        :class="['ml-2 px-2 py-0.5 rounded text-xs font-bold border', statusClass]"
+      >
+        {{ statusLabel }}
+      </span>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import { formatDateTime } from '../../utils/dateFormatter';
 
 const STATUS_LABELS = {
     novo:               'Novo',
@@ -77,18 +74,10 @@ const props = defineProps({
         type: Object,
         required: true,
     },
-    lastUpdate: {
-        type: String,
-        default: null,
-    },
     protocolo: {
         type: Object,
         default: null,
     },
-});
-
-const lastUpdate = computed(() => {
-    return props.lastUpdate || formatDateTime(new Date());
 });
 
 const statusLabel = computed(() =>

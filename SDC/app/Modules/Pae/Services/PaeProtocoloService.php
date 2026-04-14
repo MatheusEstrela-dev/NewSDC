@@ -6,6 +6,7 @@ namespace App\Modules\Pae\Services;
 
 use App\Models\User;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
+use App\Modules\Pae\Models\PaeEmpnto;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Models\PaeTramitacao;
 use App\Modules\Pae\Models\PaeTimeline;
@@ -18,7 +19,7 @@ class PaeProtocoloService extends BaseService
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = PaeProtocolo::query()
-            ->with(['analistaAtual:id,name', 'empreendimento:id,nome'])
+            ->with(['analistaAtual:id,name', 'empreendimento:id,pae_empdor_id,nome', 'empreendimento.empdor:id,nome'])
             ->ativo();
 
         if (!empty($filters['restringir_ao_analista'])) {
@@ -53,8 +54,22 @@ class PaeProtocoloService extends BaseService
         return PaeProtocolo::with(['analistaAtual', 'tramitacoes.usuario', 'timeline.usuario'])->find($id);
     }
 
+    public function gerarNumProtocolo(): string
+    {
+        $ano = now()->format('Y');
+        $ultimo = PaeProtocolo::whereYear('created_at', $ano)->max(
+            \Illuminate\Support\Facades\DB::raw(
+                "CAST(SUBSTRING_INDEX(num_protocolo, '.', -1) AS UNSIGNED)"
+            )
+        ) ?? 0;
+        $seq = str_pad((string) ($ultimo + 1), 3, '0', STR_PAD_LEFT);
+        return now()->format('d.m.Y') . '.' . $seq;
+    }
+
     public function create(array $data, User $user): PaeProtocolo
     {
+        $data['num_protocolo'] ??= $this->gerarNumProtocolo();
+
         $protocolo = PaeProtocolo::create([
             ...$data,
             'status' => PaeProtocoloStatus::NOVO->value,
@@ -62,6 +77,15 @@ class PaeProtocoloService extends BaseService
             'created_by' => $user->id,
             'dt_entrada' => now()->toDateString(),
         ]);
+
+        if (!empty($data['pae_empnto_id'])) {
+            $empnto = PaeEmpnto::with('empdor:id,nome')->find($data['pae_empnto_id']);
+            if ($empnto) {
+                $protocolo->update([
+                    'empnto_search' => trim(($empnto->empdor?->nome ? $empnto->empdor->nome . ' - ' : '') . $empnto->nome),
+                ]);
+            }
+        }
 
         $this->registrarTimeline($protocolo, 'criacao', 'Protocolo criado no sistema SDC.', $user);
 

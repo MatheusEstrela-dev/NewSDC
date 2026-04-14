@@ -164,11 +164,24 @@ fi
 
 export PATH="/usr/local/bin:$PATH"
 
-# HTTP puro em 0.0.0.0 — TLS e terminado pelo Azure App Service na borda
-echo "Porta: ${PORT:-80} (HTTP — TLS terminado pelo Azure)"
-exec php artisan octane:frankenphp \
-    --host=0.0.0.0 \
-    --port=${PORT:-80} \
-    --workers=${FRANKENPHP_WORKERS:-auto} \
-    --max-requests=${FRANKENPHP_MAX_REQUESTS:-500} \
-    --no-interaction
+# Determinar modo HTTPS
+# OCTANE_HTTPS=true  -> TLS gerenciado pelo FrankenPHP/Caddy com Caddyfile customizado (local/dev)
+# OCTANE_HTTPS=false -> HTTP puro, TLS terminado na borda (Azure/GCP)
+if [ "${OCTANE_HTTPS:-false}" = "true" ] && [ -n "${OCTANE_CADDYFILE:-}" ] && [ -f "${OCTANE_CADDYFILE}" ]; then
+    echo "Porta: ${PORT:-443} (HTTPS — Caddyfile: ${OCTANE_CADDYFILE})"
+    exec php artisan octane:frankenphp \
+        --host=0.0.0.0 \
+        --port=${PORT:-443} \
+        --workers=${FRANKENPHP_WORKERS:-auto} \
+        --max-requests=${FRANKENPHP_MAX_REQUESTS:-500} \
+        --caddyfile="${OCTANE_CADDYFILE}" \
+        --no-interaction
+else
+    echo "Porta: ${PORT:-80} (HTTP — TLS terminado pelo Azure)"
+    exec php artisan octane:frankenphp \
+        --host=0.0.0.0 \
+        --port=${PORT:-80} \
+        --workers=${FRANKENPHP_WORKERS:-auto} \
+        --max-requests=${FRANKENPHP_MAX_REQUESTS:-500} \
+        --no-interaction
+fi

@@ -19,6 +19,7 @@ readonly class PaeFormInfoGeraisDTO
         public ?int $nivelEmergencia = null,
         public ?int $municipioId = null,
         public ?int $paeEmpntoId = null,
+        public ?int $paeProtocoloId = null,
     ) {}
 
     public static function fromArray(array $data, int $userId): self
@@ -32,10 +33,11 @@ readonly class PaeFormInfoGeraisDTO
             coordenadorMunDefCiv: $data['coordenador_mun_def_civ'] ?? null,
             coordenadorMunCompdec: $data['coordenador_mun_compdec'] ?? null,
             metodoConstrutivo: $data['metodo_construtivo'] ?? null,
-            numeroZas: isset($data['numero_zas']) ? (int) $data['numero_zas'] : null,
-            nivelEmergencia: isset($data['nivel_emergencia']) ? (int) $data['nivel_emergencia'] : null,
+            numeroZas: isset($data['numero_zas']) && is_numeric($data['numero_zas']) ? (int) $data['numero_zas'] : null,
+            nivelEmergencia: isset($data['nivel_emergencia']) && is_numeric($data['nivel_emergencia']) ? (int) $data['nivel_emergencia'] : null,
             municipioId: isset($data['municipio_id']) ? (int) $data['municipio_id'] : null,
             paeEmpntoId: isset($data['pae_empnto_id']) ? (int) $data['pae_empnto_id'] : null,
+            paeProtocoloId: isset($data['pae_protocolo_id']) ? (int) $data['pae_protocolo_id'] : null,
         );
     }
 
@@ -53,6 +55,7 @@ readonly class PaeFormInfoGeraisDTO
             'nivel_emergencia'     => $this->nivelEmergencia,
             'municipio_id'         => $this->municipioId,
             'pae_empnto_id'        => $this->paeEmpntoId,
+            'pae_protocolo_id'     => $this->paeProtocoloId,
             'updated_by'           => $this->userId,
         ];
     }

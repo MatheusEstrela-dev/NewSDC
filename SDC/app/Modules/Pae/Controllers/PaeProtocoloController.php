@@ -63,19 +63,25 @@ class PaeProtocoloController extends Controller
         ]);
     }
 
+    public function proximoNumero(): JsonResponse
+    {
+        return response()->json([
+            'num_protocolo' => $this->service->gerarNumProtocolo(),
+        ]);
+    }
+
     public function store(Request $request): \Illuminate\Http\RedirectResponse
     {
         $data = $request->validate([
-            'num_protocolo' => ['required', 'string', 'max:50', 'unique:pae_protocolos,num_protocolo'],
-            'sigibar' => ['nullable', 'string', 'max:100'],
-            'sei_numero' => ['nullable', 'string', 'max:100'],
+            'sigibar'       => ['nullable', 'string', 'max:100'],
+            'sei_numero'    => ['nullable', 'string', 'max:100'],
             'pae_empnto_id' => ['nullable', 'integer', 'exists:pae_empntos,id'],
-            'obs' => ['nullable', 'string'],
+            'obs'           => ['nullable', 'string'],
         ]);
 
         $protocolo = $this->service->create($data, $request->user());
 
-        return redirect()->route('pae.protocolos.index')
+        return redirect()->route('pae.index', ['protocolo_id' => $protocolo->id])
             ->with('success', "Protocolo {$protocolo->num_protocolo} criado com sucesso.");
     }
 

@@ -51,8 +51,9 @@
 </template>
 
 <script setup>
-import { ref, h, reactive } from 'vue';
+import { ref, h, reactive, computed } from 'vue';
 import { usePaeFormulario } from '@/composables/pae/usePaeFormulario';
+import { usePage } from '@inertiajs/vue3';
 import PaeFormTabs from './PaeFormTabs.vue';
 import PaeFormInfoGerais from './PaeFormInfoGerais.vue';
 import PaeFormObjetivoContexto from './PaeFormObjetivoContexto.vue';
@@ -83,6 +84,11 @@ const props = defineProps({
 });
 
 const activeSubTab = ref(1);
+const page = usePage();
+
+// ID local: captura o ID retornado pelo backend após o primeiro save (POST)
+// e tem prioridade sobre os props (que podem ainda não ter sido atualizados)
+const localFormularioId = ref(props.formulario?.id ?? null);
 
 const rat = reactive(usePaeFormulario(props.empreendimento, props.formulario));
 
@@ -109,25 +115,39 @@ const tabConfig = [
   },
 ];
 
-const formularioId = props.formulario?.id ?? props.empreendimento?.formulario_id ?? null;
+const formularioId = computed(
+  () => localFormularioId.value
+    ?? props.formulario?.id
+    ?? props.empreendimento?.formulario_id
+    ?? null
+);
 
-function handleSaveInfoGerais() {
-  rat.saveInfoGerais(formularioId);
+function handleSaveInfoGerais(data) {
+  Object.assign(rat.infoGerais, data);
+  // Após o POST de criação, o Inertia recarrega a página com o novo formulario
+  // no prop. Capturamos o ID e avançamos para a próxima aba automaticamente.
+  rat.saveInfoGerais(formularioId.value, (newId) => {
+    if (newId) {
+      localFormularioId.value = newId;
+      activeSubTab.value = 2;
+    }
+  });
 }
 
-function handleSaveObjetivo() {
-  rat.saveObjetivoContexto(formularioId);
+function handleSaveObjetivo(data) {
+  Object.assign(rat.objetivoContexto, data);
+  rat.saveObjetivoContexto(formularioId.value);
 }
 
 function handleSaveApontamentos() {
-  rat.saveApontamentos(formularioId);
+  rat.saveApontamentos(formularioId.value);
 }
 
 function handleSaveConclusao() {
-  rat.saveConclusao(formularioId);
+  rat.saveConclusao(formularioId.value);
 }
 
 function handleFinalizar() {
-  rat.finalizarRelatorio(formularioId);
+  rat.finalizarRelatorio(formularioId.value);
 }
 </script>
