@@ -50,6 +50,7 @@ services:
       FRANKENPHP_WORKERS: ${FRANKENPHP_WORKERS:-4}
       FRANKENPHP_MAX_REQUESTS: ${FRANKENPHP_MAX_REQUESTS:-500}
       PORT: 443
+      OCTANE_CADDYFILE: /etc/caddy/Caddyfile.local
 
       # Cache/Session (Redis compartilhado)
       CACHE_DRIVER: redis
@@ -78,6 +79,10 @@ services:
       - ../../database/migrations:/app/database/migrations
       - ../../tests:/app/tests
       - ../storage/logs:/app/storage/logs
+      - ../../public:/app/public
+      - ../../resources:/app/resources
+      - ./scripts/entrypoint.sh:/start.sh:ro
+      - ./Caddyfile.local:/etc/caddy/Caddyfile.local:ro
 
     networks:
       - sdc_network

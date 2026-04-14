@@ -22,11 +22,35 @@
 }
 
 .form-input:focus {
-  @apply border-blue-500 dark:border-blue-500 bg-white dark:bg-slate-900 shadow-[0_0_0_1px_rgba(59,130,246,0.5)];
+  @apply border-blue-500 dark:border-blue-500 bg-white dark:bg-slate-900;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5);
 }
 
 .form-input::placeholder {
   @apply text-slate-400 dark:text-slate-500;
+}
+
+/* Estado preenchido — verde igual ao módulo RAT */
+.form-input.form-input-filled {
+  @apply border-2 border-emerald-500 bg-emerald-50 text-emerald-900;
+  @apply dark:bg-emerald-900/20 dark:text-emerald-100 dark:border-emerald-500;
+  @apply hover:border-emerald-500 shadow-sm shadow-emerald-500/10;
+}
+
+.form-input.form-input-filled:focus {
+  @apply border-emerald-500 ring-2 ring-emerald-500/30;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4);
+}
+
+.form-select.form-select-filled {
+  @apply border-2 border-emerald-500 bg-emerald-50 text-emerald-900;
+  @apply dark:bg-emerald-900/20 dark:text-emerald-100 dark:border-emerald-500;
+  @apply hover:border-emerald-500 shadow-sm shadow-emerald-500/10;
+}
+
+.form-select.form-select-filled:focus {
+  @apply border-emerald-500 ring-2 ring-emerald-500/30;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4);
 }
 
 /* Campos Readonly */
@@ -98,6 +122,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -112,6 +137,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -162,15 +188,15 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   .pae-container {
     padding: 1rem;
   }
-  
+
   .pae-card {
     @apply rounded-lg;
   }
-  
+
   .pae-card-header {
     @apply px-4 py-3;
   }
-  
+
   .pae-card-title {
     @apply text-base;
   }
@@ -190,6 +216,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 /* Responsive form fields */
 @media (max-width: 640px) {
+
   .form-input,
   .form-select {
     @apply text-sm;
@@ -203,4 +230,3 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     @apply -mx-4 px-4;
   }
 }
-

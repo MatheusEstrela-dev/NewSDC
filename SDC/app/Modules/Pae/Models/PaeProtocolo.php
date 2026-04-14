@@ -35,6 +35,7 @@ class PaeProtocolo extends Model
         'ccpae_venc',
         'ccpae',
         'obs',
+        'empnto_search',
     ];
 
     protected $casts = [
@@ -48,6 +49,11 @@ class PaeProtocolo extends Model
     public function analistaAtual(): BelongsTo
     {
         return $this->belongsTo(User::class, 'analista_atual_id');
+    }
+
+    public function empreendimento(): BelongsTo
+    {
+        return $this->belongsTo(PaeEmpnto::class, 'pae_empnto_id');
     }
 
     public function usuario(): BelongsTo

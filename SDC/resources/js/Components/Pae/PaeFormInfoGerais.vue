@@ -47,6 +47,7 @@
       <FormField
         label="Número de ZAS"
         v-model="local.numero_zas"
+        type="number"
         placeholder="Número de ZAS"
       />
       <FormSelect

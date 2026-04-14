@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { useToast } from '@/composables/useToast';
 
 const OBJETIVO_DEFAULT = 'Analisar os requisitos necessários para a aprovação da Segunda Seção do Plano de Ação de Emergência, relativos à competência do órgão Estadual de Proteção e Defesa Civil, expressa no Decreto Estadual n. 48.078, de 05 de novembro de 2020 e notificar o empreendedor sobre as inconsistências observadas para devida correção.';
 
@@ -11,6 +12,7 @@ const CONTEXTUALIZACAO_DEFAULT = 'O PAE é analisado conforme a Resolução GMG 
  */
 export function usePaeFormulario(empreendimento = {}, formulario = null) {
   const saving = ref(false);
+  const { show: toast } = useToast();
   let nextId = 10;
 
   function makeId() {
@@ -21,6 +23,7 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
     barragem:                formulario?.barragem                ?? empreendimento?.nome               ?? '',
     municipio_id:            formulario?.municipio_id             ?? empreendimento?.municipio_id       ?? '',
     pae_empnto_id:           formulario?.pae_empnto_id            ?? empreendimento?.id                 ?? '',
+    pae_protocolo_id:        formulario?.pae_protocolo_id         ?? '',
     coordenador_pae:         formulario?.coordenador_pae          ?? empreendimento?.coordenador        ?? '',
     email:                   formulario?.email                    ?? empreendimento?.email_coord        ?? '',
     coordenador_mun_def_civ: formulario?.coordenador_mun_def_civ  ?? '',
@@ -48,14 +51,20 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
       : [{ id: makeId(), text: '', children: [] }]
   );
 
-  function saveInfoGerais(id) {
+  function saveInfoGerais(id, onCreated) {
     saving.value = true;
     if (!id) {
       router.post('/pae/formulario', infoGerais.value, {
+        onSuccess: (page) => {
+          toast('Informações gerais salvas com sucesso.');
+          const newId = page.props?.formulario?.id ?? null;
+          if (onCreated) onCreated(newId);
+        },
         onFinish: () => { saving.value = false; },
       });
     } else {
       router.put(`/pae/formulario/${id}/infogerais`, infoGerais.value, {
+        onSuccess: () => toast('Informações gerais atualizadas.'),
         onFinish: () => { saving.value = false; },
       });
     }
@@ -64,6 +73,7 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
   function saveObjetivoContexto(id) {
     saving.value = true;
     router.put(`/pae/formulario/${id}/objetivo`, objetivoContexto.value, {
+      onSuccess: () => toast('Objetivo e contextualização atualizados.'),
       onFinish: () => { saving.value = false; },
     });
   }
@@ -71,6 +81,7 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
   function saveApontamentos(id) {
     saving.value = true;
     router.put(`/pae/formulario/${id}/aptecnico`, { apontamentos: apontamentos.value }, {
+      onSuccess: () => toast('Apontamentos técnicos salvos.'),
       onFinish: () => { saving.value = false; },
     });
   }
@@ -78,6 +89,7 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
   function saveConclusao(id) {
     saving.value = true;
     router.put(`/pae/formulario/${id}/conclusao`, { conclusao: conclusao.value }, {
+      onSuccess: () => toast('Conclusão salva.'),
       onFinish: () => { saving.value = false; },
     });
   }
@@ -85,6 +97,7 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
   function finalizarRelatorio(id) {
     saving.value = true;
     router.put(`/pae/formulario/${id}/finalizar`, { conclusao: conclusao.value }, {
+      onSuccess: () => toast('Relatório finalizado com sucesso.'),
       onFinish: () => { saving.value = false; },
     });
   }
