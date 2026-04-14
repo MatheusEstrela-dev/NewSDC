@@ -5,17 +5,10 @@
         <div class="pae-container">
             <PaeHeader
                 :empreendimento="empreendimento"
-                :last-update="props.lastUpdate"
                 :protocolo="props.protocolo"
             />
 
-            <PaeBreadcrumb
-                v-if="props.protocolo"
-                :situacao="props.protocolo.status"
-                :num-protocolo="props.protocolo.num_protocolo"
-            />
-
-            <PaeForm
+<PaeForm
                 :empreendimento="empreendimento"
                 :municipios="props.municipios"
                 :formulario="props.formulario"
@@ -25,7 +18,6 @@
 </template>
 
 <script setup>
-import PaeBreadcrumb from '@/Components/Pae/PaeBreadcrumb.vue';
 import PaeForm from '@/Components/Pae/PaeForm.vue';
 import PaeHeader from '@/Components/Pae/PaeHeader.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -39,10 +31,6 @@ const props = defineProps({
     empreendimento: {
         type: Object,
         default: () => ({}),
-    },
-    lastUpdate: {
-        type: String,
-        default: null,
     },
     municipios: {
         type: Object,
