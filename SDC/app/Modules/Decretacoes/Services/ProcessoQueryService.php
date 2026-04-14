@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Decretacoes\Services;
 
 use App\Modules\Decretacoes\Constants\DesastreConstants;
+use App\Modules\Decretacoes\Resources\ProcessoFlatResource;
 use App\Modules\Decretacoes\Resources\ProcessoResource;
 use App\Modules\Decretacoes\Filters\ProcessoFilter;
 use App\Modules\Decretacoes\Models\DecretoMunicipio;
@@ -580,6 +581,38 @@ class ProcessoQueryService
     }
 
     /**
+     * Lista processos com estrutura plana legada para API externa.
+     *
+     * FLUXO:
+     *   Filtros -> list() -> enrichPaginatorWithTotais() -> enrichWithGeoData() -> ProcessoFlatResource
+     *
+     * DESTINO: GET /api/v1/decretacoes (consumidores externos, BI, integracoes)
+     *
+     * @param array $filters Filtros de busca
+     * @param int $perPage Itens por pagina
+     * @return array Dados com estrutura plana e meta de paginacao
+     */
+    public function listForApiFlat(array $filters = [], int $perPage = 15): array
+    {
+        $paginator = $this->list($filters, $perPage);
+
+        $processos = collect($paginator->items());
+
+        $this->enrichPaginatorWithTotais($paginator);
+        $this->enrichWithGeoData($processos);
+
+        return [
+            'data' => ProcessoFlatResource::collection($paginator)->resolve(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+        ];
+    }
+
+    /**
      * Retorna detalhes completos de um processo para API.
      *
      * FLUXO: ID -> Processo (com relacionamentos) -> ProcessoResource -> JSON
@@ -729,6 +762,96 @@ class ProcessoQueryService
     }
 
     /**
+     * Enriquece processos com dados geograficos do primeiro municipio.
+     * Usa 2 queries batch para todos os processos — sem N+1.
+     *
+     * Seta o atributo `_geo` em cada processo com:
+     *   uf, municipio, codigo_ibge, macroregiao, latitude, longitude, latitude_dec, longitude_dec
+     *
+     * PREREQUISITO: dec_decreto_municipios populado com n_protocolo_fide no formato MG-F-{ibge7}-...
+     *
+     * @param \Illuminate\Support\Collection $processos Collection de modelos Processo
+     */
+    private function enrichWithGeoData(\Illuminate\Support\Collection $processos): void
+    {
+        $processoIds = $processos->pluck('id');
+
+        if ($processoIds->isEmpty()) {
+            return;
+        }
+
+        // Query 1: primeiro dec_decreto_municipio de cada processo (extrai IBGE do protocolo)
+        $firstDecRows = DB::table('dec_decreto_municipios')
+            ->whereIn('entrada_processos_id', $processoIds)
+            ->whereNull('deleted_at')
+            ->select('entrada_processos_id', 'municipio_id', 'n_protocolo_fide')
+            ->get()
+            ->groupBy('entrada_processos_id')
+            ->map(fn($rows) => $rows->first());
+
+        // Monta mapa processo_id -> ibge_code
+        $processoToIbge = [];
+        $ibgeCodes = [];
+
+        foreach ($firstDecRows as $processoId => $row) {
+            $parts = explode('-', (string) $row->n_protocolo_fide);
+            $ibge = (isset($parts[2]) && strlen($parts[2]) === 7) ? $parts[2] : null;
+
+            if ($ibge) {
+                $processoToIbge[(int) $processoId] = $ibge;
+                $ibgeCodes[$ibge] = true;
+            }
+        }
+
+        if (empty($ibgeCodes)) {
+            $processos->each(fn($p) => $p->setAttribute('_geo', []));
+            return;
+        }
+
+        // Query 2: municipios com LEFT JOIN em cedec_municipio por codigo IBGE
+        $geoData = DB::table('municipios as m')
+            ->leftJoin('cedec_municipio as cm', DB::raw('LEFT(cm.Codmundv, 7)'), '=', 'm.codigo_ibge')
+            ->whereIn('m.codigo_ibge', array_keys($ibgeCodes))
+            ->select(
+                'm.codigo_ibge',
+                'm.uf',
+                'm.nome',
+                'cm.macroregiao',
+                'cm.latitude as latitude_str',
+                'cm.longitude as longitude_str',
+                'cm.latitude_dec',
+                'cm.longitude_dec'
+            )
+            ->get()
+            ->keyBy('codigo_ibge');
+
+        foreach ($processos as $processo) {
+            $ibge = $processoToIbge[$processo->id] ?? null;
+
+            if (!$ibge || !isset($geoData[$ibge])) {
+                $processo->setAttribute('_geo', [
+                    'uf' => 'MG', 'municipio' => null, 'codigo_ibge' => $ibge,
+                    'macroregiao' => null, 'latitude' => null, 'longitude' => null,
+                    'latitude_dec' => null, 'longitude_dec' => null,
+                ]);
+                continue;
+            }
+
+            $geo = $geoData[$ibge];
+            $processo->setAttribute('_geo', [
+                'uf'           => $geo->uf ?? 'MG',
+                'municipio'    => $geo->nome ?? null,
+                'codigo_ibge'  => $geo->codigo_ibge ?? null,
+                'macroregiao'  => $geo->macroregiao ?? null,
+                'latitude'     => $geo->latitude_str ?? null,
+                'longitude'    => $geo->longitude_str ?? null,
+                'latitude_dec'   => $geo->latitude_dec !== null ? (float) $geo->latitude_dec : null,
+                'longitude_dec'  => $geo->longitude_dec !== null ? (float) $geo->longitude_dec : null,
+            ]);
+        }
+    }
+
+    /**
      * Calcula totais de desastres para um processo especifico.
      * Usa a mesma logica do ProcessoExportService para garantir consistencia.
      *
@@ -871,27 +994,26 @@ class ProcessoQueryService
             + $totaisDanosHumanos['desalojados'] + $totaisDanosHumanos['desabrigados']
             + $totaisDanosHumanos['desaparecidos'] + $totaisDanosHumanos['outros_afetados'];
 
-        // Inicializa totais
-        $danosMateriais = ['quantidade' => 0, 'valor' => 0];
+        $danosMateriais    = ['quantidade' => 0, 'danificadas' => 0, 'destruidas' => 0, 'valor' => 0];
         $prejuizosPublicos = ['total' => 0];
         $prejuizosPrivados = ['total' => 0];
 
-        // Soma de todos os municipios usando campos exatos (mesmo padrao do ExportService)
         foreach ($groupedByMunicipio as $municipioData) {
-            // DANOS MATERIAIS - acessa campos exatos
             if (isset($municipioData[DesastreConstants::CAT_DANOS_MATERIAIS])) {
-                $dm = $municipioData[DesastreConstants::CAT_DANOS_MATERIAIS];
-                $danosMateriais['quantidade'] += ($dm['Quantidades danificadas'] ?? 0) + ($dm['Quantidades destruídas'] ?? $dm['Quantidades destruidas'] ?? 0);
-                $danosMateriais['valor'] += $dm['Valor (R$)'] ?? 0;
+                $dm          = $municipioData[DesastreConstants::CAT_DANOS_MATERIAIS];
+                $danificadas = (int) ($dm['Quantidades danificadas'] ?? 0);
+                $destruidas  = (int) ($dm['Quantidades destruídas'] ?? $dm['Quantidades destruidas'] ?? 0);
+                $danosMateriais['danificadas'] += $danificadas;
+                $danosMateriais['destruidas']  += $destruidas;
+                $danosMateriais['quantidade']  += $danificadas + $destruidas;
+                $danosMateriais['valor']       += $dm['Valor (R$)'] ?? 0;
             }
 
-            // PREJUIZOS ECONOMICOS PUBLICOS
             if (isset($municipioData[DesastreConstants::CAT_PREJUIZOS_PUBLICOS])) {
                 $pp = $municipioData[DesastreConstants::CAT_PREJUIZOS_PUBLICOS];
                 $prejuizosPublicos['total'] += $pp['Valor do prejuízo (R$)'] ?? $pp['Valor do prejuizo (R$)'] ?? 0;
             }
 
-            // PREJUIZOS ECONOMICOS PRIVADOS
             if (isset($municipioData[DesastreConstants::CAT_PREJUIZOS_PRIVADOS])) {
                 $ppv = $municipioData[DesastreConstants::CAT_PREJUIZOS_PRIVADOS];
                 $prejuizosPrivados['total'] += $ppv['Valor do prejuízo (R$)'] ?? $ppv['Valor do prejuizo (R$)'] ?? 0;
