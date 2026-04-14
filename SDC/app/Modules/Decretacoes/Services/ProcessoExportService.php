@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Services;
 
+use App\Modules\Decretacoes\Constants\DesastreConstants;
 use App\Modules\Decretacoes\Models\Processo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -14,24 +15,6 @@ use Illuminate\Support\Facades\DB;
  */
 class ProcessoExportService
 {
-    // Categorias de exportacao
-    private const CAT_DANOS_MATERIAIS = 'DANOS MATERIAIS';
-    private const CAT_PREJUIZOS_PUBLICOS = 'PREJUÍZOS ECONÔMICOS PÚBLICOS';
-    private const CAT_PREJUIZOS_PRIVADOS = 'PREJUÍZOS ECONÔMICOS PRIVADOS';
-    private const CATEGORIA_DANOS_HUMANOS = 1;
-
-    // Mapeamento de item_id para tipo de dano humano
-    private const DANOS_HUMANOS_MAP = [
-        1 => 'obitos',
-        2 => 'feridos',
-        3 => 'feridos',
-        4 => 'desabrigados',
-        5 => 'desalojados',
-        6 => 'desaparecidos',
-        7 => 'outros_afetados',
-    ];
-
-    // Tipos de decreto validos
     private const TIPOS_DECRETO_VALIDOS = ['SE', 'ECP'];
 
     public function __construct(
@@ -95,10 +78,6 @@ class ProcessoExportService
             ->join('dec_entrada_desastres as ed', 'ecd.id', '=', 'ed.entrada_categoria_desastre_id')
             ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
             ->join('dec_desastre_categorias as dc', 'ecd.categoria_id', '=', 'dc.id')
-            ->leftJoin('municipios as m', function ($join) {
-                $join->on('ed.municipio_id', '=', 'm.id')
-                     ->orWhereRaw("m.codigo_ibge LIKE CONCAT('31', ed.municipio_id, '_')");
-            })
             ->whereIn('ecd.entrada_processo_id', $processoIds)
             ->whereIn('dic.tipo', ['number', 'currency'])
             ->select(
@@ -140,7 +119,7 @@ class ProcessoExportService
             ->join('dec_desastre_items as di', 'dic.desastre_item_id', '=', 'di.id')
             ->join('dec_desastre_categorias as dc', 'di.categoria_id', '=', 'dc.id')
             ->whereIn('ecd.entrada_processo_id', $processoIds)
-            ->where('dc.id', self::CATEGORIA_DANOS_HUMANOS)
+            ->where('dc.id', DesastreConstants::CATEGORIA_DANOS_HUMANOS_ID)
             ->whereNull('ed.deleted_at')
             ->select(
                 'ecd.entrada_processo_id as processo_id',
@@ -150,13 +129,13 @@ class ProcessoExportService
             )
             ->get();
 
-        $emptyDanos = array_fill_keys(array_unique(array_values(self::DANOS_HUMANOS_MAP)), 0);
+        $emptyDanos = array_fill_keys(array_unique(array_values(DesastreConstants::DANOS_HUMANOS_MAP)), 0);
         $result = [];
 
         foreach ($rows as $item) {
             $pid = $item->processo_id;
             $mid = $item->municipio_id;
-            $key = self::DANOS_HUMANOS_MAP[(int) $item->item_id] ?? null;
+            $key = DesastreConstants::DANOS_HUMANOS_MAP[(int) $item->item_id] ?? null;
 
             if (!$key) {
                 continue;
@@ -191,43 +170,43 @@ class ProcessoExportService
         $lng = $municipio?->longitude;
 
         return [
-            'id' => $entrada->id,
-            'uf' => 'MG',
-            'municipio' => $municipio?->nome,
-            'codigo_ibge' => $municipio?->codigo_ibge,
-            'macroregiao' => $municipio?->mesorregiao ?? $municipio?->regiao,
-            'latitude' => $lat !== null ? (string) intval($lat) . '.' : null,
-            'longitude' => $lng !== null ? (string) intval($lng) . '.' : null,
-            'latitude_dec' => $lat !== null ? (float) $lat : null,
-            'longitude_dec' => $lng !== null ? (float) $lng : null,
-            'data_registro' => $entrada->data_entrada,
-            'data_criacao' => $entrada->created_at,
-            'deletado' => $entrada->trashed(),
-            'data_delecao' => $entrada->deleted_at,
-            'protocolo' => $entrada->n_protocolo_fide,
-            'cobrade' => $entrada->tipo_desastre_cobrade,
-            'tipo_desastre' => $entrada->tipo_desastre_nome,
-            'status' => $entrada->reconhecimento,
-            'data_fato' => $entrada->data_ocorrencia_desastre,
-            'data_decreto_municipal' => $entrada->data_decreto_municipal,
-            'data_publicacao_mg' => $entrada->data_publicacao_mg,
-            'prazo_vigencia_dias' => $entrada->prazo_vigencia,
-            'data_vencimento' => $entrada->data_vencimento,
-            'dias_restantes' => $entrada->dias_restantes,
-            'tipo_decreto' => $this->mapearTipoDecreto($entrada->situacao_anormalidade),
-            'processo' => $entrada->processo,
-            'analista' => $entrada->analista,
+            'id'                    => $entrada->id,
+            'uf'                    => 'MG',
+            'municipio'             => $municipio?->nome,
+            'codigo_ibge'           => $municipio?->codigo_ibge,
+            'macroregiao'           => $municipio?->mesorregiao ?? $municipio?->regiao,
+            'latitude'              => $lat !== null ? (string) intval($lat) . '.' : null,
+            'longitude'             => $lng !== null ? (string) intval($lng) . '.' : null,
+            'latitude_dec'          => $lat !== null ? (float) $lat : null,
+            'longitude_dec'         => $lng !== null ? (float) $lng : null,
+            'data_registro'         => $entrada->data_entrada,
+            'data_criacao'          => $entrada->created_at,
+            'deletado'              => $entrada->trashed(),
+            'data_delecao'          => $entrada->deleted_at,
+            'protocolo'             => $entrada->n_protocolo_fide,
+            'cobrade'               => $entrada->tipo_desastre_cobrade,
+            'tipo_desastre'         => $entrada->tipo_desastre_nome,
+            'status'                => $entrada->reconhecimento,
+            'data_fato'             => $entrada->data_ocorrencia_desastre,
+            'data_decreto_municipal'=> $entrada->data_decreto_municipal,
+            'data_publicacao_mg'    => $entrada->data_publicacao_mg,
+            'prazo_vigencia_dias'   => $entrada->prazo_vigencia,
+            'data_vencimento'       => $entrada->data_vencimento,
+            'dias_restantes'        => $entrada->dias_restantes,
+            'tipo_decreto'          => $this->mapearTipoDecreto($entrada->situacao_anormalidade),
+            'processo'              => $entrada->processo,
+            'analista'              => $entrada->analista,
         ];
     }
 
     private function buildDanosHumanosRow(array $danosHumanos): array
     {
         return [
-            'obitos' => $danosHumanos['obitos'] ?? 0,
-            'feridos' => $danosHumanos['feridos'] ?? 0,
-            'desalojados' => $danosHumanos['desalojados'] ?? 0,
-            'desabrigados' => $danosHumanos['desabrigados'] ?? 0,
-            'desaparecidos' => $danosHumanos['desaparecidos'] ?? 0,
+            'obitos'          => $danosHumanos['obitos'] ?? 0,
+            'feridos'         => $danosHumanos['feridos'] ?? 0,
+            'desalojados'     => $danosHumanos['desalojados'] ?? 0,
+            'desabrigados'    => $danosHumanos['desabrigados'] ?? 0,
+            'desaparecidos'   => $danosHumanos['desaparecidos'] ?? 0,
             'outros_afetados' => $danosHumanos['outros_afetados'] ?? 0,
         ];
     }
@@ -240,12 +219,16 @@ class ProcessoExportService
 
     private function buildDanosMateriaisRow(array $municipioTotals): array
     {
+        $dm  = $municipioTotals[DesastreConstants::CAT_DANOS_MATERIAIS] ?? [];
+        $pp  = $municipioTotals[DesastreConstants::CAT_PREJUIZOS_PUBLICOS] ?? [];
+        $ppv = $municipioTotals[DesastreConstants::CAT_PREJUIZOS_PRIVADOS] ?? [];
+
         return [
-            'danos_materiais_danificadas' => $municipioTotals[self::CAT_DANOS_MATERIAIS]['Quantidades danificadas'] ?? 0,
-            'danos_materiais_destruidas' => $municipioTotals[self::CAT_DANOS_MATERIAIS]['Quantidades destruídas'] ?? $municipioTotals[self::CAT_DANOS_MATERIAIS]['Quantidades destruidas'] ?? 0,
-            'danos_materiais_valor' => $municipioTotals[self::CAT_DANOS_MATERIAIS]['Valor (R$)'] ?? 0,
-            'prejuizos_publicos_valor' => $municipioTotals[self::CAT_PREJUIZOS_PUBLICOS]['Valor do prejuízo (R$)'] ?? $municipioTotals[self::CAT_PREJUIZOS_PUBLICOS]['Valor do prejuizo (R$)'] ?? 0,
-            'prejuizos_privados_valor' => $municipioTotals[self::CAT_PREJUIZOS_PRIVADOS]['Valor do prejuízo (R$)'] ?? $municipioTotals[self::CAT_PREJUIZOS_PRIVADOS]['Valor do prejuizo (R$)'] ?? 0,
+            'danos_materiais_danificadas' => $dm['Quantidades danificadas'] ?? 0,
+            'danos_materiais_destruidas'  => $dm['Quantidades destruídas'] ?? $dm['Quantidades destruidas'] ?? 0,
+            'danos_materiais_valor'       => $dm['Valor (R$)'] ?? 0,
+            'prejuizos_publicos_valor'    => $pp['Valor do prejuízo (R$)'] ?? $pp['Valor do prejuizo (R$)'] ?? 0,
+            'prejuizos_privados_valor'    => $ppv['Valor do prejuízo (R$)'] ?? $ppv['Valor do prejuizo (R$)'] ?? 0,
         ];
     }
 

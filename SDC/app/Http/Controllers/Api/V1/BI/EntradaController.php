@@ -109,7 +109,7 @@ class EntradaController extends Controller
             'meta' => [
                 'total_registros' => count($dados),
                 'gerado_em' => now()->toISOString(),
-                'filtros_aplicados' => $request->except(['bi-access']),
+                'filtros_aplicados' => $request->except(['bi-access', 'include_deleted']),
             ],
         ]);
     }
