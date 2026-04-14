@@ -12,23 +12,37 @@
       <!-- Linha conectora de fundo contínua -->
       <div class="absolute left-[29px] top-6 bottom-6 w-0.5 bg-slate-100 dark:bg-slate-800 z-0"></div>
 
-      <TransitionGroup name="list" tag="div" class="space-y-6 relative z-10">
+      <!-- Loading skeleton -->
+      <div v-if="isLoading && items.length === 0" class="space-y-6 relative z-10">
+        <div v-for="i in 3" :key="i" class="flex gap-4 animate-pulse">
+          <div class="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-700 flex-shrink-0 mt-1"></div>
+          <div class="flex-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-3 h-16"></div>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div v-else-if="!isLoading && items.length === 0" class="flex flex-col items-center justify-center py-12 text-slate-400">
+        <DocumentTextIcon class="w-10 h-10 mb-3 opacity-40" />
+        <p class="text-sm">Nenhuma movimentacao recente</p>
+      </div>
+
+      <TransitionGroup v-else name="list" tag="div" class="space-y-6 relative z-10">
         <div
-          v-for="(h, index) in historico"
+          v-for="(h, index) in items"
           :key="h.id"
           class="flex gap-4 group/item cursor-default"
           :style="{ transitionDelay: `${index * 50}ms` }"
         >
-          <!-- Ícone/Dot Timeline -->
+          <!-- Icone/Dot Timeline -->
           <div class="relative flex-shrink-0 mt-1">
-            <div 
+            <div
               :class="['w-8 h-8 rounded-xl flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-slate-950 transition-colors duration-300 group-hover/item:scale-110 group-hover/item:rotate-3', timelineBgColor(h.type)]"
             >
               <component :is="timelineIcon(h.type)" class="w-4 h-4 text-white" />
             </div>
           </div>
-          
-          <!-- Conteúdo Card -->
+
+          <!-- Conteudo Card -->
           <div class="flex-1 bg-slate-50 dark:bg-slate-800/40 rounded-xl p-3 border border-slate-100 dark:border-slate-700/50 hover:border-slate-200 dark:hover:border-slate-600 transition-colors duration-300 group-hover/item:translate-x-1 group-hover/item:shadow-md hover:bg-white dark:hover:bg-slate-800">
             <div class="flex items-center justify-between mb-1">
               <span class="font-bold text-sm text-slate-800 dark:text-slate-200 group-hover/item:text-blue-500 transition-colors">{{ h.municipio }}</span>
@@ -52,37 +66,27 @@ import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
-import { ref } from 'vue';
+import { useActivityFeed } from '@/composables/useActivityFeed';
 
-// Mock Icons se não existirem (para evitar erro, usando os já importados ou genéricos)
-// Ajuste: UserPlusIcon pode não existir, vou usar DocumentTextIcon como fallback se necessário ou importar corretamente.
-// O UserPlusIcon não foi visto no import original do Dashboard.vue nas linhas visualizadas, mas verifiquei alguns ícones.
-// Vou usar os ícones padrão importados no script setup do Dashboard.vue para garantir.
-
-const historico = ref([
-  { id: 1, type: 'approval', municipio: 'Belo Horizonte', acao: 'Plano de Trabalho Aprovado - R$ 1.5M liberação imediata via Fundo Estadual.', data: '10 min', protocolo: 'Proc. 9982/24' },
-  { id: 2, type: 'alert', municipio: 'Contagem', acao: 'Alerta de Tempestade Severa emitido. Defesa Civil em prontidão nível laranja.', data: '32 min', protocolo: 'Alert. 1102' },
-  { id: 3, type: 'new_process', municipio: 'Betim', acao: 'Novo processo de captação iniciado para obras de contenção de encostas.', data: '1h 15m', protocolo: 'Proc. 9981/24' },
-  { id: 4, type: 'analysis', municipio: 'Juiz de Fora', acao: 'Documentação técnica em análise pela equipe de engenharia.', data: '2h 30m', protocolo: 'Proc. 9978/24' },
-]);
+const { items, isLoading } = useActivityFeed();
 
 function timelineIcon(type) {
-  const map = {
-    approval: CheckCircleIcon,
-    alert: ExclamationTriangleIcon,
-    new_process: DocumentTextIcon,
-    analysis: ClockIcon,
-  };
-  return map[type] || DocumentTextIcon;
+    const map = {
+        approval:    CheckCircleIcon,
+        alert:       ExclamationTriangleIcon,
+        new_process: DocumentTextIcon,
+        analysis:    ClockIcon,
+    };
+    return map[type] || DocumentTextIcon;
 }
 
 function timelineBgColor(type) {
-  const map = {
-    approval: 'bg-emerald-500 shadow-emerald-500/40',
-    alert: 'bg-amber-500 shadow-amber-500/40',
-    new_process: 'bg-blue-500 shadow-blue-500/40',
-    analysis: 'bg-violet-500 shadow-violet-500/40'
-  };
-  return map[type] || 'bg-slate-500';
+    const map = {
+        approval:    'bg-emerald-500 shadow-emerald-500/40',
+        alert:       'bg-amber-500 shadow-amber-500/40',
+        new_process: 'bg-blue-500 shadow-blue-500/40',
+        analysis:    'bg-violet-500 shadow-violet-500/40',
+    };
+    return map[type] || 'bg-slate-500';
 }
 </script>
