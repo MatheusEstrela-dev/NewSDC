@@ -18,12 +18,10 @@
           </Button>
 
           <!-- Botao Novo Protocolo - Responsivo -->
-          <Link v-if="canCreate" :href="route('pae.index')">
-            <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
-              <span class="hidden sm:inline">Novo Protocolo</span>
-              <span class="sm:hidden">Novo</span>
-            </Button>
-          </Link>
+          <Button v-if="canCreate" variant="primary" size="md" :icon="PlusIcon" icon-position="left" @click="openNovoProtocolo">
+            <span class="hidden sm:inline">Novo Protocolo</span>
+            <span class="sm:hidden">Novo</span>
+          </Button>
         </div>
       </template>
     </PageHeader>
@@ -131,7 +129,7 @@
 
 <script setup>
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import { Link, router } from '@inertiajs/vue3';
+import { router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 import Button from '@/Components/Atoms/Button/Button.vue';
@@ -198,6 +196,7 @@ const props = defineProps({
   statusOptions: { type: Object, default: null },
   analistas: { type: Array, default: null },
   empreendedores: { type: Array, default: null },
+  empreendimentos: { type: Array, default: () => [] },
   canAtribuir: { type: Boolean, default: false },
   podeVerTodos: { type: Boolean, default: false },
 });
@@ -413,9 +412,7 @@ function cancelDelete() {
   protocoloIdToDelete.value = null;
 }
 
-function handleOptions(id) {
-  // TODO: Implementar menu de opcoes adicional se necessario
-  console.log('Options clicked for id: ', id);
+function handleOptions(_id) {
 }
 
 // Modal de atribuicao
@@ -473,6 +470,18 @@ function handlePrint(id) {
 function closePrint() {
   printModalOpen.value = false;
   selectedProtocoloPrint.value = null;
+}
+
+// ── Novo Protocolo ─────────────────────────────────────
+const novoForm = useForm({
+    pae_empnto_id: '',
+    sei_numero: '',
+});
+
+function openNovoProtocolo() {
+    novoForm.post(route('pae.protocolos.store'), {
+        onError: () => {},
+    });
 }
 
 // =========================
