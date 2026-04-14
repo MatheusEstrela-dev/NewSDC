@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "SDC - Sistema de Defesa Civil API",
-        "description": "API RESTful escalável para 100k+ usuários simultâneos.\n *                  Suporta webhooks, rate limiting inteligente, processamento assíncrono via Redis,\n *                  e múltiplos níveis de priorização de requisições.",
+        "description": "API RESTful escalável para 100k+ usuários simultâneos.\r\n *                  Suporta webhooks, rate limiting inteligente, processamento assíncrono via Redis,\r\n *                  e múltiplos níveis de priorização de requisições.",
         "contact": {
             "name": "SDC API Support",
             "email": "api@sdc.gov.br"
@@ -15,12 +15,16 @@
     },
     "servers": [
         {
-            "url": "http://localhost:18001",
-            "description": "Servidor de Desenvolvimento (Docker)"
+            "url": "https://localhost:19443",
+            "description": "Servidor de Desenvolvimento (FrankenPHP HTTPS)"
+        },
+        {
+            "url": "http://localhost:19080",
+            "description": "Servidor de Desenvolvimento (HTTP)"
         },
         {
             "url": "https://api.sdc.gov.br",
-            "description": "Servidor de Produção"
+            "description": "Servidor de Producao"
         }
     ],
     "paths": {
@@ -561,54 +565,21 @@
                 "tags": [
                     "BI - Entrada"
                 ],
-                "summary": "Lista todas as entradas de desastres e eventos",
-                "description": "Retorna uma lista paginada de todas as entradas de desastres e eventos registrados no sistema",
-                "operationId": "listEntradas",
+                "summary": "Lista entradas de processos normalizadas para Power BI",
+                "description": "Retorna lista flat de processos de decretacoes com dados de municipios e totais de desastres, otimizada para consumo pelo Power BI",
+                "operationId": "biEntradaIndex",
                 "parameters": [
                     {
-                        "name": "page",
+                        "name": "search",
                         "in": "query",
-                        "description": "Número da página",
                         "required": false,
                         "schema": {
-                            "type": "integer",
-                            "example": 1
+                            "type": "string"
                         }
                     },
                     {
-                        "name": "per_page",
+                        "name": "data_entrada_inicio",
                         "in": "query",
-                        "description": "Itens por página",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "example": 15
-                        }
-                    },
-                    {
-                        "name": "uf",
-                        "in": "query",
-                        "description": "Filtrar por UF",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "example": "MG"
-                        }
-                    },
-                    {
-                        "name": "municipio",
-                        "in": "query",
-                        "description": "Filtrar por município",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "example": "Juiz de Fora"
-                        }
-                    },
-                    {
-                        "name": "data_inicio",
-                        "in": "query",
-                        "description": "Data de início (formato: YYYY-MM-DD)",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -617,9 +588,8 @@
                         }
                     },
                     {
-                        "name": "data_fim",
+                        "name": "data_entrada_fim",
                         "in": "query",
-                        "description": "Data de fim (formato: YYYY-MM-DD)",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -628,24 +598,107 @@
                         }
                     },
                     {
-                        "name": "status",
+                        "name": "processo",
                         "in": "query",
-                        "description": "Filtrar por status",
                         "required": false,
                         "schema": {
                             "type": "string",
                             "enum": [
-                                "Registro",
-                                "Em Análise",
-                                "Aprovado",
-                                "Rejeitado"
+                                "MUNICIPAL",
+                                "ESTADUAL"
                             ]
+                        }
+                    },
+                    {
+                        "name": "reconhecimento",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "analista",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "situacao_anormalidade",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "SE",
+                                "ECP"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "data_decreto_inicio",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "data_decreto_fim",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "vigencia_status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "tipo_desastre_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "municipio_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "n_protocolo_fide",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "include_deleted",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Lista de entradas retornada com sucesso",
+                        "description": "Lista normalizada retornada com sucesso",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -695,8 +748,11 @@
                                                     },
                                                     "data_criacao": {
                                                         "type": "string",
-                                                        "format": "date-time",
-                                                        "example": "2025-11-19T17:21:07.000000Z"
+                                                        "format": "date-time"
+                                                    },
+                                                    "deletado": {
+                                                        "type": "boolean",
+                                                        "example": false
                                                     },
                                                     "protocolo": {
                                                         "type": "string",
@@ -712,12 +768,47 @@
                                                     },
                                                     "status": {
                                                         "type": "string",
-                                                        "example": "Registro"
+                                                        "example": "Reconhecido pelo Estado e pela Uniao"
                                                     },
                                                     "data_fato": {
                                                         "type": "string",
+                                                        "format": "date"
+                                                    },
+                                                    "data_decreto_municipal": {
+                                                        "type": "string",
                                                         "format": "date",
-                                                        "example": "2025-06-13"
+                                                        "nullable": true
+                                                    },
+                                                    "data_publicacao_mg": {
+                                                        "type": "string",
+                                                        "format": "date",
+                                                        "nullable": true
+                                                    },
+                                                    "prazo_vigencia_dias": {
+                                                        "type": "integer",
+                                                        "nullable": true
+                                                    },
+                                                    "data_vencimento": {
+                                                        "type": "string",
+                                                        "format": "date",
+                                                        "nullable": true
+                                                    },
+                                                    "dias_restantes": {
+                                                        "type": "integer",
+                                                        "nullable": true
+                                                    },
+                                                    "tipo_decreto": {
+                                                        "type": "string",
+                                                        "example": "SE",
+                                                        "nullable": true
+                                                    },
+                                                    "processo": {
+                                                        "type": "string",
+                                                        "example": "MUNICIPAL"
+                                                    },
+                                                    "analista": {
+                                                        "type": "string",
+                                                        "nullable": true
                                                     },
                                                     "obitos": {
                                                         "type": "integer",
@@ -741,11 +832,11 @@
                                                     },
                                                     "outros_afetados": {
                                                         "type": "integer",
-                                                        "example": 50
+                                                        "example": 0
                                                     },
                                                     "danos_humanos_quantidade": {
                                                         "type": "integer",
-                                                        "example": 50
+                                                        "example": 0
                                                     },
                                                     "danos_materiais_danificadas": {
                                                         "type": "integer",
@@ -774,21 +865,21 @@
                                                 "type": "object"
                                             }
                                         },
-                                        "total": {
-                                            "type": "integer",
-                                            "example": 100
-                                        },
-                                        "pagina_atual": {
-                                            "type": "integer",
-                                            "example": 1
-                                        },
-                                        "por_pagina": {
-                                            "type": "integer",
-                                            "example": 15
-                                        },
-                                        "ultima_pagina": {
-                                            "type": "integer",
-                                            "example": 7
+                                        "meta": {
+                                            "properties": {
+                                                "total_registros": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "gerado_em": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "filtros_aplicados": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -797,7 +888,10 @@
                         }
                     },
                     "401": {
-                        "description": "Não autenticado"
+                        "description": "Nao autenticado"
+                    },
+                    "403": {
+                        "description": "Sem permissao rat.bi.view"
                     }
                 },
                 "security": [
@@ -812,14 +906,12 @@
                 "tags": [
                     "BI - Entrada"
                 ],
-                "summary": "Exibe uma entrada específica",
-                "description": "Retorna os detalhes completos de uma entrada de desastre/evento específica",
-                "operationId": "showEntrada",
+                "summary": "Detalhe de uma entrada de processo",
+                "operationId": "biEntradaShow",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID da entrada",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -848,7 +940,30 @@
                         }
                     },
                     "404": {
-                        "description": "Entrada não encontrada"
+                        "description": "Registro nao encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "sucesso": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "mensagem": {
+                                            "type": "string",
+                                            "example": "Registro nao encontrado"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado"
+                    },
+                    "403": {
+                        "description": "Sem permissao rat.bi.view"
                     }
                 },
                 "security": [
@@ -1894,6 +2009,21 @@
                         "bearerAuth": []
                     }
                 ]
+            }
+        },
+        "/api/v1/logs/layers": {
+            "get": {
+                "tags": [
+                    "Log Viewer V1"
+                ],
+                "summary": "Camadas de log disponíveis",
+                "description": "Retorna lista de camadas (layers) disponíveis para filtragem",
+                "operationId": "logsLayers",
+                "responses": {
+                    "200": {
+                        "description": "Camadas de log"
+                    }
+                }
             }
         },
         "/api/v1/logs/levels": {
@@ -3758,7 +3888,7 @@
         },
         {
             "name": "BI - Entrada",
-            "description": "Endpoints para acesso aos dados de entrada de desastres e eventos"
+            "description": "Endpoints para acesso aos dados de entrada de desastres e eventos para Power BI"
         },
         {
             "name": "Integração",
