@@ -6,7 +6,7 @@ use App\Core\Actions\Services\ActionConfigService;
 use App\Modules\Rat\Application\Services\RatService;
 use App\Modules\Rat\Config\RatActionsConfig;
 use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
-use App\Modules\Rat\Infrastructure\Persistence\EloquentRatRepository;
+use App\Modules\Rat\Infrastructure\Repositories\RatRepository;
 use App\Modules\Rat\Services\RatAttachmentService;
 use App\Modules\Rat\Services\RatProtocoloService;
 use App\Services\Rat\RatAuditService;
@@ -23,10 +23,10 @@ class RatServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Infraestrutura legada (UUID/JSON)
+        // Estrutura Modular (UUID/Rats table)
         $this->app->bind(
             RatRepositoryInterface::class,
-            EloquentRatRepository::class
+            RatRepository::class
         );
 
         $this->app->singleton(RatService::class);

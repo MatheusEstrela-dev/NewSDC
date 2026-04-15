@@ -36,9 +36,9 @@ class RatRepository implements RatRepositoryInterface
     {
         $query = Rat::query();
 
-        // Filtro por protocolo/número BOS
+        // Filtro por protocolo
         if ($filters->protocolo) {
-            $query->where('numero_bos', 'like', "%{$filters->protocolo}%");
+            $query->where('protocolo', 'like', "%{$filters->protocolo}%");
         }
 
         // Filtro por status
@@ -61,24 +61,24 @@ class RatRepository implements RatRepositoryInterface
             $query->whereYear('created_at', (int)$filters->ano);
         }
 
-        // Filtro por município
+        // Filtro por município (dentro do JSON local)
         if ($filters->municipio) {
-            $query->where('municipio', $filters->municipio);
+            $query->where('local->municipio', $filters->municipio);
         }
 
-        // Filtro por tipo COBRADE
+        // Filtro por tipo COBRADE (dentro do JSON dados_gerais)
         if ($filters->tipoCobrade) {
-            $query->where('tipo_cobrade', $filters->tipoCobrade);
+            $query->where('dados_gerais->cobrade', $filters->tipoCobrade);
         }
 
-        // Filtro por natureza
+        // Filtro por natureza (dentro do JSON dados_gerais)
         if ($filters->natureza) {
-            $query->where('natureza', $filters->natureza);
+            $query->where('dados_gerais->natureza', $filters->natureza);
         }
 
         // Filtro por criado por
         if ($filters->criadoPor) {
-            $query->where('created_by_id', $filters->criadoPor);
+            $query->where('created_by', $filters->criadoPor);
         }
 
         // Ordenação padrão
@@ -94,9 +94,11 @@ class RatRepository implements RatRepositoryInterface
     public function getMunicipalities(): array
     {
         return Rat::query()
-            ->distinct()
-            ->pluck('municipio')
+            ->whereNotNull('local')
+            ->get()
+            ->pluck('local.municipio')
             ->filter()
+            ->unique()
             ->sort()
             ->values()
             ->toArray();
@@ -171,6 +173,6 @@ class RatRepository implements RatRepositoryInterface
     public function getLatestSequence(int $year): int
     {
         $latest = Rat::query()->whereYear('created_at', $year)->latest('created_at')->first();
-        return $latest ? (int)substr($latest->numero_bos ?? '0', -5) + 1 : 1;
+        return $latest ? (int)substr($latest->protocolo ?? '0', -5) : 0;
     }
 }

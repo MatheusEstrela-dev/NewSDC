@@ -74,12 +74,8 @@ const props = defineProps({
   },
 });
 
-// Usar dados reais do backend quando disponíveis, caso contrário usar mocks
-const useMock = computed(() => {
-  if (!props.rats) return true;
-  if (Array.isArray(props.rats)) return props.rats.length === 0;
-  return !props.rats.data || props.rats.data.length === 0;
-});
+// Forçar o uso de dados reais agora que o backend está integrado
+const useMock = computed(() => false);
 
 const effectiveRats = computed(() => {
   if (useMock.value) return getMockRats();

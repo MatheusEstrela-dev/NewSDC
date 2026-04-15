@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Rat extends Model
 {
-    use HasUuids, SoftDeletes;
+    use HasUuids; //, SoftDeletes;
 
     public $incrementing = false;
     protected $keyType = 'string';
