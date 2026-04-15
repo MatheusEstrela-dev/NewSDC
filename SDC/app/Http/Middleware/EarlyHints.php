@@ -147,7 +147,7 @@ class EarlyHints
         if (!empty($appEntry['file'])) {
             $assets[] = [
                 'url' => "/build/{$appEntry['file']}",
-                'as' => 'script',
+                'rel' => 'modulepreload',
                 'crossorigin' => 'anonymous',
             ];
         }
@@ -159,7 +159,7 @@ class EarlyHints
                     if (str_contains($entry['file'], $chunk)) {
                         $assets[] = [
                             'url' => "/build/{$entry['file']}",
-                            'as' => 'script',
+                            'rel' => 'modulepreload',
                             'crossorigin' => 'anonymous',
                         ];
                         break;
