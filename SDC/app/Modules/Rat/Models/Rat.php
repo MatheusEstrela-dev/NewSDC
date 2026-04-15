@@ -9,6 +9,23 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property string      $id
+ * @property string      $protocolo
+ * @property string      $status
+ * @property bool        $tem_vistoria
+ * @property array|null  $dados_gerais
+ * @property array|null  $local
+ * @property array|null  $endereco
+ * @property array|null  $comunicacao
+ * @property array|null  $recursos
+ * @property array|null  $envolvidos
+ * @property array|null  $vistoria
+ * @property array|null  $historico
+ * @property array|null  $anexos
+ * @property \Carbon\Carbon|null $created_at
+ * @property \Carbon\Carbon|null $updated_at
+ */
 class Rat extends Model
 {
     use HasUuids;

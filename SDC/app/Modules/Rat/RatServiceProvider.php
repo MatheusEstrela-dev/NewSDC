@@ -34,6 +34,8 @@ class RatServiceProvider extends ServiceProvider
         $this->app->singleton(RatProtocoloService::class);
         $this->app->singleton(RatAttachmentService::class);
         $this->app->singleton(RatAnexoService::class);
+        $this->app->singleton(\App\Modules\Rat\Services\RatExportBIService::class);
+        $this->app->singleton(\App\Modules\Rat\Services\RatReceiveBIService::class);
 
         // Nova estrutura (RatOcorrencia + relatos polimórficos)
         $this->app->singleton(RatOcorrenciaService::class);

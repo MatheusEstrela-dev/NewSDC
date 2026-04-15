@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\BI;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Decretacoes\Services\ProcessoExportService;
+use App\Modules\Decretacoes\Services\ProcessoExportBIService;
 use App\Modules\Decretacoes\Services\ProcessoQueryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +19,7 @@ use Illuminate\Http\Request;
 class EntradaController extends Controller
 {
     public function __construct(
-        private readonly ProcessoExportService $exportService,
+        private readonly ProcessoExportBIService $exportService,
         private readonly ProcessoQueryService $queryService
     ) {
     }
@@ -96,7 +96,7 @@ class EntradaController extends Controller
      *         )
      *     ),
      *     @OA\Response(response=401, description="Nao autenticado"),
-     *     @OA\Response(response=403, description="Sem permissao rat.bi.view")
+     *     @OA\Response(response=403, description="Acesso negado")
      * )
      */
     public function index(Request $request): JsonResponse
@@ -137,7 +137,7 @@ class EntradaController extends Controller
      *         )
      *     ),
      *     @OA\Response(response=401, description="Nao autenticado"),
-     *     @OA\Response(response=403, description="Sem permissao rat.bi.view")
+     *     @OA\Response(response=403, description="Acesso negado")
      * )
      */
     public function show(int $id): JsonResponse

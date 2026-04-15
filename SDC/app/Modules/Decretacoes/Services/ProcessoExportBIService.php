@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Service responsible for processing and exporting Processo data to Power BI.
  */
-class ProcessoExportService
+class ProcessoExportBIService
 {
     private const TIPOS_DECRETO_VALIDOS = ['SE', 'ECP'];
 
