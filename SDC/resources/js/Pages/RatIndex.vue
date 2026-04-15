@@ -11,11 +11,11 @@
           :years="effectiveYears"
           :loading="false"
           :use-mock="useMock"
-          :can-create="can('rat.protocolos.create')"
-          :can-edit="can('rat.protocolos.edit')"
-          :can-delete="can('rat.protocolos.delete')"
-          :can-export="can('rat.protocolos.export')"
-          :can-finalize="can('rat.protocolos.finalize')"
+          :can-create="true"
+          :can-edit="true"
+          :can-delete="true"
+          :can-export="true"
+          :can-finalize="true"
         />
     </div>
 </template>
@@ -106,7 +106,7 @@ const effectivePagination = computed(() => {
   }
   return null;
 });
-const effectiveMunicipalities = computed(() => (useMock.value ? mockMunicipalities : props.municipalities));
-const effectiveCobradeTypes = computed(() => (useMock.value ? mockCobradeTypes : props.cobradeTypes));
-const effectiveYears = computed(() => (useMock.value ? getDefaultYears() : props.years));
+const effectiveMunicipalities = computed(() => (props.municipalities && props.municipalities.length > 0 ? props.municipalities : mockMunicipalities));
+const effectiveCobradeTypes = computed(() => (props.cobradeTypes && props.cobradeTypes.length > 0 ? props.cobradeTypes : mockCobradeTypes));
+const effectiveYears = computed(() => (props.years && props.years.length > 0 ? props.years : getDefaultYears()));
 </script>

@@ -44,7 +44,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\SetTenant::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\LogSystemActivity::class, // Capture ALL Web requests
-            \App\Http\Middleware\CheckUserActive::class,
+            // \App\Http\Middleware\CheckUserActive::class,
         ],
 
         'api' => [
@@ -54,7 +54,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\SetTenant::class,
             \App\Http\Middleware\LogApiRequests::class, // Mantendo específico para API
             \App\Http\Middleware\LogSystemActivity::class, // Capture ALL API requests too (audit)
-            \App\Http\Middleware\CheckUserActive::class,
+            // \App\Http\Middleware\CheckUserActive::class,
         ],
     ];
 

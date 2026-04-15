@@ -192,6 +192,34 @@ export function useRat(initialData = {}) {
   }
 
   /**
+   * Atualiza lista de recursos
+   */
+  function atualizarRecursos(newRecursos) {
+    recursos.value = Array.isArray(newRecursos) ? [...newRecursos] : [newRecursos];
+  }
+
+  /**
+   * Atualiza lista de envolvidos
+   */
+  function atualizarEnvolvidos(newEnvolvidos) {
+    envolvidos.value = Array.isArray(newEnvolvidos) ? [...newEnvolvidos] : [newEnvolvidos];
+  }
+
+  /**
+   * Atualiza objeto de vistoria
+   */
+  function atualizarVistoria(newData) {
+    Object.assign(vistoria.value, newData);
+  }
+
+  /**
+   * Atualiza histórico
+   */
+  function atualizarHistorico(newHistory) {
+    historico.value = [...newHistory];
+  }
+
+  /**
    * Remove anexo
    */
   function removerAnexo(id) {
@@ -199,6 +227,13 @@ export function useRat(initialData = {}) {
     if (index > -1) {
       anexos.value.splice(index, 1);
     }
+  }
+
+  /**
+   * Atualiza lista de anexos
+   */
+  function atualizarAnexos(newAnexos) {
+    anexos.value = [...newAnexos];
   }
 
   return {
@@ -220,12 +255,17 @@ export function useRat(initialData = {}) {
     cancelarRat,
     adicionarRecurso,
     removerRecurso,
+    atualizarRecursos,
     adicionarEnvolvido,
     removerEnvolvido,
+    atualizarEnvolvidos,
     salvarVistoria,
+    atualizarVistoria,
     adicionarObservacao,
+    atualizarHistorico,
     adicionarAnexo,
     removerAnexo,
+    atualizarAnexos,
   };
 }
 

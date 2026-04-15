@@ -53,11 +53,12 @@ class RatRelatoDadosGerais extends RatRelato
     ];
 
     protected $casts = [
-        'data_ocorrencia' => 'datetime',
-        'hora_ocorrencia' => 'datetime',
-        'km_percorrido' => 'float',
-        'data_criacao' => 'datetime',
-        'data_atualizacao' => 'datetime',
+        'data_fato' => 'datetime',
+        'data_inicio_atividade' => 'datetime',
+        'data_termino_atividade' => 'datetime',
+        'com_ocorrencia_data' => 'datetime',
+        'local_latitude' => 'float',
+        'local_longitude' => 'float',
     ];
 
     /**

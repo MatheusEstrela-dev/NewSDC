@@ -5,7 +5,7 @@
         :href="route('compdec.rat.show', rat.id)"
         class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
       >
-        {{ rat.protocolo || `RAT #${rat.id}` }}
+        {{ rat.numero_bos || `RAT #${rat.id}` }}
       </Link>
     </TableCell>
     <TableCell class="w-44 whitespace-nowrap">
@@ -20,7 +20,7 @@
       <StatusBadge :status="rat.status" />
     </TableCell>
     <TableCell class="w-auto whitespace-nowrap">
-      {{ rat.local?.municipio || 'Não informado' }}
+      {{ rat.dados_gerais?.municipio || rat.local?.municipio || 'Não informado' }}
     </TableCell>
     <TableCell class="w-44 whitespace-nowrap">
       {{ rat.criado_por || 'Sistema' }}

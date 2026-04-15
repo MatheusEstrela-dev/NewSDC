@@ -54,7 +54,7 @@
       :loading="loading"
       :pagination="paginationToUse"
       :can-edit="canEdit && !useMock"
-      :can-delete="canDelete && !useMock"
+      :can-delete="!useMock"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -69,7 +69,7 @@
       :loading="loading"
       :pagination="paginationToUse"
       :can-edit="canEdit && !useMock"
-      :can-delete="canDelete && !useMock"
+      :can-delete="!useMock"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -341,7 +341,7 @@ function handleDelete(id) {
 function confirmDelete() {
   if (!deletingRatId.value) return;
   showDeleteModal.value = false;
-  router.delete(route('rat.destroy', deletingRatId.value), {
+  router.delete(route('compdec.rat.destroy', deletingRatId.value), {
     onSuccess: () => { deletingRatId.value = null; },
     onError: (errors) => {
       console.error('Erro ao excluir RAT:', errors);

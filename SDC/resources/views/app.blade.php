@@ -11,8 +11,8 @@
         <link rel="dns-prefetch" href="https://fonts.bunny.net">
 
         <!-- Fonts com display=optional para não bloquear renderização -->
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=optional" rel="stylesheet" media="print" onload="this.media='all'">
-        <noscript><link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=optional" rel="stylesheet"></noscript>
+        <!-- <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=optional" rel="stylesheet" media="print" onload="this.media='all'">
+        <noscript><link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=optional" rel="stylesheet"></noscript> -->
 
         <!-- Scripts -->
         @routes

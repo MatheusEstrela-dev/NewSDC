@@ -20,7 +20,7 @@ Route::prefix('compdec/rat')->name('compdec.rat.')->group(function () {
     Route::put('/{ocorrencia}', [RatUnifiedController::class, 'update'])->name('update');
     Route::delete('/{ocorrencia}', [RatUnifiedController::class, 'destroy'])->name('destroy');
     Route::patch('/{ocorrencia}/finalize', [RatUnifiedController::class, 'finalize'])->name('finalize');
-    Route::post('/{ocorrencia}/draft', [RatUnifiedController::class, 'draft'])->name('draft');
+    Route::match(['post', 'patch'], '/{ocorrencia}/draft', [RatUnifiedController::class, 'draft'])->name('draft');
 
     // Boletim de Ocorrência
     Route::get('/bo', [RatUnifiedController::class, 'indexBo'])->name('bo.index');

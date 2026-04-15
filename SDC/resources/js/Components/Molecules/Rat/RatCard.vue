@@ -3,11 +3,11 @@
     <!-- Header -->
     <div class="rat-card-header">
       <div class="rat-card-title-section">
-        <h3 class="rat-card-number">{{ rat.numero_rat }}</h3>
-        <p class="rat-card-subtitle">{{ rat.municipio || 'Sem município' }}</p>
+        <h3 class="rat-card-number">{{ rat.numero_bos || `RAT #${rat.id}` }}</h3>
+        <p class="rat-card-subtitle">{{ rat.dados_gerais?.municipio || rat.local?.municipio || 'Sem município' }}</p>
       </div>
       <div class="rat-card-year">
-        <span class="year-badge">{{ rat.ano }}</span>
+        <span class="year-badge">{{ getYear(rat.created_at) }}</span>
       </div>
     </div>
 
@@ -27,7 +27,7 @@
 
       <div class="rat-card-field rat-card-field-full">
         <span class="field-label">Criado por</span>
-        <span class="field-value">{{ rat.usuario_nome || '-' }}</span>
+        <span class="field-value">{{ rat.criado_por || 'Sistema' }}</span>
       </div>
     </div>
 
@@ -82,6 +82,11 @@ const formatDateTime = (dateTime) => {
     minute: '2-digit',
   });
 };
+
+function getYear(date) {
+  if (!date) return new Date().getFullYear();
+  return new Date(date).getFullYear();
+}
 </script>
 
 <style scoped>

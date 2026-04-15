@@ -245,21 +245,39 @@ class Processo extends Model
     public function scopeVigentes($query)
     {
         return $query->where(function ($q) {
-            $q->whereNull('data_publicacao_mg')
-              ->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
+            $q->whereNull('data_publicacao_mg');
+            
+            if (config('database.default') === 'sqlite') {
+                $q->orWhereRaw("date(data_publicacao_mg, '+' || prazo_vigencia || ' days') >= date('now')");
+            } else {
+                $q->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
+            }
         });
     }
 
     public function scopeVencidos($query)
     {
         return $query->whereNotNull('data_publicacao_mg')
-                     ->whereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) < CURDATE()');
+            ->where(function ($q) {
+                if (config('database.default') === 'sqlite') {
+                    $q->whereRaw("date(data_publicacao_mg, '+' || prazo_vigencia || ' days') < date('now')");
+                } else {
+                    $q->whereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) < CURDATE()');
+                }
+            });
     }
 
     public function scopeProximosVencer($query)
     {
         return $query->whereNotNull('data_publicacao_mg')
-                     ->whereRaw('DATEDIFF(DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY), CURDATE()) BETWEEN 1 AND 15');
+            ->where(function ($q) {
+                if (config('database.default') === 'sqlite') {
+                    // SQLite version of DATEDIFF(DATE_ADD(...), CURDATE()) BETWEEN 1 AND 15
+                    $q->whereRaw("julianday(data_publicacao_mg, '+' || prazo_vigencia || ' days') - julianday('now') BETWEEN 1 AND 15");
+                } else {
+                    $q->whereRaw('DATEDIFF(DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY), CURDATE()) BETWEEN 1 AND 15');
+                }
+            });
     }
 
     public function podeSerEditado(): bool

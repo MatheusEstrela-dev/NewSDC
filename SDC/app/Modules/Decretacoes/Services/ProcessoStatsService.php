@@ -164,8 +164,13 @@ class ProcessoStatsService
 
         // Vigencia: data_publicacao_mg NULL ou dentro do prazo
         $query->where(function ($q) {
-            $q->whereNull('data_publicacao_mg')
-              ->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
+            $q->whereNull('data_publicacao_mg');
+            
+            if (config('database.default') === 'sqlite') {
+                $q->orWhereRaw("date(data_publicacao_mg, '+' || prazo_vigencia || ' days') >= date('now')");
+            } else {
+                $q->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
+            }
         });
 
         // Reconhecido pelo estado
@@ -188,8 +193,13 @@ class ProcessoStatsService
     {
         return Cache::remember(self::CACHE_PREFIX . 'vigentes', self::CACHE_TTL, function () {
             return Processo::where(function ($q) {
-                $q->whereNull('data_publicacao_mg')
-                  ->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
+                $q->whereNull('data_publicacao_mg');
+                
+                if (config('database.default') === 'sqlite') {
+                    $q->orWhereRaw("date(data_publicacao_mg, '+' || prazo_vigencia || ' days') >= date('now')");
+                } else {
+                    $q->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
+                }
             })->count();
         });
     }

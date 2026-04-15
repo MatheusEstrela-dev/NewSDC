@@ -7,10 +7,11 @@ use App\Modules\Rat\Enums\Protocolo;
 use App\Modules\Rat\Enums\Status;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Rat extends Model
 {
-    use HasUuids;
+    use HasUuids, SoftDeletes;
 
     public $incrementing = false;
     protected $keyType = 'string';

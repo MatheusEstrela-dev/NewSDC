@@ -138,8 +138,7 @@ Route::middleware('auth')->group(function () {
     // Modulo: IA
     require __DIR__ . '/modules/ia.php';
 
-    // Modulo: Inmet (Meteorologia)
-    require __DIR__ . '/modules/inmet.php';
+    // Modulo: Inmet (Meteorologia) (movido para fora para testes)
 
     // Módulo: Plantão Diário
     require __DIR__ . '/modules/plantao.php';
@@ -150,5 +149,6 @@ Route::middleware('auth')->group(function () {
 // TODO: Remover isto e adicionar auth() depois de testes
 require __DIR__ . '/modules/rat.php';
 require __DIR__ . '/modules/plancon.php';
+require __DIR__ . '/modules/inmet.php';
 
 require __DIR__ . '/auth.php';

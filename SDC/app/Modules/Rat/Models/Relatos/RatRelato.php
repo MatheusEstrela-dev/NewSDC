@@ -16,7 +16,6 @@ abstract class RatRelato extends Model
 {
     use HasFactory;
 
-    protected $connection = 'mysql';
     protected $fillable = [
         'ocorrencia_id',
         'usuario_id',

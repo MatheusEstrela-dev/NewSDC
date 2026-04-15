@@ -85,7 +85,7 @@ readonly class RatVistoriaDTO
             vCep:                          $data['v_cep']                          ?? null,
             vLatitude:                    isset($data['v_latitude'])              ? (float) $data['v_latitude'] : null,
             vLongitude:                   isset($data['v_longitude'])             ? (float) $data['v_longitude'] : null,
-            extraFields:                   $data, // Keep everything else for now
+            extraFields:                  $data, // Keep everything else for now
         );
     }
 

@@ -60,11 +60,9 @@ class RatOcorrenciaService
     {
         $ocorrencia = RatOcorrencia::findOrFail($id);
 
-        abort_if(
-            $ocorrencia->status === self::STATUS_FINALIZADO,
-            422,
-            'Ocorrência já está finalizada.'
-        );
+        if ($ocorrencia->status === self::STATUS_FINALIZADO) {
+            return $ocorrencia;
+        }
 
         $ocorrencia->update(['status' => self::STATUS_FINALIZADO]);
 

@@ -165,19 +165,22 @@ class EloquentRatRepository implements RatRepositoryInterface
         $rat->dados_gerais = $dadosGerais ?? [];
         $rat->local        = [
             'municipio' => $dadosGerais['local_municipio'] ?? null,
-            'uf'        => $dadosGerais['local_uf'] ?? 'MG',
+            'uf'        => $dadosGerais['local_estadouf'] ?? $dadosGerais['local_uf'] ?? 'MG',
         ];
         $rat->endereco     = [
-            'logradouro' => $dadosGerais['local_logradouro'] ?? null,
+            'logradouro' => $dadosGerais['local_logradoura_1'] ?? $dadosGerais['local_logradouro'] ?? null,
             'numero'     => $dadosGerais['local_numero'] ?? null,
             'bairro'     => $dadosGerais['local_bairro'] ?? null,
             'cep'        => $dadosGerais['local_cep'] ?? null,
         ];
-        $rat->comunicacao  = [];
+        $rat->comunicacao  = [
+            'data'        => $dadosGerais['com_ocorrencia_data'] ?? null,
+            'atendimento' => $dadosGerais['com_ocorrencia_atendimento'] ?? null,
+        ];
         $rat->recursos     = $recursos;
         $rat->envolvidos   = $envolvidos;
         $rat->vistoria     = $vistoria ?? [];
-        $rat->historico    = [];
+        $rat->historico    = $ocorrencia->historicos ? $ocorrencia->historicos->toArray() : [];
         $rat->anexos       = [];
         $rat->created_at   = $ocorrencia->created_at;
         $rat->updated_at   = $ocorrencia->updated_at;

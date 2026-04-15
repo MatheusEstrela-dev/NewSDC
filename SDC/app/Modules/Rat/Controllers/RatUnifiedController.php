@@ -79,10 +79,12 @@ class RatUnifiedController extends BaseController
     {
         $filtro      = RatOcorrenciaFiltroDTO::fromArray($request->only(['status', 'numero_bos']));
         $ocorrencias = $this->ocorrenciaService->paginate($filtro);
+        $statistics  = $this->statisticsService->getStatistics()->toArray();
 
-        return Inertia::render('Compdec/Rat/Index', [
-            'ocorrencias' => $ocorrencias,
+        return Inertia::render('RatIndex', [
+            'rats'        => $ocorrencias,
             'filters'     => $request->only(['status', 'numero_bos']),
+            'statistics'  => $statistics,
         ]);
     }
 
@@ -111,8 +113,29 @@ class RatUnifiedController extends BaseController
             RatBoDTO::fromArray($validated)
         );
 
+        // Processamento de Relatos aninhados (Dados Gerais, Recursos, etc)
+        if ($request->has('dadosGerais')) {
+            $this->writeService->saveDadosGerais((string)$ocorrencia->id, RatDadosGeraisDTO::fromArray($request->input('dadosGerais')));
+        }
+
         if ($request->has('relatos')) {
             $this->relatoService->manageRelatos($ocorrencia, $request->input('relatos'));
+        }
+
+        if ($request->has('recursos')) {
+            foreach ($request->input('recursos') as $recursoData) {
+                $this->writeService->saveRecurso((string)$ocorrencia->id, RatRecursoDTO::fromArray($recursoData));
+            }
+        }
+
+        if ($request->has('envolvidos')) {
+            foreach ($request->input('envolvidos') as $envolvidoData) {
+                $this->writeService->saveEnvolvido((string)$ocorrencia->id, RatEnvolvidoDTO::fromArray($envolvidoData));
+            }
+        }
+
+        if ($request->has('historico')) {
+            $this->writeService->saveHistorico((string)$ocorrencia->id, RatHistoricoDTO::fromArray($request->input('historico')));
         }
 
         return redirect()
@@ -169,6 +192,27 @@ class RatUnifiedController extends BaseController
             $id
         );
 
+        // Atualização de Relatos aninhados
+        if ($request->has('dadosGerais')) {
+            $this->writeService->saveDadosGerais((string)$id, RatDadosGeraisDTO::fromArray($request->input('dadosGerais')));
+        }
+
+        if ($request->has('recursos')) {
+            foreach ($request->input('recursos') as $recursoData) {
+                $this->writeService->saveRecurso((string)$id, RatRecursoDTO::fromArray($recursoData));
+            }
+        }
+
+        if ($request->has('envolvidos')) {
+            foreach ($request->input('envolvidos') as $envolvidoData) {
+                $this->writeService->saveEnvolvido((string)$id, RatEnvolvidoDTO::fromArray($envolvidoData));
+            }
+        }
+
+        if ($request->has('historico')) {
+            $this->writeService->saveHistorico((string)$id, RatHistoricoDTO::fromArray($request->input('historico')));
+        }
+
         return redirect()
             ->route('compdec.rat.show', $id)
             ->with('success', 'Ocorrência atualizada com sucesso!');
@@ -207,6 +251,27 @@ class RatUnifiedController extends BaseController
      */
     public function draft(UpdateRatRequest $request, int $id): RedirectResponse
     {
+        // Processamento de Relatos aninhados (garante que rascunho salve os dados)
+        if ($request->has('dadosGerais')) {
+            $this->writeService->saveDadosGerais((string)$id, RatDadosGeraisDTO::fromArray($request->input('dadosGerais')));
+        }
+
+        if ($request->has('recursos')) {
+            foreach ($request->input('recursos') as $recursoData) {
+                $this->writeService->saveRecurso((string)$id, RatRecursoDTO::fromArray($recursoData));
+            }
+        }
+
+        if ($request->has('envolvidos')) {
+            foreach ($request->input('envolvidos') as $envolvidoData) {
+                $this->writeService->saveEnvolvido((string)$id, RatEnvolvidoDTO::fromArray($envolvidoData));
+            }
+        }
+
+        if ($request->has('historico')) {
+            $this->writeService->saveHistorico((string)$id, RatHistoricoDTO::fromArray($request->input('historico')));
+        }
+
         $this->writeService->saveDraft((string)$id, $request->validated());
 
         return redirect()

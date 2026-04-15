@@ -18,7 +18,6 @@ class RatRelatoRecurso extends RatRelato
     protected $table = 'rat_relato_recursos';
 
     protected $fillable = [
-        'ocorrencia_id',
         'seq',
         'recurso_tipo',
         'recurso_problemas',

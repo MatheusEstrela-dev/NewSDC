@@ -12,6 +12,7 @@ class Authenticate extends Middleware
      */
     protected function redirectTo(Request $request): ?string
     {
+        \Illuminate\Support\Facades\Log::warning('User unauthenticated on path: ' . $request->path() . ' expectsJson: ' . ($request->expectsJson() ? 'true' : 'false'));
         return $request->expectsJson() ? null : route('login');
     }
 }

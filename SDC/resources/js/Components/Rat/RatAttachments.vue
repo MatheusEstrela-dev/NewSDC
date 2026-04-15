@@ -83,7 +83,16 @@ async function handleUploadFile({ file, tempId }) {
   uploadError.value = null;
 
   const form = new FormData();
-  form.append('file', file);
+  form.append('arquivo', file);
+  
+  // Detectar tipo para o backend
+  let tipo = 'documento';
+  if (file.type.startsWith('image/')) tipo = 'imagem';
+  else if (file.type.startsWith('video/')) tipo = 'video';
+  else if (file.type.startsWith('audio/')) tipo = 'audio';
+  
+  form.append('tipo', tipo);
+  form.append('descricao', file.name);
 
   try {
     const axios    = window.axios || (await import('axios')).default;

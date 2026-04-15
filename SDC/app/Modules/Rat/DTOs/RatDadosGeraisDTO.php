@@ -63,10 +63,10 @@ readonly class RatDadosGeraisDTO
     public static function fromArray(array $data): self
     {
         return new self(
-            dataFato:                 $data['data_fato']                  ?? null,
+            dataFato:                 $data['data_fato'] ?? $data['data_ocorrencia'] ?? null,
             dataInicioAtividade:      $data['data_inicio_atividade']      ?? null,
             dataTerminoAtividade:     $data['data_termino_atividade']     ?? null,
-            natCodigo:                $data['nat_codigo']                 ?? null,
+            natCodigo:                $data['nat_codigo'] ?? $data['natureza'] ?? null,
             natCobradeId:             isset($data['nat_cobrade_id'])
                                           ? (int) $data['nat_cobrade_id']
                                           : null,
@@ -83,10 +83,10 @@ readonly class RatDadosGeraisDTO
             comOcorrenciaData:        $data['com_ocorrencia_data']        ?? null,
             comOcorrenciaAtendimento: $data['com_ocorrencia_atendimento'] ?? null,
             localPais:                $data['local_pais']                 ?? null,
-            localEstadoUf:            $data['local_estadouf']             ?? null,
-            localMunicipio:           $data['local_municipio']            ?? null,
+            localEstadoUf:            $data['local_estadouf'] ?? $data['local_estado_uf'] ?? null,
+            localMunicipio:           $data['local_municipio'] ?? $data['cidade'] ?? null,
             localCep:                 $data['local_cep']                  ?? null,
-            localLogradouro:          $data['local_logradoura_1']         ?? null,
+            localLogradouro:          $data['local_logradouro'] ?? $data['local_logradoura_1'] ?? $data['endereco'] ?? null,
             localBairro:              $data['local_bairro']               ?? null,
             localComplemento:         $data['local_complemento']          ?? null,
             localNumero:              $data['local_numero']               ?? null,

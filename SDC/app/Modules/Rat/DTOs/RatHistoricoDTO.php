@@ -11,19 +11,34 @@ readonly class RatHistoricoDTO
 {
     public function __construct(
         public ?string $historico = null,
+        public ?array  $clima = null,
+        public ?string $resultado = null,
+        public ?string $grauRisco = null,
+        public ?array  $metricas = null,
+        public ?string $encaminhamentos = null,
     ) {}
 
     public static function fromArray(array $data): self
     {
         return new self(
-            historico: $data['historico'] ?? $data['descricao'] ?? null,
+            historico:        $data['historico']        ?? $data['descricao'] ?? null,
+            clima:            $data['clima']            ?? null,
+            resultado:        $data['resultado']        ?? null,
+            grauRisco:        $data['grau_risco']       ?? null,
+            metricas:         $data['metricas']         ?? null,
+            encaminhamentos:  $data['encaminhamentos']  ?? null,
         );
     }
 
     public function toArray(): array
     {
-        return [
-            'historico' => $this->historico,
-        ];
+        return array_filter([
+            'historico'       => $this->historico,
+            'clima'           => $this->clima,
+            'resultado'       => $this->resultado,
+            'grau_risco'      => $this->grauRisco,
+            'metricas'        => $this->metricas,
+            'encaminhamentos' => $this->encaminhamentos,
+        ], fn ($v) => $v !== null);
     }
 }

@@ -112,7 +112,9 @@ class RatWriteService
             $auth = auth();
             $envolvido = RatRelatoEnvolvidos::updateOrCreate(
                 ['id' => $dto->id],
-                array_merge($dto->toArray(), ['created_by' => $auth->id()])
+                array_merge($dto->toArray(), [
+                    'created_by'    => $auth->id()
+                ])
             );
 
             $this->ensureRelatoLink($ocorrenciaId, $envolvido);
@@ -129,7 +131,9 @@ class RatWriteService
             // 1. Salva o relato de recurso principal
             $recurso = RatRelatoRecurso::updateOrCreate(
                 ['id' => $dto->id],
-                array_merge($dto->toArray(), ['created_by' => $auth->id()])
+                array_merge($dto->toArray(), [
+                    'created_by'    => $auth->id()
+                ])
             );
 
             $this->ensureRelatoLink($ocorrenciaId, $recurso);
@@ -154,11 +158,13 @@ class RatWriteService
     /** Salva o histórico/descrição. */
     public function saveHistorico(string $ocorrenciaId, RatHistoricoDTO $dto): void
     {
-        // O histórico geralmente é salvo no modelo de Dados Gerais ou em um modelo específico.
-        // Seguindo o padrão de Dados Gerais:
-        $this->saveDadosGerais($ocorrenciaId, new RatDadosGeraisDTO(
-            natOcorrencia: $dto->historico
-        ));
+        // O histórico narrativo deve ser salvo na coluna 'descricao' dos Dados Gerais
+        DB::transaction(function () use ($ocorrenciaId, $dto) {
+            $dadosGerais = RatRelatoDadosGerais::where('ocorrencia_id', $ocorrenciaId)->first();
+            if ($dadosGerais instanceof RatRelatoDadosGerais) {
+                $dadosGerais->update(['descricao' => $dto->historico]);
+            }
+        });
     }
 
     /** Salva ou atualiza uma Vistoria. */
