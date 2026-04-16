@@ -28,3 +28,4 @@ rr
 .gemini
 /nativephp
 bootstrap/ssr/
+tests/
