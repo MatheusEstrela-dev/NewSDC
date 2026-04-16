@@ -41,7 +41,7 @@ COPY crontab /etc/crontabs/root
 
 # Healthcheck
 HEALTHCHECK --interval=1h --timeout=10s --retries=2 \
-    CMD find /backups -type f -name 'jenkins-*.tar.gz' -mtime -1 | grep -q . || exit 1
+    CMD test -f /backups/last_backup_success && [ $(( $(date +%s) - $(cat /backups/last_backup_success) )) -lt 25200 ] || exit 1
 
 # Executar cron em foreground
 CMD ["crond", "-f", "-l", "2"]

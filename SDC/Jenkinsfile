@@ -1,150 +1,106 @@
 pipeline {
-    // Usar agente padrão do Jenkins (Azure App Service não expõe Docker socket)
-    // O container Jenkins já possui Docker, Docker Compose, Azure CLI e ferramentas necessárias
     agent any
 
     environment {
-        APP_NAME = 'sdc'
-        DOCKER_COMPOSE = 'docker-compose -f docker-compose.prod.yml'
-
-        // Variáveis para Docker Buildkit (melhora performance)
-        DOCKER_BUILDKIT = '1'
+        APP_NAME                 = 'sdc'
+        DOCKER_BUILDKIT          = '1'
         COMPOSE_DOCKER_CLI_BUILD = '1'
-
-        // Diretórios de cache (resolve problema de workspace crescer infinito)
-        COMPOSER_CACHE_DIR = "${WORKSPACE}/.composer-cache"
-        NPM_CACHE_DIR = "${WORKSPACE}/.npm-cache"
-
-        // Azure Container Registry
-        ACR_NAME = 'APIDOVER'
-        ACR_RESOURCE_GROUP = 'DOVER'
-        ACR_LOGIN_SERVER = 'apidover.azurecr.io'
-        ACR_IMAGE = 'apidover.azurecr.io/sdc-dev-app'
-        ACR_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
+        ACR_NAME                 = 'APIDOVER'
+        ACR_RESOURCE_GROUP       = 'DOVER'
+        ACR_LOGIN_SERVER         = 'apidover.azurecr.io'
+        ACR_IMAGE                = 'apidover.azurecr.io/sdc-dev-app'
+        ACR_TAG                  = "${env.BUILD_NUMBER}-${env.GIT_COMMIT?.take(7) ?: 'unknown'}"
     }
 
     options {
-        // Timeout global para evitar builds travados
         timeout(time: 30, unit: 'MINUTES')
-
-        // Manter apenas últimos 10 builds
         buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
-
-        // Timestamps nos logs
         timestamps()
-
-        // Colorir output
         ansiColor('xterm')
     }
 
-    // Trigger automático via webhook do GitHub
     triggers {
         githubPush()
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                echo '📦 Checking out code...'
-                // Resolve problema SSH: usar credenciais configuradas
                 checkout scm
-
-                // Exibir informações do commit
                 script {
-                    env.GIT_COMMIT_MSG = sh(
-                        script: 'git log -1 --pretty=%B',
-                        returnStdout: true
-                    ).trim()
-                    env.GIT_AUTHOR = sh(
-                        script: 'git log -1 --pretty=%an',
-                        returnStdout: true
-                    ).trim()
+                    env.GIT_COMMIT_MSG = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+                    env.GIT_AUTHOR    = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
+                    echo "[INFO] Commit: ${env.GIT_COMMIT_MSG}"
+                    echo "[INFO] Autor: ${env.GIT_AUTHOR}"
                 }
-                echo "Commit: ${env.GIT_COMMIT_MSG}"
-                echo "Author: ${env.GIT_AUTHOR}"
             }
         }
 
-        stage('Pre-flight Checks') {
+        stage('Pre-flight') {
             steps {
-                echo '🔍 Running pre-flight checks...'
-
                 script {
-                    // Verificar se Docker está disponível
                     sh 'docker --version'
-                    sh 'docker-compose --version'
+                    sh 'az --version'
 
-                    // Verificar espaço em disco (mínimo 5GB)
                     def availableSpace = sh(
                         script: "df -BG ${WORKSPACE} | tail -1 | awk '{print \$4}' | sed 's/G//'",
                         returnStdout: true
                     ).trim().toInteger()
 
                     if (availableSpace < 5) {
-                        error("Espaço em disco insuficiente: ${availableSpace}GB. Mínimo: 5GB")
+                        error("[ERROR] Espaco insuficiente: ${availableSpace}GB. Minimo: 5GB")
                     }
-                    echo "✅ Espaço disponível: ${availableSpace}GB"
-
-                    // Nota: .env não é necessário para build Docker
-                    // A imagem Docker usa variáveis de ambiente do Azure App Service
-                    echo "ℹ️  Build usa variáveis de ambiente do Azure (não requer .env local)"
+                    echo "[INFO] Espaco disponivel: ${availableSpace}GB"
                 }
             }
         }
 
-        stage('Build and Push to ACR') {
+        stage('Build and Push ACR') {
             steps {
-                echo '🏗️  Building Docker images using Azure Container Registry...'
-
                 script {
-                    // Verificar se estamos no diretório correto
-                    sh 'pwd && ls -la SDC/'
-
-                    // Login no Azure usando Service Principal
                     withCredentials([usernamePassword(
                         credentialsId: 'azure-service-principal',
-                        usernameVariable: 'AZURE_CLIENT_ID',
-                        passwordVariable: 'AZURE_CLIENT_SECRET'
+                        usernameVariable: 'SP_CLIENT_ID',
+                        passwordVariable: 'SP_CLIENT_SECRET'
                     )]) {
-                        def tenantId = env.AZURE_TENANT_ID ?: ''
-                        if (!tenantId) {
-                            error("AZURE_TENANT_ID não configurado")
+                        azureLogin(SP_CLIENT_ID, SP_CLIENT_SECRET, env.AZURE_TENANT_ID)
+                    }
+
+                    def attempt     = 0
+                    def maxAttempts = 3
+                    def built       = false
+
+                    while (!built) {
+                        try {
+                            dir('SDC') {
+                                sh """
+                                    az acr build \\
+                                        --registry ${ACR_NAME} \\
+                                        --resource-group ${ACR_RESOURCE_GROUP} \\
+                                        --image sdc-dev-app:${ACR_TAG} \\
+                                        --image sdc-dev-app:latest \\
+                                        --file docker/frankenphp/Dockerfile \\
+                                        --platform linux \\
+                                        .
+                                """
+                            }
+                            built = true
+                        } catch (err) {
+                            attempt++
+                            if (attempt >= maxAttempts) throw err
+                            echo "[WARN] Tentativa ${attempt}/${maxAttempts} falhou. Aguardando 30s..."
+                            sleep(time: 30, unit: 'SECONDS')
                         }
-
-                        sh """
-                            az login --service-principal \
-                                --username \$AZURE_CLIENT_ID \
-                                --password \$AZURE_CLIENT_SECRET \
-                                --tenant ${tenantId}
-                        """
                     }
 
-                    // Build e Push usando Azure Container Registry Build
-                    // Isso executa o build remotamente no Azure (não precisa de Docker local)
-                    dir('SDC') {
-                        sh """
-                            az acr build \
-                                --registry ${ACR_NAME} \
-                                --resource-group ${ACR_RESOURCE_GROUP} \
-                                --image sdc-dev-app:${ACR_TAG} \
-                                --image sdc-dev-app:latest \
-                                --file docker/Dockerfile.prod \
-                                --platform linux \
-                                .
-                        """
-                    }
-
-                    echo "✅ Imagem buildada e enviada para ACR:"
-                    echo "   - ${ACR_IMAGE}:${ACR_TAG}"
-                    echo "   - ${ACR_IMAGE}:latest"
+                    echo "[INFO] Imagem publicada: ${ACR_IMAGE}:${ACR_TAG}"
                 }
             }
         }
 
-
-        stage('Code Quality & Tests') {
+        stage('Code Quality and Tests') {
             when {
-                // Executar apenas em branches de desenvolvimento
                 not {
                     anyOf {
                         branch 'main'
@@ -153,12 +109,9 @@ pipeline {
                 }
             }
             steps {
-                echo '🔍 Running code quality checks and tests...'
-                echo 'ℹ️  Para produção, testes são executados em ambiente de staging'
-                // Em produção, confiamos no build da imagem que já passou por validações
+                echo '[INFO] Testes executados no PR/branch. Producao confia no build ACR.'
             }
         }
-
 
         stage('Deploy to Azure App Service') {
             when {
@@ -168,39 +121,24 @@ pipeline {
                 }
             }
             steps {
-                echo '🚀 Deploying to Azure App Service AUTOMATICALLY...'
-
                 script {
-                    // Verificar se Azure CLI está disponível
-                    sh 'az --version || (echo "Azure CLI não encontrado" && exit 1)'
+                    def appServiceName = env.AZURE_APP_SERVICE_NAME ?: 'newsdc2027'
+                    def resourceGroup  = env.AZURE_RESOURCE_GROUP  ?: 'DEFESA_CIVIL'
 
-                    // Variáveis do App Service (configurar no Jenkins)
-                    def APP_SERVICE_NAME = env.AZURE_APP_SERVICE_NAME ?: 'newsdc2027'
-                    def RESOURCE_GROUP = env.AZURE_RESOURCE_GROUP ?: 'DEFESA_CIVIL'
-                    def ACR_NAME = env.ACR_NAME ?: 'apidover'
-
-                    // Fazer login no Azure usando Service Principal
                     withCredentials([usernamePassword(
                         credentialsId: 'azure-service-principal',
-                        usernameVariable: 'AZURE_CLIENT_ID',
-                        passwordVariable: 'AZURE_CLIENT_SECRET'
+                        usernameVariable: 'SP_CLIENT_ID',
+                        passwordVariable: 'SP_CLIENT_SECRET'
                     )]) {
-                        def tenantId = env.AZURE_TENANT_ID ?: ''
-                        if (!tenantId) {
-                            error("AZURE_TENANT_ID não configurado. Configure no Jenkins: Manage Jenkins → Configure System → Global properties")
-                        }
+                        azureLogin(SP_CLIENT_ID, SP_CLIENT_SECRET, env.AZURE_TENANT_ID)
 
-                        sh """
-                            az login --service-principal \
-                                --username \$AZURE_CLIENT_ID \
-                                --password \$AZURE_CLIENT_SECRET \
-                                --tenant ${tenantId}
-                        """
+                        env.PREVIOUS_IMAGE = sh(
+                            script: "az webapp config container show --name ${appServiceName} --resource-group ${resourceGroup} --query image -o tsv 2>/dev/null || echo ''",
+                            returnStdout: true
+                        ).trim()
 
-                        // Fazer login no ACR
-                        sh "az acr login --name ${ACR_NAME}"
+                        echo "[INFO] Imagem anterior: ${env.PREVIOUS_IMAGE ?: 'nenhuma'}"
 
-                        // Obter credenciais do ACR para configurar no App Service
                         def acrUsername = sh(
                             script: "az acr credential show --name ${ACR_NAME} --query username -o tsv",
                             returnStdout: true
@@ -211,49 +149,68 @@ pipeline {
                             returnStdout: true
                         ).trim()
 
-                        // Atualizar App Service com nova imagem
-                        echo "Atualizando App Service: ${APP_SERVICE_NAME}"
-                        echo "Imagem: ${ACR_IMAGE}:${ACR_TAG}"
                         sh """
                             az webapp config container set \\
-                                --name ${APP_SERVICE_NAME} \\
-                                --resource-group ${RESOURCE_GROUP} \\
+                                --name ${appServiceName} \\
+                                --resource-group ${resourceGroup} \\
                                 --docker-custom-image-name ${ACR_IMAGE}:${ACR_TAG} \\
                                 --docker-registry-server-url https://${ACR_LOGIN_SERVER} \\
                                 --docker-registry-server-user ${acrUsername} \\
                                 --docker-registry-server-password ${acrPassword}
                         """
+
+                        sh "az webapp restart --name ${appServiceName} --resource-group ${resourceGroup}"
                     }
 
-                    // Reiniciar App Service para aplicar nova imagem
-                    echo "Reiniciando App Service..."
-                    sh """
-                        az webapp restart \\
-                            --name ${APP_SERVICE_NAME} \\
-                            --resource-group ${RESOURCE_GROUP}
-                    """
+                    echo "[INFO] Aguardando aplicacao iniciar..."
+                    def appUrl = "https://${appServiceName}.azurewebsites.net"
 
-                    // Health check no App Service
-                    def APP_URL = "https://${APP_SERVICE_NAME}.azurewebsites.net"
-                    echo "Verificando saúde da aplicação em ${APP_URL}..."
+                    if (!healthCheck(appUrl)) {
+                        echo "[ERROR] Health check falhou. Iniciando rollback..."
 
-                    timeout(time: 5, unit: 'MINUTES') {
-                        sh """
-                            for i in {1..30}; do
-                                if curl -f ${APP_URL}/health 2>/dev/null; then
-                                    echo "✅ App Service está respondendo!"
-                                    exit 0
-                                fi
-                                echo "Tentativa \$i/30: Aguardando aplicação..."
-                                sleep 10
-                            done
-                            echo "⚠️  App Service não respondeu no tempo esperado"
-                            exit 1
-                        """
+                        if (env.PREVIOUS_IMAGE) {
+                            withCredentials([usernamePassword(
+                                credentialsId: 'azure-service-principal',
+                                usernameVariable: 'SP_CLIENT_ID',
+                                passwordVariable: 'SP_CLIENT_SECRET'
+                            )]) {
+                                azureLogin(SP_CLIENT_ID, SP_CLIENT_SECRET, env.AZURE_TENANT_ID)
+                                sh """
+                                    az webapp config container set \\
+                                        --name ${appServiceName} \\
+                                        --resource-group ${resourceGroup} \\
+                                        --docker-custom-image-name ${env.PREVIOUS_IMAGE}
+                                """
+                                sh "az webapp restart --name ${appServiceName} --resource-group ${resourceGroup}"
+                            }
+                            notify('ROLLBACK', "Rollback executado | Voltando para: ${env.PREVIOUS_IMAGE} | Build #${env.BUILD_NUMBER}")
+                        }
+
+                        error("[ERROR] Deploy falhou - rollback executado para ${env.PREVIOUS_IMAGE ?: 'imagem anterior'}")
                     }
 
-                    echo "✅ Deploy para Azure App Service concluído!"
-                    echo "🌐 URL: ${APP_URL}"
+                    echo "[INFO] Deploy concluido: ${ACR_IMAGE}:${ACR_TAG}"
+                }
+            }
+        }
+
+        stage('Smoke Test') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                script {
+                    def appServiceName = env.AZURE_APP_SERVICE_NAME ?: 'newsdc2027'
+                    def appUrl = "https://${appServiceName}.azurewebsites.net"
+
+                    if (!healthCheck(appUrl, 5, 20)) {
+                        error("[ERROR] Smoke test falhou - aplicacao nao responde em ${appUrl}/health")
+                    }
+
+                    echo "[INFO] Smoke test OK: ${appUrl}"
                 }
             }
         }
@@ -262,49 +219,92 @@ pipeline {
 
     post {
         always {
-            echo '🧹 Cleaning up...'
-
             script {
-                // Limpar workspace cache (manter apenas últimos 3 builds)
-                sh """
-                    find ${WORKSPACE}/.composer-cache -type f -mtime +7 -delete 2>/dev/null || true
-                    find ${WORKSPACE}/.npm-cache -type f -mtime +7 -delete 2>/dev/null || true
-                """
-
-                // Nota: Limpeza de containers Docker desabilitada
-                // Azure App Service não expõe Docker socket
-                echo "ℹ️  Docker cleanup skipped (Azure App Service environment)"
+                sh "find ${WORKSPACE}/.composer-cache -type f -mtime +7 -delete 2>/dev/null || true"
             }
         }
-
         success {
-            echo '✅ Pipeline completed successfully!'
-
-            // Notificação de sucesso (configurar no Jenkins)
-            // slackSend color: 'good', message: "Build #${env.BUILD_NUMBER} succeeded"
-        }
-
-        failure {
-            echo '❌ Pipeline failed!'
-
             script {
-                // Coletar informações do build para debugging
+                def appServiceName = env.AZURE_APP_SERVICE_NAME ?: 'newsdc2027'
+                notify('SUCCESS', "Deploy #${env.BUILD_NUMBER} em producao | Imagem: ${ACR_IMAGE}:${ACR_TAG} | https://${appServiceName}.azurewebsites.net")
+            }
+        }
+        failure {
+            script {
                 sh """
-                    echo '=== Build Information ===' > build-info.txt
-                    echo "Build Number: ${env.BUILD_NUMBER}" >> build-info.txt
-                    echo "Git Commit: ${env.GIT_COMMIT}" >> build-info.txt
-                    echo "Git Branch: ${env.GIT_BRANCH}" >> build-info.txt
-                    echo "ACR Image: ${ACR_IMAGE}:${ACR_TAG}" >> build-info.txt
+                    {
+                        echo "Build Number: ${env.BUILD_NUMBER}"
+                        echo "Git Commit:   ${env.GIT_COMMIT}"
+                        echo "Git Branch:   ${env.GIT_BRANCH}"
+                        echo "ACR Image:    ${ACR_IMAGE}:${ACR_TAG}"
+                        echo "Autor:        ${env.GIT_AUTHOR}"
+                    } > build-info.txt
                 """
                 archiveArtifacts artifacts: 'build-info.txt', allowEmptyArchive: true
+                notify('FAILURE', "Falha no Build #${env.BUILD_NUMBER} | Branch: ${env.GIT_BRANCH} | Autor: ${env.GIT_AUTHOR}")
             }
-
-            // Notificação de falha
-            // slackSend color: 'danger', message: "Build #${env.BUILD_NUMBER} failed"
         }
-
         unstable {
-            echo '⚠️  Pipeline completed with warnings'
+            script {
+                notify('UNSTABLE', "Build #${env.BUILD_NUMBER} com warnings | Branch: ${env.GIT_BRANCH}")
+            }
         }
     }
+}
+
+// ============================================================
+// FUNCOES INTERNAS
+// ============================================================
+
+def azureLogin(String clientId, String clientSecret, String tenantId) {
+    if (!tenantId) {
+        error("[ERROR] AZURE_TENANT_ID nao configurado. Acesse: Manage Jenkins -> Configure System -> Global properties")
+    }
+    sh """
+        az login --service-principal \\
+            --username '${clientId}' \\
+            --password '${clientSecret}' \\
+            --tenant '${tenantId}'
+    """
+}
+
+def notify(String status, String message) {
+    def slackWebhook = env.SLACK_WEBHOOK_URL ?: ''
+    def teamsWebhook = env.TEAMS_WEBHOOK_URL ?: ''
+
+    if (slackWebhook) {
+        def color = (status == 'SUCCESS') ? 'good' : (status in ['FAILURE', 'ROLLBACK']) ? 'danger' : 'warning'
+        sh(script: """
+            curl -sf -X POST '${slackWebhook}' \\
+                -H 'Content-Type: application/json' \\
+                -d '{"attachments":[{"color":"${color}","title":"[${status}] Jenkins SDC - Build #${env.BUILD_NUMBER}","text":"${message}"}]}' \\
+            || true
+        """, returnStatus: true)
+    }
+
+    if (teamsWebhook) {
+        def teamsColor = (status == 'SUCCESS') ? '00C853' : (status in ['FAILURE', 'ROLLBACK']) ? 'FF0000' : 'FF6F00'
+        sh(script: """
+            curl -sf -X POST '${teamsWebhook}' \\
+                -H 'Content-Type: application/json' \\
+                -d '{"@type":"MessageCard","@context":"http://schema.org/extensions","themeColor":"${teamsColor}","summary":"[${status}] Jenkins SDC","title":"[${status}] Jenkins SDC - Build #${env.BUILD_NUMBER}","text":"${message}"}' \\
+            || true
+        """, returnStatus: true)
+    }
+}
+
+def healthCheck(String url, Integer retries = 10, Integer intervalSeconds = 15) {
+    for (int i = 1; i <= retries; i++) {
+        def rc = sh(script: "curl -sf '${url}/health'", returnStatus: true)
+        if (rc == 0) {
+            echo "[INFO] Health check OK na tentativa ${i}/${retries}"
+            return true
+        }
+        if (i < retries) {
+            echo "[INFO] Tentativa ${i}/${retries}: aguardando ${intervalSeconds}s..."
+            sleep(time: intervalSeconds, unit: 'SECONDS')
+        }
+    }
+    echo "[WARN] Health check falhou apos ${retries} tentativas em ${url}/health"
+    return false
 }

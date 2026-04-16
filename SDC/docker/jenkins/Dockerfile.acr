@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     jq \
+    pigz \
     python3 \
     python3-pip \
     make \
@@ -61,28 +62,6 @@ RUN curl -L "https://github.com/docker/compose/releases/latest/download/docker-c
 RUN groupadd -g ${DOCKER_GID} docker || groupmod -g ${DOCKER_GID} docker && \
     usermod -aG docker jenkins
 
-# ===== INSTALAR BUN =====
-RUN curl -fsSL https://bun.sh/install | bash \
-    && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
-    && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx \
-    && bun --version
-
-# ===== INSTALAR PHP E COMPOSER =====
-# Adicionar repositório sury.org para PHP 8.2
-RUN curl -fsSL https://packages.sury.org/php/apt.gpg | gpg --dearmor -o /usr/share/keyrings/sury-php-archive-keyring.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/sury-php-archive-keyring.gpg] https://packages.sury.org/php/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/sury-php.list > /dev/null && \
-    apt-get update && apt-get install -y \
-    php8.2-cli \
-    php8.2-curl \
-    php8.2-mbstring \
-    php8.2-xml \
-    php8.2-zip \
-    php8.2-mysql \
-    php8.2-gd \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
-    composer --version
 
 # ===== INSTALAR AZURE CLI =====
 # CRÍTICO: Necessário para push de imagens para ACR e deploy no Azure
@@ -123,11 +102,9 @@ RUN jenkins-plugin-cli --plugins \
     ws-cleanup \
     build-timeout \
     ansicolor \
-    azure-credentials \
-    azure-cli
+    azure-credentials
 
 # ===== CONFIGURAÇÃO JCasC =====
-ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
 ENV CASC_JENKINS_CONFIG=/var/jenkins_home/casc.yaml
 
 # ===== SCRIPTS DE INICIALIZAÇÃO =====
@@ -142,9 +119,7 @@ RUN chmod +x /usr/local/bin/healthcheck.sh
 RUN chown -R jenkins:jenkins /var/jenkins_home
 
 # ===== JAVA HEAP CONFIGURATION =====
-ENV JAVA_OPTS="-Xms512m -Xmx2g -Djava.awt.headless=true \
-    -Djenkins.install.runSetupWizard=false \
-    -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=false"
+ENV JAVA_OPTS="-Xms512m -Xmx2g -Djava.awt.headless=true -Djenkins.install.runSetupWizard=false -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=false"
 
 # ===== EXPOR PORTAS =====
 EXPOSE 8080 50000
