@@ -18,6 +18,7 @@ class RatRelatoRecurso extends RatRelato
     protected $table = 'rat_relato_recursos';
 
     protected $fillable = [
+        'ocorrencia_id',
         'seq',
         'recurso_tipo',
         'recurso_problemas',
@@ -59,5 +60,13 @@ class RatRelatoRecurso extends RatRelato
     public function empregados(): HasMany
     {
         return $this->hasMany(RatRecursosEmpregado::class, 'relato_recurso_id');
+    }
+
+    /**
+     * Relação: Componentes da Guarnição / Agentes
+     */
+    public function agentes(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Rat\Models\Recursos\RatRecursosComponentesGuarnicao::class, 'relato_recurso_id');
     }
 }

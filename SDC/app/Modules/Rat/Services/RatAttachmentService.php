@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Services;
 
-use App\Modules\Rat\Models\Rat;
+use App\Models\Rat\RatOcorrencia;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -35,19 +35,22 @@ class RatAttachmentService
     public function getMaxKb(): int         { return self::MAX_KB; }
 
     /** Faz upload do arquivo, persiste metadados em rat.anexos e retorna o registro criado. */
-    public function store(Rat $rat, UploadedFile $file): array
+    public function store(RatOcorrencia $rat, UploadedFile $file): array
     {
-        ['id' => $id, 'path' => $path] = $this->persist($rat->id, $file);
+        ['id' => $id, 'path' => $path] = $this->persist((string)$rat->id, $file);
         $anexo = $this->buildMetadata($file, $id, $path);
-        $rat->update(['anexos' => [...($rat->anexos ?? []), $anexo]]);
+        
+        $currentAnexos = is_string($rat->anexos) ? json_decode($rat->anexos, true) : ($rat->anexos ?? []);
+        $rat->update(['anexos' => array_merge($currentAnexos, [$anexo])]);
 
         return $anexo;
     }
 
     /** Remove o arquivo do disco e o registro de rat.anexos. */
-    public function destroy(Rat $rat, string $anexoId): void
+    public function destroy(RatOcorrencia $rat, string $anexoId): void
     {
-        $existing = collect($rat->anexos ?? []);
+        $currentAnexos = is_string($rat->anexos) ? json_decode($rat->anexos, true) : ($rat->anexos ?? []);
+        $existing = collect($currentAnexos);
         $target   = $existing->firstWhere('id', $anexoId);
 
         if ($target && !empty($target['path'])) {

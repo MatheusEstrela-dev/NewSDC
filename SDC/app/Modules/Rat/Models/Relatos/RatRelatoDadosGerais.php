@@ -17,6 +17,7 @@ class RatRelatoDadosGerais extends RatRelato
     protected $table = 'rat_relato_dados_gerais';
 
     protected $fillable = [
+        'ocorrencia_id',
         'created_by',
         'data_fato',
         'data_inicio_atividade',
@@ -50,6 +51,8 @@ class RatRelatoDadosGerais extends RatRelato
         'local_ocorrencia_estradas_rodovias',
         'local_unidade_militar',
         'tem_vistoria',
+        'descricao', // Narrative history
+        'status',
     ];
 
     protected $casts = [
@@ -59,6 +62,7 @@ class RatRelatoDadosGerais extends RatRelato
         'com_ocorrencia_data' => 'datetime',
         'local_latitude' => 'float',
         'local_longitude' => 'float',
+        'tem_vistoria' => 'boolean',
     ];
 
     /**

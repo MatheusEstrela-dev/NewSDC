@@ -388,7 +388,7 @@ import { useExport } from '@/Composables/useExport';
 const {
   showExportModal,
   handleExport: triggerExport
-} = useExport('rat.export');
+} = useExport('compdec.rat.export');
 
 function handleExportCsv(params) {
   // Passamos os filtros atuais da tela para serem combinados com os filtros do modal

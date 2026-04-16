@@ -40,7 +40,12 @@ class EloquentRatRepository implements RatRepositoryInterface
 
     public function findById(string $id): ?Rat
     {
-        $ocorrencia = RatOcorrencia::with(['relatosMorph'])->find($id);
+        $ocorrencia = RatOcorrencia::with([
+            'relatosMorph', 
+            'relatosMorph.conteudo',
+            'relatosMorph.conteudo.agentes', // If available for resources
+            'historicos'
+        ])->find($id);
 
         if (!$ocorrencia) {
             return null;
@@ -180,8 +185,8 @@ class EloquentRatRepository implements RatRepositoryInterface
         $rat->recursos     = $recursos;
         $rat->envolvidos   = $envolvidos;
         $rat->vistoria     = $vistoria ?? [];
-        $rat->historico    = $ocorrencia->historicos ? $ocorrencia->historicos->toArray() : [];
-        $rat->anexos       = [];
+        $rat->historico    = $ocorrencia->historico ?? ($dadosGerais['descricao'] ?? null);
+        $rat->anexos       = $ocorrencia->anexos ?? [];
         $rat->created_at   = $ocorrencia->created_at;
         $rat->updated_at   = $ocorrencia->updated_at;
 

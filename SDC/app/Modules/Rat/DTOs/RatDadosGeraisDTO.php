@@ -62,47 +62,57 @@ readonly class RatDadosGeraisDTO
      */
     public static function fromArray(array $data): self
     {
+        // Se os dados vierem aninhados (comunicacao, local, endereco), faz o merge para o nível raiz
+        // para facilitar o mapeamento no DTO.
+        $merged = array_merge(
+            $data['dadosGerais'] ?? [],
+            $data['comunicacao'] ?? [],
+            $data['local'] ?? [],
+            $data['endereco'] ?? [],
+            $data // Mantém os campos que já estão na raiz
+        );
+
         return new self(
-            dataFato:                 $data['data_fato'] ?? $data['data_ocorrencia'] ?? null,
-            dataInicioAtividade:      $data['data_inicio_atividade']      ?? null,
-            dataTerminoAtividade:     $data['data_termino_atividade']     ?? null,
-            natCodigo:                $data['nat_codigo'] ?? $data['natureza'] ?? null,
-            natCobradeId:             isset($data['nat_cobrade_id'])
-                                          ? (int) $data['nat_cobrade_id']
+            dataFato:                 $merged['data_fato'] ?? $merged['data_ocorrencia'] ?? $merged['data'] ?? null,
+            dataInicioAtividade:      $merged['data_inicio_atividade']      ?? null,
+            dataTerminoAtividade:     $merged['data_termino_atividade']     ?? null,
+            natCodigo:                $merged['nat_codigo'] ?? $merged['natureza'] ?? null,
+            natCobradeId:             isset($merged['nat_cobrade_id'])
+                                          ? (int) $merged['nat_cobrade_id']
                                           : null,
-            natOcorrencia:            $data['nat_ocorrencia']             ?? null,
-            natNomeOperacao:          $data['nat_nome_operacao']          ?? null,
-            uniResponsavelMunicipio:  $data['uni_responsavel_municipio']  ?? null,
-            uniResponsavelCodigo:     $data['uni_responsavel_codigo']     ?? null,
-            uniResponsavelUnidade:    $data['uni_responsavel_unidade']    ?? null,
-            uniBoCodUnidade:          $data['uni_bo_cod_unidade']         ?? null,
-            uniBoAno:                 isset($data['uni_bo_ano'])
-                                          ? (int) $data['uni_bo_ano']
+            natOcorrencia:            $merged['nat_ocorrencia']             ?? null,
+            natNomeOperacao:          $merged['nat_nome_operacao']          ?? null,
+            uniResponsavelMunicipio:  $merged['uni_responsavel_municipio']  ?? null,
+            uniResponsavelCodigo:     $merged['uni_responsavel_codigo']     ?? null,
+            uniResponsavelUnidade:    $merged['uni_responsavel_unidade']    ?? null,
+            uniBoCodUnidade:          $merged['uni_bo_cod_unidade']         ?? null,
+            uniBoAno:                 isset($merged['uni_bo_ano'])
+                                          ? (int) $merged['uni_bo_ano']
                                           : null,
-            uniBoSequencial:          $data['uni_bo_sequencial']          ?? null,
-            comOcorrenciaData:        $data['com_ocorrencia_data']        ?? null,
-            comOcorrenciaAtendimento: $data['com_ocorrencia_atendimento'] ?? null,
-            localPais:                $data['local_pais']                 ?? null,
-            localEstadoUf:            $data['local_estadouf'] ?? $data['local_estado_uf'] ?? null,
-            localMunicipio:           $data['local_municipio'] ?? $data['cidade'] ?? null,
-            localCep:                 $data['local_cep']                  ?? null,
-            localLogradouro:          $data['local_logradouro'] ?? $data['local_logradoura_1'] ?? $data['endereco'] ?? null,
-            localBairro:              $data['local_bairro']               ?? null,
-            localComplemento:         $data['local_complemento']          ?? null,
-            localNumero:              $data['local_numero']               ?? null,
-            localKm:                  $data['local_km']                   ?? null,
-            localCruzamento:          $data['local_cruzamento']           ?? null,
-            localPontoReferencia:    $data['local_ponto_referencia']     ?? null,
-            localLatitude:           isset($data['local_latitude'])
-                                          ? (float) $data['local_latitude']
-                                          : null,
-            localLongitude:          isset($data['local_longitude'])
-                                          ? (float) $data['local_longitude']
-                                          : null,
-            localOcorrenciaTipo:     $data['local_ocorrencia_tipo']      ?? null,
-            localOcorrenciaEstradas: $data['local_ocorrencia_estradas_rodovias'] ?? null,
-            localUnidadeMilitar:     $data['local_unidade_militar']      ?? null,
-            temVistoria:             (bool) ($data['tem_vistoria']       ?? false),
+            uniBoSequencial:          $merged['uni_bo_sequencial']          ?? null,
+            comOcorrenciaData:        $merged['com_ocorrencia_data']        ?? $merged['data'] ?? null,
+            comOcorrenciaAtendimento: $merged['com_ocorrencia_atendimento'] ?? $merged['atendimento'] ?? null,
+            localPais:                $merged['local_pais']                 ?? $merged['pais_id'] ?? null,
+            localEstadoUf:            $merged['local_estadouf'] ?? $merged['local_estado_uf'] ?? $merged['uf'] ?? null,
+            localMunicipio:           $merged['local_municipio'] ?? $merged['cidade'] ?? $merged['municipio'] ?? null,
+            localCep:                 $merged['local_cep']                  ?? $merged['cep'] ?? null,
+            localLogradouro:          $merged['local_logradouro'] ?? $merged['local_logradoura_1'] ?? $merged['endereco'] ?? $merged['logradouro'] ?? null,
+            localBairro:              $merged['local_bairro']               ?? $merged['bairro'] ?? null,
+            localComplemento:         $merged['local_complemento']          ?? $merged['complemento'] ?? null,
+            localNumero:              $merged['local_numero']               ?? $merged['numero'] ?? null,
+            localKm:                  $merged['local_km']                   ?? $merged['km'] ?? null,
+            localCruzamento:          $merged['local_cruzamento']           ?? null,
+            localPontoReferencia:    $merged['local_ponto_referencia']     ?? $merged['ponto_referencia'] ?? null,
+            localLatitude:           isset($merged['local_latitude'])
+                                          ? (float) $merged['local_latitude']
+                                          : (isset($merged['latitude']) ? (float) $merged['latitude'] : null),
+            localLongitude:          isset($merged['local_longitude'])
+                                          ? (float) $merged['local_longitude']
+                                          : (isset($merged['longitude']) ? (float) $merged['longitude'] : null),
+            localOcorrenciaTipo:     $merged['local_ocorrencia_tipo']      ?? $merged['tipo'] ?? null,
+            localOcorrenciaEstradas: $merged['local_ocorrencia_estradas_rodovias'] ?? $merged['estradas_rodovias'] ?? null,
+            localUnidadeMilitar:     $merged['local_unidade_militar']      ?? $merged['unidade_militar'] ?? null,
+            temVistoria:             (bool) ($merged['tem_vistoria']       ?? false),
         );
     }
 

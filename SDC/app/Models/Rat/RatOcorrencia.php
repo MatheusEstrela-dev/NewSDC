@@ -43,6 +43,7 @@ class RatOcorrencia extends Model
         'updated_by',
         'ocorrencia_origem_id',
         'historico',
+        'anexos',
     ];
 
     protected $casts = [
@@ -51,6 +52,7 @@ class RatOcorrencia extends Model
         'created_at'   => 'datetime',
         'updated_at'   => 'datetime',
         'deleted_at'   => 'datetime',
+        'anexos'       => 'array',
     ];
 
     // ─── Relacionamentos ────────────────────────────────────────────────────

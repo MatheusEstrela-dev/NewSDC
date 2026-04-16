@@ -23,6 +23,7 @@ class RatRelatoEnvolvidos extends RatRelato
     protected $table = 'rat_relato_envolvidos';
 
     protected $fillable = [
+        'ocorrencia_id',
         // Dados gerais do envolvimento
         'g_tipo_pessoa',
         'g_lesao_grau',

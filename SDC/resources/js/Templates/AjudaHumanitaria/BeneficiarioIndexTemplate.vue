@@ -235,7 +235,7 @@ const {
 } = useExport('ajuda-humanitaria.beneficiarios.export');
 
 function handleExportCsv(params) {
-  triggerExport(params, filters.value);
+  triggerExport(params, localFilters.value);
 }
 
 // =========================
