@@ -98,8 +98,20 @@ class UserManagementController extends Controller
             $role->permissions_count = $role->permissions->count();
         });
 
+        $tokens = $user->tokens->map(fn ($t) => [
+            'id'           => $t->id,
+            'name'         => $t->name,
+            'abilities'    => $t->abilities,
+            'last_used_at' => $t->last_used_at,
+            'expires_at'   => $t->expires_at,
+            'created_at'   => $t->created_at,
+        ]);
+
         return Inertia::render('Admin/Permissions/Users/Show', [
-            'user' => $user,
+            'user'         => $user,
+            'tokens'       => $tokens,
+            'newToken'     => session('new_token'),
+            'newTokenName' => session('new_token_name'),
         ]);
     }
 

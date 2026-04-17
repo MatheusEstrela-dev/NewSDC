@@ -1,157 +1,166 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1\Rat;
 
 use App\Http\Controllers\Controller;
-use App\Models\Protocolo;
+use App\Modules\Rat\DTOs\RatFilterDTO;
+use App\Modules\Rat\DTOs\RatReceiveBIDTO;
+use App\Modules\Rat\Http\Requests\ReceiveRatBIRequest;
+use App\Modules\Rat\Http\Resources\RatListResource;
+use App\Modules\Rat\Http\Resources\RatResource;
+use App\Modules\Rat\Services\RatExportBIService;
+use App\Modules\Rat\Services\RatReceiveBIService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
+ * API Controller para o modulo RAT.
+ *
+ * FLUXO: Request -> Controller -> Service -> JSON
+ *
+ * RESPONSABILIDADES:
+ * - GET /api/v1/rat/protocolos                → listagem paginada
+ * - GET /api/v1/rat/protocolos?format=powerbi → flat array para Power BI
+ * - GET /api/v1/rat/protocolos/{id}           → detalhe completo
+ * - POST /api/v1/rat/protocolos               → recebimento de dados externos
+ *
  * @OA\Tag(
  *     name="RAT",
- *     description="Endpoints do módulo RAT (Registro de Atendimento Técnico)"
- * )
- * 
- * @OA\Schema(
- *     schema="ProtocoloRAT",
- *     type="object",
- *     title="Protocolo RAT",
- *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="numero", type="string", example="2025/001"),
- *     @OA\Property(property="municipio_id", type="integer", example=123),
- *     @OA\Property(property="tipo", type="string", example="Vistoria Técnica"),
- *     @OA\Property(property="status", type="string", example="em_analise"),
- *     @OA\Property(property="data", type="string", format="date", example="2025-01-20")
+ *     description="Endpoints do modulo RAT (Registro de Atendimento Tecnico)"
  * )
  */
 class ProtocoloController extends Controller
 {
-    public function __construct()
-    {
-        $this->authorizeResource(Protocolo::class, 'protocolo');
-    }
+    public function __construct(
+        private readonly RatExportBIService  $exportService,
+        private readonly RatReceiveBIService $receiveService,
+    ) {}
 
     /**
+     * Lista protocolos RAT ou exporta flat para Power BI.
+     *
+     * ?format=powerbi → retorna array flat desnormalizado (sem paginacao)
+     * sem parametro   → retorna lista paginada com RatListResource
+     *
      * @OA\Get(
      *     path="/api/v1/rat/protocolos",
-     *     summary="Lista todos os protocolos RAT",
-     *     description="Retorna uma lista paginada de todos os protocolos RAT cadastrados",
-     *     operationId="listProtocolos",
+     *     summary="Lista protocolos RAT / export Power BI",
      *     tags={"RAT"},
-     *     security={{"sanctum": {}}},
-     *     @OA\Parameter(
-     *         name="page",
-     *         in="query",
-     *         description="Número da página",
-     *         required=false,
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Lista de protocolos retornada com sucesso",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/ProtocoloRAT")),
-     *             @OA\Property(property="meta", type="object", ref="#/components/schemas/PaginationMeta")
-     *         )
-     *     )
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(name="format", in="query", required=false,
+     *         @OA\Schema(type="string", enum={"powerbi"})),
+     *     @OA\Parameter(name="protocolo", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="status", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="municipio", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="ano", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="data_inicio", in="query", required=false, @OA\Schema(type="string", format="date")),
+     *     @OA\Parameter(name="data_fim", in="query", required=false, @OA\Schema(type="string", format="date")),
+     *     @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=15)),
+     *     @OA\Response(response=200, description="Sucesso"),
+     *     @OA\Response(response=401, description="Nao autenticado"),
+     *     @OA\Response(response=429, description="Rate limit excedido")
      * )
      */
     public function index(Request $request): JsonResponse
     {
-        return response()->json([
-            'data' => [],
-            'meta' => ['current_page' => 1, 'total' => 0],
-        ]);
-    }
+        $filters = RatFilterDTO::fromArray($request->only([
+            'protocolo', 'status', 'municipio', 'ano',
+            'data_inicio', 'data_fim', 'per_page',
+        ]));
 
-    /**
-     * @OA\Get(
-     *     path="/api/v1/rat/protocolos/{id}",
-     *     summary="Exibe um protocolo RAT específico",
-     *     operationId="showProtocolo",
-     *     tags={"RAT"},
-     *     security={{"sanctum": {}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Protocolo encontrado",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="data", ref="#/components/schemas/ProtocoloRAT")
-     *         )
-     *     )
-     * )
-     */
-    public function show(int $id): JsonResponse
-    {
-        return response()->json([
-            'data' => ['id' => $id, 'numero' => '2025/001'],
-        ]);
-    }
+        if ($request->input('format') === 'powerbi') {
+            $data = $this->exportService->listForPowerBI($filters);
 
-    /**
-     * @OA\Post(
-     *     path="/api/v1/rat/protocolos",
-     *     summary="Cria um novo protocolo RAT",
-     *     operationId="storeProtocolo",
-     *     tags={"RAT"},
-     *     security={{"sanctum": {}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"municipio_id", "tipo"},
-     *             @OA\Property(property="municipio_id", type="integer", example=123),
-     *             @OA\Property(property="tipo", type="string", example="Vistoria Técnica"),
-     *             @OA\Property(property="descricao", type="string", example="Solicitação de vistoria técnica")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Protocolo criado com sucesso",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="data", ref="#/components/schemas/ProtocoloRAT"),
-     *             @OA\Property(property="message", type="string", example="Protocolo criado com sucesso")
-     *         )
-     *     )
-     * )
-     */
-    public function store(Request $request): JsonResponse
-    {
-        return response()->json([
-            'data' => $request->all(),
-            'message' => 'Protocolo criado com sucesso',
-        ], 201);
-    }
+            return response()->json([
+                'success' => true,
+                'data'    => $data,
+                'meta'    => [
+                    'total_registros' => count($data),
+                    'gerado_em'       => now()->toIso8601String(),
+                ],
+            ]);
+        }
 
-    public function update(Request $request, int $id): JsonResponse
-    {
-        return response()->json([
-            'data' => array_merge(['id' => $id], $request->all()),
-            'message' => 'Protocolo atualizado com sucesso',
-        ], 200);
-    }
+        $paginator = $this->exportService->listForApi($filters);
 
-    public function destroy(int $id): JsonResponse
-    {
-        return response()->json(null, 204);
-    }
-
-    public function finalize(Request $request, int $protocolo): JsonResponse
-    {
         return response()->json([
             'success' => true,
-            'message' => 'Protocolo finalizado com sucesso',
-            'data' => [
-                'id' => $protocolo,
-                'finalized_by' => $request->user()?->id,
-                'finalized_at' => now()->toIso8601String(),
+            'data'    => RatListResource::collection($paginator)->resolve(),
+            'meta'    => [
+                'current_page' => $paginator->currentPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+                'last_page'    => $paginator->lastPage(),
             ],
-        ], 200);
+        ]);
+    }
+
+    /**
+     * Detalhe completo de um RAT por UUID.
+     *
+     * @OA\Get(
+     *     path="/api/v1/rat/protocolos/{id}",
+     *     summary="Detalhe de um protocolo RAT",
+     *     tags={"RAT"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string")),
+     *     @OA\Response(response=200, description="Protocolo encontrado"),
+     *     @OA\Response(response=404, description="Nao encontrado"),
+     *     @OA\Response(response=401, description="Nao autenticado")
+     * )
+     */
+    public function show(string $id): JsonResponse
+    {
+        $rat = $this->exportService->findById($id);
+
+        if (!$rat) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Protocolo RAT nao encontrado.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => (new RatResource($rat))->resolve(),
+        ]);
+    }
+
+    /**
+     * Recebe dados externos e cria um novo RAT.
+     *
+     * @OA\Post(
+     *     path="/api/v1/rat/protocolos",
+     *     summary="Recebe dados externos e cria protocolo RAT",
+     *     tags={"RAT"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="dados_gerais", type="object"),
+     *             @OA\Property(property="comunicacao", type="object"),
+     *             @OA\Property(property="local", type="object"),
+     *             @OA\Property(property="endereco", type="object"),
+     *             @OA\Property(property="recursos", type="array", @OA\Items(type="object")),
+     *             @OA\Property(property="envolvidos", type="array", @OA\Items(type="object")),
+     *             @OA\Property(property="vistoria", type="object"),
+     *             @OA\Property(property="finalize", type="boolean", example=false)
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="RAT criado com sucesso"),
+     *     @OA\Response(response=422, description="Dados invalidos"),
+     *     @OA\Response(response=429, description="Rate limit excedido")
+     * )
+     */
+    public function receive(ReceiveRatBIRequest $request): JsonResponse
+    {
+        $dto = RatReceiveBIDTO::fromRequest($request);
+        $rat = $this->receiveService->receive($dto);
+
+        return response()->json([
+            'success' => true,
+            'data'    => (new RatResource($rat))->resolve(),
+        ], 201);
     }
 }
-

@@ -162,6 +162,14 @@
               <p class="text-slate-500 dark:text-slate-400">Nenhuma permissão direta atribuída.</p>
             </div>
           </div>
+
+          <!-- API Tokens Card -->
+          <UserApiTokens
+            :user-id="user.id"
+            :tokens="tokens"
+            :new-token="newToken"
+            :new-token-name="newTokenName"
+          />
         </div>
 
         <!-- Sidebar (horizontal on mobile, vertical on xl) -->
@@ -199,11 +207,24 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 defineOptions({ layout: AuthenticatedLayout });
 import PermissionBadge from '@/Components/Admin/PermissionBadge.vue';
 import StatsCard from '@/Components/Admin/StatsCard.vue';
+import UserApiTokens from '@/Components/Organisms/Permissions/UserApiTokens.vue';
 
 const props = defineProps({
   user: {
     type: Object,
     required: true
+  },
+  tokens: {
+    type: Array,
+    default: () => []
+  },
+  newToken: {
+    type: String,
+    default: null
+  },
+  newTokenName: {
+    type: String,
+    default: null
   }
 });
 

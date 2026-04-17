@@ -9,7 +9,7 @@ use App\Modules\Decretacoes\Observers\ProcessoObserver;
 use App\Modules\Decretacoes\Services\DesastreDataService;
 use App\Modules\Decretacoes\Services\EntradaProcessoService;
 use App\Modules\Decretacoes\Services\HexagonIntegrationService;
-use App\Modules\Decretacoes\Services\ProcessoExportService;
+use App\Modules\Decretacoes\Services\ProcessoExportBIService;
 use App\Modules\Decretacoes\Services\ProcessoQueryService;
 use App\Modules\Decretacoes\Services\ProcessoStatsService;
 use Illuminate\Support\ServiceProvider;
@@ -32,14 +32,14 @@ class DecretacoesServiceProvider extends ServiceProvider
         $this->app->singleton(DesastreDataService::class);
         $this->app->singleton(ProcessoQueryService::class);
         $this->app->singleton(ProcessoStatsService::class);
-        $this->app->singleton(ProcessoExportService::class);
+        $this->app->singleton(ProcessoExportBIService::class);
 
         $this->app->singleton(EntradaProcessoService::class, function ($app) {
             return new EntradaProcessoService(
                 $app->make(HexagonIntegrationService::class),
                 $app->make(ProcessoQueryService::class),
                 $app->make(ProcessoStatsService::class),
-                $app->make(ProcessoExportService::class)
+                $app->make(ProcessoExportBIService::class)
             );
         });
     }

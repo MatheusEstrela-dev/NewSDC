@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Models\Empreendimento;
-use App\Models\Entrada;
 use App\Models\Protocolo;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
@@ -55,7 +54,6 @@ class RouteServiceProvider extends ServiceProvider
          */
         Route::bind('empreendimento', fn ($value) => new Empreendimento(['id' => (int) $value]));
         Route::bind('protocolo', fn ($value) => new Protocolo(['id' => (int) $value]));
-        Route::bind('entrada', fn ($value) => new Entrada(['id' => (int) $value]));
 
         $this->routes(function () {
             Route::middleware('api')

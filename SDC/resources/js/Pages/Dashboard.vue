@@ -157,6 +157,21 @@ import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
 
+const props = defineProps({
+    ratAbertas:         { type: Number, default: 0 },
+    paeEmAnalise:       { type: Number, default: 0 },
+    decretosAprovados:  { type: Number, default: 0 },
+    demandasConcluidas: { type: Number, default: 0 },
+    ratTrend:           { type: Number, default: 0 },
+    paeTrend:           { type: Number, default: 0 },
+    decretoTrend:       { type: Number, default: 0 },
+    demandaTrend:       { type: Number, default: 0 },
+    moduleDistribution: { type: Array,  default: () => [] },
+    barData6M:          { type: Array,  default: () => [] },
+    barData12M:         { type: Array,  default: () => [] },
+    sparklines:         { type: Array,  default: () => [] },
+});
+
 const currentYear = ref(new Date().getFullYear());
 
 // Estado do Modal
@@ -218,84 +233,87 @@ function trendClasses(trend) {
 
 // Definição dos Itens do Dashboard
 const dashboardItems = ref([
-  // Métricas (Linha 1)
-  { 
-    id: 'metric-1', 
-    component: markRaw(DashboardMetricCard), 
-    colSpan: 'col-span-1 lg:col-span-3', 
-    props: { title: 'Em Edição', value: 24, trend: 12, subtitle: '3 novos hoje', variant: 'info', icon: markRaw(PencilSquareIcon) } 
-  },
-  { 
-    id: 'metric-2', 
-    component: markRaw(DashboardMetricCard), 
-    colSpan: 'col-span-1 lg:col-span-3', 
-    props: { title: 'Em Análise', value: 5, trend: -8, subtitle: 'Tempo médio: 4 dias', variant: 'warning', icon: markRaw(ClockIcon) } 
-  },
-  { 
-    id: 'metric-3', 
-    component: markRaw(DashboardMetricCard), 
-    colSpan: 'col-span-1 lg:col-span-3', 
-    props: { title: 'Aprovados', value: 77, trend: 15, subtitle: '12 esta semana', variant: 'success', icon: markRaw(CheckCircleIcon) } 
-  },
-  { 
-    id: 'metric-4', 
-    component: markRaw(DashboardMetricCard), 
-    colSpan: 'col-span-1 lg:col-span-3', 
-    props: { title: 'Atendidos', value: 12, trend: 5, subtitle: '98% resolução', variant: 'danger', icon: markRaw(CheckCircleIcon) } 
-  },
-  
-  // Gráficos Principais (Linha 2)
-  { 
-    id: 'chart-bar', 
-    component: markRaw(BarChartWidget), 
-    colSpan: 'col-span-1 lg:col-span-6' 
-  },
-  { 
-    id: 'chart-donut', 
-    component: markRaw(DonutChartWidget), 
-    colSpan: 'col-span-1 lg:col-span-6' 
-  },
+    // Métricas (Linha 1)
+    {
+        id: 'metric-1',
+        component: markRaw(DashboardMetricCard),
+        colSpan: 'col-span-1 lg:col-span-3',
+        props: { title: 'RAT Abertas', value: props.ratAbertas, trend: props.ratTrend, subtitle: 'Total de ocorrências', variant: 'info', icon: markRaw(PencilSquareIcon) }
+    },
+    {
+        id: 'metric-2',
+        component: markRaw(DashboardMetricCard),
+        colSpan: 'col-span-1 lg:col-span-3',
+        props: { title: 'PAE Em Análise', value: props.paeEmAnalise, trend: props.paeTrend, subtitle: 'Aguardando análise', variant: 'warning', icon: markRaw(ClockIcon) }
+    },
+    {
+        id: 'metric-3',
+        component: markRaw(DashboardMetricCard),
+        colSpan: 'col-span-1 lg:col-span-3',
+        props: { title: 'Decretos Aprovados', value: props.decretosAprovados, trend: props.decretoTrend, subtitle: 'Reconhecidos', variant: 'success', icon: markRaw(CheckCircleIcon) }
+    },
+    {
+        id: 'metric-4',
+        component: markRaw(DashboardMetricCard),
+        colSpan: 'col-span-1 lg:col-span-3',
+        props: { title: 'Demandas Concluídas', value: props.demandasConcluidas, trend: props.demandaTrend, subtitle: 'Resolvidas e fechadas', variant: 'danger', icon: markRaw(CheckCircleIcon) }
+    },
 
-  // Linha 3 (Sparklines, PMDA, Timeline)
-  { 
-    id: 'sparklines', 
-    component: markRaw(SparklinesWidget), 
-    colSpan: 'col-span-1 lg:col-span-4' 
-  },
-  { 
-    id: 'pmda-list', 
-    component: markRaw(PmdaListWidget), 
-    colSpan: 'col-span-1 lg:col-span-4' 
-  },
-  { 
-    id: 'timeline', 
-    component: markRaw(TimelineWidget), 
-    colSpan: 'col-span-1 lg:col-span-4' 
-  },
+    // Gráficos Principais (Linha 2)
+    {
+        id: 'chart-bar',
+        component: markRaw(BarChartWidget),
+        colSpan: 'col-span-1 lg:col-span-6',
+        props: { barData6M: props.barData6M, barData12M: props.barData12M }
+    },
+    {
+        id: 'chart-donut',
+        component: markRaw(DonutChartWidget),
+        colSpan: 'col-span-1 lg:col-span-6',
+        props: { moduleDistribution: props.moduleDistribution }
+    },
 
-  // Linha 4 (Tendência + Radar)
-  {
-    id: 'chart-trend',
-    component: markRaw(TrendChartWidget),
-    colSpan: 'col-span-1 lg:col-span-8'
-  },
-  {
-    id: 'chart-radar',
-    component: markRaw(RadarChartWidget),
-    colSpan: 'col-span-1 lg:col-span-4'
-  },
+    // Linha 3 (Sparklines, PMDA, Timeline)
+    {
+        id: 'sparklines',
+        component: markRaw(SparklinesWidget),
+        colSpan: 'col-span-1 lg:col-span-4',
+        props: { sparklines: props.sparklines }
+    },
+    {
+        id: 'pmda-list',
+        component: markRaw(PmdaListWidget),
+        colSpan: 'col-span-1 lg:col-span-4'
+    },
+    {
+        id: 'timeline',
+        component: markRaw(TimelineWidget),
+        colSpan: 'col-span-1 lg:col-span-4'
+    },
 
-  // Linha 5 (Plano de Contingencia - 2 blocos)
-  {
-    id: 'plancon-municipios',
-    component: markRaw(PlanConMunicipiosWidget),
-    colSpan: 'col-span-1 lg:col-span-6'
-  },
-  {
-    id: 'plancon-situacao',
-    component: markRaw(PlanConSituacaoWidget),
-    colSpan: 'col-span-1 lg:col-span-6'
-  },
+    // Linha 4 (Tendência + Radar)
+    {
+        id: 'chart-trend',
+        component: markRaw(TrendChartWidget),
+        colSpan: 'col-span-1 lg:col-span-8'
+    },
+    {
+        id: 'chart-radar',
+        component: markRaw(RadarChartWidget),
+        colSpan: 'col-span-1 lg:col-span-4'
+    },
+
+    // Linha 5 (Plano de Contingencia - 2 blocos)
+    {
+        id: 'plancon-municipios',
+        component: markRaw(PlanConMunicipiosWidget),
+        colSpan: 'col-span-1 lg:col-span-6'
+    },
+    {
+        id: 'plancon-situacao',
+        component: markRaw(PlanConSituacaoWidget),
+        colSpan: 'col-span-1 lg:col-span-6'
+    },
 ]);
 
 </script>

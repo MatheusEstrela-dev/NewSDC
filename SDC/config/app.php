@@ -183,6 +183,7 @@ return [
         App\Modules\Suporte\SuporteServiceProvider::class,
         App\Modules\Plantao\PlantaoServiceProvider::class,
         App\Modules\PlanCon\PlanConServiceProvider::class,
+        App\Modules\Dashboard\DashboardServiceProvider::class,
     ])->toArray(),
 
     /*

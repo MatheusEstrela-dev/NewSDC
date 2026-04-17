@@ -42,6 +42,7 @@ class User extends Authenticatable
         'user_agent',
         'created_by',
         'updated_by',
+        'notification_update_mode',
     ];
 
     /**
