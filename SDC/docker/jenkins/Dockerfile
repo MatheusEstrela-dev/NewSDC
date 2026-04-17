@@ -86,6 +86,7 @@ RUN jenkins-plugin-cli --plugins \
     office-365-connector \
     email-ext \
     prometheus \
+    cloudbees-disk-usage-simple \
     timestamper \
     ws-cleanup \
     build-timeout \

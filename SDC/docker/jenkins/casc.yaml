@@ -67,14 +67,6 @@ unclassified:
   globalDefaultFlowDurabilityLevel:
     durabilityHint: PERFORMANCE_OPTIMIZED
 
-  # Teams notifications via office-365-connector
-  office365ConnectorWebhookNotifier:
-    webhooks:
-      - url: "${TEAMS_WEBHOOK_URL:-}"
-        name: "SDC Teams"
-        notifySuccess: false
-        notifyFailure: true
-        notifyBackToNormal: true
 
 # ===== CREDENTIALS =====
 credentials:

@@ -98,6 +98,7 @@ RUN jenkins-plugin-cli --plugins \
     slack \
     email-ext \
     prometheus \
+    cloudbees-disk-usage-simple \
     timestamper \
     ws-cleanup \
     build-timeout \
