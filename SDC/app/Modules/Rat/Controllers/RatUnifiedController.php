@@ -253,7 +253,7 @@ class RatUnifiedController extends BaseController
      */
     public function showBo(string $id): JsonResponse
     {
-        $ocorrencia = $this->ocorrenciaService->findOrFail($id);
+        $ocorrencia = $this->ocorrenciaService->findOrFail((int) $id);
 
         return response()->json([
             'success' => true,
@@ -500,6 +500,7 @@ class RatUnifiedController extends BaseController
 
         abort_if(!$rat, 404, 'Ocorrência não encontrada.');
 
+        /** @var \App\Models\Rat\RatOcorrencia $rat */
         $attachment = $this->attachmentService->store($rat, $request->file('arquivo'));
 
         return response()->json([
@@ -516,6 +517,10 @@ class RatUnifiedController extends BaseController
     public function destroyAttachment(string $ocorrenciaId, string $attachmentId): JsonResponse
     {
         $rat = $this->appDataService->findById($ocorrenciaId);
+
+        abort_if(!$rat, 404, 'Ocorrência não encontrada.');
+
+        /** @var \App\Models\Rat\RatOcorrencia $rat */
         $this->attachmentService->destroy($rat, $attachmentId);
 
         return response()->json([
@@ -547,7 +552,7 @@ class RatUnifiedController extends BaseController
     {
         $history = $this->auditService->history(
             'rat_ocorrencias',
-            $id,
+            (int) $id,
             $request->integer('per_page', 20)
         );
 
@@ -625,7 +630,7 @@ class RatUnifiedController extends BaseController
      */
     public function powerBiData(string $id): JsonResponse
     {
-        $ocorrencia = $this->ocorrenciaService->findOrFail($id);
+        $ocorrencia = $this->ocorrenciaService->findOrFail((int) $id);
 
         return response()->json([
             'dados_gerais' => $this->novoService->extractDadosGerais($ocorrencia),
