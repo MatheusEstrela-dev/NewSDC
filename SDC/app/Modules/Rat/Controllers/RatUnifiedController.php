@@ -39,6 +39,11 @@ use App\Services\Rat\RatHistoricoService;
 // ─── HTTP ────────────────────────────────────────────────────────────────────
 use App\Modules\Rat\Http\Requests\UpdateRatRequest;
 use App\Modules\Rat\Http\Requests\ListRatRequest;
+use App\Modules\Rat\Http\Requests\RatDadosGeraisRequest;
+use App\Modules\Rat\Http\Requests\RatEnvolvidoRequest;
+use App\Modules\Rat\Http\Requests\RatRecursoRequest;
+use App\Modules\Rat\Http\Requests\RatVistoriaRequest;
+use App\Modules\Rat\Http\Requests\RatHistoricoRequest;
 use App\Modules\Rat\Http\Resources\RatResource;
 
 // ─── Laravel ─────────────────────────────────────────────────────────────────
@@ -274,9 +279,9 @@ class RatUnifiedController extends BaseController
      * Cria ou atualiza os dados gerais de uma ocorrência.
      * POST /compdec/rat/ocorrencias/{ocorrencia}/dados-gerais
      */
-    public function storeDadosGerais(Request $request, string $ocorrenciaId): JsonResponse
+    public function storeDadosGerais(RatDadosGeraisRequest $request, string $ocorrenciaId): JsonResponse
     {
-        $dto         = RatDadosGeraisDTO::fromArray($request->all());
+        $dto         = RatDadosGeraisDTO::fromArray($request->validated());
         $dadosGerais = $this->writeService->saveDadosGerais($ocorrenciaId, $dto);
 
         return response()->json([
@@ -314,9 +319,9 @@ class RatUnifiedController extends BaseController
      * Adiciona ou atualiza um envolvido na ocorrência.
      * POST /compdec/rat/ocorrencias/{ocorrencia}/envolvidos
      */
-    public function storeEnvolvidos(Request $request, string $ocorrenciaId): JsonResponse
+    public function storeEnvolvidos(RatEnvolvidoRequest $request, string $ocorrenciaId): JsonResponse
     {
-        $dto       = RatEnvolvidoDTO::fromArray($request->all());
+        $dto       = RatEnvolvidoDTO::fromArray($request->validated());
         $envolvido = $this->writeService->saveEnvolvido($ocorrenciaId, $dto);
 
         return response()->json([
@@ -372,9 +377,9 @@ class RatUnifiedController extends BaseController
      * Adiciona ou atualiza um recurso empregado.
      * POST /compdec/rat/ocorrencias/{ocorrencia}/recursos
      */
-    public function storeRecursos(Request $request, string $ocorrenciaId): JsonResponse
+    public function storeRecursos(RatRecursoRequest $request, string $ocorrenciaId): JsonResponse
     {
-        $dto     = RatRecursoDTO::fromArray($request->all());
+        $dto     = RatRecursoDTO::fromArray($request->validated());
         $recurso = $this->writeService->saveRecurso($ocorrenciaId, $dto);
 
         return response()->json([
@@ -426,9 +431,9 @@ class RatUnifiedController extends BaseController
      * Cria ou atualiza a vistoria de uma ocorrência.
      * POST /compdec/rat/ocorrencias/{ocorrencia}/vistoria
      */
-    public function storeVistoria(Request $request, string $ocorrenciaId): JsonResponse
+    public function storeVistoria(RatVistoriaRequest $request, string $ocorrenciaId): JsonResponse
     {
-        $dto      = RatVistoriaDTO::fromArray($request->all());
+        $dto      = RatVistoriaDTO::fromArray($request->validated());
         $vistoria = $this->writeService->saveVistoria($ocorrenciaId, $dto);
 
         return response()->json([
@@ -468,9 +473,9 @@ class RatUnifiedController extends BaseController
      * Registra um evento no histórico da ocorrência.
      * POST /compdec/rat/ocorrencias/{ocorrencia}/historico
      */
-    public function storeHistorico(Request $request, string $ocorrenciaId): JsonResponse
+    public function storeHistorico(RatHistoricoRequest $request, string $ocorrenciaId): JsonResponse
     {
-        $dto = RatHistoricoDTO::fromArray($request->all());
+        $dto = RatHistoricoDTO::fromArray($request->validated());
         $this->writeService->saveHistorico($ocorrenciaId, $dto);
 
         return response()->json([
