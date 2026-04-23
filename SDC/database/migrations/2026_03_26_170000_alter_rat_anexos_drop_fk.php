@@ -11,8 +11,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('rat_anexos', function (Blueprint $table) {
-            $table->dropForeign(['rat_id']);
-            $table->string('rat_id', 36)->change();
+            // $table->dropForeign(['rat_id']);
+            // $table->string('rat_id', 36)->change();
         });
     }
 

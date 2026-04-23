@@ -3,11 +3,15 @@
 # Build otimizado com Early Hints e HTTP/2-3 nativo
 # ============================================================================
 
-FROM dunglas/frankenphp:latest-php8.3-alpine
+# FROM dunglas/frankenphp:latest-php8.3-alpine
+FROM c24773c3328e
 
 LABEL maintainer="SDC Team"
 LABEL environment="production"
 LABEL server="frankenphp"
+
+ARG UID=1000
+ARG GID=1000
 
 # Instalar extensoes PHP necessarias
 RUN install-php-extensions \

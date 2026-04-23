@@ -891,7 +891,7 @@
                         "description": "Nao autenticado"
                     },
                     "403": {
-                        "description": "Sem permissao rat.bi.view"
+                        "description": "Acesso negado"
                     }
                 },
                 "security": [
@@ -963,7 +963,7 @@
                         "description": "Nao autenticado"
                     },
                     "403": {
-                        "description": "Sem permissao rat.bi.view"
+                        "description": "Acesso negado"
                     }
                 },
                 "security": [
@@ -2766,47 +2766,201 @@
                 "tags": [
                     "RAT"
                 ],
-                "summary": "Lista todos os protocolos RAT",
-                "description": "Retorna uma lista paginada de todos os protocolos RAT cadastrados",
-                "operationId": "listProtocolos",
+                "summary": "Lista protocolos RAT / export Power BI",
+                "description": "Lista protocolos RAT ou exporta flat para Power BI.\n\n?format=powerbi → retorna array flat desnormalizado (sem paginacao)\nsem parametro   → retorna lista paginada com RatListResource",
+                "operationId": "486604ef5445a5ba7b780014a0f41b12",
                 "parameters": [
                     {
-                        "name": "page",
+                        "name": "format",
                         "in": "query",
-                        "description": "Número da página",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "powerbi"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "protocolo",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "municipio",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "ano",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "data_inicio",
+                        "in": "query",
+                        "description": "Filtro por data inicial (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "data_fim",
+                        "in": "query",
+                        "description": "Filtro por data final (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
                         "required": false,
                         "schema": {
                             "type": "integer",
-                            "example": 1
+                            "default": 15
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Lista de protocolos retornada com sucesso",
+                        "description": "Sucesso",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/ProtocoloRAT"
-                                            }
+                                    "oneOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
                                         },
-                                        "meta": {
-                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        {
+                                            "$ref": "#/components/schemas/PaginatedResponse"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
+                                },
+                                "example": {
+                                    "success": true,
+                                    "data": [
+                                        {
+                                            "dados_gerais": {
+                                                "id": 155,
+                                                "numero_bos": "2025-000000001-001",
+                                                "status": 1,
+                                                "status_descricao": "Finalizado",
+                                                "uf": "MG",
+                                                "municipio": "620 - BELO HORIZONTE",
+                                                "data_fato": "2025-12-23 08:53:00",
+                                                "data_inicio_atividade": "2025-12-23 08:53:00",
+                                                "data_termino_atividade": "2025-12-23 08:53:00",
+                                                "comunicacao_data": "2025-12-23 08:53:00",
+                                                "created_at": "2025-12-23 08:53:14",
+                                                "updated_at": "2025-12-23 08:54:53"
+                                            },
+                                            "recursos": [
+                                                {
+                                                    "id": 8,
+                                                    "tipo_recurso": "aquatico",
+                                                    "categoria": "comunicacao",
+                                                    "numero_viatura": "HNH 1932",
+                                                    "placa": "HNH 1932",
+                                                    "orgao": "samu",
+                                                    "descricao": "Voluptatem rerum qui"
+                                                }
+                                            ],
+                                            "envolvidos": [
+                                                {
+                                                    "id": 37,
+                                                    "tipo_pessoa": "juridica",
+                                                    "nome": "Quod ipsum omnis ir",
+                                                    "email": "buta@mailinator.com",
+                                                    "data_nascimento": "2017-09-23"
+                                                }
+                                            ],
+                                            "vistoria": {
+                                                "id": 9,
+                                                "solicitante": {
+                                                    "nome": "MATHEUS KEVIN ESTRELA DA SILVA",
+                                                    "cpf": "312.312.312-38",
+                                                    "telefone": "(23) 13123-1231"
+                                                },
+                                                "imovel": {
+                                                    "tipo_imovel": "comercial",
+                                                    "tipo_construcao": "outro",
+                                                    "tipo_edificacao": "construcoes_area_risco",
+                                                    "numero_pavimentos": 9,
+                                                    "estado_conservacao": "pessimo",
+                                                    "regime_ocupacao": "proprio"
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "meta": {
+                                        "current_page": 1,
+                                        "per_page": 15,
+                                        "total": 1,
+                                        "last_page": 1
+                                    }
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "description": "Requisicao invalida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validacao",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit excedido"
                     }
                 },
                 "security": [
                     {
-                        "sanctum": []
+                        "bearerAuth": []
                     }
                 ]
             },
@@ -2814,29 +2968,46 @@
                 "tags": [
                     "RAT"
                 ],
-                "summary": "Cria um novo protocolo RAT",
-                "operationId": "storeProtocolo",
+                "summary": "Recebe dados externos e cria protocolo RAT",
+                "description": "Recebe dados externos e cria um novo RAT.",
+                "operationId": "9f6a5759209f0da9c452a5f4794cc213",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "municipio_id",
-                                    "tipo"
-                                ],
                                 "properties": {
-                                    "municipio_id": {
-                                        "type": "integer",
-                                        "example": 123
+                                    "dados_gerais": {
+                                        "type": "object"
                                     },
-                                    "tipo": {
-                                        "type": "string",
-                                        "example": "Vistoria Técnica"
+                                    "comunicacao": {
+                                        "type": "object"
                                     },
-                                    "descricao": {
-                                        "type": "string",
-                                        "example": "Solicitação de vistoria técnica"
+                                    "local": {
+                                        "type": "object"
+                                    },
+                                    "endereco": {
+                                        "type": "object"
+                                    },
+                                    "recursos": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "envolvidos": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "vistoria": {
+                                        "type": "object"
+                                    },
+                                    "finalize": {
+                                        "type": "boolean",
+                                        "example": false,
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -2846,28 +3017,52 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Protocolo criado com sucesso",
+                        "description": "RAT criado com sucesso",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/ProtocoloRAT"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Protocolo criado com sucesso"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/SuccessResponse"
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "description": "Requisicao invalida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Dados invalidos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit excedido"
                     }
                 },
                 "security": [
                     {
-                        "sanctum": []
+                        "bearerAuth": []
                     }
                 ]
             }
@@ -2877,39 +3072,33 @@
                 "tags": [
                     "RAT"
                 ],
-                "summary": "Exibe um protocolo RAT específico",
-                "operationId": "showProtocolo",
+                "summary": "Detalhe de um protocolo RAT",
+                "description": "Detalhe completo de um RAT por UUID.",
+                "operationId": "ccc6fb514f5307d9809ccb570d1fb6e6",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "example": 1
+                            "type": "string"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Protocolo encontrado",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/ProtocoloRAT"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Protocolo encontrado"
+                    },
+                    "404": {
+                        "description": "Nao encontrado"
+                    },
+                    "401": {
+                        "description": "Nao autenticado"
                     }
                 },
                 "security": [
                     {
-                        "sanctum": []
+                        "bearerAuth": []
                     }
                 ]
             }
@@ -3813,37 +4002,6 @@
                     }
                 },
                 "type": "object"
-            },
-            "ProtocoloRAT": {
-                "title": "Protocolo RAT",
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "example": 1
-                    },
-                    "numero": {
-                        "type": "string",
-                        "example": "2025/001"
-                    },
-                    "municipio_id": {
-                        "type": "integer",
-                        "example": 123
-                    },
-                    "tipo": {
-                        "type": "string",
-                        "example": "Vistoria Técnica"
-                    },
-                    "status": {
-                        "type": "string",
-                        "example": "em_analise"
-                    },
-                    "data": {
-                        "type": "string",
-                        "format": "date",
-                        "example": "2025-01-20"
-                    }
-                },
-                "type": "object"
             }
         },
         "securitySchemes": {
@@ -3912,7 +4070,7 @@
         },
         {
             "name": "RAT",
-            "description": "Endpoints do módulo RAT (Registro de Atendimento Técnico)"
+            "description": "Endpoints do modulo RAT (Registro de Atendimento Tecnico)"
         }
     ],
     "security": [
