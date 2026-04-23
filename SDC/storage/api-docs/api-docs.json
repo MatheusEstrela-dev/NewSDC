@@ -2849,7 +2849,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "oneOf": [
+                                    "allOf": [
                                         {
                                             "$ref": "#/components/schemas/SuccessResponse"
                                         },
@@ -2858,67 +2858,85 @@
                                         }
                                     ]
                                 },
-                                "example": {
-                                    "success": true,
-                                    "data": [
-                                        {
-                                            "dados_gerais": {
-                                                "id": 155,
-                                                "numero_bos": "2025-000000001-001",
-                                                "status": 1,
-                                                "status_descricao": "Finalizado",
-                                                "uf": "MG",
-                                                "municipio": "620 - BELO HORIZONTE",
-                                                "data_fato": "2025-12-23 08:53:00",
-                                                "data_inicio_atividade": "2025-12-23 08:53:00",
-                                                "data_termino_atividade": "2025-12-23 08:53:00",
-                                                "comunicacao_data": "2025-12-23 08:53:00",
-                                                "created_at": "2025-12-23 08:53:14",
-                                                "updated_at": "2025-12-23 08:54:53"
-                                            },
-                                            "recursos": [
+                                "examples": {
+                                    "listagemPaginada": {
+                                        "summary": "Listagem paginada padrao",
+                                        "value": {
+                                            "success": true,
+                                            "data": [
                                                 {
-                                                    "id": 8,
-                                                    "tipo_recurso": "aquatico",
-                                                    "categoria": "comunicacao",
-                                                    "numero_viatura": "HNH 1932",
-                                                    "placa": "HNH 1932",
-                                                    "orgao": "samu",
-                                                    "descricao": "Voluptatem rerum qui"
+                                                    "dados_gerais": {
+                                                        "id": 155,
+                                                        "numero_bos": "2025-000000001-001",
+                                                        "status": 1,
+                                                        "status_descricao": "Finalizado",
+                                                        "uf": "MG",
+                                                        "municipio": "620 - BELO HORIZONTE",
+                                                        "data_fato": "2025-12-23 08:53:00",
+                                                        "data_inicio_atividade": "2025-12-23 08:53:00",
+                                                        "data_termino_atividade": "2025-12-23 08:53:00",
+                                                        "comunicacao_data": "2025-12-23 08:53:00",
+                                                        "created_at": "2025-12-23 08:53:14",
+                                                        "updated_at": "2025-12-23 08:54:53"
+                                                    },
+                                                    "recursos": [
+                                                        {
+                                                            "id": 8,
+                                                            "tipo_recurso": "aquatico",
+                                                            "categoria": "comunicacao",
+                                                            "numero_viatura": "HNH 1932",
+                                                            "placa": "HNH 1932",
+                                                            "orgao": "samu",
+                                                            "descricao": "Voluptatem rerum qui"
+                                                        }
+                                                    ],
+                                                    "envolvidos": [
+                                                        {
+                                                            "id": 37,
+                                                            "tipo_pessoa": "juridica",
+                                                            "nome": "Quod ipsum omnis ir",
+                                                            "email": "buta@mailinator.com",
+                                                            "data_nascimento": "2017-09-23"
+                                                        }
+                                                    ],
+                                                    "vistoria": {
+                                                        "id": 9
+                                                    }
                                                 }
                                             ],
-                                            "envolvidos": [
-                                                {
-                                                    "id": 37,
-                                                    "tipo_pessoa": "juridica",
-                                                    "nome": "Quod ipsum omnis ir",
-                                                    "email": "buta@mailinator.com",
-                                                    "data_nascimento": "2017-09-23"
-                                                }
-                                            ],
-                                            "vistoria": {
-                                                "id": 9,
-                                                "solicitante": {
-                                                    "nome": "MATHEUS KEVIN ESTRELA DA SILVA",
-                                                    "cpf": "312.312.312-38",
-                                                    "telefone": "(23) 13123-1231"
-                                                },
-                                                "imovel": {
-                                                    "tipo_imovel": "comercial",
-                                                    "tipo_construcao": "outro",
-                                                    "tipo_edificacao": "construcoes_area_risco",
-                                                    "numero_pavimentos": 9,
-                                                    "estado_conservacao": "pessimo",
-                                                    "regime_ocupacao": "proprio"
-                                                }
+                                            "meta": {
+                                                "current_page": 1,
+                                                "per_page": 15,
+                                                "total": 1,
+                                                "last_page": 1
                                             }
                                         }
-                                    ],
-                                    "meta": {
-                                        "current_page": 1,
-                                        "per_page": 15,
-                                        "total": 1,
-                                        "last_page": 1
+                                    },
+                                    "exportPowerbi": {
+                                        "summary": "Exportacao flat para Power BI (?format=powerbi)",
+                                        "value": {
+                                            "success": true,
+                                            "data": [
+                                                {
+                                                    "rat_id": 155,
+                                                    "protocolo": "2025-000000001-001",
+                                                    "status": "finalizado",
+                                                    "created_at": "2025-12-23 08:53:14",
+                                                    "updated_at": "2025-12-23 08:54:53",
+                                                    "dados_gerais_data_fato": "2025-12-23 08:53:00",
+                                                    "dados_gerais_data_inicio_atividade": "2025-12-23 08:53:00",
+                                                    "dados_gerais_data_termino_atividade": "2025-12-23 08:53:00",
+                                                    "comunicacao_data": "2025-12-23 08:53:00",
+                                                    "recurso_data_saida": "2025-12-23 08:53:00",
+                                                    "recurso_data_chegada": "2025-12-23 08:53:00",
+                                                    "envolvido_data_nascimento": "2017-09-23"
+                                                }
+                                            ],
+                                            "meta": {
+                                                "total_registros": 1,
+                                                "gerado_em": "2025-12-23 09:00:00"
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -3087,13 +3105,92 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Protocolo encontrado"
+                        "description": "Protocolo encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "required": [
+                                                        "dados_gerais",
+                                                        "recursos",
+                                                        "envolvidos",
+                                                        "vistoria"
+                                                    ],
+                                                    "properties": {
+                                                        "dados_gerais": {
+                                                            "type": "object"
+                                                        },
+                                                        "recursos": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "object"
+                                                            }
+                                                        },
+                                                        "envolvidos": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "object"
+                                                            }
+                                                        },
+                                                        "vistoria": {
+                                                            "type": "object"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     },
-                    "404": {
-                        "description": "Nao encontrado"
+                    "400": {
+                        "description": "Requisicao invalida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     },
                     "401": {
-                        "description": "Nao autenticado"
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validacao",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Nao encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
