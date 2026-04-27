@@ -18,11 +18,10 @@
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         <FormField
           label="CEP"
-          :model-value="localData.local_cep"
+          v-model="localData.cep"
           mask="#####-###"
           placeholder="00000-000"
-          :error="errors.local_cep"
-          @update:model-value="emit('update:modelValue', { ...localData, local_cep: $event })"
+          :error="errors.cep"
           @blur="handleCepBlur"
         >
           <template #suffix>
@@ -43,11 +42,10 @@
         <div class="md:col-span-3">
           <FormField
             label="Logradouro"
-            :model-value="localData.local_logradouro"
+            v-model="localData.logradouro"
             placeholder="Rua, Avenida, Rodovia..."
             required
-            :error="errors.local_logradouro"
-            @update:model-value="emit('update:modelValue', { ...localData, local_logradouro: $event })"
+            :error="errors.logradouro"
           />
         </div>
       </div>
@@ -56,26 +54,23 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <FormField
           label="Bairro"
-          :model-value="localData.local_bairro"
+          v-model="localData.bairro"
           placeholder="Nome do bairro"
-          :error="errors.local_bairro"
-          @update:model-value="emit('update:modelValue', { ...localData, local_bairro: $event })"
+          :error="errors.bairro"
         />
 
         <FormField
           label="Número"
-          :model-value="localData.local_numero"
+          v-model="localData.numero"
           placeholder="S/N"
-          :error="errors.local_numero"
-          @update:model-value="emit('update:modelValue', { ...localData, local_numero: $event })"
+          :error="errors.numero"
         />
 
         <FormField
           label="Complemento"
-          :model-value="localData.local_complemento"
+          v-model="localData.complemento"
           placeholder="Apto, Bloco, Sala..."
-          :error="errors.local_complemento"
-          @update:model-value="emit('update:modelValue', { ...localData, local_complemento: $event })"
+          :error="errors.complemento"
         />
       </div>
 
@@ -83,38 +78,39 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <FormField
           label="KM"
-          :model-value="localData.local_km"
+          v-model="localData.km"
           placeholder="Ex: KM 345"
-          :error="errors.local_km"
-          @update:model-value="emit('update:modelValue', { ...localData, local_km: $event })"
+          :error="errors.km"
         />
 
         <FormField
           label="Cruzamento"
-          :model-value="localData.local_cruzamento"
+          v-model="localData.cruzamento"
           placeholder="Cruzamento com..."
-          :error="errors.local_cruzamento"
-          @update:model-value="emit('update:modelValue', { ...localData, local_cruzamento: $event })"
+          :error="errors.cruzamento"
         />
 
         <FormField
           label="Ponto de Referência"
-          :model-value="localData.local_ponto_referencia"
+          v-model="localData.ponto_referencia"
           placeholder="Próximo a..."
-          :error="errors.local_ponto_referencia"
-          @update:model-value="emit('update:modelValue', { ...localData, local_ponto_referencia: $event })"
+          :error="errors.ponto_referencia"
         />
       </div>
 
       <!-- Linha 4: Tipo de Localização -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <!-- Removido campo tipo_localizacao por enquanto -->
-        </div>
+        <FormSelect
+          label="Tipo de Localização"
+          v-model="localData.tipo_localizacao"
+          :options="tipoLocalizacaoOptions"
+          required
+          :error="errors.tipo_localizacao"
+        />
 
         <div class="flex items-end">
           <button
-            v-if="localData.local_latitude && localData.local_longitude"
+            v-if="localData.latitude && localData.longitude"
             type="button"
             @click="viewOnMap"
             class="w-full px-4 py-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2"
@@ -132,8 +128,8 @@
       </div>
 
       <!-- Coordenadas (hidden inputs) -->
-      <input type="hidden" :value="localData.local_latitude" />
-      <input type="hidden" :value="localData.local_longitude" />
+      <input type="hidden" v-model="localData.latitude" />
+      <input type="hidden" v-model="localData.longitude" />
       </div>
     </div>
   </div>
@@ -149,16 +145,17 @@ const props = defineProps({
   modelValue: {
     type: Object,
     default: () => ({
-      local_cep: '',
-      local_logradouro: '',
-      local_bairro: '',
-      local_numero: '',
-      local_complemento: '',
-      local_km: '',
-      local_cruzamento: '',
-      local_ponto_referencia: '',
-      local_latitude: null,
-      local_longitude: null,
+      cep: '',
+      logradouro: '',
+      bairro: '',
+      numero: '',
+      complemento: '',
+      km: '',
+      cruzamento: '',
+      ponto_referencia: '',
+      tipo_localizacao: '',
+      latitude: null,
+      longitude: null,
     }),
   },
   errors: {
@@ -185,11 +182,11 @@ const aplicarResultadoCep = (resultado) => {
   if (!resultado) return;
   localData.value = {
     ...localData.value,
-    local_logradouro: resultado.logradouro || localData.value.local_logradouro,
-    local_bairro:     resultado.bairro     || localData.value.local_bairro,
-    local_complemento: resultado.complemento || localData.value.local_complemento,
-    local_latitude:   resultado.latitude,
-    local_longitude:  resultado.longitude,
+    logradouro: resultado.logradouro || localData.value.logradouro,
+    bairro:     resultado.bairro     || localData.value.bairro,
+    complemento: resultado.complemento || localData.value.complemento,
+    latitude:   resultado.latitude,
+    longitude:  resultado.longitude,
   };
   emit('location-updated', {
     uf:        resultado.uf,
@@ -200,7 +197,7 @@ const aplicarResultadoCep = (resultado) => {
 // Dispara busca automaticamente ao atingir 8 dígitos (escuta a prop diretamente
 // para evitar o cache da computed que impede detecção de mudanças de propriedade)
 watch(
-  () => props.modelValue?.local_cep,
+  () => props.modelValue?.cep,
   async (newCep) => {
     if (!newCep) return;
     const cepLimpo = newCep.replace(/\D/g, '');
@@ -222,14 +219,14 @@ const tipoLocalizacaoOptions = [
 ];
 
 const handleCepBlur = async () => {
-  if (!localData.value.local_cep) return;
-  const cepLimpo = localData.value.local_cep.replace(/\D/g, '');
+  if (!localData.value.cep) return;
+  const cepLimpo = localData.value.cep.replace(/\D/g, '');
   if (cepLimpo.length !== 8) return;
   aplicarResultadoCep(await buscarCep(cepLimpo));
 };
 
 const viewOnMap = () => {
-  const { local_latitude, local_longitude } = localData.value;
-  window.open(`https://www.google.com/maps?q=${local_latitude},${local_longitude}`, '_blank');
+  const { latitude, longitude } = localData.value;
+  window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank');
 };
 </script>

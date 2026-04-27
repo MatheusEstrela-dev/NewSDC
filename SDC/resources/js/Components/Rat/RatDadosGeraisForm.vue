@@ -73,75 +73,30 @@ const localData = ref({
     tem_vistoria: props.rat?.tem_vistoria || false,
   },
   comunicacao: {
-    com_ocorrencia_data: props.rat?.comunicacao?.com_ocorrencia_data || '',
-    com_ocorrencia_atendimento: props.rat?.comunicacao?.com_ocorrencia_atendimento || '',
+    data_comunicacao: props.rat?.comunicacao?.data_comunicacao || '',
+    tipo_solicitacao: props.rat?.comunicacao?.tipo_solicitacao || '',
     telefone_contato: props.rat?.comunicacao?.telefone_contato || '',
     nome_solicitante: props.rat?.comunicacao?.nome_solicitante || '',
   },
   local: {
-    local_pais: props.rat?.local?.local_pais || 'BR',
-    local_uf: props.rat?.local?.local_uf || '',
-    local_municipio: props.rat?.local?.local_municipio || '',
+    pais_id: props.rat?.local?.pais_id || '1',
+    uf: props.rat?.local?.uf || '',
+    municipio_id: props.rat?.local?.municipio_id || '',
   },
   endereco: {
-    local_cep: props.rat?.endereco?.local_cep || '',
-    local_logradouro: props.rat?.endereco?.local_logradouro || '',
-    local_numero: props.rat?.endereco?.local_numero || '',
-    local_complemento: props.rat?.endereco?.local_complemento || '',
-    local_bairro: props.rat?.endereco?.local_bairro || '',
-    local_km: props.rat?.endereco?.local_km || '',
-    local_cruzamento: props.rat?.endereco?.local_cruzamento || '',
-    local_ponto_referencia: props.rat?.endereco?.local_ponto_referencia || '',
-    local_latitude: props.rat?.endereco?.local_latitude || null,
-    local_longitude: props.rat?.endereco?.local_longitude || null,
+    cep: props.rat?.endereco?.cep || '',
+    logradouro: props.rat?.endereco?.logradouro || '',
+    numero: props.rat?.endereco?.numero || '',
+    complemento: props.rat?.endereco?.complemento || '',
+    bairro: props.rat?.endereco?.bairro || '',
+    km: props.rat?.endereco?.km || '',
+    cruzamento: props.rat?.endereco?.cruzamento || '',
+    ponto_referencia: props.rat?.endereco?.ponto_referencia || '',
+    tipo_localizacao: props.rat?.endereco?.tipo_localizacao || '',
+    latitude: props.rat?.endereco?.latitude || null,
+    longitude: props.rat?.endereco?.longitude || null,
   },
 });
-
-// Converte datetime-local para formato dd/mm/aaaa hh:mm
-const formatDateTimeForBackend = (isoDateTime) => {
-  if (!isoDateTime) return '';
-  if (typeof isoDateTime !== 'string') return '';
-  const [date, time] = isoDateTime.split('T');
-  if (!date || !time) return '';
-  const [year, month, day] = date.split('-');
-  return `${day}/${month}/${year} ${time}`;
-};
-
-// Mapeia e flattena os dados do formulário para o formato esperado pelo backend
-const transformDataForBackend = (data) => {
-  const transformed = {
-    // Dados Gerais
-    data_fato: formatDateTimeForBackend(data.dadosGerais?.data_fato),
-    data_inicio_atividade: formatDateTimeForBackend(data.dadosGerais?.data_inicio_atividade),
-    data_termino_atividade: formatDateTimeForBackend(data.dadosGerais?.data_termino_atividade),
-    nat_cobrade_id: data.dadosGerais?.nat_cobrade_id,
-    nat_nome_operacao: data.dadosGerais?.nat_nome_operacao,
-    tem_vistoria: data.dadosGerais?.tem_vistoria || false,
-
-    // Comunicação
-    com_data_comunicacao: formatDateTimeForBackend(data.comunicacao?.data_comunicacao),
-    com_tipo_atendimento: data.comunicacao?.tipo_solicitacao || 'outro',
-
-    // Localização
-    local_pais: data.local?.pais_id || 'BR',
-    local_uf: data.local?.uf || '',
-    local_municipio: data.local?.municipio_id || '',
-
-    // Endereço detalhado
-    local_logradouro: data.endereco?.logradouro || '',
-    local_numero: data.endereco?.numero || '',
-    local_bairro: data.endereco?.bairro || '',
-    local_cep: data.endereco?.cep || '',
-    local_complemento: data.endereco?.complemento || '',
-    local_km: data.endereco?.km || '',
-    local_cruzamento: data.endereco?.cruzamento || '',
-    local_ponto_referencia: data.endereco?.ponto_referencia || '',
-    local_latitude: data.endereco?.latitude || null,
-    local_longitude: data.endereco?.longitude || null,
-  };
-
-  return transformed;
-};
 
 function onConfigUpdate(dadosGerais) {
   const hadVistoria = localData.value.dadosGerais.tem_vistoria;
@@ -172,8 +127,6 @@ watch(
 watch(
   localData,
   (newVal) => {
-    // Emite dados estruturados (não transformados) para criação de novo RAT
-    // A transformação acontecerá apenas ao atualizar dados gerais com um RAT já existente
     emit('update:form-data', { ...newVal });
   },
   { deep: true, immediate: true }

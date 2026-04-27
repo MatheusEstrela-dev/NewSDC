@@ -20,19 +20,19 @@ class RatDadosGeraisRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Datas e Horários - aceita ISO (YYYY-MM-DDTHH:mm) ou DD/MM/YYYY HH:MM
-            'data_fato'               => ['required', 'string'],
-            'data_inicio_atividade'   => ['nullable', 'string'],
-            'data_termino_atividade'  => ['nullable', 'string'],
+            // Datas e Horários
+            'data_fato'               => ['required', 'string', 'regex:/^\d{2}\/\d{2}\/\d{4}/'],
+            'data_inicio_atividade'   => ['nullable', 'string', 'regex:/^\d{2}\/\d{2}\/\d{4}/'],
+            'data_termino_atividade'  => ['nullable', 'string', 'regex:/^\d{2}\/\d{2}\/\d{4}/'],
 
             // Classificação
             'nat_codigo'              => ['nullable', 'string', 'max:50'],
             'nat_cobrade_id'          => ['nullable', 'integer'],
             'nat_nome_operacao'       => ['nullable', 'string', 'max:255'],
 
-            // Comunicação - aceita ISO ou DD/MM/YYYY HH:MM
-            'com_ocorrencia_data'    => ['required', 'string'],
-            'com_ocorrencia_atendimento' => ['required', 'string', Rule::in(['telefone', 'radio', 'pessoal', 'sistema', 'email', 'outro'])],
+            // Comunicação
+            'com_data_comunicacao'    => ['required', 'string', 'regex:/^\d{2}\/\d{2}\/\d{4}/'],
+            'com_tipo_atendimento'    => ['required', 'string', Rule::in(['telefone', 'radio', 'pessoal', 'sistema', 'email', 'outro'])],
 
             // Localização
             'local_pais'              => ['required', 'string', 'max:50'],
@@ -40,7 +40,7 @@ class RatDadosGeraisRequest extends FormRequest
             'local_municipio'         => ['required', 'string', 'max:150'],
 
             // Endereço Detalhado
-            'local_cep'               => ['nullable', 'string', 'max:10'],
+            'local_cep'               => ['nullable', 'string', 'max:10', 'regex:/^\d{5}-?\d{3}$/'],
             'local_logradouro'        => ['required', 'string', 'max:255'],
             'local_numero'            => ['nullable', 'string', 'max:20'],
             'local_bairro'            => ['required', 'string', 'max:150'],
@@ -48,13 +48,14 @@ class RatDadosGeraisRequest extends FormRequest
             'local_km'                => ['nullable', 'string', 'max:20'],
             'local_cruzamento'        => ['nullable', 'string', 'max:255'],
             'local_ponto_referencia'  => ['nullable', 'string', 'max:255'],
+            'local_tipo_localizacao'  => ['required', 'string', Rule::in(['urbana', 'rural', 'rodovia', 'estrada', 'mata', 'montanha', 'rio', 'lago', 'outro'])],
 
             // Coordenadas
             'local_latitude'          => ['nullable', 'numeric', 'between:-90,90'],
             'local_longitude'         => ['nullable', 'numeric', 'between:-180,180'],
 
             // Unidade Responsável
-            'uni_responsavel'         => ['nullable', 'string', 'max:255'],
+            'uni_responsavel'         => ['required', 'string', 'max:255'],
 
             // Vistoria
             'tem_vistoria'            => ['nullable', 'boolean'],
@@ -66,7 +67,7 @@ class RatDadosGeraisRequest extends FormRequest
         return [
             'data_fato.required'           => 'Data do fato é obrigatória.',
             'data_fato.regex'              => 'Data do fato deve estar no formato dd/mm/aaaa.',
-            'com_ocorrencia_data.required' => 'Data da comunicação é obrigatória.',
+            'com_data_comunicacao.required' => 'Data da comunicação é obrigatória.',
             'local_uf.required'            => 'Estado/UF é obrigatório.',
             'local_municipio.required'     => 'Município é obrigatório.',
             'local_logradouro.required'    => 'Logradouro é obrigatório.',

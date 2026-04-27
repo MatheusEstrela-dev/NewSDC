@@ -48,8 +48,8 @@
       <fieldset :disabled="props.viewOnly" style="border:none;padding:0;margin:0;min-width:0;">
         <div class="rat-section-content">
           <div class="rat-grid-3">
-            <FormField label="Data/Hora de Saída" type="datetime-local" :modelValue="localData.data_hora_saida" @update:modelValue="handleDateTimeSaida" />
-            <FormField label="Data/Hora de Chegada" type="datetime-local" :modelValue="localData.data_hora_chegada" @update:modelValue="handleDateTimeChegada" />
+            <FormField label="Data/Hora de Saída" type="datetime-local" v-model="localData.data_saida" />
+            <FormField label="Data/Hora de Chegada" type="datetime-local" v-model="localData.data_chegada" />
             <FormField label="KM Percorrido" type="number" v-model="localData.km_percorrido" />
           </div>
           <div class="rat-grid-2">
@@ -81,7 +81,7 @@
             <FormSelect label="Condição" v-model="localData.condicao" :options="condicaoOptions" />
           </div>
           <div class="rat-grid-2 mt-4">
-            <FormField label="Operador Responsável" v-model="localData.operador_responsavel" />
+            <FormField label="Operador Responsável" v-model="localData.operador" />
             <FormField label="Contato de Emergência" v-model="localData.contato_emergencia" mask="phone" />
           </div>
           <FormField label="Observações" v-model="localData.observacoes" type="textarea" class="mt-4" />
@@ -159,15 +159,15 @@ const localData = ref({
   identificacao: props.modelValue?.identificacao || '',
   condutor: props.modelValue?.condutor || '',
   descricao: props.modelValue?.descricao || '',
-  data_hora_saida: props.modelValue?.data_hora_saida || '',
-  data_hora_chegada: props.modelValue?.data_hora_chegada || '',
+  data_saida: props.modelValue?.data_saida || '',
+  data_chegada: props.modelValue?.data_chegada || '',
   km_percorrido: props.modelValue?.km_percorrido || '',
   local_origem: props.modelValue?.local_origem || '',
   local_destino: props.modelValue?.local_destino || '',
-  quantidade: props.modelValue?.quantidade || 1,
+  quantidade: props.modelValue?.quantidade || '1',
   capacidade: props.modelValue?.capacidade || '',
   condicao: props.modelValue?.condicao || 'operacional',
-  operador_responsavel: props.modelValue?.operador_responsavel || '',
+  operador: props.modelValue?.operador || '',
   contato_emergencia: props.modelValue?.contato_emergencia || '',
   observacoes: props.modelValue?.observacoes || '',
   agentes: props.modelValue?.agentes || [],
@@ -178,11 +178,12 @@ const agenteEditIndex = ref(null);
 const novoAgente = ref({ nome: '', matricula: '', cargo: '', funcao: '', orgao: '', unidade: '', condutor: false });
 
 const tipoRecursoOptions = [
-  { value: 'veículo', label: 'Veículo' },
-  { value: 'pessoal', label: 'Pessoal' },
-  { value: 'material', label: 'Material' },
+  { value: 'viatura', label: 'Viatura' },
+  { value: 'aeronave', label: 'Aeronave' },
+  { value: 'embarcacao', label: 'Embarcação' },
   { value: 'equipamento', label: 'Equipamento' },
-  { value: 'outro', label: 'Outro' },
+  { value: 'material', label: 'Material' },
+  { value: 'pessoal', label: 'Pessoal' },
 ];
 
 const categoriaOptions = [
@@ -202,9 +203,8 @@ const orgaoOptions = [
 
 const condicaoOptions = [
   { value: 'operacional', label: 'Operacional' },
-  { value: 'parcialmente operacional', label: 'Parcialmente Operacional' },
-  { value: 'inoperacional', label: 'Inoperacional' },
-  { value: 'danificado', label: 'Danificado' },
+  { value: 'manutencao', label: 'Em Manutenção' },
+  { value: 'inoperante', label: 'Inoperante' },
 ];
 
 const funcaoOptions = [
@@ -214,14 +214,6 @@ const funcaoOptions = [
   { value: 'socorrista', label: 'Socorrista' },
   { value: 'auxiliar', label: 'Auxiliar' },
 ];
-
-const handleDateTimeSaida = (value) => {
-  localData.value.data_hora_saida = value; // Mantém ISO format, DTO faz conversão
-};
-
-const handleDateTimeChegada = (value) => {
-  localData.value.data_hora_chegada = value; // Mantém ISO format, DTO faz conversão
-};
 
 const toggleFormularioAgente = () => { mostrarFormularioAgente.value = !mostrarFormularioAgente.value; };
 const cancelarFormularioAgente = () => { mostrarFormularioAgente.value = false; };
@@ -234,28 +226,6 @@ const salvarAgente = () => {
 };
 const removerAgente = (index) => { localData.value.agentes.splice(index, 1); emit('update:modelValue', localData.value); };
 
-// Emit changes to parent (watch only localData changes initiated by user interaction)
-watch(
-  localData,
-  (nv) => { emit('update:modelValue', nv); },
-  { deep: true }
-);
-
-// Sync props changes but prevent circular updates
-let isSyncing = false;
-watch(
-  () => props.modelValue,
-  (nv) => {
-    if (nv && !isSyncing) {
-      isSyncing = true;
-      const currentStr = JSON.stringify(localData.value);
-      const newStr = JSON.stringify(nv);
-      if (currentStr !== newStr) {
-        localData.value = { ...nv };
-      }
-      isSyncing = false;
-    }
-  },
-  { deep: true }
-);
+watch(localData, (nv) => { emit('update:modelValue', nv); }, { deep: true });
+watch(() => props.modelValue, (nv) => { if (nv) localData.value = { ...localData.value, ...nv }; }, { deep: true });
 </script>

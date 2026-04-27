@@ -2,18 +2,14 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "bun run vite",
-        "build": "rm -f public/hot && bun run vite build",
-        "build:ssr": "rm -rf public/hot bootstrap/ssr/* && bun run vite build && bun run vite build --ssr",
-        "ssr": "bun bootstrap/ssr/js/ssr-*.js",
-        "build:pwa": "bun run vite build && bun workbox generateSW workbox-config.js",
-        "test:e2e": "bun run dotenvx run -f .env -f tests/e2e/.env.test -- bun run playwright test",
-        "test:e2e:crud": "bun run dotenvx run -f .env -f tests/e2e/.env.test -- bun run playwright test tests/e2e/decretacoes-crud.spec.js",
-        "test:e2e:ui": "bun run dotenvx run -f .env -f tests/e2e/.env.test -- bun run playwright test --ui",
-        "install:all": "bun install",
-        "validate:api": "php artisan test --filter=RatApi",
-        "migrate:pgsql": "php artisan migrate --database=pgsql",
-        "seed:pgsql": "php artisan db:seed --database=pgsql"
+        "dev": "vite",
+        "build": "rm -f public/hot && vite build",
+        "build:ssr": "rm -rf public/hot bootstrap/ssr/* && vite build && vite build --ssr",
+        "ssr": "bun $(ls -t bootstrap/ssr/js/ssr-*.js | head -n 1)",
+        "build:pwa": "vite build && workbox generateSW workbox-config.js",
+        "test:e2e": "dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test",
+        "test:e2e:crud": "dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test tests/e2e/decretacoes-crud.spec.js",
+        "test:e2e:ui": "dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test --ui"
     },
     "devDependencies": {
         "@dotenvx/dotenvx": "^1.57.2",
@@ -26,6 +22,7 @@
         "autoprefixer": "^10.4.12",
         "axios": "^1.6.4",
         "laravel-vite-plugin": "^1.0.0",
+        "mysql2": "^3.20.0",
         "playwright": "^1.57.0",
         "postcss": "^8.4.31",
         "sharp": "^0.34.5",
@@ -33,7 +30,6 @@
         "vite": "^5.0.0",
         "vite-plugin-pwa": "^0.21.1",
         "vue": "^3.4.0",
-        "workbox-cli": "^7.3.0",
         "workbox-window": "^7.3.0"
     },
     "dependencies": {

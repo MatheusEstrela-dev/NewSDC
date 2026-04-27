@@ -81,7 +81,7 @@ class RatUnifiedController extends BaseController
         $filtersDTO = RatFilterDTO::fromArray($request->all());
         $data       = $this->appDataService->getIndexData($filtersDTO);
 
-        return Inertia::render('RatIndex_MELHORADO', [
+        return Inertia::render('RatIndex', [
             'rats'           => $data['rats'],
             'statistics'     => $data['statistics'],
             'filters'        => $request->all(),
@@ -101,98 +101,98 @@ class RatUnifiedController extends BaseController
      */
     public function create(): Response
     {
-        return Inertia::render('Rat/RatCreate');
+        return Inertia::render('Rat');
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $rat = $this->appDataService->createWithData($request->all());
+        $ocorrencia = $this->appDataService->createWithData($request->all());
 
         return redirect()
-            ->route('compdec.rat.show', $rat->id)
-            ->with('success', 'RAT criado com sucesso!');
+            ->route('compdec.rat.show', $ocorrencia->id)
+            ->with('success', 'Ocorrência RAT criada com sucesso!');
     }
 
-    public function show(string $ocorrencia): Response
+    public function show(string $id): Response
     {
-        $rat = $this->appDataService->findById($ocorrencia);
+        $ocorrencia = $this->appDataService->findById($id);
 
-        abort_if(!$rat, 404, 'Ocorrência não encontrada.');
+        abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
-        return Inertia::render('Rat/RatShow', [
-            'rat'        => $rat,
-            'lastUpdate' => $rat->updated_at?->toDateTimeString(),
+        return Inertia::render('Rat', [
+            'rat'      => $ocorrencia,
+            'viewOnly' => true,
         ]);
     }
 
-    public function edit(string $ocorrencia): Response
+    public function edit(string $id): Response
     {
-        $rat = $this->appDataService->findById($ocorrencia);
+        $ocorrencia = $this->appDataService->findById($id);
 
-        abort_if(!$rat, 404, 'Ocorrência não encontrada.');
+        abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
-        return Inertia::render('Rat/RatEdit', [
-            'rat'        => $rat,
-            'lastUpdate' => $rat->updated_at?->toDateTimeString(),
+        return Inertia::render('Rat', [
+            'rat'      => $ocorrencia,
+            'viewOnly' => false,
         ]);
     }
 
-    public function update(Request $request, string $ocorrencia): RedirectResponse
+    public function update(Request $request, string $id): RedirectResponse
     {
         // Atualização de Relatos aninhados via WriteService
         if ($request->has('dadosGerais')) {
-            $this->writeService->saveDadosGerais($ocorrencia, RatDadosGeraisDTO::fromArray($request->input('dadosGerais')));
+            $this->writeService->saveDadosGerais($id, RatDadosGeraisDTO::fromArray($request->input('dadosGerais')));
         }
 
         if ($request->has('recursos')) {
             foreach ($request->input('recursos') as $recursoData) {
-                $this->writeService->saveRecurso($ocorrencia, RatRecursoDTO::fromArray($recursoData));
+                $this->writeService->saveRecurso($id, RatRecursoDTO::fromArray($recursoData));
             }
         }
 
         if ($request->has('envolvidos')) {
             foreach ($request->input('envolvidos') as $envolvidoData) {
-                $this->writeService->saveEnvolvido($ocorrencia, RatEnvolvidoDTO::fromArray($envolvidoData));
+                $this->writeService->saveEnvolvido($id, RatEnvolvidoDTO::fromArray($envolvidoData));
             }
         }
 
         if ($request->has('historico')) {
-            $this->writeService->saveHistorico($ocorrencia, RatHistoricoDTO::fromArray($request->input('historico')));
+            $this->writeService->saveHistorico($id, RatHistoricoDTO::fromArray($request->input('historico')));
         }
 
         return redirect()
-            ->route('compdec.rat.show', $ocorrencia)
-            ->with('success', 'RAT atualizado com sucesso!');
+            ->route('compdec.rat.show', $id)
+            ->with('success', 'Ocorrência atualizada com sucesso!');
     }
 
-    public function destroy(string $ocorrencia): RedirectResponse
+    public function destroy(string $id): RedirectResponse
     {
-        $this->appDataService->delete($ocorrencia);
+        $this->appDataService->delete($id);
 
         return redirect()
             ->route('compdec.rat.index')
-            ->with('success', 'RAT excluído com sucesso!');
+            ->with('success', 'Ocorrência excluída com sucesso!');
     }
 
-    public function finalize(string $ocorrencia): RedirectResponse
+    public function finalize(string $id): RedirectResponse
     {
-        $this->appDataService->finalize($ocorrencia);
+        $this->appDataService->finalize($id);
 
         return redirect()
-            ->route('compdec.rat.show', $ocorrencia)
-            ->with('success', 'RAT finalizado com sucesso!');
+            ->route('compdec.rat.show', $id)
+            ->with('success', 'Ocorrência finalizada com sucesso!');
     }
 
     /**
-     * Salva rascunho.
-     * POST|PATCH /compdec/rat/{ocorrencia}/draft
+     * Salva rascunho via Modules WriteService.
+     * POST /compdec/rat/{ocorrencia}/draft
      */
-    public function draft(Request $request, string $ocorrencia): RedirectResponse
+    public function draft(Request $request, string $id): RedirectResponse
     {
-        $this->writeService->saveDraft($ocorrencia, $request->all());
+        $this->writeService->saveDraft($id, $request->all());
 
         return redirect()
-            ->route('compdec.rat.show', $ocorrencia)
+            ->route('compdec.rat.show', $id)
             ->with('success', 'Rascunho salvo com sucesso!');
     }
 
@@ -295,7 +295,7 @@ class RatUnifiedController extends BaseController
      * Atualiza dados gerais (alias polimórfico para storeDadosGerais).
      * PUT /compdec/rat/ocorrencias/{ocorrencia}/dados-gerais/{id}
      */
-    public function updateDadosGerais(RatDadosGeraisRequest $request, string $ocorrenciaId, string $id): JsonResponse
+    public function updateDadosGerais(Request $request, string $ocorrenciaId, string $id): JsonResponse
     {
         return $this->storeDadosGerais($request, $ocorrenciaId);
     }
@@ -335,7 +335,7 @@ class RatUnifiedController extends BaseController
      * Atualiza um envolvido existente.
      * PUT /compdec/rat/ocorrencias/{ocorrencia}/envolvidos/{id}
      */
-    public function updateEnvolvidos(RatEnvolvidoRequest $request, string $ocorrenciaId, string $id): JsonResponse
+    public function updateEnvolvidos(Request $request, string $ocorrenciaId, string $id): JsonResponse
     {
         // Injeta o ID no payload para que o DTO passe o id ao updateOrCreate.
         $request->merge(['id' => $id]);
@@ -393,7 +393,7 @@ class RatUnifiedController extends BaseController
      * Atualiza um recurso existente.
      * PUT /compdec/rat/ocorrencias/{ocorrencia}/recursos/{id}
      */
-    public function updateRecursos(RatRecursoRequest $request, string $ocorrenciaId, string $id): JsonResponse
+    public function updateRecursos(Request $request, string $ocorrenciaId, string $id): JsonResponse
     {
         $request->merge(['id' => $id]);
         return $this->storeRecursos($request, $ocorrenciaId);
@@ -447,7 +447,7 @@ class RatUnifiedController extends BaseController
      * Atualiza a vistoria (alias para storeVistoria no modelo upsert).
      * PUT /compdec/rat/ocorrencias/{ocorrencia}/vistoria/{id}
      */
-    public function updateVistoria(RatVistoriaRequest $request, string $ocorrenciaId, string $id): JsonResponse
+    public function updateVistoria(Request $request, string $ocorrenciaId, string $id): JsonResponse
     {
         return $this->storeVistoria($request, $ocorrenciaId);
     }

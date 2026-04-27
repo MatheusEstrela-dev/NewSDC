@@ -71,26 +71,6 @@ readonly class RatEnvolvidoDTO
         public ?string $pMotivoAusenciaContato = null,
     ) {}
 
-    /**
-     * Converte ISO datetime (YYYY-MM-DDTHH:mm ou YYYY-MM-DD) para dd/mm/aaaa
-     */
-    private static function convertIsoDate(?string $isoDate): ?string
-    {
-        if (!$isoDate) return null;
-
-        // Se já está em formato dd/mm/aaaa, retorna como está
-        if (preg_match('/^\d{2}\/\d{2}\/\d{4}/', $isoDate)) {
-            return $isoDate;
-        }
-
-        // Se é ISO date ou datetime (YYYY-MM-DD ou YYYY-MM-DDTHH:mm), converte apenas a data
-        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})/', $isoDate, $matches)) {
-            return "{$matches[3]}/{$matches[2]}/{$matches[1]}";
-        }
-
-        return $isoDate;
-    }
-
     public static function fromArray(array $data): self
     {
         return new self(
@@ -111,7 +91,7 @@ readonly class RatEnvolvidoDTO
             pOrgaoExpedidor:               $data['p_orgao_expedidor']              ?? null,
             pNomeCompleto:                 $data['p_nome_completo']                ?? $data['nome'] ?? null,
             pNomeFantasia:                 $data['p_nome_fantasia']                ?? null,
-            pDataNascimento:               self::convertIsoDate($data['p_data_nascimento'] ?? $data['data_nascimento'] ?? null),
+            pDataNascimento:               $data['p_data_nascimento']              ?? $data['data_nascimento'] ?? null,
             pCpf:                          $data['p_cpf']                          ?? $data['cpf'] ?? null,
             pNomeMae:                      $data['p_nome_mae']                     ?? null,
             pNomePai:                      $data['p_nome_pai']                     ?? null,

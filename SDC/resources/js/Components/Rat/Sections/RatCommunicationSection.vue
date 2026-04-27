@@ -17,20 +17,18 @@
         <FormField
           label="Data/Hora da Comunicação"
           type="datetime-local"
-          :model-value="modelValue.com_ocorrencia_data"
+          v-model="localData.data_comunicacao"
           required
-          @update:model-value="handleDataComunicacao"
-          :error="errors.com_ocorrencia_data"
+          :error="errors.data_comunicacao"
         />
 
         <FormSelect
           label="Como foi solicitado o atendimento"
-          :model-value="modelValue.com_ocorrencia_atendimento"
+          v-model="localData.tipo_solicitacao"
           :options="tipoSolicitacaoOptions"
           placeholder="Selecione..."
           required
-          @update:model-value="handleTipoAtendimento"
-          :error="errors.com_ocorrencia_atendimento"
+          :error="errors.tipo_solicitacao"
         />
       </div>
     </div>
@@ -46,8 +44,8 @@ const props = defineProps({
   modelValue: {
     type: Object,
     default: () => ({
-      com_ocorrencia_data: '',
-      com_ocorrencia_atendimento: '',
+      data_comunicacao: '',
+      tipo_solicitacao: '',
     }),
   },
   errors: {
@@ -67,20 +65,14 @@ const localData = computed({
   },
 });
 
-const handleDataComunicacao = (value) => {
-  emit('update:modelValue', { ...props.modelValue, com_ocorrencia_data: value });
-};
-
-const handleTipoAtendimento = (value) => {
-  emit('update:modelValue', { ...props.modelValue, com_ocorrencia_atendimento: value });
-};
-
 const tipoSolicitacaoOptions = [
   { value: 'telefone', label: 'Telefone' },
+  { value: '190', label: '190 - Emergência' },
   { value: 'radio', label: 'Rádio' },
-  { value: 'pessoal', label: 'Pessoal' },
-  { value: 'sistema', label: 'Sistema' },
+  { value: 'presencial', label: 'Presencial' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'app', label: 'Aplicativo' },
   { value: 'email', label: 'E-mail' },
-  { value: 'outro', label: 'Outro' },
+  { value: 'outros', label: 'Outros' },
 ];
 </script>
