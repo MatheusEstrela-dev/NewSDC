@@ -165,12 +165,20 @@ class RatRepository implements RatRepositoryInterface
      */
     public function getLatestSequence(int $year): int
     {
-        $latestRat = Rat::query()->whereYear('created_at', $year)->latest('created_at')->first();
-        $latestOcorrencia = \App\Models\Rat\RatOcorrencia::query()->whereYear('created_at', $year)->latest('created_at')->first();
+        $prefix = "RAT-{$year}-%";
 
-        $seqRat = $latestRat ? (int)substr($latestRat->protocolo ?? '0', -5) : 0;
-        $seqOc = $latestOcorrencia ? (int)substr($latestOcorrencia->numero_bos ?? '0', -5) : 0;
+        // Busca o maior valor diretamente via SQL para máxima precisão
+        $maxOc = \Illuminate\Support\Facades\DB::table('rat_ocorrencias')
+            ->where('numero_bos', 'like', $prefix)
+            ->max('numero_bos');
 
-        return (int) max($seqRat, $seqOc);
+        $maxRat = \Illuminate\Support\Facades\DB::table('rats')
+            ->where('protocolo', 'like', $prefix)
+            ->max('protocolo');
+
+        $seqOc = $maxOc ? (int)substr((string)$maxOc, -5) : 0;
+        $seqRat = $maxRat ? (int)substr((string)$maxRat, -5) : 0;
+
+        return (int) max($seqOc, $seqRat);
     }
 }
