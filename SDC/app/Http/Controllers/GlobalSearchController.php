@@ -17,7 +17,7 @@ class GlobalSearchController extends Controller
     public function search(Request $request): JsonResponse
     {
         $request->validate([
-            'q' => ['required', 'string', 'min:3', 'max:100'],
+            'q' => ['required', 'string', 'min:2', 'max:100'],
         ]);
 
         $query = $request->string('q')->toString();

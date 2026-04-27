@@ -120,14 +120,18 @@ class GlobalSearchService
             ->toArray();
     }
 
-    /**
-     * Remove prefixos especiais (#, @), normaliza espacos.
-     * Preserva pontos e barras (importantes em numeros de protocolo).
-     */
     private function normalize(string $query): string
     {
+        // Strip leading special prefixes (#, @)
         $clean = ltrim(trim($query), '#@');
-        return preg_replace('/\s+/', ' ', $clean);
+
+        // Remove caracteres nao-ASCII e de controle (ex: †, cursor artifacts, zero-width)
+        $clean = preg_replace('/[^\x20-\x7E\xA0-\xFF]/u', '', $clean);
+
+        // Normaliza espacos multiplos
+        $clean = preg_replace('/\s+/', ' ', $clean);
+
+        return trim($clean);
     }
 
     private function emptyResult(): array
