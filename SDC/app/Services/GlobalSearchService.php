@@ -19,7 +19,7 @@ class GlobalSearchService
     {
         $normalized = $this->normalize($query);
 
-        if (strlen($normalized) < 2) {
+        if (mb_strlen($normalized) < 2) {
             return $this->emptyResult();
         }
 
@@ -126,10 +126,10 @@ class GlobalSearchService
         $clean = ltrim(trim($query), '#@');
 
         // Remove caracteres nao-ASCII e de controle (ex: †, cursor artifacts, zero-width)
-        $clean = preg_replace('/[^\x20-\x7E\xA0-\xFF]/u', '', $clean);
+        $clean = preg_replace('/[^\x20-\x7E\xC0-\xFF]/u', '', $clean) ?? $clean;
 
         // Normaliza espacos multiplos
-        $clean = preg_replace('/\s+/', ' ', $clean);
+        $clean = preg_replace('/\s+/', ' ', $clean) ?? $clean;
 
         return trim($clean);
     }
