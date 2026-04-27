@@ -41,7 +41,7 @@ class RatWriteService
     ) {}
 
     /** Cria um RAT em branco com protocolo sequencial único dentro de transação atômica. */
-    public function create(): Rat
+    public function create(): object
     {
         return DB::transaction(function () {
             $protocolo = $this->protocoloService->generate();
@@ -49,8 +49,10 @@ class RatWriteService
         });
     }
 
-    /** Cria um RAT com dados do formulário em uma única transação. */
-    public function createWithData(array $data): Rat
+    /**
+     * Cria um novo RAT com dados do formulário (rascunho com protocolo automático).
+     */
+    public function createWithData(array $data): object
     {
         return DB::transaction(function () use ($data) {
             $protocolo = $this->protocoloService->generate();
@@ -87,12 +89,29 @@ class RatWriteService
                 $ocorrencia->update(['status' => 1]);
             }
 
-            return $this->repository->findById($id);
+            // Sincroniza com a tabela 'rats' (legada) para visibilidade imediata na lista (index)
+            // e compatibilidade com os filtros existentes que usam colunas JSON.
+            Rat::updateOrCreate(['id' => $id], [
+                'protocolo'    => $protocolo,
+                'status'       => $ocorrencia->status,
+                'dados_gerais' => $data['dadosGerais'] ?? [],
+                'local'        => $data['local']       ?? [],
+                'endereco'     => $data['endereco']    ?? [],
+                'comunicacao'  => $data['comunicacao'] ?? [],
+                'recursos'     => $data['recursos']    ?? [],
+                'envolvidos'   => $data['envolvidos']  ?? [],
+                'vistoria'     => $data['vistoria']    ?? [],
+                'historico'    => $data['historico']   ?? [],
+                'created_by'   => auth()->id(),
+                'updated_by'   => auth()->id(),
+            ]);
+
+            return $this->findById($id);
         });
     }
 
     /** Persiste todos os campos editáveis e avança o status para EM_ANDAMENTO. */
-    public function update(string $id, array $data): Rat
+    public function update(string $id, array $data): object
     {
         return $this->repository->update($id, array_merge($data, [
             'status' => Status::EM_ANDAMENTO->value,
@@ -100,17 +119,25 @@ class RatWriteService
     }
 
     /** Persiste os dados mantendo o status RASCUNHO. */
-    public function saveDraft(string $id, array $data): Rat
+    public function saveDraft(string $id, array $data): object
     {
         return $this->repository->update($id, array_merge($data, [
             'status' => Status::RASCUNHO->value,
         ]));
     }
 
-    /** Finaliza o RAT — aborta se já finalizado. */
-    public function finalize(string $id): Rat
+    /**
+     * Buscar um RAT por ID (UUID ou Inteiro).
+     */
+    public function findById(string $id): ?object
     {
-        $rat = $this->repository->findById($id);
+        return Rat::find($id) ?? \App\Models\Rat\RatOcorrencia::find($id);
+    }
+
+    /** Finaliza o RAT — aborta se já finalizado. */
+    public function finalize(string $id): object
+    {
+        $rat = $this->findById($id);
         abort_if(is_null($rat), 404, 'RAT não encontrado.');
         abort_if($rat->status === Status::FINALIZADO->value, 422, 'RAT já está finalizado.');
 

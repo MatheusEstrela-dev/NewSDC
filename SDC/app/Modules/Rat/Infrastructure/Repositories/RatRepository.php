@@ -20,13 +20,11 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class RatRepository implements RatRepositoryInterface
 {
     /**
-     * Buscar um RAT por ID (UUID).
+     * Buscar um RAT por ID (UUID ou Inteiro).
      */
-    public function findById(string $id): ?Rat
+    public function findById(string $id): ?object
     {
-        return Rat::query()
-            ->where('id', $id)
-            ->first();
+        return Rat::find($id) ?? \App\Models\Rat\RatOcorrencia::find($id);
     }
 
     /**
@@ -34,11 +32,12 @@ class RatRepository implements RatRepositoryInterface
      */
     public function paginate(RatFilterDTO $filters): LengthAwarePaginator
     {
-        $query = Rat::query();
+        // Agora usamos RatOcorrencia como fonte principal para a lista
+        $query = \App\Models\Rat\RatOcorrencia::query();
 
-        // Filtro por protocolo
+        // Filtro por protocolo (numero_bos)
         if ($filters->protocolo) {
-            $query->where('protocolo', 'like', "%{$filters->protocolo}%");
+            $query->where('numero_bos', 'like', "%{$filters->protocolo}%");
         }
 
         // Filtro por status
@@ -46,34 +45,18 @@ class RatRepository implements RatRepositoryInterface
             $query->where('status', $filters->status);
         }
 
-        // Filtro por data de início
+        // Filtro por município, tipo COBRADE, natureza (estão no relato de Dados Gerais)
+        // Nota: Filtros complexos podem exigir joins ou whereHas futuramente.
+        
+        // Filtro por data de início/fim/ano
         if ($filters->dataInicio) {
             $query->whereDate('created_at', '>=', $filters->dataInicio);
         }
-
-        // Filtro por data de fim
         if ($filters->dataFim) {
             $query->whereDate('created_at', '<=', $filters->dataFim);
         }
-
-        // Filtro por ano
         if ($filters->ano) {
             $query->whereYear('created_at', (int)$filters->ano);
-        }
-
-        // Filtro por município (dentro do JSON local)
-        if ($filters->municipio) {
-            $query->where('local->municipio', $filters->municipio);
-        }
-
-        // Filtro por tipo COBRADE (dentro do JSON dados_gerais)
-        if ($filters->tipoCobrade) {
-            $query->where('dados_gerais->cobrade', $filters->tipoCobrade);
-        }
-
-        // Filtro por natureza (dentro do JSON dados_gerais)
-        if ($filters->natureza) {
-            $query->where('dados_gerais->natureza', $filters->natureza);
         }
 
         // Filtro por criado por
@@ -107,7 +90,7 @@ class RatRepository implements RatRepositoryInterface
     /**
      * Criar novo RAT.
      */
-    public function create(array $data): Rat
+    public function create(array $data): object
     {
         return Rat::create($data);
     }
@@ -115,7 +98,7 @@ class RatRepository implements RatRepositoryInterface
     /**
      * Atualizar um RAT existente.
      */
-    public function update(string $id, array $data): Rat
+    public function update(string $id, array $data): object
     {
         $rat = $this->findById($id);
 
@@ -123,7 +106,17 @@ class RatRepository implements RatRepositoryInterface
             throw new \Exception("RAT com ID {$id} não encontrado");
         }
 
-        $rat->update($data);
+        if ($rat instanceof Rat) {
+            $rat->update($data);
+        } else {
+            // Se for RatOcorrencia, a atualização é mais complexa e deve ser via Service
+            // Mas para compatibilidade básica:
+            $rat->update(array_filter([
+                'status' => $data['status'] ?? null,
+                'numero_bos' => $data['protocolo'] ?? null,
+            ]));
+        }
+
         return $rat;
     }
 
@@ -172,7 +165,12 @@ class RatRepository implements RatRepositoryInterface
      */
     public function getLatestSequence(int $year): int
     {
-        $latest = Rat::query()->whereYear('created_at', $year)->latest('created_at')->first();
-        return $latest ? (int)substr($latest->protocolo ?? '0', -5) : 0;
+        $latestRat = Rat::query()->whereYear('created_at', $year)->latest('created_at')->first();
+        $latestOcorrencia = \App\Models\Rat\RatOcorrencia::query()->whereYear('created_at', $year)->latest('created_at')->first();
+
+        $seqRat = $latestRat ? (int)substr($latestRat->protocolo ?? '0', -5) : 0;
+        $seqOc = $latestOcorrencia ? (int)substr($latestOcorrencia->numero_bos ?? '0', -5) : 0;
+
+        return (int) max($seqRat, $seqOc);
     }
 }

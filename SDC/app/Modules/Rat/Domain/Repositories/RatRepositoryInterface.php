@@ -10,9 +10,9 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 interface RatRepositoryInterface
 {
-    public function findById(string $id): ?Rat;
+    public function findById(string $id): ?object;
 
-    public function create(array $data): Rat;
+    public function create(array $data): object;
 
     public function paginate(RatFilterDTO $filters): LengthAwarePaginator;
 
@@ -22,7 +22,7 @@ interface RatRepositoryInterface
 
     public function updateStatus(string $id, string $status): void;
 
-    public function update(string $id, array $data): Rat;
+    public function update(string $id, array $data): object;
 
     /**
      * Retorna o maior número de sequência do protocolo RAT para o ano dado.

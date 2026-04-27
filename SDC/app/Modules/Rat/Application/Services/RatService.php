@@ -34,7 +34,7 @@ class RatService
     /**
      * Cria um novo RAT em branco (rascunho com protocolo automático).
      */
-    public function createNew(): Rat
+    public function createNew(): object
     {
         return $this->writeService->create();
     }
@@ -42,7 +42,7 @@ class RatService
     /**
      * Cria um novo RAT com dados do formulário (rascunho com protocolo automático).
      */
-    public function createWithData(array $data): Rat
+    public function createWithData(array $data): object
     {
         return $this->writeService->createWithData($data);
     }
@@ -50,7 +50,7 @@ class RatService
     /**
      * Finaliza um RAT existente.
      */
-    public function finalize(string $id): Rat
+    public function finalize(string $id): object
     {
         return $this->writeService->finalize($id);
     }
@@ -70,7 +70,7 @@ class RatService
     /**
      * Busca um RAT por UUID, retorna null se não encontrado.
      */
-    public function findById(string $id): ?Rat
+    public function findById(string $id): ?object
     {
         return $this->repository->findById($id);
     }

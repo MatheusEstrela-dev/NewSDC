@@ -103,4 +103,53 @@ class RatOcorrencia extends Model
     {
         return $this->status === 1 ? 'Finalizado' : 'Rascunho';
     }
+
+    // ─── Compatibilidade com RatResource legado ─────────────────────────────
+
+    public function getProtocoloAttribute(): ?string
+    {
+        return $this->numero_bos;
+    }
+
+    public function getDadosGeraisAttribute(): array
+    {
+        $dados = $this->relatosMorph()->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais::class)->first()?->conteudo;
+        return $dados ? $dados->toArray() : [];
+    }
+
+    public function getLocalAttribute(): array
+    {
+        return $this->getDadosGeraisAttribute(); // No modelo antigo local era parte do JSON
+    }
+
+    public function getEnderecoAttribute(): array
+    {
+        return $this->getDadosGeraisAttribute();
+    }
+
+    public function getComunicacaoAttribute(): array
+    {
+        return $this->getDadosGeraisAttribute();
+    }
+
+    public function getRecursosAttribute(): array
+    {
+        return $this->relatosMorph()->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoRecurso::class)->get()->map(fn($r) => $r->conteudo)->toArray();
+    }
+
+    public function getEnvolvidosAttribute(): array
+    {
+        return $this->relatosMorph()->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos::class)->get()->map(fn($e) => $e->conteudo)->toArray();
+    }
+
+    public function getVistoriaAttribute(): array
+    {
+        $vistoria = $this->relatosMorph()->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoVistoria::class)->first()?->conteudo;
+        return $vistoria ? $vistoria->toArray() : [];
+    }
+
+    public function getTemVistoriaAttribute(): bool
+    {
+        return !empty($this->getVistoriaAttribute());
+    }
 }

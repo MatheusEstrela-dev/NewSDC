@@ -50,12 +50,25 @@ return new class extends Migration
                 $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
                 $table->foreign('usuario_id')->references('id')->on('users')->onDelete('restrict');
             });
+        } else {
+            Schema::table('rat_relato_dados_gerais', function (Blueprint $table) {
+                if (!Schema::hasColumn('rat_relato_dados_gerais', 'ocorrencia_id')) {
+                    $table->unsignedBigInteger('ocorrencia_id')->nullable()->after('id');
+                    $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                }
+                if (!Schema::hasColumn('rat_relato_dados_gerais', 'descricao')) {
+                    $table->longText('descricao')->nullable()->after('orgao_responsavel');
+                }
+                if (!Schema::hasColumn('rat_relato_dados_gerais', 'status')) {
+                    $table->enum('status', ['rascunho', 'em_andamento', 'finalizado', 'cancelado'])->default('rascunho')->after('descricao');
+                }
+            });
         }
 
         // ========================
         // ENVOLVIDOS
         // ========================
-        if (!Schema::hasTable('rat_relato_envolvidos')) {
+        if (! Schema::hasTable('rat_relato_envolvidos')) {
             Schema::create('rat_relato_envolvidos', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('ocorrencia_id');
@@ -101,12 +114,19 @@ return new class extends Migration
                 $table->foreign('usuario_id')->references('id')->on('users')->onDelete('restrict');
                 $table->index(['ocorrencia_id', 'tipo_envolvimento']);
             });
+        } else {
+            Schema::table('rat_relato_envolvidos', function (Blueprint $table) {
+                if (!Schema::hasColumn('rat_relato_envolvidos', 'ocorrencia_id')) {
+                    $table->unsignedBigInteger('ocorrencia_id')->nullable()->after('id');
+                    $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                }
+            });
         }
 
         // ========================
         // RECURSOS
         // ========================
-        if (!Schema::hasTable('rat_relato_recursos')) {
+        if (! Schema::hasTable('rat_relato_recursos')) {
             Schema::create('rat_relato_recursos', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('ocorrencia_id');
@@ -138,12 +158,19 @@ return new class extends Migration
                 $table->foreign('usuario_id')->references('id')->on('users')->onDelete('restrict');
                 $table->index(['ocorrencia_id', 'tipo_recurso']);
             });
+        } else {
+            Schema::table('rat_relato_recursos', function (Blueprint $table) {
+                if (!Schema::hasColumn('rat_relato_recursos', 'ocorrencia_id')) {
+                    $table->unsignedBigInteger('ocorrencia_id')->nullable()->after('id');
+                    $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                }
+            });
         }
 
         // ========================
         // VISTORIA
         // ========================
-        if (!Schema::hasTable('rat_relato_vistorias')) {
+        if (! Schema::hasTable('rat_relato_vistorias')) {
             Schema::create('rat_relato_vistorias', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('ocorrencia_id');
@@ -169,6 +196,13 @@ return new class extends Migration
                 // Índices
                 $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
                 $table->foreign('usuario_id')->references('id')->on('users')->onDelete('restrict');
+            });
+        } else {
+            Schema::table('rat_relato_vistorias', function (Blueprint $table) {
+                if (!Schema::hasColumn('rat_relato_vistorias', 'ocorrencia_id')) {
+                    $table->unsignedBigInteger('ocorrencia_id')->nullable()->after('id');
+                    $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                }
             });
         }
 

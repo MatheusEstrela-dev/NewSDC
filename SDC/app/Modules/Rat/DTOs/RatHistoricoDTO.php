@@ -20,8 +20,13 @@ readonly class RatHistoricoDTO
 
     public static function fromArray(array $data): self
     {
+        $historico = $data['historico'] ?? $data['descricao'] ?? null;
+        if (is_array($historico)) {
+            $historico = null;
+        }
+
         return new self(
-            historico:        $data['historico']        ?? $data['descricao'] ?? null,
+            historico:        $historico,
             clima:            $data['clima']            ?? null,
             resultado:        $data['resultado']        ?? null,
             grauRisco:        $data['grau_risco']       ?? null,
