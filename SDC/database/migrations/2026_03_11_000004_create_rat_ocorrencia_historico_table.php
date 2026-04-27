@@ -27,9 +27,10 @@ return new class extends Migration
             $table->string('evento', 100)
                   ->comment('Nome do evento (ex: envolvido.adicionado, ocorrencia.finalizada)');
 
-            $table->json('payload')
+            $table->jsonb('payload')
                   ->nullable()
                   ->comment('Dados extras do evento: IDs, nomes, diffs de campos');
+            $table->index('payload', 'idx_rat_ocorrencia_historico_payload', 'gin');
 
             $table->string('ip_address', 45)->nullable();
             $table->string('user_agent', 500)->nullable();

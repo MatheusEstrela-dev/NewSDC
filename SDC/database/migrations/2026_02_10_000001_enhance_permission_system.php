@@ -131,7 +131,7 @@ return new class extends Migration
     }
 
     /**
-     * Adiciona indice se nao existir (compativel com MySQL e SQLite).
+     * Adiciona indice se nao existir (compativel com PostgreSQL, MySQL e SQLite).
      */
     protected function addIndexIfNotExists(string $table, array $columns, string $indexName): void
     {
@@ -139,6 +139,11 @@ return new class extends Migration
 
         if ($driver === 'sqlite') {
             $indexes = collect(DB::select("PRAGMA index_list({$table})"))->pluck('name');
+        } elseif ($driver === 'pgsql') {
+            $indexes = collect(DB::select(
+                "SELECT indexname FROM pg_indexes WHERE tablename = ? AND schemaname = 'public'",
+                [$table]
+            ))->pluck('indexname');
         } else {
             $indexes = collect(DB::select("SHOW INDEX FROM {$table}"))->pluck('Key_name')->unique();
         }
@@ -151,7 +156,7 @@ return new class extends Migration
     }
 
     /**
-     * Remove indice se existir (compativel com MySQL e SQLite).
+     * Remove indice se existir (compativel com PostgreSQL, MySQL e SQLite).
      */
     protected function dropIndexIfExists(string $table, string $indexName): void
     {
@@ -159,6 +164,11 @@ return new class extends Migration
 
         if ($driver === 'sqlite') {
             $indexes = collect(DB::select("PRAGMA index_list({$table})"))->pluck('name');
+        } elseif ($driver === 'pgsql') {
+            $indexes = collect(DB::select(
+                "SELECT indexname FROM pg_indexes WHERE tablename = ? AND schemaname = 'public'",
+                [$table]
+            ))->pluck('indexname');
         } else {
             $indexes = collect(DB::select("SHOW INDEX FROM {$table}"))->pluck('Key_name')->unique();
         }
@@ -171,7 +181,7 @@ return new class extends Migration
     }
 
     /**
-     * Adiciona CHECK constraint se nao existir (apenas MySQL 8+).
+     * Adiciona CHECK constraint se nao existir (compativel com PostgreSQL, MySQL 8+ e SQLite).
      */
     protected function addCheckConstraintIfNotExists(string $table, string $constraintName, string $expression): void
     {
@@ -181,23 +191,38 @@ return new class extends Migration
             return;
         }
 
-        $constraints = DB::select("
-            SELECT CONSTRAINT_NAME
-            FROM information_schema.TABLE_CONSTRAINTS
-            WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = '{$table}'
-            AND CONSTRAINT_TYPE = 'CHECK'
-        ");
+        if ($driver === 'pgsql') {
+            $constraints = DB::select(
+                "SELECT constraint_name AS CONSTRAINT_NAME
+                 FROM information_schema.table_constraints
+                 WHERE table_schema = 'public'
+                 AND table_name = ?
+                 AND constraint_type = 'CHECK'",
+                [$table]
+            );
+        } else {
+            $constraints = DB::select("
+                SELECT CONSTRAINT_NAME
+                FROM information_schema.TABLE_CONSTRAINTS
+                WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = '{$table}'
+                AND CONSTRAINT_TYPE = 'CHECK'
+            ");
+        }
 
         $constraintNames = collect($constraints)->pluck('CONSTRAINT_NAME');
 
         if (!$constraintNames->contains($constraintName)) {
+            if ($driver === 'pgsql') {
+                // PostgreSQL: colunas boolean usam true/false, nao 0/1
+                $expression = str_replace('IN (0, 1)', 'IN (true, false)', $expression);
+            }
             DB::statement("ALTER TABLE {$table} ADD CONSTRAINT {$constraintName} CHECK ({$expression})");
         }
     }
 
     /**
-     * Remove CHECK constraint se existir (apenas MySQL).
+     * Remove CHECK constraint se existir (compativel com PostgreSQL, MySQL e SQLite).
      */
     protected function dropCheckConstraintIfExists(string $table, string $constraintName): void
     {
@@ -207,13 +232,24 @@ return new class extends Migration
             return;
         }
 
-        $constraints = DB::select("
-            SELECT CONSTRAINT_NAME
-            FROM information_schema.TABLE_CONSTRAINTS
-            WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = '{$table}'
-            AND CONSTRAINT_TYPE = 'CHECK'
-        ");
+        if ($driver === 'pgsql') {
+            $constraints = DB::select(
+                "SELECT constraint_name AS CONSTRAINT_NAME
+                 FROM information_schema.table_constraints
+                 WHERE table_schema = 'public'
+                 AND table_name = ?
+                 AND constraint_type = 'CHECK'",
+                [$table]
+            );
+        } else {
+            $constraints = DB::select("
+                SELECT CONSTRAINT_NAME
+                FROM information_schema.TABLE_CONSTRAINTS
+                WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = '{$table}'
+                AND CONSTRAINT_TYPE = 'CHECK'
+            ");
+        }
 
         $constraintNames = collect($constraints)->pluck('CONSTRAINT_NAME');
 

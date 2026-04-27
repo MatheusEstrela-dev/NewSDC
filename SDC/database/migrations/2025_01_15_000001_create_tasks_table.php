@@ -82,8 +82,9 @@ return new class extends Migration
             $table->boolean('sla_resolucao_violado')->default(false)->index();
 
             // Campos Dinâmicos (JSON Schema)
-            $table->json('campos_customizados')->nullable()
+            $table->jsonb('campos_customizados')->nullable()
                 ->comment('Formulários dinâmicos baseados no catálogo de serviços');
+            $table->index('campos_customizados', 'idx_tasks_campos_customizados', 'gin');
 
             // Métricas de Tempo
             $table->integer('tempo_em_aberta')->default(0)

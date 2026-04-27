@@ -59,7 +59,7 @@ class PaeProtocoloService extends BaseService
         $ano = now()->format('Y');
         $ultimo = PaeProtocolo::whereYear('created_at', $ano)->max(
             \Illuminate\Support\Facades\DB::raw(
-                "CAST(SUBSTRING_INDEX(num_protocolo, '.', -1) AS UNSIGNED)"
+                "CAST(SPLIT_PART(num_protocolo, '.', 4) AS BIGINT)"
             )
         ) ?? 0;
         $seq = str_pad((string) ($ultimo + 1), 3, '0', STR_PAD_LEFT);

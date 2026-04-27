@@ -41,8 +41,9 @@ return new class extends Migration
             $table->boolean('enviado_email')->default(false);
 
             // Metadados da atualização (para tipo=atualizacao)
-            $table->json('metadata')->nullable()
+            $table->jsonb('metadata')->nullable()
                 ->comment('Ex: {"campo": "status", "de": "aberta", "para": "em_progresso"}');
+            $table->index('metadata', 'idx_task_comments_metadata', 'gin');
 
             $table->timestamps();
 

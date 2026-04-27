@@ -58,12 +58,14 @@ return new class extends Migration
             $table->decimal('longitude', 10, 7)->nullable();
 
             // Abrangência (JSON: array de município IDs cobertos)
-            $table->json('abrangencia')->nullable()
+            $table->jsonb('abrangencia')->nullable()
                 ->comment('IDs dos municípios cobertos por este órgão');
+            $table->index('abrangencia', 'idx_orgaos_abrangencia', 'gin');
 
             // Metadados adicionais
-            $table->json('metadata')->nullable()
+            $table->jsonb('metadata')->nullable()
                 ->comment('Campos extras: site, horário, estrutura, etc');
+            $table->index('metadata', 'idx_orgaos_metadata', 'gin');
 
             $table->timestamps();
             $table->softDeletes();

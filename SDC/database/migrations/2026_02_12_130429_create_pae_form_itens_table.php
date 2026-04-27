@@ -29,7 +29,7 @@ return new class extends Migration
 
                 $table->timestamp('updated_at')
                       ->useCurrent()
-                      ->useCurrentOnUpdate();
+                      ;
 
                 $table->index('pae_form_id', 'idx_apontamentos_form');
                 $table->index('parent_id', 'idx_apontamentos_parent');
@@ -55,7 +55,7 @@ return new class extends Migration
 
                 $table->timestamp('updated_at')
                       ->useCurrent()
-                      ->useCurrentOnUpdate();
+                      ;
 
                 $table->index('pae_form_id', 'idx_conclusao_form');
                 $table->index('parent_id', 'idx_conclusao_parent');

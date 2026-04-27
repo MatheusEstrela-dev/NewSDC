@@ -49,8 +49,9 @@ return new class extends Migration
             $table->string('ip_address', 45)->nullable();
             $table->string('user_agent', 255)->nullable();
 
-            $table->json('metadata')->nullable()
+            $table->jsonb('metadata')->nullable()
                 ->comment('Dados adicionais da ação');
+            $table->index('metadata', 'idx_task_audit_logs_metadata', 'gin');
 
             $table->timestamp('created_at')->useCurrent();
 

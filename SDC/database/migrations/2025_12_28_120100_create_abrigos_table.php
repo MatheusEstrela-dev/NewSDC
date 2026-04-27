@@ -41,8 +41,10 @@ return new class extends Migration
             $table->date('data_fechamento')->nullable();
 
             // Infraestrutura (JSON)
-            $table->json('infraestrutura')->nullable();
-            $table->json('recursos_disponiveis')->nullable();
+            $table->jsonb('infraestrutura')->nullable();
+            $table->index('infraestrutura', 'idx_abrigos_infraestrutura', 'gin');
+            $table->jsonb('recursos_disponiveis')->nullable();
+            $table->index('recursos_disponiveis', 'idx_abrigos_recursos_disponiveis', 'gin');
 
             // Observações
             $table->text('observacoes')->nullable();

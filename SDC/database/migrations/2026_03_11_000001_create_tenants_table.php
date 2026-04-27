@@ -17,8 +17,9 @@ return new class extends Migration
             $table->string('database')->nullable();     // nome do banco para multi-db tenancy
             $table->string('dominio')->nullable();      // domínio vinculado ao tenant
             $table->boolean('ativo')->default(true);
-            $table->json('config')->nullable();         // configurações extras por tenant
+            $table->jsonb('config')->nullable();         // configurações extras por tenant
             $table->timestamps();
+            $table->index('config', 'idx_tenants_config', 'gin');
             $table->softDeletes();
 
             $table->index('slug');

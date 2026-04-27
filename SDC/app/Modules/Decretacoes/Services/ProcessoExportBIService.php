@@ -125,7 +125,7 @@ class ProcessoExportBIService
                 'ecd.entrada_processo_id as processo_id',
                 'ed.municipio_id',
                 'di.id as item_id',
-                DB::raw('CAST(COALESCE(ed.valor, 0) AS UNSIGNED) as valor_numerico')
+                DB::raw('CAST(COALESCE(ed.valor, 0) AS BIGINT) as valor_numerico')
             )
             ->get();
 

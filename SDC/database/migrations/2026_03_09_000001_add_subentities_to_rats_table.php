@@ -10,16 +10,20 @@ return new class extends Migration
     {
         Schema::table('rats', function (Blueprint $table) {
             if (!Schema::hasColumn('rats', 'recursos')) {
-                $table->json('recursos')->nullable()->after('comunicacao');
+                $table->jsonb('recursos')->nullable()->after('comunicacao');
+                $table->index('recursos', 'idx_rats_recursos', 'gin');
             }
             if (!Schema::hasColumn('rats', 'envolvidos')) {
-                $table->json('envolvidos')->nullable()->after('recursos');
+                $table->jsonb('envolvidos')->nullable()->after('recursos');
+                $table->index('envolvidos', 'idx_rats_envolvidos', 'gin');
             }
             if (!Schema::hasColumn('rats', 'vistoria')) {
-                $table->json('vistoria')->nullable()->after('envolvidos');
+                $table->jsonb('vistoria')->nullable()->after('envolvidos');
+                $table->index('vistoria', 'idx_rats_vistoria', 'gin');
             }
             if (!Schema::hasColumn('rats', 'historico')) {
-                $table->json('historico')->nullable()->after('vistoria');
+                $table->jsonb('historico')->nullable()->after('vistoria');
+                $table->index('historico', 'idx_rats_historico', 'gin');
             }
         });
     }

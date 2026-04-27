@@ -75,7 +75,17 @@ return new class extends Migration
 
     private function hasIndex(string $table, string $indexName): bool
     {
-        $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$indexName]);
-        return count($indexes) > 0;
+        $driver = DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            $indexes = DB::select(
+                "SELECT 1 FROM pg_indexes WHERE tablename = ? AND indexname = ? AND schemaname = 'public'",
+                [$table, $indexName]
+            );
+        } else {
+            $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$indexName]);
+        }
+
+        return \count($indexes) > 0;
     }
 };
