@@ -88,17 +88,18 @@
 
             <!-- Empty State -->
             <div
-              v-else-if="!hasResults && query.length >= 3"
+              v-else-if="!isLoading && !hasResults && query.length >= 2"
               class="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400"
             >
               <svg class="w-10 h-10 mb-3 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p class="text-sm">Não encontramos nada para "<span class="font-medium text-slate-900 dark:text-slate-100">{{ query }}</span>"</p>
+              <p class="text-xs text-slate-400 mt-1">Verifique o número de protocolo ou tente outro módulo</p>
             </div>
 
              <!-- Initial State (Quick Actions / Recent) -->
-             <div v-else-if="query.length < 3" class="p-2">
+             <div v-else-if="query.length < 2" class="p-2">
                  <div class="px-3 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                     Sugestões Rápidas
                  </div>
@@ -305,7 +306,7 @@ const quickActions = computed(() => [
 
 const flattenedResults = computed(() => {
     // If empty query, return quick actions
-    if (query.value.length < 3) return quickActions.value;
+    if (query.value.length < 2) return quickActions.value;
 
     let flat = [];
     const priorityOrder = ['actions', 'navigation', 'admin', 'db_results'];
@@ -336,7 +337,7 @@ const handleInput = () => {
   isLoading.value = true;
   activeIndex.value = 0;
 
-  if (query.value.length < 3) {
+  if (query.value.length < 2) {
     results.value = {};
     isLoading.value = false;
     return;
@@ -399,6 +400,34 @@ const handleInput = () => {
           icon: 'checkbadge',
           category: 'actions',
           tag: 'TASK'
+      });
+  }
+
+  // Deteccao de formato Decreto: MG-F-XX-XXXXX ou similares
+  const decretoMatch = q.match(/^(mg|rs|sp|rj|pr|sc|ba|es|go|mt|ms|pe|ce|ma|al|rn|pb|pi|am|pa|ap|ro|rr|ac|to|df)[-\s]?(f|s|e|d)[-\s]?(\d+)/i);
+  if (decretoMatch && q.length >= 4) {
+      directActions.push({
+          id: `goto_decreto_search_${q}`,
+          title: `Buscar Decreto "${q.toUpperCase()}"`,
+          subtitle: 'Pesquisar em Decretações',
+          url: safeRoute('decretacoes.index') + '?search=' + encodeURIComponent(query.value),
+          icon: 'scale',
+          category: 'actions',
+          tag: 'DECRETO'
+      });
+  }
+
+  // Deteccao de formato PAE: DD.MM.YYYY ou parcial com pontos
+  const paeMatch = q.match(/^\d{2}\.\d{2}/);
+  if (paeMatch) {
+      directActions.push({
+          id: `goto_pae_search_${q}`,
+          title: `Buscar PAE "${q}"`,
+          subtitle: 'Pesquisar em Protocolos PAE',
+          url: safeRoute('pae.protocolos.index') + '?search=' + encodeURIComponent(query.value),
+          icon: 'document',
+          category: 'actions',
+          tag: 'PAE'
       });
   }
 
