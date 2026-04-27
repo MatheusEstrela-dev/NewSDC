@@ -49,17 +49,108 @@ class ProtocoloController extends Controller
      *     summary="Lista protocolos RAT / export Power BI",
      *     tags={"RAT"},
      *     security={{"bearerAuth": {}}},
-     *     @OA\Parameter(name="format", in="query", required=false,
-     *         @OA\Schema(type="string", enum={"powerbi"})),
+     *     @OA\Parameter(name="format", in="query", required=false, @OA\Schema(type="string", enum={"powerbi"})),
      *     @OA\Parameter(name="protocolo", in="query", required=false, @OA\Schema(type="string")),
      *     @OA\Parameter(name="status", in="query", required=false, @OA\Schema(type="string")),
      *     @OA\Parameter(name="municipio", in="query", required=false, @OA\Schema(type="string")),
      *     @OA\Parameter(name="ano", in="query", required=false, @OA\Schema(type="string")),
-     *     @OA\Parameter(name="data_inicio", in="query", required=false, @OA\Schema(type="string", format="date")),
-     *     @OA\Parameter(name="data_fim", in="query", required=false, @OA\Schema(type="string", format="date")),
+     *     @OA\Parameter(name="data_inicio", in="query", required=false, description="Filtro por data inicial (YYYY-MM-DD)", @OA\Schema(type="string", format="date")),
+     *     @OA\Parameter(name="data_fim", in="query", required=false, description="Filtro por data final (YYYY-MM-DD)", @OA\Schema(type="string", format="date")),
      *     @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=15)),
-     *     @OA\Response(response=200, description="Sucesso"),
-     *     @OA\Response(response=401, description="Nao autenticado"),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Sucesso",
+     *         @OA\JsonContent(
+     *             allOf={
+     *                 @OA\Schema(ref="#/components/schemas/SuccessResponse"),
+     *                 @OA\Schema(ref="#/components/schemas/PaginatedResponse")
+     *             },
+     *             @OA\Examples(
+     *                 example="listagemPaginada",
+     *                 summary="Listagem paginada padrao",
+     *                 value={
+     *                     "success": true,
+     *                     "data": {
+     *                         {
+     *                             "dados_gerais": {
+     *                                 "id": 155,
+     *                                 "numero_bos": "2025-000000001-001",
+     *                                 "status": 1,
+     *                                 "status_descricao": "Finalizado",
+     *                                 "uf": "MG",
+     *                                 "municipio": "620 - BELO HORIZONTE",
+     *                                 "data_fato": "2025-12-23 08:53:00",
+     *                                 "data_inicio_atividade": "2025-12-23 08:53:00",
+     *                                 "data_termino_atividade": "2025-12-23 08:53:00",
+     *                                 "comunicacao_data": "2025-12-23 08:53:00",
+     *                                 "created_at": "2025-12-23 08:53:14",
+     *                                 "updated_at": "2025-12-23 08:54:53"
+     *                             },
+     *                             "recursos": {
+     *                                 {
+     *                                     "id": 8,
+     *                                     "tipo_recurso": "aquatico",
+     *                                     "categoria": "comunicacao",
+     *                                     "numero_viatura": "HNH 1932",
+     *                                     "placa": "HNH 1932",
+     *                                     "orgao": "samu",
+     *                                     "descricao": "Voluptatem rerum qui"
+     *                                 }
+     *                             },
+     *                             "envolvidos": {
+     *                                 {
+     *                                     "id": 37,
+     *                                     "tipo_pessoa": "juridica",
+     *                                     "nome": "Quod ipsum omnis ir",
+     *                                     "email": "buta@mailinator.com",
+     *                                     "data_nascimento": "2017-09-23"
+     *                                 }
+     *                             },
+     *                             "vistoria": {
+     *                                 "id": 9
+     *                             }
+     *                         }
+     *                     },
+     *                     "meta": {
+     *                         "current_page": 1,
+     *                         "per_page": 15,
+     *                         "total": 1,
+     *                         "last_page": 1
+     *                     }
+     *                 }
+     *             ),
+     *             @OA\Examples(
+     *                 example="exportPowerbi",
+     *                 summary="Exportacao flat para Power BI (?format=powerbi)",
+     *                 value={
+     *                     "success": true,
+     *                     "data": {
+     *                         {
+     *                             "rat_id": 155,
+     *                             "protocolo": "2025-000000001-001",
+     *                             "status": "finalizado",
+     *                             "created_at": "2025-12-23 08:53:14",
+     *                             "updated_at": "2025-12-23 08:54:53",
+     *                             "dados_gerais_data_fato": "2025-12-23 08:53:00",
+     *                             "dados_gerais_data_inicio_atividade": "2025-12-23 08:53:00",
+     *                             "dados_gerais_data_termino_atividade": "2025-12-23 08:53:00",
+     *                             "comunicacao_data": "2025-12-23 08:53:00",
+     *                             "recurso_data_saida": "2025-12-23 08:53:00",
+     *                             "recurso_data_chegada": "2025-12-23 08:53:00",
+     *                             "envolvido_data_nascimento": "2017-09-23"
+     *                         }
+     *                     },
+     *                     "meta": {
+     *                         "total_registros": 1,
+     *                         "gerado_em": "2025-12-23 09:00:00"
+     *                     }
+     *                 }
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Requisicao invalida", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
+     *     @OA\Response(response=401, description="Nao autenticado", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
+     *     @OA\Response(response=422, description="Erro de validacao", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
      *     @OA\Response(response=429, description="Rate limit excedido")
      * )
      */
@@ -106,9 +197,30 @@ class ProtocoloController extends Controller
      *     tags={"RAT"},
      *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string")),
-     *     @OA\Response(response=200, description="Protocolo encontrado"),
-     *     @OA\Response(response=404, description="Nao encontrado"),
-     *     @OA\Response(response=401, description="Nao autenticado")
+     *     @OA\Response(
+     *         response=200,
+     *         description="Protocolo encontrado",
+     *         @OA\JsonContent(
+     *             allOf={
+     *                 @OA\Schema(ref="#/components/schemas/SuccessResponse"),
+     *                 @OA\Schema(
+     *                     @OA\Property(
+     *                         property="data",
+     *                         type="object",
+     *                         required={"dados_gerais", "recursos", "envolvidos", "vistoria"},
+     *                         @OA\Property(property="dados_gerais", type="object"),
+     *                         @OA\Property(property="recursos", type="array", @OA\Items(type="object")),
+     *                         @OA\Property(property="envolvidos", type="array", @OA\Items(type="object")),
+     *                         @OA\Property(property="vistoria", type="object")
+     *                     )
+     *                 )
+     *             }
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Requisicao invalida", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
+     *     @OA\Response(response=401, description="Nao autenticado", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
+     *     @OA\Response(response=422, description="Erro de validacao", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
+     *     @OA\Response(response=404, description="Nao encontrado", @OA\JsonContent(ref="#/components/schemas/ErrorResponse"))
      * )
      */
     public function show(string $id): JsonResponse
@@ -136,8 +248,10 @@ class ProtocoloController extends Controller
      *     summary="Recebe dados externos e cria protocolo RAT",
      *     tags={"RAT"},
      *     security={{"bearerAuth": {}}},
-     *     @OA\RequestBody(required=true,
+     *     @OA\RequestBody(
+     *         required=true,
      *         @OA\JsonContent(
+     *             type="object",
      *             @OA\Property(property="dados_gerais", type="object"),
      *             @OA\Property(property="comunicacao", type="object"),
      *             @OA\Property(property="local", type="object"),
@@ -145,11 +259,13 @@ class ProtocoloController extends Controller
      *             @OA\Property(property="recursos", type="array", @OA\Items(type="object")),
      *             @OA\Property(property="envolvidos", type="array", @OA\Items(type="object")),
      *             @OA\Property(property="vistoria", type="object"),
-     *             @OA\Property(property="finalize", type="boolean", example=false)
+     *             @OA\Property(property="finalize", type="boolean", nullable=true, example=false)
      *         )
      *     ),
-     *     @OA\Response(response=201, description="RAT criado com sucesso"),
-     *     @OA\Response(response=422, description="Dados invalidos"),
+     *     @OA\Response(response=201, description="RAT criado com sucesso", @OA\JsonContent(ref="#/components/schemas/SuccessResponse")),
+     *     @OA\Response(response=400, description="Requisicao invalida", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
+     *     @OA\Response(response=401, description="Nao autenticado", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
+     *     @OA\Response(response=422, description="Dados invalidos", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
      *     @OA\Response(response=429, description="Rate limit excedido")
      * )
      */

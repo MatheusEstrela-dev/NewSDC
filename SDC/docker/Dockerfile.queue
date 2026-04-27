@@ -1,4 +1,5 @@
-FROM php:8.3-fpm-alpine
+# FROM dunglas/frankenphp:latest-php8.3-alpine
+FROM c24773c3328e
 
 # Argumentos de build
 ARG UID=1000
@@ -16,31 +17,8 @@ RUN apk add --no-cache \
     supervisor \
     mysql-client \
     postgresql-client \
-    postgresql-dev
-
-# Instalar extensões PHP
-RUN docker-php-ext-install \
-    pdo_mysql \
-    pdo_pgsql \
-    zip \
-    gd \
-    pcntl \
-    bcmath
-
-# Instalar Redis extension
-RUN apk add --no-cache pcre-dev $PHPIZE_DEPS \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
-    && apk del pcre-dev $PHPIZE_DEPS
-
-# Configurar usuário www-data
-RUN delgroup www-data 2>/dev/null || true \
-    && deluser www-data 2>/dev/null || true \
-    && addgroup -g ${GID} www-data \
-    && adduser -D -u ${UID} -G www-data www-data
-
-# Instalar Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+    postgresql-dev \
+    composer
 
 # Configurar working directory
 WORKDIR /var/www
