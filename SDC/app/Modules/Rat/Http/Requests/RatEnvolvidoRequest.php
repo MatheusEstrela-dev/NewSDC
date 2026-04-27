@@ -27,7 +27,7 @@ class RatEnvolvidoRequest extends FormRequest
             'p_nome_completo'         => ['required', 'string', 'max:255'],
             'p_cpf'                   => ['nullable', 'string', 'regex:/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/'],
             'p_rg'                    => ['nullable', 'string', 'max:20'],
-            'p_data_nascimento'       => ['nullable', 'string', 'regex:/^\d{2}\/\d{2}\/\d{4}$/'],
+            'p_data_nascimento'       => ['nullable', 'string'], // Aceita ISO YYYY-MM-DD ou DD/MM/YYYY, conversão no DTO
             'p_sexo'                  => ['nullable', 'string', Rule::in(['M', 'F'])],
             'p_escolaridade'          => ['nullable', 'string', 'max:100'],
             'p_profissao'             => ['nullable', 'string', 'max:100'],

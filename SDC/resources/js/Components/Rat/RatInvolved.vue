@@ -3,9 +3,9 @@
     <div v-for="(envolvido, index) in localEnvolvidos" :key="envolvido.id || index" class="relative">
       <div v-if="localEnvolvidos.length > 1" class="flex justify-between items-center mb-2 px-4">
         <span class="text-sm font-bold text-blue-600">Envolvido #{{ index + 1 }}</span>
-        <button 
-          v-if="!viewOnly" 
-          @click="removerLocal(index)" 
+        <button
+          v-if="!viewOnly"
+          @click="removerLocal(index)"
           class="text-red-500 hover:text-red-700 text-xs font-medium"
         >
           Remover Envolvido
@@ -68,21 +68,21 @@ const localEnvolvidos = ref(
     ? [...props.envolvidos]
     : [{
         id: Date.now(),
-        nome: '',
-        tipo_envolvimento: 'vitima',
-        rg: '',
-        cpf: '',
-        sexo: '',
-        data_nascimento: '',
+        g_tipo_pessoa: 'vítima',
+        p_nome_completo: '',
+        p_rg: '',
+        p_cpf: '',
+        p_sexo: '',
+        p_data_nascimento: '',
       }]
 );
 
 const adicionarLocal = () => {
   localEnvolvidos.value.push({
     id: Date.now(),
-    nome: '',
-    tipo_envolvimento: 'vitima',
-    sexo: '',
+    g_tipo_pessoa: 'vítima',
+    p_nome_completo: '',
+    p_sexo: '',
   });
 };
 

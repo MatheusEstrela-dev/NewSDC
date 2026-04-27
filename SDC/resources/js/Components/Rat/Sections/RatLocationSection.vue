@@ -17,29 +17,31 @@
       <div class="rat-grid-3">
         <FormSelect
           label="País"
-          v-model="localData.pais"
+          :model-value="localData.local_pais"
           :options="paisOptions"
           required
-          :error="errors.pais"
+          :error="errors.local_pais"
+          @update:model-value="emit('update:modelValue', { ...localData, local_pais: $event })"
         />
 
         <FormSelect
           label="Estado/UF"
-          v-model="localData.uf"
+          :model-value="localData.local_uf"
           :options="ufOptions"
           required
-          :error="errors.uf"
-          @update:modelValue="handleUfChange"
+          :error="errors.local_uf"
+          @update:model-value="(uf) => { emit('update:modelValue', { ...localData, local_uf: uf }); handleUfChange(uf); }"
         />
 
         <FormSelect
           label="Município"
-          v-model="localData.municipio_id"
+          :model-value="localData.local_municipio"
           :options="municipioOptions"
-          :disabled="!localData.uf"
+          :disabled="!localData.local_uf"
           required
-          :error="errors.municipio_id"
+          :error="errors.local_municipio"
           placeholder="Selecione o estado primeiro"
+          @update:model-value="emit('update:modelValue', { ...localData, local_municipio: $event })"
         />
       </div>
     </div>
@@ -55,9 +57,9 @@ const props = defineProps({
   modelValue: {
     type: Object,
     default: () => ({
-      pais: 'BR',
-      uf: '',
-      municipio_id: null,
+      local_pais: 'BR',
+      local_uf: '',
+      local_municipio: null,
     }),
   },
   errors: {
@@ -85,14 +87,14 @@ const {
 } = useLocationData();
 
 const handleUfChange = (uf) => {
-  localData.value.municipio_id = null;
+  localData.value.local_municipio = null;
   if (uf) {
     loadMunicipios(uf);
   }
 };
 
 // Carrega municípios se já tiver UF selecionada
-watch(() => props.modelValue.uf, (newUf) => {
+watch(() => props.modelValue.local_uf, (newUf) => {
   if (newUf) {
     loadMunicipios(newUf);
   }

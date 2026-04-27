@@ -17,20 +17,20 @@
         type="datetime-local"
         :model-value="modelValue.data_fato"
         required
-        @update:model-value="emit('update:modelValue', { ...modelValue, data_fato: $event })"
+        @update:model-value="handleDataFato"
       />
       <FormField
         label="Início da Atividade"
         type="datetime-local"
         :model-value="modelValue.data_inicio_atividade"
         required
-        @update:model-value="emit('update:modelValue', { ...modelValue, data_inicio_atividade: $event })"
+        @update:model-value="handleDataInicio"
       />
       <FormField
         label="Término da Atividade"
         type="datetime-local"
         :model-value="modelValue.data_termino_atividade"
-        @update:model-value="emit('update:modelValue', { ...modelValue, data_termino_atividade: $event })"
+        @update:model-value="handleDataTermino"
       />
     </div>
   </RatCollapsibleSection>
@@ -52,4 +52,20 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+const handleDataFato = (value) => {
+  emit('update:modelValue', { ...props.modelValue, data_fato: value });
+};
+
+const handleDataInicio = (value) => {
+  emit('update:modelValue', { ...props.modelValue, data_inicio_atividade: value });
+};
+
+const handleDataTermino = (value) => {
+  emit('update:modelValue', { ...props.modelValue, data_termino_atividade: value });
+};
+
+const handleDataComunicacao = (value) => {
+  emit('update:modelValue', { ...props.modelValue, com_ocorrencia_data: value });
+};
 </script>

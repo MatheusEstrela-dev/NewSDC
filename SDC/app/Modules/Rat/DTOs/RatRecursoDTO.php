@@ -9,6 +9,26 @@ namespace App\Modules\Rat\DTOs;
  */
 readonly class RatRecursoDTO
 {
+    /**
+     * Converte ISO datetime (YYYY-MM-DDTHH:mm) para dd/mm/aaaa hh:mm
+     */
+    private static function convertIsoDateTime(?string $isoDateTime): ?string
+    {
+        if (!$isoDateTime) return null;
+
+        // Se já está em formato dd/mm/aaaa hh:mm, retorna como está
+        if (preg_match('/^\d{2}\/\d{2}\/\d{4}/', $isoDateTime)) {
+            return $isoDateTime;
+        }
+
+        // Se é ISO datetime (YYYY-MM-DDTHH:mm), converte
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/', $isoDateTime, $matches)) {
+            return "{$matches[3]}/{$matches[2]}/{$matches[1]} {$matches[4]}:{$matches[5]}";
+        }
+
+        return $isoDateTime;
+    }
+
     public function __construct(
         public ?int    $id = null,
         public ?int    $seq = null,
@@ -33,7 +53,7 @@ readonly class RatRecursoDTO
         public ?string $operadorMasp = null,
         public ?bool   $operadorIsCondutor = null,
         public ?string $viaturaContato = null,
-        
+
         /** @var RatAgenteDTO[]|null */
         public ?array  $agentes = null,
     ) {}
@@ -52,8 +72,8 @@ readonly class RatRecursoDTO
             viaturaPadrao:       $data['viatura_padrao']       ?? null,
             viaturaOrgao:        $data['viatura_orgao']        ?? $data['orgao_responsavel'] ?? null,
             viaturaDescricao:    $data['viatura_descricao']    ?? null,
-            viaturaSaida:        $data['viatura_saida']        ?? $data['data_saida'] ?? $data['data_hora_saida'] ?? null,
-            viaturaChegada:      $data['viatura_chegada']      ?? $data['data_chegada'] ?? $data['data_hora_chegada'] ?? null,
+            viaturaSaida:        self::convertIsoDateTime($data['viatura_saida'] ?? $data['data_saida'] ?? $data['data_hora_saida'] ?? null),
+            viaturaChegada:      self::convertIsoDateTime($data['viatura_chegada'] ?? $data['data_chegada'] ?? $data['data_hora_chegada'] ?? null),
             viaturaKm:           $data['viatura_km']           ?? $data['km_percorrido'] ?? null,
             viaturaLocalOrigem:  $data['viatura_local_origem']  ?? $data['local_origem'] ?? null,
             viaturaLocalDestino: $data['viatura_local_destino'] ?? $data['local_destino'] ?? null,
@@ -64,8 +84,8 @@ readonly class RatRecursoDTO
             operadorMasp:        $data['operador_masp']        ?? null,
             operadorIsCondutor:  isset($data['operador_is_condutor']) ? (bool) $data['operador_is_condutor'] : null,
             viaturaContato:      $data['viatura_contato']      ?? null,
-            agentes:             isset($data['agentes']) 
-                                    ? array_map(fn($a) => RatAgenteDTO::fromArray($a), $data['agentes']) 
+            agentes:             isset($data['agentes'])
+                                    ? array_map(fn($a) => RatAgenteDTO::fromArray($a), $data['agentes'])
                                     : null,
         );
     }

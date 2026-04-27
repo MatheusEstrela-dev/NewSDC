@@ -1,0 +1,22 @@
+# BUN Configuration
+# ============================================================================
+
+[runtime]
+# Comportamento do runtime Bun
+preload = []
+smol = false
+
+[install]
+# Configurações de instalação de dependências
+optional = true
+peer = false
+
+[bundle]
+# Otimizações de bundle
+root = "."
+naming = "use loose"
+
+# FrankenPHP Integration
+[ffi]
+# Bindings para FrankenPHP (se necessário)
+php = "libphp"

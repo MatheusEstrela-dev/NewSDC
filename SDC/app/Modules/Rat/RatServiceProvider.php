@@ -8,7 +8,11 @@ use App\Modules\Rat\Config\RatActionsConfig;
 use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
 use App\Modules\Rat\Infrastructure\Repositories\RatRepository;
 use App\Modules\Rat\Services\RatAttachmentService;
+use App\Modules\Rat\Services\RatExportService;
+use App\Modules\Rat\Services\RatFilterService;
 use App\Modules\Rat\Services\RatProtocoloService;
+use App\Modules\Rat\Services\RatStatisticsService;
+use App\Modules\Rat\Services\RatWriteService;
 use App\Services\Rat\RatAuditService;
 use App\Services\Rat\RatBiService;
 use App\Services\Rat\RatHistoricoService;
@@ -29,9 +33,14 @@ class RatServiceProvider extends ServiceProvider
             RatRepository::class
         );
 
+        // Application Services
         $this->app->singleton(RatService::class);
         $this->app->singleton(RatProtocoloService::class);
         $this->app->singleton(RatAttachmentService::class);
+        $this->app->singleton(RatWriteService::class);
+        $this->app->singleton(RatExportService::class);
+        $this->app->singleton(RatStatisticsService::class);
+        $this->app->singleton(RatFilterService::class);
 
         // Nova estrutura (RatOcorrencia + relatos polimórficos)
         $this->app->singleton(RatOcorrenciaService::class);

@@ -138,16 +138,13 @@ Route::middleware('auth')->group(function () {
     // Modulo: IA
     require __DIR__ . '/modules/ia.php';
 
-    // Modulo: Inmet (Meteorologia) (movido para fora para testes)
-
     // Módulo: Plantão Diário
     require __DIR__ . '/modules/plantao.php';
+
+    // Módulo: RAT (Registro de Atendimento Técnico)
+    require __DIR__ . '/modules/rat.php';
 });
 
-// ⚠️ RAT temporariamente fora do grupo 'auth' para testes
-// ⚠️ PlanCon também temporariamente fora do grupo 'auth' para testes
-// TODO: Remover isto e adicionar auth() depois de testes
-require __DIR__ . '/modules/rat.php';
 require __DIR__ . '/modules/plancon.php';
 require __DIR__ . '/modules/inmet.php';
 

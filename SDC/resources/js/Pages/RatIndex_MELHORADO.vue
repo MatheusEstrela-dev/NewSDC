@@ -3,6 +3,41 @@
     <Head title="Gestão de RAT" />
 
     <div class="container mx-auto px-4 py-8">
+
+      <!-- Alertas Flash -->
+      <Transition
+        enter-active-class="transition duration-300 ease-out"
+        enter-from-class="transform -translate-y-2 opacity-0"
+        enter-to-class="transform translate-y-0 opacity-100"
+        leave-active-class="transition duration-200 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="flashMessage"
+          :class="[
+            'flex items-center gap-3 mb-6 px-5 py-4 rounded-xl shadow-md border text-sm font-medium',
+            flashType === 'success'
+              ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-800 dark:text-green-200'
+              : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-800 dark:text-red-200'
+          ]"
+        >
+          <!-- Ícone -->
+          <svg v-if="flashType === 'success'" class="w-5 h-5 flex-shrink-0 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <svg v-else class="w-5 h-5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span class="flex-1">{{ flashMessage }}</span>
+          <button @click="flashMessage = null" class="ml-2 opacity-60 hover:opacity-100 transition-opacity">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </Transition>
+
       <!-- Header -->
       <div class="flex items-center justify-between mb-8">
         <div>
@@ -245,27 +280,97 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="deletingRatId"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+          @click.self="deletingRatId = null"
+        >
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Excluir RAT</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  Tem certeza que deseja excluir este RAT? Esta ação não pode ser desfeita.
+                </p>
+              </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+              <button
+                @click="deletingRatId = null"
+                class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                @click="confirmDelete"
+                class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+              >
+                Sim, excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { ref, computed, onMounted, watch } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { usePermissions } from '@/Composables/usePermissions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
 const { can } = usePermissions();
+const page = usePage();
+
+// ─── Flash Messages ────────────────────────────────────────────────────────
+const flashMessage = ref(null);
+const flashType    = ref('success');
+let   flashTimer   = null;
+
+function showFlash(message, type = 'success') {
+  if (flashTimer) clearTimeout(flashTimer);
+  flashMessage.value = message;
+  flashType.value    = type;
+  flashTimer = setTimeout(() => { flashMessage.value = null; }, 4000);
+}
+
+watch(
+  () => page.props.flash,
+  (flash) => {
+    if (flash?.success) showFlash(flash.success, 'success');
+    if (flash?.error)   showFlash(flash.error,   'error');
+  },
+  { immediate: true, deep: true }
+);
 
 const props = defineProps({
-  statistics: { type: Object, default: () => ({ total: 0, hoje: 0, esteMes: 0, esteAno: 0 }) },
-  rats: { type: [Array, Object], default: () => [] },
-  filters: { type: Object, default: () => ({}) },
-  pagination: { type: Object, default: null },
-  municipalities: { type: Array, default: () => [] },
-  cobradeTypes: { type: Array, default: () => [] },
-  years: { type: Array, default: () => [] },
+  statistics:    { type: Object, default: () => ({ total: 0, hoje: 0, esteMes: 0, esteAno: 0 }) },
+  rats:          { type: [Array, Object], default: () => [] },
+  filters:       { type: Object, default: () => ({}) },
+  pagination:    { type: Object, default: null },
+  municipalities:{ type: Array, default: () => [] },
+  cobradeTypes:  { type: Array, default: () => [] },
+  years:         { type: Array, default: () => [] },
 });
 
 const loading = ref(false);
@@ -326,14 +431,25 @@ function goToPage(url) {
   }
 }
 
+// ─── Delete ─────────────────────────────────────────────────────────────────
+const deletingRatId = ref(null);
+
 function deleteRat(ratId) {
-  if (confirm('Tem certeza que deseja excluir este RAT?')) {
-    router.delete(route('compdec.rat.destroy', ratId), {
-      onSuccess: () => {
-        applyFilters();
-      },
-    });
-  }
+  deletingRatId.value = ratId;
+}
+
+function confirmDelete() {
+  if (!deletingRatId.value) return;
+  router.delete(route('compdec.rat.destroy', deletingRatId.value), {
+    onSuccess: () => {
+      deletingRatId.value = null;
+      applyFilters();
+    },
+    onError: () => {
+      deletingRatId.value = null;
+      showFlash('Erro ao excluir o RAT. Tente novamente.', 'error');
+    },
+  });
 }
 
 function formatStatus(status) {
@@ -346,13 +462,14 @@ function formatStatus(status) {
   return statusMap[status] || status;
 }
 
+
 function formatDate(date) {
   if (!date) return '-';
   return new Date(date).toLocaleDateString('pt-BR');
 }
 
 onMounted(() => {
-  // Dados carregados do servidor via props
+  // Dados carregados via Inertia props
 });
 </script>
 
