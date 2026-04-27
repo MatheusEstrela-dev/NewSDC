@@ -43,10 +43,10 @@ php artisan db:port-postgres --batch=json|enum|timestamps  categoria especifica
 |-----------|-------------|------|
 | Docker / config / env | 3 arquivos | Substituicao manual |
 | Conexoes legado (legacy, carga, tenancy) | 3 conexoes | Remover de config/database.php |
-| ENUMs em migrations | 22 arquivos | Script: ->enum() -> string + checkIn() |
-| JSON em migrations | 15+ arquivos | Script: ->json() -> ->jsonb() + GIN index |
-| useCurrentOnUpdate | 3 arquivos | Script: remover chamada |
-| Raw SQL MySQL-only | 5 arquivos PHP | Manual: substituicoes cirurgicas |
+| ENUMs em migrations | 21 arquivos | NENHUMA ACAO: Laravel PostgresGrammar ja converte ->enum() para varchar(255) CHECK(...) nativamente |
+| JSON em migrations | 20 arquivos | Script: ->json() -> ->jsonb() + GIN index |
+| useCurrentOnUpdate | 3 arquivos (4 ocorrencias) | Script: remover chamada |
+| Raw SQL MySQL-only | 6 arquivos PHP | Manual: substituicoes cirurgicas |
 
 ### O que NAO muda
 
@@ -131,19 +131,7 @@ $table->index('dados', 'idx_TABELA_dados', 'gin');
 GIN index aplicado em TODAS as colunas JSONB sem excecao (decisao de negocio: esquema
 otimizado desde o inicio, sem adicoes posteriores).
 
-**Batch ENUM -> string + checkIn:**
-
-```php
-// ANTES
-$table->enum('status', ['ativo', 'inativo'])->default('ativo');
-
-// DEPOIS
-$table->string('status', 20)->default('ativo')
-      ->checkIn(['ativo', 'inativo']);
-
-// N = len(valor_mais_longo) + 10, minimo 20
-// Modificadores encadeados (->default, ->nullable, ->index, ->comment) sao preservados
-```
+**Nota: batch ENUM removido** — `->enum()` ja e traduzido para `varchar(255) CHECK(...)` pelo `PostgresGrammar` do Laravel. Nenhuma conversao necessaria.
 
 **Batch useCurrentOnUpdate:**
 
@@ -160,11 +148,10 @@ $table->timestamp('updated_at')->useCurrent();
 ```bash
 # Todos devem retornar 0
 grep -rn "->json("             database/migrations/ | wc -l
-grep -rn "->enum("             database/migrations/ | wc -l
 grep -rn "useCurrentOnUpdate"  database/migrations/ | wc -l
 ```
 
-### 3. Raw SQL MySQL-only — 5 arquivos (edicao manual)
+### 3. Raw SQL MySQL-only — 6 arquivos (edicao manual)
 
 | Arquivo | Linha | Problema | Fix PostgreSQL |
 |---------|-------|----------|----------------|
@@ -173,6 +160,7 @@ grep -rn "useCurrentOnUpdate"  database/migrations/ | wc -l
 | `ProcessoExportService.php` | 149 | `CAST(... AS UNSIGNED)` | `CAST(... AS BIGINT)` |
 | `HealthCheckController.php` | 364 | `SHOW STATUS WHERE ...` | `SELECT ... FROM pg_stat_activity` |
 | `PaeProtocoloService.php` | 62 | `SUBSTRING_INDEX(..., '.', -1)` | `SPLIT_PART(num_protocolo, '.', 4)` |
+| `enhance_permission_system.php` | ~184, ~210 | `DATABASE()` em `information_schema` | `current_database()` + query pg_catalog |
 
 Detalhes:
 
