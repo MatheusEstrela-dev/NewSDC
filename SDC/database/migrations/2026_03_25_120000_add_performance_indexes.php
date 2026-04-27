@@ -11,6 +11,8 @@ return new class extends Migration
     {
         DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
         DB::statement('CREATE EXTENSION IF NOT EXISTS unaccent');
+        DB::statement('CREATE EXTENSION IF NOT EXISTS btree_gin');
+        DB::statement('CREATE EXTENSION IF NOT EXISTS pg_stat_statements');
 
         $trgmIndexes = [
             ['table' => 'pae_protocolos', 'column' => 'num_protocolo',      'name' => 'idx_trgm_pae_num_protocolo'],
@@ -72,6 +74,23 @@ return new class extends Migration
                 }
             });
         }
+
+        // btree_gin: GIN compostos em colunas de alta cardinalidade
+        $btreeGinIndexes = [
+            ['table' => 'pae_protocolos', 'columns' => ['status', 'created_at'], 'name' => 'idx_gin_pae_status_created'],
+            ['table' => 'processos',      'columns' => ['status', 'created_at'], 'name' => 'idx_gin_proc_status_created'],
+            ['table' => 'rats',           'columns' => ['status', 'created_at'], 'name' => 'idx_gin_rat_status_created'],
+            ['table' => 'tasks',          'columns' => ['status', 'created_at'], 'name' => 'idx_gin_task_status_created'],
+        ];
+
+        foreach ($btreeGinIndexes as $idx) {
+            if (Schema::hasTable($idx['table']) && !$this->hasIndex($idx['table'], $idx['name'])) {
+                $cols = implode(', ', $idx['columns']);
+                DB::statement(
+                    "CREATE INDEX {$idx['name']} ON {$idx['table']} USING GIN ({$cols})"
+                );
+            }
+        }
     }
 
     public function down(): void
@@ -103,6 +122,14 @@ return new class extends Migration
         Schema::table('decreto_municipio', function (Blueprint $table) {
             $table->dropIndex('idx_entrada_municipio');
         });
+
+        $btreeGinNames = [
+            'idx_gin_pae_status_created', 'idx_gin_proc_status_created',
+            'idx_gin_rat_status_created', 'idx_gin_task_status_created',
+        ];
+        foreach ($btreeGinNames as $name) {
+            DB::statement("DROP INDEX IF EXISTS {$name}");
+        }
     }
 
     private function hasIndex(string $table, string $indexName): bool
