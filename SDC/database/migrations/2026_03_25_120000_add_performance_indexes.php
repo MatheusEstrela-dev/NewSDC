@@ -9,6 +9,29 @@ return new class extends Migration
 {
     public function up(): void
     {
+        DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+        DB::statement('CREATE EXTENSION IF NOT EXISTS unaccent');
+
+        $trgmIndexes = [
+            ['table' => 'pae_protocolos', 'column' => 'num_protocolo',      'name' => 'idx_trgm_pae_num_protocolo'],
+            ['table' => 'pae_protocolos', 'column' => 'sei_numero',         'name' => 'idx_trgm_pae_sei_numero'],
+            ['table' => 'pae_protocolos', 'column' => 'sigibar',            'name' => 'idx_trgm_pae_sigibar'],
+            ['table' => 'pae_protocolos', 'column' => 'empnto_search',      'name' => 'idx_trgm_pae_empnto'],
+            ['table' => 'processos',      'column' => 'n_protocolo_fide',   'name' => 'idx_trgm_proc_protocolo'],
+            ['table' => 'processos',      'column' => 'tipo_desastre_nome', 'name' => 'idx_trgm_proc_tipo'],
+            ['table' => 'rats',           'column' => 'protocolo',          'name' => 'idx_trgm_rat_protocolo'],
+            ['table' => 'tasks',          'column' => 'titulo',             'name' => 'idx_trgm_task_titulo'],
+            ['table' => 'tasks',          'column' => 'protocolo',          'name' => 'idx_trgm_task_protocolo'],
+        ];
+
+        foreach ($trgmIndexes as $idx) {
+            if (Schema::hasTable($idx['table']) && !$this->hasIndex($idx['table'], $idx['name'])) {
+                DB::statement(
+                    "CREATE INDEX {$idx['name']} ON {$idx['table']} USING GIN ({$idx['column']} gin_trgm_ops)"
+                );
+            }
+        }
+
         if (Schema::hasTable('rat_ocorrencia_relatos')) {
             Schema::table('rat_ocorrencia_relatos', function (Blueprint $table) {
                 if (!$this->hasIndex('rat_ocorrencia_relatos', 'idx_ocorrencia')) {
@@ -53,6 +76,15 @@ return new class extends Migration
 
     public function down(): void
     {
+        $trgmNames = [
+            'idx_trgm_pae_num_protocolo', 'idx_trgm_pae_sei_numero', 'idx_trgm_pae_sigibar',
+            'idx_trgm_pae_empnto', 'idx_trgm_proc_protocolo', 'idx_trgm_proc_tipo',
+            'idx_trgm_rat_protocolo', 'idx_trgm_task_titulo', 'idx_trgm_task_protocolo',
+        ];
+        foreach ($trgmNames as $name) {
+            DB::statement("DROP INDEX IF EXISTS {$name}");
+        }
+
         Schema::table('rat_ocorrencia_relatos', function (Blueprint $table) {
             $table->dropIndex('idx_ocorrencia');
             $table->dropIndex('idx_conteudo');

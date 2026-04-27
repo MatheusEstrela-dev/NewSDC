@@ -5,47 +5,77 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Modules\Decretacoes\Models\Processo;
-use App\Modules\Rat\Models\Rat;
 use App\Modules\Demandas\Models\Task;
 use App\Modules\Pae\Models\PaeProtocolo;
+use App\Modules\Rat\Models\Rat;
 use Illuminate\Support\Facades\Cache;
 
 class GlobalSearchService
 {
-    private const LIMIT = 5;
+    private const LIMIT     = 5;
     private const CACHE_TTL = 60;
 
     public function search(string $query): array
     {
-        $normalized = strtolower(trim($query));
+        $normalized = $this->normalize($query);
+
+        if (strlen($normalized) < 2) {
+            return $this->emptyResult();
+        }
+
         $key = 'global_search:' . md5($normalized);
 
         return Cache::store('redis')
             ->tags(['global_search'])
-            ->remember($key, self::CACHE_TTL, fn () => $this->runSearch($query));
+            ->remember($key, self::CACHE_TTL, fn () => $this->runSearch($normalized));
     }
 
     private function runSearch(string $query): array
     {
         return [
+            'pae'         => $this->searchPae($query),
             'decretacoes' => $this->searchDecretacoes($query),
             'rat'         => $this->searchRat($query),
             'demandas'    => $this->searchDemandas($query),
-            'pae'         => $this->searchPae($query),
         ];
+    }
+
+    private function searchPae(string $query): array
+    {
+        return PaeProtocolo::select(['id', 'num_protocolo', 'sei_numero', 'sigibar', 'status'])
+            ->where(function ($q) use ($query) {
+                $q->whereRaw('num_protocolo ILIKE ?', ["%{$query}%"])
+                  ->orWhereRaw('sei_numero ILIKE ?', ["%{$query}%"])
+                  ->orWhereRaw('sigibar ILIKE ?', ["%{$query}%"])
+                  ->orWhereRaw('empnto_search ILIKE ?', ["%{$query}%"]);
+            })
+            ->limit(self::LIMIT)
+            ->get()
+            ->map(fn ($p) => [
+                'id'       => $p->id,
+                'title'    => $p->num_protocolo,
+                'subtitle' => $p->sei_numero ? 'SEI: ' . $p->sei_numero : ($p->sigibar ?? 'PAE'),
+                'url'      => route('pae.protocolos.index') . '?search=' . urlencode($p->num_protocolo),
+                'icon'     => 'document',
+                'tag'      => 'PAE',
+            ])
+            ->toArray();
     }
 
     private function searchDecretacoes(string $query): array
     {
         return Processo::without(['municipios', 'desastres'])
-            ->select(['id', 'n_protocolo_fide', 'tipo_desastre'])
-            ->where('n_protocolo_fide', 'like', $query . '%')
+            ->select(['id', 'n_protocolo_fide', 'tipo_desastre_nome'])
+            ->where(function ($q) use ($query) {
+                $q->whereRaw('n_protocolo_fide ILIKE ?', ["%{$query}%"])
+                  ->orWhereRaw('tipo_desastre_nome ILIKE ?', ["%{$query}%"]);
+            })
             ->limit(self::LIMIT)
             ->get()
             ->map(fn ($p) => [
                 'id'       => $p->id,
                 'title'    => $p->n_protocolo_fide,
-                'subtitle' => $p->tipo_desastre ?? 'Decretacao',
+                'subtitle' => $p->tipo_desastre_nome ?? 'Decretacao',
                 'url'      => route('decretacoes.index') . '?search=' . urlencode($p->n_protocolo_fide),
                 'icon'     => 'scale',
                 'tag'      => 'DECRETO',
@@ -56,7 +86,7 @@ class GlobalSearchService
     private function searchRat(string $query): array
     {
         return Rat::select(['id', 'protocolo', 'status'])
-            ->where('protocolo', 'like', $query . '%')
+            ->whereRaw('protocolo ILIKE ?', ["%{$query}%"])
             ->limit(self::LIMIT)
             ->get()
             ->map(fn ($r) => [
@@ -73,7 +103,10 @@ class GlobalSearchService
     private function searchDemandas(string $query): array
     {
         return Task::select(['id', 'protocolo', 'titulo', 'status'])
-            ->where('titulo', 'like', '%' . $query . '%')
+            ->where(function ($q) use ($query) {
+                $q->whereRaw('titulo ILIKE ?', ["%{$query}%"])
+                  ->orWhereRaw('protocolo ILIKE ?', ["%{$query}%"]);
+            })
             ->limit(self::LIMIT)
             ->get()
             ->map(fn ($t) => [
@@ -87,20 +120,18 @@ class GlobalSearchService
             ->toArray();
     }
 
-    private function searchPae(string $query): array
+    /**
+     * Remove prefixos especiais (#, @), normaliza espacos.
+     * Preserva pontos e barras (importantes em numeros de protocolo).
+     */
+    private function normalize(string $query): string
     {
-        return PaeProtocolo::select(['id', 'num_protocolo', 'sei_numero', 'status'])
-            ->where('num_protocolo', 'like', $query . '%')
-            ->limit(self::LIMIT)
-            ->get()
-            ->map(fn ($p) => [
-                'id'       => $p->id,
-                'title'    => $p->num_protocolo,
-                'subtitle' => $p->sei_numero ? 'SEI: ' . $p->sei_numero : 'PAE',
-                'url'      => route('pae.protocolos.index'),
-                'icon'     => 'document',
-                'tag'      => 'PAE',
-            ])
-            ->toArray();
+        $clean = ltrim(trim($query), '#@');
+        return preg_replace('/\s+/', ' ', $clean);
+    }
+
+    private function emptyResult(): array
+    {
+        return ['pae' => [], 'decretacoes' => [], 'rat' => [], 'demandas' => []];
     }
 }
