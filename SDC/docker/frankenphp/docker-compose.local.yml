@@ -59,10 +59,10 @@ services:
       REDIS_HOST: newsdc_redis
       REDIS_PORT: 6379
 
-      # DB Local (container db na mesma rede)
-      DB_CONNECTION: mysql
+      # DB Local (PostgreSQL 18 + PostGIS 3.6)
+      DB_CONNECTION: pgsql
       DB_HOST: newsdc_db
-      DB_PORT: 3306
+      DB_PORT: 5432
       DB_DATABASE: sdc
       DB_USERNAME: sdc
       DB_PASSWORD: secret

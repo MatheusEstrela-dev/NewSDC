@@ -131,10 +131,10 @@ services:
       - app
 
   # ==========================================================================
-  # MySQL 8.0
+  # PostgreSQL 18 + PostGIS 3.6
   # ==========================================================================
   db:
-    image: mysql:8.0
+    image: postgis/postgis:18-3.6-alpine
     container_name: newsdc_db
     hostname: db
     restart: unless-stopped
@@ -142,33 +142,24 @@ services:
       - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=db"
 
-    secrets:
-      - db_password
-      - db_root_password
-
     environment:
-      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
-      MYSQL_DATABASE: ${DB_DATABASE:-sdc}
-      MYSQL_USER: ${DB_USERNAME:-sdc}
-      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_DB: ${DB_DATABASE:-sdc}
+      POSTGRES_USER: ${DB_USERNAME:-sdc}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
       TZ: America/Sao_Paulo
+      PGDATA: /var/lib/postgresql/data/pgdata
 
     volumes:
-      - newsdc_db_data:/var/lib/mysql
-      - ./mysql/dev.cnf:/etc/mysql/conf.d/custom.cnf:ro
-      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+      - newsdc_db_data:/var/lib/postgresql/data
 
     ports:
-      - "13307:3306"
+      - "5432:5432"
 
     networks:
       - sdc_network
 
-    command: >
-      --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --sql_mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
-
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-root}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-sdc} -d ${DB_DATABASE:-sdc}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -645,26 +636,24 @@ services:
       - /dev/kmsg
 
   # ==========================================================================
-  # MONITORAMENTO - MySQL Exporter
+  # MONITORAMENTO - PostgreSQL Exporter
   # ==========================================================================
-  mysql-exporter:
-    image: prom/mysqld-exporter:v0.15.1
-    container_name: newsdc_mysql_exporter
-    hostname: mysql-exporter
+  pg-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: newsdc_pg_exporter
+    hostname: pg-exporter
     restart: unless-stopped
-    platform: linux/amd64
     labels:
       - "com.docker.compose.project=newsdc"
-    command:
-      - --mysqld.address=newsdc_db:3306
-      - --mysqld.username=sdc
-      - --web.listen-address=:9104
     environment:
-      MYSQLD_EXPORTER_PASSWORD: "secret"
+      DATA_SOURCE_NAME: "postgresql://${DB_USERNAME:-sdc}:${DB_PASSWORD:-secret}@newsdc_db:5432/${DB_DATABASE:-sdc}?sslmode=disable"
     ports:
-      - "19104:9104"
+      - "19187:9187"
     networks:
       - sdc_network
+    depends_on:
+      db:
+        condition: service_healthy
 
   # ==========================================================================
   # MONITORAMENTO - Redis Exporter
