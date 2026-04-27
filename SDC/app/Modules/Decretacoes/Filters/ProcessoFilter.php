@@ -177,19 +177,19 @@ class ProcessoFilter
                 case 'vigente':
                     $this->builder->where(function ($q) {
                         $q->whereNull('data_publicacao_mg')
-                          ->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
+                          ->orWhereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE");
                     });
                     break;
 
                 case 'vencido':
                     $this->builder->whereNotNull('data_publicacao_mg')
-                                 ->whereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) < CURDATE()');
+                                 ->whereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) < CURRENT_DATE");
                     break;
 
                 case 'proximo_vencer':
                     $this->builder->whereNotNull('data_publicacao_mg')
-                                 ->whereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()')
-                                 ->whereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)');
+                                 ->whereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE")
+                                 ->whereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) <= (CURRENT_DATE + INTERVAL '30 days')");
                     break;
 
                 case 'sem_data':

@@ -259,20 +259,20 @@ class Processo extends Model
     {
         return $query->where(function ($q) {
             $q->whereNull('data_publicacao_mg')
-              ->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
+              ->orWhereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE");
         });
     }
 
     public function scopeVencidos($query)
     {
         return $query->whereNotNull('data_publicacao_mg')
-                     ->whereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) < CURDATE()');
+                     ->whereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) < CURRENT_DATE");
     }
 
     public function scopeProximosVencer($query)
     {
         return $query->whereNotNull('data_publicacao_mg')
-                     ->whereRaw('DATEDIFF(DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY), CURDATE()) BETWEEN 1 AND 15');
+                     ->whereRaw("((data_publicacao_mg + (prazo_vigencia || ' days')::interval)::date - CURRENT_DATE) BETWEEN 1 AND 15");
     }
 
     public function podeSerEditado(): bool

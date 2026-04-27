@@ -193,7 +193,7 @@ class ProcessosIndexResource extends ResourceCollection
 
         return $entrada->where(function ($q) {
             $q->whereNull('data_publicacao_mg')
-                ->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
+                ->orWhereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE");
         })->where('reconhecimento', '!=', 'Registro');
     }
 
