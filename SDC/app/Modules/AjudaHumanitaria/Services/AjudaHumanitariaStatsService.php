@@ -20,7 +20,7 @@ class AjudaHumanitariaStatsService
     {
         $inicio = now()->subMonths($months - 1)->startOfMonth();
 
-        $rows = Auxilio::selectRaw('YEAR(created_at) as ano, MONTH(created_at) as mes, COUNT(*) as total')
+        $rows = Auxilio::selectRaw('EXTRACT(YEAR FROM created_at)::int as ano, EXTRACT(MONTH FROM created_at)::int as mes, COUNT(*) as total')
             ->where('created_at', '>=', $inicio)
             ->groupBy('ano', 'mes')
             ->orderBy('ano')

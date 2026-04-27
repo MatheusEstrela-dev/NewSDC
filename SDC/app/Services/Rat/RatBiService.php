@@ -45,7 +45,7 @@ class RatBiService
     {
         $year = now()->year;
         return Cache::remember(self::CACHE_PREFIX . "mes.{$year}", self::CACHE_TTL, function () {
-            return RatOcorrencia::selectRaw('MONTH(created_at) as mes, count(*) as total')
+            return RatOcorrencia::selectRaw('EXTRACT(MONTH FROM created_at)::int as mes, count(*) as total')
                 ->whereYear('created_at', now()->year)
                 ->groupBy('mes')
                 ->orderBy('mes')
