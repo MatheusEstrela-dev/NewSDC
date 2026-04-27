@@ -86,7 +86,7 @@ class ProcessoExportBIService
                 'dc.titulo as categoria_titulo',
                 'dic.titulo as desastre_campo_titulo',
                 'dic.tipo',
-                DB::raw('SUM(ed.valor) as total_valor')
+                DB::raw("SUM(CAST(COALESCE(ed.valor, '0') AS NUMERIC)) as total_valor")
             )
             ->groupBy('ecd.entrada_processo_id', 'ed.municipio_id', 'dc.titulo', 'dic.titulo', 'dic.tipo')
             ->get();
@@ -125,7 +125,7 @@ class ProcessoExportBIService
                 'ecd.entrada_processo_id as processo_id',
                 'ed.municipio_id',
                 'di.id as item_id',
-                DB::raw('CAST(COALESCE(ed.valor, 0) AS BIGINT) as valor_numerico')
+                DB::raw("COALESCE(NULLIF(TRIM(ed.valor), ''), '0')::bigint as valor_numerico")
             )
             ->get();
 
