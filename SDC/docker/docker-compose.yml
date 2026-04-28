@@ -173,6 +173,54 @@ services:
       start_period: 30s
 
   # ==========================================================================
+  # PostgreSQL 17 — IA / AI (Citus + pgvector + PostGIS)
+  # Servico separado do db principal (PG18+PostGIS) para isolar workloads:
+  #   db     → dados geograficos/transacionais (PG18, sem gargalo)
+  #   db_ai  → busca semantica por vetores, sharding Citus (PG17)
+  # Nao ha conflito — Laravel roteia via conexoes pgsql vs pgsql_read.
+  # ==========================================================================
+  db_ai:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.db_ai
+    image: newsdc-db-ai:latest
+    container_name: newsdc_db_ai
+    hostname: db_ai
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=newsdc"
+      - "com.docker.compose.service=db_ai"
+
+    command: >
+      postgres
+      -c shared_preload_libraries=citus,pg_stat_statements
+      -c citus.node_conninfo='sslmode=disable'
+      -c pg_stat_statements.track=all
+
+    environment:
+      POSTGRES_DB: ${DB_PGSQL_DATABASE:-sdc_ai}
+      POSTGRES_USER: ${DB_PGSQL_USERNAME:-sdc}
+      POSTGRES_PASSWORD: ${DB_PGSQL_PASSWORD:-secret}
+      TZ: America/Sao_Paulo
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    volumes:
+      - newsdc_db_ai_data:/var/lib/postgresql/data
+
+    ports:
+      - "5433:5432"
+
+    networks:
+      - sdc_network
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_PGSQL_USERNAME:-sdc} -d ${DB_PGSQL_DATABASE:-sdc_ai}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # ==========================================================================
   # Redis (Cache/Session/Queue)
   # ==========================================================================
   redis:
@@ -741,6 +789,8 @@ networks:
 # ==========================================================================
 volumes:
   newsdc_db_data:
+    driver: local
+  newsdc_db_ai_data:
     driver: local
   newsdc_redis_data:
     driver: local

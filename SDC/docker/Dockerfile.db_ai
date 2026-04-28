@@ -1,0 +1,82 @@
+# =============================================================================
+# SDC IA 2.0 — PostgreSQL 17 com Citus 12.1 + pgvector 0.8 + PostGIS 3
+#
+# Base: citusdata/citus:12.1-alpine  →  PostgreSQL 17 (confirmado)
+#
+# Estrategia multistage:
+#   Stage 1 (pgvector-builder): compila pgvector 0.8.0 dentro do Citus Alpine
+#                               com clang15 (versao que o PG17 Alpine usa para LLVM)
+#   Stage 2 (final):            Citus 12.1 Alpine + pgvector copiado
+#                               + PostGIS via apk com copia manual de path
+#
+# PROBLEMA DO PATH PostGIS no Alpine:
+#   `apk add postgis` instala para o PG do sistema Alpine em /usr/lib/postgresqlXX/
+#   mas o PG do Docker esta em /usr/local/lib/postgresql/
+#   Solucao: usar `find` para localizar e copiar os arquivos corretos.
+# =============================================================================
+
+# =============================================================================
+# Stage 1: Compilar pgvector (PG17 Alpine exige clang15 para LLVM)
+# =============================================================================
+FROM citusdata/citus:12.1-alpine AS pgvector-builder
+
+ARG PGVECTOR_VERSION=0.8.0
+
+RUN apk add --no-cache \
+    build-base \
+    clang15 \
+    llvm15 \
+    git
+
+RUN git clone --branch "v${PGVECTOR_VERSION}" --depth 1 \
+    https://github.com/pgvector/pgvector.git /pgvector
+
+WORKDIR /pgvector
+
+ENV PG_CONFIG=/usr/local/bin/pg_config
+
+RUN make clean && make && make install
+
+# =============================================================================
+# Stage 2: Final — Citus + pgvector + PostGIS (com correcao de path Alpine)
+# =============================================================================
+FROM citusdata/citus:12.1-alpine
+
+# pgvector (compilado contra o mesmo PG17 do Citus Alpine)
+COPY --from=pgvector-builder \
+    /usr/local/lib/postgresql/vector.so \
+    /usr/local/lib/postgresql/vector.so
+
+COPY --from=pgvector-builder \
+    /usr/local/share/postgresql/extension/vector.control \
+    /usr/local/share/postgresql/extension/vector.control
+
+COPY --from=pgvector-builder \
+    /usr/local/share/postgresql/extension/vector--0.8.0.sql \
+    /usr/local/share/postgresql/extension/vector--0.8.0.sql
+
+# PostGIS: apk instala para o PG do sistema Alpine, nao para o Docker PG.
+# O `find` localiza os arquivos corretos e os copia para o path do Docker PG.
+RUN apk add --no-cache \
+    postgis \
+    gdal \
+    proj \
+    geos \
+    protobuf-c \
+    json-c && \
+    # .so das extensoes: postgis-3.so, postgis_topology-3.so, etc.
+    find /usr/lib -name "postgis*.so" -exec cp {} /usr/local/lib/postgresql/ \; && \
+    find /usr/lib -name "address_standardizer*.so" -exec cp {} /usr/local/lib/postgresql/ \; && \
+    find /usr/lib -name "rtpostgis*.so" -exec cp {} /usr/local/lib/postgresql/ \; && \
+    # arquivos de extensao: .sql e .control
+    find /usr/share -name "postgis*.sql" -exec cp {} /usr/local/share/postgresql/extension/ \; && \
+    find /usr/share -name "postgis*.control" -exec cp {} /usr/local/share/postgresql/extension/ \; && \
+    find /usr/share -name "postgis_topology*.sql" -exec cp {} /usr/local/share/postgresql/extension/ \; && \
+    find /usr/share -name "postgis_topology*.control" -exec cp {} /usr/local/share/postgresql/extension/ \; && \
+    find /usr/share -name "address_standardizer*.sql" -exec cp {} /usr/local/share/postgresql/extension/ \; && \
+    find /usr/share -name "address_standardizer*.control" -exec cp {} /usr/local/share/postgresql/extension/ \; && \
+    rm -rf /var/cache/apk/*
+
+COPY docker/database/init-ai-db.sh /docker-entrypoint-initdb.d/02-init-ai-db.sh
+
+RUN chmod +x /docker-entrypoint-initdb.d/02-init-ai-db.sh
