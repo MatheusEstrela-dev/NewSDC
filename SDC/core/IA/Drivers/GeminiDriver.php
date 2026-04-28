@@ -5,6 +5,7 @@ namespace App\Core\IA\Drivers;
 use App\Core\IA\Contracts\LLMDriverInterface;
 use Generator;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class GeminiDriver implements LLMDriverInterface
@@ -17,9 +18,9 @@ class GeminiDriver implements LLMDriverInterface
     public function __construct()
     {
         $config = config('ai.drivers.gemini');
-        $this->apiKey = $config['api_key'] ?? '';
-        $this->model = $config['model'] ?? 'gemini-pro';
-        $this->baseUrl = $config['base_url'] ?? 'https://generativelanguage.googleapis.com/v1beta';
+        $this->apiKey   = $config['api_key']  ?? '';
+        $this->model    = $config['model']     ?? 'gemini-pro';
+        $this->baseUrl  = $config['base_url']  ?? 'https://generativelanguage.googleapis.com/v1beta';
         $this->maxTokens = $config['max_tokens'] ?? 4096;
 
         if (empty($this->apiKey)) {
@@ -29,14 +30,13 @@ class GeminiDriver implements LLMDriverInterface
 
     public function chat(array $messages, array $options = []): string
     {
-        $contents = $this->convertMessages($messages);
+        [$systemInstruction, $contents] = $this->extractSystemAndContents($messages);
+
+        $payload = $this->buildPayload($contents, $systemInstruction, $options);
 
         $response = Http::timeout(60)->post(
-            $this->baseUrl . '/models/' . ($options['model'] ?? $this->model) . ':generateContent?key=' . $this->apiKey,
-            [
-                'contents' => $contents,
-                'generationConfig' => ['maxOutputTokens' => $options['max_tokens'] ?? $this->maxTokens],
-            ]
+            $this->buildUrl('generateContent', $options),
+            $payload
         );
 
         if (!$response->successful()) {
@@ -48,66 +48,79 @@ class GeminiDriver implements LLMDriverInterface
 
     public function chatStream(array $messages, array $options = []): Generator
     {
-        $contents = $this->convertMessages($messages);
+        [$systemInstruction, $contents] = $this->extractSystemAndContents($messages);
+
+        $payload = $this->buildPayload($contents, $systemInstruction, $options);
 
         $response = Http::withOptions(['stream' => true])->timeout(120)->post(
-            $this->baseUrl . '/models/' . ($options['model'] ?? $this->model) . ':streamGenerateContent?key=' . $this->apiKey,
-            ['contents' => $contents, 'generationConfig' => ['maxOutputTokens' => $this->maxTokens]]
+            $this->buildUrl('streamGenerateContent', $options),
+            $payload
         );
 
-        $body = $response->getBody();
+        $body   = $response->getBody();
         $buffer = '';
 
         while (!$body->eof()) {
-            $buffer .= $body->read(1024);
-            while (($pos = strpos($buffer, "\n")) !== false) {
-                $line = substr($buffer, 0, $pos);
-                $buffer = substr($buffer, $pos + 1);
-                if (empty(trim($line))) continue;
-                $data = json_decode($line, true);
+            $chunk = $body->read(512);
+
+            if ($chunk === '') {
+                usleep(1000);
+                continue;
+            }
+
+            $buffer .= $chunk;
+
+            while (($data = $this->tryExtractJsonObject($buffer)) !== false) {
                 if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
                     yield $data['candidates'][0]['content']['parts'][0]['text'];
                 }
+            }
+        }
+
+        while (($data = $this->tryExtractJsonObject($buffer)) !== false) {
+            if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                yield $data['candidates'][0]['content']['parts'][0]['text'];
             }
         }
     }
 
     public function chatWithTools(array $tools, array $messages, array $options = []): array
     {
-        $contents = $this->convertMessages($messages);
+        [$systemInstruction, $contents] = $this->extractSystemAndContents($messages);
 
         $functionDeclarations = array_map(fn($tool) => [
-            'name' => $tool->getName(),
+            'name'        => $tool->getName(),
             'description' => $tool->getDescription(),
-            'parameters' => $tool->getParametersSchema(),
+            'parameters'  => $tool->getParametersSchema(),
         ], $tools);
 
+        $payload = $this->buildPayload($contents, $systemInstruction, $options, [
+            'tools' => [['functionDeclarations' => $functionDeclarations]],
+        ]);
+
         $response = Http::timeout(60)->post(
-            $this->baseUrl . '/models/' . ($options['model'] ?? $this->model) . ':generateContent?key=' . $this->apiKey,
-            [
-                'contents' => $contents,
-                'tools' => [['functionDeclarations' => $functionDeclarations]],
-                'generationConfig' => ['maxOutputTokens' => $this->maxTokens],
-            ]
+            $this->buildUrl('generateContent', $options),
+            $payload
         );
 
         if (!$response->successful()) {
             throw new RuntimeException('Gemini API error: ' . $response->body());
         }
 
-        $data = $response->json();
-        $parts = $data['candidates'][0]['content']['parts'] ?? [];
-        $content = null;
+        $data      = $response->json();
+        $parts     = $data['candidates'][0]['content']['parts'] ?? [];
+        $content   = null;
         $toolCalls = [];
 
         foreach ($parts as $part) {
-            if (isset($part['text'])) $content = $part['text'];
-            elseif (isset($part['functionCall'])) {
+            if (isset($part['text'])) {
+                $content = $part['text'];
+            } elseif (isset($part['functionCall'])) {
                 $toolCalls[] = [
-                    'id' => uniqid('call_'),
-                    'type' => 'function',
+                    'id'       => (string) Str::uuid(),
+                    'type'     => 'function',
                     'function' => [
-                        'name' => $part['functionCall']['name'],
+                        'name'      => $part['functionCall']['name'],
                         'arguments' => json_encode($part['functionCall']['args'] ?? []),
                     ],
                 ];
@@ -115,10 +128,10 @@ class GeminiDriver implements LLMDriverInterface
         }
 
         return [
-            'content' => $content,
-            'tool_calls' => $toolCalls,
+            'content'       => $content,
+            'tool_calls'    => $toolCalls,
             'finish_reason' => $data['candidates'][0]['finishReason'] ?? null,
-            'usage' => $data['usageMetadata'] ?? [],
+            'usage'         => $data['usageMetadata'] ?? [],
         ];
     }
 
@@ -146,26 +159,106 @@ class GeminiDriver implements LLMDriverInterface
         return $this->model;
     }
 
-    protected function convertMessages(array $messages): array
+    protected function extractSystemAndContents(array $messages): array
     {
-        $contents = [];
-        $system = null;
+        $systemPrompt = null;
+        $contents     = [];
 
         foreach ($messages as $msg) {
             if ($msg['role'] === 'system') {
-                $system = $msg['content'];
+                $systemPrompt = $msg['content'];
                 continue;
             }
+
             $contents[] = [
-                'role' => $msg['role'] === 'assistant' ? 'model' : 'user',
+                'role'  => $msg['role'] === 'assistant' ? 'model' : 'user',
                 'parts' => [['text' => $msg['content']]],
             ];
         }
 
-        if ($system && !empty($contents)) {
-            $contents[0]['parts'][0]['text'] = $system . "\n\n" . $contents[0]['parts'][0]['text'];
+        return [$systemPrompt, $contents];
+    }
+
+    protected function buildUrl(string $method, array $options = []): string
+    {
+        $model = $options['model'] ?? $this->model;
+
+        return $this->baseUrl . '/models/' . $model . ':' . $method . '?key=' . $this->apiKey;
+    }
+
+    private function buildPayload(
+        array $contents,
+        ?string $systemInstruction,
+        array $options,
+        array $extra = []
+    ): array {
+        $payload = array_merge([
+            'contents'         => $contents,
+            'generationConfig' => ['maxOutputTokens' => $options['max_tokens'] ?? $this->maxTokens],
+        ], $extra);
+
+        if ($systemInstruction !== null) {
+            $payload['systemInstruction'] = ['parts' => [['text' => $systemInstruction]]];
         }
 
-        return $contents;
+        return $payload;
+    }
+
+    private function tryExtractJsonObject(string &$buffer): array|false
+    {
+        $buffer = ltrim($buffer, " \n\r\t[,]");
+
+        if ($buffer === '' || $buffer[0] !== '{') {
+            return false;
+        }
+
+        $length   = strlen($buffer);
+        $depth    = 0;
+        $inString = false;
+        $escape   = false;
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $buffer[$i];
+
+            if ($escape) {
+                $escape = false;
+                continue;
+            }
+
+            if ($char === '\\' && $inString) {
+                $escape = true;
+                continue;
+            }
+
+            if ($char === '"') {
+                $inString = !$inString;
+                continue;
+            }
+
+            if ($inString) {
+                continue;
+            }
+
+            if ($char === '{') {
+                $depth++;
+            } elseif ($char === '}') {
+                $depth--;
+
+                if ($depth === 0) {
+                    $jsonStr = substr($buffer, 0, $i + 1);
+                    $buffer  = substr($buffer, $i + 1);
+
+                    $data = json_decode($jsonStr, true);
+
+                    if ($data === null) {
+                        return false;
+                    }
+
+                    return $data;
+                }
+            }
+        }
+
+        return false;
     }
 }

@@ -4,98 +4,90 @@ declare(strict_types=1);
 
 namespace App\Core\IA\Http\Controllers;
 
-use App\Core\IA\AIService;
-use App\Core\IA\DTOs\ChatInputDTO;
 use App\Core\IA\Models\AIConversation;
-use App\Core\IA\Services\RagService;
+use App\Core\IA\Models\AIMessage;
+use App\Core\IA\Papiro\SdcPapiro;
+use App\Core\IA\Tools\LLPhant\PaeTools;
+use App\Core\IA\Tools\LLPhant\RatTools;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use LLPhant\Chat\FunctionInfo\FunctionBuilder;
+use LLPhant\Chat\Message;
+use LLPhant\Chat\OpenAIChat;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChatController extends Controller
 {
-    protected AIService $aiService;
-    protected RagService $ragService;
-
-    public function __construct()
-    {
-        $this->aiService = new AIService();
-        $this->ragService = new RagService();
-    }
+    public function __construct(protected OpenAIChat $chat) {}
 
     public function chat(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'message' => 'required|string|max:10000',
+            'message'         => 'required|string|max:10000',
             'conversation_id' => 'nullable|uuid',
-            'intent' => 'nullable|string|max:100',
-            'options' => 'nullable|array',
+            'intent'          => 'nullable|string|max:100',
         ]);
 
-        $conversationId = $validated['conversation_id'] ?? null;
+        $startedAt      = hrtime(true);
+        $conversationId = $this->resolveConversationId($validated['conversation_id'] ?? null);
+        $userInput      = $validated['message'];
 
-        if ($conversationId) {
-            $this->aiService->conversation($conversationId);
-        } else {
-            $conversationId = $this->aiService->getOrCreateConversation();
-            $this->aiService->conversation($conversationId);
-        }
+        $messages = $this->buildMessages($conversationId, $userInput);
 
-        // RAG: Enriquecer mensagem com dados do banco
-        $enrichedMessage = $this->ragService->enrichMessage($validated['message']);
+        $this->registerTools();
 
-        $dto = new ChatInputDTO(
-            message: $enrichedMessage,
-            conversationId: $conversationId,
-            intent: $validated['intent'] ?? null,
-            options: $validated['options'] ?? []
-        );
+        $content = $this->chat->generateChat($messages);
 
-        $response = $this->aiService->chat($dto);
+        $this->persistMessages($conversationId, $userInput, $content);
 
-        // Adicionar contexto RAG na resposta
-        $response['rag_context'] = $this->ragService->getContextData();
+        $elapsedMs = (int) round((hrtime(true) - $startedAt) / 1_000_000);
 
-        return response()->json($response);
+        return response()->json([
+            'conversation_id'   => $conversationId,
+            'content'           => $content,
+            'driver'            => 'gemini',
+            'execution_time_ms' => $elapsedMs,
+        ]);
     }
 
     public function stream(Request $request): StreamedResponse
     {
         $validated = $request->validate([
-            'message' => 'required|string|max:10000',
+            'message'         => 'required|string|max:10000',
             'conversation_id' => 'nullable|uuid',
-            'intent' => 'nullable|string|max:100',
-            'options' => 'nullable|array',
+            'intent'          => 'nullable|string|max:100',
         ]);
 
-        $conversationId = $validated['conversation_id'] ?? null;
+        $conversationId = $this->resolveConversationId($validated['conversation_id'] ?? null);
+        $userInput      = $validated['message'];
 
-        if ($conversationId) {
-            $this->aiService->conversation($conversationId);
-        } else {
-            $conversationId = $this->aiService->getOrCreateConversation();
-            $this->aiService->conversation($conversationId);
-        }
+        $messages = $this->buildMessages($conversationId, $userInput);
 
-        // RAG: Enriquecer mensagem com dados do banco
-        $enrichedMessage = $this->ragService->enrichMessage($validated['message']);
+        $this->registerTools();
 
-        $dto = new ChatInputDTO(
-            message: $enrichedMessage,
-            conversationId: $conversationId,
-            intent: $validated['intent'] ?? null,
-            options: $validated['options'] ?? []
-        );
+        $stream = $this->chat->generateChatStream($messages);
 
-        return response()->stream(function () use ($dto, $conversationId) {
-            echo "data: " . json_encode(['conversation_id' => $conversationId]) . "\n\n";
+        return response()->stream(function () use ($stream, $conversationId, $userInput) {
+            echo 'data: ' . json_encode(['conversation_id' => $conversationId]) . "\n\n";
             ob_flush();
             flush();
 
-            foreach ($this->aiService->chatStream($dto) as $chunk) {
-                echo "data: " . json_encode(['content' => $chunk]) . "\n\n";
+            $fullContent = '';
+
+            while (! $stream->eof()) {
+                $chunk = $stream->read(512);
+
+                if ($chunk === '' || $chunk === false) {
+                    continue;
+                }
+
+                $fullContent .= $chunk;
+
+                echo 'data: ' . json_encode(['content' => $chunk]) . "\n\n";
                 ob_flush();
                 flush();
             }
@@ -103,10 +95,12 @@ class ChatController extends Controller
             echo "data: [DONE]\n\n";
             ob_flush();
             flush();
+
+            $this->persistMessages($conversationId, $userInput, $fullContent);
         }, 200, [
-            'Content-Type' => 'text/event-stream',
-            'Cache-Control' => 'no-cache',
-            'Connection' => 'keep-alive',
+            'Content-Type'      => 'text/event-stream',
+            'Cache-Control'     => 'no-cache',
+            'Connection'        => 'keep-alive',
             'X-Accel-Buffering' => 'no',
         ]);
     }
@@ -121,9 +115,9 @@ class ChatController extends Controller
         return response()->json($conversations);
     }
 
-    public function messages(string $conversationId): JsonResponse
+    public function messages(string $id): JsonResponse
     {
-        $conversation = AIConversation::where('id', $conversationId)
+        $conversation = AIConversation::where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
@@ -133,13 +127,13 @@ class ChatController extends Controller
 
         return response()->json([
             'conversation' => $conversation,
-            'messages' => $messages,
+            'messages'     => $messages,
         ]);
     }
 
-    public function deleteConversation(string $conversationId): JsonResponse
+    public function deleteConversation(string $id): JsonResponse
     {
-        $conversation = AIConversation::where('id', $conversationId)
+        $conversation = AIConversation::where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
@@ -151,16 +145,107 @@ class ChatController extends Controller
 
     public function tools(): JsonResponse
     {
-        $tools = [];
+        $ratTools = new RatTools();
+        $paeTools = new PaeTools();
 
-        foreach ($this->aiService->getTools() as $name => $tool) {
-            $tools[] = [
-                'name' => $name,
-                'description' => $tool->getDescription(),
-                'parameters' => $tool->getParametersSchema(),
-            ];
+        $tools = [
+            FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorMunicipio'),
+            FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorProtocolo'),
+            FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorId'),
+            FunctionBuilder::buildFunctionInfo($paeTools, 'buscarPaePorMunicipio'),
+            FunctionBuilder::buildFunctionInfo($paeTools, 'buscarPaePorProtocolo'),
+            FunctionBuilder::buildFunctionInfo($paeTools, 'resumoStatusPae'),
+        ];
+
+        $payload = array_map(fn ($tool) => [
+            'name'        => $tool->name,
+            'description' => $tool->description,
+        ], $tools);
+
+        return response()->json($payload);
+    }
+
+    protected function buildMessages(string $conversationId, string $userInput): array
+    {
+        $cacheKey = 'ai_history:' . $conversationId;
+
+        $history = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($conversationId) {
+            return AIMessage::where('conversation_id', $conversationId)
+                ->orderBy('created_at', 'desc')
+                ->limit(20)
+                ->get(['role', 'content'])
+                ->reverse()
+                ->values()
+                ->toArray();
+        });
+
+        $messages = [Message::system(SdcPapiro::build())];
+
+        foreach ($history as $msg) {
+            $messages[] = $msg['role'] === 'user'
+                ? Message::user($msg['content'])
+                : Message::assistant($msg['content']);
         }
 
-        return response()->json($tools);
+        $messages[] = Message::user($userInput);
+
+        return $messages;
+    }
+
+    protected function registerTools(): void
+    {
+        $ratTools = new RatTools();
+        $paeTools = new PaeTools();
+
+        $this->chat->setTools([
+            FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorMunicipio'),
+            FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorProtocolo'),
+            FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorId'),
+            FunctionBuilder::buildFunctionInfo($paeTools, 'buscarPaePorMunicipio'),
+            FunctionBuilder::buildFunctionInfo($paeTools, 'buscarPaePorProtocolo'),
+            FunctionBuilder::buildFunctionInfo($paeTools, 'resumoStatusPae'),
+        ]);
+    }
+
+    protected function resolveConversationId(?string $conversationId): string
+    {
+        if ($conversationId) {
+            $exists = AIConversation::where('id', $conversationId)
+                ->where('user_id', Auth::id())
+                ->exists();
+
+            if ($exists) {
+                return $conversationId;
+            }
+        }
+
+        $conversation = AIConversation::create([
+            'user_id' => Auth::id(),
+            'title'   => 'Nova conversa',
+        ]);
+
+        return $conversation->id;
+    }
+
+    protected function persistMessages(string $conversationId, string $userMessage, string $assistantMessage): void
+    {
+        AIMessage::create([
+            'id'              => (string) Str::uuid(),
+            'conversation_id' => $conversationId,
+            'role'            => 'user',
+            'content'         => $userMessage,
+        ]);
+
+        AIMessage::create([
+            'id'              => (string) Str::uuid(),
+            'conversation_id' => $conversationId,
+            'role'            => 'assistant',
+            'content'         => $assistantMessage,
+        ]);
+
+        Cache::forget('ai_history:' . $conversationId);
+
+        AIConversation::where('id', $conversationId)
+            ->update(['title' => Str::limit($userMessage, 100)]);
     }
 }

@@ -20,6 +20,13 @@ class AppServiceProvider extends ServiceProvider
             \App\Contracts\HierarchyServiceInterface::class,
             \App\Services\Auth\HierarchyService::class
         );
+
+        $this->app->bind(\LLPhant\Chat\OpenAIChat::class, function () {
+            $config = new \LLPhant\GeminiOpenAIConfig();
+            $config->model = config('ai.drivers.gemini.model', 'gemini-2.0-flash');
+            // api_key lida automaticamente de GEMINI_API_KEY pelo GeminiOpenAIConfig
+            return new \LLPhant\Chat\OpenAIChat($config);
+        });
     }
 
     /**
