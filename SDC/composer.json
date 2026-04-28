@@ -10,6 +10,8 @@
     "require": {
         "php": "^8.3",
         "darkaonline/l5-swagger": "^8.6",
+        "doctrine/dbal": "^4",
+        "doctrine/orm": "^3",
         "google-gemini-php/client": "*",
         "guzzlehttp/guzzle": "^7.9",
         "inertiajs/inertia-laravel": "^1.3",

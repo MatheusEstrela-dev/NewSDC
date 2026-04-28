@@ -24,8 +24,42 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(\LLPhant\Chat\OpenAIChat::class, function () {
             $config = new \LLPhant\GeminiOpenAIConfig();
             $config->model = config('ai.drivers.gemini.model', 'gemini-2.0-flash');
-            // api_key lida automaticamente de GEMINI_API_KEY pelo GeminiOpenAIConfig
+            $config->modelOptions = ['temperature' => 0.1];
             return new \LLPhant\Chat\OpenAIChat($config);
+        });
+
+        $this->app->bind(\App\Core\IA\Embeddings\GeminiEmbeddingGenerator::class, function () {
+            return new \App\Core\IA\Embeddings\GeminiEmbeddingGenerator();
+        });
+
+        $this->app->bind(\LLPhant\Embeddings\VectorStores\Doctrine\DoctrineVectorStore::class, function () {
+            $connectionParams = [
+                'driver'   => 'pdo_pgsql',
+                'host'     => env('DB_PGSQL_HOST', '127.0.0.1'),
+                'port'     => (int) env('DB_PGSQL_PORT', 5432),
+                'dbname'   => env('DB_PGSQL_DATABASE', env('DB_DATABASE')),
+                'user'     => env('DB_PGSQL_USERNAME', env('DB_USERNAME')),
+                'password' => env('DB_PGSQL_PASSWORD', env('DB_PASSWORD', '')),
+            ];
+
+            $doctrineConfig = new \Doctrine\ORM\Configuration();
+            $doctrineConfig->setMetadataDriverImpl(
+                new \Doctrine\ORM\Mapping\Driver\AttributeDriver([
+                    base_path('core/IA/Embeddings'),
+                    base_path('vendor/theodo-group/llphant/src/Embeddings/VectorStores/Doctrine'),
+                ])
+            );
+            $doctrineConfig->setProxyDir(storage_path('app/doctrine/proxies'));
+            $doctrineConfig->setProxyNamespace('App\Core\IA\DoctrineProxies');
+            $doctrineConfig->setAutoGenerateProxyClasses(true);
+
+            $connection = \Doctrine\DBAL\DriverManager::getConnection($connectionParams);
+            $em = new \Doctrine\ORM\EntityManager($connection, $doctrineConfig);
+
+            return new \LLPhant\Embeddings\VectorStores\Doctrine\DoctrineVectorStore(
+                $em,
+                \App\Core\IA\Embeddings\DecEmbeddingEntity::class
+            );
         });
     }
 

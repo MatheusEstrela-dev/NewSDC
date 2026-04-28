@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Core\IA\Http\Controllers;
 
+use App\Core\IA\Embeddings\GeminiEmbeddingGenerator;
 use App\Core\IA\Models\AIConversation;
 use App\Core\IA\Models\AIMessage;
 use App\Core\IA\Papiro\SdcPapiro;
+use App\Core\IA\Tools\LLPhant\DecretosTools;
 use App\Core\IA\Tools\LLPhant\PaeTools;
 use App\Core\IA\Tools\LLPhant\RatTools;
 use Illuminate\Http\JsonResponse;
@@ -18,11 +20,16 @@ use Illuminate\Support\Str;
 use LLPhant\Chat\FunctionInfo\FunctionBuilder;
 use LLPhant\Chat\Message;
 use LLPhant\Chat\OpenAIChat;
+use LLPhant\Embeddings\VectorStores\Doctrine\DoctrineVectorStore;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChatController extends Controller
 {
-    public function __construct(protected OpenAIChat $chat) {}
+    public function __construct(
+        protected OpenAIChat $chat,
+        protected DoctrineVectorStore $vectorStore,
+        protected GeminiEmbeddingGenerator $embeddingGenerator,
+    ) {}
 
     public function chat(Request $request): JsonResponse
     {
@@ -145,8 +152,9 @@ class ChatController extends Controller
 
     public function tools(): JsonResponse
     {
-        $ratTools = new RatTools();
-        $paeTools = new PaeTools();
+        $ratTools      = new RatTools();
+        $paeTools      = new PaeTools();
+        $decretosTools = new DecretosTools();
 
         $tools = [
             FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorMunicipio'),
@@ -155,6 +163,10 @@ class ChatController extends Controller
             FunctionBuilder::buildFunctionInfo($paeTools, 'buscarPaePorMunicipio'),
             FunctionBuilder::buildFunctionInfo($paeTools, 'buscarPaePorProtocolo'),
             FunctionBuilder::buildFunctionInfo($paeTools, 'resumoStatusPae'),
+            FunctionBuilder::buildFunctionInfo($decretosTools, 'listar_decretos_municipio'),
+            FunctionBuilder::buildFunctionInfo($decretosTools, 'consultar_processo_decreto'),
+            FunctionBuilder::buildFunctionInfo($decretosTools, 'obter_diagnostico_municipio'),
+            FunctionBuilder::buildFunctionInfo($decretosTools, 'consultar_danos_socioeconomicos'),
         ];
 
         $payload = array_map(fn ($tool) => [
@@ -187,15 +199,40 @@ class ChatController extends Controller
                 : Message::assistant($msg['content']);
         }
 
-        $messages[] = Message::user($userInput);
+        $ragContext = $this->buildRagContext($userInput);
+        $enrichedInput = $ragContext ? $userInput.$ragContext : $userInput;
+
+        $messages[] = Message::user($enrichedInput);
 
         return $messages;
     }
 
+    protected function buildRagContext(string $userInput): string
+    {
+        try {
+            $embedding = $this->embeddingGenerator->embedText($userInput);
+            $documents = $this->vectorStore->similaritySearch($embedding, 3);
+
+            if (empty($documents)) {
+                return '';
+            }
+
+            $contextParts = [];
+            foreach ($documents as $doc) {
+                $contextParts[] = '['.($doc->sourceName ?? 'RAT').'] '.$doc->content;
+            }
+
+            return "\n\n--- CONTEXTO DO BANCO (RAG) ---\n".implode("\n", $contextParts)."\n---";
+        } catch (\Exception) {
+            return '';
+        }
+    }
+
     protected function registerTools(): void
     {
-        $ratTools = new RatTools();
-        $paeTools = new PaeTools();
+        $ratTools      = new RatTools();
+        $paeTools      = new PaeTools();
+        $decretosTools = new DecretosTools();
 
         $this->chat->setTools([
             FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorMunicipio'),
@@ -204,6 +241,10 @@ class ChatController extends Controller
             FunctionBuilder::buildFunctionInfo($paeTools, 'buscarPaePorMunicipio'),
             FunctionBuilder::buildFunctionInfo($paeTools, 'buscarPaePorProtocolo'),
             FunctionBuilder::buildFunctionInfo($paeTools, 'resumoStatusPae'),
+            FunctionBuilder::buildFunctionInfo($decretosTools, 'listar_decretos_municipio'),
+            FunctionBuilder::buildFunctionInfo($decretosTools, 'consultar_processo_decreto'),
+            FunctionBuilder::buildFunctionInfo($decretosTools, 'obter_diagnostico_municipio'),
+            FunctionBuilder::buildFunctionInfo($decretosTools, 'consultar_danos_socioeconomicos'),
         ]);
     }
 

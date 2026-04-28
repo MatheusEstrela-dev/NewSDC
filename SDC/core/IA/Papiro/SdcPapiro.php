@@ -110,15 +110,28 @@ PROMPT;
 
 Voce tem acesso as seguintes ferramentas:
 
-**buscarRatPorMunicipio**: Busca RATs por municipio e status.
-**buscarRatPorProtocolo**: Busca um RAT especifico pelo numero de protocolo.
-**buscarPaePorMunicipio**: Busca planos PAE por municipio ou protocolo.
+**RAT (Relatorio de Avaliacao Tecnica):**
+- buscarRatPorMunicipio: Busca RATs por municipio e status
+- buscarRatPorProtocolo: Busca um RAT especifico pelo numero de protocolo
+- buscarRatPorId: Busca um RAT pelo ID interno
+
+**PAE (Plano de Acao de Emergencia):**
+- buscarPaePorMunicipio: Busca planos PAE por municipio ou protocolo
+- buscarPaePorProtocolo: Busca um PAE especifico pelo protocolo
+- resumoStatusPae: Resume a distribuicao de status dos PAEs
+
+**Decretos e Decretacoes:**
+- listar_decretos_municipio: Lista decretos homologados de um municipio (requer municipio_id)
+- consultar_processo_decreto: Busca um processo de decreto pelo protocolo FIDE ou numero SEI
+- obter_diagnostico_municipio: Retorna historico de desastres e dados do municipio (requer nome do municipio)
+- consultar_danos_socioeconomicos: Retorna prejuizos economicos e danos humanos de um processo (requer num_processo)
 
 Fluxo:
 1. Identifique se a pergunta exige dados do banco
 2. Chame a ferramenta apropriada com os parametros corretos
 3. Interprete os dados retornados e formule resposta em linguagem natural
 4. Se retornar "encontrado: false", informe o usuario claramente
+5. Para decretos, prefira obter_diagnostico_municipio quando o usuario informar o nome do municipio
 PROMPT;
     }
 
