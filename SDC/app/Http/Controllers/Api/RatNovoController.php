@@ -6,7 +6,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\Rat\RatNovoService;
+use App\Modules\Rat\Http\Resources\RatResource;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Request;
 
 /**
@@ -24,14 +26,10 @@ class RatNovoController extends Controller
      * GET /api/rat-novo/{id}
      * Retorna dados completos e normalizados de uma ocorrência.
      */
-    public function show(int $id, Request $request): JsonResponse
+    public function show(int $id): RatResource
     {
-        $request->merge(['ocorrencia_id' => $id]);
-        $request->route() && $request->route()->setParameter('id', $id);
-
-        $data = $this->service->getNormalizedDataForPowerBI($request);
-
-        return response()->json($data);
+        $ocorrencia = \App\Models\Rat\RatOcorrencia::with('relatosMorph')->findOrFail($id);
+        return new RatResource($ocorrencia);
     }
 
     /**
@@ -53,11 +51,64 @@ class RatNovoController extends Controller
      * GET /api/rat-novo
      * Lista resumida de ocorrências para integrações externas.
      */
-    public function index(): JsonResponse
+    public function index(): AnonymousResourceCollection
     {
         $ocorrencias = \App\Models\Rat\RatOcorrencia::latest()
             ->paginate(request()->integer('per_page', 15));
 
-        return response()->json($ocorrencias);
+        return RatResource::collection($ocorrencias);
+    }
+
+    /**
+     * POST /api/rat-novo
+     * Cria um novo registro de RAT.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'numero_bos'   => 'nullable|string|max:50',
+            'status'       => 'integer|in:0,1',
+            'dados_gerais' => 'nullable|array',
+        ]);
+
+        $ocorrencia = $this->service->createRat($validated);
+
+        return response()->json([
+            'message' => 'RAT criado com sucesso!',
+            'data'    => new RatResource($ocorrencia)
+        ], 21);
+    }
+
+    /**
+     * PUT /api/rat-novo/{id}
+     * Atualiza dados básicos do RAT.
+     */
+    public function update(int $id, Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'numero_bos'   => 'nullable|string|max:50',
+            'status'       => 'integer|in:0,1',
+            'historico'    => 'nullable|string',
+        ]);
+
+        $ocorrencia = $this->service->updateRat($id, $validated);
+
+        return response()->json([
+            'message' => 'RAT atualizado com sucesso!',
+            'data'    => new RatResource($ocorrencia)
+        ]);
+    }
+
+    /**
+     * DELETE /api/rat-novo/{id}
+     * Remove o registro (soft delete).
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $this->service->deleteRat($id);
+
+        return response()->json([
+            'message' => 'RAT removido com sucesso!'
+        ]);
     }
 }
