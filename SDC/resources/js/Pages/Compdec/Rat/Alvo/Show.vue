@@ -4,7 +4,7 @@
 
         <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-4xl mx-auto">
             <div class="mb-6">
-                <Link :href="route('compdec.rat.alvos.index')" class="text-sm text-blue-600 hover:underline">&larr; Voltar para Alvos</Link>
+                <Link :href="route('rat.alvos.index')" class="text-sm text-blue-600 hover:underline">&larr; Voltar para Alvos</Link>
                 <h1 class="mt-2 text-2xl font-bold text-gray-900">Alvos — Ocorrência #{{ ocorrencia?.id }}</h1>
                 <p class="text-sm text-gray-500">BO: {{ ocorrencia?.numero_bos ?? '—' }}</p>
             </div>
@@ -35,7 +35,7 @@
             <!-- Ações -->
             <div class="flex justify-end gap-3">
                 <Link
-                    :href="route('compdec.rat.show', ocorrencia?.id)"
+                    :href="route('rat.show', ocorrencia?.id)"
                     class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                     Ver Ocorrência Completa

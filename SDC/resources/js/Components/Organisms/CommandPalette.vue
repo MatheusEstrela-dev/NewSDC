@@ -262,7 +262,7 @@ const safeRoute = (name, fallback = '') => {
 const navigationIndex = computed(() => [
     // Principal
     { id: 'nav_dash', title: 'Visão Geral', subtitle: 'Dashboard Principal', url: safeRoute('dashboard'), icon: 'dashboard', category: 'navigation', keywords: ['home', 'inicio', 'painel'] },
-    { id: 'nav_rat', title: 'RAT', subtitle: 'Relatório de Atendimento Técnico', url: safeRoute('compdec.rat.index'), icon: 'document', category: 'navigation', keywords: ['vistoria', 'relatorio', 'tecnico'] },
+    { id: 'nav_rat', title: 'RAT', subtitle: 'Relatório de Atendimento Técnico', url: safeRoute('rat.index'), icon: 'document', category: 'navigation', keywords: ['vistoria', 'relatorio', 'tecnico'] },
     { id: 'nav_dem', title: 'Demandas', subtitle: 'Gestão de Chamados e Tarefas', url: safeRoute('demandas.index'), icon: 'checkbadge', category: 'navigation', keywords: ['chamado', 'ticket', 'tarefa'] },
     { id: 'nav_pae', title: 'PAE', subtitle: 'Plano de Ação de Emergência', url: safeRoute('pae.index', safeRoute('pae.protocolos.index')), icon: 'document', category: 'navigation', keywords: ['plano', 'emergencia', 'protocolo'] },
 
@@ -284,14 +284,14 @@ const navigationIndex = computed(() => [
     { id: 'adm_roles', title: 'Cargos e Funções', subtitle: 'Definição de Papéis', url: safeRoute('admin.permissions.roles.index'), icon: 'shield', category: 'admin', keywords: ['admin', 'roles', 'cargos'] },
 
     // Actions
-    { id: 'act_rat', title: 'Novo RAT', subtitle: 'Criar Relatório', url: safeRoute('compdec.rat.create'), icon: 'document', category: 'actions', keywords: ['criar', 'novo', 'adicionar'] },
+    { id: 'act_rat', title: 'Novo RAT', subtitle: 'Criar Relatório', url: safeRoute('rat.create'), icon: 'document', category: 'actions', keywords: ['criar', 'novo', 'adicionar'] },
     { id: 'act_dem', title: 'Nova Demanda', subtitle: 'Abrir Chamado', url: safeRoute('demandas.create'), icon: 'checkbadge', category: 'actions', keywords: ['criar', 'novo', 'adicionar'] },
     { id: 'act_logout', title: 'Sair do Sistema', subtitle: 'Fazer Logout', url: safeRoute('logout'), icon: 'logout', category: 'actions', method: 'post', keywords: ['sair', 'logoff'] },
 ]);
 
 // Mock Quick Actions
 const quickActions = computed(() => [
-  { id: 'qa_rat', title: 'Novo RAT', subtitle: 'Criar Relatório de Atendimento', url: safeRoute('compdec.rat.create'), icon: 'document', type: 'action' },
+  { id: 'qa_rat', title: 'Novo RAT', subtitle: 'Criar Relatório de Atendimento', url: safeRoute('rat.create'), icon: 'document', type: 'action' },
   { id: 'qa_dem', title: 'Nova Demanda', subtitle: 'Abrir um chamado', url: safeRoute('demandas.nova'), icon: 'checkbadge', type: 'action' },
   { id: 'qa_prof', title: 'Meu Perfil', subtitle: 'Configurações da conta', url: '/profile?open_profile=true', icon: 'user', type: 'action' }, // Link especial para abrir modal
 ]);
@@ -352,7 +352,7 @@ const handleInput = () => {
           id: `goto_rat_${id}`,
           title: `Abrir RAT #${id}`,
           subtitle: 'Navegação Direta por ID',
-          url: safeRoute('compdec.rat.show', `/compdec/rat/${id}`), // Fallback manual URL if route missing
+          url: safeRoute('rat.show', `/rat/${id}`), // Fallback manual URL if route missing
           icon: 'bolt',
           category: 'actions',
           tag: 'JUMP TO'
@@ -375,7 +375,7 @@ const handleInput = () => {
           id: `goto_rat_specific_${id}`,
           title: `Acessar RAT #${id}`,
           subtitle: 'Ir para Relatório Técnico',
-          url: safeRoute('compdec.rat.show', `/compdec/rat/${id}`),
+          url: safeRoute('rat.show', `/rat/${id}`),
           icon: 'document',
           category: 'actions',
           tag: 'RAT'

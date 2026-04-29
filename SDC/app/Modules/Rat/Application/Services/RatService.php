@@ -14,10 +14,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Orquestrador da camada de aplicação do módulo RAT.
- *
- * Responsabilidade única: coordena casos de uso sem lógica de negócio própria.
- * Inversão de Dependência: depende de interfaces e services especializados.
- *
  * 5 métodos públicos: createNew · getIndexData · findById · delete · export
  * Finalização  → RatWriteService (chamado diretamente pelo RatFinalizeController).
  * Update/draft → RatWriteService (chamado diretamente pelo RatWriteController).

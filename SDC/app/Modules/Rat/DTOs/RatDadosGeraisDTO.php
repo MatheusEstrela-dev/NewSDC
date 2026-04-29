@@ -96,7 +96,7 @@ readonly class RatDadosGeraisDTO
             localEstadoUf:            $merged['local_estadouf'] ?? $merged['local_estado_uf'] ?? $merged['uf'] ?? null,
             localMunicipio:           $merged['local_municipio'] ?? $merged['cidade'] ?? $merged['municipio'] ?? null,
             localCep:                 $merged['local_cep']                  ?? $merged['cep'] ?? null,
-            localLogradouro:          $merged['local_logradouro'] ?? $merged['local_logradoura_1'] ?? $merged['endereco'] ?? $merged['logradouro'] ?? null,
+            localLogradouro:          $merged['local_logradouro'] ?? $merged['local_logradoura_1'] ?? $merged['logradouro'] ?? null,
             localBairro:              $merged['local_bairro']               ?? $merged['bairro'] ?? null,
             localComplemento:         $merged['local_complemento']          ?? $merged['complemento'] ?? null,
             localNumero:              $merged['local_numero']               ?? $merged['numero'] ?? null,

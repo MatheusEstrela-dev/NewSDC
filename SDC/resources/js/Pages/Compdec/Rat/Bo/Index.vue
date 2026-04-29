@@ -47,7 +47,7 @@
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-500">{{ formatDate(bo.created_at) }}</td>
                             <td class="px-4 py-3 text-right">
-                                <Link :href="route('compdec.rat.show', bo.id)" class="text-sm text-blue-600 hover:underline">Ver</Link>
+                                <Link :href="route('rat.show', bo.id)" class="text-sm text-blue-600 hover:underline">Ver</Link>
                             </td>
                         </tr>
                     </tbody>
@@ -74,7 +74,7 @@ const localFilters = reactive({
 });
 
 function applyFilters() {
-    router.get(route('compdec.rat.bo.index'), localFilters, { preserveState: true, replace: true });
+    router.get(route('rat.bo.index'), localFilters, { preserveState: true, replace: true });
 }
 
 function statusClass(status) {

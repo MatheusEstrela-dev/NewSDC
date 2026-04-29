@@ -4,7 +4,7 @@
 
         <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-3xl mx-auto">
             <div class="mb-6">
-                <Link :href="route('compdec.rat.show', ocorrencia?.id)" class="text-sm text-blue-600 hover:underline">&larr; Voltar</Link>
+                <Link :href="route('rat.show', ocorrencia?.id)" class="text-sm text-blue-600 hover:underline">&larr; Voltar</Link>
                 <h1 class="mt-2 text-2xl font-bold text-gray-900">Editar Ocorrência #{{ ocorrencia?.id }}</h1>
             </div>
 
@@ -45,7 +45,7 @@
 
                 <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
                     <Link
-                        :href="route('compdec.rat.show', ocorrencia?.id)"
+                        :href="route('rat.show', ocorrencia?.id)"
                         class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >Cancelar</Link>
                     <button
@@ -78,7 +78,7 @@ const form = useForm({
 });
 
 function submit() {
-    form.put(route('compdec.rat.update', props.ocorrencia?.id), {
+    form.put(route('rat.update', props.ocorrencia?.id), {
         preserveScroll: true,
     });
 }

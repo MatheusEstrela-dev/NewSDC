@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models\Relatos;
 
-use App\Modules\Rat\Models\Relatos\RatRelato;
+use App\Models\Rat\RatOcorrencia;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Vistoria técnica realizada durante uma ocorrência RAT.
@@ -21,6 +22,7 @@ class RatRelatoVistoria extends RatRelato
     protected $table = 'rat_relato_vistoria';
 
     protected $fillable = [
+        'ocorrencia_id',
         'created_by',
         'updated_by',
         // Solicitante
@@ -151,4 +153,12 @@ class RatRelatoVistoria extends RatRelato
         'v_latitude'           => 'decimal:8',
         'v_longitude'          => 'decimal:8',
     ];
+
+    /**
+     * Relação: Ocorrência pai
+     */
+    public function ocorrencia(): BelongsTo
+    {
+        return $this->belongsTo(RatOcorrencia::class, 'ocorrencia_id');
+    }
 }

@@ -24,7 +24,8 @@ class RatRepository implements RatRepositoryInterface
      */
     public function findById(string $id): ?object
     {
-        return Rat::find($id) ?? \App\Models\Rat\RatOcorrencia::find($id);
+        // Primeiro busca na tabela nova, depois na antiga para compatibilidade
+        return \App\Models\Rat\RatOcorrencia::find($id) ?? Rat::find($id);
     }
 
     /**

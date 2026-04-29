@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models\Relatos;
 
+use App\Models\Rat\RatOcorrencia;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * RatRelatoDadosGerais - Relato com dados gerais da ocorrência
@@ -64,6 +66,14 @@ class RatRelatoDadosGerais extends RatRelato
         'local_longitude' => 'float',
         'tem_vistoria' => 'boolean',
     ];
+
+    /**
+     * Relação: Ocorrência pai
+     */
+    public function ocorrencia(): BelongsTo
+    {
+        return $this->belongsTo(RatOcorrencia::class, 'ocorrencia_id');
+    }
 
     /**
      * Relação: Envolvidos

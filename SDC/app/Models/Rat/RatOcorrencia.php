@@ -53,6 +53,11 @@ class RatOcorrencia extends Model
         'updated_at'   => 'datetime',
         'deleted_at'   => 'datetime',
         'anexos'       => 'array',
+        'historico'    => 'array',
+    ];
+
+    protected $appends = [
+        'protocolo',
     ];
 
     // ─── Relacionamentos ────────────────────────────────────────────────────
@@ -61,7 +66,7 @@ class RatOcorrencia extends Model
      * Relatos polimórficos vinculados a esta ocorrência.
      * Usa a tabela pivô rat_ocorrencia_relatos.
      */
-    public function relatosMorph(): HasMany
+    public function relatos_ocorrencia(): HasMany
     {
         return $this->hasMany(RatOcorrenciaRelato::class, 'ocorrencia_id');
     }
@@ -90,6 +95,24 @@ class RatOcorrencia extends Model
         return $this->hasMany(self::class, 'ocorrencia_origem_id');
     }
 
+    /** Usuário que criou o RAT. */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
+    }
+
+    /** Usuário que realizou a última atualização. */
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'updated_by');
+    }
+
+    /** Órgão responsável por este RAT. */
+    public function orgaoEmissor(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Compdec\Models\Orgao::class, 'orgao_emissor_id');
+    }
+
     // ─── Helpers ────────────────────────────────────────────────────────────
 
     /** Retorna true se a ocorrência está finalizada. */
@@ -104,47 +127,50 @@ class RatOcorrencia extends Model
         return $this->status === 1 ? 'Finalizado' : 'Rascunho';
     }
 
-    // ─── Compatibilidade com RatResource legado ─────────────────────────────
-
-    public function getProtocoloAttribute(): ?string
+    public function getProtocoloAttribute(): string
     {
-        return $this->numero_bos;
+        if (!$this->sequencial_ano) return '';
+        $ano = $this->created_at ? $this->created_at->year : date('Y');
+        return "RAT-{$ano}-" . str_pad((string)$this->sequencial_ano, 5, '0', STR_PAD_LEFT);
     }
 
     public function getDadosGeraisAttribute(): array
     {
-        $dados = $this->relatosMorph()->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais::class)->first()?->conteudo;
+        $dados = $this->relatos_ocorrencia()->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais::class)->first()?->conteudo;
         return $dados ? $dados->toArray() : [];
     }
 
-    public function getLocalAttribute(): array
-    {
-        return $this->getDadosGeraisAttribute(); // No modelo antigo local era parte do JSON
-    }
-
-    public function getEnderecoAttribute(): array
-    {
-        return $this->getDadosGeraisAttribute();
-    }
-
-    public function getComunicacaoAttribute(): array
-    {
-        return $this->getDadosGeraisAttribute();
-    }
+    public function getLocalAttribute(): array { return $this->getDadosGeraisAttribute(); }
+    public function getEnderecoAttribute(): array { return $this->getDadosGeraisAttribute(); }
+    public function getComunicacaoAttribute(): array { return $this->getDadosGeraisAttribute(); }
 
     public function getRecursosAttribute(): array
     {
-        return $this->relatosMorph()->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoRecurso::class)->get()->map(fn($r) => $r->conteudo)->toArray();
+        $relatos = $this->relatos_ocorrencia()
+            ->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoRecurso::class)
+            ->get();
+            
+        return $relatos->map(function($r) {
+            $conteudo = $r->conteudo;
+            if ($conteudo) {
+                // Carrega agentes se existirem no modelo polimórfico
+                $conteudo->load('agentes');
+                return $conteudo->toArray();
+            }
+            return null;
+        })->filter()->values()->toArray();
     }
 
     public function getEnvolvidosAttribute(): array
     {
-        return $this->relatosMorph()->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos::class)->get()->map(fn($e) => $e->conteudo)->toArray();
+        $relatos = $this->relatos_ocorrencia()->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos::class)->get();
+        return $relatos->map(fn($r) => $r->conteudo)->filter()->values()->toArray();
     }
+
 
     public function getVistoriaAttribute(): array
     {
-        $vistoria = $this->relatosMorph()->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoVistoria::class)->first()?->conteudo;
+        $vistoria = $this->relatos_ocorrencia()->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoVistoria::class)->first()?->conteudo;
         return $vistoria ? $vistoria->toArray() : [];
     }
 

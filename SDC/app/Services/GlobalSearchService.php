@@ -35,7 +35,7 @@ class GlobalSearchService
     protected function searchActions(string $query): array
     {
         $actions = [
-            ['id' => 'act_1', 'title' => 'Novo RAT', 'subtitle' => 'Criar novo relatório', 'url' => route('compdec.rat.create'), 'icon' => 'document', 'tag' => 'Criar'],
+            ['id' => 'act_1', 'title' => 'Novo RAT', 'subtitle' => 'Criar novo relatório', 'url' => route('rat.create'), 'icon' => 'document', 'tag' => 'Criar'],
             ['id' => 'act_2', 'title' => 'Nova Demanda', 'subtitle' => 'Abrir chamado técnico', 'url' => route('demandas.create'), 'icon' => 'checkbadge', 'tag' => 'Criar'],
             ['id' => 'act_3', 'title' => 'Meu Perfil', 'subtitle' => 'Gerenciar conta', 'url' => route('profile.edit'), 'icon' => 'user', 'tag' => 'Config'],
             ['id' => 'act_4', 'title' => 'Dashboard', 'subtitle' => 'Ir para página inicial', 'url' => route('dashboard'), 'icon' => 'home', 'tag' => 'Nav'],
@@ -61,7 +61,7 @@ class GlobalSearchService
                     'id' => $item->id,
                     'title' => $item->protocolo ?? 'RAT ' . $item->id,
                     'subtitle' => 'RAT - ' . ($item->status ?? 'N/A'),
-                    'url' => route('compdec.rat.show-json', $item->id),
+                    'url' => route('rat.show-json', $item->id),
                     'type' => 'rat',
                     'icon' => 'document'
                 ];

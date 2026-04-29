@@ -156,23 +156,23 @@ const buscarCepLocal = async () => {
   }
 };
 
+// Sincroniza local -> pai apenas se houver mudança real
 watch(
-  localData,
-  (newValue) => {
-    emit('update:modelValue', newValue);
+  () => localData.value,
+  (nv) => {
+    if (JSON.stringify(nv) !== JSON.stringify(props.modelValue)) {
+      emit('update:modelValue', nv);
+    }
   },
   { deep: true }
 );
 
+// Sincroniza pai -> local apenas se os dados externos mudarem
 watch(
   () => props.modelValue,
-  (newValue) => {
-    if (newValue) {
-      const currentStr = JSON.stringify(localData.value);
-      const newStr = JSON.stringify(newValue);
-      if (currentStr !== newStr) {
-        localData.value = { ...localData.value, ...newValue };
-      }
+  (nv) => {
+    if (nv && JSON.stringify(nv) !== JSON.stringify(localData.value)) {
+      localData.value = JSON.parse(JSON.stringify(nv));
     }
   },
   { deep: true }

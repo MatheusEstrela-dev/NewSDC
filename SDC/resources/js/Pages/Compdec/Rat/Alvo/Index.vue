@@ -34,7 +34,7 @@
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-500">{{ formatDate(oc.created_at) }}</td>
                             <td class="px-4 py-3 text-right">
-                                <Link :href="route('compdec.rat.alvos.show', oc.id)" class="text-sm text-blue-600 hover:underline">
+                                <Link :href="route('rat.alvos.show', oc.id)" class="text-sm text-blue-600 hover:underline">
                                     Ver Alvos
                                 </Link>
                             </td>

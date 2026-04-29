@@ -1,21 +1,22 @@
 <template>
     <div>
-        <Head title="Gestao de RAT" />
+        <Head title="Gestão de RAT" />
+
         <RatIndexTemplate
-          :statistics="effectiveStatistics"
-          :rats="effectiveRats"
-          :filters="effectiveFilters"
-          :pagination="effectivePagination"
-          :municipalities="effectiveMunicipalities"
-          :cobrade-types="effectiveCobradeTypes"
-          :years="effectiveYears"
-          :loading="false"
-          :use-mock="useMock"
-          :can-create="true"
-          :can-edit="true"
-          :can-delete="true"
-          :can-export="true"
-          :can-finalize="true"
+            :statistics="statistics"
+            :rats="ratsData"
+            :filters="props.filters"
+            :pagination="pagination"
+            :municipalities="props.municipalities"
+            :cobrade-types="props.cobradeTypes"
+            :years="props.years"
+            :loading="false"
+            :use-mock="false"
+            :can-create="can('rat.protocolos.create')"
+            :can-edit="can('rat.protocolos.edit')"
+            :can-delete="can('rat.protocolos.delete')"
+            :can-export="can('rat.protocolos.export')"
+            :can-finalize="can('rat.protocolos.finalize')"
         />
     </div>
 </template>
@@ -23,13 +24,6 @@
 <script setup>
 import { usePermissions } from '@/Composables/usePermissions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import {
-    getDefaultYears,
-    getMockRats,
-    getMockStatisticsFromRats,
-    mockCobradeTypes,
-    mockMunicipalities,
-} from '@/mocks/rat';
 import RatIndexTemplate from '@/Templates/Rat/RatIndexTemplate.vue';
 import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -39,70 +33,37 @@ defineOptions({ layout: AuthenticatedLayout });
 const { can } = usePermissions();
 
 const props = defineProps({
-  statistics: {
-    type: Object,
-    default: () => ({
-      total: 0,
-      hoje: 0,
-      esteMes: 0,
-      esteAno: 0,
-    }),
-  },
-  rats: {
-    type: [Array, Object],
-    default: () => [],
-  },
-  filters: {
-    type: Object,
-    default: () => ({}),
-  },
-  pagination: {
-    type: Object,
-    default: null,
-  },
-  municipalities: {
-    type: Array,
-    default: () => [],
-  },
-  cobradeTypes: {
-    type: Array,
-    default: () => [],
-  },
-  years: {
-    type: Array,
-    default: () => [],
-  },
+    statistics:    { type: Object, default: () => ({ total: 0, hoje: 0, esteMes: 0, esteAno: 0 }) },
+    rats:          { type: [Array, Object], default: () => [] },
+    filters:       { type: Object, default: () => ({}) },
+    pagination:    { type: Object, default: null },
+    municipalities:{ type: Array, default: () => [] },
+    cobradeTypes:  { type: Array, default: () => [] },
+    years:         { type: Array, default: () => [] },
 });
 
-// Forçar o uso de dados reais agora que o backend está integrado
-const useMock = computed(() => false);
+// Normalize paginated resource collection or plain array
+const ratsData = computed(() => {
+    if (Array.isArray(props.rats)) return props.rats;
+    return props.rats?.data ?? [];
+});
 
-const effectiveRats = computed(() => {
-  if (useMock.value) return getMockRats();
-  return Array.isArray(props.rats) ? props.rats : (props.rats.data || []);
+const pagination = computed(() => {
+    if (props.pagination) return props.pagination;
+    if (props.rats && !Array.isArray(props.rats)) {
+        const p = props.rats?.meta ?? props.rats;
+        return {
+            current_page: p.current_page ?? 1,
+            last_page:    p.last_page    ?? 1,
+            per_page:     p.per_page     ?? 15,
+            total:        p.total        ?? 0,
+            from:         p.from         ?? null,
+            to:           p.to           ?? null,
+            links:        props.rats?.links ?? p.links ?? [],
+        };
+    }
+    return null;
 });
-const effectiveStatistics = computed(() => {
-  if (useMock.value) {
-    return getMockStatisticsFromRats(effectiveRats.value);
-  }
-  return props.statistics;
-});
-const effectiveFilters = computed(() => (useMock.value ? {} : props.filters));
-const effectivePagination = computed(() => {
-  if (useMock.value) return null;
-  if (props.pagination) return props.pagination;
-  if (props.rats && !Array.isArray(props.rats)) {
-    return {
-      current_page: props.rats.current_page,
-      last_page: props.rats.last_page,
-      per_page: props.rats.per_page,
-      total: props.rats.total,
-      links: props.rats.links,
-    };
-  }
-  return null;
-});
-const effectiveMunicipalities = computed(() => (props.municipalities && props.municipalities.length > 0 ? props.municipalities : mockMunicipalities));
-const effectiveCobradeTypes = computed(() => (props.cobradeTypes && props.cobradeTypes.length > 0 ? props.cobradeTypes : mockCobradeTypes));
-const effectiveYears = computed(() => (props.years && props.years.length > 0 ? props.years : getDefaultYears()));
+
+const statistics = computed(() => props.statistics ?? { total: 0, hoje: 0, esteMes: 0, esteAno: 0 });
 </script>

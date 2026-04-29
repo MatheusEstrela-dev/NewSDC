@@ -12,6 +12,7 @@ readonly class RatEnvolvidoDTO
     public function __construct(
         // ID do registro (para updates)
         public ?int $id = null,
+        public ?int $seq = null,
 
         // Dados Gerais (g_)
         public ?string $gTipoPessoa = null,
@@ -75,6 +76,7 @@ readonly class RatEnvolvidoDTO
     {
         return new self(
             id:                            $data['id']                             ?? null,
+            seq:                           $data['seq']                            ?? null,
             gTipoPessoa:                   $data['g_tipo_pessoa']                  ?? $data['tipo_envolvimento'] ?? null,
             gLesaoGrau:                    $data['g_lesao_grau']                   ?? null,
             gLesaoGrauSelecionado:         $data['g_lesao_grau_selecionado']       ?? null,
@@ -110,17 +112,17 @@ readonly class RatEnvolvidoDTO
             pNaturalidadeUf:               $data['p_naturalidade_uf']              ?? null,
             pTurista:                      isset($data['p_turista'])               ? (bool) $data['p_turista'] : null,
             pSituacaoRua:                  isset($data['p_situacao_rua'])          ? (bool) $data['p_situacao_rua'] : null,
-            pEndCep:                       $data['p_end_cep']                      ?? null,
+            pEndCep:                       $data['p_end_cep']                      ?? $data['cep'] ?? null,
             pEndPais:                      $data['p_end_pais']                     ?? null,
-            pEndEstadoUf:                  $data['p_end_estado_uf']                ?? null,
-            pEndMunicipio:                 $data['p_end_municipio']                ?? null,
-            pEndBairro:                    $data['p_end_bairro']                   ?? null,
-            pEndLogradouro:                $data['p_end_logradouro']               ?? null,
+            pEndEstadoUf:                  $data['p_end_estado_uf']                ?? $data['uf'] ?? null,
+            pEndMunicipio:                 $data['p_end_municipio']                ?? $data['municipio'] ?? null,
+            pEndBairro:                    $data['p_end_bairro']                   ?? $data['bairro'] ?? null,
+            pEndLogradouro:                $data['p_end_logradouro']               ?? $data['endereco'] ?? null,
             pEndNumero:                    $data['p_end_numero']                   ?? null,
             pEndComplemento:               $data['p_end_complemento']              ?? null,
             pEndKm:                        $data['p_end_km']                       ?? null,
             pEndIbge:                      $data['p_end_ibge']                     ?? null,
-            pTelefoneResidencial:         $data['p_telefone_residencial']         ?? null,
+            pTelefoneResidencial:         $data['p_telefone_residencial']         ?? $data['telefone'] ?? null,
             pTelefoneComercial:           $data['p_telefone_comercial']           ?? null,
             pEmail:                        $data['p_email']                        ?? null,
             pMotivoAusenciaContato:       $data['p_motivo_ausencia_contato']      ?? null,
@@ -130,6 +132,7 @@ readonly class RatEnvolvidoDTO
     public function toArray(): array
     {
         return array_filter([
+            'seq'                            => $this->seq,
             'g_tipo_pessoa'                  => $this->gTipoPessoa,
             'g_lesao_grau'                   => $this->gLesaoGrau,
             'g_lesao_grau_selecionado'       => $this->gLesaoGrauSelecionado,

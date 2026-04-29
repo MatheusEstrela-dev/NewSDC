@@ -5,7 +5,7 @@
         <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-4xl mx-auto">
             <div class="mb-6 flex items-center justify-between">
                 <div>
-                    <Link :href="route('compdec.rat.ocorrencias.index')" class="text-sm text-blue-600 hover:underline">&larr; Voltar</Link>
+                    <Link :href="route('rat.ocorrencias.index')" class="text-sm text-blue-600 hover:underline">&larr; Voltar</Link>
                     <h1 class="mt-2 text-2xl font-bold text-gray-900">Ocorrência #{{ ocorrencia?.id }}</h1>
                     <p class="text-sm text-gray-500">BO: {{ ocorrencia?.numero_bos ?? '—' }}</p>
                 </div>
@@ -87,7 +87,7 @@ const relatos = computed(() => props.ocorrencia?.relatos_morph ?? props.ocorrenc
 
 function finalize() {
     finalizing.value = true;
-    router.patch(route('compdec.rat.ocorrencias.finalize', props.ocorrencia?.id), {}, {
+    router.patch(route('rat.ocorrencias.finalize', props.ocorrencia?.id), {}, {
         preserveScroll: true,
         onFinish: () => { finalizing.value = false; },
     });

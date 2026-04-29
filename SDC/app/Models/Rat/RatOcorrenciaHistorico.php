@@ -29,7 +29,7 @@ class RatOcorrenciaHistorico extends Model
     // Histórico é imutável — não existe updated_at
     public const UPDATED_AT = null;
 
-    protected $table = 'rat_ocorrencia_historico';
+    protected $table = 'rat_ocorrencia_historicos';
 
     protected $fillable = [
         'ocorrencia_id',

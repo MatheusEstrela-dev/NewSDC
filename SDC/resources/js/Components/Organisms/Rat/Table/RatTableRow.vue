@@ -2,10 +2,10 @@
   <TableDataRow>
     <TableCell class="w-48 whitespace-nowrap">
       <Link
-        :href="route('compdec.rat.show', rat.id)"
+        :href="route('rat.show', rat.id)"
         class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
       >
-        {{ rat.numero_bos || `RAT #${rat.id}` }}
+        {{ rat.protocolo || rat.numero_bos || `RAT #${rat.id}` }}
       </Link>
     </TableCell>
     <TableCell class="w-44 whitespace-nowrap">

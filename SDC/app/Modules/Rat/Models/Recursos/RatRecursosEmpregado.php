@@ -4,25 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models\Recursos;
 
-use App\Models\Rat\Recursos\RatRecurso;
 use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
-use App\Modules\Rat\Models\Relatos\RatRelato;
 use App\Modules\Rat\Models\Recursos\RatRecursosComponentesGuarnicao;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * Recurso empregado em atendimento (viatura, pessoal a pé, etc.).
- *
- * Campos-chave (ver migração 2026_02_10_100003):
- * @property int         $id
- * @property int|null    $relato_recurso_id
- * @property string|null $recurso_tipo       viatura|pe
- * @property string|null $viatura_placa      Placa da viatura
- * @property string|null $viatura_tipo       Tipo da viatura
- */
-class RatRecursosEmpregado extends RatRecurso
+class RatRecursosEmpregado extends Model
 {
     protected $table = 'rat_recursos_empregados';
 

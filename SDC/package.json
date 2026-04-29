@@ -3,8 +3,8 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "rm -f public/hot && vite build",
-        "build:ssr": "rm -rf public/hot bootstrap/ssr/* && vite build && vite build --ssr",
+        "build": "vite build",
+        "build:ssr": "vite build && vite build --ssr",
         "ssr": "bun $(ls -t bootstrap/ssr/js/ssr-*.js | head -n 1)",
         "build:pwa": "vite build && workbox generateSW workbox-config.js",
         "test:e2e": "dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test",

@@ -34,7 +34,9 @@
 
     <RatFormActions
       :view-only="viewOnly"
-      @save-draft="$emit('save-draft', localData)"
+      :loading="loading"
+      :show-finalize="true"
+      @save="$emit('save', localData)"
       @finalize="$emit('finalize', localData)"
     />
   </fieldset>
@@ -59,9 +61,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['save-draft', 'finalize', 'update:tem-vistoria', 'update:form-data']);
+const emit = defineEmits(['save', 'finalize', 'update:tem-vistoria', 'update:form-data']);
 
 const localData = ref({
   dadosGerais: {

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Route;
 // RAT — Estrutura Unificada: RatOcorrencia + relatos polimórficos
 // ============================================================================
 
-Route::prefix('compdec/rat')->name('compdec.rat.')->group(function () {
+Route::prefix('rat')->name('rat.')->group(function () {
     // ========================================================================
     // Compdec Flow (Web / Inertia)
     // ========================================================================

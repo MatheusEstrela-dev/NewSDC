@@ -18,7 +18,7 @@ use App\Models\Rat\RatOcorrenciaRelato;
 use App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais;
 use App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos;
 use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
-use App\Models\Rat\Recursos\RatRecursosEmpregado;
+use App\Modules\Rat\Models\Recursos\RatRecursosEmpregado;
 use App\Modules\Rat\Models\Recursos\RatRecursosComponentesGuarnicao;
 use App\Modules\Rat\Models\Relatos\RatRelatoVistoria;
 use Illuminate\Support\Facades\DB;
@@ -56,11 +56,15 @@ class RatWriteService
     {
         return DB::transaction(function () use ($data) {
             $protocolo = $this->protocoloService->generate();
+            /** @var \Illuminate\Contracts\Auth\Guard $auth */
+            $auth = auth();
+            $userId = $auth->id(); // Pode ser null se não autenticado
+
             $ocorrencia = RatOcorrencia::create([
                 'numero_bos'  => $protocolo,
                 'status'      => 0,
-                'created_by'  => auth()->id(),
-                'updated_by'  => auth()->id(),
+                'created_by'  => $userId,
+                'updated_by'  => $userId,
             ]);
 
             $id = (string)$ocorrencia->id;
@@ -102,8 +106,8 @@ class RatWriteService
                 'envolvidos'   => $data['envolvidos']  ?? [],
                 'vistoria'     => $data['vistoria']    ?? [],
                 'historico'    => $data['historico']   ?? [],
-                'created_by'   => auth()->id(),
-                'updated_by'   => auth()->id(),
+                'created_by'   => $userId,
+                'updated_by'   => $userId,
             ]);
 
             return $this->findById($id);
@@ -145,76 +149,80 @@ class RatWriteService
         return $rat->fresh();
     }
 
-    /** Salva ou atualiza os Dados Gerais de um RAT. */
+    /** Salva ou atualiza os Dados Gerais de um RAT. FIX: usa ocorrencia_id como chave do updateOrCreate. */
     public function saveDadosGerais(string $ocorrenciaId, RatDadosGeraisDTO $dto): RatRelatoDadosGerais
     {
         return DB::transaction(function () use ($ocorrenciaId, $dto) {
-            /** @var \Illuminate\Contracts\Auth\Guard $auth */
             $auth = auth();
-            $relatoId = $this->getRelatoId($ocorrenciaId, RatRelatoDadosGerais::class);
-            
             $dadosGerais = RatRelatoDadosGerais::updateOrCreate(
-                ['id' => $relatoId],
+                ['ocorrencia_id' => $ocorrenciaId],
                 array_merge($dto->toArray(), [
                     'ocorrencia_id' => $ocorrenciaId,
-                    'usuario_id'    => $auth->id(),
                     'created_by'    => $auth->id(),
                 ])
             );
-
             $this->ensureRelatoLink($ocorrenciaId, $dadosGerais);
             return $dadosGerais;
         });
     }
 
-    /** Salva um envolvido (cria ou atualiza). */
+    /** Salva um envolvido (cria ou atualiza). FIX: se tem id, update; senão, create. */
     public function saveEnvolvido(string $ocorrenciaId, RatEnvolvidoDTO $dto): RatRelatoEnvolvidos
     {
         return DB::transaction(function () use ($ocorrenciaId, $dto) {
-            /** @var \Illuminate\Contracts\Auth\Guard $auth */
             $auth = auth();
-            $envolvido = RatRelatoEnvolvidos::updateOrCreate(
-                ['id' => $dto->id],
-                array_merge($dto->toArray(), [
-                    'ocorrencia_id' => $ocorrenciaId,
-                    'usuario_id'    => $auth->id(),
-                    'created_by'    => $auth->id()
-                ])
-            );
+            $data = array_merge($dto->toArray(), [
+                'ocorrencia_id' => $ocorrenciaId,
+                'created_by'    => $auth->id(),
+            ]);
+
+            if ($dto->id) {
+                $envolvido = RatRelatoEnvolvidos::find($dto->id);
+                if ($envolvido) {
+                    $envolvido->update($data);
+                } else {
+                    $envolvido = RatRelatoEnvolvidos::create($data);
+                }
+            } else {
+                $envolvido = RatRelatoEnvolvidos::create($data);
+            }
 
             $this->ensureRelatoLink($ocorrenciaId, $envolvido);
             return $envolvido;
         });
     }
 
-    /** Salva um recurso e seus agentes. */
+    /** Salva um recurso e seus agentes. FIX: mesma lógica que envolvido. */
     public function saveRecurso(string $ocorrenciaId, RatRecursoDTO $dto): RatRelatoRecurso
     {
         return DB::transaction(function () use ($ocorrenciaId, $dto) {
-            /** @var \Illuminate\Contracts\Auth\Guard $auth */
             $auth = auth();
-            // 1. Salva o relato de recurso principal
-            $recurso = RatRelatoRecurso::updateOrCreate(
-                ['id' => $dto->id],
-                array_merge($dto->toArray(), [
-                    'ocorrencia_id' => $ocorrenciaId,
-                    'usuario_id'    => $auth->id(),
-                    'created_by'    => $auth->id()
-                ])
-            );
+            $data = array_merge($dto->toArray(), [
+                'ocorrencia_id' => $ocorrenciaId,
+                'created_by'    => $auth->id(),
+            ]);
+
+            if ($dto->id) {
+                $recurso = RatRelatoRecurso::find($dto->id);
+                if ($recurso) {
+                    $recurso->update($data);
+                } else {
+                    $recurso = RatRelatoRecurso::create($data);
+                }
+            } else {
+                $recurso = RatRelatoRecurso::create($data);
+            }
 
             $this->ensureRelatoLink($ocorrenciaId, $recurso);
 
-            // 2. Salva agentes (guarnição) se fornecidos
+            // Salva agentes (guarnição)
             if ($dto->agentes !== null) {
-                // Remove agentes antigos para evitar duplicatas se for um update completo
-                // Ou apenas faz updateOrCreate individualmente
                 foreach ($dto->agentes as $agenteDto) {
                     RatRecursosComponentesGuarnicao::updateOrCreate(
-                        ['id' => $agenteDto->id],
+                        ['id' => $agenteDto->id ?? null, 'relato_recurso_id' => $recurso->id],
                         array_merge($agenteDto->toArray(), [
                             'relato_recurso_id' => $recurso->id,
-                            'created_by' => $auth->id()
+                            'created_by'        => $auth->id(),
                         ])
                     );
                 }
@@ -224,46 +232,30 @@ class RatWriteService
         });
     }
 
-    /** Salva o histórico/descrição. */
+    /** Salva o histórico/descrição. FIX: salvar array JSON diretamente. */
     public function saveHistorico(string $ocorrenciaId, RatHistoricoDTO $dto): void
     {
-        // O histórico narrativo deve ser salvo na coluna 'descricao' dos Dados Gerais
         DB::transaction(function () use ($ocorrenciaId, $dto) {
-            $dadosGerais = RatRelatoDadosGerais::where('ocorrencia_id', $ocorrenciaId)->first();
-            if (!$dadosGerais) {
-                // Cria rascunho de dados gerais se não existir
-                /** @var \Illuminate\Contracts\Auth\Guard $auth */
-                $auth = auth();
-                $dadosGerais = RatRelatoDadosGerais::create([
-                    'ocorrencia_id' => $ocorrenciaId,
-                    'usuario_id'    => $auth->id(),
-                    'created_by'    => $auth->id(),
-                    'descricao'     => $dto->historico,
-                    'nat_codigo'    => 'NI', // Não informado inicialmente
-                    'data_fato'     => now(),
-                    'local_origem'  => 'NI',
-                ]);
-                $this->ensureRelatoLink($ocorrenciaId, $dadosGerais);
-            } else {
-                $dadosGerais->update(['descricao' => $dto->historico]);
-            }
-            
-            // Também salva na coluna historico da RatOcorrencia para compatibilidade frontend
-            RatOcorrencia::where('id', $ocorrenciaId)->update(['historico' => $dto->historico]);
+            // Salva o array completo de histórico na coluna JSON da ocorrência
+            $historico = $dto->historicoArray ?? ($dto->historico ? [$dto->historico] : []);
+            \App\Models\Rat\RatOcorrencia::where('id', $ocorrenciaId)->update([
+                'historico' => $historico,
+            ]);
         });
     }
 
-    /** Salva ou atualiza uma Vistoria. */
+    /** Salva ou atualiza uma Vistoria. FIX: usa ocorrencia_id como chave + inclui no data. */
     public function saveVistoria(string $ocorrenciaId, RatVistoriaDTO $dto): RatRelatoVistoria
     {
         return DB::transaction(function () use ($ocorrenciaId, $dto) {
-            /** @var \Illuminate\Contracts\Auth\Guard $auth */
             $auth = auth();
             $vistoria = RatRelatoVistoria::updateOrCreate(
-                ['id' => $this->getRelatoId($ocorrenciaId, RatRelatoVistoria::class)],
-                array_merge($dto->toArray(), ['created_by' => $auth->id()])
+                ['ocorrencia_id' => $ocorrenciaId],
+                array_merge($dto->toArray(), [
+                    'ocorrencia_id' => $ocorrenciaId,
+                    'created_by'    => $auth->id(),
+                ])
             );
-
             $this->ensureRelatoLink($ocorrenciaId, $vistoria);
             return $vistoria;
         });
@@ -312,4 +304,3 @@ class RatWriteService
         ];
     }
 }
-

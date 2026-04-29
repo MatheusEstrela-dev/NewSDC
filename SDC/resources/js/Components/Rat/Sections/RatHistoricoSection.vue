@@ -19,6 +19,7 @@
           <FormField
             type="textarea"
             v-model="localData.historico"
+            @blur="handleEmitUpdate"
             placeholder="Descreva aqui o histórico completo..."
             :rows="12"
           />
@@ -49,8 +50,8 @@
             </div>
 
             <div class="space-y-4">
-              <FormSelect label="Resultado da Operação" v-model="localData.resultado" :options="resultadoOptions" />
-              <FormSelect label="Grau de Risco" v-model="localData.grau_risco" :options="riscoOptions" />
+              <FormSelect label="Resultado da Operação" v-model="localData.resultado" @blur="handleEmitUpdate" :options="resultadoOptions" />
+              <FormSelect label="Grau de Risco" v-model="localData.grau_risco" @blur="handleEmitUpdate" :options="riscoOptions" />
             </div>
           </div>
         </div>
@@ -75,7 +76,7 @@
             </div>
           </div>
           <div class="mt-6">
-            <FormField type="textarea" label="Encaminhamentos" v-model="localData.encaminhamentos" :rows="3" />
+            <FormField type="textarea" label="Encaminhamentos" v-model="localData.encaminhamentos" @blur="handleEmitUpdate" :rows="3" />
           </div>
         </div>
       </div>
@@ -126,6 +127,28 @@ const riscoOptions = [
   { value: 'alto', label: 'Alto' },
 ];
 
-watch(localData, (nv) => { emit('update:modelValue', nv); }, { deep: true });
-watch(() => props.modelValue, (nv) => { if (nv) localData.value = { ...localData.value, ...nv }; }, { deep: true });
+// CORRIGIDO: Remover watchers infinitos que causavam FREEZE/TRAVA
+// O problema: A cada digitação, watcher 1 emitia, que atualizava props,
+// que triggerava watcher 2, que atualizava localData, criando um loop infinito
+watch(
+  () => props.modelValue,
+  (nv) => {
+    if (nv) {
+      localData.value = {
+        historico: nv.historico || '',
+        clima: nv.clima || { chuva: false, vento_forte: false, nevoeiro: false, tempestade: false },
+        resultado: nv.resultado || '',
+        grau_risco: nv.grau_risco || '',
+        metricas: nv.metricas || { pessoas_atendidas: 0, vitimas_resgatadas: 0, imoveis_vistoriados: 0, familias_desalojadas: 0 },
+        encaminhamentos: nv.encaminhamentos || '',
+      };
+    }
+  },
+  { deep: false }
+);
+
+// Emitir apenas ao sair do campo (onBlur)
+const handleEmitUpdate = () => {
+  emit('update:modelValue', localData.value);
+};
 </script>

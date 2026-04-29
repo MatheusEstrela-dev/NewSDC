@@ -33,14 +33,14 @@ export function useRat({
 
     /**
      * Salva dados gerais da ocorrência.
-     * POST /compdec/rat/ocorrencias/{id}/dados-gerais
+     * POST /rat/ocorrencias/{id}/dados-gerais
      */
     async function saveDadosGerais(ratId, dadosGerais) {
         loading.value = true;
         errors.value = {};
 
         try {
-            await fetch(route('compdec.rat.ocorrencias.dados-gerais.store', ratId), {
+            await fetch(route('rat.ocorrencias.dados-gerais.store', ratId), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content },
                 body: JSON.stringify(dadosGerais),
@@ -57,13 +57,13 @@ export function useRat({
 
     /**
      * Adiciona um envolvido.
-     * POST /compdec/rat/ocorrencias/{id}/envolvidos
+     * POST /rat/ocorrencias/{id}/envolvidos
      */
     async function saveEnvolvido(ratId, envolvidoData) {
         loading.value = true;
 
         try {
-            const response = await fetch(route('compdec.rat.ocorrencias.envolvidos.store', ratId), {
+            const response = await fetch(route('rat.ocorrencias.envolvidos.store', ratId), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content },
                 body: JSON.stringify(envolvidoData),
@@ -90,13 +90,13 @@ export function useRat({
 
     /**
      * Adiciona um recurso.
-     * POST /compdec/rat/ocorrencias/{id}/recursos
+     * POST /rat/ocorrencias/{id}/recursos
      */
     async function saveRecurso(ratId, recursoData) {
         loading.value = true;
 
         try {
-            const response = await fetch(route('compdec.rat.ocorrencias.recursos.store', ratId), {
+            const response = await fetch(route('rat.ocorrencias.recursos.store', ratId), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content },
                 body: JSON.stringify(recursoData),
@@ -122,13 +122,13 @@ export function useRat({
 
     /**
      * Salva vistoria técnica.
-     * POST /compdec/rat/ocorrencias/{id}/vistoria
+     * POST /rat/ocorrencias/{id}/vistoria
      */
     async function saveVistoria(ratId, vistoriaData) {
         loading.value = true;
 
         try {
-            const response = await fetch(route('compdec.rat.ocorrencias.vistoria.store', ratId), {
+            const response = await fetch(route('rat.ocorrencias.vistoria.store', ratId), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content },
                 body: JSON.stringify(vistoriaData),
@@ -149,13 +149,13 @@ export function useRat({
 
     /**
      * Registra evento no histórico.
-     * POST /compdec/rat/ocorrencias/{id}/historico
+     * POST /rat/ocorrencias/{id}/historico
      */
     async function saveHistoricoEvent(ratId, eventoData) {
         loading.value = true;
 
         try {
-            const response = await fetch(route('compdec.rat.ocorrencias.historico.store', ratId), {
+            const response = await fetch(route('rat.ocorrencias.historico.store', ratId), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content },
                 body: JSON.stringify(eventoData),
@@ -176,14 +176,14 @@ export function useRat({
 
     /**
      * Remove um envolvido.
-     * DELETE /compdec/rat/ocorrencias/{id}/envolvidos/{envolvidoId}
+     * DELETE /rat/ocorrencias/{id}/envolvidos/{envolvidoId}
      */
     async function removeEnvolvido(ratId, envolvidoId) {
         loading.value = true;
 
         try {
             const response = await fetch(
-                route('compdec.rat.ocorrencias.envolvidos.destroy', [ratId, envolvidoId]),
+                route('rat.ocorrencias.envolvidos.destroy', [ratId, envolvidoId]),
                 { method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content } }
             ).then(r => r.json());
 
@@ -202,14 +202,14 @@ export function useRat({
 
     /**
      * Remove um recurso.
-     * DELETE /compdec/rat/ocorrencias/{id}/recursos/{recursoId}
+     * DELETE /rat/ocorrencias/{id}/recursos/{recursoId}
      */
     async function removeRecurso(ratId, recursoId) {
         loading.value = true;
 
         try {
             const response = await fetch(
-                route('compdec.rat.ocorrencias.recursos.destroy', [ratId, recursoId]),
+                route('rat.ocorrencias.recursos.destroy', [ratId, recursoId]),
                 { method: 'DELETE', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content } }
             ).then(r => r.json());
 
@@ -228,8 +228,8 @@ export function useRat({
 
     /**
      * Cria ou atualiza RAT completo.
-     * POST /compdec/rat (novo)
-     * PUT /compdec/rat/{id} (atualizar)
+     * POST /rat (novo)
+     * PUT /rat/{id} (atualizar)
      */
     function salvarRat(formData = {}) {
         const data = {
@@ -244,7 +244,7 @@ export function useRat({
         };
 
         if (!rat.value?.id) {
-            router.post(route('compdec.rat.store'), data, {
+            router.post(route('rat.store'), data, {
                 preserveScroll: true,
                 onError: (err) => {
                     errors.value = err;
@@ -252,7 +252,7 @@ export function useRat({
                 },
             });
         } else {
-            router.put(route('compdec.rat.update', rat.value.id), data, {
+            router.put(route('rat.update', rat.value.id), data, {
                 preserveScroll: true,
                 onError: (err) => {
                     errors.value = err;
@@ -264,7 +264,7 @@ export function useRat({
 
     /**
      * Salva como rascunho.
-     * PATCH /compdec/rat/{id}/draft
+     * PATCH /rat/{id}/draft
      */
     function salvarRascunho(formData = {}) {
         const data = {
@@ -280,16 +280,16 @@ export function useRat({
 
         if (!rat.value?.id) {
             // Cria novo
-            router.post(route('compdec.rat.store'), data, { preserveScroll: true });
+            router.post(route('rat.store'), data, { preserveScroll: true });
         } else {
             // Salva como rascunho
-            router.patch(route('compdec.rat.draft', rat.value.id), data, { preserveScroll: true });
+            router.patch(route('rat.draft', rat.value.id), data, { preserveScroll: true });
         }
     }
 
     /**
      * Finaliza RAT.
-     * PATCH /compdec/rat/{id}/finalize
+     * PATCH /rat/{id}/finalize
      */
     function finalizarRat(formData = {}) {
         const data = {
@@ -304,11 +304,11 @@ export function useRat({
         };
 
         if (!rat.value?.id) {
-            router.post(route('compdec.rat.store'), { ...data, finalize: true }, {
+            router.post(route('rat.store'), { ...data, finalize: true }, {
                 preserveScroll: true,
             });
         } else {
-            router.patch(route('compdec.rat.finalize', rat.value.id), data, {
+            router.patch(route('rat.finalize', rat.value.id), data, {
                 preserveScroll: true,
             });
         }
@@ -318,18 +318,18 @@ export function useRat({
      * Cancela e volta para listagem.
      */
     function cancelarRat() {
-        router.visit(route('compdec.rat.index'));
+        router.visit(route('rat.index'));
     }
 
     /**
      * Exclui RAT.
-     * DELETE /compdec/rat/{id}
+     * DELETE /rat/{id}
      */
     function deletarRat(ratId) {
         if (confirm('Tem certeza que deseja excluir este RAT?')) {
-            router.delete(route('compdec.rat.destroy', ratId), {
+            router.delete(route('rat.destroy', ratId), {
                 preserveScroll: true,
-                onSuccess: () => router.visit(route('compdec.rat.index')),
+                onSuccess: () => router.visit(route('rat.index')),
             });
         }
     }

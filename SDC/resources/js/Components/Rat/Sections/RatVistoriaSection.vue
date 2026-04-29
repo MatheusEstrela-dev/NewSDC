@@ -182,6 +182,25 @@ const tipoConstrucaoOptions = [ { value: 'alvenaria', label: 'Alvenaria' }, { va
 const estadoConservacaoOptions = [ { value: 'bom', label: 'Bom' }, { value: 'regular', label: 'Regular' }, { value: 'ruim', label: 'Ruim' } ];
 const regimeOcupacaoOptions = [ { value: 'proprio', label: 'Próprio' }, { value: 'alugado', label: 'Alugado' } ];
 
-watch(localData, (nv) => { emit('update:modelValue', nv); }, { deep: true });
-watch(() => props.modelValue, (nv) => { if (nv) localData.value = { ...localData.value, ...nv }; }, { deep: true });
+// Sincroniza local -> pai apenas se houver mudança real
+watch(
+  () => localData.value,
+  (nv) => {
+    if (JSON.stringify(nv) !== JSON.stringify(props.modelValue)) {
+      emit('update:modelValue', nv);
+    }
+  },
+  { deep: true }
+);
+
+// Sincroniza pai -> local apenas se os dados externos mudarem
+watch(
+  () => props.modelValue,
+  (nv) => {
+    if (nv && JSON.stringify(nv) !== JSON.stringify(localData.value)) {
+      localData.value = JSON.parse(JSON.stringify(nv));
+    }
+  },
+  { deep: true }
+);
 </script>

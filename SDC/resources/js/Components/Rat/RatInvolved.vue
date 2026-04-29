@@ -28,20 +28,7 @@
         Adicionar Outra Pessoa
       </button>
 
-      <div class="rat-actions-footer w-full">
-        <div class="max-w-full mx-auto flex items-center justify-center gap-2 sm:gap-3 px-3 py-3 sm:px-6 sm:py-4">
-          <button
-            type="button"
-            @click="$emit('save')"
-            class="px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-600/25 transition-all duration-200 flex items-center gap-1.5 sm:gap-2"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-            </svg>
-            Salvar Tudo
-          </button>
-        </div>
-      </div>
+      <RatFormActions :view-only="viewOnly" :loading="loading" @save="$emit('save')" />
     </div>
   </div>
 </template>
@@ -49,6 +36,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import RatEnvolvidosSection from './Sections/RatEnvolvidosSection.vue';
+import RatFormActions from '@/Components/Molecules/Rat/RatFormActions.vue';
 
 const props = defineProps({
   envolvidos: {
@@ -56,6 +44,10 @@ const props = defineProps({
     default: () => [],
   },
   viewOnly: {
+    type: Boolean,
+    default: false,
+  },
+  loading: {
     type: Boolean,
     default: false,
   },
@@ -90,25 +82,27 @@ const removerLocal = (index) => {
   localEnvolvidos.value.splice(index, 1);
 };
 
+// Watch para emitir mudanças do localEnvolvidos para o pai apenas se houver mudança real
 watch(
-  localEnvolvidos,
+  () => localEnvolvidos.value,
   (newValue) => {
-    emit('update', newValue);
+    if (JSON.stringify(newValue) !== JSON.stringify(props.envolvidos)) {
+      emit('update', newValue);
+    }
   },
   { deep: true }
 );
 
+// Watch para sincronizar props.envolvidos com localEnvolvidos apenas se houver mudança real
 watch(
   () => props.envolvidos,
   (newValue) => {
     if (Array.isArray(newValue) && newValue.length > 0) {
-      const currentStr = JSON.stringify(localEnvolvidos.value);
-      const newStr = JSON.stringify(newValue);
-      if (currentStr !== newStr) {
-        localEnvolvidos.value = [...newValue];
+      if (JSON.stringify(localEnvolvidos.value) !== JSON.stringify(newValue)) {
+        localEnvolvidos.value = JSON.parse(JSON.stringify(newValue));
       }
     }
   },
-  { deep: true }
+  { deep: false }
 );
 </script>

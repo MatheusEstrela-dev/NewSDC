@@ -13,17 +13,17 @@ export function useBreadcrumb() {
         ],
         'Rat/Create': [
             { label: 'Início', route: 'dashboard' },
-            { label: 'RAT', route: 'compdec.rat.index' },
+            { label: 'RAT', route: 'rat.index' },
             { label: 'Novo RAT', route: null }
         ],
         'Rat/Edit': [
             { label: 'Início', route: 'dashboard' },
-            { label: 'RAT', route: 'compdec.rat.index' },
+            { label: 'RAT', route: 'rat.index' },
             { label: 'Edição', route: null }
         ],
         'Rat/Show': [
             { label: 'Início', route: 'dashboard' },
-            { label: 'RAT', route: 'compdec.rat.index' },
+            { label: 'RAT', route: 'rat.index' },
             { label: 'Visualizar', route: null }
         ],
 

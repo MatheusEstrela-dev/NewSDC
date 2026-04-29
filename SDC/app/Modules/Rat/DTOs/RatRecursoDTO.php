@@ -72,8 +72,28 @@ readonly class RatRecursoDTO
 
     public function toArray(): array
     {
-        return array_filter([
-            'recurso_tipo'          => $this->recursoTipo,
+        // Mapeamento de valores do frontend para o banco de dados (ENUMs)
+        $tipoMap = [
+            'pessoal' => 'pe',
+            'viatura' => 'viatura',
+            'aereo'   => 'aereo',
+            'aquatico' => 'aquatico',
+            'outro'   => 'outro'
+        ];
+
+        $condicaoMap = [
+            'operacional'     => 'boa',
+            'manutencao'      => 'ruim',
+            'inoperante'      => 'inoperante',
+            'otima'           => 'otima',
+            'boa'             => 'boa',
+            'regular'         => 'regular',
+            'ruim'            => 'ruim'
+        ];
+
+        $data = [
+            'seq'                   => $this->seq ?? 1, // Default sequence
+            'recurso_tipo'          => $tipoMap[$this->recursoTipo] ?? $this->recursoTipo,
             'recurso_problemas'     => $this->recursoProblemas,
             'recurso_descricao'     => $this->recursoDescricao,
             'viatura_tipo'          => $this->viaturaTipo,
@@ -89,11 +109,13 @@ readonly class RatRecursoDTO
             'viatura_local_destino' => $this->viaturaLocalDestino,
             'viatura_quantidade'    => $this->viaturaQuantidade,
             'viatura_capacidade'    => $this->viaturaCapacidade,
-            'viatura_condicao'      => $this->viaturaCondicao,
+            'viatura_condicao'      => $condicaoMap[$this->viaturaCondicao] ?? $this->viaturaCondicao,
             'viatura_operador'      => $this->viaturaOperador,
             'operador_masp'         => $this->operadorMasp,
             'operador_is_condutor'  => $this->operadorIsCondutor,
             'viatura_contato'       => $this->viaturaContato,
-        ], fn ($v) => $v !== null);
+        ];
+
+        return array_filter($data, fn ($v) => $v !== null);
     }
 }

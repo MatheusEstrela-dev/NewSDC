@@ -139,7 +139,7 @@
 import FormField from '@/Components/Form/FormField.vue';
 import FormSelect from '@/Components/Form/FormSelect.vue';
 import { useCep } from '@/composables/location';
-import { computed, watch } from 'vue';
+import { computed, watch, ref } from 'vue';
 
 const props = defineProps({
   modelValue: {
@@ -166,14 +166,29 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'location-updated']);
 
-const localData = computed({
-  get() {
-    return props.modelValue;
+const localData = ref({ ...props.modelValue });
+
+// Sincroniza local -> pai apenas se houver mudança real
+watch(
+  () => localData.value,
+  (nv) => {
+    if (JSON.stringify(nv) !== JSON.stringify(props.modelValue)) {
+      emit('update:modelValue', nv);
+    }
   },
-  set(value) {
-    emit('update:modelValue', value);
+  { deep: true }
+);
+
+// Sincroniza pai -> local apenas se os dados externos mudarem
+watch(
+  () => props.modelValue,
+  (nv) => {
+    if (nv && JSON.stringify(nv) !== JSON.stringify(localData.value)) {
+      localData.value = JSON.parse(JSON.stringify(nv));
+    }
   },
-});
+  { deep: true }
+);
 
 const { buscarCep, isLoading: isLoadingCep } = useCep();
 

@@ -27,7 +27,7 @@ class RatRelatoService
     public function manageRelatos(RatOcorrencia $ocorrencia, array $relatos): void
     {
         DB::transaction(function () use ($ocorrencia, $relatos) {
-            $ocorrencia->relatos()->delete();
+            $ocorrencia->relatos_ocorrencia()->delete();
 
             foreach ($relatos as $relato) {
                 $this->attachRelato($ocorrencia, $relato['conteudo_type'], $relato['conteudo_id']);

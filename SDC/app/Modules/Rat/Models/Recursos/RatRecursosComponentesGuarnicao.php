@@ -4,24 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models\Recursos;
 
-use App\Models\Rat\Recursos\RatRecurso;
-use App\Modules\Rat\Models\Recursos\RatRecursosEmpregado;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Componente da guarnição — agente/servidor que participou do atendimento.
- *
- * Campos-chave (ver migração 2026_02_10_100004):
- * @property int         $id
- * @property int|null    $recurso_empregado_id
- * @property int|null    $relato_recurso_id
- * @property string|null $nome_completo
- * @property string|null $matricula
- * @property string|null $corporacao
- * @property bool        $is_condutor
  */
-class RatRecursosComponentesGuarnicao extends RatRecurso
+class RatRecursosComponentesGuarnicao extends Model
 {
     protected $table = 'rat_recursos_componentes_guarnicao';
 
@@ -45,13 +34,15 @@ class RatRecursosComponentesGuarnicao extends RatRecurso
         'is_condutor' => 'boolean',
     ];
 
-    // -------------------------------------------------------------------------
-    // Relacionamentos
-    // -------------------------------------------------------------------------
-
     /** Recurso empregado ao qual este componente pertence. */
     public function recursoEmpregado(): BelongsTo
     {
         return $this->belongsTo(RatRecursosEmpregado::class, 'recurso_empregado_id');
+    }
+
+    /** Relato de recurso ao qual este componente pertence. */
+    public function relatoRecurso(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Rat\Models\Relatos\RatRelatoRecurso::class, 'relato_recurso_id');
     }
 }

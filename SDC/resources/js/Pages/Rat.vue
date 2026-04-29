@@ -14,10 +14,9 @@
                 <RatDadosGeraisForm
                   :rat="rat"
                   :view-only="props.viewOnly"
+                  :loading="loading"
                   @save="handleSave"
-                  @save-draft="handleSaveDraft"
                   @finalize="handleFinalize"
-                  @cancel="handleCancel"
                   @update:tem-vistoria="handleToggleVistoria"
                   @update:form-data="handleFormDataUpdate"
                 />
@@ -28,6 +27,7 @@
                 <RatResources
                   :recursos="recursos"
                   :view-only="props.viewOnly"
+                  :loading="loading"
                   @add="handleAddRecurso"
                   @remove="handleRemoveRecurso"
                   @update="handleUpdateRecurso"
@@ -40,6 +40,7 @@
                 <RatInvolved
                   :envolvidos="envolvidos"
                   :view-only="props.viewOnly"
+                  :loading="loading"
                   @add="handleAddEnvolvido"
                   @remove="handleRemoveEnvolvido"
                   @update="handleUpdateEnvolvidos"
@@ -52,6 +53,7 @@
                 <RatInspection
                   :vistoria="vistoria"
                   :view-only="props.viewOnly"
+                  :loading="loading"
                   @save="handleSaveFromSubTab"
                   @update="handleUpdateVistoria"
                 />
@@ -62,6 +64,7 @@
                 <RatHistory
                   :events="historico"
                   :view-only="props.viewOnly"
+                  :loading="loading"
                   @add-observation="handleAddObservation"
                   @update="handleUpdateHistorico"
                   @save="handleSaveFromSubTab"
@@ -163,6 +166,7 @@ const {
   vistoria: vistoriaState,
   historico: historicoEstado,
   anexos: anexosState,
+  loading,
   tabs,
   salvarRat,
   salvarRascunho,
@@ -186,43 +190,12 @@ const rat = computed(() => {
   return ratState.value || { id: null, status: 'rascunho' };
 });
 
-const recursos = computed(() => {
-  if (recursosState.value && (Array.isArray(recursosState.value) ? recursosState.value.length > 0 : Object.keys(recursosState.value).length > 0)) {
-    return recursosState.value;
-  }
-  if (Array.isArray(props.rat?.recursos) && props.rat.recursos.length > 0) return props.rat.recursos;
-  if (props.rat?.recursos && !Array.isArray(props.rat.recursos) && Object.keys(props.rat.recursos).length > 0) return props.rat.recursos;
-  if (props.recursos?.length > 0) return props.recursos;
-  return recursosState.value || [];
-});
-
-const envolvidos = computed(() => {
-  if (envolvidosState.value?.length > 0) return envolvidosState.value;
-  if (Array.isArray(props.rat?.envolvidos) && props.rat.envolvidos.length > 0) return props.rat.envolvidos;
-  if (props.envolvidos?.length > 0) return props.envolvidos;
-  return envolvidosState.value || [];
-});
-
-const vistoria = computed(() => {
-  if (vistoriaState.value && Object.keys(vistoriaState.value).length > 0) return vistoriaState.value;
-  if (props.rat?.vistoria && Object.keys(props.rat.vistoria).length > 0) return props.rat.vistoria;
-  if (props.vistoria?.id) return props.vistoria;
-  return vistoriaState.value || {};
-});
-
-const historico = computed(() => {
-  if (historicoEstado.value?.length > 0) return historicoEstado.value;
-  if (Array.isArray(props.rat?.historico) && props.rat.historico.length > 0) return props.rat.historico;
-  if (props.historico?.length > 0) return props.historico;
-  return historicoEstado.value || [];
-});
-
-const anexos = computed(() => {
-  if (anexosState.value?.length > 0) return anexosState.value;
-  if (Array.isArray(props.rat?.anexos) && props.rat.anexos.length > 0) return props.rat.anexos;
-  if (props.anexos?.length > 0) return props.anexos;
-  return anexosState.value || [];
-});
+// Usamos os estados do composable diretamente
+const recursos = recursosState;
+const envolvidos = envolvidosState;
+const vistoria = vistoriaState;
+const historico = historicoEstado;
+const anexos = anexosState;
 
 const currentActiveTab = computed(() => {
   const tabValue = tabs.activeTab;

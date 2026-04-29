@@ -10,28 +10,14 @@
       @remove-file="handleRemoveFile"
     />
 
-    <!-- Footer de ações — padrão das demais abas -->
-    <div v-if="!viewOnly" class="rat-actions-footer mt-4">
-      <div class="max-w-full mx-auto flex items-center justify-center gap-2 sm:gap-3 px-3 py-3 sm:px-6 sm:py-4">
-        <button
-          type="button"
-          @click="$emit('save')"
-          :disabled="uploading"
-          class="px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-600/25 transition-all duration-200 flex items-center gap-1.5 sm:gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-          </svg>
-          Salvar Anexos
-        </button>
-      </div>
-    </div>
+    <RatFormActions :view-only="viewOnly" :loading="uploading" @save="$emit('save')" />
   </div>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue';
 import RatAttachmentsSection from './Sections/RatAttachmentsSection.vue';
+import RatFormActions from '@/Components/Molecules/Rat/RatFormActions.vue';
 
 const props = defineProps({
   ratId: {
@@ -79,24 +65,33 @@ watch(
  * optimistic preview entry added by RatAttachmentsSection.
  */
 async function handleUploadFile({ file, tempId }) {
+  // CORRIGIDO: Validar se ratId existe antes de fazer upload
+  if (!props.ratId) {
+    uploadError.value = '❌ Erro: RAT não foi criado ainda. Salve o RAT primeiro antes de anexar arquivos.';
+    const updated = localAnexos.value.anexos.filter(a => a.id !== tempId);
+    localAnexos.value.anexos = updated;
+    emit('update', updated);
+    return;
+  }
+
   uploading.value   = true;
   uploadError.value = null;
 
   const form = new FormData();
   form.append('arquivo', file);
-  
+
   // Detectar tipo para o backend
   let tipo = 'documento';
   if (file.type.startsWith('image/')) tipo = 'imagem';
   else if (file.type.startsWith('video/')) tipo = 'video';
   else if (file.type.startsWith('audio/')) tipo = 'audio';
-  
+
   form.append('tipo', tipo);
   form.append('descricao', file.name);
 
   try {
     const axios    = window.axios || (await import('axios')).default;
-    const response = await axios.post(route('compdec.rat.ocorrencias.attachments.store', props.ratId), form, {
+    const response = await axios.post(route('rat.ocorrencias.attachments.store', props.ratId), form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
@@ -127,7 +122,7 @@ async function handleRemoveFile(anexoId) {
   if (!isTemp) {
     try {
       const axios = window.axios || (await import('axios')).default;
-      await axios.delete(route('compdec.rat.ocorrencias.attachments.destroy', { id: props.ratId, anexoId }));
+      await axios.delete(route('rat.ocorrencias.attachments.destroy', { id: props.ratId, anexoId }));
     } catch (err) {
       // removal error handled silently
     }

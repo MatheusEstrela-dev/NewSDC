@@ -27,7 +27,7 @@ export function useRatFilters(initialFilters = {}) {
   }
 
   function aplicarFiltros() {
-    router.get(route('compdec.rat.index'), filters.value, {
+    router.get(route('rat.index'), filters.value, {
       preserveState: true,
       preserveScroll: true,
     });
@@ -35,7 +35,7 @@ export function useRatFilters(initialFilters = {}) {
 
   function limparTodosFiltros() {
     limparFiltros();
-    router.get(route('compdec.rat.index'), {}, {
+    router.get(route('rat.index'), {}, {
       preserveState: false,
       preserveScroll: false,
     });

@@ -13,7 +13,7 @@
       </Link>
       <ChevronRightIcon class="w-4 h-4 mx-2 text-slate-600" />
       <Link
-        :href="route('compdec.rat.index')"
+        :href="route('rat.index')"
         class="text-slate-400 hover:text-blue-400 transition-colors"
       >
         RAT
@@ -24,7 +24,7 @@
 
     <!-- Botão Voltar -->
     <button
-      @click="router.visit(route('compdec.rat.index'))"
+      @click="router.visit(route('rat.index'))"
       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 hover:border-slate-600 transition-all duration-200"
     >
       <ArrowLeftIcon class="w-4 h-4" />

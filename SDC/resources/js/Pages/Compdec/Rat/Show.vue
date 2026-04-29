@@ -5,7 +5,7 @@
         <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-4xl mx-auto">
             <div class="mb-6 flex items-center justify-between">
                 <div>
-                    <Link :href="route('compdec.rat.index')" class="text-sm text-blue-600 hover:underline">&larr; Voltar</Link>
+                    <Link :href="route('rat.index')" class="text-sm text-blue-600 hover:underline">&larr; Voltar</Link>
                     <h1 class="mt-2 text-2xl font-bold text-gray-900">Ocorrência RAT #{{ ocorrencia?.id }}</h1>
                     <p class="text-sm text-gray-500 mt-0.5">
                         BO: {{ ocorrencia?.numero_bos ?? '—' }} &bull;
@@ -14,7 +14,7 @@
                 </div>
                 <div class="flex gap-2">
                     <Link
-                        :href="route('compdec.rat.edit', ocorrencia?.id)"
+                        :href="route('rat.edit', ocorrencia?.id)"
                         class="rounded-md bg-yellow-500 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-600"
                     >Editar</Link>
                 </div>

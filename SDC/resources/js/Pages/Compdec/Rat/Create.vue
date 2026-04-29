@@ -4,7 +4,7 @@
 
         <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-3xl mx-auto">
             <div class="mb-6">
-                <Link :href="route('compdec.rat.index')" class="text-sm text-blue-600 hover:underline">&larr; Voltar para lista</Link>
+                <Link :href="route('rat.index')" class="text-sm text-blue-600 hover:underline">&larr; Voltar para lista</Link>
                 <h1 class="mt-2 text-2xl font-bold text-gray-900">Nova Ocorrência RAT</h1>
             </div>
 
@@ -47,7 +47,7 @@
 
                 <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
                     <Link
-                        :href="route('compdec.rat.index')"
+                        :href="route('rat.index')"
                         class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >Cancelar</Link>
                     <button
@@ -81,7 +81,7 @@ const processing = computed(() => inertiaForm.processing);
 const formErrors = computed(() => inertiaForm.errors);
 
 function submit() {
-    inertiaForm.post(route('compdec.rat.store'), {
+    inertiaForm.post(route('rat.store'), {
         preserveScroll: true,
     });
 }

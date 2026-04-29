@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models\Relatos;
 
+use App\Models\Rat\RatOcorrencia;
 use App\Modules\Rat\Models\Recursos\RatRecursosEmpregado;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * RatRelatoRecurso - Relato de recursos empregados na ocorrência
@@ -68,5 +70,13 @@ class RatRelatoRecurso extends RatRelato
     public function agentes(): HasMany
     {
         return $this->hasMany(\App\Modules\Rat\Models\Recursos\RatRecursosComponentesGuarnicao::class, 'relato_recurso_id');
+    }
+
+    /**
+     * Relação: Ocorrência pai
+     */
+    public function ocorrencia(): BelongsTo
+    {
+        return $this->belongsTo(RatOcorrencia::class, 'ocorrencia_id');
     }
 }
