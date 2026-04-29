@@ -113,8 +113,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // Módulo RAT — Nova Estrutura (RatOcorrencia + relatos polimórficos)
     Route::prefix('rat-novo')->name('api.v1.rat-novo.')->group(function () {
-        Route::get('/', [RatNovoController::class, 'index'])->name('index');
-        Route::get('/{id}', [RatNovoController::class, 'show'])->name('show');
+        Route::get('/',            [RatNovoController::class, 'index'])   ->name('index');
+        Route::post('/',           [RatNovoController::class, 'store'])   ->name('store');
+        Route::get('/{id}',        [RatNovoController::class, 'show'])    ->name('show');
+        Route::put('/{id}',        [RatNovoController::class, 'update'])  ->name('update');
+        Route::delete('/{id}',     [RatNovoController::class, 'destroy']) ->name('destroy');
         Route::get('/{id}/power-bi', [RatNovoController::class, 'powerBiData'])->name('power-bi');
     });
 
