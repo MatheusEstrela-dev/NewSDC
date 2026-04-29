@@ -391,6 +391,254 @@
                 ]
             }
         },
+        "/api/v1/rat-novo/{id}": {
+            "get": {
+                "tags": [
+                    "RAT Novo"
+                ],
+                "summary": "Retorna dados completos e normalizados de uma ocorrência",
+                "operationId": "29d8e236af6734f5bce1425c4a7ddbb8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dados do RAT",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RatNovo"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "RAT não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "RAT Novo"
+                ],
+                "summary": "Atualiza dados básicos do RAT",
+                "operationId": "5a555346d4665da6c1b15aa97c58cc57",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "numero_bos": {
+                                        "type": "string"
+                                    },
+                                    "status": {
+                                        "type": "integer"
+                                    },
+                                    "historico": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "RAT atualizado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/RatNovo"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "RAT Novo"
+                ],
+                "summary": "Remove o registro (soft delete)",
+                "operationId": "cf7f3d900b00068251d22a4cd9a8c370",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "RAT removido com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/rat-novo/{id}/power-bi": {
+            "get": {
+                "tags": [
+                    "RAT Novo"
+                ],
+                "summary": "Payload otimizado para consumo direto pelo Power BI",
+                "operationId": "241bab82f02943e055b946415a8c041e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dados otimizados para BI"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/rat-novo": {
+            "get": {
+                "tags": [
+                    "RAT Novo"
+                ],
+                "summary": "Lista resumida de ocorrências para integrações externas",
+                "operationId": "0c8b79e15623a754148f20b413974b87",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de RATs",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RatNovoList"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "RAT Novo"
+                ],
+                "summary": "Cria um novo registro de RAT",
+                "operationId": "4b989fda8a99e6b51dceebfefe6632f1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RatNovoStoreRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "RAT criado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/RatNovo"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/auth/login": {
             "post": {
                 "tags": [
@@ -3559,6 +3807,117 @@
     },
     "components": {
         "schemas": {
+            "RatNovo": {
+                "title": "Nova Estrutura de RAT",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "protocolo": {
+                        "type": "string",
+                        "example": "RAT-2026-0001"
+                    },
+                    "status": {
+                        "description": "0=Rascunho, 1=Finalizado",
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "status_label": {
+                        "type": "string",
+                        "example": "Rascunho"
+                    },
+                    "tem_vistoria": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "dados_gerais": {
+                        "type": "object"
+                    },
+                    "local": {
+                        "type": "object"
+                    },
+                    "recursos": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
+                    "envolvidos": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
+                    "criado_por": {
+                        "type": "string",
+                        "example": "João Silva"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "RatNovoList": {
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RatNovo"
+                        }
+                    },
+                    "meta": {
+                        "$ref": "#/components/schemas/PaginationMeta"
+                    },
+                    "links": {
+                        "$ref": "#/components/schemas/PaginationLinks"
+                    }
+                },
+                "type": "object"
+            },
+            "RatNovoStoreRequest": {
+                "required": [
+                    "numero_bos"
+                ],
+                "properties": {
+                    "numero_bos": {
+                        "type": "string",
+                        "example": "BOS-2026-001"
+                    },
+                    "status": {
+                        "type": "integer",
+                        "default": 0,
+                        "enum": [
+                            0,
+                            1
+                        ]
+                    },
+                    "dados_gerais": {
+                        "properties": {
+                            "nat_codigo": {
+                                "type": "string",
+                                "example": "1.01.00"
+                            },
+                            "local_municipio": {
+                                "type": "string",
+                                "example": "Florianópolis"
+                            },
+                            "local_estadouf": {
+                                "type": "string",
+                                "example": "SC"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
             "ErrorResponse": {
                 "properties": {
                     "success": {
@@ -4128,6 +4487,10 @@
         {
             "name": "Log Viewer",
             "description": "Visualização de logs e eventos do sistema em tempo real"
+        },
+        {
+            "name": "RAT Novo",
+            "description": "Endpoints da API para a nova estrutura de RAT (RatOcorrencia + relatos polimórficos)"
         },
         {
             "name": "Webhooks",
