@@ -21,7 +21,8 @@ return new class extends Migration
                 $table->integer('ordem')->default(0);
                 
                 // Campo JSON para sub-itens estruturados
-                $table->json('sub_itens_json')->nullable();
+                $table->jsonb('sub_itens_json')->nullable();
+                $table->index('sub_itens_json', 'idx_pae_form_templates_sub_itens_json', 'gin');
                 
                 $table->boolean('ativo')->default(true);
                 $table->integer('versao')->default(1);

@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\DB;
  * SERVICES DELEGADOS:
  * - ProcessoQueryService: Consultas e filtros
  * - ProcessoStatsService: Estatisticas do dashboard
- * - ProcessoExportService: Exportacao para PowerBI
+ * - ProcessoExportBIService: Exportacao para PowerBI
  * - HexagonIntegrationService: Integracao externa
  */
 class EntradaProcessoService
@@ -37,7 +37,7 @@ class EntradaProcessoService
         private readonly HexagonIntegrationService $hexagonService,
         private readonly ProcessoQueryService $queryService,
         private readonly ProcessoStatsService $statsService,
-        private readonly ProcessoExportService $exportService
+        private readonly ProcessoExportBIService $exportService
     ) {
     }
 
@@ -161,11 +161,12 @@ class EntradaProcessoService
      *
      * DELEGADO PARA: ProcessoStatsService
      *
+     * @param array $filters Filtros opcionais 
      * @return array Estatisticas formatadas
      */
-    public function getStatistics(): array
+    public function getStatistics(array $filters = []): array
     {
-        return $this->statsService->getDashboardStatistics();
+        return $this->statsService->getDashboardStatistics($filters);
     }
 
     /**
@@ -222,7 +223,7 @@ class EntradaProcessoService
     /**
      * Obtem dados normalizados para PowerBI.
      *
-     * DELEGADO PARA: ProcessoExportService
+     * DELEGADO PARA: ProcessoExportBIService
      *
      * DESTINO: Integracao PowerBI (dashboard externo)
      *

@@ -24,7 +24,7 @@ class ProcessoExportService
     private const DANOS_HUMANOS_MAP = [
         1 => 'obitos',
         2 => 'feridos',
-        3 => 'feridos', // Historicamente agrupado no BD
+        3 => 'feridos',
         4 => 'desabrigados',
         5 => 'desalojados',
         6 => 'desaparecidos',
@@ -41,6 +41,9 @@ class ProcessoExportService
 
     /**
      * Get normalized data for Power BI export.
+     *
+     * PERFORMANCE: Carrega todos os processos com eager load (municipios/desastres)
+     * e calcula totais em 2 queries batch para todos os IDs — sem N+1.
      */
     public function getNormalizedDataForPowerBI(Request $request): array
     {
@@ -50,12 +53,21 @@ class ProcessoExportService
             $query->withTrashed();
         }
 
-        $entradas = $query->get();
+        $entradas = $query->with(['municipios', 'desastres'])->get();
+
+        if ($entradas->isEmpty()) {
+            return [];
+        }
+
+        $allIds = $entradas->pluck('id');
+
+        $desastreTotalsBatch = $this->calculateDesastreTotalsBatch($allIds);
+        $danosHumanosBatch   = $this->calculateDanosHumanosBatch($allIds);
+
         $normalizedData = [];
 
         foreach ($entradas as $entrada) {
-            $entrada->load(['municipios', 'desastres']);
-            $desastreTotals = $this->calculateDesastreTotalsForEntry($entrada);
+            $pid = $entrada->id;
 
             if ($entrada->municipios->isEmpty()) {
                 $normalizedData[] = $this->buildExportRow($entrada, null, [], []);
@@ -63,13 +75,101 @@ class ProcessoExportService
             }
 
             foreach ($entrada->municipios as $municipio) {
-                $municipioTotals = $desastreTotals['por_municipio'][$municipio->id] ?? [];
-                $danosHumanos = $desastreTotals['danos_humanos_por_municipio'][$municipio->id] ?? [];
+                $municipioTotals  = $desastreTotalsBatch[$pid][$municipio->id] ?? [];
+                $danosHumanos     = $danosHumanosBatch[$pid][$municipio->id] ?? [];
                 $normalizedData[] = $this->buildExportRow($entrada, $municipio, $municipioTotals, $danosHumanos);
             }
         }
 
         return $normalizedData;
+    }
+
+    /**
+     * Calcula totais de danos materiais e prejuizos para todos os processos em uma unica query batch.
+     *
+     * Retorna: [processo_id][municipio_id][categoria_titulo][campo_titulo] = valor
+     */
+    private function calculateDesastreTotalsBatch(Collection $processoIds): array
+    {
+        $rows = DB::table('dec_entrada_categoria_desastres as ecd')
+            ->join('dec_entrada_desastres as ed', 'ecd.id', '=', 'ed.entrada_categoria_desastre_id')
+            ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
+            ->join('dec_desastre_categorias as dc', 'ecd.categoria_id', '=', 'dc.id')
+            ->leftJoin('municipios as m', function ($join) {
+                $join->on('ed.municipio_id', '=', 'm.id')
+                     ->orWhereRaw("m.codigo_ibge LIKE CONCAT('31', ed.municipio_id, '_')");
+            })
+            ->whereIn('ecd.entrada_processo_id', $processoIds)
+            ->whereIn('dic.tipo', ['number', 'currency'])
+            ->select(
+                'ecd.entrada_processo_id as processo_id',
+                'ed.municipio_id',
+                'dc.titulo as categoria_titulo',
+                'dic.titulo as desastre_campo_titulo',
+                'dic.tipo',
+                DB::raw("SUM(CAST(COALESCE(ed.valor, '0') AS NUMERIC)) as total_valor")
+            )
+            ->groupBy('ecd.entrada_processo_id', 'ed.municipio_id', 'dc.titulo', 'dic.titulo', 'dic.tipo')
+            ->get();
+
+        $result = [];
+
+        foreach ($rows as $row) {
+            $pid   = $row->processo_id;
+            $mid   = $row->municipio_id;
+            $cat   = $row->categoria_titulo;
+            $campo = $row->desastre_campo_titulo;
+            $valor = $row->tipo === 'currency' ? (float) $row->total_valor : (int) $row->total_valor;
+
+            $result[$pid][$mid][$cat][$campo] = $valor;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Calcula danos humanos para todos os processos em uma unica query batch.
+     *
+     * Retorna: [processo_id][municipio_id] = ['obitos' => int, 'feridos' => int, ...]
+     */
+    private function calculateDanosHumanosBatch(Collection $processoIds): array
+    {
+        $rows = DB::table('dec_entrada_desastres as ed')
+            ->join('dec_entrada_categoria_desastres as ecd', 'ed.entrada_categoria_desastre_id', '=', 'ecd.id')
+            ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
+            ->join('dec_desastre_items as di', 'dic.desastre_item_id', '=', 'di.id')
+            ->join('dec_desastre_categorias as dc', 'di.categoria_id', '=', 'dc.id')
+            ->whereIn('ecd.entrada_processo_id', $processoIds)
+            ->where('dc.id', self::CATEGORIA_DANOS_HUMANOS)
+            ->whereNull('ed.deleted_at')
+            ->select(
+                'ecd.entrada_processo_id as processo_id',
+                'ed.municipio_id',
+                'di.id as item_id',
+                DB::raw("COALESCE(NULLIF(TRIM(ed.valor), ''), '0')::bigint as valor_numerico")
+            )
+            ->get();
+
+        $emptyDanos = array_fill_keys(array_unique(array_values(self::DANOS_HUMANOS_MAP)), 0);
+        $result = [];
+
+        foreach ($rows as $item) {
+            $pid = $item->processo_id;
+            $mid = $item->municipio_id;
+            $key = self::DANOS_HUMANOS_MAP[(int) $item->item_id] ?? null;
+
+            if (!$key) {
+                continue;
+            }
+
+            if (!isset($result[$pid][$mid])) {
+                $result[$pid][$mid] = $emptyDanos;
+            }
+
+            $result[$pid][$mid][$key] += (int) $item->valor_numerico;
+        }
+
+        return $result;
     }
 
     /**
@@ -147,83 +247,6 @@ class ProcessoExportService
             'prejuizos_publicos_valor' => $municipioTotals[self::CAT_PREJUIZOS_PUBLICOS]['Valor do prejuízo (R$)'] ?? $municipioTotals[self::CAT_PREJUIZOS_PUBLICOS]['Valor do prejuizo (R$)'] ?? 0,
             'prejuizos_privados_valor' => $municipioTotals[self::CAT_PREJUIZOS_PRIVADOS]['Valor do prejuízo (R$)'] ?? $municipioTotals[self::CAT_PREJUIZOS_PRIVADOS]['Valor do prejuizo (R$)'] ?? 0,
         ];
-    }
-
-    /**
-     * Calculate desastre totals for a single entry.
-     */
-    private function calculateDesastreTotalsForEntry(Processo $entrada): array
-    {
-        $processoIds = collect([$entrada->id]);
-
-        $allTotals = DB::table('dec_entrada_categoria_desastres as ecd')
-            ->join('dec_entrada_desastres as ed', 'ecd.id', '=', 'ed.entrada_categoria_desastre_id')
-            ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
-            ->join('dec_desastre_categorias as dc', 'ecd.categoria_id', '=', 'dc.id')
-            ->leftJoin('municipios as m', function ($join) {
-                $join->on('ed.municipio_id', '=', 'm.id')
-                     ->orWhereRaw("m.codigo_ibge LIKE CONCAT('31', ed.municipio_id, '_')");
-            })
-            ->whereIn('ecd.entrada_processo_id', $processoIds)
-            ->whereIn('dic.tipo', ['number', 'currency'])
-            ->select(
-                'ed.municipio_id',
-                'dc.titulo as categoria_titulo',
-                'dic.titulo as desastre_campo_titulo',
-                'dic.tipo',
-                DB::raw('SUM(ed.valor) as total_valor')
-            )
-            ->groupBy('ed.municipio_id', 'dc.titulo', 'dic.titulo', 'dic.tipo')
-            ->get();
-
-        $groupedByMunicipio = $allTotals->groupBy('municipio_id')->map(function ($municipioItems) {
-            return $municipioItems->groupBy('categoria_titulo')->map(function ($categoriaItems) {
-                return $categoriaItems->keyBy('desastre_campo_titulo')->map(function ($item) {
-                    return $item->tipo === 'currency' ? (float) $item->total_valor : (int) $item->total_valor;
-                });
-            });
-        });
-
-        $danosHumanosByMunicipio = $this->calculateDanosHumanos($processoIds);
-
-        return [
-            'por_municipio' => $groupedByMunicipio->toArray(),
-            'danos_humanos_por_municipio' => $danosHumanosByMunicipio->toArray()
-        ];
-    }
-
-    /**
-     * Calculate danos humanos for processos.
-     */
-    private function calculateDanosHumanos(Collection $processoIds): Collection
-    {
-        $danosHumanos = DB::table('dec_entrada_desastres as ed')
-            ->join('dec_entrada_categoria_desastres as ecd', 'ed.entrada_categoria_desastre_id', '=', 'ecd.id')
-            ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
-            ->join('dec_desastre_items as di', 'dic.desastre_item_id', '=', 'di.id')
-            ->join('dec_desastre_categorias as dc', 'di.categoria_id', '=', 'dc.id')
-            ->whereIn('ecd.entrada_processo_id', $processoIds)
-            ->where('dc.id', self::CATEGORIA_DANOS_HUMANOS)
-            ->whereNull('ed.deleted_at')
-            ->select(
-                'ed.municipio_id',
-                'di.id as item_id',
-                DB::raw('CAST(COALESCE(ed.valor, 0) AS UNSIGNED) as valor_numerico')
-            )
-            ->get();
-
-        return $danosHumanos->groupBy('municipio_id')->map(function ($municipioItems) {
-            $result = array_fill_keys(array_unique(array_values(self::DANOS_HUMANOS_MAP)), 0);
-
-            foreach ($municipioItems as $item) {
-                $key = self::DANOS_HUMANOS_MAP[(int) $item->item_id] ?? null;
-                if ($key) {
-                    $result[$key] += (int) $item->valor_numerico;
-                }
-            }
-
-            return $result;
-        });
     }
 
     /**

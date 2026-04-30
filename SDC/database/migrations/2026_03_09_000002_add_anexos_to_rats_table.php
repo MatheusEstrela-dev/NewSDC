@@ -9,7 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('rats', function (Blueprint $table) {
-            $table->json('anexos')->nullable()->after('historico');
+            $table->jsonb('anexos')->nullable()->after('historico');
+            $table->index('anexos', 'idx_rats_anexos', 'gin');
         });
     }
 

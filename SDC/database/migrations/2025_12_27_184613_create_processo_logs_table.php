@@ -16,8 +16,10 @@ return new class extends Migration
             $table->foreignId('processo_id')->constrained('processos')->onDelete('cascade');
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
             $table->string('acao');
-            $table->json('dados_antes')->nullable();
-            $table->json('dados_depois')->nullable();
+            $table->jsonb('dados_antes')->nullable();
+            $table->index('dados_antes', 'idx_processo_logs_dados_antes', 'gin');
+            $table->jsonb('dados_depois')->nullable();
+            $table->index('dados_depois', 'idx_processo_logs_dados_depois', 'gin');
             $table->string('ip_address')->nullable();
             $table->text('user_agent')->nullable();
             $table->timestamps();

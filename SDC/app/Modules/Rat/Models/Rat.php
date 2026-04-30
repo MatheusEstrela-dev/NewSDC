@@ -5,10 +5,28 @@ namespace App\Modules\Rat\Models;
 use App\Modules\Rat\Enums\Localizacao;
 use App\Modules\Rat\Enums\Protocolo;
 use App\Modules\Rat\Enums\Status;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property string      $id
+ * @property string      $protocolo
+ * @property string      $status
+ * @property bool        $tem_vistoria
+ * @property array|null  $dados_gerais
+ * @property array|null  $local
+ * @property array|null  $endereco
+ * @property array|null  $comunicacao
+ * @property array|null  $recursos
+ * @property array|null  $envolvidos
+ * @property array|null  $vistoria
+ * @property array|null  $historico
+ * @property array|null  $anexos
+ * @property \Carbon\Carbon|null $created_at
+ * @property \Carbon\Carbon|null $updated_at
+ */
 class Rat extends Model
 {
     use HasUuids; //, SoftDeletes;
@@ -71,6 +89,14 @@ class Rat extends Model
             $this->local['uf'] ?? null,
             $this->local['pais_id'] ?? 1
         );
+    }
+
+    /**
+     * Anexos (arquivos/imagens) vinculados a este RAT.
+     */
+    public function anexos(): HasMany
+    {
+        return $this->hasMany(RatAnexo::class, 'rat_id');
     }
 
     /**

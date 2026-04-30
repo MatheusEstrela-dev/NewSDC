@@ -17,7 +17,8 @@ return new class extends Migration
             $table->string('external_event_id', 255)->index();
             $table->string('provider', 50);
             $table->string('event_type', 100)->nullable();
-            $table->json('payload');
+            $table->jsonb('payload');
+            $table->index('payload', 'idx_webhook_events_payload', 'gin');
             $table->string('signature', 512)->nullable();
             $table->enum('status', [
                 'pending',

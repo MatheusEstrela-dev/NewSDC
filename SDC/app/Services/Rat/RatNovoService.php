@@ -106,4 +106,59 @@ class RatNovoService
             ->values()
             ->toArray();
     }
+    /**
+     * Cria uma nova ocorrência de RAT.
+     */
+    public function createRat(array $data): RatOcorrencia
+    {
+        return \DB::transaction(function () use ($data) {
+            $ocorrencia = RatOcorrencia::create([
+                'numero_bos'   => $data['numero_bos'] ?? null,
+                'status'       => $data['status'] ?? 0,
+                'prazo_edicao' => $data['prazo_edicao'] ?? now()->addHours(24),
+                'created_by'   => auth()->id(),
+            ]);
+
+            // Se houver dados gerais iniciais
+            if (isset($data['dados_gerais'])) {
+                $this->addRelato($ocorrencia, RatRelatoDadosGerais::class, $data['dados_gerais']);
+            }
+
+            return $ocorrencia;
+        });
+    }
+
+    /**
+     * Atualiza dados básicos de uma ocorrência.
+     */
+    public function updateRat(int $id, array $data): RatOcorrencia
+    {
+        $ocorrencia = RatOcorrencia::findOrFail($id);
+        $ocorrencia->update($data);
+
+        return $ocorrencia;
+    }
+
+    /**
+     * Remove uma ocorrência (soft delete em cascata).
+     */
+    public function deleteRat(int $id): bool
+    {
+        $ocorrencia = RatOcorrencia::findOrFail($id);
+        return $ocorrencia->delete();
+    }
+
+    /**
+     * Helper para adicionar um relato polimórfico.
+     */
+    private function addRelato(RatOcorrencia $ocorrencia, string $type, array $data): void
+    {
+        $conteudo = $type::create($data);
+
+        $ocorrencia->relatos()->create([
+            'conteudo_id'   => $conteudo->id,
+            'conteudo_type' => $type,
+            'created_by'    => auth()->id(),
+        ]);
+    }
 }

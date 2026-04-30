@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('webhook_logs', function (Blueprint $table) {
             $table->id();
             $table->string('url', 500);
-            $table->json('payload');
+            $table->jsonb('payload');
+            $table->index('payload', 'idx_webhook_logs_payload', 'gin');
             $table->integer('status_code')->default(0);
             $table->text('response')->nullable();
             $table->decimal('duration_ms', 10, 2)->default(0);

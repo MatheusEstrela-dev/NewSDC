@@ -92,7 +92,7 @@
           v-if="canSeeRat && _routes.hasRat"
           :href="ratHref"
           :active="isRouteActive('rat.*')"
-          icon="document"
+          icon="rat-clipboard"
           :collapsed="isCollapsed"
         >
           RAT
@@ -101,7 +101,7 @@
           v-if="canSeePae && _routes.hasPae"
           :href="paeHref"
           :active="isRouteActive('pae.*')"
-          icon="document"
+          icon="pae-bolt"
           :collapsed="isCollapsed"
         >
           PAE
@@ -284,7 +284,7 @@
           v-if="canSeeLogs"
           :href="route('log-viewer.index')"
           :active="isRouteActive('log-viewer.*')"
-          icon="document"
+          icon="logs-list"
           :collapsed="isCollapsed"
         >
           Logs

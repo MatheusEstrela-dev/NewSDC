@@ -93,34 +93,17 @@
 <script setup>
 import { computed, ref } from 'vue';
 
+const props = defineProps({
+  barData6M:  { type: Array, default: () => [] },
+  barData12M: { type: Array, default: () => [] },
+});
+
 const barPeriod = ref('6M');
 const hoveredBarIndex = ref(null);
 
-const barData6M = ref([
-  { label: 'Set', value: 45 },
-  { label: 'Out', value: 62 },
-  { label: 'Nov', value: 58 },
-  { label: 'Dez', value: 71 },
-  { label: 'Jan', value: 83 },
-  { label: 'Fev', value: 47 },
-]);
-
-const barData12M = ref([
-  { label: 'Mar', value: 32 },
-  { label: 'Abr', value: 38 },
-  { label: 'Mai', value: 41 },
-  { label: 'Jun', value: 55 },
-  { label: 'Jul', value: 48 },
-  { label: 'Ago', value: 39 },
-  { label: 'Set', value: 45 },
-  { label: 'Out', value: 62 },
-  { label: 'Nov', value: 58 },
-  { label: 'Dez', value: 71 },
-  { label: 'Jan', value: 83 },
-  { label: 'Fev', value: 47 },
-]);
-
-const activeBarData = computed(() => barPeriod.value === '6M' ? barData6M.value : barData12M.value);
+const activeBarData = computed(() =>
+  barPeriod.value === '6M' ? props.barData6M : props.barData12M
+);
 const maxBarValue = computed(() => Math.max(...activeBarData.value.map(b => b.value)));
 </script>
 <style scoped>

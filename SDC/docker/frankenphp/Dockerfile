@@ -3,11 +3,15 @@
 # Build otimizado com Early Hints e HTTP/2-3 nativo
 # ============================================================================
 
-FROM dunglas/frankenphp:latest-php8.3-alpine
+# FROM dunglas/frankenphp:latest-php8.3-alpine
+FROM c24773c3328e
 
 LABEL maintainer="SDC Team"
 LABEL environment="production"
 LABEL server="frankenphp"
+
+ARG UID=1000
+ARG GID=1000
 
 # Instalar extensoes PHP necessarias
 RUN install-php-extensions \
@@ -25,8 +29,8 @@ RUN install-php-extensions \
     sockets \
     redis
 
-# Copiar Composer
-COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+# Instalar Composer via apk (evita pull do DockerHub bloqueado por proxy)
+RUN apk add --no-cache composer
 
 # Instalar Bun para build de assets (temporario)
 RUN apk add --no-cache curl bash unzip \
@@ -73,6 +77,11 @@ RUN composer install \
 # Copiar codigo da aplicacao
 COPY . .
 
+# Substituir FrankenPHP pelo binario v1.12.1 (base image vem com versao antiga)
+RUN cp /app/docker/frankenphp/frankenphp-linux-x86_64 /usr/local/bin/frankenphp \
+    && chmod +x /usr/local/bin/frankenphp \
+    && ln -sf /usr/local/bin/frankenphp /app/frankenphp
+
 # Remover arquivo hot do Vite dev server
 RUN rm -f public/hot
 
@@ -107,9 +116,9 @@ RUN test -f /app/composer.json && \
 # Expor portas (HTTP, HTTPS, Admin API Caddy)
 EXPOSE 80 443 2019
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -sfk https://localhost/health || exit 1
+# Health check — HTTP puro (TLS terminado pelo Azure na borda)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD curl -sf http://localhost:${PORT:-80}/health || exit 1
 
 # Comando padrao
 CMD ["/start.sh"]

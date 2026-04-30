@@ -14,8 +14,10 @@ return new class extends Migration
             $table->string('type', 50); // rest_api, soap, graphql, webhook, etc
             $table->string('action', 100);
             $table->string('endpoint', 500)->nullable();
-            $table->json('payload');
-            $table->json('response')->nullable();
+            $table->jsonb('payload');
+            $table->index('payload', 'idx_integrations_payload', 'gin');
+            $table->jsonb('response')->nullable();
+            $table->index('response', 'idx_integrations_response', 'gin');
             $table->decimal('duration_ms', 10, 2)->default(0);
             $table->boolean('success')->default(false);
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();

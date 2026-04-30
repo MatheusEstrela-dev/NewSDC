@@ -181,6 +181,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit' => 'Editar',
             'delete' => 'Deletar',
             'approve' => 'Aprovar',
+            'assign' => 'Atribuir',
             'finalize' => 'Finalizar',
             'manage' => 'Gerenciar',
             'execute' => 'Executar',

@@ -12,7 +12,8 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->string('title', 255)->nullable();
-            $table->json('metadata')->nullable();
+            $table->jsonb('metadata')->nullable();
+            $table->index('metadata', 'idx_ai_conversations_metadata', 'gin');
             $table->timestamps();
 
             $table->index('user_id');
@@ -24,8 +25,10 @@ return new class extends Migration
             $table->foreignUuid('conversation_id')->constrained('ai_conversations')->cascadeOnDelete();
             $table->enum('role', ['user', 'assistant', 'system', 'tool']);
             $table->text('content');
-            $table->json('tool_calls')->nullable();
-            $table->json('metadata')->nullable();
+            $table->jsonb('tool_calls')->nullable();
+            $table->index('tool_calls', 'idx_ai_messages_tool_calls', 'gin');
+            $table->jsonb('metadata')->nullable();
+            $table->index('metadata', 'idx_ai_messages_metadata', 'gin');
             $table->timestamps();
 
             $table->index('conversation_id');
@@ -36,8 +39,10 @@ return new class extends Migration
         Schema::create('ai_execution_logs', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('plugin_name')->index();
-            $table->json('input_params')->nullable();
-            $table->json('output_result')->nullable();
+            $table->jsonb('input_params')->nullable();
+            $table->index('input_params', 'idx_ai_execution_logs_input_params', 'gin');
+            $table->jsonb('output_result')->nullable();
+            $table->index('output_result', 'idx_ai_execution_logs_output_result', 'gin');
             $table->string('status')->default('success');
             $table->text('error_message')->nullable();
             $table->decimal('execution_time_ms', 10, 2)->nullable();

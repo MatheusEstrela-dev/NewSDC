@@ -23,6 +23,15 @@ RETENTION_MONTHLY="${BACKUP_RETENTION_MONTHLY:-12}"
 SLACK_WEBHOOK="${SLACK_WEBHOOK_URL:-}"
 PROMETHEUS_GATEWAY="${PROMETHEUS_PUSHGATEWAY:-}"
 
+# Compressao: preferir pigz (paralelo), fallback para gzip
+if command -v pigz &>/dev/null; then
+    COMPRESS_CMD="pigz -9 -p 2"
+    TEST_CMD="pigz -t"
+else
+    COMPRESS_CMD="gzip -9"
+    TEST_CMD="gzip -t"
+fi
+
 # ===== FUNÇÕES =====
 log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
@@ -99,6 +108,15 @@ jenkins_backup_success 0
 jenkins_backup_timestamp $(date +%s)
 EOF
     fi
+
+    # Teams notification (alertas criticos)
+    local TEAMS_WEBHOOK="${TEAMS_WEBHOOK_URL:-}"
+    if [ -n "$TEAMS_WEBHOOK" ]; then
+        curl -sf -X POST "$TEAMS_WEBHOOK" \
+            -H 'Content-Type: application/json' \
+            -d "{\"@type\":\"MessageCard\",\"@context\":\"http://schema.org/extensions\",\"themeColor\":\"FF0000\",\"summary\":\"Backup Jenkins FALHOU\",\"title\":\"Backup Jenkins FALHOU\",\"text\":\"$error_msg\"}" \
+            &>/dev/null || true
+    fi
 }
 
 # ===== PRÉ-VALIDAÇÕES =====
@@ -134,7 +152,7 @@ tar -C "$SOURCE_DIR" \
     --exclude='war/*' \
     --exclude='tmp/*' \
     --exclude='*.log' \
-    -cf - . | pigz -9 -p 2 > "$BACKUP_FILE" \
+    -cf - . | ${COMPRESS_CMD} > "$BACKUP_FILE" \
     || error "Falha ao criar backup"
 
 END_TIME=$(date +%s)
@@ -148,8 +166,8 @@ log "Verificando integridade do backup..."
 [ -s "$BACKUP_FILE" ] || error "Arquivo de backup está vazio"
 
 # Teste 2: Verificar se tar.gz é válido
-if ! pigz -t "$BACKUP_FILE" &>/dev/null; then
-    error "Arquivo de backup está corrompido (falha no pigz -t)"
+if ! ${TEST_CMD} "$BACKUP_FILE" &>/dev/null; then
+    error "Arquivo de backup esta corrompido (falha no teste de integridade)"
 fi
 
 # Teste 3: Listar conteúdo sem extrair
@@ -230,6 +248,7 @@ log "Backups totais: $TOTAL_BACKUPS"
 log "Espaço total usado: $TOTAL_SIZE"
 
 # ===== NOTIFICAÇÃO DE SUCESSO =====
+echo "$(date +%s)" > "${BACKUP_DIR}/last_backup_success"
 notify_success "$BACKUP_SIZE" "$DURATION"
 
 log "Backup concluído com sucesso!"

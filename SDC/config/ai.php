@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default_driver' => env('AI_DRIVER', 'ollama'),
+    'default_driver' => env('AI_DRIVER', 'gemini'),
 
     /*
     |--------------------------------------------------------------------------
@@ -38,8 +38,10 @@ return [
         ],
 
         'gemini' => [
-            'api_key' => env('GEMINI_API_KEY'),
-            'model' => env('GEMINI_MODEL', 'gemini-1.5-pro'),
+            'api_key'    => env('GEMINI_API_KEY'),
+            'model'      => env('GEMINI_MODEL', 'gemini-2.0-flash'),
+            'base_url'   => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
+            'max_tokens' => (int) env('GEMINI_MAX_TOKENS', 4096),
         ],
 
         'ollama' => [
@@ -63,10 +65,7 @@ return [
     |
     */
 
-    'system_prompt' => 'Você é o Assistente Inteligente da Defesa Civil de Minas Gerais (NewSDC). 
-                        Sua missão é auxiliar agentes em campo e gestores com informações precisas sobre protocolos, 
-                        alertas meteorológicos e gestão de recursos. 
-                        Mantenha um tom profissional, direto e prestativo.',
+    'system_prompt' => null,
 
     /*
     |--------------------------------------------------------------------------

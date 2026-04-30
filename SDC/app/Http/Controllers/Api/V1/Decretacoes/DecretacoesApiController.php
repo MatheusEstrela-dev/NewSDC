@@ -67,7 +67,7 @@ class DecretacoesApiController extends Controller
         ]);
 
         $perPage = (int) $request->input('per_page', 15);
-        $data = $this->queryService->listForApi($filters, $perPage);
+        $data = $this->queryService->listForApiFlat($filters, $perPage);
 
         return response()->json([
             'success' => true,

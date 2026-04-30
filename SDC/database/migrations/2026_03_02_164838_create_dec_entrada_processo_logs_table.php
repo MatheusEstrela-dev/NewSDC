@@ -16,7 +16,8 @@ return new class extends Migration
                 ->constrained('dec_entrada_processos')
                 ->onDelete('cascade');
 
-            $table->json('entrada_processo_data');
+            $table->jsonb('entrada_processo_data');
+            $table->index('entrada_processo_data', 'idx_dec_entrada_processo_logs_entrada_processo_data', 'gin');
 
             $table->string('action', 191)->default('updated');
 

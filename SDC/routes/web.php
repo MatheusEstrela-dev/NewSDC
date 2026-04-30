@@ -102,7 +102,9 @@ Route::middleware('auth')->group(function () {
     })->name('health.dashboard');
 
     // Global Search
-    Route::get('/global-search', [GlobalSearchController::class, 'index'])->name('global.search');
+    Route::get('/global-search', [GlobalSearchController::class, 'search'])
+        ->middleware('throttle:30,1')
+        ->name('global.search');
 
     // Permissionamento (Admin)
     require __DIR__ . '/modules/permissions.php';
@@ -153,3 +155,5 @@ require __DIR__ . '/modules/inmet.php';
 
 require __DIR__ . '/auth.php';
 
+// Health check - sem middleware para evitar dependencia de DB/session
+Route::get('/health', fn() => response()->json(['status' => 'ok', 'timestamp' => now()->toIso8601String()]))->withoutMiddleware('web');

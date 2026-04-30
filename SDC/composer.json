@@ -10,6 +10,9 @@
     "require": {
         "php": "^8.3",
         "darkaonline/l5-swagger": "^8.6",
+        "doctrine/dbal": "^4",
+        "doctrine/orm": "^3",
+        "google-gemini-php/client": "*",
         "guzzlehttp/guzzle": "^7.9",
         "inertiajs/inertia-laravel": "^1.3",
         "laravel/breeze": "^2.2",
@@ -18,11 +21,13 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10",
         "nativephp/mobile": "^3.0",
+        "predis/predis": "^3.4",
         "rap2hpoutre/laravel-log-viewer": "^2.5",
         "saloonphp/saloon": "^3.14",
         "spatie/laravel-permission": "^6.24",
         "spiral/roadrunner-cli": "^2.6.0",
         "spiral/roadrunner-http": "^3.3.0",
+        "theodo-group/llphant": "*",
         "tightenco/ziggy": "^2.5"
     },
     "require-dev": {

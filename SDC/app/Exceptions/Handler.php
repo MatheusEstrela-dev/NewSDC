@@ -369,20 +369,27 @@ class Handler extends ExceptionHandler
     {
         $statusCode = $this->getStatusCode($e);
 
-        return response()->json([
+        $payload = [
             'error' => true,
             'message' => $this->getErrorMessage($e),
             'code' => $e->getCode(),
             'status' => $statusCode,
             'timestamp' => now()->toIso8601String(),
             'path' => $request->path(),
-            ...(config('app.debug') ? [
-                'exception' => get_class($e),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => collect($e->getTrace())->take(5)->toArray(),
-            ] : []),
-        ], $statusCode);
+        ];
+
+        if ($e instanceof ValidationException) {
+            $payload['errors'] = $e->errors();
+        }
+
+        if (config('app.debug')) {
+            $payload['exception'] = get_class($e);
+            $payload['file'] = $e->getFile();
+            $payload['line'] = $e->getLine();
+            $payload['trace'] = collect($e->getTrace())->take(5)->toArray();
+        }
+
+        return response()->json($payload, $statusCode);
     }
 
     /**

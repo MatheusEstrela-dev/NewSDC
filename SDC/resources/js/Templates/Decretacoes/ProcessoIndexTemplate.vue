@@ -128,6 +128,7 @@ import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 
 // Detecção mobile
@@ -192,7 +193,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['filter-change', 'clear-filters', 'page-change', 'view', 'edit', 'create', 'delete']);
+const emit = defineEmits(['filter-change', 'clear-filters', 'page-change', 'view', 'edit', 'create']);
 
 const localFilters = ref({ ...props.filters });
 const viewMode = ref('table');
@@ -265,10 +266,16 @@ function handleDelete(id) {
 function confirmDelete() {
   if (processoIdToDelete.value) {
     deleteLoading.value = true;
-    emit('delete', processoIdToDelete.value);
-    deleteLoading.value = false;
-    showDeleteConfirm.value = false;
-    processoIdToDelete.value = null;
+    router.delete(route('decretacoes.destroy', processoIdToDelete.value), {
+      preserveScroll: true,
+      onSuccess: () => {
+        showDeleteConfirm.value = false;
+        processoIdToDelete.value = null;
+      },
+      onFinish: () => {
+        deleteLoading.value = false;
+      },
+    });
   }
 }
 

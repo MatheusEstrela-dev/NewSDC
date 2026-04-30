@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Services;
 
+use App\Modules\Decretacoes\Filters\ProcessoFilter;
 use App\Modules\Decretacoes\Models\DecretoMunicipio;
 use App\Modules\Decretacoes\Models\Processo;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 /**
  * Service responsible for Processo statistics and dashboard metrics.
- * Cache: 30 minutos para estatisticas de dashboard.
+ * Cache: 30 minutos para estatisticas de dashboard (quando sem filtros).
  *
  * Calcula estatisticas para os 5 cards do dashboard de Decretacoes:
  * - Total de Eventos
@@ -24,12 +26,11 @@ use Illuminate\Support\Facades\Cache;
  */
 class ProcessoStatsService
 {
-    private const CACHE_TTL = 1800;
     private const CACHE_PREFIX = 'decretacoes.stats.';
 
     /**
      * Get dashboard statistics for DecretacoesStatsCards component.
-     * Cached for 30 minutes.
+     * Cached for 30 minutes if no active filters.
      *
      * Retorna estrutura compativel com o componente Vue:
      * - totalEventos, totalEventosEcp, totalEventosSe
@@ -38,12 +39,20 @@ class ProcessoStatsService
      * - municipiosAtingidos, municipiosAtingidosEcp, municipiosAtingidosSe
      * - decretacoesVigentes, decretacoesVigentesEcp, decretacoesVigentesSe
      *
+     * @param array $filters Filtros opcionais aplicados na interface
      * @return array<string, int>
      */
-    public function getDashboardStatistics(): array
+    public function getDashboardStatistics(array $filters = []): array
     {
-        return Cache::remember(self::CACHE_PREFIX . 'dashboard', self::CACHE_TTL, function () {
+        $calculaEstatisticas = function () use ($filters) {
             $baseQuery = Processo::query();
+
+            // Aplica os filtros na query base, se houver
+            if (!empty($filters)) {
+                $request = new Request($filters);
+                $filter = new ProcessoFilter($request);
+                $baseQuery = $filter->apply($baseQuery);
+            }
 
             return [
             // Total de Eventos
@@ -71,7 +80,26 @@ class ProcessoStatsService
             'decretacoesVigentesEcp' => $this->getDecretacoesVigentes($baseQuery, 'ECP'),
             'decretacoesVigentesSe'  => $this->getDecretacoesVigentes($baseQuery, 'SE'),
             ];
-        });
+        };
+
+        // Verifica se existem filtros "ativos" (ignorando campos vazios/nulos)
+        $hasFilters = collect($filters)
+            ->only([
+                'search', 'data_entrada', 'data_entrada_inicio', 'data_entrada_fim',
+                'processo', 'reconhecimento', 'analista', 'situacao_anormalidade',
+                'data_decreto_inicio', 'data_decreto_fim', 'vigencia_status',
+                'tipo_desastre_id', 'municipio_id', 'n_protocolo_fide'
+            ])
+            ->filter(fn ($v) => $v !== null && $v !== '')
+            ->isNotEmpty();
+
+        // Se não houver filtros ativos, usa cache infinito
+        if (!$hasFilters) {
+            return Cache::rememberForever(self::CACHE_PREFIX . 'dashboard', $calculaEstatisticas);
+        }
+
+        // Se houver filtros, recalcula on the fly sem tocar no cache
+        return $calculaEstatisticas();
     }
 
     /**
@@ -164,13 +192,8 @@ class ProcessoStatsService
 
         // Vigencia: data_publicacao_mg NULL ou dentro do prazo
         $query->where(function ($q) {
-            $q->whereNull('data_publicacao_mg');
-            
-            if (config('database.default') === 'sqlite') {
-                $q->orWhereRaw("date(data_publicacao_mg, '+' || prazo_vigencia || ' days') >= date('now')");
-            } else {
-                $q->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
-            }
+            $q->whereNull('data_publicacao_mg')
+              ->orWhereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE");
         });
 
         // Reconhecido pelo estado
@@ -191,15 +214,10 @@ class ProcessoStatsService
      */
     public function getVigentesCount(): int
     {
-        return Cache::remember(self::CACHE_PREFIX . 'vigentes', self::CACHE_TTL, function () {
+        return Cache::rememberForever(self::CACHE_PREFIX . 'vigentes', function () {
             return Processo::where(function ($q) {
-                $q->whereNull('data_publicacao_mg');
-                
-                if (config('database.default') === 'sqlite') {
-                    $q->orWhereRaw("date(data_publicacao_mg, '+' || prazo_vigencia || ' days') >= date('now')");
-                } else {
-                    $q->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
-                }
+                $q->whereNull('data_publicacao_mg')
+                  ->orWhereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE");
             })->count();
         });
     }

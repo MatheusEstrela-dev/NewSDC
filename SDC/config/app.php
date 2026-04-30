@@ -173,7 +173,7 @@ return [
         App\Modules\Inmet\InmetServiceProvider::class,
         App\Modules\Suporte\SuporteServiceProvider::class,
         App\Modules\PlanCon\PlanConServiceProvider::class,
-        App\Modules\Compdec\CompdecServiceProvider::class,
+        App\Modules\Dashboard\DashboardServiceProvider::class,
     ])->toArray(),
 
     /*

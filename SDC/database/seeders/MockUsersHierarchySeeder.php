@@ -314,10 +314,16 @@ class MockUsersHierarchySeeder extends Seeder
 
             // Vincular ao orgão na tabela pivot
             if ($orgaoPrincipalId) {
+                $funcaoMap = [
+                    'super-admin' => 'coordenador',
+                    'admin'       => 'coordenador',
+                ];
+                $funcao = $funcaoMap[$roleName] ?? 'agente';
+
                 DB::table('orgao_user')->insertOrIgnore([
                     'user_id'      => $user->id,
                     'orgao_id'     => $orgaoPrincipalId,
-                    'funcao'       => $roleName ?? 'membro',
+                    'funcao'       => $funcao,
                     'is_principal'  => true,
                     'created_at'   => now(),
                     'updated_at'   => now(),

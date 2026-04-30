@@ -88,13 +88,14 @@
 
             <!-- Empty State -->
             <div
-              v-else-if="!hasResults && query.length >= 2"
+              v-else-if="!isLoading && !hasResults && query.length >= 2"
               class="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400"
             >
               <svg class="w-10 h-10 mb-3 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p class="text-sm">Não encontramos nada para "<span class="font-medium text-slate-900 dark:text-slate-100">{{ query }}</span>"</p>
+              <p class="text-xs text-slate-400 mt-1">Verifique o número de protocolo ou tente outro módulo</p>
             </div>
 
              <!-- Initial State (Quick Actions / Recent) -->
@@ -289,11 +290,18 @@ const navigationIndex = computed(() => [
     { id: 'act_logout', title: 'Sair do Sistema', subtitle: 'Fazer Logout', url: safeRoute('logout'), icon: 'logout', category: 'actions', method: 'post', keywords: ['sair', 'logoff'] },
 ]);
 
-// Mock Quick Actions
+// Quick Actions — acoes e navegacao rapida
 const quickActions = computed(() => [
-  { id: 'qa_rat', title: 'Novo RAT', subtitle: 'Criar Relatório de Atendimento', url: safeRoute('rat.create'), icon: 'document', type: 'action' },
-  { id: 'qa_dem', title: 'Nova Demanda', subtitle: 'Abrir um chamado', url: safeRoute('demandas.nova'), icon: 'checkbadge', type: 'action' },
-  { id: 'qa_prof', title: 'Meu Perfil', subtitle: 'Configurações da conta', url: '/profile?open_profile=true', icon: 'user', type: 'action' }, // Link especial para abrir modal
+  // Acoes rapidas
+  { id: 'qa_rat',  title: 'Novo RAT',      subtitle: 'Criar Relatório de Atendimento', url: safeRoute('rat.create'),      icon: 'document',    type: 'action' },
+  { id: 'qa_dem',  title: 'Nova Demanda',   subtitle: 'Abrir um chamado',              url: safeRoute('demandas.create'),  icon: 'checkbadge',  type: 'action' },
+  // Modulos principais
+  { id: 'qa_dec',  title: 'Decretações',    subtitle: 'Gestão de Decretos (SEAD)',     url: safeRoute('decretacoes.index'), icon: 'scale',       type: 'navigation' },
+  { id: 'qa_pae',  title: 'PAE',            subtitle: 'Plano de Ação de Emergência',   url: safeRoute('pae.index', safeRoute('pae.protocolos.index')), icon: 'document', type: 'navigation' },
+  { id: 'qa_hum',  title: 'Ajuda Humanitária', subtitle: 'Beneficiários e Entregas',  url: safeRoute('ajuda-humanitaria.beneficiarios.index'), icon: 'heart', type: 'navigation' },
+  { id: 'qa_org',  title: 'Órgãos',         subtitle: 'COMPDEC e Parceiros',          url: safeRoute('compdec.index'),    icon: 'building',    type: 'navigation' },
+  // Conta
+  { id: 'qa_prof', title: 'Meu Perfil',     subtitle: 'Configurações da conta',       url: '/profile?open_profile=true',  icon: 'user',        type: 'action' },
 ]);
 
 const flattenedResults = computed(() => {
@@ -395,6 +403,34 @@ const handleInput = () => {
       });
   }
 
+  // Deteccao de formato Decreto: MG-F-XX-XXXXX ou similares
+  const decretoMatch = q.match(/^(mg|rs|sp|rj|pr|sc|ba|es|go|mt|ms|pe|ce|ma|al|rn|pb|pi|am|pa|ap|ro|rr|ac|to|df)[-\s]?(f|s|e|d)[-\s]?(\d+)/i);
+  if (decretoMatch && q.length >= 4) {
+      directActions.push({
+          id: `goto_decreto_search_${q}`,
+          title: `Buscar Decreto "${q.toUpperCase()}"`,
+          subtitle: 'Pesquisar em Decretações',
+          url: safeRoute('decretacoes.index') + '?search=' + encodeURIComponent(query.value),
+          icon: 'scale',
+          category: 'actions',
+          tag: 'DECRETO'
+      });
+  }
+
+  // Deteccao de formato PAE: DD.MM.YYYY ou parcial com pontos
+  const paeMatch = q.match(/^\d{2}\.\d{2}/);
+  if (paeMatch) {
+      directActions.push({
+          id: `goto_pae_search_${q}`,
+          title: `Buscar PAE "${q}"`,
+          subtitle: 'Pesquisar em Protocolos PAE',
+          url: safeRoute('pae.protocolos.index') + '?search=' + encodeURIComponent(query.value),
+          icon: 'document',
+          category: 'actions',
+          tag: 'PAE'
+      });
+  }
+
   // B. Navigation & Keyword Search
   const localResults = navigationIndex.value.filter(item => {
       return item.title.toLowerCase().includes(q) ||
@@ -415,15 +451,20 @@ const handleInput = () => {
   // Only if backend is reachable (we wrap in try/catch)
   searchTimeout = setTimeout(async () => {
     try {
-      // Simulate/Real API call
-      // const response = await window.axios.get(route('global.search'), { params: { query: query.value } });
-      // Merge results...
-      // For now, we stick to local results as requested by user environment constraints
-
-      // If we had DB results, we would append them:
-      // results.value.db_results = response.data;
+      const response = await window.axios.get(route('global.search'), {
+        params: { q: query.value },
+        timeout: 8000,
+      });
+      const r = response.data.results ?? {};
+      const dbResults = [
+        ...(r.decretacoes ?? []),
+        ...(r.rat        ?? []),
+        ...(r.demandas   ?? []),
+        ...(r.pae        ?? []),
+      ];
+      results.value = { ...results.value, db_results: dbResults };
     } catch (error) {
-      // console.error('API Search skipped');
+      // Falha silenciosa — resultados locais continuam visíveis
     } finally {
       isLoading.value = false;
     }

@@ -20,8 +20,10 @@ return new class extends Migration
             $table->string('action', 50);
             $table->string('entity_type', 100);
             $table->unsignedBigInteger('entity_id')->nullable();
-            $table->json('before_state')->nullable();
-            $table->json('after_state')->nullable();
+            $table->jsonb('before_state')->nullable();
+            $table->index('before_state', 'idx_permission_audit_log_before_state', 'gin');
+            $table->jsonb('after_state')->nullable();
+            $table->index('after_state', 'idx_permission_audit_log_after_state', 'gin');
             $table->string('ip_address', 45);
             $table->text('user_agent')->nullable();
             $table->timestamp('created_at')->useCurrent();

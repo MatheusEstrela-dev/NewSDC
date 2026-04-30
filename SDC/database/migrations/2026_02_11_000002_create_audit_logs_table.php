@@ -18,8 +18,10 @@ return new class extends Migration
             $table->enum('event', ['insert', 'update', 'delete', 'login', 'logout']);
             $table->string('table_name', 50);
             $table->unsignedBigInteger('row_id')->nullable();
-            $table->json('old_values')->nullable();
-            $table->json('new_values')->nullable();
+            $table->jsonb('old_values')->nullable();
+            $table->index('old_values', 'idx_audit_logs_old_values', 'gin');
+            $table->jsonb('new_values')->nullable();
+            $table->index('new_values', 'idx_audit_logs_new_values', 'gin');
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
             $table->timestamp('created_at')->useCurrent();

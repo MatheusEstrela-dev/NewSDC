@@ -361,17 +361,18 @@ class HealthCheckController extends Controller
     private function getDatabaseConnections(): array
     {
         try {
-            $result = DB::select("SHOW STATUS WHERE Variable_name IN ('Threads_connected', 'Max_used_connections', 'Threads_running')");
-
-            $connections = [];
-            foreach ($result as $row) {
-                $connections[strtolower($row->Variable_name)] = (int) $row->Value;
-            }
+            $result = DB::selectOne("
+                SELECT
+                    COUNT(*) FILTER (WHERE state IS NOT NULL) AS active,
+                    COUNT(*) FILTER (WHERE state = 'active')  AS running
+                FROM pg_stat_activity
+                WHERE datname = current_database()
+            ");
 
             return [
-                'active' => $connections['threads_connected'] ?? 0,
-                'max_used' => $connections['max_used_connections'] ?? 0,
-                'running' => $connections['threads_running'] ?? 0,
+                'active'   => (int) ($result->active  ?? 0),
+                'max_used' => 0,
+                'running'  => (int) ($result->running ?? 0),
             ];
         } catch (\Exception $e) {
             return [

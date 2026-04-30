@@ -134,6 +134,28 @@
 
                 <!-- Tab: Notificações -->
                 <div v-if="currentTab === 'notifications'" class="space-y-8">
+                    <!-- Modo de Atualizacao do Feed -->
+                    <div class="p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
+                        <h4 class="font-bold text-slate-900 dark:text-white mb-1">Modo de Atualizacao</h4>
+                        <p class="text-xs text-slate-500 mb-4">Como o bloco "Ultimas Movimentacoes" do dashboard se atualiza.</p>
+                        <div class="flex gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" v-model="updateMode" value="polling" class="text-blue-600 focus:ring-blue-500">
+                                <div>
+                                    <span class="text-sm font-medium text-slate-900 dark:text-white">Polling (60s)</span>
+                                    <p class="text-xs text-slate-500">Consulta automatica a cada 60 segundos</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" v-model="updateMode" value="realtime" class="text-blue-600 focus:ring-blue-500">
+                                <div>
+                                    <span class="text-sm font-medium text-slate-900 dark:text-white">Tempo Real</span>
+                                    <p class="text-xs text-slate-500">Atualizacoes instantaneas via WebSocket</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <div v-for="module in notificationModules" :key="module.id" class="p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-3">
@@ -428,6 +450,26 @@ watch(
 const page = usePage();
 const currentTab = ref('profile');
 const isSaving = ref(false);
+const updateMode = ref('polling');
+
+async function loadPreferences() {
+    try {
+        const res = await window.axios.get('/api/v1/notification-preferences');
+        updateMode.value = res.data.update_mode ?? 'polling';
+
+        const serverModules = res.data.modules ?? [];
+        serverModules.forEach(serverMod => {
+            const local = notificationModules.value.find(m => m.id === serverMod.module);
+            if (local) {
+                local.channels.bell  = serverMod.canal_sistema;
+                local.channels.email = serverMod.canal_email;
+                local.channels.push  = serverMod.canal_push;
+            }
+        });
+    } catch (e) {
+        // silencioso - mantém defaults
+    }
+}
 
 const tabs = [
   { id: 'profile', label: 'Meu Perfil', icon: UserIcon, description: 'Gerencie suas informações pessoais e assinatura digital.' },
@@ -467,10 +509,11 @@ const passwordMismatch = computed(() =>
 );
 
 const notificationModules = ref([
-    { id: 'rat', name: 'Relatórios (RAT)', description: 'Alertas sobre novos relatórios, vistorias e aprovações.', icon: 'DocumentTextIcon', channels: { bell: true, email: true, push: false } },
-    { id: 'pae', name: 'Planos (PAE)', description: 'Vencimentos de prazos e atualizações de status.', icon: 'MapIcon', channels: { bell: true, email: false, push: true } },
-    { id: 'meteo', name: 'Meteorologia', description: 'Alertas críticos de chuva e mudanças climáticas (INMET).', icon: 'CloudIcon', channels: { bell: true, email: true, push: true } },
-    { id: 'demanda', name: 'Demandas/Chamados', description: 'Atribuições de tarefas e novos comentários.', icon: 'CheckBadgeIcon', channels: { bell: true, email: false, push: false } },
+    { id: 'rat',          name: 'Relatorios (RAT)',  description: 'Alertas sobre novos relatorios, vistorias e aprovacoes.',  icon: 'DocumentTextIcon', channels: { bell: true,  email: true,  push: false } },
+    { id: 'pae',          name: 'Planos (PAE)',       description: 'Vencimentos de prazos e atualizacoes de status.',          icon: 'MapIcon',          channels: { bell: true,  email: false, push: true  } },
+    { id: 'meteorologia', name: 'Meteorologia',       description: 'Alertas criticos de chuva e mudancas climaticas (INMET).', icon: 'CloudIcon',        channels: { bell: true,  email: true,  push: true  } },
+    { id: 'demandas',     name: 'Demandas/Chamados',  description: 'Atribuicoes de tarefas e novos comentarios.',              icon: 'CheckBadgeIcon',   channels: { bell: true,  email: false, push: false } },
+    { id: 'decretacoes',  name: 'Decretacoes',        description: 'Movimentacoes em decretos e reconhecimentos.',             icon: 'DocumentTextIcon', channels: { bell: true,  email: false, push: false } },
 ]);
 
 const regions = [
@@ -498,6 +541,7 @@ const closeOnEscape = (e) => {
 
 onMounted(() => {
     document.addEventListener('keydown', closeOnEscape);
+    loadPreferences();
 });
 
 onUnmounted(() => {
@@ -522,8 +566,21 @@ const updatePassword = () => {
 
 const save = async () => {
     isSaving.value = true;
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    isSaving.value = false;
-    emit('close');
+    try {
+        await window.axios.put('/api/v1/notification-preferences', {
+            modules: notificationModules.value.map(m => ({
+                module:        m.id,
+                canal_sistema: m.channels.bell,
+                canal_email:   m.channels.email,
+                canal_push:    m.channels.push,
+            })),
+            update_mode: updateMode.value,
+        });
+        emit('close');
+    } catch (e) {
+        // manter modal aberto se falhar
+    } finally {
+        isSaving.value = false;
+    }
 };
 </script>

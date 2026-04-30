@@ -158,5 +158,104 @@
  *         )
  *     )
  * )
+ *
+ * @OA\Schema(
+ *     schema="RatReceiveRequest",
+ *     type="object",
+ *     title="Request de Recepcao de Protocolo RAT",
+ *     description="Campos conforme ReceiveRatBIRequest. Nenhum campo de primeiro nivel e obrigatorio na validacao atual.",
+ *     @OA\Property(
+ *         property="dados_gerais",
+ *         type="object",
+ *         @OA\Property(property="data_fato", type="string", nullable=true, example="2025-12-23 08:53:00"),
+ *         @OA\Property(property="data_inicio_atividade", type="string", nullable=true, example="2025-12-23 08:53:00"),
+ *         @OA\Property(property="data_termino_atividade", type="string", nullable=true, example="2025-12-23 08:53:00"),
+ *         @OA\Property(property="nat_cobrade_id", type="string", nullable=true),
+ *         @OA\Property(property="nat_nome_operacao", type="string", nullable=true),
+ *         @OA\Property(property="tem_vistoria", type="boolean", nullable=true)
+ *     ),
+ *     @OA\Property(
+ *         property="comunicacao",
+ *         type="object",
+ *         @OA\Property(property="tipo_solicitacao", type="string", nullable=true, enum={"telefone", "radio", "pessoal", "sistema", "email", "outro"}),
+ *         @OA\Property(property="data_comunicacao", type="string", nullable=true, example="2025-12-23 08:53:00"),
+ *         @OA\Property(property="telefone_contato", type="string", nullable=true),
+ *         @OA\Property(property="nome_solicitante", type="string", nullable=true)
+ *     ),
+ *     @OA\Property(
+ *         property="local",
+ *         type="object",
+ *         @OA\Property(property="pais_id", type="integer", nullable=true),
+ *         @OA\Property(property="uf", type="string", nullable=true, example="MG"),
+ *         @OA\Property(property="municipio_id", type="string", nullable=true)
+ *     ),
+ *     @OA\Property(
+ *         property="endereco",
+ *         type="object",
+ *         @OA\Property(property="cep", type="string", nullable=true),
+ *         @OA\Property(property="logradouro", type="string", nullable=true),
+ *         @OA\Property(property="numero", type="string", nullable=true),
+ *         @OA\Property(property="complemento", type="string", nullable=true),
+ *         @OA\Property(property="bairro", type="string", nullable=true),
+ *         @OA\Property(property="km", type="string", nullable=true),
+ *         @OA\Property(property="cruzamento", type="string", nullable=true),
+ *         @OA\Property(property="ponto_referencia", type="string", nullable=true),
+ *         @OA\Property(property="tipo_localizacao", type="string", nullable=true, enum={"urbana", "rural", "rodovia", "estrada", "mata", "montanha", "rio", "lago", "outros"}),
+ *         @OA\Property(property="latitude", type="number", format="float", nullable=true),
+ *         @OA\Property(property="longitude", type="number", format="float", nullable=true)
+ *     ),
+ *     @OA\Property(
+ *         property="recursos",
+ *         type="array",
+ *         @OA\Items(
+ *             type="object",
+ *             @OA\Property(property="tipo_recurso", type="string", nullable=true),
+ *             @OA\Property(property="categoria", type="string", nullable=true),
+ *             @OA\Property(property="orgao_responsavel", type="string", nullable=true),
+ *             @OA\Property(property="identificacao", type="string", nullable=true),
+ *             @OA\Property(property="condutor", type="string", nullable=true),
+ *             @OA\Property(property="descricao", type="string", nullable=true),
+ *             @OA\Property(property="data_saida", type="string", nullable=true, example="2025-12-23 08:53:00"),
+ *             @OA\Property(property="data_chegada", type="string", nullable=true, example="2025-12-23 08:53:00"),
+ *             @OA\Property(property="km_percorrido", type="number", format="float", nullable=true),
+ *             @OA\Property(property="local_origem", type="string", nullable=true),
+ *             @OA\Property(property="local_destino", type="string", nullable=true)
+ *         )
+ *     ),
+ *     @OA\Property(
+ *         property="envolvidos",
+ *         type="array",
+ *         @OA\Items(
+ *             type="object",
+ *             @OA\Property(property="tipo_pessoa", type="string", nullable=true),
+ *             @OA\Property(property="cpf", type="string", nullable=true),
+ *             @OA\Property(property="nome", type="string", nullable=true),
+ *             @OA\Property(property="nome_social", type="string", nullable=true),
+ *             @OA\Property(property="data_nascimento", type="string", format="date", nullable=true),
+ *             @OA\Property(property="idade_aparente", type="integer", nullable=true),
+ *             @OA\Property(property="sexo", type="string", nullable=true),
+ *             @OA\Property(property="nome_mae", type="string", nullable=true),
+ *             @OA\Property(property="nome_pai", type="string", nullable=true),
+ *             @OA\Property(property="ocupacao", type="string", nullable=true),
+ *             @OA\Property(property="escolaridade", type="string", nullable=true),
+ *             @OA\Property(property="cep", type="string", nullable=true),
+ *             @OA\Property(property="uf", type="string", nullable=true),
+ *             @OA\Property(property="municipio", type="string", nullable=true),
+ *             @OA\Property(property="logradouro", type="string", nullable=true),
+ *             @OA\Property(property="bairro", type="string", nullable=true),
+ *             @OA\Property(property="numero", type="string", nullable=true),
+ *             @OA\Property(property="complemento", type="string", nullable=true)
+ *         )
+ *     ),
+ *     @OA\Property(
+ *         property="vistoria",
+ *         type="object",
+ *         @OA\Property(property="solicitante", type="object"),
+ *         @OA\Property(property="imovel", type="object"),
+ *         @OA\Property(property="estrutura", type="object"),
+ *         @OA\Property(property="moradores", type="object")
+ *     ),
+ *     @OA\Property(property="finalize", type="boolean", nullable=true, example=false)
+ * )
  */
 

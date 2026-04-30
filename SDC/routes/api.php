@@ -17,6 +17,9 @@ use App\Http\Controllers\Api\V1\LogViewerController as LogViewerV1Controller;
 use App\Http\Controllers\Api\RatNovoController;
 use App\Http\Controllers\Api\RatAuditController;
 use App\Http\Controllers\Api\V1\Decretacoes\DecretacoesApiController;
+use App\Http\Controllers\GlobalSearchController;
+use App\Http\Controllers\NotificationPreferencesController;
+use App\Http\Controllers\ActivityFeedController;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,6 +35,15 @@ use App\Http\Controllers\Api\V1\Decretacoes\DecretacoesApiController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// ============================================================================
+// GLOBAL SEARCH (API - para uso externo/sanctum)
+// ============================================================================
+
+Route::middleware(['auth:sanctum'])
+    ->get('/global-search', [GlobalSearchController::class, 'search'])
+    ->middleware('throttle:30,1')
+    ->name('api.global.search');
 
 // ============================================================================
 // MONITORING & HEALTH CHECK (Rotas Públicas)
@@ -72,15 +84,15 @@ Route::prefix('v1/auth')->group(function () {
 // API v1
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
+    // Activity Feed
+    Route::get('activity-feed', [ActivityFeedController::class, 'index'])->name('api.v1.activity-feed');
+
     // Módulo PAE
     Route::prefix('pae')->name('api.v1.pae.')->group(function () {
         Route::apiResource('empreendimentos', EmpreendimentoController::class);
     });
 
-    // Módulo RAT — Protocolos legados
-    Route::prefix('rat')->name('api.v1.rat.')->group(function () {
-        Route::apiResource('protocolos', ProtocoloController::class);
-    });
+    // Módulo RAT — Protocolos (stub removido — rotas reais abaixo com auth dual)
 
     // Módulo RAT — Ocorrências (nova estrutura polimórfica, acesso mobile/API)
     // Requer permissão: rat.api.access
@@ -101,8 +113,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // Módulo RAT — Nova Estrutura (RatOcorrencia + relatos polimórficos)
     Route::prefix('rat-novo')->name('api.v1.rat-novo.')->group(function () {
-        Route::get('/', [RatNovoController::class, 'index'])->name('index');
-        Route::get('/{id}', [RatNovoController::class, 'show'])->name('show');
+        Route::get('/',            [RatNovoController::class, 'index'])   ->name('index');
+        Route::post('/',           [RatNovoController::class, 'store'])   ->name('store');
+        Route::get('/{id}',        [RatNovoController::class, 'show'])    ->name('show');
+        Route::put('/{id}',        [RatNovoController::class, 'update'])  ->name('update');
+        Route::delete('/{id}',     [RatNovoController::class, 'destroy']) ->name('destroy');
         Route::get('/{id}/power-bi', [RatNovoController::class, 'powerBiData'])->name('power-bi');
     });
 
@@ -118,8 +133,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('pae/{paeId}/rat', [IntegracaoController::class, 'getRatByPae'])->name('pae.rat');
     });
 
-    // BI - Dados de Entrada (requer permissão: rat.bi.view)
-    Route::prefix('bi')->name('api.v1.bi.')->middleware('can:rat.bi.view')->group(function () {
+    // BI - Dados de Entrada (autenticacao Sanctum padrao)
+    Route::prefix('bi')->name('api.v1.bi.')->group(function () {
         Route::get('entrada', [EntradaController::class, 'index'])->name('entrada.index');
         Route::get('entrada/{id}', [EntradaController::class, 'show'])->name('entrada.show');
     });
@@ -174,6 +189,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             ->middleware('throttle:default')
             ->name('templates');
     });
+
+    // Preferencias de notificacao do usuario
+    Route::get('notification-preferences', [NotificationPreferencesController::class, 'index']);
+    Route::put('notification-preferences', [NotificationPreferencesController::class, 'update']);
 
     // (Logs movidos para fora do auth:sanctum)
 });
@@ -254,6 +273,7 @@ Route::prefix('v1/logs')->name('api.v1.logs.')->withoutMiddleware([
 // DECRETACOES API — Autenticacao dupla (Sanctum + Power BI token)
 // ============================================================================
 
+// Rotas de leitura — limite alto (pro: 1000 creditos/min)
 Route::prefix('v1/decretacoes')
     ->name('api.v1.decretacoes.')
     ->middleware([
@@ -261,13 +281,58 @@ Route::prefix('v1/decretacoes')
         \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
         \Illuminate\Session\Middleware\StartSession::class,
         'decretacoes.api.auth',
-        'api-rate-limiter:pro'
+        'api-rate-limiter:pro',
     ])
     ->group(function () {
         Route::get('/',                [DecretacoesApiController::class, 'index'])->name('index');
         Route::get('/export/power-bi', [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');
-        Route::post('/receive',        [DecretacoesApiController::class, 'receive'])->name('receive');
         Route::get('/{id}',            [DecretacoesApiController::class, 'show'])->name('show');
+    });
+
+// Rota de escrita — limite restrito (default: 300 creditos/min, protege contra abuso)
+Route::prefix('v1/decretacoes')
+    ->middleware([
+        \Illuminate\Cookie\Middleware\EncryptCookies::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        'decretacoes.api.auth',
+        'api-rate-limiter:default',
+    ])
+    ->group(function () {
+        Route::post('/receive', [DecretacoesApiController::class, 'receive'])->name('api.v1.decretacoes.receive');
+    });
+
+// ============================================================================
+// RAT API — Autenticacao dupla (Sanctum + Power BI token)
+// ============================================================================
+
+// Rotas de leitura — limite alto (pro: 1000 creditos/min)
+Route::prefix('v1/rat')
+    ->name('api.v1.rat.')
+    ->middleware([
+        \Illuminate\Cookie\Middleware\EncryptCookies::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        'decretacoes.api.auth',
+        'api-rate-limiter:pro',
+    ])
+    ->group(function () {
+        Route::get('protocolos',      [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'index'])->name('protocolos.index');
+        Route::get('protocolos/{id}', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'show'])->name('protocolos.show');
+    });
+
+// Rota de escrita — limite restrito (default: 300 creditos/min)
+Route::prefix('v1/rat')
+    ->name('api.v1.rat.')
+    ->middleware([
+        \Illuminate\Cookie\Middleware\EncryptCookies::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        'decretacoes.api.auth',
+        'api-rate-limiter:default',
+    ])
+    ->group(function () {
+        Route::post('protocolos', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'receive'])->name('protocolos.receive');
     });
 
 // ============================================================================

@@ -21,7 +21,7 @@ class ReceiveProcessoRequest extends FormRequest
             'municipio_id'           => 'required|integer',
             'cobrade_id'             => 'nullable|integer',
             'tipo_desastre_id'       => 'nullable|integer',
-            'situacao_anormalidade'  => 'nullable|string|in:N1,SE',
+            'situacao_anormalidade'  => 'nullable|string|in:N1,SE,ECP',
             'data_ocorrencia'        => 'nullable|date',
             'analista_id'            => 'nullable|string|max:255',
             'n_protocolo_fide'       => 'nullable|string|max:50',

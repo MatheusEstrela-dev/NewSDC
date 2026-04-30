@@ -84,7 +84,7 @@ class MembroFamilia extends Model
     public function scopeCriancas($query)
     {
         return $query->whereNotNull('data_nascimento')
-                     ->whereRaw('TIMESTAMPDIFF(YEAR, data_nascimento, CURDATE()) < 18');
+                     ->whereRaw("DATE_PART('year', AGE(CURRENT_DATE, data_nascimento)) < 18");
     }
 
     /**
@@ -93,6 +93,6 @@ class MembroFamilia extends Model
     public function scopeIdosos($query)
     {
         return $query->whereNotNull('data_nascimento')
-                     ->whereRaw('TIMESTAMPDIFF(YEAR, data_nascimento, CURDATE()) >= 60');
+                     ->whereRaw("DATE_PART('year', AGE(CURRENT_DATE, data_nascimento)) >= 60");
     }
 }
