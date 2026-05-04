@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Pae\Controllers;
 
 use App\Http\Controllers\Controller;
@@ -26,9 +28,10 @@ class PaeProtocoloController extends Controller
     {
         $filters = $request->only(['search', 'status', 'analista_id', 'data_inicio', 'data_fim']);
 
-        $user = $request->user();
-        $podeVerTodos = $user->can('pae.protocolos.atribuir')
-            || $user->hasAnyRole(['Gestor', 'Administrador', 'admin', 'super-admin', 'Desenvolvedor']);
+        $user          = $request->user();
+        $rolesGestores = ['Gestor', 'Administrador', 'admin', 'super-admin', 'Desenvolvedor'];
+        $podeVerTodos  = $user->hasAnyRole($rolesGestores);
+        $canAtribuir   = $user->hasAnyRole($rolesGestores);
 
         if (!$podeVerTodos) {
             $filters['restringir_ao_analista'] = $user->id;
@@ -58,7 +61,7 @@ class PaeProtocoloController extends Controller
             'statusOptions'  => PaeProtocoloStatus::toSelectArray(),
             'analistas'      => $analistas,
             'empreendedores' => $empreendedores,
-            'canAtribuir'    => $podeVerTodos,
+            'canAtribuir'    => $canAtribuir,
             'podeVerTodos'   => $podeVerTodos,
         ]);
     }
@@ -147,6 +150,10 @@ class PaeProtocoloController extends Controller
 
     public function assign(Request $request, PaeProtocolo $paeProtocolo): \Illuminate\Http\RedirectResponse
     {
+        if (!$paeProtocolo->status->isAssignableStatus()) {
+            abort(422, 'Protocolo nao pode ser atribuido no status atual.');
+        }
+
         $data = $request->validate([
             'analista_id' => ['required', 'integer', 'exists:users,id'],
         ]);

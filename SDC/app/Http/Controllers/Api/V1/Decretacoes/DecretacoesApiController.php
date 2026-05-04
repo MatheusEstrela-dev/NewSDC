@@ -127,7 +127,7 @@ class DecretacoesApiController extends Controller
      */
     public function exportPowerBI(Request $request): JsonResponse
     {
-        $data = $this->entradaService->getNormalizedDataForPowerBI($request);
+        $data = $this->queryService->exportAllForApiFlat($request);
 
         return response()->json([
             'success' => true,
@@ -149,7 +149,10 @@ class DecretacoesApiController extends Controller
      *     @OA\Response(
      *         response=201,
      *         description="Processo criado com sucesso",
-     *         @OA\JsonContent(ref="#/components/schemas/ProcessoDecretacaoItem")
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", ref="#/components/schemas/ProcessoDecretacaoItem")
+     *         )
      *     ),
      *     @OA\Response(response=422, description="Dados invalidos"),
      *     @OA\Response(response=401, description="Nao autenticado")
@@ -160,7 +163,7 @@ class DecretacoesApiController extends Controller
         $dto = ProcessoRequestDTO::fromRequest($request);
         $processo = $this->entradaService->createProcesso($dto);
 
-        $data = $this->queryService->showForApi($processo->id);
+        $data = $this->queryService->showForApiFlat($processo->id);
 
         return response()->json([
             'success' => true,

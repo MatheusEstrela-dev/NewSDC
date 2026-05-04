@@ -88,6 +88,14 @@
           title="Arquivar"
           @click="$emit('archive', protocolo.id)"
         />
+        <ButtonIcon
+          v-if="canAtribuir && isAssignableStatus(protocolo.situacao)"
+          :icon="UserIcon"
+          variant="info"
+          size="md"
+          title="Atribuir Analista"
+          @click="$emit('assign', protocolo.id)"
+        />
       </div>
     </div>
   </CardBase>
@@ -107,9 +115,11 @@ import EyeIcon from '@/Components/Icons/EyeIcon.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
 import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
+import UserIcon from '@/Components/Icons/UserIcon.vue';
 
 import PrazosPill from './PrazosPill.vue';
 import StatusPill from './StatusPill.vue';
+import { isAssignableStatus } from '@/Composables/usePaeAssignableStatus';
 
 const props = defineProps({
   protocolo: {
@@ -124,9 +134,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canAtribuir: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'notifications', 'archive']);
+defineEmits(['view', 'print', 'edit', 'history', 'notifications', 'archive', 'assign']);
 </script>
 
 

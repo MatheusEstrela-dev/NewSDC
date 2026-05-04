@@ -313,19 +313,36 @@ class DecretacoesController extends Controller
      *
      * @return Response Pagina Inertia com formulario vazio
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
         $filterOptions = $this->processoService->getFilterOptions();
 
-        // getFilterOptions() retorna: analistas, reconhecimentos, municipios, tipos_desastre, status_options
-        // O ProcessoCreate.vue espera props separadas no top-level
+        // Wizard de criacao em duas abas:
+        //   - GET /decretacoes/create               -> Aba 1 (form vazio), Aba 2 disabled
+        //   - GET /decretacoes/create?id={newId}    -> apos store(): Aba 1 hidratada,
+        //                                              Aba 2 habilitada com a arvore de desastres.
+        // Importante: NUNCA redireciona para /edit - o fluxo de CRIACAO permanece em /create.
+        $processo = null;
+        $municipiosDesastres = [];
+
+        $id = $request->query('id');
+        if ($id) {
+            $found = $this->processoService->findById((int) $id);
+            if ($found) {
+                $municipiosDesastres = $this->processoService->loadMunicipiosWithDesastreData($found);
+                $processo = ProcessoResource::make($found)->resolve();
+            }
+        }
+
         return Inertia::render('Decretacoes/ProcessoCreate', [
-            'tiposDesastre' => $filterOptions['tipos_desastre'] ?? [],
-            'cobrades'      => $filterOptions['tipos_desastre'] ?? [], // cobrade vem dos tipos de desastre
-            'municipios'    => $filterOptions['municipios'] ?? [],
-            'redecs'        => $filterOptions['redecs'] ?? [], 
-            'statusOptions' => $filterOptions['status_options'] ?? [],
-            'analistas'     => $filterOptions['analistas'] ?? [],
+            'tiposDesastre'        => $filterOptions['tipos_desastre'] ?? [],
+            'cobrades'             => $filterOptions['tipos_desastre'] ?? [],
+            'municipios'           => $filterOptions['municipios'] ?? [],
+            'redecs'               => $filterOptions['redecs'] ?? [],
+            'statusOptions'        => $filterOptions['status_options'] ?? [],
+            'analistas'            => $filterOptions['analistas'] ?? [],
+            'processo'             => $processo,
+            'municipiosDesastres'  => $municipiosDesastres,
         ]);
     }
 
@@ -371,8 +388,10 @@ class DecretacoesController extends Controller
         $dto = ProcessoRequestDTO::fromRequest($request);
         $processo = $this->processoService->createProcesso($dto);
 
-        return redirect()->route('decretacoes.show', $processo->id)
-            ->with('success', 'Processo cadastrado com sucesso!');
+        // Mantem o usuario no fluxo de CRIACAO (/create), nao mistura com /edit.
+        // O parametro ?id= avisa o create() a hidratar a Aba 2 do wizard.
+        return redirect()->route('decretacoes.create', ['id' => $processo->id])
+            ->with('success', 'Processo cadastrado com sucesso! Agora preencha os dados do desastre.');
     }
 
     /**

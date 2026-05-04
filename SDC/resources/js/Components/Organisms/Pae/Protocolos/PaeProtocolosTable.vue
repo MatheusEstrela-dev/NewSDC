@@ -56,7 +56,7 @@
                   :show-history="true"
                   :show-archive="true"
                   :show-options="true"
-                  :show-assign="canAtribuir"
+                  :show-assign="canAtribuir && isAssignableStatus(protocolo.situacao)"
                   @view="$emit('view', protocolo.id)"
                   @print="$emit('print', protocolo.id)"
                   @edit="$emit('edit', protocolo.id)"
@@ -84,6 +84,7 @@
 import PrazosPill from '@/Components/Molecules/Pae/Protocolos/PrazosPill.vue';
 import StatusPill from '@/Components/Molecules/Pae/Protocolos/StatusPill.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import { isAssignableStatus } from '@/Composables/usePaeAssignableStatus';
 
 defineProps({
   protocolos: {

@@ -168,6 +168,13 @@ fi
 
 export PATH="/usr/local/bin:$PATH"
 
+# Flags extras para ambiente local (hot reload via --watch)
+EXTRA_FLAGS=""
+if [ "${APP_ENV:-production}" = "local" ]; then
+    EXTRA_FLAGS="--max-requests=1"
+    echo "Modo LOCAL: MAX_REQUESTS=1 (hot reload ativo)"
+fi
+
 # Determinar modo HTTPS
 # OCTANE_HTTPS=true  -> TLS gerenciado pelo FrankenPHP/Caddy com Caddyfile customizado (local/dev)
 # OCTANE_HTTPS=false -> HTTP puro, TLS terminado na borda (Azure/GCP)
@@ -179,7 +186,8 @@ if [ "${OCTANE_HTTPS:-false}" = "true" ] && [ -n "${OCTANE_CADDYFILE:-}" ] && [ 
         --workers=${FRANKENPHP_WORKERS:-auto} \
         --max-requests=${FRANKENPHP_MAX_REQUESTS:-500} \
         --caddyfile="${OCTANE_CADDYFILE}" \
-        --no-interaction
+        --no-interaction \
+        ${EXTRA_FLAGS}
 else
     echo "Porta: ${PORT:-80} (HTTP — TLS terminado pelo Azure)"
     exec php artisan octane:frankenphp \
@@ -187,5 +195,6 @@ else
         --port=${PORT:-80} \
         --workers=${FRANKENPHP_WORKERS:-auto} \
         --max-requests=${FRANKENPHP_MAX_REQUESTS:-500} \
-        --no-interaction
+        --no-interaction \
+        ${EXTRA_FLAGS}
 fi

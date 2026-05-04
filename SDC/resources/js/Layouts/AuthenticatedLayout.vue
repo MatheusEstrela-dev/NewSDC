@@ -2,6 +2,7 @@
 import FlashNotification from '@/Components/Molecules/FlashNotification.vue';
 import OfflineIndicator from '@/Components/Molecules/OfflineIndicator.vue';
 import PullToRefresh from '@/Components/Molecules/PullToRefresh.vue';
+import ToastContainer from '@/Components/Atoms/Toast/ToastContainer.vue';
 import NavigationHeader from '@/Components/Organisms/Navigation/NavigationHeader.vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import TopBar from '@/Components/TopBar.vue';
@@ -36,8 +37,8 @@ provide('openSidebar', openSidebar);
 
 <template>
   <div class="flex min-h-screen bg-slate-50 dark:bg-slate-950">
-    <!-- Flash Notifications (sucesso/erro das ações) -->
-    <FlashNotification />
+    <!-- Toast Notifications -->
+    <ToastContainer />
 
     <!-- Offline/Slow Connection Indicator -->
     <OfflineIndicator />

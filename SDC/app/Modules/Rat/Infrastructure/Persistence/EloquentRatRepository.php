@@ -11,6 +11,7 @@ use App\Modules\Rat\Models\Rat;
 use App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais;
 use App\Modules\Rat\Services\RatFilterService;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 /**
  * Implementacao Eloquent do repositorio de RAT.
@@ -265,6 +266,23 @@ class EloquentRatRepository implements RatRepositoryInterface
             'v_proprietario_morador' => $mor['proprietario']      ?? null,
             'v_contato_telefone'     => $mor['telefone']          ?? null,
         ], fn($v) => $v !== null);
+    }
+
+    public function findAll(array $filters = [], int $limit = 10): Collection
+    {
+        $query = RatOcorrencia::with(['relatosMorph'])
+            ->orderBy('created_at', 'desc');
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where('numero_bos', 'like', "%{$search}%");
+        }
+
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        return $query->get()->map(fn($oc) => $this->toRatModel($oc));
     }
 
     public function getLatestSequence(int $year): int

@@ -17,18 +17,28 @@ async function loadPyodideAndPackages() {
                 best_match = "unknown"
                 highest_ratio = 0.0
 
+                input_lower = user_input.lower().strip()
+
+                # Mensagens muito curtas (< 3 chars) vao direto para o servidor
+                if len(input_lower) < 3:
+                    return "complex_task"
+
                 # Simple fuzzy matching
                 for intent, keywords in patterns.items():
                     for keyword in keywords:
-                        ratio = difflib.SequenceMatcher(None, user_input.lower(), keyword.lower()).ratio()
+                        ratio = difflib.SequenceMatcher(None, input_lower, keyword.lower()).ratio()
                         if ratio > highest_ratio:
                             highest_ratio = ratio
                             best_match = intent
-                
-                # Threshold for confidence
-                if highest_ratio < 0.4: # Lower threshold to catch more
-                    return "complex_task" # Default to server if unsure but looks like a task
-                
+
+                # Threshold aumentado para 0.65 para reduzir falsos positivos
+                if highest_ratio < 0.65:
+                    return "complex_task"
+
+                # Intencoes locais so sao validas para frases curtas (max 4 palavras)
+                if best_match.startswith('local_') and len(input_lower.split()) > 4:
+                    return "complex_task"
+
                 return best_match
         `);
         pythonReady = true;
@@ -42,9 +52,9 @@ loadPyodideAndPackages();
 
 const INTENT_PATTERNS = {
     "local_greeting": ["oi", "olá", "bom dia", "boa tarde", "quem é você", "tudo bem"],
-    "local_help": ["ajuda", "como usar", "manual", "suporte", "menu"],
-    "local_clear": ["limpar", "apagar", "reiniciar"],
-    "complex_task": ["analisar", "relatório", "cálculo", "previsão", "alerta", "chuva", "protocolo", "rat", "abrigo", "enchente", "danos"]
+    "local_help":     ["ajuda", "como usar", "suporte", "preciso de ajuda", "o que você faz"],
+    "local_clear":    ["limpar conversa", "apagar historico", "reiniciar chat"],
+    "complex_task":   ["analisar", "relatório", "cálculo", "previsão", "alerta", "chuva", "protocolo", "rat", "abrigo", "enchente", "danos"]
 };
 
 self.onmessage = async (event) => {

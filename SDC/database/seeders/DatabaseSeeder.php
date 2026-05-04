@@ -66,5 +66,13 @@ class DatabaseSeeder extends Seeder
 
         // 8. Usuarios de teste com hierarquia e diferentes status
         $this->call(TestUsersSeeder::class);
+
+        // 9. Estrutura canonica do FIDE/S2iD (grupos -> categorias -> itens -> campos)
+        //    Indispensavel para a aba "Dados de Desastre" exibir os campos de input.
+        if (\Illuminate\Support\Facades\Schema::hasTable('dec_desastre_grupos')) {
+            $this->call(DesastreEstruturaSeeder::class);
+        } else {
+            $this->command->warn('Tabela "dec_desastre_grupos" nao encontrada - DesastreEstruturaSeeder pulado.');
+        }
     }
 }

@@ -7,9 +7,13 @@ namespace App\Core\IA\Http\Controllers;
 use App\Core\IA\Embeddings\GeminiEmbeddingGenerator;
 use App\Core\IA\Models\AIConversation;
 use App\Core\IA\Models\AIMessage;
-use App\Core\IA\Papiro\SdcPapiro;
+use App\Core\IA\Papiro\DecretacoesPapiro;
+use App\Core\IA\Tools\LLPhant\CrossModuleTools;
+use App\Core\IA\Tools\LLPhant\DecretosAnalyticsTools;
 use App\Core\IA\Tools\LLPhant\DecretosTools;
+use App\Core\IA\Tools\LLPhant\PaeAnalyticsTools;
 use App\Core\IA\Tools\LLPhant\PaeTools;
+use App\Core\IA\Tools\LLPhant\RatAnalyticsTools;
 use App\Core\IA\Tools\LLPhant\RatTools;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,11 +29,24 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChatController extends Controller
 {
-    public function __construct(
-        protected OpenAIChat $chat,
-        protected DoctrineVectorStore $vectorStore,
-        protected GeminiEmbeddingGenerator $embeddingGenerator,
-    ) {}
+    private ?OpenAIChat $chat = null;
+    private ?DoctrineVectorStore $vectorStore = null;
+    private ?GeminiEmbeddingGenerator $embeddingGenerator = null;
+
+    private function getChat(): OpenAIChat
+    {
+        return $this->chat ??= app(OpenAIChat::class);
+    }
+
+    private function getVectorStore(): DoctrineVectorStore
+    {
+        return $this->vectorStore ??= app(DoctrineVectorStore::class);
+    }
+
+    private function getEmbeddingGenerator(): GeminiEmbeddingGenerator
+    {
+        return $this->embeddingGenerator ??= app(GeminiEmbeddingGenerator::class);
+    }
 
     public function chat(Request $request): JsonResponse
     {
@@ -47,11 +64,26 @@ class ChatController extends Controller
 
         $this->registerTools();
 
-        $content = $this->chat->generateChat($messages);
+        try {
+            $content = $this->getChat()->generateChat($messages);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('AI Chat Error', [
+                'error'  => $e->getMessage(),
+                'driver' => 'gemini',
+            ]);
+
+            return response()->json([
+                'conversation_id' => $conversationId,
+                'content'         => $this->humanizeError($e),
+                'driver'          => 'gemini',
+                'error'           => true,
+            ], 200);
+        }
 
         $this->persistMessages($conversationId, $userInput, $content);
 
-        $elapsedMs = (int) round((hrtime(true) - $startedAt) / 1_000_000);
+        // Adicionar contexto RAG na resposta
+        $response['rag_context'] = $this->ragService->getContextData();
 
         return response()->json([
             'conversation_id'   => $conversationId,
@@ -63,6 +95,8 @@ class ChatController extends Controller
 
     public function stream(Request $request): StreamedResponse
     {
+        set_time_limit(0);
+
         $validated = $request->validate([
             'message'         => 'required|string|max:10000',
             'conversation_id' => 'nullable|uuid',
@@ -76,34 +110,45 @@ class ChatController extends Controller
 
         $this->registerTools();
 
-        $stream = $this->chat->generateChatStream($messages);
+        // generateChat (nao-stream) executa o ciclo completo de function calling.
+        // generateChatStream nao fecha o ciclo das tools no LLPhant — ver doc/ARCHITECTURE.
+        // Pegamos a resposta completa e fazemos pseudo-stream em chunks para preservar UX.
+        try {
+            $fullContent = $this->getChat()->generateChat($messages);
+        } catch (\Throwable $err) {
+            \Illuminate\Support\Facades\Log::error('AI Stream Error', [
+                'error'           => $err->getMessage(),
+                'conversation_id' => $conversationId,
+                'driver'          => 'gemini',
+            ]);
 
-        return response()->stream(function () use ($stream, $conversationId, $userInput) {
+            $fullContent = $this->humanizeError($err);
+            $isError     = true;
+        }
+
+        $isError = $isError ?? false;
+
+        return response()->stream(function () use ($fullContent, $conversationId, $userInput, $isError) {
             echo 'data: ' . json_encode(['conversation_id' => $conversationId]) . "\n\n";
-            ob_flush();
+            if (ob_get_level() > 0) ob_flush();
             flush();
 
-            $fullContent = '';
-
-            while (! $stream->eof()) {
-                $chunk = $stream->read(512);
-
-                if ($chunk === '' || $chunk === false) {
-                    continue;
-                }
-
-                $fullContent .= $chunk;
-
+            // Pseudo-streaming: fragmenta a resposta em chunks de ~32 chars para feedback progressivo.
+            $chunks = mb_str_split($fullContent, 32);
+            foreach ($chunks as $chunk) {
                 echo 'data: ' . json_encode(['content' => $chunk]) . "\n\n";
-                ob_flush();
+                if (ob_get_level() > 0) ob_flush();
                 flush();
+                usleep(20000);
             }
 
             echo "data: [DONE]\n\n";
-            ob_flush();
+            if (ob_get_level() > 0) ob_flush();
             flush();
 
-            $this->persistMessages($conversationId, $userInput, $fullContent);
+            if (! $isError && $fullContent !== '') {
+                $this->persistMessages($conversationId, $userInput, $fullContent);
+            }
         }, 200, [
             'Content-Type'      => 'text/event-stream',
             'Cache-Control'     => 'no-cache',
@@ -114,10 +159,16 @@ class ChatController extends Controller
 
     public function conversations(): JsonResponse
     {
-        $conversations = AIConversation::where('user_id', Auth::id())
-            ->orderBy('updated_at', 'desc')
-            ->limit(50)
-            ->get(['id', 'title', 'created_at', 'updated_at']);
+        $userId   = Auth::id();
+        $cacheKey = 'ai_conversations:user:' . $userId;
+
+        $conversations = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($userId) {
+            return AIConversation::where('user_id', $userId)
+                ->orderBy('updated_at', 'desc')
+                ->limit(50)
+                ->get(['id', 'title', 'created_at', 'updated_at'])
+                ->toArray();
+        });
 
         return response()->json($conversations);
     }
@@ -152,14 +203,19 @@ class ChatController extends Controller
 
     public function tools(): JsonResponse
     {
-        $ratTools      = new RatTools();
-        $paeTools      = new PaeTools();
-        $decretosTools = new DecretosTools();
+        $ratTools          = new RatTools();
+        $paeTools          = new PaeTools();
+        $decretosTools     = new DecretosTools();
+        $decretosAnalytics = new DecretosAnalyticsTools();
+        $ratAnalytics      = new RatAnalyticsTools();
+        $paeAnalytics      = new PaeAnalyticsTools();
+        $crossModule       = new CrossModuleTools();
 
         $tools = [
             FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorMunicipio'),
             FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorProtocolo'),
             FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorId'),
+            FunctionBuilder::buildFunctionInfo($ratTools, 'resumoStatusRat'),
             FunctionBuilder::buildFunctionInfo($paeTools, 'buscarPaePorMunicipio'),
             FunctionBuilder::buildFunctionInfo($paeTools, 'buscarPaePorProtocolo'),
             FunctionBuilder::buildFunctionInfo($paeTools, 'resumoStatusPae'),
@@ -167,6 +223,16 @@ class ChatController extends Controller
             FunctionBuilder::buildFunctionInfo($decretosTools, 'consultar_processo_decreto'),
             FunctionBuilder::buildFunctionInfo($decretosTools, 'obter_diagnostico_municipio'),
             FunctionBuilder::buildFunctionInfo($decretosTools, 'consultar_danos_socioeconomicos'),
+            FunctionBuilder::buildFunctionInfo($decretosAnalytics, 'ranking_municipios_decretos'),
+            FunctionBuilder::buildFunctionInfo($decretosAnalytics, 'comparar_municipios_decretos'),
+            FunctionBuilder::buildFunctionInfo($decretosAnalytics, 'tendencia_anual_decretos'),
+            FunctionBuilder::buildFunctionInfo($decretosAnalytics, 'cobrade_mais_frequente'),
+            FunctionBuilder::buildFunctionInfo($decretosAnalytics, 'panorama_estado_decretos'),
+            FunctionBuilder::buildFunctionInfo($ratAnalytics, 'ranking_municipios_rat'),
+            FunctionBuilder::buildFunctionInfo($ratAnalytics, 'tendencia_anual_rat'),
+            FunctionBuilder::buildFunctionInfo($paeAnalytics, 'ranking_municipios_pae'),
+            FunctionBuilder::buildFunctionInfo($paeAnalytics, 'tendencia_anual_pae'),
+            FunctionBuilder::buildFunctionInfo($crossModule, 'panorama_municipio'),
         ];
 
         $payload = array_map(fn ($tool) => [
@@ -191,7 +257,7 @@ class ChatController extends Controller
                 ->toArray();
         });
 
-        $messages = [Message::system(SdcPapiro::build())];
+        $messages = [Message::system(DecretacoesPapiro::build())];
 
         foreach ($history as $msg) {
             $messages[] = $msg['role'] === 'user'
@@ -210,8 +276,8 @@ class ChatController extends Controller
     protected function buildRagContext(string $userInput): string
     {
         try {
-            $embedding = $this->embeddingGenerator->embedText($userInput);
-            $documents = $this->vectorStore->similaritySearch($embedding, 3);
+            $embedding = $this->getEmbeddingGenerator()->embedText($userInput);
+            $documents = $this->getVectorStore()->similaritySearch($embedding, 3);
 
             if (empty($documents)) {
                 return '';
@@ -230,14 +296,19 @@ class ChatController extends Controller
 
     protected function registerTools(): void
     {
-        $ratTools      = new RatTools();
-        $paeTools      = new PaeTools();
-        $decretosTools = new DecretosTools();
+        $ratTools          = new RatTools();
+        $paeTools          = new PaeTools();
+        $decretosTools     = new DecretosTools();
+        $decretosAnalytics = new DecretosAnalyticsTools();
+        $ratAnalytics      = new RatAnalyticsTools();
+        $paeAnalytics      = new PaeAnalyticsTools();
+        $crossModule       = new CrossModuleTools();
 
-        $this->chat->setTools([
+        $this->getChat()->setTools([
             FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorMunicipio'),
             FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorProtocolo'),
             FunctionBuilder::buildFunctionInfo($ratTools, 'buscarRatPorId'),
+            FunctionBuilder::buildFunctionInfo($ratTools, 'resumoStatusRat'),
             FunctionBuilder::buildFunctionInfo($paeTools, 'buscarPaePorMunicipio'),
             FunctionBuilder::buildFunctionInfo($paeTools, 'buscarPaePorProtocolo'),
             FunctionBuilder::buildFunctionInfo($paeTools, 'resumoStatusPae'),
@@ -245,6 +316,16 @@ class ChatController extends Controller
             FunctionBuilder::buildFunctionInfo($decretosTools, 'consultar_processo_decreto'),
             FunctionBuilder::buildFunctionInfo($decretosTools, 'obter_diagnostico_municipio'),
             FunctionBuilder::buildFunctionInfo($decretosTools, 'consultar_danos_socioeconomicos'),
+            FunctionBuilder::buildFunctionInfo($decretosAnalytics, 'ranking_municipios_decretos'),
+            FunctionBuilder::buildFunctionInfo($decretosAnalytics, 'comparar_municipios_decretos'),
+            FunctionBuilder::buildFunctionInfo($decretosAnalytics, 'tendencia_anual_decretos'),
+            FunctionBuilder::buildFunctionInfo($decretosAnalytics, 'cobrade_mais_frequente'),
+            FunctionBuilder::buildFunctionInfo($decretosAnalytics, 'panorama_estado_decretos'),
+            FunctionBuilder::buildFunctionInfo($ratAnalytics, 'ranking_municipios_rat'),
+            FunctionBuilder::buildFunctionInfo($ratAnalytics, 'tendencia_anual_rat'),
+            FunctionBuilder::buildFunctionInfo($paeAnalytics, 'ranking_municipios_pae'),
+            FunctionBuilder::buildFunctionInfo($paeAnalytics, 'tendencia_anual_pae'),
+            FunctionBuilder::buildFunctionInfo($crossModule, 'panorama_municipio'),
         ]);
     }
 
@@ -268,6 +349,33 @@ class ChatController extends Controller
         return $conversation->id;
     }
 
+    protected function humanizeError(\Throwable $e): string
+    {
+        $msg = $e->getMessage();
+
+        if (str_contains($msg, '"code": 429') || str_contains($msg, 'RESOURCE_EXHAUSTED')) {
+            return 'Limite de uso da IA atingido. Tente novamente em alguns minutos.';
+        }
+
+        if (str_contains($msg, 'API_KEY_INVALID') || str_contains($msg, 'API key expired') || str_contains($msg, '"code": 401') || str_contains($msg, '"code": 403')) {
+            return 'Configuracao da IA invalida. Contate o suporte.';
+        }
+
+        if (str_contains($msg, 'cURL error 28') || str_contains($msg, 'Connection timed out') || str_contains($msg, 'Operation timed out')) {
+            return 'Nao foi possivel alcancar o servico de IA. Verifique sua conexao e tente novamente.';
+        }
+
+        if (str_contains($msg, 'cURL error 6') || str_contains($msg, 'Could not resolve host') || str_contains($msg, 'cURL error 7')) {
+            return 'Servico de IA temporariamente indisponivel.';
+        }
+
+        if (str_contains($msg, '"code": 400') || str_contains($msg, 'INVALID_ARGUMENT')) {
+            return 'Nao foi possivel processar sua solicitacao. Reformule a pergunta e tente novamente.';
+        }
+
+        return 'Ocorreu um erro ao gerar a resposta. Tente novamente em instantes.';
+    }
+
     protected function persistMessages(string $conversationId, string $userMessage, string $assistantMessage): void
     {
         AIMessage::create([
@@ -285,6 +393,7 @@ class ChatController extends Controller
         ]);
 
         Cache::forget('ai_history:' . $conversationId);
+        Cache::forget('ai_conversations:user:' . Auth::id());
 
         AIConversation::where('id', $conversationId)
             ->update(['title' => Str::limit($userMessage, 100)]);

@@ -131,6 +131,17 @@ enum PaeProtocoloStatus: string
         return !$this->isTerminal() && !in_array($this, [self::ATIVO_3_ANOS], true);
     }
 
+    public function isAssignableStatus(): bool
+    {
+        return in_array($this, [
+            self::NOVO,
+            self::GERENCIAMENTO,
+            self::NOTIFICACAO,
+            self::ESPERAR_TRATATIVA,
+            self::DILACAO,
+        ], true);
+    }
+
     public static function toSelectArray(): array
     {
         return collect(self::cases())

@@ -361,6 +361,9 @@ if (app()->environment('local', 'development')) {
     Route::prefix('ai/dev')->group(function () {
         Route::post('chat', [\App\Core\IA\Http\Controllers\ChatController::class, 'chat']);
         Route::post('chat/stream', [\App\Core\IA\Http\Controllers\ChatController::class, 'stream']);
+        Route::get('conversations', [\App\Core\IA\Http\Controllers\ChatController::class, 'conversations']);
+        Route::get('conversations/{id}/messages', [\App\Core\IA\Http\Controllers\ChatController::class, 'messages']);
+        Route::delete('conversations/{id}', [\App\Core\IA\Http\Controllers\ChatController::class, 'deleteConversation']);
         Route::get('status', function () {
             $driver = app(\App\Core\IA\AIService::class);
             $ollamaDriver = $driver->getDriver();

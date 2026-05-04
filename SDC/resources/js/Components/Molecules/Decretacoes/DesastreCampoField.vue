@@ -30,6 +30,7 @@
     <CurrencyInput
       v-else-if="campo.tipo === 'currency'"
       :model-value="campo.valor"
+      size="sm"
       @update:model-value="emit('update:valor', $event)"
     />
 

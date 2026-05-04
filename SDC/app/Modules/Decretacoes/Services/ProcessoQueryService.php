@@ -641,6 +641,73 @@ class ProcessoQueryService
         return ProcessoResource::make($processo)->resolve();
     }
 
+    /**
+     * Retorna detalhes de um processo no formato plano (mesma estrutura de listForApiFlat).
+     *
+     * FLUXO: ID -> Processo -> geo + totais batch -> ProcessoFlatResource -> JSON
+     *
+     * DESTINO: POST /api/v1/decretacoes/receive (resposta apos criacao)
+     *
+     * @param int $id ID do processo
+     * @return array|null Dados no formato plano ou null se nao encontrado
+     */
+    public function showForApiFlat(int $id): ?array
+    {
+        $processo = Processo::find($id);
+
+        if (!$processo) {
+            return null;
+        }
+
+        $processos = collect([$processo]);
+
+        $this->enrichWithGeoData($processos);
+
+        $totais = $this->calculateTotaisForProcesso($id);
+        $processo->setAttribute('totais', $totais);
+
+        return ProcessoFlatResource::make($processo)->resolve();
+    }
+
+    /**
+     * Exporta todos os processos no formato plano para consumidores externos (BI, integracoes).
+     *
+     * FLUXO: Request (filtros + include_deleted) -> get() sem paginacao
+     *         -> enrichPaginatorWithTotais (via fake paginator) -> enrichWithGeoData
+     *         -> ProcessoFlatResource::collection -> JSON
+     *
+     * DESTINO: GET /api/v1/decretacoes/export/power-bi
+     *
+     * @param Request $request Request com filtros opcionais e include_deleted
+     * @return array Lista plana de processos
+     */
+    public function exportAllForApiFlat(Request $request): array
+    {
+        $query = $this->applyFilters($request);
+
+        if ($request->input('include_deleted', false)) {
+            $query->withTrashed();
+        }
+
+        $allProcessos = $query->get();
+
+        if ($allProcessos->isEmpty()) {
+            return [];
+        }
+
+        $fakePaginator = new \Illuminate\Pagination\LengthAwarePaginator(
+            $allProcessos->all(),
+            $allProcessos->count(),
+            $allProcessos->count(),
+            1
+        );
+
+        $this->enrichPaginatorWithTotais($fakePaginator);
+        $this->enrichWithGeoData($allProcessos);
+
+        return ProcessoFlatResource::collection($allProcessos)->resolve();
+    }
+
     // Mapeamento de titulo de item para tipo de dano humano (fallback por nome)
     private const DANOS_HUMANOS_TITLES = [
         'obito' => 'obitos',

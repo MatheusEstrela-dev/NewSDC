@@ -7,9 +7,11 @@
       :disabled="disabled"
       :placeholder="placeholder"
       :class="[
-        'atom-input atom-input-md w-full pl-9',
+        'atom-input w-full',
+        size === 'sm' ? 'atom-input-sm' : (size === 'lg' ? 'atom-input-lg' : 'atom-input-md'),
         disabled ? 'atom-input-disabled' : (modelValue ? 'atom-input-filled' : 'atom-input-normal'),
       ]"
+      style="padding-left: 2.75rem !important;"
       @keyup="handleKeyup"
       @blur="$emit('blur', $event)"
     />
@@ -31,6 +33,10 @@ const props = defineProps({
   placeholder: {
     type: String,
     default: '0,00',
+  },
+  size: {
+    type: String,
+    default: 'md',
   },
 });
 

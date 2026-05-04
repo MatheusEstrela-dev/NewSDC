@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useTabs } from './core/useTabs';
+import { useToast } from './useToast';
 
 /**
  * Composable central do módulo RAT.

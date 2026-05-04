@@ -6,6 +6,7 @@ namespace App\Core\IA\Tools\LLPhant;
 
 use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
 use App\Modules\Rat\DTOs\RatFilterDTO;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class RatTools
@@ -113,6 +114,68 @@ class RatTools
             ));
         } catch (\Exception $e) {
             Log::error('RatTools::buscarRatPorId', ['error' => $e->getMessage()]);
+            return json_encode(['encontrado' => false, 'erro' => 'Falha ao consultar banco de dados']);
+        }
+    }
+
+    /**
+     * Retorna um resumo estatistico dos protocolos RAT (Registro de Atendimento Tecnico) agrupados por status.
+     * Use sempre que o usuario perguntar quantos RAT existem, quantos estao abertos, fechados, ou pedir um panorama geral dos atendimentos.
+     * @param string $filtroStatus opcional. Se informado, retorna apenas a contagem do status indicado. Valores: "rascunho" (RAT abertos/em andamento), "finalizado" (RAT concluidos). Deixe vazio para listar todos os status.
+     */
+    public function resumoStatusRat(string $filtroStatus = ''): string
+    {
+        try {
+            $query = DB::table('rat_ocorrencias')
+                ->whereNull('deleted_at')
+                ->select('status', DB::raw('COUNT(*) as total'))
+                ->groupBy('status')
+                ->orderBy('status', 'asc');
+
+            $filtroNormalizado = strtolower(trim($filtroStatus));
+            $statusInt = match ($filtroNormalizado) {
+                'rascunho', 'aberto', 'abertos', 'em_andamento' => 0,
+                'finalizado', 'finalizados', 'fechado', 'fechados', 'concluido', 'concluidos' => 1,
+                default => null,
+            };
+
+            if ($statusInt !== null) {
+                $query->where('status', $statusInt);
+            }
+
+            $totais = $query->get();
+
+            if ($totais->isEmpty()) {
+                return json_encode([
+                    'encontrado' => false,
+                    'mensagem'   => 'Nenhum RAT registrado no sistema',
+                ]);
+            }
+
+            $rotulo = static fn (int $s): string => match ($s) {
+                0       => 'rascunho',
+                1       => 'finalizado',
+                default => 'status_' . $s,
+            };
+
+            $porStatus = $totais->map(fn ($row) => [
+                'status'        => (int) $row->status,
+                'status_rotulo' => $rotulo((int) $row->status),
+                'total'         => (int) $row->total,
+            ])->values()->toArray();
+
+            $abertos    = (int) $totais->firstWhere('status', 0)?->total;
+            $finalizados = (int) $totais->firstWhere('status', 1)?->total;
+
+            return json_encode([
+                'encontrado'  => true,
+                'total_geral' => $totais->sum('total'),
+                'abertos'     => $abertos,
+                'finalizados' => $finalizados,
+                'por_status'  => $porStatus,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('RatTools::resumoStatusRat', ['error' => $e->getMessage()]);
             return json_encode(['encontrado' => false, 'erro' => 'Falha ao consultar banco de dados']);
         }
     }

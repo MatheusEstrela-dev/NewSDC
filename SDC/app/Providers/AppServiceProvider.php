@@ -28,6 +28,26 @@ class AppServiceProvider extends ServiceProvider
             $config = new \LLPhant\GeminiOpenAIConfig();
             $config->model = config('ai.drivers.gemini.model', 'gemini-2.0-flash');
             $config->modelOptions = ['temperature' => 0.1];
+
+            // FrankenPHP embedded PHP 8.5: stream_socket_client ssl:// fails silently (errno=0).
+            // Bypass by forcing CurlHandler — Guzzle's default wrapStreaming() proxy routes
+            // stream=>true requests to StreamHandler, which uses the broken SSL wrapper.
+            $stack = \GuzzleHttp\HandlerStack::create(new \GuzzleHttp\Handler\CurlHandler());
+            $stack->push(\LLPhant\Chat\OpenAIResponseErrorsProcessor::createResponseModifier());
+
+            $guzzle = new \GuzzleHttp\Client([
+                'handler'         => $stack,
+                'timeout'         => 300.0,
+                'connect_timeout' => 30.0,
+                'read_timeout'    => 300.0,
+            ]);
+
+            $config->client = \OpenAI::factory()
+                ->withApiKey($config->apiKey)
+                ->withBaseUri($config->url)
+                ->withHttpClient($guzzle)
+                ->make();
+
             return new \LLPhant\Chat\OpenAIChat($config);
         });
 

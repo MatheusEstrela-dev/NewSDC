@@ -67,6 +67,15 @@ services:
       DB_USERNAME: sdc
       DB_PASSWORD: secret
 
+      # IA / Gemini
+      AI_DRIVER: gemini
+      GEMINI_API_KEY: AIzaSyD45DtBWtpk0MXuUlYVyUjmgkzPA532GVc
+      GEMINI_MODEL: gemini-2.5-flash-lite
+      GEMINI_MAX_TOKENS: 4096
+
+      # Proxy corporativo: desabilitado para acesso remoto (proxy 10.100.127.232 nao roteia do Docker bridge)
+      # Para uso na rede corporativa: habilitar via .env.local ou variaveis de ambiente do host
+
     ports:
       - "19444:443"     # HTTPS (FrankenPHP Octane)
       - "19081:80"      # HTTP redirect
@@ -74,6 +83,7 @@ services:
 
     volumes:
       - ../../app:/app/app
+      - ../../core:/app/core
       - ../../routes:/app/routes
       - ../../config:/app/config
       - ../../database/migrations:/app/database/migrations
@@ -81,6 +91,10 @@ services:
       - ../storage/logs:/app/storage/logs
       - ../../public:/app/public
       - ../../resources:/app/resources
+      - ../../composer.json:/app/composer.json:ro
+      - ../../composer.lock:/app/composer.lock:ro
+      - ../../vendor:/app/vendor:ro
+      - ./platform_check_bypass.php:/app/vendor/composer/platform_check.php:ro
       - ./scripts/entrypoint.sh:/start.sh:ro
       - ./Caddyfile.local:/etc/caddy/Caddyfile.local:ro
 

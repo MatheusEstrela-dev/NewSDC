@@ -122,16 +122,22 @@ class PaeTools
     /**
      * Retorna um resumo estatistico dos protocolos PAE agrupados por status.
      * Util para entender a distribuicao atual dos PAEs no sistema.
+     * @param string $filtroStatus opcional. Se informado, filtra a contagem por um status especifico. Deixe vazio para listar todos os status.
      */
-    public function resumoStatusPae(): string
+    public function resumoStatusPae(string $filtroStatus = ''): string
     {
         try {
-            $totais = DB::table('pae_protocolos')
+            $query = DB::table('pae_protocolos')
                 ->whereNull('deleted_at')
                 ->select('status', DB::raw('COUNT(*) as total'))
                 ->groupBy('status')
-                ->orderBy('total', 'desc')
-                ->get();
+                ->orderBy('total', 'desc');
+
+            if ($filtroStatus !== '') {
+                $query->where('status', $filtroStatus);
+            }
+
+            $totais = $query->get();
 
             if ($totais->isEmpty()) {
                 return json_encode([

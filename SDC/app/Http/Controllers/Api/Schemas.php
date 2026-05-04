@@ -85,18 +85,45 @@
  * @OA\Schema(
  *     schema="ProcessoDecretacaoItem",
  *     type="object",
- *     title="Processo de Decretacao",
- *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="municipio_id", type="integer", example=123),
- *     @OA\Property(property="processo", type="string", example="MUNICIPAL"),
- *     @OA\Property(property="reconhecimento", type="string", example="SE"),
- *     @OA\Property(property="tipo_desastre_id", type="integer", example=5),
- *     @OA\Property(property="situacao_anormalidade", type="string", example="SE"),
- *     @OA\Property(property="data_entrada", type="string", format="date", example="2025-01-15"),
- *     @OA\Property(property="n_protocolo_fide", type="string", nullable=true, example="2025.001.001"),
- *     @OA\Property(property="analista", type="string", nullable=true, example="joao.silva"),
- *     @OA\Property(property="created_at", type="string", format="date-time"),
- *     @OA\Property(property="updated_at", type="string", format="date-time")
+ *     title="Processo de Decretacao (formato plano)",
+ *     @OA\Property(property="id", type="integer", example=261),
+ *     @OA\Property(property="uf", type="string", example="MG"),
+ *     @OA\Property(property="municipio", type="string", nullable=true, example="Ouro Verde de Minas"),
+ *     @OA\Property(property="codigo_ibge", type="string", nullable=true, example="3146206"),
+ *     @OA\Property(property="macroregiao", type="string", nullable=true, example="JEQUITINHONHAMUCURI"),
+ *     @OA\Property(property="latitude", type="string", nullable=true, example="-18."),
+ *     @OA\Property(property="longitude", type="string", nullable=true, example="-41."),
+ *     @OA\Property(property="latitude_dec", type="number", format="float", nullable=true, example=-18.07),
+ *     @OA\Property(property="longitude_dec", type="number", format="float", nullable=true, example=-41.269722),
+ *     @OA\Property(property="data_registro", type="string", format="date", nullable=true, example="2026-12-30"),
+ *     @OA\Property(property="data_criacao", type="string", format="date-time", nullable=true, example="2026-01-30T11:28:56.000000Z"),
+ *     @OA\Property(property="deletado", type="boolean", example=false),
+ *     @OA\Property(property="data_delecao", type="string", format="date-time", nullable=true),
+ *     @OA\Property(property="protocolo", type="string", nullable=true, example="MG-F-3146206-13214-20260121"),
+ *     @OA\Property(property="cobrade", type="string", nullable=true, example="1.3.2.1.4"),
+ *     @OA\Property(property="tipo_desastre", type="string", nullable=true, example="Tempestade local: chuvas intensas."),
+ *     @OA\Property(property="status", type="string", nullable=true, example="Reconhecido pelo Estado e pela Uniao"),
+ *     @OA\Property(property="data_fato", type="string", format="date", nullable=true, example="2026-01-21"),
+ *     @OA\Property(property="data_decreto_municipal", type="string", format="date", nullable=true, example="2026-01-22"),
+ *     @OA\Property(property="data_publicacao_mg", type="string", format="date", nullable=true, example="2026-01-22"),
+ *     @OA\Property(property="prazo_vigencia_dias", type="integer", nullable=true, example=180),
+ *     @OA\Property(property="data_vencimento", type="string", format="date", nullable=true, example="2026-07-21"),
+ *     @OA\Property(property="dias_restantes", type="integer", nullable=true, example=85),
+ *     @OA\Property(property="tipo_decreto", type="string", nullable=true, enum={"SE", "ECP"}, example="SE"),
+ *     @OA\Property(property="processo", type="string", nullable=true, example="MUNICIPAL"),
+ *     @OA\Property(property="analista", type="string", nullable=true, example="SC Cristina"),
+ *     @OA\Property(property="obitos", type="integer", example=0),
+ *     @OA\Property(property="feridos", type="integer", example=0),
+ *     @OA\Property(property="desalojados", type="integer", example=39),
+ *     @OA\Property(property="desabrigados", type="integer", example=12),
+ *     @OA\Property(property="desaparecidos", type="integer", example=0),
+ *     @OA\Property(property="outros_afetados", type="integer", example=2680),
+ *     @OA\Property(property="danos_humanos_quantidade", type="integer", example=2731),
+ *     @OA\Property(property="danos_materiais_danificadas", type="integer", example=22),
+ *     @OA\Property(property="danos_materiais_destruidas", type="integer", example=0),
+ *     @OA\Property(property="danos_materiais_valor", type="number", format="float", example=122000),
+ *     @OA\Property(property="prejuizos_publicos_valor", type="number", format="float", example=71400),
+ *     @OA\Property(property="prejuizos_privados_valor", type="number", format="float", example=2100)
  * )
  *
  * @OA\Schema(
@@ -145,17 +172,7 @@
  *     @OA\Property(
  *         property="data",
  *         type="array",
- *         @OA\Items(
- *             type="object",
- *             @OA\Property(property="municipio_id", type="integer"),
- *             @OA\Property(property="municipio_nome", type="string"),
- *             @OA\Property(property="tipo_decreto", type="string"),
- *             @OA\Property(property="data_entrada", type="string", format="date"),
- *             @OA\Property(property="obitos", type="integer"),
- *             @OA\Property(property="feridos", type="integer"),
- *             @OA\Property(property="desabrigados", type="integer"),
- *             @OA\Property(property="desalojados", type="integer")
- *         )
+ *         @OA\Items(ref="#/components/schemas/ProcessoDecretacaoItem")
  *     )
  * )
  *

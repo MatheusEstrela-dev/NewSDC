@@ -7,6 +7,7 @@ namespace App\Modules\Rat\Domain\Repositories;
 use App\Modules\Rat\DTOs\RatFilterDTO;
 use App\Modules\Rat\Models\Rat;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 interface RatRepositoryInterface
 {
@@ -29,4 +30,11 @@ interface RatRepositoryInterface
      * Deve ser invocado com lockForUpdate() dentro de uma transação DB.
      */
     public function getLatestSequence(int $year): int;
+
+    /**
+     * Retorna RATs como Collection, com filtro opcional de search e limite.
+     * Usado pelo RagService para enriquecimento de contexto da IA.
+     * @param int $limit -1 para sem limite
+     */
+    public function findAll(array $filters = [], int $limit = 10): Collection;
 }

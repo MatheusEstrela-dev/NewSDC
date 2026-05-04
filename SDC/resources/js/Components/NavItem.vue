@@ -1,8 +1,10 @@
 <template>
-  <Link
+  <component
+    :is="external ? 'a' : Link"
     :href="href"
-    prefetch
-    cache-for="30s"
+    :target="external ? '_blank' : undefined"
+    :prefetch="!external"
+    :cache-for="!external ? '30s' : undefined"
     :class="[
       'nav-item',
       {
@@ -79,7 +81,7 @@
       <slot />
     </span>
     <span v-if="active && !isSubmenu && !collapsed" class="nav-item-dot"></span>
-  </Link>
+  </component>
 </template>
 
 <script setup>
@@ -107,6 +109,10 @@ const props = defineProps({
     default: false,
   },
   collapsed: {
+    type: Boolean,
+    default: false,
+  },
+  external: {
     type: Boolean,
     default: false,
   },

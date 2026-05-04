@@ -75,6 +75,14 @@
       @click="$emit('archive')"
     />
     <ButtonIcon
+      v-if="showAssign"
+      :icon="UserIcon"
+      variant="info"
+      :size="size"
+      title="Atribuir Analista"
+      @click="$emit('assign')"
+    />
+    <ButtonIcon
       v-if="showOptions"
       :icon="EllipsisVerticalIcon"
       variant="secondary"
@@ -97,6 +105,7 @@ import ArchiveBoxIcon from '../../Icons/ArchiveBoxIcon.vue';
 import UploadIcon from '../../Icons/UploadIcon.vue';
 import ExclamationIcon from '../../Icons/ExclamationIcon.vue';
 import EllipsisVerticalIcon from '../../Icons/EllipsisVerticalIcon.vue';
+import UserIcon from '../../Icons/UserIcon.vue';
 
 defineProps({
   showView: {
@@ -139,6 +148,10 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  showAssign: {
+    type: Boolean,
+    default: false,
+  },
   size: {
     type: String,
     default: 'md',
@@ -146,6 +159,6 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'attachments', 'history', 'delete', 'archive', 'upload', 'warning', 'options']);
+defineEmits(['view', 'print', 'edit', 'attachments', 'history', 'delete', 'archive', 'upload', 'warning', 'options', 'assign']);
 </script>
 

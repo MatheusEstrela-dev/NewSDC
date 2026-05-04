@@ -60,9 +60,11 @@
         :class="{ 'is-visible': showTopGradient && isHovering }"
       ></div>
 
+      <div class="sidebar-views" :class="{ 'show-submenu': activeSubmenu !== null }">
       <nav
         ref="sidebarNav"
-        class="sidebar-nav"
+        class="sidebar-nav sidebar-view sidebar-view-main"
+        :inert="activeSubmenu !== null"
         @mouseenter="onMouseEnter"
         @mouseleave="onMouseLeave"
         @mousemove="onMouseMove"
@@ -154,72 +156,28 @@
           Orgaos
         </NavItem>
 
-        <!-- TDAP com submenu -->
-        <div v-if="canSeeTdap" class="nav-group">
-          <button
-            @click="toggleSubMenu('tdap')"
-            class="nav-group-toggle"
-            :class="{ 'is-open': openSubMenus.tdap }"
-            :title="isCollapsed ? 'TDAP' : ''"
+        <!-- TDAP - drill-down (abre submenu como nova seccao) -->
+        <button
+          v-if="canSeeTdap"
+          @click="openSubmenu('tdap')"
+          class="nav-group-toggle nav-drilldown"
+          :class="{ 'is-active-route': isRouteActive('tdap.*') }"
+          :title="isCollapsed ? 'TDAP' : ''"
+        >
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+          <span v-show="!isCollapsed">TDAP</span>
+          <svg
+            v-show="!isCollapsed"
+            class="nav-arrow nav-arrow-drill"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            </svg>
-            <span v-show="!isCollapsed">TDAP</span>
-            <svg
-              v-show="!isCollapsed"
-              class="nav-arrow"
-              :class="{ 'rotate-90': openSubMenus.tdap }"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <div v-show="openSubMenus.tdap && !isCollapsed" class="nav-submenu">
-            <NavItem
-              v-if="_routes.hasTdapDashboard"
-              :href="route('tdap.dashboard')"
-              :active="isRouteActive('tdap.dashboard')"
-              icon="dot"
-              is-submenu
-              :collapsed="isCollapsed"
-            >
-              Dashboard
-            </NavItem>
-            <NavItem
-              v-if="_routes.hasTdapProducts"
-              :href="route('tdap.products.index')"
-              :active="isRouteActive('tdap.products.*')"
-              icon="dot"
-              is-submenu
-              :collapsed="isCollapsed"
-            >
-              Produtos
-            </NavItem>
-            <NavItem
-              v-if="_routes.hasTdapRecebimentos"
-              :href="route('tdap.recebimentos.index')"
-              :active="isRouteActive('tdap.recebimentos.*')"
-              icon="dot"
-              is-submenu
-              :collapsed="isCollapsed"
-            >
-              Recebimentos
-            </NavItem>
-            <NavItem
-              v-if="_routes.hasTdapMovimentacoes"
-              :href="route('tdap.movimentacoes.index')"
-              :active="isRouteActive('tdap.movimentacoes.*')"
-              icon="dot"
-              is-submenu
-              :collapsed="isCollapsed"
-            >
-              Movimentações
-            </NavItem>
-          </div>
-        </div>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
 
         <!-- Treinamento -->
         <NavItem
@@ -299,6 +257,7 @@
           :active="false"
           icon="code"
           :collapsed="isCollapsed"
+          external
         >
           API Docs
         </NavItem>
@@ -306,6 +265,71 @@
 
 
     </nav>
+
+    <!-- SUBMENU VIEW: TDAP -->
+    <nav
+      v-if="canSeeTdap"
+      class="sidebar-nav sidebar-view sidebar-view-submenu"
+      :class="{ 'is-active': activeSubmenu === 'tdap' }"
+      :inert="activeSubmenu !== 'tdap'"
+    >
+      <button
+        type="button"
+        class="submenu-back"
+        @click="closeSubmenu"
+        v-show="!isCollapsed"
+      >
+        <svg class="submenu-back-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span class="submenu-back-title">{{ submenuTitle || 'TDAP' }}</span>
+      </button>
+
+      <div class="nav-section">
+        <NavItem
+          v-if="_routes.hasTdapDashboard"
+          :href="route('tdap.dashboard')"
+          :active="isRouteActive('tdap.dashboard')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Dashboard
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapProducts"
+          :href="route('tdap.products.index')"
+          :active="isRouteActive('tdap.products.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Produtos
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapRecebimentos"
+          :href="route('tdap.recebimentos.index')"
+          :active="isRouteActive('tdap.recebimentos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Recebimentos
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapMovimentacoes"
+          :href="route('tdap.movimentacoes.index')"
+          :active="isRouteActive('tdap.movimentacoes.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Movimentações
+        </NavItem>
+      </div>
+    </nav>
+
+    </div><!-- /.sidebar-views -->
 
     <!-- Gradiente inferior -->
     <div
@@ -496,10 +520,13 @@ const canSeeDebug = computed(() => {
   return isDev || _isSuper.value;
 });
 
-const openSubMenus = ref({
-  tdap: false,
-  ajudaHumanitaria: false,
-});
+const activeSubmenu = ref(null);
+
+const submenuTitles = {
+  tdap: 'TDAP',
+};
+
+const submenuTitle = computed(() => submenuTitles[activeSubmenu.value] ?? '');
 
 // Links resilientes (evita tela branca quando uma rota nao existir no Ziggy)
 // URLs estáticas — rotas não mudam em runtime, sem necessidade de computed reativo
@@ -518,16 +545,18 @@ const permissionamentoHref = route().has('admin.permissions.users.index') ? rout
 
 function toggleSidebar() {
   isCollapsed.value = !isCollapsed.value;
-  // Fechar submenus quando colapsar
   if (isCollapsed.value) {
-    openSubMenus.value.tdap = false;
-    openSubMenus.value.ajudaHumanitaria = false;
+    activeSubmenu.value = null;
   }
 }
 
-function toggleSubMenu(menu) {
+function openSubmenu(name) {
   if (isCollapsed.value) return;
-  openSubMenus.value[menu] = !openSubMenus.value[menu];
+  activeSubmenu.value = name;
+}
+
+function closeSubmenu() {
+  activeSubmenu.value = null;
 }
 
 // Fechar sidebar mobile ao clicar em um link (será propagado aos NavItems)
@@ -982,6 +1011,122 @@ provide('sidebarCollapsed', isCollapsed);
   min-height: 0; /* Critical: Fix flexbox overflow issue */
   display: flex;
   flex-direction: column;
+}
+
+/* Container das views deslizantes (drill-down) */
+.sidebar-views {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.sidebar-view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.22s ease;
+  will-change: transform;
+}
+
+/* Estado padrao: main visivel, submenu fora a direita */
+.sidebar-view-main {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.sidebar-view-submenu {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Estado submenu ativo: main desliza p/ esquerda, submenu entra */
+.sidebar-views.show-submenu .sidebar-view-main {
+  transform: translateX(-24%);
+  opacity: 0.0;
+  pointer-events: none;
+}
+
+.sidebar-views.show-submenu .sidebar-view-submenu.is-active {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Cabecalho "Voltar" no topo da subview */
+.submenu-back {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: white;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: background 0.2s ease;
+  margin-bottom: 0.5rem;
+}
+
+.submenu-back:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.submenu-back-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.85);
+  transition: transform 0.2s ease;
+}
+
+.submenu-back:hover .submenu-back-icon {
+  transform: translateX(-2px);
+}
+
+.submenu-back-title {
+  flex: 1;
+  color: white;
+}
+
+/* Indicador no item drill-down quando rota filha esta ativa */
+.nav-drilldown.is-active-route {
+  color: #3b82f6;
+}
+
+.nav-drilldown.is-active-route .nav-icon {
+  color: #3b82f6;
+}
+
+.nav-arrow-drill {
+  opacity: 0.6;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.nav-drilldown:hover .nav-arrow-drill {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+/* Quando colapsada, esconder cabecalho voltar e nao deslizar */
+.sidebar.is-collapsed .sidebar-view-submenu {
+  display: none;
+}
+
+/* Respeitar prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-view {
+    transition: none;
+  }
 }
 
 /* Gradientes de indicação de scroll */

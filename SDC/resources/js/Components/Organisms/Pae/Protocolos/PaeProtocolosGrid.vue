@@ -29,6 +29,7 @@
         :protocolo="p"
         :can-edit="canEdit"
         :can-delete="canDelete"
+        :can-atribuir="canAtribuir"
         @view="$emit('view', $event)"
         @print="$emit('print', $event)"
         @edit="$emit('edit', $event)"
@@ -68,6 +69,10 @@ const props = defineProps({
     default: false,
   },
   canDelete: {
+    type: Boolean,
+    default: false,
+  },
+  canAtribuir: {
     type: Boolean,
     default: false,
   },
