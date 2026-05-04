@@ -7,9 +7,24 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::connection('pgsql')->statement('CREATE EXTENSION IF NOT EXISTS vector');
+        $conn = DB::connection('pgsql');
 
-        DB::connection('pgsql')->statement('
+        try {
+            $conn->statement('CREATE EXTENSION IF NOT EXISTS vector');
+        } catch (\Throwable $e) {
+            // Em Azure Flexible Server a extensao precisa estar em azure.extensions.
+            // Se nao estiver, abortamos esta migration sem falhar o batch para que o
+            // schema principal seja criado. Habilite via Portal e rode novamente:
+            //   php artisan migrate --path=database/migrations/2026_04_27_000001_create_dec_embeddings_table.php
+            return;
+        }
+
+        $hasVector = $conn->selectOne("SELECT 1 AS ok FROM pg_extension WHERE extname='vector'");
+        if (! $hasVector) {
+            return;
+        }
+
+        $conn->statement('
             CREATE TABLE IF NOT EXISTS dec_embeddings (
                 id          bigserial    PRIMARY KEY,
                 content     text         NOT NULL,
@@ -22,7 +37,7 @@ return new class extends Migration
             )
         ');
 
-        DB::connection('pgsql')->statement('
+        $conn->statement('
             CREATE INDEX IF NOT EXISTS dec_embeddings_embedding_idx
             ON dec_embeddings
             USING ivfflat (embedding vector_cosine_ops)

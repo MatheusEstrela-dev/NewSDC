@@ -53,10 +53,12 @@ return new class extends Migration
             $table->index('created_by', 'idx_rat_recursos_componentes_guarnicao_created_by');
             $table->index('created_at', 'idx_rat_recursos_componentes_guarnicao_created_at');
 
-            // Configurações do Engine
-            $table->engine = 'InnoDB';
-            $table->charset = 'utf8mb4';
-            $table->collation = 'utf8mb4_unicode_ci';
+            // Configuracoes especificas do MySQL (Postgres ignora)
+            if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                $table->engine = 'InnoDB';
+                $table->charset = 'utf8mb4';
+                $table->collation = 'utf8mb4_unicode_ci';
+            }
         });
     }
 

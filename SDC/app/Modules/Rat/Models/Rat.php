@@ -7,7 +7,6 @@ use App\Modules\Rat\Enums\Protocolo;
 use App\Modules\Rat\Enums\Status;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**

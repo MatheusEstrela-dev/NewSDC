@@ -15,10 +15,8 @@ class DecretacoesMockSeeder extends Seeder
     {
         $this->command->info("\nCriando Decretacoes (Processos) mockados...\n");
 
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
         DB::table('dec_decreto_municipios')->truncate();
         Processo::truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         // Busca municipios reais da tabela correta
         $municipioIds = DB::table('cedec_municipio')

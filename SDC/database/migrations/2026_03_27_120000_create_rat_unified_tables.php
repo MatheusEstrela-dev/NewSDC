@@ -43,7 +43,7 @@ return new class extends Migration
 
                 // Auditoria
                 $table->timestamp('data_criacao')->useCurrent();
-                $table->timestamp('data_atualizacao')->useCurrent()->useCurrentOnUpdate();
+                $table->timestamp('data_atualizacao')->useCurrent();
                 $table->timestamps();
 
                 // Índices
@@ -107,7 +107,7 @@ return new class extends Migration
 
                 // Auditoria
                 $table->timestamp('created_at')->useCurrent();
-                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+                $table->timestamp('updated_at')->useCurrent();
 
                 // Índices
                 $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
@@ -151,7 +151,7 @@ return new class extends Migration
 
                 // Auditoria
                 $table->timestamp('created_at')->useCurrent();
-                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+                $table->timestamp('updated_at')->useCurrent();
 
                 // Índices
                 $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
@@ -191,7 +191,7 @@ return new class extends Migration
 
                 // Auditoria
                 $table->timestamp('created_at')->useCurrent();
-                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+                $table->timestamp('updated_at')->useCurrent();
 
                 // Índices
                 $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');

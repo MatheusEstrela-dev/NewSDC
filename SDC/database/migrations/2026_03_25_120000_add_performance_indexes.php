@@ -9,10 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
-        DB::statement('CREATE EXTENSION IF NOT EXISTS unaccent');
-        DB::statement('CREATE EXTENSION IF NOT EXISTS btree_gin');
-        DB::statement('CREATE EXTENSION IF NOT EXISTS pg_stat_statements');
+        $hasTrgm = $this->tryCreateExtension('pg_trgm');
+        $this->tryCreateExtension('unaccent');
+        $hasBtreeGin = $this->tryCreateExtension('btree_gin');
+        $this->tryCreateExtension('pg_stat_statements');
 
         $trgmIndexes = [
             ['table' => 'pae_protocolos', 'column' => 'num_protocolo',      'name' => 'idx_trgm_pae_num_protocolo'],
@@ -27,6 +27,9 @@ return new class extends Migration
         ];
 
         foreach ($trgmIndexes as $idx) {
+            if (! $hasTrgm) {
+                break;
+            }
             if (Schema::hasTable($idx['table']) && !$this->hasIndex($idx['table'], $idx['name'])) {
                 DB::statement(
                     "CREATE INDEX {$idx['name']} ON {$idx['table']} USING GIN ({$idx['column']} gin_trgm_ops)"
@@ -84,13 +87,27 @@ return new class extends Migration
         ];
 
         foreach ($btreeGinIndexes as $idx) {
-            if (Schema::hasTable($idx['table']) && !$this->hasIndex($idx['table'], $idx['name'])) {
-                $cols = implode(', ', $idx['columns']);
-                DB::statement(
-                    "CREATE INDEX {$idx['name']} ON {$idx['table']} USING GIN ({$cols})"
-                );
+            if (! Schema::hasTable($idx['table']) || $this->hasIndex($idx['table'], $idx['name'])) {
+                continue;
             }
+            $cols = implode(', ', $idx['columns']);
+            $using = $hasBtreeGin ? 'GIN' : 'BTREE';
+            DB::statement("CREATE INDEX {$idx['name']} ON {$idx['table']} USING {$using} ({$cols})");
         }
+    }
+
+    private function tryCreateExtension(string $name): bool
+    {
+        try {
+            DB::statement(sprintf('CREATE EXTENSION IF NOT EXISTS "%s"', $name));
+        } catch (\Throwable $e) {
+            // Em Azure Flexible Server a extensao precisa estar em azure.extensions.
+            // Se nao estiver, skipamos para que o restante da migration continue
+            // (indices trgm/btree_gin caem em fallback ou sao pulados).
+        }
+
+        $row = DB::selectOne('SELECT 1 AS ok FROM pg_extension WHERE extname = ?', [$name]);
+        return (bool) $row;
     }
 
     public function down(): void

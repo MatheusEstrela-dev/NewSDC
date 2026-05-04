@@ -11,7 +11,7 @@
         size === 'sm' ? 'atom-input-sm' : (size === 'lg' ? 'atom-input-lg' : 'atom-input-md'),
         disabled ? 'atom-input-disabled' : (modelValue ? 'atom-input-filled' : 'atom-input-normal'),
       ]"
-      style="padding-left: 2.75rem !important;"
+      style="padding-left: 3rem !important;"
       @keyup="handleKeyup"
       @blur="$emit('blur', $event)"
     />

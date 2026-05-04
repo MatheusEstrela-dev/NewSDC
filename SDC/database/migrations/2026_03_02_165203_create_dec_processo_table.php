@@ -8,9 +8,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('dec_processo', function (Blueprint $table) {
-            $table->increments('id_processo');
+            $table->id('id_processo');
 
-            $table->year('ano')->nullable();
+            $table->unsignedSmallInteger('ano')->nullable();
             $table->date('dt_entrada')->nullable();
             $table->integer('num_processo')->nullable()->unique();
             $table->integer('id_municipio')->nullable();

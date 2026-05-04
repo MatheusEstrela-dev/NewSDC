@@ -7,6 +7,7 @@ namespace App\Services\Rat;
 use App\Models\Rat\RatOcorrencia;
 use App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos;
 use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
+use App\Support\Database\PgCompat;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -45,7 +46,8 @@ class RatBiService
     {
         $year = now()->year;
         return Cache::remember(self::CACHE_PREFIX . "mes.{$year}", self::CACHE_TTL, function () {
-            return RatOcorrencia::selectRaw('EXTRACT(MONTH FROM created_at)::int as mes, count(*) as total')
+            $mesExpr = PgCompat::extractDatePart('MONTH', 'created_at');
+            return RatOcorrencia::selectRaw("{$mesExpr} as mes, count(*) as total")
                 ->whereYear('created_at', now()->year)
                 ->groupBy('mes')
                 ->orderBy('mes')

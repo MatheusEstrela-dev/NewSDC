@@ -33,7 +33,7 @@ return new class extends Migration
             $table->string('uni_responsavel_codigo', 191)->nullable()->comment('Código');
             $table->string('uni_responsavel_unidade', 191)->nullable()->comment('Nome da Unidade');
             $table->string('uni_bo_cod_unidade', 191)->nullable()->comment('BO - Cod. Unidade');
-            $table->year('uni_bo_ano')->nullable()->comment('BO - Ano');
+            $table->unsignedSmallInteger('uni_bo_ano')->nullable()->comment('BO - Ano');
             $table->string('uni_bo_sequencial', 191)->nullable()->comment('BO - Sequencial');
 
             // Comunicação
@@ -69,9 +69,11 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->engine = 'InnoDB';
-            $table->charset = 'utf8mb4';
-            $table->collation = 'utf8mb4_unicode_ci';
+            if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                $table->engine = 'InnoDB';
+                $table->charset = 'utf8mb4';
+                $table->collation = 'utf8mb4_unicode_ci';
+            }
         });
     }
 

@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'mysql'),
+    'default' => env('DB_CONNECTION', 'pgsql'),
 
     /*
     |--------------------------------------------------------------------------
@@ -124,31 +124,49 @@ return [
             ]) : [],
         ],
 
+        // Conexao principal Postgres - usada em producao (Azure Flexible Server PG17)
+        // e em dev (db_ai container Docker com Citus + pgvector + PostGIS).
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'sdc'),
+            'username' => env('DB_USERNAME', 'sdc'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => env('DB_SEARCH_PATH', 'public'),
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'sslrootcert' => env('DB_SSL_CA') ?: null,
+            'application_name' => env('APP_NAME', 'sdc-laravel'),
+            'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
+            'options' => [
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ],
+        ],
+
+        // Conexao para workload de IA/embeddings (db_ai container ou schema dedicado).
+        // Aponta para o container Docker em dev; em prod aponta para o mesmo Azure
+        // PG17 (database separada ou schema 'sdc_ai') quando DB_PGSQL_HOST nao for definido.
+        'pgsql_read' => [
+            'driver' => 'pgsql',
             'host' => env('DB_PGSQL_HOST', env('DB_HOST', '127.0.0.1')),
-            'port' => env('DB_PGSQL_PORT', '5432'),
-            'database' => env('DB_PGSQL_DATABASE', env('DB_DATABASE', 'forge')),
-            'username' => env('DB_PGSQL_USERNAME', env('DB_USERNAME', 'forge')),
+            'port' => env('DB_PGSQL_PORT', env('DB_PORT', '5432')),
+            'database' => env('DB_PGSQL_DATABASE', env('DB_DATABASE', 'sdc_ai')),
+            'username' => env('DB_PGSQL_USERNAME', env('DB_USERNAME', 'sdc')),
             'password' => env('DB_PGSQL_PASSWORD', env('DB_PASSWORD', '')),
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
-            'sslmode' => 'prefer',
-        ],
-
-        'pgsql_read' => [
-            'driver' => 'pgsql',
-            'host' => env('DB_PGSQL_HOST', '127.0.0.1'),
-            'port' => env('DB_PGSQL_PORT', '5432'),
-            'database' => env('DB_PGSQL_DATABASE', env('DB_DATABASE', 'sdc')),
-            'username' => env('DB_PGSQL_USERNAME', env('DB_USERNAME', 'forge')),
-            'password' => env('DB_PGSQL_PASSWORD', env('DB_PASSWORD', '')),
-            'charset' => 'utf8',
-            'search_path' => 'public',
-            'sslmode' => 'prefer',
+            'search_path' => env('DB_PGSQL_SEARCH_PATH', 'public'),
+            'sslmode' => env('DB_PGSQL_SSLMODE', env('DB_SSLMODE', 'prefer')),
+            'sslrootcert' => env('DB_SSL_CA') ?: null,
+            'application_name' => env('APP_NAME', 'sdc-laravel') . '-ai',
+            'options' => [
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ],
         ],
 
         'sqlsrv' => [

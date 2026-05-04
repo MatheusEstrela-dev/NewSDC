@@ -11,7 +11,9 @@ use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Models\PaeTramitacao;
 use App\Modules\Pae\Models\PaeTimeline;
 use App\Modules\Shared\BaseService;
+use App\Support\Database\PgCompat;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class PaeProtocoloService extends BaseService
@@ -58,9 +60,7 @@ class PaeProtocoloService extends BaseService
     {
         $ano = now()->format('Y');
         $ultimo = PaeProtocolo::whereYear('created_at', $ano)->max(
-            \Illuminate\Support\Facades\DB::raw(
-                "CAST(SPLIT_PART(num_protocolo, '.', 4) AS BIGINT)"
-            )
+            DB::raw(PgCompat::castToInt(PgCompat::splitPart('num_protocolo', '.', 4)))
         ) ?? 0;
         $seq = str_pad((string) ($ultimo + 1), 3, '0', STR_PAD_LEFT);
         return now()->format('d.m.Y') . '.' . $seq;

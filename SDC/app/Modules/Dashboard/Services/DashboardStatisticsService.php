@@ -129,8 +129,11 @@ class DashboardStatisticsService
             ];
         }
 
+        $anoExpr = \App\Support\Database\PgCompat::extractDatePart('YEAR', 'created_at');
+        $mesExpr = \App\Support\Database\PgCompat::extractDatePart('MONTH', 'created_at');
+
         foreach ($sources as $modelClass) {
-            $rows = $modelClass::selectRaw('EXTRACT(YEAR FROM created_at)::int as ano, EXTRACT(MONTH FROM created_at)::int as mes, COUNT(*) as total')
+            $rows = $modelClass::selectRaw("{$anoExpr} as ano, {$mesExpr} as mes, COUNT(*) as total")
                 ->where('created_at', '>=', $inicio)
                 ->groupBy('ano', 'mes')
                 ->get();

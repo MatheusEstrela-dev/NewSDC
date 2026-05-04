@@ -62,9 +62,11 @@ return new class extends Migration
                   ->on('rat_relato_recursos')
                   ->onDelete('cascade');
 
-            $table->engine = 'InnoDB';
-            $table->charset = 'utf8mb4';
-            $table->collation = 'utf8mb4_unicode_ci';
+            if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                $table->engine = 'InnoDB';
+                $table->charset = 'utf8mb4';
+                $table->collation = 'utf8mb4_unicode_ci';
+            }
         });
     }
 

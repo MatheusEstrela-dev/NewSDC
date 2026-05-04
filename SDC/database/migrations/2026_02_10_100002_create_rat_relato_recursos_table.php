@@ -69,9 +69,11 @@ return new class extends Migration
             $table->index('created_by', 'idx_rat_relato_recursos_created_by');
             $table->index('created_at', 'idx_rat_relato_recursos_created_at');
 
-            $table->engine = 'InnoDB';
-            $table->charset = 'utf8mb4';
-            $table->collation = 'utf8mb4_unicode_ci';
+            if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                $table->engine = 'InnoDB';
+                $table->charset = 'utf8mb4';
+                $table->collation = 'utf8mb4_unicode_ci';
+            }
         });
     }
 

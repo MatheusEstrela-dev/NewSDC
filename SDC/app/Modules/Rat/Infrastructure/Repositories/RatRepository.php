@@ -182,4 +182,26 @@ class RatRepository implements RatRepositoryInterface
 
         return (int) max($seqOc, $seqRat);
     }
+
+    /**
+     * Retorna RATs como Collection, com filtro opcional de search e limite.
+     */
+    public function findAll(array $filters = [], int $limit = 10): \Illuminate\Support\Collection
+    {
+        $query = \App\Models\Rat\RatOcorrencia::query();
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function($q) use ($search) {
+                $q->where('numero_bos', 'like', "%{$search}%")
+                  ->orWhere('historico', 'like', "%{$search}%");
+            });
+        }
+
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        return $query->get();
+    }
 }

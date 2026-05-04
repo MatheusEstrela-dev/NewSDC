@@ -36,6 +36,9 @@ services:
       - ../../.env.local
 
     environment:
+      # Working dir do entrypoint (compose monta tudo em /app)
+      WORKDIR: /app
+
       # Laravel
       APP_NAME: "SDC Local"
       APP_ENV: local
@@ -94,7 +97,7 @@ services:
       - ../../composer.json:/app/composer.json:ro
       - ../../composer.lock:/app/composer.lock:ro
       - ../../vendor:/app/vendor:ro
-      - ./platform_check_bypass.php:/app/vendor/composer/platform_check.php:ro
+      # platform_check_bypass removido: composer dump-autoload --ignore-platform-reqs nao gera mais o arquivo
       - ./scripts/entrypoint.sh:/start.sh:ro
       - ./Caddyfile.local:/etc/caddy/Caddyfile.local:ro
 
