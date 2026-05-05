@@ -16,7 +16,6 @@ use App\Modules\Rat\Http\Requests\RatEnvolvidoRequest;
 use App\Modules\Rat\Http\Requests\RatHistoricoRequest;
 use App\Modules\Rat\Http\Requests\RatRecursoRequest;
 use App\Modules\Rat\Http\Requests\RatVistoriaRequest;
-use App\Modules\Rat\Http\Resources\RatListResource;
 use App\Modules\Rat\Http\Resources\RatResource as RatOcorrenciaResource;
 use App\Modules\Rat\Models\RatOcorrencia;
 use App\Modules\Rat\Models\RatOcorrenciaHistorico;
@@ -67,7 +66,7 @@ class RatUnifiedController extends BaseController
         $data = $this->appDataService->getIndexData();
 
         return Inertia::render('RatIndex', [
-            'rats'       => RatListResource::collection($data['rats']),
+            'rats'       => RatOcorrenciaResource::collection($data['rats']),
             'statistics' => $data['statistics'],
             'filters'    => [],
         ]);

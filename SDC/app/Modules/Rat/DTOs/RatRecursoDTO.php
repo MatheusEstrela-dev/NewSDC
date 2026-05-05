@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\DTOs;
 
+use App\Modules\Rat\DTOs\RatAgenteDTO;
+
 /**
  * DTO para dados de recursos (viaturas/pessoal) em uma ocorrência RAT.
  */

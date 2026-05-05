@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Http\Resources;
 
-use App\Modules\Rat\Enums\Status;
+use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -39,8 +39,8 @@ class RatResource extends JsonResource
                     'categoria'            => $c->viatura_tipo ?? null,
                     'identificacao'        => $c->viatura_placa ?? null,
                     'orgao_responsavel'    => $c->viatura_orgao ?? null,
-                    'data_hora_saida'      => (isset($c->viatura_saida) && $c->viatura_saida != '0' && $c->viatura_saida != '') ? (\Carbon\Carbon::parse($c->viatura_saida)->format('Y-m-d\TH:i')) : null,
-                    'data_hora_chegada'    => (isset($c->viatura_chegada) && $c->viatura_chegada != '0' && $c->viatura_chegada != '') ? (\Carbon\Carbon::parse($c->viatura_chegada)->format('Y-m-d\TH:i')) : null,
+                    'data_hora_saida'      => (isset($c->viatura_saida) && $c->viatura_saida != '0' && $c->viatura_saida != '') ? (Carbon::parse($c->viatura_saida)->format('Y-m-d\TH:i')) : null,
+                    'data_hora_chegada'    => (isset($c->viatura_chegada) && $c->viatura_chegada != '0' && $c->viatura_chegada != '') ? (Carbon::parse($c->viatura_chegada)->format('Y-m-d\TH:i')) : null,
                     'km_percorrido'        => $c->viatura_km ?? null,
                     'local_origem'         => $c->viatura_local_origem ?? null,
                     'local_destino'        => $c->viatura_local_destino ?? null,

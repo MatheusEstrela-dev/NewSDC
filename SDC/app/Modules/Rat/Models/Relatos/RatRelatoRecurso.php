@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Models\Relatos;
 
 use App\Modules\Rat\Models\RatOcorrencia;
-use App\Modules\Rat\Models\Recursos\RatRecursosEmpregado;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -55,14 +54,6 @@ class RatRelatoRecurso extends RatRelato
         'operador_is_condutor' => 'boolean',
         'viatura_quantidade' => 'integer',
     ];
-
-    /**
-     * Relação: Empregos dete recurso (detalhes da viatura/pessoal)
-     */
-    public function empregados(): HasMany
-    {
-        return $this->hasMany(RatRecursosEmpregado::class, 'relato_recurso_id');
-    }
 
     /**
      * Relação: Componentes da Guarnição / Agentes

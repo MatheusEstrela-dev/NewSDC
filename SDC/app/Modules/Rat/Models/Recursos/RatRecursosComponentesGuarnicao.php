@@ -34,12 +34,6 @@ class RatRecursosComponentesGuarnicao extends Model
         'is_condutor' => 'boolean',
     ];
 
-    /** Recurso empregado ao qual este componente pertence. */
-    public function recursoEmpregado(): BelongsTo
-    {
-        return $this->belongsTo(RatRecursosEmpregado::class, 'recurso_empregado_id');
-    }
-
     /** Relato de recurso ao qual este componente pertence. */
     public function relatoRecurso(): BelongsTo
     {
