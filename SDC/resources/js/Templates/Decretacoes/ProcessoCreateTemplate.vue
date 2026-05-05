@@ -147,6 +147,9 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'submit-desastres', 'cancel', 'finish']);
 
+// Determina se estamos no modo edicao (processo ja existe no backend)
+const isEditing = computed(() => !!props.processo?.id);
+
 // Wizard: Aba 2 fica disabled ate o processo ser criado.
 // Quando processo.id existe (post-store), ja iniciamos no tab 'desastres'.
 const { activeTab, setActiveTab, tabs } = useDecretacaoTabs({

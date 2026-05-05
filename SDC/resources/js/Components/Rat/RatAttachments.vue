@@ -118,7 +118,6 @@ watch(
  * Envia o arquivo para o backend via API.
  */
 async function doUpload(file, tempId) {
-async function handleUploadFile({ file, tempId }) {
   // CORRIGIDO: Validar se ratId existe antes de fazer upload
   if (!props.ratId) {
     uploadError.value = '❌ Erro: RAT não foi criado ainda. Salve o RAT primeiro antes de anexar arquivos.';
@@ -148,7 +147,6 @@ async function handleUploadFile({ file, tempId }) {
 
   try {
     const axios    = window.axios || (await import('axios')).default;
-    const response = await axios.post(route('rat.anexos.store', { id: props.ratId }), form, {
     const response = await axios.post(route('rat.ocorrencias.attachments.store', props.ratId), form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

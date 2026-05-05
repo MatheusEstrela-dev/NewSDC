@@ -89,8 +89,8 @@ class SecurityHeaders
         // Em ambiente local, liberamos Vite (HTTP + WebSocket) e fontes externas usadas pelo layout
         // para evitar tela em branco por CSP bloqueando assets.
         if ($isLocal || $isNativePHP) {
-            // Vite ports: internal (5173/5175) and host-mapped (15175) for Docker
-            $vitePorts = [5173, 5175, 5176, 15175];
+            // Vite ports: internal (5173/5175), host-mapped (15175) for Docker, and HMR WS (18081)
+            $vitePorts = [5173, 5175, 5176, 15175, 18081];
             $viteHosts = [];
             foreach ($vitePorts as $p) {
                 $viteHosts[] = "http://localhost:{$p}";

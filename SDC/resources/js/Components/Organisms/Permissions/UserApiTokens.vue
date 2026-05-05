@@ -63,7 +63,7 @@
           <div class="font-mono text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 flex-1">
             sk-&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;{{ String(token.id).slice(-3).padStart(3, '\u2022') }}
           </div>
-          <Button variant="danger" size="sm" :icon="TrashIcon" @click="revokeToken(token)">
+          <Button variant="danger" size="sm" :icon="TrashIcon" @click="confirmRevoke(token)">
             Revogar
           </Button>
         </div>
@@ -127,6 +127,19 @@
       </form>
     </div>
 
+    <ConfirmDialog
+      :is-open="showRevokeDialog"
+      title="Revogar Token de API"
+      :message="tokenToRevoke ? `Revogar o token “${tokenToRevoke.name}”?` : ''"
+      description="Esta acao nao pode ser desfeita. Aplicacoes que usam este token perderao acesso imediatamente."
+      variant="danger"
+      confirm-text="Sim, revogar"
+      cancel-text="Cancelar"
+      :loading="isRevoking"
+      @confirm="executeRevoke"
+      @cancel="cancelRevoke"
+    />
+
   </CardBase>
 </template>
 
@@ -140,6 +153,8 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import ClipboardIcon from '@/Components/Icons/ClipboardIcon.vue';
 import TrashIcon from '@/Components/Icons/TrashIcon.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import { useToast } from '@/composables/useToast';
 
 const PlusIconRaw     = markRaw(PlusIcon);
 const ClipboardIconRaw = markRaw(ClipboardIcon);
@@ -156,6 +171,10 @@ const showForm   = ref(false);
 const processing = ref(false);
 const copied     = ref(false);
 const errors     = ref({});
+
+const showRevokeDialog = ref(false);
+const tokenToRevoke    = ref(null);
+const isRevoking       = ref(false);
 
 const form = ref({
   name:       '',
@@ -178,13 +197,38 @@ function submitForm() {
   });
 }
 
-function revokeToken(token) {
-  if (!confirm(`Revogar o token "${token.name}"? Esta acao nao pode ser desfeita.`)) return;
+function confirmRevoke(token) {
+  tokenToRevoke.value    = token;
+  showRevokeDialog.value = true;
+}
+
+function executeRevoke() {
+  if (!tokenToRevoke.value) return;
+  const { toast } = useToast();
+  isRevoking.value = true;
 
   router.delete(route('admin.permissions.users.tokens.destroy', {
     user:    props.userId,
-    tokenId: token.id,
-  }));
+    tokenId: tokenToRevoke.value.id,
+  }), {
+    preserveScroll: true,
+    onSuccess: () => {
+      toast('Token revogado com sucesso!', 'success');
+      showRevokeDialog.value = false;
+      tokenToRevoke.value    = null;
+    },
+    onError: (err) => {
+      console.error('Erro ao revogar token:', err);
+      toast('Falha ao revogar token. Verifique o console.', 'error');
+    },
+    onFinish: () => { isRevoking.value = false; },
+  });
+}
+
+function cancelRevoke() {
+  if (isRevoking.value) return;
+  showRevokeDialog.value = false;
+  tokenToRevoke.value    = null;
 }
 
 function copyToken(value) {

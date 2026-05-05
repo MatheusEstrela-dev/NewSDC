@@ -40,9 +40,13 @@ class UserTokenController extends Controller
 
     public function destroy(User $user, int $tokenId): RedirectResponse
     {
+        \Illuminate\Support\Facades\Log::info("Tentando revogar token {$tokenId} do usuario {$user->id}");
         $revoked = $this->tokenService->revokeToken($user, $tokenId);
 
-        abort_unless($revoked, 404);
+        if (!$revoked) {
+            \Illuminate\Support\Facades\Log::error("Falha ao revogar token {$tokenId} do usuario {$user->id}");
+            abort(404);
+        }
 
         return redirect()
             ->route('admin.permissions.users.show', $user)

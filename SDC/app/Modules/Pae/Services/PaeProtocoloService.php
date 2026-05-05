@@ -59,11 +59,22 @@ class PaeProtocoloService extends BaseService
     public function gerarNumProtocolo(): string
     {
         $ano = now()->format('Y');
-        $ultimo = PaeProtocolo::whereYear('created_at', $ano)->max(
-            DB::raw(PgCompat::castToInt(PgCompat::splitPart('num_protocolo', '.', 4)))
-        ) ?? 0;
-        $seq = str_pad((string) ($ultimo + 1), 3, '0', STR_PAD_LEFT);
-        return now()->format('d.m.Y') . '.' . $seq;
+        $protocolos = PaeProtocolo::whereYear('created_at', $ano)
+            ->pluck('num_protocolo');
+            
+        $maxSeq = 0;
+        foreach ($protocolos as $num) {
+            $parts = explode('.', $num);
+            if (count($parts) === 4) {
+                $seq = (int) $parts[3];
+                if ($seq > $maxSeq) {
+                    $maxSeq = $seq;
+                }
+            }
+        }
+        
+        $seqStr = str_pad((string) ($maxSeq + 1), 3, '0', STR_PAD_LEFT);
+        return now()->format('d.m.Y') . '.' . $seqStr;
     }
 
     public function create(array $data, User $user): PaeProtocolo
