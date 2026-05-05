@@ -7,9 +7,6 @@ namespace App\Modules\Rat\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/**
- * Valida dados de um recurso empregado em uma ocorrência RAT.
- */
 class RatRecursoRequest extends FormRequest
 {
     public function authorize(): bool
@@ -20,52 +17,75 @@ class RatRecursoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Classificação
-            'tipo_recurso'            => ['required', 'string', Rule::in(['veículo', 'pessoal', 'material', 'equipamento', 'outro'])],
-            'categoria'               => ['required', 'string', 'max:100'],
-            'orgao_responsavel'       => ['required', 'string', 'max:255'],
-            'identificacao'           => ['required', 'string', 'max:100'],
-            'descricao'               => ['nullable', 'string', 'max:500'],
+            // Tipo alinhado com o enum do banco: viatura|pe|aereo|aquatico|outro
+            // O DTO também aceita "pessoal" e mapeia para "pe"
+            'recurso_tipo'          => ['nullable', 'string', Rule::in(['viatura', 'pe', 'aereo', 'aquatico', 'outro', 'pessoal'])],
+            'tipo_recurso'          => ['nullable', 'string', Rule::in(['viatura', 'pe', 'aereo', 'aquatico', 'outro', 'pessoal'])],
+            'seq'                   => ['nullable', 'integer', 'min:1'],
+            'recurso_problemas'     => ['nullable', 'boolean'],
+            'recurso_descricao'     => ['nullable', 'string', 'max:1000'],
+            'descricao'             => ['nullable', 'string', 'max:1000'],
 
-            // Condutor (para veículos)
-            'condutor'                => ['nullable', 'string', 'max:255'],
+            // Viatura
+            'viatura_tipo'          => ['nullable', 'string', 'max:100'],
+            'categoria'             => ['nullable', 'string', 'max:100'],
+            'viatura_placa'         => ['nullable', 'string', 'max:20'],
+            'identificacao'         => ['nullable', 'string', 'max:100'],
+            'viatura_prefixo'       => ['nullable', 'string', 'max:50'],
+            'viatura_padrao'        => ['nullable', 'string', 'max:50'],
+            'viatura_orgao'         => ['nullable', 'string', 'max:255'],
+            'orgao_responsavel'     => ['nullable', 'string', 'max:255'],
+            'viatura_descricao'     => ['nullable', 'string', 'max:1000'],
 
             // Deslocamento
-            'local_origem'            => ['nullable', 'string', 'max:255'],
-            'local_destino'           => ['nullable', 'string', 'max:255'],
-            'data_hora_saida'         => ['nullable', 'string', 'regex:/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/'],
-            'data_hora_chegada'       => ['nullable', 'string', 'regex:/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/'],
-            'km_percorrido'           => ['nullable', 'numeric', 'min:0', 'max:99999.99'],
+            'viatura_saida'         => ['nullable', 'string'],
+            'data_hora_saida'       => ['nullable', 'string'],
+            'viatura_chegada'       => ['nullable', 'string'],
+            'data_hora_chegada'     => ['nullable', 'string'],
+            'viatura_km'            => ['nullable', 'numeric', 'min:0', 'max:99999.99'],
+            'km_percorrido'         => ['nullable', 'numeric', 'min:0', 'max:99999.99'],
+            'viatura_local_origem'  => ['nullable', 'string', 'max:255'],
+            'local_origem'          => ['nullable', 'string', 'max:255'],
+            'viatura_local_destino' => ['nullable', 'string', 'max:255'],
+            'local_destino'         => ['nullable', 'string', 'max:255'],
 
-            // Operacional
-            'quantidade'              => ['required', 'integer', 'min:1', 'max:9999'],
-            'capacidade'              => ['nullable', 'string', 'max:100'],
-            'condicao'                => ['nullable', 'string', Rule::in(['operacional', 'parcialmente operacional', 'inoperacional', 'danificado'])],
+            // Operacional — enum do banco: otima|boa|regular|ruim|inoperante
+            'viatura_quantidade'    => ['nullable', 'integer', 'min:1'],
+            'quantidade'            => ['nullable', 'integer', 'min:1'],
+            'viatura_capacidade'    => ['nullable', 'string', 'max:100'],
+            'capacidade'            => ['nullable', 'string', 'max:100'],
+            'viatura_condicao'      => ['nullable', 'string', Rule::in(['otima', 'boa', 'regular', 'ruim', 'inoperante', 'operacional', 'manutencao'])],
+            'condicao'              => ['nullable', 'string', Rule::in(['otima', 'boa', 'regular', 'ruim', 'inoperante', 'operacional', 'manutencao'])],
 
-            // Responsável
-            'operador_responsavel'    => ['nullable', 'string', 'max:255'],
-            'contato_emergencia'      => ['nullable', 'string', 'max:20'],
+            // Operador
+            'viatura_operador'      => ['nullable', 'string', 'max:255'],
+            'operador_responsavel'  => ['nullable', 'string', 'max:255'],
+            'operador_masp'         => ['nullable', 'string', 'max:20'],
+            'operador_is_condutor'  => ['nullable', 'boolean'],
+            'viatura_contato'       => ['nullable', 'string', 'max:50'],
+            'contato_emergencia'    => ['nullable', 'string', 'max:20'],
 
-            // Observações
-            'observacoes'             => ['nullable', 'string', 'max:500'],
-
-            // Agentes/Integrantes
-            'agentes'                 => ['nullable', 'array'],
-            'agentes.*.id'            => ['nullable', 'integer'],
-            'agentes.*.nome'          => ['required', 'string', 'max:255'],
-            'agentes.*.cargo'         => ['nullable', 'string', 'max:100'],
-            'agentes.*.matricula'     => ['nullable', 'string', 'max:50'],
+            // Agentes da guarnição
+            'agentes'               => ['nullable', 'array'],
+            'agentes.*.id'          => ['nullable', 'integer'],
+            'agentes.*.nome_completo' => ['nullable', 'string', 'max:255'],
+            'agentes.*.nome'        => ['nullable', 'string', 'max:255'],
+            'agentes.*.masp'        => ['nullable', 'string', 'max:20'],
+            'agentes.*.matricula'   => ['nullable', 'string', 'max:50'],
+            'agentes.*.pg_cargo'    => ['nullable', 'string', 'max:100'],
+            'agentes.*.cargo'       => ['nullable', 'string', 'max:100'],
+            'agentes.*.orgao'       => ['nullable', 'string', 'max:100'],
+            'agentes.*.unidade'     => ['nullable', 'string', 'max:100'],
+            'agentes.*.funcao'      => ['nullable', 'string', 'max:100'],
+            'agentes.*.is_condutor' => ['nullable', 'boolean'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'tipo_recurso.required'      => 'Tipo de recurso é obrigatório.',
-            'categoria.required'         => 'Categoria é obrigatória.',
-            'orgao_responsavel.required' => 'Órgão responsável é obrigatório.',
-            'identificacao.required'     => 'Identificação/Placa/Matrícula é obrigatória.',
-            'quantidade.required'        => 'Quantidade é obrigatória.',
+            'recurso_tipo.in' => 'Tipo de recurso inválido. Use: viatura, pe, aereo, aquatico, outro.',
+            'viatura_condicao.in' => 'Condição inválida. Use: otima, boa, regular, ruim, inoperante.',
         ];
     }
 }

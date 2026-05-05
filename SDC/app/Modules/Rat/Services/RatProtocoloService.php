@@ -4,31 +4,31 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Services;
 
-use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
+use App\Modules\Rat\Models\RatOcorrencia;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Gera números de protocolo únicos e sequenciais para RATs.
- *
- * Formato: RAT-AAAA-NNNNN  (ex.: RAT-2026-00042)
- * Usa SELECT ... FOR UPDATE dentro de transação para garantir unicidade
- * mesmo sob acesso concorrente.
- */
 class RatProtocoloService
 {
-    public function __construct(
-        private readonly RatRepositoryInterface $repository,
-    ) {}
-
-    /**
-     * Gera o próximo protocolo disponível para o ano corrente.
-     * Deve ser chamado dentro de uma transação DB para garantir atomicidade.
-     */
     public function generate(): string
     {
-        $year     = (int) date('Y');
-        $sequence = $this->repository->getLatestSequence($year) + 1;
+        return DB::transaction(function () {
+            $year = now()->year;
+            $seq  = $this->getLatestSequence($year) + 1;
+            return sprintf('RAT-%d-%06d', $year, $seq);
+        });
+    }
 
-        return sprintf('RAT-%d-%05d', $year, $sequence);
+    private function getLatestSequence(int $year): int
+    {
+        $latest = RatOcorrencia::where('numero_bos', 'like', "RAT-{$year}-%")
+            ->lockForUpdate()
+            ->orderByDesc('numero_bos')
+            ->value('numero_bos');
+
+        if (!$latest) {
+            return 0;
+        }
+
+        return (int) substr($latest, strrpos($latest, '-') + 1);
     }
 }

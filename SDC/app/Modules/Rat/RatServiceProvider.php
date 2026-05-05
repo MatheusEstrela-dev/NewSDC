@@ -1,52 +1,44 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Rat;
 
 use App\Core\Actions\Services\ActionConfigService;
 use App\Modules\Rat\Application\Services\RatService;
 use App\Modules\Rat\Config\RatActionsConfig;
 use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
-use App\Modules\Rat\Infrastructure\Repositories\RatRepository;
+use App\Modules\Rat\Infrastructure\Persistence\EloquentRatRepository;
+use App\Modules\Rat\Services\RatAnexoService;
 use App\Modules\Rat\Services\RatAttachmentService;
+use App\Modules\Rat\Services\RatExportService;
+use App\Modules\Rat\Services\RatHistoricoService;
+use App\Modules\Rat\Services\RatOcorrenciaService;
 use App\Modules\Rat\Services\RatProtocoloService;
-use App\Services\Rat\RatAuditService;
-use App\Services\Rat\RatBiService;
-use App\Services\Rat\RatHistoricoService;
-use App\Services\Rat\RatNovoService;
-use App\Services\Rat\RatOcorrenciaService;
-use App\Services\Rat\RatRecursoService;
-use App\Services\Rat\RatRelatoService;
-use App\Services\Rat\RatTrackingService;
+use App\Modules\Rat\Services\RatRelatoService;
+use App\Modules\Rat\Services\RatStatisticsService;
+use App\Modules\Rat\Services\RatWriteService;
 use Illuminate\Support\ServiceProvider;
 
 class RatServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Estrutura Modular (UUID/Rats table)
         $this->app->bind(
             RatRepositoryInterface::class,
-            RatRepository::class
+            EloquentRatRepository::class
         );
 
-        $this->app->singleton(RatService::class);
         $this->app->singleton(RatProtocoloService::class);
+        $this->app->singleton(RatWriteService::class);
+        $this->app->singleton(RatStatisticsService::class);
+        $this->app->singleton(RatExportService::class);
         $this->app->singleton(RatAttachmentService::class);
         $this->app->singleton(RatAnexoService::class);
-        $this->app->singleton(\App\Modules\Rat\Services\RatExportBIService::class);
-        $this->app->singleton(\App\Modules\Rat\Services\RatReceiveBIService::class);
-
-        // Nova estrutura (RatOcorrencia + relatos polimórficos)
         $this->app->singleton(RatOcorrenciaService::class);
-        $this->app->singleton(RatRelatoService::class);
-        $this->app->singleton(RatNovoService::class);
-        $this->app->singleton(RatAuditService::class);
-        $this->app->singleton(RatBiService::class);
-        $this->app->singleton(RatRecursoService::class);
-        $this->app->singleton(RatTrackingService::class);
-
-        // Histórico dedicado por ocorrência (timeline estruturada)
         $this->app->singleton(RatHistoricoService::class);
+        $this->app->singleton(RatRelatoService::class);
+        $this->app->singleton(RatService::class);
     }
 
     public function boot(): void
@@ -54,15 +46,11 @@ class RatServiceProvider extends ServiceProvider
         $this->registerModuleActions();
     }
 
-    /**
-     * Registra as configuracoes de acoes do modulo RAT.
-     */
     private function registerModuleActions(): void
     {
         if ($this->app->bound(ActionConfigService::class)) {
-            $actionConfigService = $this->app->make(ActionConfigService::class);
-            $actionConfigService->registerModule(new RatActionsConfig());
+            $this->app->make(ActionConfigService::class)
+                ->registerModule(new RatActionsConfig());
         }
     }
 }
-

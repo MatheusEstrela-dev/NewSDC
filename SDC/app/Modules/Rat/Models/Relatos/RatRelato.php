@@ -35,7 +35,7 @@ abstract class RatRelato extends Model
     public function ocorrencia(): BelongsTo
     {
         return $this->belongsTo(
-            \App\Models\Rat\RatOcorrenciaRelato::class,
+            \App\Modules\Rat\Models\RatOcorrencia::class,
             'ocorrencia_id'
         );
     }

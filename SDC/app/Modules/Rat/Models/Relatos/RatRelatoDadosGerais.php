@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models\Relatos;
 
-use App\Models\Rat\RatOcorrencia;
+use App\Modules\Rat\Models\RatOcorrencia;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

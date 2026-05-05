@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Models\Rat\RatOcorrencia;
+use App\Modules\Rat\Models\RatOcorrencia;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
 

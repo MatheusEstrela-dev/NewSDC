@@ -14,18 +14,18 @@ class RatResource extends JsonResource
 {
     public function toArray($request): array
     {
-        /** @var \App\Models\Rat\RatOcorrencia $this */
+        /** @var \App\Modules\Rat\Models\RatOcorrencia $this */
         return [
             'id'             => $this->id,
-            'protocolo'      => $this->protocolo,
+            'protocolo'      => $this->protocolo ?? $this->numero_bos ?? null,
             'status'         => $this->status,
-            'status_label'   => $this->status_label,
-            'tem_vistoria'   => $this->tem_vistoria,
-            'dados_gerais'   => $this->dados_gerais,
-            'local'          => $this->local,
-            'endereco'       => $this->endereco,
-            'comunicacao'    => $this->comunicacao,
-            'recursos'       => collect($this->recursos)->map(function($c) {
+            'status_label'   => $this->status === 1 ? 'Finalizado' : 'Rascunho',
+            'tem_vistoria'   => $this->tem_vistoria ?? false,
+            'dados_gerais'   => $this->dados_gerais ?? [],
+            'local'          => $this->local ?? [],
+            'endereco'       => $this->endereco ?? [],
+            'comunicacao'    => $this->comunicacao ?? [],
+            'recursos'       => collect($this->recursos ?? [])->map(function($c) {
                 // Se $c já for um array e não um objeto/modelo (como agora que simplificamos o modelo)
                 if (is_array($c)) {
                     $c = (object) $c;
@@ -56,19 +56,18 @@ class RatResource extends JsonResource
                     ])->toArray() : [],
                 ];
             })->filter()->values()->toArray(),
-            'envolvidos'     => collect($this->envolvidos)->map(fn($c) => [
+            'envolvidos'     => collect($this->envolvidos ?? [])->map(fn($c) => [
                 'id'              => $c['id'] ?? null,
                 'g_tipo_pessoa'   => $c['g_tipo_pessoa'] ?? null,
                 'p_nome_completo' => $c['p_nome_completo'] ?? null,
                 'p_cpf'           => $c['p_cpf'] ?? null,
                 'p_sexo'          => $c['p_sexo'] ?? null,
             ])->filter()->values()->toArray(),
-            'vistoria'       => $this->vistoria,
-            'historico'      => $this->historico,
-            'anexos'         => $this->anexos  ?? [],
-            'orgao_emissor'  => $this->orgaoEmissor,
-            'criado_por'     => $this->creator?->name  ?? 'Sistema',
-            'atualizado_por' => $this->updater?->name,
+            'vistoria'       => $this->vistoria ?? [],
+            'historico'      => $this->historico ?? [],
+            'anexos'         => $this->anexos ?? [],
+            'criado_por'     => $this->creator?->name ?? 'Sistema',
+            'atualizado_por' => $this->updater?->name ?? null,
             'created_at'     => $this->created_at?->toIso8601String(),
             'updated_at'     => $this->updated_at?->toIso8601String(),
         ];

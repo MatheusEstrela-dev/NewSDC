@@ -8,6 +8,7 @@ use App\Modules\Rat\Enums\CategoriaAnexo;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
+use App\Modules\Rat\Models\RatOcorrencia;
 
 /**
  * Anexo vinculado a um RAT (tabela relacional).
@@ -55,7 +56,7 @@ class RatAnexo extends Model
 
     public function rat(): BelongsTo
     {
-        return $this->belongsTo(Rat::class, 'rat_id');
+        return $this->belongsTo(RatOcorrencia::class, 'rat_id');
     }
 
     public function uploader(): BelongsTo

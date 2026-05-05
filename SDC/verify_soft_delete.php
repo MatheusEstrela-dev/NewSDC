@@ -5,7 +5,7 @@ $app = require_once __DIR__ . '/bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
-use App\Models\Rat\RatOcorrencia;
+use App\Modules\Rat\Models\RatOcorrencia;
 
 echo "--- TESTE DE EXCLUSÃO LÓGICA (SOFT DELETE) ---\n";
 

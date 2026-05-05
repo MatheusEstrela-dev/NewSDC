@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Dashboard\Services;
 
-use App\Models\Rat\RatOcorrencia;
+use App\Modules\Rat\Models\RatOcorrencia;
 use App\Modules\AjudaHumanitaria\Models\Auxilio;
 use App\Modules\AjudaHumanitaria\Services\AjudaHumanitariaStatsService;
 use App\Modules\Dashboard\DTOs\DashboardStatsDTO;

@@ -4,37 +4,27 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Domain\Repositories;
 
-use App\Modules\Rat\DTOs\RatFilterDTO;
-use App\Modules\Rat\Models\Rat;
+use App\Modules\Rat\Models\RatOcorrencia;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface RatRepositoryInterface
 {
-    public function findById(string $id): ?object;
+    public function findById(string $id): ?RatOcorrencia;
 
-    public function create(array $data): object;
+    public function create(array $data): RatOcorrencia;
 
-    public function paginate(RatFilterDTO $filters): LengthAwarePaginator;
+    public function paginate(int $perPage = 15): LengthAwarePaginator;
 
     public function getMunicipalities(): array;
 
     public function delete(string $id): void;
 
-    public function updateStatus(string $id, string $status): void;
+    public function updateStatus(string $id, int $status): void;
 
-    public function update(string $id, array $data): object;
+    public function update(string $id, array $data): RatOcorrencia;
 
-    /**
-     * Retorna o maior número de sequência do protocolo RAT para o ano dado.
-     * Deve ser invocado com lockForUpdate() dentro de uma transação DB.
-     */
     public function getLatestSequence(int $year): int;
 
-    /**
-     * Retorna RATs como Collection, com filtro opcional de search e limite.
-     * Usado pelo RagService para enriquecimento de contexto da IA.
-     * @param int $limit -1 para sem limite
-     */
-    public function findAll(array $filters = [], int $limit = 10): Collection;
+    public function findAll(int $limit = 10): Collection;
 }

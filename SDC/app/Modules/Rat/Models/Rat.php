@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Rat\Models;
 
 use App\Modules\Rat\Enums\Localizacao;
@@ -7,6 +9,7 @@ use App\Modules\Rat\Enums\Protocolo;
 use App\Modules\Rat\Enums\Status;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
