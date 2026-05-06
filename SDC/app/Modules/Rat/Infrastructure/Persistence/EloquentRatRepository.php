@@ -9,12 +9,13 @@ use App\Modules\Rat\Models\RatOcorrencia;
 use App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 
 class EloquentRatRepository implements RatRepositoryInterface
 {
     public function create(array $data): RatOcorrencia
     {
-        $userId = auth()->id();
+        $userId = Auth::id();
 
         return RatOcorrencia::create([
             'numero_bos' => $data['numero_bos'] ?? $this->generateProtocolo(),
@@ -61,14 +62,14 @@ class EloquentRatRepository implements RatRepositoryInterface
     {
         RatOcorrencia::where('id', $id)->update([
             'status'     => $status,
-            'updated_by' => auth()->id(),
+            'updated_by' => Auth::id(),
         ]);
     }
 
     public function update(string $id, array $data): RatOcorrencia
     {
         $ocorrencia = RatOcorrencia::findOrFail($id);
-        $ocorrencia->update(array_merge($data, ['updated_by' => auth()->id()]));
+        $ocorrencia->update(array_merge($data, ['updated_by' => Auth::id()]));
         return $ocorrencia->fresh();
     }
 

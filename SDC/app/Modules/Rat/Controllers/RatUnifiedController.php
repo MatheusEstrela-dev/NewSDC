@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Controllers;
 
-use App\Modules\Rat\Application\Services\RatService;
 use App\Modules\Rat\DTOs\RatBoDTO;
 use App\Modules\Rat\DTOs\RatDadosGeraisDTO;
 use App\Modules\Rat\DTOs\RatEnvolvidoDTO;
@@ -29,7 +28,6 @@ use App\Modules\Rat\Services\RatExportService;
 use App\Modules\Rat\Services\RatHistoricoService;
 use App\Modules\Rat\Services\RatOcorrenciaService;
 use App\Modules\Rat\Services\RatRelatoService;
-use App\Modules\Rat\Services\RatStatisticsService;
 use App\Modules\Rat\Services\RatWriteService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -37,6 +35,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -50,8 +49,6 @@ class RatUnifiedController extends BaseController
         private readonly RatWriteService      $writeService,
         private readonly RatAttachmentService $attachmentService,
         private readonly RatExportService     $exportService,
-        private readonly RatStatisticsService $statisticsService,
-        private readonly RatService           $appDataService,
         private readonly RatOcorrenciaService $ocorrenciaService,
         private readonly RatRelatoService     $relatoService,
         private readonly RatHistoricoService  $historicoService,
@@ -63,11 +60,20 @@ class RatUnifiedController extends BaseController
 
     public function index(Request $request): Response
     {
-        $data = $this->appDataService->getIndexData();
+        $rats = RatOcorrencia::with(['relatosMorph.conteudo'])
+            ->orderByDesc('created_at')
+            ->paginate(15);
+
+        $statistics = [
+            'total'    => RatOcorrencia::count(),
+            'hoje'     => RatOcorrencia::whereDate('created_at', today())->count(),
+            'esteMes'  => RatOcorrencia::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
+            'esteAno'  => RatOcorrencia::whereYear('created_at', now()->year)->count(),
+        ];
 
         return Inertia::render('RatIndex', [
-            'rats'       => RatOcorrenciaResource::collection($data['rats']),
-            'statistics' => $data['statistics'],
+            'rats'       => RatOcorrenciaResource::collection($rats),
+            'statistics' => $statistics,
             'filters'    => [],
         ]);
     }
@@ -92,7 +98,7 @@ class RatUnifiedController extends BaseController
                 'finalize'    => 'nullable|boolean',
             ]);
 
-            $ocorrencia = $this->appDataService->createWithData($validated);
+            $ocorrencia = $this->writeService->createWithData($validated);
 
             return redirect()
                 ->route('rat.edit', $ocorrencia->id)
@@ -109,7 +115,7 @@ class RatUnifiedController extends BaseController
 
     public function show(string $id): Response
     {
-        $ocorrencia = $this->appDataService->findById($id);
+        $ocorrencia = $this->writeService->findById($id);
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
         return Inertia::render('Rat', [
@@ -120,7 +126,7 @@ class RatUnifiedController extends BaseController
 
     public function edit(string $id): Response
     {
-        $ocorrencia = $this->appDataService->findById($id);
+        $ocorrencia = $this->writeService->findById($id);
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
         return Inertia::render('Rat', [
@@ -172,7 +178,7 @@ class RatUnifiedController extends BaseController
             ]);
         }
 
-        RatOcorrencia::where('id', $id)->update(['updated_by' => auth()->id()]);
+        RatOcorrencia::where('id', $id)->update(['updated_by' => Auth::id()]);
 
         return redirect()
             ->route('rat.edit', $id)
@@ -181,7 +187,7 @@ class RatUnifiedController extends BaseController
 
     public function destroy(string $id): RedirectResponse
     {
-        $this->appDataService->delete($id);
+        RatOcorrencia::findOrFail($id)->delete();
 
         return redirect()
             ->route('rat.index')
@@ -190,7 +196,7 @@ class RatUnifiedController extends BaseController
 
     public function finalize(string $id): RedirectResponse
     {
-        $this->appDataService->finalize($id);
+        $this->writeService->finalize($id);
 
         return redirect()
             ->route('rat.show', $id)
@@ -336,9 +342,10 @@ class RatUnifiedController extends BaseController
 
     public function storeVistoria(RatVistoriaRequest $request, string $ocorrenciaId): JsonResponse
     {
+        // Usamos all() para que RatVistoriaDTO receba tanto campos v_* flat quanto estrutura aninhada
         $vistoria = $this->writeService->saveVistoria(
             $ocorrenciaId,
-            RatVistoriaDTO::fromArray($request->validated())
+            RatVistoriaDTO::fromArray($request->all())
         );
 
         return response()->json(['success' => true, 'message' => 'Vistoria salva.', 'data' => $vistoria], 201);
@@ -380,17 +387,28 @@ class RatUnifiedController extends BaseController
             'descricao' => 'nullable|string|max:500',
         ]);
 
-        $rat = $this->appDataService->findById($ocorrenciaId);
+        $rat = $this->writeService->findById($ocorrenciaId);
         abort_if(!$rat, 404, 'Ocorrência não encontrada.');
 
         $attachment = $this->attachmentService->store($rat, $request->file('arquivo'));
 
-        return response()->json(['success' => true, 'message' => 'Arquivo enviado.', 'data' => $attachment], 201);
+        // Retorna o objeto diretamente para o frontend substituir o entry temporário pelo real
+        return response()->json([
+            'id'            => $attachment->id,
+            'nome_original' => $attachment->nome_original,
+            'nome_arquivo'  => $attachment->nome_arquivo,
+            'mime_type'     => $attachment->mime_type,
+            'tamanho_bytes' => $attachment->tamanho_bytes,
+            'url'           => $attachment->url,
+            'categoria'     => $attachment->categoria instanceof \BackedEnum ? $attachment->categoria->value : $attachment->categoria,
+            'descricao'     => $attachment->descricao,
+            'created_at'    => $attachment->created_at?->toIso8601String(),
+        ], 201);
     }
 
     public function destroyAttachment(string $ocorrenciaId, string $attachmentId): JsonResponse
     {
-        $rat = $this->appDataService->findById($ocorrenciaId);
+        $rat = $this->writeService->findById($ocorrenciaId);
         abort_if(!$rat, 404, 'Ocorrência não encontrada.');
 
         $this->attachmentService->destroy($rat, $attachmentId);
@@ -434,13 +452,18 @@ class RatUnifiedController extends BaseController
     {
         return response()->json([
             'success' => true,
-            'data'    => $this->statisticsService->getStatistics()->toArray(),
+            'data'    => [
+                'total'    => RatOcorrencia::count(),
+                'hoje'     => RatOcorrencia::whereDate('created_at', today())->count(),
+                'esteMes'  => RatOcorrencia::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
+                'esteAno'  => RatOcorrencia::whereYear('created_at', now()->year)->count(),
+            ],
         ]);
     }
 
     public function showJson(string $id): JsonResponse
     {
-        $rat = $this->appDataService->findById($id);
+        $rat = $this->writeService->findById($id);
         abort_if(is_null($rat), 404, 'RAT não encontrado.');
 
         return response()->json((new RatOcorrenciaResource($rat))->resolve());

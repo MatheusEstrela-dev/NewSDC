@@ -6,6 +6,7 @@ namespace App\Modules\Rat\Services;
 
 use App\Modules\Rat\Models\RatOcorrencia;
 use App\Modules\Rat\Models\RatOcorrenciaHistorico;
+use Illuminate\Support\Facades\Auth;
 
 class RatHistoricoService
 {
@@ -35,7 +36,7 @@ class RatHistoricoService
     {
         RatOcorrenciaHistorico::create([
             'ocorrencia_id' => $ocorrencia->id,
-            'user_id'       => auth()->id(),
+            'user_id'       => Auth::id(),
             'evento'        => $evento,
             'payload'       => $payload,
             'ip_address'    => request()->ip(),

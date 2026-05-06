@@ -4,18 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models\Relatos;
 
-use App\Modules\Rat\Models\RatOcorrencia;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos;
+use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
+use App\Modules\Rat\Models\Relatos\RatRelatoVistoria;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * RatRelatoDadosGerais - Relato com dados gerais da ocorrência
  */
 class RatRelatoDadosGerais extends RatRelato
 {
-    use HasFactory;
-
     protected $table = 'rat_relato_dados_gerais';
 
     protected $fillable = [
@@ -68,34 +66,26 @@ class RatRelatoDadosGerais extends RatRelato
     ];
 
     /**
-     * Relação: Ocorrência pai
-     */
-    public function ocorrencia(): BelongsTo
-    {
-        return $this->belongsTo(RatOcorrencia::class, 'ocorrencia_id');
-    }
-
-    /**
-     * Relação: Envolvidos
+     * Relação: Envolvidos da mesma ocorrência (via ocorrencia_id compartilhado).
      */
     public function envolvidos(): HasMany
     {
-        return $this->hasMany(RatRelatoEnvolvidos::class, 'ocorrencia_id');
+        return $this->hasMany(RatRelatoEnvolvidos::class, 'ocorrencia_id', 'ocorrencia_id');
     }
 
     /**
-     * Relação: Recursos
+     * Relação: Recursos da mesma ocorrência (via ocorrencia_id compartilhado).
      */
     public function recursos(): HasMany
     {
-        return $this->hasMany(RatRelatoRecurso::class, 'ocorrencia_id');
+        return $this->hasMany(RatRelatoRecurso::class, 'ocorrencia_id', 'ocorrencia_id');
     }
 
     /**
-     * Relação: Vistoria
+     * Relação: Vistoria da mesma ocorrência (via ocorrencia_id compartilhado).
      */
     public function vistoria(): HasMany
     {
-        return $this->hasMany(RatRelatoVistoria::class, 'ocorrencia_id');
+        return $this->hasMany(RatRelatoVistoria::class, 'ocorrencia_id', 'ocorrencia_id');
     }
 }

@@ -16,6 +16,7 @@ use App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos;
 use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
 use App\Modules\Rat\Models\Relatos\RatRelatoVistoria;
 use App\Modules\Rat\Models\Recursos\RatRecursosComponentesGuarnicao;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class RatWriteService
@@ -28,7 +29,7 @@ class RatWriteService
     {
         return DB::transaction(function () {
             $protocolo = $this->protocoloService->generate();
-            $userId    = auth()->id();
+            $userId    = Auth::id();
 
             return RatOcorrencia::create([
                 'numero_bos' => $protocolo,
@@ -43,7 +44,7 @@ class RatWriteService
     {
         return DB::transaction(function () use ($data) {
             $protocolo = $this->protocoloService->generate();
-            $userId    = auth()->id();
+            $userId    = Auth::id();
 
             $ocorrencia = RatOcorrencia::create([
                 'numero_bos' => $protocolo,
@@ -92,6 +93,7 @@ class RatWriteService
             'updater',
             'relatosMorph.conteudo',
             'historicos',
+            'ratAnexos',
         ])->find($id);
     }
 
@@ -102,7 +104,7 @@ class RatWriteService
 
         $ocorrencia->update([
             'status'     => 1,
-            'updated_by' => auth()->id(),
+            'updated_by' => Auth::id(),
         ]);
 
         return $ocorrencia->fresh();
@@ -113,7 +115,7 @@ class RatWriteService
         $ocorrencia = RatOcorrencia::findOrFail($id);
         $ocorrencia->update([
             'status'     => 0,
-            'updated_by' => auth()->id(),
+            'updated_by' => Auth::id(),
         ]);
         return $ocorrencia->fresh();
     }
@@ -125,7 +127,7 @@ class RatWriteService
                 ['ocorrencia_id' => $ocorrenciaId],
                 array_merge($dto->toArray(), [
                     'ocorrencia_id' => $ocorrenciaId,
-                    'created_by'    => auth()->id(),
+                    'created_by'    => Auth::id(),
                 ])
             );
             $this->ensureRelatoLink($ocorrenciaId, $dadosGerais);
@@ -138,7 +140,7 @@ class RatWriteService
         return DB::transaction(function () use ($ocorrenciaId, $dto) {
             $data = array_merge($dto->toArray(), [
                 'ocorrencia_id' => $ocorrenciaId,
-                'created_by'    => auth()->id(),
+                'created_by'    => Auth::id(),
             ]);
 
             if ($dto->id) {
@@ -158,7 +160,7 @@ class RatWriteService
         return DB::transaction(function () use ($ocorrenciaId, $dto) {
             $data = array_merge($dto->toArray(), [
                 'ocorrencia_id' => $ocorrenciaId,
-                'created_by'    => auth()->id(),
+                'created_by'    => Auth::id(),
             ]);
 
             if ($dto->id) {
@@ -176,7 +178,7 @@ class RatWriteService
                         ['id' => $agenteDto->id ?? null, 'relato_recurso_id' => $recurso->id],
                         array_merge($agenteDto->toArray(), [
                             'relato_recurso_id' => $recurso->id,
-                            'created_by'        => auth()->id(),
+                            'created_by'        => Auth::id(),
                         ])
                     );
                 }
@@ -201,7 +203,7 @@ class RatWriteService
                 ['ocorrencia_id' => $ocorrenciaId],
                 array_merge($dto->toArray(), [
                     'ocorrencia_id' => $ocorrenciaId,
-                    'created_by'    => auth()->id(),
+                    'created_by'    => Auth::id(),
                 ])
             );
             $this->ensureRelatoLink($ocorrenciaId, $vistoria);
@@ -216,7 +218,7 @@ class RatWriteService
             'conteudo_id'   => $model->id,
             'conteudo_type' => get_class($model),
         ], [
-            'created_by' => auth()->id(),
+            'created_by' => Auth::id(),
         ]);
     }
 }

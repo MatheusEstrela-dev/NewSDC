@@ -6,6 +6,7 @@ namespace App\Modules\Rat\Services;
 
 use App\Modules\Rat\Models\RatAnexo;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class RatAttachmentService
@@ -25,7 +26,7 @@ class RatAttachmentService
             'tamanho_bytes' => $file->getSize(),
             'path'          => $path,
             'disk'          => $this->disk,
-            'uploaded_by'   => auth()->id(),
+            'uploaded_by'   => Auth::id(),
         ]);
     }
 

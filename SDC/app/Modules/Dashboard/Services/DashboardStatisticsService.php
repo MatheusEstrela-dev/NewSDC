@@ -13,23 +13,20 @@ use App\Modules\Decretacoes\Services\ProcessoStatsService;
 use App\Modules\Demandas\Models\Task;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeProtocolo;
-use App\Modules\Rat\Services\RatStatisticsService;
 use Illuminate\Support\Facades\Cache;
 
 class DashboardStatisticsService
 {
     public function __construct(
-        private readonly RatStatisticsService            $ratStats,
         private readonly ProcessoStatsService             $processoStats,
         private readonly AjudaHumanitariaStatsService    $ahStats,
     ) {}
 
     public function getStats(): DashboardStatsDTO
     {
-        $ratStatistics  = $this->ratStats->getStatistics();
-        $processoStats  = $this->processoStats->getStatistics();
+        $processoStats = $this->processoStats->getStatistics();
 
-        $ratAbertas         = $ratStatistics->total;
+        $ratAbertas         = RatOcorrencia::count();
         $paeEmAnalise       = PaeProtocolo::where('status', PaeProtocoloStatus::ANALISE->value)->count();
         $decretosAprovados  = $processoStats['aprovados'];
         $demandasConcluidas = Task::where('status', 'concluida')->count();

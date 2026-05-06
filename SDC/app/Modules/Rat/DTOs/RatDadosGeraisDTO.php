@@ -90,11 +90,11 @@ readonly class RatDadosGeraisDTO
                                           ? (int) $merged['uni_bo_ano']
                                           : null,
             uniBoSequencial:          $merged['uni_bo_sequencial']          ?? null,
-            comOcorrenciaData:        $merged['com_ocorrencia_data']        ?? $merged['data'] ?? null,
-            comOcorrenciaAtendimento: $merged['com_ocorrencia_atendimento'] ?? $merged['atendimento'] ?? null,
-            localPais:                $merged['local_pais']                 ?? $merged['pais_id'] ?? null,
+            comOcorrenciaData:        $merged['com_ocorrencia_data']        ?? $merged['data_comunicacao'] ?? $merged['data'] ?? null,
+            comOcorrenciaAtendimento: $merged['com_ocorrencia_atendimento'] ?? $merged['tipo_solicitacao'] ?? $merged['atendimento'] ?? null,
+            localPais:                $merged['local_pais']                 ?? $merged['pais_id'] ?? $merged['pais'] ?? null,
             localEstadoUf:            $merged['local_estadouf'] ?? $merged['local_estado_uf'] ?? $merged['uf'] ?? null,
-            localMunicipio:           $merged['local_municipio'] ?? $merged['cidade'] ?? $merged['municipio'] ?? null,
+            localMunicipio:           $merged['local_municipio'] ?? $merged['municipio_id'] ?? $merged['cidade'] ?? $merged['municipio'] ?? null,
             localCep:                 $merged['local_cep']                  ?? $merged['cep'] ?? null,
             localLogradouro:          $merged['local_logradouro'] ?? $merged['local_logradoura_1'] ?? $merged['logradouro'] ?? null,
             localBairro:              $merged['local_bairro']               ?? $merged['bairro'] ?? null,
@@ -109,7 +109,7 @@ readonly class RatDadosGeraisDTO
             localLongitude:          isset($merged['local_longitude'])
                                           ? (float) $merged['local_longitude']
                                           : (isset($merged['longitude']) ? (float) $merged['longitude'] : null),
-            localOcorrenciaTipo:     $merged['local_ocorrencia_tipo']      ?? $merged['tipo'] ?? null,
+            localOcorrenciaTipo:     $merged['local_ocorrencia_tipo']      ?? $merged['tipo_localizacao'] ?? $merged['tipo'] ?? null,
             localOcorrenciaEstradas: $merged['local_ocorrencia_estradas_rodovias'] ?? $merged['estradas_rodovias'] ?? null,
             localUnidadeMilitar:     $merged['local_unidade_militar']      ?? $merged['unidade_militar'] ?? null,
             temVistoria:             (bool) ($merged['tem_vistoria']       ?? false),

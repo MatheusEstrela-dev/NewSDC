@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models\Relatos;
 
-use App\Modules\Rat\Models\RatOcorrencia;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
 /**
  * Envolvidos (vítimas, agentes, etc.) em uma ocorrência RAT.
  *
@@ -89,11 +86,4 @@ class RatRelatoEnvolvidos extends RatRelato
         'p_situacao_rua'           => 'boolean',
     ];
 
-    /**
-     * Relação: Ocorrência pai
-     */
-    public function ocorrencia(): BelongsTo
-    {
-        return $this->belongsTo(RatOcorrencia::class, 'ocorrencia_id');
-    }
 }
