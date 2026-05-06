@@ -120,7 +120,7 @@ watch(
 async function doUpload(file, tempId) {
   // CORRIGIDO: Validar se ratId existe antes de fazer upload
   if (!props.ratId) {
-    uploadError.value = '❌ Erro: RAT não foi criado ainda. Salve o RAT primeiro antes de anexar arquivos.';
+    uploadError.value = ' Erro: RAT não foi criado ainda. Salve o RAT primeiro antes de anexar arquivos.';
     const updated = localAnexos.value.anexos.filter(a => a.id !== tempId);
     localAnexos.value.anexos = updated;
     emit('update', updated);
