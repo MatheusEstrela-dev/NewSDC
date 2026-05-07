@@ -58,13 +58,16 @@
               type="email"
               label="E-mail"
               :error="errors.email"
+              :maxlength="255"
             />
 
             <FormField
               v-model="form.cpf"
               label="CPF"
               :error="errors.cpf"
-              placeholder="000.000.000-00"
+              placeholder="Somente numeros"
+              :maxlength="11"
+              hint="11 digitos (sem pontos ou traco)"
             />
           </div>
 
@@ -74,14 +77,18 @@
               v-model="form.telefone"
               label="Telefone"
               :error="errors.telefone"
-              placeholder="(00) 0000-0000"
+              placeholder="DDD + numero"
+              :maxlength="11"
+              hint="DDD + numero, somente digitos"
             />
 
             <FormField
               v-model="form.celular"
               label="Celular"
               :error="errors.celular"
-              placeholder="(00) 00000-0000"
+              placeholder="DDD + numero"
+              :maxlength="11"
+              hint="DDD + numero, somente digitos"
             />
           </div>
 
@@ -92,7 +99,8 @@
               type="number"
               label="Ordem"
               :error="errors.ordem"
-              hint="Ordem de exibicao na equipe (0 = primeiro)"
+              :maxlength="5"
+              hint="0 = primeiro (max 32767)"
             />
 
             <ToggleField
@@ -170,6 +178,37 @@ const form = reactive({
 });
 
 const isEditing = computed(() => !!props.equipe?.id);
+
+// Sanitiza campos numericos: remove qualquer nao-digito e respeita maxlength.
+function digitsOnly(value, max) {
+  return String(value ?? '').replace(/\D/g, '').slice(0, max);
+}
+
+watch(() => form.cpf, (val) => {
+  const clean = digitsOnly(val, 11);
+  if (clean !== val) form.cpf = clean;
+});
+
+watch(() => form.telefone, (val) => {
+  const clean = digitsOnly(val, 11);
+  if (clean !== val) form.telefone = clean;
+});
+
+watch(() => form.celular, (val) => {
+  const clean = digitsOnly(val, 11);
+  if (clean !== val) form.celular = clean;
+});
+
+watch(() => form.ordem, (val) => {
+  if (val === '' || val === null || val === undefined) return;
+  const n = Number(val);
+  if (Number.isNaN(n)) {
+    form.ordem = 0;
+    return;
+  }
+  if (n < 0) form.ordem = 0;
+  else if (n > 32767) form.ordem = 32767;
+});
 
 watch(
   () => props.show,

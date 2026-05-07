@@ -28,7 +28,8 @@
             label="ID do Usuario"
             required
             :error="errors.usuario_id"
-            hint="ID do usuario do sistema a ser vinculado a este orgao"
+            :maxlength="10"
+            hint="ID numerico do usuario (somente digitos positivos)"
           />
 
           <div>
@@ -97,6 +98,14 @@ const form = reactive({
   usuario_id: '',
   funcao: 'agente',
   is_principal: false,
+});
+
+watch(() => form.usuario_id, (val) => {
+  if (val === '' || val === null || val === undefined) return;
+  const n = Number(val);
+  if (Number.isNaN(n) || n < 1) {
+    form.usuario_id = '';
+  }
 });
 
 watch(
