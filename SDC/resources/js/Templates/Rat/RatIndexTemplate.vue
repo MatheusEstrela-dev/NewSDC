@@ -119,7 +119,6 @@ import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { useModalState } from '@/Composables/useModalState';
 import { MESSAGES } from '@/constants/messages';
-import { getMockStatisticsFromRats } from '@/mocks/rat';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { Link, router } from '@inertiajs/vue3';
 import { useMobile } from '@/Composables/useMobile';
@@ -261,20 +260,13 @@ const filteredRats = computed(() => {
 });
 
 const statisticsToUse = computed(() => {
-  // Usa estatísticas do backend quando dados reais estão presentes.
-  // Fallback para mock apenas quando não há dados no backend.
-  const backendStats = props.statistics;
-  const hasBackendStats = backendStats && typeof backendStats.total === 'number';
-
-  if (!props.useMock && hasBackendStats) {
-    return {
-      total:   backendStats.total   ?? 0,
-      hoje:    backendStats.hoje    ?? 0,
-      esteMes: backendStats.esteMes ?? 0,
-      esteAno: backendStats.esteAno ?? 0,
-    };
-  }
-  return getMockStatisticsFromRats(filteredRats.value);
+  const s = props.statistics;
+  return {
+    total:   s?.total   ?? 0,
+    hoje:    s?.hoje    ?? 0,
+    esteMes: s?.esteMes ?? 0,
+    esteAno: s?.esteAno ?? 0,
+  };
 });
 
 const paginationToUse = computed(() => {
