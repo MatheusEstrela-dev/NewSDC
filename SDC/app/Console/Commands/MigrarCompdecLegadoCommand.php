@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Modules\Compdec\Services\EquipeService;
 use App\Modules\Compdec\Services\OrgaoService;
 use App\Modules\Compdec\Services\PrefeituraService;
 use App\Modules\Compdec\Support\MigracaoReport;
@@ -32,14 +33,15 @@ class MigrarCompdecLegadoCommand extends Command
     protected $description = 'Migra dados do banco legado (com_comdec, cedec_prefeitura, etc.) para o schema novo do modulo COMPDEC.';
 
     /** @var array<int, string> */
-    private const RECURSOS_F1 = ['orgaos', 'prefeituras'];
+    private const RECURSOS_DISPONIVEIS = ['orgaos', 'prefeituras', 'equipes'];
 
     /** @var array<int, string> */
-    private const RECURSOS_FUTUROS = ['equipes', 'anexos', 'planos'];
+    private const RECURSOS_FUTUROS = ['anexos', 'planos'];
 
     public function __construct(
         private readonly OrgaoService $orgaoService,
         private readonly PrefeituraService $prefeituraService,
+        private readonly EquipeService $equipeService,
     ) {
         parent::__construct();
     }
@@ -94,17 +96,17 @@ class MigrarCompdecLegadoCommand extends Command
         $only = (string) $this->option('only');
 
         if ($only === '') {
-            return self::RECURSOS_F1;
+            return self::RECURSOS_DISPONIVEIS;
         }
 
         $solicitados = array_map('trim', explode(',', $only));
         $futuros = array_intersect($solicitados, self::RECURSOS_FUTUROS);
 
         if ($futuros !== []) {
-            $this->warn('Recursos ainda nao implementados (F2-F4): ' . implode(',', $futuros));
+            $this->warn('Recursos ainda nao implementados (F3-F4): ' . implode(',', $futuros));
         }
 
-        return array_values(array_intersect($solicitados, self::RECURSOS_F1));
+        return array_values(array_intersect($solicitados, self::RECURSOS_DISPONIVEIS));
     }
 
     private function validarPreRequisitos(): bool
@@ -136,6 +138,7 @@ class MigrarCompdecLegadoCommand extends Command
         return match ($recurso) {
             'orgaos' => $this->orgaoService->migrarLegado($chunk, $dryRun),
             'prefeituras' => $this->prefeituraService->migrarLegado($chunk, $dryRun),
+            'equipes' => $this->equipeService->migrarLegado($chunk, $dryRun),
             default => throw new \InvalidArgumentException("Recurso desconhecido: {$recurso}"),
         };
     }

@@ -145,6 +145,11 @@ class Orgao extends Model implements HasMedia
         return $this->belongsTo(Municipio::class, 'municipio_id');
     }
 
+    public function equipes(): HasMany
+    {
+        return $this->hasMany(CompdecEquipe::class, 'orgao_id');
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection(self::MEDIA_FOTO_COORDENADOR)
