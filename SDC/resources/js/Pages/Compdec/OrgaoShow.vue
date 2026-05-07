@@ -52,13 +52,14 @@
           :errors="errors"
         />
 
-        <!-- Placeholders das fases F2/F3/F4 -->
-        <CardBase v-if="current === 'equipe'" class="text-center py-12">
-          <component :is="UsersIcon" class="w-12 h-12 mx-auto text-slate-400 mb-3" />
-          <Heading level="3" class="mb-2">Modulo Equipe</Heading>
-          <Text variant="muted">Disponivel na proxima fase de implementacao.</Text>
-        </CardBase>
+        <EquipeTab
+          v-if="current === 'equipe'"
+          :orgao="orgao"
+          :equipe="equipe"
+          :can-edit="canManage"
+        />
 
+        <!-- Placeholders das fases F3/F4 -->
         <CardBase v-if="current === 'anexos'" class="text-center py-12">
           <component :is="DocumentIcon" class="w-12 h-12 mx-auto text-slate-400 mb-3" />
           <Heading level="3" class="mb-2">Modulo Anexos Legais</Heading>
@@ -131,6 +132,14 @@
         <Text variant="muted">Nenhum usuario vinculado.</Text>
       </div>
     </CardBase>
+
+    <!-- Modais -->
+    <VincularUsuarioModal
+      :show="showVincularModal"
+      :orgao-id="orgao.id"
+      @close="showVincularModal = false"
+      @saved="handleVincularSaved"
+    />
   </div>
 </template>
 
@@ -148,6 +157,8 @@ import CompdecTabs from '@/Components/Organisms/Compdec/CompdecTabs.vue';
 import GeralTab from '@/Components/Organisms/Compdec/Tabs/GeralTab.vue';
 import CapacidadesTab from '@/Components/Organisms/Compdec/Tabs/CapacidadesTab.vue';
 import PrefeituraTab from '@/Components/Organisms/Compdec/Tabs/PrefeituraTab.vue';
+import EquipeTab from '@/Components/Organisms/Compdec/Tabs/EquipeTab.vue';
+import VincularUsuarioModal from '@/Components/Organisms/Compdec/Modals/VincularUsuarioModal.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
 import HomeIcon from '@/Components/Icons/HomeIcon.vue';
@@ -181,7 +192,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  equipe: {
+    type: Object,
+    default: null,
+  },
 });
+
+// Estado do modal de vincular usuario
+const showVincularModal = ref(false);
 
 // Estado da aba ativa - sincronizado com query string ?tab=
 const initialTab = (() => {
@@ -218,8 +236,6 @@ const tabs = computed(() => [
     id: 'equipe',
     label: 'Equipe',
     icon: UsersIcon,
-    disabled: true,
-    disabledReason: 'Disponivel na proxima fase de implementacao',
     badge: props.orgao?.equipes_count ?? null,
   },
   {
@@ -251,8 +267,12 @@ function handleDelete() {
 }
 
 function handleVincularUsuario() {
-  // TODO: abrir modal de vincular usuario (proxima iteracao)
-  alert('Modal de vinculo de usuario sera implementado na proxima iteracao.');
+  showVincularModal.value = true;
+}
+
+function handleVincularSaved() {
+  showVincularModal.value = false;
+  router.reload({ only: ['usuarios'], preserveScroll: true });
 }
 
 function handleDesvincularUsuario(userId) {
