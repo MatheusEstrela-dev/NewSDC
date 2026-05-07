@@ -1,9 +1,7 @@
 <template>
   <div class="orgao-edit">
     <div class="header-section">
-      <Button variant="ghost" @click="handleBack">
-        &larr; Voltar
-      </Button>
+
 
       <Heading level="1">Editar Orgao</Heading>
       <Text variant="muted">{{ orgao.codigo }} - {{ orgao.nome }}</Text>

@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Modules\Compdec\Controllers\EquipeController;
 use App\Modules\Compdec\Controllers\OrgaoController;
 use App\Modules\Compdec\Controllers\PrefeituraController;
+use App\Modules\Compdec\Models\CompdecEquipe;
 use App\Modules\Compdec\Models\Orgao;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +22,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::model('orgao', Orgao::class);
+Route::model('equipe', CompdecEquipe::class);
 
 Route::middleware(['auth', 'compdec.query-threshold:' . config('compdec.query_threshold', 15)])
     ->prefix('compdec')
@@ -94,6 +97,39 @@ Route::middleware(['auth', 'compdec.query-threshold:' . config('compdec.query_th
             Route::delete('/orgaos/{orgao}/prefeitura/foto', [PrefeituraController::class, 'removerFoto'])
                 ->name('prefeitura.foto.destroy')
                 ->whereNumber('orgao');
+        });
+
+        // Sub-recurso: Equipe (1:N por orgao, scoped binding)
+        Route::scopeBindings()->group(function () {
+            Route::middleware('can:compdec.equipe.view')->group(function () {
+                Route::get('/orgaos/{orgao}/equipe', [EquipeController::class, 'index'])
+                    ->name('equipe.index')
+                    ->whereNumber('orgao');
+                Route::get('/orgaos/{orgao}/equipe/{equipe}', [EquipeController::class, 'show'])
+                    ->name('equipe.show')
+                    ->whereNumber('orgao')->whereNumber('equipe');
+            });
+
+            Route::middleware('can:compdec.equipe.create')->group(function () {
+                Route::post('/orgaos/{orgao}/equipe', [EquipeController::class, 'store'])
+                    ->name('equipe.store')
+                    ->whereNumber('orgao');
+            });
+
+            Route::middleware('can:compdec.equipe.edit')->group(function () {
+                Route::put('/orgaos/{orgao}/equipe/{equipe}', [EquipeController::class, 'update'])
+                    ->name('equipe.update')
+                    ->whereNumber('orgao')->whereNumber('equipe');
+                Route::post('/orgaos/{orgao}/equipe/{equipe}/restaurar', [EquipeController::class, 'restore'])
+                    ->name('equipe.restore')
+                    ->whereNumber('orgao')->whereNumber('equipe');
+            });
+
+            Route::middleware('can:compdec.equipe.delete')->group(function () {
+                Route::delete('/orgaos/{orgao}/equipe/{equipe}', [EquipeController::class, 'destroy'])
+                    ->name('equipe.destroy')
+                    ->whereNumber('orgao')->whereNumber('equipe');
+            });
         });
 
     });

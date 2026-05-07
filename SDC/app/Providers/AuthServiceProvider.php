@@ -21,6 +21,7 @@ class AuthServiceProvider extends ServiceProvider
         \App\Models\Protocolo::class => \App\Policies\ProtocoloPolicy::class,
         \App\Modules\Compdec\Models\Orgao::class => \App\Policies\OrgaoPolicy::class,
         \App\Modules\Compdec\Models\Prefeitura::class => \App\Policies\PrefeituraPolicy::class,
+        \App\Modules\Compdec\Models\CompdecEquipe::class => \App\Policies\CompdecEquipePolicy::class,
     ];
 
     /**

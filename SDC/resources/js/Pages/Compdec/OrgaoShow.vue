@@ -3,9 +3,6 @@
     <!-- Header com acoes -->
     <div class="header-section">
       <div class="header-content">
-        <Button variant="ghost" @click="handleBack">
-          &larr; Voltar
-        </Button>
 
         <div class="header-title">
           <Heading level="1">{{ orgao.nome }}</Heading>
@@ -243,9 +240,6 @@ const tabs = computed(() => [
   },
 ]);
 
-function handleBack() {
-  router.visit(route('compdec.index'));
-}
 
 function handleEdit() {
   router.visit(route('compdec.edit', props.orgao.id));

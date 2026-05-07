@@ -174,6 +174,7 @@ return [
         App\Modules\Suporte\SuporteServiceProvider::class,
         App\Modules\PlanCon\PlanConServiceProvider::class,
         App\Modules\Dashboard\DashboardServiceProvider::class,
+        App\Modules\Compdec\CompdecServiceProvider::class,
     ])->toArray(),
 
     /*

@@ -9,8 +9,10 @@ use App\Modules\Compdec\DTOs\OrgaoDTO;
 use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Compdec\Requests\StoreOrgaoRequest;
 use App\Modules\Compdec\Requests\UpdateOrgaoRequest;
+use App\Modules\Compdec\Resources\EquipeIndexResource;
 use App\Modules\Compdec\Resources\OrgaoIndexResource;
 use App\Modules\Compdec\Resources\OrgaoResource;
+use App\Modules\Compdec\Services\EquipeService;
 use App\Modules\Compdec\Services\OrgaoService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +23,7 @@ class OrgaoController extends Controller
 {
     public function __construct(
         private readonly OrgaoService $service,
+        private readonly EquipeService $equipeService,
     ) {}
 
     public function index(Request $request): Response
@@ -63,6 +66,11 @@ class OrgaoController extends Controller
             'usuarios' => $orgao->usuarios()->select(['users.id', 'users.name', 'users.email'])->get(),
             'canManage' => $request->user()?->can('update', $orgao) ?? false,
             'canVincularUsuarios' => $request->user()?->can('compdec.usuarios.manage') ?? false,
+
+            // Tabs F2-F4: lazy via Inertia partial reload (router.reload({ only: ['equipe'] }))
+            'equipe' => Inertia::lazy(fn () => EquipeIndexResource::collection(
+                $this->equipeService->listarPorOrgao($orgao->id),
+            )),
         ]);
     }
 

@@ -98,10 +98,10 @@ class OrgaoResource extends JsonResource
                 : null),
 
             // Counts (preenchido via withCount)
-            'equipes_count' => $this->when($this->equipes_count !== null, $this->equipes_count),
-            'anexos_count' => $this->when($this->anexos_count !== null, $this->anexos_count),
-            'planos_count' => $this->when($this->planos_count !== null, $this->planos_count),
-            'usuarios_count' => $this->when($this->usuarios_count !== null, $this->usuarios_count),
+            'equipes_count' => $this->when(isset($this->equipes_count), $this->equipes_count),
+            'anexos_count' => $this->when(isset($this->anexos_count), $this->anexos_count),
+            'planos_count' => $this->when(isset($this->planos_count), $this->planos_count),
+            'usuarios_count' => $this->when(isset($this->usuarios_count), $this->usuarios_count),
 
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
