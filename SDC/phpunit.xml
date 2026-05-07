@@ -11,6 +11,14 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        <testsuite name="Compdec">
+            <directory>tests/Unit/Compdec</directory>
+            <directory>tests/Feature/Compdec</directory>
+            <directory>tests/Integration/Compdec</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>

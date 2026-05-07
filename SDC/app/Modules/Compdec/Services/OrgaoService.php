@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Modules\Compdec\DTOs\OrgaoDTO;
 use App\Modules\Compdec\Enums\TipoOrgao;
 use App\Modules\Compdec\Models\Orgao;
+use App\Modules\Compdec\Support\LegacyParser;
+use App\Modules\Compdec\Support\MigracaoReport;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\UploadedFile;
@@ -15,6 +17,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Throwable;
 
 class OrgaoService
 {
@@ -24,7 +27,7 @@ class OrgaoService
     public function listarOrgaos(int $perPage = 15, array $filtros = []): LengthAwarePaginator
     {
         return Orgao::query()
-            ->with(['orgaoSuperior:id,codigo,nome,tipo'])
+            ->with(['orgaoSuperior:id,codigo,nome,tipo', 'municipio:id,nome,uf'])
             ->withCount(['usuarios', 'orgaosSubordinados as subordinados_count'])
             ->when($filtros['tipo'] ?? null, fn ($q, $tipo) => $q->where('tipo', $tipo))
             ->when($filtros['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
@@ -298,5 +301,147 @@ class OrgaoService
             ->count() + 1;
 
         return sprintf('%s-%06d', $prefix, $proximo);
+    }
+
+    /* ============================================================
+     * ETL: Migracao do legado (com_comdec -> compdec_orgaos)
+     * ============================================================ */
+
+    /**
+     * Migra orgaos do banco legado (com_comdec) para compdec_orgaos.
+     *
+     * Idempotente: usa updateOrCreate por legacy_id.
+     * Em dry-run, nao persiste, apenas conta o que seria feito.
+     */
+    public function migrarLegado(int $chunk = 100, bool $dryRun = false): MigracaoReport
+    {
+        $report = new MigracaoReport('orgaos');
+        $report->dryRun = $dryRun;
+        $connection = config('compdec.legacy_connection', 'legacy');
+
+        DB::connection($connection)
+            ->table('com_comdec')
+            ->orderBy('id_comdec')
+            ->chunk($chunk, function ($linhas) use ($report, $dryRun): void {
+                foreach ($linhas as $row) {
+                    $this->migrarOrgaoLegado($row, $report, $dryRun);
+                }
+            });
+
+        return $report;
+    }
+
+    private function migrarOrgaoLegado(object $row, MigracaoReport $report, bool $dryRun): void
+    {
+        $legacyId = LegacyParser::toIntOrNull($row->id_comdec ?? null);
+
+        if ($legacyId === null) {
+            $report->registrarSkip();
+            $this->logEtl('orgaos', 'com_comdec', null, null, 'skipped', 'sem id_comdec', $row, $dryRun);
+
+            return;
+        }
+
+        try {
+            $payload = $this->mapearLegadoParaOrgao($row, $legacyId);
+
+            if ($dryRun) {
+                $existente = Orgao::query()->where('legacy_id', $legacyId)->exists();
+                $existente ? $report->registrarAtualizacao() : $report->registrarInsercao();
+
+                return;
+            }
+
+            $existente = Orgao::query()->where('legacy_id', $legacyId)->first();
+            $orgao = Orgao::query()->updateOrCreate(['legacy_id' => $legacyId], $payload);
+
+            if ($existente) {
+                $report->registrarAtualizacao();
+                $this->logEtl('orgaos', 'com_comdec', $legacyId, $orgao->id, 'updated', null, $row, false);
+            } else {
+                $report->registrarInsercao();
+                $this->logEtl('orgaos', 'com_comdec', $legacyId, $orgao->id, 'inserted', null, $row, false);
+            }
+        } catch (Throwable $e) {
+            $report->registrarErro($legacyId, $e->getMessage());
+            $this->logEtl('orgaos', 'com_comdec', $legacyId, null, 'error', $e->getMessage(), $row, $dryRun);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapearLegadoParaOrgao(object $row, int $legacyId): array
+    {
+        return [
+            'tipo' => TipoOrgao::COMPDEC->value,
+            'status' => 'ativo',
+            'codigo' => LegacyParser::toStringOrNull($row->codigo ?? null) ?? "LEG-{$legacyId}",
+            'nome' => LegacyParser::toStringOrNull($row->nome ?? null) ?? "(sem nome) {$legacyId}",
+            'municipio_id' => LegacyParser::toIntOrNull($row->municipio_id ?? $row->mun_id ?? null),
+            'email' => LegacyParser::toStringOrNull($row->email ?? null),
+            'email_secundario' => LegacyParser::toStringOrNull($row->email2 ?? null),
+            'email_terciario' => LegacyParser::toStringOrNull($row->email3 ?? null),
+            'telefone' => LegacyParser::toStringOrNull($row->fone_com ?? $row->telefone ?? null),
+            'telefone_secundario' => LegacyParser::toStringOrNull($row->fone_com2 ?? null),
+            'fax' => LegacyParser::toStringOrNull($row->fax ?? null),
+            'endereco' => LegacyParser::toStringOrNull($row->endereco ?? null),
+            'lei_criacao_numero' => LegacyParser::toStringOrNull($row->lei_num ?? null),
+            'lei_criacao_data' => LegacyParser::toDate($row->lei_data ?? null)?->toDateString(),
+            'decreto_numero' => LegacyParser::toStringOrNull($row->dec_num ?? null),
+            'decreto_data' => LegacyParser::toDate($row->dec_data ?? null)?->toDateString(),
+            'portaria_numero' => LegacyParser::toStringOrNull($row->port_numero ?? null),
+            'portaria_data' => LegacyParser::toDate($row->port_data ?? null)?->toDateString(),
+            'qtd_efetivo' => LegacyParser::toIntOrNull($row->efetivo_qtd ?? null) ?? 0,
+            'qtd_nupdec' => LegacyParser::toIntOrNull($row->nupdec_qtd ?? null) ?? 0,
+            'tem_sede_propria' => LegacyParser::toBool($row->sede_propria ?? null),
+            'tem_viatura' => LegacyParser::toBool($row->viatura ?? null),
+            'tem_mapeamento_risco' => LegacyParser::toBool($row->mapeamento_risco ?? null),
+            'tem_simulado' => LegacyParser::toBool($row->simulado ?? null),
+            'tem_cartao_pdc' => LegacyParser::toBool($row->cartao_pdc ?? null),
+            'metadata' => [
+                'capacidades' => [
+                    'tem_computador' => LegacyParser::toBool($row->computador ?? null),
+                    'tem_curso_gestao' => LegacyParser::toBool($row->curso_gestao ?? null),
+                    'data_curso_gestao' => LegacyParser::toDate($row->curso_gestao_data ?? null)?->toDateString(),
+                    'tem_curso_sco' => LegacyParser::toBool($row->curso_sco ?? null),
+                    'data_curso_sco' => LegacyParser::toDate($row->curso_sco_data ?? null)?->toDateString(),
+                    'tem_workshop_pdc' => LegacyParser::toBool($row->workshop_pdc ?? null),
+                    'data_workshop_pdc' => LegacyParser::toDate($row->workshop_pdc_data ?? null)?->toDateString(),
+                    'experiencia_dc' => LegacyParser::toStringOrNull($row->experiencia_dc ?? null),
+                    'capacitacao_nupdec' => LegacyParser::toStringOrNull($row->capacitacao_nupdec ?? null),
+                    'obs_capacidades' => LegacyParser::toStringOrNull($row->obs ?? null),
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>|object|null  $payload
+     */
+    private function logEtl(
+        string $recurso,
+        string $legacyTable,
+        ?int $legacyId,
+        ?int $newId,
+        string $acao,
+        ?string $motivo,
+        mixed $payload,
+        bool $dryRun,
+    ): void {
+        if ($dryRun) {
+            return;
+        }
+
+        DB::table('compdec_etl_log')->insert([
+            'recurso' => $recurso,
+            'legacy_table' => $legacyTable,
+            'legacy_id' => $legacyId ?? 0,
+            'new_id' => $newId,
+            'acao' => $acao,
+            'motivo' => $motivo,
+            'payload_legado' => $payload !== null ? json_encode((array) $payload) : null,
+            'created_at' => now(),
+        ]);
     }
 }

@@ -1,9 +1,7 @@
 <template>
   <div class="orgao-create">
     <div class="header-section">
-      <Button variant="ghost" @click="handleBack">
-        &larr; Voltar
-      </Button>
+
 
       <Heading level="1">Criar Novo Orgao</Heading>
       <Text variant="muted">Preencha os dados para cadastrar um novo orgao de defesa civil</Text>
