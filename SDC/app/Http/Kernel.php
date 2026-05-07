@@ -83,5 +83,6 @@ class Kernel extends HttpKernel
         'hierarchy' => \App\Http\Middleware\CheckHierarchy::class,
         'api-rate-limiter'     => \App\Http\Middleware\ApiRateLimiter::class,
         'decretacoes.api.auth' => \App\Http\Middleware\DecretacoesApiAuth::class,
+        'compdec.query-threshold' => \App\Http\Middleware\QueryThresholdMiddleware::class,
     ];
 }

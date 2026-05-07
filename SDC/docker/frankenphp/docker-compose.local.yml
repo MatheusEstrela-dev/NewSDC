@@ -90,13 +90,15 @@ services:
       - ../../routes:/app/routes
       - ../../config:/app/config
       - ../../database/migrations:/app/database/migrations
+      - ../../database/factories:/app/database/factories
+      - ../../database/seeders:/app/database/seeders
       - ../../tests:/app/tests
       - ../storage/logs:/app/storage/logs
       - ../../public:/app/public
       - ../../resources:/app/resources
-      - ../../composer.json:/app/composer.json:ro
-      - ../../composer.lock:/app/composer.lock:ro
-      - ../../vendor:/app/vendor:ro
+      - ../../composer.json:/app/composer.json
+      - ../../composer.lock:/app/composer.lock
+      - ../../vendor:/app/vendor
       # platform_check_bypass removido: composer dump-autoload --ignore-platform-reqs nao gera mais o arquivo
       - ./scripts/entrypoint.sh:/start.sh:ro
       - ./Caddyfile.local:/etc/caddy/Caddyfile.local:ro

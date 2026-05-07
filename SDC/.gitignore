@@ -1,5 +1,6 @@
 /.phpunit.cache
 /node_modules
+replace.ps1
 /public/build
 /public/hot
 /public/storage
@@ -23,6 +24,7 @@ yarn-error.log
 rr
 .rr.yaml
 /docker/logs
+/docker/storage/logs/*.json
 *.log
 .DS_Store
 .gemini

@@ -156,6 +156,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Canal de performance do modulo COMPDEC (QueryThresholdMiddleware)
+        'compdec-perf' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/compdec-perf.log'),
+            'level' => 'warning',
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
         // Canal para jobs falhados
         'jobs' => [
             'driver' => 'daily',

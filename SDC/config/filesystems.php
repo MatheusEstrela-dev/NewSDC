@@ -56,6 +56,15 @@ return [
             'throw' => false,
         ],
 
+        // Disk privado do modulo COMPDEC (fotos coordenador/prefeito, anexos legais, planos de contingencia)
+        // Usado pelo Spatie Media Library via collection_name (foto_coordenador, foto_prefeito, anexo_arquivo, plano_arquivo)
+        'compdec' => [
+            'driver' => 'local',
+            'root' => storage_path('app/compdec'),
+            'visibility' => 'private',
+            'throw' => false,
+        ],
+
     ],
 
     /*
