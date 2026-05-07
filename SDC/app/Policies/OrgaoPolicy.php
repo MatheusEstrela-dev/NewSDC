@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Policies;
 
 use App\Models\User;
-use App\Modules\Compdec\Domain\Entities\Orgao;
+use App\Modules\Compdec\Models\Orgao;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 
@@ -12,7 +14,7 @@ class OrgaoPolicy
     use HandlesAuthorization;
 
     /**
-     * Super-admin sempre tem acesso total
+     * Super-admin sempre tem acesso total (Gate::before global tambem cobre, esse fica como defesa em profundidade).
      */
     public function before(User $user, string $ability): ?bool
     {
@@ -23,131 +25,68 @@ class OrgaoPolicy
         return null;
     }
 
-    /**
-     * Pode visualizar a lista de órgãos?
-     */
     public function viewAny(User $user): bool
     {
-        return $user->can('compdec.view');
+        return $user->can('compdec.orgaos.view');
     }
 
-    /**
-     * Pode visualizar um órgão específico?
-     */
     public function view(User $user, Orgao $orgao): bool
     {
-        // Se pertence ao órgão, pode ver
-        if ($user->pertenceAoOrgao($orgao->id)) {
+        if (method_exists($user, 'pertenceAoOrgao') && $user->pertenceAoOrgao($orgao->id)) {
             return true;
         }
 
-        return $user->can('compdec.view-details');
+        return $user->can('compdec.orgaos.view');
     }
 
-    /**
-     * Pode criar novos órgãos?
-     */
     public function create(User $user): bool
     {
-        return $user->can('compdec.create');
+        return $user->can('compdec.orgaos.create');
     }
 
-    /**
-     * Pode editar um órgão?
-     */
     public function update(User $user, Orgao $orgao): bool
     {
-        // Coordenador pode editar seu próprio órgão
-        if ($user->orgao_principal_id === $orgao->id && $user->can('compdec.edit')) {
+        // Coordenador/agente do proprio orgao podem editar com permissao base
+        if (
+            isset($user->orgao_principal_id)
+            && (int) $user->orgao_principal_id === (int) $orgao->id
+            && $user->can('compdec.orgaos.edit')
+        ) {
             return true;
         }
 
-        return $user->can('compdec.manage');
+        return $user->can('compdec.orgaos.edit');
     }
 
-    /**
-     * Pode deletar um órgão?
-     */
     public function delete(User $user, Orgao $orgao): Response
     {
-        // Não pode deletar se tiver subordinados
-        if ($orgao->subordinados()->count() > 0) {
-            return Response::deny('Não é possível deletar um órgão que possui subordinados. Remova os vínculos hierárquicos primeiro.');
+        if (! $user->can('compdec.orgaos.delete')) {
+            return Response::deny('Voce nao tem permissao para excluir orgaos.');
         }
 
-        // Não pode deletar se tiver usuários vinculados
-        if ($orgao->usuarios()->count() > 0) {
-            return Response::deny('Não é possível deletar um órgão que possui usuários vinculados. Remova os vínculos primeiro.');
+        if ($orgao->orgaosSubordinados()->exists()) {
+            return Response::deny('Nao e possivel excluir um orgao com subordinados. Remova os vinculos primeiro.');
         }
 
-        // Não pode deletar órgãos ativos
-        if (!$orgao->status->podeSerExcluido()) {
-            return Response::deny('Apenas órgãos inativos ou em implantação podem ser deletados.');
+        if ($orgao->usuarios()->exists()) {
+            return Response::deny('Nao e possivel excluir um orgao com usuarios vinculados.');
         }
 
-        return $user->can('compdec.delete')
-            ? Response::allow()
-            : Response::deny('Você não tem permissão para deletar órgãos.');
+        return Response::allow();
     }
 
-    /**
-     * Pode restaurar um órgão deletado?
-     */
     public function restore(User $user, Orgao $orgao): bool
     {
-        return $user->hasAnyRole(['super-admin', 'admin']) && $user->can('compdec.manage');
+        return $user->hasAnyRole(['super-admin', 'admin']) && $user->can('compdec.orgaos.edit');
     }
 
-    /**
-     * Pode deletar permanentemente?
-     */
     public function forceDelete(User $user, Orgao $orgao): bool
     {
         return $user->hasRole('super-admin');
     }
 
-    /**
-     * Pode vincular/desvincular usuários ao órgão?
-     */
-    public function vincularUsuarios(User $user, Orgao $orgao): bool
-    {
-        // Coordenador pode vincular usuários ao seu próprio órgão
-        if ($user->orgao_principal_id === $orgao->id && $user->hasRole('coordinator')) {
-            return true;
-        }
-
-        return $user->can('compdec.vincular-usuarios');
-    }
-
-    /**
-     * Pode gerenciar a hierarquia (definir órgão superior)?
-     */
-    public function gerenciarHierarquia(User $user, Orgao $orgao): bool
-    {
-        return $user->can('compdec.gerenciar-hierarquia');
-    }
-
-    /**
-     * Pode visualizar estatísticas?
-     */
-    public function viewStatistics(User $user): bool
-    {
-        return $user->can('compdec.view-statistics');
-    }
-
-    /**
-     * Pode exportar dados?
-     */
     public function export(User $user): bool
     {
-        return $user->can('compdec.export');
-    }
-
-    /**
-     * Pode importar órgãos em lote?
-     */
-    public function import(User $user): bool
-    {
-        return $user->can('compdec.import');
+        return $user->can('compdec.orgaos.export');
     }
 }

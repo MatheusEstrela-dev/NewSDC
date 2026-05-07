@@ -1,158 +1,125 @@
 <template>
+  <div class="orgaos-index">
+    <!-- Header -->
+    <PageHeader
+      title="Orgaos de Defesa Civil"
+      description="Gestao de COMPDEC, REDEC e CEDEC"
+      :icon="BuildingOfficeIcon"
+      variant="gradient"
+    >
+      <template #actions>
+        <Button
+          v-if="canManage"
+          variant="primary"
+          size="md"
+          :icon="PlusIcon"
+          icon-position="left"
+          @click="handleCreate"
+        >
+          Novo Orgao
+        </Button>
+      </template>
+    </PageHeader>
 
-    <div class="orgaos-index">
-      <!-- Header Padronizado -->
-      <PageHeader
-        title="Órgãos de Defesa Civil"
-        description="Gestão de COMPDEC, REDEC e CEDEC"
-        :icon="BuildingOfficeIcon"
-        variant="gradient"
-      >
-        <template #actions>
-          <Button
-            v-if="canManage"
-            variant="primary"
-            size="md"
-            :icon="PlusIcon"
-            icon-position="left"
-            @click="handleCreate"
-          >
-            Novo Órgão
-          </Button>
-        </template>
-      </PageHeader>
+    <!-- Stats Cards (Organism reusavel) -->
+    <OrgaoStatsCards :statistics="statistics" />
 
-      <!-- Cards de Estatísticas -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" v-if="statistics">
-        <StatCard
-          title="Total de Órgãos"
-          :value="statistics.total"
-          variant="info"
-          :icon="BuildingOfficeIcon"
-        />
-        <StatCard
-          title="COMPDECs"
-          :value="statistics?.por_tipo?.compdec || 0"
-          variant="success"
-          :icon="BuildingOfficeIcon"
-        />
-        <StatCard
-          title="REDECs"
-          :value="statistics?.por_tipo?.redec || 0"
-          variant="warning"
-          :icon="BuildingOfficeIcon"
-        />
-        <StatCard
-          title="Ativos"
-          :value="statistics.ativos"
-          variant="success"
-          :icon="CheckCircleIcon"
-        />
+    <!-- Filtros -->
+    <OrgaosFiltersSection
+      :filters="localFilters"
+      :municipalities="filterOptions?.municipalities || []"
+      @filter-change="handleFilterChange"
+      @filter-reset="handleFilterReset"
+    />
+
+    <!-- Tabela -->
+    <div class="table-container">
+      <div v-if="loading" class="loading-overlay">
+        <div class="spinner"></div>
       </div>
 
-      <!-- Filtros Padronizados -->
-      <OrgaosFiltersSection
-        :filters="localFilters"
-        :municipalities="filterOptions?.municipalities || []"
-        @filter-change="handleFilterChange"
-        @filter-reset="handleFilterReset"
-      />
-
-      <!-- Tabela de Órgãos -->
-      <div class="table-container">
-        <div v-if="loading" class="loading-overlay">
-          <div class="spinner"></div>
-        </div>
-
-        <table class="orgaos-table">
-          <thead>
-            <tr>
-              <th>Código</th>
-              <th>Nome</th>
-              <th>Tipo</th>
-              <th>Município</th>
-              <th>Status</th>
-              <th>Usuários</th>
-              <th class="actions-column">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="orgaos.data.length === 0">
-              <td colspan="7" class="empty-state">
-                Nenhum órgão encontrado
-              </td>
-            </tr>
-            <tr v-for="orgao in orgaos.data" :key="orgao.id" class="table-row">
-              <td>
-                <Text variant="mono">{{ orgao.codigo }}</Text>
-              </td>
-              <td>
-                <Text variant="bold">{{ orgao.nome }}</Text>
-              </td>
-              <td>
-                <Badge :color="getTipoBadgeColor(orgao.tipo)">
-                  {{ orgao.tipoLabel }}
-                </Badge>
-              </td>
-              <td>
-                <Text variant="muted">
-                  {{ orgao.municipio?.nome || '—' }}
-                </Text>
-              </td>
-              <td>
-                <Badge :color="orgao.statusBadgeColor">
-                  {{ orgao.statusLabel }}
-                </Badge>
-              </td>
-              <td>
-                <Text variant="muted">{{ orgao.usuarios_count || 0 }}</Text>
-              </td>
-              <td class="actions-column">
-                <div class="flex items-center justify-end">
-                  <TableActions
-                    :show-view="true"
-                    :show-edit="canManage"
-                    :show-attachments="false"
-                    :show-delete="false"
-                    @view="handleView(orgao.id)"
-                    @edit="handleEdit(orgao.id)"
-                  />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Paginação -->
-      <Pagination
-        v-if="orgaos.data.length > 0"
-        :current-page="orgaos.current_page"
-        :last-page="orgaos.last_page"
-        :total="orgaos.total"
-        @page-change="handlePageChange"
-      />
+      <table class="orgaos-table">
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Nome</th>
+            <th>Tipo</th>
+            <th>Municipio</th>
+            <th>Status</th>
+            <th>Usuarios</th>
+            <th class="actions-column">Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="orgaos.data.length === 0">
+            <td colspan="7" class="empty-state">
+              Nenhum orgao encontrado
+            </td>
+          </tr>
+          <tr v-for="orgao in orgaos.data" :key="orgao.id" class="table-row">
+            <td>
+              <Text variant="mono">{{ orgao.codigo }}</Text>
+            </td>
+            <td>
+              <Text variant="bold">{{ orgao.nome }}</Text>
+            </td>
+            <td>
+              <TipoOrgaoBadge :tipo="orgao.tipo" />
+            </td>
+            <td>
+              <Text variant="muted">{{ orgao.municipio?.nome || '-' }}</Text>
+            </td>
+            <td>
+              <StatusOrgaoBadge :status="orgao.status" />
+            </td>
+            <td>
+              <Text variant="muted">{{ orgao.usuarios_count || 0 }}</Text>
+            </td>
+            <td class="actions-column">
+              <div class="flex items-center justify-end">
+                <TableActions
+                  :show-view="true"
+                  :show-edit="canManage"
+                  :show-attachments="false"
+                  :show-delete="false"
+                  @view="handleView(orgao.id)"
+                  @edit="handleEdit(orgao.id)"
+                />
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
+    <!-- Paginacao -->
+    <Pagination
+      v-if="orgaos.data.length > 0"
+      :current-page="orgaos.current_page"
+      :last-page="orgaos.last_page"
+      :total="orgaos.total"
+      @page-change="handlePageChange"
+    />
+  </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-
-defineOptions({ layout: AuthenticatedLayout });
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
-import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vue';
+import TipoOrgaoBadge from '@/Components/Molecules/Compdec/TipoOrgaoBadge.vue';
+import OrgaoStatsCards from '@/Components/Organisms/Compdec/OrgaoStatsCards.vue';
 import OrgaosFiltersSection from '@/Components/Organisms/Compdec/OrgaosFiltersSection.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
-import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   orgaos: {
@@ -161,9 +128,17 @@ const props = defineProps({
   },
   statistics: {
     type: Object,
-    default: () => ({}),
+    default: () => ({
+      total: 0,
+      ativos: 0,
+      por_tipo: { compdec: 0, redec: 0, cedec: 0 },
+    }),
   },
   filters: {
+    type: Object,
+    default: () => ({}),
+  },
+  filterOptions: {
     type: Object,
     default: () => ({}),
   },
@@ -175,22 +150,8 @@ const props = defineProps({
 
 const loading = ref(false);
 const localFilters = ref({ ...props.filters });
-let debounceTimer = null;
 
-const hasActiveFilters = computed(() => {
-  return Object.values(localFilters.value).some(v => v !== '' && v !== null);
-});
-
-const getTipoBadgeColor = (tipo) => {
-  const colors = {
-    compdec: 'blue',
-    redec: 'yellow',
-    cedec: 'purple',
-  };
-  return colors[tipo] || 'gray';
-};
-
-const applyFilters = () => {
+function applyFilters() {
   loading.value = true;
   router.get(route('compdec.index'), localFilters.value, {
     preserveState: true,
@@ -199,30 +160,19 @@ const applyFilters = () => {
       loading.value = false;
     },
   });
-};
+}
 
-const debouncedSearch = () => {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    applyFilters();
-  }, 500);
-};
-
-const clearFilters = () => {
-  localFilters.value = { tipo: '', status: '', search: '' };
-  applyFilters();
-};
-
-const handleFilterChange = (newFilters) => {
+function handleFilterChange(newFilters) {
   localFilters.value = { ...newFilters };
   applyFilters();
-};
+}
 
-const handleFilterReset = () => {
-  clearFilters();
-};
+function handleFilterReset() {
+  localFilters.value = { tipo: '', status: '', search: '', municipio: '' };
+  applyFilters();
+}
 
-const handlePageChange = (page) => {
+function handlePageChange(page) {
   loading.value = true;
   router.get(route('compdec.index'), {
     ...localFilters.value,
@@ -234,40 +184,24 @@ const handlePageChange = (page) => {
       loading.value = false;
     },
   });
-};
+}
 
-const handleCreate = () => {
+function handleCreate() {
   router.visit(route('compdec.create'));
-};
+}
 
-const handleView = (id) => {
+function handleView(id) {
   router.visit(route('compdec.show', id));
-};
+}
 
-const handleEdit = (id) => {
+function handleEdit(id) {
   router.visit(route('compdec.edit', id));
-};
+}
 </script>
 
 <style scoped>
 .orgaos-index {
   @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  /* Padding removed for global alignment */
-}
-
-.filters-section {
-  @apply bg-white dark:bg-slate-800;
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  align-items: end;
 }
 
 .table-container {
@@ -341,11 +275,5 @@ const handleEdit = (id) => {
 .actions-column {
   width: 180px;
   text-align: right;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
 }
 </style>

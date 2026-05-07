@@ -1,244 +1,184 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Compdec\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Modules\Compdec\DTOs\OrgaoDTO;
 use App\Modules\Compdec\Models\Orgao;
+use App\Modules\Compdec\Requests\StoreOrgaoRequest;
+use App\Modules\Compdec\Requests\UpdateOrgaoRequest;
+use App\Modules\Compdec\Resources\OrgaoIndexResource;
+use App\Modules\Compdec\Resources\OrgaoResource;
 use App\Modules\Compdec\Services\OrgaoService;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class OrgaoController extends Controller
 {
     public function __construct(
-        private OrgaoService $orgaoService
+        private readonly OrgaoService $service,
     ) {}
 
-    /**
-     * Listar órgãos (GET /compdec/orgaos)
-     */
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $this->authorize('viewAny', Orgao::class);
 
-        $orgaos = $this->orgaoService->listarOrgaos(15);
+        $perPage = (int) $request->integer('per_page', 15);
+        $filtros = $request->only(['tipo', 'status', 'municipio_id', 'search']);
+
+        $orgaos = $this->service->listarOrgaos($perPage, $filtros);
 
         return Inertia::render('Compdec/OrgaosIndex', [
-            'orgaos' => $orgaos,
-            'pode_criar' => $this->userCanCreate(),
+            'orgaos' => OrgaoIndexResource::collection($orgaos),
+            'statistics' => fn () => $this->service->obterEstatisticas(),
+            'filters' => $filtros,
+            'filterOptions' => [
+                'municipalities' => [],
+            ],
+            'canManage' => $request->user()?->can('compdec.orgaos.edit') ?? false,
         ]);
     }
 
-    /**
-     * Exibir formulário de criação (GET /compdec/orgaos/novo)
-     */
+    public function arvore(): Response
+    {
+        $this->authorize('viewAny', Orgao::class);
+
+        return Inertia::render('Compdec/OrgaoArvore', [
+            'arvore' => $this->service->obterArvoreHierarquica(),
+        ]);
+    }
+
+    public function show(Orgao $orgao, Request $request): Response
+    {
+        $this->authorize('view', $orgao);
+
+        $orgao = $this->service->obterOrgao($orgao->id);
+
+        return Inertia::render('Compdec/OrgaoShow', [
+            'orgao' => OrgaoResource::make($orgao->loadMissing(['orgaoSuperior', 'prefeitura'])),
+            'usuarios' => $orgao->usuarios()->select(['users.id', 'users.name', 'users.email'])->get(),
+            'canManage' => $request->user()?->can('update', $orgao) ?? false,
+            'canVincularUsuarios' => $request->user()?->can('compdec.usuarios.manage') ?? false,
+        ]);
+    }
+
     public function create(): Response
     {
         $this->authorize('create', Orgao::class);
 
-        $cedecs = $this->orgaoService->obterCedecs();
-
         return Inertia::render('Compdec/OrgaoCreate', [
-            'cedecs' => $cedecs,
+            'cedecs' => $this->service->obterCedecs(),
+            'redecs' => $this->service->obterRedecs(),
+            'orgaosSuperior' => $this->service->obterCedecs()->concat($this->service->obterRedecs())->values(),
+            'municipios' => [],
         ]);
     }
 
-    /**
-     * Armazenar novo órgão (POST /compdec/orgaos)
-     */
-    public function store(): RedirectResponse
+    public function store(StoreOrgaoRequest $request): RedirectResponse
     {
-        $this->authorize('create', Orgao::class);
+        $orgao = $this->service->criarOrgao(
+            OrgaoDTO::fromRequest($request->validated()),
+        );
 
-        try {
-            $dto = OrgaoDTO::fromRequest(request()->validate([
-                'codigo' => 'required|string|max:50|unique:orgaos',
-                'nome' => 'required|string|max:255',
-                'tipo' => 'required|in:cedec,redec,compdec',
-                'municipio_id' => 'nullable|integer|exists:municipios,id',
-                'orgao_superior_id' => 'nullable|integer|exists:orgaos,id',
-                'status' => 'required|in:ativo,inativo,em_implantacao,suspenso',
-                'email' => 'nullable|email|max:255',
-                'telefone' => 'nullable|string|max:20',
-                'endereco' => 'nullable|string',
-                'responsavel_nome' => 'nullable|string|max:255',
-                'responsavel_cpf' => 'nullable|string|max:14',
-                'responsavel_telefone' => 'nullable|string|max:20',
-                'responsavel_email' => 'nullable|email|max:255',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
-                'abrangencia' => 'nullable|array',
-                'metadata' => 'nullable|array',
-            ]));
-
-            $orgao = $this->orgaoService->criarOrgao($dto);
-
-            return redirect()
-                ->route('compdec.show', $orgao->id)
-                ->with('success', "Órgão '{$orgao->nome}' criado com sucesso!");
-
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', $e->getMessage());
-        }
+        return redirect()
+            ->route('compdec.show', $orgao->id)
+            ->with('success', "Orgao {$orgao->nome} criado com sucesso.");
     }
 
-    /**
-     * Exibir órgão específico (GET /compdec/orgaos/{id})
-     */
-    public function show(Orgao $orgao): Response | RedirectResponse
-    {
-        try {
-            $this->authorize('view', $orgao);
-
-            $entity = $this->orgaoService->obterOrgao($orgao->id);
-
-            return Inertia::render('Compdec/OrgaoShow', [
-                'orgao' => $entity->toArray(),
-                'pode_editar' => $this->userCan('update', $orgao),
-                'pode_deletar' => $this->userCan('delete', $orgao),
-            ]);
-
-        } catch (\Exception $e) {
-            return redirect()
-                ->route('compdec.index')
-                ->with('error', 'Órgão não encontrado');
-        }
-    }
-
-    /**
-     * Exibir formulário de edição (GET /compdec/orgaos/{id}/editar)
-     */
-    public function edit(Orgao $orgao): Response | RedirectResponse
-    {
-        try {
-            $this->authorize('update', $orgao);
-
-            $entity = $this->orgaoService->obterOrgao($orgao->id);
-            $cedecs = $this->orgaoService->obterCedecs();
-            $redecs = $entity->orgaoSuperiorId
-                ? $this->orgaoService->obterRedecs($entity->orgaoSuperiorId)
-                : [];
-
-            return Inertia::render('Compdec/OrgaoEdit', [
-                'orgao' => $entity->toArray(),
-                'cedecs' => $cedecs,
-                'redecs' => $redecs,
-            ]);
-
-        } catch (\Exception $e) {
-            return redirect()
-                ->route('compdec.index')
-                ->with('error', 'Órgão não encontrado');
-        }
-    }
-
-    /**
-     * Atualizar órgão (PUT /compdec/orgaos/{id})
-     */
-    public function update(Orgao $orgao): RedirectResponse
+    public function edit(Orgao $orgao): Response
     {
         $this->authorize('update', $orgao);
 
-        try {
-            $dto = OrgaoDTO::fromRequest(request()->validate([
-                'codigo' => 'required|string|max:50|unique:orgaos,codigo,'.$orgao->id,
-                'nome' => 'required|string|max:255',
-                'tipo' => 'required|in:cedec,redec,compdec',
-                'municipio_id' => 'nullable|integer|exists:municipios,id',
-                'orgao_superior_id' => 'nullable|integer|exists:orgaos,id',
-                'status' => 'required|in:ativo,inativo,em_implantacao,suspenso',
-                'email' => 'nullable|email|max:255',
-                'telefone' => 'nullable|string|max:20',
-                'endereco' => 'nullable|string',
-                'responsavel_nome' => 'nullable|string|max:255',
-                'responsavel_cpf' => 'nullable|string|max:14',
-                'responsavel_telefone' => 'nullable|string|max:20',
-                'responsavel_email' => 'nullable|email|max:255',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
-                'abrangencia' => 'nullable|array',
-                'metadata' => 'nullable|array',
-            ]));
-
-            $orgaoAtualizado = $this->orgaoService->atualizarOrgao($orgao->id, $dto);
-
-            return redirect()
-                ->route('compdec.show', $orgaoAtualizado->id)
-                ->with('success', "Órgão '{$orgaoAtualizado->nome}' atualizado com sucesso!");
-
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', $e->getMessage());
-        }
+        return Inertia::render('Compdec/OrgaoEdit', [
+            'orgao' => OrgaoResource::make($orgao->loadMissing(['orgaoSuperior'])),
+            'cedecs' => $this->service->obterCedecs(),
+            'redecs' => $this->service->obterRedecs(),
+            'orgaosSuperior' => $this->service->obterCedecs()->concat($this->service->obterRedecs())->values(),
+            'municipios' => [],
+        ]);
     }
 
-    /**
-     * Deletar órgão (DELETE /compdec/orgaos/{id})
-     */
+    public function update(UpdateOrgaoRequest $request, Orgao $orgao): RedirectResponse
+    {
+        $atualizado = $this->service->atualizarOrgao(
+            $orgao->id,
+            OrgaoDTO::fromRequest($request->validated()),
+        );
+
+        return redirect()
+            ->route('compdec.show', $atualizado->id)
+            ->with('success', "Orgao {$atualizado->nome} atualizado.");
+    }
+
     public function destroy(Orgao $orgao): RedirectResponse
     {
         $this->authorize('delete', $orgao);
 
-        try {
-            $nomOrgao = $orgao->nome;
-            $this->orgaoService->deletarOrgao($orgao->id);
+        $nome = $orgao->nome;
+        $this->service->deletarOrgao($orgao->id);
 
-            return redirect()
-                ->route('compdec.index')
-                ->with('success', "Órgão '{$nomOrgao}' deletado com sucesso!");
-
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->with('error', $e->getMessage());
-        }
+        return redirect()
+            ->route('compdec.index')
+            ->with('success', "Orgao {$nome} excluido.");
     }
 
-    /**
-     * Vincular usuário a órgão (POST /compdec/orgaos/{id}/usuarios)
-     */
-    public function vincularUsuario(Orgao $orgao): RedirectResponse
+    public function uploadFotoCoordenador(Request $request, Orgao $orgao): RedirectResponse
     {
         $this->authorize('update', $orgao);
 
-        try {
-            $this->orgaoService->vincularUsuarioAOrgao(
-                $orgao->id,
-                request()->validate([
-                    'usuario_id' => 'required|integer|exists:users,id',
-                ])['usuario_id']
-            );
+        $request->validate([
+            'foto' => [
+                'required',
+                'file',
+                'mimes:jpeg,png,webp',
+                'max:' . (int) (config('compdec.upload_limits.foto_coordenador', 307200) / 1024),
+            ],
+        ]);
 
-            return redirect()
-                ->back()
-                ->with('success', 'Usuário vinculado ao órgão com sucesso!');
+        $this->service->uploadFotoCoordenador($orgao->id, $request->file('foto'));
 
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->with('error', $e->getMessage());
-        }
+        return back()->with('success', 'Foto do coordenador atualizada.');
     }
 
-    /**
-     * Helper methods for authorization checks
-     */
-    protected function userCan(string $ability, Orgao $orgao): bool
+    public function removerFotoCoordenador(Orgao $orgao): RedirectResponse
     {
-        return request()->user()?->can($ability, $orgao) ?? false;
+        $this->authorize('update', $orgao);
+        $this->service->removerFotoCoordenador($orgao->id);
+
+        return back()->with('success', 'Foto do coordenador removida.');
     }
 
-    protected function userCanCreate(): bool
+    public function vincularUsuario(Request $request, Orgao $orgao): RedirectResponse
     {
-        return request()->user()?->can('create', Orgao::class) ?? false;
+        $this->authorize('compdec.usuarios.manage');
+
+        $data = $request->validate([
+            'usuario_id' => ['required', 'integer', 'exists:users,id'],
+            'funcao' => ['nullable', 'in:coordenador,agente,tecnico,apoio'],
+            'is_principal' => ['nullable', 'boolean'],
+        ]);
+
+        $this->service->vincularUsuarioAOrgao(
+            $orgao->id,
+            (int) $data['usuario_id'],
+            [
+                'funcao' => $data['funcao'] ?? 'agente',
+                'is_principal' => (bool) ($data['is_principal'] ?? false),
+            ],
+        );
+
+        return back()->with('success', 'Usuario vinculado ao orgao.');
+    }
+
+    public function desvincularUsuario(Orgao $orgao, int $usuario): RedirectResponse
+    {
+        $this->authorize('compdec.usuarios.manage');
+        $this->service->desvincularUsuario($orgao->id, $usuario);
+
+        return back()->with('success', 'Vinculo removido.');
     }
 }

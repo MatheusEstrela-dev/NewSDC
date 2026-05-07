@@ -1,210 +1,302 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Compdec\Services;
 
-use App\Modules\Compdec\Domain\Entities\Orgao;
-use App\Modules\Compdec\Domain\Repositories\OrgaoRepository;
+use App\Models\User;
 use App\Modules\Compdec\DTOs\OrgaoDTO;
+use App\Modules\Compdec\Enums\TipoOrgao;
+use App\Modules\Compdec\Models\Orgao;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class OrgaoService
 {
-    public function __construct(
-        private OrgaoRepository $repository
-    ) {}
-
     /**
-     * Listar todos os órgãos com paginação
+     * @param  array<string, mixed>  $filtros
      */
-    public function listarOrgaos(?int $perPage = 15): \Illuminate\Pagination\LengthAwarePaginator
+    public function listarOrgaos(int $perPage = 15, array $filtros = []): LengthAwarePaginator
     {
-        return $this->repository->getAll($perPage);
+        return Orgao::query()
+            ->with(['orgaoSuperior:id,codigo,nome,tipo'])
+            ->withCount(['usuarios', 'orgaosSubordinados as subordinados_count'])
+            ->when($filtros['tipo'] ?? null, fn ($q, $tipo) => $q->where('tipo', $tipo))
+            ->when($filtros['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
+            ->when($filtros['municipio_id'] ?? null, fn ($q, $id) => $q->where('municipio_id', $id))
+            ->when($filtros['search'] ?? null, fn ($q, $termo) => $q->buscarPorTermo($termo))
+            ->orderBy('tipo')
+            ->orderBy('nome')
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
     /**
-     * Obter órgão por ID com validação
+     * @return array<string, int|array<string, int>>
      */
+    public function obterEstatisticas(): array
+    {
+        $row = Orgao::query()
+            ->selectRaw('
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE status = ?) AS ativos,
+                COUNT(*) FILTER (WHERE tipo = ?) AS compdec_count,
+                COUNT(*) FILTER (WHERE tipo = ?) AS redec_count,
+                COUNT(*) FILTER (WHERE tipo = ?) AS cedec_count
+            ', [
+                'ativo',
+                TipoOrgao::COMPDEC->value,
+                TipoOrgao::REDEC->value,
+                TipoOrgao::CEDEC->value,
+            ])
+            ->first();
+
+        return [
+            'total' => (int) ($row->total ?? 0),
+            'ativos' => (int) ($row->ativos ?? 0),
+            'por_tipo' => [
+                'compdec' => (int) ($row->compdec_count ?? 0),
+                'redec' => (int) ($row->redec_count ?? 0),
+                'cedec' => (int) ($row->cedec_count ?? 0),
+            ],
+        ];
+    }
+
     public function obterOrgao(int $id): Orgao
     {
-        $orgao = $this->repository->findById($id);
-
-        if (!$orgao) {
-            throw new \Exception("Órgão não encontrado com ID: {$id}");
-        }
-
-        return $orgao;
+        return Orgao::query()
+            ->with(['orgaoSuperior:id,codigo,nome,tipo', 'prefeitura'])
+            ->withCount(['usuarios'])
+            ->findOrFail($id);
     }
 
-    /**
-     * Criar novo órgão
-     */
     public function criarOrgao(OrgaoDTO $dto): Orgao
     {
-        return DB::transaction(function () use ($dto) {
-            // Validar hierarquia se for REDEC ou COMPDEC
-            if ($dto->tipo !== 'cedec' && $dto->orgaoSuperiorId) {
-                $orgaoSuperior = $this->repository->findById($dto->orgaoSuperiorId);
-                if (!$orgaoSuperior) {
-                    throw new \Exception("Órgão superior não encontrado");
-                }
+        return DB::transaction(function () use ($dto): Orgao {
+            $this->validarHierarquia($dto);
 
-                // Validar níveis hierárquicos
-                if ($dto->tipo === 'redec' && !$orgaoSuperior->isCedec()) {
-                    throw new \Exception("REDEC deve estar vinculada a um CEDEC");
-                }
-                if ($dto->tipo === 'compdec' && !$orgaoSuperior->isRedec()) {
-                    throw new \Exception("COMPDEC deve estar vinculada a um REDEC");
-                }
+            $data = $dto->toArray();
+
+            // codigo auto-gerado quando vazio
+            if (empty($data['codigo'])) {
+                $data['codigo'] = $this->gerarCodigoAutomatico($dto->tipo);
             }
 
-            return $this->repository->create($dto->toArray());
+            return Orgao::create($data);
         });
     }
 
-    /**
-     * Atualizar órgão existente
-     */
     public function atualizarOrgao(int $id, OrgaoDTO $dto): Orgao
     {
-        return DB::transaction(function () use ($id, $dto) {
-            $orgao = $this->repository->findById($id);
+        return DB::transaction(function () use ($id, $dto): Orgao {
+            $orgao = Orgao::findOrFail($id);
+            $this->validarHierarquia($dto, $id);
 
-            if (!$orgao) {
-                throw new \Exception("Órgão não encontrado");
+            $data = $dto->toArray();
+
+            // se codigo nao mudou, manter
+            if (empty($data['codigo'])) {
+                $data['codigo'] = $orgao->codigo;
             }
 
-            // Validar hierarquia se for REDEC ou COMPDEC
-            if ($dto->tipo !== 'cedec' && $dto->orgaoSuperiorId !== $orgao->orgaoSuperiorId) {
-                $orgaoSuperior = $this->repository->findById($dto->orgaoSuperiorId);
-                if (!$orgaoSuperior) {
-                    throw new \Exception("Órgão superior não encontrado");
-                }
-
-                // Validar níveis hierárquicos
-                if ($dto->tipo === 'redec' && !$orgaoSuperior->isCedec()) {
-                    throw new \Exception("REDEC deve estar vinculada a um CEDEC");
-                }
-                if ($dto->tipo === 'compdec' && !$orgaoSuperior->isRedec()) {
-                    throw new \Exception("COMPDEC deve estar vinculada a um REDEC");
-                }
+            // metadata: merge inteligente para nao perder chaves nao editadas pelo form
+            if (isset($data['metadata']) && is_array($data['metadata'])) {
+                $existing = $orgao->metadata ?? [];
+                $data['metadata'] = array_replace_recursive($existing, $data['metadata']);
             }
 
-            return $this->repository->update($id, $dto->toArray());
+            $orgao->update($data);
+
+            return $orgao->fresh(['orgaoSuperior', 'prefeitura']);
         });
     }
 
-    /**
-     * Deletar órgão
-     */
     public function deletarOrgao(int $id): bool
     {
-        return DB::transaction(function () use ($id) {
-            $orgao = $this->repository->findById($id);
+        return DB::transaction(function () use ($id): bool {
+            $orgao = Orgao::findOrFail($id);
 
-            if (!$orgao) {
-                throw new \Exception("Órgão não encontrado");
+            if ($orgao->orgaosSubordinados()->exists()) {
+                throw new InvalidArgumentException('Nao e possivel deletar um orgao que possui subordinados.');
             }
 
-            // Validar se tem subordinados antes de deletar
-            // Isso pode ser permitido ou não dependendo das regras de negócio
-
-            return $this->repository->delete($id);
+            return (bool) $orgao->delete();
         });
     }
 
-    /**
-     * Restaurar órgão deletado
-     */
     public function restaurarOrgao(int $id): bool
     {
-        return $this->repository->restore($id);
+        $orgao = Orgao::onlyTrashed()->findOrFail($id);
+
+        return (bool) $orgao->restore();
     }
 
     /**
-     * Obter CEDECs para dropdown
+     * @return Collection<int, Orgao>
      */
-    public function obterCedecs(): array
+    public function obterCedecs(): Collection
     {
-        return $this->repository->getCedecs();
+        return Orgao::query()
+            ->cedec()
+            ->ativo()
+            ->select(['id', 'codigo', 'nome', 'tipo'])
+            ->orderBy('nome')
+            ->get();
     }
 
     /**
-     * Obter REDECs para dropdown
+     * @return Collection<int, Orgao>
      */
-    public function obterRedecs(?int $cedecId = null): array
+    public function obterRedecs(?int $cedecId = null): Collection
     {
-        return $this->repository->getRedecs($cedecId);
+        return Orgao::query()
+            ->redec()
+            ->ativo()
+            ->when($cedecId, fn ($q, $id) => $q->where('orgao_superior_id', $id))
+            ->select(['id', 'codigo', 'nome', 'tipo', 'orgao_superior_id'])
+            ->orderBy('nome')
+            ->get();
     }
 
     /**
-     * Obter COMPDECs para dropdown
+     * @return Collection<int, Orgao>
      */
-    public function obterCompdecs(?int $redecId = null): array
+    public function obterCompdecs(?int $redecId = null): Collection
     {
-        return $this->repository->getCompdecs($redecId);
+        return Orgao::query()
+            ->compdec()
+            ->ativo()
+            ->when($redecId, fn ($q, $id) => $q->where('orgao_superior_id', $id))
+            ->select(['id', 'codigo', 'nome', 'tipo', 'municipio_id', 'orgao_superior_id'])
+            ->orderBy('nome')
+            ->get();
     }
 
     /**
-     * Obter árvore hierárquica de órgãos
+     * Arvore CEDEC -> REDEC -> COMPDEC para selects encadeados ou navegacao.
+     *
+     * @return array<int, array<string, mixed>>
      */
-    public function obterArvorHierarquica(): array
+    public function obterArvoreHierarquica(): array
     {
-        $orgaos = $this->repository->getOrgaosComHierarquia();
+        $orgaos = Orgao::query()
+            ->ativo()
+            ->select(['id', 'codigo', 'nome', 'tipo', 'orgao_superior_id', 'municipio_id'])
+            ->orderBy('tipo')
+            ->orderBy('nome')
+            ->get();
 
-        // Agrupar por CEDEC
-        $arvore = [];
-        foreach ($orgaos as $orgao) {
-            if ($orgao->isCedec()) {
-                $arvore[$orgao->id] = [
-                    'orgao' => $orgao,
-                    'redecs' => [],
-                ];
-            }
+        $cedecs = $orgaos->where('tipo', TipoOrgao::CEDEC)->values();
+        $redecs = $orgaos->where('tipo', TipoOrgao::REDEC)->groupBy('orgao_superior_id');
+        $compdecs = $orgaos->where('tipo', TipoOrgao::COMPDEC)->groupBy('orgao_superior_id');
+
+        return $cedecs->map(fn (Orgao $cedec): array => [
+            'id' => $cedec->id,
+            'codigo' => $cedec->codigo,
+            'nome' => $cedec->nome,
+            'redecs' => ($redecs[$cedec->id] ?? collect())->map(fn (Orgao $redec): array => [
+                'id' => $redec->id,
+                'codigo' => $redec->codigo,
+                'nome' => $redec->nome,
+                'compdecs' => ($compdecs[$redec->id] ?? collect())->map(fn (Orgao $c): array => [
+                    'id' => $c->id,
+                    'codigo' => $c->codigo,
+                    'nome' => $c->nome,
+                    'municipio_id' => $c->municipio_id,
+                ])->values()->all(),
+            ])->values()->all(),
+        ])->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $pivotAttrs
+     */
+    public function vincularUsuarioAOrgao(int $orgaoId, int $userId, array $pivotAttrs = []): bool
+    {
+        $orgao = Orgao::findOrFail($orgaoId);
+        User::query()->findOrFail($userId);
+
+        $orgao->usuarios()->syncWithoutDetaching([
+            $userId => array_merge([
+                'funcao' => 'agente',
+                'is_principal' => false,
+            ], $pivotAttrs),
+        ]);
+
+        return true;
+    }
+
+    public function desvincularUsuario(int $orgaoId, int $userId): bool
+    {
+        $orgao = Orgao::findOrFail($orgaoId);
+
+        return (bool) $orgao->usuarios()->detach($userId);
+    }
+
+    public function uploadFotoCoordenador(int $orgaoId, UploadedFile $arquivo): Media
+    {
+        $orgao = Orgao::findOrFail($orgaoId);
+
+        return $orgao
+            ->addMedia($arquivo->getRealPath())
+            ->usingFileName($arquivo->hashName())
+            ->usingName($arquivo->getClientOriginalName())
+            ->toMediaCollection(Orgao::MEDIA_FOTO_COORDENADOR, config('compdec.disk', 'compdec'));
+    }
+
+    public function removerFotoCoordenador(int $orgaoId): bool
+    {
+        $orgao = Orgao::findOrFail($orgaoId);
+        $orgao->clearMediaCollection(Orgao::MEDIA_FOTO_COORDENADOR);
+
+        return true;
+    }
+
+    private function validarHierarquia(OrgaoDTO $dto, ?int $excludeId = null): void
+    {
+        if ($excludeId !== null && $dto->orgaoSuperiorId === $excludeId) {
+            throw new InvalidArgumentException('Um orgao nao pode ser superior de si mesmo.');
         }
 
-        // Adicionar REDECs aos CEDECs
-        foreach ($orgaos as $orgao) {
-            if ($orgao->isRedec() && $orgao->orgaoSuperiorId) {
-                if (isset($arvore[$orgao->orgaoSuperiorId])) {
-                    $arvore[$orgao->orgaoSuperiorId]['redecs'][$orgao->id] = [
-                        'orgao' => $orgao,
-                        'compdecs' => [],
-                    ];
-                }
-            }
+        if ($dto->tipo === TipoOrgao::CEDEC->value && $dto->orgaoSuperiorId !== null) {
+            throw new InvalidArgumentException('CEDEC nao deve ter orgao superior.');
         }
 
-        // Adicionar COMPDECs aos REDECs
-        foreach ($orgaos as $orgao) {
-            if ($orgao->isCompdec() && $orgao->orgaoSuperiorId) {
-                foreach ($arvore as &$cedec) {
-                    if (isset($cedec['redecs'][$orgao->orgaoSuperiorId])) {
-                        $cedec['redecs'][$orgao->orgaoSuperiorId]['compdecs'][] = $orgao;
-                    }
-                }
-            }
+        if ($dto->orgaoSuperiorId === null) {
+            return;
         }
 
-        return $arvore;
+        $superior = Orgao::find($dto->orgaoSuperiorId);
+        if (! $superior) {
+            throw new ModelNotFoundException('Orgao superior nao encontrado.');
+        }
+
+        if ($dto->tipo === TipoOrgao::REDEC->value && $superior->tipo !== TipoOrgao::CEDEC) {
+            throw new InvalidArgumentException('REDEC deve ter um CEDEC como orgao superior.');
+        }
+        if ($dto->tipo === TipoOrgao::COMPDEC->value && $superior->tipo !== TipoOrgao::REDEC) {
+            throw new InvalidArgumentException('COMPDEC deve ter um REDEC como orgao superior.');
+        }
     }
 
-    /**
-     * Vincular usuário a um órgão
-     */
-    public function vincularUsuarioAOrgao(int $orgaoId, int $usuarioId, array $roles = []): bool
+    private function gerarCodigoAutomatico(string $tipo): string
     {
-        $orgao = $this->repository->findById($orgaoId);
+        $prefix = match ($tipo) {
+            TipoOrgao::CEDEC->value => 'CEDEC',
+            TipoOrgao::REDEC->value => 'REDEC',
+            default => 'COMPDEC',
+        };
 
-        if (!$orgao) {
-            throw new \Exception("Órgão não encontrado");
-        }
+        // proximo numero sequencial dentro do tipo
+        $proximo = (int) Orgao::query()
+            ->where('codigo', 'ilike', "{$prefix}-%")
+            ->count() + 1;
 
-        return DB::transaction(function () use ($orgaoId, $usuarioId, $roles) {
-            // Usar o modelo para vincular via relacionamento many-to-many
-            $model = \App\Modules\Compdec\Models\Orgao::findOrFail($orgaoId);
-
-            // Sincronizar usuários (atualizar se já existe)
-            return (bool)$model->usuarios()->syncWithoutDetaching([$usuarioId]);
-        });
+        return sprintf('%s-%06d', $prefix, $proximo);
     }
 }

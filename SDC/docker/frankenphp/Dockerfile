@@ -3,8 +3,7 @@
 # Build otimizado com Early Hints e HTTP/2-3 nativo
 # ============================================================================
 
-# FROM dunglas/frankenphp:latest-php8.3-alpine
-FROM c24773c3328e
+FROM dunglas/frankenphp:1-php8.4-alpine
 
 LABEL maintainer="SDC Team"
 LABEL environment="production"

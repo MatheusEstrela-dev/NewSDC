@@ -19,7 +19,8 @@ class AuthServiceProvider extends ServiceProvider
         \App\Modules\Rat\Models\RatOcorrencia::class => \App\Policies\RatPolicy::class,
         \App\Models\Empreendimento::class => \App\Policies\EmpreendimentoPolicy::class,
         \App\Models\Protocolo::class => \App\Policies\ProtocoloPolicy::class,
-        \App\Modules\Compdec\Domain\Entities\Orgao::class => \App\Policies\OrgaoPolicy::class,
+        \App\Modules\Compdec\Models\Orgao::class => \App\Policies\OrgaoPolicy::class,
+        \App\Modules\Compdec\Models\Prefeitura::class => \App\Policies\PrefeituraPolicy::class,
     ];
 
     /**

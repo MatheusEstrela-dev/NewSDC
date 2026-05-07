@@ -1,199 +1,165 @@
 <template>
+  <div class="orgao-show">
+    <!-- Header com acoes -->
+    <div class="header-section">
+      <div class="header-content">
+        <Button variant="ghost" @click="handleBack">
+          &larr; Voltar
+        </Button>
 
-    <div class="orgao-show">
-      <!-- Header com ações -->
-      <div class="header-section">
-        <div class="header-content">
-          <Button
-            variant="ghost"
-            @click="handleBack"
-          >
-            ← Voltar
-          </Button>
-
-          <div class="header-title">
-            <Heading level="1">{{ orgao.nome }}</Heading>
-            <div class="header-meta">
-              <Badge :color="orgao.statusBadgeColor">{{ orgao.statusLabel }}</Badge>
-              <Badge :color="getTipoBadgeColor(orgao.tipo)">{{ orgao.tipoLabel }}</Badge>
-              <Text variant="muted">Código: {{ orgao.codigo }}</Text>
-            </div>
+        <div class="header-title">
+          <Heading level="1">{{ orgao.nome }}</Heading>
+          <div class="header-meta">
+            <TipoOrgaoBadge :tipo="orgao.tipo" />
+            <StatusOrgaoBadge :status="orgao.status" />
+            <Text variant="muted">Codigo: {{ orgao.codigo }}</Text>
+            <Text v-if="orgao.municipio" variant="muted">
+              {{ orgao.municipio.nome }}{{ orgao.municipio.uf ? ' - ' + orgao.municipio.uf : '' }}
+            </Text>
           </div>
-        </div>
-
-        <div class="header-actions" v-if="canManage">
-          <Button
-            variant="outline"
-            @click="handleEdit"
-          >
-            Editar
-          </Button>
-          <Button
-            variant="danger"
-            @click="handleDelete"
-          >
-            Excluir
-          </Button>
         </div>
       </div>
 
-      <!-- Conteúdo em grid -->
-      <div class="content-grid">
-        <!-- Card: Informações Básicas -->
-        <CardBase title="Informações Básicas">
-          <div class="info-grid">
-            <div class="info-item">
-              <Text variant="label">Código</Text>
-              <Text variant="mono">{{ orgao.codigo }}</Text>
-            </div>
-
-            <div class="info-item">
-              <Text variant="label">Nome</Text>
-              <Text>{{ orgao.nome }}</Text>
-            </div>
-
-            <div class="info-item">
-              <Text variant="label">Tipo</Text>
-              <Badge :color="getTipoBadgeColor(orgao.tipo)">{{ orgao.tipoLabel }}</Badge>
-            </div>
-
-            <div class="info-item">
-              <Text variant="label">Status</Text>
-              <Badge :color="orgao.statusBadgeColor">{{ orgao.statusLabel }}</Badge>
-            </div>
-
-            <div class="info-item" v-if="orgao.municipio">
-              <Text variant="label">Município</Text>
-              <Text>{{ orgao.municipio.nome }} - {{ orgao.municipio.uf }}</Text>
-            </div>
-
-            <div class="info-item" v-if="orgao.email">
-              <Text variant="label">E-mail</Text>
-              <Text>{{ orgao.email }}</Text>
-            </div>
-
-            <div class="info-item" v-if="orgao.telefone">
-              <Text variant="label">Telefone</Text>
-              <Text>{{ orgao.telefone }}</Text>
-            </div>
-
-            <div class="info-item" v-if="orgao.endereco">
-              <Text variant="label">Endereço</Text>
-              <Text>{{ orgao.endereco }}</Text>
-            </div>
-          </div>
-        </CardBase>
-
-        <!-- Card: Hierarquia -->
-        <CardBase title="Hierarquia" v-if="orgao.hierarquia && orgao.hierarquia.length > 0">
-          <div class="hierarquia-tree">
-            <div
-              v-for="(nivel, index) in orgao.hierarquia"
-              :key="nivel.id"
-              class="hierarquia-nivel"
-            >
-              <div class="hierarquia-connector" v-if="index > 0"></div>
-              <div class="hierarquia-card" :class="{ 'is-current': nivel.id === orgao.id }">
-                <Badge :color="getTipoBadgeColor(nivel.tipo)" size="sm">
-                  {{ nivel.tipoLabel }}
-                </Badge>
-                <Text variant="bold">{{ nivel.nome }}</Text>
-                <Text variant="muted" size="sm">{{ nivel.codigo }}</Text>
-              </div>
-            </div>
-          </div>
-        </CardBase>
-
-        <!-- Card: Responsável -->
-        <CardBase title="Responsável" v-if="orgao.responsavel_nome">
-          <div class="info-grid">
-            <div class="info-item">
-              <Text variant="label">Nome</Text>
-              <Text>{{ orgao.responsavel_nome }}</Text>
-            </div>
-
-            <div class="info-item" v-if="orgao.responsavel_cpf">
-              <Text variant="label">CPF</Text>
-              <Text variant="mono">{{ orgao.responsavel_cpf }}</Text>
-            </div>
-
-            <div class="info-item" v-if="orgao.responsavel_email">
-              <Text variant="label">E-mail</Text>
-              <Text>{{ orgao.responsavel_email }}</Text>
-            </div>
-
-            <div class="info-item" v-if="orgao.responsavel_telefone">
-              <Text variant="label">Telefone</Text>
-              <Text>{{ orgao.responsavel_telefone }}</Text>
-            </div>
-          </div>
-        </CardBase>
-
-        <!-- Card: Usuários Vinculados -->
-        <CardBase title="Usuários Vinculados" class="full-width">
-          <div class="usuarios-header">
-            <Text variant="muted">{{ usuarios.length }} usuário(s) vinculado(s)</Text>
-            <Button
-              v-if="canVincularUsuarios"
-              variant="primary"
-              size="sm"
-              @click="handleVincularUsuario"
-            >
-              Vincular Usuário
-            </Button>
-          </div>
-
-          <table class="usuarios-table" v-if="usuarios.length > 0">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>E-mail</th>
-                <th>Função</th>
-                <th>Principal</th>
-                <th v-if="canVincularUsuarios">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="usuario in usuarios" :key="usuario.id">
-                <td>{{ usuario.name }}</td>
-                <td>{{ usuario.email }}</td>
-                <td>
-                  <Badge color="gray">{{ usuario.pivot.funcao }}</Badge>
-                </td>
-                <td>
-                  <Badge v-if="usuario.pivot.is_principal" color="blue">Sim</Badge>
-                  <Text v-else variant="muted">—</Text>
-                </td>
-                <td v-if="canVincularUsuarios">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    @click="handleDesvincularUsuario(usuario.id)"
-                  >
-                    Remover
-                  </Button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div v-else class="empty-state">
-            <Text variant="muted">Nenhum usuário vinculado</Text>
-          </div>
-        </CardBase>
+      <div class="header-actions">
+        <Button
+          v-if="canManage"
+          variant="outline"
+          :icon="PencilIcon"
+          @click="handleEdit"
+        >
+          Editar Dados Gerais
+        </Button>
+        <Button
+          v-if="canManage"
+          variant="danger"
+          :icon="TrashIcon"
+          @click="handleDelete"
+        >
+          Excluir
+        </Button>
       </div>
     </div>
 
+    <!-- Tabs -->
+    <CompdecTabs v-model:active-tab="activeTab" :tabs="tabs">
+      <template #default="{ activeTab: current }">
+        <GeralTab v-if="current === 'geral'" :orgao="orgao" />
+
+        <CapacidadesTab v-if="current === 'capacidades'" :orgao="orgao" />
+
+        <PrefeituraTab
+          v-if="current === 'prefeitura'"
+          :orgao="orgao"
+          :prefeitura="orgao.prefeitura"
+          :can-edit="canManage"
+          :errors="errors"
+        />
+
+        <!-- Placeholders das fases F2/F3/F4 -->
+        <CardBase v-if="current === 'equipe'" class="text-center py-12">
+          <component :is="UsersIcon" class="w-12 h-12 mx-auto text-slate-400 mb-3" />
+          <Heading level="3" class="mb-2">Modulo Equipe</Heading>
+          <Text variant="muted">Disponivel na proxima fase de implementacao.</Text>
+        </CardBase>
+
+        <CardBase v-if="current === 'anexos'" class="text-center py-12">
+          <component :is="DocumentIcon" class="w-12 h-12 mx-auto text-slate-400 mb-3" />
+          <Heading level="3" class="mb-2">Modulo Anexos Legais</Heading>
+          <Text variant="muted">Disponivel na proxima fase de implementacao.</Text>
+        </CardBase>
+
+        <CardBase v-if="current === 'plano'" class="text-center py-12">
+          <component :is="ClipboardDocumentListIcon" class="w-12 h-12 mx-auto text-slate-400 mb-3" />
+          <Heading level="3" class="mb-2">Plano de Contingencia</Heading>
+          <Text variant="muted">Disponivel na proxima fase de implementacao.</Text>
+        </CardBase>
+      </template>
+    </CompdecTabs>
+
+    <!-- Usuarios Vinculados (acesso ao sistema) -->
+    <CardBase class="mt-8">
+      <div class="usuarios-header">
+        <div>
+          <Heading level="3">Usuarios com Acesso ao Sistema</Heading>
+          <Text variant="muted" size="sm">
+            {{ usuarios.length }} usuario(s) vinculado(s) a este orgao
+          </Text>
+        </div>
+        <Button
+          v-if="canVincularUsuarios"
+          variant="primary"
+          size="sm"
+          :icon="PlusIcon"
+          @click="handleVincularUsuario"
+        >
+          Vincular Usuario
+        </Button>
+      </div>
+
+      <table v-if="usuarios.length > 0" class="usuarios-table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Funcao</th>
+            <th>Principal</th>
+            <th v-if="canVincularUsuarios" class="actions-col">Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="usuario in usuarios" :key="usuario.id">
+            <td>{{ usuario.name }}</td>
+            <td>{{ usuario.email }}</td>
+            <td>
+              <span class="funcao-badge">{{ usuario.pivot?.funcao || '-' }}</span>
+            </td>
+            <td>
+              <StatusOrgaoBadge v-if="usuario.pivot?.is_principal" status="ativo" />
+              <Text v-else variant="muted">-</Text>
+            </td>
+            <td v-if="canVincularUsuarios" class="actions-col">
+              <Button
+                variant="ghost"
+                size="sm"
+                @click="handleDesvincularUsuario(usuario.id)"
+              >
+                Remover
+              </Button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div v-else class="empty-state">
+        <Text variant="muted">Nenhum usuario vinculado.</Text>
+      </div>
+    </CardBase>
+  </div>
 </template>
 
 <script setup>
-import Badge from '@/Components/Atoms/Badge/Badge.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
+import { ref, computed, watch } from 'vue';
+import { router } from '@inertiajs/vue3';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { router } from '@inertiajs/vue3';
+import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vue';
+import TipoOrgaoBadge from '@/Components/Molecules/Compdec/TipoOrgaoBadge.vue';
+import CompdecTabs from '@/Components/Organisms/Compdec/CompdecTabs.vue';
+import GeralTab from '@/Components/Organisms/Compdec/Tabs/GeralTab.vue';
+import CapacidadesTab from '@/Components/Organisms/Compdec/Tabs/CapacidadesTab.vue';
+import PrefeituraTab from '@/Components/Organisms/Compdec/Tabs/PrefeituraTab.vue';
+import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
+import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
+import HomeIcon from '@/Components/Icons/HomeIcon.vue';
+import UsersIcon from '@/Components/Icons/UsersIcon.vue';
+import DocumentIcon from '@/Components/Icons/DocumentIcon.vue';
+import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import PencilIcon from '@/Components/Icons/PencilIcon.vue';
+import TrashIcon from '@/Components/Icons/TrashIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -206,6 +172,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  errors: {
+    type: Object,
+    default: () => ({}),
+  },
   canManage: {
     type: Boolean,
     default: false,
@@ -216,42 +186,88 @@ const props = defineProps({
   },
 });
 
-const getTipoBadgeColor = (tipo) => {
-  const colors = {
-    compdec: 'blue',
-    redec: 'yellow',
-    cedec: 'purple',
-  };
-  return colors[tipo] || 'gray';
-};
+// Estado da aba ativa - sincronizado com query string ?tab=
+const initialTab = (() => {
+  if (typeof window === 'undefined') return 'geral';
+  const url = new URL(window.location.href);
+  return url.searchParams.get('tab') || 'geral';
+})();
+const activeTab = ref(initialTab);
 
-const handleBack = () => {
+watch(activeTab, (newTab) => {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  url.searchParams.set('tab', newTab);
+  window.history.replaceState({}, '', url.toString());
+});
+
+const tabs = computed(() => [
+  {
+    id: 'geral',
+    label: 'Geral',
+    icon: BuildingOfficeIcon,
+  },
+  {
+    id: 'capacidades',
+    label: 'Capacidades',
+    icon: CheckBadgeIcon,
+  },
+  {
+    id: 'prefeitura',
+    label: 'Prefeitura',
+    icon: HomeIcon,
+  },
+  {
+    id: 'equipe',
+    label: 'Equipe',
+    icon: UsersIcon,
+    disabled: true,
+    disabledReason: 'Disponivel na proxima fase de implementacao',
+    badge: props.orgao?.equipes_count ?? null,
+  },
+  {
+    id: 'anexos',
+    label: 'Documentos',
+    icon: DocumentIcon,
+    disabled: true,
+    disabledReason: 'Disponivel na proxima fase de implementacao',
+    badge: props.orgao?.anexos_count ?? null,
+  },
+  {
+    id: 'plano',
+    label: 'Plano de Contingencia',
+    icon: ClipboardDocumentListIcon,
+    disabled: true,
+    disabledReason: 'Disponivel na proxima fase de implementacao',
+    badge: props.orgao?.planos_count ?? null,
+  },
+]);
+
+function handleBack() {
   router.visit(route('compdec.index'));
-};
+}
 
-const handleEdit = () => {
+function handleEdit() {
   router.visit(route('compdec.edit', props.orgao.id));
-};
+}
 
-const handleDelete = () => {
-  if (confirm('Tem certeza que deseja excluir este órgão?')) {
-    router.delete(route('compdec.destroy', props.orgao.id));
-  }
-};
+function handleDelete() {
+  if (!confirm('Tem certeza que deseja excluir este orgao?')) return;
+  router.delete(route('compdec.destroy', props.orgao.id));
+}
 
-const handleVincularUsuario = () => {
-  // TODO: Abrir modal de vincular usuário
-  alert('Funcionalidade em desenvolvimento');
-};
+function handleVincularUsuario() {
+  // TODO: abrir modal de vincular usuario (proxima iteracao)
+  alert('Modal de vinculo de usuario sera implementado na proxima iteracao.');
+}
 
-const handleDesvincularUsuario = (userId) => {
-  if (confirm('Tem certeza que deseja remover este vínculo?')) {
-    router.delete(route('compdec.usuarios.desvincular', {
-      orgao: props.orgao.id,
-      usuario: userId,
-    }));
-  }
-};
+function handleDesvincularUsuario(userId) {
+  if (!confirm('Tem certeza que deseja remover este vinculo?')) return;
+  router.delete(route('compdec.usuarios.desvincular', {
+    orgao: props.orgao.id,
+    usuario: userId,
+  }));
+}
 </script>
 
 <style scoped>
@@ -264,15 +280,17 @@ const handleDesvincularUsuario = (userId) => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   gap: 2rem;
+  flex-wrap: wrap;
 }
 
 .header-content {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
   flex: 1;
+  min-width: 0;
 }
 
 .header-title {
@@ -283,80 +301,24 @@ const handleDesvincularUsuario = (userId) => {
 
 .header-meta {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: center;
   flex-wrap: wrap;
 }
 
 .header-actions {
   display: flex;
-  gap: 1rem;
-}
-
-.content-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 1.5rem;
-}
-
-.full-width {
-  grid-column: 1 / -1;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.hierarquia-tree {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.hierarquia-nivel {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.hierarquia-connector {
-  position: absolute;
-  left: 1.25rem;
-  top: -0.5rem;
-  width: 2px;
-  height: 1rem;
-  background: #e5e7eb;
-}
-
-.hierarquia-card {
-  display: flex;
   gap: 0.75rem;
-  padding: 1rem;
-  background: #f9fafb;
-  border-radius: 8px;
-  border: 2px solid #e5e7eb;
-  flex: 1;
-}
-
-.hierarquia-card.is-current {
-  background: #eff6ff;
-  border-color: #3b82f6;
+  flex-wrap: wrap;
 }
 
 .usuarios-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 1rem;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .usuarios-table {
@@ -365,25 +327,40 @@ const handleDesvincularUsuario = (userId) => {
 }
 
 .usuarios-table thead {
-  background: #f9fafb;
-  border-bottom: 2px solid #e5e7eb;
+  @apply bg-slate-50 dark:bg-slate-900/40 border-b-2 border-slate-200 dark:border-slate-700;
 }
 
 .usuarios-table th {
-  padding: 0.75rem;
+  padding: 0.75rem 1rem;
   text-align: left;
   font-weight: 600;
-  font-size: 0.875rem;
-  color: #6b7280;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  @apply text-slate-600 dark:text-slate-400;
 }
 
 .usuarios-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 0.75rem 1rem;
+  @apply border-b border-slate-100 dark:border-slate-800;
+}
+
+.actions-col {
+  text-align: right;
+  width: 120px;
+}
+
+.funcao-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  @apply bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300;
 }
 
 .empty-state {
-  padding: 2rem;
+  padding: 2rem 0;
   text-align: center;
 }
 </style>

@@ -205,6 +205,43 @@ return [
                 'logs' => 'webhooks.logs.view',
             ],
         ],
+        'COMPDEC' => [
+            'Orgaos' => [
+                'view'   => 'compdec.orgaos.view',
+                'create' => 'compdec.orgaos.create',
+                'edit'   => 'compdec.orgaos.edit',
+                'delete' => 'compdec.orgaos.delete',
+                'export' => 'compdec.orgaos.export',
+            ],
+            'Prefeitura' => [
+                'view' => 'compdec.prefeitura.view',
+                'edit' => 'compdec.prefeitura.edit',
+            ],
+            'Equipe' => [
+                'view'   => 'compdec.equipe.view',
+                'create' => 'compdec.equipe.create',
+                'edit'   => 'compdec.equipe.edit',
+                'delete' => 'compdec.equipe.delete',
+            ],
+            'Anexos' => [
+                'view'     => 'compdec.anexos.view',
+                'create'   => 'compdec.anexos.create',
+                'edit'     => 'compdec.anexos.edit',
+                'delete'   => 'compdec.anexos.delete',
+                'download' => 'compdec.anexos.download',
+            ],
+            'Plano' => [
+                'view'     => 'compdec.plano.view',
+                'create'   => 'compdec.plano.create',
+                'edit'     => 'compdec.plano.edit',
+                'delete'   => 'compdec.plano.delete',
+                'aprovar'  => 'compdec.plano.aprovar',
+                'download' => 'compdec.plano.download',
+            ],
+            'UsuarioVinculo' => [
+                'manage' => 'compdec.usuarios.manage',
+            ],
+        ],
     ],
 
     /*
@@ -232,6 +269,7 @@ return [
             'integrations.*',
             'webhooks.*',
             'system.*',
+            'compdec.*',
         ],
         'manager' => [
             // PAE - CRUD completo exceto delete
@@ -294,6 +332,26 @@ return [
             'integrations.execute',
             'webhooks.send',
             'webhooks.logs.view',
+            // COMPDEC - sem delete e sem aprovar
+            'compdec.orgaos.view',
+            'compdec.orgaos.create',
+            'compdec.orgaos.edit',
+            'compdec.orgaos.export',
+            'compdec.prefeitura.view',
+            'compdec.prefeitura.edit',
+            'compdec.equipe.view',
+            'compdec.equipe.create',
+            'compdec.equipe.edit',
+            'compdec.equipe.delete',
+            'compdec.anexos.view',
+            'compdec.anexos.create',
+            'compdec.anexos.edit',
+            'compdec.anexos.download',
+            'compdec.plano.view',
+            'compdec.plano.create',
+            'compdec.plano.edit',
+            'compdec.plano.download',
+            'compdec.usuarios.manage',
         ],
         'analyst' => [
             // PAE - view, create, edit
@@ -339,6 +397,23 @@ return [
             // Integracoes
             'integrations.view',
             'webhooks.logs.view',
+            // COMPDEC - sem delete e sem aprovar
+            'compdec.orgaos.view',
+            'compdec.orgaos.create',
+            'compdec.orgaos.edit',
+            'compdec.prefeitura.view',
+            'compdec.prefeitura.edit',
+            'compdec.equipe.view',
+            'compdec.equipe.create',
+            'compdec.equipe.edit',
+            'compdec.anexos.view',
+            'compdec.anexos.create',
+            'compdec.anexos.edit',
+            'compdec.anexos.download',
+            'compdec.plano.view',
+            'compdec.plano.create',
+            'compdec.plano.edit',
+            'compdec.plano.download',
         ],
         'operator' => [
             // PAE - view, create
@@ -368,6 +443,14 @@ return [
             'plantao.turnos.create',
             // BI - view
             'bi.dashboards.view',
+            // COMPDEC - leitura + downloads
+            'compdec.orgaos.view',
+            'compdec.prefeitura.view',
+            'compdec.equipe.view',
+            'compdec.anexos.view',
+            'compdec.anexos.download',
+            'compdec.plano.view',
+            'compdec.plano.download',
         ],
         'viewer' => [
             // Somente visualizacao em todos os modulos
@@ -383,6 +466,12 @@ return [
             'treinamento.cursos.view',
             'plantao.turnos.view',
             'bi.dashboards.view',
+            // COMPDEC - somente leitura
+            'compdec.orgaos.view',
+            'compdec.prefeitura.view',
+            'compdec.equipe.view',
+            'compdec.anexos.view',
+            'compdec.plano.view',
         ],
         'user' => [
             // Acesso basico apenas
@@ -393,6 +482,8 @@ return [
             'demandas.chamados.create',
             'treinamento.cursos.view',
             'plantao.turnos.view',
+            // COMPDEC - apenas listagem de orgaos
+            'compdec.orgaos.view',
         ],
     ],
 

@@ -25,6 +25,7 @@
         "predis/predis": "^3.4",
         "rap2hpoutre/laravel-log-viewer": "^2.5",
         "saloonphp/saloon": "^3.14",
+        "spatie/laravel-medialibrary": "^11.10",
         "spatie/laravel-permission": "^6.24",
         "spiral/roadrunner-cli": "^2.6.0",
         "spiral/roadrunner-http": "^3.3.0",
@@ -85,6 +86,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.4.20"
         }
     },
     "minimum-stability": "stable",
