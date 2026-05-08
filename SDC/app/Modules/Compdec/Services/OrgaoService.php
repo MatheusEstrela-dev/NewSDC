@@ -74,7 +74,7 @@ class OrgaoService
     {
         return Orgao::query()
             ->with(['orgaoSuperior:id,codigo,nome,tipo', 'prefeitura'])
-            ->withCount(['usuarios', 'equipes'])
+            ->withCount(['usuarios', 'equipes', 'anexos'])
             ->findOrFail($id);
     }
 

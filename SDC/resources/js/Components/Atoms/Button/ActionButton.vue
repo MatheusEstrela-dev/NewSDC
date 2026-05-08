@@ -66,6 +66,10 @@ import ArchiveBoxIcon from '../../Icons/ArchiveBoxIcon.vue';
 import UploadIcon from '../../Icons/UploadIcon.vue';
 import PaperClipIcon from '../../Icons/PaperClipIcon.vue';
 import ClockIcon from '../../Icons/ClockIcon.vue';
+import ExclamationIcon from '../../Icons/ExclamationIcon.vue';
+import EllipsisVerticalIcon from '../../Icons/EllipsisVerticalIcon.vue';
+import UserIcon from '../../Icons/UserIcon.vue';
+import BellIcon from '../../Icons/BellIcon.vue';
 
 const ActionIcons = {
   create: markRaw(PlusIcon),
@@ -80,6 +84,10 @@ const ActionIcons = {
   upload: markRaw(UploadIcon),
   attachments: markRaw(PaperClipIcon),
   history: markRaw(ClockIcon),
+  warning: markRaw(ExclamationIcon),
+  options: markRaw(EllipsisVerticalIcon),
+  assign: markRaw(UserIcon),
+  notifications: markRaw(BellIcon),
 };
 
 const ActionLabels = {
@@ -95,6 +103,10 @@ const ActionLabels = {
   upload: 'Upload',
   attachments: 'Anexos',
   history: 'Historico',
+  warning: 'Aviso',
+  options: 'Opcoes',
+  assign: 'Atribuir',
+  notifications: 'Notificacoes',
 };
 
 const ActionVariants = {
@@ -110,6 +122,10 @@ const ActionVariants = {
   upload: 'info',
   attachments: 'success',
   history: 'info',
+  warning: 'warning',
+  options: 'secondary',
+  assign: 'info',
+  notifications: 'secondary',
 };
 
 const ActionIconVariants = {
@@ -125,12 +141,16 @@ const ActionIconVariants = {
   upload: 'warning',
   attachments: 'success',
   history: 'success',
+  warning: 'vibrant-warning',
+  options: 'secondary',
+  assign: 'info',
+  notifications: 'secondary',
 };
 
 const props = defineProps({
   module: {
     type: String,
-    required: true,
+    default: 'global',
   },
   resource: {
     type: String,
@@ -142,7 +162,8 @@ const props = defineProps({
     validator: (value) => [
       'create', 'view', 'edit', 'delete', 'print',
       'export', 'duplicate', 'finalize', 'attachments',
-      'history', 'archive', 'upload'
+      'history', 'archive', 'upload', 'warning',
+      'options', 'assign', 'notifications'
     ].includes(value),
   },
   fallback: {
@@ -196,7 +217,7 @@ const props = defineProps({
   },
   tooltipText: {
     type: String,
-    default: 'Voce nao possui permissao para esta acao',
+    default: '',
   },
 });
 
@@ -248,9 +269,9 @@ const computedLabel = computed(() => {
 
 const tooltipTitle = computed(() => {
   if (!hasPermission.value && props.fallback === 'disable') {
-    return props.tooltipText;
+    return props.tooltipText || 'Voce nao possui permissao para esta acao';
   }
-  return getTooltip(props.action) || '';
+  return getTooltip(props.action) || props.tooltipText || computedLabel.value || '';
 });
 
 const handleClick = (event) => {

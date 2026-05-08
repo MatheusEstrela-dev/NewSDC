@@ -60,18 +60,10 @@
                 :show-print="false"
                 :show-attachments="false"
                 :show-edit="canEdit"
-                :show-delete="false"
+                :show-delete="canDelete"
                 size="sm"
                 @edit="$emit('edit', membro)"
-              />
-              <ActionButton
-                module="compdec"
-                action="delete"
-                size="sm"
-                :show-label="false"
-                :allowed="canDelete"
-                tooltip-text="Voce nao possui permissao para remover membros da equipe"
-                @click="$emit('delete', membro)"
+                @delete="$emit('delete', membro)"
               />
             </div>
           </td>
@@ -84,7 +76,6 @@
 <script setup>
 import { computed } from 'vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
-import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';

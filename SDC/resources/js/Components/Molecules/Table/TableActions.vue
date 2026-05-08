@@ -1,113 +1,35 @@
 <template>
   <div class="flex items-center gap-2">
-    <ButtonIcon
-      v-if="showView"
-      :icon="EyeIcon"
-      variant="primary"
+    <ActionButton
+      v-for="action in visibleActions"
+      :key="action.name"
+      :module="module"
+      :resource="resource"
+      :action="action.name"
+      :variant="action.variant"
+      :label="action.label"
+      :allowed="true"
+      :show-label="false"
       :size="size"
-      title="Visualizar"
-      @click="$emit('view')"
-    />
-    <ButtonIcon
-      v-if="showPrint"
-      :icon="PrinterIcon"
-      variant="info"
-      :size="size"
-      title="Imprimir"
-      @click="$emit('print')"
-    />
-    <ButtonIcon
-      v-if="showEdit"
-      :icon="PencilIcon"
-      variant="warning"
-      :size="size"
-      title="Editar"
-      @click="$emit('edit')"
-    />
-    <ButtonIcon
-      v-if="showWarning"
-      :icon="ExclamationIcon"
-      variant="vibrant-warning"
-      :size="size"
-      title="Aviso"
-      @click="$emit('warning')"
-    />
-    <ButtonIcon
-      v-if="showUpload"
-      :icon="UploadIcon"
-      variant="warning"
-      :size="size"
-      title="Upload"
-      @click="$emit('upload')"
-    />
-    <ButtonIcon
-      v-if="showAttachments"
-      :icon="PaperClipIcon"
-      variant="success"
-      :size="size"
-      title="Anexos"
-      @click="$emit('attachments')"
-    />
-    <ButtonIcon
-      v-if="showDelete"
-      :icon="TrashIcon"
-      variant="vibrant-danger"
-      :size="size"
-      title="Excluir"
-      @click="onAction('delete')"
-    />
-
-
-    <ButtonIcon
-      v-if="showHistory"
-      :icon="ClockIcon"
-      variant="success"
-      :size="size"
-      title="Serie Historica"
-      @click="$emit('history')"
-    />
-    <ButtonIcon
-      v-if="showArchive"
-      :icon="ArchiveBoxIcon"
-      variant="topaz"
-      :size="size"
-      title="Arquivar"
-      @click="$emit('archive')"
-    />
-    <ButtonIcon
-      v-if="showAssign"
-      :icon="UserIcon"
-      variant="info"
-      :size="size"
-      title="Atribuir Analista"
-      @click="$emit('assign')"
-    />
-    <ButtonIcon
-      v-if="showOptions"
-      :icon="EllipsisVerticalIcon"
-      variant="secondary"
-      :size="size"
-      title="Opções"
-      @click="$emit('options')"
+      :tooltip-text="action.label"
+      @click="emit(action.event)"
     />
   </div>
 </template>
 
 <script setup>
-import ButtonIcon from '../../Atoms/Button/ButtonIcon.vue';
-import EyeIcon from '../../Icons/EyeIcon.vue';
-import PrinterIcon from '../../Icons/PrinterIcon.vue';
-import PencilIcon from '../../Icons/PencilIcon.vue';
-import TrashIcon from '../../Icons/TrashIcon.vue';
-import PaperClipIcon from '../../Icons/PaperClipIcon.vue';
-import ClockIcon from '../../Icons/ClockIcon.vue';
-import ArchiveBoxIcon from '../../Icons/ArchiveBoxIcon.vue';
-import UploadIcon from '../../Icons/UploadIcon.vue';
-import ExclamationIcon from '../../Icons/ExclamationIcon.vue';
-import EllipsisVerticalIcon from '../../Icons/EllipsisVerticalIcon.vue';
-import UserIcon from '../../Icons/UserIcon.vue';
+import { computed } from 'vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 
-defineProps({
+const props = defineProps({
+  module: {
+    type: String,
+    default: 'global',
+  },
+  resource: {
+    type: String,
+    default: null,
+  },
   showView: {
     type: Boolean,
     default: true,
@@ -152,6 +74,22 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  showNotifications: {
+    type: Boolean,
+    default: false,
+  },
+  showExport: {
+    type: Boolean,
+    default: false,
+  },
+  showDuplicate: {
+    type: Boolean,
+    default: false,
+  },
+  showFinalize: {
+    type: Boolean,
+    default: false,
+  },
   size: {
     type: String,
     default: 'md',
@@ -159,10 +97,41 @@ defineProps({
   },
 });
 
-const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'history', 'delete', 'archive', 'upload', 'warning', 'options', 'assign']);
+const emit = defineEmits([
+  'view',
+  'print',
+  'edit',
+  'attachments',
+  'history',
+  'delete',
+  'archive',
+  'upload',
+  'warning',
+  'options',
+  'assign',
+  'notifications',
+  'export',
+  'duplicate',
+  'finalize',
+]);
 
-const onAction = (action) => {
-  emit(action);
-};
+const actions = computed(() => [
+  { name: 'view', event: 'view', show: props.showView, label: 'Visualizar' },
+  { name: 'print', event: 'print', show: props.showPrint, label: 'Imprimir' },
+  { name: 'edit', event: 'edit', show: props.showEdit, label: 'Editar' },
+  { name: 'warning', event: 'warning', show: props.showWarning, label: 'Aviso', variant: 'vibrant-warning' },
+  { name: 'upload', event: 'upload', show: props.showUpload, label: 'Upload' },
+  { name: 'attachments', event: 'attachments', show: props.showAttachments, label: 'Anexos' },
+  { name: 'history', event: 'history', show: props.showHistory, label: 'Serie Historica' },
+  { name: 'notifications', event: 'notifications', show: props.showNotifications, label: 'Notificacoes' },
+  { name: 'export', event: 'export', show: props.showExport, label: 'Exportar' },
+  { name: 'duplicate', event: 'duplicate', show: props.showDuplicate, label: 'Duplicar' },
+  { name: 'finalize', event: 'finalize', show: props.showFinalize, label: 'Finalizar' },
+  { name: 'archive', event: 'archive', show: props.showArchive, label: 'Arquivar' },
+  { name: 'delete', event: 'delete', show: props.showDelete, label: 'Excluir', variant: 'vibrant-danger' },
+  { name: 'assign', event: 'assign', show: props.showAssign, label: 'Atribuir Analista' },
+  { name: 'options', event: 'options', show: props.showOptions, label: 'Opcoes' },
+]);
+
+const visibleActions = computed(() => actions.value.filter((action) => action.show));
 </script>
-

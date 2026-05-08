@@ -81,18 +81,10 @@
                   :show-view="true"
                   :show-edit="canManage"
                   :show-attachments="false"
-                  :show-delete="false"
+                  :show-delete="canDeleteOrgao(orgao)"
                   @view="handleView(orgao.id)"
                   @edit="handleEdit(orgao.id)"
-                />
-                <ActionButton
-                  module="compdec"
-                  action="delete"
-                  size="sm"
-                  :show-label="false"
-                  :allowed="canDeleteOrgao(orgao)"
-                  tooltip-text="Voce nao possui permissao para remover este orgao"
-                  @click="handleDelete(orgao)"
+                  @delete="handleDelete(orgao)"
                 />
               </div>
             </td>
@@ -128,10 +120,10 @@
 <script setup>
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vue';

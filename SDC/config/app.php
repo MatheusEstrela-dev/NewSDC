@@ -175,6 +175,7 @@ return [
         App\Modules\PlanCon\PlanConServiceProvider::class,
         App\Modules\Dashboard\DashboardServiceProvider::class,
         App\Modules\Compdec\CompdecServiceProvider::class,
+        App\Modules\Cisterna\CisternaServiceProvider::class,
     ])->toArray(),
 
     /*

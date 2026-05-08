@@ -41,13 +41,17 @@
           :can-delete="canDeleteEquipe"
         />
 
-        <!-- Placeholders das fases F3/F4 -->
-        <CardBase v-if="current === 'anexos'" class="text-center py-12">
-          <component :is="DocumentIcon" class="w-12 h-12 mx-auto text-slate-400 mb-3" />
-          <Heading level="3" class="mb-2">Modulo Anexos Legais</Heading>
-          <Text variant="muted">Disponivel na proxima fase de implementacao.</Text>
-        </CardBase>
+        <AnexosTab
+          v-if="current === 'anexos'"
+          :orgao="orgao"
+          :anexos="anexos"
+          :can-create="canCreateAnexos"
+          :can-edit="canManageAnexos"
+          :can-delete="canDeleteAnexos"
+          :can-download="canDownloadAnexos"
+        />
 
+        <!-- Placeholder F4 -->
         <CardBase v-if="current === 'plano'" class="text-center py-12">
           <component :is="ClipboardDocumentListIcon" class="w-12 h-12 mx-auto text-slate-400 mb-3" />
           <Heading level="3" class="mb-2">Plano de Contingencia</Heading>
@@ -99,14 +103,14 @@
             </td>
             <td v-if="canVincularUsuarios" class="actions-col">
               <div class="flex justify-end">
-                <ActionButton
-                  module="compdec"
-                  action="delete"
+                <TableActions
+                  :show-view="false"
+                  :show-print="false"
+                  :show-edit="false"
+                  :show-attachments="false"
+                  :show-delete="canVincularUsuarios"
                   size="sm"
-                  :show-label="false"
-                  :allowed="canVincularUsuarios"
-                  tooltip-text="Voce nao possui permissao para remover vinculos de usuarios"
-                  @click="handleDesvincularUsuario(usuario.id)"
+                  @delete="handleDesvincularUsuario(usuario.id)"
                 />
               </div>
             </td>
@@ -167,6 +171,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
@@ -176,11 +181,13 @@ import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vue';
 import TipoOrgaoBadge from '@/Components/Molecules/Compdec/TipoOrgaoBadge.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import CompdecTabs from '@/Components/Organisms/Compdec/CompdecTabs.vue';
 import GeralTab from '@/Components/Organisms/Compdec/Tabs/GeralTab.vue';
 import CapacidadesTab from '@/Components/Organisms/Compdec/Tabs/CapacidadesTab.vue';
 import PrefeituraTab from '@/Components/Organisms/Compdec/Tabs/PrefeituraTab.vue';
 import EquipeTab from '@/Components/Organisms/Compdec/Tabs/EquipeTab.vue';
+import AnexosTab from '@/Components/Organisms/Compdec/Tabs/AnexosTab.vue';
 import VincularUsuarioModal from '@/Components/Organisms/Compdec/Modals/VincularUsuarioModal.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
@@ -230,6 +237,26 @@ const props = defineProps({
   equipe: {
     type: Object,
     default: null,
+  },
+  anexos: {
+    type: Object,
+    default: null,
+  },
+  canCreateAnexos: {
+    type: Boolean,
+    default: false,
+  },
+  canManageAnexos: {
+    type: Boolean,
+    default: false,
+  },
+  canDeleteAnexos: {
+    type: Boolean,
+    default: false,
+  },
+  canDownloadAnexos: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -288,8 +315,6 @@ const tabs = computed(() => [
     id: 'anexos',
     label: 'Documentos',
     icon: DocumentIcon,
-    disabled: true,
-    disabledReason: 'Disponivel na proxima fase de implementacao',
     badge: props.orgao?.anexos_count ?? null,
   },
   {

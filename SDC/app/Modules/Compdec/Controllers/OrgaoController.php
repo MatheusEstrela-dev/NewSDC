@@ -9,9 +9,11 @@ use App\Modules\Compdec\DTOs\OrgaoDTO;
 use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Compdec\Requests\StoreOrgaoRequest;
 use App\Modules\Compdec\Requests\UpdateOrgaoRequest;
+use App\Modules\Compdec\Resources\AnexoIndexResource;
 use App\Modules\Compdec\Resources\EquipeIndexResource;
 use App\Modules\Compdec\Resources\OrgaoIndexResource;
 use App\Modules\Compdec\Resources\OrgaoResource;
+use App\Modules\Compdec\Services\AnexoService;
 use App\Modules\Compdec\Services\EquipeService;
 use App\Modules\Compdec\Services\OrgaoService;
 use Illuminate\Http\RedirectResponse;
@@ -24,6 +26,7 @@ class OrgaoController extends Controller
     public function __construct(
         private readonly OrgaoService $service,
         private readonly EquipeService $equipeService,
+        private readonly AnexoService $anexoService,
     ) {}
 
     public function index(Request $request): Response
@@ -75,6 +78,13 @@ class OrgaoController extends Controller
             'equipe' => Inertia::lazy(fn () => EquipeIndexResource::collection(
                 $this->equipeService->listarPorOrgao($orgao->id),
             )),
+            'anexos' => Inertia::lazy(fn () => AnexoIndexResource::collection(
+                $this->anexoService->listarPorOrgao($orgao->id),
+            )),
+            'canCreateAnexos' => $request->user()?->can('compdec.anexos.create') ?? false,
+            'canManageAnexos' => $request->user()?->can('compdec.anexos.edit') ?? false,
+            'canDeleteAnexos' => $request->user()?->can('compdec.anexos.delete') ?? false,
+            'canDownloadAnexos' => $request->user()?->can('compdec.anexos.download') ?? false,
         ]);
     }
 

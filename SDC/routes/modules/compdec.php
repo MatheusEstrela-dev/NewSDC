@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Modules\Compdec\Controllers\AnexoController;
 use App\Modules\Compdec\Controllers\EquipeController;
 use App\Modules\Compdec\Controllers\OrgaoController;
 use App\Modules\Compdec\Controllers\PrefeituraController;
+use App\Modules\Compdec\Models\CompdecAnexo;
 use App\Modules\Compdec\Models\CompdecEquipe;
 use App\Modules\Compdec\Models\Orgao;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +25,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::model('orgao', Orgao::class);
 Route::model('equipe', CompdecEquipe::class);
+Route::model('anexo', CompdecAnexo::class);
 
 Route::middleware(['auth', 'compdec.query-threshold:' . config('compdec.query_threshold', 15)])
     ->prefix('compdec')
@@ -129,6 +132,40 @@ Route::middleware(['auth', 'compdec.query-threshold:' . config('compdec.query_th
                 Route::delete('/orgaos/{orgao}/equipe/{equipe}', [EquipeController::class, 'destroy'])
                     ->name('equipe.destroy')
                     ->whereNumber('orgao')->whereNumber('equipe');
+            });
+
+            // Sub-recurso: Anexos Legais (1:N por orgao, scoped binding)
+            Route::middleware('can:compdec.anexos.view')->group(function () {
+                Route::get('/orgaos/{orgao}/anexos', [AnexoController::class, 'index'])
+                    ->name('anexos.index')
+                    ->whereNumber('orgao');
+                Route::get('/orgaos/{orgao}/anexos/{anexo}', [AnexoController::class, 'show'])
+                    ->name('anexos.show')
+                    ->whereNumber('orgao')->whereNumber('anexo');
+            });
+
+            Route::middleware('can:compdec.anexos.create')->group(function () {
+                Route::post('/orgaos/{orgao}/anexos', [AnexoController::class, 'store'])
+                    ->name('anexos.store')
+                    ->whereNumber('orgao');
+            });
+
+            Route::middleware('can:compdec.anexos.edit')->group(function () {
+                Route::match(['put', 'post'], '/orgaos/{orgao}/anexos/{anexo}', [AnexoController::class, 'update'])
+                    ->name('anexos.update')
+                    ->whereNumber('orgao')->whereNumber('anexo');
+            });
+
+            Route::middleware('can:compdec.anexos.delete')->group(function () {
+                Route::delete('/orgaos/{orgao}/anexos/{anexo}', [AnexoController::class, 'destroy'])
+                    ->name('anexos.destroy')
+                    ->whereNumber('orgao')->whereNumber('anexo');
+            });
+
+            Route::middleware('can:compdec.anexos.download')->group(function () {
+                Route::get('/orgaos/{orgao}/anexos/{anexo}/download', [AnexoController::class, 'download'])
+                    ->name('anexos.download')
+                    ->whereNumber('orgao')->whereNumber('anexo');
             });
         });
 
