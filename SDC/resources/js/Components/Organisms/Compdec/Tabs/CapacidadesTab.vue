@@ -1,7 +1,7 @@
 <template>
-  <div class="space-y-6">
+  <div class="capacidades-tab-layout">
     <!-- Capacidades Estruturais (booleanos diretos) -->
-    <CardBase>
+    <CardBase class="primary-card">
       <Heading level="3" class="mb-4">Capacidades Estruturais</Heading>
       <div class="capacidades-grid">
         <div
@@ -26,7 +26,7 @@
     </CardBase>
 
     <!-- Capacitacao e Cursos -->
-    <CardBase>
+    <CardBase class="primary-card">
       <Heading level="3" class="mb-4">Capacitacao e Cursos</Heading>
       <div class="capacidades-grid">
         <div
@@ -51,7 +51,7 @@
     </CardBase>
 
     <!-- NUPDEC Detalhes -->
-    <CardBase v-if="capacidadesSoft.capacitacao_nupdec || capacidadesSoft.nupdec_org_representado">
+    <CardBase v-if="capacidadesSoft.capacitacao_nupdec || capacidadesSoft.nupdec_org_representado" class="detail-card">
       <Heading level="3" class="mb-4">NUPDEC - Detalhes</Heading>
       <div class="info-grid">
         <div class="info-item" v-if="capacidadesSoft.capacitacao_nupdec">
@@ -67,7 +67,7 @@
     </CardBase>
 
     <!-- Experiencia em DC -->
-    <CardBase v-if="capacidadesSoft.experiencia_dc || capacidadesSoft.tipo_experiencia_dc">
+    <CardBase v-if="capacidadesSoft.experiencia_dc || capacidadesSoft.tipo_experiencia_dc" class="detail-card">
       <Heading level="3" class="mb-4">Experiencia em Defesa Civil</Heading>
       <div class="info-grid">
         <div class="info-item" v-if="capacidadesSoft.experiencia_dc">
@@ -83,7 +83,7 @@
     </CardBase>
 
     <!-- Observacoes -->
-    <CardBase v-if="capacidadesSoft.obs_capacidades">
+    <CardBase v-if="capacidadesSoft.obs_capacidades" class="full-card">
       <Heading level="3" class="mb-4">Observacoes</Heading>
       <Text class="whitespace-pre-line">{{ capacidadesSoft.obs_capacidades }}</Text>
     </CardBase>
@@ -185,6 +185,11 @@ function formatDate(value) {
 </script>
 
 <style scoped>
+.capacidades-tab-layout {
+  display: grid;
+  gap: 1.5rem;
+}
+
 .capacidades-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -219,5 +224,20 @@ function formatDate(value) {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+@media (min-width: 1280px) {
+  .capacidades-tab-layout {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .primary-card,
+  .detail-card {
+    grid-column: span 6;
+  }
+
+  .full-card {
+    grid-column: span 12;
+  }
 }
 </style>

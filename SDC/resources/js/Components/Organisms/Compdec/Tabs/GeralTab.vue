@@ -1,7 +1,7 @@
 <template>
-  <div class="space-y-6">
+  <div class="geral-tab-layout">
     <!-- Identificacao -->
-    <CardBase>
+    <CardBase class="identificacao-card">
       <Heading level="3" class="mb-4">Identificacao</Heading>
       <div class="info-grid">
         <div class="info-item">
@@ -37,7 +37,7 @@
     </CardBase>
 
     <!-- Atos Legais -->
-    <CardBase>
+    <CardBase class="atos-card">
       <Heading level="3" class="mb-4">Atos Legais</Heading>
       <div class="info-grid">
         <div class="info-item">
@@ -76,7 +76,7 @@
     </CardBase>
 
     <!-- Quantitativos -->
-    <CardBase>
+    <CardBase class="quantitativos-card">
       <Heading level="3" class="mb-4">Quantitativos</Heading>
       <div class="info-grid">
         <div class="info-item">
@@ -102,7 +102,7 @@
     </CardBase>
 
     <!-- Contato -->
-    <CardBase>
+    <CardBase class="contato-card">
       <Heading level="3" class="mb-4">Contato</Heading>
       <div class="info-grid">
         <div class="info-item" v-if="orgao.email">
@@ -145,7 +145,7 @@
     </CardBase>
 
     <!-- Responsavel (Coordenador) -->
-    <CardBase v-if="orgao.responsavel_nome || orgao.responsavel_email">
+    <CardBase v-if="orgao.responsavel_nome || orgao.responsavel_email" class="responsavel-card">
       <Heading level="3" class="mb-4">Responsavel</Heading>
       <div class="info-grid">
         <div class="info-item" v-if="orgao.responsavel_nome">
@@ -210,6 +210,11 @@ function formatDate(value) {
 </script>
 
 <style scoped>
+.geral-tab-layout {
+  display: grid;
+  gap: 1.5rem;
+}
+
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -224,5 +229,25 @@ function formatDate(value) {
 
 .full-width {
   grid-column: 1 / -1;
+}
+
+@media (min-width: 1280px) {
+  .geral-tab-layout {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .identificacao-card,
+  .contato-card,
+  .responsavel-card {
+    grid-column: span 12;
+  }
+
+  .atos-card {
+    grid-column: span 5;
+  }
+
+  .quantitativos-card {
+    grid-column: span 7;
+  }
 }
 </style>

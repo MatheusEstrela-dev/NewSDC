@@ -179,6 +179,16 @@
           </svg>
         </button>
 
+        <NavItem
+          v-if="canSeeCisterna && _routes.hasCisterna"
+          :href="route('cisterna.index')"
+          :active="isRouteActive('cisterna.*')"
+          icon="cisterna"
+          :collapsed="isCollapsed"
+        >
+          Cisterna
+        </NavItem>
+
         <!-- Treinamento -->
         <NavItem
           v-if="canSeeTreinamento && _routes.hasTreinamentos"
@@ -375,6 +385,7 @@ const _routes = {
   hasTdapProducts: route().has('tdap.products.index'),
   hasTdapRecebimentos: route().has('tdap.recebimentos.index'),
   hasTdapMovimentacoes: route().has('tdap.movimentacoes.index'),
+  hasCisterna: route().has('cisterna.index'),
   hasTreinamentos: route().has('treinamentos.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
@@ -400,6 +411,7 @@ const _activeRoutes = computed(() => {
     'tdap.products.*': route().current('tdap.products.*'),
     'tdap.recebimentos.*': route().current('tdap.recebimentos.*'),
     'tdap.movimentacoes.*': route().current('tdap.movimentacoes.*'),
+    'cisterna.*': route().current('cisterna.*'),
     'treinamentos.*': route().current('treinamentos.*'),
     'plancon.*': route().current('plancon.*'),
     'inmet.*': route().current('inmet.*'),
@@ -480,6 +492,10 @@ const canSeeTdap = computed(() => {
     'tdap.recebimentos.view',
     'tdap.movimentacoes.view'
   ]);
+});
+
+const canSeeCisterna = computed(() => {
+  return true;
 });
 
 const canSeeTreinamento = computed(() => {

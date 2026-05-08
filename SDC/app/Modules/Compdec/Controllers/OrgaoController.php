@@ -43,6 +43,7 @@ class OrgaoController extends Controller
                 'municipalities' => [],
             ],
             'canManage' => $request->user()?->can('compdec.orgaos.edit') ?? false,
+            'canDelete' => $request->user()?->can('compdec.orgaos.delete') ?? false,
         ]);
     }
 
@@ -65,6 +66,9 @@ class OrgaoController extends Controller
             'orgao' => OrgaoResource::make($orgao->loadMissing(['orgaoSuperior', 'prefeitura'])),
             'usuarios' => $orgao->usuarios()->select(['users.id', 'users.name', 'users.email'])->get(),
             'canManage' => $request->user()?->can('update', $orgao) ?? false,
+            'canDelete' => $request->user()?->can('delete', $orgao) ?? false,
+            'canManageEquipe' => $request->user()?->can('compdec.equipe.edit') ?? false,
+            'canDeleteEquipe' => $request->user()?->can('compdec.equipe.delete') ?? false,
             'canVincularUsuarios' => $request->user()?->can('compdec.usuarios.manage') ?? false,
 
             // Tabs F2-F4: lazy via Inertia partial reload (router.reload({ only: ['equipe'] }))

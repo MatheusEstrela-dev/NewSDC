@@ -1,6 +1,17 @@
 <template>
   <template v-if="shouldRender">
+    <ButtonIcon
+      v-if="!showLabel"
+      :icon="computedIcon"
+      :variant="computedIconVariant"
+      :size="size"
+      :disabled="isDisabled || disabled || loading"
+      :type="type"
+      :title="tooltipTitle"
+      @click="handleClick"
+    />
     <Button
+      v-else
       :variant="computedVariant"
       :size="size"
       :icon="computedIcon"
@@ -12,7 +23,7 @@
       :title="tooltipTitle"
       @click="handleClick"
     >
-      <slot>{{ computedLabel }}</slot>
+      <slot v-if="showLabel">{{ computedLabel }}</slot>
     </Button>
   </template>
 </template>
@@ -39,6 +50,7 @@
  */
 import { computed, markRaw } from 'vue';
 import Button from './Button.vue';
+import ButtonIcon from './ButtonIcon.vue';
 import { useActionConfig } from '@/composables/ui';
 import { usePermissions } from '@/composables/auth';
 
@@ -100,6 +112,21 @@ const ActionVariants = {
   history: 'info',
 };
 
+const ActionIconVariants = {
+  create: 'primary',
+  view: 'primary',
+  edit: 'warning',
+  delete: 'vibrant-danger',
+  print: 'info',
+  export: 'secondary',
+  duplicate: 'secondary',
+  finalize: 'success',
+  archive: 'topaz',
+  upload: 'warning',
+  attachments: 'success',
+  history: 'success',
+};
+
 const props = defineProps({
   module: {
     type: String,
@@ -131,8 +158,16 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  showLabel: {
+    type: Boolean,
+    default: true,
+  },
   icon: {
     type: [Object, Function],
+    default: null,
+  },
+  allowed: {
+    type: Boolean,
     default: null,
   },
   size: {
@@ -171,6 +206,10 @@ const { can } = usePermissions();
 const { isActionEnabled, getTooltip } = useActionConfig(props.module);
 
 const hasPermission = computed(() => {
+  if (props.allowed !== null) {
+    return props.allowed;
+  }
+
   if (props.action === 'create' && props.resource) {
     return can(`${props.module}.${props.resource}.create`);
   }
@@ -195,12 +234,16 @@ const computedVariant = computed(() => {
   return props.variant || ActionVariants[props.action] || 'primary';
 });
 
+const computedIconVariant = computed(() => {
+  return props.variant || ActionIconVariants[props.action] || 'secondary';
+});
+
 const computedIcon = computed(() => {
   return props.icon || ActionIcons[props.action] || null;
 });
 
 const computedLabel = computed(() => {
-  return props.label || ActionLabels[props.action] || '';
+  return props.label !== null ? props.label : ActionLabels[props.action] || '';
 });
 
 const tooltipTitle = computed(() => {

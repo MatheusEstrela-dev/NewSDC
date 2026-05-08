@@ -1,11 +1,11 @@
 <template>
   <div class="orgao-edit">
-    <div class="header-section">
-
-
-      <Heading level="1">Editar Orgao</Heading>
-      <Text variant="muted">{{ orgao.codigo }} - {{ orgao.nome }}</Text>
-    </div>
+    <PageHeader
+      title="Editar Orgao"
+      :description="`${orgao.codigo} - ${orgao.nome}`"
+      :icon="BuildingOfficeIcon"
+      variant="gradient"
+    />
 
     <CardBase>
       <OrgaoForm
@@ -26,11 +26,10 @@
 import { reactive, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import OrgaoForm from '@/Components/Organisms/Compdec/OrgaoForm.vue';
+import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -133,14 +132,6 @@ function handleBack() {
 
 <style scoped>
 .orgao-edit {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>
