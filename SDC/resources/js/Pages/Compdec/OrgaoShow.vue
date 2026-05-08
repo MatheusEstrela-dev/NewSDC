@@ -41,13 +41,16 @@
           :can-delete="canDeleteEquipe"
         />
 
-        <!-- Placeholders das fases F3/F4 -->
-        <CardBase v-if="current === 'anexos'" class="text-center py-12">
-          <component :is="DocumentIcon" class="w-12 h-12 mx-auto text-slate-400 mb-3" />
-          <Heading level="3" class="mb-2">Modulo Anexos Legais</Heading>
-          <Text variant="muted">Disponivel na proxima fase de implementacao.</Text>
-        </CardBase>
+        <AnexosTab
+          v-if="current === 'anexos'"
+          :orgao="orgao"
+          :anexos="anexos"
+          :can-edit="canManageAnexos"
+          :can-delete="canDeleteAnexos"
+          :can-download="canDownloadAnexos"
+        />
 
+        <!-- Placeholder F4 -->
         <CardBase v-if="current === 'plano'" class="text-center py-12">
           <component :is="ClipboardDocumentListIcon" class="w-12 h-12 mx-auto text-slate-400 mb-3" />
           <Heading level="3" class="mb-2">Plano de Contingencia</Heading>
@@ -181,6 +184,7 @@ import GeralTab from '@/Components/Organisms/Compdec/Tabs/GeralTab.vue';
 import CapacidadesTab from '@/Components/Organisms/Compdec/Tabs/CapacidadesTab.vue';
 import PrefeituraTab from '@/Components/Organisms/Compdec/Tabs/PrefeituraTab.vue';
 import EquipeTab from '@/Components/Organisms/Compdec/Tabs/EquipeTab.vue';
+import AnexosTab from '@/Components/Organisms/Compdec/Tabs/AnexosTab.vue';
 import VincularUsuarioModal from '@/Components/Organisms/Compdec/Modals/VincularUsuarioModal.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
@@ -230,6 +234,22 @@ const props = defineProps({
   equipe: {
     type: Object,
     default: null,
+  },
+  anexos: {
+    type: Object,
+    default: null,
+  },
+  canManageAnexos: {
+    type: Boolean,
+    default: false,
+  },
+  canDeleteAnexos: {
+    type: Boolean,
+    default: false,
+  },
+  canDownloadAnexos: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -288,8 +308,6 @@ const tabs = computed(() => [
     id: 'anexos',
     label: 'Documentos',
     icon: DocumentIcon,
-    disabled: true,
-    disabledReason: 'Disponivel na proxima fase de implementacao',
     badge: props.orgao?.anexos_count ?? null,
   },
   {

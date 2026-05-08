@@ -21,6 +21,12 @@ class Kernel extends ConsoleKernel
             ->dailyAt('02:00')
             ->withoutOverlapping()
             ->runInBackground();
+
+        // COMPDEC: alerta diario sobre anexos legais com vencimento proximo (09:00)
+        $schedule->command('compdec:alertar-anexos-vencimento')
+            ->dailyAt('09:00')
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**

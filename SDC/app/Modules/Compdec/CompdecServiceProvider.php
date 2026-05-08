@@ -6,6 +6,7 @@ namespace App\Modules\Compdec;
 
 use App\Modules\Compdec\Models\CompdecEquipe;
 use App\Modules\Compdec\Observers\CompdecEquipeObserver;
+use App\Modules\Compdec\Services\AnexoService;
 use App\Modules\Compdec\Services\EquipeService;
 use App\Modules\Compdec\Services\OrgaoService;
 use App\Modules\Compdec\Services\PrefeituraService;
@@ -18,6 +19,7 @@ class CompdecServiceProvider extends ServiceProvider
         $this->app->singleton(OrgaoService::class);
         $this->app->singleton(PrefeituraService::class);
         $this->app->singleton(EquipeService::class);
+        $this->app->singleton(AnexoService::class);
     }
 
     public function boot(): void
