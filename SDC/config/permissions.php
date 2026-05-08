@@ -242,6 +242,15 @@ return [
                 'manage' => 'compdec.usuarios.manage',
             ],
         ],
+        'CISTERNAS' => [
+            'Cisternas' => [
+                'view'   => 'cisternas.view',
+                'create' => 'cisternas.create',
+                'edit'   => 'cisternas.edit',
+                'delete' => 'cisternas.delete',
+                'export' => 'cisternas.export',
+            ],
+        ],
     ],
 
     /*
