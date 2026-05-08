@@ -85,6 +85,15 @@
                   @view="handleView(orgao.id)"
                   @edit="handleEdit(orgao.id)"
                 />
+                <ActionButton
+                  module="compdec"
+                  action="delete"
+                  size="sm"
+                  :show-label="false"
+                  :allowed="canDeleteOrgao(orgao)"
+                  tooltip-text="Voce nao possui permissao para remover este orgao"
+                  @click="handleDelete(orgao)"
+                />
               </div>
             </td>
           </tr>
@@ -100,6 +109,19 @@
       :total="orgaos.total"
       @page-change="handlePageChange"
     />
+
+    <ConfirmDialog
+      :is-open="deleteDialog.open"
+      variant="danger"
+      title="Excluir Orgao"
+      :message="deleteDialog.message"
+      description="Esta acao remove o orgao do cadastro. Orgaos com usuarios vinculados ou subordinados nao podem ser excluidos."
+      confirm-text="Excluir"
+      cancel-text="Cancelar"
+      :loading="deleteDialog.loading"
+      @confirm="confirmDelete"
+      @cancel="closeDeleteDialog"
+    />
   </div>
 </template>
 
@@ -107,7 +129,9 @@
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vue';
@@ -118,6 +142,7 @@ import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import { useToast } from '@/composables/useToast';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -146,10 +171,21 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const loading = ref(false);
 const localFilters = ref({ ...props.filters });
+const { toast } = useToast();
+const deleteDialog = ref({
+  open: false,
+  loading: false,
+  orgao: null,
+  message: '',
+});
 
 function applyFilters() {
   loading.value = true;
@@ -196,6 +232,54 @@ function handleView(id) {
 
 function handleEdit(id) {
   router.visit(route('compdec.edit', id));
+}
+
+function canDeleteOrgao(orgao) {
+  return props.canDelete
+    && Number(orgao?.usuarios_count || 0) === 0
+    && Number(orgao?.subordinados_count || 0) === 0;
+}
+
+function handleDelete(orgao) {
+  deleteDialog.value = {
+    open: true,
+    loading: false,
+    orgao,
+    message: `Tem certeza que deseja excluir ${orgao.nome}?`,
+  };
+}
+
+function closeDeleteDialog() {
+  if (deleteDialog.value.loading) return;
+  deleteDialog.value.open = false;
+  deleteDialog.value.orgao = null;
+}
+
+function confirmDelete() {
+  const orgao = deleteDialog.value.orgao;
+  if (!orgao) return;
+
+  let handled = false;
+  deleteDialog.value.loading = true;
+  router.delete(route('compdec.destroy', orgao.id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      handled = true;
+      toast('Orgao excluido com sucesso.', 'success');
+      deleteDialog.value.loading = false;
+      closeDeleteDialog();
+    },
+    onError: () => {
+      handled = true;
+      toast('Nao foi possivel excluir este orgao. Verifique vinculos, subordinados e permissoes.', 'error');
+    },
+    onFinish: () => {
+      deleteDialog.value.loading = false;
+      if (!handled) {
+        toast('Nao foi possivel excluir este orgao. A requisicao foi rejeitada pelo servidor.', 'error');
+      }
+    },
+  });
 }
 </script>
 

@@ -1,11 +1,11 @@
 <template>
   <div class="orgao-create">
-    <div class="header-section">
-
-
-      <Heading level="1">Criar Novo Orgao</Heading>
-      <Text variant="muted">Preencha os dados para cadastrar um novo orgao de defesa civil</Text>
-    </div>
+    <PageHeader
+      title="Criar Novo Orgao"
+      description="Preencha os dados para cadastrar um novo orgao de defesa civil"
+      :icon="BuildingOfficeIcon"
+      variant="gradient"
+    />
 
     <CardBase>
       <OrgaoForm
@@ -25,11 +25,10 @@
 import { reactive, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import OrgaoForm from '@/Components/Organisms/Compdec/OrgaoForm.vue';
+import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -126,14 +125,6 @@ function handleBack() {
 
 <style scoped>
 .orgao-create {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>

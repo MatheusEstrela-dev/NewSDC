@@ -36,6 +36,7 @@ class OrgaoIndexResource extends JsonResource
                 'uf' => $this->municipio->uf ?? null,
             ] : null),
             'usuarios_count' => $this->when($this->usuarios_count !== null, $this->usuarios_count),
+            'subordinados_count' => $this->when($this->subordinados_count !== null, $this->subordinados_count),
             'equipes_count' => $this->when($this->equipes_count !== null, $this->equipes_count),
             'qtd_efetivo' => $this->qtd_efetivo,
             'tem_plano_contingencia' => $this->tem_plano_contingencia,

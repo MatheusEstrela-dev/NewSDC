@@ -3,6 +3,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
+        "prebuild": "php artisan ziggy:generate resources/js/ziggy.js",
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
         "ssr": "bun $(ls -t bootstrap/ssr/js/ssr-*.js | head -n 1)",

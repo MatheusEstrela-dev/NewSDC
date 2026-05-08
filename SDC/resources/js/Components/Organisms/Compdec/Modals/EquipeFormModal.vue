@@ -252,7 +252,13 @@ function handleSubmit() {
   loading.value = true;
   errors.value = {};
 
+  if (!props.orgaoId && !props.equipe?.orgao_id) {
+    toast.error('Erro: ID do órgão não identificado.');
+    return;
+  }
+
   const payload = { ...form };
+  const targetOrgaoId = props.orgaoId || props.equipe?.orgao_id;
   const onSuccess = () => emit('saved');
   const onError = (e) => { errors.value = e; };
   const onFinish = () => { loading.value = false; };
@@ -265,7 +271,7 @@ function handleSubmit() {
     );
   } else {
     router.post(
-      route('compdec.equipe.store', props.orgaoId),
+      route('compdec.equipe.store', targetOrgaoId),
       payload,
       { preserveScroll: true, onSuccess, onError, onFinish },
     );

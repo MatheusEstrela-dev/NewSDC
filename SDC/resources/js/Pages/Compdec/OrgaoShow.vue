@@ -1,6 +1,6 @@
 <template>
   <div class="orgao-show">
-    <!-- Header com acoes -->
+    <!-- Header -->
     <div class="header-section">
       <div class="header-content">
 
@@ -15,25 +15,6 @@
             </Text>
           </div>
         </div>
-      </div>
-
-      <div class="header-actions">
-        <Button
-          v-if="canManage"
-          variant="outline"
-          :icon="PencilIcon"
-          @click="handleEdit"
-        >
-          Editar Dados Gerais
-        </Button>
-        <Button
-          v-if="canManage"
-          variant="danger"
-          :icon="TrashIcon"
-          @click="handleDelete"
-        >
-          Excluir
-        </Button>
       </div>
     </div>
 
@@ -56,7 +37,8 @@
           v-if="current === 'equipe'"
           :orgao="orgao"
           :equipe="equipe"
-          :can-edit="canManage"
+          :can-edit="canManageEquipe"
+          :can-delete="canDeleteEquipe"
         />
 
         <!-- Placeholders das fases F3/F4 -->
@@ -116,13 +98,17 @@
               <Text v-else variant="muted">-</Text>
             </td>
             <td v-if="canVincularUsuarios" class="actions-col">
-              <Button
-                variant="ghost"
-                size="sm"
-                @click="handleDesvincularUsuario(usuario.id)"
-              >
-                Remover
-              </Button>
+              <div class="flex justify-end">
+                <ActionButton
+                  module="compdec"
+                  action="delete"
+                  size="sm"
+                  :show-label="false"
+                  :allowed="canVincularUsuarios"
+                  tooltip-text="Voce nao possui permissao para remover vinculos de usuarios"
+                  @click="handleDesvincularUsuario(usuario.id)"
+                />
+              </div>
             </td>
           </tr>
         </tbody>
@@ -133,12 +119,47 @@
       </div>
     </CardBase>
 
+    <!-- Acoes da pagina -->
+    <div v-if="canManage || canDelete" class="page-actions-footer">
+      <Button
+        v-if="canManage"
+        variant="secondary"
+        :icon="PencilIcon"
+        @click="handleEdit"
+      >
+        Editar Dados Gerais
+      </Button>
+      <ActionButton
+        v-if="canDelete"
+        module="compdec"
+        action="delete"
+        :allowed="canDelete"
+        label="Excluir"
+        @click="handleDelete"
+      >
+        Excluir
+      </ActionButton>
+    </div>
+
     <!-- Modais -->
     <VincularUsuarioModal
       :show="showVincularModal"
-      :orgao-id="orgao.id"
+      :orgao-id="orgao?.id || orgao?.data?.id"
       @close="showVincularModal = false"
       @saved="handleVincularSaved"
+    />
+
+    <ConfirmDialog
+      :is-open="deleteDialog.open"
+      variant="danger"
+      :title="deleteDialog.title"
+      :message="deleteDialog.message"
+      :description="deleteDialog.description"
+      :confirm-text="deleteDialog.confirmText"
+      cancel-text="Cancelar"
+      :loading="deleteDialog.loading"
+      @confirm="confirmDelete"
+      @cancel="closeDeleteDialog"
     />
   </div>
 </template>
@@ -147,6 +168,8 @@
 import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
@@ -166,8 +189,8 @@ import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import DocumentIcon from '@/Components/Icons/DocumentIcon.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
-import TrashIcon from '@/Components/Icons/TrashIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import { useToast } from '@/composables/useToast';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -188,6 +211,18 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
+  canManageEquipe: {
+    type: Boolean,
+    default: false,
+  },
+  canDeleteEquipe: {
+    type: Boolean,
+    default: false,
+  },
   canVincularUsuarios: {
     type: Boolean,
     default: false,
@@ -200,6 +235,17 @@ const props = defineProps({
 
 // Estado do modal de vincular usuario
 const showVincularModal = ref(false);
+const { toast } = useToast();
+const deleteDialog = ref({
+  open: false,
+  loading: false,
+  type: null,
+  payload: null,
+  title: '',
+  message: '',
+  description: '',
+  confirmText: 'Remover',
+});
 
 // Estado da aba ativa - sincronizado com query string ?tab=
 const initialTab = (() => {
@@ -262,8 +308,16 @@ function handleEdit() {
 }
 
 function handleDelete() {
-  if (!confirm('Tem certeza que deseja excluir este orgao?')) return;
-  router.delete(route('compdec.destroy', props.orgao.id));
+  deleteDialog.value = {
+    open: true,
+    loading: false,
+    type: 'orgao',
+    payload: props.orgao,
+    title: 'Excluir Orgao',
+    message: 'Tem certeza que deseja excluir este orgao?',
+    description: 'Orgaos com usuarios vinculados ou subordinados nao podem ser excluidos.',
+    confirmText: 'Excluir',
+  };
 }
 
 function handleVincularUsuario() {
@@ -272,22 +326,100 @@ function handleVincularUsuario() {
 
 function handleVincularSaved() {
   showVincularModal.value = false;
+  toast('Usuario vinculado ao orgao.', 'success');
   router.reload({ only: ['usuarios'], preserveScroll: true });
 }
 
 function handleDesvincularUsuario(userId) {
-  if (!confirm('Tem certeza que deseja remover este vinculo?')) return;
+  const usuario = props.usuarios.find((item) => item.id === userId);
+  deleteDialog.value = {
+    open: true,
+    loading: false,
+    type: 'usuario',
+    payload: { id: userId, nome: usuario?.name || 'este usuario' },
+    title: 'Remover Vinculo',
+    message: `Tem certeza que deseja remover o vinculo de ${usuario?.name || 'este usuario'}?`,
+    description: 'O usuario deixara de ter acesso ao sistema por este orgao.',
+    confirmText: 'Remover',
+  };
+}
+
+function closeDeleteDialog() {
+  if (deleteDialog.value.loading) return;
+  deleteDialog.value.open = false;
+  deleteDialog.value.type = null;
+  deleteDialog.value.payload = null;
+}
+
+function confirmDelete() {
+  if (deleteDialog.value.type === 'orgao') {
+    confirmDeleteOrgao();
+    return;
+  }
+
+  if (deleteDialog.value.type === 'usuario') {
+    confirmDesvincularUsuario();
+  }
+}
+
+function confirmDeleteOrgao() {
+  let handled = false;
+  deleteDialog.value.loading = true;
+  router.delete(route('compdec.destroy', props.orgao?.id || props.orgao?.data?.id), {
+    onSuccess: () => {
+      handled = true;
+      toast('Orgao excluido com sucesso.', 'success');
+      deleteDialog.value.loading = false;
+      closeDeleteDialog();
+    },
+    onError: () => {
+      handled = true;
+      toast('Nao foi possivel excluir este orgao. Verifique vinculos, subordinados e permissoes.', 'error');
+    },
+    onFinish: () => {
+      deleteDialog.value.loading = false;
+      if (!handled) {
+        toast('Nao foi possivel excluir este orgao. A requisicao foi rejeitada pelo servidor.', 'error');
+      }
+    },
+  });
+}
+
+function confirmDesvincularUsuario() {
+  const usuario = deleteDialog.value.payload;
+  if (!usuario?.id) return;
+
+  let handled = false;
+  deleteDialog.value.loading = true;
   router.delete(route('compdec.usuarios.desvincular', {
-    orgao: props.orgao.id,
-    usuario: userId,
-  }));
+    orgao: props.orgao?.id || props.orgao?.data?.id,
+    usuario: usuario.id,
+  }), {
+    preserveScroll: true,
+    onSuccess: () => {
+      handled = true;
+      toast('Vinculo removido com sucesso.', 'success');
+      deleteDialog.value.loading = false;
+      closeDeleteDialog();
+      router.reload({ only: ['usuarios'], preserveScroll: true });
+    },
+    onError: () => {
+      handled = true;
+      toast('Nao foi possivel remover o vinculo do usuario. Verifique suas permissoes e tente novamente.', 'error');
+    },
+    onFinish: () => {
+      deleteDialog.value.loading = false;
+      if (!handled) {
+        toast('Nao foi possivel remover o vinculo. A requisicao foi rejeitada pelo servidor.', 'error');
+      }
+    },
+  });
 }
 </script>
 
 <style scoped>
 .orgao-show {
-  max-width: 1400px;
-  margin: 0 auto;
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
 }
 
 .header-section {
@@ -317,12 +449,6 @@ function handleDesvincularUsuario(userId) {
   display: flex;
   gap: 0.75rem;
   align-items: center;
-  flex-wrap: wrap;
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
@@ -376,5 +502,21 @@ function handleDesvincularUsuario(userId) {
 .empty-state {
   padding: 2rem 0;
   text-align: center;
+}
+
+.page-actions-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid;
+  @apply border-slate-200 dark:border-slate-800;
+}
+
+@media (max-width: 640px) {
+  .page-actions-footer {
+    flex-direction: column;
+  }
 }
 </style>

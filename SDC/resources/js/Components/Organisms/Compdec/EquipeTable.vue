@@ -1,5 +1,23 @@
 <template>
   <CardBase>
+    <div class="equipe-header">
+      <div>
+        <Heading level="3">Equipe</Heading>
+        <Text variant="muted" size="sm">
+          {{ totalAtivos }} ativo(s) de {{ total }} membro(s) cadastrado(s)
+        </Text>
+      </div>
+      <Button
+        v-if="canEdit"
+        variant="primary"
+        size="sm"
+        :icon="PlusIcon"
+        @click="$emit('create')"
+      >
+        Adicionar Membro
+      </Button>
+    </div>
+
     <div v-if="!membros || membros.length === 0" class="empty-state">
       <Text variant="muted">Nenhum membro cadastrado para a equipe.</Text>
     </div>
@@ -11,7 +29,7 @@
           <th>Funcao</th>
           <th>Contato</th>
           <th>Status</th>
-          <th v-if="canEdit" class="actions-col">Acoes</th>
+          <th v-if="canEdit || canDelete" class="actions-col">Acoes</th>
         </tr>
       </thead>
       <tbody>
@@ -35,21 +53,27 @@
           <td>
             <StatusOrgaoBadge :status="membro.ativo ? 'ativo' : 'inativo'" />
           </td>
-          <td v-if="canEdit" class="actions-col">
-            <ButtonGroup>
-              <Button
-                variant="ghost"
+          <td v-if="canEdit || canDelete" class="actions-col">
+            <div class="flex justify-end">
+              <TableActions
+                :show-view="false"
+                :show-print="false"
+                :show-attachments="false"
+                :show-edit="canEdit"
+                :show-delete="false"
                 size="sm"
-                :icon="PencilIcon"
-                @click="$emit('edit', membro)"
+                @edit="$emit('edit', membro)"
               />
-              <Button
-                variant="ghost"
+              <ActionButton
+                module="compdec"
+                action="delete"
                 size="sm"
-                :icon="TrashIcon"
+                :show-label="false"
+                :allowed="canDelete"
+                tooltip-text="Voce nao possui permissao para remover membros da equipe"
                 @click="$emit('delete', membro)"
               />
-            </ButtonGroup>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -58,16 +82,18 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
-import ButtonGroup from '@/Components/Atoms/Button/ButtonGroup.vue';
-import PencilIcon from '@/Components/Icons/PencilIcon.vue';
-import TrashIcon from '@/Components/Icons/TrashIcon.vue';
+import Heading from '@/Components/Atoms/Typography/Heading.vue';
+import Text from '@/Components/Atoms/Typography/Text.vue';
 import FuncaoEquipeBadge from '@/Components/Molecules/Compdec/FuncaoEquipeBadge.vue';
 import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import { PlusIcon } from '@heroicons/vue/24/outline';
 
-defineProps({
+const props = defineProps({
   membros: {
     type: Array,
     default: () => [],
@@ -76,12 +102,28 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['edit', 'delete']);
+defineEmits(['create', 'edit', 'delete']);
+
+const total = computed(() => props.membros?.length || 0);
+const totalAtivos = computed(() => (props.membros || []).filter((membro) => membro.ativo).length);
 </script>
 
 <style scoped>
+.equipe-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .equipe-table {
   width: 100%;
   border-collapse: collapse;

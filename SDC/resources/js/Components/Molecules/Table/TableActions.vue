@@ -54,7 +54,7 @@
       variant="vibrant-danger"
       :size="size"
       title="Excluir"
-      @click="$emit('delete')"
+      @click="onAction('delete')"
     />
 
 
@@ -159,6 +159,10 @@ defineProps({
   },
 });
 
-defineEmits(['view', 'print', 'edit', 'attachments', 'history', 'delete', 'archive', 'upload', 'warning', 'options', 'assign']);
+const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'history', 'delete', 'archive', 'upload', 'warning', 'options', 'assign']);
+
+const onAction = (action) => {
+  emit(action);
+};
 </script>
 

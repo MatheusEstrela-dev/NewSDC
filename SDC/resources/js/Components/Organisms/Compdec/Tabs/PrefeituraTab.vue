@@ -1,9 +1,9 @@
 <template>
-  <div class="space-y-6">
+  <div :class="editMode ? 'prefeitura-tab-edit' : 'prefeitura-tab-layout'">
     <!-- Modo de visualizacao -->
     <template v-if="!editMode">
       <!-- Foto + Dados do Prefeito -->
-      <CardBase>
+      <CardBase class="prefeito-card">
         <div class="flex justify-between items-start mb-4 gap-4">
           <Heading level="3">Prefeito</Heading>
           <Button
@@ -60,7 +60,7 @@
       </CardBase>
 
       <!-- Endereco -->
-      <CardBase v-if="hasEndereco">
+      <CardBase v-if="hasEndereco" class="endereco-card">
         <Heading level="3" class="mb-4">Endereco</Heading>
         <div class="info-grid">
           <div class="info-item full-width" v-if="prefeitura.endereco">
@@ -91,7 +91,7 @@
       </CardBase>
 
       <!-- INSS -->
-      <CardBase v-if="prefeitura && prefeitura.inss_tem_cobranca">
+      <CardBase v-if="prefeitura && prefeitura.inss_tem_cobranca" class="inss-card">
         <Heading level="3" class="mb-4">INSS</Heading>
         <div class="info-grid">
           <div class="info-item">
@@ -118,7 +118,7 @@
     </template>
 
     <!-- Modo de edicao -->
-    <CardBase v-else>
+    <CardBase v-else class="prefeitura-form-card">
       <Heading level="3" class="mb-4">
         {{ prefeitura ? 'Editar Prefeitura' : 'Cadastrar Prefeitura' }}
       </Heading>
@@ -224,6 +224,12 @@ function formatPercent(value) {
 </script>
 
 <style scoped>
+.prefeitura-tab-layout,
+.prefeitura-tab-edit {
+  display: grid;
+  gap: 1.5rem;
+}
+
 .prefeitura-content {
   display: flex;
   gap: 1.5rem;
@@ -264,5 +270,24 @@ function formatPercent(value) {
 .empty-state {
   padding: 1.5rem 0;
   text-align: center;
+}
+
+@media (min-width: 1280px) {
+  .prefeitura-tab-layout {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .prefeito-card {
+    grid-column: span 7;
+  }
+
+  .endereco-card {
+    grid-column: span 5;
+  }
+
+  .inss-card,
+  .prefeitura-form-card {
+    grid-column: span 12;
+  }
 }
 </style>
