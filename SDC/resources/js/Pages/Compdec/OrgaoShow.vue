@@ -51,12 +51,16 @@
           :can-download="canDownloadAnexos"
         />
 
-        <!-- Placeholder F4 -->
-        <CardBase v-if="current === 'plano'" class="text-center py-12">
-          <component :is="ClipboardDocumentListIcon" class="w-12 h-12 mx-auto text-slate-400 mb-3" />
-          <Heading level="3" class="mb-2">Plano de Contingencia</Heading>
-          <Text variant="muted">Disponivel na proxima fase de implementacao.</Text>
-        </CardBase>
+        <PlanoContingenciaTab
+          v-if="current === 'plano'"
+          :orgao="orgao"
+          :planos="planos"
+          :can-create="canCreatePlano"
+          :can-edit="canManagePlano"
+          :can-delete="canDeletePlano"
+          :can-aprovar="canAprovarPlano"
+          :can-download="canDownloadPlano"
+        />
       </template>
     </CompdecTabs>
 
@@ -188,6 +192,7 @@ import CapacidadesTab from '@/Components/Organisms/Compdec/Tabs/CapacidadesTab.v
 import PrefeituraTab from '@/Components/Organisms/Compdec/Tabs/PrefeituraTab.vue';
 import EquipeTab from '@/Components/Organisms/Compdec/Tabs/EquipeTab.vue';
 import AnexosTab from '@/Components/Organisms/Compdec/Tabs/AnexosTab.vue';
+import PlanoContingenciaTab from '@/Components/Organisms/Compdec/Tabs/PlanoContingenciaTab.vue';
 import VincularUsuarioModal from '@/Components/Organisms/Compdec/Modals/VincularUsuarioModal.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
@@ -258,6 +263,30 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  planos: {
+    type: Object,
+    default: null,
+  },
+  canCreatePlano: {
+    type: Boolean,
+    default: false,
+  },
+  canManagePlano: {
+    type: Boolean,
+    default: false,
+  },
+  canDeletePlano: {
+    type: Boolean,
+    default: false,
+  },
+  canAprovarPlano: {
+    type: Boolean,
+    default: false,
+  },
+  canDownloadPlano: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Estado do modal de vincular usuario
@@ -321,8 +350,6 @@ const tabs = computed(() => [
     id: 'plano',
     label: 'Plano de Contingencia',
     icon: ClipboardDocumentListIcon,
-    disabled: true,
-    disabledReason: 'Disponivel na proxima fase de implementacao',
     badge: props.orgao?.planos_count ?? null,
   },
 ]);

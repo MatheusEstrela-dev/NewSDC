@@ -65,6 +65,7 @@ class CompdecAnexo extends Model implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection(self::MEDIA_ARQUIVO)
+            ->useDisk(config('compdec.disk', 'compdec'))
             ->singleFile()
             ->acceptsMimeTypes([
                 'application/pdf',

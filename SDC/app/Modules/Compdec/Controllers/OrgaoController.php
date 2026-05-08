@@ -13,9 +13,11 @@ use App\Modules\Compdec\Resources\AnexoIndexResource;
 use App\Modules\Compdec\Resources\EquipeIndexResource;
 use App\Modules\Compdec\Resources\OrgaoIndexResource;
 use App\Modules\Compdec\Resources\OrgaoResource;
+use App\Modules\Compdec\Resources\PlanoContingenciaIndexResource;
 use App\Modules\Compdec\Services\AnexoService;
 use App\Modules\Compdec\Services\EquipeService;
 use App\Modules\Compdec\Services\OrgaoService;
+use App\Modules\Compdec\Services\PlanoContingenciaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,6 +29,7 @@ class OrgaoController extends Controller
         private readonly OrgaoService $service,
         private readonly EquipeService $equipeService,
         private readonly AnexoService $anexoService,
+        private readonly PlanoContingenciaService $planoService,
     ) {}
 
     public function index(Request $request): Response
@@ -81,9 +84,17 @@ class OrgaoController extends Controller
             'anexos' => Inertia::lazy(fn () => AnexoIndexResource::collection(
                 $this->anexoService->listarPorOrgao($orgao->id),
             )),
+            'planos' => Inertia::lazy(fn () => PlanoContingenciaIndexResource::collection(
+                $this->planoService->listarPorOrgao($orgao->id),
+            )),
             'canCreateAnexos' => $request->user()?->can('compdec.anexos.create') ?? false,
             'canManageAnexos' => $request->user()?->can('compdec.anexos.edit') ?? false,
             'canDeleteAnexos' => $request->user()?->can('compdec.anexos.delete') ?? false,
+            'canCreatePlano' => $request->user()?->can('compdec.plano.create') ?? false,
+            'canManagePlano' => $request->user()?->can('compdec.plano.edit') ?? false,
+            'canDeletePlano' => $request->user()?->can('compdec.plano.delete') ?? false,
+            'canAprovarPlano' => $request->user()?->can('compdec.plano.aprovar') ?? false,
+            'canDownloadPlano' => $request->user()?->can('compdec.plano.download') ?? false,
             'canDownloadAnexos' => $request->user()?->can('compdec.anexos.download') ?? false,
         ]);
     }

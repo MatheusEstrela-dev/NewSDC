@@ -5,9 +5,11 @@ declare(strict_types=1);
 use App\Modules\Compdec\Controllers\AnexoController;
 use App\Modules\Compdec\Controllers\EquipeController;
 use App\Modules\Compdec\Controllers\OrgaoController;
+use App\Modules\Compdec\Controllers\PlanoContingenciaController;
 use App\Modules\Compdec\Controllers\PrefeituraController;
 use App\Modules\Compdec\Models\CompdecAnexo;
 use App\Modules\Compdec\Models\CompdecEquipe;
+use App\Modules\Compdec\Models\CompdecPlanoContingencia;
 use App\Modules\Compdec\Models\Orgao;
 use Illuminate\Support\Facades\Route;
 
@@ -25,6 +27,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::model('orgao', Orgao::class);
 Route::model('equipe', CompdecEquipe::class);
+Route::model('anexo', CompdecAnexo::class);
+Route::model('plano', CompdecPlanoContingencia::class);
 Route::model('anexo', CompdecAnexo::class);
 
 Route::middleware(['auth', 'compdec.query-threshold:' . config('compdec.query_threshold', 15)])
@@ -166,6 +170,50 @@ Route::middleware(['auth', 'compdec.query-threshold:' . config('compdec.query_th
                 Route::get('/orgaos/{orgao}/anexos/{anexo}/download', [AnexoController::class, 'download'])
                     ->name('anexos.download')
                     ->whereNumber('orgao')->whereNumber('anexo');
+            });
+
+            // Sub-recurso: Plano de Contingencia (1:N, partial unique 1 ativo por orgao)
+            Route::middleware('can:compdec.plano.view')->group(function () {
+                Route::get('/orgaos/{orgao}/planos', [PlanoContingenciaController::class, 'index'])
+                    ->name('planos.index')
+                    ->whereNumber('orgao');
+                Route::get('/orgaos/{orgao}/planos/{plano}', [PlanoContingenciaController::class, 'show'])
+                    ->name('planos.show')
+                    ->whereNumber('orgao')->whereNumber('plano');
+            });
+
+            Route::middleware('can:compdec.plano.create')->group(function () {
+                Route::post('/orgaos/{orgao}/planos', [PlanoContingenciaController::class, 'store'])
+                    ->name('planos.store')
+                    ->whereNumber('orgao');
+            });
+
+            Route::middleware('can:compdec.plano.edit')->group(function () {
+                Route::match(['put', 'post'], '/orgaos/{orgao}/planos/{plano}', [PlanoContingenciaController::class, 'update'])
+                    ->name('planos.update')
+                    ->whereNumber('orgao')->whereNumber('plano');
+                Route::post('/orgaos/{orgao}/planos/{plano}/ativar', [PlanoContingenciaController::class, 'ativar'])
+                    ->name('planos.ativar')
+                    ->whereNumber('orgao')->whereNumber('plano');
+            });
+
+            // permission aprovar e separada de edit (CEDEC/admin)
+            Route::middleware('can:compdec.plano.aprovar')->group(function () {
+                Route::post('/orgaos/{orgao}/planos/{plano}/aprovar', [PlanoContingenciaController::class, 'aprovar'])
+                    ->name('planos.aprovar')
+                    ->whereNumber('orgao')->whereNumber('plano');
+            });
+
+            Route::middleware('can:compdec.plano.delete')->group(function () {
+                Route::delete('/orgaos/{orgao}/planos/{plano}', [PlanoContingenciaController::class, 'destroy'])
+                    ->name('planos.destroy')
+                    ->whereNumber('orgao')->whereNumber('plano');
+            });
+
+            Route::middleware('can:compdec.plano.download')->group(function () {
+                Route::get('/orgaos/{orgao}/planos/{plano}/download', [PlanoContingenciaController::class, 'download'])
+                    ->name('planos.download')
+                    ->whereNumber('orgao')->whereNumber('plano');
             });
         });
 

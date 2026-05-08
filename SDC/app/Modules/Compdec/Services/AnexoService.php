@@ -14,6 +14,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
@@ -108,11 +109,15 @@ class AnexoService
 
     private function anexarArquivo(CompdecAnexo $anexo, UploadedFile $arquivo): Media
     {
+        $disk = (string) config('compdec.disk', 'compdec');
+
+        File::ensureDirectoryExists(Storage::disk($disk)->path(''));
+
         return $anexo
-            ->addMedia($arquivo)
+            ->addMedia($arquivo->getRealPath())
             ->usingFileName($arquivo->hashName())
             ->usingName($arquivo->getClientOriginalName())
-            ->toMediaCollection(CompdecAnexo::MEDIA_ARQUIVO, config('compdec.disk', 'compdec'));
+            ->toMediaCollection(CompdecAnexo::MEDIA_ARQUIVO, $disk);
     }
 
     /* ============================================================
@@ -217,12 +222,16 @@ class AnexoService
             $anexo->clearMediaCollection(CompdecAnexo::MEDIA_ARQUIVO);
         }
 
+        $disk = (string) config('compdec.disk', 'compdec');
+
+        File::ensureDirectoryExists(Storage::disk($disk)->path(''));
+
         $anexo
             ->addMedia($path)
             ->preservingOriginal()
             ->usingFileName(basename($path))
             ->usingName($anexo->titulo)
-            ->toMediaCollection(CompdecAnexo::MEDIA_ARQUIVO, config('compdec.disk', 'compdec'));
+            ->toMediaCollection(CompdecAnexo::MEDIA_ARQUIVO, $disk);
     }
 
     private function mapearTipoLegado(object $row): string
