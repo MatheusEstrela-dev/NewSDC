@@ -155,6 +155,11 @@ class Orgao extends Model implements HasMedia
         return $this->hasMany(CompdecAnexo::class, 'orgao_id');
     }
 
+    public function planos(): HasMany
+    {
+        return $this->hasMany(CompdecPlanoContingencia::class, 'orgao_id');
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection(self::MEDIA_FOTO_COORDENADOR)

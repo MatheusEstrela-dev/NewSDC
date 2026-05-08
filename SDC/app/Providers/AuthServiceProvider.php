@@ -23,6 +23,7 @@ class AuthServiceProvider extends ServiceProvider
         \App\Modules\Compdec\Models\Prefeitura::class => \App\Policies\PrefeituraPolicy::class,
         \App\Modules\Compdec\Models\CompdecEquipe::class => \App\Policies\CompdecEquipePolicy::class,
         \App\Modules\Compdec\Models\CompdecAnexo::class => \App\Policies\CompdecAnexoPolicy::class,
+        \App\Modules\Compdec\Models\CompdecPlanoContingencia::class => \App\Policies\CompdecPlanoContingenciaPolicy::class,
         \App\Modules\Cisterna\Models\Cisterna::class => \App\Policies\CisternaPolicy::class,
     ];
 

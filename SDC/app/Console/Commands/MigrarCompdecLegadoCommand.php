@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Modules\Compdec\Services\AnexoService;
 use App\Modules\Compdec\Services\EquipeService;
 use App\Modules\Compdec\Services\OrgaoService;
+use App\Modules\Compdec\Services\PlanoContingenciaService;
 use App\Modules\Compdec\Services\PrefeituraService;
 use App\Modules\Compdec\Support\MigracaoReport;
 use Illuminate\Console\Command;
@@ -34,16 +35,17 @@ class MigrarCompdecLegadoCommand extends Command
     protected $description = 'Migra dados do banco legado (com_comdec, cedec_prefeitura, etc.) para o schema novo do modulo COMPDEC.';
 
     /** @var array<int, string> */
-    private const RECURSOS_DISPONIVEIS = ['orgaos', 'prefeituras', 'equipes', 'anexos'];
+    private const RECURSOS_DISPONIVEIS = ['orgaos', 'prefeituras', 'equipes', 'anexos', 'planos'];
 
     /** @var array<int, string> */
-    private const RECURSOS_FUTUROS = ['planos'];
+    private const RECURSOS_FUTUROS = [];
 
     public function __construct(
         private readonly OrgaoService $orgaoService,
         private readonly PrefeituraService $prefeituraService,
         private readonly EquipeService $equipeService,
         private readonly AnexoService $anexoService,
+        private readonly PlanoContingenciaService $planoService,
     ) {
         parent::__construct();
     }
@@ -142,6 +144,7 @@ class MigrarCompdecLegadoCommand extends Command
             'prefeituras' => $this->prefeituraService->migrarLegado($chunk, $dryRun),
             'equipes' => $this->equipeService->migrarLegado($chunk, $dryRun),
             'anexos' => $this->anexoService->migrarLegado($chunk, $dryRun),
+            'planos' => $this->planoService->migrarLegado($chunk, $dryRun),
             default => throw new \InvalidArgumentException("Recurso desconhecido: {$recurso}"),
         };
     }
