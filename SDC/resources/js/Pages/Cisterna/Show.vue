@@ -2,9 +2,14 @@
   <Head :title="data.nome" />
 
   <div class="cisternas-show">
-    <PageHeader :title="data.nome">
+    <PageHeader
+      :title="data.nome"
+      :description="`Codigo ${data.codigo || '-'}`"
+      :icon="CubeIcon"
+      variant="gradient"
+    >
       <template #actions>
-        <Button variant="ghost" :icon="ArrowLeftIcon" @click="handleBack">Voltar</Button>
+        <Button variant="secondary" :icon="ArrowLeftIcon" @click="handleBack">Voltar</Button>
         <Button v-if="canManage" variant="secondary" :icon="PencilIcon" @click="handleEdit">
           Editar
         </Button>
@@ -52,18 +57,33 @@
         <Text>{{ data.observacoes }}</Text>
       </CardBase>
     </div>
+
+    <ConfirmDialog
+      :is-open="showDeleteConfirm"
+      title="Excluir Cisterna"
+      message="Tem certeza que deseja excluir esta cisterna?"
+      description="Esta acao ira marcar o cadastro como excluido. Os dados podem continuar disponiveis para auditoria."
+      variant="danger"
+      confirm-text="Excluir"
+      cancel-text="Cancelar"
+      :loading="deleteLoading"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, h } from 'vue';
+import { computed, h, ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import CubeIcon from '@/Components/Icons/CubeIcon.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
 import TrashIcon from '@/Components/Icons/TrashIcon.vue';
@@ -79,6 +99,8 @@ const props = defineProps({
 });
 
 const data = computed(() => props.cisterna?.data ?? props.cisterna ?? {});
+const showDeleteConfirm = ref(false);
+const deleteLoading = ref(false);
 
 const municipioLabel = computed(() => {
   const m = data.value.municipio;
@@ -106,8 +128,20 @@ function handleEdit() {
 }
 
 function handleDelete() {
-  if (!confirm(`Excluir cisterna "${data.value.nome}"?`)) return;
-  router.delete(route('cisternas.destroy', data.value.id));
+  showDeleteConfirm.value = true;
+}
+
+function confirmDelete() {
+  deleteLoading.value = true;
+  router.delete(route('cisternas.destroy', data.value.id), {
+    onFinish: () => {
+      deleteLoading.value = false;
+    },
+  });
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false;
 }
 
 // Inline molecule
@@ -124,8 +158,7 @@ const InfoItem = {
 
 <style scoped>
 .cisternas-show {
-  max-width: 1100px;
-  margin: 0 auto;
+  @apply w-full max-w-6xl mx-auto pb-8;
 }
 
 .meta-row {

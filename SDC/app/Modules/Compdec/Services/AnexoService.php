@@ -26,6 +26,7 @@ class AnexoService
     public function listarPorOrgao(int $orgaoId, int $perPage = 20, array $filtros = []): LengthAwarePaginator
     {
         return CompdecAnexo::query()
+            ->with('media')
             ->doOrgao($orgaoId)
             ->when($filtros['tipo'] ?? null, fn ($q, $tipo) => $q->doTipo($tipo))
             ->orderByDesc('data_emissao')
@@ -108,7 +109,7 @@ class AnexoService
     private function anexarArquivo(CompdecAnexo $anexo, UploadedFile $arquivo): Media
     {
         return $anexo
-            ->addMedia($arquivo->getRealPath())
+            ->addMedia($arquivo)
             ->usingFileName($arquivo->hashName())
             ->usingName($arquivo->getClientOriginalName())
             ->toMediaCollection(CompdecAnexo::MEDIA_ARQUIVO, config('compdec.disk', 'compdec'));

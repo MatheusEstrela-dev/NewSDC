@@ -53,11 +53,14 @@ return new class extends Migration
             $table->index('legacy_id');
         });
 
-        // CHECK constraint para enum textual (PG)
-        DB::statement(
-            "ALTER TABLE compdec_anexos ADD CONSTRAINT compdec_anexos_tipo_check "
-            ."CHECK (tipo IN ('lei', 'decreto', 'portaria', 'regimento', 'outros'))"
-        );
+        // CHECK constraint para enum textual (PostgreSQL).
+        // Em testes SQLite, a sintaxe ALTER TABLE ... ADD CONSTRAINT nao e suportada.
+        if (Schema::getConnection()->getDriverName() === 'pgsql') {
+            DB::statement(
+                "ALTER TABLE compdec_anexos ADD CONSTRAINT compdec_anexos_tipo_check "
+                ."CHECK (tipo IN ('lei', 'decreto', 'portaria', 'regimento', 'outros'))"
+            );
+        }
     }
 
     public function down(): void

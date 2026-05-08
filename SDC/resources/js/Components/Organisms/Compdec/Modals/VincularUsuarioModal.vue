@@ -70,6 +70,7 @@
 <script setup>
 import { reactive, ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import { XMarkIcon, LinkIcon } from '@heroicons/vue/24/outline';
 import Modal from '@/Components/Modal.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';

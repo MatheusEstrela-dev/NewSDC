@@ -27,6 +27,7 @@ class AnexoIndexResource extends JsonResource
             'tipo' => $this->tipo?->value,
             'tipo_label' => $this->tipo?->label(),
             'titulo' => $this->titulo,
+            'descricao' => $this->descricao,
             'numero' => $this->numero,
             'data_emissao' => $this->data_emissao?->toDateString(),
             'data_validade' => $this->data_validade?->toDateString(),

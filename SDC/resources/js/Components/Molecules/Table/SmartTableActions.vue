@@ -11,6 +11,7 @@
     @history="$emit('history')"
     @archive="handleArchive"
     @upload="$emit('upload')"
+    @notifications="$emit('notifications')"
   />
 </template>
 
@@ -66,6 +67,7 @@ const emit = defineEmits([
   'history',
   'archive',
   'upload',
+  'notifications',
 ]);
 
 const {

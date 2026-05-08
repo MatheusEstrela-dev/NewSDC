@@ -1,28 +1,42 @@
 <template>
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-    <CardBase>
-      <Text variant="muted" size="sm">Total</Text>
-      <Heading level="2" class="mt-1">{{ statistics.total ?? 0 }}</Heading>
-    </CardBase>
-    <CardBase>
-      <Text variant="muted" size="sm">Ativas</Text>
-      <Heading level="2" class="mt-1 text-emerald-300">{{ statistics.ativas ?? 0 }}</Heading>
-    </CardBase>
-    <CardBase>
-      <Text variant="muted" size="sm">Pendentes</Text>
-      <Heading level="2" class="mt-1 text-amber-300">{{ statistics.pendentes ?? 0 }}</Heading>
-    </CardBase>
-    <CardBase>
-      <Text variant="muted" size="sm">Municipios</Text>
-      <Heading level="2" class="mt-1">{{ statistics.municipios ?? 0 }}</Heading>
-    </CardBase>
+  <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+    <StatCard
+      title="Total"
+      :value="statistics.total ?? 0"
+      variant="info"
+      :icon="CubeIcon"
+      subtitle="Cisternas cadastradas"
+    />
+    <StatCard
+      title="Ativas"
+      :value="statistics.ativas ?? 0"
+      variant="success"
+      :icon="CheckCircleIcon"
+      subtitle="Em acompanhamento"
+    />
+    <StatCard
+      title="Pendentes"
+      :value="statistics.pendentes ?? 0"
+      variant="warning"
+      :icon="ClockIcon"
+      subtitle="Aguardando atualizacao"
+    />
+    <StatCard
+      title="Municipios"
+      :value="statistics.municipios ?? 0"
+      variant="info"
+      :icon="MapIcon"
+      subtitle="Com cisternas vinculadas"
+    />
   </div>
 </template>
 
 <script setup>
-import CardBase from '@/Components/Atoms/Card/CardBase.vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
+import ClockIcon from '@/Components/Icons/ClockIcon.vue';
+import CubeIcon from '@/Components/Icons/CubeIcon.vue';
+import MapIcon from '@/Components/Icons/MapIcon.vue';
 
 defineProps({
   statistics: {

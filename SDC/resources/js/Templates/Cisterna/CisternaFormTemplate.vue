@@ -2,9 +2,14 @@
   <Head :title="title" />
 
   <div class="cisternas-form">
-    <PageHeader :title="title" :subtitle="subtitle">
+    <PageHeader
+      :title="title"
+      :description="subtitle"
+      :icon="CubeIcon"
+      variant="gradient"
+    >
       <template #actions>
-        <Button variant="ghost" :icon="ArrowLeftIcon" @click="handleBack">
+        <Button variant="secondary" :icon="ArrowLeftIcon" @click="handleBack">
           Voltar
         </Button>
       </template>
@@ -25,6 +30,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import CubeIcon from '@/Components/Icons/CubeIcon.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import CisternaForm from '@/Components/Organisms/Cisterna/CisternaForm.vue';
 
@@ -46,7 +52,6 @@ function handleBack() {
 
 <style scoped>
 .cisternas-form {
-  max-width: 1100px;
-  margin: 0 auto;
+  @apply w-full max-w-6xl mx-auto pb-8;
 }
 </style>

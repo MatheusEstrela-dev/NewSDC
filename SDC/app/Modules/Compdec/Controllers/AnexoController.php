@@ -38,6 +38,7 @@ class AnexoController extends Controller
 
     public function show(Orgao $orgao, CompdecAnexo $anexo): JsonResponse
     {
+        $anexo = $this->service->obter($orgao->id, $anexo->id);
         $this->authorize('view', $anexo);
 
         return response()->json([

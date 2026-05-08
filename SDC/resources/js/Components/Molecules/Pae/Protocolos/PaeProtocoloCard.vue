@@ -36,7 +36,7 @@
       </div>
       <div class="flex items-center gap-2 text-slate-700 dark:text-slate-200">
         <ClockIcon class="w-4 h-4 text-slate-500 dark:text-slate-400" />
-        <span class="font-semibold text-slate-600 dark:text-slate-300">Limite Análise:</span>
+        <span class="font-semibold text-slate-600 dark:text-slate-300">Limite Analise:</span>
         <span>{{ protocolo.limiteAnalise }}</span>
         <PrazosPill :prazo="protocolo.prazo" class="ml-2" />
       </div>
@@ -44,56 +44,65 @@
 
     <div class="mt-5 flex items-center justify-between gap-2">
       <div class="flex items-center flex-wrap gap-2 sm:gap-3">
-        <ButtonIcon
-          :icon="EyeIcon"
-          variant="primary"
+        <ActionButton
+          module="pae"
+          action="view"
+          :allowed="true"
+          :show-label="false"
           size="md"
-          title="Visualizar"
           @click="$emit('view', protocolo.id)"
         />
-        <ButtonIcon
-          :icon="PrinterIcon"
-          variant="info"
+        <ActionButton
+          module="pae"
+          action="print"
+          :allowed="true"
+          :show-label="false"
           size="md"
-          title="Imprimir"
           @click="$emit('print', protocolo.id)"
         />
-        <ButtonIcon
+        <ActionButton
           v-if="canEdit"
-          :icon="PencilIcon"
-          variant="warning"
+          module="pae"
+          action="edit"
+          :allowed="true"
+          :show-label="false"
           size="md"
-          title="Editar"
           @click="$emit('edit', protocolo.id)"
         />
-        <ButtonIcon
-          :icon="ClockIcon"
-          variant="success"
+        <ActionButton
+          module="pae"
+          action="history"
+          :allowed="true"
+          :show-label="false"
           size="md"
-          title="Série Histórica"
+          label="Serie Historica"
           @click="$emit('history', protocolo.id)"
         />
-        <ButtonIcon
-          :icon="BellIcon"
-          variant="secondary"
+        <ActionButton
+          module="pae"
+          action="notifications"
+          :allowed="true"
+          :show-label="false"
           size="md"
-          title="Notificacoes"
           @click="$emit('notifications', protocolo.id)"
         />
-        <ButtonIcon
+        <ActionButton
           v-if="canDelete"
-          :icon="ArchiveBoxIcon"
-          variant="topaz"
+          module="pae"
+          action="archive"
+          :allowed="true"
+          :show-label="false"
           size="md"
-          title="Arquivar"
           @click="$emit('archive', protocolo.id)"
         />
-        <ButtonIcon
+        <ActionButton
           v-if="canAtribuir && isAssignableStatus(protocolo.situacao)"
-          :icon="UserIcon"
-          variant="info"
+          module="pae"
+          action="assign"
+          :allowed="true"
+          :show-label="false"
           size="md"
-          title="Atribuir Analista"
+          label="Atribuir Analista"
           @click="$emit('assign', protocolo.id)"
         />
       </div>
@@ -102,26 +111,20 @@
 </template>
 
 <script setup>
-import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import ArchiveBoxIcon from '@/Components/Icons/ArchiveBoxIcon.vue';
-import BellIcon from '@/Components/Icons/BellIcon.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
-import EyeIcon from '@/Components/Icons/EyeIcon.vue';
-import PencilIcon from '@/Components/Icons/PencilIcon.vue';
-import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
-import UserIcon from '@/Components/Icons/UserIcon.vue';
 
 import PrazosPill from './PrazosPill.vue';
 import StatusPill from './StatusPill.vue';
 import { isAssignableStatus } from '@/Composables/usePaeAssignableStatus';
 
-const props = defineProps({
+defineProps({
   protocolo: {
     type: Object,
     required: true,
@@ -142,5 +145,3 @@ const props = defineProps({
 
 defineEmits(['view', 'print', 'edit', 'history', 'notifications', 'archive', 'assign']);
 </script>
-
-

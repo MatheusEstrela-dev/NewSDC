@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Pae\Models;
 
+use Database\Factories\PaeFormFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -60,5 +61,10 @@ class PaeForm extends Model
     public function conclusao(): HasMany
     {
         return $this->hasMany(PaeFormConclusaoItem::class, 'pae_form_id');
+    }
+
+    protected static function newFactory(): PaeFormFactory
+    {
+        return PaeFormFactory::new();
     }
 }

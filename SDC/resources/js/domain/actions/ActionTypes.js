@@ -11,6 +11,7 @@ export const ActionTypes = Object.freeze({
     HISTORY: 'history',
     ARCHIVE: 'archive',
     UPLOAD: 'upload',
+    NOTIFICATIONS: 'notifications',
     EXPORT: 'export',
     DUPLICATE: 'duplicate',
     FINALIZE: 'finalize'
@@ -81,6 +82,13 @@ export const ActionDefaults = Object.freeze({
         label: 'Upload',
         tooltip: 'Fazer upload'
     },
+    [ActionTypes.NOTIFICATIONS]: {
+        enabled: true,
+        icon: 'BellIcon',
+        variant: 'secondary',
+        label: 'Notificacoes',
+        tooltip: 'Ver notificacoes'
+    },
     [ActionTypes.EXPORT]: {
         enabled: true,
         icon: 'ArrowDownTrayIcon',
@@ -116,11 +124,12 @@ export const ActionOrder = Object.freeze({
     [ActionTypes.ATTACHMENTS]: 4,
     [ActionTypes.UPLOAD]: 5,
     [ActionTypes.HISTORY]: 6,
-    [ActionTypes.EXPORT]: 7,
-    [ActionTypes.DUPLICATE]: 8,
-    [ActionTypes.FINALIZE]: 9,
-    [ActionTypes.ARCHIVE]: 10,
-    [ActionTypes.DELETE]: 11
+    [ActionTypes.NOTIFICATIONS]: 7,
+    [ActionTypes.EXPORT]: 8,
+    [ActionTypes.DUPLICATE]: 9,
+    [ActionTypes.FINALIZE]: 10,
+    [ActionTypes.ARCHIVE]: 11,
+    [ActionTypes.DELETE]: 12
 });
 
 /**
@@ -135,6 +144,7 @@ export const ActionToPropMap = Object.freeze({
     [ActionTypes.HISTORY]: 'showHistory',
     [ActionTypes.ARCHIVE]: 'showArchive',
     [ActionTypes.UPLOAD]: 'showUpload',
+    [ActionTypes.NOTIFICATIONS]: 'showNotifications',
     [ActionTypes.EXPORT]: 'showExport',
     [ActionTypes.DUPLICATE]: 'showDuplicate',
     [ActionTypes.FINALIZE]: 'showFinalize'

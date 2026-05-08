@@ -8,7 +8,7 @@
         </Text>
       </div>
       <Button
-        v-if="canEdit"
+        v-if="canCreate"
         variant="primary"
         size="sm"
         :icon="PlusIcon"
@@ -46,6 +46,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import { PlusIcon } from '@heroicons/vue/24/outline';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
@@ -57,6 +58,7 @@ import AnexoUploadModal from '@/Components/Organisms/Compdec/Modals/AnexoUploadM
 const props = defineProps({
   orgao: { type: Object, required: true },
   anexos: { type: Object, default: null },
+  canCreate: { type: Boolean, default: false },
   canEdit: { type: Boolean, default: false },
   canDelete: { type: Boolean, default: false },
   canDownload: { type: Boolean, default: false },

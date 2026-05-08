@@ -45,6 +45,7 @@
           v-if="current === 'anexos'"
           :orgao="orgao"
           :anexos="anexos"
+          :can-create="canCreateAnexos"
           :can-edit="canManageAnexos"
           :can-delete="canDeleteAnexos"
           :can-download="canDownloadAnexos"
@@ -102,14 +103,14 @@
             </td>
             <td v-if="canVincularUsuarios" class="actions-col">
               <div class="flex justify-end">
-                <ActionButton
-                  module="compdec"
-                  action="delete"
+                <TableActions
+                  :show-view="false"
+                  :show-print="false"
+                  :show-edit="false"
+                  :show-attachments="false"
+                  :show-delete="canVincularUsuarios"
                   size="sm"
-                  :show-label="false"
-                  :allowed="canVincularUsuarios"
-                  tooltip-text="Voce nao possui permissao para remover vinculos de usuarios"
-                  @click="handleDesvincularUsuario(usuario.id)"
+                  @delete="handleDesvincularUsuario(usuario.id)"
                 />
               </div>
             </td>
@@ -170,6 +171,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
@@ -179,6 +181,7 @@ import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vue';
 import TipoOrgaoBadge from '@/Components/Molecules/Compdec/TipoOrgaoBadge.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import CompdecTabs from '@/Components/Organisms/Compdec/CompdecTabs.vue';
 import GeralTab from '@/Components/Organisms/Compdec/Tabs/GeralTab.vue';
 import CapacidadesTab from '@/Components/Organisms/Compdec/Tabs/CapacidadesTab.vue';
@@ -238,6 +241,10 @@ const props = defineProps({
   anexos: {
     type: Object,
     default: null,
+  },
+  canCreateAnexos: {
+    type: Boolean,
+    default: false,
   },
   canManageAnexos: {
     type: Boolean,

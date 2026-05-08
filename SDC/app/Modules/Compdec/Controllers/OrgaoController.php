@@ -81,6 +81,7 @@ class OrgaoController extends Controller
             'anexos' => Inertia::lazy(fn () => AnexoIndexResource::collection(
                 $this->anexoService->listarPorOrgao($orgao->id),
             )),
+            'canCreateAnexos' => $request->user()?->can('compdec.anexos.create') ?? false,
             'canManageAnexos' => $request->user()?->can('compdec.anexos.edit') ?? false,
             'canDeleteAnexos' => $request->user()?->can('compdec.anexos.delete') ?? false,
             'canDownloadAnexos' => $request->user()?->can('compdec.anexos.download') ?? false,

@@ -1,55 +1,50 @@
 <template>
-  <CardBase>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <FormField
-        v-model="local.search"
-        label="Buscar"
-        placeholder="Codigo ou nome"
-        @blur="emitChange"
-      />
+  <FilterSection title="Filtros de Pesquisa" :columns="4" :default-collapsed="false" class="mb-6">
+    <FilterField
+      label="Busca Geral"
+      type="text"
+      :model-value="local.search"
+      placeholder="Codigo, nome ou responsavel..."
+      @update:model-value="updateFilter('search', $event)"
+    />
 
-      <div>
-        <Label>Tipo</Label>
-        <select
-          v-model="local.tipo"
-          class="w-full px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-          @change="emitChange"
-        >
-          <option value="">Todos</option>
-          <option value="comunitaria">Comunitaria</option>
-          <option value="individual">Individual</option>
-          <option value="escolar">Escolar</option>
-        </select>
-      </div>
+    <FilterField
+      label="Tipo"
+      type="select"
+      :model-value="local.tipo"
+      :options="tipoOptions"
+      placeholder="Todos"
+      @update:model-value="updateFilter('tipo', $event)"
+    />
 
-      <div>
-        <Label>Status</Label>
-        <select
-          v-model="local.status"
-          class="w-full px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-          @change="emitChange"
-        >
-          <option value="">Todos</option>
-          <option value="ativa">Ativa</option>
-          <option value="pendente">Pendente</option>
-          <option value="inativa">Inativa</option>
-          <option value="em_obras">Em Obras</option>
-        </select>
-      </div>
+    <FilterField
+      label="Status"
+      type="select"
+      :model-value="local.status"
+      :options="statusOptions"
+      placeholder="Todos"
+      @update:model-value="updateFilter('status', $event)"
+    />
 
-      <div class="flex items-end">
-        <Button variant="ghost" size="sm" @click="resetFilters">Limpar</Button>
-      </div>
+    <FilterField
+      label="Municipio"
+      type="text"
+      :model-value="local.municipio_id"
+      placeholder="ID do municipio"
+      @update:model-value="updateFilter('municipio_id', $event)"
+    />
+
+    <div class="md:col-span-2 lg:col-span-4 flex justify-end items-end pt-1">
+      <FilterActions @search="emitChange" @clear="resetFilters" />
     </div>
-  </CardBase>
+  </FilterSection>
 </template>
 
 <script setup>
 import { reactive, watch } from 'vue';
-import CardBase from '@/Components/Atoms/Card/CardBase.vue';
-import Label from '@/Components/Atoms/Typography/Label.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
-import FormField from '@/Components/Molecules/Form/FormField.vue';
+import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
+import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
+import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
 
 const props = defineProps({
   filters: {
@@ -64,6 +59,7 @@ const local = reactive({
   search: props.filters?.search ?? '',
   tipo: props.filters?.tipo ?? '',
   status: props.filters?.status ?? '',
+  municipio_id: props.filters?.municipio_id ?? '',
 });
 
 watch(() => props.filters, (val) => {
@@ -71,15 +67,35 @@ watch(() => props.filters, (val) => {
     search: val?.search ?? '',
     tipo: val?.tipo ?? '',
     status: val?.status ?? '',
+    municipio_id: val?.municipio_id ?? '',
   });
 }, { deep: true });
+
+const tipoOptions = [
+  { value: '', label: 'Todos' },
+  { value: 'comunitaria', label: 'Comunitaria' },
+  { value: 'individual', label: 'Individual' },
+  { value: 'escolar', label: 'Escolar' },
+];
+
+const statusOptions = [
+  { value: '', label: 'Todos' },
+  { value: 'ativa', label: 'Ativa' },
+  { value: 'pendente', label: 'Pendente' },
+  { value: 'inativa', label: 'Inativa' },
+  { value: 'em_obras', label: 'Em obras' },
+];
+
+function updateFilter(key, value) {
+  local[key] = value;
+}
 
 function emitChange() {
   emit('change', { ...local });
 }
 
 function resetFilters() {
-  Object.assign(local, { search: '', tipo: '', status: '' });
+  Object.assign(local, { search: '', tipo: '', status: '', municipio_id: '' });
   emitChange();
 }
 </script>

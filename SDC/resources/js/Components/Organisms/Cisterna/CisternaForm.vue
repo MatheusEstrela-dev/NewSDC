@@ -21,33 +21,22 @@
             :maxlength="255"
           />
 
-          <div>
-            <Label required>Tipo</Label>
-            <select
-              v-model="formData.tipo"
-              required
-              class="w-full px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-            >
-              <option value="" disabled>Selecione...</option>
-              <option value="comunitaria">Comunitaria</option>
-              <option value="individual">Individual</option>
-              <option value="escolar">Escolar</option>
-            </select>
-            <p v-if="errors.tipo" class="mt-1 text-xs text-red-400">{{ errors.tipo }}</p>
-          </div>
+          <FormSelect
+            v-model="formData.tipo"
+            label="Tipo"
+            required
+            :options="tipoOptions"
+            placeholder="Selecione..."
+            :error="errors.tipo"
+          />
 
-          <div>
-            <Label>Status</Label>
-            <select
-              v-model="formData.status"
-              class="w-full px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-            >
-              <option value="ativa">Ativa</option>
-              <option value="pendente">Pendente</option>
-              <option value="inativa">Inativa</option>
-              <option value="em_obras">Em Obras</option>
-            </select>
-          </div>
+          <FormSelect
+            v-model="formData.status"
+            label="Status"
+            :options="statusOptions"
+            placeholder="Selecione..."
+            :error="errors.status"
+          />
 
           <FormField
             v-model.number="formData.municipio_id"
@@ -134,12 +123,13 @@
       </CardBase>
 
       <!-- Acoes -->
-      <div class="flex justify-end gap-3">
-        <Button variant="ghost" type="button" @click="$emit('cancel')">Cancelar</Button>
-        <Button variant="primary" type="submit" :loading="loading">
-          {{ submitLabel }}
-        </Button>
-      </div>
+      <FormActions
+        cancel-label="Cancelar"
+        :submit-label="submitLabel"
+        :loading="loading"
+        @cancel="$emit('cancel')"
+        @submit="$emit('submit', formData)"
+      />
     </div>
   </form>
 </template>
@@ -147,9 +137,9 @@
 <script setup>
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Label from '@/Components/Atoms/Typography/Label.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
+import FormActions from '@/Components/Molecules/Form/FormActions.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
+import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
 
 defineProps({
@@ -160,4 +150,17 @@ defineProps({
 });
 
 defineEmits(['submit', 'cancel']);
+
+const tipoOptions = [
+  { value: 'comunitaria', label: 'Comunitaria' },
+  { value: 'individual', label: 'Individual' },
+  { value: 'escolar', label: 'Escolar' },
+];
+
+const statusOptions = [
+  { value: 'ativa', label: 'Ativa' },
+  { value: 'pendente', label: 'Pendente' },
+  { value: 'inativa', label: 'Inativa' },
+  { value: 'em_obras', label: 'Em obras' },
+];
 </script>

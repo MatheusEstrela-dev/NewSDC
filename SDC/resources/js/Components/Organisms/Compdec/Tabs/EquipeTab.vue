@@ -43,6 +43,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';

@@ -25,6 +25,7 @@
 <script setup>
 import { reactive, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
