@@ -67,12 +67,15 @@ class CompdecAnexo extends Model implements HasMedia
         $this->addMediaCollection(self::MEDIA_ARQUIVO)
             ->useDisk(config('compdec.disk', 'compdec'))
             ->singleFile()
-            ->acceptsMimeTypes([
+            ->acceptsFile(fn ($file): bool => in_array($file->mimeType, [
                 'application/pdf',
                 'application/msword',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 'application/vnd.oasis.opendocument.text',
-            ]);
+            ], true) || (
+                $file->mimeType === 'application/x-empty'
+                && in_array(mb_strtolower(pathinfo($file->name, PATHINFO_EXTENSION)), ['pdf', 'doc', 'docx', 'odt'], true)
+            ));
     }
 
     /**

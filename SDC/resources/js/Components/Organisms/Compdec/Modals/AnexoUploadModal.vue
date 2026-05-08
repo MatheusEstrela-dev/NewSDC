@@ -209,7 +209,7 @@ function handleSubmit() {
     );
   } else {
     router.post(
-      route('compdec.anexos.store', props.orgaoId),
+      route('compdec.anexos.store', { orgao: props.orgaoId }),
       payload,
       { preserveScroll: true, forceFormData: true, onSuccess, onError, onFinish },
     );

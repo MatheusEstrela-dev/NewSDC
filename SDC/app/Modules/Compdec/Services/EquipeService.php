@@ -65,7 +65,7 @@ class EquipeService
     {
         $equipe = $this->obter($orgaoId, $equipeId);
 
-        return (bool) $equipe->forceDelete();
+        return (bool) $equipe->delete();
     }
 
     public function restaurar(int $orgaoId, int $equipeId): bool

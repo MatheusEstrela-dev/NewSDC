@@ -35,7 +35,7 @@
 
     <AnexoUploadModal
       :show="modalOpen"
-      :orgao-id="orgao.id"
+      :orgao-id="orgaoId"
       :anexo="editingAnexo"
       @close="closeModal"
       @saved="handleSaved"
@@ -67,6 +67,8 @@ const props = defineProps({
 const loading = ref(false);
 const modalOpen = ref(false);
 const editingAnexo = ref(null);
+
+const orgaoId = computed(() => props.orgao?.id ?? props.orgao?.data?.id);
 
 const anexosList = computed(() => {
   if (!props.anexos) return [];
@@ -117,7 +119,7 @@ function handleDelete(anexo) {
   if (!confirm(`Remover "${anexo.titulo}"?`)) return;
 
   router.delete(
-    route('compdec.anexos.destroy', { orgao: props.orgao.id, anexo: anexo.id }),
+    route('compdec.anexos.destroy', { orgao: orgaoId.value, anexo: anexo.id }),
     {
       preserveScroll: true,
       onSuccess: () => reloadAnexos(),
@@ -126,7 +128,7 @@ function handleDelete(anexo) {
 }
 
 function handleDownload(anexo) {
-  const url = route('compdec.anexos.download', { orgao: props.orgao.id, anexo: anexo.id });
+  const url = route('compdec.anexos.download', { orgao: orgaoId.value, anexo: anexo.id });
   window.open(url, '_blank');
 }
 </script>

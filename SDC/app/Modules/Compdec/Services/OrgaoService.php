@@ -33,8 +33,7 @@ class OrgaoService
             ->when($filtros['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
             ->when($filtros['municipio_id'] ?? null, fn ($q, $id) => $q->where('municipio_id', $id))
             ->when($filtros['search'] ?? null, fn ($q, $termo) => $q->buscarPorTermo($termo))
-            ->orderBy('tipo')
-            ->orderBy('nome')
+            ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
     }
@@ -73,7 +72,7 @@ class OrgaoService
     public function obterOrgao(int $id): Orgao
     {
         return Orgao::query()
-            ->with(['orgaoSuperior:id,codigo,nome,tipo', 'prefeitura'])
+            ->with(['orgaoSuperior:id,codigo,nome,tipo', 'prefeitura.media', 'media'])
             ->withCount(['usuarios', 'equipes', 'anexos', 'planos'])
             ->findOrFail($id);
     }
@@ -190,8 +189,7 @@ class OrgaoService
         $orgaos = Orgao::query()
             ->ativo()
             ->select(['id', 'codigo', 'nome', 'tipo', 'orgao_superior_id', 'municipio_id'])
-            ->orderBy('tipo')
-            ->orderBy('nome')
+            ->orderByDesc('id')
             ->get();
 
         $cedecs = $orgaos->where('tipo', TipoOrgao::CEDEC)->values();

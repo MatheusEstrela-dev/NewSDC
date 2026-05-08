@@ -107,7 +107,7 @@ class MigrarCompdecLegadoCommand extends Command
         $futuros = array_intersect($solicitados, self::RECURSOS_FUTUROS);
 
         if ($futuros !== []) {
-            $this->warn('Recursos ainda nao implementados (F3-F4): ' . implode(',', $futuros));
+            $this->warn('Recursos ainda nao implementados: ' . implode(',', $futuros));
         }
 
         return array_values(array_intersect($solicitados, self::RECURSOS_DISPONIVEIS));

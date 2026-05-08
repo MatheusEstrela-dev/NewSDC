@@ -33,7 +33,7 @@ class AnexoController extends Controller
 
         $anexos = $this->service->listarPorOrgao($orgao->id, $perPage, $filtros);
 
-        return response()->json(AnexoIndexResource::collection($anexos));
+        return AnexoIndexResource::collection($anexos)->response();
     }
 
     public function show(Orgao $orgao, CompdecAnexo $anexo): JsonResponse

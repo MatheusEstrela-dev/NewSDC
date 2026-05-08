@@ -28,11 +28,12 @@ class EquipeController extends Controller
 
         $equipes = $this->service->listarPorOrgao($orgao->id);
 
-        return response()->json(EquipeIndexResource::collection($equipes));
+        return EquipeIndexResource::collection($equipes)->response();
     }
 
     public function show(Orgao $orgao, CompdecEquipe $equipe): JsonResponse
     {
+        $equipe = $this->service->obter($orgao->id, $equipe->id);
         $this->authorize('view', $equipe);
 
         return response()->json([

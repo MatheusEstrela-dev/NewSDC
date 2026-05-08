@@ -53,7 +53,18 @@ final class LegacyParser
         // dd/mm/yyyy
         if (preg_match('#^\d{1,2}/\d{1,2}/\d{4}$#', $value)) {
             try {
-                return Carbon::createFromFormat('d/m/Y', $value)->startOfDay();
+                $date = Carbon::createFromFormat('!d/m/Y', $value);
+                $errors = Carbon::getLastErrors();
+
+                if (
+                    $date === false
+                    || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))
+                    || $date->format('j/n/Y') !== ltrim(preg_replace('#^0?(\d{1,2})/0?(\d{1,2})/(\d{4})$#', '$1/$2/$3', $value), '0')
+                ) {
+                    return null;
+                }
+
+                return $date->startOfDay();
             } catch (\Throwable) {
                 return null;
             }

@@ -30,7 +30,7 @@ class PlanoContingenciaController extends Controller
 
         $planos = $this->service->listarPorOrgao($orgao->id);
 
-        return response()->json(PlanoContingenciaIndexResource::collection($planos));
+        return PlanoContingenciaIndexResource::collection($planos)->response();
     }
 
     public function show(Orgao $orgao, CompdecPlanoContingencia $plano): JsonResponse

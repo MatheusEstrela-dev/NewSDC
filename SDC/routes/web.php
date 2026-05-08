@@ -122,7 +122,9 @@ Route::middleware('auth')->group(function () {
     // Módulo: TDAP (Gestão de Depósito)
     require __DIR__ . '/modules/tdap.php';
 
-    require __DIR__ . '/modules/cisterna.php';
+    if (file_exists(__DIR__ . '/modules/cisterna.php')) {
+        require __DIR__ . '/modules/cisterna.php';
+    }
 
     // Módulo: Compdec (Órgãos e Competências)
     require __DIR__ . '/modules/compdec.php';

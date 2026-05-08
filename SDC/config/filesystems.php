@@ -62,7 +62,7 @@ return [
             'driver' => 'local',
             'root' => storage_path('app/compdec'),
             'visibility' => 'private',
-            'throw' => false,
+            'throw' => true,
         ],
 
     ],

@@ -70,7 +70,7 @@ class OrgaoController extends Controller
 
         return Inertia::render('Compdec/OrgaoShow', [
             'orgao' => OrgaoResource::make($orgao->loadMissing(['orgaoSuperior', 'prefeitura'])),
-            'usuarios' => $orgao->usuarios()->select(['users.id', 'users.name', 'users.email'])->get(),
+            'usuarios' => Inertia::lazy(fn () => $orgao->usuarios()->select(['users.id', 'users.name', 'users.email'])->get()),
             'canManage' => $request->user()?->can('update', $orgao) ?? false,
             'canDelete' => $request->user()?->can('delete', $orgao) ?? false,
             'canManageEquipe' => $request->user()?->can('compdec.equipe.edit') ?? false,
