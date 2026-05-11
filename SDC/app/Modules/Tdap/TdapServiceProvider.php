@@ -1,55 +1,41 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Tdap;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Route;
-use App\Modules\Tdap\Domain\Repositories\ProductRepositoryInterface;
-use App\Modules\Tdap\Domain\Repositories\ProductLoteRepositoryInterface;
-use App\Modules\Tdap\Domain\Repositories\RecebimentoRepositoryInterface;
-use App\Modules\Tdap\Domain\Repositories\MovimentacaoRepositoryInterface;
-use App\Modules\Tdap\Infrastructure\Persistence\EloquentProductRepository;
-use App\Modules\Tdap\Infrastructure\Persistence\EloquentProductLoteRepository;
-use App\Modules\Tdap\Infrastructure\Persistence\EloquentRecebimentoRepository;
-use App\Modules\Tdap\Infrastructure\Persistence\EloquentMovimentacaoRepository;
 
+/**
+ * TDAP - Transporte e Distribuicao de Agua Potavel.
+ *
+ * Gerencia o ciclo de contratacao e execucao do fornecimento emergencial de
+ * agua potavel por prestadores de servico em municipios afetados (Atas, Lotes,
+ * Cronogramas, Caminhoes, Viagens, Vistorias e Historico).
+ *
+ * Plano de migracao: docs/superpowers/plans/2026-05-11-tdap-migration.md
+ *
+ * Arquitetura DDD (espelha app/Modules/Rat/):
+ *   - Domain/Repositories/       Contratos
+ *   - Infrastructure/Persistence Implementacoes Eloquent
+ *   - Application/UseCases/      Fluxos multi-step
+ *   - Services/                  Service Layer SOLID
+ *   - DTOs/                      Imutaveis (PHP 8 readonly)
+ *   - Http/Requests, Resources
+ *   - Models/                    Eloquent anemic
+ *   - Enums/                     PHP 8.1 backed
+ *
+ * Rotas: routes/modules/tdap.php (carregado via routes/web.php no middleware auth).
+ */
 class TdapServiceProvider extends ServiceProvider
 {
-    /**
-     * Registra os serviços do módulo
-     */
     public function register(): void
     {
-        // Registrar bindings dos repositórios
-        $this->app->bind(ProductRepositoryInterface::class, EloquentProductRepository::class);
-        $this->app->bind(ProductLoteRepositoryInterface::class, EloquentProductLoteRepository::class);
-        $this->app->bind(RecebimentoRepositoryInterface::class, EloquentRecebimentoRepository::class);
-        $this->app->bind(MovimentacaoRepositoryInterface::class, EloquentMovimentacaoRepository::class);
-
-        // Registrar Use Cases (singleton para melhor performance)
-        $this->app->singleton(\App\Modules\Tdap\Application\UseCases\ListProductsUseCase::class);
-        $this->app->singleton(\App\Modules\Tdap\Application\UseCases\CreateProductUseCase::class);
-        $this->app->singleton(\App\Modules\Tdap\Application\UseCases\GetEstoqueUseCase::class);
-        $this->app->singleton(\App\Modules\Tdap\Application\UseCases\GetDashboardDataUseCase::class);
-        $this->app->singleton(\App\Modules\Tdap\Application\UseCases\ListMovimentacoesUseCase::class);
-        $this->app->singleton(\App\Modules\Tdap\Application\UseCases\CreateSaidaEstoqueUseCase::class);
-        $this->app->singleton(\App\Modules\Tdap\Application\UseCases\GetProductHistoricoUseCase::class);
-        $this->app->singleton(\App\Modules\Tdap\Application\UseCases\ListRecebimentosUseCase::class);
-        $this->app->singleton(\App\Modules\Tdap\Application\UseCases\ShowRecebimentoUseCase::class);
-        $this->app->singleton(\App\Modules\Tdap\Application\UseCases\CreateRecebimentoUseCase::class);
-        $this->app->singleton(\App\Modules\Tdap\Application\UseCases\ProcessarRecebimentoUseCase::class);
+        // Bindings Interface => Implementation sao registrados a partir da Fase 1.
     }
 
-    /**
-     * Bootstrap dos serviços do módulo
-     *
-     * NOTA: As rotas do módulo são carregadas via routes/web.php dentro do
-     * middleware group 'auth' (que inclui 'web'). NÃO usar loadRoutesFrom()
-     * aqui, pois isso registra rotas SEM o middleware 'auth', causando
-     * 403 para todos os usuários. Padrão: mesmo que RatServiceProvider.
-     */
     public function boot(): void
     {
-        // Rotas carregadas via routes/web.php -> routes/modules/tdap.php
+        // Observers e Event Listeners sao registrados nas Fases 5 e 6.
     }
 }

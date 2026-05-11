@@ -8,16 +8,19 @@
         <div class="flex items-center gap-4">
           <div class="w-11 h-11 rounded-full bg-transparent flex items-center justify-center
                       border border-slate-300 dark:border-slate-600/40">
-            <CubeIcon class="w-6 h-6 text-slate-600 dark:text-slate-200" />
+            <component :is="icon" class="w-6 h-6 text-slate-600 dark:text-slate-200" />
           </div>
           <div>
             <Heading :level="2" class="mb-1">
-              Gestão de Depósito - Visão Geral
+              {{ title }}
             </Heading>
-            <Text size="sm" color="muted">
-              Visualize e gerencie todos os produtos, recebimentos e movimentações
+            <Text v-if="description" size="sm" color="muted">
+              {{ description }}
             </Text>
           </div>
+        </div>
+        <div v-if="$slots.actions" class="flex items-center gap-2">
+          <slot name="actions" />
         </div>
       </div>
     </div>
@@ -25,7 +28,13 @@
 </template>
 
 <script setup>
-import Heading from '../../../Atoms/Typography/Heading.vue';
-import Text from '../../../Atoms/Typography/Text.vue';
-import CubeIcon from '../../../Icons/CubeIcon.vue';
+import Heading from '@/Components/Atoms/Typography/Heading.vue';
+import Text from '@/Components/Atoms/Typography/Text.vue';
+import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+
+defineProps({
+  title: { type: String, required: true },
+  description: { type: String, default: '' },
+  icon: { type: Object, default: () => TruckIcon },
+});
 </script>

@@ -5,23 +5,21 @@ declare(strict_types=1);
 namespace App\Modules\Tdap\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Tdap\Services\TdapService;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class TdapDashboardController extends Controller
 {
-    public function __construct(
-        private readonly TdapService $tdapService
-    ) {
-    }
-
     public function index(): Response
     {
-        $statistics = $this->tdapService->getDashboardStatistics();
-
         return Inertia::render('Tdap/Dashboard', [
-            'statistics' => $statistics,
+            'kpis' => [
+                'cronogramas_ativos'        => 0,
+                'cronogramas_encerrados'    => 0,
+                'm3_entregues_mes'          => 0,
+                'prestadores_ativos'        => 0,
+                'viagens_pendentes_validar' => 0,
+            ],
         ]);
     }
 }
