@@ -90,7 +90,7 @@ class SecurityHeaders
         // para evitar tela em branco por CSP bloqueando assets.
         if ($isLocal || $isNativePHP) {
             // Vite ports: internal (5173/5175), host-mapped (15175) for Docker, and HMR WS (18081)
-            $vitePorts = [5173, 5175, 5176, 15175, 18081];
+            $vitePorts = [5173, 5175, 5176, 8081, 15175, 18081];
             $viteHosts = [];
             foreach ($vitePorts as $p) {
                 $viteHosts[] = "http://localhost:{$p}";
@@ -146,7 +146,7 @@ class SecurityHeaders
 
         $workerSrc = "'self' blob: data: https://cdn.jsdelivr.net";
         if ($isLocal || $isNativePHP) {
-            $workerSrc .= " http://localhost:15175 http://127.0.0.1:15175 http://localhost:5175 http://127.0.0.1:5175";
+            $workerSrc .= " http://localhost:8081 http://127.0.0.1:8081 http://localhost:15175 http://127.0.0.1:15175 http://localhost:5175 http://127.0.0.1:5175";
         }
 
         return implode('; ', [

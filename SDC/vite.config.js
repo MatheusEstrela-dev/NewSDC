@@ -199,7 +199,7 @@ export default defineConfig({
             ignored: ['**/storage/**', '**/vendor/**'],
         },
         cors: true,
-        origin: 'http://localhost:15175',
+        origin: 'http://localhost:8081',
         allowedHosts: ['bun', 'node', 'localhost', '127.0.0.1'],
     },
     worker: {

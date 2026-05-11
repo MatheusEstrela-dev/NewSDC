@@ -86,7 +86,7 @@ class RatNovoController extends Controller
      */
     public function show(int $id): RatResource
     {
-        $ocorrencia = \App\Models\Rat\RatOcorrencia::with('relatosMorph')->findOrFail($id);
+        $ocorrencia = \App\Modules\Rat\Models\RatOcorrencia::with('relatosMorph')->findOrFail($id);
         return new RatResource($ocorrencia);
     }
 
@@ -110,7 +110,7 @@ class RatNovoController extends Controller
      */
     public function powerBiData(int $id): JsonResponse
     {
-        $ocorrencia = \App\Models\Rat\RatOcorrencia::with('relatosMorph')->findOrFail($id);
+        $ocorrencia = \App\Modules\Rat\Models\RatOcorrencia::with('relatosMorph')->findOrFail($id);
 
         return response()->json([
             'dados_gerais' => $this->service->extractDadosGerais($ocorrencia),
@@ -139,7 +139,7 @@ class RatNovoController extends Controller
      */
     public function index(): AnonymousResourceCollection
     {
-        $ocorrencias = \App\Models\Rat\RatOcorrencia::latest()
+        $ocorrencias = \App\Modules\Rat\Models\RatOcorrencia::latest()
             ->paginate(request()->integer('per_page', 15));
 
         return RatResource::collection($ocorrencias);

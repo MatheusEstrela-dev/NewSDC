@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Models;
 
 use App\Modules\Rat\Models\RatAnexo;
+use App\Modules\Rat\Models\RatOcorrenciaHistorico;
+use App\Modules\Rat\Models\RatOcorrenciaRelato;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;

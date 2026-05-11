@@ -104,7 +104,7 @@ function sparklinePoints(data) {
   const range = max - min || 1;
   
   return data.map((val, i) => {
-    const x = (i / (data.length - 1)) * 80;
+    const x = data.length > 1 ? (i / (data.length - 1)) * 80 : 40;
     const y = 32 - ((val - min) / range) * 20 - 6; // Padding bottom 6
     return `${x},${y}`;
   }).join(' ');

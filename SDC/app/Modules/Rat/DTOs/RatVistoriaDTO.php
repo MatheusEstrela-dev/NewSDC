@@ -6,7 +6,7 @@ namespace App\Modules\Rat\DTOs;
 
 /**
  * DTO para dados de Vistoria em uma ocorrência RAT.
- * Mapeia a estrutura aninhada do frontend (solicitante, imovel, estrutura, moradores, patologias)
+ * Mapeia a estrutura alinhada do frontend (solicitante, imovel, estrutura, moradores, patologias)
  * para as colunas v_* do banco de dados.
  */
 readonly class RatVistoriaDTO

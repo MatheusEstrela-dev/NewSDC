@@ -57,7 +57,7 @@
         <!-- Bars -->
         <g v-for="(item, index) in activeBarData" :key="item.label + barPeriod">
           <rect
-            :x="30 + index * ((600 - 60) / (activeBarData.length - 1)) - (activeBarData.length > 6 ? 8 : 12)"
+            :x="30 + index * ((600 - 60) / Math.max(activeBarData.length - 1, 1)) - (activeBarData.length > 6 ? 8 : 12)"
             :y="200 - (item.value / maxBarValue) * 160"
             :width="activeBarData.length > 6 ? 16 : 24"
             :height="(item.value / maxBarValue) * 160"
@@ -76,7 +76,7 @@
           />
           
           <text
-            :x="30 + index * ((600 - 60) / (activeBarData.length - 1))"
+            :x="30 + index * ((600 - 60) / Math.max(activeBarData.length - 1, 1))"
             y="215"
             text-anchor="middle"
             class="text-[10px] font-medium transition-colors duration-200"
@@ -104,7 +104,10 @@ const hoveredBarIndex = ref(null);
 const activeBarData = computed(() =>
   barPeriod.value === '6M' ? props.barData6M : props.barData12M
 );
-const maxBarValue = computed(() => Math.max(...activeBarData.value.map(b => b.value)));
+const maxBarValue = computed(() => {
+    const values = activeBarData.value.map(b => b.value);
+    return values.length > 0 ? (Math.max(...values) || 1) : 1;
+});
 </script>
 <style scoped>
 @keyframes growUp {
