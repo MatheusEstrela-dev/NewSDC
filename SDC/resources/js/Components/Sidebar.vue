@@ -189,16 +189,6 @@
           Cisternas
         </NavItem>
 
-        <NavItem
-          v-if="canSeeInventario && _routes.hasInventario"
-          :href="route('inventario.index')"
-          :active="isRouteActive('inventario.*')"
-          icon="inventory"
-          :collapsed="isCollapsed"
-        >
-          Inventario
-        </NavItem>
-
         <!-- Treinamento -->
         <NavItem
           v-if="canSeeTreinamento && _routes.hasTreinamentos"
@@ -250,12 +240,23 @@
 
         <!-- Permissionamento - Link direto sem submenu -->
         <NavItem
+          v-if="canSeePermissionamento"
           :href="permissionamentoHref"
           :active="isRouteActive('admin.permissions.*')"
           icon="lock"
           :collapsed="isCollapsed"
         >
           Permissionamento
+        </NavItem>
+
+        <NavItem
+          v-if="canSeeInventario && _routes.hasInventario"
+          :href="route('inventario.index')"
+          :active="isRouteActive('inventario.*')"
+          icon="inventory"
+          :collapsed="isCollapsed"
+        >
+          Inventario
         </NavItem>
 
         <NavItem
@@ -538,8 +539,12 @@ const canSeeVistoria = computed(() => {
 });
 
 // ADMINISTRACAO
+const canSeePermissionamento = computed(() => {
+  return hasPermission(['users.view', 'roles.view', 'permissions.view']);
+});
+
 const canSeeAdminSection = computed(() => {
-  return hasPermission(['users.view', 'roles.view', 'permissions.view', 'system.logs.view']);
+  return canSeePermissionamento.value || canSeeInventario.value || canSeeLogs.value;
 });
 
 const canSeeLogs = computed(() => {
