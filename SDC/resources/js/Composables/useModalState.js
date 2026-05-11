@@ -1,1 +1,1 @@
-export { useModalState } from '../composables/core/useModalState';
+export { useModalState } from './core/useModalState';

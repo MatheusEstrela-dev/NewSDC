@@ -1,5 +1,4 @@
-# FROM dunglas/frankenphp:latest-php8.3-alpine
-FROM c24773c3328e
+FROM dunglas/frankenphp:1-php8.4-alpine
 
 # Argumentos de build
 ARG UID=1000

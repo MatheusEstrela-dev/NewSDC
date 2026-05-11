@@ -14,8 +14,8 @@ export function useActivityFeed() {
         isLoading.value = true;
         try {
             const response = await window.axios.get('/api/v1/activity-feed');
-            items.value = response.data.items;
-            updateMode.value = response.data.update_mode;
+            items.value = Array.isArray(response.data.items) ? response.data.items : [];
+            updateMode.value = response.data.update_mode ?? 'polling';
         } catch (e) {
             // silencioso - nao polui a UI com erros de rede
         } finally {

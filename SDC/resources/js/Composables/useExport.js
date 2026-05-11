@@ -1,1 +1,1 @@
-export { useExport } from '../composables/data/useExport';
+export { useExport } from './data/useExport';

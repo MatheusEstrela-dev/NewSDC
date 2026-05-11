@@ -76,19 +76,11 @@ RUN composer install \
 # Copiar codigo da aplicacao
 COPY . .
 
-# Substituir FrankenPHP pelo binario v1.12.1 (base image vem com versao antiga)
-RUN cp /app/docker/frankenphp/frankenphp-linux-x86_64 /usr/local/bin/frankenphp \
-    && chmod +x /usr/local/bin/frankenphp \
-    && ln -sf /usr/local/bin/frankenphp /app/frankenphp
-
 # Remover arquivo hot do Vite dev server
 RUN rm -f public/hot
 
 # Agora otimizar autoloader com codigo presente
 RUN composer dump-autoload --optimize --classmap-authoritative --no-dev --no-scripts
-
-# Criar symlink para resolver case-sensitivity
-RUN cd resources/js && ln -sf composables Composables 2>/dev/null || true
 
 # Instalar dependencias e compilar assets com Bun
 RUN bun install && \
@@ -102,9 +94,9 @@ RUN rm -rf /root/.bun /usr/local/bin/bun /usr/local/bin/bunx
 RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# Copiar script de entrypoint
+# Copiar script de entrypoint (strip CRLF para compatibilidade Linux)
 COPY docker/frankenphp/scripts/entrypoint.sh /start.sh
-RUN chmod +x /start.sh
+RUN sed -i 's/\r$//' /start.sh && chmod +x /start.sh
 
 # Verificar build
 RUN test -f /app/composer.json && \
