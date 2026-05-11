@@ -70,6 +70,11 @@
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 7v10c0 1.657 2.686 3 6 3s6-1.343 6-3V7" />
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12c0 1.657 2.686 3 6 3s6-1.343 6-3" />
     </svg>
+    <svg v-else-if="icon === 'inventory'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 8.25l-9-5.25-9 5.25 9 5.25 9-5.25z" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8.25v7.5l9 5.25 9-5.25v-7.5" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 13.5V21" />
+    </svg>
     <svg v-else-if="icon === 'rat-clipboard'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
     </svg>
