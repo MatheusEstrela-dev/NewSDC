@@ -9,16 +9,18 @@
       <template #actions>
         <div class="flex items-center gap-2 sm:gap-3">
           <ViewModeToggle v-model="viewMode" />
-          <Button
-            v-if="canCreate"
-            variant="primary"
+          <ActionButton
+            module="inventario"
+            resource="equipamentos"
+            action="create"
+            :allowed="canCreate"
             size="md"
-            :icon="PlusIcon"
-            icon-position="left"
+            label="Novo Equipamento"
+            @click="emit('create')"
           >
             <span class="hidden sm:inline">Novo Equipamento</span>
             <span class="sm:hidden">Novo</span>
-          </Button>
+          </ActionButton>
         </div>
       </template>
     </PageHeader>
@@ -42,6 +44,8 @@
       :loading="loading"
       :can-edit="canEdit"
       :can-delete="canDelete"
+      @edit="emit('edit', $event)"
+      @delete="emit('delete', $event)"
     />
 
     <InventarioTable
@@ -50,12 +54,14 @@
       :loading="loading"
       :can-edit="canEdit"
       :can-delete="canDelete"
+      @edit="emit('edit', $event)"
+      @delete="emit('delete', $event)"
     />
   </div>
 </template>
 
 <script setup>
-import Button from '@/Components/Atoms/Button/Button.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import InventarioFiltersSection from '@/Components/Organisms/Inventario/InventarioFiltersSection.vue';
 import InventarioGrid from '@/Components/Organisms/Inventario/InventarioGrid.vue';
 import InventarioStatsCards from '@/Components/Organisms/Inventario/InventarioStatsCards.vue';
@@ -63,7 +69,7 @@ import InventarioTable from '@/Components/Organisms/Inventario/InventarioTable.v
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import { useMobile } from '@/Composables/useMobile';
-import { ArchiveBoxIcon, PlusIcon } from '@heroicons/vue/24/outline';
+import { ArchiveBoxIcon } from '@heroicons/vue/24/outline';
 import { ref, watch } from 'vue';
 
 const props = defineProps({
@@ -107,7 +113,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['filter-change', 'clear-filters']);
+const emit = defineEmits(['filter-change', 'clear-filters', 'create', 'edit', 'delete']);
 
 const { isMobile } = useMobile();
 const viewMode = ref('table');

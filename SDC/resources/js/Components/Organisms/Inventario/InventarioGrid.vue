@@ -18,6 +18,8 @@
         :equipamento="equipamento"
         :can-edit="canEdit"
         :can-delete="canDelete"
+        @edit="emit('edit', $event)"
+        @delete="emit('delete', $event)"
       />
     </div>
   </div>
@@ -45,4 +47,6 @@ defineProps({
     default: false,
   },
 });
+
+const emit = defineEmits(['edit', 'delete']);
 </script>
