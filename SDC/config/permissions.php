@@ -251,6 +251,22 @@ return [
                 'export' => 'cisternas.export',
             ],
         ],
+        'INVENTARIO' => [
+            'Equipamentos' => [
+                'view'   => 'inventario.equipamentos.view',
+                'create' => 'inventario.equipamentos.create',
+                'edit'   => 'inventario.equipamentos.edit',
+                'delete' => 'inventario.equipamentos.delete',
+                'export' => 'inventario.equipamentos.export',
+            ],
+            'Emprestimos' => [
+                'view'     => 'inventario.emprestimos.view',
+                'create'   => 'inventario.emprestimos.create',
+                'approve'  => 'inventario.emprestimos.approve',
+                'return'   => 'inventario.emprestimos.return',
+                'export'   => 'inventario.emprestimos.export',
+            ],
+        ],
     ],
 
     /*
@@ -279,6 +295,7 @@ return [
             'webhooks.*',
             'system.*',
             'compdec.*',
+            'inventario.*',
         ],
         'manager' => [
             // PAE - CRUD completo exceto delete
@@ -361,6 +378,16 @@ return [
             'compdec.plano.edit',
             'compdec.plano.download',
             'compdec.usuarios.manage',
+            // Inventario - gestao completa exceto delete
+            'inventario.equipamentos.view',
+            'inventario.equipamentos.create',
+            'inventario.equipamentos.edit',
+            'inventario.equipamentos.export',
+            'inventario.emprestimos.view',
+            'inventario.emprestimos.create',
+            'inventario.emprestimos.approve',
+            'inventario.emprestimos.return',
+            'inventario.emprestimos.export',
         ],
         'analyst' => [
             // PAE - view, create, edit
@@ -423,6 +450,12 @@ return [
             'compdec.plano.create',
             'compdec.plano.edit',
             'compdec.plano.download',
+            // Inventario - operacao sem delete/aprovacao
+            'inventario.equipamentos.view',
+            'inventario.equipamentos.create',
+            'inventario.equipamentos.edit',
+            'inventario.emprestimos.view',
+            'inventario.emprestimos.create',
         ],
         'operator' => [
             // PAE - view, create
@@ -460,6 +493,10 @@ return [
             'compdec.anexos.download',
             'compdec.plano.view',
             'compdec.plano.download',
+            // Inventario - leitura e solicitacao
+            'inventario.equipamentos.view',
+            'inventario.emprestimos.view',
+            'inventario.emprestimos.create',
         ],
         'viewer' => [
             // Somente visualizacao em todos os modulos
@@ -481,6 +518,8 @@ return [
             'compdec.equipe.view',
             'compdec.anexos.view',
             'compdec.plano.view',
+            'inventario.equipamentos.view',
+            'inventario.emprestimos.view',
         ],
         'user' => [
             // Acesso basico apenas
@@ -493,6 +532,9 @@ return [
             'plantao.turnos.view',
             // COMPDEC - apenas listagem de orgaos
             'compdec.orgaos.view',
+            // Inventario - acesso inicial ao modulo
+            'inventario.equipamentos.view',
+            'inventario.emprestimos.view',
         ],
     ],
 
