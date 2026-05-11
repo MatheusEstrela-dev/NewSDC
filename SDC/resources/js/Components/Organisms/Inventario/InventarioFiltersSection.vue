@@ -1,58 +1,42 @@
 <template>
-  <section class="mb-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
-      <label class="block">
-        <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Busca</span>
-        <input
-          v-model="localFilters.search"
-          type="search"
-          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-          placeholder="Nome, patrimonio ou responsavel"
-          @keyup.enter="apply"
-        />
-      </label>
+  <FilterSection title="Filtros de Pesquisa" :columns="4" :default-collapsed="false" class="mb-6">
+    <FilterField
+      label="Busca"
+      type="search"
+      :model-value="localFilters.search || ''"
+      placeholder="Nome, patrimonio ou responsavel"
+      @update:model-value="updateFilter('search', $event)"
+    />
 
-      <label class="block">
-        <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Categoria</span>
-        <select
-          v-model="localFilters.categoria"
-          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-        >
-          <option value="">Todas</option>
-          <option v-for="option in filterOptions.categorias || []" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
-        </select>
-      </label>
+    <FilterField
+      label="Categoria"
+      type="select"
+      :model-value="localFilters.categoria || ''"
+      :options="categoriaOptions"
+      placeholder="Todas"
+      @update:model-value="updateFilter('categoria', $event)"
+    />
 
-      <label class="block">
-        <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Situacao</span>
-        <select
-          v-model="localFilters.situacao"
-          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-        >
-          <option value="">Todas</option>
-          <option v-for="option in filterOptions.situacoes || []" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
-        </select>
-      </label>
+    <FilterField
+      label="Situacao"
+      type="select"
+      :model-value="localFilters.situacao || ''"
+      :options="situacaoOptions"
+      placeholder="Todas"
+      @update:model-value="updateFilter('situacao', $event)"
+    />
 
-      <div class="flex items-end gap-2">
-        <Button variant="primary" size="md" class="flex-1" @click="apply">
-          Filtrar
-        </Button>
-        <Button variant="secondary" size="md" @click="clear">
-          Limpar
-        </Button>
-      </div>
+    <div class="flex min-h-[4.25rem] items-end justify-end">
+      <FilterActions @search="apply" @clear="clear" />
     </div>
-  </section>
+  </FilterSection>
 </template>
 
 <script setup>
-import Button from '@/Components/Atoms/Button/Button.vue';
-import { ref, watch } from 'vue';
+import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
+import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
+import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
   filters: {
@@ -68,6 +52,10 @@ const props = defineProps({
 const emit = defineEmits(['update:filters', 'apply', 'clear']);
 
 const localFilters = ref({ ...props.filters });
+let searchTimer = null;
+
+const categoriaOptions = computed(() => props.filterOptions.categorias || []);
+const situacaoOptions = computed(() => props.filterOptions.situacoes || []);
 
 watch(
   () => props.filters,
@@ -85,8 +73,27 @@ watch(
   { deep: true }
 );
 
+function cleanFilters(filters) {
+  return Object.fromEntries(
+    Object.entries(filters).filter(([, value]) => value !== '' && value !== null && value !== undefined)
+  );
+}
+
+function updateFilter(key, value) {
+  localFilters.value = { ...localFilters.value, [key]: value };
+
+  if (key === 'search') {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(apply, 350);
+    return;
+  }
+
+  apply();
+}
+
 function apply() {
-  emit('apply', { ...localFilters.value });
+  clearTimeout(searchTimer);
+  emit('apply', cleanFilters(localFilters.value));
 }
 
 function clear() {

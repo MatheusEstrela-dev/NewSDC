@@ -32,30 +32,34 @@
         Movimentado em {{ formatDate(equipamento.ultima_movimentacao) }}
       </span>
       <div class="flex items-center gap-2">
-        <button
-          v-if="canEdit"
-          type="button"
-          class="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-          title="Editar"
-        >
-          <PencilSquareIcon class="h-4 w-4" />
-        </button>
-        <button
-          v-if="canDelete"
-          type="button"
-          class="rounded-md p-1.5 text-slate-500 transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
-          title="Excluir"
-        >
-          <TrashIcon class="h-4 w-4" />
-        </button>
+        <ActionButton
+          module="inventario"
+          resource="equipamentos"
+          action="edit"
+          :allowed="canEdit"
+          :show-label="false"
+          size="sm"
+          tooltip-text="Editar equipamento"
+          @click="emit('edit', equipamento)"
+        />
+        <ActionButton
+          module="inventario"
+          resource="equipamentos"
+          action="delete"
+          :allowed="canDelete"
+          :show-label="false"
+          size="sm"
+          tooltip-text="Excluir equipamento"
+          @click="emit('delete', equipamento)"
+        />
       </div>
     </div>
   </article>
 </template>
 
 <script setup>
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import InventarioStatusBadge from '@/Components/Molecules/Inventario/InventarioStatusBadge.vue';
-import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline';
 
 defineProps({
   equipamento: {
@@ -71,6 +75,8 @@ defineProps({
     default: false,
   },
 });
+
+const emit = defineEmits(['edit', 'delete']);
 
 function formatDate(value) {
   if (!value) return '-';
