@@ -317,36 +317,7 @@
         >
           Dashboard
         </NavItem>
-        <NavItem
-          v-if="_routes.hasTdapProducts"
-          :href="route('tdap.products.index')"
-          :active="isRouteActive('tdap.products.*')"
-          icon="dot"
-          is-submenu
-          :collapsed="isCollapsed"
-        >
-          Produtos
-        </NavItem>
-        <NavItem
-          v-if="_routes.hasTdapRecebimentos"
-          :href="route('tdap.recebimentos.index')"
-          :active="isRouteActive('tdap.recebimentos.*')"
-          icon="dot"
-          is-submenu
-          :collapsed="isCollapsed"
-        >
-          Recebimentos
-        </NavItem>
-        <NavItem
-          v-if="_routes.hasTdapMovimentacoes"
-          :href="route('tdap.movimentacoes.index')"
-          :active="isRouteActive('tdap.movimentacoes.*')"
-          icon="dot"
-          is-submenu
-          :collapsed="isCollapsed"
-        >
-          Movimentações
-        </NavItem>
+        <!-- Itens (Prestadores, Caminhoes, Atas, Lotes, Cronogramas, Vistorias, Historico) entram a partir da Fase 1 -->
       </div>
     </nav>
 
@@ -393,9 +364,6 @@ const _routes = {
   hasHumanitaria: route().has('ajuda-humanitaria.beneficiarios.index'),
   hasCompdec: route().has('compdec.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
-  hasTdapProducts: route().has('tdap.products.index'),
-  hasTdapRecebimentos: route().has('tdap.recebimentos.index'),
-  hasTdapMovimentacoes: route().has('tdap.movimentacoes.index'),
   hasCisterna: route().has('cisternas.index'),
   hasInventario: route().has('inventario.index'),
   hasTreinamentos: route().has('treinamentos.index'),
@@ -420,9 +388,6 @@ const _activeRoutes = computed(() => {
     'compdec.*': route().current('compdec.*'),
     'tdap.*': route().current('tdap.*'),
     'tdap.dashboard': route().current('tdap.dashboard'),
-    'tdap.products.*': route().current('tdap.products.*'),
-    'tdap.recebimentos.*': route().current('tdap.recebimentos.*'),
-    'tdap.movimentacoes.*': route().current('tdap.movimentacoes.*'),
     'cisternas.*': route().current('cisternas.*'),
     'inventario.*': route().current('inventario.*'),
     'treinamentos.*': route().current('treinamentos.*'),
@@ -500,11 +465,7 @@ const canSeeOrgaos = computed(() => {
 });
 
 const canSeeTdap = computed(() => {
-  return hasPermission([
-    'tdap.products.view',
-    'tdap.recebimentos.view',
-    'tdap.movimentacoes.view'
-  ]);
+  return hasPermission(['tdap.dashboard.view']);
 });
 
 const canSeeCisterna = computed(() => {

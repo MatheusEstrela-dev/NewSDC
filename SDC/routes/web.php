@@ -7,7 +7,6 @@ use App\Modules\Rat\Presentation\Http\Controllers\RatIndexController;
 use App\Http\Controllers\GlobalSearchController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Modules\Tdap\Application\UseCases\ListMovimentacoesUseCase;
 
 // DEBUG: Rota para testar executeAsDTO (requer container)
 Route::get('/debug/test-dto', function () {
