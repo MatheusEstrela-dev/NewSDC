@@ -54,7 +54,7 @@
 
     <!-- Navigation -->
     <div class="sidebar-nav-wrapper">
-      <!-- Gradientes de indicaÃ§Ã£o de scroll -->
+      <!-- Gradientes de indicação de scroll -->
       <div
         class="scroll-gradient scroll-gradient-top"
         :class="{ 'is-visible': showTopGradient && isHovering }"
@@ -79,7 +79,7 @@
           icon="dashboard"
           :collapsed="isCollapsed"
         >
-          VisÃ£o Geral
+          Visão Geral
         </NavItem>
         <NavItem
           v-if="canSeeDemandas && _routes.hasDemandas"
@@ -115,13 +115,13 @@
           icon="clock"
           :collapsed="isCollapsed"
         >
-          PlantÃ£o DiÃ¡rio
+          Plantão Diário
         </NavItem>
       </div>
 
-      <!-- MÃ“DULOS DE GESTÃƒO -->
+      <!-- MÓDULOS DE GESTÃO -->
       <div class="nav-section">
-        <div v-show="!isCollapsed" class="nav-section-title">MÃ“DULOS DE GESTÃƒO</div>
+        <div v-show="!isCollapsed" class="nav-section-title">MÓDULOS DE GESTÃO</div>
 
         <!-- DECRETACOES -->
         <NavItem
@@ -432,7 +432,7 @@
           is-submenu
           :collapsed="isCollapsed"
         >
-          CaminhÃµes
+          Caminhões
         </NavItem>
         <!-- Itens (Atas, Lotes, Cronogramas, Vistorias, Historico) entram a partir da Fase 2 -->
       </div>
@@ -456,7 +456,7 @@ import { route } from 'ziggy-js';
 import NavItem from './NavItem.vue';
 
 
-// Tentar injetar o estado do layout, se nÃ£o existir, criar localmente
+// Tentar injetar o estado do layout, se não existir, criar localmente
 const sidebarCollapsed = inject('sidebarCollapsed', ref(false));
 const isCollapsed = sidebarCollapsed;
 
@@ -470,7 +470,7 @@ const closeSidebar = inject('closeSidebar', () => {});
 const page = usePage();
 
 // ============================================================================
-// VerificaÃ§Ã£o de rotas existentes â€” estÃ¡ticas, calculadas 1x (rotas nÃ£o mudam)
+// Verificação de rotas existentes — estáticas, calculadas 1x (rotas não mudam)
 // ============================================================================
 const _routes = {
   hasRat: route().has('rat.index') || route().has('rat.create'),
@@ -489,18 +489,17 @@ const _routes = {
   hasEstoqueProdutos: route().has('estoque.produtos.index'),
   hasEstoqueKits: route().has('estoque.kits.index'),
   hasEstoqueMovimentacoes: route().has('estoque.movimentacoes.index'),
-  hasEstoqueExportExcel: route().has('estoque.export-excel'),
   hasTreinamentos: route().has('treinamentos.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
 };
 
 // ============================================================================
-// Rotas ativas â€” recalculadas 1x por navegaÃ§Ã£o em um Ãºnico computed
+// Rotas ativas — recalculadas 1x por navegação em um único computed
 // (em vez de 15+ chamadas individuais route().current() no template)
 // ============================================================================
 const _activeRoutes = computed(() => {
-  const _url = page.url; // dependÃªncia reativa Ãºnica
+  const _url = page.url; // dependência reativa única
   return {
     'dashboard': route().current('dashboard'),
     'rat.*': route().current('rat.*'),
@@ -521,7 +520,6 @@ const _activeRoutes = computed(() => {
     'estoque.produtos.*': route().current('estoque.produtos.*'),
     'estoque.kits.*': route().current('estoque.kits.*'),
     'estoque.movimentacoes.*': route().current('estoque.movimentacoes.*'),
-    'estoque.export-excel': route().current('estoque.export-excel'),
     'treinamentos.*': route().current('treinamentos.*'),
     'plancon.*': route().current('plancon.*'),
     'inmet.*': route().current('inmet.*'),
@@ -533,8 +531,8 @@ const _activeRoutes = computed(() => {
 const isRouteActive = (pattern) => _activeRoutes.value[pattern] ?? false;
 
 // ============================================================================
-// Cache estÃ¡vel de permissÃµes â€” nÃ£o re-executa em cada navegaÃ§Ã£o.
-// Atualiza apenas quando o ID do usuÃ¡rio muda (login/logout).
+// Cache estável de permissões — não re-executa em cada navegação.
+// Atualiza apenas quando o ID do usuário muda (login/logout).
 // ============================================================================
 const _permSet = shallowRef(new Set(page.props?.auth?.user?.permissions ?? []));
 const _isSuper = shallowRef(page.props?.auth?.user?.is_super_admin ?? false);
@@ -569,8 +567,8 @@ const hasRole = (roleList) => {
 
 // PRINCIPAL
 const canSeeRat = computed(() => {
-  // RAT Ã© visÃ­vel para todos os usuÃ¡rios autenticados (mÃ³dulo crÃ­tico)
-  // TODO: Configurar permissÃ£o rat.protocolos.view quando sistema de permissÃµes estiver completo
+  // RAT é visível para todos os usuários autenticados (módulo crítico)
+  // TODO: Configurar permissão rat.protocolos.view quando sistema de permissões estiver completo
   return true;
 });
 
@@ -676,7 +674,7 @@ const submenuTitles = {
 const submenuTitle = computed(() => submenuTitles[activeSubmenu.value] ?? '');
 
 // Links resilientes (evita tela branca quando uma rota nao existir no Ziggy)
-// URLs estÃ¡ticas â€” rotas nÃ£o mudam em runtime, sem necessidade de computed reativo
+// URLs estáticas — rotas não mudam em runtime, sem necessidade de computed reativo
 const ratHref = route().has('rat.index') ? route('rat.index') :
                 route().has('rat.create') ? route('rat.create') :
                 route('dashboard');
@@ -706,7 +704,7 @@ function closeSubmenu() {
   activeSubmenu.value = null;
 }
 
-// Fechar sidebar mobile ao clicar em um link (serÃ¡ propagado aos NavItems)
+// Fechar sidebar mobile ao clicar em um link (será propagado aos NavItems)
 provide('onNavItemClick', () => {
   if (isMobile.value || isTablet.value) {
     closeSidebar();
@@ -714,7 +712,7 @@ provide('onNavItemClick', () => {
 });
 
 // ============================================================================
-// Smooth Scroll Feature - Auto-scroll quando mouse estÃ¡ prÃ³ximo das bordas
+// Smooth Scroll Feature - Auto-scroll quando mouse está próximo das bordas
 // ============================================================================
 const sidebarNav = ref(null);
 let rafId = null;
@@ -723,9 +721,9 @@ const isHovering = ref(false);
 const showTopGradient = ref(false);
 const showBottomGradient = ref(false);
 
-// ConfiguraÃ§Ãµes
+// Configurações
 const EDGE_THRESHOLD = 60; // Pixels da borda para ativar auto-scroll
-const MAX_SCROLL_SPEED = 8; // Velocidade mÃ¡xima de scroll (pixels por frame)
+const MAX_SCROLL_SPEED = 8; // Velocidade máxima de scroll (pixels por frame)
 
 function onMouseEnter() {
   isHovering.value = true;
@@ -941,7 +939,7 @@ provide('sidebarCollapsed', isCollapsed);
   }
 }
 
-/* Mobile (< 768px): Esconder sidebar por padrÃ£o e mostrar como drawer */
+/* Mobile (< 768px): Esconder sidebar por padrão e mostrar como drawer */
 @media (max-width: 767px) {
   .sidebar {
     transform: translateX(-100%);
@@ -1276,7 +1274,7 @@ provide('sidebarCollapsed', isCollapsed);
   }
 }
 
-/* Gradientes de indicaÃ§Ã£o de scroll */
+/* Gradientes de indicação de scroll */
 .scroll-gradient {
   position: absolute;
   left: 0;
@@ -1383,3 +1381,4 @@ provide('sidebarCollapsed', isCollapsed);
   height: 24px;
 }
 </style>
+
