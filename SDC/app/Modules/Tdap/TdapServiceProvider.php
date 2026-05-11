@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap;
 
+use App\Modules\Tdap\Services\CaminhaoService;
+use App\Modules\Tdap\Services\PrestadorService;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -15,27 +17,29 @@ use Illuminate\Support\ServiceProvider;
  *
  * Plano de migracao: docs/superpowers/plans/2026-05-11-tdap-migration.md
  *
- * Arquitetura DDD (espelha app/Modules/Rat/):
- *   - Domain/Repositories/       Contratos
- *   - Infrastructure/Persistence Implementacoes Eloquent
- *   - Application/UseCases/      Fluxos multi-step
- *   - Services/                  Service Layer SOLID
- *   - DTOs/                      Imutaveis (PHP 8 readonly)
- *   - Http/Requests, Resources
- *   - Models/                    Eloquent anemic
- *   - Enums/                     PHP 8.1 backed
- *
- * Rotas: routes/modules/tdap.php (carregado via routes/web.php no middleware auth).
+ * Padrao DDD-minimo (espelha app/Modules/Cisterna/, Compdec/):
+ *   - Controllers/  Thin, injetam Service via constructor
+ *   - DTOs/         Imutaveis (readonly), com fromRequest()/toArray()
+ *   - Enums/        PHP 8.1 backed
+ *   - Models/       Eloquent anemic + relacionamentos + scopes
+ *   - Observers/    Hooks de evento Eloquent (Fase 5)
+ *   - Requests/     Form Requests com authorize() + rules()
+ *   - Resources/    JSON Resources (Index + Show separados)
+ *   - Services/     Service Layer (uma responsabilidade por classe)
  */
 class TdapServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Bindings Interface => Implementation sao registrados a partir da Fase 1.
+        // Cadastros base (Fase 1)
+        $this->app->singleton(PrestadorService::class);
+        $this->app->singleton(CaminhaoService::class);
     }
 
     public function boot(): void
     {
+        // Rotas carregadas via routes/web.php (require routes/modules/tdap.php)
+        // Permissoes sincronizadas via config/permissions.php + RolesAndPermissionsSeeder
         // Observers e Event Listeners sao registrados nas Fases 5 e 6.
     }
 }
