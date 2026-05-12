@@ -24,20 +24,24 @@
         </p>
       </div>
 
-      <!-- Última Atualização - visível apenas em sm+ -->
+      <!-- Número RAT + Última Atualização - visível apenas em sm+ -->
       <div class="hidden sm:flex items-center gap-2 text-sm bg-slate-100 dark:bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700/50 flex-shrink-0">
         <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
+        <span v-if="rat.numero_bos" class="text-slate-800 dark:text-slate-200 font-bold font-mono">{{ rat.numero_bos }}</span>
+        <span v-if="rat.numero_bos" class="text-slate-400 dark:text-slate-500">·</span>
         <span class="text-slate-600 dark:text-slate-300 font-medium">{{ formattedLastUpdate }}</span>
       </div>
     </div>
 
-    <!-- Row 2: Timestamp em mobile (visivel apenas em < sm) -->
+    <!-- Row 2: Número RAT + Timestamp em mobile (visivel apenas em < sm) -->
     <div class="flex sm:hidden items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
+      <span v-if="rat.numero_bos" class="font-bold font-mono text-slate-700 dark:text-slate-300">{{ rat.numero_bos }}</span>
+      <span v-if="rat.numero_bos" class="text-slate-300 dark:text-slate-600">·</span>
       <span>Atualizado: {{ formattedLastUpdate }}</span>
     </div>
   </div>
@@ -67,7 +71,7 @@ const props = defineProps({
 });
 
 const pageTitle = computed(() => {
-  if (props.isCreate) return 'Novo RAT';
+  if (props.isCreate) return 'Criar Novo RAT';
   if (props.viewOnly) return 'Visualizar RAT';
   return 'Editar RAT';
 });

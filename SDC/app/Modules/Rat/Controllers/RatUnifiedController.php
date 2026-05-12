@@ -78,9 +78,10 @@ class RatUnifiedController extends BaseController
         ]);
     }
 
-    public function create(): Response
+    public function create(): RedirectResponse
     {
-        return Inertia::render('Rat');
+        $ocorrencia = $this->writeService->create();
+        return redirect(route('rat.edit', $ocorrencia->id) . '?new=1');
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
@@ -136,7 +137,7 @@ class RatUnifiedController extends BaseController
         ]);
     }
 
-    public function edit(string $id): Response
+    public function edit(Request $request, string $id): Response
     {
         $ocorrencia = $this->writeService->findById($id);
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
@@ -144,6 +145,7 @@ class RatUnifiedController extends BaseController
         return Inertia::render('Rat', [
             'rat'      => new RatOcorrenciaResource($ocorrencia),
             'viewOnly' => false,
+            'isCreate' => $request->boolean('new'),
         ]);
     }
 

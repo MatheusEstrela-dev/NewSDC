@@ -4,7 +4,7 @@
 
         <div class="rat-container">
           <!-- Header -->
-          <RatHeader :rat="rat" :last-update="lastUpdate" :view-only="props.viewOnly" />
+          <RatHeader :rat="rat" :last-update="lastUpdate" :view-only="props.viewOnly" :is-create="props.isCreate" />
 
           <!-- Sistema de Abas -->
           <RatTabs :active-tab="currentActiveTab" :tabs="tabConfig" @tab-change="tabs.setActiveTab">
@@ -117,6 +117,7 @@ const { show: toast } = useToast();
 const props = defineProps({
   rat:        { type: Object,  default: () => ({}) },
   viewOnly:   { type: Boolean, default: false },
+  isCreate:   { type: Boolean, default: false },
   lastUpdate: { type: String,  default: null },
 });
 
