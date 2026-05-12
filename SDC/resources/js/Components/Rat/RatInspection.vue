@@ -2,7 +2,7 @@
   <div class="animate-fade-in-up pb-6">
     <RatVistoriaSection v-model="localVistoria" :view-only="viewOnly" />
 
-    <RatFormActions :view-only="viewOnly" :loading="loading" @save="$emit('save')" />
+    <RatFormActions :view-only="viewOnly" :loading="loading" label="Salvar Vistoria" @save="$emit('save')" />
   </div>
 </template>
 

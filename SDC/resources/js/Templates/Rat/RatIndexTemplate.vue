@@ -200,6 +200,8 @@ const viewMode = ref(isMobile.value ? 'grid' : 'table'); // grid no mobile, tabl
 // Estado para confirmação de exclusão
 const showDeleteModal = ref(false);
 const deletingRatId = ref(null);
+// IDs excluídos apenas no frontend (soft-delete no banco, sem reload)
+const excludedIds = ref(new Set());
 
 watch(
   () => props.filters,
@@ -284,10 +286,14 @@ const paginationToUse = computed(() => {
 });
 
 const ratsToUse = computed(() => {
-  if (!props.useMock) return props.rats || [];
+  if (!props.useMock) {
+    return (props.rats || []).filter(r => !excludedIds.value.has(r.id));
+  }
   const p = paginationToUse.value;
   const start = (p.current_page - 1) * p.per_page;
-  return filteredRats.value.slice(start, start + p.per_page);
+  return filteredRats.value
+    .filter(r => !excludedIds.value.has(r.id))
+    .slice(start, start + p.per_page);
 });
 
 const filtersToUse = computed(() => (props.useMock ? localFilters.value : props.filters));
@@ -330,17 +336,28 @@ function handleDelete(id) {
   showDeleteModal.value = true;
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!deletingRatId.value) return;
+  const id = deletingRatId.value;
   showDeleteModal.value = false;
-  router.delete(route('rat.destroy', deletingRatId.value), {
-    onSuccess: () => { deletingRatId.value = null; },
-    onError: (errors) => {
-      console.error('Erro ao excluir RAT:', errors);
-      alert('Não foi possível excluir o RAT. Verifique suas permissões e tente novamente.');
-      deletingRatId.value = null;
-    },
-  });
+  deletingRatId.value = null;
+
+  // Remove imediatamente do frontend (soft-delete — dado permanece no banco)
+  excludedIds.value = new Set([...excludedIds.value, id]);
+
+  try {
+    const ax = window.axios || (await import('axios')).default;
+    await ax.delete(route('rat.destroy', id), {
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        'Accept': 'application/json',
+      },
+    });
+  } catch {
+    // Se falhar, restaura o item na lista
+    excludedIds.value.delete(id);
+    excludedIds.value = new Set([...excludedIds.value]);
+  }
 }
 
 // =========================

@@ -118,7 +118,11 @@ class RatResource extends JsonResource
                     'local_origem'     => $c->viatura_local_origem ?? null,
                     'local_destino'    => $c->viatura_local_destino ?? null,
                     'quantidade'       => $c->viatura_quantidade ?? null,
+                    'capacidade'       => $c->viatura_capacidade ?? null,
                     'condicao'         => ($c->viatura_condicao ?? null) === 'boa' ? 'operacional' : ($c->viatura_condicao ?? null),
+                    'operador'         => $c->viatura_operador ?? null,
+                    'contato_emergencia' => $c->viatura_contato ?? null,
+                    'observacoes'      => $c->viatura_descricao ?? null,
                     'descricao'        => $c->recurso_descricao ?? null,
                     'agentes'          => isset($c->agentes) ? collect($c->agentes)->map(fn ($a) => [
                         'id'            => is_array($a) ? ($a['id'] ?? null)            : ($a->id ?? null),

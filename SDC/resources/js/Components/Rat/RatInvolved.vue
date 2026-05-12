@@ -28,7 +28,7 @@
         Adicionar Outra Pessoa
       </button>
 
-      <RatFormActions :view-only="viewOnly" :loading="loading" @save="$emit('save')" />
+      <RatFormActions :view-only="viewOnly" :loading="loading" label="Salvar Envolvidos" @save="$emit('save')" />
     </div>
   </div>
 </template>

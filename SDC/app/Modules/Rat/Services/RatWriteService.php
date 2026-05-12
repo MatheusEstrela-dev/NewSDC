@@ -71,6 +71,10 @@ class RatWriteService
                 }
             }
 
+            if (isset($data['vistoria']) && is_array($data['vistoria']) && !empty($data['vistoria'])) {
+                $this->saveVistoria($id, RatVistoriaDTO::fromArray($data['vistoria']));
+            }
+
             if (isset($data['historico'])) {
                 $this->saveHistorico($id, RatHistoricoDTO::fromArray(['historico' => $data['historico']]));
             }
@@ -112,12 +116,54 @@ class RatWriteService
 
     public function saveDraft(string $id, array $data): RatOcorrencia
     {
-        $ocorrencia = RatOcorrencia::findOrFail($id);
-        $ocorrencia->update([
-            'status'     => 0,
-            'updated_by' => Auth::id(),
-        ]);
-        return $ocorrencia->fresh();
+        return DB::transaction(function () use ($id, $data) {
+            $userId = Auth::id();
+
+            RatOcorrencia::where('id', $id)->update([
+                'status'     => 0,
+                'updated_by' => $userId,
+            ]);
+
+            if (isset($data['dadosGerais']) || isset($data['comunicacao']) || isset($data['local']) || isset($data['endereco'])) {
+                $this->saveDadosGerais($id, RatDadosGeraisDTO::fromArray($data));
+            }
+
+            if (isset($data['recursos']) && is_array($data['recursos'])) {
+                RatRelatoRecurso::where('ocorrencia_id', $id)->delete();
+                RatOcorrenciaRelato::where('ocorrencia_id', $id)
+                    ->where('conteudo_type', RatRelatoRecurso::class)
+                    ->forceDelete();
+
+                foreach ($data['recursos'] as $index => $recursoData) {
+                    unset($recursoData['id']);
+                    $recursoData['seq'] = $recursoData['seq'] ?? ($index + 1);
+                    $this->saveRecurso($id, RatRecursoDTO::fromArray($recursoData));
+                }
+            }
+
+            if (isset($data['envolvidos']) && is_array($data['envolvidos'])) {
+                RatRelatoEnvolvidos::where('ocorrencia_id', $id)->delete();
+                RatOcorrenciaRelato::where('ocorrencia_id', $id)
+                    ->where('conteudo_type', RatRelatoEnvolvidos::class)
+                    ->forceDelete();
+
+                foreach ($data['envolvidos'] as $index => $envolvidoData) {
+                    unset($envolvidoData['id']);
+                    $envolvidoData['seq'] = $envolvidoData['seq'] ?? ($index + 1);
+                    $this->saveEnvolvido($id, RatEnvolvidoDTO::fromArray($envolvidoData));
+                }
+            }
+
+            if (isset($data['vistoria']) && !empty($data['vistoria'])) {
+                $this->saveVistoria($id, RatVistoriaDTO::fromArray($data['vistoria']));
+            }
+
+            if (isset($data['historico'])) {
+                $this->saveHistorico($id, RatHistoricoDTO::fromArray(['historico' => $data['historico']]));
+            }
+
+            return RatOcorrencia::find($id);
+        });
     }
 
     public function saveDadosGerais(string $ocorrenciaId, RatDadosGeraisDTO $dto): RatRelatoDadosGerais

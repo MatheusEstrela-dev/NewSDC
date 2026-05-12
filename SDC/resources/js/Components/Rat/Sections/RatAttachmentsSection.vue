@@ -25,11 +25,11 @@
             isDragging ? 'border-blue-500 bg-blue-500/10' : 'border-slate-700 bg-slate-950/30 hover:border-slate-500'
           ]"
         >
-          <input ref="fileInput" type="file" multiple class="hidden" @change="handleFileSelect" />
+          <input ref="fileInput" type="file" multiple class="hidden" :accept="acceptedTypes" @change="handleFileSelect" />
           <div class="flex flex-col items-center">
             <svg class="w-10 h-10 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
             <p class="text-sm font-medium text-slate-300">Arraste arquivos ou clique para selecionar</p>
-            <p class="text-xs text-slate-500 mt-1">PDF, DOC, JPG, PNG (Max 10MB)</p>
+            <p class="text-xs text-slate-500 mt-1">PDF, DOC, DOCX, XLS, XLSX, imagens (Max 20MB)</p>
           </div>
         </div>
       </div>
@@ -47,8 +47,8 @@
           <div class="flex items-center gap-3 overflow-hidden">
             <svg class="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
             <div class="truncate">
-              <div class="text-sm font-medium text-slate-200 truncate">{{ anexo.nome || anexo.name }}</div>
-              <div class="text-[10px] text-slate-500 uppercase">{{ anexo.tipo || anexo.type }}</div>
+              <div class="text-sm font-medium text-slate-200 truncate">{{ anexo.nome_original || anexo.descricao || anexo.nome || anexo.name }}</div>
+              <div class="text-[10px] text-slate-500 uppercase">{{ anexo.mime_type || anexo.categoria || anexo.tipo || anexo.type }}</div>
             </div>
           </div>
           <div class="flex items-center gap-1">
@@ -66,10 +66,11 @@
 import { ref, watch } from 'vue';
 
 const props = defineProps({
-  modelValue: { type: Object, default: () => ({ anexos: [] }) },
-  uploading: { type: Boolean, default: false },
-  uploadError: { type: String, default: null },
-  viewOnly: { type: Boolean, default: false },
+  modelValue:    { type: Object, default: () => ({ anexos: [] }) },
+  uploading:     { type: Boolean, default: false },
+  uploadError:   { type: String, default: null },
+  viewOnly:      { type: Boolean, default: false },
+  acceptedTypes: { type: String, default: '' },
 });
 
 const emit = defineEmits(['update:modelValue', 'upload-file', 'remove-file']);

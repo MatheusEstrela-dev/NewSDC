@@ -35,9 +35,8 @@
     <RatFormActions
       :view-only="viewOnly"
       :loading="loading"
-      :show-finalize="true"
+      label="Salvar Dados Gerais"
       @save="$emit('save', localData)"
-      @finalize="$emit('finalize', localData)"
     />
   </fieldset>
 </template>
@@ -67,7 +66,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['save', 'finalize', 'update:tem-vistoria', 'update:form-data']);
+const emit = defineEmits(['save', 'update:tem-vistoria', 'update:form-data']);
 
 const localData = ref({
   dadosGerais: {
