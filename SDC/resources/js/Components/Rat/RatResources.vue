@@ -15,8 +15,8 @@
       <hr v-if="index < localRecursos.length - 1" class="my-8 border-slate-200 dark:border-slate-700" />
     </div>
 
-    <!-- Controles -->
-    <div v-if="!viewOnly" class="flex flex-col items-center gap-4 mt-8">
+    <!-- Botão Adicionar -->
+    <div v-if="!viewOnly" class="flex justify-center">
       <button
         type="button"
         @click="adicionarLocal"
@@ -27,9 +27,9 @@
         </svg>
         Adicionar Outro Recurso
       </button>
-
-      <RatFormActions :view-only="viewOnly" :loading="loading" label="Salvar Recursos Empregados" @save="$emit('save')" />
     </div>
+
+    <RatFormActions :view-only="viewOnly" :loading="loading" label="Salvar Recursos Empregados" @save="$emit('save')" />
   </div>
 </template>
 
@@ -72,9 +72,9 @@ const localRecursos = ref(
         km_percorrido: '',
         local_origem: '',
         local_destino: '',
-        quantidade: '1',
+        quantidade: '',
         capacidade: '',
-        condicao: 'operacional',
+        condicao: '',
         operador: '',
         contato_emergencia: '',
         observacoes: '',
@@ -88,8 +88,8 @@ const adicionarLocal = () => {
     tipo_recurso: '',
     categoria: '',
     agentes: [],
-    condicao: 'operacional',
-    quantidade: '1'
+    condicao: '',
+    quantidade: ''
   });
 };
 

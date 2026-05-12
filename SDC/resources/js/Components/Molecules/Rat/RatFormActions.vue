@@ -1,6 +1,6 @@
 <template>
   <div v-if="!viewOnly" class="rat-actions-footer">
-    <div class="flex items-center justify-center gap-3 px-4 py-4 flex-wrap">
+    <div class="flex items-center justify-center gap-3 flex-wrap">
 
       <!-- Botão principal (label configurável por aba) -->
       <button

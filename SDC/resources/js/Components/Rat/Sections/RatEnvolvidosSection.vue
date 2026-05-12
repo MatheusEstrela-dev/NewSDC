@@ -113,7 +113,7 @@ const emit = defineEmits(['update:modelValue']);
 // localData gerencia apenas UM envolvido agora
 const localData = ref({
   id: props.modelValue?.id || Date.now(),
-  tipo_envolvimento: props.modelValue?.tipo_envolvimento || 'vitima',
+  tipo_envolvimento: props.modelValue?.tipo_envolvimento || '',
   nome: props.modelValue?.nome || '',
   rg: props.modelValue?.rg || '',
   cpf: props.modelValue?.cpf || '',

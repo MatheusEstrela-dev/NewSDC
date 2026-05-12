@@ -13,13 +13,13 @@ class RatAttachmentService
 {
     private string $disk = 'public';
 
-    public function store(object $rat, UploadedFile $file): RatAnexo
+    public function store(object $rat, UploadedFile $file, string $tipo = 'documento'): RatAnexo
     {
         $path = $file->store("rat/{$rat->id}/anexos", $this->disk);
 
         return RatAnexo::create([
             'rat_id'        => $rat->id,
-            'categoria'     => 'documento',
+            'categoria'     => $tipo,
             'nome_original' => $file->getClientOriginalName(),
             'nome_arquivo'  => basename($path),
             'mime_type'     => $file->getMimeType(),

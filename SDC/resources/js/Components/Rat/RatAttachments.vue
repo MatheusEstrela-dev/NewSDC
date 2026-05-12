@@ -26,8 +26,8 @@
     />
 
     <!-- Footer: Salvar Anexo + Finalizar RAT -->
-    <div v-if="!viewOnly" class="rat-actions-footer mt-4">
-      <div class="flex items-center justify-center gap-3 px-4 py-4 flex-wrap">
+    <div v-if="!viewOnly" class="rat-actions-footer">
+      <div class="flex items-center justify-center gap-3 flex-wrap">
         <!-- Salvar Anexo -->
         <button
           type="button"

@@ -1,8 +1,8 @@
 <template>
   <fieldset
     :disabled="viewOnly"
-    style="border: none; padding: 0; margin: 0; min-width: 0;"
-    :class="['space-y-4 sm:space-y-6 rat-form-content', viewOnly ? 'pb-10' : '']"
+    style="border: none; padding-top: 0; padding-left: 0; padding-right: 0; margin: 0; min-width: 0;"
+    :class="['space-y-4 sm:space-y-6 rat-form-content', viewOnly ? 'pb-10' : 'pb-6']"
   >
     <RatAtendimentoSection
       :model-value="localData.dadosGerais"

@@ -147,7 +147,7 @@ class RatUnifiedController extends BaseController
         ]);
     }
 
-    public function update(Request $request, string $id): RedirectResponse
+    public function update(Request $request, string $id): RedirectResponse|JsonResponse
     {
         \Illuminate\Support\Facades\DB::transaction(function () use ($request, $id) {
             if ($request->has('dadosGerais') || $request->has('comunicacao') || $request->has('local') || $request->has('endereco')) {
@@ -190,6 +190,10 @@ class RatUnifiedController extends BaseController
 
             RatOcorrencia::where('id', $id)->update(['updated_by' => Auth::id()]);
         });
+
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Ocorrência atualizada com sucesso.']);
+        }
 
         return redirect()
             ->route('rat.edit', $id)
@@ -413,7 +417,7 @@ class RatUnifiedController extends BaseController
         $rat = $this->writeService->findById($ocorrenciaId);
         abort_if(!$rat, 404, 'Ocorrência não encontrada.');
 
-        $attachment = $this->attachmentService->store($rat, $request->file('arquivo'));
+        $attachment = $this->attachmentService->store($rat, $request->file('arquivo'), $request->input('tipo', 'documento'));
 
         // Retorna o objeto diretamente para o frontend substituir o entry temporário pelo real
         return response()->json([

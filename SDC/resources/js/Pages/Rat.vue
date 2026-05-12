@@ -43,7 +43,7 @@
                   @add="handleAddEnvolvido"
                   @remove="handleRemoveEnvolvido"
                   @update="handleUpdateEnvolvidos"
-                  @save="() => saveAndAdvance({ envolvidos: envolvidosState.value }, temVistoria ? 4 : 5)"
+                  @save="() => saveAndAdvance({ envolvidos: envolvidosState.value }, temVistoria.value ? 4 : 5)"
                 />
               </div>
 
@@ -104,12 +104,15 @@ import RatInvolved from '@/Components/Rat/RatInvolved.vue';
 import RatResources from '@/Components/Rat/RatResources.vue';
 import RatTabs from '@/Components/Rat/RatTabs.vue';
 import { useRat } from '@/Composables/useRat';
+import { useToast } from '@/Composables/useToast';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import '../../css/pages/rat/rat.css';
 
 defineOptions({ layout: AuthenticatedLayout });
+
+const { show: toast } = useToast();
 
 const props = defineProps({
   rat:        { type: Object,  default: () => ({}) },
@@ -167,6 +170,20 @@ const tabConfig = computed(() => [
 
 // ─── Save-and-Advance ──────────────────────────────────────────────────────
 
+const TAB_LABELS = {
+  dadosGerais: 'Dados Gerais',
+  recursos:    'Recursos Empregados',
+  envolvidos:  'Envolvidos',
+  vistoria:    'Vistoria',
+  historico:   'Histórico',
+  anexos:      'Anexos',
+};
+
+function resolveTabLabel(payload) {
+  const key = Object.keys(TAB_LABELS).find(k => k in payload);
+  return key ? TAB_LABELS[key] : 'Dados';
+}
+
 async function saveAndAdvance(tabPayload, nextTab) {
   const ratId  = rat.value?.id;
   const axios  = window.axios || (await import('axios')).default;
@@ -176,7 +193,6 @@ async function saveAndAdvance(tabPayload, nextTab) {
   loading.value = true;
   try {
     if (!ratId) {
-      // CRIAÇÃO: POST + redireciona para edit?tab=nextTab via Inertia
       const payload = {
         ...buildDadosGeraisPayload(),
         recursos:   recursosState.value,
@@ -187,12 +203,16 @@ async function saveAndAdvance(tabPayload, nextTab) {
       };
       router.post(route('rat.store'), payload, {
         preserveScroll: false,
-        onFinish: () => { loading.value = false; },
+        onSuccess: () => toast('RAT criado com sucesso.', 'success', { noIcon: true }),
+        onError:   () => toast('Erro ao criar RAT.', 'error', { noIcon: true }),
+        onFinish:  () => { loading.value = false; },
       });
     } else {
-      // EDIÇÃO: PATCH apenas com os dados da aba atual
       const payload = { ...tabPayload };
       await axios.patch(route('rat.draft', ratId), payload, { headers });
+
+      const label = resolveTabLabel(tabPayload);
+      toast(`${label} salvos com sucesso.`, 'success', { noIcon: true });
 
       if (nextTab !== null) {
         tabs.setActiveTab(nextTab);
@@ -202,7 +222,7 @@ async function saveAndAdvance(tabPayload, nextTab) {
   } catch (err) {
     loading.value = false;
     const msg = err.response?.data?.message ?? err.message ?? 'Erro ao salvar.';
-    alert('Erro ao salvar: ' + msg);
+    toast('Erro ao salvar: ' + msg, 'error', { noIcon: true });
   }
 }
 
@@ -221,7 +241,7 @@ function buildDadosGeraisPayload() {
 async function handleFinalize() {
   const ratId = rat.value?.id;
   if (!ratId) {
-    alert('Salve o RAT antes de finalizar.');
+    toast('Salve o RAT antes de finalizar.', 'warning', { noIcon: true });
     return;
   }
   if (!confirm('Deseja finalizar este RAT? Esta ação não poderá ser desfeita.')) return;
@@ -233,10 +253,11 @@ async function handleFinalize() {
     await axios.patch(route('rat.finalize', ratId), {}, {
       headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' },
     });
+    toast('RAT finalizado com sucesso.', 'success', { noIcon: true });
     router.visit(route('rat.show', ratId));
   } catch (err) {
     loading.value = false;
-    alert('Erro ao finalizar: ' + (err.response?.data?.message ?? err.message));
+    toast('Erro ao finalizar: ' + (err.response?.data?.message ?? err.message), 'error', { noIcon: true });
   }
 }
 

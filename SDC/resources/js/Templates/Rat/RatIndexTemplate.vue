@@ -122,6 +122,7 @@ import { MESSAGES } from '@/constants/messages';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { Link, router } from '@inertiajs/vue3';
 import { useMobile } from '@/Composables/useMobile';
+import { useToast } from '@/Composables/useToast';
 import { computed, ref, watch } from 'vue';
 import RatFiltersSection from '../../Components/Organisms/Rat/Filters/RatFiltersSection.vue';
 import RatGrid from '../../Components/Organisms/Rat/Grid/RatGrid.vue';
@@ -196,6 +197,8 @@ const currentPage = ref(1);
 const localFilters = ref({ ...(props.filters || {}) });
 const { isMobile } = useMobile();
 const viewMode = ref(isMobile.value ? 'grid' : 'table'); // grid no mobile, table no desktop
+
+const { show: toast } = useToast();
 
 // Estado para confirmação de exclusão
 const showDeleteModal = ref(false);
@@ -353,10 +356,11 @@ async function confirmDelete() {
         'Accept': 'application/json',
       },
     });
+    toast('RAT excluído com sucesso.', 'success', { noIcon: true });
   } catch {
-    // Se falhar, restaura o item na lista
     excludedIds.value.delete(id);
     excludedIds.value = new Set([...excludedIds.value]);
+    toast('Erro ao excluir o RAT.', 'error', { noIcon: true });
   }
 }
 
