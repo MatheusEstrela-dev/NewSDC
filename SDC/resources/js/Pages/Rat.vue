@@ -31,7 +31,7 @@
                   @add="handleAddRecurso"
                   @remove="handleRemoveRecurso"
                   @update="handleUpdateRecurso"
-                  @save="() => saveAndAdvance({ recursos: recursosState.value }, 3)"
+                  @save="() => saveAndAdvance({ recursos: recursosState }, 3)"
                 />
               </div>
 
@@ -44,7 +44,7 @@
                   @add="handleAddEnvolvido"
                   @remove="handleRemoveEnvolvido"
                   @update="handleUpdateEnvolvidos"
-                  @save="() => saveAndAdvance({ envolvidos: envolvidosState.value }, temVistoria.value ? 4 : 5)"
+                  @save="() => saveAndAdvance({ envolvidos: envolvidosState }, temVistoria ? 4 : 5)"
                 />
               </div>
 
@@ -54,7 +54,7 @@
                   :vistoria="vistoriaState"
                   :view-only="props.viewOnly"
                   :loading="loading"
-                  @save="() => saveAndAdvance({ vistoria: vistoriaState.value }, 5)"
+                  @save="() => saveAndAdvance({ vistoria: vistoriaState }, 5)"
                   @update="handleUpdateVistoria"
                 />
               </div>
@@ -66,7 +66,7 @@
                   :view-only="props.viewOnly"
                   :loading="loading"
                   @update="handleUpdateHistorico"
-                  @save="() => saveAndAdvance({ historico: historicoEstado.value }, 6)"
+                  @save="() => saveAndAdvance({ historico: historicoEstado }, 6)"
                 />
               </div>
 
@@ -74,7 +74,7 @@
               <div v-else-if="Number(activeTab) === 6">
                 <RatAttachments
                   :rat-id="rat?.id ? String(rat.id) : null"
-                  :anexos="Array.isArray(anexosState.value) ? anexosState.value : []"
+                  :anexos="Array.isArray(anexosState) ? anexosState : []"
                   :view-only="props.viewOnly"
                   @add="handleAddAnexo"
                   @remove="handleRemoveAnexo"
