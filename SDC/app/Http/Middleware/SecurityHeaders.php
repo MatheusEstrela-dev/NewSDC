@@ -21,8 +21,9 @@ class SecurityHeaders
 
         $isLocal = app()->environment(['local', 'development']);
         $isNativePHP = env('NATIVEPHP_RUNNING') || env('NATIVE_PHP') || str_contains(strtolower(php_uname('a')), 'android');
+        $viteDevActive = $isLocal || $isNativePHP || file_exists(public_path('hot'));
 
-        $csp = $this->buildCspHeader($isLocal, $isNativePHP);
+        $csp = $this->buildCspHeader($isLocal, $isNativePHP, $viteDevActive);
 
         $response->headers->set('Content-Security-Policy', $csp);
 
@@ -33,18 +34,19 @@ class SecurityHeaders
         return $response;
     }
 
-    private function buildCspHeader(bool $isLocal, bool $isNativePHP): string
+    private function buildCspHeader(bool $isLocal, bool $isNativePHP, bool $viteDevActive): string
     {
-        // Em producao, usa cache. Em local, sempre recalcula para evitar tela branca apos rebuild
-        if (!$isLocal) {
+        // Em producao sem Vite dev, usa cache. Em local ou com hot file ativo, sempre recalcula
+        // para evitar tela branca apos rebuild ou divergencia quando o dev server liga/desliga
+        if (!$viteDevActive) {
             $cacheKey = 'csp_header_' . app()->environment() . ($isNativePHP ? '_native' : '');
-            return Cache::remember($cacheKey, 3600, fn() => $this->generateCspDirectives($isLocal, $isNativePHP));
+            return Cache::remember($cacheKey, 3600, fn() => $this->generateCspDirectives($isLocal, $isNativePHP, $viteDevActive));
         }
 
-        return $this->generateCspDirectives($isLocal, $isNativePHP);
+        return $this->generateCspDirectives($isLocal, $isNativePHP, $viteDevActive);
     }
 
-    private function generateCspDirectives(bool $isLocal, bool $isNativePHP): string
+    private function generateCspDirectives(bool $isLocal, bool $isNativePHP, bool $viteDevActive): string
     {
         $scriptSrc = [
             "'self'",
@@ -86,9 +88,10 @@ class SecurityHeaders
             "https://cdn.jsdelivr.net",
         ];
 
-        // Em ambiente local, liberamos Vite (HTTP + WebSocket) e fontes externas usadas pelo layout
+        // Quando Vite dev esta ativo (ambiente local, NativePHP ou hot file presente),
+        // liberamos Vite (HTTP + WebSocket) e fontes externas usadas pelo layout
         // para evitar tela em branco por CSP bloqueando assets.
-        if ($isLocal || $isNativePHP) {
+        if ($viteDevActive) {
             // Vite ports: internal (5173/5175), host-mapped (15175) for Docker, and HMR WS (18081)
             $vitePorts = [5173, 5175, 5176, 8081, 15175, 18081];
             $viteHosts = [];
@@ -145,7 +148,7 @@ class SecurityHeaders
         }
 
         $workerSrc = "'self' blob: data: https://cdn.jsdelivr.net";
-        if ($isLocal || $isNativePHP) {
+        if ($viteDevActive) {
             $workerSrc .= " http://localhost:8081 http://127.0.0.1:8081 http://localhost:15175 http://127.0.0.1:15175 http://localhost:5175 http://127.0.0.1:5175";
         }
 

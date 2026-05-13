@@ -302,6 +302,38 @@ return [
                 'export'   => 'inventario.emprestimos.export',
             ],
         ],
+        'ESTOQUE' => [
+            'Produtos' => [
+                'view'   => 'estoque.produtos.view',
+                'create' => 'estoque.produtos.create',
+                'edit'   => 'estoque.produtos.edit',
+                'delete' => 'estoque.produtos.delete',
+                'export' => 'estoque.produtos.export',
+            ],
+            'Lotes' => [
+                'view'   => 'estoque.lotes.view',
+                'create' => 'estoque.lotes.create',
+                'edit'   => 'estoque.lotes.edit',
+                'delete' => 'estoque.lotes.delete',
+            ],
+            'Kits' => [
+                'view'        => 'estoque.kits.view',
+                'create'      => 'estoque.kits.create',
+                'assemble'    => 'estoque.kits.assemble',
+                'disassemble' => 'estoque.kits.disassemble',
+            ],
+            'Movimentacoes' => [
+                'view'    => 'estoque.movimentacoes.view',
+                'create'  => 'estoque.movimentacoes.create',
+                'approve' => 'estoque.movimentacoes.approve',
+                'export'  => 'estoque.movimentacoes.export',
+            ],
+            'Inventarios' => [
+                'view'  => 'estoque.inventarios.view',
+                'create' => 'estoque.inventarios.create',
+                'audit'  => 'estoque.inventarios.audit',
+            ],
+        ],
     ],
 
     /*
@@ -331,6 +363,7 @@ return [
             'system.*',
             'compdec.*',
             'inventario.*',
+            'estoque.*',
         ],
         'manager' => [
             // PAE - CRUD completo exceto delete
@@ -442,6 +475,25 @@ return [
             'inventario.emprestimos.approve',
             'inventario.emprestimos.return',
             'inventario.emprestimos.export',
+            // Estoque - MVP completo exceto delete
+            'estoque.produtos.view',
+            'estoque.produtos.create',
+            'estoque.produtos.edit',
+            'estoque.produtos.export',
+            'estoque.lotes.view',
+            'estoque.lotes.create',
+            'estoque.lotes.edit',
+            'estoque.kits.view',
+            'estoque.kits.create',
+            'estoque.kits.assemble',
+            'estoque.kits.disassemble',
+            'estoque.movimentacoes.view',
+            'estoque.movimentacoes.create',
+            'estoque.movimentacoes.approve',
+            'estoque.movimentacoes.export',
+            'estoque.inventarios.view',
+            'estoque.inventarios.create',
+            'estoque.inventarios.audit',
         ],
         'analyst' => [
             // PAE - view, create, edit
@@ -520,6 +572,19 @@ return [
             'inventario.equipamentos.edit',
             'inventario.emprestimos.view',
             'inventario.emprestimos.create',
+            // Estoque - operacao sem delete/aprovacao
+            'estoque.produtos.view',
+            'estoque.produtos.create',
+            'estoque.produtos.edit',
+            'estoque.lotes.view',
+            'estoque.lotes.create',
+            'estoque.kits.view',
+            'estoque.kits.create',
+            'estoque.kits.assemble',
+            'estoque.movimentacoes.view',
+            'estoque.movimentacoes.create',
+            'estoque.inventarios.view',
+            'estoque.inventarios.create',
         ],
         'operator' => [
             // PAE - view, create
@@ -538,7 +603,7 @@ return [
             // Ajuda Humanitaria - view, create
             'humanitaria.beneficiarios.view',
             'humanitaria.beneficiarios.create',
-            // TDAP - view + create de viagens (prestador registra na operação)
+            // TDAP - view + create de viagens (prestador registra na operaÃ§Ã£o)
             'tdap.dashboard.view',
             'tdap.prestadores.view',
             'tdap.caminhoes.view',
@@ -567,6 +632,12 @@ return [
             'inventario.equipamentos.view',
             'inventario.emprestimos.view',
             'inventario.emprestimos.create',
+            // Estoque - leitura e movimentacao operacional
+            'estoque.produtos.view',
+            'estoque.lotes.view',
+            'estoque.kits.view',
+            'estoque.movimentacoes.view',
+            'estoque.movimentacoes.create',
         ],
         'viewer' => [
             // Somente visualizacao em todos os modulos
@@ -596,6 +667,10 @@ return [
             'compdec.plano.view',
             'inventario.equipamentos.view',
             'inventario.emprestimos.view',
+            'estoque.produtos.view',
+            'estoque.lotes.view',
+            'estoque.kits.view',
+            'estoque.movimentacoes.view',
         ],
         'user' => [
             // Acesso basico apenas
@@ -611,6 +686,11 @@ return [
             // Inventario - acesso inicial ao modulo
             'inventario.equipamentos.view',
             'inventario.emprestimos.view',
+            // Estoque - acesso inicial ao modulo
+            'estoque.produtos.view',
+            'estoque.lotes.view',
+            'estoque.kits.view',
+            'estoque.movimentacoes.view',
         ],
     ],
 
@@ -653,3 +733,4 @@ return [
     */
     'guard' => 'web',
 ];
+

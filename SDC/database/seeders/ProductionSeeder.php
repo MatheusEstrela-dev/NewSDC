@@ -42,7 +42,7 @@ class ProductionSeeder extends Seeder
         ]);
 
         // Atribuir role super-admin
-        $superAdminRole = Role::where('name', 'super-admin')
+        $superAdminRole = Role::where('slug', 'super-admin')
             ->where('guard_name', $guard)
             ->first();
 

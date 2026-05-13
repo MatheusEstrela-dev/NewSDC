@@ -3,11 +3,15 @@ import FlashNotification from '@/Components/Molecules/FlashNotification.vue';
 import OfflineIndicator from '@/Components/Molecules/OfflineIndicator.vue';
 import PullToRefresh from '@/Components/Molecules/PullToRefresh.vue';
 import ToastContainer from '@/Components/Atoms/Toast/ToastContainer.vue';
+import ContentAreaSkeleton from '@/Components/Molecules/Skeleton/ContentAreaSkeleton.vue';
 import NavigationHeader from '@/Components/Organisms/Navigation/NavigationHeader.vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import TopBar from '@/Components/TopBar.vue';
 import { useMobile, useSidebarMobile } from '@/Composables/useMobile';
+import { usePageLoading } from '@/Composables/usePageLoading';
 import { defineAsyncComponent, provide, ref } from 'vue';
+
+const { isPageLoading } = usePageLoading();
 
 // Modais carregados sob demanda (raramente usados, reduz bundle de ~50KB+ por página)
 const SupportModal = defineAsyncComponent(() => import('@/Components/Organisms/Suporte/SupportModal.vue'));
@@ -74,7 +78,8 @@ provide('openSidebar', openSidebar);
 
       <!-- Page Content -->
       <main class="flex-1 pt-4 bg-slate-50 dark:bg-slate-950 [overflow-x:clip] px-4 sm:px-6 lg:px-8">
-        <slot />
+        <ContentAreaSkeleton v-if="isPageLoading" />
+        <slot v-else />
       </main>
 
       <!-- Footer -->

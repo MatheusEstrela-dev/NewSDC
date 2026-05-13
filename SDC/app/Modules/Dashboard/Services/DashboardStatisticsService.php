@@ -14,9 +14,12 @@ use App\Modules\Demandas\Models\Task;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeProtocolo;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardStatisticsService
 {
+    private array $tableExistsCache = [];
+
     public function __construct(
         private readonly ProcessoStatsService             $processoStats,
         private readonly AjudaHumanitariaStatsService    $ahStats,
@@ -24,12 +27,18 @@ class DashboardStatisticsService
 
     public function getStats(): DashboardStatsDTO
     {
-        $processoStats = $this->processoStats->getStatistics();
+        if (filter_var(env('DASHBOARD_LIGHTWEIGHT', false), FILTER_VALIDATE_BOOLEAN)) {
+            return $this->getLightweightStats();
+        }
 
-        $ratAbertas         = RatOcorrencia::count();
-        $paeEmAnalise       = PaeProtocolo::where('status', PaeProtocoloStatus::ANALISE->value)->count();
+        $processoStats = $this->tableExists(Processo::class)
+            ? $this->processoStats->getStatistics()
+            : ['aprovados' => 0];
+
+        $ratAbertas         = $this->safeCount(RatOcorrencia::class);
+        $paeEmAnalise       = $this->safeCountWhere(PaeProtocolo::class, 'status', PaeProtocoloStatus::ANALISE->value);
         $decretosAprovados  = $processoStats['aprovados'];
-        $demandasConcluidas = Task::where('status', 'concluida')->count();
+        $demandasConcluidas = $this->safeCountWhere(Task::class, 'status', 'concluida');
 
         $ratTrend     = $this->calcTrend(RatOcorrencia::class);
         $paeTrend     = $this->calcTrendWithWhere(PaeProtocolo::class, 'status', PaeProtocoloStatus::ANALISE->value);
@@ -61,6 +70,10 @@ class DashboardStatisticsService
 
     private function calcTrend(string $modelClass): float
     {
+        if (!$this->tableExists($modelClass)) {
+            return 0.0;
+        }
+
         $thisMonth = $modelClass::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)->count();
         $prevMonth = $modelClass::whereMonth('created_at', now()->subMonth()->month)
@@ -75,6 +88,10 @@ class DashboardStatisticsService
 
     private function calcTrendWithWhere(string $modelClass, string $column, string $value): float
     {
+        if (!$this->tableExists($modelClass)) {
+            return 0.0;
+        }
+
         $thisMonth = $modelClass::where($column, $value)
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)->count();
@@ -91,6 +108,10 @@ class DashboardStatisticsService
 
     private function calcTrendWithLike(string $modelClass, string $column, string $value): float
     {
+        if (!$this->tableExists($modelClass)) {
+            return 0.0;
+        }
+
         $thisMonth = $modelClass::where($column, 'like', $value)
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)->count();
@@ -130,6 +151,10 @@ class DashboardStatisticsService
         $mesExpr = \App\Support\Database\PgCompat::extractDatePart('MONTH', 'created_at');
 
         foreach ($sources as $modelClass) {
+            if (!$this->tableExists($modelClass)) {
+                continue;
+            }
+
             $rows = $modelClass::selectRaw("{$anoExpr} as ano, {$mesExpr} as mes, COUNT(*) as total")
                 ->where('created_at', '>=', $inicio)
                 ->groupBy('ano', 'mes')
@@ -160,6 +185,16 @@ class DashboardStatisticsService
             $months     = 7;
             $inicio     = now()->subMonths($months - 1)->startOfMonth();
             $modelClass = $mod['model'];
+
+            if (!$this->tableExists($modelClass)) {
+                return [
+                    'name'    => $mod['name'],
+                    'value'   => 0,
+                    'trend'   => 0.0,
+                    'variant' => $mod['variant'],
+                    'data'    => array_fill(0, $months, 0),
+                ];
+            }
 
             $rows = $modelClass::selectRaw('EXTRACT(YEAR FROM created_at)::int as ano, EXTRACT(MONTH FROM created_at)::int as mes, COUNT(*) as total')
                 ->where('created_at', '>=', $inicio)
@@ -202,5 +237,70 @@ class DashboardStatisticsService
             ['name' => 'Demandas',        'value' => $demandas, 'percent' => $pct($demandas), 'color' => '#ef4444'],
             ['name' => 'Aj. Humanitaria', 'value' => $ah,       'percent' => $pct($ah),       'color' => '#8b5cf6'],
         ];
+    }
+
+    private function safeCount(string $modelClass): int
+    {
+        return $this->tableExists($modelClass) ? $modelClass::count() : 0;
+    }
+
+    private function safeCountWhere(string $modelClass, string $column, string $value): int
+    {
+        return $this->tableExists($modelClass)
+            ? $modelClass::where($column, $value)->count()
+            : 0;
+    }
+
+    private function safeCountLike(string $modelClass, string $column, string $value): int
+    {
+        return $this->tableExists($modelClass)
+            ? $modelClass::where($column, 'like', $value)->count()
+            : 0;
+    }
+
+    private function tableExists(string $modelClass): bool
+    {
+        $table = (new $modelClass())->getTable();
+
+        return $this->tableExistsCache[$table] ??= Schema::hasTable($table);
+    }
+
+    private function getLightweightStats(): DashboardStatsDTO
+    {
+        $ratAbertas         = $this->safeCount(RatOcorrencia::class);
+        $paeEmAnalise       = $this->safeCountWhere(PaeProtocolo::class, 'status', PaeProtocoloStatus::ANALISE->value);
+        $decretosAprovados  = $this->safeCountLike(Processo::class, 'reconhecimento', 'Reconhecido%');
+        $demandasConcluidas = $this->safeCountWhere(Task::class, 'status', 'concluida');
+        $ahTotal            = $this->safeCount(Auxilio::class);
+
+        return new DashboardStatsDTO(
+            ratAbertas:         $ratAbertas,
+            paeEmAnalise:       $paeEmAnalise,
+            decretosAprovados:  $decretosAprovados,
+            demandasConcluidas: $demandasConcluidas,
+            ratTrend:           0.0,
+            paeTrend:           0.0,
+            decretoTrend:       0.0,
+            demandaTrend:       0.0,
+            moduleDistribution: $this->buildDistribution($ratAbertas, $paeEmAnalise, $decretosAprovados, $demandasConcluidas, $ahTotal),
+            barData6M:          $this->emptyMonthlyData(6),
+            barData12M:         $this->emptyMonthlyData(12),
+            sparklines:         [],
+        );
+    }
+
+    private function emptyMonthlyData(int $months): array
+    {
+        $data = [];
+
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $data[] = [
+                'label' => $date->locale('pt_BR')->isoFormat('MMM'),
+                'value' => 0,
+            ];
+        }
+
+        return $data;
     }
 }

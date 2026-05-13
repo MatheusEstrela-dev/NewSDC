@@ -79,8 +79,8 @@ class UserManagementController extends Controller
             'active' => true,
         ]);
 
-        $roleNames = Role::whereIn('id', $validated['roles'])->pluck('name')->toArray();
-        $user->syncRoles($roleNames);
+        $roles = Role::whereIn('id', $validated['roles'])->get();
+        $user->syncRoles($roles);
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
@@ -164,8 +164,8 @@ class UserManagementController extends Controller
         ]);
 
         if (isset($validated['roles'])) {
-            $roleNames = Role::whereIn('id', $validated['roles'])->pluck('name')->toArray();
-            $user->syncRoles($roleNames);
+            $roles = Role::whereIn('id', $validated['roles'])->get();
+            $user->syncRoles($roles);
         }
 
         if (array_key_exists('direct_permissions', $validated)) {
@@ -186,8 +186,8 @@ class UserManagementController extends Controller
             'roles.*' => 'exists:roles,id',
         ]);
 
-        $roleNames = Role::whereIn('id', $validated['roles'])->pluck('name')->toArray();
-        $user->syncRoles($roleNames);
+        $roles = Role::whereIn('id', $validated['roles'])->get();
+        $user->syncRoles($roles);
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 

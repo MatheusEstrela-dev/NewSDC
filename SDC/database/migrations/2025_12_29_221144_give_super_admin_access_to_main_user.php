@@ -20,12 +20,15 @@ return new class extends Migration {
             $now   = now();
 
             // Cria a role via query builder (sem SoftDeletes scope)
-            $roleId = DB::table('roles')->where('name', 'super-admin')->where('guard_name', $guard)->value('id');
+            $roleId = DB::table('roles')->where('slug', 'super-admin')->where('guard_name', $guard)->value('id');
             if (!$roleId) {
                 $roleId = DB::table('roles')->insertGetId([
-                    'name'            => 'super-admin',
+                    'name'            => 'Desenvolvedor',
                     'guard_name'      => $guard,
+                    'slug'            => 'super-admin',
                     'hierarchy_level' => 0,
+                    'description'     => 'Acesso total e irrestrito ao sistema - Desenvolvimento e Manutencao',
+                    'is_active'       => true,
                     'created_at'      => $now,
                     'updated_at'      => $now,
                 ]);

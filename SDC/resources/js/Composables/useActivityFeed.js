@@ -17,7 +17,7 @@ export function useActivityFeed() {
             items.value = Array.isArray(response.data.items) ? response.data.items : [];
             updateMode.value = response.data.update_mode ?? 'polling';
         } catch (e) {
-            // silencioso - nao polui a UI com erros de rede
+            items.value = [];
         } finally {
             isLoading.value = false;
         }

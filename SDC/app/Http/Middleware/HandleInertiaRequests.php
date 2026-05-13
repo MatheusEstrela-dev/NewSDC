@@ -20,7 +20,7 @@ class HandleInertiaRequests extends Middleware
      */
     public function version(Request $request): string|null
     {
-        return parent::version($request);
+        return getenv('INERTIA_VERSION') ?: parent::version($request);
     }
 
     /**

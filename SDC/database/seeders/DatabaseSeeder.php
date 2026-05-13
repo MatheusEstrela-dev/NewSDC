@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
         );
 
         $guard = config('auth.defaults.guard', 'web');
-        $superAdminRole = \App\Models\Role::where('name', 'super-admin')
+        $superAdminRole = \App\Models\Role::where('slug', 'super-admin')
             ->where('guard_name', $guard)
             ->first();
 
