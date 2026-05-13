@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 /**
  * Seed de permissões do módulo RAT.
@@ -85,9 +85,18 @@ class RatPermissionsSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         foreach (self::PERMISSIONS as $name => $attributes) {
-            Permission::firstOrCreate(
+            Permission::updateOrCreate(
                 ['name' => $name, 'guard_name' => self::GUARD],
-                $attributes
+                [
+                    'name' => $name,
+                    'guard_name' => self::GUARD,
+                    'slug' => $name,
+                    'description' => $attributes['description'],
+                    'group' => 'protocolos',
+                    'module' => 'rat',
+                    'is_active' => true,
+                    'is_immutable' => false,
+                ]
             );
         }
 
@@ -96,15 +105,22 @@ class RatPermissionsSeeder extends Seeder
         // ------------------------------------------------------------------ //
 
         // Super Admin — acesso total (já gerenciado por Spatie via role super-admin)
-        $superAdmin = Role::where('name', 'super-admin')->first();
+        $superAdmin = Role::where('slug', 'super-admin')->where('guard_name', self::GUARD)->first();
         if ($superAdmin) {
             $superAdmin->givePermissionTo(array_keys(self::PERMISSIONS));
         }
 
         // Analista RAT — acesso operacional completo (sem delete)
-        $analista = Role::firstOrCreate(
-            ['name' => 'analista-rat', 'guard_name' => self::GUARD],
-            ['description' => 'Analista do módulo RAT com acesso operacional completo']
+        $analista = Role::updateOrCreate(
+            ['slug' => 'analista-rat', 'guard_name' => self::GUARD],
+            [
+                'name' => 'Analista RAT',
+                'slug' => 'analista-rat',
+                'guard_name' => self::GUARD,
+                'hierarchy_level' => 3,
+                'description' => 'Analista do modulo RAT com acesso operacional completo',
+                'is_active' => true,
+            ]
         );
         $analista->syncPermissions([
             'rat.protocolos.view',
@@ -118,16 +134,30 @@ class RatPermissionsSeeder extends Seeder
         ]);
 
         // Coordenador RAT — tudo incluindo delete e BI
-        $coordenador = Role::firstOrCreate(
-            ['name' => 'coordenador-rat', 'guard_name' => self::GUARD],
-            ['description' => 'Coordenador do módulo RAT com acesso gerencial']
+        $coordenador = Role::updateOrCreate(
+            ['slug' => 'coordenador-rat', 'guard_name' => self::GUARD],
+            [
+                'name' => 'Coordenador RAT',
+                'slug' => 'coordenador-rat',
+                'guard_name' => self::GUARD,
+                'hierarchy_level' => 2,
+                'description' => 'Coordenador do modulo RAT com acesso gerencial',
+                'is_active' => true,
+            ]
         );
         $coordenador->syncPermissions(array_keys(self::PERMISSIONS));
 
         // Leitor RAT — somente visualização
-        $leitor = Role::firstOrCreate(
-            ['name' => 'leitor-rat', 'guard_name' => self::GUARD],
-            ['description' => 'Acesso somente leitura ao módulo RAT']
+        $leitor = Role::updateOrCreate(
+            ['slug' => 'leitor-rat', 'guard_name' => self::GUARD],
+            [
+                'name' => 'Leitor RAT',
+                'slug' => 'leitor-rat',
+                'guard_name' => self::GUARD,
+                'hierarchy_level' => 5,
+                'description' => 'Acesso somente leitura ao modulo RAT',
+                'is_active' => true,
+            ]
         );
         $leitor->syncPermissions([
             'rat.protocolos.view',

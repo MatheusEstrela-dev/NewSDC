@@ -16,7 +16,7 @@
 #
 # Acesso:
 #   LOCAL: https://localhost:19444
-#   CLOUD: https://localhost:19443
+#   CLOUD: https://localhost:19445
 # ============================================================================
 
 name: newsdc-frankenphp-local
@@ -121,13 +121,13 @@ services:
       start_period: 30s
 
   # ==========================================================================
-  # CLOUD - FrankenPHP com Google Cloud SQL
+  # CLOUD - FrankenPHP com Azure PostgreSQL
   # Parado por default. Ativar com: --profile cloud
   # ==========================================================================
   app-cloud:
     image: newsdc-frankenphp-app:latest
-    container_name: newsdc_frankenphp
-    hostname: frankenphp
+    container_name: newsdc_app
+    hostname: frankenphp-cloud
     restart: unless-stopped
     profiles:
       - cloud
@@ -136,11 +136,14 @@ services:
       - ../../.env.prod
 
     environment:
+      # Working dir do entrypoint (compose monta tudo em /app)
+      WORKDIR: /app
+
       # Laravel
       APP_NAME: SDC
       APP_ENV: ${APP_ENV:-production}
       APP_DEBUG: ${APP_DEBUG:-false}
-      APP_URL: https://localhost:19443
+      APP_URL: https://localhost:19445
 
       # Octane - FrankenPHP
       OCTANE_SERVER: frankenphp
@@ -150,6 +153,9 @@ services:
       FRANKENPHP_WORKERS: ${FRANKENPHP_WORKERS:-8}
       FRANKENPHP_MAX_REQUESTS: ${FRANKENPHP_MAX_REQUESTS:-1000}
       PORT: 443
+      OCTANE_CADDYFILE: /etc/caddy/Caddyfile.local
+      SKIP_MIGRATIONS: "true"
+      DASHBOARD_LIGHTWEIGHT: "true"
 
       # Cache/Session (Redis compartilhado)
       CACHE_DRIVER: redis
@@ -158,15 +164,30 @@ services:
       REDIS_HOST: newsdc_redis
       REDIS_PORT: 6379
 
-      # DB usa credenciais do docker/.env (Google Cloud SQL)
+      # DB usa credenciais do .env.prod (Azure PostgreSQL)
 
     ports:
-      - "19443:443"     # HTTPS (FrankenPHP Octane + HTTP/2 + HTTP/3)
-      - "19080:80"      # HTTP redirect
-      - "2020:2019"     # Caddy Admin API
+      - "19445:443"     # HTTPS (FrankenPHP Octane + HTTP/2 + HTTP/3)
+      - "19082:80"      # HTTP redirect
+      - "2022:2019"     # Caddy Admin API
 
     volumes:
+      - ../../app:/app/app
+      - ../../core:/app/core
+      - ../../routes:/app/routes
+      - ../../config:/app/config
+      - ../../database/migrations:/app/database/migrations
+      - ../../database/factories:/app/database/factories
+      - ../../database/seeders:/app/database/seeders
+      - ../../tests:/app/tests
       - ../storage/logs:/app/storage/logs
+      - ../../public:/app/public
+      - ../../resources:/app/resources
+      - ../../composer.json:/app/composer.json
+      - ../../composer.lock:/app/composer.lock
+      - ../../vendor:/app/vendor
+      - ./scripts/entrypoint.sh:/start.sh:ro
+      - ./Caddyfile.local:/etc/caddy/Caddyfile.local:ro
 
     networks:
       - sdc_network

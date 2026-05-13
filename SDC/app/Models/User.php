@@ -24,6 +24,56 @@ class User extends Authenticatable
      */
     protected $guard_name = 'web';
 
+    /**
+     * Spatie usa roles.name como identificador, mas o NewSDC guarda o codigo
+     * estavel em roles.slug e o nome de exibicao em roles.name.
+     */
+    public function hasRole($roles, ?string $guard = null): bool
+    {
+        $this->loadMissing('roles');
+
+        if (is_string($roles) && str_contains($roles, '|')) {
+            $roles = explode('|', $roles);
+        }
+
+        if ($roles instanceof \BackedEnum) {
+            $roles = $roles->value;
+        }
+
+        if (is_int($roles) || (is_string($roles) && ctype_digit($roles))) {
+            return $this->roles
+                ->when($guard, fn ($q) => $q->where('guard_name', $guard))
+                ->contains('id', (int) $roles);
+        }
+
+        if (is_string($roles)) {
+            return $this->roles
+                ->when($guard, fn ($q) => $q->where('guard_name', $guard))
+                ->contains(fn ($role) => $role->name === $roles || $role->slug === $roles);
+        }
+
+        if ($roles instanceof Role) {
+            return $this->roles->contains($roles->getKeyName(), $roles->getKey());
+        }
+
+        if (is_array($roles) || $roles instanceof \Illuminate\Support\Collection) {
+            foreach ($roles as $role) {
+                if ($this->hasRole($role, $guard)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        throw new \TypeError('Unsupported type for $roles parameter to hasRole().');
+    }
+
+    public function hasAnyRole(...$roles): bool
+    {
+        return $this->hasRole($roles);
+    }
+
 
 
     /**

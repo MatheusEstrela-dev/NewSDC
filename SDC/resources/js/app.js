@@ -6,6 +6,37 @@ import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
+import { startLoading, stopLoading } from '@/Composables/usePageLoading';
+
+const isSamePagePath = (url) => {
+    if (!url || typeof window === 'undefined') return false;
+    try {
+        const parsed = url instanceof URL ? url : new URL(url, window.location.origin);
+        return parsed.pathname === window.location.pathname;
+    } catch {
+        return false;
+    }
+};
+
+const isUserFacingNavigation = (visit) => {
+    if (!visit || visit.method !== 'get') return false;
+    if (visit.prefetch) return false;
+    if (visit.only?.length > 0 || visit.except?.length > 0) return false;
+    if (visit.async) return false;
+    if (isSamePagePath(visit.url)) return false;
+    return true;
+};
+
+router.on('start', (event) => {
+    if (isUserFacingNavigation(event.detail?.visit)) {
+        startLoading();
+    }
+});
+router.on('finish', (event) => {
+    if (isUserFacingNavigation(event.detail?.visit)) {
+        stopLoading();
+    }
+});
 
 const loadPageCSS = (pageName) => {
     const cssMap = {

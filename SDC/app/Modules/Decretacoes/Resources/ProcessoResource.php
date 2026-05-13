@@ -104,7 +104,7 @@ class ProcessoResource extends JsonResource
             // Relacionamentos - sempre incluidos (Model tem $with)
             'municipios' => $this->mapMunicipios(),
             'desastres' => $this->mapDesastres(),
-            'municipios_count' => $this->municipios ? $this->municipios->count() : 0,
+            'municipios_count' => count($this->mapMunicipios()),
 
             // Timestamps
             'created_at' => $this->created_at?->toIso8601String(),
@@ -312,7 +312,9 @@ class ProcessoResource extends JsonResource
     protected function getFirstMunicipioId(): ?int
     {
         try {
-            return $this->municipios->first()?->id;
+            $municipios = $this->mapMunicipios();
+
+            return !empty($municipios) ? (int) $municipios[0]['id'] : null;
         } catch (\Throwable) {
             return null;
         }
@@ -328,6 +330,16 @@ class ProcessoResource extends JsonResource
     protected function mapMunicipios(): array
     {
         try {
+            $preloadedMunicipios = $this->resource->getAttribute('_municipios');
+
+            if (is_array($preloadedMunicipios) && !empty($preloadedMunicipios)) {
+                return array_values(array_map(fn($m) => [
+                    'id' => $m['id'] ?? null,
+                    'nome' => $m['nome'] ?? null,
+                    'codigo_ibge' => $m['codigo_ibge'] ?? null,
+                ], $preloadedMunicipios));
+            }
+
             return $this->municipios->map(fn($m) => [
                 'id' => $m->id,
                 'nome' => $m->nome,

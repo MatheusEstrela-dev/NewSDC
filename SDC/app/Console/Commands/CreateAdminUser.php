@@ -88,7 +88,7 @@ class CreateAdminUser extends Command
 
         // Atribuir role super-admin
         $guard = config('auth.defaults.guard', 'web');
-        $superAdminRole = Role::where('name', 'super-admin')
+        $superAdminRole = Role::where('slug', 'super-admin')
             ->where('guard_name', $guard)
             ->first();
 

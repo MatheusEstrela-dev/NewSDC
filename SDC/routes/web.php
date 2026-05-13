@@ -124,6 +124,9 @@ Route::middleware('auth')->group(function () {
     // Modulo: Inventario
     require __DIR__ . '/modules/inventario.php';
 
+    // Modulo: Estoque
+    require __DIR__ . '/modules/estoque.php';
+
     if (file_exists(__DIR__ . '/modules/cisterna.php')) {
         require __DIR__ . '/modules/cisterna.php';
     }

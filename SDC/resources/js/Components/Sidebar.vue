@@ -372,16 +372,6 @@
         >
           Movimentacoes
         </NavItem>
-        <NavItem
-          v-if="_routes.hasEstoqueExportExcel && canSeeEstoqueExport"
-          :href="route('estoque.export-excel')"
-          :active="isRouteActive('estoque.export-excel')"
-          icon="dot"
-          is-submenu
-          :collapsed="isCollapsed"
-        >
-          Export Excel
-        </NavItem>
       </div>
     </nav>
     <!-- SUBMENU VIEW: TDAP -->

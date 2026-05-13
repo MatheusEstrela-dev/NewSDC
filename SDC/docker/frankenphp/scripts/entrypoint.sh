@@ -87,6 +87,13 @@ fi
 # Garantir estrutura de diretorios do Laravel
 mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions bootstrap/cache
 
+# Em producao, nunca usar o hot file do Vite local. Se public/hot existir,
+# o Laravel injeta scripts de localhost:8081 e a CSP bloqueia a tela.
+if [ "${APP_ENV:-production}" = "production" ] && [ -f public/hot ]; then
+    echo "Removendo public/hot para usar assets buildados em producao..."
+    rm -f public/hot
+fi
+
 # Limpar bootstrap cache via filesystem ANTES de qualquer comando artisan.
 # Se o config.php cacheado tiver APP_KEY vazia, o EncryptionServiceProvider falha
 # e impede o HashServiceProvider de ser registrado, quebrando todos os comandos
@@ -109,7 +116,9 @@ fi
 php artisan package:discover --ansi 2>&1 || true
 
 # Migrations (ignorar erros) - apenas se DB disponivel
-if [ "$DB_READY" = "true" ] || [ -z "$DB_HOST" ] || [ "$DB_HOST" = "localhost" ]; then
+if [ "${SKIP_MIGRATIONS:-false}" = "true" ]; then
+    echo "Pulando migrations (SKIP_MIGRATIONS=true)"
+elif [ "$DB_READY" = "true" ] || [ -z "$DB_HOST" ] || [ "$DB_HOST" = "localhost" ]; then
     echo "Executando migrations..."
     set +e
     php artisan migrate --force 2>&1
