@@ -29,7 +29,7 @@
       </button>
     </div>
 
-    <RatFormActions :view-only="viewOnly" :loading="loading" label="Salvar Envolvidos" @save="$emit('save')" />
+    <RatFormActions :view-only="viewOnly" :loading="loading" label="Salvar Envolvidos" @save="handleSave" />
   </div>
 </template>
 
@@ -80,6 +80,11 @@ const adicionarLocal = () => {
 
 const removerLocal = (index) => {
   localEnvolvidos.value.splice(index, 1);
+};
+
+const handleSave = () => {
+  emit('update', [...localEnvolvidos.value]);
+  emit('save');
 };
 
 // Watch para emitir mudanças do localEnvolvidos para o pai apenas se houver mudança real

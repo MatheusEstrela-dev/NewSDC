@@ -29,7 +29,7 @@
       </button>
     </div>
 
-    <RatFormActions :view-only="viewOnly" :loading="loading" label="Salvar Recursos Empregados" @save="$emit('save')" />
+    <RatFormActions :view-only="viewOnly" :loading="loading" label="Salvar Recursos Empregados" @save="handleSave" />
   </div>
 </template>
 
@@ -95,6 +95,11 @@ const adicionarLocal = () => {
 
 const removerLocal = (index) => {
   localRecursos.value.splice(index, 1);
+};
+
+const handleSave = () => {
+  emit('update', [...localRecursos.value]);
+  emit('save');
 };
 
 // Watch para emitir mudanças do localRecursos para o pai apenas se houver mudança real

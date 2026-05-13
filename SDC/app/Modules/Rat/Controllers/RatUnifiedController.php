@@ -213,7 +213,7 @@ class RatUnifiedController extends BaseController
         try {
             RatOcorrencia::findOrFail($id)->delete();
         } catch (\Throwable $e) {
-            \Log::error('Erro ao excluir RAT', ['id' => $id, 'error' => $e->getMessage()]);
+            Log::error('Erro ao excluir RAT', ['id' => $id, 'error' => $e->getMessage()]);
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'Erro ao excluir: ' . $e->getMessage()], 500);
             }
@@ -244,7 +244,15 @@ class RatUnifiedController extends BaseController
 
     public function draft(Request $request, string $id): RedirectResponse|JsonResponse
     {
-        $this->writeService->saveDraft($id, $request->all());
+        try {
+            $this->writeService->saveDraft($id, $request->all());
+        } catch (\Throwable $e) {
+            Log::error('Erro ao salvar rascunho RAT', ['id' => $id, 'error' => $e->getMessage()]);
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Erro ao salvar: ' . $e->getMessage()], 500);
+            }
+            return redirect()->route('rat.edit', $id)->with('error', 'Erro ao salvar rascunho.');
+        }
 
         if ($request->expectsJson() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'Rascunho salvo com sucesso!']);
