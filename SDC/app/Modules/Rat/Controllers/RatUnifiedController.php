@@ -60,6 +60,7 @@ class RatUnifiedController extends BaseController
 
     public function index(Request $request): Response
     {
+
         $rats = RatOcorrencia::with(['relatosMorph.conteudo'])
             ->orderByDesc('created_at')
             ->paginate(15);
@@ -78,10 +79,16 @@ class RatUnifiedController extends BaseController
         ]);
     }
 
-    public function create(): RedirectResponse
+    public function create(): Response
     {
         $ocorrencia = $this->writeService->create();
-        return redirect(route('rat.edit', $ocorrencia->id) . '?new=1');
+        $loaded     = $this->writeService->findById((string) $ocorrencia->id);
+
+        return Inertia::render('Rat', [
+            'rat'      => (new RatOcorrenciaResource($loaded))->resolve(),
+            'viewOnly' => false,
+            'isCreate' => true,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
@@ -132,20 +139,19 @@ class RatUnifiedController extends BaseController
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
         return Inertia::render('Rat', [
-            'rat'      => new RatOcorrenciaResource($ocorrencia),
+            'rat'      => (new RatOcorrenciaResource($ocorrencia))->resolve(),
             'viewOnly' => true,
         ]);
     }
 
-    public function edit(Request $request, string $id): Response
+    public function edit(string $id): Response
     {
         $ocorrencia = $this->writeService->findById($id);
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
         return Inertia::render('Rat', [
-            'rat'      => new RatOcorrenciaResource($ocorrencia),
+            'rat'      => (new RatOcorrenciaResource($ocorrencia))->resolve(),
             'viewOnly' => false,
-            'isCreate' => $request->boolean('new'),
         ]);
     }
 
@@ -204,7 +210,15 @@ class RatUnifiedController extends BaseController
 
     public function destroy(Request $request, string $id): RedirectResponse|JsonResponse
     {
-        RatOcorrencia::findOrFail($id)->delete();
+        try {
+            RatOcorrencia::findOrFail($id)->delete();
+        } catch (\Throwable $e) {
+            \Log::error('Erro ao excluir RAT', ['id' => $id, 'error' => $e->getMessage()]);
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Erro ao excluir: ' . $e->getMessage()], 500);
+            }
+            return redirect()->route('rat.index')->with('error', 'Erro ao excluir RAT.');
+        }
 
         if ($request->expectsJson() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'Ocorrência excluída com sucesso.']);

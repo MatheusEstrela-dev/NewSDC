@@ -47,14 +47,14 @@ return new class extends Migration
                 $table->timestamps();
 
                 // Índices
-                $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencias')->onDelete('cascade');
                 $table->foreign('usuario_id')->references('id')->on('users')->onDelete('restrict');
             });
         } else {
             Schema::table('rat_relato_dados_gerais', function (Blueprint $table) {
                 if (!Schema::hasColumn('rat_relato_dados_gerais', 'ocorrencia_id')) {
                     $table->unsignedBigInteger('ocorrencia_id')->nullable()->after('id');
-                    $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                    $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencias')->onDelete('cascade');
                 }
                 if (!Schema::hasColumn('rat_relato_dados_gerais', 'descricao')) {
                     $table->longText('descricao')->nullable()->after('orgao_responsavel');
@@ -110,7 +110,7 @@ return new class extends Migration
                 $table->timestamp('updated_at')->useCurrent();
 
                 // Índices
-                $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencias')->onDelete('cascade');
                 $table->foreign('usuario_id')->references('id')->on('users')->onDelete('restrict');
                 $table->index(['ocorrencia_id', 'tipo_envolvimento']);
             });
@@ -118,7 +118,7 @@ return new class extends Migration
             Schema::table('rat_relato_envolvidos', function (Blueprint $table) {
                 if (!Schema::hasColumn('rat_relato_envolvidos', 'ocorrencia_id')) {
                     $table->unsignedBigInteger('ocorrencia_id')->nullable()->after('id');
-                    $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                    $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencias')->onDelete('cascade');
                 }
             });
         }
@@ -154,7 +154,7 @@ return new class extends Migration
                 $table->timestamp('updated_at')->useCurrent();
 
                 // Índices
-                $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencias')->onDelete('cascade');
                 $table->foreign('usuario_id')->references('id')->on('users')->onDelete('restrict');
                 $table->index(['ocorrencia_id', 'tipo_recurso']);
             });
@@ -162,7 +162,7 @@ return new class extends Migration
             Schema::table('rat_relato_recursos', function (Blueprint $table) {
                 if (!Schema::hasColumn('rat_relato_recursos', 'ocorrencia_id')) {
                     $table->unsignedBigInteger('ocorrencia_id')->nullable()->after('id');
-                    $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                    $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencias')->onDelete('cascade');
                 }
             });
         }
@@ -194,14 +194,14 @@ return new class extends Migration
                 $table->timestamp('updated_at')->useCurrent();
 
                 // Índices
-                $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencias')->onDelete('cascade');
                 $table->foreign('usuario_id')->references('id')->on('users')->onDelete('restrict');
             });
         } else {
             Schema::table('rat_relato_vistorias', function (Blueprint $table) {
                 if (!Schema::hasColumn('rat_relato_vistorias', 'ocorrencia_id')) {
                     $table->unsignedBigInteger('ocorrencia_id')->nullable()->after('id');
-                    $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                    $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencias')->onDelete('cascade');
                 }
             });
         }
@@ -224,7 +224,7 @@ return new class extends Migration
                 $table->timestamp('created_at')->useCurrent();
 
                 // Índices
-                $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencia_relatos')->onDelete('cascade');
+                $table->foreign('ocorrencia_id')->references('id')->on('rat_ocorrencias')->onDelete('cascade');
                 $table->foreign('usuario_id')->references('id')->on('users')->onDelete('restrict');
                 $table->index(['ocorrencia_id', 'created_at']);
             });
