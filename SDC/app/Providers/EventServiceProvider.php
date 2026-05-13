@@ -2,93 +2,83 @@
 
 namespace App\Providers;
 
+use App\Listeners\PermissionEventSubscriber;
+use App\Models\Role;
+use App\Models\User;
+use App\Observers\RoleObserver;
+use App\Observers\UserObserver;
+use App\Services\Logging\ActivityLogger;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
-use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
 {
-    /**
-     * The event to listener mappings for the application.
-     *
-     * @var array<class-string, array<int, class-string>>
-     */
-    protected $listen = [
-        Registered::class => [
-            SendEmailVerificationNotification::class,
-        ],
-    ];
-
-    /**
-     * The subscriber classes to register.
-     *
-     * @var array<int, class-string>
-     */
-    protected $subscribe = [
-        \App\Listeners\PermissionEventSubscriber::class,
-    ];
-
-    /**
-     * Register any events for your application.
-     */
     public function boot(): void
     {
-        \App\Models\User::observe(\App\Observers\UserObserver::class);
-        \App\Models\Role::observe(\App\Observers\RoleObserver::class);
+        User::observe(UserObserver::class);
+        Role::observe(RoleObserver::class);
 
-        // Log jobs falhados automaticamente
-        \Queue::failing(function (\Illuminate\Queue\Events\JobFailed $event) {
-            \Log::channel('jobs')->error('Job failed', [
-                'job' => $event->job->resolveName(),
+        Event::listen(Registered::class, SendEmailVerificationNotification::class);
+
+        Event::subscribe(PermissionEventSubscriber::class);
+
+        Event::listen(JobFailed::class, function (JobFailed $event) {
+            Log::channel('jobs')->error('Job failed', [
+                'job'        => $event->job->resolveName(),
                 'connection' => $event->connectionName,
-                'queue' => $event->job->getQueue(),
-                'exception' => $event->exception->getMessage(),
-                'trace' => $event->exception->getTraceAsString(),
+                'queue'      => $event->job->getQueue(),
+                'exception'  => $event->exception->getMessage(),
+                'trace'      => $event->exception->getTraceAsString(),
             ]);
 
-            \App\Services\Logging\ActivityLogger::logCriticalError(
-                message: 'Queue job failed: ' . $event->job->resolveName(),
+            ActivityLogger::logCriticalError(
+                message:   'Queue job failed: ' . $event->job->resolveName(),
                 exception: $event->exception,
-                context: [
-                    'queue' => $event->job->getQueue(),
+                context:   [
+                    'queue'      => $event->job->getQueue(),
                     'connection' => $event->connectionName,
-                    'attempts' => method_exists($event->job, 'attempts') ? $event->job->attempts() : 0,
+                    'attempts'   => method_exists($event->job, 'attempts') ? $event->job->attempts() : 0,
                 ]
             );
         });
 
-        // Log jobs processados com sucesso (para métricas)
-        \Queue::after(function (\Illuminate\Queue\Events\JobProcessed $event) {
-            \App\Services\Logging\ActivityLogger::logEvent(
-                type: 'jobs',
+        Event::listen(JobProcessed::class, function (JobProcessed $event) {
+            ActivityLogger::logEvent(
+                type:  'jobs',
                 event: 'processed',
-                data: [
-                    'job' => $event->job->resolveName(),
+                data:  [
+                    'job'        => $event->job->resolveName(),
                     'connection' => $event->connectionName,
-                    'queue' => $event->job->getQueue(),
+                    'queue'      => $event->job->getQueue(),
                 ],
                 level: 'info'
             );
         });
 
-        // Log tentativas de login
-        Event::listen('Illuminate\Auth\Events\Login', function ($event) {
-            \App\Services\Logging\ActivityLogger::logSecurity(
-                event: 'login_success',
-                data: [
+        Event::listen(Login::class, function (Login $event) {
+            ActivityLogger::logSecurity(
+                event:    'login_success',
+                data:     [
                     'user_id' => $event->user->id,
-                    'email' => $event->user->email,
-                    'guard' => $event->guard,
+                    'email'   => $event->user->email,
+                    'guard'   => $event->guard,
                 ],
                 severity: 'info'
             );
         });
 
-        Event::listen('Illuminate\Auth\Events\Failed', function ($event) {
-            \App\Services\Logging\ActivityLogger::logSecurity(
-                event: 'login_failed',
-                data: [
+        Event::listen(Failed::class, function (Failed $event) {
+            ActivityLogger::logSecurity(
+                event:    'login_failed',
+                data:     [
                     'email' => $event->credentials['email'] ?? 'unknown',
                     'guard' => $event->guard ?? 'web',
                 ],
@@ -96,24 +86,16 @@ class EventServiceProvider extends ServiceProvider
             );
         });
 
-        Event::listen('Illuminate\Auth\Events\Logout', function ($event) {
-            \App\Services\Logging\ActivityLogger::logSecurity(
-                event: 'logout',
-                data: [
+        Event::listen(Logout::class, function (Logout $event) {
+            ActivityLogger::logSecurity(
+                event:    'logout',
+                data:     [
                     'user_id' => $event->user->id,
-                    'email' => $event->user->email,
-                    'guard' => $event->guard,
+                    'email'   => $event->user->email,
+                    'guard'   => $event->guard,
                 ],
                 severity: 'info'
             );
         });
-    }
-
-    /**
-     * Determine if events and listeners should be automatically discovered.
-     */
-    public function shouldDiscoverEvents(): bool
-    {
-        return false;
     }
 }

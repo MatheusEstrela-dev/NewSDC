@@ -27,14 +27,18 @@ const isUserFacingNavigation = (visit) => {
     return true;
 };
 
+let userFacingNavPending = false;
+
 router.on('start', (event) => {
     if (isUserFacingNavigation(event.detail?.visit)) {
         startLoading();
+        userFacingNavPending = true;
     }
 });
-router.on('finish', (event) => {
-    if (isUserFacingNavigation(event.detail?.visit)) {
+router.on('finish', () => {
+    if (userFacingNavPending) {
         stopLoading();
+        userFacingNavPending = false;
     }
 });
 

@@ -81,11 +81,8 @@ class RatUnifiedController extends BaseController
 
     public function create(): Response
     {
-        $ocorrencia = $this->writeService->create();
-        $loaded     = $this->writeService->findById((string) $ocorrencia->id);
-
         return Inertia::render('Rat', [
-            'rat'      => (new RatOcorrenciaResource($loaded))->resolve(),
+            'rat'      => null,
             'viewOnly' => false,
             'isCreate' => true,
         ]);

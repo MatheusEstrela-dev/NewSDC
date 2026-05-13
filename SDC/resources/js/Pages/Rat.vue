@@ -109,14 +109,13 @@ import { useToast } from '@/Composables/useToast';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
-import '../../css/pages/rat/rat.css';
 
 defineOptions({ layout: AuthenticatedLayout });
 
 const { show: toast } = useToast();
 
 const props = defineProps({
-  rat:        { type: Object,  default: () => ({}) },
+  rat:        { type: Object,  default: null },
   viewOnly:   { type: Boolean, default: false },
   isCreate:   { type: Boolean, default: false },
   lastUpdate: { type: String,  default: null },
@@ -142,13 +141,13 @@ const {
   loading,
   tabs,
 } = useRat({
-  rat:       props.rat,
-  recursos:  props.rat?.recursos  ?? [],
+  rat:        props.rat ?? null,
+  recursos:   props.rat?.recursos   ?? [],
   envolvidos: props.rat?.envolvidos ?? [],
-  vistoria:  props.rat?.vistoria   ?? {},
-  historico: props.rat?.historico  ?? [],
-  anexos:    props.rat?.anexos     ?? [],
-  activeTab: initialTab,
+  vistoria:   props.rat?.vistoria   ?? {},
+  historico:  props.rat?.historico  ?? [],
+  anexos:     props.rat?.anexos     ?? [],
+  activeTab:  initialTab,
 });
 
 const rat = computed(() => (props.rat?.id ? props.rat : ratState.value) ?? { id: null, status: 'rascunho' });
