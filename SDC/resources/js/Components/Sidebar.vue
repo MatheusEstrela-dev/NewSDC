@@ -179,6 +179,31 @@
           </svg>
         </button>
 
+        <!-- ESTOQUE - drill-down (abre submenu como nova seccao) -->
+        <button
+          v-if="canSeeEstoque"
+          @click="openSubmenu('estoque')"
+          class="nav-group-toggle nav-drilldown"
+          :class="{ 'is-active-route': isRouteActive('estoque.*') }"
+          :title="isCollapsed ? 'Estoque' : ''"
+        >
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7.5l8-4.5 8 4.5-8 4.5-8-4.5z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7.5v9l8 4.5 8-4.5v-9" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12v9M8 9.75v4.5m8-4.5v4.5" />
+          </svg>
+          <span v-show="!isCollapsed">Estoque</span>
+          <svg
+            v-show="!isCollapsed"
+            class="nav-arrow nav-arrow-drill"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
         <NavItem
           v-if="canSeeCisterna && _routes.hasCisterna"
           :href="route('cisternas.index')"
@@ -240,12 +265,23 @@
 
         <!-- Permissionamento - Link direto sem submenu -->
         <NavItem
+          v-if="canSeePermissionamento"
           :href="permissionamentoHref"
           :active="isRouteActive('admin.permissions.*')"
           icon="lock"
           :collapsed="isCollapsed"
         >
           Permissionamento
+        </NavItem>
+
+        <NavItem
+          v-if="canSeeInventario && _routes.hasInventario"
+          :href="route('inventario.index')"
+          :active="isRouteActive('inventario.*')"
+          icon="inventory"
+          :collapsed="isCollapsed"
+        >
+          Inventario
         </NavItem>
 
         <NavItem
@@ -276,6 +312,78 @@
 
     </nav>
 
+    <!-- SUBMENU VIEW: ESTOQUE -->
+    <nav
+      v-if="canSeeEstoque"
+      class="sidebar-nav sidebar-view sidebar-view-submenu"
+      :class="{ 'is-active': activeSubmenu === 'estoque' }"
+      :inert="activeSubmenu !== 'estoque'"
+    >
+      <button
+        type="button"
+        class="submenu-back"
+        @click="closeSubmenu"
+        v-show="!isCollapsed"
+      >
+        <svg class="submenu-back-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span class="submenu-back-title">{{ submenuTitle || 'Estoque' }}</span>
+      </button>
+
+      <div class="nav-section">
+        <NavItem
+          v-if="_routes.hasEstoque"
+          :href="route('estoque.index')"
+          :active="isRouteActive('estoque.index')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Dashboard
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasEstoqueProdutos"
+          :href="route('estoque.produtos.index')"
+          :active="isRouteActive('estoque.produtos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Produtos e Lotes
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasEstoqueKits"
+          :href="route('estoque.kits.index')"
+          :active="isRouteActive('estoque.kits.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Kits
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasEstoqueMovimentacoes"
+          :href="route('estoque.movimentacoes.index')"
+          :active="isRouteActive('estoque.movimentacoes.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Movimentacoes
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasEstoqueExportExcel && canSeeEstoqueExport"
+          :href="route('estoque.export-excel')"
+          :active="isRouteActive('estoque.export-excel')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Export Excel
+        </NavItem>
+      </div>
+    </nav>
     <!-- SUBMENU VIEW: TDAP -->
     <nav
       v-if="canSeeTdap"
@@ -307,35 +415,26 @@
           Dashboard
         </NavItem>
         <NavItem
-          v-if="_routes.hasTdapProducts"
-          :href="route('tdap.products.index')"
-          :active="isRouteActive('tdap.products.*')"
+          v-if="_routes.hasTdapPrestadores"
+          :href="route('tdap.prestadores.index')"
+          :active="isRouteActive('tdap.prestadores.*')"
           icon="dot"
           is-submenu
           :collapsed="isCollapsed"
         >
-          Produtos
+          Prestadores
         </NavItem>
         <NavItem
-          v-if="_routes.hasTdapRecebimentos"
-          :href="route('tdap.recebimentos.index')"
-          :active="isRouteActive('tdap.recebimentos.*')"
+          v-if="_routes.hasTdapCaminhoes"
+          :href="route('tdap.caminhoes.index')"
+          :active="isRouteActive('tdap.caminhoes.*')"
           icon="dot"
           is-submenu
           :collapsed="isCollapsed"
         >
-          Recebimentos
+          Caminhões
         </NavItem>
-        <NavItem
-          v-if="_routes.hasTdapMovimentacoes"
-          :href="route('tdap.movimentacoes.index')"
-          :active="isRouteActive('tdap.movimentacoes.*')"
-          icon="dot"
-          is-submenu
-          :collapsed="isCollapsed"
-        >
-          Movimentações
-        </NavItem>
+        <!-- Itens (Atas, Lotes, Cronogramas, Vistorias, Historico) entram a partir da Fase 2 -->
       </div>
     </nav>
 
@@ -371,7 +470,7 @@ const closeSidebar = inject('closeSidebar', () => {});
 const page = usePage();
 
 // ============================================================================
-// Verificação de rotas existentes — estáticas, calculadas 1x (rotas não mudam)
+// Verificação de rotas existentes — estáticas, calculadas 1x (rotas não mudam)
 // ============================================================================
 const _routes = {
   hasRat: route().has('rat.index') || route().has('rat.create'),
@@ -382,17 +481,21 @@ const _routes = {
   hasHumanitaria: route().has('ajuda-humanitaria.beneficiarios.index'),
   hasCompdec: route().has('compdec.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
-  hasTdapProducts: route().has('tdap.products.index'),
-  hasTdapRecebimentos: route().has('tdap.recebimentos.index'),
-  hasTdapMovimentacoes: route().has('tdap.movimentacoes.index'),
+  hasTdapPrestadores: route().has('tdap.prestadores.index'),
+  hasTdapCaminhoes: route().has('tdap.caminhoes.index'),
   hasCisterna: route().has('cisternas.index'),
+  hasInventario: route().has('inventario.index'),
+  hasEstoque: route().has('estoque.index'),
+  hasEstoqueProdutos: route().has('estoque.produtos.index'),
+  hasEstoqueKits: route().has('estoque.kits.index'),
+  hasEstoqueMovimentacoes: route().has('estoque.movimentacoes.index'),
   hasTreinamentos: route().has('treinamentos.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
 };
 
 // ============================================================================
-// Rotas ativas — recalculadas 1x por navegação em um único computed
+// Rotas ativas — recalculadas 1x por navegação em um único computed
 // (em vez de 15+ chamadas individuais route().current() no template)
 // ============================================================================
 const _activeRoutes = computed(() => {
@@ -408,10 +511,15 @@ const _activeRoutes = computed(() => {
     'compdec.*': route().current('compdec.*'),
     'tdap.*': route().current('tdap.*'),
     'tdap.dashboard': route().current('tdap.dashboard'),
-    'tdap.products.*': route().current('tdap.products.*'),
-    'tdap.recebimentos.*': route().current('tdap.recebimentos.*'),
-    'tdap.movimentacoes.*': route().current('tdap.movimentacoes.*'),
+    'tdap.prestadores.*': route().current('tdap.prestadores.*'),
+    'tdap.caminhoes.*': route().current('tdap.caminhoes.*'),
     'cisternas.*': route().current('cisternas.*'),
+    'inventario.*': route().current('inventario.*'),
+    'estoque.*': route().current('estoque.*'),
+    'estoque.index': route().current('estoque.index'),
+    'estoque.produtos.*': route().current('estoque.produtos.*'),
+    'estoque.kits.*': route().current('estoque.kits.*'),
+    'estoque.movimentacoes.*': route().current('estoque.movimentacoes.*'),
     'treinamentos.*': route().current('treinamentos.*'),
     'plancon.*': route().current('plancon.*'),
     'inmet.*': route().current('inmet.*'),
@@ -423,7 +531,7 @@ const _activeRoutes = computed(() => {
 const isRouteActive = (pattern) => _activeRoutes.value[pattern] ?? false;
 
 // ============================================================================
-// Cache estável de permissões — não re-executa em cada navegação.
+// Cache estável de permissões — não re-executa em cada navegação.
 // Atualiza apenas quando o ID do usuário muda (login/logout).
 // ============================================================================
 const _permSet = shallowRef(new Set(page.props?.auth?.user?.permissions ?? []));
@@ -488,9 +596,9 @@ const canSeeOrgaos = computed(() => {
 
 const canSeeTdap = computed(() => {
   return hasPermission([
-    'tdap.products.view',
-    'tdap.recebimentos.view',
-    'tdap.movimentacoes.view'
+    'tdap.dashboard.view',
+    'tdap.prestadores.view',
+    'tdap.caminhoes.view',
   ]);
 });
 
@@ -498,6 +606,22 @@ const canSeeCisterna = computed(() => {
   return hasPermission(['cisternas.view']);
 });
 
+const canSeeInventario = computed(() => {
+  return hasPermission(['inventario.equipamentos.view', 'inventario.emprestimos.view']);
+});
+
+const canSeeEstoque = computed(() => {
+  return hasPermission([
+    'estoque.produtos.view',
+    'estoque.lotes.view',
+    'estoque.kits.view',
+    'estoque.movimentacoes.view'
+  ]);
+});
+
+const canSeeEstoqueExport = computed(() => {
+  return hasPermission(['estoque.produtos.export', 'estoque.movimentacoes.export']);
+});
 const canSeeTreinamento = computed(() => {
   return hasPermission(['treinamento.cursos.view']);
 });
@@ -522,8 +646,12 @@ const canSeeVistoria = computed(() => {
 });
 
 // ADMINISTRACAO
+const canSeePermissionamento = computed(() => {
+  return hasPermission(['users.view', 'roles.view', 'permissions.view']);
+});
+
 const canSeeAdminSection = computed(() => {
-  return hasPermission(['users.view', 'roles.view', 'permissions.view', 'system.logs.view']);
+  return canSeePermissionamento.value || canSeeInventario.value || canSeeLogs.value;
 });
 
 const canSeeLogs = computed(() => {
@@ -540,12 +668,13 @@ const activeSubmenu = ref(null);
 
 const submenuTitles = {
   tdap: 'TDAP',
+  estoque: 'Estoque',
 };
 
 const submenuTitle = computed(() => submenuTitles[activeSubmenu.value] ?? '');
 
 // Links resilientes (evita tela branca quando uma rota nao existir no Ziggy)
-// URLs estáticas — rotas não mudam em runtime, sem necessidade de computed reativo
+// URLs estáticas — rotas não mudam em runtime, sem necessidade de computed reativo
 const ratHref = route().has('rat.index') ? route('rat.index') :
                 route().has('rat.create') ? route('rat.create') :
                 route('dashboard');
@@ -1252,3 +1381,4 @@ provide('sidebarCollapsed', isCollapsed);
   height: 24px;
 }
 </style>
+

@@ -149,20 +149,55 @@ return [
             ],
         ],
         'TDAP' => [
-            'Produtos' => [
-                'view' => 'tdap.products.view',
-                'create' => 'tdap.products.create',
-                'edit' => 'tdap.products.edit',
-                'delete' => 'tdap.products.delete',
+            // TDAP - Transporte e Distribuicao de Agua Potavel
+            'Dashboard' => [
+                'view' => 'tdap.dashboard.view',
             ],
-            'Recebimentos' => [
-                'view' => 'tdap.recebimentos.view',
-                'create' => 'tdap.recebimentos.create',
-                'processar' => 'tdap.recebimentos.processar',
+            'Prestadores' => [
+                'view' => 'tdap.prestadores.view',
+                'create' => 'tdap.prestadores.create',
+                'edit' => 'tdap.prestadores.edit',
+                'delete' => 'tdap.prestadores.delete',
             ],
-            'Movimentacoes' => [
-                'view' => 'tdap.movimentacoes.view',
-                'create' => 'tdap.movimentacoes.create',
+            'Caminhoes' => [
+                'view' => 'tdap.caminhoes.view',
+                'create' => 'tdap.caminhoes.create',
+                'edit' => 'tdap.caminhoes.edit',
+                'delete' => 'tdap.caminhoes.delete',
+            ],
+            'Atas' => [
+                'view' => 'tdap.atas.view',
+                'create' => 'tdap.atas.create',
+                'edit' => 'tdap.atas.edit',
+                'delete' => 'tdap.atas.delete',
+            ],
+            'Lotes' => [
+                'view' => 'tdap.lotes.view',
+                'create' => 'tdap.lotes.create',
+                'edit' => 'tdap.lotes.edit',
+                'delete' => 'tdap.lotes.delete',
+            ],
+            'Cronogramas' => [
+                'view' => 'tdap.cronogramas.view',
+                'create' => 'tdap.cronogramas.create',
+                'edit' => 'tdap.cronogramas.edit',
+                'ativar' => 'tdap.cronogramas.ativar',
+                'prorrogar' => 'tdap.cronogramas.prorrogar',
+                'export' => 'tdap.cronogramas.export',
+            ],
+            'Viagens' => [
+                'view' => 'tdap.viagens.view',
+                'create' => 'tdap.viagens.create',
+                'validar' => 'tdap.viagens.validar',
+            ],
+            'Vistorias' => [
+                'view' => 'tdap.vistorias.view',
+                'create' => 'tdap.vistorias.create',
+                'edit' => 'tdap.vistorias.edit',
+                'aprovar' => 'tdap.vistorias.aprovar',
+            ],
+            'Historico' => [
+                'view' => 'tdap.historico.view',
             ],
             'Admin' => [
                 'admin' => 'tdap.admin',
@@ -251,6 +286,22 @@ return [
                 'export' => 'cisternas.export',
             ],
         ],
+        'INVENTARIO' => [
+            'Equipamentos' => [
+                'view'   => 'inventario.equipamentos.view',
+                'create' => 'inventario.equipamentos.create',
+                'edit'   => 'inventario.equipamentos.edit',
+                'delete' => 'inventario.equipamentos.delete',
+                'export' => 'inventario.equipamentos.export',
+            ],
+            'Emprestimos' => [
+                'view'     => 'inventario.emprestimos.view',
+                'create'   => 'inventario.emprestimos.create',
+                'approve'  => 'inventario.emprestimos.approve',
+                'return'   => 'inventario.emprestimos.return',
+                'export'   => 'inventario.emprestimos.export',
+            ],
+        ],
     ],
 
     /*
@@ -279,6 +330,7 @@ return [
             'webhooks.*',
             'system.*',
             'compdec.*',
+            'inventario.*',
         ],
         'manager' => [
             // PAE - CRUD completo exceto delete
@@ -314,15 +366,34 @@ return [
             'humanitaria.beneficiarios.create',
             'humanitaria.beneficiarios.edit',
             'humanitaria.beneficiarios.export',
-            // TDAP - gestao completa
-            'tdap.products.view',
-            'tdap.products.create',
-            'tdap.products.edit',
-            'tdap.recebimentos.view',
-            'tdap.recebimentos.create',
-            'tdap.recebimentos.processar',
-            'tdap.movimentacoes.view',
-            'tdap.movimentacoes.create',
+            // TDAP - gestao completa (sem delete)
+            'tdap.dashboard.view',
+            'tdap.prestadores.view',
+            'tdap.prestadores.create',
+            'tdap.prestadores.edit',
+            'tdap.caminhoes.view',
+            'tdap.caminhoes.create',
+            'tdap.caminhoes.edit',
+            'tdap.atas.view',
+            'tdap.atas.create',
+            'tdap.atas.edit',
+            'tdap.lotes.view',
+            'tdap.lotes.create',
+            'tdap.lotes.edit',
+            'tdap.cronogramas.view',
+            'tdap.cronogramas.create',
+            'tdap.cronogramas.edit',
+            'tdap.cronogramas.ativar',
+            'tdap.cronogramas.prorrogar',
+            'tdap.cronogramas.export',
+            'tdap.viagens.view',
+            'tdap.viagens.create',
+            'tdap.viagens.validar',
+            'tdap.vistorias.view',
+            'tdap.vistorias.create',
+            'tdap.vistorias.edit',
+            'tdap.vistorias.aprovar',
+            'tdap.historico.view',
             // Treinamento - gestao completa
             'treinamento.cursos.view',
             'treinamento.cursos.create',
@@ -361,6 +432,16 @@ return [
             'compdec.plano.edit',
             'compdec.plano.download',
             'compdec.usuarios.manage',
+            // Inventario - gestao completa exceto delete
+            'inventario.equipamentos.view',
+            'inventario.equipamentos.create',
+            'inventario.equipamentos.edit',
+            'inventario.equipamentos.export',
+            'inventario.emprestimos.view',
+            'inventario.emprestimos.create',
+            'inventario.emprestimos.approve',
+            'inventario.emprestimos.return',
+            'inventario.emprestimos.export',
         ],
         'analyst' => [
             // PAE - view, create, edit
@@ -387,13 +468,23 @@ return [
             'humanitaria.beneficiarios.view',
             'humanitaria.beneficiarios.create',
             'humanitaria.beneficiarios.edit',
-            // TDAP - view, create
-            'tdap.products.view',
-            'tdap.products.create',
-            'tdap.recebimentos.view',
-            'tdap.recebimentos.create',
-            'tdap.movimentacoes.view',
-            'tdap.movimentacoes.create',
+            // TDAP - view + create em cadastros, view nas operacoes
+            'tdap.dashboard.view',
+            'tdap.prestadores.view',
+            'tdap.prestadores.create',
+            'tdap.prestadores.edit',
+            'tdap.caminhoes.view',
+            'tdap.caminhoes.create',
+            'tdap.caminhoes.edit',
+            'tdap.atas.view',
+            'tdap.lotes.view',
+            'tdap.cronogramas.view',
+            'tdap.cronogramas.create',
+            'tdap.viagens.view',
+            'tdap.viagens.create',
+            'tdap.vistorias.view',
+            'tdap.vistorias.create',
+            'tdap.historico.view',
             // Treinamento - view
             'treinamento.cursos.view',
             // Plantao - view, create, edit
@@ -423,6 +514,12 @@ return [
             'compdec.plano.create',
             'compdec.plano.edit',
             'compdec.plano.download',
+            // Inventario - operacao sem delete/aprovacao
+            'inventario.equipamentos.view',
+            'inventario.equipamentos.create',
+            'inventario.equipamentos.edit',
+            'inventario.emprestimos.view',
+            'inventario.emprestimos.create',
         ],
         'operator' => [
             // PAE - view, create
@@ -441,10 +538,16 @@ return [
             // Ajuda Humanitaria - view, create
             'humanitaria.beneficiarios.view',
             'humanitaria.beneficiarios.create',
-            // TDAP - view
-            'tdap.products.view',
-            'tdap.recebimentos.view',
-            'tdap.movimentacoes.view',
+            // TDAP - view + create de viagens (prestador registra na operação)
+            'tdap.dashboard.view',
+            'tdap.prestadores.view',
+            'tdap.caminhoes.view',
+            'tdap.atas.view',
+            'tdap.lotes.view',
+            'tdap.cronogramas.view',
+            'tdap.viagens.view',
+            'tdap.viagens.create',
+            'tdap.vistorias.view',
             // Treinamento - view
             'treinamento.cursos.view',
             // Plantao - view, create
@@ -460,6 +563,10 @@ return [
             'compdec.anexos.download',
             'compdec.plano.view',
             'compdec.plano.download',
+            // Inventario - leitura e solicitacao
+            'inventario.equipamentos.view',
+            'inventario.emprestimos.view',
+            'inventario.emprestimos.create',
         ],
         'viewer' => [
             // Somente visualizacao em todos os modulos
@@ -469,9 +576,15 @@ return [
             'demandas.chamados.view',
             'decretacoes.processos.view',
             'humanitaria.beneficiarios.view',
-            'tdap.products.view',
-            'tdap.recebimentos.view',
-            'tdap.movimentacoes.view',
+            'tdap.dashboard.view',
+            'tdap.prestadores.view',
+            'tdap.caminhoes.view',
+            'tdap.atas.view',
+            'tdap.lotes.view',
+            'tdap.cronogramas.view',
+            'tdap.viagens.view',
+            'tdap.vistorias.view',
+            'tdap.historico.view',
             'treinamento.cursos.view',
             'plantao.turnos.view',
             'bi.dashboards.view',
@@ -481,6 +594,8 @@ return [
             'compdec.equipe.view',
             'compdec.anexos.view',
             'compdec.plano.view',
+            'inventario.equipamentos.view',
+            'inventario.emprestimos.view',
         ],
         'user' => [
             // Acesso basico apenas
@@ -493,6 +608,9 @@ return [
             'plantao.turnos.view',
             // COMPDEC - apenas listagem de orgaos
             'compdec.orgaos.view',
+            // Inventario - acesso inicial ao modulo
+            'inventario.equipamentos.view',
+            'inventario.emprestimos.view',
         ],
     ],
 

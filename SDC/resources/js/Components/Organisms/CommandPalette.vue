@@ -272,9 +272,8 @@ const navigationIndex = computed(() => [
     { id: 'nav_hum', title: 'Ajuda Humanitária', subtitle: 'Beneficiários e Entregas', url: safeRoute('ajuda-humanitaria.beneficiarios.index'), icon: 'heart', category: 'navigation', keywords: ['donativo', 'cesta', 'social'] },
     { id: 'nav_org', title: 'Órgãos', subtitle: 'Cadastro de COMPDEC e Parceiros', url: safeRoute('compdec.index'), icon: 'building', category: 'navigation', keywords: ['municipio', 'prefeitura', 'contato'] },
 
-    // TDAP
-    { id: 'nav_tdap_dash', title: 'TDAP Dashboard', subtitle: 'Visão Geral TDAP', url: safeRoute('tdap.dashboard'), icon: 'document', category: 'navigation', keywords: ['tdap', 'cartao', 'pagamento'] },
-    { id: 'nav_tdap_prod', title: 'TDAP Produtos', subtitle: 'Gestão de Produtos', url: safeRoute('tdap.products.index'), icon: 'document', category: 'navigation', keywords: ['tdap', 'item', 'estoque'] },
+    // TDAP - Transporte e Distribuicao de Agua Potavel
+    { id: 'nav_tdap_dash', title: 'TDAP Dashboard', subtitle: 'Transporte de Água Potável', url: safeRoute('tdap.dashboard'), icon: 'document', category: 'navigation', keywords: ['tdap', 'agua', 'caminhao', 'pipa', 'prestador', 'cronograma'] },
 
     // Outros
     { id: 'nav_treino', title: 'Treinamentos', subtitle: 'Cursos e Capacitações', url: safeRoute('treinamentos.index'), icon: 'academic', category: 'navigation', keywords: ['curso', 'aula', 'ead'] },

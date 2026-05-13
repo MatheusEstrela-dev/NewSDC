@@ -7,7 +7,6 @@ use App\Modules\Rat\Presentation\Http\Controllers\RatIndexController;
 use App\Http\Controllers\GlobalSearchController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Modules\Tdap\Application\UseCases\ListMovimentacoesUseCase;
 
 // DEBUG: Rota para testar executeAsDTO (requer container)
 Route::get('/debug/test-dto', function () {
@@ -121,6 +120,9 @@ Route::middleware('auth')->group(function () {
 
     // Módulo: TDAP (Gestão de Depósito)
     require __DIR__ . '/modules/tdap.php';
+
+    // Modulo: Inventario
+    require __DIR__ . '/modules/inventario.php';
 
     if (file_exists(__DIR__ . '/modules/cisterna.php')) {
         require __DIR__ . '/modules/cisterna.php';
