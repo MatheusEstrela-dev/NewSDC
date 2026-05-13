@@ -56,6 +56,10 @@ const props = defineProps({
     type: [Object, null],
     default: () => null,
   },
+  savedFormData: {
+    type: [Object, null],
+    default: null,
+  },
   viewOnly: {
     type: Boolean,
     default: false,
@@ -68,38 +72,44 @@ const props = defineProps({
 
 const emit = defineEmits(['save', 'update:tem-vistoria', 'update:form-data']);
 
+// Prefere savedFormData (estado em memória do pai) sobre os props do servidor
+const _dg  = props.savedFormData?.dadosGerais ?? props.rat?.dados_gerais  ?? {};
+const _com = props.savedFormData?.comunicacao ?? props.rat?.comunicacao   ?? {};
+const _loc = props.savedFormData?.local       ?? props.rat?.local         ?? {};
+const _end = props.savedFormData?.endereco    ?? props.rat?.endereco      ?? {};
+
 const localData = ref({
   dadosGerais: {
-    data_fato: props.rat?.dados_gerais?.data_fato || '',
-    data_inicio_atividade: props.rat?.dados_gerais?.data_inicio_atividade || '',
-    data_termino_atividade: props.rat?.dados_gerais?.data_termino_atividade || '',
-    nat_cobrade_id: props.rat?.dados_gerais?.nat_cobrade_id || '',
-    nat_nome_operacao: props.rat?.dados_gerais?.nat_nome_operacao || '',
-    tem_vistoria: props.rat?.tem_vistoria || false,
+    data_fato: _dg.data_fato || '',
+    data_inicio_atividade: _dg.data_inicio_atividade || '',
+    data_termino_atividade: _dg.data_termino_atividade || '',
+    nat_cobrade_id: _dg.nat_cobrade_id || '',
+    nat_nome_operacao: _dg.nat_nome_operacao || '',
+    tem_vistoria: _dg.tem_vistoria ?? props.rat?.tem_vistoria ?? false,
   },
   comunicacao: {
-    data_comunicacao: props.rat?.comunicacao?.data_comunicacao || '',
-    tipo_solicitacao: props.rat?.comunicacao?.tipo_solicitacao || '',
-    telefone_contato: props.rat?.comunicacao?.telefone_contato || '',
-    nome_solicitante: props.rat?.comunicacao?.nome_solicitante || '',
+    data_comunicacao: _com.data_comunicacao || '',
+    tipo_solicitacao: _com.tipo_solicitacao || '',
+    telefone_contato: _com.telefone_contato || '',
+    nome_solicitante: _com.nome_solicitante || '',
   },
   local: {
-    pais_id: props.rat?.local?.pais_id || '1',
-    uf: props.rat?.local?.uf || '',
-    municipio_id: props.rat?.local?.municipio_id || '',
+    pais_id: _loc.pais_id || '1',
+    uf: _loc.uf || '',
+    municipio_id: _loc.municipio_id || '',
   },
   endereco: {
-    cep: props.rat?.endereco?.cep || '',
-    logradouro: props.rat?.endereco?.logradouro || '',
-    numero: props.rat?.endereco?.numero || '',
-    complemento: props.rat?.endereco?.complemento || '',
-    bairro: props.rat?.endereco?.bairro || '',
-    km: props.rat?.endereco?.km || '',
-    cruzamento: props.rat?.endereco?.cruzamento || '',
-    ponto_referencia: props.rat?.endereco?.ponto_referencia || '',
-    tipo_localizacao: props.rat?.endereco?.tipo_localizacao || '',
-    latitude: props.rat?.endereco?.latitude || null,
-    longitude: props.rat?.endereco?.longitude || null,
+    cep: _end.cep || '',
+    logradouro: _end.logradouro || '',
+    numero: _end.numero || '',
+    complemento: _end.complemento || '',
+    bairro: _end.bairro || '',
+    km: _end.km || '',
+    cruzamento: _end.cruzamento || '',
+    ponto_referencia: _end.ponto_referencia || '',
+    tipo_localizacao: _end.tipo_localizacao || '',
+    latitude: _end.latitude || null,
+    longitude: _end.longitude || null,
   },
 });
 

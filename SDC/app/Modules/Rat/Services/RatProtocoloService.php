@@ -20,7 +20,8 @@ class RatProtocoloService
 
     private function getLatestSequence(int $year): int
     {
-        $latest = RatOcorrencia::where('numero_bos', 'like', "RAT-{$year}-%")
+        $latest = RatOcorrencia::withTrashed()
+            ->where('numero_bos', 'like', "RAT-{$year}-%")
             ->lockForUpdate()
             ->orderByDesc('numero_bos')
             ->value('numero_bos');

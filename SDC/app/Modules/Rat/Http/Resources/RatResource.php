@@ -39,6 +39,8 @@ class RatResource extends JsonResource
             ])->toArray();
         }
 
+        $dt = static fn ($v) => $v ? Carbon::parse($v)->format('Y-m-d\TH:i') : null;
+
         return [
             'id'           => $this->id,
             'protocolo'    => $this->protocolo ?? $this->numero_bos ?? null,
@@ -49,9 +51,9 @@ class RatResource extends JsonResource
 
             // ── Dados Gerais (campos que a aba Dados Gerais lê via props.rat.dados_gerais) ──
             'dados_gerais' => [
-                'data_fato'                  => $dg['data_fato'] ?? null,
-                'data_inicio_atividade'      => $dg['data_inicio_atividade'] ?? null,
-                'data_termino_atividade'     => $dg['data_termino_atividade'] ?? null,
+                'data_fato'                  => $dt($dg['data_fato'] ?? null),
+                'data_inicio_atividade'      => $dt($dg['data_inicio_atividade'] ?? null),
+                'data_termino_atividade'     => $dt($dg['data_termino_atividade'] ?? null),
                 'nat_codigo'                 => $dg['nat_codigo'] ?? null,
                 'nat_cobrade_id'             => $dg['nat_cobrade_id'] ?? null,
                 'nat_ocorrencia'             => $dg['nat_ocorrencia'] ?? null,
@@ -68,7 +70,7 @@ class RatResource extends JsonResource
 
             // ── Comunicação: nomes que RatCommunicationSection.vue usa ──
             'comunicacao' => [
-                'data_comunicacao' => $dg['com_ocorrencia_data'] ?? null,
+                'data_comunicacao' => $dt($dg['com_ocorrencia_data'] ?? null),
                 'tipo_solicitacao' => $dg['com_ocorrencia_atendimento'] ?? null,
             ],
 

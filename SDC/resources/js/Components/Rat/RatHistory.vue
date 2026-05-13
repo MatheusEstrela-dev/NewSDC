@@ -10,7 +10,7 @@
       :view-only="viewOnly"
       :loading="loading"
       label="Salvar Histórico"
-      @save="$emit('save')"
+      @save="handleSave"
     />
   </div>
 </template>
@@ -52,5 +52,10 @@ watch(
 function handleSectionUpdate(text) {
   localHistorico.value = text;
   emit('update', text);
+}
+
+function handleSave() {
+  emit('update', localHistorico.value);
+  emit('save');
 }
 </script>

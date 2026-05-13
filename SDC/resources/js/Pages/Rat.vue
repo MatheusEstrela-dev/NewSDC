@@ -13,6 +13,7 @@
               <div v-if="Number(activeTab) === 1">
                 <RatDadosGeraisForm
                   :rat="rat"
+                  :saved-form-data="currentFormData"
                   :view-only="props.viewOnly"
                   :loading="loading"
                   @save="(data) => saveAndAdvance({ dadosGerais: data.dadosGerais, comunicacao: data.comunicacao, local: data.local, endereco: data.endereco }, 2)"
@@ -157,8 +158,9 @@ const currentActiveTab = computed(() => {
   return Number(typeof v === 'object' && v !== null && 'value' in v ? v.value : v);
 });
 
-const temVistoria  = ref(props.rat?.tem_vistoria || false);
+const temVistoria    = ref(props.rat?.tem_vistoria || false);
 const currentFormData = ref(null);
+const creating        = ref(false);
 
 const tabConfig = computed(() => [
   { id: 1, label: 'Dados Gerais',        icon: DocumentTextIcon },
@@ -191,9 +193,12 @@ async function saveAndAdvance(tabPayload, nextTab) {
   const csrf   = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
   const headers = { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' };
 
+  if (!ratId && creating.value) return;
+
   loading.value = true;
   try {
     if (!ratId) {
+      creating.value = true;
       const payload = {
         ...buildDadosGeraisPayload(),
         recursos:   recursosState.value,
@@ -205,8 +210,8 @@ async function saveAndAdvance(tabPayload, nextTab) {
       router.post(route('rat.store'), payload, {
         preserveScroll: false,
         onSuccess: () => toast('RAT criado com sucesso.', 'success', { noIcon: true }),
-        onError:   () => toast('Erro ao criar RAT.', 'error', { noIcon: true }),
-        onFinish:  () => { loading.value = false; },
+        onError:   () => toast('Erro ao salvar dados gerais.', 'error', { noIcon: true }),
+        onFinish:  () => { loading.value = false; creating.value = false; },
       });
     } else {
       const payload = { ...tabPayload };
