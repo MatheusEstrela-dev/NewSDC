@@ -66,6 +66,22 @@ class RatResource extends JsonResource
                 'uni_bo_sequencial'          => $dg['uni_bo_sequencial'] ?? null,
                 'descricao'                  => $dg['descricao'] ?? null,
                 'tem_vistoria'               => (bool) ($dg['tem_vistoria'] ?? false),
+                // Campos de comunicação usados pelo BoletimDadosGerais
+                'data_comunicacao'           => $dt($dg['com_ocorrencia_data'] ?? null),
+                'com_ocorrencia_atendimento' => $dg['com_ocorrencia_atendimento'] ?? null,
+                // Campos de local/endereço usados pelo BoletimDadosGerais
+                'local_municipio'            => $dg['local_municipio'] ?? null,
+                'local_pais'                 => $dg['local_pais'] ?? null,
+                'local_estadouf'             => $dg['local_estadouf'] ?? null,
+                'local_cep'                  => $dg['local_cep'] ?? null,
+                'local_logradoura_1'         => $dg['local_logradoura_1'] ?? null,
+                'local_bairro'               => $dg['local_bairro'] ?? null,
+                'local_complemento'          => $dg['local_complemento'] ?? null,
+                'local_numero'               => $dg['local_numero'] ?? null,
+                'local_km'                   => $dg['local_km'] ?? null,
+                'local_cruzamento'           => $dg['local_cruzamento'] ?? null,
+                'local_ponto_referencia'     => $dg['local_ponto_referencia'] ?? null,
+                'local_ocorrencia_tipo'      => $dg['local_ocorrencia_tipo'] ?? null,
             ],
 
             // ── Comunicação: nomes que RatCommunicationSection.vue usa ──
@@ -106,13 +122,16 @@ class RatResource extends JsonResource
 
                 $saida   = !empty($c->viatura_saida)   && $c->viatura_saida   !== '0' ? Carbon::parse($c->viatura_saida)->format('Y-m-d\TH:i')   : null;
                 $chegada = !empty($c->viatura_chegada) && $c->viatura_chegada !== '0' ? Carbon::parse($c->viatura_chegada)->format('Y-m-d\TH:i') : null;
+                $tipoRecurso = ($c->recurso_tipo ?? null) === 'pe' ? 'pessoal' : ($c->recurso_tipo ?? null);
+                $condicao    = ($c->viatura_condicao ?? null) === 'boa' ? 'operacional' : ($c->viatura_condicao ?? null);
 
                 return [
                     'id'               => $c->id ?? null,
                     'seq'              => $c->seq ?? null,
-                    'tipo_recurso'     => ($c->recurso_tipo ?? null) === 'pe' ? 'pessoal' : ($c->recurso_tipo ?? null),
+                    // Nomes usados pelo formulário de edição
+                    'tipo_recurso'     => $tipoRecurso,
                     'categoria'        => $c->viatura_tipo ?? null,
-                    'identificacao'    => $c->viatura_placa ?? null,
+                    'identificacao'    => $c->viatura_placa ?? $c->viatura_prefixo ?? null,
                     'orgao_responsavel'=> $c->viatura_orgao ?? null,
                     'data_saida'       => $saida,
                     'data_chegada'     => $chegada,
@@ -121,17 +140,46 @@ class RatResource extends JsonResource
                     'local_destino'    => $c->viatura_local_destino ?? null,
                     'quantidade'       => $c->viatura_quantidade ?? null,
                     'capacidade'       => $c->viatura_capacidade ?? null,
-                    'condicao'         => ($c->viatura_condicao ?? null) === 'boa' ? 'operacional' : ($c->viatura_condicao ?? null),
+                    'condicao'         => $condicao,
                     'operador'         => $c->viatura_operador ?? null,
                     'contato_emergencia' => $c->viatura_contato ?? null,
                     'observacoes'      => $c->viatura_descricao ?? null,
                     'descricao'        => $c->recurso_descricao ?? null,
+                    // Aliases com prefixo r_* usados pelo BoletimRecursos.vue
+                    'r_tipo_recurso'        => $tipoRecurso,
+                    'r_categoria'           => $c->viatura_tipo ?? null,
+                    'r_orgao_responsavel'   => $c->viatura_orgao ?? null,
+                    'r_identificacao'       => $c->viatura_placa ?? $c->viatura_prefixo ?? null,
+                    'r_descricao'           => $c->recurso_descricao ?? null,
+                    'r_data_saida'          => $saida,
+                    'r_hora_saida'          => $saida,
+                    'r_data_chegada'        => $chegada,
+                    'r_hora_chegada'        => $chegada,
+                    'r_km_percorrido'       => $c->viatura_km ?? null,
+                    'r_quantidade'          => $c->viatura_quantidade ?? null,
+                    'r_origem'              => $c->viatura_local_origem ?? null,
+                    'r_destino'             => $c->viatura_local_destino ?? null,
+                    'r_capacidade'          => $c->viatura_capacidade ?? null,
+                    'r_condicao'            => $condicao,
+                    'r_operador_responsavel'=> $c->viatura_operador ?? null,
+                    'r_contato'             => $c->viatura_contato ?? null,
+                    // Campos diretos usados no v-if e exibição do BoletimRecursos.vue
+                    'viatura_tipo'          => $c->viatura_tipo ?? null,
+                    'viatura_placa'         => $c->viatura_placa ?? null,
+                    'viatura_orgao'         => $c->viatura_orgao ?? null,
+                    'viatura_descricao'     => $c->viatura_descricao ?? null,
+                    'recurso_descricao'     => $c->recurso_descricao ?? null,
                     'agentes'          => isset($c->agentes) ? collect($c->agentes)->map(fn ($a) => [
                         'id'            => is_array($a) ? ($a['id'] ?? null)            : ($a->id ?? null),
                         'corporacao'    => is_array($a) ? ($a['corporacao'] ?? null)    : ($a->corporacao ?? null),
+                        'matricula'     => is_array($a) ? ($a['matricula'] ?? null)     : ($a->matricula ?? null),
                         'masp'          => is_array($a) ? ($a['masp'] ?? null)          : ($a->masp ?? null),
                         'nome_completo' => is_array($a) ? ($a['nome_completo'] ?? null) : ($a->nome_completo ?? null),
+                        'pg_cargo'      => is_array($a) ? ($a['pg_cargo'] ?? null)      : ($a->pg_cargo ?? null),
+                        'orgao'         => is_array($a) ? ($a['orgao'] ?? null)         : ($a->orgao ?? null),
+                        'unidade'       => is_array($a) ? ($a['unidade'] ?? null)       : ($a->unidade ?? null),
                         'funcao'        => is_array($a) ? ($a['funcao'] ?? null)        : ($a->funcao ?? null),
+                        'is_condutor'   => is_array($a) ? (bool) ($a['is_condutor'] ?? false) : (bool) ($a->is_condutor ?? false),
                     ])->toArray() : [],
                 ];
             })->filter()->values()->toArray(),
@@ -141,8 +189,9 @@ class RatResource extends JsonResource
                 if (!is_array($c)) {
                     $c = is_object($c) ? (array) $c : [];
                 }
-                return [
-                    'id'               => $c['id'] ?? null,
+                // Mantém todos os campos raw (p_*/g_*) que BoletimEnvolvidos.vue usa,
+                // e adiciona aliases para o formulário de edição.
+                return array_merge($c, [
                     'tipo_envolvimento' => $c['g_tipo_pessoa'] ?? null,
                     'nome'             => $c['p_nome_completo'] ?? null,
                     'rg'               => $c['p_numero'] ?? null,
@@ -155,7 +204,7 @@ class RatResource extends JsonResource
                     'bairro'           => $c['p_end_bairro'] ?? null,
                     'municipio'        => $c['p_end_municipio'] ?? null,
                     'uf'               => $c['p_end_estado_uf'] ?? null,
-                ];
+                ]);
             })->filter()->values()->toArray(),
 
             // ── Vistoria: estrutura aninhada que RatVistoriaSection.vue usa ──

@@ -52,8 +52,8 @@ const vistoria = computed(() => {
 const agentes = computed(() => {
   const allAgentes = [];
   recursos.value.forEach((recurso) => {
-    if (recurso?.componentesGuarnicao) {
-      allAgentes.push(...recurso.componentesGuarnicao);
+    if (recurso?.agentes) {
+      allAgentes.push(...recurso.agentes);
     }
   });
   return allAgentes;
