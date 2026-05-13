@@ -78,12 +78,13 @@ class RatUnifiedController extends BaseController
         ]);
     }
 
-    public function create(): Response
+    public function create(): RedirectResponse
     {
-        return Inertia::render('Rat');
+        $ocorrencia = $this->writeService->create();
+        return redirect(route('rat.edit', $ocorrencia->id) . '?new=1');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         try {
             $validated = $request->validate([
@@ -94,17 +95,29 @@ class RatUnifiedController extends BaseController
                 'recursos'    => 'nullable|array',
                 'envolvidos'  => 'nullable|array',
                 'vistoria'    => 'nullable|array',
-                'historico'   => 'nullable|array',
+                'historico'   => 'nullable',
                 'finalize'    => 'nullable|boolean',
             ]);
 
             $ocorrencia = $this->writeService->createWithData($validated);
 
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'id'      => $ocorrencia->id,
+                    'message' => 'RAT criado com sucesso.',
+                ], 201);
+            }
+
             return redirect()
-                ->route('rat.edit', $ocorrencia->id)
+                ->to(route('rat.edit', $ocorrencia->id) . '?tab=2')
                 ->with('success', 'Ocorrência RAT criada com sucesso!');
         } catch (\Exception $e) {
             Log::error('Erro ao criar RAT: ' . $e->getMessage(), ['exception' => $e]);
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            }
 
             return redirect()
                 ->back()
@@ -124,7 +137,7 @@ class RatUnifiedController extends BaseController
         ]);
     }
 
-    public function edit(string $id): Response
+    public function edit(Request $request, string $id): Response
     {
         $ocorrencia = $this->writeService->findById($id);
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
@@ -132,83 +145,99 @@ class RatUnifiedController extends BaseController
         return Inertia::render('Rat', [
             'rat'      => new RatOcorrenciaResource($ocorrencia),
             'viewOnly' => false,
+            'isCreate' => $request->boolean('new'),
         ]);
     }
 
-    public function update(Request $request, string $id): RedirectResponse
+    public function update(Request $request, string $id): RedirectResponse|JsonResponse
     {
-        if ($request->has('dadosGerais') || $request->has('comunicacao') || $request->has('local') || $request->has('endereco')) {
-            $this->writeService->saveDadosGerais($id, RatDadosGeraisDTO::fromArray($request->all()));
-        }
-
-        if ($request->has('recursos')) {
-            RatRelatoRecurso::where('ocorrencia_id', $id)->delete();
-            RatOcorrenciaRelato::where('ocorrencia_id', $id)
-                ->where('conteudo_type', RatRelatoRecurso::class)
-                ->forceDelete();
-
-            foreach ($request->input('recursos', []) as $index => $recursoData) {
-                unset($recursoData['id']);
-                $recursoData['seq'] = $recursoData['seq'] ?? ($index + 1);
-                $this->writeService->saveRecurso($id, RatRecursoDTO::fromArray($recursoData));
+        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $id) {
+            if ($request->has('dadosGerais') || $request->has('comunicacao') || $request->has('local') || $request->has('endereco')) {
+                $this->writeService->saveDadosGerais($id, RatDadosGeraisDTO::fromArray($request->all()));
             }
-        }
 
-        if ($request->has('envolvidos')) {
-            RatRelatoEnvolvidos::where('ocorrencia_id', $id)->delete();
-            RatOcorrenciaRelato::where('ocorrencia_id', $id)
-                ->where('conteudo_type', RatRelatoEnvolvidos::class)
-                ->forceDelete();
+            if ($request->has('recursos')) {
+                RatRelatoRecurso::where('ocorrencia_id', $id)->delete();
+                RatOcorrenciaRelato::where('ocorrencia_id', $id)
+                    ->where('conteudo_type', RatRelatoRecurso::class)
+                    ->forceDelete();
 
-            foreach ($request->input('envolvidos', []) as $index => $envolvidoData) {
-                unset($envolvidoData['id']);
-                $envolvidoData['seq'] = $envolvidoData['seq'] ?? ($index + 1);
-                $this->writeService->saveEnvolvido($id, RatEnvolvidoDTO::fromArray($envolvidoData));
+                foreach ($request->input('recursos', []) as $index => $recursoData) {
+                    unset($recursoData['id']);
+                    $recursoData['seq'] = $recursoData['seq'] ?? ($index + 1);
+                    $this->writeService->saveRecurso($id, RatRecursoDTO::fromArray($recursoData));
+                }
             }
-        }
 
-        if ($request->has('vistoria') && !empty($request->input('vistoria'))) {
-            $this->writeService->saveVistoria($id, RatVistoriaDTO::fromArray($request->input('vistoria')));
-        }
+            if ($request->has('envolvidos')) {
+                RatRelatoEnvolvidos::where('ocorrencia_id', $id)->delete();
+                RatOcorrenciaRelato::where('ocorrencia_id', $id)
+                    ->where('conteudo_type', RatRelatoEnvolvidos::class)
+                    ->forceDelete();
 
-        if ($request->has('historico')) {
-            $historico = $request->input('historico', []);
-            RatOcorrencia::where('id', $id)->update([
-                'historico' => is_array($historico) ? $historico : [],
-            ]);
-        }
+                foreach ($request->input('envolvidos', []) as $index => $envolvidoData) {
+                    unset($envolvidoData['id']);
+                    $envolvidoData['seq'] = $envolvidoData['seq'] ?? ($index + 1);
+                    $this->writeService->saveEnvolvido($id, RatEnvolvidoDTO::fromArray($envolvidoData));
+                }
+            }
 
-        RatOcorrencia::where('id', $id)->update(['updated_by' => Auth::id()]);
+            if ($request->has('vistoria') && !empty($request->input('vistoria'))) {
+                $this->writeService->saveVistoria($id, RatVistoriaDTO::fromArray($request->input('vistoria')));
+            }
+
+            if ($request->has('historico')) {
+                $this->writeService->saveHistorico($id, RatHistoricoDTO::fromArray(['historico' => $request->input('historico')]));
+            }
+
+            RatOcorrencia::where('id', $id)->update(['updated_by' => Auth::id()]);
+        });
+
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Ocorrência atualizada com sucesso.']);
+        }
 
         return redirect()
             ->route('rat.edit', $id)
             ->with('success', 'Ocorrência atualizada com sucesso!');
     }
 
-    public function destroy(string $id): RedirectResponse
+    public function destroy(Request $request, string $id): RedirectResponse|JsonResponse
     {
         RatOcorrencia::findOrFail($id)->delete();
+
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Ocorrência excluída com sucesso.']);
+        }
 
         return redirect()
             ->route('rat.index')
             ->with('success', 'Ocorrência excluída com sucesso!');
     }
 
-    public function finalize(string $id): RedirectResponse
+    public function finalize(Request $request, string $id): RedirectResponse|JsonResponse
     {
         $this->writeService->finalize($id);
+
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'RAT finalizado com sucesso.']);
+        }
 
         return redirect()
             ->route('rat.show', $id)
             ->with('success', 'Ocorrência finalizada com sucesso!');
     }
 
-    public function draft(Request $request, string $id): RedirectResponse
+    public function draft(Request $request, string $id): RedirectResponse|JsonResponse
     {
         $this->writeService->saveDraft($id, $request->all());
 
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Rascunho salvo com sucesso!']);
+        }
+
         return redirect()
-            ->route('rat.show', $id)
+            ->route('rat.edit', $id)
             ->with('success', 'Rascunho salvo com sucesso!');
     }
 
@@ -382,7 +411,7 @@ class RatUnifiedController extends BaseController
     public function storeAttachment(Request $request, string $ocorrenciaId): JsonResponse
     {
         $request->validate([
-            'arquivo'   => 'required|file|max:10240',
+            'arquivo'   => 'required|file|max:20480',
             'tipo'      => 'required|string|in:imagem,documento,video,audio',
             'descricao' => 'nullable|string|max:500',
         ]);
@@ -390,7 +419,7 @@ class RatUnifiedController extends BaseController
         $rat = $this->writeService->findById($ocorrenciaId);
         abort_if(!$rat, 404, 'Ocorrência não encontrada.');
 
-        $attachment = $this->attachmentService->store($rat, $request->file('arquivo'));
+        $attachment = $this->attachmentService->store($rat, $request->file('arquivo'), $request->input('tipo', 'documento'));
 
         // Retorna o objeto diretamente para o frontend substituir o entry temporário pelo real
         return response()->json([

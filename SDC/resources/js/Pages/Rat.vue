@@ -4,7 +4,7 @@
 
         <div class="rat-container">
           <!-- Header -->
-          <RatHeader :rat="rat" :last-update="lastUpdate" :view-only="props.viewOnly" />
+          <RatHeader :rat="rat" :last-update="lastUpdate" :view-only="props.viewOnly" :is-create="props.isCreate" />
 
           <!-- Sistema de Abas -->
           <RatTabs :active-tab="currentActiveTab" :tabs="tabConfig" @tab-change="tabs.setActiveTab">
@@ -15,8 +15,7 @@
                   :rat="rat"
                   :view-only="props.viewOnly"
                   :loading="loading"
-                  @save="handleSave"
-                  @finalize="handleFinalize"
+                  @save="(data) => saveAndAdvance({ dadosGerais: data.dadosGerais, comunicacao: data.comunicacao, local: data.local, endereco: data.endereco }, 2)"
                   @update:tem-vistoria="handleToggleVistoria"
                   @update:form-data="handleFormDataUpdate"
                 />
@@ -25,36 +24,36 @@
               <!-- Aba 2: Recursos Empregados -->
               <div v-else-if="Number(activeTab) === 2">
                 <RatResources
-                  :recursos="recursos"
+                  :recursos="recursosState"
                   :view-only="props.viewOnly"
                   :loading="loading"
                   @add="handleAddRecurso"
                   @remove="handleRemoveRecurso"
                   @update="handleUpdateRecurso"
-                  @save="handleSaveFromSubTab"
+                  @save="() => saveAndAdvance({ recursos: recursosState.value }, 3)"
                 />
               </div>
 
               <!-- Aba 3: Envolvidos -->
               <div v-else-if="Number(activeTab) === 3">
                 <RatInvolved
-                  :envolvidos="envolvidos"
+                  :envolvidos="envolvidosState"
                   :view-only="props.viewOnly"
                   :loading="loading"
                   @add="handleAddEnvolvido"
                   @remove="handleRemoveEnvolvido"
                   @update="handleUpdateEnvolvidos"
-                  @save="handleSaveFromSubTab"
+                  @save="() => saveAndAdvance({ envolvidos: envolvidosState.value }, temVistoria.value ? 4 : 5)"
                 />
               </div>
 
               <!-- Aba 4: Vistoria -->
               <div v-else-if="Number(activeTab) === 4">
                 <RatInspection
-                  :vistoria="vistoria"
+                  :vistoria="vistoriaState"
                   :view-only="props.viewOnly"
                   :loading="loading"
-                  @save="handleSaveFromSubTab"
+                  @save="() => saveAndAdvance({ vistoria: vistoriaState.value }, 5)"
                   @update="handleUpdateVistoria"
                 />
               </div>
@@ -62,25 +61,25 @@
               <!-- Aba 5: Histórico -->
               <div v-else-if="Number(activeTab) === 5">
                 <RatHistory
-                  :events="historico"
+                  :events="historicoEstado"
                   :view-only="props.viewOnly"
                   :loading="loading"
-                  @add-observation="handleAddObservation"
                   @update="handleUpdateHistorico"
-                  @save="handleSaveFromSubTab"
+                  @save="() => saveAndAdvance({ historico: historicoEstado.value }, 6)"
                 />
               </div>
 
               <!-- Aba 6: Anexos -->
               <div v-else-if="Number(activeTab) === 6">
                 <RatAttachments
-                  :rat-id="rat?.id"
-                  :anexos="anexos"
+                  :rat-id="rat?.id ? String(rat.id) : null"
+                  :anexos="Array.isArray(anexosState.value) ? anexosState.value : []"
                   :view-only="props.viewOnly"
                   @add="handleAddAnexo"
                   @remove="handleRemoveAnexo"
                   @update="handleUpdateAnexos"
-                  @save="handleSaveFromSubTab"
+                  @save="() => saveAndAdvance({ anexos: true }, null)"
+                  @finalize="handleFinalize"
                 />
               </div>
             </template>
@@ -105,50 +104,23 @@ import RatInvolved from '@/Components/Rat/RatInvolved.vue';
 import RatResources from '@/Components/Rat/RatResources.vue';
 import RatTabs from '@/Components/Rat/RatTabs.vue';
 import { useRat } from '@/Composables/useRat';
+import { useToast } from '@/Composables/useToast';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import '../../css/pages/rat/rat.css';
 
 defineOptions({ layout: AuthenticatedLayout });
 
-// Recebe props do Inertia
+const { show: toast } = useToast();
+
 const props = defineProps({
-  rat: {
-    type: Object,
-    default: () => ({}),
-  },
-  viewOnly: {
-    type: Boolean,
-    default: false,
-  },
-  recursos: {
-    type: Array,
-    default: () => [],
-  },
-  envolvidos: {
-    type: Array,
-    default: () => [],
-  },
-  vistoria: {
-    type: Object,
-    default: () => ({}),
-  },
-  historico: {
-    type: Array,
-    default: () => [],
-  },
-  anexos: {
-    type: Array,
-    default: () => [],
-  },
-  lastUpdate: {
-    type: String,
-    default: null,
-  },
+  rat:        { type: Object,  default: () => ({}) },
+  viewOnly:   { type: Boolean, default: false },
+  isCreate:   { type: Boolean, default: false },
+  lastUpdate: { type: String,  default: null },
 });
 
-// Usa composable com dados do Inertia
 const initialTab = (() => {
   try {
     const tab = new URLSearchParams(window.location.search).get('tab');
@@ -168,178 +140,165 @@ const {
   anexos: anexosState,
   loading,
   tabs,
-  salvarRat,
-  salvarRascunho,
-  finalizarRat,
-  cancelarRat,
 } = useRat({
-  rat: props.rat,
-  recursos: props.rat?.recursos ?? props.recursos ?? [],
-  envolvidos: props.rat?.envolvidos ?? props.envolvidos ?? [],
-  vistoria: props.rat?.vistoria ?? props.vistoria ?? {},
-  historico: props.rat?.historico ?? props.historico ?? [],
-  anexos: props.rat?.anexos ?? props.anexos ?? [],
+  rat:       props.rat,
+  recursos:  props.rat?.recursos  ?? [],
+  envolvidos: props.rat?.envolvidos ?? [],
+  vistoria:  props.rat?.vistoria   ?? {},
+  historico: props.rat?.historico  ?? [],
+  anexos:    props.rat?.anexos     ?? [],
   activeTab: initialTab,
 });
 
-// Usa dados do Inertia ou do composable
-const rat = computed(() => {
-  if (props.rat && props.rat.id) {
-    return props.rat;
-  }
-  return ratState.value || { id: null, status: 'rascunho' };
-});
-
-// Usamos os estados do composable diretamente
-const recursos = recursosState;
-const envolvidos = envolvidosState;
-const vistoria = vistoriaState;
-const historico = historicoEstado;
-const anexos = anexosState;
+const rat = computed(() => (props.rat?.id ? props.rat : ratState.value) ?? { id: null, status: 'rascunho' });
 
 const currentActiveTab = computed(() => {
-  const tabValue = tabs.activeTab;
-  if (typeof tabValue === 'object' && tabValue !== null && 'value' in tabValue) {
-    return Number(tabValue.value);
-  }
-  return Number(tabValue);
+  const v = tabs.activeTab;
+  return Number(typeof v === 'object' && v !== null && 'value' in v ? v.value : v);
 });
 
-// Estado local para controlar visibilidade da aba Vistoria
-const temVistoria = ref(props.rat?.tem_vistoria || false);
-
-// Rastreia o estado atual do formulário principal (aba Dados Gerais)
+const temVistoria  = ref(props.rat?.tem_vistoria || false);
 const currentFormData = ref(null);
 
-// Configuração das abas
-const tabConfig = computed(() => {
-  const tabs = [
-    { id: 1, label: 'Dados Gerais', icon: DocumentTextIcon },
-    { id: 2, label: 'Recursos Empregados', icon: TruckIcon, badge: recursos.value?.length > 0 ? recursos.value.length : null },
-    { id: 3, label: 'Envolvidos', icon: UsersIcon, badge: envolvidos.value?.length > 0 ? envolvidos.value.length : null },
-    { id: 4, label: 'Vistoria', icon: ClipboardIcon, hidden: !temVistoria.value },
-    { id: 5, label: 'Histórico', icon: ClockIcon },
-    { id: 6, label: 'Anexos', icon: PaperClipIcon, badge: (anexos.value && Array.isArray(anexos.value) && anexos.value.length > 0) ? anexos.value.length : null },
-  ];
-  return tabs;
-});
+const tabConfig = computed(() => [
+  { id: 1, label: 'Dados Gerais',        icon: DocumentTextIcon },
+  { id: 2, label: 'Recursos Empregados', icon: TruckIcon,    badge: recursosState.value?.length > 0  ? recursosState.value.length  : null },
+  { id: 3, label: 'Envolvidos',          icon: UsersIcon,    badge: envolvidosState.value?.length > 0 ? envolvidosState.value.length : null },
+  { id: 4, label: 'Vistoria',            icon: ClipboardIcon, hidden: !temVistoria.value },
+  { id: 5, label: 'Histórico',           icon: ClockIcon },
+  { id: 6, label: 'Anexos',             icon: PaperClipIcon, badge: Array.isArray(anexosState.value) && anexosState.value.length > 0 ? anexosState.value.length : null },
+]);
 
-// Handlers
-function handleSave(data) {
-  salvarRat(data);
+// ─── Save-and-Advance ──────────────────────────────────────────────────────
+
+const TAB_LABELS = {
+  dadosGerais: 'Dados Gerais',
+  recursos:    'Recursos Empregados',
+  envolvidos:  'Envolvidos',
+  vistoria:    'Vistoria',
+  historico:   'Histórico',
+  anexos:      'Anexos',
+};
+
+function resolveTabLabel(payload) {
+  const key = Object.keys(TAB_LABELS).find(k => k in payload);
+  return key ? TAB_LABELS[key] : 'Dados';
 }
 
-function handleSaveDraft(data) {
-  salvarRascunho(data);
-}
+async function saveAndAdvance(tabPayload, nextTab) {
+  const ratId  = rat.value?.id;
+  const axios  = window.axios || (await import('axios')).default;
+  const csrf   = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+  const headers = { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' };
 
-function handleFinalize(data) {
-  finalizarRat(data);
-}
+  loading.value = true;
+  try {
+    if (!ratId) {
+      const payload = {
+        ...buildDadosGeraisPayload(),
+        recursos:   recursosState.value,
+        envolvidos: envolvidosState.value,
+        vistoria:   vistoriaState.value,
+        historico:  historicoEstado.value,
+        ...tabPayload,
+      };
+      router.post(route('rat.store'), payload, {
+        preserveScroll: false,
+        onSuccess: () => toast('RAT criado com sucesso.', 'success', { noIcon: true }),
+        onError:   () => toast('Erro ao criar RAT.', 'error', { noIcon: true }),
+        onFinish:  () => { loading.value = false; },
+      });
+    } else {
+      const payload = { ...tabPayload };
+      await axios.patch(route('rat.draft', ratId), payload, { headers });
 
-function handleCancel() {
-  cancelarRat();
-}
+      const label = resolveTabLabel(tabPayload);
+      toast(`${label} salvos com sucesso.`, 'success', { noIcon: true });
 
-// Sincroniza dados do formulário principal para uso nas abas secundárias
-function handleFormDataUpdate(data) {
-  currentFormData.value = data;
-}
-
-function handleAddRecurso(recurso) {
-  if (!Array.isArray(recursosState.value)) {
-    recursosState.value = [];
+      if (nextTab !== null) {
+        tabs.setActiveTab(nextTab);
+      }
+      loading.value = false;
+    }
+  } catch (err) {
+    loading.value = false;
+    const msg = err.response?.data?.message ?? err.message ?? 'Erro ao salvar.';
+    toast('Erro ao salvar: ' + msg, 'error', { noIcon: true });
   }
-  recursosState.value.push(recurso);
 }
 
-function handleRemoveRecurso(id) {
-  if (!Array.isArray(recursosState.value)) return;
-  const index = recursosState.value.findIndex(r => r.id === id);
-  if (index > -1) {
-    recursosState.value.splice(index, 1);
-  }
-}
-
-function handleUpdateRecurso(data) {
-  recursosState.value = data;
-}
-
-function handleAddEnvolvido(envolvido) {
-  envolvidosState.value.push(envolvido);
-}
-
-function handleRemoveEnvolvido(id) {
-  const index = envolvidosState.value.findIndex(e => e.id === id);
-  if (index > -1) {
-    envolvidosState.value.splice(index, 1);
-  }
-}
-
-function handleUpdateEnvolvidos(data) {
-  envolvidosState.value = Array.isArray(data) ? data : [];
-}
-
-function handleSaveVistoria(data) {
-  vistoriaState.value = { ...vistoriaState.value, ...data };
-}
-
-function handleUpdateVistoria(data) {
-  vistoriaState.value = { ...vistoriaState.value, ...data };
-}
-
-function handleUpdateHistorico(data) {
-  historicoEstado.value = data;
-}
-
-function handleAddObservation(observation) {
-  if (!Array.isArray(historicoEstado.value)) {
-    historicoEstado.value = [];
-  }
-  historicoEstado.value.unshift({
-    id: Date.now(),
-    ...observation,
-    created_at: new Date().toISOString(),
-  });
-}
-
-/**
- * Salva o RAT a partir de uma aba secundária (Recursos, Envolvidos, Vistoria, Histórico, Anexos).
- * Usa os dados mais recentes do formulário principal se já foram preenchidos.
- */
-function handleSaveFromSubTab() {
-  const formData = currentFormData.value ?? {
+function buildDadosGeraisPayload() {
+  if (currentFormData.value) return currentFormData.value;
+  return {
     dadosGerais: props.rat?.dados_gerais ?? {},
     comunicacao: props.rat?.comunicacao  ?? {},
     local:       props.rat?.local        ?? {},
     endereco:    props.rat?.endereco     ?? {},
   };
-  salvarRat(formData);
 }
 
-function handleAddAnexo(anexo) {
-  if (!anexosState.value) {
-    anexosState.value = [];
+// ─── Finalizar ────────────────────────────────────────────────────────────
+
+async function handleFinalize() {
+  const ratId = rat.value?.id;
+  if (!ratId) {
+    toast('Salve o RAT antes de finalizar.', 'warning', { noIcon: true });
+    return;
   }
-  anexosState.value.push(anexo);
+  if (!confirm('Deseja finalizar este RAT? Esta ação não poderá ser desfeita.')) return;
+
+  const axios  = window.axios || (await import('axios')).default;
+  const csrf   = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+  loading.value = true;
+  try {
+    await axios.patch(route('rat.finalize', ratId), {}, {
+      headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' },
+    });
+    toast('RAT finalizado com sucesso.', 'success', { noIcon: true });
+    router.visit(route('rat.show', ratId));
+  } catch (err) {
+    loading.value = false;
+    toast('Erro ao finalizar: ' + (err.response?.data?.message ?? err.message), 'error', { noIcon: true });
+  }
 }
 
+// ─── Handlers de estado local ──────────────────────────────────────────────
+
+function handleFormDataUpdate(data) { currentFormData.value = data; }
+function handleToggleVistoria(value) { temVistoria.value = value; }
+
+function handleAddRecurso(recurso) {
+  if (!Array.isArray(recursosState.value)) recursosState.value = [];
+  recursosState.value.push(recurso);
+}
+function handleRemoveRecurso(id) {
+  if (!Array.isArray(recursosState.value)) return;
+  const i = recursosState.value.findIndex(r => r.id === id);
+  if (i > -1) recursosState.value.splice(i, 1);
+}
+function handleUpdateRecurso(data) { recursosState.value = Array.isArray(data) ? data : []; }
+
+function handleAddEnvolvido(e) { envolvidosState.value.push(e); }
+function handleRemoveEnvolvido(id) {
+  const i = envolvidosState.value.findIndex(e => e.id === id);
+  if (i > -1) envolvidosState.value.splice(i, 1);
+}
+function handleUpdateEnvolvidos(data) { envolvidosState.value = Array.isArray(data) ? data : []; }
+
+function handleUpdateVistoria(data) { vistoriaState.value = { ...vistoriaState.value, ...data }; }
+function handleUpdateHistorico(text) { historicoEstado.value = text; }
+
+function handleAddAnexo(a) {
+  if (!Array.isArray(anexosState.value)) anexosState.value = [];
+  anexosState.value.push(a);
+}
 function handleRemoveAnexo(id) {
-  if (!anexosState.value) return;
-  const index = anexosState.value.findIndex(a => a.id === id);
-  if (index > -1) {
-    anexosState.value.splice(index, 1);
-  }
+  if (!Array.isArray(anexosState.value)) return;
+  const i = anexosState.value.findIndex(a => a.id === id);
+  if (i > -1) anexosState.value.splice(i, 1);
 }
-
-function handleUpdateAnexos(updatedAnexos) {
-  if (Array.isArray(updatedAnexos)) {
-    anexosState.value = [...updatedAnexos];
-  }
-}
-
-function handleToggleVistoria(value) {
-  temVistoria.value = value;
+function handleUpdateAnexos(data) {
+  if (Array.isArray(data)) anexosState.value = [...data];
 }
 </script>
 
@@ -348,4 +307,3 @@ function handleToggleVistoria(value) {
   @apply w-full min-h-screen bg-transparent;
 }
 </style>
-

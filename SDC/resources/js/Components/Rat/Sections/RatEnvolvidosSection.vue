@@ -69,7 +69,6 @@
                 label="CEP"
                 v-model="localData.cep"
                 mask="cep"
-                @blur="buscarCepLocal"
               />
               <FormField
                 label="Município"
@@ -114,7 +113,7 @@ const emit = defineEmits(['update:modelValue']);
 // localData gerencia apenas UM envolvido agora
 const localData = ref({
   id: props.modelValue?.id || Date.now(),
-  tipo_envolvimento: props.modelValue?.tipo_envolvimento || 'vitima',
+  tipo_envolvimento: props.modelValue?.tipo_envolvimento || '',
   nome: props.modelValue?.nome || '',
   rg: props.modelValue?.rg || '',
   cpf: props.modelValue?.cpf || '',
@@ -123,6 +122,7 @@ const localData = ref({
   telefone: props.modelValue?.telefone || '',
   cep: props.modelValue?.cep || '',
   endereco: props.modelValue?.endereco || '',
+  bairro: props.modelValue?.bairro || '',
   municipio: props.modelValue?.municipio || '',
   uf: props.modelValue?.uf || '',
 });
@@ -131,7 +131,7 @@ const tipoEnvolvimentoOptions = [
   { value: 'vitima', label: 'Vítima' },
   { value: 'testemunha', label: 'Testemunha' },
   { value: 'solicitante', label: 'Solicitante' },
-  { value: ' proprietario', label: 'Proprietário' },
+  { value: 'proprietario', label: 'Proprietário' },
   { value: 'outros', label: 'Outros' },
 ];
 
@@ -142,19 +142,22 @@ const sexoOptions = [
 ];
 
 const { buscarCep } = useCep();
-const buscarCepLocal = async () => {
-  if (localData.value.cep) {
-    const cepLimpo = localData.value.cep.replace(/\D/g, '');
-    if (cepLimpo.length === 8) {
-      const resultado = await buscarCep(cepLimpo);
-      if (resultado) {
-        localData.value.endereco = resultado.logradouro || localData.value.endereco;
-        localData.value.municipio = resultado.localidade || localData.value.municipio;
-        localData.value.uf = resultado.uf || localData.value.uf;
-      }
+
+watch(
+  () => localData.value.cep,
+  async (newCep) => {
+    if (!newCep) return;
+    const cepLimpo = newCep.replace(/\D/g, '');
+    if (cepLimpo.length !== 8) return;
+    const resultado = await buscarCep(cepLimpo);
+    if (resultado) {
+      localData.value.endereco  = resultado.logradouro || localData.value.endereco;
+      localData.value.bairro    = resultado.bairro     || localData.value.bairro;
+      localData.value.municipio = resultado.localidade || localData.value.municipio;
+      localData.value.uf        = resultado.uf         || localData.value.uf;
     }
   }
-};
+);
 
 // Sincroniza local -> pai apenas se houver mudança real
 watch(

@@ -131,11 +131,12 @@ export default defineConfig({
         }),
     ],
     resolve: {
-        alias: {
-            '@': path.resolve(__dirname, 'resources/js'),
-            '@/Composables': path.resolve(__dirname, 'resources/js/composables'),
-            ziggy: path.resolve(__dirname, 'vendor/tightenco/ziggy/dist/index.esm.js'),
-        },
+        alias: [
+            { find: '@/Composables', replacement: path.resolve(__dirname, 'resources/js/Composables') },
+            { find: '@/composables', replacement: path.resolve(__dirname, 'resources/js/Composables') },
+            { find: 'ziggy', replacement: path.resolve(__dirname, 'vendor/tightenco/ziggy/dist/index.esm.js') },
+            { find: '@', replacement: path.resolve(__dirname, 'resources/js') },
+        ],
     },
     build: {
         rollupOptions: {
@@ -190,7 +191,7 @@ export default defineConfig({
         strictPort: false,
         hmr: {
             host: 'localhost',
-            clientPort: 18081,
+            clientPort: 8081,
             protocol: 'ws',
         },
         watch: {

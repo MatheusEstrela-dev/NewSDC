@@ -1,6 +1,6 @@
 <template>
-  <div v-if="!viewOnly" class="rat-actions-footer mt-6">
-    <div class="max-w-full mx-auto flex items-center justify-center gap-2 sm:gap-3 px-3 py-3 sm:px-6 sm:py-4">
+  <div v-if="!viewOnly" class="rat-actions-footer">
+    <div class="flex items-center justify-center gap-3 flex-wrap">
       <!-- Botão Salvar -->
       <Button
         variant="default"
@@ -54,8 +54,3 @@ defineProps({
 defineEmits(['save', 'finalize']);
 </script>
 
-<style scoped>
-.rat-actions-footer {
-  @apply border-t border-slate-200 dark:border-slate-700/30 bg-slate-50 dark:bg-slate-950/50 sticky bottom-0 z-10;
-}
-</style>

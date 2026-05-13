@@ -122,6 +122,7 @@ import { MESSAGES } from '@/constants/messages';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { Link, router } from '@inertiajs/vue3';
 import { useMobile } from '@/Composables/useMobile';
+import { useToast } from '@/Composables/useToast';
 import { computed, ref, watch } from 'vue';
 import RatFiltersSection from '../../Components/Organisms/Rat/Filters/RatFiltersSection.vue';
 import RatGrid from '../../Components/Organisms/Rat/Grid/RatGrid.vue';
@@ -197,9 +198,13 @@ const localFilters = ref({ ...(props.filters || {}) });
 const { isMobile } = useMobile();
 const viewMode = ref(isMobile.value ? 'grid' : 'table'); // grid no mobile, table no desktop
 
+const { show: toast } = useToast();
+
 // Estado para confirmação de exclusão
 const showDeleteModal = ref(false);
 const deletingRatId = ref(null);
+// IDs excluídos apenas no frontend (soft-delete no banco, sem reload)
+const excludedIds = ref(new Set());
 
 watch(
   () => props.filters,
@@ -284,10 +289,14 @@ const paginationToUse = computed(() => {
 });
 
 const ratsToUse = computed(() => {
-  if (!props.useMock) return props.rats || [];
+  if (!props.useMock) {
+    return (props.rats || []).filter(r => !excludedIds.value.has(r.id));
+  }
   const p = paginationToUse.value;
   const start = (p.current_page - 1) * p.per_page;
-  return filteredRats.value.slice(start, start + p.per_page);
+  return filteredRats.value
+    .filter(r => !excludedIds.value.has(r.id))
+    .slice(start, start + p.per_page);
 });
 
 const filtersToUse = computed(() => (props.useMock ? localFilters.value : props.filters));
@@ -330,17 +339,29 @@ function handleDelete(id) {
   showDeleteModal.value = true;
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!deletingRatId.value) return;
+  const id = deletingRatId.value;
   showDeleteModal.value = false;
-  router.delete(route('rat.destroy', deletingRatId.value), {
-    onSuccess: () => { deletingRatId.value = null; },
-    onError: (errors) => {
-      console.error('Erro ao excluir RAT:', errors);
-      alert('Não foi possível excluir o RAT. Verifique suas permissões e tente novamente.');
-      deletingRatId.value = null;
-    },
-  });
+  deletingRatId.value = null;
+
+  // Remove imediatamente do frontend (soft-delete — dado permanece no banco)
+  excludedIds.value = new Set([...excludedIds.value, id]);
+
+  try {
+    const ax = window.axios || (await import('axios')).default;
+    await ax.delete(route('rat.destroy', id), {
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        'Accept': 'application/json',
+      },
+    });
+    toast('RAT excluído com sucesso.', 'success', { noIcon: true });
+  } catch {
+    excludedIds.value.delete(id);
+    excludedIds.value = new Set([...excludedIds.value]);
+    toast('Erro ao excluir o RAT.', 'error', { noIcon: true });
+  }
 }
 
 // =========================

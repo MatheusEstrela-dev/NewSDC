@@ -31,8 +31,7 @@ services:
       - ../storage/logs:/app/storage/logs
       # Assets frontend (Vite build) montados para refletir builds locais
       - ../public/build:/app/public/build:ro
-      # Entrypoint e Caddyfile atualizados (sem precisar rebuild)
-      - ./frankenphp/scripts/entrypoint.sh:/start.sh:ro
+      # Caddyfile atualizado (sem precisar rebuild)
       - ./frankenphp/Caddyfile.dev:/app/Caddyfile:ro
       # Certificados Caddy (persistir CA interna entre restarts)
       - newsdc_caddy_data:/data/caddy
@@ -47,13 +46,14 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      ssr:
-        condition: service_started
 
     env_file:
       - ../.env.local
 
     environment:
+      # Diretorio de trabalho do entrypoint (Laravel esta montado em /app)
+      WORKDIR: /app
+
       # Laravel
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
@@ -71,9 +71,9 @@ services:
       INERTIA_SSR_URL: "http://ssr:13714"
 
       # Database (credenciais via Docker secrets)
-      DB_CONNECTION: mysql
+      DB_CONNECTION: pgsql
       DB_HOST: ${DB_HOST:-db}
-      DB_PORT: ${DB_PORT:-3306}
+      DB_PORT: ${DB_PORT:-5432}
       DB_DATABASE: ${DB_DATABASE:-sdc}
       DB_USERNAME: ${DB_USERNAME:-sdc}
 
@@ -105,11 +105,11 @@ services:
           memory: 512M
 
     healthcheck:
-      test: [ "CMD", "curl", "-sfk", "https://localhost/health" ]
+      test: [ "CMD", "curl", "-sf", "http://localhost/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 120s
 
   # ==========================================================================
   # NGINX (Web Server / Reverse Proxy)
@@ -364,9 +364,9 @@ services:
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
-      DB_CONNECTION: mysql
+      DB_CONNECTION: pgsql
       DB_HOST: db
-      DB_PORT: 3306
+      DB_PORT: 5432
       DB_DATABASE: ${DB_DATABASE:-sdc}
       DB_USERNAME: ${DB_USERNAME:-sdc}
       REDIS_HOST: redis
@@ -443,6 +443,8 @@ services:
 
   # ==========================================================================
   # Inertia SSR Server (Bun — renderizacao server-side das paginas Vue)
+  # Desabilitado por padrao (INERTIA_SSR_ENABLED=false). Para ativar:
+  #   docker compose --profile ssr up -d ssr
   # ==========================================================================
   ssr:
     build:
@@ -451,6 +453,8 @@ services:
     container_name: newsdc_ssr
     hostname: ssr
     restart: unless-stopped
+    profiles:
+      - ssr
     labels:
       - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=ssr"
@@ -493,6 +497,8 @@ services:
     container_name: newsdc_vault
     hostname: vault
     restart: unless-stopped
+    profiles:
+      - tools
     labels:
       - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=vault"
@@ -532,6 +538,8 @@ services:
     hostname: prometheus
     restart: unless-stopped
     platform: linux/amd64
+    profiles:
+      - monitoring
     labels:
       - "com.docker.compose.project=newsdc"
     security_opt:
@@ -569,6 +577,8 @@ services:
     hostname: alertmanager
     restart: unless-stopped
     platform: linux/amd64
+    profiles:
+      - monitoring
     labels:
       - "com.docker.compose.project=newsdc"
     security_opt:
@@ -601,6 +611,8 @@ services:
     hostname: grafana
     restart: unless-stopped
     platform: linux/amd64
+    profiles:
+      - monitoring
     labels:
       - "com.docker.compose.project=newsdc"
     security_opt:
@@ -644,6 +656,8 @@ services:
     container_name: newsdc_node_exporter
     hostname: node-exporter
     restart: unless-stopped
+    profiles:
+      - monitoring
     labels:
       - "com.docker.compose.project=newsdc"
     command:
@@ -672,6 +686,8 @@ services:
     hostname: cadvisor
     restart: unless-stopped
     platform: linux/amd64
+    profiles:
+      - monitoring
     labels:
       - "com.docker.compose.project=newsdc"
     security_opt:
@@ -698,6 +714,8 @@ services:
     container_name: newsdc_pg_exporter
     hostname: pg-exporter
     restart: unless-stopped
+    profiles:
+      - monitoring
     labels:
       - "com.docker.compose.project=newsdc"
     environment:
@@ -718,6 +736,8 @@ services:
     container_name: newsdc_redis_exporter
     hostname: redis-exporter
     restart: unless-stopped
+    profiles:
+      - monitoring
     labels:
       - "com.docker.compose.project=newsdc"
     environment:
@@ -736,6 +756,8 @@ services:
     container_name: newsdc_blackbox_exporter
     hostname: blackbox-exporter
     restart: unless-stopped
+    profiles:
+      - monitoring
     labels:
       - "com.docker.compose.project=newsdc"
     command:
@@ -777,8 +799,6 @@ services:
 secrets:
   db_password:
     environment: DB_PASSWORD
-  db_root_password:
-    environment: DB_ROOT_PASSWORD
 
 networks:
   sdc_network:

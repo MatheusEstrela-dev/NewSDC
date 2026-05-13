@@ -40,6 +40,7 @@ class RatRelatoVistoria extends RatRelato
         'v_tipo_imovel',
         'v_tipo_imovel_outro_descricao',
         'v_tipo_construcao',
+        'v_tipo_construcao_outro_descricao',
         'v_tipo_edificacao',
         'v_tipo_terreno_relevo',
         'v_sistema_estrutural',

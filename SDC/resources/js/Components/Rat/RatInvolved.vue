@@ -15,8 +15,8 @@
       <hr v-if="index < localEnvolvidos.length - 1" class="my-8 border-slate-200 dark:border-slate-700" />
     </div>
 
-    <!-- Controles -->
-    <div v-if="!viewOnly" class="flex flex-col items-center gap-4 mt-8">
+    <!-- Botão Adicionar -->
+    <div v-if="!viewOnly" class="flex justify-center">
       <button
         type="button"
         @click="adicionarLocal"
@@ -27,9 +27,9 @@
         </svg>
         Adicionar Outra Pessoa
       </button>
-
-      <RatFormActions :view-only="viewOnly" :loading="loading" @save="$emit('save')" />
     </div>
+
+    <RatFormActions :view-only="viewOnly" :loading="loading" label="Salvar Envolvidos" @save="$emit('save')" />
   </div>
 </template>
 
@@ -61,7 +61,7 @@ const localEnvolvidos = ref(
     : [{
         id: Date.now(),
         nome: '',
-        tipo_envolvimento: 'vitima',
+        tipo_envolvimento: '',
         rg: '',
         cpf: '',
         sexo: '',
@@ -73,7 +73,7 @@ const adicionarLocal = () => {
   localEnvolvidos.value.push({
     id: Date.now(),
     nome: '',
-    tipo_envolvimento: 'vitima',
+    tipo_envolvimento: '',
     sexo: '',
   });
 };

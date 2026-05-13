@@ -21,10 +21,10 @@ class RatHistoricoRequest extends FormRequest
     {
         return [
             // Tipo de Evento
-            'tipo_evento'             => ['required', 'string', Rule::in(['criado', 'atualizado', 'comentário', 'anexo_adicionado', 'status_mudado', 'finalizado', 'cancelado', 'outro'])],
+            'tipo_evento'             => ['nullable', 'string', Rule::in(['criado', 'atualizado', 'comentário', 'anexo_adicionado', 'status_mudado', 'finalizado', 'cancelado', 'outro'])],
 
             // Descrição
-            'descricao'               => ['required', 'string', 'max:1000'],
+            'descricao'               => ['nullable', 'string', 'max:5000'],
 
             // Data/Hora (opcional, usa current se não informado)
             'data_evento'             => ['nullable', 'string', 'regex:/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/'],
@@ -54,9 +54,6 @@ class RatHistoricoRequest extends FormRequest
 
     public function messages(): array
     {
-        return [
-            'tipo_evento.required'     => 'Tipo de evento é obrigatório.',
-            'descricao.required'       => 'Descrição é obrigatória.',
-        ];
+        return [];
     }
 }
