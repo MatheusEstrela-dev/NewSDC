@@ -112,12 +112,15 @@ class CronogramaService
             return [false, 'Cronograma exige ao menos 1 caminhao alocado.'];
         }
 
-        // GUARD Vistoria (Fase 4) - desligado ate Fase 4 ligar a regra real.
-        // foreach ($cronograma->caminhoes as $cc) {
-        //     if (! $cc->caminhao->vistoriaVigente) {
-        //         return [false, "Caminhao {$cc->caminhao->placa} sem vistoria aprovada vigente."];
-        //     }
-        // }
+        // GUARD Vistoria (Fase 4) - regra real ligada:
+        // todos os caminhoes alocados precisam ter vistoria aprovada vigente (<= 12 meses).
+        $cronograma->load(['caminhoes.caminhao.vistoriaVigente']);
+        foreach ($cronograma->caminhoes as $cc) {
+            if (! $cc->caminhao?->vistoriaVigente) {
+                $placa = $cc->caminhao?->placa ?? "id={$cc->caminhao_id}";
+                return [false, "Caminhao {$placa} nao tem vistoria aprovada vigente (12 meses). Registre/aprove vistoria antes."];
+            }
+        }
 
         return [true, null];
     }
