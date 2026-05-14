@@ -39,6 +39,18 @@ Route::prefix('pae')->name('pae.')->group(function () {
         ->name('formulario.conclusao')
         ->middleware('can:pae.empreendimentos.edit');
 
+    Route::post('/formulario/{paeForm}/anexos', [PaeFormularioController::class, 'storeAnexo'])
+        ->name('formulario.anexos.store')
+        ->middleware('can:pae.empreendimentos.edit');
+
+    Route::delete('/formulario/{paeForm}/anexos/{paeFormAnexo}', [PaeFormularioController::class, 'destroyAnexo'])
+        ->name('formulario.anexos.destroy')
+        ->middleware('can:pae.empreendimentos.edit');
+
+    Route::get('/formulario/{paeForm}/anexos/{paeFormAnexo}/download', [PaeFormularioController::class, 'downloadAnexo'])
+        ->name('formulario.anexos.download')
+        ->middleware('can:pae.empreendimentos.view');
+
     Route::put('/formulario/{paeForm}/finalizar', [PaeFormularioController::class, 'finalizar'])
         ->name('formulario.finalizar')
         ->middleware('can:pae.empreendimentos.edit');

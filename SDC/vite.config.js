@@ -1,11 +1,32 @@
 import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
+import { existsSync, rmSync } from 'fs';
 import path from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+function removeLaravelHotOnBuild() {
+    return {
+        name: 'remove-laravel-hot-on-build',
+        apply: 'build',
+        buildStart() {
+            const hotFile = path.resolve(__dirname, 'public/hot');
+            if (existsSync(hotFile)) {
+                rmSync(hotFile, { force: true });
+            }
+        },
+        closeBundle() {
+            const hotFile = path.resolve(__dirname, 'public/hot');
+            if (existsSync(hotFile)) {
+                rmSync(hotFile, { force: true });
+            }
+        },
+    };
+}
+
 export default defineConfig({
     plugins: [
+        removeLaravelHotOnBuild(),
         laravel({
             input: 'resources/js/app.js',
             ssr: 'resources/js/ssr.ts',

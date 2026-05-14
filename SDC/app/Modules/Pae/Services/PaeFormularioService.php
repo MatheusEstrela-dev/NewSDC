@@ -5,30 +5,48 @@ declare(strict_types=1);
 namespace App\Modules\Pae\Services;
 
 use App\Models\User;
+use App\Modules\Pae\DTOs\PaeFormAnexoDTO;
 use App\Modules\Pae\DTOs\PaeFormInfoGeraisDTO;
 use App\Modules\Pae\DTOs\PaeFormObjetivoDTO;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeForm;
+use App\Modules\Pae\Models\PaeFormAnexo;
 use App\Modules\Pae\Models\PaeFormApontamento;
 use App\Modules\Pae\Models\PaeFormConclusaoItem;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Models\PaeTimeline;
 use App\Modules\Shared\BaseService;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class PaeFormularioService extends BaseService
 {
     public function findById(int $id): ?PaeForm
     {
-        return PaeForm::with(['apontamentos', 'conclusao'])->find($id);
+        return PaeForm::with(['apontamentos', 'conclusao', 'anexos'])->find($id);
     }
 
     public function create(PaeFormInfoGeraisDTO $dto): PaeForm
     {
+        $data = array_merge($dto->toArray(), [
+            'status'     => 'RASCUNHO',
+            'created_by' => $dto->userId,
+        ]);
+
+        if ($dto->paeProtocoloId) {
+            $existing = PaeForm::where('pae_protocolo_id', $dto->paeProtocoloId)->first();
+
+            if ($existing) {
+                $existing->update($dto->toArray());
+
+                return $existing->fresh();
+            }
+        }
+
         return PaeForm::create(
-            array_merge($dto->toArray(), [
-                'status'     => 'RASCUNHO',
-                'created_by' => $dto->userId,
-            ])
+            $data
         );
     }
 
@@ -52,6 +70,53 @@ class PaeFormularioService extends BaseService
     {
         $this->syncConclusao($form, $itens);
         $form->update(['updated_by' => $user->id]);
+    }
+
+    public function storeAnexo(PaeForm $form, PaeFormAnexoDTO $dto, User $user): PaeFormAnexo
+    {
+        $disk = 'pae';
+        $directory = 'formularios/' . $form->id;
+        $extension = mb_strtolower($dto->arquivo->getClientOriginalExtension());
+        $nomeArquivo = (string) Str::uuid() . ($extension !== '' ? '.' . $extension : '');
+        $path = null;
+
+        try {
+            $path = $dto->arquivo->storeAs($directory, $nomeArquivo, $disk);
+
+            return $form->anexos()->create([
+                'nome_original' => $dto->arquivo->getClientOriginalName(),
+                'nome_arquivo' => $nomeArquivo,
+                'mime_type' => $dto->arquivo->getMimeType() ?: $dto->arquivo->getClientMimeType(),
+                'tamanho_bytes' => $dto->arquivo->getSize(),
+                'path' => $path,
+                'disk' => $disk,
+                'descricao' => $dto->descricao,
+                'uploaded_by' => $user->id,
+            ]);
+        } catch (Throwable $e) {
+            if ($path) {
+                Storage::disk($disk)->delete($path);
+            }
+
+            throw $e;
+        }
+    }
+
+    public function deleteAnexo(PaeForm $form, PaeFormAnexo $anexo): void
+    {
+        $this->ensureAnexoBelongsToForm($form, $anexo);
+
+        Storage::disk($anexo->disk)->delete($anexo->path);
+        $anexo->delete();
+    }
+
+    public function downloadAnexo(PaeForm $form, PaeFormAnexo $anexo): StreamedResponse
+    {
+        $this->ensureAnexoBelongsToForm($form, $anexo);
+
+        abort_unless(Storage::disk($anexo->disk)->exists($anexo->path), 404);
+
+        return Storage::disk($anexo->disk)->download($anexo->path, $anexo->nome_original);
     }
 
     public function finalizar(PaeForm $form, User $user): void
@@ -107,6 +172,10 @@ class PaeFormularioService extends BaseService
             ? $form->conclusao
             : $form->conclusao()->get();
 
+        $anexos = $form->relationLoaded('anexos')
+            ? $form->anexos
+            : $form->anexos()->get();
+
         return [
             'id'                      => $form->id,
             'pae_protocolo_id'        => $form->pae_protocolo_id,
@@ -124,9 +193,33 @@ class PaeFormularioService extends BaseService
             'objetivo'                => $form->objetivo,
             'contextualizacao'        => $form->contexto,
             'apontamentos'            => $this->buildTree($apontamentos),
+            'anexos'                  => $this->formatAnexos($anexos),
             'conclusao'               => $this->buildTree($conclusao),
             'status'                  => $form->status,
         ];
+    }
+
+    private function ensureAnexoBelongsToForm(PaeForm $form, PaeFormAnexo $anexo): void
+    {
+        abort_unless((int) $anexo->pae_form_id === (int) $form->id, 404);
+    }
+
+    private function formatAnexos($anexos): array
+    {
+        return $anexos
+            ->sortByDesc('created_at')
+            ->values()
+            ->map(fn (PaeFormAnexo $anexo) => [
+                'id' => $anexo->id,
+                'nome_original' => $anexo->nome_original,
+                'nome_arquivo' => $anexo->nome_arquivo,
+                'mime_type' => $anexo->mime_type,
+                'tamanho_bytes' => $anexo->tamanho_bytes,
+                'tamanho_formatado' => $anexo->tamanho_formatado,
+                'descricao' => $anexo->descricao,
+                'created_at' => $anexo->created_at?->format('Y-m-d H:i:s'),
+            ])
+            ->all();
     }
 
     private function syncApontamentos(PaeForm $form, array $itens): void

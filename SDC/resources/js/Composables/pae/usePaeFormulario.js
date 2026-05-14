@@ -12,6 +12,9 @@ const CONTEXTUALIZACAO_DEFAULT = 'O PAE é analisado conforme a Resolução GMG 
  */
 export function usePaeFormulario(empreendimento = {}, formulario = null) {
   const saving = ref(false);
+  const anexoProgress = ref(0);
+  const anexoStatus = ref('');
+  const anexoError = ref('');
   const { show: toast } = useToast();
   let nextId = 10;
 
@@ -50,6 +53,33 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
       ? formulario.conclusao
       : [{ id: makeId(), text: '', children: [] }]
   );
+
+  const anexos = ref(formulario?.anexos ?? []);
+
+  function syncAnexosFromPage(page) {
+    const updated = page.props?.formulario?.anexos;
+    if (Array.isArray(updated)) {
+      anexos.value = updated;
+    }
+  }
+
+  function clearAnexoFeedback() {
+    anexoProgress.value = 0;
+    anexoStatus.value = '';
+    anexoError.value = '';
+  }
+
+  function firstErrorMessage(errors, fallback) {
+    if (!errors) return fallback;
+    if (typeof errors === 'string') return errors;
+
+    const first = Object.values(errors)[0];
+    if (Array.isArray(first)) {
+      return first[0] ?? fallback;
+    }
+
+    return first ? String(first) : fallback;
+  }
 
   function saveInfoGerais(id, onCreated) {
     saving.value = true;
@@ -94,6 +124,106 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
     });
   }
 
+  function uploadAnexo(id, payload, callbacks = {}) {
+    clearAnexoFeedback();
+
+    if (!id) {
+      const message = 'Salve as Informacoes Gerais antes de adicionar anexos.';
+      anexoError.value = message;
+      toast(message);
+      callbacks.onError?.(message);
+      return;
+    }
+
+    saving.value = true;
+    anexoProgress.value = 8;
+    anexoStatus.value = 'Validando arquivo...';
+
+    router.post(`/pae/formulario/${id}/anexos`, payload, {
+      preserveScroll: true,
+      forceFormData: true,
+      onStart: () => {
+        anexoProgress.value = 12;
+        anexoStatus.value = 'Enviando anexo...';
+      },
+      onProgress: (progress) => {
+        if (!progress?.percentage) return;
+
+        anexoProgress.value = Math.max(12, Math.min(95, Math.round(progress.percentage)));
+        anexoStatus.value = anexoProgress.value >= 95 ? 'Processando anexo...' : 'Enviando anexo...';
+      },
+      onSuccess: (page) => {
+        anexoProgress.value = 100;
+        anexoStatus.value = 'Anexo salvo.';
+        syncAnexosFromPage(page);
+        toast('Anexo salvo.');
+        callbacks.onSuccess?.();
+      },
+      onError: (errors) => {
+        const message = firstErrorMessage(errors, 'Nao foi possivel adicionar o anexo. Tente novamente.');
+        anexoError.value = message;
+        anexoStatus.value = 'Falha ao adicionar anexo.';
+        toast(message);
+        callbacks.onError?.(message);
+      },
+      onCancel: () => {
+        const message = 'Envio cancelado antes da conclusao.';
+        anexoError.value = message;
+        anexoStatus.value = 'Envio cancelado.';
+        callbacks.onError?.(message);
+      },
+      onFinish: () => {
+        saving.value = false;
+        if (!anexoError.value) {
+          window.setTimeout(() => {
+            anexoProgress.value = 0;
+            anexoStatus.value = '';
+          }, 900);
+        }
+      },
+    });
+  }
+
+  function deleteAnexo(id, anexoId) {
+    if (!id || !anexoId) return;
+
+    clearAnexoFeedback();
+    saving.value = true;
+    anexoProgress.value = 35;
+    anexoStatus.value = 'Removendo anexo...';
+
+    router.delete(`/pae/formulario/${id}/anexos/${anexoId}`, {
+      preserveScroll: true,
+      onSuccess: (page) => {
+        anexoProgress.value = 100;
+        anexoStatus.value = 'Anexo removido.';
+        syncAnexosFromPage(page);
+        toast('Anexo removido.');
+      },
+      onError: (errors) => {
+        const message = firstErrorMessage(errors, 'Nao foi possivel remover o anexo. Tente novamente.');
+        anexoError.value = message;
+        anexoStatus.value = 'Falha ao remover anexo.';
+        toast(message);
+      },
+      onFinish: () => {
+        saving.value = false;
+        if (!anexoError.value) {
+          window.setTimeout(() => {
+            anexoProgress.value = 0;
+            anexoStatus.value = '';
+          }, 900);
+        }
+      },
+    });
+  }
+
+  function downloadAnexo(id, anexoId) {
+    if (!id || !anexoId) return;
+
+    window.location.assign(`/pae/formulario/${id}/anexos/${anexoId}/download`);
+  }
+
   function finalizarRelatorio(id) {
     saving.value = true;
     router.put(`/pae/formulario/${id}/finalizar`, { conclusao: conclusao.value }, {
@@ -125,13 +255,20 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
 
   return {
     saving,
+    anexoProgress,
+    anexoStatus,
+    anexoError,
     infoGerais,
     objetivoContexto,
     apontamentos,
+    anexos,
     conclusao,
     saveInfoGerais,
     saveObjetivoContexto,
     saveApontamentos,
+    uploadAnexo,
+    deleteAnexo,
+    downloadAnexo,
     saveConclusao,
     finalizarRelatorio,
     addItem,

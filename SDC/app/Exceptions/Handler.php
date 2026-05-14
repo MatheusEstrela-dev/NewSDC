@@ -268,10 +268,9 @@ class Handler extends ExceptionHandler
         // Web (SPA/Inertia): sempre responder com páginas Inertia (sem redirect 302 / sem HTML "solto")
         // Assim o erro renderiza no mesmo layout, ao lado do sidebar.
         if ($e instanceof AuthenticationException) {
-            return Inertia::render('Auth/Login', [
-                'status' => 'Sua sessão expirou. Faça login novamente.',
-                'intended' => $request->fullUrl(),
-            ])->toResponse($request)->setStatusCode(401);
+            return redirect()
+                ->guest(route('login'))
+                ->with('status', 'Sua sessao expirou. Faca login novamente.');
         }
 
         if ($e instanceof AuthorizationException || ($e instanceof HttpException && $e->getStatusCode() === 403)) {

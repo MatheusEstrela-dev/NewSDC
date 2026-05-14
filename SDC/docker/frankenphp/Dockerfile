@@ -40,8 +40,8 @@ RUN apk add --no-cache curl bash unzip \
 # Configuracao PHP otimizada
 RUN echo "memory_limit=512M" > /usr/local/etc/php/conf.d/99-memory.ini \
     && echo "max_execution_time=30" >> /usr/local/etc/php/conf.d/99-memory.ini \
-    && echo "upload_max_filesize=32M" >> /usr/local/etc/php/conf.d/99-memory.ini \
-    && echo "post_max_size=34M" >> /usr/local/etc/php/conf.d/99-memory.ini \
+    && echo "upload_max_filesize=64M" >> /usr/local/etc/php/conf.d/99-memory.ini \
+    && echo "post_max_size=64M" >> /usr/local/etc/php/conf.d/99-memory.ini \
     && echo "opcache.enable=1" > /usr/local/etc/php/conf.d/99-opcache.ini \
     && echo "opcache.enable_cli=1" >> /usr/local/etc/php/conf.d/99-opcache.ini \
     && echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/99-opcache.ini \

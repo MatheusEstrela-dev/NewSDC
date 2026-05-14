@@ -32,11 +32,10 @@ router.on('start', (event) => {
         startLoading();
     }
 });
-router.on('finish', (event) => {
-    if (isUserFacingNavigation(event.detail?.visit)) {
-        stopLoading();
-    }
-});
+router.on('finish', () => stopLoading());
+router.on('error', () => stopLoading());
+router.on('exception', () => stopLoading());
+router.on('navigate', () => stopLoading());
 
 const loadPageCSS = (pageName) => {
     const cssMap = {
