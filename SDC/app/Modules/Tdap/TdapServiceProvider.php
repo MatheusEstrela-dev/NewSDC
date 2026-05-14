@@ -6,6 +6,9 @@ namespace App\Modules\Tdap;
 
 use App\Modules\Tdap\Services\AtaService;
 use App\Modules\Tdap\Services\CaminhaoService;
+use App\Modules\Tdap\Services\CronoCaminhaoService;
+use App\Modules\Tdap\Services\CronogramaService;
+use App\Modules\Tdap\Services\CronoViagemService;
 use App\Modules\Tdap\Services\LoteService;
 use App\Modules\Tdap\Services\PrestadorService;
 use Illuminate\Support\ServiceProvider;
@@ -40,6 +43,11 @@ class TdapServiceProvider extends ServiceProvider
         // Instrumentos contratuais (Fase 2)
         $this->app->singleton(AtaService::class);
         $this->app->singleton(LoteService::class);
+
+        // Cronograma (Fase 3)
+        $this->app->singleton(CronogramaService::class);
+        $this->app->singleton(CronoCaminhaoService::class);
+        $this->app->singleton(CronoViagemService::class);
     }
 
     public function boot(): void
