@@ -444,7 +444,27 @@
         >
           Lotes
         </NavItem>
-        <!-- Itens (Cronogramas, Vistorias, Historico) entram a partir da Fase 3 -->
+        <NavItem
+          v-if="_routes.hasTdapCronogramas"
+          :href="route('tdap.cronogramas.index')"
+          :active="isRouteActive('tdap.cronogramas.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Cronogramas
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapViagensPendentes"
+          :href="route('tdap.viagens.pendentes')"
+          :active="isRouteActive('tdap.viagens.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Viagens pendentes
+        </NavItem>
+        <!-- Itens (Vistorias, Historico) entram a partir da Fase 4 -->
       </div>
     </nav>
 
@@ -495,6 +515,8 @@ const _routes = {
   hasTdapCaminhoes: route().has('tdap.caminhoes.index'),
   hasTdapAtas: route().has('tdap.atas.index'),
   hasTdapLotes: route().has('tdap.lotes.index'),
+  hasTdapCronogramas: route().has('tdap.cronogramas.index'),
+  hasTdapViagensPendentes: route().has('tdap.viagens.pendentes'),
   hasCisterna: route().has('cisternas.index'),
   hasInventario: route().has('inventario.index'),
   hasEstoque: route().has('estoque.index'),
@@ -527,6 +549,8 @@ const _activeRoutes = computed(() => {
     'tdap.caminhoes.*': route().current('tdap.caminhoes.*'),
     'tdap.atas.*': route().current('tdap.atas.*'),
     'tdap.lotes.*': route().current('tdap.lotes.*'),
+    'tdap.cronogramas.*': route().current('tdap.cronogramas.*'),
+    'tdap.viagens.*': route().current('tdap.viagens.*'),
     'cisternas.*': route().current('cisternas.*'),
     'inventario.*': route().current('inventario.*'),
     'estoque.*': route().current('estoque.*'),
@@ -615,6 +639,8 @@ const canSeeTdap = computed(() => {
     'tdap.caminhoes.view',
     'tdap.atas.view',
     'tdap.lotes.view',
+    'tdap.cronogramas.view',
+    'tdap.viagens.view',
   ]);
 });
 

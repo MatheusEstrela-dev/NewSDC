@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 use App\Modules\Tdap\Controllers\AtaController;
 use App\Modules\Tdap\Controllers\CaminhaoController;
+use App\Modules\Tdap\Controllers\CronoCaminhaoController;
+use App\Modules\Tdap\Controllers\CronogramaController;
+use App\Modules\Tdap\Controllers\CronoViagemController;
 use App\Modules\Tdap\Controllers\LoteController;
 use App\Modules\Tdap\Controllers\PrestadorController;
 use App\Modules\Tdap\Controllers\TdapDashboardController;
 use App\Modules\Tdap\Models\Ata;
 use App\Modules\Tdap\Models\Caminhao;
+use App\Modules\Tdap\Models\Cronograma;
+use App\Modules\Tdap\Models\CronoCaminhao;
+use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Models\Lote;
 use App\Modules\Tdap\Models\Prestador;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +36,9 @@ Route::model('prestador', Prestador::class);
 Route::model('caminhao', Caminhao::class);
 Route::model('ata', Ata::class);
 Route::model('lote', Lote::class);
+Route::model('cronograma', Cronograma::class);
+Route::model('cronoCaminhao', CronoCaminhao::class);
+Route::model('viagem', CronoViagem::class);
 
 Route::prefix('tdap')->name('tdap.')->group(function () {
 
@@ -138,6 +147,70 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
         Route::middleware('can:tdap.lotes.delete')->group(function () {
             Route::delete('/{lote}', [LoteController::class, 'destroy'])
                 ->name('destroy')->whereNumber('lote');
+        });
+    });
+
+    /* Cronogramas (Fase 3) */
+    Route::prefix('cronogramas')->name('cronogramas.')->group(function () {
+        Route::middleware('can:tdap.cronogramas.view')->group(function () {
+            Route::get('/', [CronogramaController::class, 'index'])->name('index');
+            Route::get('/{cronograma}', [CronogramaController::class, 'show'])
+                ->name('show')->whereNumber('cronograma');
+        });
+
+        Route::middleware('can:tdap.cronogramas.create')->group(function () {
+            Route::get('/novo/cadastrar', [CronogramaController::class, 'create'])->name('create');
+            Route::post('/', [CronogramaController::class, 'store'])->name('store');
+        });
+
+        Route::middleware('can:tdap.cronogramas.edit')->group(function () {
+            Route::get('/{cronograma}/editar', [CronogramaController::class, 'edit'])
+                ->name('edit')->whereNumber('cronograma');
+            Route::put('/{cronograma}', [CronogramaController::class, 'update'])
+                ->name('update')->whereNumber('cronograma');
+        });
+
+        Route::middleware('can:tdap.cronogramas.ativar')->group(function () {
+            Route::post('/{cronograma}/ativar', [CronogramaController::class, 'ativar'])
+                ->name('ativar')->whereNumber('cronograma');
+            Route::post('/{cronograma}/encerrar', [CronogramaController::class, 'encerrar'])
+                ->name('encerrar')->whereNumber('cronograma');
+        });
+
+        Route::middleware('can:tdap.cronogramas.prorrogar')->group(function () {
+            Route::post('/{cronograma}/prorrogar', [CronogramaController::class, 'prorrogar'])
+                ->name('prorrogar')->whereNumber('cronograma');
+        });
+
+        Route::middleware('can:tdap.cronogramas.delete')->group(function () {
+            Route::delete('/{cronograma}', [CronogramaController::class, 'destroy'])
+                ->name('destroy')->whereNumber('cronograma');
+        });
+    });
+
+    /* CronoCaminhoes - subrota gerenciada pelo Cronograma (Fase 3) */
+    Route::prefix('crono-caminhoes')->name('crono_caminhoes.')->group(function () {
+        Route::middleware('can:tdap.cronogramas.edit')->group(function () {
+            Route::post('/', [CronoCaminhaoController::class, 'store'])->name('store');
+            Route::put('/{cronoCaminhao}', [CronoCaminhaoController::class, 'update'])
+                ->name('update')->whereNumber('cronoCaminhao');
+            Route::delete('/{cronoCaminhao}', [CronoCaminhaoController::class, 'destroy'])
+                ->name('destroy')->whereNumber('cronoCaminhao');
+        });
+    });
+
+    /* Viagens (Fase 3) */
+    Route::prefix('viagens')->name('viagens.')->group(function () {
+        Route::middleware('can:tdap.viagens.validar')->group(function () {
+            Route::get('/pendentes', [CronoViagemController::class, 'pendentes'])->name('pendentes');
+            Route::post('/{viagem}/validar', [CronoViagemController::class, 'validar'])
+                ->name('validar')->whereNumber('viagem');
+        });
+
+        Route::middleware('can:tdap.viagens.create')->group(function () {
+            Route::post('/', [CronoViagemController::class, 'store'])->name('store');
+            Route::delete('/{viagem}', [CronoViagemController::class, 'destroy'])
+                ->name('destroy')->whereNumber('viagem');
         });
     });
 });
