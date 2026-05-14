@@ -470,7 +470,7 @@ class RatUnifiedController extends BaseController
 
     public function export(Request $request): StreamedResponse
     {
-        return $this->exportService->exportToCsv();
+        return $this->exportService->exportToCsv($request);
     }
 
     public function exportRats(Request $request): StreamedResponse

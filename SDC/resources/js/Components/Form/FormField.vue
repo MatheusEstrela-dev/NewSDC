@@ -140,9 +140,9 @@ const isFilled = computed(() => {
 const handleInput = (event) => {
   let value = event.target.value;
 
-  // Aplica máscara se fornecida
   if (props.mask) {
     value = applyMask(value, props.mask);
+    event.target.value = value;
   }
 
   emit('update:modelValue', value);

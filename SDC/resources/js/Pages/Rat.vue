@@ -208,7 +208,10 @@ async function saveAndAdvance(tabPayload, nextTab) {
       };
       router.post(route('rat.store'), payload, {
         preserveScroll: false,
-        onSuccess: () => toast('RAT criado com sucesso.', 'success', { noIcon: true }),
+        onSuccess: () => {
+          toast('RAT criado com sucesso.', 'success', { noIcon: true });
+          if (nextTab !== null) tabs.setActiveTab(nextTab);
+        },
         onError:   () => toast('Erro ao salvar dados gerais.', 'error', { noIcon: true }),
         onFinish:  () => { loading.value = false; creating.value = false; },
       });
@@ -259,7 +262,7 @@ async function handleFinalize() {
       headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' },
     });
     toast('RAT finalizado com sucesso.', 'success', { noIcon: true });
-    router.visit(route('rat.show', ratId));
+    router.visit(route('rat.index'));
   } catch (err) {
     loading.value = false;
     toast('Erro ao finalizar: ' + (err.response?.data?.message ?? err.message), 'error', { noIcon: true });
