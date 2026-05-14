@@ -336,6 +336,23 @@ Route::prefix('v1/rat')
     });
 
 // ============================================================================
+// TDAP API (PowerBI / BI integration) - Fase 5
+// ============================================================================
+Route::prefix('v1/tdap')
+    ->name('api.v1.tdap.')
+    ->middleware([
+        \Illuminate\Cookie\Middleware\EncryptCookies::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        'decretacoes.api.auth',
+        'api-rate-limiter:pro',
+    ])
+    ->group(function () {
+        Route::get('cronogramas', [\App\Http\Controllers\Api\V1\Tdap\TdapApiController::class, 'cronogramas'])
+            ->name('cronogramas');
+    });
+
+// ============================================================================
 // IA INTEGRATION CORE
 // ============================================================================
 
