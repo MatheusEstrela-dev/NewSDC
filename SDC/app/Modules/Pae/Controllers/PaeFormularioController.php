@@ -6,15 +6,19 @@ namespace App\Modules\Pae\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Municipio;
+use App\Modules\Pae\DTOs\PaeFormAnexoDTO;
 use App\Modules\Pae\DTOs\PaeFormInfoGeraisDTO;
 use App\Modules\Pae\DTOs\PaeFormObjetivoDTO;
 use App\Modules\Pae\Models\PaeForm;
+use App\Modules\Pae\Models\PaeFormAnexo;
 use App\Modules\Pae\Models\PaeProtocolo;
+use App\Modules\Pae\Requests\StorePaeFormAnexoRequest;
 use App\Modules\Pae\Services\PaeFormularioService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PaeFormularioController extends Controller
 {
@@ -22,17 +26,22 @@ class PaeFormularioController extends Controller
         private readonly PaeFormularioService $service
     ) {}
 
-    public function show(Request $request): Response
+    public function show(Request $request): Response|RedirectResponse
     {
         $formulario = null;
         $protocolo  = null;
 
         if ($request->filled('formulario_id')) {
-            $form = PaeForm::with(['apontamentos', 'conclusao'])
+            $form = PaeForm::with(['apontamentos', 'conclusao', 'anexos'])
                 ->findOrFail($request->integer('formulario_id'));
+
+            if ($form->pae_protocolo_id) {
+                return redirect()->route('pae.index', ['protocolo_id' => $form->pae_protocolo_id]);
+            }
+
             $formulario = $this->service->formatForView($form);
         } elseif ($request->filled('protocolo_id')) {
-            $form = PaeForm::with(['apontamentos', 'conclusao'])
+            $form = PaeForm::with(['apontamentos', 'conclusao', 'anexos'])
                 ->where('pae_protocolo_id', $request->integer('protocolo_id'))
                 ->first();
 
@@ -71,7 +80,7 @@ class PaeFormularioController extends Controller
 
     public function edit(PaeProtocolo $paeProtocolo): Response|RedirectResponse
     {
-        $form = PaeForm::with(['apontamentos', 'conclusao'])
+        $form = PaeForm::with(['apontamentos', 'conclusao', 'anexos'])
             ->where('pae_protocolo_id', $paeProtocolo->id)
             ->first();
 
@@ -101,7 +110,11 @@ class PaeFormularioController extends Controller
 
         $form = $this->service->create($dto);
 
-        return redirect()->route('pae.index', ['formulario_id' => $form->id])
+        $routeParams = $form->pae_protocolo_id
+            ? ['protocolo_id' => $form->pae_protocolo_id]
+            : ['formulario_id' => $form->id];
+
+        return redirect()->route('pae.index', $routeParams)
             ->with('success', 'Informações gerais salvas.');
     }
 
@@ -148,6 +161,29 @@ class PaeFormularioController extends Controller
         $this->service->updateConclusao($paeForm, $request->input('conclusao', []), $request->user());
 
         return back()->with('success', 'Conclusão salva.');
+    }
+
+    public function storeAnexo(StorePaeFormAnexoRequest $request, PaeForm $paeForm): RedirectResponse
+    {
+        $this->service->storeAnexo(
+            $paeForm,
+            PaeFormAnexoDTO::fromArray($request->validated()),
+            $request->user(),
+        );
+
+        return back()->with('success', 'Anexo salvo.');
+    }
+
+    public function destroyAnexo(PaeForm $paeForm, PaeFormAnexo $paeFormAnexo): RedirectResponse
+    {
+        $this->service->deleteAnexo($paeForm, $paeFormAnexo);
+
+        return back()->with('success', 'Anexo removido.');
+    }
+
+    public function downloadAnexo(PaeForm $paeForm, PaeFormAnexo $paeFormAnexo): StreamedResponse
+    {
+        return $this->service->downloadAnexo($paeForm, $paeFormAnexo);
     }
 
     public function finalizar(Request $request, PaeForm $paeForm): RedirectResponse

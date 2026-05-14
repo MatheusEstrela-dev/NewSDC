@@ -63,6 +63,11 @@ class PaeForm extends Model
         return $this->hasMany(PaeFormConclusaoItem::class, 'pae_form_id');
     }
 
+    public function anexos(): HasMany
+    {
+        return $this->hasMany(PaeFormAnexo::class, 'pae_form_id')->orderByDesc('created_at');
+    }
+
     protected static function newFactory(): PaeFormFactory
     {
         return PaeFormFactory::new();

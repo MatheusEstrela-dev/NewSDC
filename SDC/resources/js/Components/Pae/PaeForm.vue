@@ -36,6 +36,20 @@
     </div>
 
     <div v-else-if="activeSubTab === 4">
+      <PaeFormAnexos
+        :items="rat.anexos"
+        :formulario-id="formularioId"
+        :saving="rat.saving"
+        :progress="rat.anexoProgress"
+        :status-message="rat.anexoStatus"
+        :error-message="rat.anexoError"
+        @upload="handleUploadAnexo"
+        @remove="handleRemoveAnexo"
+        @download="handleDownloadAnexo"
+      />
+    </div>
+
+    <div v-else-if="activeSubTab === 5">
       <PaeFormConclusao
         :items="rat.conclusao"
         :saving="rat.saving"
@@ -58,6 +72,7 @@ import PaeFormTabs from './PaeFormTabs.vue';
 import PaeFormInfoGerais from './PaeFormInfoGerais.vue';
 import PaeFormObjetivoContexto from './PaeFormObjetivoContexto.vue';
 import PaeFormApontamentos from './PaeFormApontamentos.vue';
+import PaeFormAnexos from './PaeFormAnexos.vue';
 import PaeFormConclusao from './PaeFormConclusao.vue';
 
 function svgIcon(d) {
@@ -110,6 +125,11 @@ const tabConfig = [
   },
   {
     id: 4,
+    label: 'Anexos',
+    icon: svgIcon('M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m0-12l-4 4m4-4l4 4'),
+  },
+  {
+    id: 5,
     label: 'Conclusão',
     icon: svgIcon('M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'),
   },
@@ -141,6 +161,19 @@ function handleSaveObjetivo(data) {
 
 function handleSaveApontamentos() {
   rat.saveApontamentos(formularioId.value);
+}
+
+function handleUploadAnexo(payload) {
+  const { onSuccess, onError, ...data } = payload;
+  rat.uploadAnexo(formularioId.value, data, { onSuccess, onError });
+}
+
+function handleRemoveAnexo(anexoId) {
+  rat.deleteAnexo(formularioId.value, anexoId);
+}
+
+function handleDownloadAnexo(anexoId) {
+  rat.downloadAnexo(formularioId.value, anexoId);
 }
 
 function handleSaveConclusao() {

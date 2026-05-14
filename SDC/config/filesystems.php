@@ -65,6 +65,13 @@ return [
             'throw' => true,
         ],
 
+        'pae' => [
+            'driver' => 'local',
+            'root' => storage_path('app/pae'),
+            'visibility' => 'private',
+            'throw' => true,
+        ],
+
     ],
 
     /*
