@@ -5,176 +5,48 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Rat;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Rat\DTOs\RatFilterDTO;
-use App\Modules\Rat\DTOs\RatReceiveBIDTO;
 use App\Modules\Rat\Http\Requests\ReceiveRatBIRequest;
 use App\Modules\Rat\Http\Resources\RatListResource;
 use App\Modules\Rat\Http\Resources\RatResource;
-use App\Modules\Rat\Services\RatExportBIService;
-use App\Modules\Rat\Services\RatReceiveBIService;
+use App\Modules\Rat\Models\RatOcorrencia;
+use App\Modules\Rat\Services\RatWriteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/**
- * API Controller para o modulo RAT.
- *
- * FLUXO: Request -> Controller -> Service -> JSON
- *
- * RESPONSABILIDADES:
- * - GET /api/v1/rat/protocolos                → listagem paginada
- * - GET /api/v1/rat/protocolos?format=powerbi → flat array para Power BI
- * - GET /api/v1/rat/protocolos/{id}           → detalhe completo
- * - POST /api/v1/rat/protocolos               → recebimento de dados externos
- *
- * @OA\Tag(
- *     name="RAT",
- *     description="Endpoints do modulo RAT (Registro de Atendimento Tecnico)"
- * )
- */
 class ProtocoloController extends Controller
 {
     public function __construct(
-        private readonly RatExportBIService  $exportService,
-        private readonly RatReceiveBIService $receiveService,
+        private readonly RatWriteService $writeService,
     ) {}
 
-    /**
-     * Lista protocolos RAT ou exporta flat para Power BI.
-     *
-     * ?format=powerbi → retorna array flat desnormalizado (sem paginacao)
-     * sem parametro   → retorna lista paginada com RatListResource
-     *
-     * @OA\Get(
-     *     path="/api/v1/rat/protocolos",
-     *     summary="Lista protocolos RAT / export Power BI",
-     *     tags={"RAT"},
-     *     security={{"bearerAuth": {}}},
-     *     @OA\Parameter(name="format", in="query", required=false, @OA\Schema(type="string", enum={"powerbi"})),
-     *     @OA\Parameter(name="protocolo", in="query", required=false, @OA\Schema(type="string")),
-     *     @OA\Parameter(name="status", in="query", required=false, @OA\Schema(type="string")),
-     *     @OA\Parameter(name="municipio", in="query", required=false, @OA\Schema(type="string")),
-     *     @OA\Parameter(name="ano", in="query", required=false, @OA\Schema(type="string")),
-     *     @OA\Parameter(name="data_inicio", in="query", required=false, description="Filtro por data inicial (YYYY-MM-DD)", @OA\Schema(type="string", format="date")),
-     *     @OA\Parameter(name="data_fim", in="query", required=false, description="Filtro por data final (YYYY-MM-DD)", @OA\Schema(type="string", format="date")),
-     *     @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=15)),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Sucesso",
-     *         @OA\JsonContent(
-     *             allOf={
-     *                 @OA\Schema(ref="#/components/schemas/SuccessResponse"),
-     *                 @OA\Schema(ref="#/components/schemas/PaginatedResponse")
-     *             },
-     *             @OA\Examples(
-     *                 example="listagemPaginada",
-     *                 summary="Listagem paginada padrao",
-     *                 value={
-     *                     "success": true,
-     *                     "data": {
-     *                         {
-     *                             "dados_gerais": {
-     *                                 "id": 155,
-     *                                 "numero_bos": "2025-000000001-001",
-     *                                 "status": 1,
-     *                                 "status_descricao": "Finalizado",
-     *                                 "uf": "MG",
-     *                                 "municipio": "620 - BELO HORIZONTE",
-     *                                 "data_fato": "2025-12-23 08:53:00",
-     *                                 "data_inicio_atividade": "2025-12-23 08:53:00",
-     *                                 "data_termino_atividade": "2025-12-23 08:53:00",
-     *                                 "comunicacao_data": "2025-12-23 08:53:00",
-     *                                 "created_at": "2025-12-23 08:53:14",
-     *                                 "updated_at": "2025-12-23 08:54:53"
-     *                             },
-     *                             "recursos": {
-     *                                 {
-     *                                     "id": 8,
-     *                                     "tipo_recurso": "aquatico",
-     *                                     "categoria": "comunicacao",
-     *                                     "numero_viatura": "HNH 1932",
-     *                                     "placa": "HNH 1932",
-     *                                     "orgao": "samu",
-     *                                     "descricao": "Voluptatem rerum qui"
-     *                                 }
-     *                             },
-     *                             "envolvidos": {
-     *                                 {
-     *                                     "id": 37,
-     *                                     "tipo_pessoa": "juridica",
-     *                                     "nome": "Quod ipsum omnis ir",
-     *                                     "email": "buta@mailinator.com",
-     *                                     "data_nascimento": "2017-09-23"
-     *                                 }
-     *                             },
-     *                             "vistoria": {
-     *                                 "id": 9
-     *                             }
-     *                         }
-     *                     },
-     *                     "meta": {
-     *                         "current_page": 1,
-     *                         "per_page": 15,
-     *                         "total": 1,
-     *                         "last_page": 1
-     *                     }
-     *                 }
-     *             ),
-     *             @OA\Examples(
-     *                 example="exportPowerbi",
-     *                 summary="Exportacao flat para Power BI (?format=powerbi)",
-     *                 value={
-     *                     "success": true,
-     *                     "data": {
-     *                         {
-     *                             "rat_id": 155,
-     *                             "protocolo": "2025-000000001-001",
-     *                             "status": "finalizado",
-     *                             "created_at": "2025-12-23 08:53:14",
-     *                             "updated_at": "2025-12-23 08:54:53",
-     *                             "dados_gerais_data_fato": "2025-12-23 08:53:00",
-     *                             "dados_gerais_data_inicio_atividade": "2025-12-23 08:53:00",
-     *                             "dados_gerais_data_termino_atividade": "2025-12-23 08:53:00",
-     *                             "comunicacao_data": "2025-12-23 08:53:00",
-     *                             "recurso_data_saida": "2025-12-23 08:53:00",
-     *                             "recurso_data_chegada": "2025-12-23 08:53:00",
-     *                             "envolvido_data_nascimento": "2017-09-23"
-     *                         }
-     *                     },
-     *                     "meta": {
-     *                         "total_registros": 1,
-     *                         "gerado_em": "2025-12-23 09:00:00"
-     *                     }
-     *                 }
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(response=400, description="Requisicao invalida", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
-     *     @OA\Response(response=401, description="Nao autenticado", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
-     *     @OA\Response(response=422, description="Erro de validacao", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
-     *     @OA\Response(response=429, description="Rate limit excedido")
-     * )
-     */
     public function index(Request $request): JsonResponse
     {
-        $filters = RatFilterDTO::fromArray($request->only([
-            'protocolo', 'status', 'municipio', 'ano',
-            'data_inicio', 'data_fim', 'per_page',
-        ]));
+        $query = RatOcorrencia::query()
+            ->with(['relatosMorph.conteudo'])
+            ->orderByDesc('created_at');
 
-        if ($request->input('format') === 'powerbi') {
-            $data = $this->exportService->listForPowerBI($filters);
-
-            return response()->json([
-                'success' => true,
-                'data'    => $data,
-                'meta'    => [
-                    'total_registros' => count($data),
-                    'gerado_em'       => now()->toIso8601String(),
-                ],
-            ]);
+        if ($protocolo = $request->input('protocolo')) {
+            $query->where('numero_bos', 'like', '%' . $protocolo . '%');
         }
 
-        $paginator = $this->exportService->listForApi($filters);
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($ano = $request->input('ano')) {
+            $query->whereYear('created_at', $ano);
+        }
+
+        if ($dataInicio = $request->input('data_inicio')) {
+            $query->whereDate('created_at', '>=', $dataInicio);
+        }
+
+        if ($dataFim = $request->input('data_fim')) {
+            $query->whereDate('created_at', '<=', $dataFim);
+        }
+
+        $perPage   = (int) $request->input('per_page', 15);
+        $paginator = $query->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -188,44 +60,9 @@ class ProtocoloController extends Controller
         ]);
     }
 
-    /**
-     * Detalhe completo de um RAT por UUID.
-     *
-     * @OA\Get(
-     *     path="/api/v1/rat/protocolos/{id}",
-     *     summary="Detalhe de um protocolo RAT",
-     *     tags={"RAT"},
-     *     security={{"bearerAuth": {}}},
-     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string")),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Protocolo encontrado",
-     *         @OA\JsonContent(
-     *             allOf={
-     *                 @OA\Schema(ref="#/components/schemas/SuccessResponse"),
-     *                 @OA\Schema(
-     *                     @OA\Property(
-     *                         property="data",
-     *                         type="object",
-     *                         required={"dados_gerais", "recursos", "envolvidos", "vistoria"},
-     *                         @OA\Property(property="dados_gerais", type="object"),
-     *                         @OA\Property(property="recursos", type="array", @OA\Items(type="object")),
-     *                         @OA\Property(property="envolvidos", type="array", @OA\Items(type="object")),
-     *                         @OA\Property(property="vistoria", type="object")
-     *                     )
-     *                 )
-     *             }
-     *         )
-     *     ),
-     *     @OA\Response(response=400, description="Requisicao invalida", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
-     *     @OA\Response(response=401, description="Nao autenticado", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
-     *     @OA\Response(response=422, description="Erro de validacao", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
-     *     @OA\Response(response=404, description="Nao encontrado", @OA\JsonContent(ref="#/components/schemas/ErrorResponse"))
-     * )
-     */
     public function show(string $id): JsonResponse
     {
-        $rat = $this->exportService->findById($id);
+        $rat = RatOcorrencia::with(['relatosMorph.conteudo'])->find($id);
 
         if (!$rat) {
             return response()->json([
@@ -240,39 +77,18 @@ class ProtocoloController extends Controller
         ]);
     }
 
-    /**
-     * Recebe dados externos e cria um novo RAT.
-     *
-     * @OA\Post(
-     *     path="/api/v1/rat/protocolos",
-     *     summary="Recebe dados externos e cria protocolo RAT",
-     *     tags={"RAT"},
-     *     security={{"bearerAuth": {}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             type="object",
-     *             @OA\Property(property="dados_gerais", type="object"),
-     *             @OA\Property(property="comunicacao", type="object"),
-     *             @OA\Property(property="local", type="object"),
-     *             @OA\Property(property="endereco", type="object"),
-     *             @OA\Property(property="recursos", type="array", @OA\Items(type="object")),
-     *             @OA\Property(property="envolvidos", type="array", @OA\Items(type="object")),
-     *             @OA\Property(property="vistoria", type="object"),
-     *             @OA\Property(property="finalize", type="boolean", nullable=true, example=false)
-     *         )
-     *     ),
-     *     @OA\Response(response=201, description="RAT criado com sucesso", @OA\JsonContent(ref="#/components/schemas/SuccessResponse")),
-     *     @OA\Response(response=400, description="Requisicao invalida", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
-     *     @OA\Response(response=401, description="Nao autenticado", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
-     *     @OA\Response(response=422, description="Dados invalidos", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
-     *     @OA\Response(response=429, description="Rate limit excedido")
-     * )
-     */
     public function receive(ReceiveRatBIRequest $request): JsonResponse
     {
-        $dto = RatReceiveBIDTO::fromRequest($request);
-        $rat = $this->receiveService->receive($dto);
+        $rat = $this->writeService->createWithData([
+            'dadosGerais' => $request->input('dados_gerais', []),
+            'comunicacao' => $request->input('comunicacao', []),
+            'local'       => $request->input('local', []),
+            'endereco'    => $request->input('endereco', []),
+            'recursos'    => $request->input('recursos', []),
+            'envolvidos'  => $request->input('envolvidos', []),
+            'vistoria'    => $request->input('vistoria', []),
+            'finalize'    => (bool) $request->input('finalize', false),
+        ]);
 
         return response()->json([
             'success' => true,

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\IA\Tools\LLPhant;
 
 use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
-use App\Modules\Rat\DTOs\RatFilterDTO;
+use App\Modules\Rat\Models\RatOcorrencia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -26,13 +26,20 @@ class RatTools
     public function buscarRatPorMunicipio(string $municipio = '', string $status = ''): string
     {
         try {
-            $filters = new RatFilterDTO(
-                municipio: $municipio ?: null,
-                status:    $status    ?: null,
-                perPage:   10,
-            );
+            $query = RatOcorrencia::query()->orderByDesc('created_at');
 
-            $paginator = $this->ratRepository->paginate($filters);
+            if ($status) {
+                $statusInt = match (strtolower(trim($status))) {
+                    'rascunho', 'em_andamento' => 0,
+                    'finalizado'               => 1,
+                    default                    => null,
+                };
+                if ($statusInt !== null) {
+                    $query->where('status', $statusInt);
+                }
+            }
+
+            $paginator = $query->paginate(10);
             $rats      = $paginator->getCollection();
 
             $result = $rats->map(fn ($rat) => $this->mapRatToArray($rat));
@@ -64,12 +71,10 @@ class RatTools
         try {
             $protocolo = strtoupper(trim($protocolo));
 
-            $filters   = new RatFilterDTO(
-                protocolo: $protocolo,
-                perPage:   5,
-            );
-
-            $paginator = $this->ratRepository->paginate($filters);
+            $paginator = RatOcorrencia::query()
+                ->where('numero_bos', 'like', '%' . $protocolo . '%')
+                ->orderByDesc('created_at')
+                ->paginate(5);
             $rats      = $paginator->getCollection();
 
             foreach ($rats as $rat) {
