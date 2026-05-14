@@ -10,6 +10,7 @@ use App\Modules\Tdap\Controllers\CronoViagemController;
 use App\Modules\Tdap\Controllers\LoteController;
 use App\Modules\Tdap\Controllers\PrestadorController;
 use App\Modules\Tdap\Controllers\TdapDashboardController;
+use App\Modules\Tdap\Controllers\VistoriaController;
 use App\Modules\Tdap\Models\Ata;
 use App\Modules\Tdap\Models\Caminhao;
 use App\Modules\Tdap\Models\Cronograma;
@@ -17,6 +18,7 @@ use App\Modules\Tdap\Models\CronoCaminhao;
 use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Models\Lote;
 use App\Modules\Tdap\Models\Prestador;
+use App\Modules\Tdap\Models\Vistoria;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -39,6 +41,7 @@ Route::model('lote', Lote::class);
 Route::model('cronograma', Cronograma::class);
 Route::model('cronoCaminhao', CronoCaminhao::class);
 Route::model('viagem', CronoViagem::class);
+Route::model('vistoria', Vistoria::class);
 
 Route::prefix('tdap')->name('tdap.')->group(function () {
 
@@ -211,6 +214,32 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
             Route::post('/', [CronoViagemController::class, 'store'])->name('store');
             Route::delete('/{viagem}', [CronoViagemController::class, 'destroy'])
                 ->name('destroy')->whereNumber('viagem');
+        });
+    });
+
+    /* Vistorias (Fase 4) */
+    Route::prefix('vistorias')->name('vistorias.')->group(function () {
+        Route::middleware('can:tdap.vistorias.view')->group(function () {
+            Route::get('/', [VistoriaController::class, 'index'])->name('index');
+            Route::get('/{vistoria}', [VistoriaController::class, 'show'])
+                ->name('show')->whereNumber('vistoria');
+        });
+
+        Route::middleware('can:tdap.vistorias.create')->group(function () {
+            Route::get('/novo/cadastrar', [VistoriaController::class, 'create'])->name('create');
+            Route::post('/', [VistoriaController::class, 'store'])->name('store');
+        });
+
+        Route::middleware('can:tdap.vistorias.edit')->group(function () {
+            Route::get('/{vistoria}/editar', [VistoriaController::class, 'edit'])
+                ->name('edit')->whereNumber('vistoria');
+            Route::put('/{vistoria}', [VistoriaController::class, 'update'])
+                ->name('update')->whereNumber('vistoria');
+        });
+
+        Route::middleware('can:tdap.vistorias.delete')->group(function () {
+            Route::delete('/{vistoria}', [VistoriaController::class, 'destroy'])
+                ->name('destroy')->whereNumber('vistoria');
         });
     });
 });

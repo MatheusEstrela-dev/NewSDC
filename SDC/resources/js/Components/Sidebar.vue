@@ -464,7 +464,17 @@
         >
           Viagens pendentes
         </NavItem>
-        <!-- Itens (Vistorias, Historico) entram a partir da Fase 4 -->
+        <NavItem
+          v-if="_routes.hasTdapVistorias"
+          :href="route('tdap.vistorias.index')"
+          :active="isRouteActive('tdap.vistorias.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Vistorias
+        </NavItem>
+        <!-- Item (Historico) entra a partir da Fase 5 -->
       </div>
     </nav>
 
@@ -517,6 +527,7 @@ const _routes = {
   hasTdapLotes: route().has('tdap.lotes.index'),
   hasTdapCronogramas: route().has('tdap.cronogramas.index'),
   hasTdapViagensPendentes: route().has('tdap.viagens.pendentes'),
+  hasTdapVistorias: route().has('tdap.vistorias.index'),
   hasCisterna: route().has('cisternas.index'),
   hasInventario: route().has('inventario.index'),
   hasEstoque: route().has('estoque.index'),
@@ -551,6 +562,7 @@ const _activeRoutes = computed(() => {
     'tdap.lotes.*': route().current('tdap.lotes.*'),
     'tdap.cronogramas.*': route().current('tdap.cronogramas.*'),
     'tdap.viagens.*': route().current('tdap.viagens.*'),
+    'tdap.vistorias.*': route().current('tdap.vistorias.*'),
     'cisternas.*': route().current('cisternas.*'),
     'inventario.*': route().current('inventario.*'),
     'estoque.*': route().current('estoque.*'),
@@ -641,6 +653,7 @@ const canSeeTdap = computed(() => {
     'tdap.lotes.view',
     'tdap.cronogramas.view',
     'tdap.viagens.view',
+    'tdap.vistorias.view',
   ]);
 });
 

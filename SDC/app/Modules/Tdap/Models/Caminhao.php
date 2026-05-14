@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Models;
 
+use App\Modules\Tdap\Enums\ParecerVistoria;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -49,6 +52,23 @@ class Caminhao extends Model
     public function prestador(): BelongsTo
     {
         return $this->belongsTo(Prestador::class, 'prestador_id');
+    }
+
+    public function vistorias(): HasMany
+    {
+        return $this->hasMany(Vistoria::class, 'placa_id')->orderByDesc('data');
+    }
+
+    /**
+     * Vistoria aprovada vigente (<= 12 meses), mais recente.
+     * Usada pelo CronogramaService::podeAtivar.
+     */
+    public function vistoriaVigente(): HasOne
+    {
+        return $this->hasOne(Vistoria::class, 'placa_id')
+            ->where('parecer', ParecerVistoria::Aprovada->value)
+            ->whereDate('data', '>=', now()->subMonths(Vistoria::VIGENCIA_MESES)->toDateString())
+            ->latestOfMany('data');
     }
 
     public function scopeAtivo(Builder $query): Builder
