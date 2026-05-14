@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap;
 
+use App\Modules\Tdap\Services\AtaService;
 use App\Modules\Tdap\Services\CaminhaoService;
+use App\Modules\Tdap\Services\LoteService;
 use App\Modules\Tdap\Services\PrestadorService;
 use Illuminate\Support\ServiceProvider;
 
@@ -34,6 +36,10 @@ class TdapServiceProvider extends ServiceProvider
         // Cadastros base (Fase 1)
         $this->app->singleton(PrestadorService::class);
         $this->app->singleton(CaminhaoService::class);
+
+        // Instrumentos contratuais (Fase 2)
+        $this->app->singleton(AtaService::class);
+        $this->app->singleton(LoteService::class);
     }
 
     public function boot(): void

@@ -2,10 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Modules\Tdap\Controllers\AtaController;
 use App\Modules\Tdap\Controllers\CaminhaoController;
+use App\Modules\Tdap\Controllers\LoteController;
 use App\Modules\Tdap\Controllers\PrestadorController;
 use App\Modules\Tdap\Controllers\TdapDashboardController;
+use App\Modules\Tdap\Models\Ata;
 use App\Modules\Tdap\Models\Caminhao;
+use App\Modules\Tdap\Models\Lote;
 use App\Modules\Tdap\Models\Prestador;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +28,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::model('prestador', Prestador::class);
 Route::model('caminhao', Caminhao::class);
+Route::model('ata', Ata::class);
+Route::model('lote', Lote::class);
 
 Route::prefix('tdap')->name('tdap.')->group(function () {
 
@@ -80,6 +86,58 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
         Route::middleware('can:tdap.caminhoes.delete')->group(function () {
             Route::delete('/{caminhao}', [CaminhaoController::class, 'destroy'])
                 ->name('destroy')->whereNumber('caminhao');
+        });
+    });
+
+    /* Atas (Fase 2) */
+    Route::prefix('atas')->name('atas.')->group(function () {
+        Route::middleware('can:tdap.atas.view')->group(function () {
+            Route::get('/', [AtaController::class, 'index'])->name('index');
+            Route::get('/{ata}', [AtaController::class, 'show'])
+                ->name('show')->whereNumber('ata');
+        });
+
+        Route::middleware('can:tdap.atas.create')->group(function () {
+            Route::get('/novo/cadastrar', [AtaController::class, 'create'])->name('create');
+            Route::post('/', [AtaController::class, 'store'])->name('store');
+        });
+
+        Route::middleware('can:tdap.atas.edit')->group(function () {
+            Route::get('/{ata}/editar', [AtaController::class, 'edit'])
+                ->name('edit')->whereNumber('ata');
+            Route::put('/{ata}', [AtaController::class, 'update'])
+                ->name('update')->whereNumber('ata');
+        });
+
+        Route::middleware('can:tdap.atas.delete')->group(function () {
+            Route::delete('/{ata}', [AtaController::class, 'destroy'])
+                ->name('destroy')->whereNumber('ata');
+        });
+    });
+
+    /* Lotes (Fase 2) */
+    Route::prefix('lotes')->name('lotes.')->group(function () {
+        Route::middleware('can:tdap.lotes.view')->group(function () {
+            Route::get('/', [LoteController::class, 'index'])->name('index');
+            Route::get('/{lote}', [LoteController::class, 'show'])
+                ->name('show')->whereNumber('lote');
+        });
+
+        Route::middleware('can:tdap.lotes.create')->group(function () {
+            Route::get('/novo/cadastrar', [LoteController::class, 'create'])->name('create');
+            Route::post('/', [LoteController::class, 'store'])->name('store');
+        });
+
+        Route::middleware('can:tdap.lotes.edit')->group(function () {
+            Route::get('/{lote}/editar', [LoteController::class, 'edit'])
+                ->name('edit')->whereNumber('lote');
+            Route::put('/{lote}', [LoteController::class, 'update'])
+                ->name('update')->whereNumber('lote');
+        });
+
+        Route::middleware('can:tdap.lotes.delete')->group(function () {
+            Route::delete('/{lote}', [LoteController::class, 'destroy'])
+                ->name('destroy')->whereNumber('lote');
         });
     });
 });
