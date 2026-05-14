@@ -474,7 +474,16 @@
         >
           Vistorias
         </NavItem>
-        <!-- Item (Historico) entra a partir da Fase 5 -->
+        <NavItem
+          v-if="_routes.hasTdapHistoricos"
+          :href="route('tdap.historicos.index')"
+          :active="isRouteActive('tdap.historicos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Histórico
+        </NavItem>
       </div>
     </nav>
 
@@ -528,6 +537,7 @@ const _routes = {
   hasTdapCronogramas: route().has('tdap.cronogramas.index'),
   hasTdapViagensPendentes: route().has('tdap.viagens.pendentes'),
   hasTdapVistorias: route().has('tdap.vistorias.index'),
+  hasTdapHistoricos: route().has('tdap.historicos.index'),
   hasCisterna: route().has('cisternas.index'),
   hasInventario: route().has('inventario.index'),
   hasEstoque: route().has('estoque.index'),
@@ -563,6 +573,7 @@ const _activeRoutes = computed(() => {
     'tdap.cronogramas.*': route().current('tdap.cronogramas.*'),
     'tdap.viagens.*': route().current('tdap.viagens.*'),
     'tdap.vistorias.*': route().current('tdap.vistorias.*'),
+    'tdap.historicos.*': route().current('tdap.historicos.*'),
     'cisternas.*': route().current('cisternas.*'),
     'inventario.*': route().current('inventario.*'),
     'estoque.*': route().current('estoque.*'),
@@ -654,6 +665,7 @@ const canSeeTdap = computed(() => {
     'tdap.cronogramas.view',
     'tdap.viagens.view',
     'tdap.vistorias.view',
+    'tdap.historico.view',
   ]);
 });
 

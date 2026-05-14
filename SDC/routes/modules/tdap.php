@@ -8,6 +8,7 @@ use App\Modules\Tdap\Controllers\CronoCaminhaoController;
 use App\Modules\Tdap\Controllers\CronogramaController;
 use App\Modules\Tdap\Controllers\CronoViagemController;
 use App\Modules\Tdap\Controllers\LoteController;
+use App\Modules\Tdap\Controllers\HistoricoController;
 use App\Modules\Tdap\Controllers\PrestadorController;
 use App\Modules\Tdap\Controllers\TdapDashboardController;
 use App\Modules\Tdap\Controllers\VistoriaController;
@@ -16,6 +17,7 @@ use App\Modules\Tdap\Models\Caminhao;
 use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\CronoCaminhao;
 use App\Modules\Tdap\Models\CronoViagem;
+use App\Modules\Tdap\Models\Historico;
 use App\Modules\Tdap\Models\Lote;
 use App\Modules\Tdap\Models\Prestador;
 use App\Modules\Tdap\Models\Vistoria;
@@ -42,6 +44,7 @@ Route::model('cronograma', Cronograma::class);
 Route::model('cronoCaminhao', CronoCaminhao::class);
 Route::model('viagem', CronoViagem::class);
 Route::model('vistoria', Vistoria::class);
+Route::model('historico', Historico::class);
 
 Route::prefix('tdap')->name('tdap.')->group(function () {
 
@@ -240,6 +243,16 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
         Route::middleware('can:tdap.vistorias.delete')->group(function () {
             Route::delete('/{vistoria}', [VistoriaController::class, 'destroy'])
                 ->name('destroy')->whereNumber('vistoria');
+        });
+    });
+
+    /* Historico (Fase 5) - somente leitura */
+    Route::prefix('historicos')->name('historicos.')->group(function () {
+        Route::middleware('can:tdap.historico.view')->group(function () {
+            Route::get('/', [HistoricoController::class, 'index'])->name('index');
+            Route::get('/por-entidade', [HistoricoController::class, 'porEntidade'])->name('por_entidade');
+            Route::get('/{historico}', [HistoricoController::class, 'show'])
+                ->name('show')->whereNumber('historico');
         });
     });
 });

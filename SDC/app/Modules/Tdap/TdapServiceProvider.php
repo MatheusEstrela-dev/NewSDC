@@ -4,32 +4,37 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap;
 
+use App\Modules\Tdap\Models\Cronograma;
+use App\Modules\Tdap\Models\CronoViagem;
+use App\Modules\Tdap\Models\Vistoria;
+use App\Modules\Tdap\Observers\CronogramaObserver;
+use App\Modules\Tdap\Observers\CronoViagemObserver;
+use App\Modules\Tdap\Observers\VistoriaObserver;
 use App\Modules\Tdap\Services\AtaService;
 use App\Modules\Tdap\Services\CaminhaoService;
 use App\Modules\Tdap\Services\CronoCaminhaoService;
 use App\Modules\Tdap\Services\CronogramaService;
 use App\Modules\Tdap\Services\CronoViagemService;
+use App\Modules\Tdap\Services\HistoricoService;
 use App\Modules\Tdap\Services\LoteService;
 use App\Modules\Tdap\Services\PrestadorService;
+use App\Modules\Tdap\Services\TdapExportBiService;
 use App\Modules\Tdap\Services\VistoriaService;
 use Illuminate\Support\ServiceProvider;
 
 /**
  * TDAP - Transporte e Distribuicao de Agua Potavel.
  *
- * Gerencia o ciclo de contratacao e execucao do fornecimento emergencial de
- * agua potavel por prestadores de servico em municipios afetados (Atas, Lotes,
- * Cronogramas, Caminhoes, Viagens, Vistorias e Historico).
- *
- * Plano de migracao: docs/superpowers/plans/2026-05-11-tdap-migration.md
+ * Plano: docs/superpowers/plans/2026-05-11-tdap-migration.md
  *
  * Padrao DDD-minimo (espelha app/Modules/Cisterna/, Compdec/):
  *   - Controllers/  Thin, injetam Service via constructor
  *   - DTOs/         Imutaveis (readonly), com fromRequest()/toArray()
  *   - Enums/        PHP 8.1 backed
  *   - Models/       Eloquent anemic + relacionamentos + scopes
- *   - Observers/    Hooks de evento Eloquent (Fase 5)
- *   - Requests/     Form Requests com authorize() + rules()
+ *   - Observers/    Hooks de evento Eloquent (Fase 5 +)
+ *   - Mail/         Mailables (Fase 5)
+ *   - Requests/     Form Requests com authorize() + rules() (Abstract+Store+Update SOLID)
  *   - Resources/    JSON Resources (Index + Show separados)
  *   - Services/     Service Layer (uma responsabilidade por classe)
  */
@@ -52,12 +57,20 @@ class TdapServiceProvider extends ServiceProvider
 
         // Vistoria (Fase 4)
         $this->app->singleton(VistoriaService::class);
+
+        // Historico + BI Export (Fase 5)
+        $this->app->singleton(HistoricoService::class);
+        $this->app->singleton(TdapExportBiService::class);
     }
 
     public function boot(): void
     {
+        // Observers (Fase 5) - eventos de dominio do TDAP gravados em tdap_historicos
+        Cronograma::observe(CronogramaObserver::class);
+        CronoViagem::observe(CronoViagemObserver::class);
+        Vistoria::observe(VistoriaObserver::class);
+
         // Rotas carregadas via routes/web.php (require routes/modules/tdap.php)
         // Permissoes sincronizadas via config/permissions.php + RolesAndPermissionsSeeder
-        // Observers e Event Listeners sao registrados nas Fases 5 e 6.
     }
 }
