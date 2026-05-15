@@ -104,7 +104,7 @@ class RatOcorrencia extends Model
 
     public function getStatusLabelAttribute(): string
     {
-        return $this->status === 1 ? 'Finalizado' : 'Rascunho';
+        return $this->status === 1 ? 'Finalizado' : 'Em Andamento';
     }
 
     public function getProtocoloAttribute(): string

@@ -19,10 +19,65 @@
         :icon="ClipboardIcon"
         @update:model-value="onToggleVistoria"
       />
+
+      <!-- Unidade Responsável -->
+      <div>
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Unidade Responsável</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <FormField
+            label="Município"
+            :model-value="modelValue.uni_responsavel_municipio"
+            @update:model-value="update('uni_responsavel_municipio', $event)"
+          />
+          <FormField
+            label="Código da Unidade"
+            :model-value="modelValue.uni_responsavel_codigo"
+            @update:model-value="update('uni_responsavel_codigo', $event)"
+          />
+          <FormField
+            label="Nome da Unidade"
+            :model-value="modelValue.uni_responsavel_unidade"
+            @update:model-value="update('uni_responsavel_unidade', $event)"
+          />
+        </div>
+      </div>
+
+      <!-- Número do Boletim de Ocorrência (gera o BOS) -->
+      <div>
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Número do Boletim de Ocorrência</p>
+        <p class="text-xs text-slate-500 mb-3">Preencha os três campos para gerar automaticamente o Número do BOS</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <FormField
+            label="Ano do BO"
+            type="number"
+            :model-value="modelValue.uni_bo_ano"
+            placeholder="Ex: 2026"
+            @update:model-value="update('uni_bo_ano', $event)"
+          />
+          <FormField
+            label="Nº Sequencial do BO"
+            type="number"
+            :model-value="modelValue.uni_bo_sequencial"
+            placeholder="Ex: 61"
+            @update:model-value="update('uni_bo_sequencial', $event)"
+          />
+          <FormField
+            label="Código da Unidade (BO)"
+            type="number"
+            :model-value="modelValue.uni_bo_cod_unidade"
+            placeholder="Ex: 001"
+            @update:model-value="update('uni_bo_cod_unidade', $event)"
+          />
+        </div>
+      </div>
+
+      <!-- Narrativa / Descrição -->
       <FormField
-        label="Unidade Responsavel"
-        :model-value="unidade"
-        readonly
+        type="textarea"
+        label="Narrativa / Descrição da Ocorrência"
+        :model-value="modelValue.descricao"
+        :rows="4"
+        @update:model-value="update('descricao', $event)"
       />
     </div>
   </RatCollapsibleSection>
@@ -39,13 +94,13 @@ const props = defineProps({
     type: Object,
     default: () => ({ tem_vistoria: false }),
   },
-  unidade: {
-    type: String,
-    default: 'COMPDEC - Municipio Modelo/MG',
-  },
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+function update(field, value) {
+  emit('update:modelValue', { ...props.modelValue, [field]: value });
+}
 
 function onToggleVistoria(value) {
   emit('update:modelValue', { ...props.modelValue, tem_vistoria: value });

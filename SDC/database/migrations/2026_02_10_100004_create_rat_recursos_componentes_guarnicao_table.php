@@ -35,7 +35,7 @@ return new class extends Migration
             $table->string('funcao', 255)->nullable()->comment('Função no Atendimento');
 
             // Flag de Condutor (Booleano)
-            $table->boolean('is_condutor')->default(0)
+            $table->boolean('is_condutor')->default(false)
                   ->comment('É o Condutor do veículo');
 
             // Auditoria

@@ -61,6 +61,6 @@ readonly class RatHistoricoDTO
             'grau_risco'      => $this->grauRisco,
             'metricas'        => $this->metricas,
             'encaminhamentos' => $this->encaminhamentos,
-        ], fn ($v) => $v !== null);
+        ], fn ($v) => $v !== null && $v !== '');
     }
 }

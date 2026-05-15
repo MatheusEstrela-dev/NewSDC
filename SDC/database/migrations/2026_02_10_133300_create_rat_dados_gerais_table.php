@@ -63,7 +63,7 @@ return new class extends Migration
             $table->string('local_unidade_militar', 191)->nullable()->comment('Unidade Militar');
 
             // Check de Vistoria
-            $table->boolean('tem_vistoria')->default(0)->comment('Indica se possui vistoria imobiliária');
+            $table->boolean('tem_vistoria')->default(false)->comment('Indica se possui vistoria imobiliária');
 
             // Timestamps e SoftDeletes
             $table->timestamps();

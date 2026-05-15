@@ -62,7 +62,7 @@ class RatUnifiedController extends BaseController
     public function index(Request $request): Response
     {
 
-        $rats = RatOcorrencia::with(['relatosMorph.conteudo'])
+        $rats = RatOcorrencia::with(['relatosMorph.conteudo', 'creator'])
             ->orderByDesc('created_at')
             ->paginate(15);
 
@@ -80,13 +80,13 @@ class RatUnifiedController extends BaseController
         ]);
     }
 
-    public function create(): Response
+    public function create(): RedirectResponse
     {
-        return Inertia::render('Rat', [
-            'rat'      => null,
-            'viewOnly' => false,
-            'isCreate' => true,
-        ]);
+        $ocorrencia = $this->writeService->create();
+
+        return redirect()
+            ->route('rat.edit', $ocorrencia->id)
+            ->with('success', 'Novo RAT criado. Preencha os dados do boletim.');
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
@@ -309,7 +309,7 @@ class RatUnifiedController extends BaseController
     public function draft(Request $request, string $id): RedirectResponse|JsonResponse
     {
         try {
-            $this->writeService->saveDraft($id, $request->all());
+            $ocorrencia = $this->writeService->saveDraft($id, $request->all());
         } catch (\Throwable $e) {
             Log::error('Erro ao salvar rascunho RAT', ['id' => $id, 'error' => $e->getMessage()]);
             if ($request->expectsJson() || $request->wantsJson()) {
@@ -319,7 +319,12 @@ class RatUnifiedController extends BaseController
         }
 
         if ($request->expectsJson() || $request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Rascunho salvo com sucesso!']);
+            return response()->json([
+                'success'    => true,
+                'message'    => 'Rascunho salvo com sucesso!',
+                'numero_bos' => $ocorrencia?->numero_bos,
+                'protocolo'  => $ocorrencia?->protocolo,
+            ]);
         }
 
         return redirect()

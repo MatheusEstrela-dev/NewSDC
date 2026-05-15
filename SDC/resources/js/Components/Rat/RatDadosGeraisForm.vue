@@ -80,11 +80,20 @@ const _end = props.savedFormData?.endereco    ?? props.rat?.endereco      ?? {};
 
 const localData = ref({
   dadosGerais: {
-    data_fato: _dg.data_fato || '',
-    data_inicio_atividade: _dg.data_inicio_atividade || '',
+    data_fato:              _dg.data_fato              || '',
+    data_inicio_atividade:  _dg.data_inicio_atividade  || '',
     data_termino_atividade: _dg.data_termino_atividade || '',
-    nat_cobrade_id: _dg.nat_cobrade_id || '',
-    nat_nome_operacao: _dg.nat_nome_operacao || '',
+    nat_codigo:             _dg.nat_codigo             || '',
+    nat_cobrade_id:         _dg.nat_cobrade_id         || '',
+    nat_ocorrencia:         _dg.nat_ocorrencia         || '',
+    nat_nome_operacao:      _dg.nat_nome_operacao      || '',
+    uni_responsavel_municipio: _dg.uni_responsavel_municipio || '',
+    uni_responsavel_codigo:    _dg.uni_responsavel_codigo    || '',
+    uni_responsavel_unidade:   _dg.uni_responsavel_unidade   || '',
+    uni_bo_ano:             _dg.uni_bo_ano             || '',
+    uni_bo_sequencial:      _dg.uni_bo_sequencial      || '',
+    uni_bo_cod_unidade:     _dg.uni_bo_cod_unidade     || '',
+    descricao:              _dg.descricao              || '',
     tem_vistoria: _dg.tem_vistoria ?? props.rat?.tem_vistoria ?? false,
   },
   comunicacao: {
@@ -94,7 +103,7 @@ const localData = ref({
     nome_solicitante: _com.nome_solicitante || '',
   },
   local: {
-    pais_id: _loc.pais_id || '1',
+    pais: _loc.pais ?? _loc.pais_id ?? 'BR',
     uf: _loc.uf || '',
     municipio_id: _loc.municipio_id || '',
   },

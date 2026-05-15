@@ -77,7 +77,7 @@
         <div class="rat-section-content">
           <div class="rat-grid-3">
             <FormField label="Quantidade" type="number" v-model="localData.quantidade" />
-            <FormField label="Capacidade/Potência" v-model="localData.capacidade" />
+            <FormField label="Capacidade/Potência" type="number" v-model="localData.capacidade" />
             <FormSelect label="Condição" v-model="localData.condicao" :options="condicaoOptions" />
           </div>
           <div class="rat-grid-2 mt-4">

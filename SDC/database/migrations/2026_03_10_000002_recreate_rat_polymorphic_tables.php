@@ -33,9 +33,11 @@ return new class extends Migration
                 $table->string('sigla', 10);
                 $table->timestamps();
 
-                $table->engine    = 'InnoDB';
-                $table->charset   = 'utf8mb4';
-                $table->collation = 'utf8mb4_unicode_ci';
+                if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                    $table->engine    = 'InnoDB';
+                    $table->charset   = 'utf8mb4';
+                    $table->collation = 'utf8mb4_unicode_ci';
+                }
             });
         }
 
@@ -77,9 +79,11 @@ return new class extends Migration
                       ->on('rat_ocorrencias')
                       ->onDelete('set null');
 
-                $table->engine    = 'InnoDB';
-                $table->charset   = 'utf8mb4';
-                $table->collation = 'utf8mb4_unicode_ci';
+                if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                    $table->engine    = 'InnoDB';
+                    $table->charset   = 'utf8mb4';
+                    $table->collation = 'utf8mb4_unicode_ci';
+                }
             });
         }
 
@@ -105,9 +109,11 @@ return new class extends Migration
                       ->on('rat_ocorrencias')
                       ->onDelete('set null');
 
-                $table->engine    = 'InnoDB';
-                $table->charset   = 'utf8mb4';
-                $table->collation = 'utf8mb4_unicode_ci';
+                if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                    $table->engine    = 'InnoDB';
+                    $table->charset   = 'utf8mb4';
+                    $table->collation = 'utf8mb4_unicode_ci';
+                }
             });
         }
 
@@ -125,7 +131,7 @@ return new class extends Migration
                       ->nullable()
                       ->comment('Tipo de Recurso');
 
-                $table->boolean('recurso_problemas')->default(0)->comment('Problemas durante o atendimento');
+                $table->boolean('recurso_problemas')->default(false)->comment('Problemas durante o atendimento');
                 $table->text('recurso_descricao')->nullable()->comment('Descrição do problema');
 
                 $table->string('viatura_tipo', 100)->nullable()->comment('Tipo da Viatura');
@@ -150,7 +156,7 @@ return new class extends Migration
 
                 $table->string('viatura_operador', 255)->nullable()->comment('Operador/Responsável');
                 $table->string('operador_masp', 20)->nullable()->comment('MASP do Operador');
-                $table->boolean('operador_is_condutor')->default(0)->comment('Indica se é o condutor');
+                $table->boolean('operador_is_condutor')->default(false)->comment('Indica se é o condutor');
                 $table->string('viatura_contato', 50)->nullable()->comment('Contato de Emergência');
 
                 $table->unsignedBigInteger('created_by')->nullable();
@@ -165,9 +171,11 @@ return new class extends Migration
                 $table->index('created_by', 'idx_rat_relato_recursos_created_by');
                 $table->index('created_at', 'idx_rat_relato_recursos_created_at');
 
-                $table->engine    = 'InnoDB';
-                $table->charset   = 'utf8mb4';
-                $table->collation = 'utf8mb4_unicode_ci';
+                if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                    $table->engine    = 'InnoDB';
+                    $table->charset   = 'utf8mb4';
+                    $table->collation = 'utf8mb4_unicode_ci';
+                }
             });
         }
 
@@ -217,9 +225,11 @@ return new class extends Migration
                       ->on('rat_relato_recursos')
                       ->onDelete('cascade');
 
-                $table->engine    = 'InnoDB';
-                $table->charset   = 'utf8mb4';
-                $table->collation = 'utf8mb4_unicode_ci';
+                if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                    $table->engine    = 'InnoDB';
+                    $table->charset   = 'utf8mb4';
+                    $table->collation = 'utf8mb4_unicode_ci';
+                }
             });
         }
 
@@ -246,7 +256,7 @@ return new class extends Migration
                 $table->string('unidade', 255)->nullable()->comment('Unidade');
                 $table->string('funcao', 255)->nullable()->comment('Função no Atendimento');
 
-                $table->boolean('is_condutor')->default(0)
+                $table->boolean('is_condutor')->default(false)
                       ->comment('É o Condutor do veículo');
 
                 $table->unsignedBigInteger('created_by')->nullable();
@@ -262,9 +272,11 @@ return new class extends Migration
                 $table->index('created_by', 'idx_rat_recursos_componentes_guarnicao_created_by');
                 $table->index('created_at', 'idx_rat_recursos_componentes_guarnicao_created_at');
 
-                $table->engine    = 'InnoDB';
-                $table->charset   = 'utf8mb4';
-                $table->collation = 'utf8mb4_unicode_ci';
+                if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                    $table->engine    = 'InnoDB';
+                    $table->charset   = 'utf8mb4';
+                    $table->collation = 'utf8mb4_unicode_ci';
+                }
             });
         }
 
@@ -336,9 +348,11 @@ return new class extends Migration
                 $table->softDeletes();
                 $table->string('created_by')->nullable()->comment('Quem criou o registro');
 
-                $table->engine    = 'InnoDB';
-                $table->charset   = 'utf8mb4';
-                $table->collation = 'utf8mb4_unicode_ci';
+                if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                    $table->engine    = 'InnoDB';
+                    $table->charset   = 'utf8mb4';
+                    $table->collation = 'utf8mb4_unicode_ci';
+                }
             });
         }
 
@@ -415,72 +429,72 @@ return new class extends Migration
                 $table->string('v_tipo_localizacao', 20)->nullable();
 
                 // Encaminhamentos
-                $table->boolean('v_enc_interdicao_parcial')->default(0);
-                $table->boolean('v_enc_interdicao_total')->default(0);
-                $table->boolean('v_enc_remocao_temporaria')->default(0);
-                $table->boolean('v_enc_remocao_definitiva')->default(0);
-                $table->boolean('v_enc_isolamento_area')->default(0);
-                $table->boolean('v_enc_desocupacao_abrigo')->default(0);
-                $table->boolean('v_enc_notificacao_responsavel')->default(0);
-                $table->boolean('v_enc_contratacao_responsavel')->default(0);
-                $table->boolean('v_enc_comunicacao_orgaos')->default(0);
-                $table->boolean('v_enc_apoio_social')->default(0);
-                $table->boolean('v_enc_outros')->default(0);
+                $table->boolean('v_enc_interdicao_parcial')->default(false);
+                $table->boolean('v_enc_interdicao_total')->default(false);
+                $table->boolean('v_enc_remocao_temporaria')->default(false);
+                $table->boolean('v_enc_remocao_definitiva')->default(false);
+                $table->boolean('v_enc_isolamento_area')->default(false);
+                $table->boolean('v_enc_desocupacao_abrigo')->default(false);
+                $table->boolean('v_enc_notificacao_responsavel')->default(false);
+                $table->boolean('v_enc_contratacao_responsavel')->default(false);
+                $table->boolean('v_enc_comunicacao_orgaos')->default(false);
+                $table->boolean('v_enc_apoio_social')->default(false);
+                $table->boolean('v_enc_outros')->default(false);
                 $table->text('v_enc_outros_descricao')->nullable();
 
                 // Patologias
-                $table->boolean('v_patologia_rachaduras')->default(0);
-                $table->boolean('v_patologia_trincas')->default(0);
-                $table->boolean('v_patologia_fissuras_estruturais')->default(0);
-                $table->boolean('v_patologia_deformacoes_estruturais')->default(0);
-                $table->boolean('v_patologia_infiltracoes')->default(0);
-                $table->boolean('v_patologia_corrosao_armaduras')->default(0);
-                $table->boolean('v_patologia_desagregacao')->default(0);
-                $table->boolean('v_patologia_eflorescencia')->default(0);
-                $table->boolean('v_patologia_desplacamento')->default(0);
-                $table->boolean('v_patologia_fundacoes')->default(0);
-                $table->boolean('v_patologia_instabilidade_talude')->default(0);
-                $table->boolean('v_patologia_movimentacao_solo')->default(0);
-                $table->boolean('v_patologia_tombamento_muralhas')->default(0);
-                $table->boolean('v_patologia_inundacoes')->default(0);
-                $table->boolean('v_patologia_alagamentos')->default(0);
-                $table->boolean('v_patologia_enxurradas')->default(0);
-                $table->boolean('v_patologia_madeira')->default(0);
-                $table->boolean('v_patologia_elementos_nao_estruturais')->default(0);
-                $table->boolean('v_patologia_falha_drenagem')->default(0);
-                $table->boolean('v_patologia_queda_arvores')->default(0);
-                $table->boolean('v_patologia_outros')->default(0);
+                $table->boolean('v_patologia_rachaduras')->default(false);
+                $table->boolean('v_patologia_trincas')->default(false);
+                $table->boolean('v_patologia_fissuras_estruturais')->default(false);
+                $table->boolean('v_patologia_deformacoes_estruturais')->default(false);
+                $table->boolean('v_patologia_infiltracoes')->default(false);
+                $table->boolean('v_patologia_corrosao_armaduras')->default(false);
+                $table->boolean('v_patologia_desagregacao')->default(false);
+                $table->boolean('v_patologia_eflorescencia')->default(false);
+                $table->boolean('v_patologia_desplacamento')->default(false);
+                $table->boolean('v_patologia_fundacoes')->default(false);
+                $table->boolean('v_patologia_instabilidade_talude')->default(false);
+                $table->boolean('v_patologia_movimentacao_solo')->default(false);
+                $table->boolean('v_patologia_tombamento_muralhas')->default(false);
+                $table->boolean('v_patologia_inundacoes')->default(false);
+                $table->boolean('v_patologia_alagamentos')->default(false);
+                $table->boolean('v_patologia_enxurradas')->default(false);
+                $table->boolean('v_patologia_madeira')->default(false);
+                $table->boolean('v_patologia_elementos_nao_estruturais')->default(false);
+                $table->boolean('v_patologia_falha_drenagem')->default(false);
+                $table->boolean('v_patologia_queda_arvores')->default(false);
+                $table->boolean('v_patologia_outros')->default(false);
                 $table->text('v_patologia_outros_descricao')->nullable();
 
                 // Bens Afetados
-                $table->boolean('v_bens_residencia')->default(0);
-                $table->boolean('v_bens_muros')->default(0);
-                $table->boolean('v_bens_vias_publicas')->default(0);
-                $table->boolean('v_bens_pontes')->default(0);
-                $table->boolean('v_bens_viadutos')->default(0);
-                $table->boolean('v_bens_comercios')->default(0);
-                $table->boolean('v_bens_galpoes')->default(0);
-                $table->boolean('v_bens_predios_publicos')->default(0);
-                $table->boolean('v_bens_edificios_publicos')->default(0);
-                $table->boolean('v_bens_outros')->default(0);
+                $table->boolean('v_bens_residencia')->default(false);
+                $table->boolean('v_bens_muros')->default(false);
+                $table->boolean('v_bens_vias_publicas')->default(false);
+                $table->boolean('v_bens_pontes')->default(false);
+                $table->boolean('v_bens_viadutos')->default(false);
+                $table->boolean('v_bens_comercios')->default(false);
+                $table->boolean('v_bens_galpoes')->default(false);
+                $table->boolean('v_bens_predios_publicos')->default(false);
+                $table->boolean('v_bens_edificios_publicos')->default(false);
+                $table->boolean('v_bens_outros')->default(false);
                 $table->text('v_bens_outros_descricao')->nullable();
 
                 // Órgãos Acionados
-                $table->boolean('v_orgao_copasa')->default(0);
-                $table->boolean('v_orgao_cemig')->default(0);
-                $table->boolean('v_orgao_secretaria_municipal')->default(0);
-                $table->boolean('v_orgao_defesa_civil_estadual')->default(0);
-                $table->boolean('v_orgao_dnit')->default(0);
-                $table->boolean('v_orgao_outros')->default(0);
+                $table->boolean('v_orgao_copasa')->default(false);
+                $table->boolean('v_orgao_cemig')->default(false);
+                $table->boolean('v_orgao_secretaria_municipal')->default(false);
+                $table->boolean('v_orgao_defesa_civil_estadual')->default(false);
+                $table->boolean('v_orgao_dnit')->default(false);
+                $table->boolean('v_orgao_outros')->default(false);
                 $table->text('v_orgao_outros_descricao')->nullable();
                 $table->text('v_bens_afetados')->nullable();
                 $table->text('v_orgaos_acionados')->nullable();
                 $table->text('v_orgaos_acionados_outros')->nullable();
                 $table->string('v_orgao_pm', 255)->nullable();
                 $table->string('v_orgao_bm', 255)->nullable();
-                $table->boolean('v_orgao_crea')->default(0);
-                $table->boolean('v_orgao_emater')->default(0);
-                $table->boolean('v_orgao_seapa')->default(0);
+                $table->boolean('v_orgao_crea')->default(false);
+                $table->boolean('v_orgao_emater')->default(false);
+                $table->boolean('v_orgao_seapa')->default(false);
 
                 $table->timestamps();
                 $table->softDeletes();
@@ -488,9 +502,11 @@ return new class extends Migration
                 $table->index('v_tipo_imovel', 'idx_v_tipo_imovel');
                 $table->index('v_municipio', 'idx_v_municipio');
 
-                $table->engine    = 'InnoDB';
-                $table->charset   = 'utf8mb4';
-                $table->collation = 'utf8mb4_unicode_ci';
+                if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                    $table->engine    = 'InnoDB';
+                    $table->charset   = 'utf8mb4';
+                    $table->collation = 'utf8mb4_unicode_ci';
+                }
             });
         }
 
@@ -508,7 +524,7 @@ return new class extends Migration
                 $table->string('modelo', 100)->comment('Modelo do veículo');
                 $table->string('marca', 50)->comment('Marca do veículo');
 
-                $table->boolean('ativo')->default(1)->comment('Veículo ativo');
+                $table->boolean('ativo')->default(true)->comment('Veículo ativo');
 
                 $table->timestamps();
                 $table->softDeletes();
@@ -517,9 +533,11 @@ return new class extends Migration
                 $table->index('ativo', 'idx_ativo');
                 $table->index('deleted_at', 'idx_deleted_at');
 
-                $table->engine    = 'InnoDB';
-                $table->charset   = 'utf8mb4';
-                $table->collation = 'utf8mb4_unicode_ci';
+                if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                    $table->engine    = 'InnoDB';
+                    $table->charset   = 'utf8mb4';
+                    $table->collation = 'utf8mb4_unicode_ci';
+                }
             });
         }
     }
