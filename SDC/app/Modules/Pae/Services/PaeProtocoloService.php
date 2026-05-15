@@ -109,7 +109,24 @@ class PaeProtocoloService extends BaseService
         User $user,
         string $obs = ''
     ): PaeProtocolo {
-        if (!$protocolo->validarTransicaoStatus($novo)) {
+        if ($protocolo->status === $novo) {
+            return $protocolo->fresh();
+        }
+
+        $podeConcluirParaCcpae = $novo === PaeProtocoloStatus::CCPAE
+            && in_array($protocolo->status, [
+                PaeProtocoloStatus::NOVO,
+                PaeProtocoloStatus::ENTRADA_PROCESSO,
+                PaeProtocoloStatus::CRIACAO_SDC,
+                PaeProtocoloStatus::GERENCIAMENTO,
+                PaeProtocoloStatus::NOTIFICACAO,
+                PaeProtocoloStatus::ANALISE,
+                PaeProtocoloStatus::APROVADO,
+                PaeProtocoloStatus::ESPERAR_TRATATIVA,
+                PaeProtocoloStatus::DILACAO,
+            ], true);
+
+        if (!$protocolo->validarTransicaoStatus($novo) && !$podeConcluirParaCcpae) {
             throw ValidationException::withMessages([
                 'status' => "Transição inválida: {$protocolo->status->getLabel()} → {$novo->getLabel()}.",
             ]);

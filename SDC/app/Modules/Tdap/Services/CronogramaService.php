@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Services;
 
+use App\Core\Events\DomainEvent;
+use App\Core\Outbox\OutboxDispatcher;
+use App\Modules\Tdap\Domain\Events\CronogramaAtivadoV1;
 use App\Modules\Tdap\DTOs\CronogramaDTO;
-use App\Modules\Tdap\Mail\CronogramaAtivadoMail;
 use App\Modules\Tdap\Models\Cronograma;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class CronogramaService
 {
+    public function __construct(
+        private readonly OutboxDispatcher $outbox,
+    ) {}
+
+
     /**
      * @param  array<string, mixed>  $filtros
      */
@@ -157,20 +162,22 @@ class CronogramaService
 
             $fresh = $cronograma->fresh(['prestador', 'municipio', 'ata', 'lote']);
 
-            // Dispara notificacao por e-mail. Falha de e-mail nao deve abortar a ativacao.
-            try {
-                $mail = new CronogramaAtivadoMail($fresh);
-                $destinatarios = $mail->destinatariosLogicos();
-                if (! empty($destinatarios)) {
-                    Mail::to($destinatarios)->send($mail);
-                }
-            } catch (\Throwable $e) {
-                Log::error('Falha ao enviar e-mail de cronograma ativado', [
+            // Emite CronogramaAtivadoV1 no outbox (mesma transacao do save).
+            // Listener idempotente EnviarEmailCronogramaListener consome
+            // o evento e envia o e-mail de forma assincrona/retryable.
+            $this->outbox->persist(new CronogramaAtivadoV1(
+                eventId:       DomainEvent::newId(),
+                aggregateType: 'cronograma',
+                aggregateId:   (string) $fresh->id,
+                occurredAt:    new \DateTimeImmutable(),
+                metadata: [
                     'cronograma_id' => $fresh->id,
                     'numero'        => $fresh->numero,
-                    'erro'          => $e->getMessage(),
-                ]);
-            }
+                    'prestador_id'  => $fresh->prestador_id,
+                    'municipio_id'  => $fresh->municipio_id,
+                    'ativado_em'    => $fresh->ativado_em?->toIso8601String(),
+                ],
+            ));
 
             return $fresh;
         });

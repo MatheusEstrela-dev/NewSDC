@@ -199,6 +199,11 @@ return [
             'Historico' => [
                 'view' => 'tdap.historico.view',
             ],
+            'Processos' => [
+                'view'      => 'tdap.processos.view',
+                'create'    => 'tdap.processos.create',
+                'transitar' => 'tdap.processos.transitar',
+            ],
             'Admin' => [
                 'admin' => 'tdap.admin',
             ],
@@ -427,6 +432,9 @@ return [
             'tdap.vistorias.edit',
             'tdap.vistorias.aprovar',
             'tdap.historico.view',
+            'tdap.processos.view',
+            'tdap.processos.create',
+            'tdap.processos.transitar',
             // Treinamento - gestao completa
             'treinamento.cursos.view',
             'treinamento.cursos.create',
@@ -537,6 +545,8 @@ return [
             'tdap.vistorias.view',
             'tdap.vistorias.create',
             'tdap.historico.view',
+            'tdap.processos.view',
+            'tdap.processos.create',
             // Treinamento - view
             'treinamento.cursos.view',
             // Plantao - view, create, edit
@@ -656,6 +666,7 @@ return [
             'tdap.viagens.view',
             'tdap.vistorias.view',
             'tdap.historico.view',
+            'tdap.processos.view',
             'treinamento.cursos.view',
             'plantao.turnos.view',
             'bi.dashboards.view',
