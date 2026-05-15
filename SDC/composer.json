@@ -49,7 +49,13 @@
             "App\\Core\\": "core/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        }
+        },
+        "classmap": [
+            "app/Modules/Tdap/Resources/TdapResource.php",
+            "app/Modules/Tdap/Requests/TdapRequest.php",
+            "app/Modules/Tdap/Requests/StoreRequests.php",
+            "app/Modules/Tdap/Requests/UpdateRequests.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
