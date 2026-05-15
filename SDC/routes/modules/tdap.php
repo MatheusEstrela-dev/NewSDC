@@ -10,6 +10,7 @@ use App\Modules\Tdap\Controllers\CronoViagemController;
 use App\Modules\Tdap\Controllers\LoteController;
 use App\Modules\Tdap\Controllers\HistoricoController;
 use App\Modules\Tdap\Controllers\PrestadorController;
+use App\Modules\Tdap\Controllers\ProcessoTdapController;
 use App\Modules\Tdap\Controllers\TdapDashboardController;
 use App\Modules\Tdap\Controllers\VistoriaController;
 use App\Modules\Tdap\Models\Ata;
@@ -20,6 +21,7 @@ use App\Modules\Tdap\Models\CronoViagem;
 use App\Modules\Tdap\Models\Historico;
 use App\Modules\Tdap\Models\Lote;
 use App\Modules\Tdap\Models\Prestador;
+use App\Modules\Tdap\Models\ProcessoTdap;
 use App\Modules\Tdap\Models\Vistoria;
 use Illuminate\Support\Facades\Route;
 
@@ -45,6 +47,7 @@ Route::model('cronoCaminhao', CronoCaminhao::class);
 Route::model('viagem', CronoViagem::class);
 Route::model('vistoria', Vistoria::class);
 Route::model('historico', Historico::class);
+Route::model('processo', ProcessoTdap::class);
 
 Route::prefix('tdap')->name('tdap.')->group(function () {
 
@@ -253,6 +256,26 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
             Route::get('/por-entidade', [HistoricoController::class, 'porEntidade'])->name('por_entidade');
             Route::get('/{historico}', [HistoricoController::class, 'show'])
                 ->name('show')->whereNumber('historico');
+        });
+    });
+
+    /* Processos / Workflow (Fase 6) */
+    Route::prefix('processos')->name('processos.')->group(function () {
+        Route::middleware('can:tdap.processos.view')->group(function () {
+            Route::get('/', [ProcessoTdapController::class, 'index'])->name('index');
+            Route::get('/swimlanes', [ProcessoTdapController::class, 'swimlanes'])->name('swimlanes');
+            Route::get('/{processo}', [ProcessoTdapController::class, 'show'])
+                ->name('show')->whereUuid('processo');
+        });
+
+        Route::middleware('can:tdap.processos.create')->group(function () {
+            Route::get('/novo/abrir', [ProcessoTdapController::class, 'create'])->name('create');
+            Route::post('/', [ProcessoTdapController::class, 'store'])->name('store');
+        });
+
+        Route::middleware('can:tdap.processos.transitar')->group(function () {
+            Route::post('/{processo}/transitar', [ProcessoTdapController::class, 'transitar'])
+                ->name('transitar')->whereUuid('processo');
         });
     });
 });

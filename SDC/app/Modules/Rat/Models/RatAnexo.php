@@ -17,7 +17,7 @@ use App\Modules\Rat\Models\RatOcorrencia;
  * enquanto o binario fica no disco configurado (default: public).
  *
  * @property int         $id
- * @property string      $rat_id          UUID do RAT pai
+ * @property int         $rat_id          ID da ocorrencia RAT pai
  * @property string      $categoria
  * @property string      $nome_original
  * @property string      $nome_arquivo
@@ -46,6 +46,7 @@ class RatAnexo extends Model
     ];
 
     protected $casts = [
+        'rat_id'        => 'integer',
         'categoria'     => CategoriaAnexo::class,
         'tamanho_bytes' => 'integer',
     ];

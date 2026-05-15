@@ -484,6 +484,16 @@
         >
           Histórico
         </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapProcessos"
+          :href="route('tdap.processos.swimlanes')"
+          :active="isRouteActive('tdap.processos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Processos (Workflow)
+        </NavItem>
       </div>
     </nav>
 
@@ -538,6 +548,7 @@ const _routes = {
   hasTdapViagensPendentes: route().has('tdap.viagens.pendentes'),
   hasTdapVistorias: route().has('tdap.vistorias.index'),
   hasTdapHistoricos: route().has('tdap.historicos.index'),
+  hasTdapProcessos: route().has('tdap.processos.swimlanes'),
   hasCisterna: route().has('cisternas.index'),
   hasInventario: route().has('inventario.index'),
   hasEstoque: route().has('estoque.index'),
@@ -574,6 +585,7 @@ const _activeRoutes = computed(() => {
     'tdap.viagens.*': route().current('tdap.viagens.*'),
     'tdap.vistorias.*': route().current('tdap.vistorias.*'),
     'tdap.historicos.*': route().current('tdap.historicos.*'),
+    'tdap.processos.*': route().current('tdap.processos.*'),
     'cisternas.*': route().current('cisternas.*'),
     'inventario.*': route().current('inventario.*'),
     'estoque.*': route().current('estoque.*'),
@@ -666,6 +678,7 @@ const canSeeTdap = computed(() => {
     'tdap.viagens.view',
     'tdap.vistorias.view',
     'tdap.historico.view',
+    'tdap.processos.view',
   ]);
 });
 
