@@ -55,6 +55,7 @@ readonly class RatDadosGeraisDTO
         public ?string $localOcorrenciaEstradas = null,
         public ?string $localUnidadeMilitar     = null,
         public ?bool   $temVistoria             = false,
+        public ?string $descricao               = null,
     ) {}
 
     /**
@@ -113,6 +114,7 @@ readonly class RatDadosGeraisDTO
             localOcorrenciaEstradas: $merged['local_ocorrencia_estradas_rodovias'] ?? $merged['estradas_rodovias'] ?? null,
             localUnidadeMilitar:     $merged['local_unidade_militar']      ?? $merged['unidade_militar'] ?? null,
             temVistoria:             (bool) ($merged['tem_vistoria']       ?? false),
+            descricao:               $merged['descricao']                   ?? null,
         );
     }
 
@@ -155,6 +157,7 @@ readonly class RatDadosGeraisDTO
             'local_ocorrencia_estradas_rodovias' => $this->localOcorrenciaEstradas,
             'local_unidade_militar'       => $this->localUnidadeMilitar,
             'tem_vistoria'                => $this->temVistoria,
+            'descricao'                   => $this->descricao,
         ], fn ($v) => $v !== null && $v !== '');
     }
 }
