@@ -32,6 +32,12 @@ class PaeProtocoloController extends Controller
         $rolesGestores = ['Gestor', 'Administrador', 'admin', 'super-admin', 'Desenvolvedor'];
         $podeVerTodos  = $user->hasAnyRole($rolesGestores);
         $canAtribuir   = $user->hasAnyRole($rolesGestores);
+        $canCreate     = $user->can('pae.protocolos.create');
+        $canEdit       = $user->can('pae.protocolos.edit');
+        $canDelete     = $user->can('pae.protocolos.delete');
+        $canExport     = $user->can('pae.protocolos.export');
+        $canCheck      = $canEdit;
+        $canPdf        = $user->can('pae.protocolos.view');
 
         if (!$podeVerTodos) {
             $filters['restringir_ao_analista'] = $user->id;
@@ -61,7 +67,13 @@ class PaeProtocoloController extends Controller
             'statusOptions'  => PaeProtocoloStatus::toSelectArray(),
             'analistas'      => $analistas,
             'empreendedores' => $empreendedores,
+            'canCreate'      => $canCreate,
+            'canEdit'        => $canEdit,
+            'canDelete'      => $canDelete,
+            'canExport'      => $canExport,
             'canAtribuir'    => $canAtribuir,
+            'canCheck'       => $canCheck,
+            'canPdf'         => $canPdf,
             'podeVerTodos'   => $podeVerTodos,
         ]);
     }
@@ -114,10 +126,31 @@ class PaeProtocoloController extends Controller
             ];
         });
 
+        $analises = $protocolo->tramitacoes->map(fn ($item) => [
+            'id'          => $item->id,
+            'titulo'      => $item->status ? 'Movimentacao de Status' : 'Analise Registrada',
+            'data'        => $item->dt_status?->format('d/m/Y, H:i'),
+            'responsavel' => $item->usuario?->name ?? 'Sistema',
+            'status'      => $item->status,
+            'descricao'   => $item->obs,
+        ])->values();
+
+        $notificacoes = $protocolo->tramitacoes
+            ->where('status', PaeProtocoloStatus::NOTIFICACAO->value)
+            ->map(fn ($item) => [
+                'id'          => $item->id,
+                'titulo'      => 'Notificacao registrada',
+                'data'        => $item->dt_status?->format('d/m/Y, H:i'),
+                'responsavel' => $item->usuario?->name ?? 'Sistema',
+                'canal'       => 'Sistema',
+                'descricao'   => $item->obs,
+            ])
+            ->values();
+
         return response()->json([
             'protocolo'    => $protocolo->num_protocolo,
-            'analises'     => $protocolo->tramitacoes->count(),
-            'notificacoes' => $protocolo->tramitacoes->where('status', 'notificacao')->count(),
+            'analises'     => $analises,
+            'notificacoes' => $notificacoes,
             'timeline'     => $timeline,
         ]);
     }

@@ -9,6 +9,10 @@
     >
       <template #actions>
         <div class="flex items-center gap-2 sm:gap-3">
+          <Button variant="violet" size="md" @click="handleCcpaeFilter">
+            CCPAE
+          </Button>
+
           <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
           <ViewModeToggle v-model="viewMode" />
 
@@ -63,10 +67,14 @@
       :can-edit="canEdit"
       :can-delete="canDelete"
       :can-atribuir="canAtribuirComputed"
+      :can-check="canCheck"
+      :can-pdf="canPdf"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
       @history="handleHistory"
+      @check="handleCheck"
+      @pdf="handlePdf"
       @archive="handleArchive"
       @delete="handleDelete"
       @options="handleOptions"
@@ -80,10 +88,14 @@
       :can-edit="canEdit"
       :can-delete="canDelete"
       :can-atribuir="canAtribuirComputed"
+      :can-check="canCheck"
+      :can-pdf="canPdf"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
       @history="handleHistory"
+      @check="handleCheck"
+      @pdf="handlePdf"
       @archive="handleArchive"
       @delete="handleDelete"
       @options="handleOptions"
@@ -102,6 +114,7 @@
       :open="historicoModalOpen"
       :protocolo="selectedProtocolo"
       :historico="historicoPayload"
+      :external-view="isExternalView"
       @close="closeHistorico"
     />
 
@@ -123,6 +136,20 @@
       :loading="deleteLoading"
       @confirm="confirmDelete"
       @cancel="cancelDelete"
+    />
+
+    <!-- Modal de Confirmacao CCPAE -->
+    <ConfirmDialog
+      :is-open="showCcpaeConfirm"
+      title="Concluir para CCPAE"
+      message="Deseja concluir este protocolo para o CCPAE?"
+      description="Esta acao alterara o status do protocolo para CCPAE, registrando a movimentacao e mantendo o historico."
+      variant="success"
+      confirm-text="Concluir"
+      cancel-text="Cancelar"
+      :loading="ccpaeLoading"
+      @confirm="confirmCcpae"
+      @cancel="cancelCcpae"
     />
   </div>
 </template>
@@ -199,6 +226,8 @@ const props = defineProps({
   empreendedores: { type: Array, default: null },
   empreendimentos: { type: Array, default: () => [] },
   canAtribuir: { type: Boolean, default: false },
+  canCheck: { type: Boolean, default: false },
+  canPdf: { type: Boolean, default: false },
   podeVerTodos: { type: Boolean, default: false },
 });
 
@@ -214,8 +243,16 @@ const apiRepository = new ApiPaeProtocoloRepository();
 const repository = props.useMock ? mockRepository : apiRepository;
 const listUsecase = new ListPaeProtocolos(mockRepository);
 const historicoUsecase = new GetPaeProtocoloHistorico(repository);
+const { toast } = useToast();
 
 const canAtribuirComputed = computed(() => props.useMock ? props.canEdit : props.canAtribuir);
+const isExternalView = computed(() => (
+  !props.canCreate &&
+  !props.canEdit &&
+  !props.canDelete &&
+  !props.canExport &&
+  !props.canAtribuir
+));
 
 const perPage = 15;
 const currentPage = ref(1);
@@ -355,6 +392,10 @@ function handleFilterReset() {
   }
 }
 
+function handleCcpaeFilter() {
+  handleFilterChange({ status: 'ccpae' });
+}
+
 function handlePageChange(page) {
   if (props.useMock) {
     currentPage.value = page;
@@ -375,6 +416,9 @@ function handleEdit(id) {
 const showDeleteConfirm = ref(false);
 const deleteLoading = ref(false);
 const protocoloIdToDelete = ref(null);
+const showCcpaeConfirm = ref(false);
+const ccpaeLoading = ref(false);
+const protocoloIdToCcpae = ref(null);
 
 function handleArchive(id) {
   // O comportamento de arquivar pode ser direcionado para o delete por enquanto.
@@ -414,6 +458,60 @@ function cancelDelete() {
 }
 
 function handleOptions(_id) {
+}
+
+function handleCheck(id) {
+  const protocolo = (filteredProtocolos.value || []).find((p) => p.id === id);
+  if (!protocolo) return;
+
+  protocoloIdToCcpae.value = id;
+  showCcpaeConfirm.value = true;
+}
+
+function getRequestErrorMessage(error) {
+  const data = error?.response?.data;
+  const firstValidationMessage = data?.errors
+    ? Object.values(data.errors).flat().find(Boolean)
+    : null;
+
+  return firstValidationMessage
+    || data?.message
+    || 'Erro ao concluir protocolo para CCPAE. Tente novamente.';
+}
+
+async function confirmCcpae() {
+  if (!protocoloIdToCcpae.value) return;
+
+  ccpaeLoading.value = true;
+
+  try {
+    const ax = window.axios || (await import('axios')).default;
+
+    await ax.post(route('pae.protocolos.status', protocoloIdToCcpae.value), {
+      novo_status: 'ccpae',
+      obs: 'Protocolo concluido para CCPAE.',
+    }, {
+      headers: { Accept: 'application/json' },
+    });
+
+    showCcpaeConfirm.value = false;
+    protocoloIdToCcpae.value = null;
+    toast('Protocolo concluido para CCPAE.', 'success');
+    router.get(route('pae.protocolos.index'), { ...filters.value, status: 'ccpae' }, { preserveState: false, replace: true });
+  } catch (error) {
+    toast(getRequestErrorMessage(error), 'error');
+  } finally {
+    ccpaeLoading.value = false;
+  }
+}
+
+function cancelCcpae() {
+  showCcpaeConfirm.value = false;
+  protocoloIdToCcpae.value = null;
+}
+
+function handlePdf(id) {
+  handlePrint(id);
 }
 
 // Modal de atribuicao

@@ -30,10 +30,14 @@
         :can-edit="canEdit"
         :can-delete="canDelete"
         :can-atribuir="canAtribuir"
+        :can-check="canCheck"
+        :can-pdf="canPdf"
         @view="$emit('view', $event)"
         @print="$emit('print', $event)"
         @edit="$emit('edit', $event)"
         @history="$emit('history', $event)"
+        @check="$emit('check', $event)"
+        @pdf="$emit('pdf', $event)"
         @archive="$emit('archive', $event)"
         @delete="$emit('delete', $event)"
         @options="$emit('options', $event)"
@@ -76,9 +80,17 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canCheck: {
+    type: Boolean,
+    default: false,
+  },
+  canPdf: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'archive', 'delete', 'options', 'assign']);
+defineEmits(['view', 'print', 'edit', 'history', 'check', 'pdf', 'archive', 'delete', 'options', 'assign']);
 </script>
 
 

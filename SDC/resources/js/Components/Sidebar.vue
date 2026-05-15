@@ -424,7 +424,76 @@
         >
           Caminhões
         </NavItem>
-        <!-- Itens (Atas, Lotes, Cronogramas, Vistorias, Historico) entram a partir da Fase 2 -->
+        <NavItem
+          v-if="_routes.hasTdapAtas"
+          :href="route('tdap.atas.index')"
+          :active="isRouteActive('tdap.atas.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Atas
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapLotes"
+          :href="route('tdap.lotes.index')"
+          :active="isRouteActive('tdap.lotes.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Lotes
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapCronogramas"
+          :href="route('tdap.cronogramas.index')"
+          :active="isRouteActive('tdap.cronogramas.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Cronogramas
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapViagensPendentes"
+          :href="route('tdap.viagens.pendentes')"
+          :active="isRouteActive('tdap.viagens.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Viagens pendentes
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapVistorias"
+          :href="route('tdap.vistorias.index')"
+          :active="isRouteActive('tdap.vistorias.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Vistorias
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapHistoricos"
+          :href="route('tdap.historicos.index')"
+          :active="isRouteActive('tdap.historicos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Histórico
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapProcessos"
+          :href="route('tdap.processos.swimlanes')"
+          :active="isRouteActive('tdap.processos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Processos (Workflow)
+        </NavItem>
       </div>
     </nav>
 
@@ -473,6 +542,13 @@ const _routes = {
   hasTdapDashboard: route().has('tdap.dashboard'),
   hasTdapPrestadores: route().has('tdap.prestadores.index'),
   hasTdapCaminhoes: route().has('tdap.caminhoes.index'),
+  hasTdapAtas: route().has('tdap.atas.index'),
+  hasTdapLotes: route().has('tdap.lotes.index'),
+  hasTdapCronogramas: route().has('tdap.cronogramas.index'),
+  hasTdapViagensPendentes: route().has('tdap.viagens.pendentes'),
+  hasTdapVistorias: route().has('tdap.vistorias.index'),
+  hasTdapHistoricos: route().has('tdap.historicos.index'),
+  hasTdapProcessos: route().has('tdap.processos.swimlanes'),
   hasCisterna: route().has('cisternas.index'),
   hasInventario: route().has('inventario.index'),
   hasEstoque: route().has('estoque.index'),
@@ -503,6 +579,13 @@ const _activeRoutes = computed(() => {
     'tdap.dashboard': route().current('tdap.dashboard'),
     'tdap.prestadores.*': route().current('tdap.prestadores.*'),
     'tdap.caminhoes.*': route().current('tdap.caminhoes.*'),
+    'tdap.atas.*': route().current('tdap.atas.*'),
+    'tdap.lotes.*': route().current('tdap.lotes.*'),
+    'tdap.cronogramas.*': route().current('tdap.cronogramas.*'),
+    'tdap.viagens.*': route().current('tdap.viagens.*'),
+    'tdap.vistorias.*': route().current('tdap.vistorias.*'),
+    'tdap.historicos.*': route().current('tdap.historicos.*'),
+    'tdap.processos.*': route().current('tdap.processos.*'),
     'cisternas.*': route().current('cisternas.*'),
     'inventario.*': route().current('inventario.*'),
     'estoque.*': route().current('estoque.*'),
@@ -589,6 +672,13 @@ const canSeeTdap = computed(() => {
     'tdap.dashboard.view',
     'tdap.prestadores.view',
     'tdap.caminhoes.view',
+    'tdap.atas.view',
+    'tdap.lotes.view',
+    'tdap.cronogramas.view',
+    'tdap.viagens.view',
+    'tdap.vistorias.view',
+    'tdap.historico.view',
+    'tdap.processos.view',
   ]);
 });
 

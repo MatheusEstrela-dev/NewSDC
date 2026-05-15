@@ -1,11 +1,20 @@
 <template>
   <template v-if="shouldRender">
+    <input
+      v-if="isUploadButton"
+      ref="fileInputRef"
+      type="file"
+      class="hidden"
+      :accept="uploadAccept"
+      :multiple="uploadMultiple"
+      @change="handleFileChange"
+    />
     <ButtonIcon
       v-if="!showLabel"
       :icon="computedIcon"
       :variant="computedIconVariant"
       :size="size"
-      :disabled="isDisabled || disabled || loading"
+      :disabled="buttonDisabled"
       :type="type"
       :title="tooltipTitle"
       @click="handleClick"
@@ -16,8 +25,8 @@
       :size="size"
       :icon="computedIcon"
       :icon-position="iconPosition"
-      :disabled="isDisabled || disabled"
-      :loading="loading"
+      :disabled="buttonDisabled"
+      :loading="buttonLoading"
       :type="type"
       :full-width="fullWidth"
       :title="tooltipTitle"
@@ -47,8 +56,17 @@
  * >
  *   Exportar CSV
  * </ActionButton>
+ *
+ * Upload com envio real:
+ * <ActionButton
+ *   action="upload"
+ *   upload-url="/endpoint"
+ *   upload-field-name="arquivo"
+ *   @upload-success="recarregar"
+ * />
  */
-import { computed, markRaw } from 'vue';
+import { computed, markRaw, ref } from 'vue';
+import { router } from '@inertiajs/vue3';
 import Button from './Button.vue';
 import ButtonIcon from './ButtonIcon.vue';
 import { useActionConfig } from '@/composables/ui';
@@ -61,6 +79,7 @@ import TrashIcon from '../../Icons/TrashIcon.vue';
 import PrinterIcon from '../../Icons/PrinterIcon.vue';
 import DownloadIcon from '../../Icons/DownloadIcon.vue';
 import DocumentIcon from '../../Icons/DocumentIcon.vue';
+import DocumentTextIcon from '../../Icons/DocumentTextIcon.vue';
 import CheckIcon from '../../Icons/CheckIcon.vue';
 import ArchiveBoxIcon from '../../Icons/ArchiveBoxIcon.vue';
 import UploadIcon from '../../Icons/UploadIcon.vue';
@@ -80,6 +99,8 @@ const ActionIcons = {
   export: markRaw(DownloadIcon),
   duplicate: markRaw(DocumentIcon),
   finalize: markRaw(CheckIcon),
+  check: markRaw(CheckIcon),
+  pdf: markRaw(DocumentTextIcon),
   archive: markRaw(ArchiveBoxIcon),
   upload: markRaw(UploadIcon),
   attachments: markRaw(PaperClipIcon),
@@ -99,6 +120,8 @@ const ActionLabels = {
   export: 'Exportar',
   duplicate: 'Duplicar',
   finalize: 'Finalizar',
+  check: 'Validar',
+  pdf: 'PDF',
   archive: 'Arquivar',
   upload: 'Upload',
   attachments: 'Anexos',
@@ -118,8 +141,10 @@ const ActionVariants = {
   export: 'secondary',
   duplicate: 'secondary',
   finalize: 'success',
+  check: 'success',
+  pdf: 'danger',
   archive: 'warning',
-  upload: 'info',
+  upload: 'black',
   attachments: 'success',
   history: 'info',
   warning: 'warning',
@@ -137,8 +162,10 @@ const ActionIconVariants = {
   export: 'secondary',
   duplicate: 'secondary',
   finalize: 'success',
+  check: 'success',
+  pdf: 'vibrant-danger',
   archive: 'topaz',
-  upload: 'warning',
+  upload: 'black',
   attachments: 'success',
   history: 'success',
   warning: 'vibrant-warning',
@@ -163,7 +190,7 @@ const props = defineProps({
       'create', 'view', 'edit', 'delete', 'print',
       'export', 'duplicate', 'finalize', 'attachments',
       'history', 'archive', 'upload', 'warning',
-      'options', 'assign', 'notifications'
+      'options', 'assign', 'notifications', 'check', 'pdf'
     ].includes(value),
   },
   fallback: {
@@ -219,9 +246,43 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  uploadUrl: {
+    type: String,
+    default: null,
+  },
+  uploadFieldName: {
+    type: String,
+    default: 'arquivo',
+  },
+  uploadData: {
+    type: Object,
+    default: () => ({}),
+  },
+  uploadAccept: {
+    type: String,
+    default: '',
+  },
+  uploadMultiple: {
+    type: Boolean,
+    default: false,
+  },
+  uploadOptions: {
+    type: Object,
+    default: () => ({}),
+  },
 });
 
-const emit = defineEmits(['click']);
+const emit = defineEmits([
+  'click',
+  'files-selected',
+  'upload-start',
+  'upload-success',
+  'upload-error',
+  'upload-finish',
+]);
+
+const fileInputRef = ref(null);
+const isUploading = ref(false);
 
 const { can } = usePermissions();
 const { isActionEnabled, getTooltip } = useActionConfig(props.module);
@@ -251,6 +312,18 @@ const isDisabled = computed(() => {
   return false;
 });
 
+const isUploadButton = computed(() => {
+  return props.action === 'upload' && !!props.uploadUrl;
+});
+
+const buttonDisabled = computed(() => {
+  return isDisabled.value || props.disabled || props.loading || isUploading.value;
+});
+
+const buttonLoading = computed(() => {
+  return props.loading || isUploading.value;
+});
+
 const computedVariant = computed(() => {
   return props.variant || ActionVariants[props.action] || 'primary';
 });
@@ -275,8 +348,72 @@ const tooltipTitle = computed(() => {
 });
 
 const handleClick = (event) => {
-  if (hasPermission.value && !props.disabled && !props.loading) {
-    emit('click', event);
+  if (!hasPermission.value || buttonDisabled.value) {
+    return;
   }
+
+  emit('click', event);
+
+  if (isUploadButton.value) {
+    fileInputRef.value?.click();
+  }
+};
+
+const appendFormValue = (formData, key, value) => {
+  if (value === null || value === undefined) return;
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => appendFormValue(formData, `${key}[]`, item));
+    return;
+  }
+
+  formData.append(key, value);
+};
+
+const buildUploadPayload = (files) => {
+  const formData = new FormData();
+
+  Object.entries(props.uploadData).forEach(([key, value]) => {
+    appendFormValue(formData, key, value);
+  });
+
+  files.forEach((file) => {
+    formData.append(props.uploadFieldName, file);
+  });
+
+  return formData;
+};
+
+const uploadFiles = (files) => {
+  if (!files.length || !props.uploadUrl) return;
+
+  isUploading.value = true;
+  emit('upload-start', files);
+
+  router.post(props.uploadUrl, buildUploadPayload(files), {
+    preserveScroll: true,
+    forceFormData: true,
+    ...props.uploadOptions,
+    onSuccess: (page) => {
+      props.uploadOptions.onSuccess?.(page);
+      emit('upload-success', { files, page });
+    },
+    onError: (errors) => {
+      props.uploadOptions.onError?.(errors);
+      emit('upload-error', { files, errors });
+    },
+    onFinish: (visit) => {
+      props.uploadOptions.onFinish?.(visit);
+      isUploading.value = false;
+      emit('upload-finish', { files, visit });
+    },
+  });
+};
+
+const handleFileChange = (event) => {
+  const files = Array.from(event.target.files || []);
+  emit('files-selected', files);
+  uploadFiles(files);
+  event.target.value = '';
 };
 </script>

@@ -97,6 +97,8 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
+        $this->removeViteHotFileWhenBuildAssetsShouldBeUsed();
+
         // Spatie permissions: reset cache entre requests no Octane
         if (class_exists(\Laravel\Octane\Events\RequestReceived::class)) {
             $this->app['events']->listen(RequestReceived::class, function () {
@@ -254,6 +256,23 @@ class AppServiceProvider extends ServiceProvider
                     'cpf_coordenador' => $notifiable->cpf ?? null,
                 ]);
         });
+    }
+
+    private function removeViteHotFileWhenBuildAssetsShouldBeUsed(): void
+    {
+        $buildManifestExists = file_exists(public_path('build/manifest.json'));
+        $shouldUseBuildAssets = !app()->environment('local') || $buildManifestExists;
+
+        if (!$shouldUseBuildAssets) {
+            return;
+        }
+
+        $hotFile = public_path('hot');
+        if (!file_exists($hotFile)) {
+            return;
+        }
+
+        @unlink($hotFile);
     }
 
     private function getQueryCaller(): array

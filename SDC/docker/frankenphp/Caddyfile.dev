@@ -3,6 +3,9 @@
 	auto_https disable_redirects
 
 	frankenphp {
+		php_ini post_max_size 64M
+		php_ini upload_max_filesize 64M
+
 		worker {
 			file {$APP_PUBLIC_PATH}/frankenphp-worker.php
 			num {$FRANKENPHP_WORKERS:auto}
@@ -21,6 +24,10 @@ https://localhost {
 
 	log {
 		level WARN
+	}
+
+	request_body {
+		max_size 64MB
 	}
 
 	route {

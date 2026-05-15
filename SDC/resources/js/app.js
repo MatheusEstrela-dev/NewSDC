@@ -35,12 +35,16 @@ router.on('start', (event) => {
         userFacingNavPending = true;
     }
 });
-router.on('finish', () => {
+const finishUserFacingNav = () => {
     if (userFacingNavPending) {
         stopLoading();
         userFacingNavPending = false;
     }
-});
+};
+router.on('finish', finishUserFacingNav);
+router.on('error', finishUserFacingNav);
+router.on('exception', finishUserFacingNav);
+router.on('navigate', finishUserFacingNav);
 
 const loadPageCSS = (pageName) => {
     const cssMap = {

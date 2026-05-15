@@ -37,6 +37,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -90,7 +91,18 @@ class RatUnifiedController extends BaseController
 
     public function store(Request $request): RedirectResponse|JsonResponse
     {
+        $traceId = $this->ratDebugTraceId($request);
+
         try {
+            $this->ratDebug($request, $traceId, 'controller.store.received', [
+                'route' => 'rat.store',
+                'url' => $request->fullUrl(),
+                'method' => $request->method(),
+                'expects_json' => $request->expectsJson() || $request->wantsJson(),
+                'input_keys' => array_keys($request->all()),
+                'payload' => $this->ratDebugPayload($request->all()),
+            ]);
+
             $validated = $request->validate([
                 'dadosGerais' => 'nullable|array',
                 'comunicacao' => 'nullable|array',
@@ -103,7 +115,29 @@ class RatUnifiedController extends BaseController
                 'finalize'    => 'nullable|boolean',
             ]);
 
+            $this->ratDebug($request, $traceId, 'controller.store.validated', [
+                'validated_keys' => array_keys($validated),
+                'payload' => $this->ratDebugPayload($validated),
+            ]);
+
             $ocorrencia = $this->writeService->createWithData($validated);
+
+            $this->ratDebug($request, $traceId, 'controller.store.persisted', [
+                'rat_id' => $ocorrencia->id,
+                'numero_bos' => $ocorrencia->numero_bos,
+                'status' => $ocorrencia->status,
+                'created_by' => $ocorrencia->created_by,
+                'updated_by' => $ocorrencia->updated_by,
+                'created_at' => $ocorrencia->created_at?->toISOString(),
+                'db_counts' => [
+                    'rat_ocorrencias' => RatOcorrencia::whereKey($ocorrencia->id)->count(),
+                    'rat_ocorrencia_relatos' => RatOcorrenciaRelato::where('ocorrencia_id', $ocorrencia->id)->count(),
+                    'rat_relato_dados_gerais' => RatRelatoDadosGerais::where('ocorrencia_id', $ocorrencia->id)->count(),
+                    'rat_relato_recursos' => RatRelatoRecurso::where('ocorrencia_id', $ocorrencia->id)->count(),
+                    'rat_relato_envolvidos' => RatRelatoEnvolvidos::where('ocorrencia_id', $ocorrencia->id)->count(),
+                    'rat_relato_vistoria' => RatRelatoVistoria::where('ocorrencia_id', $ocorrencia->id)->count(),
+                ],
+            ]);
 
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json([
@@ -128,6 +162,39 @@ class RatUnifiedController extends BaseController
                 ->withErrors(['error' => 'Erro ao criar RAT: ' . $e->getMessage()])
                 ->withInput();
         }
+    }
+
+    private function ratDebugTraceId(Request $request): string
+    {
+        return (string) ($request->headers->get('X-Request-Id') ?: str()->uuid());
+    }
+
+    private function ratDebug(Request $request, string $traceId, string $stage, array $context = []): void
+    {
+        if (!$this->ratDebugEnabled($request)) {
+            return;
+        }
+
+        Log::debug('[RAT_DEBUG_CREATE] ' . $stage, array_merge([
+            'trace_id' => $traceId,
+            'user_id' => Auth::id(),
+            'session_id' => $request->hasSession() ? $request->session()->getId() : null,
+        ], $context));
+    }
+
+    private function ratDebugEnabled(Request $request): bool
+    {
+        return (bool) config('app.debug') || $request->input('_debug') === 'rat' || $request->query('debug') === 'rat';
+    }
+
+    private function ratDebugPayload(array $payload): array
+    {
+        return Arr::except($payload, [
+            '_token',
+            'password',
+            'password_confirmation',
+            'current_password',
+        ]);
     }
 
     public function show(string $id): Response

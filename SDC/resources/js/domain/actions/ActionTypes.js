@@ -78,7 +78,7 @@ export const ActionDefaults = Object.freeze({
     [ActionTypes.UPLOAD]: {
         enabled: true,
         icon: 'UploadIcon',
-        variant: 'warning',
+        variant: 'black',
         label: 'Upload',
         tooltip: 'Fazer upload'
     },

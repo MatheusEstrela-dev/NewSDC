@@ -1,6 +1,6 @@
 <template>
-  <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
-    <div class="overflow-x-auto">
+  <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-visible shadow-sm">
+    <div class="overflow-visible">
       <table class="w-full text-sm text-left">
         <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
           <tr>
@@ -54,6 +54,8 @@
                   :show-delete="canDelete"
                   :show-edit="canEdit"
                   :show-history="true"
+                  :show-check="canCheck"
+                  :show-pdf="canPdf"
                   :show-archive="true"
                   :show-options="true"
                   :show-assign="canAtribuir && isAssignableStatus(protocolo.situacao)"
@@ -61,6 +63,8 @@
                   @print="$emit('print', protocolo.id)"
                   @edit="$emit('edit', protocolo.id)"
                   @history="$emit('history', protocolo.id)"
+                  @check="$emit('check', protocolo.id)"
+                  @pdf="$emit('pdf', protocolo.id)"
                   @archive="$emit('archive', protocolo.id)"
                   @delete="$emit('delete', protocolo.id)"
                   @options="$emit('options', protocolo.id)"
@@ -103,7 +107,15 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  canCheck: {
+    type: Boolean,
+    default: false,
+  },
+  canPdf: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'archive', 'delete', 'options', 'assign']);
+defineEmits(['view', 'print', 'edit', 'history', 'check', 'pdf', 'archive', 'delete', 'options', 'assign']);
 </script>
