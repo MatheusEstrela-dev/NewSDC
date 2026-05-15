@@ -28,6 +28,7 @@
 
         <div class="mt-4 flex items-center gap-6 border-b border-slate-700/40">
           <button
+            v-if="showTimelineTab"
             type="button"
             class="pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors"
             :class="activeTab === 'timeline' ? 'border-blue-400 text-white' : 'border-transparent text-slate-200/70 hover:text-white'"
@@ -174,16 +175,31 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  externalView: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 defineEmits(['close']);
 
 const activeTab = ref('timeline');
+const showTimelineTab = computed(() => !props.externalView);
+const defaultTab = computed(() => (props.externalView ? 'analises' : 'timeline'));
 
 watch(
   () => props.open,
   (v) => {
-    if (v) activeTab.value = 'timeline';
+    if (v) activeTab.value = defaultTab.value;
+  }
+);
+
+watch(
+  () => props.externalView,
+  () => {
+    if (props.open && !showTimelineTab.value && activeTab.value === 'timeline') {
+      activeTab.value = defaultTab.value;
+    }
   }
 );
 
@@ -231,5 +247,4 @@ function eventIcon(tipo) {
   return map[tipo] || ExclamationTriangleIcon;
 }
 </script>
-
 

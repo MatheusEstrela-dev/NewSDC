@@ -33,8 +33,6 @@ class CronoCaminhao extends Model
         'comunidade_id',
         'agua_prevista',
         'num_viagens',
-        'agua_entregue',
-        'vr_total',
         'ordem',
     ];
 

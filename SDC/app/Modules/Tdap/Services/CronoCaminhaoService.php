@@ -115,10 +115,12 @@ class CronoCaminhaoService
             $aguaEntregue = $viagensValidadas * $capacidade;
             $vrTotal = $aguaEntregue * $valorM3;
 
-            $cc->update([
+            // forceFill: agua_entregue e vr_total nao estao em $fillable
+            // (sao derivados — somente este Service pode escreve-los).
+            $cc->forceFill([
                 'agua_entregue' => $aguaEntregue,
                 'vr_total'      => $vrTotal,
-            ]);
+            ])->save();
         });
     }
 }

@@ -40,6 +40,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property ?array          $stored_pmda_ponto
  * @property ?array          $stored_municipio
  * @property ?array          $stored_prestador
+ * @property ?string         $processo_tdap_id
  */
 class Cronograma extends Model
 {
@@ -74,6 +75,7 @@ class Cronograma extends Model
         'stored_pmda_ponto',
         'stored_municipio',
         'stored_prestador',
+        'processo_tdap_id',
     ];
 
     protected $casts = [
@@ -120,6 +122,11 @@ class Cronograma extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function processoTdap(): BelongsTo
+    {
+        return $this->belongsTo(ProcessoTdap::class, 'processo_tdap_id');
     }
 
     public function caminhoes(): HasMany

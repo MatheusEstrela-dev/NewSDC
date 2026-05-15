@@ -35,6 +35,12 @@ return new class extends Migration
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
 
+            // Vinculo opcional ao agregado raiz ProcessoTdap (Fase 6).
+            // Nullable para preservar cronogramas legados criados antes do
+            // workflow event-driven.
+            $table->uuid('processo_tdap_id')->nullable()->index()
+                ->comment('FK opcional para tdap_processos (workflow Fase 6)');
+
             $table->string('cnpj', 18)->nullable()->comment('Snapshot do CNPJ do prestador');
 
             $table->decimal('consumo_diario', 12, 2)->default(0)->comment('m3/dia');

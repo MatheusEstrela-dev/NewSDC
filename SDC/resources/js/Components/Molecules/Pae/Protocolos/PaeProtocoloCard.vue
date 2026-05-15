@@ -43,78 +43,38 @@
     </div>
 
     <div class="mt-5 flex items-center justify-between gap-2">
-      <div class="flex items-center flex-wrap gap-2 sm:gap-3">
-        <ActionButton
-          module="pae"
-          action="view"
-          :allowed="true"
-          :show-label="false"
-          size="md"
-          @click="$emit('view', protocolo.id)"
-        />
-        <ActionButton
-          module="pae"
-          action="print"
-          :allowed="true"
-          :show-label="false"
-          size="md"
-          @click="$emit('print', protocolo.id)"
-        />
-        <ActionButton
-          v-if="canEdit"
-          module="pae"
-          action="edit"
-          :allowed="true"
-          :show-label="false"
-          size="md"
-          @click="$emit('edit', protocolo.id)"
-        />
-        <ActionButton
-          module="pae"
-          action="history"
-          :allowed="true"
-          :show-label="false"
-          size="md"
-          label="Serie Historica"
-          @click="$emit('history', protocolo.id)"
-        />
-        <ActionButton
-          module="pae"
-          action="notifications"
-          :allowed="true"
-          :show-label="false"
-          size="md"
-          @click="$emit('notifications', protocolo.id)"
-        />
-        <ActionButton
-          v-if="canDelete"
-          module="pae"
-          action="archive"
-          :allowed="true"
-          :show-label="false"
-          size="md"
-          @click="$emit('archive', protocolo.id)"
-        />
-        <ActionButton
-          v-if="canAtribuir && isAssignableStatus(protocolo.situacao)"
-          module="pae"
-          action="assign"
-          :allowed="true"
-          :show-label="false"
-          size="md"
-          label="Atribuir Analista"
-          @click="$emit('assign', protocolo.id)"
-        />
-      </div>
+      <TableActions
+        module="pae"
+        :show-attachments="false"
+        :show-delete="false"
+        :show-edit="canEdit"
+        :show-history="true"
+        :show-notifications="true"
+        :show-check="canCheck"
+        :show-pdf="canPdf"
+        :show-archive="canDelete"
+        :show-options="true"
+        :show-assign="canAtribuir && isAssignableStatus(protocolo.situacao)"
+        @view="$emit('view', protocolo.id)"
+        @print="$emit('print', protocolo.id)"
+        @edit="$emit('edit', protocolo.id)"
+        @history="$emit('history', protocolo.id)"
+        @notifications="$emit('notifications', protocolo.id)"
+        @check="$emit('check', protocolo.id)"
+        @pdf="$emit('pdf', protocolo.id)"
+        @archive="$emit('archive', protocolo.id)"
+        @options="$emit('options', protocolo.id)"
+        @assign="$emit('assign', protocolo.id)"
+      />
     </div>
   </CardBase>
 </template>
 
 <script setup>
-import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
@@ -141,7 +101,15 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  canCheck: {
+    type: Boolean,
+    default: false,
+  },
+  canPdf: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'notifications', 'archive', 'assign']);
+defineEmits(['view', 'print', 'edit', 'history', 'notifications', 'check', 'pdf', 'archive', 'options', 'assign']);
 </script>

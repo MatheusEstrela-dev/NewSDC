@@ -16,6 +16,8 @@
           :can-delete="can('pae.protocolos.delete')"
           :can-export="can('pae.protocolos.export')"
           :can-atribuir="can('pae.protocolos.atribuir')"
+          :can-check="props.canCheck"
+          :can-pdf="props.canPdf"
           :pode-ver-todos="props.podeVerTodos"
         />
     </div>
@@ -39,6 +41,8 @@ const props = defineProps({
     analistas: Array,
     empreendedores: Array,
     canAtribuir: { type: Boolean, default: false },
+    canCheck: { type: Boolean, default: false },
+    canPdf: { type: Boolean, default: false },
     podeVerTodos: { type: Boolean, default: false },
 });
 </script>

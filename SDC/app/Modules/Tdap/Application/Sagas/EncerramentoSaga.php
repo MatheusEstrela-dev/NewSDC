@@ -92,20 +92,29 @@ class EncerramentoSaga extends IdempotentListener
     }
 
     /**
+     * Soma num_viagens previstas e agua_entregue dos CronoCaminhoes
+     * vinculados aos Cronogramas do ProcessoTdap. Resultado dispara a
+     * transicao EM_EXECUCAO -> LIQUIDACAO_PENDENTE quando todas as viagens
+     * previstas estao validadas.
+     *
      * @return array{previstas: int, agua_entregue: float}
      */
     private function totaisDoProcesso(string $processoId): array
     {
-        // Consulta agregada — cronogramas vinculados ao processo via campo
-        // futuro tdap_cronogramas.processo_tdap_id. Por enquanto, retorna 0
-        // (placeholder ate o link ser estabelecido em Fase 6.x).
-        $row = DB::table('tdap_processo_projecoes')
-            ->where('processo_id', $processoId)
+        $row = DB::table('tdap_crono_caminhoes as cc')
+            ->join('tdap_cronogramas as c', 'c.id', '=', 'cc.cronograma_id')
+            ->where('c.processo_tdap_id', $processoId)
+            ->whereNull('cc.deleted_at')
+            ->whereNull('c.deleted_at')
+            ->selectRaw('
+                COALESCE(SUM(cc.num_viagens), 0)   as previstas,
+                COALESCE(SUM(cc.agua_entregue), 0) as agua_entregue
+            ')
             ->first();
 
         return [
-            'previstas'     => 0, // TODO: somar num_viagens dos crono_caminhoes vinculados quando processo_tdap_id existir em cronogramas
-            'agua_entregue' => (float) ($row->total_agua_entregue_m3 ?? 0),
+            'previstas'     => (int) ($row->previstas ?? 0),
+            'agua_entregue' => (float) ($row->agua_entregue ?? 0),
         ];
     }
 }

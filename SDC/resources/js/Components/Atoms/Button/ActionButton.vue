@@ -79,6 +79,7 @@ import TrashIcon from '../../Icons/TrashIcon.vue';
 import PrinterIcon from '../../Icons/PrinterIcon.vue';
 import DownloadIcon from '../../Icons/DownloadIcon.vue';
 import DocumentIcon from '../../Icons/DocumentIcon.vue';
+import DocumentTextIcon from '../../Icons/DocumentTextIcon.vue';
 import CheckIcon from '../../Icons/CheckIcon.vue';
 import ArchiveBoxIcon from '../../Icons/ArchiveBoxIcon.vue';
 import UploadIcon from '../../Icons/UploadIcon.vue';
@@ -98,6 +99,8 @@ const ActionIcons = {
   export: markRaw(DownloadIcon),
   duplicate: markRaw(DocumentIcon),
   finalize: markRaw(CheckIcon),
+  check: markRaw(CheckIcon),
+  pdf: markRaw(DocumentTextIcon),
   archive: markRaw(ArchiveBoxIcon),
   upload: markRaw(UploadIcon),
   attachments: markRaw(PaperClipIcon),
@@ -117,6 +120,8 @@ const ActionLabels = {
   export: 'Exportar',
   duplicate: 'Duplicar',
   finalize: 'Finalizar',
+  check: 'Validar',
+  pdf: 'PDF',
   archive: 'Arquivar',
   upload: 'Upload',
   attachments: 'Anexos',
@@ -136,6 +141,8 @@ const ActionVariants = {
   export: 'secondary',
   duplicate: 'secondary',
   finalize: 'success',
+  check: 'success',
+  pdf: 'danger',
   archive: 'warning',
   upload: 'black',
   attachments: 'success',
@@ -155,6 +162,8 @@ const ActionIconVariants = {
   export: 'secondary',
   duplicate: 'secondary',
   finalize: 'success',
+  check: 'success',
+  pdf: 'vibrant-danger',
   archive: 'topaz',
   upload: 'black',
   attachments: 'success',
@@ -181,7 +190,7 @@ const props = defineProps({
       'create', 'view', 'edit', 'delete', 'print',
       'export', 'duplicate', 'finalize', 'attachments',
       'history', 'archive', 'upload', 'warning',
-      'options', 'assign', 'notifications'
+      'options', 'assign', 'notifications', 'check', 'pdf'
     ].includes(value),
   },
   fallback: {

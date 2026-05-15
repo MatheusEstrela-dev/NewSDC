@@ -60,11 +60,15 @@ class OutboxDispatcher
      */
     public function dispatchPending(int $batch = 100): int
     {
+        // Postgres: SELECT ... FOR UPDATE SKIP LOCKED permite N workers
+        // consumindo a mesma fila sem contencao — cada worker pula rows ja
+        // travadas por outro processo. Sem skipLocked, workers concorrentes
+        // ficam em wait-lock ate timeout (throughput cai a zero).
         $rows = OutboxEvent::query()
             ->pending()
             ->orderBy('occurred_at')
             ->limit($batch)
-            ->lockForUpdate()
+            ->lock('FOR UPDATE SKIP LOCKED')
             ->get();
 
         $count = 0;

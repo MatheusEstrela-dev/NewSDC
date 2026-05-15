@@ -42,7 +42,9 @@ class EnviarEmailCronogramaListener extends IdempotentListener
         $mail = new CronogramaAtivadoMail($cronograma);
         $destinatarios = $mail->destinatariosLogicos();
         if (! empty($destinatarios)) {
-            Mail::to($destinatarios)->send($mail);
+            // queue() em vez de send(): SMTP nao bloqueia o worker do
+            // outbox e falha de transporte cai na fila com retry isolado.
+            Mail::to($destinatarios)->queue($mail);
         }
     }
 }

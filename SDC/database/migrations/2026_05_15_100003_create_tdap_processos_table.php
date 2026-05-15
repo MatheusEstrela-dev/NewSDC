@@ -66,10 +66,32 @@ return new class extends Migration
                 'em_execucao','liquidacao_pendente','pago','encerrado'
             ))
         ");
+
+        // Garante a coluna processo_tdap_id em tdap_cronogramas antes da FK.
+        // Necessario porque a migration de tdap_cronogramas pode ter rodado
+        // em ambientes onde a coluna ainda nao havia sido consolidada nela.
+        if (! Schema::hasColumn('tdap_cronogramas', 'processo_tdap_id')) {
+            Schema::table('tdap_cronogramas', function (Blueprint $table) {
+                $table->uuid('processo_tdap_id')->nullable()->after('prestador_id')->index()
+                    ->comment('FK opcional para tdap_processos (workflow Fase 6)');
+            });
+        }
+
+        // FK tdap_cronogramas.processo_tdap_id -> tdap_processos.id.
+        // SET NULL ao deletar processo (nao destroi cronogramas historicos).
+        Schema::table('tdap_cronogramas', function (Blueprint $table) {
+            $table->foreign('processo_tdap_id')
+                ->references('id')->on('tdap_processos')
+                ->cascadeOnUpdate()
+                ->nullOnDelete();
+        });
     }
 
     public function down(): void
     {
+        Schema::table('tdap_cronogramas', function (Blueprint $table) {
+            $table->dropForeign(['processo_tdap_id']);
+        });
         Schema::dropIfExists('tdap_processos');
     }
 };

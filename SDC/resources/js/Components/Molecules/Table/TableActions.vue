@@ -1,7 +1,7 @@
 <template>
   <div class="flex items-center gap-2">
     <ActionButton
-      v-for="action in visibleActions"
+      v-for="action in inlineActions"
       :key="action.name"
       :module="module"
       :resource="resource"
@@ -14,12 +14,49 @@
       :tooltip-text="action.label"
       @click="emit(action.event)"
     />
+
+    <Dropdown
+      v-if="hasMenuActions"
+      align="right"
+      width="48"
+      content-classes="py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+    >
+      <template #trigger>
+        <ActionButton
+          :module="module"
+          :resource="resource"
+          action="options"
+          :allowed="true"
+          :show-label="false"
+          :size="size"
+          tooltip-text="Opcoes"
+        />
+      </template>
+
+      <template #content>
+        <button
+          v-for="action in menuActions"
+          :key="action.name"
+          type="button"
+          class="w-full flex items-center gap-3 px-3 py-2 text-sm text-left transition-colors text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+          @click="emit(action.event)"
+        >
+          <component :is="action.icon" :class="['w-4 h-4 flex-shrink-0', action.iconClass]" />
+          <span>{{ action.label }}</span>
+        </button>
+      </template>
+    </Dropdown>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import Dropdown from '@/Components/Dropdown.vue';
+import ArchiveBoxIcon from '@/Components/Icons/ArchiveBoxIcon.vue';
+import CheckIcon from '@/Components/Icons/CheckIcon.vue';
+import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import UserIcon from '@/Components/Icons/UserIcon.vue';
 
 const props = defineProps({
   module: {
@@ -90,6 +127,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  showCheck: {
+    type: Boolean,
+    default: false,
+  },
+  showPdf: {
+    type: Boolean,
+    default: false,
+  },
   size: {
     type: String,
     default: 'md',
@@ -113,6 +158,8 @@ const emit = defineEmits([
   'export',
   'duplicate',
   'finalize',
+  'check',
+  'pdf',
 ]);
 
 const actions = computed(() => [
@@ -127,11 +174,56 @@ const actions = computed(() => [
   { name: 'export', event: 'export', show: props.showExport, label: 'Exportar' },
   { name: 'duplicate', event: 'duplicate', show: props.showDuplicate, label: 'Duplicar' },
   { name: 'finalize', event: 'finalize', show: props.showFinalize, label: 'Finalizar' },
-  { name: 'archive', event: 'archive', show: props.showArchive, label: 'Arquivar' },
   { name: 'delete', event: 'delete', show: props.showDelete, label: 'Excluir', variant: 'vibrant-danger' },
-  { name: 'assign', event: 'assign', show: props.showAssign, label: 'Atribuir Analista' },
-  { name: 'options', event: 'options', show: props.showOptions, label: 'Opcoes' },
 ]);
 
-const visibleActions = computed(() => actions.value.filter((action) => action.show));
+const menuActions = computed(() => [
+  {
+    name: 'check',
+    event: 'check',
+    show: props.showCheck,
+    label: 'Validar',
+    icon: CheckIcon,
+    iconClass: 'text-emerald-400',
+  },
+  {
+    name: 'pdf',
+    event: 'pdf',
+    show: props.showPdf,
+    label: 'PDF',
+    icon: DocumentTextIcon,
+    iconClass: 'text-[#ff4d00]',
+  },
+  {
+    name: 'archive',
+    event: 'archive',
+    show: props.showArchive,
+    label: 'Arquivar',
+    icon: ArchiveBoxIcon,
+    iconClass: 'text-yellow-500',
+  },
+  {
+    name: 'assign',
+    event: 'assign',
+    show: props.showAssign,
+    label: 'Atribuir Analista',
+    icon: UserIcon,
+    iconClass: 'text-sky-400',
+  },
+].filter((action) => action.show));
+
+const hasMenuActions = computed(() => menuActions.value.length > 0);
+
+const inlineActions = computed(() => {
+  const visible = actions.value.filter((action) => action.show);
+
+  if (!props.showOptions || hasMenuActions.value) {
+    return visible;
+  }
+
+  return [
+    ...visible,
+    { name: 'options', event: 'options', show: true, label: 'Opcoes' },
+  ];
+});
 </script>
