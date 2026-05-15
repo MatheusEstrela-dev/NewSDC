@@ -60,24 +60,7 @@
   @apply border-blue-500 dark:border-blue-500 bg-white dark:bg-slate-900;
 }
 
-/* Fix for date inputs in Webkit browsers - only invert in dark mode */
-.dark input[type="date"]::-webkit-calendar-picker-indicator,
-.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  opacity: 0.6;
-  cursor: pointer;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: 0.6;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator:hover,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-}
+/* Date/time picker indicator styles are defined in sections.css */
 
 /* Scrollbar Customization */
 .custom-scrollbar::-webkit-scrollbar {

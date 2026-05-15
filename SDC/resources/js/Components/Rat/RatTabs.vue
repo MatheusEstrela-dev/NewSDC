@@ -21,21 +21,33 @@
         <button
           v-for="tab in visibleTabs"
           :key="tab.id"
-          @click="$emit('tab-change', tab.id)"
-          :class="getTabClass(tab.id)"
-          :title="tab.label"
+          v-bind="!tab.disabled ? { onClick: () => handleTabClick(tab) } : {}"
+          :class="getTabClass(tab.id, tab.disabled)"
+          :disabled="tab.disabled || undefined"
+          :style="tab.disabled ? { pointerEvents: 'none' } : {}"
+          :title="tab.disabled ? 'Conclua a aba anterior para continuar' : tab.label"
           type="button"
           class="snap-start"
         >
           <component :is="tab.icon" class="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0" />
           <span class="hidden sm:inline whitespace-nowrap">{{ tab.label }}</span>
           <span
-            v-if="tab.badge"
+            v-if="tab.badge && !tab.disabled"
             class="ml-1 sm:ml-1.5 px-1.5 sm:px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 min-w-[1.25rem] text-center"
             :class="activeTab === tab.id ? 'bg-blue-500/20 text-blue-600 dark:text-blue-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'"
           >
             {{ tab.badge }}
           </span>
+          <!-- Ícone de cadeado para abas bloqueadas -->
+          <svg
+            v-if="tab.disabled"
+            class="w-3 h-3 ml-1 flex-shrink-0 opacity-70"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
         </button>
       </nav>
     </div>
@@ -61,7 +73,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['tab-change']);
+const emit = defineEmits(['tab-change']);
 
 const tabsNav = ref(null);
 const showLeftFade = ref(false);
@@ -71,15 +83,24 @@ const visibleTabs = computed(() => {
   return props.tabs.filter(tab => !tab.hidden);
 });
 
-function getTabClass(tabId) {
-  const baseClass =
-    'px-3 py-3 sm:px-4 sm:py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-1.5 sm:gap-2 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer select-none relative whitespace-nowrap min-w-[3rem] sm:min-w-0 justify-center sm:justify-start';
+function handleTabClick(tab) {
+  if (tab.disabled) return;
+  emit('tab-change', tab.id);
+}
 
-  if (props.activeTab === tabId) {
-    return `${baseClass} text-blue-600 dark:text-blue-400 bg-white dark:bg-blue-500/10 border-b-2 border-blue-500 dark:border-blue-400 shadow-sm dark:shadow-none`;
+function getTabClass(tabId, disabled) {
+  const baseClass =
+    'px-3 py-3 sm:px-4 sm:py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-1.5 sm:gap-2 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 select-none relative whitespace-nowrap min-w-[3rem] sm:min-w-0 justify-center sm:justify-start';
+
+  if (disabled) {
+    return `${baseClass} opacity-40 cursor-not-allowed text-slate-400 dark:text-slate-500`;
   }
 
-  return `${baseClass} text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-700/50`;
+  if (props.activeTab === tabId) {
+    return `${baseClass} cursor-pointer text-blue-600 dark:text-blue-400 bg-white dark:bg-blue-500/10 border-b-2 border-blue-500 dark:border-blue-400 shadow-sm dark:shadow-none`;
+  }
+
+  return `${baseClass} cursor-pointer text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-700/50`;
 }
 
 function handleScroll() {
@@ -142,6 +163,11 @@ onUnmounted(() => {
 .rat-tabs-wrapper button {
   flex-shrink: 0;
   min-width: fit-content;
+}
+
+/* Botão desabilitado: garantir cursor correto (atributo disabled reseta para default em alguns browsers) */
+.rat-tabs-wrapper button:disabled {
+  cursor: not-allowed;
 }
 
 /* Mobile: icones maiores e mais espacamento para touch */

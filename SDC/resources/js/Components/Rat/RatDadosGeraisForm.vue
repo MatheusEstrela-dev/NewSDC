@@ -9,18 +9,18 @@
       @update:model-value="localData.dadosGerais = $event"
     />
 
-    <RatCommunicationSection
-      v-model="localData.comunicacao"
-    />
-
     <RatNaturezaSection
       :model-value="localData.dadosGerais"
       @update:model-value="localData.dadosGerais = $event"
     />
 
-    <RatConfigSection
+    <RatCommunicationSection
+      v-model="localData.comunicacao"
+    />
+
+    <RatUnidadeSection
       :model-value="localData.dadosGerais"
-      @update:model-value="onConfigUpdate"
+      @update:model-value="localData.dadosGerais = $event"
     />
 
     <RatLocationSection
@@ -31,6 +31,21 @@
       v-model="localData.endereco"
       @location-updated="handleLocationUpdated"
     />
+
+    <!-- Incluir Relatório de Vistoria -->
+    <div class="rat-section-card">
+      <label class="flex items-center gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          :checked="localData.dadosGerais.tem_vistoria"
+          class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 bg-white dark:bg-slate-900/50"
+          @change="onToggleVistoria($event.target.checked)"
+        />
+        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">
+          Incluir Relatório de Vistoria
+        </span>
+      </label>
+    </div>
 
     <RatFormActions
       :view-only="viewOnly"
@@ -46,7 +61,7 @@ import { ref, watch } from 'vue';
 import RatAtendimentoSection from './Sections/RatAtendimentoSection.vue';
 import RatCommunicationSection from './Sections/RatCommunicationSection.vue';
 import RatNaturezaSection from './Sections/RatNaturezaSection.vue';
-import RatConfigSection from './Sections/RatConfigSection.vue';
+import RatUnidadeSection from './Sections/RatUnidadeSection.vue';
 import RatLocationSection from './Sections/RatLocationSection.vue';
 import RatAddressSection from './Sections/RatAddressSection.vue';
 import RatFormActions from '@/Components/Molecules/Rat/RatFormActions.vue';
@@ -72,7 +87,6 @@ const props = defineProps({
 
 const emit = defineEmits(['save', 'update:tem-vistoria', 'update:form-data']);
 
-// Prefere savedFormData (estado em memória do pai) sobre os props do servidor
 const _dg  = props.savedFormData?.dadosGerais ?? props.rat?.dados_gerais  ?? {};
 const _com = props.savedFormData?.comunicacao ?? props.rat?.comunicacao   ?? {};
 const _loc = props.savedFormData?.local       ?? props.rat?.local         ?? {};
@@ -122,11 +136,11 @@ const localData = ref({
   },
 });
 
-function onConfigUpdate(dadosGerais) {
+function onToggleVistoria(value) {
   const hadVistoria = localData.value.dadosGerais.tem_vistoria;
-  localData.value.dadosGerais = dadosGerais;
-  if (dadosGerais.tem_vistoria !== hadVistoria) {
-    emit('update:tem-vistoria', dadosGerais.tem_vistoria);
+  localData.value.dadosGerais = { ...localData.value.dadosGerais, tem_vistoria: value };
+  if (value !== hadVistoria) {
+    emit('update:tem-vistoria', value);
   }
 }
 

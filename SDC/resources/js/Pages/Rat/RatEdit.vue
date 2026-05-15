@@ -7,7 +7,7 @@
           <RatHeader :rat="rat" :last-update="lastUpdate" :view-only="false" />
 
           <!-- Sistema de Abas -->
-          <RatTabs :active-tab="currentActiveTab" :tabs="tabConfig" @tab-change="tabs.setActiveTab">
+          <RatTabs :active-tab="currentActiveTab" :tabs="tabConfig" @tab-change="onTabChange">
             <template #default="{ activeTab }">
               <!-- Aba 1: Dados Gerais -->
               <div v-if="Number(activeTab) === 1">
@@ -177,19 +177,40 @@ const currentActiveTab = computed(() => {
 const temVistoria = ref(props.rat?.tem_vistoria || false);
 const currentFormData = ref(null);
 
+// RAT existente → todas as abas acessíveis; RAT novo → apenas aba 1
+const unlockedTabs = ref(props.rat?.id ? [1, 2, 3, 4, 5, 6] : [1]);
+
+function unlockAndAdvanceTab(currentTabId) {
+  const ordered = [1, 2, 3, temVistoria.value ? 4 : null, 5, 6].filter(Boolean);
+  const idx = ordered.indexOf(Number(currentTabId));
+  if (idx >= 0 && idx < ordered.length - 1) {
+    const nextId = ordered[idx + 1];
+    if (!unlockedTabs.value.includes(nextId)) {
+      unlockedTabs.value = [...unlockedTabs.value, nextId];
+    }
+    tabs.setActiveTab(nextId);
+  }
+}
+
 const tabConfig = computed(() => [
-  { id: 1, label: 'Dados Gerais', icon: DocumentTextIcon },
-  { id: 2, label: 'Recursos Empregados', icon: TruckIcon, badge: recursos.value?.length > 0 ? recursos.value.length : null },
-  { id: 3, label: 'Envolvidos', icon: UsersIcon, badge: envolvidos.value?.length > 0 ? envolvidos.value.length : null },
-  { id: 4, label: 'Vistoria', icon: ClipboardIcon, hidden: !temVistoria.value },
-  { id: 5, label: 'Histórico', icon: ClockIcon },
-  { id: 6, label: 'Anexos', icon: PaperClipIcon, badge: (anexos.value?.length > 0) ? anexos.value.length : null },
+  { id: 1, label: 'Dados Gerais',        icon: DocumentTextIcon, disabled: false },
+  { id: 2, label: 'Recursos Empregados', icon: TruckIcon,         badge: recursos.value?.length > 0 ? recursos.value.length : null, disabled: !unlockedTabs.value.includes(2) },
+  { id: 3, label: 'Envolvidos',          icon: UsersIcon,         badge: envolvidos.value?.length > 0 ? envolvidos.value.length : null, disabled: !unlockedTabs.value.includes(3) },
+  { id: 4, label: 'Vistoria',            icon: ClipboardIcon,     hidden: !temVistoria.value, disabled: !unlockedTabs.value.includes(4) },
+  { id: 5, label: 'Histórico',           icon: ClockIcon,         disabled: !unlockedTabs.value.includes(5) },
+  { id: 6, label: 'Anexos',             icon: PaperClipIcon,     badge: (anexos.value?.length > 0) ? anexos.value.length : null, disabled: !unlockedTabs.value.includes(6) },
 ]);
 
-function handleSave(data) { salvarRat(data); }
-function handleSaveDraft(data) { salvarRascunho(data); }
+function onTabChange(tabId) {
+  if (unlockedTabs.value.includes(Number(tabId))) {
+    tabs.setActiveTab(tabId);
+  }
+}
+
+function handleSave(data)     { salvarRat(data);     unlockAndAdvanceTab(1); }
+function handleSaveDraft(data){ salvarRascunho(data); unlockAndAdvanceTab(1); }
 function handleFinalize(data) { finalizarRat(data); }
-function handleCancel() { cancelarRat(); }
+function handleCancel()       { cancelarRat(); }
 function handleFormDataUpdate(data) { currentFormData.value = data; }
 function handleToggleVistoria(value) { temVistoria.value = value; }
 
@@ -201,6 +222,7 @@ function handleSaveFromSubTab() {
     endereco: props.rat?.endereco ?? {},
   };
   salvarRascunho(formData);
+  unlockAndAdvanceTab(currentActiveTab.value);
 }
 
 function handleAddRecurso(recurso) {
