@@ -19,7 +19,7 @@
         RAT
       </Link>
       <ChevronRightIcon class="w-4 h-4 mx-2 text-slate-600" />
-      <span class="text-white font-medium">{{ isEdit ? 'Editar RAT' : 'Novo RAT' }}</span>
+      <span class="text-white font-medium">Boletim de Ocorrência</span>
     </nav>
 
     <!-- Botão Voltar -->
@@ -35,14 +35,7 @@
 
 <script setup>
 import { Link, router } from '@inertiajs/vue3';
-import { computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
 import ChevronRightIcon from '../Icons/ChevronRightIcon.vue';
 import ArrowLeftIcon from '../Icons/ArrowLeftIcon.vue';
-
-const page = usePage();
-const isEdit = computed(() => {
-  return page.props.rat?.id !== null && page.props.rat?.id !== undefined;
-});
 </script>
 

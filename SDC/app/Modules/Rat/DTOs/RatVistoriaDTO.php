@@ -106,12 +106,12 @@ readonly class RatVistoriaDTO
             vTipoDestinacao:                 $data['v_tipo_destinacao']                  ?? $est['tipo_destinacao'] ?? null,
             vTipoTerrenoRelevo:              $data['v_tipo_terreno_relevo']              ?? null,
             vSistemaEstrutural:              $data['v_sistema_estrutural']               ?? $est['sistema_estrutural'] ?? null,
-            vNumeroPavimentos:               isset($data['v_numero_pavimentos'])         ? (int) $data['v_numero_pavimentos'] : (isset($est['num_pavimentos']) ? (int) $est['num_pavimentos'] : null),
+            vNumeroPavimentos:               self::intOrNull($data['v_numero_pavimentos'] ?? $est['num_pavimentos'] ?? null),
             vEstadoConservacao:              $data['v_estado_conservacao']               ?? $est['estado_conservacao'] ?? null,
             vRegimeOcupacao:                 $data['v_regime_ocupacao']                  ?? $est['regime_ocupacao'] ?? null,
             vProprietarioMorador:            $data['v_proprietario_morador']             ?? $mor['proprietario'] ?? null,
             vContatoTelefone:                $data['v_contato_telefone']                 ?? $mor['telefone'] ?? null,
-            vNumeroMoradores:                isset($data['v_numero_moradores'])          ? (int) $data['v_numero_moradores'] : (isset($mor['num_moradores']) ? (int) $mor['num_moradores'] : null),
+            vNumeroMoradores:                self::intOrNull($data['v_numero_moradores'] ?? $mor['num_moradores'] ?? null),
             vHaIdosos:                       isset($data['v_ha_idosos'])                 ? (bool) $data['v_ha_idosos'] : (isset($mor['ha_idosos']) ? (bool) $mor['ha_idosos'] : null),
             vHaCriancas:                     isset($data['v_ha_criancas'])               ? (bool) $data['v_ha_criancas'] : (isset($mor['ha_criancas']) ? (bool) $mor['ha_criancas'] : null),
             vHaDificuldadeLocomocao:         $data['v_ha_dificuldade_locomocao']         ?? ($mor['ha_pcd'] ?? null ? 'sim' : null),
@@ -149,6 +149,11 @@ readonly class RatVistoriaDTO
                 'id', 'solicitante', 'imovel', 'estrutura', 'moradores', 'patologias',
             ])),
         );
+    }
+
+    private static function intOrNull(mixed $v): ?int
+    {
+        return ($v !== null && $v !== '') ? (int) $v : null;
     }
 
     public function toArray(): array
@@ -214,6 +219,6 @@ readonly class RatVistoriaDTO
         // Mescla campos extras que possuem chaves de colunas v_* válidas
         $extraV = array_filter($this->extraFields ?? [], fn ($k) => str_starts_with($k, 'v_'), ARRAY_FILTER_USE_KEY);
 
-        return array_filter(array_merge($extraV, $base), fn ($v) => $v !== null);
+        return array_filter(array_merge($extraV, $base), fn ($v) => $v !== null && $v !== '');
     }
 }

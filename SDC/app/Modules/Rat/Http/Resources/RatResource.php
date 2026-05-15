@@ -42,11 +42,19 @@ class RatResource extends JsonResource
         $dt = static fn ($v) => $v ? Carbon::parse($v)->format('Y-m-d\TH:i') : null;
 
         return [
-            'id'           => $this->id,
-            'protocolo'    => $this->protocolo ?? $this->numero_bos ?? null,
-            'numero_bos'   => $this->numero_bos,
-            'status'       => $this->status,
-            'status_label' => $this->status === 1 ? 'Finalizado' : 'Rascunho',
+            'id'             => $this->id,
+            'sequencial_ano' => $this->sequencial_ano,
+            'protocolo'      => $this->protocolo ?? $this->numero_bos ?? null,
+            'numero_bos'     => $this->numero_bos,
+            'municipio'      => $dg['local_municipio'] ?? $dg['uni_responsavel_municipio'] ?? null,
+            'status'         => match((int) $this->status) {
+                1       => 'finalizado',
+                default => 'em_andamento',
+            },
+            'status_label'   => match((int) $this->status) {
+                1       => 'Finalizado',
+                default => 'Em Andamento',
+            },
             'tem_vistoria' => (bool) ($dg['tem_vistoria'] ?? false),
 
             // ── Dados Gerais (campos que a aba Dados Gerais lê via props.rat.dados_gerais) ──
@@ -92,9 +100,10 @@ class RatResource extends JsonResource
 
             // ── Local: nomes que RatLocationSection.vue usa ──
             'local' => [
-                'pais'       => $dg['local_pais'] ?? 'BR',
-                'pais_id'    => $dg['local_pais'] ?? 'BR',
-                'uf'         => $dg['local_estadouf'] ?? null,
+                'pais'         => $dg['local_pais'] ?? 'BR',
+                'pais_id'      => $dg['local_pais'] ?? 'BR',
+                'uf'           => $dg['local_estadouf'] ?? null,
+                'municipio'    => $dg['local_municipio'] ?? null,
                 'municipio_id' => $dg['local_municipio'] ?? null,
             ],
 

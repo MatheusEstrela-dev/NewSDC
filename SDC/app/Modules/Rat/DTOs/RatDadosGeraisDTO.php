@@ -155,6 +155,6 @@ readonly class RatDadosGeraisDTO
             'local_ocorrencia_estradas_rodovias' => $this->localOcorrenciaEstradas,
             'local_unidade_militar'       => $this->localUnidadeMilitar,
             'tem_vistoria'                => $this->temVistoria,
-        ], fn ($v) => $v !== null);
+        ], fn ($v) => $v !== null && $v !== '');
     }
 }

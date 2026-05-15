@@ -140,7 +140,7 @@ readonly class RatEnvolvidoDTO
             'g_envolvido_presenca'          => $this->gEnvolvidoPresenca,
             'g_envolvido_tipo'              => $this->gEnvolvidoTipo,
             'g_envolvido_orgao'             => $this->gEnvolvidoOrgao,
-            'g_envolvido_uf'                => $this->gEnvolvidoUf,
+            'g_envolvido_uf'                => $this->gEnvolvidoUf    ? mb_substr($this->gEnvolvidoUf, 0, 2)    : null,
             'g_envolvido_matricula'         => $this->gEnvolvidoMatricula,
             'g_envolvido_servico'           => $this->gEnvolvidoServico,
             'p_tipo'                        => $this->pTipo,
@@ -165,12 +165,12 @@ readonly class RatEnvolvidoDTO
             'p_nome_social'                 => $this->pNomeSocial,
             'p_nacionalidade'               => $this->pNacionalidade,
             'p_pais_origem'                 => $this->pPaisOrigem,
-            'p_naturalidade_uf'             => $this->pNaturalidadeUf,
+            'p_naturalidade_uf'             => $this->pNaturalidadeUf ? mb_substr($this->pNaturalidadeUf, 0, 2) : null,
             'p_turista'                     => $this->pTurista,
             'p_situacao_rua'                => $this->pSituacaoRua,
             'p_end_cep'                     => $this->pEndCep,
             'p_end_pais'                    => $this->pEndPais,
-            'p_end_estado_uf'               => $this->pEndEstadoUf,
+            'p_end_estado_uf'               => $this->pEndEstadoUf    ? mb_substr($this->pEndEstadoUf, 0, 2)    : null,
             'p_end_municipio'               => $this->pEndMunicipio,
             'p_end_bairro'                  => $this->pEndBairro,
             'p_end_logradouro'              => $this->pEndLogradouro,
@@ -182,6 +182,6 @@ readonly class RatEnvolvidoDTO
             'p_telefone_comercial'          => $this->pTelefoneComercial,
             'p_email'                       => $this->pEmail,
             'p_motivo_ausencia_contato'     => $this->pMotivoAusenciaContato,
-        ], fn ($v) => $v !== null);
+        ], fn ($v) => $v !== null && $v !== '');
     }
 }

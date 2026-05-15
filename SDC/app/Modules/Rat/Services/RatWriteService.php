@@ -32,10 +32,11 @@ class RatWriteService
             $userId    = Auth::id();
 
             return RatOcorrencia::create([
-                'numero_bos' => $protocolo,
-                'status'     => 0,
-                'created_by' => $userId,
-                'updated_by' => $userId,
+                'numero_bos'     => $protocolo,
+                'sequencial_ano' => now()->year,
+                'status'         => 0,
+                'created_by'     => $userId,
+                'updated_by'     => $userId,
             ]);
         });
     }
@@ -47,10 +48,11 @@ class RatWriteService
             $userId    = Auth::id();
 
             $ocorrencia = RatOcorrencia::create([
-                'numero_bos' => $protocolo,
-                'status'     => 0,
-                'created_by' => $userId,
-                'updated_by' => $userId,
+                'numero_bos'     => $protocolo,
+                'sequencial_ano' => now()->year,
+                'status'         => 0,
+                'created_by'     => $userId,
+                'updated_by'     => $userId,
             ]);
 
             $id = (string) $ocorrencia->id;
@@ -177,6 +179,20 @@ class RatWriteService
                 ])
             );
             $this->ensureRelatoLink($ocorrenciaId, $dadosGerais);
+
+            // Gera o número do BOS no formato {ano}-{seq 9 dígitos}-{cod 3 dígitos}
+            // quando todos os campos identificadores do BO estiverem preenchidos.
+            if ($dto->uniBoAno && $dto->uniBoSequencial && $dto->uniBoCodUnidade) {
+                $ano      = str_pad((string) $dto->uniBoAno, 4, '0', STR_PAD_LEFT);
+                $seq      = str_pad((string) $dto->uniBoSequencial, 9, '0', STR_PAD_LEFT);
+                $cod      = str_pad((string) $dto->uniBoCodUnidade, 3, '0', STR_PAD_LEFT);
+                $numeroBos = "{$ano}-{$seq}-{$cod}";
+                RatOcorrencia::where('id', $ocorrenciaId)->update([
+                    'numero_bos'     => $numeroBos,
+                    'sequencial_ano' => (int) $dto->uniBoAno,
+                ]);
+            }
+
             return $dadosGerais;
         });
     }
@@ -238,6 +254,22 @@ class RatWriteService
     {
         DB::transaction(function () use ($ocorrenciaId, $dto) {
             $historico = $dto->historicoArray ?? ($dto->historico ? [$dto->historico] : []);
+
+            // Enforça limite de 500 caracteres por entrada de texto
+            $historico = array_map(function ($entry) {
+                if (is_string($entry)) {
+                    return mb_substr($entry, 0, 500);
+                }
+                if (is_array($entry)) {
+                    foreach (['texto', 'descricao', 'text', 'content'] as $key) {
+                        if (isset($entry[$key]) && is_string($entry[$key])) {
+                            $entry[$key] = mb_substr($entry[$key], 0, 500);
+                        }
+                    }
+                }
+                return $entry;
+            }, $historico);
+
             RatOcorrencia::where('id', $ocorrenciaId)->update(['historico' => $historico]);
         });
     }

@@ -16,15 +16,17 @@ return new class extends Migration
             $table->comment('Tabela de Recursos do Relato - Armazena informações principais dos recursos utilizados no atendimento');
             
             $table->id();
-            
+
+            $table->unsignedBigInteger('ocorrencia_id')->nullable()->index()->comment('ID da ocorrência vinculada');
+
             // Sequencial e Tipo (Enum)
-            $table->integer('seq')->comment('Sequencial do Recurso');
+            $table->integer('seq')->nullable()->comment('Sequencial do Recurso');
             $table->enum('recurso_tipo', ['viatura', 'pe', 'aereo', 'aquatico', 'outro'])
                   ->nullable()
                   ->comment('Tipo de Recurso');
 
             // Problemas e Descrições
-            $table->boolean('recurso_problemas')->default(0)->comment('Problemas durante o atendimento');
+            $table->boolean('recurso_problemas')->default(false)->comment('Problemas durante o atendimento');
             $table->text('recurso_descricao')->nullable()->comment('Descrição do problema');
 
             // Detalhes da Viatura
@@ -52,7 +54,7 @@ return new class extends Migration
             
             $table->string('viatura_operador', 255)->nullable()->comment('Operador/Responsável');
             $table->string('operador_masp', 20)->nullable()->comment('MASP do Operador');
-            $table->boolean('operador_is_condutor')->default(0)->comment('Indica se é o condutor');
+            $table->boolean('operador_is_condutor')->default(false)->comment('Indica se é o condutor');
             $table->string('viatura_contato', 50)->nullable()->comment('Contato de Emergência');
 
             // Auditoria

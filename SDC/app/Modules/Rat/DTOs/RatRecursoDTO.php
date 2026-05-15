@@ -59,8 +59,8 @@ readonly class RatRecursoDTO
             viaturaKm:           $data['viatura_km']           ?? $data['km_percorrido'] ?? null,
             viaturaLocalOrigem:  $data['viatura_local_origem']  ?? $data['local_origem'] ?? null,
             viaturaLocalDestino: $data['viatura_local_destino'] ?? $data['local_destino'] ?? null,
-            viaturaQuantidade:   isset($data['viatura_quantidade']) ? (int) $data['viatura_quantidade'] : (isset($data['quantidade']) ? (int) $data['quantidade'] : null),
-            viaturaCapacidade:   isset($data['viatura_capacidade']) ? (int) $data['viatura_capacidade'] : (isset($data['capacidade']) ? (int) $data['capacidade'] : null),
+            viaturaQuantidade:   self::intOrNull($data['viatura_quantidade'] ?? $data['quantidade'] ?? null),
+            viaturaCapacidade:   self::intOrNull($data['viatura_capacidade'] ?? $data['capacidade'] ?? null),
             viaturaCondicao:     $data['viatura_condicao']     ?? $data['condicao'] ?? null,
             viaturaOperador:     $data['viatura_operador']     ?? $data['condutor'] ?? $data['operador'] ?? null,
             operadorMasp:        $data['operador_masp']        ?? null,
@@ -72,15 +72,24 @@ readonly class RatRecursoDTO
         );
     }
 
+    private static function intOrNull(mixed $v): ?int
+    {
+        return ($v !== null && $v !== '') ? (int) $v : null;
+    }
+
     public function toArray(): array
     {
         // Mapeamento de valores do frontend para o banco de dados (ENUMs)
         $tipoMap = [
-            'pessoal' => 'pe',
-            'viatura' => 'viatura',
-            'aereo'   => 'aereo',
-            'aquatico' => 'aquatico',
-            'outro'   => 'outro'
+            'pessoal'    => 'pe',
+            'viatura'    => 'viatura',
+            'aeronave'   => 'aereo',
+            'aereo'      => 'aereo',
+            'embarcacao' => 'aquatico',
+            'aquatico'   => 'aquatico',
+            'equipamento'=> 'outro',
+            'material'   => 'outro',
+            'outro'      => 'outro',
         ];
 
         $condicaoMap = [
@@ -118,6 +127,6 @@ readonly class RatRecursoDTO
             'viatura_contato'       => $this->viaturaContato,
         ];
 
-        return array_filter($data, fn ($v) => $v !== null);
+        return array_filter($data, fn ($v) => $v !== null && $v !== '');
     }
 }

@@ -25,14 +25,14 @@ readonly class RatAgenteDTO
     {
         return new self(
             id:           $data['id']            ?? null,
-            nomeCompleto: $data['nome_completo'] ?? null,
+            nomeCompleto: $data['nome_completo'] ?? $data['nome']  ?? null,
             matricula:    $data['matricula']     ?? null,
             masp:         $data['masp']          ?? null,
-            pgCargo:      $data['pg_cargo']      ?? null,
+            pgCargo:      $data['pg_cargo']      ?? $data['cargo'] ?? null,
             orgao:        $data['orgao']         ?? null,
             unidade:      $data['unidade']       ?? null,
             funcao:       $data['funcao']        ?? null,
-            isCondutor:   isset($data['is_condutor']) ? (bool) $data['is_condutor'] : null,
+            isCondutor:   isset($data['is_condutor']) ? (bool) $data['is_condutor'] : (isset($data['condutor']) ? (bool) $data['condutor'] : null),
         );
     }
 
@@ -47,6 +47,6 @@ readonly class RatAgenteDTO
             'unidade'       => $this->unidade,
             'funcao'        => $this->funcao,
             'is_condutor'   => $this->isCondutor,
-        ], fn ($v) => $v !== null);
+        ], fn ($v) => $v !== null && $v !== '');
     }
 }

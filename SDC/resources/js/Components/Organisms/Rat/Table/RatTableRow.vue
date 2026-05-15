@@ -20,7 +20,7 @@
       <StatusBadge :status="rat.status" />
     </TableCell>
     <TableCell class="w-auto whitespace-nowrap">
-      {{ rat.dados_gerais?.municipio || rat.local?.municipio || 'Não informado' }}
+      {{ rat.municipio || rat.dados_gerais?.local_municipio || rat.local?.municipio || 'Não informado' }}
     </TableCell>
     <TableCell class="w-44 whitespace-nowrap">
       {{ rat.criado_por || 'Sistema' }}

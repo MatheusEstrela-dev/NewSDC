@@ -13,12 +13,10 @@
               <div v-if="Number(activeTab) === 1">
                 <RatDadosGeraisForm
                   :rat="rat"
-                  :saved-form-data="currentFormData"
                   :view-only="props.viewOnly"
                   :loading="loading"
                   @save="(data) => saveAndAdvance({ dadosGerais: data.dadosGerais, comunicacao: data.comunicacao, local: data.local, endereco: data.endereco }, 2)"
                   @update:tem-vistoria="handleToggleVistoria"
-                  @update:form-data="handleFormDataUpdate"
                 />
               </div>
 
@@ -107,8 +105,8 @@ import RatTabs from '@/Components/Rat/RatTabs.vue';
 import { useRat } from '@/Composables/useRat';
 import { useToast } from '@/Composables/useToast';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import { computed, onMounted, ref } from 'vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -150,7 +148,13 @@ const {
   activeTab:  initialTab,
 });
 
-const rat = computed(() => (props.rat?.id ? props.rat : ratState.value) ?? { id: null, status: 'rascunho' });
+const rat = computed(() => {
+  const base = (props.rat?.id ? props.rat : ratState.value) ?? { id: null, status: 'em_andamento' };
+  if (localNumeroBos.value && localNumeroBos.value !== base.numero_bos) {
+    return { ...base, numero_bos: localNumeroBos.value, protocolo: localNumeroBos.value };
+  }
+  return base;
+});
 
 const currentActiveTab = computed(() => {
   const v = tabs.activeTab;
@@ -158,8 +162,17 @@ const currentActiveTab = computed(() => {
 });
 
 const temVistoria    = ref(props.rat?.tem_vistoria || false);
-const currentFormData = ref(null);
-const creating        = ref(false);
+const localNumeroBos = ref(props.rat?.numero_bos ?? null);
+
+// Exibe flash message vinda do redirect (ex: após criar novo RAT)
+onMounted(() => {
+  const page = usePage();
+  const flash = page.props?.flash;
+  if (flash?.success) toast(flash.success, 'success', { noIcon: true });
+  else if (flash?.info)    toast(flash.info,    'info',    { noIcon: true });
+  else if (flash?.warning) toast(flash.warning, 'warning', { noIcon: true });
+  else if (flash?.error)   toast(flash.error,   'error',   { noIcon: true });
+});
 
 const tabConfig = computed(() => [
   { id: 1, label: 'Dados Gerais',        icon: DocumentTextIcon },
@@ -181,67 +194,55 @@ const TAB_LABELS = {
   anexos:      'Anexos',
 };
 
+const TAB_MESSAGES = {
+  dadosGerais: 'Dados Gerais salvos com sucesso.',
+  recursos:    'Recursos salvos com sucesso.',
+  envolvidos:  'Envolvidos salvos com sucesso.',
+  vistoria:    'Vistoria salva com sucesso.',
+  historico:   'Histórico salvo com sucesso.',
+  anexos:      'Anexos salvos com sucesso.',
+};
+
 function resolveTabLabel(payload) {
   const key = Object.keys(TAB_LABELS).find(k => k in payload);
   return key ? TAB_LABELS[key] : 'Dados';
 }
 
+function resolveToastMsg(payload) {
+  const key = Object.keys(TAB_MESSAGES).find(k => k in payload);
+  return key ? TAB_MESSAGES[key] : 'Dados salvos com sucesso.';
+}
+
 async function saveAndAdvance(tabPayload, nextTab) {
   const ratId  = rat.value?.id;
+  if (!ratId) {
+    toast('RAT ainda não foi criado. Atualize a página.', 'warning', { noIcon: true });
+    return;
+  }
+
   const axios  = window.axios || (await import('axios')).default;
   const csrf   = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
   const headers = { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' };
 
-  if (!ratId && creating.value) return;
-
   loading.value = true;
   try {
-    if (!ratId) {
-      creating.value = true;
-      const payload = {
-        ...buildDadosGeraisPayload(),
-        recursos:   recursosState.value,
-        envolvidos: envolvidosState.value,
-        vistoria:   vistoriaState.value,
-        historico:  historicoEstado.value,
-        ...tabPayload,
-      };
-      router.post(route('rat.store'), payload, {
-        preserveScroll: false,
-        onSuccess: () => {
-          toast('RAT criado com sucesso.', 'success', { noIcon: true });
-          if (nextTab !== null) tabs.setActiveTab(nextTab);
-        },
-        onError:   () => toast('Erro ao salvar dados gerais.', 'error', { noIcon: true }),
-        onFinish:  () => { loading.value = false; creating.value = false; },
-      });
-    } else {
-      const payload = { ...tabPayload };
-      await axios.patch(route('rat.draft', ratId), payload, { headers });
+    const payload = { ...tabPayload };
+    const resp = await axios.patch(route('rat.draft', ratId), payload, { headers });
 
-      const label = resolveTabLabel(tabPayload);
-      toast(`${label} salvos com sucesso.`, 'success', { noIcon: true });
+    // Atualiza o número do BOS no header se o backend retornou um novo valor
+    if (resp.data?.numero_bos) localNumeroBos.value = resp.data.numero_bos;
 
-      if (nextTab !== null) {
-        tabs.setActiveTab(nextTab);
-      }
-      loading.value = false;
+    toast(resolveToastMsg(tabPayload), 'success', { noIcon: true });
+
+    if (nextTab !== null) {
+      tabs.setActiveTab(nextTab);
     }
   } catch (err) {
-    loading.value = false;
     const msg = err.response?.data?.message ?? err.message ?? 'Erro ao salvar.';
     toast('Erro ao salvar: ' + msg, 'error', { noIcon: true });
+  } finally {
+    loading.value = false;
   }
-}
-
-function buildDadosGeraisPayload() {
-  if (currentFormData.value) return currentFormData.value;
-  return {
-    dadosGerais: props.rat?.dados_gerais ?? {},
-    comunicacao: props.rat?.comunicacao  ?? {},
-    local:       props.rat?.local        ?? {},
-    endereco:    props.rat?.endereco     ?? {},
-  };
 }
 
 // ─── Finalizar ────────────────────────────────────────────────────────────
@@ -271,7 +272,6 @@ async function handleFinalize() {
 
 // ─── Handlers de estado local ──────────────────────────────────────────────
 
-function handleFormDataUpdate(data) { currentFormData.value = data; }
 function handleToggleVistoria(value) { temVistoria.value = value; }
 
 function handleAddRecurso(recurso) {
