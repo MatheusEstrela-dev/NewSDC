@@ -1,5 +1,5 @@
 <template>
-  <div class="processos-container">
+  <div ref="processosContainerRef" class="processos-container">
     <!-- Header Padronizado -->
     <PageHeader
       title="Reconhecimentos de Desastre"
@@ -8,7 +8,7 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
           <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
           <ViewModeToggle v-model="viewMode" />
 
@@ -59,7 +59,7 @@
 
     <!-- Mobile: Sempre Grade | Desktop: Grade ou Tabela -->
     <ProcessoGrid
-      v-if="viewMode === 'grid' || isMobile"
+      v-if="viewMode === 'grid' || isCompact"
       :processos="processos"
       :loading="loading"
       :can-edit="canEdit"
@@ -70,7 +70,7 @@
 
     <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
     <ProcessoTable
-      v-else-if="viewMode === 'table' && !isMobile"
+      v-else-if="viewMode === 'table' && !isCompact"
       :processos="processos"
       :total="pagination?.total"
       :can-edit="canEdit"
@@ -129,10 +129,35 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount, onMounted } from 'vue';
 
 // Detecção mobile
-const { isMobile } = useMobile();
+const { isMobile, isTablet, screenWidth } = useMobile();
+const processosContainerRef = ref(null);
+const containerWidth = ref(0);
+let containerResizeObserver = null;
+
+const isCompact = computed(() => {
+  const availableWidth = containerWidth.value || screenWidth.value;
+  return isMobile.value || isTablet.value || availableWidth < 1180;
+});
+
+onMounted(() => {
+  if (typeof ResizeObserver === 'undefined' || !processosContainerRef.value) {
+    containerWidth.value = processosContainerRef.value?.getBoundingClientRect?.().width || screenWidth.value;
+    return;
+  }
+
+  containerResizeObserver = new ResizeObserver(([entry]) => {
+    containerWidth.value = entry.contentRect.width;
+  });
+  containerResizeObserver.observe(processosContainerRef.value);
+});
+
+onBeforeUnmount(() => {
+  containerResizeObserver?.disconnect();
+  containerResizeObserver = null;
+});
 
 const props = defineProps({
   processos: {
@@ -287,6 +312,6 @@ function cancelDelete() {
 
 <style scoped>
 .processos-container {
-  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
+  @apply w-full min-w-0 overflow-x-hidden pb-8 bg-slate-50 dark:bg-slate-950;
 }
 </style>

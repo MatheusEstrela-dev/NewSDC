@@ -8,130 +8,81 @@
     >
       <template #actions>
         <Link v-if="canCreate" :href="route('tdap.cronogramas.create')">
-          <PrimaryButton>Novo Cronograma</PrimaryButton>
+          <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
+            <span class="hidden sm:inline">Novo Cronograma</span>
+            <span class="sm:hidden">Novo</span>
+          </Button>
         </Link>
       </template>
     </TdapPageHeader>
 
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Total</p>
-        <p class="text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ estatisticas.total }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Ativos</p>
-        <p class="text-2xl font-semibold text-emerald-600">{{ estatisticas.ativos }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Rascunhos</p>
-        <p class="text-2xl font-semibold text-amber-600">{{ estatisticas.rascunhos }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Encerrados</p>
-        <p class="text-2xl font-semibold text-slate-400">{{ estatisticas.encerrados }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Volume ativo (m³)</p>
-        <p class="text-2xl font-semibold text-blue-600">{{ Number(estatisticas.volume_ativo_m3 || 0).toLocaleString('pt-BR', {minimumFractionDigits:0,maximumFractionDigits:0}) }}</p>
-      </div>
-    </div>
+    <TdapStatsRow :cards="statsCards" :columns="5" />
 
-    <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-        <input
-          v-model="filtroSearch"
-          type="text"
-          placeholder="Buscar numero/empenho..."
-          class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm md:col-span-2"
-          @keyup.enter="aplicarFiltros"
-        />
-        <select v-model="filtroEstado" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" @change="aplicarFiltros">
-          <option value="">Estado</option>
-          <option value="rascunho">Rascunho</option>
-          <option value="ativo">Ativo</option>
-          <option value="encerrado">Encerrado</option>
-        </select>
-        <select v-model="filtroAta" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" @change="aplicarFiltros">
-          <option value="">Ata</option>
-          <option v-for="a in atas" :key="a.id" :value="a.id">{{ a.numero }}</option>
-        </select>
-        <PrimaryButton @click="aplicarFiltros">Filtrar</PrimaryButton>
-      </div>
-    </div>
+    <TdapCronogramasFiltersSection
+      v-model:filters="activeFilters"
+      :atas="atas"
+      @apply="aplicarFiltros"
+      @clear="limparFiltros"
+    />
 
-    <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
-      <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-        <thead class="bg-slate-50 dark:bg-slate-800/40">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Número</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Vigência</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Ata / Lote</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Município / Prestador</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Volume (m³)</th>
-            <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Caminhões</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Estado</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Ações</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="c in cronogramas.data" :key="c.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-            <td class="px-4 py-3 text-sm font-mono">
-              <Link :href="route('tdap.cronogramas.show', c.id)" class="text-blue-600 hover:text-blue-800 font-semibold">{{ c.numero }}</Link>
-            </td>
-            <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ fmtDate(c.dt_inicio) }} — {{ fmtDate(c.dt_final) }}</td>
-            <td class="px-4 py-3 text-sm">
-              <p class="font-mono">{{ c.ata_numero }}</p>
-              <p class="text-xs text-slate-500 font-mono">{{ c.lote_numero }}</p>
-            </td>
-            <td class="px-4 py-3 text-sm">
-              <p>{{ c.municipio_nome }}<span v-if="c.municipio_uf" class="text-slate-400">/{{ c.municipio_uf }}</span></p>
-              <p class="text-xs text-slate-500">{{ c.prestador_nome }}</p>
-            </td>
-            <td class="px-4 py-3 text-sm text-right font-mono">{{ Number(c.volume_contratado_m3).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}</td>
-            <td class="px-4 py-3 text-sm text-center">{{ c.caminhoes_count }}</td>
-            <td class="px-4 py-3 text-sm">
-              <EstadoBadge :estado="c.estado" />
-            </td>
-            <td class="px-4 py-3 text-right text-sm space-x-2">
-              <Link :href="route('tdap.cronogramas.show', c.id)" class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200">Ver</Link>
-              <Link v-if="canEdit && c.estado === 'rascunho'" :href="route('tdap.cronogramas.edit', c.id)" class="text-blue-600 hover:text-blue-800">Editar</Link>
-            </td>
-          </tr>
-          <tr v-if="cronogramas.data.length === 0">
-            <td colspan="8" class="px-4 py-12 text-center text-slate-400">Nenhum cronograma cadastrado.</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div v-if="cronogramas.meta && cronogramas.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-        <p class="text-xs text-slate-500">
-          Página {{ cronogramas.meta.current_page }} de {{ cronogramas.meta.last_page }} ({{ cronogramas.meta.total }} registros)
-        </p>
-        <div class="space-x-2">
-          <Link
-            v-for="(link, i) in cronogramas.meta.links || []"
-            :key="i"
-            :href="link.url || '#'"
-            v-html="link.label"
-            class="px-3 py-1 text-sm rounded border"
-            :class="link.active ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-700 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'"
-          />
-        </div>
-      </div>
-    </div>
+    <TdapDataTable
+      title="Cronogramas"
+      subtitle="Ordens operacionais ativas e histórico"
+      :columns="columns"
+      :rows="cronogramas.data"
+      :pagination="cronogramas.meta"
+      empty-text="Nenhum cronograma cadastrado."
+    >
+      <template #row="{ row: c }">
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+          <td class="px-4 py-3 text-sm font-mono">
+            <Link :href="route('tdap.cronogramas.show', c.id)" class="text-blue-600 hover:text-blue-800 font-semibold">{{ c.numero }}</Link>
+          </td>
+          <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+            {{ fmtDate(c.dt_inicio) }} — {{ fmtDate(c.dt_final) }}
+          </td>
+          <td class="px-4 py-3 text-sm">
+            <p class="font-mono">{{ c.ata_numero }}</p>
+            <p class="text-xs text-slate-500 font-mono">{{ c.lote_numero }}</p>
+          </td>
+          <td class="px-4 py-3 text-sm">
+            <p>{{ c.municipio_nome }}<span v-if="c.municipio_uf" class="text-slate-400">/{{ c.municipio_uf }}</span></p>
+            <p class="text-xs text-slate-500">{{ c.prestador_nome }}</p>
+          </td>
+          <td class="px-4 py-3 text-sm text-right font-mono">{{ fmtDecimal(c.volume_contratado_m3) }}</td>
+          <td class="px-4 py-3 text-sm text-center">{{ c.caminhoes_count }}</td>
+          <td class="px-4 py-3 text-sm">
+            <EstadoBadge :estado="c.estado" />
+          </td>
+          <td class="px-4 py-3 text-right text-sm space-x-2">
+            <Link :href="route('tdap.cronogramas.show', c.id)" class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200">Ver</Link>
+            <Link v-if="canEdit && c.estado === 'rascunho'" :href="route('tdap.cronogramas.edit', c.id)" class="text-blue-600 hover:text-blue-800">Editar</Link>
+          </td>
+        </tr>
+      </template>
+    </TdapDataTable>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TdapLayout from '@/Layouts/TdapLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
+import TdapStatsRow from '@/Components/Organisms/Tdap/Statistics/TdapStatsRow.vue';
+import TdapCronogramasFiltersSection from '@/Components/Organisms/Tdap/TdapCronogramasFiltersSection.vue';
+import TdapDataTable from '@/Components/Organisms/Tdap/Table/TdapDataTable.vue';
 import EstadoBadge from '@/Components/Organisms/Tdap/EstadoBadge.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
+import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
+import ArchiveBoxIcon from '@/Components/Icons/ArchiveBoxIcon.vue';
+import CubeIcon from '@/Components/Icons/CubeIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 
-defineOptions({ layout: AuthenticatedLayout });
+defineOptions({ layout: TdapLayout });
 
 const props = defineProps({
   cronogramas:  { type: Object, default: () => ({ data: [], meta: {} }) },
@@ -145,21 +96,51 @@ const props = defineProps({
   canDelete:    { type: Boolean, default: false },
 });
 
-const filtroSearch = ref(props.filtros.search ?? '');
-const filtroEstado = ref(props.filtros.estado ?? '');
-const filtroAta    = ref(props.filtros.ata_id ?? '');
+const activeFilters = ref({
+  search: props.filtros.search ?? '',
+  estado: props.filtros.estado ?? '',
+  ata_id: props.filtros.ata_id ?? '',
+});
 
-function aplicarFiltros() {
-  router.get(route('tdap.cronogramas.index'), {
-    search: filtroSearch.value || undefined,
-    estado: filtroEstado.value || undefined,
-    ata_id: filtroAta.value || undefined,
-  }, { preserveState: true, replace: true });
-}
+const columns = [
+  { label: 'Número', align: 'left' },
+  { label: 'Vigência', align: 'left' },
+  { label: 'Ata / Lote', align: 'left' },
+  { label: 'Município / Prestador', align: 'left' },
+  { label: 'Volume (m³)', align: 'right' },
+  { label: 'Caminhões', align: 'center' },
+  { label: 'Estado', align: 'left' },
+  { label: 'Ações', align: 'right' },
+];
+
+const statsCards = computed(() => [
+  { title: 'Total',             value: props.estatisticas.total,                                 variant: 'info',    icon: DocumentTextIcon },
+  { title: 'Ativos',            value: props.estatisticas.ativos,                                variant: 'success', icon: CheckBadgeIcon },
+  { title: 'Rascunhos',         value: props.estatisticas.rascunhos,                             variant: 'warning', icon: PencilSquareIcon },
+  { title: 'Encerrados',        value: props.estatisticas.encerrados,                            variant: 'danger',  icon: ArchiveBoxIcon },
+  { title: 'Volume ativo (m³)', value: props.estatisticas.volume_ativo_m3, format: 'integer',    variant: 'info',    icon: CubeIcon },
+]);
 
 function fmtDate(d) {
   if (!d) return '—';
   const date = typeof d === 'string' ? new Date(d) : d;
   return date.toLocaleDateString('pt-BR');
+}
+
+function fmtDecimal(v) {
+  return Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function aplicarFiltros(filters = activeFilters.value) {
+  router.get(route('tdap.cronogramas.index'), {
+    search: filters.search || undefined,
+    estado: filters.estado || undefined,
+    ata_id: filters.ata_id || undefined,
+  }, { preserveState: true, replace: true });
+}
+
+function limparFiltros() {
+  activeFilters.value = { search: '', estado: '', ata_id: '' };
+  router.get(route('tdap.cronogramas.index'), {}, { preserveState: true, replace: true });
 }
 </script>

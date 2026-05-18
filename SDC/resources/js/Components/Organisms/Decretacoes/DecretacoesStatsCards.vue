@@ -1,7 +1,8 @@
 <template>
-  <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
+  <div class="decretacoes-stats-grid mb-6">
     <!-- Total de Eventos -->
     <StatCardWithBreakdown
+      class="stats-grid-item"
       title="Total de Eventos"
       :value="statistics.totalEventos"
       :ecp="statistics.totalEventosEcp"
@@ -13,6 +14,7 @@
 
     <!-- Registros -->
     <StatCardWithBreakdown
+      class="stats-grid-item"
       title="Registros"
       :value="statistics.registros"
       :ecp="statistics.registrosEcp"
@@ -24,6 +26,7 @@
 
     <!-- Decretacoes -->
     <StatCardWithBreakdown
+      class="stats-grid-item"
       title="Decretacoes"
       :value="statistics.decretacoes"
       :ecp="statistics.decretacoesEcp"
@@ -35,6 +38,7 @@
 
     <!-- Municipios Atingidos -->
     <StatCardWithBreakdown
+      class="stats-grid-item"
       title="Municipios Atingidos"
       :value="statistics.municipiosAtingidos"
       :ecp="statistics.municipiosAtingidosEcp"
@@ -46,6 +50,7 @@
 
     <!-- Decretacoes Vigentes -->
     <StatCardWithBreakdown
+      class="stats-grid-item"
       title="Decretacoes Vigentes"
       :value="statistics.decretacoesVigentes"
       :ecp="statistics.decretacoesVigentesEcp"
@@ -94,3 +99,27 @@ function handleFilter(type) {
   emit('filter', type);
 }
 </script>
+
+<style scoped>
+.decretacoes-stats-grid {
+  container-type: inline-size;
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+}
+
+@media (min-width: 640px) {
+  .decretacoes-stats-grid {
+    gap: 1rem;
+  }
+}
+
+@container (max-width: 42rem) {
+  .stats-grid-item:last-child {
+    grid-column: 1 / -1;
+  }
+}
+</style>

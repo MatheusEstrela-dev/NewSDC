@@ -58,7 +58,7 @@
       />
     </div>
 
-    <div class="flex justify-end mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+    <div v-if="!viewOnly" class="flex justify-end mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
       <button
         type="button"
         :disabled="saving"
@@ -88,6 +88,10 @@ const props = defineProps({
     default: () => ({}),
   },
   saving: {
+    type: Boolean,
+    default: false,
+  },
+  viewOnly: {
     type: Boolean,
     default: false,
   },

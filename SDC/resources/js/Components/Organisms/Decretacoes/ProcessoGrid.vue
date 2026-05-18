@@ -16,7 +16,7 @@
     </div>
 
     <!-- Grid de Cards -->
-    <div v-else class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div v-else class="processos-card-grid">
       <ProcessoCard
         v-for="processo in processos"
         :key="processo.id"
@@ -135,3 +135,12 @@ const closeEditChoiceModal = () => {
   selectedProcessoIdForEdit.value = null;
 };
 </script>
+
+<style scoped>
+.processos-card-grid {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+}
+</style>

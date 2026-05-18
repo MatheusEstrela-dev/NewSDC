@@ -162,9 +162,9 @@ import TdapStatusBadge from '@/Components/Atoms/Tdap/TdapStatusBadge.vue';
 import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import TdapPrestadoresFiltersSection from '@/Components/Organisms/Tdap/TdapPrestadoresFiltersSection.vue';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TdapLayout from '@/Layouts/TdapLayout.vue';
 
-defineOptions({ layout: AuthenticatedLayout });
+defineOptions({ layout: TdapLayout });
 
 const props = defineProps({
   prestadores:  { type: Object, default: () => ({ data: [], meta: {} }) },

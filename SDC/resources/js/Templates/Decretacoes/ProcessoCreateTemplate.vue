@@ -3,12 +3,21 @@
     <!-- Header -->
     <div class="page-header mb-6">
       <Heading level="h1" size="2xl">
-        {{ isEditing ? 'Editar Processo' : 'Novo Reconhecimento de Desastre' }}
+        {{ headerTitle }}
       </Heading>
       <Text size="sm" color="muted" class="mt-1">
-        {{ processo?.id
-          ? 'Etapa 2 de 2 - Preencha os dados do desastre por municipio'
-          : 'Etapa 1 de 2 - Cadastre um novo processo de reconhecimento' }}
+        {{ headerSubtitle }}
+      </Text>
+    </div>
+
+    <!-- Banner de modo somente-leitura -->
+    <div
+      v-if="viewOnly"
+      class="bg-sky-50 dark:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-800/40 p-3 mb-6 flex items-center gap-3"
+    >
+      <EyeIcon class="w-5 h-5 text-sky-600 dark:text-sky-400 shrink-0" />
+      <Text size="sm" class="text-sky-700 dark:text-sky-200 font-medium">
+        Modo de visualizacao - somente leitura. Edicao desabilitada.
       </Text>
     </div>
 
@@ -31,6 +40,7 @@
           :analistas="analistas"
           :submit-label="processo?.id ? 'Atualizar Identificacao' : 'Criar Processo'"
           :is-editing="!!processo?.id"
+          :view-only="viewOnly"
           @submit="handleSubmitIdentificacao"
           @cancel="$emit('cancel')"
         />
@@ -85,6 +95,7 @@
                 :key="mun.id"
                 :municipio="mun"
                 :m-index="mIndex"
+                :view-only="viewOnly"
                 @update:municipio="localMunicipios[mIndex] = $event"
               />
             </div>
@@ -100,7 +111,10 @@
               </Text>
             </div>
 
-            <div class="flex items-center justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700/50">
+            <div
+              v-if="!viewOnly"
+              class="flex items-center justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700/50"
+            >
               <Button type="button" variant="secondary" @click="$emit('finish')">
                 Concluir mais tarde
               </Button>
@@ -122,7 +136,7 @@
 
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue';
-import { ExclamationTriangleIcon, MapPinIcon } from '@heroicons/vue/24/outline';
+import { ExclamationTriangleIcon, MapPinIcon, EyeIcon } from '@heroicons/vue/24/outline';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
@@ -143,6 +157,19 @@ const props = defineProps({
   analistas:           { type: Array,  default: () => [] },
   processo:            { type: Object, default: null },
   municipiosDesastres: { type: Array,  default: () => [] },
+  viewOnly:            { type: Boolean, default: false },
+});
+
+const headerTitle = computed(() => {
+  if (props.viewOnly) return 'Visualizar Processo';
+  return isEditing.value ? 'Editar Processo' : 'Novo Reconhecimento de Desastre';
+});
+
+const headerSubtitle = computed(() => {
+  if (props.viewOnly) return 'Detalhes do processo em modo somente leitura';
+  return props.processo?.id
+    ? 'Etapa 2 de 2 - Preencha os dados do desastre por municipio'
+    : 'Etapa 1 de 2 - Cadastre um novo processo de reconhecimento';
 });
 
 const emit = defineEmits(['submit', 'submit-desastres', 'cancel', 'finish']);
@@ -151,9 +178,10 @@ const emit = defineEmits(['submit', 'submit-desastres', 'cancel', 'finish']);
 const isEditing = computed(() => !!props.processo?.id);
 
 // Wizard: Aba 2 fica disabled ate o processo ser criado.
-// Quando processo.id existe (post-store), ja iniciamos no tab 'desastres'.
+// - Em viewOnly: comeca sempre na Aba 1 (identificacao).
+// - Apos store no fluxo de criacao (processo.id ja existe): pula direto para a Aba 2.
 const { activeTab, setActiveTab, tabs } = useDecretacaoTabs({
-  initialTab: props.processo?.id ? 'desastres' : 'identificacao',
+  initialTab: !props.viewOnly && props.processo?.id ? 'desastres' : 'identificacao',
   processo: computed(() => props.processo),
 });
 

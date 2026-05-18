@@ -2,7 +2,7 @@
   <aside
     class="sidebar"
     :class="{
-      'is-collapsed': isCollapsed,
+      'is-collapsed': effectivelyCollapsed,
       'is-mobile-open': isSidebarOpen && (isMobile || isTablet)
     }"
   >
@@ -17,7 +17,7 @@
             class="logo-image"
           />
         </picture>
-        <div v-show="!isCollapsed || (isMobile || isTablet)" class="logo-text">
+        <div v-show="!effectivelyCollapsed || (isMobile || isTablet)" class="logo-text">
           <div class="logo-title">SDC MG</div>
           <div class="logo-subtitle">SISTEMA INTEGRADO</div>
         </div>
@@ -72,12 +72,12 @@
       >
         <!-- PRINCIPAL -->
       <div class="nav-section">
-        <div v-show="!isCollapsed" class="nav-section-title">PRINCIPAL</div>
+        <div v-show="!effectivelyCollapsed" class="nav-section-title">PRINCIPAL</div>
         <NavItem
           :href="route('dashboard')"
           :active="isRouteActive('dashboard')"
           icon="dashboard"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Visão Geral
         </NavItem>
@@ -86,7 +86,7 @@
           :href="route('demandas.index')"
           :active="isRouteActive('demandas.*')"
           icon="checkbadge"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           DEMANDAS
         </NavItem>
@@ -95,7 +95,7 @@
           :href="ratHref"
           :active="isRouteActive('rat.*')"
           icon="rat-clipboard"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           RAT
         </NavItem>
@@ -104,7 +104,7 @@
           :href="paeHref"
           :active="isRouteActive('pae.*')"
           icon="pae-bolt"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           PAE
         </NavItem>
@@ -113,7 +113,7 @@
           :href="route('plantao.index')"
           :active="isRouteActive('plantao.*')"
           icon="clock"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Plantão Diário
         </NavItem>
@@ -121,7 +121,7 @@
 
       <!-- MÓDULOS DE GESTÃO -->
       <div class="nav-section">
-        <div v-show="!isCollapsed" class="nav-section-title">MÓDULOS DE GESTÃO</div>
+        <div v-show="!effectivelyCollapsed" class="nav-section-title">MÓDULOS DE GESTÃO</div>
 
         <!-- DECRETACOES -->
         <NavItem
@@ -129,7 +129,7 @@
           :href="route('decretacoes.index')"
           :active="isRouteActive('decretacoes.*')"
           icon="scale"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Decretacoes
         </NavItem>
@@ -140,7 +140,7 @@
           :href="route('ajuda-humanitaria.beneficiarios.index')"
           :active="isRouteActive('ajuda-humanitaria.*')"
           icon="heart"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Ajuda Humanitaria
         </NavItem>
@@ -151,7 +151,7 @@
           :href="route('compdec.index')"
           :active="isRouteActive('compdec.*')"
           icon="building"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Orgaos
         </NavItem>
@@ -162,14 +162,14 @@
           @click="openSubmenu('tdap')"
           class="nav-group-toggle nav-drilldown"
           :class="{ 'is-active-route': isRouteActive('tdap.*') }"
-          :title="isCollapsed ? 'TDAP' : ''"
+          :title="effectivelyCollapsed ? 'TDAP' : ''"
         >
           <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
           </svg>
-          <span v-show="!isCollapsed">TDAP</span>
+          <span v-show="!effectivelyCollapsed">TDAP</span>
           <svg
-            v-show="!isCollapsed"
+            v-show="!effectivelyCollapsed"
             class="nav-arrow nav-arrow-drill"
             fill="none"
             stroke="currentColor"
@@ -185,16 +185,16 @@
           @click="openSubmenu('estoque')"
           class="nav-group-toggle nav-drilldown"
           :class="{ 'is-active-route': isRouteActive('estoque.*') }"
-          :title="isCollapsed ? 'Estoque' : ''"
+          :title="effectivelyCollapsed ? 'Estoque' : ''"
         >
           <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7.5l8-4.5 8 4.5-8 4.5-8-4.5z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7.5v9l8 4.5 8-4.5v-9" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12v9M8 9.75v4.5m8-4.5v4.5" />
           </svg>
-          <span v-show="!isCollapsed">Estoque</span>
+          <span v-show="!effectivelyCollapsed">Estoque</span>
           <svg
-            v-show="!isCollapsed"
+            v-show="!effectivelyCollapsed"
             class="nav-arrow nav-arrow-drill"
             fill="none"
             stroke="currentColor"
@@ -209,7 +209,7 @@
           :href="route('cisternas.index')"
           :active="isRouteActive('cisternas.*')"
           icon="cisterna"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Cisternas
         </NavItem>
@@ -220,7 +220,7 @@
           :href="route('treinamentos.index')"
           :active="isRouteActive('treinamentos.*')"
           icon="academic"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Treinamento
         </NavItem>
@@ -231,7 +231,7 @@
           :href="route('plancon.index')"
           :active="isRouteActive('plancon.*')"
           icon="shield"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Plano de Contingencia
         </NavItem>
@@ -242,7 +242,7 @@
           :href="route('inmet.index', undefined, false)"
           :active="isRouteActive('inmet.*')"
           icon="cloud"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Meteorologia
         </NavItem>
@@ -253,7 +253,7 @@
           :href="route('dashboard')"
           :active="false"
           icon="book"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Vistoria
         </NavItem>
@@ -261,7 +261,7 @@
 
       <!-- ADMINISTRACAO - Visivel apenas para usuarios com permissao -->
       <div v-if="canSeeAdminSection" class="nav-section">
-        <div v-show="!isCollapsed" class="nav-section-title">ADMINISTRACAO</div>
+        <div v-show="!effectivelyCollapsed" class="nav-section-title">ADMINISTRACAO</div>
 
         <!-- Permissionamento - Link direto sem submenu -->
         <NavItem
@@ -269,7 +269,7 @@
           :href="permissionamentoHref"
           :active="isRouteActive('admin.permissions.*')"
           icon="lock"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Permissionamento
         </NavItem>
@@ -279,7 +279,7 @@
           :href="route('inventario.index')"
           :active="isRouteActive('inventario.*')"
           icon="inventory"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Inventario
         </NavItem>
@@ -289,7 +289,7 @@
           :href="route('log-viewer.index')"
           :active="isRouteActive('log-viewer.*')"
           icon="logs-list"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Logs
         </NavItem>
@@ -297,12 +297,12 @@
 
       <!-- INTEGRACOES -->
       <div class="nav-section">
-        <div v-show="!isCollapsed" class="nav-section-title">INTEGRACOES</div>
+        <div v-show="!effectivelyCollapsed" class="nav-section-title">INTEGRACOES</div>
         <NavItem
           href="/api/documentation"
           :active="false"
           icon="code"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
           external
         >
           API Docs
@@ -323,7 +323,7 @@
         type="button"
         class="submenu-back"
         @click="closeSubmenu"
-        v-show="!isCollapsed"
+        v-show="!effectivelyCollapsed"
       >
         <svg class="submenu-back-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -338,7 +338,7 @@
           :active="isRouteActive('estoque.index')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Dashboard
         </NavItem>
@@ -348,7 +348,7 @@
           :active="isRouteActive('estoque.produtos.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Produtos e Lotes
         </NavItem>
@@ -358,7 +358,7 @@
           :active="isRouteActive('estoque.kits.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Kits
         </NavItem>
@@ -368,7 +368,7 @@
           :active="isRouteActive('estoque.movimentacoes.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Movimentacoes
         </NavItem>
@@ -385,7 +385,7 @@
         type="button"
         class="submenu-back"
         @click="closeSubmenu"
-        v-show="!isCollapsed"
+        v-show="!effectivelyCollapsed"
       >
         <svg class="submenu-back-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -400,7 +400,7 @@
           :active="isRouteActive('tdap.dashboard')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Dashboard
         </NavItem>
@@ -410,7 +410,7 @@
           :active="isRouteActive('tdap.prestadores.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Prestadores
         </NavItem>
@@ -420,7 +420,7 @@
           :active="isRouteActive('tdap.caminhoes.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Caminhões
         </NavItem>
@@ -430,7 +430,7 @@
           :active="isRouteActive('tdap.atas.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Atas
         </NavItem>
@@ -440,7 +440,7 @@
           :active="isRouteActive('tdap.lotes.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Lotes
         </NavItem>
@@ -450,7 +450,7 @@
           :active="isRouteActive('tdap.cronogramas.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Cronogramas
         </NavItem>
@@ -460,7 +460,7 @@
           :active="isRouteActive('tdap.viagens.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Viagens pendentes
         </NavItem>
@@ -470,7 +470,7 @@
           :active="isRouteActive('tdap.vistorias.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Vistorias
         </NavItem>
@@ -480,7 +480,7 @@
           :active="isRouteActive('tdap.historicos.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Histórico
         </NavItem>
@@ -490,7 +490,7 @@
           :active="isRouteActive('tdap.processos.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Processos (Workflow)
         </NavItem>
@@ -525,6 +525,20 @@ const isTablet = inject('isTablet', ref(false));
 const isDesktop = inject('isDesktop', ref(true));
 const isSidebarOpen = inject('isSidebarOpen', ref(false));
 const closeSidebar = inject('closeSidebar', () => {});
+
+// Estrategia tablet: sidebar e DRAWER (translateX(-100%) por padrao, slide-in
+// quando is-mobile-open). NAO ha rail collapsed reservando 80px - o conteudo
+// principal ocupa 100% da viewport em tablet (layout: ml-0 lg:ml-[280px]).
+//
+// effectivelyCollapsed = true significa "renderizar como icone-only" e so
+// vale em desktop quando o toggle e clicado. Em mobile/tablet, quando o
+// drawer abre, mostra sidebar full (effectivelyCollapsed=false sempre).
+const effectivelyCollapsed = computed(() => {
+  // Drawer aberto em tablet/mobile -> sidebar full
+  if (isSidebarOpen.value && (isMobile.value || isTablet.value)) return false;
+  // Desktop -> respeita o toggle manual
+  return isCollapsed.value;
+});
 
 const page = usePage();
 
@@ -901,564 +915,13 @@ onUnmounted(() => {
 provide('sidebarCollapsed', isCollapsed);
 </script>
 
-<style scoped>
-.sidebar {
-  width: 280px;
-  height: 100vh;
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: 50;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  transition: width 0.3s ease, transform 0.3s ease;
-  /* padding-top safe-area is now handled by .sidebar-header */
-}
-
-.sidebar.is-collapsed {
-  width: 80px;
-}
-
-/* Tablet (768px - 1023px): Sidebar collapsed por padrao, expande quando drawer abre */
-@media (min-width: 768px) and (max-width: 1023px) {
-  .sidebar {
-    width: 80px;
-    transform: translateX(0);
-    transition: width 0.3s ease, transform 0.3s ease;
-  }
-
-  /* Quando drawer abre em tablet, expandir completamente */
-  .sidebar.is-mobile-open {
-    width: 280px !important;
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
-  }
-
-  /* Estado collapsed padrao (sem drawer aberto) */
-  .sidebar:not(.is-mobile-open) .logo-text,
-  .sidebar:not(.is-mobile-open) .nav-section-title,
-  .sidebar:not(.is-mobile-open) .nav-arrow {
-    display: none;
-    opacity: 0;
-    visibility: hidden;
-  }
-
-  /* Mostrar textos quando drawer esta aberto */
-  .sidebar.is-mobile-open .logo-text,
-  .sidebar.is-mobile-open .nav-section-title,
-  .sidebar.is-mobile-open .nav-arrow {
-    display: flex;
-    opacity: 1;
-    visibility: visible;
-  }
-
-  .sidebar.is-mobile-open .logo-text {
-    flex-direction: column;
-  }
-
-  /* Esconder submenu quando collapsed */
-  .sidebar:not(.is-mobile-open) .nav-submenu {
-    display: none;
-  }
-
-  /* Mostrar submenu quando drawer aberto */
-  .sidebar.is-mobile-open .nav-submenu {
-    display: block;
-  }
-
-  /* Ajustar header no estado collapsed */
-  .sidebar:not(.is-mobile-open) .sidebar-header {
-    padding: 1rem;
-    justify-content: center;
-  }
-
-  .sidebar:not(.is-mobile-open) .logo-container {
-    justify-content: center;
-  }
-
-  /* Ajustar header quando drawer aberto */
-  .sidebar.is-mobile-open .sidebar-header {
-    padding: 1.5rem 1.25rem;
-    justify-content: space-between;
-  }
-
-  .sidebar.is-mobile-open .logo-container {
-    justify-content: flex-start;
-  }
-
-  /* Esconder botao toggle desktop em tablet */
-  .sidebar-toggle {
-    display: none !important;
-  }
-
-  /* nav-group-toggle collapsed */
-  .sidebar:not(.is-mobile-open) .nav-group-toggle {
-    justify-content: center;
-    padding: 0.75rem;
-  }
-
-  .sidebar:not(.is-mobile-open) .nav-group-toggle span {
-    display: none;
-  }
-
-  /* nav-group-toggle expandido */
-  .sidebar.is-mobile-open .nav-group-toggle {
-    justify-content: flex-start;
-    padding: 0.75rem 1.25rem;
-    gap: 0.75rem;
-  }
-
-  .sidebar.is-mobile-open .nav-group-toggle span {
-    display: inline;
-  }
-
-  /* Ajustar icones quando collapsed */
-  .sidebar:not(.is-mobile-open) .nav-icon {
-    margin: 0;
-  }
-}
-
-/* Mobile (< 768px): Esconder sidebar por padrão e mostrar como drawer */
-@media (max-width: 767px) {
-  .sidebar {
-    transform: translateX(-100%);
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
-    z-index: 50;
-  }
-
-  .sidebar.is-mobile-open {
-    transform: translateX(0);
-  }
-
-  /* Desabilitar collapsed mode em mobile quando drawer aberto */
-  .sidebar.is-collapsed {
-    width: 280px;
-  }
-}
-
-.sidebar-header {
-  padding: 0 1.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  position: relative;
-  height: 77px;
-  box-sizing: border-box;
-}
-
-.logo-container {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-  min-width: 0;
-}
-
-.logo-image {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  flex-shrink: 0;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 1.25rem;
-  flex-shrink: 0;
-}
-
-.logo-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.logo-title {
-  color: white;
-  font-weight: 700;
-  font-size: 1.125rem;
-  line-height: 1.2;
-}
-
-.logo-subtitle {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.75rem;
-  line-height: 1.2;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.sidebar-toggle {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.sidebar-toggle:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.toggle-icon {
-  width: 18px;
-  height: 18px;
-  transition: transform 0.3s ease;
-}
-
-.toggle-icon.rotated {
-  transform: rotate(180deg);
-}
-
-.sidebar-nav {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 1rem 0;
-  scroll-behavior: smooth;
-  overscroll-behavior: contain;
-  min-height: 0; /* Critical: allows flexbox to shrink below content size */
-}
-
-.nav-section {
-  margin-bottom: 1.5rem;
-}
-
-.nav-section-title {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0 1.25rem;
-  margin-bottom: 0.5rem;
-}
-
-.nav-group {
-  margin-bottom: 0.25rem;
-}
-
-.nav-group-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1.25rem;
-  color: rgba(255, 255, 255, 0.8);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.9375rem;
-}
-
-.sidebar.is-collapsed .nav-group-toggle {
-  padding: 0.75rem;
-  justify-content: center;
-  gap: 0;
-}
-
-.sidebar.is-collapsed .nav-group-toggle.is-open {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-  box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.35);
-  border-radius: 12px;
-  margin: 0 0.5rem;
-}
-
-.nav-group-toggle:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
-}
-
-.nav-group-toggle.is-open {
-  color: white;
-}
-
-.nav-icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-
-.nav-arrow {
-  width: 16px;
-  height: 16px;
-  margin-left: auto;
-  transition: transform 0.2s;
-}
-
-.nav-arrow.rotate-90 {
-  transform: rotate(90deg);
-}
-
-.nav-submenu {
-  padding-left: 1.25rem;
-  margin-top: 0.25rem;
-}
-
-/* Scrollbar styling */
-.sidebar-nav::-webkit-scrollbar {
-  width: 6px;
-}
-
-.sidebar-nav::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-}
-
-.sidebar-nav::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* Wrapper para os gradientes */
-.sidebar-nav-wrapper {
-  position: relative;
-  flex: 1 1 auto; /* Allow shrinking and growing */
-  overflow: hidden;
-  min-height: 0; /* Critical: Fix flexbox overflow issue */
-  display: flex;
-  flex-direction: column;
-}
-
-/* Container das views deslizantes (drill-down) */
-.sidebar-views {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-  width: 100%;
-}
-
-.sidebar-view {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.22s ease;
-  will-change: transform;
-}
-
-/* Estado padrao: main visivel, submenu fora a direita */
-.sidebar-view-main {
-  transform: translateX(0);
-  opacity: 1;
-}
-
-.sidebar-view-submenu {
-  transform: translateX(100%);
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Estado submenu ativo: main desliza p/ esquerda, submenu entra */
-.sidebar-views.show-submenu .sidebar-view-main {
-  transform: translateX(-24%);
-  opacity: 0.0;
-  pointer-events: none;
-}
-
-.sidebar-views.show-submenu .sidebar-view-submenu.is-active {
-  transform: translateX(0);
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Cabecalho "Voltar" no topo da subview */
-.submenu-back {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  width: 100%;
-  padding: 1rem 1.25rem;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  color: white;
-  cursor: pointer;
-  text-align: left;
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  transition: background 0.2s ease;
-  margin-bottom: 0.5rem;
-}
-
-.submenu-back:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.submenu-back-icon {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.85);
-  transition: transform 0.2s ease;
-}
-
-.submenu-back:hover .submenu-back-icon {
-  transform: translateX(-2px);
-}
-
-.submenu-back-title {
-  flex: 1;
-  color: white;
-}
-
-/* Indicador no item drill-down quando rota filha esta ativa */
-.nav-drilldown.is-active-route {
-  color: #3b82f6;
-}
-
-.nav-drilldown.is-active-route .nav-icon {
-  color: #3b82f6;
-}
-
-.nav-arrow-drill {
-  opacity: 0.6;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-.nav-drilldown:hover .nav-arrow-drill {
-  opacity: 1;
-  transform: translateX(2px);
-}
-
-/* Quando colapsada, esconder cabecalho voltar e nao deslizar */
-.sidebar.is-collapsed .sidebar-view-submenu {
-  display: none;
-}
-
-/* Respeitar prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-  .sidebar-view {
-    transition: none;
-  }
-}
-
-/* Gradientes de indicação de scroll */
-.scroll-gradient {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 60px;
-  pointer-events: none;
-  z-index: 10;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.scroll-gradient.is-visible {
-  opacity: 1;
-}
-
-.scroll-gradient-top {
-  top: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(30, 41, 59, 0.95) 0%,
-    rgba(30, 41, 59, 0.8) 40%,
-    rgba(30, 41, 59, 0) 100%
-  );
-}
-
-.scroll-gradient-bottom {
-  bottom: 0;
-  background: linear-gradient(
-    to top,
-    rgba(15, 23, 42, 0.95) 0%,
-    rgba(15, 23, 42, 0.8) 40%,
-    rgba(15, 23, 42, 0) 100%
-  );
-}
-
-/* Indicador visual de zona de scroll ao hover */
-.sidebar-nav-wrapper:hover .scroll-gradient.is-visible {
-  opacity: 0.7;
-}
-
-/* Efeito de brilho nas bordas durante hover */
-.sidebar-nav-wrapper:hover .scroll-gradient-top.is-visible::after,
-.sidebar-nav-wrapper:hover .scroll-gradient-bottom.is-visible::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(59, 130, 246, 0.5) 50%,
-    transparent 100%
-  );
-  animation: shimmer 2s ease-in-out infinite;
-}
-
-.sidebar-nav-wrapper:hover .scroll-gradient-top.is-visible::after {
-  top: 0;
-}
-
-.sidebar-nav-wrapper:hover .scroll-gradient-bottom.is-visible::after {
-  bottom: 0;
-}
-
-@keyframes shimmer {
-  0%, 100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
-/* Mobile close button */
-.sidebar-close-mobile {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.sidebar-close-mobile:hover,
-.sidebar-close-mobile:active {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.sidebar-close-mobile:active {
-  transform: scale(0.95);
-}
-
-.sidebar-close-mobile svg {
-  width: 24px;
-  height: 24px;
-}
-</style>
-
+<!--
+  Estilos extraidos para ./Sidebar.styles.css (Fase 5.0 da auditoria).
+  Estrutura dos estilos externos (busque os marcadores [REGION:*] em Sidebar.styles.css):
+    - base, header, nav, views, submenu, gradients, mobile-ui
+
+  REGRA: para garantir que selectors recebam o atributo data-v-* (scoped),
+  adicione todos os estilos em Sidebar.styles.css. NAO use @import dentro
+  de Sidebar.styles.css - imports aninhados podem perder o scope.
+-->
+<style src="./Sidebar.styles.css" scoped></style>

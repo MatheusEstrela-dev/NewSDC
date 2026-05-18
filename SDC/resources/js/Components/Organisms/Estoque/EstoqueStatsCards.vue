@@ -1,5 +1,5 @@
 <template>
-  <div class="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+  <div class="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-5">
     <button type="button" class="text-left" @click="$emit('filter', 'total')">
       <StatCard title="Produtos" :value="statistics.produtos" variant="info" :icon="ArchiveBoxIcon" />
     </button>
@@ -12,7 +12,7 @@
     <button type="button" class="text-left" @click="$emit('filter', 'atencao')">
       <StatCard title="Lotes vencendo" :value="statistics.lotes_vencendo" variant="warning" :icon="ClockIcon" />
     </button>
-    <button type="button" class="text-left" @click="$emit('filter', 'critico')">
+    <button type="button" class="col-span-2 text-left lg:col-span-1" @click="$emit('filter', 'critico')">
       <StatCard title="Requisicoes" :value="statistics.requisicoes" variant="danger" :icon="ClipboardDocumentCheckIcon" />
     </button>
   </div>

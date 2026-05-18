@@ -45,10 +45,10 @@ const props = defineProps({
 });
 
 const containerClasses = computed(() => {
-  const base = 'mb-6';
+  const base = 'mb-6 min-w-0';
   
   if (props.variant === 'gradient') {
-    return `${base} rounded-2xl p-6 border bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-700/30 border-slate-200 dark:border-slate-700/30`;
+    return `${base} rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 border bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-700/30 border-slate-200 dark:border-slate-700/30`;
   }
   
   return base;
@@ -64,10 +64,10 @@ const iconContainerClasses = computed(() => {
 
 <template>
   <div :class="containerClasses">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div class="flex items-center gap-4">
+    <div class="flex min-w-0 flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div class="flex min-w-0 items-center gap-3 sm:gap-4">
         <!-- Ícone opcional -->
-        <div v-if="icon" :class="iconContainerClasses">
+        <div v-if="icon" :class="[iconContainerClasses, 'shrink-0']">
           <component 
             :is="icon" 
             :class="['w-6 h-6', iconClass || 'text-slate-600 dark:text-slate-200']" 
@@ -75,18 +75,18 @@ const iconContainerClasses = computed(() => {
         </div>
         
         <!-- Título e descrição -->
-        <div>
-          <Heading :level="2" class="text-slate-900 dark:text-slate-100 mb-1">
+        <div class="min-w-0">
+          <Heading :level="2" class="mb-1 break-words text-slate-900 dark:text-slate-100">
             {{ title }}
           </Heading>
-          <Text v-if="description" size="sm" color="muted">
+          <Text v-if="description" size="sm" color="muted" class="break-words">
             {{ description }}
           </Text>
         </div>
       </div>
 
       <!-- Slot para ações (botões) -->
-      <div v-if="$slots.actions" class="flex items-center gap-3">
+      <div v-if="$slots.actions" class="flex w-full min-w-0 flex-wrap items-center justify-start gap-2 sm:gap-3 md:w-auto md:justify-end">
         <slot name="actions" />
       </div>
     </div>

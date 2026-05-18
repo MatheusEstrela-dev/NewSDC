@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+  <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-5 mb-6">
     <StatCard
       title="Cronogramas Ativos"
       :value="kpis.cronogramas_ativos"
@@ -25,6 +25,7 @@
       :icon="BuildingIcon"
     />
     <StatCard
+      class="col-span-2 lg:col-span-1"
       title="Viagens p/ Validar"
       :value="kpis.viagens_pendentes_validar"
       variant="warning"

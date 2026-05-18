@@ -6,12 +6,14 @@
             <PaeHeader
                 :empreendimento="empreendimento"
                 :protocolo="props.protocolo"
+                :view-only="props.viewOnly"
             />
 
 <PaeForm
                 :empreendimento="empreendimento"
                 :municipios="props.municipios"
                 :formulario="props.formulario"
+                :view-only="props.viewOnly"
             />
         </div>
     </div>
@@ -43,6 +45,14 @@ const props = defineProps({
     protocolo: {
         type: Object,
         default: null,
+    },
+    viewOnly: {
+        type: Boolean,
+        default: false,
+    },
+    canEdit: {
+        type: Boolean,
+        default: false,
     },
 });
 

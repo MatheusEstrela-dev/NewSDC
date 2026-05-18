@@ -1,5 +1,5 @@
 <template>
-  <div :class="cardClasses">
+  <component :is="clickable ? 'button' : 'div'" :class="cardClasses" :type="clickable ? 'button' : null" @click="handleClick">
     <div class="flex items-start justify-between gap-2 sm:gap-4">
       <div class="min-w-0 flex-1">
         <Text size="sm" color="muted" weight="medium" class="mb-0.5 sm:mb-1 text-xs sm:text-sm leading-tight">
@@ -17,7 +17,7 @@
         <component :is="icon" class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
       </div>
     </div>
-  </div>
+  </component>
 </template>
 
 <script setup>
@@ -51,6 +51,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  clickable: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const variantAccentClasses = {
@@ -70,7 +74,10 @@ const variantBorderClasses = {
 const cardClasses = computed(() => {
   const base =
     'rounded-lg sm:rounded-xl border backdrop-blur-sm px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-4 transition-colors duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] touch-manipulation bg-white dark:bg-slate-900/60 hover:bg-slate-50 dark:hover:bg-slate-900/80';
-  return [base, variantBorderClasses[props.variant]].filter(Boolean).join(' ');
+  const interactive = props.clickable
+    ? 'w-full appearance-none text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950'
+    : '';
+  return [base, interactive, variantBorderClasses[props.variant]].filter(Boolean).join(' ');
 });
 
 const iconContainerClasses = computed(() => {
@@ -83,5 +90,13 @@ const formattedValue = computed(() => {
   }
   return props.value;
 });
+
+const emit = defineEmits(['click']);
+
+function handleClick() {
+  if (props.clickable) {
+    emit('click');
+  }
+}
 </script>
 

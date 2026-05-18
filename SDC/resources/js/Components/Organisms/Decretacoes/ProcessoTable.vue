@@ -1,19 +1,10 @@
 <template>
-  <div class="bg-white dark:bg-slate-800/50 rounded-lg sm:rounded-xl shadow-lg border border-slate-200 dark:border-slate-700/50 overflow-hidden">
-    <!-- Header -->
-    <div class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center bg-slate-50 dark:bg-slate-800/70">
-      <div class="min-w-0 flex-1">
-        <h3 class="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base truncate">
-          <DocumentIcon class="w-4 h-4 sm:w-5 sm:h-5 text-primary-400 flex-shrink-0" />
-          <span class="truncate">{{ title }}</span>
-        </h3>
-        <p class="text-xs text-slate-400 mt-0.5 hidden sm:block">{{ subtitle }}</p>
-      </div>
-      <span class="bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 text-xs font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-blue-200 dark:border-blue-500/30 flex-shrink-0 ml-2">
-        {{ total ?? processos.length }}
-      </span>
-    </div>
-
+  <ListSurface
+    :title="title"
+    :subtitle="subtitle"
+    :count="total ?? processos.length"
+    :icon="DocumentIcon"
+  >
     <!-- Tabela -->
     <div class="overflow-x-auto -mx-px">
       <table class="w-full text-sm">
@@ -26,7 +17,7 @@
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap">Reconhecimento</th>
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap">Nº Protocolo S2ID</th>
             <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left whitespace-nowrap hidden lg:table-cell">Vigência</th>
-            <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-right whitespace-nowrap w-36 min-w-36">Ações</th>
+            <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-right whitespace-nowrap w-64 min-w-64">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700/30">
@@ -79,7 +70,7 @@
             </td>
 
             <!-- Acoes -->
-            <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 w-36 min-w-36">
+            <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 w-64 min-w-64">
               <div class="flex items-center justify-end">
                 <TableActions
                   :show-view="true"
@@ -89,11 +80,11 @@
                   :show-delete="canDelete"
                   :show-warning="true"
                   :show-options="true"
-                  @view="openDetailModal(processo)"
+                  @view="navigateToShow(processo)"
                   @print="$emit('print', processo.id)"
                   @edit="openEditChoiceModal(processo.id)"
                   @delete="$emit('delete', processo.id)"
-                  @warning="$emit('warning', processo.id)"
+                  @warning="openDetailModal(processo)"
                   @options="$emit('options', processo.id)"
                 />
               </div>
@@ -127,20 +118,21 @@
       :processo-id="selectedProcessoIdForEdit"
       @close="closeEditChoiceModal"
     />
-  </div>
+  </ListSurface>
 </template>
 
 <script setup>
 import { ref } from 'vue';
 import axios from 'axios';
+import { router } from '@inertiajs/vue3';
 import DocumentIcon from '../../Icons/DocumentTextIcon.vue';
 import PrazoBadge from '../../Molecules/Decretacoes/PrazoBadge.vue';
 import StatusBadge from '../../Molecules/Decretacoes/StatusBadge.vue';
 import TipoProcessoBadge from '../../Molecules/Decretacoes/TipoProcessoBadge.vue';
 import TableActions from '../../Molecules/Table/TableActions.vue';
-import Pagination from '../../Molecules/Navigation/Pagination.vue';
 import DecretacaoDetailModal from './Details/DecretacaoDetailModal.vue';
 import EditChoiceModal from './EditChoiceModal.vue';
+import ListSurface from '../Table/ListSurface.vue';
 
 const props = defineProps({
   title: {
@@ -177,6 +169,10 @@ const loadingDetail = ref(false);
 const showEditChoiceModal = ref(false);
 const selectedProcessoIdForEdit = ref(null);
 
+const navigateToShow = (processo) => {
+  router.visit(route('decretacoes.show', processo.id));
+};
+
 const openDetailModal = async (processo) => {
   selectedProcesso.value = processo;
   showDetailModal.value = true;
@@ -184,9 +180,7 @@ const openDetailModal = async (processo) => {
 
   try {
     const response = await axios.get(`/api/v1/decretacoes/${processo.id}`, { withCredentials: true });
-    console.log('API Response:', response.data);
     if (response.data.success && response.data.data) {
-      console.log('Totais:', response.data.data.totais);
       selectedProcesso.value = response.data.data;
     }
   } catch (error) {

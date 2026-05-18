@@ -10,7 +10,7 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
           <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
           <ViewModeToggle v-model="viewMode" />
 
@@ -49,7 +49,7 @@
     />
     <!-- Visualização em Grade -->
     <RatGrid
-      v-if="viewMode === 'grid'"
+      v-if="viewMode === 'grid' || isCompact"
       :rats="ratsToUse"
       :loading="loading"
       :pagination="paginationToUse"
@@ -64,7 +64,7 @@
 
     <!-- Visualização em Tabela -->
     <RatTable
-      v-else
+      v-else-if="viewMode === 'table' && !isCompact"
       :rats="ratsToUse"
       :loading="loading"
       :pagination="paginationToUse"
@@ -195,8 +195,9 @@ const props = defineProps({
 const perPage = 15;
 const currentPage = ref(1);
 const localFilters = ref({ ...(props.filters || {}) });
-const { isMobile } = useMobile();
-const viewMode = ref(isMobile.value ? 'grid' : 'table'); // grid no mobile, table no desktop
+const { isMobile, isTablet } = useMobile();
+const isCompact = computed(() => isMobile.value || isTablet.value);
+const viewMode = ref(isCompact.value ? 'grid' : 'table'); // grid no compacto, table no desktop
 
 const { show: toast } = useToast();
 

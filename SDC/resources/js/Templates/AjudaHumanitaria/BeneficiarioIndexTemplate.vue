@@ -8,7 +8,7 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
           <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
           <ViewModeToggle v-model="viewMode" />
 
@@ -65,7 +65,7 @@
 
     <!-- Mobile: Sempre Grade | Desktop: Grade ou Tabela -->
     <BeneficiarioGrid
-      v-if="viewMode === 'grid' || isMobile"
+      v-if="viewMode === 'grid' || isCompact"
       :beneficiarios="beneficiarios"
       :loading="loading"
       :can-edit="canEdit"
@@ -77,9 +77,16 @@
     />
 
     <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
-    <div v-else-if="viewMode === 'table' && !isMobile" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <table class="w-full">
-        <thead class="bg-slate-50 dark:bg-slate-700/50">
+    <ListSurface
+      v-else-if="viewMode === 'table' && !isCompact"
+      title="Beneficiários"
+      subtitle="Gestão de beneficiários e famílias afetadas por desastres"
+      :count="pagination?.total ?? beneficiarios.length"
+      :icon="HeartIcon"
+    >
+      <div class="overflow-x-auto -mx-px">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
           <tr>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Nome</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">CPF</th>
@@ -89,8 +96,8 @@
             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider w-40 min-w-40">Ações</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="beneficiario in beneficiarios" :key="beneficiario.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+        <tbody class="divide-y divide-slate-200 dark:divide-slate-700/30">
+          <tr v-for="beneficiario in beneficiarios" :key="beneficiario.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
             <td class="px-4 py-3">
               <div class="text-sm font-medium text-slate-900 dark:text-white">{{ beneficiario.nome }}</div>
             </td>
@@ -131,7 +138,8 @@
           </tr>
         </tbody>
       </table>
-    </div>
+      </div>
+    </ListSurface>
 
     <!-- Pagination -->
     <div v-if="pagination" class="mt-6">
@@ -155,11 +163,12 @@ import BeneficiarioGrid from '@/Components/Organisms/AjudaHumanitaria/Beneficiar
 import BeneficiarioStatsCards from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioStatsCards.vue';
 import PrintBeneficiarioModal from '@/Components/Organisms/AjudaHumanitaria/Print/PrintBeneficiarioModal.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import ListSurface from '@/Components/Organisms/Table/ListSurface.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { useExport } from '@/Composables/useExport';
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   beneficiarios: {
@@ -207,7 +216,8 @@ const props = defineProps({
 const emit = defineEmits(['create', 'view', 'edit', 'delete', 'print', 'filter', 'filter-change', 'filter-reset']);
 
 // Detecção mobile
-const { isMobile } = useMobile();
+const { isMobile, isTablet } = useMobile();
+const isCompact = computed(() => isMobile.value || isTablet.value);
 
 const viewMode = ref('table');
 const localFilters = ref({ ...props.filters });

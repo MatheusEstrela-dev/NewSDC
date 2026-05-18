@@ -1,6 +1,6 @@
 <template>
   <header
-    class="fixed top-0 right-0 left-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm md:left-20 lg:left-[280px]"
+    class="fixed top-0 right-0 left-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm lg:left-[280px]"
     :class="{
       'lg:!left-20': isCollapsed
     }"

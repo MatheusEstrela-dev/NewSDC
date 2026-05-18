@@ -168,9 +168,9 @@ import TdapStatusBadge from '@/Components/Atoms/Tdap/TdapStatusBadge.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import TdapCaminhoesFiltersSection from '@/Components/Organisms/Tdap/TdapCaminhoesFiltersSection.vue';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TdapLayout from '@/Layouts/TdapLayout.vue';
 
-defineOptions({ layout: AuthenticatedLayout });
+defineOptions({ layout: TdapLayout });
 
 const props = defineProps({
   caminhoes:    { type: Object, default: () => ({ data: [], meta: {} }) },

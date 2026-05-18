@@ -1,12 +1,13 @@
 <template>
-  <div class="responsive-table-container">
-    <!-- Desktop: Tabela tradicional -->
-    <div class="table-desktop hidden md:block">
+  <div class="responsive-table-container" data-responsive="true">
+    <!-- Desktop e Tablet: Tabela tradicional -->
+    <!-- Tablet recebe a tabela completa porem o caller pode usar :priority-columns para esconder colunas via CSS -->
+    <div class="table-desktop hidden lg:block" :data-priority-columns="priorityColumnsAttr">
       <slot name="table"></slot>
     </div>
 
     <!-- Mobile: Cards -->
-    <div class="table-mobile block md:hidden">
+    <div class="table-mobile block lg:hidden">
       <div v-if="items && items.length > 0" class="mobile-cards-list">
         <TableMobileCard
           v-for="(item, index) in items"
@@ -132,7 +133,33 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  /**
+   * Colunas prioritarias exibidas em viewport tablet (768-1023px).
+   *
+   * TODO(Fase 8.0/8.2): API ainda nao consumida pelo CSS scoped.
+   * O atributo `data-priority-columns` e renderizado no container desktop
+   * (linha 5), mas nao ha selectors `[data-priority-columns] th[data-priority]`
+   * para esconder colunas em tablet. Adicionar quando primeiro modulo migrar
+   * (PAE/Decretacoes em 8.2-8.3) com o padrao real de uso definido.
+   *
+   * Uso futuro previsto:
+   *   <ResponsiveTable :priority-columns="['protocolo', 'situacao', 'acoes']">
+   *     <template #table>
+   *       <table>
+   *         <th data-priority="protocolo">Protocolo</th>
+   *         <th data-priority="empreendedor">Empreendedor</th>   <-- escondido em tablet
+   *         <th data-priority="situacao">Situacao</th>
+   *       </table>
+   *     </template>
+   *   </ResponsiveTable>
+   */
+  priorityColumns: {
+    type: Array,
+    default: () => [],
+  },
 });
+
+const priorityColumnsAttr = computed(() => props.priorityColumns.join(','));
 </script>
 
 <style scoped>
@@ -243,7 +270,7 @@ const props = defineProps({
 }
 
 /* Responsive adjustments */
-@media (min-width: 640px) and (max-width: 767px) {
+@media (min-width: 640px) and (max-width: 1023px) {
   .mobile-cards-list {
     display: grid;
     grid-template-columns: 1fr 1fr;

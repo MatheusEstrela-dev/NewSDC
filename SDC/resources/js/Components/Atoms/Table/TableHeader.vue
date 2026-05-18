@@ -77,8 +77,8 @@ const wrapperClasses = computed(() => {
 });
 
 const headerClasses = computed(() => {
-  const base = 'px-4 py-3 text-xs font-semibold text-slate-400 dark:text-slate-400 text-slate-600 uppercase tracking-wider bg-slate-900/50 dark:bg-slate-900/50 bg-slate-100';
-  const sortableClass = props.sortable ? 'cursor-pointer hover:bg-slate-800/50 dark:hover:bg-slate-800/50 hover:bg-slate-200 select-none' : '';
+  const base = 'px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50';
+  const sortableClass = props.sortable ? 'cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 select-none' : '';
 
   return [
     base,
@@ -87,4 +87,3 @@ const headerClasses = computed(() => {
   ].join(' ');
 });
 </script>
-

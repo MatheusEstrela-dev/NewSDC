@@ -12,12 +12,12 @@
 
 <script setup>
 import { Head, useForm, router } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TdapLayout from '@/Layouts/TdapLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import AtaForm from '@/Components/Organisms/Tdap/AtaForm.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 
-defineOptions({ layout: AuthenticatedLayout });
+defineOptions({ layout: TdapLayout });
 
 const props = defineProps({
   ata: { type: Object, required: true },

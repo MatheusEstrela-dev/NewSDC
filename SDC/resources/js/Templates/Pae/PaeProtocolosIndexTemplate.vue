@@ -8,13 +8,14 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+          <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
+          <ViewModeToggle v-model="viewMode" />
+
+          <!-- Botao CCPAE - filtro rapido -->
           <Button variant="violet" size="md" @click="handleCcpaeFilter">
             CCPAE
           </Button>
-
-          <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
-          <ViewModeToggle v-model="viewMode" />
 
           <!-- Botao Exportar -->
           <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
@@ -47,7 +48,21 @@
       @assigned="handleAssignedAction"
     />
 
-    <PaeProtocolosStatsCards :stats="statsToUse" />
+    <!-- Modal Novo Protocolo -->
+    <NovoProtocoloModal
+      :show="showNovoProtocoloModal"
+      :empreendedores="empreendedores"
+      @close="showNovoProtocoloModal = false"
+      @created="handleNovoProtocoloCreated"
+    />
+
+    <PaeProtocolosStatsCards
+      :stats="statsToUse"
+      @total="handleTotalProtocolos"
+      @historico="handleHistoricoProtocolos"
+      @vencidos="handleVencidosProtocolos"
+      @ccpae="handleCcpaeFilter"
+    />
 
     <PaeProtocolosFilters
       :filters="filters"
@@ -60,7 +75,7 @@
 
     <!-- Mobile: Sempre Grade | Desktop: Grade ou Tabela -->
     <PaeProtocolosGrid
-      v-if="viewMode === 'grid' || isMobile"
+      v-if="viewMode === 'grid' || isCompact"
       :protocolos="paginatedProtocolos"
       :loading="loading"
       :pagination="paginationToUse"
@@ -83,7 +98,7 @@
 
     <!-- Desktop: Tabela (somente quando selecionada e nao mobile) -->
     <PaeProtocolosTable
-      v-else-if="viewMode === 'table' && !isMobile"
+      v-else-if="viewMode === 'table' && !isCompact"
       :protocolos="paginatedProtocolos"
       :can-edit="canEdit"
       :can-delete="canDelete"
@@ -156,7 +171,7 @@
 
 <script setup>
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import { router, useForm } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { useToast } from '@/composables/useToast';
 
@@ -176,6 +191,7 @@ import PaeProtocolosGrid from '@/Components/Organisms/Pae/Protocolos/PaeProtocol
 import PaeProtocolosStatsCards from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosStatsCards.vue';
 import PaeProtocolosTable from '@/Components/Organisms/Pae/Protocolos/PaeProtocolosTable.vue';
 import AssignAnalistaModal from '@/Components/Organisms/Pae/Protocolos/AssignAnalistaModal.vue';
+import NovoProtocoloModal from '@/Components/Organisms/Pae/Protocolos/NovoProtocoloModal.vue';
 
 import { GetPaeProtocoloHistorico } from '@/domain/pae/usecases/GetPaeProtocoloHistorico';
 import { ListPaeProtocolos } from '@/domain/pae/usecases/ListPaeProtocolos';
@@ -232,7 +248,8 @@ const props = defineProps({
 });
 
 // Detecção mobile
-const { isMobile } = useMobile();
+const { isMobile, isTablet } = useMobile();
+const isCompact = computed(() => isMobile.value || isTablet.value);
 
 // Estado da visualização (mobile sempre será grade)
 const viewMode = ref('table');
@@ -348,6 +365,7 @@ const statsToUse = computed(() => {
       historico: (s.aprovado ?? 0) + (s.ccpae ?? 0) + (s.ativo_3_anos ?? 0),
       vencidos: s.vencidos ?? 0,
       ccpae: s.ccpae ?? 0,
+      ccpaeProtocoloId: s.ccpae_protocolo_id ?? null,
     };
   }
   return getMockPaeStats(filteredProtocolos.value);
@@ -392,8 +410,43 @@ function handleFilterReset() {
   }
 }
 
+function handleTotalProtocolos() {
+  if (props.useMock) {
+    mockFilters.value = { buscar: '', situacao: '', analista: '', empreendedor: '', data_inicio: '', data_fim: '' };
+    currentPage.value = 1;
+    return;
+  }
+
+  router.get(route('pae.protocolos.index'), {}, { preserveState: false, replace: true });
+}
+
+function handleHistoricoProtocolos() {
+  if (props.useMock) {
+    mockFilters.value = { ...mockFilters.value, situacao: 'historico' };
+    currentPage.value = 1;
+    return;
+  }
+
+  router.get(route('pae.protocolos.index'), { status_grupo: 'historico' }, { preserveState: false, replace: true });
+}
+
+function handleVencidosProtocolos() {
+  if (props.useMock) {
+    mockFilters.value = { ...mockFilters.value, situacao: 'vencido' };
+    currentPage.value = 1;
+    return;
+  }
+
+  router.get(route('pae.protocolos.index'), { status_grupo: 'vencidos' }, { preserveState: false, replace: true });
+}
+
 function handleCcpaeFilter() {
-  handleFilterChange({ status: 'ccpae' });
+  if (props.useMock) {
+    handleFilterChange({ situacao: 'ccpae' });
+    return;
+  }
+
+  router.get(route('pae.protocolos.index'), { status: 'ccpae' }, { preserveState: false, replace: true });
 }
 
 function handlePageChange(page) {
@@ -405,7 +458,7 @@ function handlePageChange(page) {
 }
 
 function handleView(id) {
-  router.visit(route('pae.index', { protocolo_id: id }));
+  router.visit(route('pae.protocolo.show', id));
 }
 
 function handleEdit(id) {
@@ -572,19 +625,15 @@ function closePrint() {
 }
 
 // ── Novo Protocolo ─────────────────────────────────────
-const novoForm = useForm({
-    pae_empnto_id: '',
-    sei_numero: '',
-});
+const showNovoProtocoloModal = ref(false);
 
 function openNovoProtocolo() {
-    novoForm.post(route('pae.protocolos.store'), {
-        onError: (errors) => {
-            console.error('Validation errors:', errors);
-            const { toast } = useToast();
-            toast('Erro ao criar protocolo. Verifique os dados.', 'error');
-        },
-    });
+    showNovoProtocoloModal.value = true;
+}
+
+function handleNovoProtocoloCreated() {
+    // O backend redireciona via Inertia; o modal ja exibe toast.
+    // Mantemos o handler como hook caso seja preciso refrescar listas locais.
 }
 
 // =========================

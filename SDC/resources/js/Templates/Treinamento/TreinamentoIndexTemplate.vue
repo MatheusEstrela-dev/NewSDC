@@ -3,14 +3,16 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import ListSurface from '@/Components/Organisms/Table/ListSurface.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import TreinamentoFiltersSection from '@/Components/Organisms/Treinamento/TreinamentoFiltersSection.vue';
 import TreinamentoGrid from '@/Components/Organisms/Treinamento/TreinamentoGrid.vue';
 import TreinamentoStatsCards from '@/Components/Organisms/Treinamento/TreinamentoStatsCards.vue';
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 
 // Formatador de data seguro (evita Invalid Date em strings já formatadas dd/mm/yyyy)
@@ -25,7 +27,8 @@ const formatDate = (dateValue) => {
 };
 
 // Detecção mobile
-const { isMobile } = useMobile();
+const { isMobile, isTablet } = useMobile();
+const isCompact = computed(() => isMobile.value || isTablet.value);
 
 const props = defineProps({
   treinamentos: {
@@ -114,7 +117,7 @@ function handleExportCsv(params) {
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
           <!-- Toggle Grade/Tabela - Oculto em mobile -->
           <ViewModeToggle v-model="viewMode" />
 
@@ -159,7 +162,7 @@ function handleExportCsv(params) {
 
     <!-- Mobile: Sempre Grade | Desktop: Grade ou Tabela -->
     <TreinamentoGrid
-      v-if="viewMode === 'grid' || isMobile"
+      v-if="viewMode === 'grid' || isCompact"
       :treinamentos="treinamentos"
       :can-edit="canEdit"
       :can-delete="canDelete"
@@ -169,9 +172,16 @@ function handleExportCsv(params) {
     />
 
     <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
-    <div v-else-if="viewMode === 'table' && !isMobile" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <table class="w-full">
-        <thead class="bg-slate-50 dark:bg-slate-700/50">
+    <ListSurface
+      v-else-if="viewMode === 'table' && !isCompact"
+      title="Treinamentos"
+      subtitle="Gestão de treinamentos e cursos"
+      :count="pagination?.total ?? treinamentos.length"
+      :icon="BookOpenIcon"
+    >
+      <div class="overflow-x-auto -mx-px">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
           <tr>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Título</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Tipo</th>
@@ -181,8 +191,8 @@ function handleExportCsv(params) {
             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Ações</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="treinamento in treinamentos" :key="treinamento.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+        <tbody class="divide-y divide-slate-200 dark:divide-slate-700/30">
+          <tr v-for="treinamento in treinamentos" :key="treinamento.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
             <td class="px-4 py-3">
               <div class="text-sm font-medium text-slate-900 dark:text-white">{{ treinamento.titulo }}</div>
               <div class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs">{{ treinamento.descricao }}</div>
@@ -229,7 +239,8 @@ function handleExportCsv(params) {
           </tr>
         </tbody>
       </table>
-    </div>
+      </div>
+    </ListSurface>
 
     <!-- Pagination -->
     <div v-if="pagination" class="mt-6">

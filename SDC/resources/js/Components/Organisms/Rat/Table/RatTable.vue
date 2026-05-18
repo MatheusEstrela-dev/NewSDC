@@ -1,14 +1,10 @@
 <template>
-  <CardBase variant="default" padding="none" class="overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/30">
-      <div class="flex items-center justify-between">
-        <Heading :level="5" color="default" class="flex items-center gap-2">
-          <DocumentTextIcon class="w-5 h-5" />
-          Lista de RATs ({{ pagination?.total || rats.length }} registros)
-        </Heading>
-      </div>
-    </div>
-
+  <ListSurface
+    title="Lista de RATs"
+    subtitle="Registros de Atendimento Técnico"
+    :count="pagination?.total || rats.length"
+    :icon="DocumentTextIcon"
+  >
     <div v-if="loading" class="p-12 text-center">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
       <p class="mt-4 text-slate-600 dark:text-slate-400">Carregando...</p>
@@ -23,8 +19,8 @@
     </div>
 
     <!-- Desktop: Tabela -->
-    <div v-else-if="!isMobile" class="overflow-x-auto">
-      <table class="w-full">
+    <div v-else-if="!isMobile" class="overflow-x-auto -mx-px">
+      <table class="w-full text-sm">
         <TableHeaderRow>
           <TableHeader class="w-48 whitespace-nowrap">Número RAT</TableHeader>
           <TableHeader class="w-44 whitespace-nowrap">Data/Hora</TableHeader>
@@ -32,7 +28,7 @@
           <TableHeader align="center" class="w-36 whitespace-nowrap">Status</TableHeader>
           <TableHeader class="w-auto whitespace-nowrap">Município</TableHeader>
           <TableHeader class="w-44 whitespace-nowrap">Criado por</TableHeader>
-          <TableHeader align="right" class="w-44 whitespace-nowrap text-right">Ações</TableHeader>
+          <TableHeader align="right" class="w-56 min-w-56 whitespace-nowrap text-right">Ações</TableHeader>
         </TableHeaderRow>
         <tbody>
           <RatTableRow
@@ -67,17 +63,17 @@
         class="m-4 first:mt-0 last:mb-0"
       />
     </div>
-  </CardBase>
+  </ListSurface>
 </template>
 
 <script setup>
-import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import TableHeader from '@/Components/Atoms/Table/TableHeader.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import RatCard from '@/Components/Molecules/Rat/RatCard.vue';
 import TableHeaderRow from '@/Components/Molecules/Table/TableHeaderRow.vue';
+import ListSurface from '@/Components/Organisms/Table/ListSurface.vue';
 import { useMobile } from '@/Composables/useMobile';
 import RatTableRow from './RatTableRow.vue';
 
@@ -129,4 +125,3 @@ function handleDelete(id) {
   emit('delete', id);
 }
 </script>
-

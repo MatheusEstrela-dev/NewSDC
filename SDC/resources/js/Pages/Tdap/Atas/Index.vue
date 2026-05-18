@@ -8,120 +8,70 @@
     >
       <template #actions>
         <Link v-if="canCreate" :href="route('tdap.atas.create')">
-          <PrimaryButton>Nova Ata</PrimaryButton>
+          <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
+            <span class="hidden sm:inline">Nova Ata</span>
+            <span class="sm:hidden">Nova</span>
+          </Button>
         </Link>
       </template>
     </TdapPageHeader>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Total</p>
-        <p class="text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ estatisticas.total }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Ativas</p>
-        <p class="text-2xl font-semibold text-emerald-600">{{ estatisticas.ativos }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Vigentes</p>
-        <p class="text-2xl font-semibold text-blue-600">{{ estatisticas.vigentes }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Encerradas</p>
-        <p class="text-2xl font-semibold text-slate-400">{{ estatisticas.encerradas }}</p>
-      </div>
-    </div>
+    <TdapStatsRow :cards="statsCards" :columns="4" />
 
-    <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-      <div class="flex flex-col md:flex-row gap-3">
-        <input
-          v-model="filtroSearch"
-          type="text"
-          placeholder="Buscar por número ou histórico..."
-          class="flex-1 border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
-          @keyup.enter="aplicarFiltros"
-        />
-        <select
-          v-model="filtroAtivo"
-          class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
-          @change="aplicarFiltros"
-        >
-          <option value="">Todas</option>
-          <option value="1">Ativas</option>
-          <option value="0">Inativas</option>
-        </select>
-        <label class="inline-flex items-center gap-2 text-sm">
-          <input type="checkbox" v-model="filtroVigente" @change="aplicarFiltros" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-          Apenas vigentes
-        </label>
-        <PrimaryButton @click="aplicarFiltros">Filtrar</PrimaryButton>
-      </div>
-    </div>
+    <TdapAtasFiltersSection
+      v-model:filters="activeFilters"
+      @apply="aplicarFiltros"
+      @clear="limparFiltros"
+    />
 
-    <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
-      <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-        <thead class="bg-slate-50 dark:bg-slate-800/40">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Número</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Vigência</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Lotes</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Status</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Ações</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="a in atas.data" :key="a.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-            <td class="px-4 py-3 text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">
-              <Link :href="route('tdap.atas.show', a.id)" class="hover:text-blue-600">{{ a.numero }}</Link>
-            </td>
-            <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
-              {{ formatDate(a.dt_inicio) }} — {{ formatDate(a.dt_final) }}
-            </td>
-            <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ a.lotes_count }}</td>
-            <td class="px-4 py-3 text-sm">
-              <span v-if="a.vigente" class="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">Vigente</span>
-              <span v-else-if="a.ativo" class="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">Ativa</span>
-              <span v-else class="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">Inativa</span>
-            </td>
-            <td class="px-4 py-3 text-right text-sm space-x-2">
-              <Link :href="route('tdap.atas.show', a.id)" class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200">Ver</Link>
-              <Link v-if="canEdit" :href="route('tdap.atas.edit', a.id)" class="text-blue-600 hover:text-blue-800">Editar</Link>
-            </td>
-          </tr>
-          <tr v-if="atas.data.length === 0">
-            <td colspan="5" class="px-4 py-12 text-center text-slate-400">Nenhuma ata cadastrada.</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div v-if="atas.meta && atas.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-        <p class="text-xs text-slate-500">
-          Página {{ atas.meta.current_page }} de {{ atas.meta.last_page }} ({{ atas.meta.total }} registros)
-        </p>
-        <div class="space-x-2">
-          <Link
-            v-for="(link, i) in atas.meta.links || []"
-            :key="i"
-            :href="link.url || '#'"
-            v-html="link.label"
-            class="px-3 py-1 text-sm rounded border"
-            :class="link.active ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-700 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'"
-          />
-        </div>
-      </div>
-    </div>
+    <TdapDataTable
+      title="Atas"
+      subtitle="Contratos vigentes e histórico"
+      :columns="columns"
+      :rows="atas.data"
+      :pagination="atas.meta"
+      empty-text="Nenhuma ata cadastrada."
+    >
+      <template #row="{ row: a }">
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+          <td class="px-4 py-3 text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">
+            <Link :href="route('tdap.atas.show', a.id)" class="hover:text-blue-600">{{ a.numero }}</Link>
+          </td>
+          <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+            {{ formatDate(a.dt_inicio) }} — {{ formatDate(a.dt_final) }}
+          </td>
+          <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ a.lotes_count }}</td>
+          <td class="px-4 py-3 text-sm">
+            <TdapStatusBadge :state="ataState(a)" />
+          </td>
+          <td class="px-4 py-3 text-right text-sm space-x-2">
+            <Link :href="route('tdap.atas.show', a.id)" class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200">Ver</Link>
+            <Link v-if="canEdit" :href="route('tdap.atas.edit', a.id)" class="text-blue-600 hover:text-blue-800">Editar</Link>
+          </td>
+        </tr>
+      </template>
+    </TdapDataTable>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TdapLayout from '@/Layouts/TdapLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import TdapStatsRow from '@/Components/Organisms/Tdap/Statistics/TdapStatsRow.vue';
+import TdapAtasFiltersSection from '@/Components/Organisms/Tdap/TdapAtasFiltersSection.vue';
+import TdapDataTable from '@/Components/Organisms/Tdap/Table/TdapDataTable.vue';
+import TdapStatusBadge from '@/Components/Atoms/Tdap/TdapStatusBadge.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
+import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
+import ClockIcon from '@/Components/Icons/ClockIcon.vue';
+import ArchiveBoxIcon from '@/Components/Icons/ArchiveBoxIcon.vue';
+import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 
-defineOptions({ layout: AuthenticatedLayout });
+defineOptions({ layout: TdapLayout });
 
 const props = defineProps({
   atas:         { type: Object, default: () => ({ data: [], meta: {} }) },
@@ -132,16 +82,43 @@ const props = defineProps({
   canDelete:    { type: Boolean, default: false },
 });
 
-const filtroSearch = ref(props.filtros.search ?? '');
-const filtroAtivo  = ref(props.filtros.ativo ?? '');
-const filtroVigente = ref(Boolean(props.filtros.vigente));
+const activeFilters = ref({
+  search:  props.filtros.search ?? '',
+  ativo:   props.filtros.ativo ?? '',
+  vigente: props.filtros.vigente ? 1 : '',
+});
 
-function aplicarFiltros() {
+const columns = [
+  { label: 'Número', align: 'left' },
+  { label: 'Vigência', align: 'left' },
+  { label: 'Lotes', align: 'left' },
+  { label: 'Status', align: 'left' },
+  { label: 'Ações', align: 'right' },
+];
+
+const statsCards = computed(() => [
+  { title: 'Total',      value: props.estatisticas.total,      variant: 'info',    icon: DocumentTextIcon },
+  { title: 'Ativas',     value: props.estatisticas.ativos,     variant: 'success', icon: CheckBadgeIcon },
+  { title: 'Vigentes',   value: props.estatisticas.vigentes,   variant: 'info',    icon: ClockIcon },
+  { title: 'Encerradas', value: props.estatisticas.encerradas, variant: 'warning', icon: ArchiveBoxIcon },
+]);
+
+function ataState(a) {
+  if (a.vigente) return 'vigente';
+  return a.ativo ? 'ativa' : 'inativa';
+}
+
+function aplicarFiltros(filters = activeFilters.value) {
   router.get(route('tdap.atas.index'), {
-    search:  filtroSearch.value || undefined,
-    ativo:   filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
-    vigente: filtroVigente.value ? 1 : undefined,
+    search:  filters.search || undefined,
+    ativo:   filters.ativo !== '' && filters.ativo !== undefined ? filters.ativo : undefined,
+    vigente: filters.vigente ? 1 : undefined,
   }, { preserveState: true, replace: true });
+}
+
+function limparFiltros() {
+  activeFilters.value = { search: '', ativo: '', vigente: '' };
+  router.get(route('tdap.atas.index'), {}, { preserveState: true, replace: true });
 }
 
 function formatDate(d) {

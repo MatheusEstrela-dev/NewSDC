@@ -1,18 +1,10 @@
 <template>
-  <div class="bg-white dark:bg-slate-800/50 rounded-lg sm:rounded-xl shadow-lg border border-slate-200 dark:border-slate-700/50 overflow-hidden">
-    <div class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center bg-slate-50 dark:bg-slate-800/70">
-      <div class="min-w-0 flex-1">
-        <h3 class="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base truncate">
-          <CubeIcon class="w-4 h-4 sm:w-5 sm:h-5 text-primary-400 flex-shrink-0" />
-          <span class="truncate">{{ title }}</span>
-        </h3>
-        <p class="text-xs text-slate-400 mt-0.5 hidden sm:block">{{ subtitle }}</p>
-      </div>
-      <span class="bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 text-xs font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-blue-200 dark:border-blue-500/30 flex-shrink-0 ml-2">
-        {{ total ?? cisternas.length }}
-      </span>
-    </div>
-
+  <ListSurface
+    :title="title"
+    :subtitle="subtitle"
+    :count="total ?? cisternas.length"
+    :icon="CubeIcon"
+  >
     <div class="overflow-x-auto -mx-px">
       <table class="w-full text-sm">
         <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
@@ -96,7 +88,7 @@
         </tbody>
       </table>
     </div>
-  </div>
+  </ListSurface>
 </template>
 
 <script setup>
@@ -104,6 +96,7 @@ import CubeIcon from '@/Components/Icons/CubeIcon.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import StatusCisternaBadge from '@/Components/Molecules/Cisterna/StatusCisternaBadge.vue';
 import TipoCisternaBadge from '@/Components/Molecules/Cisterna/TipoCisternaBadge.vue';
+import ListSurface from '@/Components/Organisms/Table/ListSurface.vue';
 
 defineProps({
   title: { type: String, default: 'Cisternas cadastradas' },

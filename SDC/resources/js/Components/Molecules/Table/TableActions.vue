@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center gap-2">
+  <div class="flex min-w-max flex-nowrap items-center justify-end gap-1.5 sm:gap-2 whitespace-nowrap">
     <ActionButton
       v-for="action in inlineActions"
       :key="action.name"
@@ -20,6 +20,8 @@
       align="right"
       width="48"
       content-classes="py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+      teleport
+      @open-change="emit('open-change', $event)"
     >
       <template #trigger>
         <ActionButton
@@ -160,6 +162,7 @@ const emit = defineEmits([
   'finalize',
   'check',
   'pdf',
+  'open-change',
 ]);
 
 const actions = computed(() => [

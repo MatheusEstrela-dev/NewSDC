@@ -1,5 +1,6 @@
 <template>
   <form @submit.prevent="handleSubmit" class="processo-form">
+    <fieldset :disabled="viewOnly" style="border: none; padding: 0; margin: 0;">
     <!-- Secao 1: Identificacao do Processo -->
     <FormSection title="Identificacao do Processo" :cols="3">
       <FormSelect
@@ -249,8 +250,10 @@
       />
     </FormSection>
 
+    </fieldset>
+
     <!-- Acoes do Formulario -->
-    <div class="form-actions flex justify-end gap-3 mt-6">
+    <div v-if="!viewOnly" class="form-actions flex justify-end gap-3 mt-6">
       <Button
         type="button"
         variant="secondary"
@@ -315,6 +318,10 @@ const props = defineProps({
     default: 'Salvar Processo',
   },
   isEditing: {
+    type: Boolean,
+    default: false,
+  },
+  viewOnly: {
     type: Boolean,
     default: false,
   },

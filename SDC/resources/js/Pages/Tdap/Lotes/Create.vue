@@ -20,12 +20,12 @@
 
 <script setup>
 import { Head, useForm, router } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TdapLayout from '@/Layouts/TdapLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import LoteForm from '@/Components/Organisms/Tdap/LoteForm.vue';
 import MapIcon from '@/Components/Icons/MapIcon.vue';
 
-defineOptions({ layout: AuthenticatedLayout });
+defineOptions({ layout: TdapLayout });
 
 const props = defineProps({
   ata_id:      { type: Number, default: null },

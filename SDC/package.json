@@ -12,7 +12,9 @@
         "build:pwa": "vite build && workbox generateSW workbox-config.js",
         "test:e2e": "dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test",
         "test:e2e:crud": "dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test tests/e2e/decretacoes-crud.spec.js",
-        "test:e2e:ui": "dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test --ui"
+        "test:e2e:ui": "dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test --ui",
+        "lint:responsive": "node scripts/check-responsive-contract.js",
+        "lint:responsive:baseline": "node scripts/check-responsive-contract.js --update-baseline"
     },
     "devDependencies": {
         "@dotenvx/dotenvx": "^1.57.2",

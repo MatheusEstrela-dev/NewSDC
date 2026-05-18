@@ -33,49 +33,56 @@
     />
 
     <!-- Tabela -->
-    <div class="table-container">
+    <ListSurface
+      title="Órgãos"
+      subtitle="Cadastro e acompanhamento de COMPDEC, REDEC e CEDEC"
+      :count="orgaos.total ?? orgaos.data.length"
+      :icon="BuildingOfficeIcon"
+      class="relative mb-8"
+    >
       <div v-if="loading" class="loading-overlay">
         <div class="spinner"></div>
       </div>
 
-      <table class="orgaos-table">
-        <thead>
+      <div class="overflow-x-auto -mx-px">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
           <tr>
-            <th>Codigo</th>
-            <th>Nome</th>
-            <th>Tipo</th>
-            <th>Municipio</th>
-            <th>Status</th>
-            <th>Usuarios</th>
-            <th class="actions-column">Acoes</th>
+            <th class="px-4 py-3 text-left whitespace-nowrap">Código</th>
+            <th class="px-4 py-3 text-left whitespace-nowrap">Nome</th>
+            <th class="px-4 py-3 text-left whitespace-nowrap">Tipo</th>
+            <th class="px-4 py-3 text-left whitespace-nowrap">Município</th>
+            <th class="px-4 py-3 text-left whitespace-nowrap">Status</th>
+            <th class="px-4 py-3 text-left whitespace-nowrap">Usuários</th>
+            <th class="px-4 py-3 text-right whitespace-nowrap w-48 min-w-48">Ações</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-slate-200 dark:divide-slate-700/30">
           <tr v-if="orgaos.data.length === 0">
-            <td colspan="7" class="empty-state">
-              Nenhum orgao encontrado
+            <td colspan="7" class="px-4 py-12 text-center text-slate-500 dark:text-slate-400">
+              Nenhum órgão encontrado
             </td>
           </tr>
-          <tr v-for="orgao in orgaos.data" :key="orgao.id" class="table-row">
-            <td>
+          <tr v-for="orgao in orgaos.data" :key="orgao.id" class="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/20">
+            <td class="px-4 py-4 whitespace-nowrap">
               <Text variant="mono">{{ orgao.codigo }}</Text>
             </td>
-            <td>
+            <td class="px-4 py-4">
               <Text variant="bold">{{ orgao.nome }}</Text>
             </td>
-            <td>
+            <td class="px-4 py-4 whitespace-nowrap">
               <TipoOrgaoBadge :tipo="orgao.tipo" />
             </td>
-            <td>
+            <td class="px-4 py-4 whitespace-nowrap">
               <Text variant="muted">{{ orgao.municipio?.nome || '-' }}</Text>
             </td>
-            <td>
+            <td class="px-4 py-4 whitespace-nowrap">
               <StatusOrgaoBadge :status="orgao.status" />
             </td>
-            <td>
+            <td class="px-4 py-4 whitespace-nowrap">
               <Text variant="muted">{{ orgao.usuarios_count || 0 }}</Text>
             </td>
-            <td class="actions-column">
+            <td class="px-4 py-4 text-right w-48 min-w-48">
               <div class="flex items-center justify-end">
                 <TableActions
                   :show-view="true"
@@ -91,7 +98,8 @@
           </tr>
         </tbody>
       </table>
-    </div>
+      </div>
+    </ListSurface>
 
     <!-- Paginacao -->
     <Pagination
@@ -130,6 +138,7 @@ import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vu
 import TipoOrgaoBadge from '@/Components/Molecules/Compdec/TipoOrgaoBadge.vue';
 import OrgaoStatsCards from '@/Components/Organisms/Compdec/OrgaoStatsCards.vue';
 import OrgaosFiltersSection from '@/Components/Organisms/Compdec/OrgaosFiltersSection.vue';
+import ListSurface from '@/Components/Organisms/Table/ListSurface.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
@@ -280,15 +289,6 @@ function confirmDelete() {
   @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
 }
 
-.table-container {
-  @apply bg-white dark:bg-slate-800;
-  position: relative;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  margin-bottom: 2rem;
-}
-
 .loading-overlay {
   @apply bg-white/80 dark:bg-slate-900/80;
   position: absolute;
@@ -312,44 +312,4 @@ function confirmDelete() {
   to { transform: rotate(360deg); }
 }
 
-.orgaos-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.orgaos-table thead {
-  @apply bg-gray-50 dark:bg-slate-700;
-  border-bottom: 2px solid #e5e7eb;
-}
-
-.orgaos-table th {
-  @apply text-gray-700 dark:text-gray-300;
-  padding: 1rem;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.orgaos-table td {
-  @apply border-b border-gray-200 dark:border-slate-700;
-  padding: 1rem;
-}
-
-.table-row {
-  @apply hover:bg-gray-50 dark:hover:bg-slate-700/50;
-  transition: background-color 0.15s ease;
-}
-
-.empty-state {
-  @apply text-gray-500 dark:text-gray-400;
-  text-align: center;
-  padding: 3rem;
-}
-
-.actions-column {
-  width: 180px;
-  text-align: right;
-}
 </style>
