@@ -80,8 +80,17 @@ function checkFile(filePath) {
   }
 
   // Regra 2: overflow-x-auto envolvendo <table> sem ResponsiveTable
+  //
+  // Janela de 800 chars cobre Organisms tipicas (em alguns Organisms grandes,
+  // a wrapper div pode ter centenas de chars de markup intermediario antes do
+  // <table>). Falsos positivos sao mitigados pelo `!/<ResponsiveTable/` global.
+  //
+  // Cobre tambem class binding estatico (class="...overflow-x-auto..."), mas
+  // NAO cobre :class="{ 'overflow-x-auto': cond }" - este caso e raro e
+  // intencionalmente nao bloqueado (so usar <ResponsiveTable> ja eh suficiente
+  // para passar o lint).
   const overflowWrappingTable =
-    /class="[^"]*overflow-x-auto[^"]*"[\s\S]{0,200}?<table/.test(template) &&
+    /class="[^"]*overflow-x-auto[^"]*"[\s\S]{0,800}?<table/.test(template) &&
     !/<ResponsiveTable/.test(template);
   if (overflowWrappingTable) {
     violations.push({

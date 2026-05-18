@@ -28,6 +28,17 @@ const breakpointColor = computed(() => {
 });
 
 let observer = null;
+let scanTimeoutId = null;
+
+function scheduleScan() {
+  // Debounce 250ms para evitar scans excessivos em paginas Inertia
+  // com mutacoes frequentes (re-render, hot-reload, etc).
+  if (scanTimeoutId) clearTimeout(scanTimeoutId);
+  scanTimeoutId = setTimeout(() => {
+    scanTimeoutId = null;
+    scanViolations();
+  }, 250);
+}
 
 function scanViolations() {
   if (typeof document === 'undefined') return;
@@ -79,7 +90,7 @@ onMounted(() => {
   if (!props.enabled || typeof window === 'undefined') return;
   scanViolations();
   observer = new MutationObserver(() => {
-    scanViolations();
+    scheduleScan();
   });
   observer.observe(document.body, { childList: true, subtree: true });
 });
@@ -88,6 +99,10 @@ onUnmounted(() => {
   if (observer) {
     observer.disconnect();
     observer = null;
+  }
+  if (scanTimeoutId) {
+    clearTimeout(scanTimeoutId);
+    scanTimeoutId = null;
   }
 });
 </script>

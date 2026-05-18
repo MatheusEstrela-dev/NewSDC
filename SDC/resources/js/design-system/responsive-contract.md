@@ -2,7 +2,7 @@
 
 > **Status:** OBRIGATORIO desde 2026-05-18 (Fase 0 da auditoria frontend).
 > Toda nova feature, refactor ou correcao deve seguir este contrato.
-> O lint custom `scripts/eslint-rules/no-bare-table.js` falha o build em violacoes basicas.
+> O lint custom `scripts/check-responsive-contract.js` (npm script `lint:responsive`) falha em violacoes basicas. Roda em modo baseline para PRs - so bloqueia NOVAS violacoes.
 
 ## 1. Breakpoints (fonte unica de verdade)
 

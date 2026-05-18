@@ -915,23 +915,13 @@ onUnmounted(() => {
 provide('sidebarCollapsed', isCollapsed);
 </script>
 
-<style src="./Sidebar.styles.css" scoped></style>
+<!--
+  Estilos extraidos para ./Sidebar.styles.css (Fase 5.0 da auditoria).
+  Estrutura dos estilos externos (busque os marcadores [REGION:*] em Sidebar.styles.css):
+    - base, header, nav, views, submenu, gradients, mobile-ui
 
-<style scoped>
-/*
- * Estilos da Sidebar foram extraidos para ./Sidebar.styles.css (importado acima).
- * Este bloco fica reservado para overrides locais futuros ou estilos
- * temporarios em A/B test. Manter vazio em producao.
- *
- * Estrutura dos estilos externos (busque os marcadores [REGION:*] em Sidebar.styles.css):
- *   - base, header, nav, views, submenu, gradients, mobile-ui
- *
- * REGRA: para garantir que selectores recebam o atributo data-v-* (scoped),
- * adicione todos os estilos em Sidebar.styles.css. NAO use @import dentro
- * de Sidebar.styles.css - imports aninhados podem perder o scope.
- */
-.__sidebar_external_styles__ {
-  /* marcador inerte - mantem o bloco scoped valido */
-  display: contents;
-}
-</style>
+  REGRA: para garantir que selectors recebam o atributo data-v-* (scoped),
+  adicione todos os estilos em Sidebar.styles.css. NAO use @import dentro
+  de Sidebar.styles.css - imports aninhados podem perder o scope.
+-->
+<style src="./Sidebar.styles.css" scoped></style>
