@@ -5,11 +5,18 @@ import PullToRefresh from '@/Components/Molecules/PullToRefresh.vue';
 import ToastContainer from '@/Components/Atoms/Toast/ToastContainer.vue';
 import ContentAreaSkeleton from '@/Components/Molecules/Skeleton/ContentAreaSkeleton.vue';
 import NavigationHeader from '@/Components/Organisms/Navigation/NavigationHeader.vue';
+import ResponsiveDebugOverlay from '@/Components/Atoms/ResponsiveDebugOverlay.vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import TopBar from '@/Components/TopBar.vue';
 import { useMobile, useSidebarMobile } from '@/Composables/useMobile';
 import { usePageLoading } from '@/Composables/usePageLoading';
-import { defineAsyncComponent, provide, ref } from 'vue';
+import { computed, defineAsyncComponent, provide, ref } from 'vue';
+
+const responsiveDebugEnabled = computed(() => {
+  if (typeof window === 'undefined') return false;
+  if (import.meta.env.PROD) return false;
+  return new URLSearchParams(window.location.search).get('debug') === 'responsive';
+});
 
 const { isPageLoading } = usePageLoading();
 
@@ -112,6 +119,9 @@ provide('openSidebar', openSidebar);
         </div>
       </footer>
     </div>
+    <!-- Responsive Debug Overlay (dev only, ativado via ?debug=responsive) -->
+    <ResponsiveDebugOverlay :enabled="responsiveDebugEnabled" />
+
     <!-- Support Modal -->
     <SupportModal :show="showSupportModal" @close="showSupportModal = false" />
     <!-- Termos Uso Modal -->

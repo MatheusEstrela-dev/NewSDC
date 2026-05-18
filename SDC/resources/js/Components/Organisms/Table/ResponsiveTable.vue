@@ -1,7 +1,8 @@
 <template>
-  <div class="responsive-table-container">
-    <!-- Desktop: Tabela tradicional -->
-    <div class="table-desktop hidden md:block">
+  <div class="responsive-table-container" data-responsive="true">
+    <!-- Desktop e Tablet: Tabela tradicional -->
+    <!-- Tablet recebe a tabela completa porem o caller pode usar :priority-columns para esconder colunas via CSS -->
+    <div class="table-desktop hidden md:block" :data-priority-columns="priorityColumnsAttr">
       <slot name="table"></slot>
     </div>
 
@@ -132,7 +133,17 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  /**
+   * Colunas prioritarias exibidas em viewport tablet (768-1023px).
+   * Caller usa este array para hidratar `data-priority` em <th>/<td> e o CSS esconde colunas nao-prioritarias em tablet.
+   */
+  priorityColumns: {
+    type: Array,
+    default: () => [],
+  },
 });
+
+const priorityColumnsAttr = computed(() => props.priorityColumns.join(','));
 </script>
 
 <style scoped>

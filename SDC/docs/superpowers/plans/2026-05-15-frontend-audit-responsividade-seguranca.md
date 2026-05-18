@@ -1,4 +1,5 @@
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 # Auditoria Frontend NewSDC: Responsividade, Bugs, Mobile e Infiltracoes
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -7,6 +8,8 @@
 
 **Architecture:** Auditoria por camadas (Layout > Design System > Componentes > Composables > Controllers > Requests) com fixes pontuais e um **contrato unico de responsividade** que todos os modulos passam a seguir. Sem reescrita ampla. Reaproveitar `useMobile.js` como fonte unica de breakpoints.
 =======
+=======
+>>>>>>> Stashed changes
 # Auditoria Frontend NewSDC: Responsividade, Bugs e Infiltracoes
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -14,6 +17,9 @@
 **Goal:** Auditar a SPA NewSDC (Vue3 + Inertia + Tailwind), corrigir bugs de responsividade visiveis (gap da sidebar em viewport tablet), consolidar breakpoints, e varrer o backend Laravel + frontend Vue por vulnerabilidades OWASP Top 10 e dependencias com CVE.
 
 **Architecture:** Auditoria por camadas (Layout > Componentes > Composables > Controllers > Requests) com fixes pontuais. Sem reescrita ampla. Reaproveitar `useMobile.js` (breakpoints Tailwind oficiais) como fonte unica de verdade.
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 **Tech Stack:** Laravel 12, Vue 3, Inertia.js v2, Tailwind 3, Vite 5, TanStack Query, Playwright (E2E), Octane/FrankenPHP, MySQL.
@@ -21,6 +27,7 @@
 **Escopo confirmado:**
 - Alvo: NewSDC apenas (`C:\Users\x24679188\Documents\Github\NewSDC\SDC`)
 - Seguranca: OWASP Top 10 + audit de dependencias (composer/npm)
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 - Profundidade: Abrangente (refactor leve)
 - **Mobile-first por modulo**: cada modulo (RAT, PAE, Decretacoes, Compdec, Demandas, TDAP, Ajuda Humanitaria, Inventario, PlanCon, Plantao, Inmet, Cisternas, Treinamento) recebe revisao Web + Mobile dedicada
@@ -49,6 +56,8 @@
 - Index pages dos modulos (Decretacoes 95L, Demandas 36L, Pae 48L, Rat 69L, Inventario 66L) sao thin wrappers - logica responsiva delegada aos Organisms, mas cada Organism tem implementacao propria divergente.
 - **Diagnostico**: nao existe padrao unico de responsividade entre modulos. Cada modulo reinventa ou ignora. Fase 0 enderecca isto.
 =======
+=======
+>>>>>>> Stashed changes
 - Profundidade: Abrangente (refactor leve, sem DDD)
 - **Mobile-first por modulo**: cada modulo (RAT, PAE, Decretacoes, Compdec, Demandas, TDAP, Ajuda Humanitaria, Inventario, PlanCon, Plantao, Inmet, Cisternas, Treinamento) recebe revisao mobile dedicada
 - **NativePHP**: avaliar empacotamento como app nativo (desktop via electron, iOS/Android via nativephp/ios e nativephp/android)
@@ -72,6 +81,9 @@
 - **Decretacoes mobile**: cards KPI em grid 2 colunas (`Total Eventos`, `Registros`, `Decretacoes`, `Municipios Atingidos`, `Vigentes`) ficam apertados com 5 cards mal distribuidos.
 - **Sidebar mobile drawer**: funciona bem (overlay + drawer 280px), mas logo "SDC MG" sobreposta a horario do sistema (z-index/safe-area).
 - **PAE Painel Gerencial mobile**: cards de KPI em coluna unica (OK), mas falta densidade aproveitavel (apenas 1 card visivel por dobra inicial).
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 ---
@@ -81,6 +93,7 @@
 **Goal:** Eliminar a divergencia de implementacao entre modulos. Definir um **contrato unico de responsividade** que todos os modulos passam a seguir.
 
 **Files:**
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 - Create: `resources/js/design-system/responsive-contract.md`
 - Modify: `resources/js/Components/Organisms/Table/ResponsiveTable.vue` (referencia oficial)
@@ -94,6 +107,8 @@
 
 Criar `resources/js/design-system/responsive-contract.md`:
 =======
+=======
+>>>>>>> Stashed changes
 - Create: `resources/js/design-system/responsive-contract.md` (documentacao do contrato)
 - Modify: `resources/js/Components/Organisms/Table/ResponsiveTable.vue` (tornar referencia oficial)
 - Modify: 8 Organisms de tabela divergentes (ver lista)
@@ -104,6 +119,9 @@ Criar `resources/js/design-system/responsive-contract.md`:
 - [ ] **Step 0.A.1: Documentar o contrato de responsividade**
 
 Criar `resources/js/design-system/responsive-contract.md` com regras OBRIGATORIAS:
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 ```
@@ -112,6 +130,7 @@ Criar `resources/js/design-system/responsive-contract.md` com regras OBRIGATORIA
    - Tablet: 768-1023px (lg)
    - Desktop: >=1024px
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 2. KPI CARDS
    - <640px: 1 ou 2 colunas (par)
@@ -129,6 +148,8 @@ Criar `resources/js/design-system/responsive-contract.md` com regras OBRIGATORIA
 4. FILTROS
    - Desktop: <FilterPanel> sidebar lateral colapsavel
 =======
+=======
+>>>>>>> Stashed changes
 2. KPI CARDS (todos os modulos)
    - <640px: 1 ou 2 colunas (par)
    - 640-1023: 2 ou 3 colunas
@@ -144,11 +165,15 @@ Criar `resources/js/design-system/responsive-contract.md` com regras OBRIGATORIA
 
 4. FILTROS (todos os modulos)
    - Desktop: <FilterPanel> lateral colapsavel
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
    - Tablet: <FilterPanel> em accordion
    - Mobile: <FilterBottomSheet> via chip "Filtros"
 
 5. PAGE HEADER
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
    - Sempre via <PageHeader> com titulo, descricao, breadcrumb, acoes
    - Acoes em mobile colapsam em 3-dot se >2
@@ -208,6 +233,8 @@ Em desenvolvimento, overlay flutuante mostrando viewport atual, breakpoint ativo
 ### 0.D: Commit fundacao
 
 =======
+=======
+>>>>>>> Stashed changes
    - Usar <PageHeader> com titulo, descricao, breadcrumb, acoes
    - Acoes em mobile colapsam em 3-dot menu se >2
 
@@ -278,6 +305,9 @@ Configurar Storybook 7+ com viewport addon. Cada componente novo deve ter storie
 
 - [ ] **Step 0.D.1: Commit**
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 ```bash
 git add resources/js/design-system/ docs/superpowers/audits/2026-05-15-responsive-diff.md \
@@ -285,20 +315,27 @@ git add resources/js/design-system/ docs/superpowers/audits/2026-05-15-responsiv
        scripts/eslint-rules/no-bare-table.js \
        resources/js/Components/Atoms/ResponsiveDebugOverlay.vue
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 git commit -m "feat(design-system): contrato unico de responsividade + catalogo de divergencias"
 ```
 
 =======
+=======
+>>>>>>> Stashed changes
 git commit -m "feat(design-system): define contrato unico de responsividade e cataloga divergencias entre modulos"
 ```
 
 **Apos esta fase, todas as fases seguintes (incluindo 8.X) tem o contrato como guia. Cada modulo na Fase 8 vira esta fase de divergente -> conforme.**
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 ---
 
 ## Fase 1: Mapeamento e Baseline
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 - [ ] **1.1**: Inventario de breakpoints (grep `@media`, `md:`, `lg:`, `xl:`, `2xl:`)
 - [ ] **1.2**: Componentes >800 linhas: `Sidebar.vue` 1464L confirmada. Buscar outros.
@@ -319,6 +356,8 @@ git commit -m "feat(design-system): define contrato unico de responsividade e ca
 - [ ] **2.5**: Teste Playwright especifico em 895px (gap detection)
 - [ ] **2.6**: Commit
 =======
+=======
+>>>>>>> Stashed changes
 **Files:**
 - Read: `resources/js/Layouts/AuthenticatedLayout.vue`
 - Read: `resources/js/Components/Sidebar.vue` (1464 linhas)
@@ -436,12 +475,16 @@ test('dashboard sem gap em viewport tablet 895px', async ({ page }) => {
 git add resources/js/Layouts/ resources/js/Components/Sidebar.vue tests/e2e/responsividade-tablet.spec.js
 git commit -m "fix(layout): elimina gap vazio da sidebar em viewport tablet (768-1023px)"
 ```
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 ---
 
 ## Fase 3: Consolidacao de Breakpoints e Design Tokens
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 - [ ] **3.1**: Tornar `BREAKPOINTS` de `useMobile.js` exportavel e referenciado via CSS custom properties
 - [ ] **3.2**: Substituir 34 `@media` inline por classes Tailwind (priorizar BottomNavigation, Sidebar, TopBar, Dropdown, FormField)
@@ -473,6 +516,8 @@ git commit -m "fix(layout): elimina gap vazio da sidebar em viewport tablet (768
 - [ ] **4.5**: Modal/Drawer 100vw em mobile, `max-w-*` em desktop.
 - [ ] **4.6**: Commit
 =======
+=======
+>>>>>>> Stashed changes
 **Files:**
 - Create: `resources/js/Composables/useResponsive.js` (wrapper expandido de useMobile)
 - Create: `resources/sass/tokens.scss` ou `tailwind.config.js` (extend.spacing)
@@ -570,12 +615,16 @@ responsive: [{
 git add tests/e2e/viewports.spec.js resources/
 git commit -m "fix(responsive): corrige overflow horizontal e ajustes por viewport"
 ```
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 ---
 
 ## Fase 5: Refactor Leve da Sidebar (1464 LOC)
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 - [ ] **5.1**: Extrair permissoes para `useSidebarNavigation.js`
 - [ ] **5.2**: `SidebarSection.vue` (title + slot)
@@ -621,6 +670,8 @@ git commit -m "fix(responsive): corrige overflow horizontal e ajustes por viewpo
 - [ ] **6.F.1**: `security-report.md` com severidade por finding
 - [ ] **6.F.2**: Commit
 =======
+=======
+>>>>>>> Stashed changes
 **Files:**
 - Modify: `resources/js/Components/Sidebar.vue`
 - Create: `resources/js/Components/Organisms/Navigation/SidebarSection.vue`
@@ -781,12 +832,16 @@ Para cada finding: severidade (CRITICO/ALTO/MEDIO/BAIXO), arquivo:linha, descric
 git add app/ resources/js/ tests/Feature/Security/ docs/superpowers/audits/
 git commit -m "security: corrige findings OWASP Top 10 (SQLi, XSS, IDOR, mass-assignment)"
 ```
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 ---
 
 ## Fase 7: Auditoria de Dependencias
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 - [ ] **7.1**: `composer audit` + `composer outdated --direct`
 - [ ] **7.2**: `npm audit` + `npm outdated`
@@ -795,6 +850,8 @@ git commit -m "security: corrige findings OWASP Top 10 (SQLi, XSS, IDOR, mass-as
 - [ ] **7.5**: Confirmar lockfiles versionados
 - [ ] **7.6**: Commit
 =======
+=======
+>>>>>>> Stashed changes
 **Files:**
 - Read: `composer.json`, `composer.lock`, `package.json`, `package-lock.json`
 - Create: `docs/superpowers/audits/2026-05-15-deps-report.md`
@@ -842,12 +899,16 @@ Confirmar que `composer.lock` e `package-lock.json` estao commitados (deploy rep
 git add composer.json composer.lock package.json package-lock.json docs/superpowers/audits/
 git commit -m "chore(deps): atualiza pacotes com CVE e remove abandonados"
 ```
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 ---
 
 ## Fase 8: UX e Responsividade por Modulo (Web + Mobile)
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 **Goal:** Cada modulo migra para o contrato da Fase 0. Tarefas cobrem Desktop, Tablet e Mobile.
 
@@ -964,6 +1025,8 @@ git commit -m "chore(deps): atualiza pacotes com CVE e remove abandonados"
 - [ ] Snapshot Playwright em 375 e 414px para cada modulo
 - [ ] Lighthouse Mobile `--preset=mobile` >=85
 =======
+=======
+>>>>>>> Stashed changes
 **Goal:** Cada modulo recebe revisao dedicada nos 3 modos de uso: **Desktop (>=1280px)**, **Tablet/Laptop (768-1279px)** e **Mobile (<768px)**. Foco em densidade de informacao apropriada para cada viewport, touch targets, gestos e fluxos otimizados.
 
 **Estrutura por modulo:**
@@ -1139,12 +1202,16 @@ git commit -m "feat(ux): componentes base responsivos (KpiGrid, FilterPanel, Res
 git add resources/js/Pages/ resources/js/Components/
 git commit -m "feat(mobile): UX dedicada por modulo (RAT, PAE, Compdec, Decretacoes, TDAP, etc)"
 ```
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 ---
 
 ## Fase 9: NativePHP (App Nativo)
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 ### 9.A: Avaliacao e POC Desktop
 - [ ] **9.A.1**: Decisao arquitetural (PWA vs NativePHP vs Capacitor) - recomendado NativePHP
@@ -1176,6 +1243,8 @@ git commit -m "feat(mobile): UX dedicada por modulo (RAT, PAE, Compdec, Decretac
 - [ ] **9.E.2**: Auto-updater Electron + EAS Update mobile
 - [ ] **9.E.3**: Commit final
 =======
+=======
+>>>>>>> Stashed changes
 **Goal:** Empacotar NewSDC como app nativo para desktop e mobile, aproveitando o stack Laravel ja existente.
 
 **NativePHP fornece:**
@@ -1319,6 +1388,9 @@ Configurar auto-updater do Electron + EAS Update para mobile.
 git add nativephp.config.php app/Providers/NativeAppServiceProvider.php docs/superpowers/nativephp/
 git commit -m "feat(native): empacota NewSDC como app nativo (electron + ios + android)"
 ```
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 ---
@@ -1327,6 +1399,7 @@ git commit -m "feat(native): empacota NewSDC como app nativo (electron + ios + a
 
 | Artefato | Caminho |
 |----------|---------|
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 | Contrato de responsividade | `resources/js/design-system/responsive-contract.md` |
 | Catalogo de divergencias | `docs/superpowers/audits/2026-05-15-responsive-diff.md` |
@@ -1342,6 +1415,8 @@ git commit -m "feat(native): empacota NewSDC como app nativo (electron + ios + a
 | Componentes base | `Components/Atoms/ResponsiveDebugOverlay.vue`, `Molecules/Mobile/{ActionSheet,FilterBottomSheet,KpiGrid,PageHeader}.vue` |
 | Apps nativos | Electron (.exe/.dmg/.AppImage) + iOS (.ipa) + Android (.apk) |
 =======
+=======
+>>>>>>> Stashed changes
 | Relatorio de auditoria visual | `docs/superpowers/audits/2026-05-15-baseline.md` |
 | Relatorio de seguranca | `docs/superpowers/audits/2026-05-15-security-report.md` |
 | Relatorio de dependencias | `docs/superpowers/audits/2026-05-15-deps-report.md` |
@@ -1351,6 +1426,9 @@ git commit -m "feat(native): empacota NewSDC como app nativo (electron + ios + a
 | Sidebar refatorada | commits em Fase 5 |
 | Componentes mobile base | `resources/js/Components/Molecules/Mobile/{MobilePageHeader,MobileKpiGrid,FilterBottomSheet,ActionSheet}.vue` |
 | Apps nativos | builds Electron (.exe/.dmg/.AppImage) + iOS (.ipa) + Android (.apk) |
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 | Docs NativePHP | `docs/superpowers/nativephp/{ios-build,android-build,build-pipeline}.md` |
 
@@ -1358,6 +1436,7 @@ git commit -m "feat(native): empacota NewSDC como app nativo (electron + ios + a
 
 ## Criterios de Aceitacao
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 ### Padronizacao (Fase 0)
 - [ ] Todos os 13 modulos usam `<ResponsiveTable>`, `<KpiGrid>`, `<FilterPanel/BottomSheet>`, `<PageHeader>` do design-system
@@ -1393,6 +1472,8 @@ git commit -m "feat(native): empacota NewSDC como app nativo (electron + ios + a
 - [ ] APK Android assinado gerado
 - [ ] iOS roda em simulador Xcode (TestFlight opcional)
 =======
+=======
+>>>>>>> Stashed changes
 - [ ] Screenshot do dashboard em 895px nao mostra faixa preta vazia a esquerda
 - [ ] Suite Playwright passa nos 8 viewports definidos
 - [ ] Zero overflow horizontal em qualquer viewport >= 320px
@@ -1410,6 +1491,9 @@ git commit -m "feat(native): empacota NewSDC como app nativo (electron + ios + a
 - [ ] **Build NativePHP (Electron) executa sem erros e abre janela funcional**
 - [ ] **APK Android assinado gerado com sucesso para distribuicao interna**
 - [ ] **App iOS roda em simulador Xcode (build TestFlight opcional, requer Apple Dev account)**
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 ---
@@ -1418,6 +1502,7 @@ git commit -m "feat(native): empacota NewSDC como app nativo (electron + ios + a
 
 | Risco | Probabilidade | Mitigacao |
 |-------|---------------|-----------|
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 | Refactor Sidebar quebra navegacao | Media | Snapshots Playwright + diff visual obrigatorio |
 | `composer update` quebra Laravel/Octane | Media | Update incremental, `php artisan test` apos cada |
@@ -1430,6 +1515,8 @@ git commit -m "feat(native): empacota NewSDC como app nativo (electron + ios + a
 | Refactor tabelas->cards quebra bulk actions | Media | Toggle view=table/cards em mobile |
 | Migracao de 13 modulos para contrato unico e custosa | Alta | Fase 0 cria automacao (lint + debug overlay); Fase 8 paraleliza por modulo |
 =======
+=======
+>>>>>>> Stashed changes
 | Refactor da Sidebar quebra navegacao | Media | Snapshots Playwright + diff visual obrigatorio antes de merge |
 | `composer update` quebra Laravel/Octane | Media | Atualizar incrementalmente, rodar `php artisan test` apos cada |
 | Remocao de `md:ml-20` quebra desktop | Baixa | Teste Playwright em viewport 1280, 1440, 1920 antes de commit |
@@ -1439,12 +1526,16 @@ git commit -m "feat(native): empacota NewSDC como app nativo (electron + ios + a
 | Build iOS exige macOS + Apple Developer ($99/ano) | Media | Priorizar Android + Electron primeiro; iOS so apos validacao com stakeholders |
 | Sync offline pode causar conflitos de dados | Media | Definir estrategia "last-write-wins" ou CRDT simples para campos editaveis em campo |
 | Refactor de tabelas para card view quebra fluxos de bulk-action | Media | Manter modo `view=table` em mobile como opcao avancada via toggle |
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 ---
 
 ## Ordem de Execucao Recomendada
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 | Ordem | Fase | Horas | Categoria |
 |-------|------|-------|-----------|
@@ -1475,6 +1566,8 @@ git commit -m "feat(native): empacota NewSDC como app nativo (electron + ios + a
 - **Sprint 3 (1 semana)**: Fases 8.7-8.12, 3, 5 - modulos restantes + refactor
 - **Sprint 4 (1-2 semanas)**: Fase 9 - NativePHP (paralelizavel: Android+Electron em Windows, iOS em macOS)
 =======
+=======
+>>>>>>> Stashed changes
 1. **Fase 0** (6h) - Fundacao: contrato unico de responsividade + catalogo de divergencias entre modulos
 2. **Fase 1** (4h) - Baseline obrigatorio
 3. **Fase 2** (3h) - Fix critico visivel ao usuario (gap tablet)
@@ -1501,4 +1594,7 @@ git commit -m "feat(native): empacota NewSDC como app nativo (electron + ios + a
 - **Sprint 2 (1 semana)**: Fases 4, 8.1-8.6 - mobile dos modulos criticos (RAT, PAE, Compdec, Decretacoes, Demandas, TDAP)
 - **Sprint 3 (1 semana)**: Fases 8.7-8.12, 3, 5 - mobile restante + refactor
 - **Sprint 4 (1-2 semanas)**: Fase 9 - NativePHP (paralelizavel: Android + Electron em Windows, iOS em macOS)
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes

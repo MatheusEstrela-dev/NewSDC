@@ -1,0 +1,94 @@
+[
+  {
+    "file": "resources/js/Pages/Inmet/MapaInmet.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Pages/Tdap/Historicos/Index.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Cisterna/CisternaTable.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Cisterna/CisternaTable.vue",
+    "rule": "no-overflow-x-only"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Compdec/AnexosTable.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Compdec/EquipeTable.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Compdec/PlanosTable.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Decretacoes/DesastreAccordion.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Decretacoes/DesastreAccordion.vue",
+    "rule": "no-overflow-x-only"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Decretacoes/ProcessoTable.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Decretacoes/ProcessoTable.vue",
+    "rule": "no-overflow-x-only"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Estoque/EstoqueExcelExportPanel.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Estoque/EstoqueExcelExportPanel.vue",
+    "rule": "no-overflow-x-only"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Estoque/EstoqueTable.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Estoque/EstoqueTable.vue",
+    "rule": "no-overflow-x-only"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Inventario/InventarioTable.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Inventario/InventarioTable.vue",
+    "rule": "no-overflow-x-only"
+  },
+  {
+    "file": "resources/js/Components/Organisms/LogViewer/LogViewerTable.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Pae/Protocolos/PaeProtocolosTable.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Plantao/PlantaoTable.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Plantao/PlantaoTable.vue",
+    "rule": "no-overflow-x-only"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Rat/Table/RatTable.vue",
+    "rule": "no-bare-table"
+  },
+  {
+    "file": "resources/js/Components/Organisms/Rat/Table/RatTable.vue",
+    "rule": "no-overflow-x-only"
+  }
+]
