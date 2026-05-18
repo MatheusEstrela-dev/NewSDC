@@ -8,14 +8,14 @@
     :is-create="true"
     :last-update="null"
     :view-only="false"
-    @tab-change="tabs.setActiveTab"
+    @tab-change="onTabChange"
   >
     <template #default="{ activeTab }">
       <div v-if="Number(activeTab) === 1">
         <RatDadosGeraisForm
           :rat="null"
           :view-only="false"
-          @save-draft="salvarComAnexos"
+          @save="(data) => salvarComAnexos(data).then(() => unlockAndAdvanceTab(1)).catch(() => {})"
           @finalize="finalizarRat"
           @update:tem-vistoria="temVistoria = $event"
           @update:form-data="currentFormData = $event"
@@ -130,6 +130,21 @@ const {
 const temVistoria = ref(false);
 const currentFormData = ref({ dadosGerais: {}, comunicacao: {}, local: {}, endereco: {} });
 
+// Novo RAT → apenas aba 1 acessível inicialmente
+const unlockedTabs = ref([1]);
+
+function unlockAndAdvanceTab(currentTabId) {
+  const ordered = [1, 2, 3, temVistoria.value ? 4 : null, 5, 6].filter(Boolean);
+  const idx = ordered.indexOf(Number(currentTabId));
+  if (idx >= 0 && idx < ordered.length - 1) {
+    const nextId = ordered[idx + 1];
+    if (!unlockedTabs.value.includes(nextId)) {
+      unlockedTabs.value = [...unlockedTabs.value, nextId];
+    }
+    tabs.setActiveTab(nextId);
+  }
+}
+
 /** Arquivos pendentes vindos do componente RatAttachments. */
 const pendingAttachmentFiles = ref([]);
 
@@ -211,12 +226,18 @@ const currentActiveTab = computed(() => {
   return Number(typeof t === 'object' && t !== null && 'value' in t ? t.value : t);
 });
 
+function onTabChange(tabId) {
+  if (unlockedTabs.value.includes(Number(tabId))) {
+    tabs.setActiveTab(tabId);
+  }
+}
+
 const tabConfig = computed(() => [
-  { id: 1, label: 'Dados Gerais', icon: DocumentTextIcon },
-  { id: 2, label: 'Recursos Empregados', icon: TruckIcon, badge: recursos.value?.length || null },
-  { id: 3, label: 'Envolvidos', icon: UsersIcon, badge: envolvidos.value?.length || null },
-  { id: 4, label: 'Vistoria', icon: ClipboardIcon, hidden: !temVistoria.value },
-  { id: 5, label: 'Historico', icon: ClockIcon },
-  { id: 6, label: 'Anexos', icon: PaperClipIcon },
+  { id: 1, label: 'Dados Gerais',        icon: DocumentTextIcon, disabled: false },
+  { id: 2, label: 'Recursos Empregados', icon: TruckIcon,         badge: recursos.value?.length || null, disabled: !unlockedTabs.value.includes(2) },
+  { id: 3, label: 'Envolvidos',          icon: UsersIcon,         badge: envolvidos.value?.length || null, disabled: !unlockedTabs.value.includes(3) },
+  { id: 4, label: 'Vistoria',            icon: ClipboardIcon,     hidden: !temVistoria.value, disabled: !unlockedTabs.value.includes(4) },
+  { id: 5, label: 'Histórico',           icon: ClockIcon,         disabled: !unlockedTabs.value.includes(5) },
+  { id: 6, label: 'Anexos',             icon: PaperClipIcon,     disabled: !unlockedTabs.value.includes(6) },
 ]);
 </script>

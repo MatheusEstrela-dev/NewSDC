@@ -61,35 +61,33 @@ const localRecursos = ref(
     ? [...props.recursos]
     : [{
         id: Date.now(),
-        tipo_recurso: '',
-        categoria: '',
+        tipo_recurso:      '',
+        categoria:         '',
         orgao_responsavel: '',
-        identificacao: '',
-        condutor: '',
-        descricao: '',
-        data_saida: '',
-        data_chegada: '',
-        km_percorrido: '',
-        local_origem: '',
-        local_destino: '',
-        quantidade: '',
-        capacidade: '',
-        condicao: '',
-        operador: '',
-        contato_emergencia: '',
-        observacoes: '',
-        agentes: [],
+        identificacao:     '',
+        descricao:         '',
+        data_saida:        '',
+        data_chegada:      '',
+        km_percorrido:     '',
+        local_origem:      '',
+        local_destino:     '',
+        quantidade:        '',
+        capacidade:        '',
+        condicao:          '',
+        contato_emergencia:'',
+        observacoes:       '',
+        agentes:           [],
       }]
 );
 
 const adicionarLocal = () => {
   localRecursos.value.push({
-    id: Date.now(),
-    tipo_recurso: '',
-    categoria: '',
-    agentes: [],
-    condicao: '',
-    quantidade: ''
+    id:          Date.now(),
+    tipo_recurso:'',
+    categoria:   '',
+    condicao:    '',
+    quantidade:  '',
+    agentes:     [],
   });
 };
 

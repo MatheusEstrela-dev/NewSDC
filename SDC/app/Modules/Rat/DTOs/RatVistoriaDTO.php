@@ -270,8 +270,8 @@ readonly class RatVistoriaDTO
             vOrgaoSecretariaMunicipal:  self::boolOrNull($data['v_orgao_secretaria_municipal'] ?? $orgaos['secretaria_municipal'] ?? null),
             vOrgaoDefesaCivilEstadual:  self::boolOrNull($data['v_orgao_defesa_civil_estadual']?? $orgaos['defesa_civil_estadual']?? null),
             vOrgaoDnit:                 self::boolOrNull($data['v_orgao_dnit']                 ?? $orgaos['dnit']                 ?? null),
-            vOrgaoPm:                   $data['v_orgao_pm']                                    ?? $orgaos['pm']                   ?? null,
-            vOrgaoBm:                   $data['v_orgao_bm']                                    ?? $orgaos['bm']                   ?? null,
+            vOrgaoPm:                   self::boolToSimOrNull($data['v_orgao_pm']              ?? $orgaos['pm']                   ?? null),
+            vOrgaoBm:                   self::boolToSimOrNull($data['v_orgao_bm']              ?? $orgaos['bm']                   ?? null),
             vOrgaoCrea:                 self::boolOrNull($data['v_orgao_crea']                 ?? $orgaos['crea']                 ?? null),
             vOrgaoEmater:               self::boolOrNull($data['v_orgao_emater']               ?? $orgaos['emater']               ?? null),
             vOrgaoSeapa:                self::boolOrNull($data['v_orgao_seapa']                 ?? $orgaos['seapa']                ?? null),
@@ -290,6 +290,13 @@ readonly class RatVistoriaDTO
     private static function boolOrNull(mixed $v): ?bool
     {
         return $v !== null ? (bool) $v : null;
+    }
+
+    private static function boolToSimOrNull(mixed $v): ?string
+    {
+        if ($v === null || $v === '' || $v === false) return null;
+        if ($v === true || $v === 1 || $v === '1') return 'sim';
+        return is_string($v) ? $v : null;
     }
 
     public function toArray(): array

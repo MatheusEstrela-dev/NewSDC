@@ -60,21 +60,20 @@ const localEnvolvidos = ref(
     ? [...props.envolvidos]
     : [{
         id: Date.now(),
-        nome: '',
-        tipo_envolvimento: '',
-        rg: '',
-        cpf: '',
-        sexo: '',
-        data_nascimento: '',
+        g_tipo_pessoa:   '',
+        p_nome_completo: '',
+        p_cpf:           '',
+        p_sexo:          '',
+        p_data_nascimento: '',
       }]
 );
 
 const adicionarLocal = () => {
   localEnvolvidos.value.push({
     id: Date.now(),
-    nome: '',
-    tipo_envolvimento: '',
-    sexo: '',
+    g_tipo_pessoa:   '',
+    p_nome_completo: '',
+    p_sexo:          '',
   });
 };
 
