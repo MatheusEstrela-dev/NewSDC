@@ -286,23 +286,31 @@ class DecretacoesController extends Controller
     }
 
     /**
-     * A visualizacao de detalhes e feita via modal (DecretacaoDetailModal)
-     * na pagina de listagem. Esta rota redireciona para o index com o
-     * parametro de busca preenchido para abrir o processo correto.
-     *
-     * @param int $id ID do processo
-     * @return RedirectResponse
+     * Visualizacao do processo em modo somente-leitura (mesmo padrao do RAT).
+     * Renderiza a mesma pagina Inertia que a edicao, apenas alternando viewOnly.
+     * Inclui municipiosDesastres para que a Aba 2 (Dados de Desastre) seja navegavel.
      */
-    public function show(int $id): RedirectResponse
+    public function show(int $id): Response
     {
         $processo = $this->processoService->findById($id);
 
         if (!$processo) {
-            return redirect()->route('decretacoes.index');
+            abort(404, 'Processo nao encontrado');
         }
 
-        return redirect()->route('decretacoes.index', [
-            'search' => $processo->n_protocolo_fide,
+        $filterOptions       = $this->processoService->getFilterOptions();
+        $municipiosDesastres = $this->processoService->loadMunicipiosWithDesastreData($processo);
+
+        return Inertia::render('Decretacoes/Processo', [
+            'processo'            => ProcessoResource::make($processo)->resolve(),
+            'tiposDesastre'       => $filterOptions['tipos_desastre'] ?? [],
+            'cobrades'            => $filterOptions['tipos_desastre'] ?? [],
+            'municipios'          => $filterOptions['municipios'] ?? [],
+            'redecs'              => $filterOptions['redecs'] ?? [],
+            'statusOptions'       => $filterOptions['status_options'] ?? [],
+            'analistas'           => $filterOptions['analistas'] ?? [],
+            'municipiosDesastres' => $municipiosDesastres,
+            'viewOnly'            => true,
         ]);
     }
 
@@ -349,10 +357,7 @@ class DecretacoesController extends Controller
     /**
      * Exibe formulario de edicao de processo.
      *
-     * FLUXO: ID -> Service.findById() -> Inertia (ProcessoEdit.vue)
-     *
-     * @param int $id ID do processo
-     * @return Response Pagina Inertia com formulario preenchido
+     * FLUXO: ID -> Service.findById() -> Inertia (Processo.vue com viewOnly=false)
      */
     public function edit(int $id): Response
     {
@@ -364,7 +369,7 @@ class DecretacoesController extends Controller
 
         $filterOptions = $this->processoService->getFilterOptions();
 
-        return Inertia::render('Decretacoes/ProcessoEdit', [
+        return Inertia::render('Decretacoes/Processo', [
             'processo'      => ProcessoResource::make($processo)->resolve(),
             'tiposDesastre' => $filterOptions['tipos_desastre'] ?? [],
             'cobrades'      => $filterOptions['tipos_desastre'] ?? [],
@@ -372,6 +377,7 @@ class DecretacoesController extends Controller
             'redecs'        => $filterOptions['redecs'] ?? [],
             'statusOptions' => $filterOptions['status_options'] ?? [],
             'analistas'     => $filterOptions['analistas'] ?? [],
+            'viewOnly'      => false,
         ]);
     }
 

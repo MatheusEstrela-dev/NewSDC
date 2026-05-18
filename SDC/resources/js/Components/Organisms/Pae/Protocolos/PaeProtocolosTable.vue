@@ -1,19 +1,24 @@
 <template>
-  <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-visible shadow-sm">
-    <div class="overflow-visible">
+  <ListSurface
+    title="Protocolos PAE"
+    subtitle="Gerencie os protocolos de análise de PAE"
+    :count="protocolos.length"
+    :icon="ClipboardDocumentListIcon"
+  >
+    <div class="overflow-x-auto -mx-px">
       <table class="w-full text-sm text-left">
-        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+        <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
           <tr>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Protocolo</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Empreendedor / Estrutura</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Analista</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Datas</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Situação</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-44 min-w-44">Ações</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-72 min-w-72">Ações</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="protocolo in protocolos" :key="protocolo.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+        <tbody class="divide-y divide-slate-200 dark:divide-slate-700/30">
+          <tr v-for="protocolo in protocolos" :key="protocolo.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
             <!-- Protocolo -->
             <td class="px-4 py-3">
               <div class="font-medium text-slate-900 dark:text-white">#{{ protocolo.protocoloNumero }}</div>
@@ -47,7 +52,7 @@
             </td>
 
             <!-- Acoes -->
-            <td class="px-4 py-3 w-44 min-w-44">
+            <td class="px-4 py-3 w-72 min-w-72">
               <div class="flex items-center justify-end">
                 <TableActions
                   :show-attachments="false"
@@ -81,13 +86,15 @@
         </tbody>
       </table>
     </div>
-  </div>
+  </ListSurface>
 </template>
 
 <script setup>
+import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import PrazosPill from '@/Components/Molecules/Pae/Protocolos/PrazosPill.vue';
 import StatusPill from '@/Components/Molecules/Pae/Protocolos/StatusPill.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ListSurface from '@/Components/Organisms/Table/ListSurface.vue';
 import { isAssignableStatus } from '@/Composables/usePaeAssignableStatus';
 
 defineProps({

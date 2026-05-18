@@ -92,14 +92,14 @@
 <script setup>
 import { computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TdapLayout from '@/Layouts/TdapLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 
-defineOptions({ layout: AuthenticatedLayout });
+defineOptions({ layout: TdapLayout });
 
 const props = defineProps({
   ata:       { type: Object, required: true },

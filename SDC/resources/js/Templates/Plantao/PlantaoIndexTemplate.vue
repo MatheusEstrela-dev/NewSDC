@@ -13,8 +13,9 @@ import PlantaoStatsCards from '@/Components/Organisms/Plantao/PlantaoStatsCards.
 import PlantaoTable from '@/Components/Organisms/Plantao/PlantaoTable.vue';
 import { useExport } from '@/Composables/useExport';
 import { useMobile } from '@/Composables/useMobile';
-import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import { ref } from 'vue';
+import { ArrowDownTrayIcon, NewspaperIcon } from '@heroicons/vue/24/outline';
+import { router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   plantoes: {
@@ -59,7 +60,8 @@ const emit = defineEmits(['view', 'edit', 'filter', 'abrir-plantao']);
 
 const viewMode = ref('table');
 const showAbrirModal = ref(false);
-const { isMobile } = useMobile();
+const { isMobile, isTablet } = useMobile();
+const isCompact = computed(() => isMobile.value || isTablet.value);
 
 const handleStatFilter = (statId) => {
   const statusMap = {
@@ -80,6 +82,10 @@ const {
 const handleExportCsv = (params) => {
   triggerExport(params, props.filters);
 };
+
+const handleBuscarNoticias = () => {
+  router.visit(route('plantao.noticias'));
+};
 </script>
 
 <template>
@@ -93,9 +99,20 @@ const handleExportCsv = (params) => {
       icon-class="text-blue-600 dark:text-blue-400"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
           <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
           <ViewModeToggle v-model="viewMode" />
+
+          <Button
+            variant="secondary"
+            size="md"
+            :icon="NewspaperIcon"
+            icon-position="left"
+            @click="handleBuscarNoticias"
+          >
+            <span class="hidden sm:inline">Buscar Noticias</span>
+            <span class="sm:hidden">Noticias</span>
+          </Button>
 
           <Button
             v-if="canExport"
@@ -140,7 +157,7 @@ const handleExportCsv = (params) => {
 
     <!-- Grid (Mobile ou Desktop selecionado) -->
     <PlantaoGrid
-      v-if="viewMode === 'grid' || isMobile"
+      v-if="viewMode === 'grid' || isCompact"
       :plantoes="plantoes"
       :can-edit="canEdit"
       :can-delete="canDelete"
@@ -151,7 +168,7 @@ const handleExportCsv = (params) => {
 
     <!-- Tabela (Desktop selecionado) -->
     <PlantaoTable
-      v-else-if="viewMode === 'table' && !isMobile"
+      v-else-if="viewMode === 'table' && !isCompact"
       :plantoes="plantoes"
       :can-edit="canEdit"
       :can-delete="canDelete"

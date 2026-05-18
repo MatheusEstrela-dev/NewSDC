@@ -2,13 +2,13 @@
   <PaeCard title="4. Anexos">
     <div class="space-y-6">
       <div
-        v-if="!formularioId"
+        v-if="!viewOnly && !formularioId"
         class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-200"
       >
         Salve as Informacoes Gerais antes de adicionar anexos.
       </div>
 
-      <form class="space-y-4" @submit.prevent="handleSubmit">
+      <form v-if="!viewOnly" class="space-y-4" @submit.prevent="handleSubmit">
         <div
           class="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-5"
           :class="formularioId ? 'hover:border-blue-500/50' : 'opacity-60'"
@@ -119,6 +119,7 @@
                 Baixar
               </button>
               <button
+                v-if="!viewOnly"
                 type="button"
                 :disabled="saving"
                 class="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-500 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
@@ -162,6 +163,10 @@ const props = defineProps({
   errorMessage: {
     type: String,
     default: '',
+  },
+  viewOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 

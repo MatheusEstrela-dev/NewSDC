@@ -1,5 +1,7 @@
 <script setup>
-
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ListSurface from '@/Components/Organisms/Table/ListSurface.vue';
+import { ClockIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   plantoes: {
@@ -25,27 +27,19 @@ const getStatusClasses = (status) => {
   }
   return 'bg-slate-500/15 text-slate-400 ring-1 ring-slate-500/25';
 };
-
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 </script>
 
 <template>
-  <div class="bg-white dark:bg-slate-800/60 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700/50 overflow-hidden backdrop-blur-sm">
-    <!-- Header -->
-    <div class="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-      <div class="flex items-center space-x-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <h3 class="font-semibold text-slate-900 dark:text-white text-sm sm:text-base">Histórico de Plantões</h3>
-      </div>
-    </div>
-
-    <!-- Table -->
-    <div class="overflow-x-auto">
+  <ListSurface
+    title="Histórico de Plantões"
+    subtitle="Turnos e lançamentos operacionais"
+    :count="plantoes.length"
+    :icon="ClockIcon"
+  >
+    <div class="overflow-x-auto -mx-px">
       <table class="w-full text-left text-sm">
-        <thead>
-          <tr class="text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-700/20">
+        <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
+          <tr>
             <th class="px-6 py-3.5 font-semibold text-xs uppercase tracking-wider">Data</th>
             <th class="px-6 py-3.5 font-semibold text-xs uppercase tracking-wider">Plantonista</th>
             <th class="px-6 py-3.5 font-semibold text-xs uppercase tracking-wider">Período</th>
@@ -53,7 +47,7 @@ import TableActions from '@/Components/Molecules/Table/TableActions.vue';
             <th class="px-6 py-3.5 font-semibold text-xs uppercase tracking-wider text-right w-36 min-w-36">Ações</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
+        <tbody class="divide-y divide-slate-200 dark:divide-slate-700/30">
           <tr
             v-for="item in plantoes"
             :key="item.id"
@@ -97,5 +91,5 @@ import TableActions from '@/Components/Molecules/Table/TableActions.vue';
         </tbody>
       </table>
     </div>
-  </div>
+  </ListSurface>
 </template>

@@ -7,7 +7,7 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
           <Button
             v-if="canExport"
             variant="success"
@@ -39,35 +39,42 @@
         </div>
       </div>
 
-      <div class="hidden sm:block rounded-xl border border-slate-700/50 overflow-hidden">
-        <table class="w-full">
-          <thead class="bg-slate-800/80">
+      <ListSurface
+        class="hidden sm:block"
+        title="Municípios"
+        :subtitle="description"
+        :count="filteredMunicipios.length"
+        :icon="icon"
+      >
+        <div class="overflow-x-auto -mx-px">
+        <table class="w-full text-sm">
+          <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left font-semibold tracking-wider">
                 Municipio
               </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left font-semibold tracking-wider">
                 Codigo IBGE
               </th>
-              <th v-if="showSituacao" class="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              <th v-if="showSituacao" class="px-4 py-3 text-left font-semibold tracking-wider">
                 Situacao
               </th>
-              <th v-if="showDataAtualizacao" class="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              <th v-if="showDataAtualizacao" class="px-4 py-3 text-left font-semibold tracking-wider">
                 Ultima Atualizacao
               </th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              <th class="px-4 py-3 text-right font-semibold tracking-wider">
                 Acoes
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-700/50">
+          <tbody class="divide-y divide-slate-200 dark:divide-slate-700/30">
             <tr
               v-for="municipio in paginatedMunicipios"
               :key="municipio.id"
-              class="hover:bg-slate-700/30 transition-colors"
+              class="hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors"
             >
               <td class="px-4 py-3">
-                <span class="font-medium text-slate-200">{{ municipio.nome }}</span>
+                <span class="font-medium text-slate-900 dark:text-slate-200">{{ municipio.nome }}</span>
               </td>
               <td class="px-4 py-3">
                 <span class="text-slate-400 font-mono text-sm">{{ municipio.codigoIbge || '-' }}</span>
@@ -99,7 +106,8 @@
             </tr>
           </tbody>
         </table>
-      </div>
+        </div>
+      </ListSurface>
 
       <div class="sm:hidden space-y-3">
         <div
@@ -162,6 +170,7 @@
 import { ref, computed } from 'vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import ListSurface from '@/Components/Organisms/Table/ListSurface.vue';
 import {
   ArrowDownTrayIcon,
   MagnifyingGlassIcon,

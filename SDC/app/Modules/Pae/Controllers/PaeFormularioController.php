@@ -78,6 +78,27 @@ class PaeFormularioController extends Controller
         ]);
     }
 
+    public function showProtocolo(Request $request, PaeProtocolo $paeProtocolo): Response
+    {
+        $form = PaeForm::with(['apontamentos', 'conclusao', 'anexos'])
+            ->where('pae_protocolo_id', $paeProtocolo->id)
+            ->first();
+
+        return Inertia::render('Pae', [
+            'municipios' => Municipio::orderBy('nome')->pluck('nome', 'id'),
+            'formulario' => $form
+                ? $this->service->formatForView($form)
+                : ['pae_protocolo_id' => $paeProtocolo->id],
+            'protocolo'  => [
+                'id'            => $paeProtocolo->id,
+                'num_protocolo' => $paeProtocolo->num_protocolo,
+                'status'        => $paeProtocolo->status?->value ?? $paeProtocolo->status,
+            ],
+            'viewOnly'   => true,
+            'canEdit'    => $request->user()?->can('pae.empreendimentos.edit') ?? false,
+        ]);
+    }
+
     public function edit(PaeProtocolo $paeProtocolo): Response|RedirectResponse
     {
         $form = PaeForm::with(['apontamentos', 'conclusao', 'anexos'])

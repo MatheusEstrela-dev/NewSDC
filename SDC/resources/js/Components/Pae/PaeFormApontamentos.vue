@@ -46,6 +46,7 @@
                   ]"
                 />
                 <button
+                  v-if="!viewOnly"
                   type="button"
                   @click="$emit('remove-sub', index, childIndex)"
                   class="flex-shrink-0 mt-2 text-red-500/50 hover:text-red-500 transition-colors"
@@ -57,6 +58,7 @@
             </div>
 
             <button
+              v-if="!viewOnly"
               type="button"
               @click="$emit('add-sub', index)"
               class="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors"
@@ -67,6 +69,7 @@
           </div>
 
           <button
+            v-if="!viewOnly"
             type="button"
             @click="$emit('remove-item', index)"
             :disabled="items.length === 1"
@@ -79,6 +82,7 @@
       </div>
 
       <button
+        v-if="!viewOnly"
         type="button"
         @click="$emit('add-item')"
         class="w-full py-4 flex items-center justify-center gap-2 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500/50 dark:hover:border-blue-500/50 rounded-xl text-slate-500 dark:text-slate-400 hover:text-blue-400 font-medium text-sm transition-colors"
@@ -88,7 +92,7 @@
       </button>
     </div>
 
-    <div class="flex justify-end pt-2">
+    <div v-if="!viewOnly" class="flex justify-end pt-2">
       <button
         type="button"
         :disabled="saving"
@@ -109,6 +113,10 @@ defineProps({
     required: true,
   },
   saving: {
+    type: Boolean,
+    default: false,
+  },
+  viewOnly: {
     type: Boolean,
     default: false,
   },

@@ -21,7 +21,10 @@
     </button>
 
     <!-- Conteudo do Municipio -->
-    <div v-show="isExpanded" class="p-4 border-t border-slate-200 dark:border-slate-700/50 space-y-6">
+    <div
+      v-show="isExpanded"
+      :class="['p-4 border-t border-slate-200 dark:border-slate-700/50 space-y-6', { 'is-view-only': viewOnly }]"
+    >
       <!-- Protocolo FIDE -->
       <div class="max-w-sm">
         <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
@@ -77,6 +80,10 @@ const props = defineProps({
     type: Number,
     required: true,
   },
+  viewOnly: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['update:municipio']);
@@ -100,3 +107,13 @@ function emitUpdate() {
   emit('update:municipio', JSON.parse(JSON.stringify(localMunicipio.value)));
 }
 </script>
+
+<style scoped>
+.is-view-only :deep(input),
+.is-view-only :deep(select),
+.is-view-only :deep(textarea) {
+  pointer-events: none;
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+</style>

@@ -6,11 +6,13 @@
       @tab-change="activeSubTab = $event"
     />
 
+    <fieldset :disabled="viewOnly" class="contents">
     <div v-if="activeSubTab === 1">
       <PaeFormInfoGerais
         :model-value="rat.infoGerais"
         :municipios="municipios"
         :saving="rat.saving"
+        :view-only="viewOnly"
         @save="handleSaveInfoGerais"
       />
     </div>
@@ -19,6 +21,7 @@
       <PaeFormObjetivoContexto
         :model-value="rat.objetivoContexto"
         :saving="rat.saving"
+        :view-only="viewOnly"
         @save="handleSaveObjetivo"
       />
     </div>
@@ -27,6 +30,7 @@
       <PaeFormApontamentos
         :items="rat.apontamentos"
         :saving="rat.saving"
+        :view-only="viewOnly"
         @save="handleSaveApontamentos"
         @add-item="rat.addItem('apontamentos')"
         @remove-item="(i) => rat.removeItem('apontamentos', i)"
@@ -43,6 +47,7 @@
         :progress="rat.anexoProgress"
         :status-message="rat.anexoStatus"
         :error-message="rat.anexoError"
+        :view-only="viewOnly"
         @upload="handleUploadAnexo"
         @remove="handleRemoveAnexo"
         @download="handleDownloadAnexo"
@@ -53,6 +58,7 @@
       <PaeFormConclusao
         :items="rat.conclusao"
         :saving="rat.saving"
+        :view-only="viewOnly"
         @save="handleSaveConclusao"
         @finalizar="handleFinalizar"
         @add-item="rat.addItem('conclusao')"
@@ -61,6 +67,7 @@
         @remove-sub="(i, j) => rat.removeSubItem('conclusao', i, j)"
       />
     </div>
+    </fieldset>
   </div>
 </template>
 
@@ -95,6 +102,10 @@ const props = defineProps({
   formulario: {
     type: Object,
     default: null,
+  },
+  viewOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 

@@ -7,7 +7,7 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
           <ViewModeToggle v-model="viewMode" />
           <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
             <span class="hidden sm:inline">Exportar</span>
@@ -53,7 +53,7 @@
 
 
     <EstoqueGrid
-        v-if="(activeSection === 'dashboard' || activeSection === 'produtos') && (viewMode === 'grid' || isMobile)"
+        v-if="(activeSection === 'dashboard' || activeSection === 'produtos') && (viewMode === 'grid' || isCompact)"
       :produtos="produtos"
       :loading="loading"
       :can-edit="canEdit"
@@ -65,7 +65,7 @@
     />
 
     <EstoqueTable
-      v-else-if="activeSection === 'dashboard' || activeSection === 'produtos'"
+      v-else-if="(activeSection === 'dashboard' || activeSection === 'produtos') && viewMode === 'table' && !isCompact"
       :produtos="produtos"
       :loading="loading"
       :can-edit="canEdit"
@@ -117,7 +117,7 @@ import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import { useExport } from '@/Composables/useExport';
 import { useMobile } from '@/Composables/useMobile';
 import { ArchiveBoxIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
   produtos: {
@@ -202,7 +202,8 @@ const emit = defineEmits([
   'assemble',
 ]);
 
-const { isMobile } = useMobile();
+const { isMobile, isTablet } = useMobile();
+const isCompact = computed(() => isMobile.value || isTablet.value);
 const viewMode = ref('table');
 const localFilters = ref({ ...props.filters });
 

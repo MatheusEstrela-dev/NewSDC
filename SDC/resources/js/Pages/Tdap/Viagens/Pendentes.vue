@@ -73,12 +73,12 @@
 
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TdapLayout from '@/Layouts/TdapLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 
-defineOptions({ layout: AuthenticatedLayout });
+defineOptions({ layout: TdapLayout });
 
 defineProps({
   viagens:    { type: Object, default: () => ({ data: [], meta: {} }) },

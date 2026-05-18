@@ -1,6 +1,6 @@
 <template>
     <div>
-        <Head :title="`Editar Processo - ${processo?.data?.n_protocolo_fide || processo?.n_protocolo_fide || 'Processo'}`" />
+        <Head :title="pageTitle" />
         <ProcessoCreateTemplate
           :form="form"
           :tipos-desastre="tiposDesastre"
@@ -9,7 +9,10 @@
           :redecs="redecs"
           :status-options="statusOptions"
           :analistas="analistas"
+          :processo="processoData"
+          :municipios-desastres="municipiosDesastres"
           :is-editing="true"
+          :view-only="viewOnly"
           @submit="handleSubmit"
           @cancel="handleCancel"
         />
@@ -20,6 +23,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ProcessoCreateTemplate from '@/Templates/Decretacoes/ProcessoCreateTemplate.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -52,6 +56,14 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  municipiosDesastres: {
+    type: Array,
+    default: () => [],
+  },
+  viewOnly: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const formatDate = (date) => {
@@ -62,6 +74,13 @@ const formatDate = (date) => {
 };
 
 const processoData = props.processo?.data || props.processo;
+
+const pageTitle = computed(() => {
+  const protocolo = processoData?.n_protocolo_fide || 'Processo';
+  return props.viewOnly
+    ? `Visualizar Processo - ${protocolo}`
+    : `Editar Processo - ${protocolo}`;
+});
 
 const form = useForm({
   tipo_desastre_id: processoData?.tipo_desastre_id || '',
@@ -93,6 +112,7 @@ const form = useForm({
 });
 
 function handleSubmit() {
+  if (props.viewOnly) return;
   const pId = processoData?.id;
   form.put(route('decretacoes.update', pId), {
     preserveScroll: true,

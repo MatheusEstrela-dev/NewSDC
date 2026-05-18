@@ -19,13 +19,13 @@
 
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TdapLayout from '@/Layouts/TdapLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import SwimlaneBoard from '@/Components/Organisms/Tdap/SwimlaneBoard.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 
-defineOptions({ layout: AuthenticatedLayout });
+defineOptions({ layout: TdapLayout });
 
 defineProps({
   boards: { type: Array, default: () => [] },

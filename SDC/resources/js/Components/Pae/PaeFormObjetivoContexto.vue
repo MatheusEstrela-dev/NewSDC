@@ -24,7 +24,7 @@
       />
     </PaeCard>
 
-    <div class="flex justify-end">
+    <div v-if="!viewOnly" class="flex justify-end">
       <button
         type="button"
         :disabled="saving"
@@ -48,6 +48,10 @@ const props = defineProps({
     required: true,
   },
   saving: {
+    type: Boolean,
+    default: false,
+  },
+  viewOnly: {
     type: Boolean,
     default: false,
   },

@@ -25,7 +25,7 @@
     <TableCell class="w-44 whitespace-nowrap">
       {{ rat.criado_por || 'Sistema' }}
     </TableCell>
-    <TableCell align="right" class="w-44 whitespace-nowrap">
+    <TableCell align="right" class="w-56 min-w-56 whitespace-nowrap">
       <div class="flex justify-end">
         <TableActions
           :show-print="true"

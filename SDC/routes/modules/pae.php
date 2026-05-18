@@ -15,6 +15,10 @@ Route::prefix('pae')->name('pae.')->group(function () {
         ->name('index')
         ->middleware('can:pae.empreendimentos.view');
 
+    Route::get('/protocolo/{paeProtocolo}/show', [PaeFormularioController::class, 'showProtocolo'])
+        ->name('protocolo.show')
+        ->middleware('can:pae.empreendimentos.view');
+
     Route::get('/protocolo/{paeProtocolo}/edit', [PaeFormularioController::class, 'edit'])
         ->name('protocolo.edit')
         ->middleware('can:pae.empreendimentos.edit');

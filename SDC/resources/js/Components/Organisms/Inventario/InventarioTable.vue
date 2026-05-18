@@ -1,25 +1,18 @@
 <template>
-  <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
-    <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-800/70">
-      <div class="flex items-center justify-between gap-3">
-        <div class="min-w-0">
-          <h3 class="truncate text-sm font-bold text-slate-900 dark:text-slate-100">Equipamentos</h3>
-          <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Lista inicial do acervo patrimonial</p>
-        </div>
-        <span class="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/15 dark:text-blue-300">
-          {{ equipamentos.length }}
-        </span>
-      </div>
-    </div>
-
+  <ListSurface
+    title="Equipamentos"
+    subtitle="Lista inicial do acervo patrimonial"
+    :count="equipamentos.length"
+    :icon="ArchiveBoxIcon"
+  >
     <div v-if="loading" class="p-10 text-center">
       <div class="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
       <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">Carregando equipamentos...</p>
     </div>
 
-    <div v-else class="overflow-x-auto">
+    <div v-else class="overflow-x-auto -mx-px">
       <table class="w-full text-sm">
-        <thead class="border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase text-slate-500 dark:border-slate-700/50 dark:bg-slate-800 dark:text-slate-400">
+        <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
           <tr>
             <th class="px-4 py-3 text-left">Equipamento</th>
             <th class="px-4 py-3 text-left">Patrimonio</th>
@@ -30,11 +23,11 @@
             <th class="w-28 px-4 py-3 text-right">Acoes</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+        <tbody class="divide-y divide-slate-200 dark:divide-slate-700/30">
           <tr
             v-for="equipamento in equipamentos"
             :key="equipamento.id"
-            class="transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
+            class="transition hover:bg-slate-50 dark:hover:bg-slate-700/20"
           >
             <td class="px-4 py-4">
               <div class="font-semibold text-slate-900 dark:text-slate-100">{{ equipamento.nome }}</div>
@@ -91,12 +84,13 @@
         </tbody>
       </table>
     </div>
-  </div>
+  </ListSurface>
 </template>
 
 <script setup>
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import InventarioStatusBadge from '@/Components/Molecules/Inventario/InventarioStatusBadge.vue';
+import ListSurface from '@/Components/Organisms/Table/ListSurface.vue';
 import { ArchiveBoxIcon } from '@heroicons/vue/24/outline';
 
 defineProps({

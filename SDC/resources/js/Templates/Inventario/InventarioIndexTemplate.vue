@@ -7,7 +7,7 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
           <ViewModeToggle v-model="viewMode" />
           <ActionButton
             module="inventario"
@@ -39,7 +39,7 @@
     />
 
     <InventarioGrid
-      v-if="viewMode === 'grid' || isMobile"
+      v-if="viewMode === 'grid' || isCompact"
       :equipamentos="equipamentos"
       :loading="loading"
       :can-edit="canEdit"
@@ -49,7 +49,7 @@
     />
 
     <InventarioTable
-      v-else
+      v-else-if="viewMode === 'table' && !isCompact"
       :equipamentos="equipamentos"
       :loading="loading"
       :can-edit="canEdit"
@@ -70,7 +70,7 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import { useMobile } from '@/Composables/useMobile';
 import { ArchiveBoxIcon } from '@heroicons/vue/24/outline';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
   equipamentos: {
@@ -115,7 +115,8 @@ const props = defineProps({
 
 const emit = defineEmits(['filter-change', 'clear-filters', 'create', 'edit', 'delete']);
 
-const { isMobile } = useMobile();
+const { isMobile, isTablet } = useMobile();
+const isCompact = computed(() => isMobile.value || isTablet.value);
 const viewMode = ref('table');
 const localFilters = ref({ ...props.filters });
 

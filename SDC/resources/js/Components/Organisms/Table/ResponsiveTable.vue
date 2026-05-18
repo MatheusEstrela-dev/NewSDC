@@ -2,12 +2,12 @@
   <div class="responsive-table-container" data-responsive="true">
     <!-- Desktop e Tablet: Tabela tradicional -->
     <!-- Tablet recebe a tabela completa porem o caller pode usar :priority-columns para esconder colunas via CSS -->
-    <div class="table-desktop hidden md:block" :data-priority-columns="priorityColumnsAttr">
+    <div class="table-desktop hidden lg:block" :data-priority-columns="priorityColumnsAttr">
       <slot name="table"></slot>
     </div>
 
     <!-- Mobile: Cards -->
-    <div class="table-mobile block md:hidden">
+    <div class="table-mobile block lg:hidden">
       <div v-if="items && items.length > 0" class="mobile-cards-list">
         <TableMobileCard
           v-for="(item, index) in items"
@@ -270,7 +270,7 @@ const priorityColumnsAttr = computed(() => props.priorityColumns.join(','));
 }
 
 /* Responsive adjustments */
-@media (min-width: 640px) and (max-width: 767px) {
+@media (min-width: 640px) and (max-width: 1023px) {
   .mobile-cards-list {
     display: grid;
     grid-template-columns: 1fr 1fr;

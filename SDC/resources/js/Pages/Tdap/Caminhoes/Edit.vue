@@ -18,12 +18,12 @@
 
 <script setup>
 import { Head, useForm, router } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TdapLayout from '@/Layouts/TdapLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import CaminhaoForm from '@/Components/Organisms/Tdap/CaminhaoForm.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 
-defineOptions({ layout: AuthenticatedLayout });
+defineOptions({ layout: TdapLayout });
 
 const props = defineProps({
   caminhao:    { type: Object, required: true },

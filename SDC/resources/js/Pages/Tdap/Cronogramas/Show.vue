@@ -162,7 +162,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TdapLayout from '@/Layouts/TdapLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import EstadoBadge from '@/Components/Organisms/Tdap/EstadoBadge.vue';
 import AlocarCaminhaoModal from '@/Components/Organisms/Tdap/AlocarCaminhaoModal.vue';
@@ -172,7 +172,7 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 
-defineOptions({ layout: AuthenticatedLayout });
+defineOptions({ layout: TdapLayout });
 
 const props = defineProps({
   cronograma:        { type: Object, required: true },

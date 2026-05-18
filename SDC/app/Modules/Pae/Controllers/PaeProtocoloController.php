@@ -26,7 +26,7 @@ class PaeProtocoloController extends Controller
 
     public function index(Request $request): \Inertia\Response
     {
-        $filters = $request->only(['search', 'status', 'analista_id', 'data_inicio', 'data_fim']);
+        $filters = $request->only(['search', 'status', 'status_grupo', 'analista_id', 'data_inicio', 'data_fim']);
 
         $user          = $request->user();
         $rolesGestores = ['Gestor', 'Administrador', 'admin', 'super-admin', 'Desenvolvedor'];
@@ -88,11 +88,25 @@ class PaeProtocoloController extends Controller
     public function store(Request $request): \Illuminate\Http\RedirectResponse
     {
         $data = $request->validate([
-            'sigibar'       => ['nullable', 'string', 'max:100'],
-            'sei_numero'    => ['nullable', 'string', 'max:100'],
-            'pae_empnto_id' => ['nullable', 'integer', 'exists:pae_empntos,id'],
-            'obs'           => ['nullable', 'string'],
+            'sigibar'           => ['nullable', 'string', 'max:100'],
+            'sei_numero'        => ['nullable', 'string', 'max:100'],
+            'pae_empnto_id'     => ['nullable', 'integer', 'exists:pae_empntos,id'],
+            'empreendedor_nome' => ['required_without:pae_empnto_id', 'nullable', 'string', 'max:255'],
+            'estrutura_nome'    => ['required_without:pae_empnto_id', 'nullable', 'string', 'max:255'],
+            'obs'               => ['nullable', 'string'],
         ]);
+
+        // Resolve empreendedor + estrutura por nome (find-or-create) quando o cliente
+        // nao envia pae_empnto_id direto.
+        if (empty($data['pae_empnto_id']) && !empty($data['empreendedor_nome']) && !empty($data['estrutura_nome'])) {
+            $data['pae_empnto_id'] = $this->service->resolveEmpntoByNames(
+                trim($data['empreendedor_nome']),
+                trim($data['estrutura_nome'])
+            );
+        }
+
+        // Remove campos auxiliares antes de passar pro service (nao sao colunas do protocolo).
+        unset($data['empreendedor_nome'], $data['estrutura_nome']);
 
         $protocolo = $this->service->create($data, $request->user());
 

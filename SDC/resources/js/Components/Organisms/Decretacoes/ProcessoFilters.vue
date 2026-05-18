@@ -61,7 +61,7 @@
     >
       <div v-show="isExpanded" class="pt-4 space-y-4 overflow-hidden">
         <!-- Filtros Basicos - Grid 4 colunas -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <FilterField
             label="Busca Geral"
             type="text"
@@ -113,7 +113,7 @@
             leave-from-class="opacity-100 max-h-[500px]"
             leave-to-class="opacity-0 max-h-0"
           >
-            <div v-show="showAdvanced" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-hidden">
+            <div v-show="showAdvanced" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 overflow-hidden">
               <FilterField
                 label="Analista"
                 type="select"
@@ -253,7 +253,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:filters', 'apply', 'clear']);
 
-const isExpanded = ref(true);
+const isExpanded = ref(false);
 const showAdvanced = ref(false);
 const showCobrade = ref(false);
 const localFilters = ref({ ...props.filters });

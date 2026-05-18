@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps({
     align: {
@@ -18,16 +18,31 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    teleport: {
+        type: Boolean,
+        default: false,
+    },
 });
+
+const emit = defineEmits(['open-change']);
 
 const closeOnEscape = (e) => {
     if (open.value && e.key === 'Escape') {
-        open.value = false;
+        close();
     }
 };
 
-onMounted(() => document.addEventListener('keydown', closeOnEscape));
-onUnmounted(() => document.removeEventListener('keydown', closeOnEscape));
+onMounted(() => {
+    document.addEventListener('keydown', closeOnEscape);
+    window.addEventListener('resize', updateFloatingPosition);
+    window.addEventListener('scroll', updateFloatingPosition, true);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('keydown', closeOnEscape);
+    window.removeEventListener('resize', updateFloatingPosition);
+    window.removeEventListener('scroll', updateFloatingPosition, true);
+});
 
 const widthClass = computed(() => {
     return {
@@ -48,18 +63,90 @@ const alignmentClasses = computed(() => {
 });
 
 const open = ref(false);
+const triggerRef = ref(null);
+const floatingStyle = ref({});
+
+const widthPx = computed(() => {
+    return {
+        48: 192,
+        80: 320,
+        96: 384,
+    }[props.width.toString()] ?? 192;
+});
+
+watch(open, (value) => {
+    emit('open-change', value);
+    if (value) {
+        nextTick(updateFloatingPosition);
+    }
+});
+
+function toggle() {
+    if (open.value) {
+        close();
+        return;
+    }
+
+    open.value = true;
+}
+
+function close() {
+    open.value = false;
+}
+
+function updateFloatingPosition() {
+    if (!open.value || !props.teleport || !triggerRef.value) return;
+
+    const rect = triggerRef.value.getBoundingClientRect();
+    const viewportPadding = 8;
+    const gap = 8;
+    const width = widthPx.value;
+
+    let left = rect.right - width;
+    if (props.align === 'left') {
+        left = rect.left;
+    } else if (props.align === 'center') {
+        left = rect.left + rect.width / 2 - width / 2;
+    }
+
+    left = Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding));
+
+    const belowSpace = window.innerHeight - rect.bottom - gap - viewportPadding;
+    const aboveSpace = rect.top - gap - viewportPadding;
+    const shouldOpenUp = belowSpace < 120 && aboveSpace > belowSpace;
+
+    const nextStyle = {
+        position: 'fixed',
+        left: `${left}px`,
+        width: `${width}px`,
+        overflowY: 'auto',
+        zIndex: 1000,
+    };
+
+    if (shouldOpenUp) {
+        nextStyle.bottom = `${window.innerHeight - rect.top + gap}px`;
+        nextStyle.maxHeight = `${Math.max(120, aboveSpace)}px`;
+    } else {
+        const top = rect.bottom + gap;
+        nextStyle.top = `${top}px`;
+        nextStyle.maxHeight = `${Math.max(120, belowSpace)}px`;
+    }
+
+    floatingStyle.value = nextStyle;
+}
 </script>
 
 <template>
     <div class="relative">
-        <div @click="open = !open">
+        <div ref="triggerRef" @click="toggle">
             <slot name="trigger" />
         </div>
 
         <!-- Full Screen Dropdown Overlay -->
-        <div v-show="open" class="fixed inset-0 z-40" @click="open = false"></div>
+        <div v-if="!teleport" v-show="open" class="fixed inset-0 z-40" @click="close"></div>
 
         <Transition
+            v-if="!teleport"
             enter-active-class="transition ease-out duration-200"
             enter-from-class="opacity-0 scale-95"
             enter-to-class="opacity-100 scale-100"
@@ -76,13 +163,37 @@ const open = ref(false);
                     mobileFullWidth ? '' : alignmentClasses
                 ]"
                 style="display: none"
-                @click="open = false"
+                @click="close"
             >
                 <div class="rounded-md ring-1 ring-black ring-opacity-5" :class="contentClasses">
                     <slot name="content" />
                 </div>
             </div>
         </Transition>
+
+        <Teleport v-if="teleport" to="body">
+            <div v-show="open" class="fixed inset-0" style="z-index: 999" @click="close"></div>
+
+            <Transition
+                enter-active-class="transition ease-out duration-200"
+                enter-from-class="opacity-0 scale-95"
+                enter-to-class="opacity-100 scale-100"
+                leave-active-class="transition ease-in duration-75"
+                leave-from-class="opacity-100 scale-100"
+                leave-to-class="opacity-0 scale-95"
+            >
+                <div
+                    v-show="open"
+                    class="rounded-md shadow-lg"
+                    :style="floatingStyle"
+                    @click="close"
+                >
+                    <div class="rounded-md ring-1 ring-black ring-opacity-5" :class="contentClasses">
+                        <slot name="content" />
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
     </div>
 </template>
 

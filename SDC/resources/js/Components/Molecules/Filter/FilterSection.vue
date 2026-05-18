@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { computed, ref, Transition, onMounted } from 'vue';
+import { computed, ref, Transition } from 'vue';
 import CardBase from '../../Atoms/Card/CardBase.vue';
 import Heading from '../../Atoms/Typography/Heading.vue';
 import FunnelIcon from '../../Icons/FunnelIcon.vue';
@@ -73,11 +73,11 @@ const isCollapsed = ref(getInitialCollapsed());
 
 const gridClasses = computed(() => {
   const gridCols = {
-    2: 'grid grid-cols-1 md:grid-cols-2 gap-4',
-    3: 'grid grid-cols-1 md:grid-cols-3 gap-4',
-    4: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4',
-    5: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4',
-    6: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4',
+    2: 'grid grid-cols-1 sm:grid-cols-2 gap-4',
+    3: 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4',
+    4: 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4',
+    5: 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4',
+    6: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-4',
   };
   
   return gridCols[props.columns] || gridCols[4];

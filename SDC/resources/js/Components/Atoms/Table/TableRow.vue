@@ -31,10 +31,10 @@ function handleClick(event) {
 }
 
 const rowClasses = computed(() => {
-  const base = 'border-b border-slate-700/50 dark:border-slate-700/50 border-slate-200 transition-colors duration-150';
-  const hoverClass = props.hover ? 'hover:bg-slate-800/30 dark:hover:bg-slate-800/30 hover:bg-slate-100' : '';
+  const base = 'border-b border-slate-200 dark:border-slate-700/30 transition-colors duration-150';
+  const hoverClass = props.hover ? 'hover:bg-slate-100 dark:hover:bg-slate-700/20' : '';
   const clickableClass = props.clickable ? 'cursor-pointer' : '';
-  const stripedClass = props.striped ? 'bg-slate-900/20 dark:bg-slate-900/20 bg-slate-50' : '';
+  const stripedClass = props.striped ? 'bg-slate-50 dark:bg-slate-900/20' : '';
 
   return [
     base,
@@ -44,4 +44,3 @@ const rowClasses = computed(() => {
   ].filter(Boolean).join(' ');
 });
 </script>
-

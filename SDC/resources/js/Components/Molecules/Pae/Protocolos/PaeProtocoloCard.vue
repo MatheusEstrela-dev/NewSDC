@@ -1,5 +1,10 @@
 <template>
-  <CardBase variant="default" padding="lg">
+  <CardBase
+    variant="default"
+    padding="lg"
+    class="relative overflow-visible"
+    :class="actionMenuOpen ? 'z-[80]' : 'z-0'"
+  >
     <div class="flex items-start justify-between gap-3 mb-4">
       <div class="min-w-0">
         <div class="flex items-center gap-2">
@@ -65,6 +70,7 @@
         @archive="$emit('archive', protocolo.id)"
         @options="$emit('options', protocolo.id)"
         @assign="$emit('assign', protocolo.id)"
+        @open-change="actionMenuOpen = $event"
       />
     </div>
   </CardBase>
@@ -83,6 +89,9 @@ import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import PrazosPill from './PrazosPill.vue';
 import StatusPill from './StatusPill.vue';
 import { isAssignableStatus } from '@/Composables/usePaeAssignableStatus';
+import { ref } from 'vue';
+
+const actionMenuOpen = ref(false);
 
 defineProps({
   protocolo: {

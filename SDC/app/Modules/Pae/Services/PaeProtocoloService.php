@@ -6,6 +6,7 @@ namespace App\Modules\Pae\Services;
 
 use App\Models\User;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
+use App\Modules\Pae\Models\PaeEmpdor;
 use App\Modules\Pae\Models\PaeEmpnto;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Models\PaeTramitacao;
@@ -32,7 +33,27 @@ class PaeProtocoloService extends BaseService
             'num_protocolo', 'sigibar', 'sei_numero', 'empnto_search',
         ]);
 
-        if (!empty($filters['status'])) {
+        if (!empty($filters['status_grupo'])) {
+            if ($filters['status_grupo'] === 'historico') {
+                $query->whereIn('status', [
+                    PaeProtocoloStatus::APROVADO->value,
+                    PaeProtocoloStatus::CCPAE->value,
+                    PaeProtocoloStatus::ATIVO_3_ANOS->value,
+                ]);
+            }
+
+            if ($filters['status_grupo'] === 'vencidos') {
+                $query->whereNotNull('limite_analise')
+                    ->where('limite_analise', '<', now()->toDateString())
+                    ->whereNotIn('status', [
+                        PaeProtocoloStatus::APROVADO->value,
+                        PaeProtocoloStatus::CCPAE->value,
+                        PaeProtocoloStatus::ATIVO_3_ANOS->value,
+                        PaeProtocoloStatus::REPROVADO->value,
+                        PaeProtocoloStatus::REVOGADO->value,
+                    ]);
+            }
+        } elseif (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
@@ -101,6 +122,27 @@ class PaeProtocoloService extends BaseService
         $this->registrarTimeline($protocolo, 'criacao', 'Protocolo criado no sistema SDC.', $user);
 
         return $protocolo;
+    }
+
+    /**
+     * Find-or-create de Empreendedor + Estrutura a partir dos nomes informados
+     * no formulario "Novo Protocolo". Retorna o id do PaeEmpnto resolvido.
+     */
+    public function resolveEmpntoByNames(string $empreendedorNome, string $estruturaNome): int
+    {
+        return DB::transaction(function () use ($empreendedorNome, $estruturaNome) {
+            $empdor = PaeEmpdor::firstOrCreate(
+                ['nome' => $empreendedorNome],
+                ['status' => 'ativo']
+            );
+
+            $empnto = PaeEmpnto::firstOrCreate(
+                ['pae_empdor_id' => $empdor->id, 'nome' => $estruturaNome],
+                ['status' => 'ativo']
+            );
+
+            return $empnto->id;
+        });
     }
 
     public function changeStatus(
@@ -201,12 +243,20 @@ class PaeProtocoloService extends BaseService
             ? PaeProtocolo::ativo()->where('analista_atual_id', $analistaId)
             : PaeProtocolo::ativo();
 
+        $ccpaeCount = $base()->where('status', PaeProtocoloStatus::CCPAE->value)->count();
+        $ccpaeProtocoloId = $ccpaeCount === 1
+            ? $base()->where('status', PaeProtocoloStatus::CCPAE->value)
+                ->latest('dt_entrada')
+                ->value('id')
+            : null;
+
         return [
             'total' => $base()->count(),
             'novo' => $base()->where('status', PaeProtocoloStatus::NOVO->value)->count(),
             'analise' => $base()->where('status', PaeProtocoloStatus::ANALISE->value)->count(),
             'aprovado' => $base()->where('status', PaeProtocoloStatus::APROVADO->value)->count(),
-            'ccpae' => $base()->where('status', PaeProtocoloStatus::CCPAE->value)->count(),
+            'ccpae' => $ccpaeCount,
+            'ccpae_protocolo_id' => $ccpaeProtocoloId,
             'ativo_3_anos' => $base()->where('status', PaeProtocoloStatus::ATIVO_3_ANOS->value)->count(),
             'vencidos' => $base()
                 ->whereNotNull('limite_analise')
