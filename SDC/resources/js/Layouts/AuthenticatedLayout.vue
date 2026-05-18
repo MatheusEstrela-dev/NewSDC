@@ -74,7 +74,7 @@ provide('openSidebar', openSidebar);
 
     <!-- Main Content Area -->
     <div
-      class="flex-1 flex flex-col min-h-screen ml-0 md:ml-20 lg:ml-[280px]"
+      class="flex-1 flex flex-col min-h-screen ml-0 lg:ml-[280px]"
       :class="{
         'lg:!ml-20': sidebarCollapsed
       }"

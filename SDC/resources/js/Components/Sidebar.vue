@@ -526,17 +526,17 @@ const isDesktop = inject('isDesktop', ref(true));
 const isSidebarOpen = inject('isSidebarOpen', ref(false));
 const closeSidebar = inject('closeSidebar', () => {});
 
-// Em tablet a sidebar sempre se comporta como collapsed (rail 80px),
-// exceto quando o drawer (is-mobile-open) esta ativo. Isso elimina o gap
-// preto da Fase 2 (md:ml-20 no layout sem icones visiveis no aside).
-// O toggle desktop (toggleSidebar) continua mutando isCollapsed diretamente
-// porque so e visivel em isDesktop.
+// Estrategia tablet: sidebar e DRAWER (translateX(-100%) por padrao, slide-in
+// quando is-mobile-open). NAO ha rail collapsed reservando 80px - o conteudo
+// principal ocupa 100% da viewport em tablet (layout: ml-0 lg:ml-[280px]).
+//
+// effectivelyCollapsed = true significa "renderizar como icone-only" e so
+// vale em desktop quando o toggle e clicado. Em mobile/tablet, quando o
+// drawer abre, mostra sidebar full (effectivelyCollapsed=false sempre).
 const effectivelyCollapsed = computed(() => {
-  // Drawer aberto (tablet ou mobile) -> sidebar full
+  // Drawer aberto em tablet/mobile -> sidebar full
   if (isSidebarOpen.value && (isMobile.value || isTablet.value)) return false;
-  // Tablet sem drawer -> rail collapsed
-  if (isTablet.value) return true;
-  // Desktop ou mobile -> respeita o toggle manual
+  // Desktop -> respeita o toggle manual
   return isCollapsed.value;
 });
 
