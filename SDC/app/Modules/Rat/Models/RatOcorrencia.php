@@ -7,6 +7,7 @@ namespace App\Modules\Rat\Models;
 use App\Modules\Rat\Models\RatAnexo;
 use App\Modules\Rat\Models\RatOcorrenciaHistorico;
 use App\Modules\Rat\Models\RatOcorrenciaRelato;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,7 +15,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RatOcorrencia extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasUuids;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $table = 'rat_ocorrencias';
 

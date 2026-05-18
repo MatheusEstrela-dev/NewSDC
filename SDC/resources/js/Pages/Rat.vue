@@ -162,8 +162,11 @@ const currentActiveTab = computed(() => {
 });
 
 const temVistoria    = ref(props.rat?.tem_vistoria || false);
-<<<<<<< Updated upstream
 const localNumeroBos = ref(props.rat?.numero_bos ?? null);
+
+// Abas desbloqueadas progressivamente: novo RAT começa só com aba 1,
+// RATs existentes ou view-only têm todas as abas acessíveis.
+const maxUnlockedTab = ref(props.isCreate && !props.viewOnly ? 1 : 6);
 
 // Exibe flash message vinda do redirect (ex: após criar novo RAT)
 onMounted(() => {
@@ -174,26 +177,14 @@ onMounted(() => {
   else if (flash?.warning) toast(flash.warning, 'warning', { noIcon: true });
   else if (flash?.error)   toast(flash.error,   'error',   { noIcon: true });
 });
-=======
-const currentFormData = ref(null);
-const creating        = ref(false);
-const ratDebugEnabled = (() => {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('debug') === 'rat' || window.localStorage?.getItem('rat_debug') === '1';
-  } catch {
-    return false;
-  }
-})();
->>>>>>> Stashed changes
 
 const tabConfig = computed(() => [
-  { id: 1, label: 'Dados Gerais',        icon: DocumentTextIcon },
-  { id: 2, label: 'Recursos Empregados', icon: TruckIcon,    badge: recursosState.value?.length > 0  ? recursosState.value.length  : null },
-  { id: 3, label: 'Envolvidos',          icon: UsersIcon,    badge: envolvidosState.value?.length > 0 ? envolvidosState.value.length : null },
-  { id: 4, label: 'Vistoria',            icon: ClipboardIcon, hidden: !temVistoria.value },
-  { id: 5, label: 'Histórico',           icon: ClockIcon },
-  { id: 6, label: 'Anexos',             icon: PaperClipIcon, badge: Array.isArray(anexosState.value) && anexosState.value.length > 0 ? anexosState.value.length : null },
+  { id: 1, label: 'Dados Gerais',        icon: DocumentTextIcon, disabled: false },
+  { id: 2, label: 'Recursos Empregados', icon: TruckIcon,    badge: recursosState.value?.length > 0  ? recursosState.value.length  : null, disabled: maxUnlockedTab.value < 2 },
+  { id: 3, label: 'Envolvidos',          icon: UsersIcon,    badge: envolvidosState.value?.length > 0 ? envolvidosState.value.length : null, disabled: maxUnlockedTab.value < 3 },
+  { id: 4, label: 'Vistoria',            icon: ClipboardIcon, hidden: !temVistoria.value, disabled: maxUnlockedTab.value < 4 },
+  { id: 5, label: 'Histórico',           icon: ClockIcon,    disabled: maxUnlockedTab.value < 5 },
+  { id: 6, label: 'Anexos',             icon: PaperClipIcon, badge: Array.isArray(anexosState.value) && anexosState.value.length > 0 ? anexosState.value.length : null, disabled: maxUnlockedTab.value < 6 },
 ]);
 
 // ─── Save-and-Advance ──────────────────────────────────────────────────────
@@ -227,68 +218,29 @@ function resolveToastMsg(payload) {
 }
 
 async function saveAndAdvance(tabPayload, nextTab) {
-  const ratId  = rat.value?.id;
+  const ratId = rat.value?.id;
   if (!ratId) {
-    toast('RAT ainda não foi criado. Atualize a página.', 'warning', { noIcon: true });
+    toast('Erro: RAT sem ID. Recarregue a página.', 'error', { noIcon: true });
     return;
   }
 
-  const axios  = window.axios || (await import('axios')).default;
-  const csrf   = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+  const axios   = window.axios || (await import('axios')).default;
+  const csrf    = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
   const headers = { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' };
 
   loading.value = true;
   try {
-<<<<<<< Updated upstream
-    const payload = { ...tabPayload };
-    const resp = await axios.patch(route('rat.draft', ratId), payload, { headers });
-=======
-    if (!ratId) {
-      creating.value = true;
-      const payload = {
-        ...buildDadosGeraisPayload(),
-        recursos:   recursosState.value,
-        envolvidos: envolvidosState.value,
-        vistoria:   vistoriaState.value,
-        historico:  historicoEstado.value,
-        ...tabPayload,
-      };
-      if (ratDebugEnabled) {
-        payload._debug = 'rat';
-        console.groupCollapsed('[RAT_DEBUG_CREATE] frontend payload POST /rat');
-        console.info('tabPayload', tabPayload);
-        console.info('payload', payload);
-        console.groupEnd();
-      }
-      router.post(route('rat.store'), payload, {
-        preserveScroll: false,
-        onSuccess: () => {
-          if (ratDebugEnabled) {
-            console.info('[RAT_DEBUG_CREATE] frontend success POST /rat');
-          }
-          toast('RAT criado com sucesso.', 'success', { noIcon: true });
-          if (nextTab !== null) tabs.setActiveTab(nextTab);
-        },
-        onError:   (errors) => {
-          if (ratDebugEnabled) {
-            console.error('[RAT_DEBUG_CREATE] frontend error POST /rat', errors);
-          }
-          toast('Erro ao salvar dados gerais.', 'error', { noIcon: true });
-        },
-        onFinish:  () => { loading.value = false; creating.value = false; },
-      });
-    } else {
-      const payload = { ...tabPayload };
-      await axios.patch(route('rat.draft', ratId), payload, { headers });
->>>>>>> Stashed changes
+    const resp = await axios.patch(route('rat.draft', ratId), tabPayload, { headers });
 
-    // Atualiza o número do BOS no header se o backend retornou um novo valor
     if (resp.data?.numero_bos) localNumeroBos.value = resp.data.numero_bos;
 
     toast(resolveToastMsg(tabPayload), 'success', { noIcon: true });
 
     if (nextTab !== null) {
+      maxUnlockedTab.value = Math.max(maxUnlockedTab.value, nextTab);
       tabs.setActiveTab(nextTab);
+    } else {
+      maxUnlockedTab.value = 6;
     }
   } catch (err) {
     const msg = err.response?.data?.message ?? err.message ?? 'Erro ao salvar.';

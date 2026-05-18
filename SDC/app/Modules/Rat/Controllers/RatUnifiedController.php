@@ -61,8 +61,7 @@ class RatUnifiedController extends BaseController
 
     public function index(Request $request): Response
     {
-
-        $rats = RatOcorrencia::with(['relatosMorph.conteudo', 'creator'])
+        $rats = RatOcorrencia::with(['creator'])
             ->orderByDesc('created_at')
             ->paginate(15);
 
@@ -83,10 +82,8 @@ class RatUnifiedController extends BaseController
     public function create(): RedirectResponse
     {
         $ocorrencia = $this->writeService->create();
-
-        return redirect()
-            ->route('rat.edit', $ocorrencia->id)
-            ->with('success', 'Novo RAT criado. Preencha os dados do boletim.');
+        return redirect()->route('rat.edit', $ocorrencia->id)
+            ->with('success', 'Novo RAT criado. Preencha os dados abaixo.');
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
@@ -141,9 +138,10 @@ class RatUnifiedController extends BaseController
 
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json([
-                    'success' => true,
-                    'id'      => $ocorrencia->id,
-                    'message' => 'RAT criado com sucesso.',
+                    'success'    => true,
+                    'id'         => $ocorrencia->id,
+                    'numero_bos' => $ocorrencia->numero_bos,
+                    'message'    => 'RAT criado com sucesso.',
                 ], 201);
             }
 
@@ -213,9 +211,13 @@ class RatUnifiedController extends BaseController
         $ocorrencia = $this->writeService->findById($id);
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
+        // RAT recém-criado: ainda sem dados gerais preenchidos → começa na aba 1 travada
+        $isNew = !RatRelatoDadosGerais::where('ocorrencia_id', $id)->exists();
+
         return Inertia::render('Rat', [
             'rat'      => (new RatOcorrenciaResource($ocorrencia))->resolve(),
             'viewOnly' => false,
+            'isCreate' => $isNew,
         ]);
     }
 

@@ -18,9 +18,9 @@ class RatRecursoRequest extends FormRequest
     {
         return [
             // Tipo alinhado com o enum do banco: viatura|pe|aereo|aquatico|outro
-            // O DTO também aceita "pessoal" e mapeia para "pe"
-            'recurso_tipo'          => ['nullable', 'string', Rule::in(['viatura', 'pe', 'aereo', 'aquatico', 'outro', 'pessoal'])],
-            'tipo_recurso'          => ['nullable', 'string', Rule::in(['viatura', 'pe', 'aereo', 'aquatico', 'outro', 'pessoal'])],
+            // O DTO aceita aliases (pessoal, a_pe, outros, aeronave, embarcacao) e os mapeia
+            'recurso_tipo'          => ['nullable', 'string', Rule::in(['viatura', 'pe', 'aereo', 'aquatico', 'outro', 'pessoal', 'a_pe', 'aeronave', 'embarcacao', 'outros', 'equipamento', 'material'])],
+            'tipo_recurso'          => ['nullable', 'string', Rule::in(['viatura', 'pe', 'aereo', 'aquatico', 'outro', 'pessoal', 'a_pe', 'aeronave', 'embarcacao', 'outros', 'equipamento', 'material'])],
             'seq'                   => ['nullable', 'integer', 'min:1'],
             'recurso_problemas'     => ['nullable', 'boolean'],
             'recurso_descricao'     => ['nullable', 'string', 'max:1000'],

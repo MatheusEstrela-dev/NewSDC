@@ -18,9 +18,9 @@
       v-model="localData.comunicacao"
     />
 
-    <RatUnidadeSection
+    <RatConfigSection
       :model-value="localData.dadosGerais"
-      @update:model-value="localData.dadosGerais = $event"
+      @update:model-value="onDadosGeraisUpdate($event)"
     />
 
     <RatLocationSection
@@ -31,21 +31,6 @@
       v-model="localData.endereco"
       @location-updated="handleLocationUpdated"
     />
-
-    <!-- Incluir Relatório de Vistoria -->
-    <div class="rat-section-card">
-      <label class="flex items-center gap-3 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          :checked="localData.dadosGerais.tem_vistoria"
-          class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 bg-white dark:bg-slate-900/50"
-          @change="onToggleVistoria($event.target.checked)"
-        />
-        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Incluir Relatório de Vistoria
-        </span>
-      </label>
-    </div>
 
     <RatFormActions
       :view-only="viewOnly"
@@ -61,7 +46,7 @@ import { ref, watch } from 'vue';
 import RatAtendimentoSection from './Sections/RatAtendimentoSection.vue';
 import RatCommunicationSection from './Sections/RatCommunicationSection.vue';
 import RatNaturezaSection from './Sections/RatNaturezaSection.vue';
-import RatUnidadeSection from './Sections/RatUnidadeSection.vue';
+import RatConfigSection from './Sections/RatConfigSection.vue';
 import RatLocationSection from './Sections/RatLocationSection.vue';
 import RatAddressSection from './Sections/RatAddressSection.vue';
 import RatFormActions from '@/Components/Molecules/Rat/RatFormActions.vue';
@@ -111,10 +96,10 @@ const localData = ref({
     tem_vistoria: _dg.tem_vistoria ?? props.rat?.tem_vistoria ?? false,
   },
   comunicacao: {
-    data_comunicacao: _com.data_comunicacao || '',
-    tipo_solicitacao: _com.tipo_solicitacao || '',
-    telefone_contato: _com.telefone_contato || '',
-    nome_solicitante: _com.nome_solicitante || '',
+    data_comunicacao: _com.data_comunicacao || _com.com_ocorrencia_data || '',
+    tipo_solicitacao: _com.tipo_solicitacao || _com.com_ocorrencia_atendimento || '',
+    telefone_contato: _com.telefone_contato || _com.com_telefone_contato || '',
+    nome_solicitante: _com.nome_solicitante || _com.com_nome_solicitante || '',
   },
   local: {
     pais: _loc.pais ?? _loc.pais_id ?? 'BR',
@@ -136,11 +121,11 @@ const localData = ref({
   },
 });
 
-function onToggleVistoria(value) {
+function onDadosGeraisUpdate(newDg) {
   const hadVistoria = localData.value.dadosGerais.tem_vistoria;
-  localData.value.dadosGerais = { ...localData.value.dadosGerais, tem_vistoria: value };
-  if (value !== hadVistoria) {
-    emit('update:tem-vistoria', value);
+  localData.value.dadosGerais = newDg;
+  if (newDg.tem_vistoria !== hadVistoria) {
+    emit('update:tem-vistoria', newDg.tem_vistoria);
   }
 }
 

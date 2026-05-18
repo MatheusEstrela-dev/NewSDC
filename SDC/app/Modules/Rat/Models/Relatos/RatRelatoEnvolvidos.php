@@ -37,6 +37,8 @@ class RatRelatoEnvolvidos extends RatRelato
         'p_tipo_selecionado',
         'p_numero',
         'p_orgao_expedidor',
+        'p_uf',
+        'p_idade_aparente',
         'p_nome_completo',
         'p_nome_fantasia',
         'p_data_nascimento',
@@ -80,6 +82,7 @@ class RatRelatoEnvolvidos extends RatRelato
 
     protected $casts = [
         'p_data_nascimento'        => 'date',
+        'p_idade_aparente'         => 'integer',
         'g_envolvido_presenca'     => 'boolean',
         'g_envolvido_servico'      => 'boolean',
         'p_turista'                => 'boolean',

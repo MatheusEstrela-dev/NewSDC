@@ -31,6 +31,8 @@ class RatEnvolvidoRequest extends FormRequest
             'p_tipo'                          => ['nullable', 'string', 'max:50'],
             'p_numero'                        => ['nullable', 'string', 'max:50'],
             'p_orgao_expedidor'               => ['nullable', 'string', 'max:50'],
+            'p_uf'                            => ['nullable', 'string', 'max:2'],
+            'p_idade_aparente'                => ['nullable', 'integer', 'min:0', 'max:150'],
             'p_nome_completo'                 => ['nullable', 'string', 'max:255'],
             'p_nome_fantasia'                 => ['nullable', 'string', 'max:255'],
             'p_data_nascimento'               => ['nullable', 'date'],

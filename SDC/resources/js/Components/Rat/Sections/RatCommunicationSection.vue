@@ -41,11 +41,27 @@
         :error="errors.tipo_solicitacao"
       />
     </div>
+
+    <div class="rat-grid-2">
+      <FormField
+        label="Nome do Solicitante"
+        v-model="localData.nome_solicitante"
+        placeholder="Nome de quem solicitou o atendimento"
+      />
+      <FormField
+        label="Telefone de Contato"
+        v-model="localData.telefone_contato"
+        placeholder="(00) 00000-0000"
+        mask="phone"
+        type="tel"
+      />
+    </div>
   </RatCollapsibleSection>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue';
+import FormField from '@/Components/Form/FormField.vue';
 import FormSelect from '@/Components/Form/FormSelect.vue';
 import DatePicker from '@/Components/Form/DatePicker.vue';
 import TimePicker from '@/Components/Form/TimePicker.vue';
@@ -57,6 +73,8 @@ const props = defineProps({
     default: () => ({
       data_comunicacao: '',
       tipo_solicitacao: '',
+      nome_solicitante: '',
+      telefone_contato: '',
     }),
   },
   errors: {

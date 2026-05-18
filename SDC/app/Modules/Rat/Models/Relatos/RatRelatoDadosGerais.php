@@ -51,7 +51,9 @@ class RatRelatoDadosGerais extends RatRelato
         'local_ocorrencia_estradas_rodovias',
         'local_unidade_militar',
         'tem_vistoria',
-        'descricao', // Narrative history
+        'descricao',
+        'com_telefone_contato',
+        'com_nome_solicitante',
         'status',
     ];
 

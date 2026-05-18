@@ -94,8 +94,10 @@ class RatResource extends JsonResource
 
             // ── Comunicação: nomes que RatCommunicationSection.vue usa ──
             'comunicacao' => [
-                'data_comunicacao' => $dt($dg['com_ocorrencia_data'] ?? null),
-                'tipo_solicitacao' => $dg['com_ocorrencia_atendimento'] ?? null,
+                'data_comunicacao'  => $dt($dg['com_ocorrencia_data'] ?? null),
+                'tipo_solicitacao'  => $dg['com_ocorrencia_atendimento'] ?? null,
+                'telefone_contato'  => $dg['com_telefone_contato'] ?? null,
+                'nome_solicitante'  => $dg['com_nome_solicitante'] ?? null,
             ],
 
             // ── Local: nomes que RatLocationSection.vue usa ──
@@ -213,6 +215,9 @@ class RatResource extends JsonResource
                     'bairro'           => $c['p_end_bairro'] ?? null,
                     'municipio'        => $c['p_end_municipio'] ?? null,
                     'uf'               => $c['p_end_estado_uf'] ?? null,
+                    // Campos adicionais
+                    'p_uf'             => $c['p_uf'] ?? null,
+                    'p_idade_aparente' => $c['p_idade_aparente'] ?? null,
                 ]);
             })->filter()->values()->toArray(),
 

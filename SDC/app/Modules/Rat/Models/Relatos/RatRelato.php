@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Models\Relatos;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +15,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 abstract class RatRelato extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $fillable = [
         'ocorrencia_id',

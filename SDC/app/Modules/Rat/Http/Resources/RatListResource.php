@@ -11,29 +11,15 @@ class RatListResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $dadosGerais = $this->relatosMorph
-            ->first(fn($r) => $r->conteudo instanceof \App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais)
-            ?->conteudo;
+        /** @var \App\Modules\Rat\Models\RatOcorrencia $this */
 
-        $recursos = $this->relatosMorph
-            ->filter(fn($r) => $r->conteudo instanceof \App\Modules\Rat\Models\Relatos\RatRelatoRecurso)
-            ->map(fn($r) => $r->conteudo?->toArray())
-            ->values();
-
-        $envolvidos = $this->relatosMorph
-            ->filter(fn($r) => $r->conteudo instanceof \App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos)
-            ->map(fn($r) => $r->conteudo?->toArray())
-            ->values();
-
-        $vistoria = $this->relatosMorph
-            ->first(fn($r) => $r->conteudo instanceof \App\Modules\Rat\Models\Relatos\RatRelatoVistoria)
-            ?->conteudo;
+        $dadosGerais = $this->dados_gerais;
 
         return [
-            'dados_gerais' => $dadosGerais?->toArray(),
-            'recursos'     => $recursos,
-            'envolvidos'   => $envolvidos,
-            'vistoria'     => $vistoria ? ['id' => $vistoria->id] : null,
+            'dados_gerais' => $dadosGerais ?: null,
+            'recursos'     => $this->recursos ?: [],
+            'envolvidos'   => $this->envolvidos ?: [],
+            'vistoria'     => $this->vistoria ? ['id' => $this->vistoria['id'] ?? null] : null,
         ];
     }
 }

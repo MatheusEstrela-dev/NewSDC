@@ -41,5 +41,6 @@ import Text from '../../../Atoms/Typography/Text.vue';
 import Button from '../../../Atoms/Button/Button.vue';
 import PlusIcon from '../../../Icons/PlusIcon.vue';
 import DocumentTextIcon from '../../../Icons/DocumentTextIcon.vue';
+
 </script>
 

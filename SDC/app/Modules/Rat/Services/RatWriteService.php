@@ -97,7 +97,6 @@ class RatWriteService
         return RatOcorrencia::with([
             'creator',
             'updater',
-            'relatosMorph.conteudo',
             'historicos',
             'ratAnexos',
         ])->find($id);
@@ -236,13 +235,16 @@ class RatWriteService
 
             if ($dto->agentes !== null) {
                 foreach ($dto->agentes as $agenteDto) {
-                    RatRecursosComponentesGuarnicao::updateOrCreate(
-                        ['id' => $agenteDto->id ?? null, 'relato_recurso_id' => $recurso->id],
-                        array_merge($agenteDto->toArray(), [
-                            'relato_recurso_id' => $recurso->id,
-                            'created_by'        => Auth::id(),
-                        ])
-                    );
+                    $agenteData = array_merge($agenteDto->toArray(), [
+                        'relato_recurso_id' => $recurso->id,
+                        'created_by'        => Auth::id(),
+                    ]);
+                    if ($agenteDto->id) {
+                        $agente = RatRecursosComponentesGuarnicao::find($agenteDto->id);
+                        $agente ? $agente->update($agenteData) : RatRecursosComponentesGuarnicao::create($agenteData);
+                    } else {
+                        RatRecursosComponentesGuarnicao::create($agenteData);
+                    }
                 }
             }
 

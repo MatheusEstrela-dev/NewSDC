@@ -56,6 +56,8 @@ readonly class RatDadosGeraisDTO
         public ?string $localUnidadeMilitar     = null,
         public ?bool   $temVistoria             = false,
         public ?string $descricao               = null,
+        public ?string $comTelefoneContato      = null,
+        public ?string $comNomeSolicitante      = null,
     ) {}
 
     /**
@@ -115,6 +117,8 @@ readonly class RatDadosGeraisDTO
             localUnidadeMilitar:     $merged['local_unidade_militar']      ?? $merged['unidade_militar'] ?? null,
             temVistoria:             (bool) ($merged['tem_vistoria']       ?? false),
             descricao:               $merged['descricao']                   ?? null,
+            comTelefoneContato:      $merged['telefone_contato']            ?? $merged['com_telefone_contato'] ?? null,
+            comNomeSolicitante:      $merged['nome_solicitante']            ?? $merged['com_nome_solicitante'] ?? null,
         );
     }
 
@@ -158,6 +162,8 @@ readonly class RatDadosGeraisDTO
             'local_unidade_militar'       => $this->localUnidadeMilitar,
             'tem_vistoria'                => $this->temVistoria,
             'descricao'                   => $this->descricao,
+            'com_telefone_contato'        => $this->comTelefoneContato,
+            'com_nome_solicitante'        => $this->comNomeSolicitante,
         ], fn ($v) => $v !== null && $v !== '');
     }
 }

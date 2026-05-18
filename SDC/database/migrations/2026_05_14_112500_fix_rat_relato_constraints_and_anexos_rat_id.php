@@ -69,6 +69,14 @@ return new class extends Migration
             return;
         }
 
+        // Skip if column was already converted to uuid or bigint by a later migration
+        $col = DB::selectOne(
+            "SELECT data_type FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'rat_anexos' AND column_name = 'rat_id'"
+        );
+        if ($col && in_array($col->data_type, ['uuid', 'bigint', 'integer'])) {
+            return;
+        }
+
         DB::statement('ALTER TABLE rat_anexos DROP CONSTRAINT IF EXISTS rat_anexos_rat_id_foreign');
         DB::statement('DROP INDEX IF EXISTS rat_anexos_rat_id_categoria_index');
         DB::statement('DROP INDEX IF EXISTS rat_anexos_rat_id_index');

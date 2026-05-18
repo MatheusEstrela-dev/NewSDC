@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models\Recursos;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,6 +13,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class RatRecursosComponentesGuarnicao extends Model
 {
+    use HasUuids;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
+
     protected $table = 'rat_recursos_componentes_guarnicao';
 
     protected $fillable = [

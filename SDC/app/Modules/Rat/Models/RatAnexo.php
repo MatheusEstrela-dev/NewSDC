@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Models;
 
 use App\Modules\Rat\Enums\CategoriaAnexo;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
@@ -30,6 +31,11 @@ use App\Modules\Rat\Models\RatOcorrencia;
  */
 class RatAnexo extends Model
 {
+    use HasUuids;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
+
     protected $table = 'rat_anexos';
 
     protected $fillable = [
@@ -46,7 +52,6 @@ class RatAnexo extends Model
     ];
 
     protected $casts = [
-        'rat_id'        => 'integer',
         'categoria'     => CategoriaAnexo::class,
         'tamanho_bytes' => 'integer',
     ];

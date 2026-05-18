@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,10 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class RatOcorrenciaRelato extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasUuids;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $table = 'rat_ocorrencia_relatos';
 

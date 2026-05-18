@@ -22,7 +22,6 @@ class ProtocoloController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = RatOcorrencia::query()
-            ->with(['relatosMorph.conteudo'])
             ->orderByDesc('created_at');
 
         if ($protocolo = $request->input('protocolo')) {
@@ -62,7 +61,7 @@ class ProtocoloController extends Controller
 
     public function show(string $id): JsonResponse
     {
-        $rat = RatOcorrencia::with(['relatosMorph.conteudo'])->find($id);
+        $rat = $this->writeService->findById($id);
 
         if (!$rat) {
             return response()->json([

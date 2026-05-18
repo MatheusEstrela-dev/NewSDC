@@ -82,6 +82,7 @@ readonly class RatRecursoDTO
         // Mapeamento de valores do frontend para o banco de dados (ENUMs)
         $tipoMap = [
             'pessoal'    => 'pe',
+            'a_pe'       => 'pe',
             'viatura'    => 'viatura',
             'aeronave'   => 'aereo',
             'aereo'      => 'aereo',
@@ -90,6 +91,7 @@ readonly class RatRecursoDTO
             'equipamento'=> 'outro',
             'material'   => 'outro',
             'outro'      => 'outro',
+            'outros'     => 'outro',
         ];
 
         $condicaoMap = [
