@@ -69,14 +69,18 @@ Status: **CONCLUIDA em 2026-05-18** (commit `e12f5870`).
 
 ## Fase 2: Fix Critico Tablet Gap
 
-**Bug:** Viewport `[768, 1024)` recebe `md:ml-20` (80px) mas Sidebar so visivel se `isSidebarOpen`. Resultado: faixa vazia.
+Status: **CONCLUIDA em 2026-05-18**.
 
-- [ ] **2.1**: Decidir comportamento em tablet (decidido: rail collapsed visivel)
-- [ ] **2.2**: Aplicar correcao em `AuthenticatedLayout.vue:70`
-- [ ] **2.3**: Atualizar Sidebar.vue para tratar tablet como `is-collapsed`
-- [ ] **2.4**: Replicar em `SidebarOnlyLayout.vue`
-- [ ] **2.5**: Teste Playwright especifico em 895px
-- [ ] **2.6**: Commit
+**Bug original:** Viewport `[768, 1024)` recebia `md:ml-20` (80px) mas Sidebar.vue so passava texto/icones quando `isSidebarOpen===true`. Em viewport ~895px aparecia faixa preta de ~80px.
+
+**Solucao implementada:** Adicionado computed `effectivelyCollapsed` em Sidebar.vue que retorna `true` em tablet (sem drawer aberto) ou em desktop quando usuario colapsa, e `false` em tablet/mobile com drawer aberto. Substitui 45 referencias inline de `isCollapsed` por `effectivelyCollapsed` no template (mantendo `isCollapsed` apenas no toggle button v-if="isDesktop" e funcoes do script). Layouts (`AuthenticatedLayout`, `SidebarOnlyLayout`) ja aplicavam `md:ml-20` corretamente - bug estava so na Sidebar.
+
+- [x] **2.1**: Decidir comportamento em tablet (rail collapsed visivel)
+- [x] **2.2**: Adicionar `effectivelyCollapsed` computed em Sidebar.vue
+- [x] **2.3**: Substituir 45 refs de `isCollapsed` no template por `effectivelyCollapsed`
+- [x] **2.4**: AuthenticatedLayout/SidebarOnlyLayout sem alteracoes (md:ml-20 ja correto)
+- [x] **2.5**: `tests/e2e/responsive-tablet-gap.spec.js` (768/895/1023px + smoke /login)
+- [x] **2.6**: Commit
 
 ---
 

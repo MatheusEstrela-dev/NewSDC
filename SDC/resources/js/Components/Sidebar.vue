@@ -2,7 +2,7 @@
   <aside
     class="sidebar"
     :class="{
-      'is-collapsed': isCollapsed,
+      'is-collapsed': effectivelyCollapsed,
       'is-mobile-open': isSidebarOpen && (isMobile || isTablet)
     }"
   >
@@ -17,7 +17,7 @@
             class="logo-image"
           />
         </picture>
-        <div v-show="!isCollapsed || (isMobile || isTablet)" class="logo-text">
+        <div v-show="!effectivelyCollapsed || (isMobile || isTablet)" class="logo-text">
           <div class="logo-title">SDC MG</div>
           <div class="logo-subtitle">SISTEMA INTEGRADO</div>
         </div>
@@ -72,12 +72,12 @@
       >
         <!-- PRINCIPAL -->
       <div class="nav-section">
-        <div v-show="!isCollapsed" class="nav-section-title">PRINCIPAL</div>
+        <div v-show="!effectivelyCollapsed" class="nav-section-title">PRINCIPAL</div>
         <NavItem
           :href="route('dashboard')"
           :active="isRouteActive('dashboard')"
           icon="dashboard"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Visão Geral
         </NavItem>
@@ -86,7 +86,7 @@
           :href="route('demandas.index')"
           :active="isRouteActive('demandas.*')"
           icon="checkbadge"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           DEMANDAS
         </NavItem>
@@ -95,7 +95,7 @@
           :href="ratHref"
           :active="isRouteActive('rat.*')"
           icon="rat-clipboard"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           RAT
         </NavItem>
@@ -104,7 +104,7 @@
           :href="paeHref"
           :active="isRouteActive('pae.*')"
           icon="pae-bolt"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           PAE
         </NavItem>
@@ -113,7 +113,7 @@
           :href="route('plantao.index')"
           :active="isRouteActive('plantao.*')"
           icon="clock"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Plantão Diário
         </NavItem>
@@ -121,7 +121,7 @@
 
       <!-- MÓDULOS DE GESTÃO -->
       <div class="nav-section">
-        <div v-show="!isCollapsed" class="nav-section-title">MÓDULOS DE GESTÃO</div>
+        <div v-show="!effectivelyCollapsed" class="nav-section-title">MÓDULOS DE GESTÃO</div>
 
         <!-- DECRETACOES -->
         <NavItem
@@ -129,7 +129,7 @@
           :href="route('decretacoes.index')"
           :active="isRouteActive('decretacoes.*')"
           icon="scale"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Decretacoes
         </NavItem>
@@ -140,7 +140,7 @@
           :href="route('ajuda-humanitaria.beneficiarios.index')"
           :active="isRouteActive('ajuda-humanitaria.*')"
           icon="heart"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Ajuda Humanitaria
         </NavItem>
@@ -151,7 +151,7 @@
           :href="route('compdec.index')"
           :active="isRouteActive('compdec.*')"
           icon="building"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Orgaos
         </NavItem>
@@ -162,14 +162,14 @@
           @click="openSubmenu('tdap')"
           class="nav-group-toggle nav-drilldown"
           :class="{ 'is-active-route': isRouteActive('tdap.*') }"
-          :title="isCollapsed ? 'TDAP' : ''"
+          :title="effectivelyCollapsed ? 'TDAP' : ''"
         >
           <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
           </svg>
-          <span v-show="!isCollapsed">TDAP</span>
+          <span v-show="!effectivelyCollapsed">TDAP</span>
           <svg
-            v-show="!isCollapsed"
+            v-show="!effectivelyCollapsed"
             class="nav-arrow nav-arrow-drill"
             fill="none"
             stroke="currentColor"
@@ -185,16 +185,16 @@
           @click="openSubmenu('estoque')"
           class="nav-group-toggle nav-drilldown"
           :class="{ 'is-active-route': isRouteActive('estoque.*') }"
-          :title="isCollapsed ? 'Estoque' : ''"
+          :title="effectivelyCollapsed ? 'Estoque' : ''"
         >
           <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7.5l8-4.5 8 4.5-8 4.5-8-4.5z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7.5v9l8 4.5 8-4.5v-9" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12v9M8 9.75v4.5m8-4.5v4.5" />
           </svg>
-          <span v-show="!isCollapsed">Estoque</span>
+          <span v-show="!effectivelyCollapsed">Estoque</span>
           <svg
-            v-show="!isCollapsed"
+            v-show="!effectivelyCollapsed"
             class="nav-arrow nav-arrow-drill"
             fill="none"
             stroke="currentColor"
@@ -209,7 +209,7 @@
           :href="route('cisternas.index')"
           :active="isRouteActive('cisternas.*')"
           icon="cisterna"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Cisternas
         </NavItem>
@@ -220,7 +220,7 @@
           :href="route('treinamentos.index')"
           :active="isRouteActive('treinamentos.*')"
           icon="academic"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Treinamento
         </NavItem>
@@ -231,7 +231,7 @@
           :href="route('plancon.index')"
           :active="isRouteActive('plancon.*')"
           icon="shield"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Plano de Contingencia
         </NavItem>
@@ -242,7 +242,7 @@
           :href="route('inmet.index', undefined, false)"
           :active="isRouteActive('inmet.*')"
           icon="cloud"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Meteorologia
         </NavItem>
@@ -253,7 +253,7 @@
           :href="route('dashboard')"
           :active="false"
           icon="book"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Vistoria
         </NavItem>
@@ -261,7 +261,7 @@
 
       <!-- ADMINISTRACAO - Visivel apenas para usuarios com permissao -->
       <div v-if="canSeeAdminSection" class="nav-section">
-        <div v-show="!isCollapsed" class="nav-section-title">ADMINISTRACAO</div>
+        <div v-show="!effectivelyCollapsed" class="nav-section-title">ADMINISTRACAO</div>
 
         <!-- Permissionamento - Link direto sem submenu -->
         <NavItem
@@ -269,7 +269,7 @@
           :href="permissionamentoHref"
           :active="isRouteActive('admin.permissions.*')"
           icon="lock"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Permissionamento
         </NavItem>
@@ -279,7 +279,7 @@
           :href="route('inventario.index')"
           :active="isRouteActive('inventario.*')"
           icon="inventory"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Inventario
         </NavItem>
@@ -289,7 +289,7 @@
           :href="route('log-viewer.index')"
           :active="isRouteActive('log-viewer.*')"
           icon="logs-list"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Logs
         </NavItem>
@@ -297,12 +297,12 @@
 
       <!-- INTEGRACOES -->
       <div class="nav-section">
-        <div v-show="!isCollapsed" class="nav-section-title">INTEGRACOES</div>
+        <div v-show="!effectivelyCollapsed" class="nav-section-title">INTEGRACOES</div>
         <NavItem
           href="/api/documentation"
           :active="false"
           icon="code"
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
           external
         >
           API Docs
@@ -323,7 +323,7 @@
         type="button"
         class="submenu-back"
         @click="closeSubmenu"
-        v-show="!isCollapsed"
+        v-show="!effectivelyCollapsed"
       >
         <svg class="submenu-back-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -338,7 +338,7 @@
           :active="isRouteActive('estoque.index')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Dashboard
         </NavItem>
@@ -348,7 +348,7 @@
           :active="isRouteActive('estoque.produtos.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Produtos e Lotes
         </NavItem>
@@ -358,7 +358,7 @@
           :active="isRouteActive('estoque.kits.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Kits
         </NavItem>
@@ -368,7 +368,7 @@
           :active="isRouteActive('estoque.movimentacoes.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Movimentacoes
         </NavItem>
@@ -385,7 +385,7 @@
         type="button"
         class="submenu-back"
         @click="closeSubmenu"
-        v-show="!isCollapsed"
+        v-show="!effectivelyCollapsed"
       >
         <svg class="submenu-back-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -400,7 +400,7 @@
           :active="isRouteActive('tdap.dashboard')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Dashboard
         </NavItem>
@@ -410,7 +410,7 @@
           :active="isRouteActive('tdap.prestadores.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Prestadores
         </NavItem>
@@ -420,7 +420,7 @@
           :active="isRouteActive('tdap.caminhoes.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Caminhões
         </NavItem>
@@ -430,7 +430,7 @@
           :active="isRouteActive('tdap.atas.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Atas
         </NavItem>
@@ -440,7 +440,7 @@
           :active="isRouteActive('tdap.lotes.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Lotes
         </NavItem>
@@ -450,7 +450,7 @@
           :active="isRouteActive('tdap.cronogramas.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Cronogramas
         </NavItem>
@@ -460,7 +460,7 @@
           :active="isRouteActive('tdap.viagens.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Viagens pendentes
         </NavItem>
@@ -470,7 +470,7 @@
           :active="isRouteActive('tdap.vistorias.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Vistorias
         </NavItem>
@@ -480,7 +480,7 @@
           :active="isRouteActive('tdap.historicos.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Histórico
         </NavItem>
@@ -490,7 +490,7 @@
           :active="isRouteActive('tdap.processos.*')"
           icon="dot"
           is-submenu
-          :collapsed="isCollapsed"
+          :collapsed="effectivelyCollapsed"
         >
           Processos (Workflow)
         </NavItem>
@@ -525,6 +525,20 @@ const isTablet = inject('isTablet', ref(false));
 const isDesktop = inject('isDesktop', ref(true));
 const isSidebarOpen = inject('isSidebarOpen', ref(false));
 const closeSidebar = inject('closeSidebar', () => {});
+
+// Em tablet a sidebar sempre se comporta como collapsed (rail 80px),
+// exceto quando o drawer (is-mobile-open) esta ativo. Isso elimina o gap
+// preto da Fase 2 (md:ml-20 no layout sem icones visiveis no aside).
+// O toggle desktop (toggleSidebar) continua mutando isCollapsed diretamente
+// porque so e visivel em isDesktop.
+const effectivelyCollapsed = computed(() => {
+  // Drawer aberto (tablet ou mobile) -> sidebar full
+  if (isSidebarOpen.value && (isMobile.value || isTablet.value)) return false;
+  // Tablet sem drawer -> rail collapsed
+  if (isTablet.value) return true;
+  // Desktop ou mobile -> respeita o toggle manual
+  return isCollapsed.value;
+});
 
 const page = usePage();
 
