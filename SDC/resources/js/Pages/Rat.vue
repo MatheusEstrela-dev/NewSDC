@@ -162,7 +162,6 @@ const currentActiveTab = computed(() => {
 });
 
 const temVistoria    = ref(props.rat?.tem_vistoria || false);
-<<<<<<< Updated upstream
 const localNumeroBos = ref(props.rat?.numero_bos ?? null);
 
 // Exibe flash message vinda do redirect (ex: após criar novo RAT)
@@ -174,18 +173,6 @@ onMounted(() => {
   else if (flash?.warning) toast(flash.warning, 'warning', { noIcon: true });
   else if (flash?.error)   toast(flash.error,   'error',   { noIcon: true });
 });
-=======
-const currentFormData = ref(null);
-const creating        = ref(false);
-const ratDebugEnabled = (() => {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('debug') === 'rat' || window.localStorage?.getItem('rat_debug') === '1';
-  } catch {
-    return false;
-  }
-})();
->>>>>>> Stashed changes
 
 const tabConfig = computed(() => [
   { id: 1, label: 'Dados Gerais',        icon: DocumentTextIcon },
@@ -239,48 +226,8 @@ async function saveAndAdvance(tabPayload, nextTab) {
 
   loading.value = true;
   try {
-<<<<<<< Updated upstream
     const payload = { ...tabPayload };
     const resp = await axios.patch(route('rat.draft', ratId), payload, { headers });
-=======
-    if (!ratId) {
-      creating.value = true;
-      const payload = {
-        ...buildDadosGeraisPayload(),
-        recursos:   recursosState.value,
-        envolvidos: envolvidosState.value,
-        vistoria:   vistoriaState.value,
-        historico:  historicoEstado.value,
-        ...tabPayload,
-      };
-      if (ratDebugEnabled) {
-        payload._debug = 'rat';
-        console.groupCollapsed('[RAT_DEBUG_CREATE] frontend payload POST /rat');
-        console.info('tabPayload', tabPayload);
-        console.info('payload', payload);
-        console.groupEnd();
-      }
-      router.post(route('rat.store'), payload, {
-        preserveScroll: false,
-        onSuccess: () => {
-          if (ratDebugEnabled) {
-            console.info('[RAT_DEBUG_CREATE] frontend success POST /rat');
-          }
-          toast('RAT criado com sucesso.', 'success', { noIcon: true });
-          if (nextTab !== null) tabs.setActiveTab(nextTab);
-        },
-        onError:   (errors) => {
-          if (ratDebugEnabled) {
-            console.error('[RAT_DEBUG_CREATE] frontend error POST /rat', errors);
-          }
-          toast('Erro ao salvar dados gerais.', 'error', { noIcon: true });
-        },
-        onFinish:  () => { loading.value = false; creating.value = false; },
-      });
-    } else {
-      const payload = { ...tabPayload };
-      await axios.patch(route('rat.draft', ratId), payload, { headers });
->>>>>>> Stashed changes
 
     // Atualiza o número do BOS no header se o backend retornou um novo valor
     if (resp.data?.numero_bos) localNumeroBos.value = resp.data.numero_bos;
