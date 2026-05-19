@@ -44,6 +44,13 @@ class AuthenticatedSessionController extends Controller
 
         AuditLog::logLogin($user->id);
 
+        // Onboarding: usuario com senha provisoria precisa troca-la antes de
+        // qualquer outra navegacao. Quebra o redirect->intended para nao cair
+        // numa rota qualquer salva na session.
+        if ($user->must_change_password) {
+            return redirect()->route('password.first-access');
+        }
+
         return redirect()->intended(RouteServiceProvider::HOME);
     }
 

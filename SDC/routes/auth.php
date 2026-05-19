@@ -4,11 +4,13 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\FirstAccessController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\OnboardingController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -57,6 +59,20 @@ Route::middleware('auth')->group(function () {
     Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
+
+    // Onboarding: tela de primeiro acesso (troca obrigatoria da senha provisoria).
+    // EnsurePasswordChanged libera 'password.first-access*' e 'logout' enquanto
+    // bloqueia qualquer outra rota para usuarios com must_change_password=true.
+    Route::get('first-access', [FirstAccessController::class, 'show'])
+                ->name('password.first-access');
+
+    Route::post('first-access', [FirstAccessController::class, 'store'])
+                ->middleware('throttle:6,1')
+                ->name('password.first-access.update');
+
+    // Marca o tour Shepherd como concluido (chamado pelo composable do frontend).
+    Route::post('onboarding/tour/complete', [OnboardingController::class, 'completeTour'])
+                ->name('onboarding.tour.complete');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
                 ->name('logout');

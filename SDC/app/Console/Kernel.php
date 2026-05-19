@@ -27,6 +27,12 @@ class Kernel extends ConsoleKernel
             ->dailyAt('09:00')
             ->withoutOverlapping()
             ->runInBackground();
+
+        // Onboarding: desativa contas pending cuja senha provisoria expirou (24h).
+        $schedule->command('users:deactivate-expired-pending')
+            ->hourly()
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**
