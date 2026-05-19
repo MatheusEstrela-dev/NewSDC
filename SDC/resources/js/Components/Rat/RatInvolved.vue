@@ -405,6 +405,9 @@ function removerEnvolvido(index) {
 }
 
 function handleSave() {
+  const anyRequiredFilled = formData.value.g_tipo_pessoa || formData.value.p_nome_completo ||
+                             formData.value.p_cpf;
+  if (anyRequiredFilled && !validarEnvolvido()) return;
   emit('update', [...localEnvolvidos.value]);
   emit('save');
 }

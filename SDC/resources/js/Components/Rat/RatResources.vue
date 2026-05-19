@@ -436,7 +436,13 @@ function emitUpdate() {
     ...r, agentes: i === 0 ? [...localAgentes.value] : [],
   })));
 }
-function handleSave() { emitUpdate(); emit('save'); }
+function handleSave() {
+  const anyRequiredFilled = formData.value.tipo_recurso || formData.value.categoria ||
+                             formData.value.orgao_responsavel || formData.value.identificacao;
+  if (anyRequiredFilled && !validarRecurso()) return;
+  emitUpdate();
+  emit('save');
+}
 
 // ── Sync from parent ──────────────────────────────────────────────────────────
 watch(() => props.recursos, (nv) => {

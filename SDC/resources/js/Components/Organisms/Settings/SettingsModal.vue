@@ -440,6 +440,7 @@ watch(
   (newVal) => {
     if (newVal) {
       document.body.style.overflow = 'hidden';
+      loadPreferences();
     } else {
       document.body.style.overflow = null;
     }
@@ -541,7 +542,6 @@ const closeOnEscape = (e) => {
 
 onMounted(() => {
     document.addEventListener('keydown', closeOnEscape);
-    loadPreferences();
 });
 
 onUnmounted(() => {
