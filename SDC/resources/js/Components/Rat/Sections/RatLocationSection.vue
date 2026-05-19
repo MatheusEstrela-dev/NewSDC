@@ -68,7 +68,10 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
-const localData = ref({ ...props.modelValue });
+const localData = ref({
+  municipio_nome: '',
+  ...props.modelValue,
+});
 
 // Sincroniza local -> pai apenas se houver mudança real
 watch(
@@ -95,9 +98,22 @@ watch(
 const {
   paisOptions,
   ufOptions,
+  municipios,
   municipioOptions,
   loadMunicipios
 } = useLocationData();
+
+// Resolve municipality name from IBGE code whenever id or options change
+watch(
+  [() => localData.value.municipio_id, municipios],
+  ([id]) => {
+    if (!id || !municipios.value.length) return;
+    const match = municipios.value.find(m => String(m.id) === String(id));
+    if (match && localData.value.municipio_nome !== match.nome) {
+      localData.value.municipio_nome = match.nome;
+    }
+  }
+);
 
 const handleUfChange = (uf) => {
   localData.value.municipio_id = null;

@@ -22,6 +22,7 @@
             <DatePicker
               :model-value="getDate(localData.data_comunicacao)"
               @update:model-value="(v) => updateComunicacao('date', v)"
+              :extra-class="errors.data_comunicacao ? 'ring-2 ring-red-400' : ''"
             />
           </div>
           <TimePicker
@@ -30,6 +31,13 @@
             extra-class="w-28"
           />
         </div>
+        <button type="button" class="hoje-btn" @click="setHojeComunicacao">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          Hoje
+        </button>
+        <p v-if="errors.data_comunicacao" class="mt-1 text-xs text-red-500">{{ errors.data_comunicacao }}</p>
       </div>
 
       <FormSelect
@@ -117,10 +125,21 @@ function getTime(datetime) {
   return datetime.includes('T') ? datetime.split('T')[1] : '';
 }
 
+function nowTime() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function setHojeComunicacao() {
+  const date = new Date().toISOString().split('T')[0];
+  const time = getTime(localData.value.data_comunicacao) || nowTime();
+  localData.value = { ...localData.value, data_comunicacao: `${date}T${time}` };
+}
+
 function updateComunicacao(part, value) {
   const current = localData.value.data_comunicacao || '';
   const date = part === 'date' ? value : getDate(current);
-  const time = part === 'time' ? value : (getTime(current) || '00:00');
+  const time = part === 'time' ? value : (getTime(current) || nowTime());
   localData.value = {
     ...localData.value,
     data_comunicacao: date ? `${date}T${time}` : '',
@@ -142,5 +161,13 @@ const tipoSolicitacaoOptions = [
 <style scoped>
 .form-label {
   @apply block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 sm:mb-2;
+}
+.hoje-btn {
+  @apply mt-2 inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded
+    border border-emerald-500/50
+    text-emerald-600 dark:text-emerald-400
+    bg-emerald-50 dark:bg-emerald-900/20
+    hover:bg-emerald-100 dark:hover:bg-emerald-900/30
+    transition-colors duration-150;
 }
 </style>

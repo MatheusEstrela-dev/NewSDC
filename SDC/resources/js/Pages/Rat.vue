@@ -7,7 +7,7 @@
           <RatHeader :rat="rat" :last-update="lastUpdate" :view-only="props.viewOnly" :is-create="props.isCreate" />
 
           <!-- Sistema de Abas -->
-          <RatTabs :active-tab="currentActiveTab" :tabs="tabConfig" @tab-change="tabs.setActiveTab">
+          <RatTabs :active-tab="currentActiveTab" :tabs="tabConfig" @tab-change="handleTabChange">
             <template #default="{ activeTab }">
               <!-- Aba 1: Dados Gerais -->
               <div v-if="Number(activeTab) === 1">
@@ -119,9 +119,15 @@ const props = defineProps({
   lastUpdate: { type: String,  default: null },
 });
 
+const ABA_TO_TAB = { recursos: 2, envolvidos: 3, vistoria: 4, historico: 5, anexos: 6 };
+const TAB_TO_ABA = { 2: 'recursos', 3: 'envolvidos', 4: 'vistoria', 5: 'historico', 6: 'anexos' };
+
 const initialTab = (() => {
   try {
-    const tab = new URLSearchParams(window.location.search).get('tab');
+    const params = new URLSearchParams(window.location.search);
+    const aba = params.get('aba');
+    if (aba && ABA_TO_TAB[aba]) return ABA_TO_TAB[aba];
+    const tab = params.get('tab');
     const n = Number(tab);
     return Number.isFinite(n) && n > 0 ? n : 1;
   } catch {
@@ -276,6 +282,18 @@ async function handleFinalize() {
 }
 
 // ─── Handlers de estado local ──────────────────────────────────────────────
+
+function handleTabChange(tabId) {
+  tabs.setActiveTab(tabId);
+  const params = new URLSearchParams(window.location.search);
+  const aba = TAB_TO_ABA[tabId];
+  if (aba) {
+    params.set('aba', aba);
+  } else {
+    params.delete('aba');
+  }
+  window.history.replaceState({}, '', window.location.pathname + '?' + params.toString());
+}
 
 function handleToggleVistoria(value) { temVistoria.value = value; }
 

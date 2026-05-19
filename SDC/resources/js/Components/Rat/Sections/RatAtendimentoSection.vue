@@ -23,6 +23,7 @@
             <DatePicker
               :model-value="getDate(modelValue.data_fato)"
               @update:model-value="(v) => emit('update:modelValue', { ...modelValue, data_fato: combine(v, getTime(modelValue.data_fato)) })"
+              :extra-class="errors.data_fato ? 'ring-2 ring-red-400' : ''"
             />
           </div>
           <TimePicker
@@ -31,12 +32,13 @@
             extra-class="w-28"
           />
         </div>
-        <button type="button" class="hoje-btn" @click="emit('update:modelValue', { ...modelValue, data_fato: combine(today(), getTime(modelValue.data_fato) || '00:00') })">
+        <button type="button" class="hoje-btn" @click="emit('update:modelValue', { ...modelValue, data_fato: combine(today(), getTime(modelValue.data_fato) || nowTime()) })">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           Hoje
         </button>
+        <p v-if="errors.data_fato" class="mt-1 text-xs text-red-500">{{ errors.data_fato }}</p>
       </div>
 
       <!-- Data/Hora Início da Atividade -->
@@ -49,6 +51,7 @@
             <DatePicker
               :model-value="getDate(modelValue.data_inicio_atividade)"
               @update:model-value="(v) => emit('update:modelValue', { ...modelValue, data_inicio_atividade: combine(v, getTime(modelValue.data_inicio_atividade)) })"
+              :extra-class="errors.data_inicio_atividade ? 'ring-2 ring-red-400' : ''"
             />
           </div>
           <TimePicker
@@ -57,12 +60,13 @@
             extra-class="w-28"
           />
         </div>
-        <button type="button" class="hoje-btn" @click="emit('update:modelValue', { ...modelValue, data_inicio_atividade: combine(today(), getTime(modelValue.data_inicio_atividade) || '00:00') })">
+        <button type="button" class="hoje-btn" @click="emit('update:modelValue', { ...modelValue, data_inicio_atividade: combine(today(), getTime(modelValue.data_inicio_atividade) || nowTime()) })">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           Hoje
         </button>
+        <p v-if="errors.data_inicio_atividade" class="mt-1 text-xs text-red-500">{{ errors.data_inicio_atividade }}</p>
       </div>
 
       <!-- Data/Hora Término da Atividade -->
@@ -75,6 +79,7 @@
             <DatePicker
               :model-value="getDate(modelValue.data_termino_atividade)"
               @update:model-value="(v) => emit('update:modelValue', { ...modelValue, data_termino_atividade: combine(v, getTime(modelValue.data_termino_atividade)) })"
+              :extra-class="errors.data_termino_atividade ? 'ring-2 ring-red-400' : ''"
             />
           </div>
           <TimePicker
@@ -83,12 +88,13 @@
             extra-class="w-28"
           />
         </div>
-        <button type="button" class="hoje-btn" @click="emit('update:modelValue', { ...modelValue, data_termino_atividade: combine(today(), getTime(modelValue.data_termino_atividade) || '00:00') })">
+        <button type="button" class="hoje-btn" @click="emit('update:modelValue', { ...modelValue, data_termino_atividade: combine(today(), getTime(modelValue.data_termino_atividade) || nowTime()) })">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           Hoje
         </button>
+        <p v-if="errors.data_termino_atividade" class="mt-1 text-xs text-red-500">{{ errors.data_termino_atividade }}</p>
       </div>
     </div>
   </RatCollapsibleSection>
@@ -108,6 +114,7 @@ const props = defineProps({
       data_termino_atividade: '',
     }),
   },
+  errors: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -129,6 +136,11 @@ function combine(date, time) {
 
 function today() {
   return new Date().toISOString().split('T')[0];
+}
+
+function nowTime() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 </script>
 

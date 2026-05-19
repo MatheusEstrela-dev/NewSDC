@@ -177,13 +177,14 @@ async function salvarComAnexos(formData) {
   };
 
   const ax = window.axios || (await import('axios')).default;
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
   try {
-    const response = await ax.post(route('rat.store'), data);
+    const response = await ax.post(route('rat.store'), data, {
+      headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf },
+    });
 
-    const finalUrl = response.request?.responseURL || '';
-    const idMatch = finalUrl.match(/\/rat\/(\d+)/);
-    const newRatId = idMatch?.[1] ?? null;
+    const newRatId = response.data?.id ?? null;
 
     if (newRatId) {
       for (const { file } of filesToUpload) {
@@ -196,28 +197,10 @@ async function salvarComAnexos(formData) {
         });
       }
       pendingAttachmentFiles.value = [];
-      router.visit(route('rat.edit', newRatId));
+      router.visit(route('rat.bo.index') + '?ocorrencia_id=' + newRatId);
     }
   } catch (e) {
-    const finalUrl = e.request?.responseURL || e.response?.request?.responseURL || '';
-    const idMatch = finalUrl.match(/\/rat\/(\d+)/);
-    const newRatId = idMatch?.[1] ?? null;
-
-    if (newRatId) {
-      for (const { file } of filesToUpload) {
-        const form = new FormData();
-        form.append('file', file);
-        const categoria = file.type?.startsWith('image/') ? 'imagem' : 'documento';
-        form.append('categoria', categoria);
-        await ax.post(route('rat.anexos.store', { id: newRatId }), form, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-      }
-      pendingAttachmentFiles.value = [];
-      router.visit(route('rat.edit', newRatId));
-    } else {
-      console.error('Erro ao salvar RAT:', e);
-    }
+    console.error('Erro ao salvar RAT:', e);
   }
 }
 

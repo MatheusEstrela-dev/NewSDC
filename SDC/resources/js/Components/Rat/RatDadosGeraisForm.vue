@@ -6,6 +6,7 @@
   >
     <RatAtendimentoSection
       :model-value="localData.dadosGerais"
+      :errors="vErros.atendimento"
       @update:model-value="localData.dadosGerais = $event"
     />
 
@@ -16,6 +17,7 @@
 
     <RatCommunicationSection
       v-model="localData.comunicacao"
+      :errors="vErros.comunicacao"
     />
 
     <RatConfigSection
@@ -36,13 +38,14 @@
       :view-only="viewOnly"
       :loading="loading"
       label="Salvar Dados Gerais"
-      @save="$emit('save', localData)"
+      @save="handleSave"
     />
   </fieldset>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, reactive, watch } from 'vue';
+import { useToast } from '@/Composables/useToast';
 import RatAtendimentoSection from './Sections/RatAtendimentoSection.vue';
 import RatCommunicationSection from './Sections/RatCommunicationSection.vue';
 import RatNaturezaSection from './Sections/RatNaturezaSection.vue';
@@ -71,6 +74,44 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['save', 'update:tem-vistoria', 'update:form-data']);
+
+const { show: toast } = useToast();
+
+const vErros = reactive({
+  atendimento: { data_fato: '', data_inicio_atividade: '', data_termino_atividade: '' },
+  comunicacao: { data_comunicacao: '', tipo_solicitacao: '' },
+});
+
+const LABELS = {
+  data_fato: 'Data/Hora do Fato',
+  data_inicio_atividade: 'Data/Hora Início da Atividade',
+  data_termino_atividade: 'Data/Hora Término da Atividade',
+  data_comunicacao: 'Data/Hora da Comunicação',
+  tipo_solicitacao: 'Como foi solicitado o atendimento',
+};
+
+function handleSave() {
+  const dg  = localData.value.dadosGerais;
+  const com = localData.value.comunicacao;
+
+  vErros.atendimento.data_fato              = dg.data_fato              ? '' : 'Campo obrigatório';
+  vErros.atendimento.data_inicio_atividade  = dg.data_inicio_atividade  ? '' : 'Campo obrigatório';
+  vErros.atendimento.data_termino_atividade = dg.data_termino_atividade ? '' : 'Campo obrigatório';
+  vErros.comunicacao.data_comunicacao       = com.data_comunicacao      ? '' : 'Campo obrigatório';
+  vErros.comunicacao.tipo_solicitacao       = com.tipo_solicitacao      ? '' : 'Campo obrigatório';
+
+  const faltando = [
+    ...Object.entries(vErros.atendimento),
+    ...Object.entries(vErros.comunicacao),
+  ].filter(([, v]) => v).map(([k]) => LABELS[k]);
+
+  if (faltando.length) {
+    toast(`Preencha os campos obrigatórios: ${faltando.join(', ')}`, 'error');
+    return;
+  }
+
+  emit('save', localData.value);
+}
 
 const _dg  = props.savedFormData?.dadosGerais ?? props.rat?.dados_gerais  ?? {};
 const _com = props.savedFormData?.comunicacao ?? props.rat?.comunicacao   ?? {};
@@ -105,6 +146,7 @@ const localData = ref({
     pais: _loc.pais ?? _loc.pais_id ?? 'BR',
     uf: _loc.uf || '',
     municipio_id: _loc.municipio_id || '',
+    municipio_nome: _loc.municipio_nome || '',
   },
   endereco: {
     cep: _end.cep || '',

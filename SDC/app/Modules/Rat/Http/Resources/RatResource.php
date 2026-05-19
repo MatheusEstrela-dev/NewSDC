@@ -46,7 +46,7 @@ class RatResource extends JsonResource
             'sequencial_ano' => $this->sequencial_ano,
             'protocolo'      => $this->protocolo ?? $this->numero_bos ?? null,
             'numero_bos'     => $this->numero_bos,
-            'municipio'      => $dg['local_municipio'] ?? $dg['uni_responsavel_municipio'] ?? null,
+            'municipio'      => $dg['local_municipio_nome'] ?? $dg['local_municipio'] ?? $dg['uni_responsavel_municipio'] ?? null,
             'status'         => match((int) $this->status) {
                 1       => 'finalizado',
                 default => 'em_andamento',
@@ -102,11 +102,12 @@ class RatResource extends JsonResource
 
             // ── Local: nomes que RatLocationSection.vue usa ──
             'local' => [
-                'pais'         => $dg['local_pais'] ?? 'BR',
-                'pais_id'      => $dg['local_pais'] ?? 'BR',
-                'uf'           => $dg['local_estadouf'] ?? null,
-                'municipio'    => $dg['local_municipio'] ?? null,
-                'municipio_id' => $dg['local_municipio'] ?? null,
+                'pais'           => $dg['local_pais'] ?? 'BR',
+                'pais_id'        => $dg['local_pais'] ?? 'BR',
+                'uf'             => $dg['local_estadouf'] ?? null,
+                'municipio'      => $dg['local_municipio_nome'] ?? $dg['local_municipio'] ?? null,
+                'municipio_id'   => $dg['local_municipio'] ?? null,
+                'municipio_nome' => $dg['local_municipio_nome'] ?? null,
             ],
 
             // ── Endereço: nomes que RatAddressSection.vue usa ──

@@ -17,6 +17,7 @@
 
 <script setup>
 import { ref, watch } from 'vue';
+import { useToast } from '@/Composables/useToast';
 import RatHistoricoSection from './Sections/RatHistoricoSection.vue';
 import RatFormActions from '@/Components/Molecules/Rat/RatFormActions.vue';
 
@@ -27,6 +28,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update', 'save']);
+
+const { show: toast } = useToast();
 
 function extractText(val) {
   if (!val) return '';
@@ -55,6 +58,10 @@ function handleSectionUpdate(text) {
 }
 
 function handleSave() {
+  if (!localHistorico.value?.trim()) {
+    toast('Preencha o Histórico da Ocorrência antes de salvar.', 'error');
+    return;
+  }
   emit('update', localHistorico.value);
   emit('save');
 }

@@ -17,12 +17,12 @@
       <fieldset :disabled="viewOnly" style="border:none;padding:0;margin:0;min-width:0;">
         <div class="rat-section-content">
           <div class="rat-grid-3">
-            <FormSelect label="Tipo de Recurso" v-model="formData.tipo_recurso" :options="tipoRecursoOptions" required />
-            <FormSelect label="Categoria" v-model="formData.categoria" :options="categoriaOptions" required />
-            <FormSelect label="Órgão Responsável" v-model="formData.orgao_responsavel" :options="orgaoOptions" required />
+            <FormSelect label="Tipo de Recurso" v-model="formData.tipo_recurso" :options="tipoRecursoOptions" required :error="vErros.tipo_recurso" />
+            <FormSelect label="Categoria" v-model="formData.categoria" :options="categoriaOptions" required :error="vErros.categoria" />
+            <FormSelect label="Órgão Responsável" v-model="formData.orgao_responsavel" :options="orgaoOptions" required :error="vErros.orgao_responsavel" />
           </div>
           <div class="rat-grid-2">
-            <FormField label="Identificação / Placa / Matrícula" v-model="formData.identificacao" placeholder="Digite para buscar ou criar nova identificação" required />
+            <FormField label="Identificação / Placa / Matrícula" v-model="formData.identificacao" placeholder="Digite para buscar ou criar nova identificação" required :error="vErros.identificacao" />
             <FormField label="Descrição do Recurso" v-model="formData.descricao" />
           </div>
         </div>
@@ -53,6 +53,12 @@
                 </div>
                 <TimePicker :model-value="getTime(formData.data_saida)" @update:model-value="(v) => updateSaida('time', v)" extra-class="w-28" />
               </div>
+              <button type="button" class="hoje-btn" @click="setHojeSaida">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Hoje
+              </button>
             </div>
             <div>
               <label class="form-label">Data/Hora de Chegada</label>
@@ -62,6 +68,12 @@
                 </div>
                 <TimePicker :model-value="getTime(formData.data_chegada)" @update:model-value="(v) => updateChegada('time', v)" extra-class="w-28" />
               </div>
+              <button type="button" class="hoje-btn" @click="setHojeChegada">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Hoje
+              </button>
             </div>
           </div>
           <div class="rat-grid-3">
@@ -299,7 +311,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, reactive, watch } from 'vue';
+import { useToast } from '@/Composables/useToast';
 import FormField from '@/Components/Form/FormField.vue';
 import FormSelect from '@/Components/Form/FormSelect.vue';
 import DatePicker from '@/Components/Form/DatePicker.vue';
@@ -312,6 +325,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['add', 'remove', 'update', 'save']);
+
+const { show: toast } = useToast();
+const vErros = reactive({ tipo_recurso: '', categoria: '', orgao_responsavel: '', identificacao: '' });
 
 // ── Form state ──────────────────────────────────────────────────────────────
 const emptyForm = () => ({
@@ -343,18 +359,46 @@ function getTime(dt) {
   return dt.includes('T') ? (dt.split('T')[1] || '').substring(0, 5)
        : dt.includes(' ') ? (dt.split(' ')[1] || '').substring(0, 5) : '';
 }
-function combine(date, time) { return date ? `${date}T${time || '00:00'}` : ''; }
+function nowTime() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+function combine(date, time) { return date ? `${date}T${time || nowTime()}` : ''; }
 function updateSaida(part, v) {
   const cur = formData.value.data_saida || '';
-  formData.value = { ...formData.value, data_saida: combine(part === 'date' ? v : getDate(cur), part === 'time' ? v : (getTime(cur) || '00:00')) };
+  formData.value = { ...formData.value, data_saida: combine(part === 'date' ? v : getDate(cur), part === 'time' ? v : (getTime(cur) || nowTime())) };
 }
 function updateChegada(part, v) {
   const cur = formData.value.data_chegada || '';
-  formData.value = { ...formData.value, data_chegada: combine(part === 'date' ? v : getDate(cur), part === 'time' ? v : (getTime(cur) || '00:00')) };
+  formData.value = { ...formData.value, data_chegada: combine(part === 'date' ? v : getDate(cur), part === 'time' ? v : (getTime(cur) || nowTime())) };
+}
+function setHojeSaida() {
+  const date = new Date().toISOString().split('T')[0];
+  const time = getTime(formData.value.data_saida) || nowTime();
+  formData.value = { ...formData.value, data_saida: `${date}T${time}` };
+}
+function setHojeChegada() {
+  const date = new Date().toISOString().split('T')[0];
+  const time = getTime(formData.value.data_chegada) || nowTime();
+  formData.value = { ...formData.value, data_chegada: `${date}T${time}` };
 }
 
 // ── Recurso actions ──────────────────────────────────────────────────────────
+function validarRecurso() {
+  vErros.tipo_recurso    = formData.value.tipo_recurso    ? '' : 'Campo obrigatório';
+  vErros.categoria       = formData.value.categoria       ? '' : 'Campo obrigatório';
+  vErros.orgao_responsavel = formData.value.orgao_responsavel ? '' : 'Campo obrigatório';
+  vErros.identificacao   = formData.value.identificacao   ? '' : 'Campo obrigatório';
+  const campos = Object.entries(vErros).filter(([, v]) => v).map(([k]) => ({
+    tipo_recurso: 'Tipo de Recurso', categoria: 'Categoria',
+    orgao_responsavel: 'Órgão Responsável', identificacao: 'Identificação',
+  }[k]));
+  if (campos.length) { toast(`Preencha os campos obrigatórios: ${campos.join(', ')}`, 'error'); return false; }
+  return true;
+}
+
 function adicionarRecurso() {
+  if (!validarRecurso()) return;
   if (editingIndex.value >= 0) {
     localRecursos.value[editingIndex.value] = { ...formData.value };
   } else {
@@ -362,6 +406,7 @@ function adicionarRecurso() {
   }
   editingIndex.value = -1;
   formData.value = emptyForm();
+  Object.keys(vErros).forEach(k => { vErros[k] = ''; });
   emitUpdate();
 }
 function editarRecurso(index) {
@@ -486,6 +531,14 @@ function condicaoLabel(v)  { return condicaoOptions.find(o => o.value === v)?.la
 <style scoped>
 .form-label {
   @apply block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 sm:mb-2;
+}
+.hoje-btn {
+  @apply mt-2 inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded
+    border border-emerald-500/50
+    text-emerald-600 dark:text-emerald-400
+    bg-emerald-50 dark:bg-emerald-900/20
+    hover:bg-emerald-100 dark:hover:bg-emerald-900/30
+    transition-colors duration-150;
 }
 .radio-label {
   @apply flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer select-none;

@@ -82,7 +82,7 @@ class RatUnifiedController extends BaseController
     public function create(): RedirectResponse
     {
         $ocorrencia = $this->writeService->create();
-        return redirect()->route('rat.edit', $ocorrencia->id)
+        return redirect()->to($this->boUrl($ocorrencia->id))
             ->with('success', 'Novo RAT criado. Preencha os dados abaixo.');
     }
 
@@ -146,7 +146,7 @@ class RatUnifiedController extends BaseController
             }
 
             return redirect()
-                ->to(route('rat.edit', $ocorrencia->id) . '?tab=2')
+                ->to($this->boUrl($ocorrencia->id))
                 ->with('success', 'Ocorrência RAT criada com sucesso!');
         } catch (\Exception $e) {
             Log::error('Erro ao criar RAT: ' . $e->getMessage(), ['exception' => $e]);
@@ -160,6 +160,15 @@ class RatUnifiedController extends BaseController
                 ->withErrors(['error' => 'Erro ao criar RAT: ' . $e->getMessage()])
                 ->withInput();
         }
+    }
+
+    private function boUrl(string $id, ?string $aba = null): string
+    {
+        $url = route('rat.bo.index') . '?ocorrencia_id=' . $id;
+        if ($aba) {
+            $url .= '&aba=' . $aba;
+        }
+        return $url;
     }
 
     private function ratDebugTraceId(Request $request): string
@@ -270,7 +279,7 @@ class RatUnifiedController extends BaseController
         }
 
         return redirect()
-            ->route('rat.edit', $id)
+            ->to($this->boUrl($id))
             ->with('success', 'Ocorrência atualizada com sucesso!');
     }
 
@@ -317,7 +326,7 @@ class RatUnifiedController extends BaseController
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'Erro ao salvar: ' . $e->getMessage()], 500);
             }
-            return redirect()->route('rat.edit', $id)->with('error', 'Erro ao salvar rascunho.');
+            return redirect()->to($this->boUrl($id))->with('error', 'Erro ao salvar rascunho.');
         }
 
         if ($request->expectsJson() || $request->wantsJson()) {
@@ -330,7 +339,7 @@ class RatUnifiedController extends BaseController
         }
 
         return redirect()
-            ->route('rat.edit', $id)
+            ->to($this->boUrl($id))
             ->with('success', 'Rascunho salvo com sucesso!');
     }
 
@@ -340,6 +349,21 @@ class RatUnifiedController extends BaseController
 
     public function indexBo(Request $request): Response
     {
+        $ocorrenciaId = $request->query('ocorrencia_id');
+
+        if ($ocorrenciaId) {
+            $ocorrencia = $this->writeService->findById($ocorrenciaId);
+            abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
+
+            $isNew = !RatRelatoDadosGerais::where('ocorrencia_id', $ocorrenciaId)->exists();
+
+            return Inertia::render('Rat', [
+                'rat'      => (new RatOcorrenciaResource($ocorrencia))->resolve(),
+                'viewOnly' => false,
+                'isCreate' => $isNew,
+            ]);
+        }
+
         $bos = RatRelatoDadosGerais::with(['ocorrencia'])->paginate(15);
 
         return Inertia::render('Rat/BoIndex', ['bos' => $bos]);

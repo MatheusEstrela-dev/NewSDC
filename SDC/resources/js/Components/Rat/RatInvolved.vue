@@ -21,9 +21,10 @@
             :options="tipoEnvolvimentoOptions"
             placeholder="Selecione uma opção"
             required
+            :error="vErros.g_tipo_pessoa"
           />
           <div class="rat-grid-2">
-            <FormField label="Nome Completo / Razão Social" v-model="formData.p_nome_completo" placeholder="Nome completo ou razão social" required />
+            <FormField label="Nome Completo / Razão Social" v-model="formData.p_nome_completo" placeholder="Nome completo ou razão social" required :error="vErros.p_nome_completo" />
             <FormField label="Nome Social" v-model="formData.p_nome_social" placeholder="Ex: Zê da Silva" />
           </div>
           <div class="rat-grid-3">
@@ -32,7 +33,7 @@
               <DatePicker v-model="formData.p_data_nascimento" />
             </div>
             <FormField label="Idade Aparente" v-model="formData.p_idade_aparente" placeholder="Ex: 25" type="number" />
-            <FormField label="CPF" v-model="formData.p_cpf" mask="cpf" placeholder="000.000.000-00" required />
+            <FormField label="CPF" v-model="formData.p_cpf" mask="cpf" placeholder="000.000.000-00" required :error="vErros.p_cpf" />
           </div>
           <div class="rat-grid-2">
             <FormField label="Nome da Mãe" v-model="formData.p_nome_mae" placeholder="Nome completo da mãe" />
@@ -301,7 +302,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, reactive, watch } from 'vue';
+import { useToast } from '@/Composables/useToast';
 import { useCep } from '@/composables/location';
 import FormField from '@/Components/Form/FormField.vue';
 import FormSelect from '@/Components/Form/FormSelect.vue';
@@ -314,6 +316,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['add', 'remove', 'update', 'save']);
+
+const { show: toast } = useToast();
+const vErros = reactive({ g_tipo_pessoa: '', p_nome_completo: '', p_cpf: '' });
 
 // ── Form state ──────────────────────────────────────────────────────────────
 const emptyForm = () => ({
@@ -337,8 +342,18 @@ const emptyForm = () => ({
 const formData     = ref(emptyForm());
 const editingIndex = ref(-1);
 
+function validarEnvolvido() {
+  vErros.g_tipo_pessoa   = formData.value.g_tipo_pessoa   ? '' : 'Campo obrigatório';
+  vErros.p_nome_completo = formData.value.p_nome_completo ? '' : 'Campo obrigatório';
+  vErros.p_cpf           = formData.value.p_cpf           ? '' : 'Campo obrigatório';
+  const LABELS = { g_tipo_pessoa: 'Tipo de Pessoa', p_nome_completo: 'Nome Completo', p_cpf: 'CPF' };
+  const faltando = Object.entries(vErros).filter(([, v]) => v).map(([k]) => LABELS[k]);
+  if (faltando.length) { toast(`Preencha os campos obrigatórios: ${faltando.join(', ')}`, 'error'); return false; }
+  return true;
+}
+
 function adicionarEnvolvido() {
-  if (!formData.value.p_nome_completo) return;
+  if (!validarEnvolvido()) return;
   if (editingIndex.value >= 0) {
     localEnvolvidos.value[editingIndex.value] = { ...formData.value };
   } else {
@@ -346,6 +361,7 @@ function adicionarEnvolvido() {
   }
   editingIndex.value = -1;
   formData.value = emptyForm();
+  Object.keys(vErros).forEach(k => { vErros[k] = ''; });
   emit('update', [...localEnvolvidos.value]);
 }
 

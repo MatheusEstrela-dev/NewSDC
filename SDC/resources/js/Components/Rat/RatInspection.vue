@@ -2,12 +2,13 @@
   <div class="animate-fade-in-up pb-6">
     <RatVistoriaSection v-model="localVistoria" :view-only="viewOnly" />
 
-    <RatFormActions :view-only="viewOnly" :loading="loading" label="Salvar Vistoria" @save="$emit('save')" />
+    <RatFormActions :view-only="viewOnly" :loading="loading" label="Salvar Vistoria" @save="handleSave" />
   </div>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue';
+import { useToast } from '@/Composables/useToast';
 import RatVistoriaSection from './Sections/RatVistoriaSection.vue';
 import RatFormActions from '@/Components/Molecules/Rat/RatFormActions.vue';
 
@@ -27,6 +28,22 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['save', 'update']);
+
+const { show: toast } = useToast();
+
+function handleSave() {
+  const v = localVistoria.value;
+  const faltando = [];
+  if (!v?.solicitante?.nome)       faltando.push('Nome do Solicitante');
+  if (!v?.solicitante?.cpf)        faltando.push('CPF do Solicitante');
+  if (!v?.solicitante?.endereco)   faltando.push('Endereço do Solicitante');
+  if (!v?.estrutura?.tipo_imovel)  faltando.push('Tipo de Imóvel');
+  if (faltando.length) {
+    toast(`Preencha os campos obrigatórios: ${faltando.join(', ')}`, 'error');
+    return;
+  }
+  emit('save');
+}
 
 const localVistoria = ref(props.vistoria || {});
 

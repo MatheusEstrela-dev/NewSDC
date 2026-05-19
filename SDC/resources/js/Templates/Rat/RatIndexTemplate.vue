@@ -326,12 +326,11 @@ function handleView(id) {
 }
 
 function handleEdit(id) {
-  router.visit(route('rat.edit', id));
+  router.visit(route('rat.bo.index') + '?ocorrencia_id=' + id);
 }
 
 function handleAttachments(id) {
-  // Abrir diretamente na aba "Anexos" (id 6) no formulário de edição
-  router.visit(`${route('rat.edit', id)}?tab=6`);
+  router.visit(route('rat.bo.index') + '?ocorrencia_id=' + id + '&aba=anexos');
 }
 
 function handleDelete(id) {

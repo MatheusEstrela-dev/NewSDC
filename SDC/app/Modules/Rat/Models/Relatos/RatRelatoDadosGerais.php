@@ -54,6 +54,7 @@ class RatRelatoDadosGerais extends RatRelato
         'descricao',
         'com_telefone_contato',
         'com_nome_solicitante',
+        'local_municipio_nome',
         'status',
     ];
 
