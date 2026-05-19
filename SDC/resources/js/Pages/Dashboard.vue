@@ -135,10 +135,26 @@ import Modal from '@/Components/Modal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import draggable from '@/lib/vuedraggable-src/vuedraggable.js';
-import { Head } from '@inertiajs/vue3';
-import { defineAsyncComponent, markRaw, ref } from 'vue';
+import { Head, usePage } from '@inertiajs/vue3';
+import { defineAsyncComponent, markRaw, onMounted, ref } from 'vue';
+import { useWelcomeTour } from '@/composables/auth/useWelcomeTour';
 
 defineOptions({ layout: AuthenticatedLayout });
+
+// Tour de onboarding: dispara apenas se o backend sinalizar
+// auth.show_welcome_tour=true (vide HandleInertiaRequests::share).
+const inertiaPage = usePage();
+const { startWelcomeTour } = useWelcomeTour({
+    userName: inertiaPage.props.auth?.user?.name ?? '',
+});
+
+onMounted(() => {
+    if (inertiaPage.props.auth?.show_welcome_tour) {
+        // Pequeno delay garante que o layout (sidebar, user menu) ja
+        // esteja montado antes do Shepherd tentar achar os seletores.
+        setTimeout(startWelcomeTour, 400);
+    }
+});
 
 // Widgets carregados sob demanda (lazy) para reduzir bundle inicial
 const DashboardMetricCard = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/DashboardMetricCard.vue'));

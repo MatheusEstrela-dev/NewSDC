@@ -43,6 +43,7 @@
         "dexie": "^3.2.4",
         "idb-keyval": "^6.2.1",
         "leaflet": "^1.9.4",
+        "shepherd.js": "^15.2.2",
         "uuid": "^9.0.1",
         "vue3-apexcharts": "^1.10.0",
         "vuedraggable": "^4.1.0",
