@@ -20,7 +20,7 @@
       <StatusBadge :status="rat.status" />
     </TableCell>
     <TableCell class="w-auto whitespace-nowrap">
-      {{ rat.municipio || rat.dados_gerais?.local_municipio || rat.local?.municipio || 'Não informado' }}
+      {{ municipioDisplay || 'Não informado' }}
     </TableCell>
     <TableCell class="w-44 whitespace-nowrap">
       {{ rat.criado_por || 'Sistema' }}
@@ -44,11 +44,15 @@
 
 <script setup>
 import { Link } from '@inertiajs/vue3';
+import { ref, onMounted } from 'vue';
 import Badge from '../../../Atoms/Badge/Badge.vue';
 import StatusBadge from '../../../Atoms/Badge/StatusBadge.vue';
 import TableCell from '../../../Atoms/Table/TableCell.vue';
 import TableActions from '../../../Molecules/Table/TableActions.vue';
 import TableDataRow from '../../../Molecules/Table/TableDataRow.vue';
+
+// Module-level cache so each IBGE code is fetched only once per page load
+const _municipioCache = {};
 
 const props = defineProps({
   rat: {
@@ -63,6 +67,31 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+});
+
+const municipioDisplay = ref(props.rat.municipio ?? '');
+
+onMounted(async () => {
+  const raw = props.rat.municipio ?? props.rat.local?.municipio_id ?? '';
+  if (!raw || !/^\d+$/.test(String(raw))) {
+    municipioDisplay.value = raw || 'Não informado';
+    return;
+  }
+  const code = String(raw);
+  if (_municipioCache[code]) {
+    municipioDisplay.value = _municipioCache[code];
+    return;
+  }
+  try {
+    const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios/${code}`);
+    if (res.ok) {
+      const d = await res.json();
+      _municipioCache[code] = d.nome;
+      municipioDisplay.value = d.nome;
+    }
+  } catch {
+    // keep raw code if API fails
+  }
 });
 
 const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);

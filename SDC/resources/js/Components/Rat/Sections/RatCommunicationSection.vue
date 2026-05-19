@@ -132,17 +132,16 @@ function nowTime() {
 
 function setHojeComunicacao() {
   const date = new Date().toISOString().split('T')[0];
-  const time = getTime(localData.value.data_comunicacao) || nowTime();
-  localData.value = { ...localData.value, data_comunicacao: `${date}T${time}` };
+  localData.value = { ...localData.value, data_comunicacao: `${date}T${nowTime()}` };
 }
 
 function updateComunicacao(part, value) {
   const current = localData.value.data_comunicacao || '';
   const date = part === 'date' ? value : getDate(current);
-  const time = part === 'time' ? value : (getTime(current) || nowTime());
+  const time = part === 'time' ? value : getTime(current);
   localData.value = {
     ...localData.value,
-    data_comunicacao: date ? `${date}T${time}` : '',
+    data_comunicacao: date ? (time ? `${date}T${time}` : date) : '',
   };
 }
 

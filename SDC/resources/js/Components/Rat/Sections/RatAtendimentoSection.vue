@@ -32,7 +32,7 @@
             extra-class="w-28"
           />
         </div>
-        <button type="button" class="hoje-btn" @click="emit('update:modelValue', { ...modelValue, data_fato: combine(today(), getTime(modelValue.data_fato) || nowTime()) })">
+        <button type="button" class="hoje-btn" @click="emit('update:modelValue', { ...modelValue, data_fato: combine(today(), nowTime()) })">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
@@ -60,7 +60,7 @@
             extra-class="w-28"
           />
         </div>
-        <button type="button" class="hoje-btn" @click="emit('update:modelValue', { ...modelValue, data_inicio_atividade: combine(today(), getTime(modelValue.data_inicio_atividade) || nowTime()) })">
+        <button type="button" class="hoje-btn" @click="emit('update:modelValue', { ...modelValue, data_inicio_atividade: combine(today(), nowTime()) })">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
@@ -88,7 +88,7 @@
             extra-class="w-28"
           />
         </div>
-        <button type="button" class="hoje-btn" @click="emit('update:modelValue', { ...modelValue, data_termino_atividade: combine(today(), getTime(modelValue.data_termino_atividade) || nowTime()) })">
+        <button type="button" class="hoje-btn" @click="emit('update:modelValue', { ...modelValue, data_termino_atividade: combine(today(), nowTime()) })">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>

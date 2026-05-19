@@ -52,7 +52,8 @@ return new class extends Migration
 
         foreach ($pkTables as $table) {
             DB::statement("ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_pkey");
-            // gen_random_uuid() is evaluated per-row; 0 rows → safe type change
+            // Must drop bigserial default before changing type (prevents 42804 datatype mismatch)
+            DB::statement("ALTER TABLE {$table} ALTER COLUMN id DROP DEFAULT");
             DB::statement("ALTER TABLE {$table} ALTER COLUMN id TYPE uuid USING gen_random_uuid()");
             DB::statement("ALTER TABLE {$table} ALTER COLUMN id SET DEFAULT gen_random_uuid()");
             DB::statement("ALTER TABLE {$table} ADD PRIMARY KEY (id)");
@@ -80,9 +81,10 @@ return new class extends Migration
         DB::statement('ALTER TABLE rat_relato_recursos DROP COLUMN IF EXISTS ocorrencia_id');
         DB::statement('ALTER TABLE rat_relato_recursos ADD COLUMN ocorrencia_id uuid');
 
-        // rat_recursos_componentes_guarnicao
+        // rat_recursos_componentes_guarnicao — FK column is relato_recurso_id, not recurso_id
         DB::statement('ALTER TABLE rat_recursos_componentes_guarnicao DROP COLUMN IF EXISTS recurso_id');
-        DB::statement('ALTER TABLE rat_recursos_componentes_guarnicao ADD COLUMN recurso_id uuid');
+        DB::statement('ALTER TABLE rat_recursos_componentes_guarnicao DROP COLUMN IF EXISTS relato_recurso_id');
+        DB::statement('ALTER TABLE rat_recursos_componentes_guarnicao ADD COLUMN relato_recurso_id uuid');
 
         // rat_relato_envolvidos
         DB::statement('ALTER TABLE rat_relato_envolvidos DROP COLUMN IF EXISTS ocorrencia_id');
@@ -113,7 +115,7 @@ return new class extends Migration
         DB::statement('ALTER TABLE rat_ocorrencia_relatos ADD CONSTRAINT rat_ocorrencia_relatos_ocorrencia_id_foreign FOREIGN KEY (ocorrencia_id) REFERENCES rat_ocorrencias(id) ON DELETE CASCADE');
         DB::statement('ALTER TABLE rat_relato_dados_gerais ADD CONSTRAINT rat_relato_dados_gerais_ocorrencia_id_foreign FOREIGN KEY (ocorrencia_id) REFERENCES rat_ocorrencias(id) ON DELETE CASCADE');
         DB::statement('ALTER TABLE rat_relato_recursos ADD CONSTRAINT rat_relato_recursos_ocorrencia_id_foreign FOREIGN KEY (ocorrencia_id) REFERENCES rat_ocorrencias(id) ON DELETE CASCADE');
-        DB::statement('ALTER TABLE rat_recursos_componentes_guarnicao ADD CONSTRAINT rat_recursos_componentes_guarnicao_recurso_id_foreign FOREIGN KEY (recurso_id) REFERENCES rat_relato_recursos(id) ON DELETE CASCADE');
+        DB::statement('ALTER TABLE rat_recursos_componentes_guarnicao ADD CONSTRAINT rat_recursos_componentes_guarnicao_relato_recurso_id_foreign FOREIGN KEY (relato_recurso_id) REFERENCES rat_relato_recursos(id) ON DELETE CASCADE');
         DB::statement('ALTER TABLE rat_relato_envolvidos ADD CONSTRAINT rat_relato_envolvidos_ocorrencia_id_foreign FOREIGN KEY (ocorrencia_id) REFERENCES rat_ocorrencias(id) ON DELETE CASCADE');
         DB::statement('ALTER TABLE rat_relato_vistoria ADD CONSTRAINT rat_relato_vistoria_ocorrencia_id_foreign FOREIGN KEY (ocorrencia_id) REFERENCES rat_ocorrencias(id) ON DELETE CASCADE');
         DB::statement('ALTER TABLE rat_ocorrencia_historicos ADD CONSTRAINT rat_ocorrencia_historicos_ocorrencia_id_foreign FOREIGN KEY (ocorrencia_id) REFERENCES rat_ocorrencias(id) ON DELETE CASCADE');

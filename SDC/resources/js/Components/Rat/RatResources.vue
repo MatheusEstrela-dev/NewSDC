@@ -363,24 +363,21 @@ function nowTime() {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
-function combine(date, time) { return date ? `${date}T${time || nowTime()}` : ''; }
+function today() { return new Date().toISOString().split('T')[0]; }
+function combine(date, time) { return date ? (time ? `${date}T${time}` : date) : ''; }
 function updateSaida(part, v) {
   const cur = formData.value.data_saida || '';
-  formData.value = { ...formData.value, data_saida: combine(part === 'date' ? v : getDate(cur), part === 'time' ? v : (getTime(cur) || nowTime())) };
+  formData.value = { ...formData.value, data_saida: combine(part === 'date' ? v : getDate(cur), part === 'time' ? v : getTime(cur)) };
 }
 function updateChegada(part, v) {
   const cur = formData.value.data_chegada || '';
-  formData.value = { ...formData.value, data_chegada: combine(part === 'date' ? v : getDate(cur), part === 'time' ? v : (getTime(cur) || nowTime())) };
+  formData.value = { ...formData.value, data_chegada: combine(part === 'date' ? v : getDate(cur), part === 'time' ? v : getTime(cur)) };
 }
 function setHojeSaida() {
-  const date = new Date().toISOString().split('T')[0];
-  const time = getTime(formData.value.data_saida) || nowTime();
-  formData.value = { ...formData.value, data_saida: `${date}T${time}` };
+  formData.value = { ...formData.value, data_saida: `${today()}T${nowTime()}` };
 }
 function setHojeChegada() {
-  const date = new Date().toISOString().split('T')[0];
-  const time = getTime(formData.value.data_chegada) || nowTime();
-  formData.value = { ...formData.value, data_chegada: `${date}T${time}` };
+  formData.value = { ...formData.value, data_chegada: `${today()}T${nowTime()}` };
 }
 
 // ── Recurso actions ──────────────────────────────────────────────────────────
