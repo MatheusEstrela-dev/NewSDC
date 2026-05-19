@@ -56,6 +56,13 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        if (!$user->active || in_array($user->status, ['inactive', 'suspended', 'blocked'], true)) {
+            RateLimiter::hit($this->throttleKey());
+            throw ValidationException::withMessages([
+                'cpf' => 'Seu usuário está desativado. Entre em contato com o suporte ou com o gestor do sistema.',
+            ]);
+        }
+
         // Now attempt auth with email instead of CPF
         $credentials = [
             'email' => $user->email,

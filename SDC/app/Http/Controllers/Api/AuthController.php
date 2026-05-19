@@ -94,6 +94,13 @@ class AuthController extends Controller
             ], 401);
         }
 
+        if (!$user->active || in_array($user->status, ['inactive', 'suspended', 'blocked'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User disabled. Contact support or the system manager.',
+            ], 403);
+        }
+
         // Delete old tokens (optional - single device login)
         // $user->tokens()->delete();
 

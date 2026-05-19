@@ -925,3 +925,4 @@ provide('sidebarCollapsed', isCollapsed);
   de Sidebar.styles.css - imports aninhados podem perder o scope.
 -->
 <style src="./Sidebar.styles.css" scoped></style>
+  

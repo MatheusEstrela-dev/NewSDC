@@ -1,5 +1,21 @@
 <?php
 
+$defaultAllowedOrigins = [
+    'https://newsdc2027.azurewebsites.net',
+    'https://localhost:19444',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:18001',
+    'http://127.0.0.1:18001',
+];
+
+$allowedOrigins = env('CORS_ALLOWED_ORIGINS')
+    ? array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS')))
+    : $defaultAllowedOrigins;
+
+// CORS with credentials must never use a wildcard origin.
+$allowedOrigins = array_values(array_filter($allowedOrigins, fn ($origin) => $origin !== '*'));
+
 return [
 
     /*
@@ -19,14 +35,7 @@ return [
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => env('CORS_ALLOWED_ORIGINS') ? explode(',', env('CORS_ALLOWED_ORIGINS')) : [
-        'https://newsdc2027.azurewebsites.net',
-        'http://localhost:3000',
-        'http://localhost:5173',
-        'http://localhost:18001',
-        'http://127.0.0.1:18001',
-        '*',
-    ],
+    'allowed_origins' => $allowedOrigins,
 
     'allowed_origins_patterns' => [],
 

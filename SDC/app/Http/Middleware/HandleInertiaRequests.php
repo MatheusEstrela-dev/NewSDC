@@ -37,7 +37,9 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => fn() => $user ? $this->getCachedUserData($user) : null,
             ],
-            'acl' => fn() => $this->getCachedAclConfig(),
+            // Nao vazar a arvore de ACL/permissoes em paginas publicas (login, etc).
+            // Antes: era exposta no data-page do Inertia mesmo sem usuario autenticado.
+            'acl' => fn() => $user ? $this->getCachedAclConfig() : (object) [],
             'flash' => [
                 'success' => fn() => $request->session()->get('success'),
                 'error'   => fn() => $request->session()->get('error'),

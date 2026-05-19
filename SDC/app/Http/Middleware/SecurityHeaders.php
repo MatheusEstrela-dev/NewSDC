@@ -18,6 +18,8 @@ class SecurityHeaders
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+        $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+        $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
 
         $isLocal = app()->environment(['local', 'development']);
         $isNativePHP = env('NATIVEPHP_RUNNING') || env('NATIVE_PHP') || str_contains(strtolower(php_uname('a')), 'android');
@@ -51,25 +53,19 @@ class SecurityHeaders
         $scriptSrc = [
             "'self'",
             "'unsafe-inline'",
-            "'unsafe-eval'",
             "blob:",
             "https://cdn.jsdelivr.net",
         ];
+
+        if ($viteDevActive) {
+            $scriptSrc[] = "'unsafe-eval'";
+        }
 
         $styleSrc = [
             "'self'",
             "'unsafe-inline'",
             "https://fonts.bunny.net",
         ];
-
-        // Allow app URL
-        $appUrl = config('app.url');
-        if ($appUrl) {
-            $scriptSrc[] = $appUrl;
-            $styleSrc[] = $appUrl;
-            $connectSrc[] = $appUrl;
-            $imgSrc[] = $appUrl;
-        }
 
         $imgSrc = [
             "'self'",
@@ -87,6 +83,15 @@ class SecurityHeaders
             "'self'",
             "https://cdn.jsdelivr.net",
         ];
+
+        // Allow app URL
+        $appUrl = config('app.url');
+        if ($appUrl) {
+            $scriptSrc[] = $appUrl;
+            $styleSrc[] = $appUrl;
+            $connectSrc[] = $appUrl;
+            $imgSrc[] = $appUrl;
+        }
 
         // Quando Vite dev esta ativo (ambiente local, NativePHP ou hot file presente),
         // liberamos Vite (HTTP + WebSocket) e fontes externas usadas pelo layout
@@ -152,15 +157,19 @@ class SecurityHeaders
             $workerSrc .= " http://localhost:8081 http://127.0.0.1:8081 http://localhost:15175 http://127.0.0.1:15175 http://localhost:5175 http://127.0.0.1:5175";
         }
 
-        return implode('; ', [
+        return implode('; ', array_filter([
             "default-src 'self'",
+            "base-uri 'self'",
             'script-src ' . implode(' ', array_unique($scriptSrc)),
             'style-src ' . implode(' ', array_unique($styleSrc)),
             'img-src ' . implode(' ', array_unique($imgSrc)),
             'font-src ' . implode(' ', array_unique($fontSrc)),
             'connect-src ' . implode(' ', array_unique($connectSrc)),
+            "object-src 'none'",
+            "form-action 'self'",
             "frame-ancestors 'self'",
             "worker-src {$workerSrc}",
-        ]);
+            app()->environment('production') ? 'upgrade-insecure-requests' : '',
+        ]));
     }
 }

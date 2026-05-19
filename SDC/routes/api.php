@@ -32,7 +32,7 @@ use App\Http\Controllers\ActivityFeedController;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class])->get('/user', function (Request $request) {
     return $request->user();
 });
 
@@ -40,7 +40,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // GLOBAL SEARCH (API - para uso externo/sanctum)
 // ============================================================================
 
-Route::middleware(['auth:sanctum'])
+Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class])
     ->get('/global-search', [GlobalSearchController::class, 'search'])
     ->middleware('throttle:30,1')
     ->name('api.global.search');
@@ -51,8 +51,10 @@ Route::middleware(['auth:sanctum'])
 
 // Health Checks (sem autenticação - para load balancers)
 Route::get('/health', [HealthCheckController::class, 'basic'])->name('health.basic');
-Route::get('/health/detailed', [HealthCheckController::class, 'detailed'])->name('health.detailed');
-Route::get('/health/metrics', [HealthCheckController::class, 'metrics'])->name('health.metrics');
+Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class, 'can:system.logs.view'])->group(function () {
+    Route::get('/health/detailed', [HealthCheckController::class, 'detailed'])->name('health.detailed');
+    Route::get('/health/metrics', [HealthCheckController::class, 'metrics'])->name('health.metrics');
+});
 
 // ============================================================================
 // AUTHENTICATION & AUTHORIZATION (Bearer Token)
@@ -60,12 +62,12 @@ Route::get('/health/metrics', [HealthCheckController::class, 'metrics'])->name('
 
 // Public auth routes (no authentication required)
 Route::prefix('auth')->name('auth.')->group(function () {
-    Route::post('register', [\App\Http\Controllers\Api\AuthController::class, 'register'])->name('register');
-    Route::post('login', [\App\Http\Controllers\Api\AuthController::class, 'login'])->name('login');
+    Route::post('register', [\App\Http\Controllers\Api\AuthController::class, 'register'])->middleware('throttle:register')->name('register');
+    Route::post('login', [\App\Http\Controllers\Api\AuthController::class, 'login'])->middleware('throttle:login')->name('login');
 });
 
 // Protected auth routes (authentication required)
-Route::prefix('auth')->middleware('auth:sanctum')->name('auth.')->group(function () {
+Route::prefix('auth')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class])->name('auth.')->group(function () {
     Route::post('logout', [\App\Http\Controllers\Api\AuthController::class, 'logout'])->name('logout');
     Route::post('logout-all', [\App\Http\Controllers\Api\AuthController::class, 'logoutAll'])->name('logout-all');
     Route::get('me', [\App\Http\Controllers\Api\AuthController::class, 'me'])->name('me');
@@ -76,13 +78,13 @@ Route::prefix('auth')->middleware('auth:sanctum')->name('auth.')->group(function
 
 // Legacy V1 auth routes (mantido para compatibilidade)
 Route::prefix('v1/auth')->group(function () {
-    Route::post('/login', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'login']);
-    Route::post('/logout', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'logout'])->middleware('auth:sanctum');
-    Route::get('/me', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'me'])->middleware('auth:sanctum');
+    Route::post('/login', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('/logout', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'logout'])->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class]);
+    Route::get('/me', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'me'])->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class]);
 });
 
 // API v1
-Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class])->group(function () {
 
     // Activity Feed
     Route::get('activity-feed', [ActivityFeedController::class, 'index'])->name('api.v1.activity-feed');
@@ -197,18 +199,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // (Logs movidos para fora do auth:sanctum)
 });
 
-// Log Viewer - Sistema avançado de visualização de logs
-// Rotas publicas sem autenticacao para acesso administrativo local
-Route::prefix('v1/logs')->name('api.v1.logs.')->withoutMiddleware([
-    'throttle',
-    'throttle:api',
-    'throttle:default',
-    'auth',
+// Log Viewer - Sistema avancado de visualizacao de logs
+// Protegido por autenticacao e permissao de logs.
+Route::prefix('v1/logs')->name('api.v1.logs.')->middleware([
     'auth:sanctum',
-    \Illuminate\Routing\Middleware\ThrottleRequests::class,
-    \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
     \App\Http\Middleware\CheckUserActive::class,
-    \App\Http\Middleware\LogSystemActivity::class,
+    'can:system.logs.view',
+    'throttle:30,1',
 ])->group(function () {
 
     // Rota de teste para forcar erros (apenas em dev/local)

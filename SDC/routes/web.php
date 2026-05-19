@@ -8,13 +8,9 @@ use App\Http\Controllers\GlobalSearchController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// DEBUG: Rota para testar executeAsDTO (requer container)
-Route::get('/debug/test-dto', function () {
-    // ... (rest of debug route)
-});
-
-// Rota de Teste para Gerar Logs Propositais (Temporariamente fora do Auth para teste)
-Route::get('/test-log-error', function () {
+// Rota local para gerar logs propositais durante desenvolvimento.
+if (app()->environment(['local', 'development'])) {
+    Route::get('/debug/test-log-error', function () {
     $logger = app(\App\Services\Logging\ActivityLogger::class);
 
     // Log de evento comum
@@ -31,7 +27,8 @@ Route::get('/test-log-error', function () {
     }
 
     return "Logs gerados! Verifique o Log Viewer em /log-viewer. Certifique-se de que o LOG_CHANNEL está correto (ex: stack ou daily).";
-})->name('test.log.error');
+    })->name('debug.test-log-error');
+}
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -149,18 +146,14 @@ Route::middleware('auth')->group(function () {
     // Modulo: IA
     require __DIR__ . '/modules/ia.php';
 
-    // Modulo: Inmet (Meteorologia) (movido para fora para testes)
-
     // Módulo: Plantão Diário
     require __DIR__ . '/modules/plantao.php';
-});
 
-// ⚠️ RAT temporariamente fora do grupo 'auth' para testes
-// ⚠️ PlanCon também temporariamente fora do grupo 'auth' para testes
-// TODO: Remover isto e adicionar auth() depois de testes
-require __DIR__ . '/modules/rat.php';
-require __DIR__ . '/modules/plancon.php';
-require __DIR__ . '/modules/inmet.php';
+    // Modulos operacionais
+    require __DIR__ . '/modules/rat.php';
+    require __DIR__ . '/modules/plancon.php';
+    require __DIR__ . '/modules/inmet.php';
+});
 
 require __DIR__ . '/auth.php';
 

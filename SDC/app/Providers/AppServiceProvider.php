@@ -248,13 +248,30 @@ class AppServiceProvider extends ServiceProvider
         }
 
         \Illuminate\Auth\Notifications\ResetPassword::toMailUsing(function (object $notifiable, string $token) {
+            // URL opaca: encripta {token,email} para nao expor o token ou o email na URL.
+            // Decriptado em NewPasswordController::create. Validade real continua via
+            // password_reset_tokens (15min, config/auth.php).
+            $payload = \Illuminate\Support\Facades\Crypt::encryptString(json_encode([
+                'token' => $token,
+                'email' => $notifiable->getEmailForPasswordReset(),
+            ], JSON_THROW_ON_ERROR));
+
+            $resetUrl = url('/reset-password/' . $payload);
+
             return (new \Illuminate\Notifications\Messages\MailMessage)
                 ->subject('Redefinição de Senha - SDC')
                 ->view('emails.password_reset_simple', [
-                    'token' => $token,
-                    'email' => $notifiable->getEmailForPasswordReset(),
+                    'resetUrl' => $resetUrl,
                     'cpf_coordenador' => $notifiable->cpf ?? null,
-                ]);
+                ])
+                ->withSymfonyMessage(function (\Symfony\Component\Mime\Email $message) {
+                    // Inline image via CID — Outlook/Gmail nao bloqueiam (parte do email).
+                    // Logo so-hexagono; "DEFESA CIVIL" renderiza em HTML branco ao lado.
+                    $logoPath = public_path('imgs/logo_dc.png');
+                    if (is_file($logoPath)) {
+                        $message->embedFromPath($logoPath, 'logo-cedec', 'image/png');
+                    }
+                });
         });
     }
 

@@ -163,6 +163,54 @@
             </div>
           </div>
 
+          <!-- Historico de Movimentacao -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+              <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+                <svg class="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Histórico de Movimentação
+              </h3>
+              <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300">
+                {{ history.length }}
+              </span>
+            </div>
+
+            <div v-if="history.length > 0" class="p-4 sm:p-6">
+              <ul class="space-y-3">
+                <li
+                  v-for="event in history"
+                  :key="event.id"
+                  class="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700"
+                >
+                  <div
+                    class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border"
+                    :class="historyIconClass(event.kind)"
+                  >
+                    <component :is="historyIcon(event.kind)" class="w-4 h-4" />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-slate-800 dark:text-slate-100 leading-snug">{{ event.summary }}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      por <span class="font-medium text-slate-600 dark:text-slate-300">{{ event.actor_name }}</span>
+                      <span class="mx-1">·</span>
+                      {{ formatDate(event.occurred_at) }}
+                    </p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div v-else class="p-8 text-center">
+              <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p class="text-slate-500 dark:text-slate-400">Nenhuma movimentação registrada.</p>
+            </div>
+          </div>
+
           <!-- API Tokens Card -->
           <UserApiTokens
             :user-id="user.id"
@@ -225,6 +273,10 @@ const props = defineProps({
   newTokenName: {
     type: String,
     default: null
+  },
+  history: {
+    type: Array,
+    default: () => []
   }
 });
 
@@ -280,6 +332,76 @@ const formatDate = (date) => {
     hour: '2-digit',
     minute: '2-digit'
   });
+};
+
+const HistoryIconPower = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M18.364 5.636a9 9 0 11-12.728 0M12 3v10' })
+]);
+
+const HistoryIconUserCog = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' })
+]);
+
+const HistoryIconBuilding = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' })
+]);
+
+const HistoryIconKey = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' })
+]);
+
+const HistoryIconEdit = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' })
+]);
+
+const HistoryIconCheck = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' })
+]);
+
+const HistoryIconBan = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636' })
+]);
+
+const historyIcon = (kind) => {
+  switch (kind) {
+    case 'activated':           return HistoryIconCheck;
+    case 'deactivated':         return HistoryIconBan;
+    case 'role_granted':
+    case 'role_revoked':
+    case 'permission_granted':
+    case 'permission_revoked':  return HistoryIconUserCog;
+    case 'orgao_changed':
+    case 'municipio_changed':   return HistoryIconBuilding;
+    case 'password_reset':      return HistoryIconKey;
+    case 'created':             return HistoryIconCheck;
+    case 'deleted':             return HistoryIconBan;
+    default:                    return HistoryIconEdit;
+  }
+};
+
+const historyIconClass = (kind) => {
+  switch (kind) {
+    case 'activated':
+    case 'created':
+      return 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800';
+    case 'deactivated':
+    case 'deleted':
+      return 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800';
+    case 'role_granted':
+    case 'permission_granted':
+      return 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800';
+    case 'role_revoked':
+    case 'permission_revoked':
+      return 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+    case 'orgao_changed':
+      return 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800';
+    case 'municipio_changed':
+      return 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700 ring-2 ring-orange-200 dark:ring-orange-800';
+    case 'password_reset':
+      return 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800';
+    default:
+      return 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700';
+  }
 };
 
 const formatModuleName = (module) => {

@@ -314,13 +314,17 @@ class Handler extends ExceptionHandler
             'auth' => [
                 'user' => $user ? $this->getInertiaUserData($user) : null,
             ],
-            'acl' => [
-                'levels' => config('permissions.levels', []),
-                'modules' => config('permissions.modules', []),
-                'protected_roles' => config('permissions.protected_roles', []),
-                'immutable_permissions' => config('permissions.immutable_permissions', []),
-                'default_level' => config('permissions.default_level', 99),
-            ],
+            // Mesma protecao do HandleInertiaRequests: nao expor a arvore ACL
+            // em paginas de erro renderizadas para usuario nao autenticado.
+            'acl' => $user
+                ? [
+                    'levels' => config('permissions.levels', []),
+                    'modules' => config('permissions.modules', []),
+                    'protected_roles' => config('permissions.protected_roles', []),
+                    'immutable_permissions' => config('permissions.immutable_permissions', []),
+                    'default_level' => config('permissions.default_level', 99),
+                ]
+                : (object) [],
         ];
     }
 

@@ -13,13 +13,13 @@ class TestOrgaosSeeder extends Seeder
 
         $now = now();
 
-        $cedecExistente = DB::table('orgaos')->where('codigo', 'TEST-CEDEC-MG')->first();
+        $cedecExistente = DB::table('compdec_orgaos')->where('codigo', 'TEST-CEDEC-MG')->first();
         if ($cedecExistente) {
             $this->command->warn('Orgaos de teste ja existem. Pulando...');
             return;
         }
 
-        $cedecId = DB::table('orgaos')->insertGetId([
+        $cedecId = DB::table('compdec_orgaos')->insertGetId([
             'codigo' => 'TEST-CEDEC-MG',
             'nome' => 'Coordenadoria Estadual de Defesa Civil - MG (Teste)',
             'tipo' => 'cedec',
@@ -41,7 +41,7 @@ class TestOrgaosSeeder extends Seeder
             'updated_at' => $now,
         ]);
 
-        $redecMetroId = DB::table('orgaos')->insertGetId([
+        $redecMetroId = DB::table('compdec_orgaos')->insertGetId([
             'codigo' => 'TEST-REDEC-METRO',
             'nome' => 'Regional Metropolitana de Defesa Civil (Teste)',
             'tipo' => 'redec',
@@ -63,7 +63,7 @@ class TestOrgaosSeeder extends Seeder
             'updated_at' => $now,
         ]);
 
-        $redecSulId = DB::table('orgaos')->insertGetId([
+        $redecSulId = DB::table('compdec_orgaos')->insertGetId([
             'codigo' => 'TEST-REDEC-SUL',
             'nome' => 'Regional Sul de Defesa Civil (Teste)',
             'tipo' => 'redec',
@@ -137,7 +137,7 @@ class TestOrgaosSeeder extends Seeder
         ];
 
         foreach ($compdecs as $compdec) {
-            DB::table('orgaos')->insert(array_merge($compdec, [
+            DB::table('compdec_orgaos')->insert(array_merge($compdec, [
                 'tipo' => 'compdec',
                 'municipio_id' => null,
                 'status' => 'ativo',
