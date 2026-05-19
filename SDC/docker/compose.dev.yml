@@ -1,0 +1,150 @@
+# ============================================================================
+# SDC - Compose DEV self-contained (FrankenPHP + PG18+PostGIS + Redis + Mailhog)
+#
+# Uso (da raiz NewSDC/):
+#   just dev-build       # primeira vez (build da imagem)
+#   just dev-up
+#   just dev-status
+#   just dev-logs
+#
+# App:     https://localhost:19444
+# Mailhog: http://localhost:8025
+# Postgres host:5433  Redis host:6380
+#
+# Vite roda no HOST (just dev-vite), nao neste compose.
+# ============================================================================
+
+name: newsdc-dev
+
+services:
+  app:
+    build:
+      context: ../..                          # raiz NewSDC/
+      dockerfile: SDC/docker/Dockerfile.frankenphp-dev
+    image: newsdc-frankenphp-dev:latest
+    container_name: newsdc_dev_app
+    hostname: app
+    restart: unless-stopped
+
+    environment:
+      WORKDIR: /app
+      APP_NAME: "SDC Dev"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: https://localhost:19444
+
+      # Octane + FrankenPHP
+      OCTANE_SERVER: frankenphp
+      OCTANE_HTTPS: "true"
+      OCTANE_CADDYFILE: /etc/caddy/Caddyfile.local
+      PORT: 443
+      FRANKENPHP_WORKERS: 4
+      FRANKENPHP_MAX_REQUESTS: 500
+
+      # Banco
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: sdc
+      DB_USERNAME: sdc
+      DB_PASSWORD: secret
+
+      # Redis (cache / session / queue)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+
+      # Mail (capturado pelo Mailhog)
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
+      MAIL_FROM_ADDRESS: dev@sdc.local
+      MAIL_FROM_NAME: "SDC Dev"
+
+    ports:
+      - "19444:443"     # HTTPS (FrankenPHP)
+      - "19081:80"      # HTTP -> redirect HTTPS
+      - "2021:2019"     # Caddy admin API
+
+    volumes:
+      # Codigo da app (bind-mount p/ hot reload via Octane --max-requests=1)
+      - ../app:/app/app
+      - ../core:/app/core
+      - ../bootstrap:/app/bootstrap
+      - ../config:/app/config
+      - ../database:/app/database
+      - ../routes:/app/routes
+      - ../resources:/app/resources
+      - ../public:/app/public
+      - ../tests:/app/tests
+      - ../composer.json:/app/composer.json:ro
+      - ../composer.lock:/app/composer.lock:ro
+      - ../artisan:/app/artisan:ro
+      # Logs visiveis no host
+      - ../storage/logs:/app/storage/logs
+      # Caddyfile + entrypoint (read-only) — reaproveita os do frankenphp/
+      - ./frankenphp/Caddyfile.local:/etc/caddy/Caddyfile.local:ro
+      - ./frankenphp/scripts/entrypoint.sh:/start.sh:ro
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-sfk", "https://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  db:
+    image: postgis/postgis:18-3.6-alpine
+    container_name: newsdc_dev_db
+    hostname: db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sdc
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: sdc
+    ports:
+      - "5433:5432"       # 5433 no host (evita colisao com legacy 5432)
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sdc -d sdc"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: newsdc_dev_redis
+    hostname: redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6380:6379"       # 6380 no host
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: newsdc_dev_mailhog
+    hostname: mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"       # SMTP
+      - "8025:8025"       # UI
+
+volumes:
+  pgdata:
+  redisdata:

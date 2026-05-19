@@ -273,6 +273,70 @@ setup:
     just build
     @echo "✅ Setup completo finalizado!"
 
+# ==================== DEV LOCAL (FrankenPHP self-contained) ====================
+
+dev_compose := "SDC/docker/compose.dev.yml"
+dev_app := "newsdc_dev_app"
+dev_db := "newsdc_dev_db"
+
+# Builda a imagem newsdc-frankenphp-dev (primeira vez ou apos mudanca no Dockerfile)
+dev-build:
+    docker compose -f {{dev_compose}} build app
+
+# Sobe stack dev (app + db + redis + mailhog)
+dev-up:
+    docker compose -f {{dev_compose}} up -d
+    @echo "App:     https://localhost:19444"
+    @echo "Mailhog: http://localhost:8025"
+    @echo "Postgres host:5433  Redis host:6380"
+
+# Derruba stack dev (mantem volumes)
+dev-down:
+    docker compose -f {{dev_compose}} down
+
+# Logs (default: app). Uso: just dev-logs db
+dev-logs svc="app":
+    docker compose -f {{dev_compose}} logs -f --tail=200 {{svc}}
+
+# Shell no container app
+dev-shell:
+    docker exec -it {{dev_app}} sh
+
+# psql no banco dev
+dev-db:
+    docker exec -it {{dev_db}} psql -U sdc -d sdc
+
+# redis-cli no redis dev
+dev-redis:
+    docker exec -it newsdc_dev_redis redis-cli
+
+# Status dos containers + URLs uteis
+dev-status:
+    @docker compose -f {{dev_compose}} ps
+    @echo ""
+    @echo "URLs:"
+    @echo "  https://localhost:19444  (app)"
+    @echo "  http://localhost:8025    (mailhog UI)"
+
+# Restart so do container app (apos mudanca de config/.env)
+dev-restart:
+    docker compose -f {{dev_compose}} restart app
+
+# Migrate dentro do container dev
+dev-migrate:
+    docker exec {{dev_app}} php artisan migrate --force
+
+# Reset destrutivo: down + remove volumes (dados perdidos). Pede confirmacao.
+dev-clean:
+    @echo "ATENCAO: vai remover volumes pgdata e redisdata (dados perdidos)."
+    @echo "Ctrl+C para abortar; ENTER para continuar."
+    @read _
+    docker compose -f {{dev_compose}} down -v
+
+# Vite dev server no HOST (rodar em terminal separado)
+dev-vite:
+    cd SDC && npm run dev
+
 # ==================== ENV SWITCH ====================
 
 # Troca para ambiente LOCAL (Docker)

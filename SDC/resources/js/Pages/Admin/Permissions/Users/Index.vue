@@ -89,7 +89,7 @@
           :subtitle="user.email"
           :data="{
             email: user.email,
-            status: statusLabel(user.status),
+            status: statusLabel(effectiveStatus(user)),
             created_at: formatDate(user.created_at),
             roles: user.roles.map(r => r.name).join(', ') || 'Nenhum cargo'
           }"
@@ -100,17 +100,19 @@
           ]"
         >
           <template #actions>
-            <TableActions
-              :show-view="true"
-              :show-print="false"
-              :show-edit="canEdit"
-              :show-attachments="false"
-              :show-delete="canDelete"
-              size="sm"
-              @view="router.get(route('admin.permissions.users.show', user.id))"
-              @edit="router.get(route('admin.permissions.users.edit', user.id))"
-              @delete="deactivateUser(user.id)"
-            />
+            <div class="flex items-center justify-end gap-1.5">
+              <TableActions
+                :show-view="true"
+                :show-print="false"
+                :show-edit="canEdit"
+                :show-attachments="false"
+                :show-delete="canDelete"
+                size="sm"
+                @view="router.get(route('admin.permissions.users.show', user.id))"
+                @edit="router.get(route('admin.permissions.users.edit', user.id))"
+                @delete="confirmDelete(user)"
+              />
+            </div>
           </template>
         </TableMobileCard>
 
@@ -203,9 +205,9 @@
                 <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
                   <span
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                    :class="statusClass(user.status)"
+                    :class="statusClass(effectiveStatus(user))"
                   >
-                    {{ statusLabel(user.status) }}
+                    {{ statusLabel(effectiveStatus(user)) }}
                   </span>
                 </td>
                 <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400 hidden lg:table-cell">
@@ -221,7 +223,7 @@
                     size="sm"
                     @view="router.get(route('admin.permissions.users.show', user.id))"
                     @edit="router.get(route('admin.permissions.users.edit', user.id))"
-                    @delete="deactivateUser(user.id)"
+                    @delete="confirmDelete(user)"
                   />
                 </td>
               </tr>
@@ -243,12 +245,26 @@
           <Pagination :pagination="users" @page-change="onPageChange" />
         </div>
       </div>
+
+      <ConfirmDialog
+        :isOpen="showDeleteDialog"
+        title="Excluir Usuário"
+        :message="`Tem certeza que deseja excluir o usuário '${userToDelete?.name}'?`"
+        description="O usuário será removido da lista (exclusão lógica). Para apenas bloquear o acesso temporariamente, use o toggle 'Status do usuário' na tela de edição."
+        variant="danger"
+        confirmText="Sim, excluir"
+        cancelText="Cancelar"
+        :loading="isDeleting"
+        @confirm="deleteUser"
+        @cancel="cancelDelete"
+      />
+
     </div>
 
 </template>
 
 <script setup>
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -257,6 +273,7 @@ defineOptions({ layout: AuthenticatedLayout });
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import TableMobileCard from '@/Components/Molecules/Table/TableMobileCard.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import { useMobile } from '@/Composables/useMobile';
 import { usePermissions } from '@/Composables/usePermissions';
 
@@ -317,10 +334,16 @@ const formatDate = (date) => {
   });
 };
 
+const effectiveStatus = (user) => {
+  if (user.active === false) return 'inactive';
+  if (['suspended', 'blocked'].includes(user.status)) return user.status;
+  return 'active';
+};
+
 const statusLabel = (status) => {
   const labels = {
     active: 'Ativo',
-    inactive: 'Inativo',
+    inactive: 'Desativado',
     suspended: 'Suspenso',
     pending: 'Pendente',
     blocked: 'Bloqueado',
@@ -331,7 +354,7 @@ const statusLabel = (status) => {
 const statusClass = (status) => {
   const classes = {
     active: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
-    inactive: 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
+    inactive: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 ring-1 ring-red-200 dark:ring-red-800',
     suspended: 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300',
     pending: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300',
     blocked: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300',
@@ -339,9 +362,30 @@ const statusClass = (status) => {
   return classes[status] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
 };
 
-const deactivateUser = (userId) => {
-  router.delete(route('admin.permissions.users.destroy', userId), {
+const showDeleteDialog = ref(false);
+const userToDelete = ref(null);
+const isDeleting = ref(false);
+
+const confirmDelete = (user) => {
+  userToDelete.value = user;
+  showDeleteDialog.value = true;
+};
+
+const cancelDelete = () => {
+  showDeleteDialog.value = false;
+  userToDelete.value = null;
+};
+
+const deleteUser = () => {
+  if (!userToDelete.value) return;
+  isDeleting.value = true;
+  router.delete(route('admin.permissions.users.destroy', userToDelete.value.id), {
     preserveScroll: true,
+    onFinish: () => {
+      isDeleting.value = false;
+      showDeleteDialog.value = false;
+      userToDelete.value = null;
+    },
   });
 };
 

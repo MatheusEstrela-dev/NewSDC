@@ -16,7 +16,23 @@ class CheckUserActive
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check() && $request->hasSession()) {
+        $user = $request->user();
+
+        if (!$user) {
+            return $next($request);
+        }
+
+        if (!$request->hasSession()) {
+            if (!$user->active) {
+                return response()->json([
+                    'message' => 'Seu usuario esta desativado. Entre em contato com o suporte ou com o gestor do sistema.',
+                ], 403);
+            }
+
+            return $next($request);
+        }
+
+        if (Auth::check()) {
             $shouldCheck = true;
             $lastCheck = $request->session()->get('user_last_active_check');
 
@@ -29,13 +45,13 @@ class CheckUserActive
             }
 
             if ($shouldCheck) {
-                if (!Auth::user()->active) {
+                if (!$user->active) {
                     Auth::logout();
                     $request->session()->invalidate();
                     $request->session()->regenerateToken();
 
                     return redirect()->route('login')->withErrors([
-                        'email' => 'Sua conta foi desativada por falta de atualização cadastral (prazo de 6 meses excedido). Entre em contato com o suporte para reativação.',
+                        'cpf' => 'Seu usuario esta desativado. Entre em contato com o suporte ou com o gestor do sistema.',
                     ]);
                 }
 

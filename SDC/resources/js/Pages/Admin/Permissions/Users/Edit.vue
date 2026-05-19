@@ -54,6 +54,163 @@
                 />
                 <span v-if="errors.email" class="text-xs text-red-500 font-medium">{{ errors.email }}</span>
               </div>
+
+              <div class="space-y-2 md:col-span-2">
+                <label for="cpf" class="block text-sm font-medium text-slate-700 dark:text-slate-300">CPF</label>
+                <input
+                  id="cpf"
+                  v-model="form.cpf"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="11"
+                  @input="form.cpf = form.cpf.replace(/\D/g, '').slice(0, 11)"
+                  class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                  :class="{ 'border-red-500 focus:ring-red-500': errors.cpf }"
+                  placeholder="Somente números (11 dígitos)"
+                  required
+                />
+                <span v-if="errors.cpf" class="text-xs text-red-500 font-medium">{{ errors.cpf }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Acoes Administrativas (gated) -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+              <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Ações Administrativas
+              </h3>
+              <p v-if="!canManageSensitive" class="text-xs text-amber-700 dark:text-amber-400 mt-2">
+                Somente Administrador ou Desenvolvedor podem alterar estes campos.
+              </p>
+            </div>
+
+            <div class="p-6 space-y-6">
+              <!-- Mover usuario (orgao principal) -->
+              <div class="space-y-2">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Órgão Principal
+                </label>
+                <select
+                  v-model.number="form.orgao_principal_id"
+                  :disabled="!canManageSensitive"
+                  class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow text-slate-900 dark:text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  :class="{ 'border-red-500 focus:ring-red-500': errors.orgao_principal_id }"
+                >
+                  <option :value="null">— Nenhum —</option>
+                  <option
+                    v-for="orgao in availableOrgaos"
+                    :key="orgao.id"
+                    :value="orgao.id"
+                  >
+                    {{ orgao.nome }}<span v-if="orgao.municipio"> — {{ orgao.municipio.nome }}</span>
+                  </option>
+                </select>
+                <p v-if="selectedOrgao?.municipio" class="text-xs text-slate-500 dark:text-slate-400">
+                  Município: <span class="font-medium text-slate-700 dark:text-slate-300">{{ selectedOrgao.municipio.nome }}</span>
+                </p>
+                <span v-if="errors.orgao_principal_id" class="text-xs text-red-500 font-medium">{{ errors.orgao_principal_id }}</span>
+              </div>
+
+              <!-- Redefinir senha -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                <div class="space-y-2">
+                  <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Nova senha
+                  </label>
+                  <input
+                    id="password"
+                    v-model="form.password"
+                    type="password"
+                    autocomplete="new-password"
+                    :disabled="!canManageSensitive"
+                    placeholder="Deixe em branco para manter"
+                    class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    :class="{ 'border-red-500 focus:ring-red-500': errors.password }"
+                  />
+                  <span v-if="errors.password" class="text-xs text-red-500 font-medium">{{ errors.password }}</span>
+                </div>
+                <div class="space-y-2">
+                  <label for="password_confirmation" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Confirmar senha
+                  </label>
+                  <input
+                    id="password_confirmation"
+                    v-model="form.password_confirmation"
+                    type="password"
+                    autocomplete="new-password"
+                    :disabled="!canManageSensitive || !form.password"
+                    placeholder="Repita a nova senha"
+                    class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              <!-- Status ativo/inativo (destacado) -->
+              <div
+                class="mt-4 rounded-xl border-2 p-4 sm:p-5 transition-colors"
+                :class="form.active
+                  ? 'border-green-300 dark:border-green-700 bg-green-50/60 dark:bg-green-900/15'
+                  : 'border-red-400 dark:border-red-700 bg-red-50/70 dark:bg-red-900/20 ring-2 ring-red-200 dark:ring-red-900/40'"
+              >
+                <div class="flex items-center justify-between gap-4">
+                  <div class="flex items-start gap-3 min-w-0">
+                    <div
+                      class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border"
+                      :class="form.active
+                        ? 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 border-green-300 dark:border-green-700'
+                        : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700'"
+                    >
+                      <svg v-if="form.active" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <p class="text-sm font-bold text-slate-800 dark:text-slate-100">Status do usuário</p>
+                        <span
+                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide"
+                          :class="form.active
+                            ? 'bg-green-600 text-white'
+                            : 'bg-red-600 text-white animate-pulse'"
+                        >
+                          {{ form.active ? 'Ativo' : 'Desativado' }}
+                        </span>
+                      </div>
+                      <p
+                        class="text-xs mt-1 font-medium"
+                        :class="form.active
+                          ? 'text-green-700 dark:text-green-300'
+                          : 'text-red-700 dark:text-red-300'"
+                      >
+                        {{ form.active
+                          ? 'Pode acessar normalmente o sistema.'
+                          : 'Conta bloqueada — usuário não conseguirá efetuar login.' }}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    :aria-checked="form.active"
+                    :disabled="!canManageSensitive"
+                    @click="canManageSensitive && (form.active = !form.active)"
+                    class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    :class="form.active ? 'bg-green-600' : 'bg-red-600'"
+                  >
+                    <span
+                      class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform"
+                      :class="form.active ? 'translate-x-6' : 'translate-x-1'"
+                    ></span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -272,6 +429,22 @@
                   <span class="text-slate-800 dark:text-slate-200">Total de Permissões</span>
                   <span class="text-blue-600 dark:text-blue-400">{{ totalPermissionsCount }}</span>
                 </div>
+
+                <div v-if="canManageSensitive && (orgaoChanged || activeChanged || passwordWillChange)" class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700 space-y-2">
+                  <p class="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Ações pendentes</p>
+                  <div v-if="orgaoChanged" class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                    Órgão alterado
+                  </div>
+                  <div v-if="passwordWillChange" class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                    <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                    Senha será redefinida
+                  </div>
+                  <div v-if="activeChanged" class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                    <span class="w-1.5 h-1.5 rounded-full" :class="form.active ? 'bg-green-500' : 'bg-red-500'"></span>
+                    {{ form.active ? 'Usuário será ativado' : 'Usuário será desativado' }}
+                  </div>
+                </div>
               </div>
 
               <div class="space-y-3">
@@ -324,7 +497,15 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
+  availableOrgaos: {
+    type: Array,
+    default: () => []
+  },
   canEditSuperAdmin: {
+    type: Boolean,
+    default: false
+  },
+  canManageSensitive: {
     type: Boolean,
     default: false
   },
@@ -386,9 +567,25 @@ const getInitialDirectPermissions = () => {
 const form = useForm({
   name: props.user.name,
   email: props.user.email,
+  cpf: props.user.cpf ?? '',
   roles: props.user.roles?.map(r => r.id) || [],
-  direct_permissions: getInitialDirectPermissions()
+  direct_permissions: getInitialDirectPermissions(),
+  password: '',
+  password_confirmation: '',
+  active: props.user.active ?? true,
+  orgao_principal_id: props.user.orgao_principal_id ?? null
 });
+
+const initialOrgaoId = props.user.orgao_principal_id ?? null;
+const initialActive = props.user.active ?? true;
+
+const selectedOrgao = computed(() =>
+  props.availableOrgaos.find(o => o.id === form.orgao_principal_id) ?? null
+);
+
+const orgaoChanged = computed(() => form.orgao_principal_id !== initialOrgaoId);
+const activeChanged = computed(() => form.active !== initialActive);
+const passwordWillChange = computed(() => form.password && form.password.length > 0);
 
 const isFromRole = (slug) => {
   return rolePermissionsList.value.includes(slug);

@@ -15,7 +15,7 @@ class OrgaosSeeder extends Seeder
     public function run(): void
     {
         // CEDEC - Coordenadoria Estadual de Defesa Civil
-        DB::table('orgaos')->updateOrInsert(
+        DB::table('compdec_orgaos')->updateOrInsert(
             ['codigo' => 'CEDEC-SC'],
             [
                 'nome' => 'Coordenadoria Estadual de Defesa Civil de Santa Catarina',
@@ -34,7 +34,7 @@ class OrgaosSeeder extends Seeder
             ]
         );
 
-        $cedecId = DB::table('orgaos')->where('codigo', 'CEDEC-SC')->value('id');
+        $cedecId = DB::table('compdec_orgaos')->where('codigo', 'CEDEC-SC')->value('id');
 
         // REDEC - Coordenadorias Regionais de Defesa Civil
         $redecs = [
@@ -62,7 +62,7 @@ class OrgaosSeeder extends Seeder
         ];
 
         foreach ($redecs as $redec) {
-            DB::table('orgaos')->updateOrInsert(
+            DB::table('compdec_orgaos')->updateOrInsert(
                 ['codigo' => $redec['codigo']],
                 [
                     'nome' => $redec['nome'],
@@ -80,7 +80,7 @@ class OrgaosSeeder extends Seeder
             );
         }
 
-        $redecIds = DB::table('orgaos')->whereIn('codigo', array_column($redecs, 'codigo'))->pluck('id')->toArray();
+        $redecIds = DB::table('compdec_orgaos')->whereIn('codigo', array_column($redecs, 'codigo'))->pluck('id')->toArray();
 
         // COMPDEC - Coordenadorias Municipais de Defesa Civil
         $compdecs = [
@@ -127,7 +127,7 @@ class OrgaosSeeder extends Seeder
         ];
 
         foreach ($compdecs as $compdec) {
-            DB::table('orgaos')->updateOrInsert(
+            DB::table('compdec_orgaos')->updateOrInsert(
                 ['codigo' => $compdec['codigo']],
                 [
                     'nome' => $compdec['nome'],

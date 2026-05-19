@@ -17,7 +17,7 @@ class MockUsersHierarchySeeder extends Seeder
         $roles = Role::where('guard_name', $guard)->get()->keyBy('slug');
 
         // Buscar IDs de órgãos existentes (se o OrgaosSeeder já rodou)
-        $orgaos = DB::table('orgaos')->pluck('id', 'codigo')->toArray();
+        $orgaos = DB::table('compdec_orgaos')->pluck('id', 'codigo')->toArray();
 
         $defaultPassword = 'password';
 

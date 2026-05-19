@@ -72,6 +72,12 @@ class AuthController extends Controller
             ]);
         }
 
+        if (!$user->active || in_array($user->status, ['inactive', 'suspended', 'blocked'], true)) {
+            throw ValidationException::withMessages([
+                'cpf' => ['Seu usuario esta desativado. Entre em contato com o suporte ou com o gestor do sistema.'],
+            ]);
+        }
+
         // Revogar tokens anteriores (opcional)
         $user->tokens()->delete();
 
@@ -157,4 +163,3 @@ class AuthController extends Controller
         ]);
     }
 }
-

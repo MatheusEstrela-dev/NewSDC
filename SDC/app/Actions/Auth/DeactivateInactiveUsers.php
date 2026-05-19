@@ -22,7 +22,10 @@ class DeactivateInactiveUsers
         
         if ($count > 0) {
             // Realiza o update em massa para performance
-            $updated = $query->update(['active' => false]);
+            $updated = $query->update([
+                'active' => false,
+                'status' => 'inactive',
+            ]);
             
             Log::info("SDC Auto-Deactivation: $updated usuários foram desativados por inatividade cadastral superior a 6 meses.");
             

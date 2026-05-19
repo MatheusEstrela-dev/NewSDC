@@ -4,49 +4,92 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class NewPasswordController extends Controller
 {
     /**
-     * Display the password reset view.
+     * Chave da session que guarda o contexto (token+email) ate o submit do form.
+     * Mantemos esses valores SO no servidor — nao expor no data-page do Inertia.
      */
-    public function create(Request $request): View
+    private const SESSION_KEY = 'password_reset_context';
+
+    /**
+     * GET /reset-password/{token}
+     *
+     * Decripta o payload da URL (Crypt::encryptString de JSON com token+email
+     * gerado em AppServiceProvider::boot), guarda na session do navegador e
+     * renderiza a tela. **Nao envia token nem email para o frontend** —
+     * impede que view-source / devtools exponham o token de reset.
+     *
+     * Compat: se o param vier no formato antigo (token plano + ?email=),
+     * tambem aceita.
+     */
+    public function create(Request $request): Response
     {
-        return view('auth.reset-password', [
-            'email' => $request->email,
-            'token' => $request->route('token'),
+        [$token, $email] = $this->extractContext($request);
+
+        $hasContext = $token !== '' && $email !== '';
+
+        if ($hasContext) {
+            $request->session()->put(self::SESSION_KEY, [
+                'token'     => $token,
+                'email'     => $email,
+                'expires_at'=> Carbon::now()->addMinutes(15)->timestamp,
+            ]);
+        }
+
+        return Inertia::render('Auth/NewPassword', [
+            'hasResetContext' => $hasContext,
         ]);
     }
 
     /**
-     * Handle an incoming new password request.
+     * POST /reset-password
+     *
+     * Le token+email da session (nao do request). Form so envia password +
+     * confirmacao. Se o contexto nao existir / expirou, redireciona pra
+     * solicitar novo link.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
+        $context = $request->session()->get(self::SESSION_KEY);
+
+        if (!$this->contextIsValid($context)) {
+            $request->session()->forget(self::SESSION_KEY);
+
+            return redirect()
+                ->route('password.request')
+                ->withErrors(['email' => 'Link de redefinicao invalido ou expirado. Solicite um novo.']);
+        }
+
         $request->validate([
-            'token' => 'required',
-            'email' => 'required|email',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
         $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
+            [
+                'token'                 => $context['token'],
+                'email'                 => $context['email'],
+                'password'              => $request->password,
+                'password_confirmation' => $request->password_confirmation,
+            ],
             function ($user) use ($request) {
                 $user->forceFill([
-                    'password' => Hash::make($request->password),
+                    'password'       => Hash::make($request->password),
                     'remember_token' => Str::random(60),
                 ])->save();
 
@@ -54,15 +97,47 @@ class NewPasswordController extends Controller
             }
         );
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
-        if ($status == Password::PASSWORD_RESET) {
+        $request->session()->forget(self::SESSION_KEY);
+
+        if ($status === Password::PASSWORD_RESET) {
             return redirect()->route('login')->with('success', __($status));
         }
 
         throw ValidationException::withMessages([
             'email' => [trans($status)],
         ]);
+    }
+
+    /**
+     * Extrai {token, email} do parametro de rota — encriptado ou plano (compat).
+     *
+     * @return array{0:string,1:string}
+     */
+    private function extractContext(Request $request): array
+    {
+        $raw   = (string) $request->route('token');
+        $token = $raw;
+        $email = (string) $request->query('email', '');
+
+        try {
+            $payload = json_decode(Crypt::decryptString($raw), true, 16, JSON_THROW_ON_ERROR);
+            if (is_array($payload) && isset($payload['token'])) {
+                $token = (string) $payload['token'];
+                $email = (string) ($payload['email'] ?? $email);
+            }
+        } catch (DecryptException|\JsonException) {
+            // Formato antigo (plano): mantem $token = $raw, $email = ?email=
+        }
+
+        return [$token, $email];
+    }
+
+    private function contextIsValid(mixed $context): bool
+    {
+        return is_array($context)
+            && !empty($context['token'])
+            && !empty($context['email'])
+            && isset($context['expires_at'])
+            && (int) $context['expires_at'] > Carbon::now()->timestamp;
     }
 }

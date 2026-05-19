@@ -43,6 +43,7 @@ provide('openSidebar', openSidebar);
   <div class="flex min-h-screen bg-slate-50 dark:bg-slate-950">
     <!-- Toast Notifications -->
     <ToastContainer />
+    <FlashNotification />
 
     <!-- Offline/Slow Connection Indicator -->
     <OfflineIndicator />
