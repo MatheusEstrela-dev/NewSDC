@@ -581,7 +581,7 @@ export function useWelcomeTour({ userName = '', skipPersist = false } = {}) {
           </div>
         `,
         attachTo: { element: () => syncVirtualTarget('[data-tour="kpi-card"]', { scroll: true, block: 'start' }), on: 'bottom' },
-        classes: 'shepherd-sdc shepherd-sdc--blue',
+        classes: 'shepherd-sdc shepherd-sdc--blue shepherd-sdc--kpis',
         buttons: [
           { classes: 'shepherd-button-secondary', text: 'Voltar', action() { this.back(); } },
           { classes: 'shepherd-button-primary', text: 'Avancar', action() { this.next(); } },

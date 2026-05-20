@@ -115,6 +115,38 @@
   flex-shrink: 0 !important;
 }
 
+.shepherd-element.shepherd-sdc--kpis {
+  position: fixed !important;
+  top: 50dvh !important;
+  left: 50vw !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(540px, calc(100vw - 32px)) !important;
+  min-width: min(540px, calc(100vw - 32px)) !important;
+  max-width: 540px !important;
+  max-height: calc(100dvh - 40px) !important;
+}
+
+.shepherd-element.shepherd-sdc--kpis .shepherd-content {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: inherit !important;
+}
+
+.shepherd-element.shepherd-sdc--kpis .shepherd-text {
+  overflow-y: auto !important;
+  padding-top: 14px !important;
+  padding-bottom: 2px !important;
+}
+
+.shepherd-element.shepherd-sdc--kpis .shepherd-footer,
+.shepherd-element.shepherd-sdc--kpis .shepherd-header,
+.shepherd-element.shepherd-sdc--kpis .shepherd-progress-dots {
+  flex-shrink: 0 !important;
+}
+
 .shepherd-element.shepherd-sdc--actions {
   max-width: 540px !important;
   max-height: calc(100dvh - 40px) !important;
