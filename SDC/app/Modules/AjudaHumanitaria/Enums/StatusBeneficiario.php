@@ -10,6 +10,7 @@ enum StatusBeneficiario: string
     case INATIVO = 'inativo';
     case PENDENTE = 'pendente';
     case SUSPENSO = 'suspenso';
+    case FALECIDO = 'falecido';
 
     public static function toSelectArray(): array
     {
@@ -18,6 +19,7 @@ enum StatusBeneficiario: string
             ['value' => self::INATIVO->value, 'label' => 'Inativo'],
             ['value' => self::PENDENTE->value, 'label' => 'Pendente'],
             ['value' => self::SUSPENSO->value, 'label' => 'Suspenso'],
+            ['value' => self::FALECIDO->value, 'label' => 'Falecido'],
         ];
     }
 }

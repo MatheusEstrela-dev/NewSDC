@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
+use App\Providers\RouteServiceProvider;
+use App\Services\Auth\OnboardingService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -24,6 +29,11 @@ class NewPasswordController extends Controller
      * Mantemos esses valores SO no servidor — nao expor no data-page do Inertia.
      */
     private const SESSION_KEY = 'password_reset_context';
+
+    public function __construct(
+        private readonly OnboardingService $onboarding,
+    ) {
+    }
 
     /**
      * GET /reset-password/{token}
@@ -80,6 +90,9 @@ class NewPasswordController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        $resetUser = null;
+        $completedFirstAccess = false;
+
         $status = Password::reset(
             [
                 'token'                 => $context['token'],
@@ -87,11 +100,18 @@ class NewPasswordController extends Controller
                 'password'              => $request->password,
                 'password_confirmation' => $request->password_confirmation,
             ],
-            function ($user) use ($request) {
-                $user->forceFill([
-                    'password'       => Hash::make($request->password),
-                    'remember_token' => Str::random(60),
-                ])->save();
+            function ($user) use ($request, &$resetUser, &$completedFirstAccess) {
+                $resetUser = $user;
+                $completedFirstAccess = (bool) $user->must_change_password;
+
+                if ($completedFirstAccess) {
+                    $this->onboarding->completeFirstAccess($user, $request->string('password')->value());
+                } else {
+                    $user->forceFill([
+                        'password'       => Hash::make($request->password),
+                        'remember_token' => Str::random(60),
+                    ])->save();
+                }
 
                 event(new PasswordReset($user));
             }
@@ -100,6 +120,25 @@ class NewPasswordController extends Controller
         $request->session()->forget(self::SESSION_KEY);
 
         if ($status === Password::PASSWORD_RESET) {
+            if ($completedFirstAccess && $resetUser !== null) {
+                Auth::login($resetUser);
+                $request->session()->regenerate();
+
+                $resetUser->recordLogin(
+                    $request->attributes->get('client_ip') ?? $request->ip(),
+                    $request->userAgent(),
+                );
+
+                Cache::forget("inertia_user_data_{$resetUser->id}");
+                AuditLog::logLogin($resetUser->id);
+                $request->session()->flash('show_welcome_tour', true);
+
+                return redirect(RouteServiceProvider::HOME)->with(
+                    'success',
+                    'Senha atualizada com sucesso. Bem-vindo ao SDC!'
+                );
+            }
+
             return redirect()->route('login')->with('success', __($status));
         }
 

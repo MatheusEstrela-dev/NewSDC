@@ -66,11 +66,17 @@ class OnboardingService
 
     /**
      * Conclui o primeiro acesso: persiste nova senha e promove status para 'active'.
+     *
+     * email_verified_at e setado aqui propositalmente: o usuario so chegou a esse
+     * ponto porque (a) recebeu a senha provisoria no email cadastrado, (b) logou
+     * com ela e (c) esta trocando para uma senha pessoal. Isso e prova de posse
+     * do email — equivalente a um link de verificacao classico, sem step extra.
      */
     public function completeFirstAccess(User $user, string $newPassword): void
     {
         DB::transaction(function () use ($user, $newPassword) {
             $oldStatus = $user->status;
+            $wasUnverified = $user->email_verified_at === null;
 
             $user->forceFill([
                 'password' => Hash::make($newPassword),
@@ -80,14 +86,20 @@ class OnboardingService
                 'pending_expires_at' => null,
                 'status' => 'active',
                 'active' => true,
+                'email_verified_at' => $user->email_verified_at ?? now(),
             ])->save();
 
             if ($oldStatus !== 'active') {
+                $reason = 'Primeiro acesso concluido — senha provisoria substituida';
+                if ($wasUnverified) {
+                    $reason .= ' e email verificado (login com senha enviada por email)';
+                }
+
                 UserStatusHistory::logStatusChange(
                     $user,
                     $oldStatus,
                     'active',
-                    'Primeiro acesso concluido — senha provisoria substituida'
+                    $reason
                 );
             }
         });

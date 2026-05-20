@@ -69,12 +69,6 @@
           </button>
         </div>
 
-        <PasswordStrengthMeter :password="form.password" />
-
-        <div v-if="form.errors.password" class="error-message">
-          {{ form.errors.password }}
-        </div>
-
         <div class="input-group">
           <input
             :type="showConfirm ? 'text' : 'password'"
@@ -108,6 +102,12 @@
 
         <div v-if="passwordsMismatch" class="error-message">
           A confirmacao nao coincide com a nova senha.
+        </div>
+
+        <PasswordStrengthMeter :password="form.password" />
+
+        <div v-if="form.errors.password" class="error-message">
+          {{ form.errors.password }}
         </div>
 
         <button

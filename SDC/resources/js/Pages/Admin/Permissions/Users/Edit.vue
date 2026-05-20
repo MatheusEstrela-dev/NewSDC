@@ -121,31 +121,67 @@
                   <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
                     Nova senha
                   </label>
-                  <input
-                    id="password"
-                    v-model="form.password"
-                    type="password"
-                    autocomplete="new-password"
-                    :disabled="!canManageSensitive"
-                    placeholder="Deixe em branco para manter"
-                    class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                    :class="{ 'border-red-500 focus:ring-red-500': errors.password }"
-                  />
+                  <div class="relative">
+                    <input
+                      id="password"
+                      v-model="form.password"
+                      :type="showPassword ? 'text' : 'password'"
+                      autocomplete="new-password"
+                      :disabled="!canManageSensitive"
+                      placeholder="Deixe em branco para manter"
+                      class="w-full px-4 py-2 pr-12 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      :class="{ 'border-red-500 focus:ring-red-500': errors.password }"
+                    />
+                    <button
+                      type="button"
+                      class="absolute inset-y-0 right-0 z-20 flex w-11 items-center justify-center text-slate-400 transition-colors hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:pointer-events-none disabled:opacity-40"
+                      :disabled="!canManageSensitive"
+                      @click="showPassword = !showPassword"
+                      :aria-label="showPassword ? 'Ocultar nova senha' : 'Mostrar nova senha'"
+                      :title="showPassword ? 'Ocultar nova senha' : 'Mostrar nova senha'"
+                    >
+                      <svg v-if="showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18M10.58 10.58A2 2 0 0012 14a2 2 0 001.42-.58M9.88 4.24A10.7 10.7 0 0112 4c7 0 10 8 10 8a15.5 15.5 0 01-3.1 4.35M6.6 6.6C3.8 8.48 2 12 2 12s3 8 10 8a10.9 10.9 0 005.4-1.4" />
+                      </svg>
+                      <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8-10-8-10-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  </div>
                   <span v-if="errors.password" class="text-xs text-red-500 font-medium">{{ errors.password }}</span>
                 </div>
                 <div class="space-y-2">
                   <label for="password_confirmation" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
                     Confirmar senha
                   </label>
-                  <input
-                    id="password_confirmation"
-                    v-model="form.password_confirmation"
-                    type="password"
-                    autocomplete="new-password"
-                    :disabled="!canManageSensitive || !form.password"
-                    placeholder="Repita a nova senha"
-                    class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
+                  <div class="relative">
+                    <input
+                      id="password_confirmation"
+                      v-model="form.password_confirmation"
+                      :type="showPasswordConfirmation ? 'text' : 'password'"
+                      autocomplete="new-password"
+                      :disabled="!canManageSensitive || !form.password"
+                      placeholder="Repita a nova senha"
+                      class="w-full px-4 py-2 pr-12 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    <button
+                      type="button"
+                      class="absolute inset-y-0 right-0 z-20 flex w-11 items-center justify-center text-slate-400 transition-colors hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:pointer-events-none disabled:opacity-40"
+                      :disabled="!canManageSensitive || !form.password"
+                      @click="showPasswordConfirmation = !showPasswordConfirmation"
+                      :aria-label="showPasswordConfirmation ? 'Ocultar confirmacao de senha' : 'Mostrar confirmacao de senha'"
+                      :title="showPasswordConfirmation ? 'Ocultar confirmacao de senha' : 'Mostrar confirmacao de senha'"
+                    >
+                      <svg v-if="showPasswordConfirmation" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18M10.58 10.58A2 2 0 0012 14a2 2 0 001.42-.58M9.88 4.24A10.7 10.7 0 0112 4c7 0 10 8 10 8a15.5 15.5 0 01-3.1 4.35M6.6 6.6C3.8 8.48 2 12 2 12s3 8 10 8a10.9 10.9 0 005.4-1.4" />
+                      </svg>
+                      <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8-10-8-10-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -519,6 +555,8 @@ const page = usePage();
 const { isSuperAdmin, canAssignRole, isImmutablePermission: checkImmutable } = useHierarchy();
 
 const aclModules = computed(() => page.props.acl?.modules ?? {});
+const showPassword = ref(false);
+const showPasswordConfirmation = ref(false);
 
 const checkRoleDisabled = (role) => {
   if (isSuperAdmin.value) return false;

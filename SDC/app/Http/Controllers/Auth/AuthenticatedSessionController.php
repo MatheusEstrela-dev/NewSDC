@@ -37,7 +37,12 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         $user = Auth::user();
-        $user->recordLogin($request->ip(), $request->userAgent());
+        // Prefere o IP detectado pelo frontend (WebRTC + ipify via header
+        // X-Client-IP, resolvido pelo middleware ResolveClientIp). Em ambiente
+        // Docker o $request->ip() seria so o gateway (172.x.x.x); o do client
+        // e mais informativo para auditoria.
+        $clientIp = $request->attributes->get('client_ip') ?? $request->ip();
+        $user->recordLogin($clientIp, $request->userAgent());
 
         // Invalidar cache do usuario para garantir dados frescos no dashboard
         Cache::forget("inertia_user_data_{$user->id}");

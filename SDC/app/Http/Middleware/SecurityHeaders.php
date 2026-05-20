@@ -82,6 +82,10 @@ class SecurityHeaders
         $connectSrc = [
             "'self'",
             "https://cdn.jsdelivr.net",
+            // Best-effort para auditoria de IP do client (composable useClientIp).
+            // Bloqueio = sem dado, nao quebra fluxo.
+            "https://api.ipify.org",
+            "https://ipapi.co",
         ];
 
         // Allow app URL

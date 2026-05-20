@@ -92,6 +92,7 @@ class User extends Authenticatable
         'last_login_at',
         'last_login_ip',
         'user_agent',
+        'last_login_browser',
         'created_by',
         'updated_by',
         'notification_update_mode',
@@ -238,10 +239,13 @@ class User extends Authenticatable
         $oldStatus = $this->status;
         $isPendingFirstAccess = $this->must_change_password === true;
 
+        $resolvedUa = $userAgent ?? request()->userAgent();
+
         $payload = [
             'last_login_at' => now(),
             'last_login_ip' => $ip ?? request()->ip(),
-            'user_agent' => $userAgent ?? request()->userAgent(),
+            'user_agent' => $resolvedUa,
+            'last_login_browser' => \App\Support\UserAgentParser::summarize($resolvedUa),
         ];
 
         if (!$isPendingFirstAccess) {

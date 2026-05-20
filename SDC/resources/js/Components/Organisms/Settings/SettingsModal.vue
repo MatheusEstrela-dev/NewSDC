@@ -315,7 +315,9 @@
                                      <button
                                          type="button"
                                          @click="showCurrentPassword = !showCurrentPassword"
-                                         class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                         class="absolute inset-y-0 right-0 z-20 flex w-11 items-center justify-center text-slate-400 transition-colors hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:hover:text-slate-300 dark:focus:ring-offset-slate-800"
+                                         :aria-label="showCurrentPassword ? 'Ocultar senha atual' : 'Mostrar senha atual'"
+                                         :title="showCurrentPassword ? 'Ocultar senha atual' : 'Mostrar senha atual'"
                                      >
                                          <EyeSlashIcon v-if="showCurrentPassword" class="w-5 h-5" />
                                          <EyeIcon v-else class="w-5 h-5" />
@@ -336,7 +338,9 @@
                                      <button
                                          type="button"
                                          @click="showNewPassword = !showNewPassword"
-                                         class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                         class="absolute inset-y-0 right-0 z-20 flex w-11 items-center justify-center text-slate-400 transition-colors hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:hover:text-slate-300 dark:focus:ring-offset-slate-800"
+                                         :aria-label="showNewPassword ? 'Ocultar nova senha' : 'Mostrar nova senha'"
+                                         :title="showNewPassword ? 'Ocultar nova senha' : 'Mostrar nova senha'"
                                      >
                                          <EyeSlashIcon v-if="showNewPassword" class="w-5 h-5" />
                                          <EyeIcon v-else class="w-5 h-5" />
@@ -357,7 +361,9 @@
                                      <button
                                          type="button"
                                          @click="showConfirmPassword = !showConfirmPassword"
-                                         class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                         class="absolute inset-y-0 right-0 z-20 flex w-11 items-center justify-center text-slate-400 transition-colors hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:hover:text-slate-300 dark:focus:ring-offset-slate-800"
+                                         :aria-label="showConfirmPassword ? 'Ocultar confirmacao de senha' : 'Mostrar confirmacao de senha'"
+                                         :title="showConfirmPassword ? 'Ocultar confirmacao de senha' : 'Mostrar confirmacao de senha'"
                                      >
                                          <EyeSlashIcon v-if="showConfirmPassword" class="w-5 h-5" />
                                          <EyeIcon v-else class="w-5 h-5" />

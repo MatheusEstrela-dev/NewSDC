@@ -43,6 +43,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\HandleInertiaRequests::class,
             \App\Http\Middleware\SetTenant::class,
             \App\Http\Middleware\LogSystemActivity::class, // Capture ALL Web requests
+            \App\Http\Middleware\ResolveClientIp::class,
             \App\Http\Middleware\CheckUserActive::class,
             \App\Http\Middleware\EnsurePasswordChanged::class,
         ],

@@ -56,12 +56,22 @@ services:
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
 
-      # Mail (capturado pelo Mailhog)
-      MAIL_MAILER: smtp
-      MAIL_HOST: mailhog
-      MAIL_PORT: 1025
-      MAIL_FROM_ADDRESS: dev@sdc.local
-      MAIL_FROM_NAME: "SDC Dev"
+      # Mail. Default: Mailhog (capturado em http://localhost:8025).
+      # Para usar SMTP real (Prodemge, etc.) sobrescreva via docker/.env:
+      #   MAIL_HOST=smtpprdm.prodemge.gov.br
+      #   MAIL_PORT=587
+      #   MAIL_USERNAME=...
+      #   MAIL_PASSWORD=...
+      #   MAIL_ENCRYPTION=tls
+      #   MAIL_FROM_ADDRESS=sdc@defesacivil.mg.gov.br
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailhog}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-dev@sdc.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
 
     ports:
       - "19444:443"     # HTTPS (FrankenPHP)

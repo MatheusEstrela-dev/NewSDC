@@ -13,6 +13,7 @@ enum SituacaoVulnerabilidade: string
     case ENFERMO = 'enfermo';
     case ISOLADO = 'isolado';
     case AFETADO = 'afetado';
+    case EM_RISCO = 'em_risco';
 
     public static function toSelectArray(): array
     {
@@ -24,6 +25,7 @@ enum SituacaoVulnerabilidade: string
             ['value' => self::ENFERMO->value, 'label' => 'Enfermo'],
             ['value' => self::ISOLADO->value, 'label' => 'Isolado'],
             ['value' => self::AFETADO->value, 'label' => 'Afetado'],
+            ['value' => self::EM_RISCO->value, 'label' => 'Em Risco'],
         ];
     }
 }
