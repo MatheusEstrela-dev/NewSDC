@@ -88,5 +88,6 @@ class Kernel extends HttpKernel
         'statement_timeout' => \App\Http\Middleware\SetStatementTimeout::class,
         'acquire_slot' => \App\Http\Middleware\AcquireConnectionSlot::class,
         'backpressure' => \App\Http\Middleware\Backpressure::class,
+        'cache_swagger' => \App\Http\Middleware\CacheSwaggerUi::class,
     ];
 }

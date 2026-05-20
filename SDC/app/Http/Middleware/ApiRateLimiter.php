@@ -42,6 +42,13 @@ class ApiRateLimiter
      */
     public function handle(Request $request, Closure $next, string $tier = 'default'): Response
     {
+        // 0. Bucket global por segundo: protege contra tempestade legítima
+        // de tiers de baixa prioridade (publico, free) sob carga.
+        $globalDecision = $this->checkGlobalBucket($tier);
+        if ($globalDecision !== null) {
+            return $globalDecision;
+        }
+
         $user = $request->user();
 
         // 1. Define o limite baseado no Plano (Contexto do Cliente)
@@ -54,7 +61,7 @@ class ApiRateLimiter
         $key = 'rate_limit:' . ($user ? "user:{$user->id}" : "ip:{$request->ip()}") . ":tier:{$tier}";
 
         // 4. Verifica rate limit usando Redis (operações atômicas)
-        $limitCheck = $this->checkRateLimit($key, $cost, $limits);
+        $limitCheck = $this->checkRateLimit($key, $cost, $limits, $tier);
 
         if (!$limitCheck['allowed']) {
             // Log de segurança para rate limit excedido
@@ -99,28 +106,21 @@ class ApiRateLimiter
      *
      * Baseado no papiro.md - usa INCR e EXPIRE do Redis
      */
-    private function checkRateLimit(string $key, float $cost, array $limits): array
+    private function checkRateLimit(string $key, float $cost, array $limits, string $tier = 'default'): array
     {
         try {
             // Verifica se Redis está disponível
             if (!class_exists('Redis') && !class_exists('Predis\Client')) {
-                // Se Redis não está disponível, permite a requisição
                 return ['allowed' => true, 'current_usage' => 0, 'retry_after' => 0];
             }
 
-            // Verifica se a key já existe (para evitar comparação de float)
             $exists = Redis::exists($key);
-
-            // Incrementa o contador de forma atômica
             $currentUsage = Redis::incrbyfloat($key, $cost);
 
-            // Se a key não existia antes, define a expiração
-            // Usa $exists ao invés de comparar floats ($currentUsage == $cost)
             if (!$exists) {
                 Redis::expire($key, $limits['decay_seconds']);
             }
 
-            // Verifica se excedeu o limite
             if ($currentUsage > $limits['max_attempts']) {
                 $retryAfter = Redis::ttl($key);
 
@@ -137,15 +137,66 @@ class ApiRateLimiter
                 'retry_after' => 0,
             ];
 
-        } catch (\Exception $e) {
-            // Se houver erro no Redis, loga e permite a requisição
+        } catch (\Throwable $e) {
             \Log::error('Redis error in rate limiter', [
                 'error' => $e->getMessage(),
                 'key' => $key,
+                'tier' => $tier,
             ]);
+
+            // Fail-closed: tiers de baixa prioridade sao recusados quando Redis cai;
+            // tiers altos passam (continuidade para usuarios autenticados criticos).
+            $bypassOnError = ['pro', 'premium', 'enterprise', 'internal', 'admin', 'webhook'];
+            if ((bool) config('resilience.rate_limit.fail_closed', true)
+                && !in_array($tier, $bypassOnError, true)) {
+                return ['allowed' => false, 'current_usage' => 0, 'retry_after' => 10];
+            }
 
             return ['allowed' => true, 'current_usage' => 0, 'retry_after' => 0];
         }
+    }
+
+    /**
+     * Bucket global por segundo: protege o sistema contra picos legitimos
+     * de tiers de baixa prioridade. Tiers altos sempre passam.
+     */
+    private function checkGlobalBucket(string $tier): ?Response
+    {
+        $tiersBypass = ['internal', 'admin', 'enterprise', 'webhook'];
+        if (in_array($tier, $tiersBypass, true)) {
+            return null;
+        }
+
+        try {
+            $current = (int) Redis::incr('rate_limit:global:per_second');
+            if ($current === 1) {
+                Redis::expire('rate_limit:global:per_second', 1);
+            }
+
+            $threshold = (int) config('resilience.rate_limit.global_per_second', 1500);
+            if ($current > $threshold && in_array($tier, ['public', 'free', 'default'], true)) {
+                return response()->json([
+                    'error' => 'Service Busy',
+                    'message' => 'Capacidade global atingida; tente em alguns segundos.',
+                ], 503, ['Retry-After' => '5']);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Redis error in global rate limiter', [
+                'error' => $e->getMessage(),
+                'tier' => $tier,
+            ]);
+
+            // Fail-closed em queda do Redis: tiers baixos sao recusados.
+            if ((bool) config('resilience.rate_limit.fail_closed', true)
+                && in_array($tier, ['public', 'free', 'default'], true)) {
+                return response()->json([
+                    'error' => 'Service Degraded',
+                    'message' => 'Rate limit indisponivel; tente em breve.',
+                ], 503, ['Retry-After' => '10']);
+            }
+        }
+
+        return null;
     }
 
     /**
