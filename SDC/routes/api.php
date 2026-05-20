@@ -295,9 +295,10 @@ Route::prefix('v1/decretacoes')
         'api-rate-limiter:pro',
     ])
     ->group(function () {
-        Route::get('/',                [DecretacoesApiController::class, 'index'])->name('index');
-        Route::get('/export/power-bi', [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');
-        Route::get('/{id}',            [DecretacoesApiController::class, 'show'])->name('show');
+        Route::get('/',                      [DecretacoesApiController::class, 'index'])->name('index');
+        Route::get('/export/power-bi',       [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');
+        Route::get('/export/power-bi/async', [DecretacoesApiController::class, 'exportPowerBIAsync'])->name('export.power-bi.async');
+        Route::get('/{id}',                  [DecretacoesApiController::class, 'show'])->name('show');
     });
 
 // Rota de escrita — limite restrito (default: 300 creditos/min, protege contra abuso)

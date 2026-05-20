@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Decretacoes;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Traits\AsynchronousResponse;
 use App\Http\Traits\ApiResponseTrait;
+use App\Jobs\Decretacoes\ExportPowerBIJob;
 use App\Modules\Decretacoes\DTO\ProcessoRequestDTO;
 use App\Modules\Decretacoes\Requests\ReceiveProcessoRequest;
 use App\Modules\Decretacoes\Services\EntradaProcessoService;
@@ -31,6 +33,7 @@ use Illuminate\Http\Request;
 class DecretacoesApiController extends Controller
 {
     use ApiResponseTrait;
+    use AsynchronousResponse;
 
     public function __construct(
         private readonly ProcessoQueryService $queryService,
@@ -133,6 +136,33 @@ class DecretacoesApiController extends Controller
             'success' => true,
             'data'    => $data,
         ]);
+    }
+
+    /**
+     * Versao assincrona do export Power BI. Despacha job e retorna 202 com
+     * trace_id. Cliente consulta GET /api/v1/traces/{traceId} e baixa CSV
+     * via /download quando completed.
+     *
+     * @OA\Get(
+     *     path="/api/v1/decretacoes/export/power-bi/async",
+     *     summary="Export Power BI assincrono (recomendado para datasets grandes)",
+     *     operationId="decretacoesExportPowerBIAsync",
+     *     tags={"Decretacoes"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Response(response=202, description="Job enfileirado; consulte status via trace_id"),
+     *     @OA\Response(response=401, description="Nao autenticado")
+     * )
+     */
+    public function exportPowerBIAsync(Request $request): JsonResponse
+    {
+        return $this->dispatchAsyncJob(
+            jobClass: ExportPowerBIJob::class,
+            type: 'export_decretacoes_powerbi',
+            args: [$request->query()],
+            meta: ['filters' => $request->query()],
+            queue: 'bulk',
+            estimatedSeconds: 120,
+        );
     }
 
     /**
