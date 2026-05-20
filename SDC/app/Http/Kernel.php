@@ -51,6 +51,10 @@ class Kernel extends HttpKernel
         'api' => [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
+            // Resiliencia: backpressure antes de tocar DB; semaforo logo apos
+            // para garantir contagem global de requests concorrentes.
+            \App\Http\Middleware\Backpressure::class,
+            \App\Http\Middleware\AcquireConnectionSlot::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\SetTenant::class,
             \App\Http\Middleware\LogApiRequests::class, // Mantendo específico para API

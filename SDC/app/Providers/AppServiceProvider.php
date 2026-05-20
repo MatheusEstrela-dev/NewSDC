@@ -242,9 +242,12 @@ class AppServiceProvider extends ServiceProvider
         $circuitBreaker = $this->app->make(DatabaseCircuitBreaker::class);
 
         DB::listen(function ($query) use ($slowQueryThreshold, $circuitBreaker) {
-            // Sinaliza timeout suspeito ao circuit breaker (>30s).
+            // Circuit breaker: timeout suspeito (>30s) abre; queries rapidas
+            // sinalizam sucesso e permitem half-open -> closed.
             if ($query->time > 30000) {
                 $circuitBreaker->recordTimeout();
+            } else {
+                $circuitBreaker->recordSuccess();
             }
 
             if ($query->time <= $slowQueryThreshold) {
