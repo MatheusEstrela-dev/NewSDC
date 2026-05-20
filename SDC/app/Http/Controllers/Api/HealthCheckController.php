@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Database\ConnectionSemaphore;
 use App\Http\Controllers\Controller;
+use App\Services\Database\DatabaseCircuitBreaker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
@@ -34,13 +36,22 @@ class HealthCheckController extends Controller
      *     )
      * )
      */
-    public function basic(): JsonResponse
+    public function basic(ConnectionSemaphore $sem, DatabaseCircuitBreaker $cb): JsonResponse
     {
+        $semSaturated = $sem->active() / max(1, $sem->limit()) > 0.95;
+        $cbOpen = $cb->isOpen();
+        $degraded = $semSaturated || $cbOpen;
+
         return response()->json([
-            'status' => 'ok',
+            'status' => $degraded ? 'degraded' : 'ok',
             'timestamp' => now()->toIso8601String(),
             'uptime' => $this->getUptime(),
-        ]);
+            'db' => [
+                'semaphore_active' => $sem->active(),
+                'semaphore_limit' => $sem->limit(),
+                'circuit_breaker' => $cb->state(),
+            ],
+        ], $degraded ? 503 : 200);
     }
 
     /**

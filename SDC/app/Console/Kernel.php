@@ -33,6 +33,14 @@ class Kernel extends ConsoleKernel
             ->hourly()
             ->withoutOverlapping()
             ->runInBackground();
+
+        // Resiliencia: arquiva webhook_events completed com idade > 90 dias.
+        // Roda semanalmente (domingo 03:00) para manter tabela operacional pequena.
+        $schedule->command('webhooks:archive --days=90 --chunk=500')
+            ->weeklyOn(0, '03:00')
+            ->onOneServer()
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**
