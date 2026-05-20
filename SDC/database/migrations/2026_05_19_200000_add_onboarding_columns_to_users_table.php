@@ -29,6 +29,11 @@ return new class extends Migration
                 ->after('password_changed_at')
                 ->comment('Timestamp em que o usuario concluiu (ou pulou) o tour de boas-vindas.');
 
+            $table->string('last_login_browser', 100)
+                ->nullable()
+                ->after('user_agent')
+                ->comment('Resumo legivel do user-agent do ultimo login (ex.: "Chrome 148 / Windows"). Parseado em User::recordLogin.');
+
             $table->index(['status', 'pending_expires_at'], 'idx_users_pending_expiry');
         });
     }
@@ -42,6 +47,7 @@ return new class extends Migration
                 'must_change_password',
                 'password_changed_at',
                 'welcome_tour_completed_at',
+                'last_login_browser',
             ]);
         });
     }

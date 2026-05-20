@@ -9,7 +9,7 @@ import Sidebar from '@/Components/Sidebar.vue';
 import TopBar from '@/Components/TopBar.vue';
 import { useMobile, useSidebarMobile } from '@/Composables/useMobile';
 import { usePageLoading } from '@/Composables/usePageLoading';
-import { defineAsyncComponent, provide, ref } from 'vue';
+import { defineAsyncComponent, onMounted, onUnmounted, provide, ref } from 'vue';
 
 const { isPageLoading } = usePageLoading();
 
@@ -17,12 +17,46 @@ const { isPageLoading } = usePageLoading();
 const SupportModal = defineAsyncComponent(() => import('@/Components/Organisms/Suporte/SupportModal.vue'));
 const TermosUsoModal = defineAsyncComponent(() => import('@/Components/Organisms/TermosUsoModal.vue'));
 const PrivacidadeModal = defineAsyncComponent(() => import('@/Components/Organisms/PrivacidadeModal.vue'));
+const GuiaSistemaModal = defineAsyncComponent(() => import('@/Components/Organisms/GuiaSistemaModal.vue'));
 
 // Estado compartilhado da sidebar desktop
 const sidebarCollapsed = ref(false);
 const showSupportModal = ref(false);
 const showTermosModal = ref(false);
 const showPrivacidadeModal = ref(false);
+const showGuiaModal = ref(false);
+
+// Listeners para eventos disparados pelo passo final do tour de boas-vindas.
+// Quando o tour abre Termos via "open-termos", encadeamos Privacidade ao fechar
+// para completar o ciclo de aceite institucional (LGPD).
+const chainPrivacidadeAfterTermos = ref(false);
+
+const handleOpenGuia = () => { showGuiaModal.value = true; };
+const handleOpenTermos = () => {
+  chainPrivacidadeAfterTermos.value = true;
+  showTermosModal.value = true;
+};
+const handleOpenPrivacidade = () => { showPrivacidadeModal.value = true; };
+
+const closeTermos = () => {
+  showTermosModal.value = false;
+  if (chainPrivacidadeAfterTermos.value) {
+    chainPrivacidadeAfterTermos.value = false;
+    setTimeout(() => { showPrivacidadeModal.value = true; }, 250);
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('sdc-tour:open-guia', handleOpenGuia);
+  window.addEventListener('sdc-tour:open-termos', handleOpenTermos);
+  window.addEventListener('sdc-tour:open-privacidade', handleOpenPrivacidade);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('sdc-tour:open-guia', handleOpenGuia);
+  window.removeEventListener('sdc-tour:open-termos', handleOpenTermos);
+  window.removeEventListener('sdc-tour:open-privacidade', handleOpenPrivacidade);
+});
 
 // Estado e funções para sidebar mobile
 const { isMobile, isTablet, isDesktop } = useMobile();
@@ -116,9 +150,11 @@ provide('openSidebar', openSidebar);
     <!-- Support Modal -->
     <SupportModal :show="showSupportModal" @close="showSupportModal = false" />
     <!-- Termos Uso Modal -->
-    <TermosUsoModal :show="showTermosModal" @close="showTermosModal = false" />
+    <TermosUsoModal :show="showTermosModal" @close="closeTermos" />
     <!-- Privacidade Modal -->
     <PrivacidadeModal :show="showPrivacidadeModal" @close="showPrivacidadeModal = false" />
+    <!-- Guia do Sistema (disparado pelo passo final do tour) -->
+    <GuiaSistemaModal :show="showGuiaModal" @close="showGuiaModal = false" />
   </div>
 </template>
 

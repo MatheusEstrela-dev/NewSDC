@@ -31,7 +31,7 @@ const close = () => {
         leave-from-class="opacity-100"
         leave-to-class="opacity-0"
     >
-        <div v-if="show" class="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6 md:p-10">
+        <div v-if="show" class="fixed inset-0 z-[10050] flex items-center justify-center p-4 sm:p-6 md:p-10">
             <!-- Backdrop -->
             <div 
                 class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"

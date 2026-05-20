@@ -1,5 +1,6 @@
 import '../css/app.css';
 import { initAxios } from './bootstrap';
+import { installClientIpInterceptor } from '@/Composables/auth/useClientIp';
 
 import { createInertiaApp, router } from '@inertiajs/vue3';
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
@@ -163,6 +164,10 @@ const registerServiceWorker = async () => {
 const appName = import.meta.env.VITE_APP_NAME || 'SDC';
 
 await initAxios();
+// Best-effort: anexa header X-Client-IP em toda request (WebRTC + ipify).
+// Cobre Inertia router (POST /login, navegacao) E axios (XHR diretos).
+// Falhas silenciosas — nao bloqueia o boot do app.
+installClientIpInterceptor({ router });
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

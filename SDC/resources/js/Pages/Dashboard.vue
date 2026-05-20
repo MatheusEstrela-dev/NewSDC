@@ -4,12 +4,14 @@
 
         <div class="dashboard-container">
           <!-- Header Padronizado -->
-          <PageHeader
-            title="Painel Gerencial"
-            :description="`Exercício ${currentYear} - Visão consolidada dos processos.`"
-            :icon="HomeIcon"
-            variant="gradient"
-          />
+          <div data-tour="painel-header">
+            <PageHeader
+              title="Painel Gerencial"
+              :description="`Exercício ${currentYear} - Visão consolidada dos processos.`"
+              :icon="HomeIcon"
+              variant="gradient"
+            />
+          </div>
 
           <!-- Área de Drop Principal -->
           <draggable
@@ -21,7 +23,11 @@
             :animation="200"
           >
             <template #item="{ element }">
-              <div :class="element.colSpan" class="min-h-[100px]">
+              <div
+                :class="element.colSpan"
+                class="min-h-[100px]"
+                :data-tour="element.id.startsWith('metric-') ? 'kpi-card' : (element.id === 'chart-bar' || element.id === 'chart-donut' ? 'charts-card' : undefined)"
+              >
                 <!-- Wrapper com Handle de Arraste -->
                 <div class="h-full relative group/item">
                   <!-- Botão de Arraste -->
@@ -135,10 +141,29 @@ import Modal from '@/Components/Modal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import draggable from '@/lib/vuedraggable-src/vuedraggable.js';
-import { Head } from '@inertiajs/vue3';
-import { defineAsyncComponent, markRaw, ref } from 'vue';
+import { Head, usePage } from '@inertiajs/vue3';
+import { defineAsyncComponent, markRaw, nextTick, onMounted, ref } from 'vue';
+import { useWelcomeTour } from '@/composables/auth/useWelcomeTour';
 
 defineOptions({ layout: AuthenticatedLayout });
+
+// Tour de onboarding: dispara apenas se o backend sinalizar
+// auth.show_welcome_tour=true (vide HandleInertiaRequests::share).
+const inertiaPage = usePage();
+const { startWelcomeTour } = useWelcomeTour({
+    userName: inertiaPage.props.auth?.user?.name ?? '',
+});
+
+onMounted(async () => {
+    if (!inertiaPage.props.auth?.show_welcome_tour) return;
+
+    // Garante que sidebar, topbar e widgets async ja estejam no DOM antes
+    // do Shepherd resolver os seletores [data-tour="*"].
+    await nextTick();
+    requestAnimationFrame(() => {
+        requestAnimationFrame(startWelcomeTour);
+    });
+});
 
 // Widgets carregados sob demanda (lazy) para reduzir bundle inicial
 const DashboardMetricCard = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/DashboardMetricCard.vue'));

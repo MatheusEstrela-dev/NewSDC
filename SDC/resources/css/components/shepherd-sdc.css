@@ -1,0 +1,1189 @@
+/*
+ * Tour de boas-vindas SDC MG - v2 cinematografico.
+ * Escopado por .shepherd-sdc + modifiers por cor (.shepherd-sdc--{accent}).
+ * Modo OBRIGATORIO: sem X, sem skip, sem ESC, sem clicar fora.
+ * Tema claro por default (a UI por baixo esta em light mode).
+ */
+
+/* ============================================================================
+ * Tokens por accent (CSS custom properties)
+ * ========================================================================= */
+.shepherd-sdc {
+  --shepherd-accent: #2563eb;
+  --shepherd-accent-soft: rgba(37, 99, 235, 0.12);
+  --shepherd-accent-strong: rgba(37, 99, 235, 0.35);
+  --shepherd-text-strong: #0f172a;
+  --shepherd-text-base: #334155;
+  --shepherd-text-muted: #64748b;
+  --shepherd-surface: #ffffff;
+  --shepherd-surface-soft: #f8fafc;
+  --shepherd-border: #e2e8f0;
+}
+
+.shepherd-sdc--emerald  { --shepherd-accent: #2563eb; --shepherd-accent-soft: rgba(37,99,235,.12);  --shepherd-accent-strong: rgba(37,99,235,.35); }
+.shepherd-sdc--blue     { --shepherd-accent: #2563eb; --shepherd-accent-soft: rgba(37,99,235,.12);  --shepherd-accent-strong: rgba(37,99,235,.35); }
+.shepherd-sdc--cyan     { --shepherd-accent: #0891b2; --shepherd-accent-soft: rgba(8,145,178,.12);  --shepherd-accent-strong: rgba(8,145,178,.35); }
+.shepherd-sdc--sky      { --shepherd-accent: #0284c7; --shepherd-accent-soft: rgba(2,132,199,.12);   --shepherd-accent-strong: rgba(2,132,199,.35); }
+.shepherd-sdc--indigo   { --shepherd-accent: #2563eb; --shepherd-accent-soft: rgba(37,99,235,.12);  --shepherd-accent-strong: rgba(37,99,235,.35); }
+.shepherd-sdc--violet   { --shepherd-accent: #2563eb; --shepherd-accent-soft: rgba(37,99,235,.12);  --shepherd-accent-strong: rgba(37,99,235,.35); }
+.shepherd-sdc--amber    { --shepherd-accent: #d97706; --shepherd-accent-soft: rgba(217,119,6,.12);  --shepherd-accent-strong: rgba(217,119,6,.35); }
+
+/* ============================================================================
+ * Card base
+ * ========================================================================= */
+.shepherd-element.shepherd-sdc {
+  background: var(--shepherd-surface) !important;
+  border: 1px solid var(--shepherd-border) !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 30px 60px -15px rgba(15, 23, 42, 0.25),
+    0 0 40px -10px var(--shepherd-accent-strong) !important;
+  max-width: 580px !important;
+  width: calc(100vw - 32px) !important;
+  padding: 0 !important;
+  font-family: 'Figtree', system-ui, -apple-system, sans-serif !important;
+  color: var(--shepherd-text-base) !important;
+  overflow: hidden !important;
+  animation: shepherd-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both !important;
+  z-index: 10000 !important;
+}
+
+@keyframes shepherd-pop {
+  from { transform: scale(0.94) translateY(8px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.shepherd-element.shepherd-sdc .shepherd-content {
+  background: transparent !important;
+  border-radius: 20px !important;
+  padding: 0 !important;
+}
+
+/* ============================================================================
+ * Variant CINEMATOGRAFICO (passo 1 welcome)
+ * ========================================================================= */
+.shepherd-element.shepherd-sdc--cinematic {
+  max-width: 680px !important;
+  background:
+    radial-gradient(ellipse at top left, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(14, 165, 233, 0.08) 0%, transparent 50%),
+    var(--shepherd-surface) !important;
+}
+
+.shepherd-element.shepherd-sdc--welcome.shepherd-centered {
+  position: fixed !important;
+  top: 50dvh !important;
+  left: 50vw !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  transform: translate(-50%, -50%) !important;
+  max-height: calc(100dvh - 48px) !important;
+  overflow-y: auto !important;
+}
+
+.shepherd-element.shepherd-sdc--filters {
+  max-width: 540px !important;
+  max-height: calc(100dvh - 40px) !important;
+}
+
+.shepherd-element.shepherd-sdc--filters.shepherd-centered {
+  position: fixed !important;
+  top: 50dvh !important;
+  left: 50vw !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.shepherd-element.shepherd-sdc--filters .shepherd-content {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: inherit !important;
+}
+
+.shepherd-element.shepherd-sdc--filters .shepherd-text {
+  overflow-y: auto !important;
+  padding-top: 14px !important;
+  padding-bottom: 2px !important;
+}
+
+.shepherd-element.shepherd-sdc--filters .shepherd-footer,
+.shepherd-element.shepherd-sdc--filters .shepherd-header,
+.shepherd-element.shepherd-sdc--filters .shepherd-progress-dots {
+  flex-shrink: 0 !important;
+}
+
+.shepherd-element.shepherd-sdc--kpis {
+  position: fixed !important;
+  top: 50dvh !important;
+  left: 50vw !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(540px, calc(100vw - 32px)) !important;
+  min-width: min(540px, calc(100vw - 32px)) !important;
+  max-width: 540px !important;
+  max-height: calc(100dvh - 40px) !important;
+}
+
+.shepherd-element.shepherd-sdc--kpis .shepherd-content {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: inherit !important;
+}
+
+.shepherd-element.shepherd-sdc--kpis .shepherd-text {
+  overflow-y: auto !important;
+  padding-top: 14px !important;
+  padding-bottom: 2px !important;
+}
+
+.shepherd-element.shepherd-sdc--kpis .shepherd-footer,
+.shepherd-element.shepherd-sdc--kpis .shepherd-header,
+.shepherd-element.shepherd-sdc--kpis .shepherd-progress-dots {
+  flex-shrink: 0 !important;
+}
+
+.shepherd-element.shepherd-sdc--actions {
+  max-width: 540px !important;
+  max-height: calc(100dvh - 40px) !important;
+}
+
+.shepherd-element.shepherd-sdc--actions.shepherd-centered {
+  position: fixed !important;
+  top: 50dvh !important;
+  left: 50vw !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.shepherd-element.shepherd-sdc--actions .shepherd-content {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: inherit !important;
+}
+
+.shepherd-element.shepherd-sdc--actions .shepherd-text {
+  overflow-y: auto !important;
+  padding-top: 14px !important;
+  padding-bottom: 2px !important;
+}
+
+.shepherd-element.shepherd-sdc--actions .shepherd-footer,
+.shepherd-element.shepherd-sdc--actions .shepherd-header,
+.shepherd-element.shepherd-sdc--actions .shepherd-progress-dots {
+  flex-shrink: 0 !important;
+}
+
+.shepherd-element.shepherd-sdc--finale {
+  max-width: 720px !important;
+  max-height: calc(100dvh - 40px) !important;
+}
+
+.shepherd-element.shepherd-sdc--finale.shepherd-centered {
+  position: fixed !important;
+  top: 50dvh !important;
+  left: 50vw !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.shepherd-element.shepherd-sdc--finale .shepherd-content {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: inherit !important;
+}
+
+.shepherd-element.shepherd-sdc--finale .shepherd-text {
+  overflow-y: auto !important;
+}
+
+.shepherd-element.shepherd-sdc--finale .shepherd-footer,
+.shepherd-element.shepherd-sdc--finale .shepherd-header {
+  flex-shrink: 0 !important;
+}
+
+.shepherd-sdc--cinematic .shepherd-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.shepherd-sdc--cinematic .shepherd-particles span {
+  position: absolute;
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--shepherd-accent);
+  opacity: 0.4;
+  animation: shepherd-float 7s ease-in-out infinite alternate;
+}
+
+.shepherd-sdc--cinematic .shepherd-particles span:nth-child(1) { top: 18%; left: 12%; animation-delay: 0s; }
+.shepherd-sdc--cinematic .shepherd-particles span:nth-child(2) { top: 35%; right: 18%; animation-delay: 1.4s; width: 8px; height: 8px; }
+.shepherd-sdc--cinematic .shepherd-particles span:nth-child(3) { bottom: 22%; left: 22%; animation-delay: 2.8s; }
+.shepherd-sdc--cinematic .shepherd-particles span:nth-child(4) { bottom: 30%; right: 14%; animation-delay: 4.2s; width: 5px; height: 5px; }
+
+@keyframes shepherd-float {
+  0%   { transform: translate(0, 0); opacity: 0.2; }
+  50%  { opacity: 0.6; }
+  100% { transform: translate(20px, -30px); opacity: 0.2; }
+}
+
+/* ============================================================================
+ * Progress dots no topo (clicaveis)
+ * ========================================================================= */
+.shepherd-progress-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px 28px 0;
+}
+
+.shepherd-progress-dots button {
+  appearance: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.shepherd-progress-dots button.is-done {
+  background: #2563eb;
+  opacity: 0.45;
+}
+
+.shepherd-progress-dots button.is-active {
+  background: #2563eb;
+  transform: scale(1.6);
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.6);
+}
+
+.shepherd-progress-dots button:hover {
+  background: #2563eb;
+  opacity: 0.85;
+}
+
+/* ============================================================================
+ * Header
+ * ========================================================================= */
+.shepherd-sdc .shepherd-header {
+  background: linear-gradient(180deg, var(--shepherd-accent-soft) 0%, transparent 100%) !important;
+  border-bottom: 1px solid var(--shepherd-border) !important;
+  padding: 16px 28px 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  position: relative;
+  z-index: 1;
+}
+
+.shepherd-sdc .shepherd-step-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--shepherd-accent-soft);
+  color: var(--shepherd-accent);
+  border: 1px solid var(--shepherd-accent-strong);
+}
+
+.shepherd-sdc .shepherd-title {
+  color: var(--shepherd-text-strong) !important;
+  font-size: 1.2rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.3 !important;
+  margin: 0 !important;
+  flex: 1 !important;
+}
+
+/* MODO OBRIGATORIO: esconder X de cancelar */
+.shepherd-sdc .shepherd-cancel-icon,
+.shepherd-sdc .shepherd-has-cancel-icon .shepherd-cancel-icon {
+  display: none !important;
+}
+
+/* ============================================================================
+ * Body
+ * ========================================================================= */
+.shepherd-sdc .shepherd-text {
+  color: var(--shepherd-text-base) !important;
+  font-size: 0.95rem !important;
+  line-height: 1.65 !important;
+  padding: 18px 28px 4px !important;
+  background: transparent !important;
+  position: relative;
+  z-index: 1;
+}
+
+.shepherd-sdc .shepherd-text p {
+  margin: 0 0 10px;
+}
+
+.shepherd-sdc .shepherd-text p:last-child { margin-bottom: 0; }
+
+.shepherd-sdc .shepherd-compact-hint {
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.shepherd-sdc .shepherd-text strong {
+  color: var(--shepherd-text-strong);
+  font-weight: 700;
+}
+
+.shepherd-sdc .shepherd-text em {
+  color: var(--shepherd-accent);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.shepherd-sdc .shepherd-text ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.shepherd-sdc .shepherd-text ul li {
+  position: relative;
+  padding: 10px 12px 10px 36px;
+  background: var(--shepherd-surface-soft);
+  border: 1px solid var(--shepherd-border);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: var(--shepherd-text-base);
+}
+
+.shepherd-sdc .shepherd-text ul li::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--shepherd-accent-soft);
+  border: 2px solid var(--shepherd-accent);
+}
+
+.shepherd-sdc .shepherd-feature-list {
+  gap: 7px;
+}
+
+.shepherd-sdc .shepherd-feature-list li {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.shepherd-sdc .shepherd-feature-list li::before {
+  content: none;
+}
+
+.shepherd-sdc .shepherd-feature-list li:hover {
+  background: #f8fafc;
+  border-color: rgba(14, 165, 233, 0.32);
+  box-shadow: 0 8px 18px -16px rgba(15, 23, 42, 0.35);
+  transform: translateY(-1px);
+}
+
+.shepherd-feature-icon,
+.shepherd-feature-icon-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shepherd-feature-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  color: #0284c7;
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.18);
+}
+
+.shepherd-feature-icon-group {
+  gap: 4px;
+}
+
+.shepherd-feature-icon-group .shepherd-feature-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+
+.shepherd-sdc .shepherd-text kbd {
+  display: inline-block;
+  padding: 2px 8px;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 0.8rem;
+  background: var(--shepherd-surface-soft);
+  border: 1px solid var(--shepherd-border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  color: var(--shepherd-text-strong);
+  font-weight: 600;
+}
+
+/* ============================================================================
+ * Hero layers (passo 1 cinematografico)
+ * ========================================================================= */
+.shepherd-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 0 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.shepherd-hero-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 18px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.18) 0%, rgba(37, 99, 235, 0.04) 70%);
+  border-radius: 50%;
+  box-shadow:
+    0 8px 24px -8px rgba(37, 99, 235, 0.5),
+    0 0 0 1px rgba(37, 99, 235, 0.2);
+  animation: shepherd-logo-pulse 3s ease-in-out infinite, shepherd-layer-rise 0.6s ease-out 0s both;
+}
+
+.shepherd-hero-logo picture,
+.shepherd-hero-logo img {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+@keyframes shepherd-logo-pulse {
+  0%, 100% { box-shadow: 0 8px 24px -8px rgba(37, 99, 235, 0.5), 0 0 0 1px rgba(37, 99, 235, 0.2); }
+  50%      { box-shadow: 0 12px 36px -8px rgba(37, 99, 235, 0.7), 0 0 0 4px rgba(37, 99, 235, 0.25); }
+}
+
+.shepherd-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--shepherd-accent-soft);
+  color: var(--shepherd-accent);
+  border: 1px solid var(--shepherd-accent-strong);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  animation: shepherd-layer-rise 0.6s ease-out 0.1s both;
+}
+
+.shepherd-hero-badge .shepherd-hero-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--shepherd-accent);
+  box-shadow: 0 0 8px var(--shepherd-accent);
+  animation: shepherd-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes shepherd-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(1.4); }
+}
+
+.shepherd-hero-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--shepherd-text-strong);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0 0 8px;
+  animation: shepherd-layer-rise 0.6s ease-out 0.15s both;
+}
+
+.shepherd-hero-title .shepherd-hero-name {
+  background: linear-gradient(135deg, var(--shepherd-accent) 0%, #0ea5e9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.shepherd-hero-sub {
+  font-size: 0.95rem;
+  color: var(--shepherd-text-muted);
+  max-width: 480px;
+  margin: 0 auto 18px;
+  line-height: 1.6;
+  animation: shepherd-layer-rise 0.6s ease-out 0.3s both;
+}
+
+@keyframes shepherd-layer-rise {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* ============================================================================
+ * Action cards (passo 5 - botoes de acao dentro do card)
+ * ========================================================================= */
+.shepherd-action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+@media (max-width: 520px) {
+  .shepherd-action-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.shepherd-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--shepherd-surface-soft);
+  border: 1px solid var(--shepherd-border);
+  border-radius: 12px;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.shepherd-action:hover {
+  border-color: var(--shepherd-accent);
+  background: var(--shepherd-accent-soft);
+  transform: translateY(-1px);
+}
+
+.shepherd-action-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--shepherd-accent-soft);
+  color: var(--shepherd-accent);
+  border-radius: 9px;
+  border: 1px solid var(--shepherd-accent-strong);
+}
+
+.shepherd-action-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.shepherd-action-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--shepherd-text-strong);
+}
+
+.shepherd-action-sub {
+  font-size: 0.72rem;
+  color: var(--shepherd-text-muted);
+  line-height: 1.3;
+}
+
+/* ============================================================================
+ * Filter preview (passo 4 - mini-preview de filtros de pesquisa)
+ * ========================================================================= */
+.shepherd-filter-preview {
+  margin: 10px 0 8px;
+  padding: 12px;
+  background: var(--shepherd-surface-soft);
+  border: 1px solid var(--shepherd-border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shepherd-filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.shepherd-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shepherd-filter-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--shepherd-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.shepherd-filter-input {
+  padding: 6px 9px;
+  background: var(--shepherd-surface);
+  border: 1px solid var(--shepherd-border);
+  border-radius: 8px;
+  font-size: 0.76rem;
+  color: var(--shepherd-text-muted);
+  font-style: italic;
+}
+
+.shepherd-filter-advanced {
+  display: flex;
+  gap: 14px;
+  padding-top: 2px;
+}
+
+.shepherd-filter-advanced span {
+  font-size: 0.75rem;
+  color: var(--shepherd-accent);
+  font-weight: 600;
+}
+
+.shepherd-filter-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 4px;
+  border-top: 1px dashed var(--shepherd-border);
+  margin-top: 2px;
+}
+
+.shepherd-filter-btn {
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 7px;
+  letter-spacing: 0.02em;
+}
+
+.shepherd-filter-btn--apply {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.shepherd-filter-btn--clear {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+/* ============================================================================
+ * Action row (passo 5 - barra de acoes real do modulo)
+ * ========================================================================= */
+.shepherd-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  margin: 10px 0 4px;
+  box-shadow: 0 6px 18px -8px rgba(15, 23, 42, 0.4);
+}
+
+.shepherd-action-row-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.shepherd-action-row-icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shepherd-action-icon-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.shepherd-action-icon-pill:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Cores espelhando o padrao das tabelas SDC */
+.shepherd-action-pill--view   { color: #38bdf8; }
+.shepherd-action-pill--print  { color: #cbd5e1; }
+.shepherd-action-pill--edit   { color: #fbbf24; }
+.shepherd-action-pill--alert  { color: #fb923c; }
+.shepherd-action-pill--delete { color: #f87171; }
+.shepherd-action-pill--more   { color: #cbd5e1; }
+
+.shepherd-acoes-hint {
+  margin-top: 10px !important;
+  padding: 9px 11px;
+  background: var(--shepherd-accent-soft);
+  border-left: 3px solid var(--shepherd-accent);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: var(--shepherd-text-base);
+}
+
+.shepherd-element.shepherd-sdc--actions .shepherd-text ul {
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.shepherd-element.shepherd-sdc--actions .shepherd-text ul li {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 0.86rem;
+  line-height: 1.42;
+}
+
+/* ============================================================================
+ * Aceite (passo 6 - cards de conscientizacao com scroll)
+ * ========================================================================= */
+.shepherd-accept-box {
+  position: relative;
+  margin-top: 14px;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--shepherd-border);
+  border-radius: 14px;
+  background: var(--shepherd-surface-soft);
+  scroll-behavior: smooth;
+  padding: 4px;
+}
+
+.shepherd-accept-card {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  margin: 8px;
+  background: var(--shepherd-surface);
+  border: 1px solid var(--shepherd-border);
+  border-left: 4px solid var(--shepherd-accent);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px -8px rgba(15, 23, 42, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.shepherd-accept-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -10px rgba(15, 23, 42, 0.2);
+}
+
+.shepherd-accept-card--danger  { border-left-color: #dc2626; }
+.shepherd-accept-card--warn    { border-left-color: #d97706; }
+.shepherd-accept-card--info    { border-left-color: #2563eb; }
+.shepherd-accept-card--success { border-left-color: #2563eb; }
+
+.shepherd-accept-icon-lg {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--shepherd-accent-soft);
+  color: var(--shepherd-accent);
+  border-radius: 10px;
+  border: 1px solid var(--shepherd-accent-strong);
+}
+
+.shepherd-accept-card--danger  .shepherd-accept-icon-lg { background: rgba(220, 38, 38, 0.12);  color: #dc2626; border-color: rgba(220, 38, 38, 0.35); }
+.shepherd-accept-card--warn    .shepherd-accept-icon-lg { background: rgba(217, 119, 6, 0.12);  color: #d97706; border-color: rgba(217, 119, 6, 0.35); }
+.shepherd-accept-card--info    .shepherd-accept-icon-lg { background: rgba(37, 99, 235, 0.12);  color: #2563eb; border-color: rgba(37, 99, 235, 0.35); }
+.shepherd-accept-card--success .shepherd-accept-icon-lg { background: rgba(37, 99, 235, 0.12);  color: #2563eb; border-color: rgba(37, 99, 235, 0.35); }
+
+.shepherd-accept-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.shepherd-accept-body h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--shepherd-text-strong);
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+
+.shepherd-accept-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  background: var(--shepherd-accent-soft);
+  color: var(--shepherd-accent);
+  border: 1px solid var(--shepherd-accent-strong);
+}
+
+.shepherd-accept-card--danger  .shepherd-accept-badge { background: rgba(220, 38, 38, 0.1); color: #dc2626; border-color: rgba(220, 38, 38, 0.3); }
+.shepherd-accept-card--warn    .shepherd-accept-badge { background: rgba(217, 119, 6, 0.1); color: #d97706; border-color: rgba(217, 119, 6, 0.3); }
+.shepherd-accept-card--info    .shepherd-accept-badge { background: rgba(37, 99, 235, 0.1); color: #2563eb; border-color: rgba(37, 99, 235, 0.3); }
+.shepherd-accept-card--success .shepherd-accept-badge { background: rgba(37, 99, 235, 0.1); color: #2563eb; border-color: rgba(37, 99, 235, 0.3); }
+
+.shepherd-accept-body p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--shepherd-text-muted);
+  line-height: 1.55;
+}
+
+.shepherd-accept-body p strong { color: var(--shepherd-text-strong); }
+
+.shepherd-accept-body p a {
+  color: var(--shepherd-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 600;
+}
+
+.shepherd-accept-scroll-hint {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, transparent 0%, var(--shepherd-surface-soft) 60%, var(--shepherd-surface-soft) 100%);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--shepherd-accent);
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  text-transform: uppercase;
+}
+
+.shepherd-accept-box.is-scrolled-end .shepherd-accept-scroll-hint {
+  opacity: 0;
+}
+
+/* Scrollbar custom dentro do box */
+.shepherd-accept-box::-webkit-scrollbar {
+  width: 8px;
+}
+.shepherd-accept-box::-webkit-scrollbar-track {
+  background: transparent;
+}
+.shepherd-accept-box::-webkit-scrollbar-thumb {
+  background: var(--shepherd-accent-strong);
+  border-radius: 4px;
+}
+
+/* ============================================================================
+ * Finale slogan (passo 8 - "Defesa Civil somos todos nos" em laranja)
+ * ========================================================================= */
+.shepherd-finale-slogan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 18px auto 4px;
+  padding: 6px 8px;
+  animation: shepherd-layer-rise 0.6s ease-out 0.6s both;
+}
+
+.shepherd-finale-rule {
+  display: block;
+  height: 2px;
+  width: 48px;
+  background: linear-gradient(90deg, transparent, #ea580c, transparent);
+  border-radius: 999px;
+}
+
+.shepherd-finale-text {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ea580c;
+  text-shadow: 0 0 24px rgba(234, 88, 12, 0.25);
+  white-space: nowrap;
+}
+
+.shepherd-hero--finale {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.shepherd-hero--finale .shepherd-hero-title {
+  font-size: 1.45rem;
+}
+
+.shepherd-hero--finale .shepherd-hero-sub {
+  font-size: 0.9rem;
+  margin-bottom: 14px;
+}
+
+/* No finale, o accept-box ocupa mais espaco e fica dentro do hero centralizado */
+.shepherd-hero--finale .shepherd-accept-box {
+  margin: 0 auto 8px;
+  text-align: left;
+  width: 100%;
+  max-width: 600px;
+}
+
+/* ============================================================================
+ * Footer / botoes
+ * ========================================================================= */
+.shepherd-sdc .shepherd-footer {
+  padding: 16px 28px 20px !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+  background: transparent !important;
+  border: none !important;
+  position: relative;
+  z-index: 1;
+}
+
+.shepherd-sdc .shepherd-button {
+  appearance: none !important;
+  padding: 9px 22px !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  font-family: inherit !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.01em !important;
+}
+
+.shepherd-sdc .shepherd-button-primary {
+  background: var(--shepherd-accent) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 14px var(--shepherd-accent-strong) !important;
+}
+
+.shepherd-sdc .shepherd-button-primary:hover:not(:disabled) {
+  transform: translateY(-1px) !important;
+  filter: brightness(1.08) !important;
+  box-shadow: 0 8px 18px var(--shepherd-accent-strong) !important;
+}
+
+.shepherd-sdc .shepherd-button-primary:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+.shepherd-sdc .shepherd-button-secondary {
+  background: var(--shepherd-surface-soft) !important;
+  color: var(--shepherd-text-base) !important;
+  border: 1px solid var(--shepherd-border) !important;
+}
+
+.shepherd-sdc .shepherd-button-secondary:hover:not(:disabled) {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* ============================================================================
+ * Modal overlay (MODO OBRIGATORIO - sem clicar para sair)
+ * + Spotlight com blur real no fundo (passo destacado em foco)
+ * ========================================================================= */
+.shepherd-modal-overlay-container.shepherd-modal-is-visible {
+  opacity: 1 !important;
+  transition: opacity 0.3s ease !important;
+  pointer-events: auto !important;
+}
+
+.shepherd-modal-overlay-container {
+  fill: rgba(15, 23, 42, 0.55) !important;
+  z-index: 9997 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+}
+
+/* Quando o tour esta ativo, congela o body sem alterar escala visual. */
+body.shepherd-tour-locked {
+  overflow: hidden !important;
+  width: 100vw !important;
+  min-height: 100dvh !important;
+  overscroll-behavior: none !important;
+}
+
+/* Backdrop segmentado: o JS posiciona quatro faixas fora do recorte atual.
+   Assim o blur fica apenas no fundo, sem contaminar o alvo destacado. */
+.sdc-tour-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  pointer-events: none;
+  z-index: 9996;
+  overflow: hidden;
+}
+
+.sdc-tour-backdrop__pane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  background: rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(5px) saturate(0.86) brightness(0.94);
+  -webkit-backdrop-filter: blur(5px) saturate(0.86) brightness(0.94);
+  will-change: transform, width, height;
+  transition:
+    transform 0.28s ease,
+    width 0.28s ease,
+    height 0.28s ease,
+    opacity 0.18s ease;
+}
+
+.sdc-tour-virtual-target {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  border-radius: 16px;
+  z-index: 9998;
+  will-change: top, left, width, height;
+}
+
+/* Mantem o anchor destacado totalmente nitido (Shepherd adiciona shepherd-target
+   ao elemento alvo) e ainda mais brilhante que o resto. */
+.shepherd-target,
+.shepherd-target.shepherd-enabled {
+  filter: none !important;
+  z-index: 9998 !important;
+  position: relative;
+  isolation: isolate;
+  animation: shepherd-anchor-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes shepherd-anchor-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.92),
+      0 0 0 6px rgba(37, 99, 235, 0.36),
+      0 14px 32px -18px rgba(15, 23, 42, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.98),
+      0 0 0 7px rgba(37, 99, 235, 0.48),
+      0 18px 40px -20px rgba(15, 23, 42, 0.5);
+  }
+}
+
+/* Garante que o overlay do Shepherd nao corte o halo */
+.shepherd-modal-overlay-container path {
+  transition: d 0.4s ease;
+}
+
+/* ============================================================================
+ * Arrow / tooltip pointer
+ * ========================================================================= */
+.shepherd-sdc .shepherd-arrow:before {
+  background: var(--shepherd-surface) !important;
+  border: 1px solid var(--shepherd-border) !important;
+}
+
+/* ============================================================================
+ * Confete (passo final - reaproveitado da v1)
+ * ========================================================================= */
+.sdc-confetti-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10001;
+  overflow: hidden;
+}
+
+.sdc-confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: sdc-confetti-fall 3.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes sdc-confetti-fall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+}
+
+/* ============================================================================
+ * Responsividade
+ * ========================================================================= */
+@media (max-width: 640px) {
+  .shepherd-element.shepherd-sdc,
+  .shepherd-element.shepherd-sdc--cinematic {
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  .shepherd-sdc .shepherd-header { padding: 14px 18px 12px !important; }
+  .shepherd-sdc .shepherd-text { padding: 14px 18px 4px !important; font-size: 0.9rem !important; }
+  .shepherd-sdc .shepherd-footer { padding: 14px 18px 16px !important; }
+  .shepherd-hero-title { font-size: 1.4rem; }
+  .shepherd-hero-sub { font-size: 0.85rem; }
+}

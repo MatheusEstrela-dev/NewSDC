@@ -21,7 +21,7 @@
       <div class="hidden lg:block w-10 flex-shrink-0"></div>
 
       <!-- Search Bar Trigger (Pro Mode) - visivel em tablet e desktop -->
-      <div class="hidden md:flex flex-1 max-w-2xl mx-auto z-[60] items-center gap-3">
+      <div class="hidden md:flex flex-1 max-w-2xl mx-auto z-[60] items-center gap-3" data-tour="search">
         <button
           @click="openCommandPalette"
           class="relative flex items-center w-full group outline-none"
@@ -75,7 +75,7 @@
       </button>
 
       <!-- Right Section - User Info & Actions -->
-      <div class="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0 relative z-40">
+      <div class="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0 relative z-40" data-tour="topbar-actions">
         <!-- Notifications Dropdown -->
         <Dropdown align="right" width="96" contentClasses="p-0 overflow-hidden" :mobileFullWidth="true">
           <template #trigger>
@@ -139,7 +139,7 @@
         </button>
 
         <!-- User Menu -->
-        <div class="relative user-menu">
+        <div class="relative user-menu" data-tour="user-menu">
           <button
             @click="toggleUserMenu"
             class="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg transition-colors
@@ -195,18 +195,19 @@
               </svg>
               Meu Perfil
             </button>
-            <Link
-              :href="route('logout')"
-              method="post"
-              as="button"
+            <button
+              type="button"
+              :disabled="isLoggingOut"
+              @click="handleLogout"
               class="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors
-                     text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300"
+                     text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300
+                     disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-              Sair
-            </Link>
+              {{ isLoggingOut ? 'Saindo...' : 'Sair' }}
+            </button>
             </div>
           </Transition>
         </div>
@@ -224,7 +225,7 @@
 <script setup>
 import { useNotifications } from '@/composables/useNotifications';
 import { useTheme } from '@/composables/ui';
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, inject, onMounted, onUnmounted, ref, Transition, watch } from 'vue';
 import HamburgerButton from './Atoms/Button/HamburgerButton.vue';
 import Dropdown from './Dropdown.vue';
@@ -239,6 +240,30 @@ const page = usePage();
 const showUserMenu = ref(false);
 const showProfileModal = ref(false);
 const showAiAssistant = ref(false);
+const isLoggingOut = ref(false);
+
+// Logout robusto via router.post explicito. O <Link as=button method=post>
+// dependia do Link estar visivel/montado no momento do click; com o
+// dropdown sumindo no mesmo frame, o submit as vezes nao chegava a
+// disparar — botao + router.post elimina o race.
+function handleLogout() {
+    if (isLoggingOut.value) return;
+    isLoggingOut.value = true;
+    showUserMenu.value = false;
+
+    router.post(route('logout'), {}, {
+        preserveScroll: false,
+        preserveState: false,
+        onFinish: () => {
+            isLoggingOut.value = false;
+        },
+        onError: () => {
+            // Fallback: se Inertia falhar (419/timeout/etc), forca redirect
+            // hard para /login para garantir saida da sessao no client.
+            window.location.assign('/login');
+        },
+    });
+}
 
 // Pro Mode: Command Palette State
 const isCommandPaletteOpen = ref(false);

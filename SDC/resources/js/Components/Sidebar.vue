@@ -71,7 +71,7 @@
         @scroll="onScroll"
       >
         <!-- PRINCIPAL -->
-      <div class="nav-section">
+      <div class="nav-section" data-tour="sidebar-principal">
         <div v-show="!isCollapsed" class="nav-section-title">PRINCIPAL</div>
         <NavItem
           :href="route('dashboard')"
@@ -120,7 +120,7 @@
       </div>
 
       <!-- MÓDULOS DE GESTÃO -->
-      <div class="nav-section">
+      <div class="nav-section" data-tour="sidebar-modulos">
         <div v-show="!isCollapsed" class="nav-section-title">MÓDULOS DE GESTÃO</div>
 
         <!-- DECRETACOES -->
@@ -260,7 +260,7 @@
       </div>
 
       <!-- ADMINISTRACAO - Visivel apenas para usuarios com permissao -->
-      <div v-if="canSeeAdminSection" class="nav-section">
+      <div v-if="canSeeAdminSection" class="nav-section" data-tour="sidebar-admin">
         <div v-show="!isCollapsed" class="nav-section-title">ADMINISTRACAO</div>
 
         <!-- Permissionamento - Link direto sem submenu -->
