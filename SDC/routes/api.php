@@ -93,6 +93,16 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
     // Activity Feed
     Route::get('activity-feed', [ActivityFeedController::class, 'index'])->name('api.v1.activity-feed');
 
+    // Traces: status de requests assincronos despachados via AsynchronousResponse.
+    Route::prefix('traces')->name('api.v1.traces.')->group(function () {
+        Route::get('{traceId}', [\App\Http\Controllers\Api\V1\TraceController::class, 'show'])
+            ->name('show')
+            ->whereUuid('traceId');
+        Route::get('{traceId}/download', [\App\Http\Controllers\Api\V1\TraceController::class, 'download'])
+            ->name('download')
+            ->whereUuid('traceId');
+    });
+
     // Módulo PAE
     Route::prefix('pae')->name('api.v1.pae.')->group(function () {
         Route::apiResource('empreendimentos', EmpreendimentoController::class);
@@ -285,9 +295,10 @@ Route::prefix('v1/decretacoes')
         'api-rate-limiter:pro',
     ])
     ->group(function () {
-        Route::get('/',                [DecretacoesApiController::class, 'index'])->name('index');
-        Route::get('/export/power-bi', [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');
-        Route::get('/{id}',            [DecretacoesApiController::class, 'show'])->name('show');
+        Route::get('/',                      [DecretacoesApiController::class, 'index'])->name('index');
+        Route::get('/export/power-bi',       [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');
+        Route::get('/export/power-bi/async', [DecretacoesApiController::class, 'exportPowerBIAsync'])->name('export.power-bi.async');
+        Route::get('/{id}',                  [DecretacoesApiController::class, 'show'])->name('show');
     });
 
 // Rota de escrita — limite restrito (default: 300 creditos/min, protege contra abuso)

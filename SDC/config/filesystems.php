@@ -72,6 +72,16 @@ return [
             'throw' => true,
         ],
 
+        // Artefatos gerados por jobs assincronos (exports CSV/XLSX/PDF).
+        // Servido via App\Http\Controllers\Api\V1\TraceController::download.
+        // Arquivos sao temporarios; podem ser limpos por job de retencao.
+        'exports' => [
+            'driver' => 'local',
+            'root' => storage_path('app/exports'),
+            'visibility' => 'private',
+            'throw' => true,
+        ],
+
     ],
 
     /*
