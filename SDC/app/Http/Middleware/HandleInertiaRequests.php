@@ -36,6 +36,11 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => fn() => $user ? $this->getCachedUserData($user) : null,
+                // Flags de onboarding NAO sao cacheadas: variam por carregamento
+                // (must_change_password vira false apos o submit; show_welcome_tour
+                // vem da session flash logo apos a troca de senha).
+                'must_change_password' => fn() => $user ? (bool) $user->must_change_password : false,
+                'show_welcome_tour' => fn() => $user && $this->shouldShowWelcomeTour($request, $user),
             ],
             // Nao vazar a arvore de ACL/permissoes em paginas publicas (login, etc).
             // Antes: era exposta no data-page do Inertia mesmo sem usuario autenticado.
@@ -47,6 +52,21 @@ class HandleInertiaRequests extends Middleware
                 'info'    => fn() => $request->session()->get('info'),
             ],
         ];
+    }
+
+    /**
+     * Mostra o tour quando o usuario acabou de concluir o primeiro acesso
+     * (flash da session) OU quando ainda nao concluiu o tour e ja esta ativo.
+     */
+    protected function shouldShowWelcomeTour(Request $request, $user): bool
+    {
+        if ($request->session()->get('show_welcome_tour') === true) {
+            return true;
+        }
+
+        return $user->status === 'active'
+            && $user->welcome_tour_completed_at === null
+            && $user->must_change_password === false;
     }
 
     /**

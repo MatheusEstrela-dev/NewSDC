@@ -56,6 +56,9 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // 'pending' eh permitido propositalmente: representa o primeiro acesso com
+        // senha provisoria. O EnsurePasswordChanged middleware obriga a troca em
+        // /first-access antes de qualquer outra rota autenticada.
         if (!$user->active || in_array($user->status, ['inactive', 'suspended', 'blocked'], true)) {
             RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([

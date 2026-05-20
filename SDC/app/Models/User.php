@@ -95,6 +95,10 @@ class User extends Authenticatable
         'created_by',
         'updated_by',
         'notification_update_mode',
+        'pending_expires_at',
+        'must_change_password',
+        'password_changed_at',
+        'welcome_tour_completed_at',
     ];
 
     /**
@@ -117,6 +121,10 @@ class User extends Authenticatable
         'last_login_at' => 'datetime',
         'password' => 'hashed',
         'active' => 'boolean',
+        'pending_expires_at' => 'datetime',
+        'password_changed_at' => 'datetime',
+        'welcome_tour_completed_at' => 'datetime',
+        'must_change_password' => 'boolean',
     ];
 
     /**
@@ -218,21 +226,32 @@ class User extends Authenticatable
     }
 
     /**
-     * Registra o ultimo login do usuario
+     * Registra o ultimo login do usuario.
+     *
+     * Mantem o status em 'pending' enquanto must_change_password=true para preservar
+     * o fluxo de primeiro acesso (a promocao para 'active' acontece apos a troca da
+     * senha provisoria em FirstAccessController). Caso contrario, qualquer login
+     * efetivamente ativa a conta.
      */
     public function recordLogin(?string $ip = null, ?string $userAgent = null): void
     {
         $oldStatus = $this->status;
+        $isPendingFirstAccess = $this->must_change_password === true;
 
-        $this->update([
+        $payload = [
             'last_login_at' => now(),
             'last_login_ip' => $ip ?? request()->ip(),
             'user_agent' => $userAgent ?? request()->userAgent(),
-            'status' => 'active',
-            'active' => true,
-        ]);
+        ];
 
-        if ($oldStatus !== 'active') {
+        if (!$isPendingFirstAccess) {
+            $payload['status'] = 'active';
+            $payload['active'] = true;
+        }
+
+        $this->update($payload);
+
+        if (!$isPendingFirstAccess && $oldStatus !== 'active') {
             UserStatusHistory::logStatusChange($this, $oldStatus, 'active', 'Login realizado');
         }
     }
