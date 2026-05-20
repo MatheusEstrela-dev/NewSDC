@@ -10,6 +10,7 @@ use App\Modules\Compdec\Enums\TipoOrgao;
 use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Compdec\Support\LegacyParser;
 use App\Modules\Compdec\Support\MigracaoReport;
+use App\Support\Cache\CachedRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\UploadedFile;
@@ -21,6 +22,13 @@ use Throwable;
 
 class OrgaoService
 {
+    private CachedRepository $cache;
+
+    public function __construct(?CachedRepository $cache = null)
+    {
+        $this->cache = $cache ?? new CachedRepository('orgaos', ttlSeconds: 3600);
+    }
+
     /**
      * @param  array<string, mixed>  $filtros
      */
@@ -79,7 +87,7 @@ class OrgaoService
 
     public function criarOrgao(OrgaoDTO $dto): Orgao
     {
-        return DB::transaction(function () use ($dto): Orgao {
+        $orgao = DB::transaction(function () use ($dto): Orgao {
             $this->validarHierarquia($dto);
 
             $data = $dto->toArray();
@@ -91,11 +99,15 @@ class OrgaoService
 
             return Orgao::create($data);
         });
+
+        $this->cache->flush();
+
+        return $orgao;
     }
 
     public function atualizarOrgao(int $id, OrgaoDTO $dto): Orgao
     {
-        return DB::transaction(function () use ($id, $dto): Orgao {
+        $orgao = DB::transaction(function () use ($id, $dto): Orgao {
             $orgao = Orgao::findOrFail($id);
             $this->validarHierarquia($dto, $id);
 
@@ -116,11 +128,15 @@ class OrgaoService
 
             return $orgao->fresh(['orgaoSuperior', 'prefeitura']);
         });
+
+        $this->cache->flush();
+
+        return $orgao;
     }
 
     public function deletarOrgao(int $id): bool
     {
-        return DB::transaction(function () use ($id): bool {
+        $deleted = DB::transaction(function () use ($id): bool {
             $orgao = Orgao::findOrFail($id);
 
             if ($orgao->orgaosSubordinados()->exists()) {
@@ -129,13 +145,24 @@ class OrgaoService
 
             return (bool) $orgao->delete();
         });
+
+        if ($deleted) {
+            $this->cache->flush();
+        }
+
+        return $deleted;
     }
 
     public function restaurarOrgao(int $id): bool
     {
         $orgao = Orgao::onlyTrashed()->findOrFail($id);
+        $restored = (bool) $orgao->restore();
 
-        return (bool) $orgao->restore();
+        if ($restored) {
+            $this->cache->flush();
+        }
+
+        return $restored;
     }
 
     /**
@@ -143,12 +170,12 @@ class OrgaoService
      */
     public function obterCedecs(): Collection
     {
-        return Orgao::query()
+        return $this->cache->remember('cedecs', fn () => Orgao::query()
             ->cedec()
             ->ativo()
             ->select(['id', 'codigo', 'nome', 'tipo'])
             ->orderBy('nome')
-            ->get();
+            ->get());
     }
 
     /**
@@ -156,13 +183,14 @@ class OrgaoService
      */
     public function obterRedecs(?int $cedecId = null): Collection
     {
-        return Orgao::query()
+        $key = 'redecs:'.($cedecId ?? 'all');
+        return $this->cache->remember($key, fn () => Orgao::query()
             ->redec()
             ->ativo()
             ->when($cedecId, fn ($q, $id) => $q->where('orgao_superior_id', $id))
             ->select(['id', 'codigo', 'nome', 'tipo', 'orgao_superior_id'])
             ->orderBy('nome')
-            ->get();
+            ->get());
     }
 
     /**
@@ -170,13 +198,14 @@ class OrgaoService
      */
     public function obterCompdecs(?int $redecId = null): Collection
     {
-        return Orgao::query()
+        $key = 'compdecs:'.($redecId ?? 'all');
+        return $this->cache->remember($key, fn () => Orgao::query()
             ->compdec()
             ->ativo()
             ->when($redecId, fn ($q, $id) => $q->where('orgao_superior_id', $id))
             ->select(['id', 'codigo', 'nome', 'tipo', 'municipio_id', 'orgao_superior_id'])
             ->orderBy('nome')
-            ->get();
+            ->get());
     }
 
     /**
@@ -185,6 +214,14 @@ class OrgaoService
      * @return array<int, array<string, mixed>>
      */
     public function obterArvoreHierarquica(): array
+    {
+        return $this->cache->remember('arvore', fn () => $this->montarArvoreHierarquica());
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function montarArvoreHierarquica(): array
     {
         $orgaos = Orgao::query()
             ->ativo()

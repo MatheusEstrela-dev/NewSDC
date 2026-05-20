@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Database\ConnectionSemaphore;
+use App\Services\Database\DatabaseCircuitBreaker;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Artisan;
@@ -23,6 +26,25 @@ class AppServiceProvider extends ServiceProvider
             \App\Contracts\HierarchyServiceInterface::class,
             \App\Services\Auth\HierarchyService::class
         );
+
+        $this->app->singleton(ConnectionSemaphore::class, function ($app) {
+            $cfg = $app['config']->get('resilience.db');
+            return new ConnectionSemaphore(
+                Redis::connection()->client(),
+                limit: $cfg['max_concurrent'],
+                waitMs: $cfg['acquire_poll_ms'],
+                maxWaitMs: $cfg['acquire_wait_ms'],
+            );
+        });
+
+        $this->app->singleton(DatabaseCircuitBreaker::class, function ($app) {
+            $cfg = $app['config']->get('resilience.db.circuit_breaker');
+            return new DatabaseCircuitBreaker(
+                timeoutThreshold: $cfg['timeout_count_threshold'],
+                windowSeconds: $cfg['window_seconds'],
+                resetSeconds: $cfg['reset_timeout_seconds'],
+            );
+        });
 
         $this->app->bind(\LLPhant\Chat\OpenAIChat::class, function () {
             $config = new \LLPhant\GeminiOpenAIConfig();
@@ -201,8 +223,14 @@ class AppServiceProvider extends ServiceProvider
 
         // Slow query detection - threshold em ms
         $slowQueryThreshold = config('app.env') === 'production' ? 1000 : 2000;
+        $circuitBreaker = $this->app->make(DatabaseCircuitBreaker::class);
 
-        DB::listen(function ($query) use ($slowQueryThreshold) {
+        DB::listen(function ($query) use ($slowQueryThreshold, $circuitBreaker) {
+            // Sinaliza timeout suspeito ao circuit breaker (>30s).
+            if ($query->time > 30000) {
+                $circuitBreaker->recordTimeout();
+            }
+
             if ($query->time <= $slowQueryThreshold) {
                 return;
             }
