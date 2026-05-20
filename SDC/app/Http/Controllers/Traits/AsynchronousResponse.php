@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Traits;
 
+use App\Models\RequestTrace;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
 
@@ -85,6 +87,49 @@ trait AsynchronousResponse
     protected function generateTraceId(): string
     {
         return Str::uuid()->toString();
+    }
+
+    /**
+     * Despacha um job assincrono criando um RequestTrace persistido.
+     *
+     * O job deve usar App\Jobs\Concerns\TracksAsyncProgress e aceitar o
+     * trace_id como primeiro argumento do construtor. O cliente consulta
+     * status via GET /api/v1/traces/{traceId}.
+     *
+     * @param string $jobClass FQCN do job a despachar
+     * @param string $type identificador do tipo (ex: 'export_decretacoes')
+     * @param array<int, mixed> $args argumentos adicionais do construtor (apos $traceId)
+     * @param array<string, mixed> $meta payload arbitrario salvo no trace
+     * @param string $queue queue de destino (default 'bulk' para baixa prioridade)
+     * @param int $estimatedSeconds tempo estimado para o cliente
+     */
+    protected function dispatchAsyncJob(
+        string $jobClass,
+        string $type,
+        array $args = [],
+        array $meta = [],
+        string $queue = 'bulk',
+        int $estimatedSeconds = 60,
+    ): JsonResponse {
+        $traceId = $this->generateTraceId();
+
+        RequestTrace::create([
+            'id' => $traceId,
+            'user_id' => optional(request()->user())->id,
+            'type' => $type,
+            'status' => RequestTrace::STATUS_PENDING,
+            'meta' => $meta,
+        ]);
+
+        $job = new $jobClass($traceId, ...$args);
+        app(Dispatcher::class)->dispatch($job->onQueue($queue));
+
+        return $this->acceptedResponse(
+            traceId: $traceId,
+            message: 'Request enqueued; consulte status via GET /api/v1/traces/{traceId}',
+            extra: ['type' => $type],
+            estimatedSeconds: $estimatedSeconds,
+        );
     }
 
     /**
