@@ -38,9 +38,9 @@ return [
             'docs' => 'docs',
             'oauth2_callback' => 'api/oauth2-callback',
             'middleware' => [
-                'api' => [],
-                'asset' => [],
-                'docs' => [],
+                'api' => ['cache_swagger:3600'],
+                'asset' => ['cache_swagger:3600'],
+                'docs' => ['cache_swagger:3600'],
                 'oauth2_callback' => [],
             ],
             'group_by' => 'tags',

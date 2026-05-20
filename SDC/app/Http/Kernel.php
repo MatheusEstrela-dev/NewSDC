@@ -51,6 +51,10 @@ class Kernel extends HttpKernel
         'api' => [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
+            // Resiliencia: backpressure antes de tocar DB; semaforo logo apos
+            // para garantir contagem global de requests concorrentes.
+            \App\Http\Middleware\Backpressure::class,
+            \App\Http\Middleware\AcquireConnectionSlot::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\SetTenant::class,
             \App\Http\Middleware\LogApiRequests::class, // Mantendo específico para API
@@ -85,5 +89,9 @@ class Kernel extends HttpKernel
         'api-rate-limiter'     => \App\Http\Middleware\ApiRateLimiter::class,
         'decretacoes.api.auth' => \App\Http\Middleware\DecretacoesApiAuth::class,
         'compdec.query-threshold' => \App\Http\Middleware\QueryThresholdMiddleware::class,
+        'statement_timeout' => \App\Http\Middleware\SetStatementTimeout::class,
+        'acquire_slot' => \App\Http\Middleware\AcquireConnectionSlot::class,
+        'backpressure' => \App\Http\Middleware\Backpressure::class,
+        'cache_swagger' => \App\Http\Middleware\CacheSwaggerUi::class,
     ];
 }

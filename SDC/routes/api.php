@@ -50,8 +50,12 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class])
 // ============================================================================
 
 // Health Checks (sem autenticação - para load balancers)
-Route::get('/health', [HealthCheckController::class, 'basic'])->name('health.basic');
-Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class, 'can:system.logs.view'])->group(function () {
+Route::middleware('statement_timeout:2000')->group(function () {
+    Route::get('/health', [HealthCheckController::class, 'basic'])->name('health.basic');
+    // Metricas Prometheus para scrape pelo monitoramento (sem auth, ACL via IP allowlist no proxy).
+    Route::get('/metrics', \App\Http\Controllers\Api\MetricsController::class)->name('metrics');
+});
+Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class, 'can:system.logs.view', 'statement_timeout:2000'])->group(function () {
     Route::get('/health/detailed', [HealthCheckController::class, 'detailed'])->name('health.detailed');
     Route::get('/health/metrics', [HealthCheckController::class, 'metrics'])->name('health.metrics');
 });
@@ -84,7 +88,7 @@ Route::prefix('v1/auth')->group(function () {
 });
 
 // API v1
-Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class])->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class, 'statement_timeout:10000'])->group(function () {
 
     // Activity Feed
     Route::get('activity-feed', [ActivityFeedController::class, 'index'])->name('api.v1.activity-feed');
@@ -154,7 +158,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
     });
 
     // Webhooks - Sistema de alta performance para 100k+ usuários
-    Route::prefix('webhooks')->name('api.v1.webhooks.')->group(function () {
+    Route::prefix('webhooks')->name('api.v1.webhooks.')->middleware('statement_timeout:15000')->group(function () {
 
         // Receber webhooks (com rate limiting tier webhook)
         Route::post('receive', [WebhookController::class, 'receive'])

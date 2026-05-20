@@ -2,8 +2,12 @@
 
 namespace App\Providers;
 
+use App\Database\ConnectionSemaphore;
+use App\Database\QueryBudgetGuard;
+use App\Services\Database\DatabaseCircuitBreaker;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Artisan;
@@ -23,6 +27,33 @@ class AppServiceProvider extends ServiceProvider
             \App\Contracts\HierarchyServiceInterface::class,
             \App\Services\Auth\HierarchyService::class
         );
+
+        $this->app->singleton(ConnectionSemaphore::class, function ($app) {
+            $cfg = $app['config']->get('resilience.db');
+            return new ConnectionSemaphore(
+                Redis::connection()->client(),
+                limit: $cfg['max_concurrent'],
+                waitMs: $cfg['acquire_poll_ms'],
+                maxWaitMs: $cfg['acquire_wait_ms'],
+            );
+        });
+
+        $this->app->singleton(DatabaseCircuitBreaker::class, function ($app) {
+            $cfg = $app['config']->get('resilience.db.circuit_breaker');
+            return new DatabaseCircuitBreaker(
+                timeoutThreshold: $cfg['timeout_count_threshold'],
+                windowSeconds: $cfg['window_seconds'],
+                resetSeconds: $cfg['reset_timeout_seconds'],
+            );
+        });
+
+        $this->app->singleton(QueryBudgetGuard::class, function ($app) {
+            $cfg = $app['config']->get('resilience.query_budget');
+            return new QueryBudgetGuard(
+                warnAt: $cfg['warn_at'],
+                failAt: $cfg['fail_at'],
+            );
+        });
 
         $this->app->bind(\LLPhant\Chat\OpenAIChat::class, function () {
             $config = new \LLPhant\GeminiOpenAIConfig();
@@ -104,6 +135,13 @@ class AppServiceProvider extends ServiceProvider
             $this->app['events']->listen(RequestReceived::class, function () {
                 app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
             });
+        }
+
+        // Query budget guard: bind globalmente e zera contador por request.
+        $budget = $this->app->make(QueryBudgetGuard::class);
+        $budget->bind();
+        if (class_exists(\Laravel\Octane\Events\RequestReceived::class)) {
+            $this->app['events']->listen(RequestReceived::class, fn () => $budget->reset());
         }
 
         // Overrides para NativePHP / Mobile / Android
@@ -201,8 +239,17 @@ class AppServiceProvider extends ServiceProvider
 
         // Slow query detection - threshold em ms
         $slowQueryThreshold = config('app.env') === 'production' ? 1000 : 2000;
+        $circuitBreaker = $this->app->make(DatabaseCircuitBreaker::class);
 
-        DB::listen(function ($query) use ($slowQueryThreshold) {
+        DB::listen(function ($query) use ($slowQueryThreshold, $circuitBreaker) {
+            // Circuit breaker: timeout suspeito (>30s) abre; queries rapidas
+            // sinalizam sucesso e permitem half-open -> closed.
+            if ($query->time > 30000) {
+                $circuitBreaker->recordTimeout();
+            } else {
+                $circuitBreaker->recordSuccess();
+            }
+
             if ($query->time <= $slowQueryThreshold) {
                 return;
             }
