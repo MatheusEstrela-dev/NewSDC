@@ -10,6 +10,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\UserStatusHistory;
 use App\Modules\Compdec\Models\Orgao;
+use App\Services\Auth\OnboardingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
@@ -18,8 +19,9 @@ use Spatie\Permission\PermissionRegistrar;
 
 class UserManagementController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private readonly OnboardingService $onboarding,
+    ) {
         $this->middleware('can:users.view')->only(['index', 'show']);
         $this->middleware('can:users.create')->only(['create', 'store']);
         $this->middleware('can:users.edit')->only(['edit', 'update', 'syncRoles', 'syncPermissions']);
@@ -71,18 +73,20 @@ class UserManagementController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'cpf' => 'required|string|size:11|unique:users,cpf',
-            'password' => 'required|string|min:8|confirmed',
             'roles' => 'required|array',
             'roles.*' => 'exists:roles,id',
+            'orgao_principal_id' => 'nullable|integer|exists:compdec_orgaos,id',
         ]);
 
-        $user = User::create([
+        // Cria usuario em status='pending' com senha provisoria + envia e-mail
+        // de onboarding. O usuario sera ativado quando trocar a senha no primeiro
+        // acesso (vide FirstAccessController). Se nao trocar em 24h o scheduler
+        // 'users:deactivate-expired-pending' desativa a conta.
+        $user = $this->onboarding->createPendingUser([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'cpf' => $validated['cpf'],
-            'password' => bcrypt($validated['password']),
-            'active' => true,
-            'status' => 'active',
+            'orgao_principal_id' => $validated['orgao_principal_id'] ?? null,
         ]);
 
         $roles = Role::whereIn('id', $validated['roles'])->get();
@@ -92,7 +96,7 @@ class UserManagementController extends Controller
 
         return redirect()
             ->route('admin.permissions.users.index')
-            ->with('success', 'Usuario criado com sucesso');
+            ->with('success', "Usuario criado. E-mail de boas-vindas enviado para {$user->email}.");
     }
 
     public function show(User $user): Response

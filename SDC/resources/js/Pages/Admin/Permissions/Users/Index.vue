@@ -336,7 +336,7 @@ const formatDate = (date) => {
 
 const effectiveStatus = (user) => {
   if (user.active === false) return 'inactive';
-  if (['suspended', 'blocked'].includes(user.status)) return user.status;
+  if (['suspended', 'blocked', 'pending'].includes(user.status)) return user.status;
   return 'active';
 };
 
