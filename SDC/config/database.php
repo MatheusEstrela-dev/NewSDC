@@ -144,6 +144,33 @@ return [
             'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
             'options' => [
                 PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', true),
+            ],
+        ],
+
+        // Conexao isolada para jobs de webhook (ProcessWebhook, ProcessInboundWebhook).
+        // Aponta para o mesmo host do pgsql, mas com application_name distinto e
+        // sem ATTR_PERSISTENT — jobs nao reusam conexao entre execucoes.
+        // Combinado com semaforo proprio (DB_MAX_CONCURRENT_WEBHOOK), isola pico
+        // de webhooks externos do pool da web.
+        'pgsql_webhook' => [
+            'driver' => 'pgsql',
+            'url' => env('DATABASE_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'sdc'),
+            'username' => env('DB_USERNAME', 'sdc'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => env('DB_SEARCH_PATH', 'public'),
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'sslrootcert' => env('DB_SSL_CA') ?: null,
+            'application_name' => env('APP_NAME', 'sdc-laravel').'-webhook',
+            'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
+            'options' => [
+                PDO::ATTR_EMULATE_PREPARES => false,
             ],
         ],
 
@@ -166,6 +193,7 @@ return [
             'application_name' => env('APP_NAME', 'sdc-laravel') . '-ai',
             'options' => [
                 PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', true),
             ],
         ],
 

@@ -85,5 +85,6 @@ class Kernel extends HttpKernel
         'api-rate-limiter'     => \App\Http\Middleware\ApiRateLimiter::class,
         'decretacoes.api.auth' => \App\Http\Middleware\DecretacoesApiAuth::class,
         'compdec.query-threshold' => \App\Http\Middleware\QueryThresholdMiddleware::class,
+        'statement_timeout' => \App\Http\Middleware\SetStatementTimeout::class,
     ];
 }
