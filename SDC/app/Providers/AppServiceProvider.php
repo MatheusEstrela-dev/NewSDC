@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Database\ConnectionSemaphore;
+use App\Database\QueryBudgetGuard;
 use App\Services\Database\DatabaseCircuitBreaker;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -43,6 +44,14 @@ class AppServiceProvider extends ServiceProvider
                 timeoutThreshold: $cfg['timeout_count_threshold'],
                 windowSeconds: $cfg['window_seconds'],
                 resetSeconds: $cfg['reset_timeout_seconds'],
+            );
+        });
+
+        $this->app->singleton(QueryBudgetGuard::class, function ($app) {
+            $cfg = $app['config']->get('resilience.query_budget');
+            return new QueryBudgetGuard(
+                warnAt: $cfg['warn_at'],
+                failAt: $cfg['fail_at'],
             );
         });
 
@@ -126,6 +135,13 @@ class AppServiceProvider extends ServiceProvider
             $this->app['events']->listen(RequestReceived::class, function () {
                 app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
             });
+        }
+
+        // Query budget guard: bind globalmente e zera contador por request.
+        $budget = $this->app->make(QueryBudgetGuard::class);
+        $budget->bind();
+        if (class_exists(\Laravel\Octane\Events\RequestReceived::class)) {
+            $this->app['events']->listen(RequestReceived::class, fn () => $budget->reset());
         }
 
         // Overrides para NativePHP / Mobile / Android
