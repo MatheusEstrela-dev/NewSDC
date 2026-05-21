@@ -17,9 +17,10 @@ Route::prefix('rat')->name('rat.')->group(function () {
     Route::post('/',      [RatUnifiedController::class, 'store'])->name('store');
 
     // Export / Statistics
-    Route::get('/export',      [RatUnifiedController::class, 'export'])->name('export');
-    Route::get('/export-rats', [RatUnifiedController::class, 'exportRats'])->name('export-rats');
-    Route::get('/statistics',  [RatUnifiedController::class, 'statistics'])->name('statistics');
+    Route::get('/export',       [RatUnifiedController::class, 'export'])->name('export');
+    Route::get('/export/async', [RatUnifiedController::class, 'exportAsync'])->name('export.async');
+    Route::get('/export-rats',  [RatUnifiedController::class, 'exportRats'])->name('export-rats');
+    Route::get('/statistics',   [RatUnifiedController::class, 'statistics'])->name('statistics');
 
     // Boletim de Ocorrência
     Route::get('/bo',       [RatUnifiedController::class, 'indexBo'])->name('bo.index');

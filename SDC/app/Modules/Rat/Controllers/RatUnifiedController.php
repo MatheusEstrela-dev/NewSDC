@@ -23,6 +23,8 @@ use App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais;
 use App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos;
 use App\Modules\Rat\Models\Relatos\RatRelatoRecurso;
 use App\Modules\Rat\Models\Relatos\RatRelatoVistoria;
+use App\Http\Controllers\Traits\AsynchronousResponse;
+use App\Jobs\Rat\ExportRatToCsvJob;
 use App\Modules\Rat\Services\RatAttachmentService;
 use App\Modules\Rat\Services\RatExportService;
 use App\Modules\Rat\Services\RatHistoricoService;
@@ -44,7 +46,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RatUnifiedController extends BaseController
 {
-    use AuthorizesRequests, ValidatesRequests;
+    use AuthorizesRequests;
+    use AsynchronousResponse;
+    use ValidatesRequests;
 
     public function __construct(
         private readonly RatWriteService      $writeService,
@@ -569,6 +573,27 @@ class RatUnifiedController extends BaseController
     public function export(Request $request): StreamedResponse
     {
         return $this->exportService->exportToCsv($request);
+    }
+
+    /**
+     * Versao assincrona do export — recomendado para datasets grandes.
+     * Retorna 202 + trace_id; cliente consulta /api/v1/traces/{id} e baixa
+     * o CSV via /download quando completed.
+     */
+    public function exportAsync(Request $request): JsonResponse
+    {
+        return $this->dispatchAsyncJob(
+            jobClass: ExportRatToCsvJob::class,
+            type: 'export_rat_csv',
+            args: [[
+                'type' => $request->input('type'),
+                'data_inicio' => $request->input('data_inicio'),
+                'data_fim' => $request->input('data_fim'),
+            ]],
+            meta: ['filters' => $request->only(['type', 'data_inicio', 'data_fim'])],
+            queue: 'bulk',
+            estimatedSeconds: 90,
+        );
     }
 
     public function exportRats(Request $request): StreamedResponse
