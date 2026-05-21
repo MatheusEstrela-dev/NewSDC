@@ -71,6 +71,22 @@ class DecretacoesApiAuth
 
         $tokenData = $this->tokenService->validatePowerBIToken($token);
 
-        return $tokenData !== null;
+        if ($tokenData === null) {
+            return false;
+        }
+
+        // Vincula o user dono do token ao request para que controllers
+        // downstream (AsynchronousResponse, TraceController) consigam
+        // isolar recursos por user. Tokens legados (sem user_id) continuam
+        // passando sem user setado — comportamento anterior preservado.
+        $userId = $tokenData['user_id'] ?? null;
+        if ($userId !== null) {
+            $user = \App\Models\User::find($userId);
+            if ($user) {
+                Auth::setUser($user);
+            }
+        }
+
+        return true;
     }
 }
