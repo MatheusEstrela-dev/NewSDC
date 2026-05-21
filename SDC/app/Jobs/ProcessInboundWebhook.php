@@ -8,7 +8,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -41,51 +40,47 @@ class ProcessInboundWebhook implements ShouldQueue
     ) {}
 
     /**
-     * Processa o webhook
+     * Processa o webhook. O isolamento da conexao pgsql_webhook eh feito
+     * pelo proprio model WebhookEvent (protected $connection = 'pgsql_webhook'),
+     * dispensando o padrao anterior de DB::setDefaultConnection que alterava
+     * estado global e podia vazar em Octane.
      */
     public function handle(): void
     {
-        $defaultConnection = config('database.default');
-        DB::setDefaultConnection('pgsql_webhook');
+        // Marca como em processamento
+        $this->event->markAsProcessing();
+
+        Log::channel('webhooks')->info('Processing inbound webhook', [
+            'event_id' => $this->event->id,
+            'external_event_id' => $this->event->external_event_id,
+            'provider' => $this->event->provider,
+            'type' => $this->event->event_type,
+            'attempt' => $this->attempts(),
+        ]);
 
         try {
-            // Marca como em processamento
-            $this->event->markAsProcessing();
+            // Processa baseado no tipo de evento
+            $result = $this->processWebhookByType(
+                $this->event->payload,
+                $this->event->event_type
+            );
 
-            Log::channel('webhooks')->info('Processing inbound webhook', [
+            // Marca como concluido
+            $this->event->markAsCompleted();
+
+            Log::channel('webhooks')->info('Inbound webhook processed successfully', [
                 'event_id' => $this->event->id,
-                'external_event_id' => $this->event->external_event_id,
-                'provider' => $this->event->provider,
-                'type' => $this->event->event_type,
-                'attempt' => $this->attempts(),
+                'result' => $result,
             ]);
 
-            try {
-                // Processa baseado no tipo de evento
-                $result = $this->processWebhookByType(
-                    $this->event->payload,
-                    $this->event->event_type
-                );
+        } catch (Throwable $e) {
+            Log::channel('webhooks')->error('Inbound webhook processing failed', [
+                'event_id' => $this->event->id,
+                'attempt' => $this->attempts(),
+                'error' => $e->getMessage(),
+            ]);
 
-                // Marca como concluido
-                $this->event->markAsCompleted();
-
-                Log::channel('webhooks')->info('Inbound webhook processed successfully', [
-                    'event_id' => $this->event->id,
-                    'result' => $result,
-                ]);
-
-            } catch (Throwable $e) {
-                Log::channel('webhooks')->error('Inbound webhook processing failed', [
-                    'event_id' => $this->event->id,
-                    'attempt' => $this->attempts(),
-                    'error' => $e->getMessage(),
-                ]);
-
-                throw $e;
-            }
-        } finally {
-            DB::setDefaultConnection($defaultConnection);
+            throw $e;
         }
     }
 

@@ -8,7 +8,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\WebhookLog;
@@ -54,15 +53,14 @@ class ProcessWebhook implements ShouldQueue
      */
     public function handle(CircuitBreakerService $circuitBreaker): void
     {
-        $defaultConnection = config('database.default');
-        DB::setDefaultConnection('pgsql_webhook');
+        // Isolamento de conexao agora vive no model WebhookLog
+        // (protected $connection = 'pgsql_webhook'). Removido o wrapper
+        // DB::setDefaultConnection que alterava estado global em Octane.
+        $serviceKey = $this->getServiceKey();
+        $startTime = microtime(true);
 
-        try {
-            $serviceKey = $this->getServiceKey();
-            $startTime = microtime(true);
-
-            // Verifica Circuit Breaker antes de tentar
-            if ($circuitBreaker->isOpen($serviceKey)) {
+        // Verifica Circuit Breaker antes de tentar
+        if ($circuitBreaker->isOpen($serviceKey)) {
             Log::channel('webhooks')->warning('Webhook job blocked by circuit breaker', [
                 'url' => $this->url,
                 'service' => $serviceKey,
@@ -122,9 +120,6 @@ class ProcessWebhook implements ShouldQueue
 
             // Re-lanca excecao para retry automatico
             throw $e;
-        }
-        } finally {
-            DB::setDefaultConnection($defaultConnection);
         }
     }
 
