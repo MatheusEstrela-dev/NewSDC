@@ -291,6 +291,8 @@ Route::prefix('v1/decretacoes')
         \Illuminate\Cookie\Middleware\EncryptCookies::class,
         \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
         \Illuminate\Session\Middleware\StartSession::class,
+        \App\Http\Middleware\Backpressure::class,
+        \App\Http\Middleware\AcquireConnectionSlot::class,
         'decretacoes.api.auth',
         'api-rate-limiter:pro',
     ])
@@ -298,6 +300,17 @@ Route::prefix('v1/decretacoes')
         Route::get('/',                      [DecretacoesApiController::class, 'index'])->name('index');
         Route::get('/export/power-bi',       [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');
         Route::get('/export/power-bi/async', [DecretacoesApiController::class, 'exportPowerBIAsync'])->name('export.power-bi.async');
+
+        // Polling de trace assincrono no mesmo grupo (suporta triple auth via
+        // DecretacoesApiAuth: session/Sanctum/PowerBI token). Permite que o
+        // cliente PowerBI consulte status e baixe artefato do export async.
+        Route::get('/traces/{traceId}',          [\App\Http\Controllers\Api\V1\TraceController::class, 'show'])
+            ->name('traces.show')
+            ->whereUuid('traceId');
+        Route::get('/traces/{traceId}/download', [\App\Http\Controllers\Api\V1\TraceController::class, 'download'])
+            ->name('traces.download')
+            ->whereUuid('traceId');
+
         Route::get('/{id}',                  [DecretacoesApiController::class, 'show'])->name('show');
     });
 
@@ -307,6 +320,8 @@ Route::prefix('v1/decretacoes')
         \Illuminate\Cookie\Middleware\EncryptCookies::class,
         \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
         \Illuminate\Session\Middleware\StartSession::class,
+        \App\Http\Middleware\Backpressure::class,
+        \App\Http\Middleware\AcquireConnectionSlot::class,
         'decretacoes.api.auth',
         'api-rate-limiter:default',
     ])
@@ -325,6 +340,8 @@ Route::prefix('v1/rat')
         \Illuminate\Cookie\Middleware\EncryptCookies::class,
         \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
         \Illuminate\Session\Middleware\StartSession::class,
+        \App\Http\Middleware\Backpressure::class,
+        \App\Http\Middleware\AcquireConnectionSlot::class,
         'decretacoes.api.auth',
         'api-rate-limiter:pro',
     ])
@@ -340,6 +357,8 @@ Route::prefix('v1/rat')
         \Illuminate\Cookie\Middleware\EncryptCookies::class,
         \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
         \Illuminate\Session\Middleware\StartSession::class,
+        \App\Http\Middleware\Backpressure::class,
+        \App\Http\Middleware\AcquireConnectionSlot::class,
         'decretacoes.api.auth',
         'api-rate-limiter:default',
     ])
@@ -356,6 +375,8 @@ Route::prefix('v1/tdap')
         \Illuminate\Cookie\Middleware\EncryptCookies::class,
         \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
         \Illuminate\Session\Middleware\StartSession::class,
+        \App\Http\Middleware\Backpressure::class,
+        \App\Http\Middleware\AcquireConnectionSlot::class,
         'decretacoes.api.auth',
         'api-rate-limiter:pro',
     ])
