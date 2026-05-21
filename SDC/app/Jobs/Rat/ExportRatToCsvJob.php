@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs\Rat;
 
 use App\Jobs\Concerns\TracksAsyncProgress;
+use App\Models\RequestTrace;
 use App\Modules\Rat\Services\RatExportService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -13,6 +14,7 @@ use Illuminate\Http\File;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 /**
  * Job assincrono para exportar RAT em CSV. Substitui chamada sincrona
@@ -69,5 +71,17 @@ class ExportRatToCsvJob implements ShouldQueue
 
             return ['disk' => $disk, 'path' => 'rat/' . $name];
         });
+    }
+
+    /**
+     * Garante que o trace transite para failed mesmo quando o job for
+     * cancelado externamente (SIGKILL, max tries exceeded) — runTracked
+     * so cobre exceptions capturadas dentro de handle().
+     */
+    public function failed(Throwable $e): void
+    {
+        if ($this->traceId) {
+            RequestTrace::find($this->traceId)?->markAsFailed($e->getMessage());
+        }
     }
 }

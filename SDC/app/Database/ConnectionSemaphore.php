@@ -35,13 +35,28 @@ class ConnectionSemaphore
         private int $maxWaitMs = 2000,
     ) {}
 
+    /**
+     * Lua script atomico: INCR + EXPIRE somente na primeira vez (TTL natural).
+     * Garante que counter NUNCA fica sem TTL — se o processo morrer entre
+     * INCR e EXPIRE no padrao anterior, o counter cresceria indefinidamente
+     * causando 503 permanente.
+     */
+    private const LUA_INCR_WITH_TTL = <<<'LUA'
+        local v = redis.call('INCR', KEYS[1])
+        if v == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
+        return v
+    LUA;
+
     public function acquire(string $owner): bool
     {
         $start = microtime(true);
 
         do {
-            $current = (int) $this->redis->incr(self::KEY_ACTIVE);
-            $this->redis->expire(self::KEY_ACTIVE, self::TTL_SECONDS);
+            $current = (int) $this->redis->eval(
+                self::LUA_INCR_WITH_TTL,
+                [self::KEY_ACTIVE, (string) self::TTL_SECONDS],
+                1
+            );
 
             if ($current <= $this->limit) {
                 $this->redis->sAdd(self::KEY_OWNERS, $owner);

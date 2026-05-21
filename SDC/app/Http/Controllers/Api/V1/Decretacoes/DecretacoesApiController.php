@@ -160,7 +160,7 @@ class DecretacoesApiController extends Controller
             type: 'export_decretacoes_powerbi',
             args: [$request->query()],
             meta: ['filters' => $request->query()],
-            queue: 'bulk',
+            queue: 'low',
             estimatedSeconds: 120,
         );
     }

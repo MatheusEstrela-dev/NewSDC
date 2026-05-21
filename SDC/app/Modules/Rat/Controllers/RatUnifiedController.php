@@ -591,7 +591,7 @@ class RatUnifiedController extends BaseController
                 'data_fim' => $request->input('data_fim'),
             ]],
             meta: ['filters' => $request->only(['type', 'data_inicio', 'data_fim'])],
-            queue: 'bulk',
+            queue: 'low',
             estimatedSeconds: 90,
         );
     }
