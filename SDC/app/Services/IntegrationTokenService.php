@@ -84,12 +84,18 @@ class IntegrationTokenService
     }
 
     /**
-     * Gera um token único para Power BI que permite acesso a múltiplas APIs
-     * 
+     * Gera um token único para Power BI que permite acesso a múltiplas APIs.
+     *
+     * Vincula o token ao user dono (o que esta gerando via API). Quando esse
+     * token eh apresentado via X-PowerBI-Token, o DecretacoesApiAuth resolve
+     * o user vinculado e isola recursos (especialmente RequestTrace) por
+     * dono, evitando vazamento entre integracoes diferentes.
+     *
      * @param array|null $allowedApis APIs permitidas (null = todas configuradas)
+     * @param \App\Models\User|null $owner User dono do token (default: request()->user())
      * @return array Array com token único e informações das APIs
      */
-    public function generatePowerBIToken(?array $allowedApis = null): array
+    public function generatePowerBIToken(?array $allowedApis = null, ?\App\Models\User $owner = null): array
     {
         $allowedApis = $allowedApis ?? $this->config['power_bi']['allowed_apis'] ?? [];
 
@@ -110,9 +116,15 @@ class IntegrationTokenService
         // Gera um token único para Power BI
         $powerBIToken = $this->generateUniqueToken($apiTokens);
 
-        // Armazena o mapeamento do token
+        // Armazena o mapeamento do token com user_id (formato novo).
+        // validatePowerBIToken aceita tanto formato novo {user_id, apis}
+        // quanto formato legado (apiTokens direto) para compatibilidade
+        // com tokens emitidos antes desta mudanca.
         $ttl = $this->config['power_bi']['token_ttl'] ?? 3600;
-        Cache::put($this->getPowerBICacheKey($powerBIToken), $apiTokens, $ttl);
+        Cache::put($this->getPowerBICacheKey($powerBIToken), [
+            'user_id' => $owner?->id,
+            'apis' => $apiTokens,
+        ], $ttl);
 
         return [
             'token' => $powerBIToken,
@@ -123,14 +135,32 @@ class IntegrationTokenService
     }
 
     /**
-     * Valida e retorna os tokens associados a um token do Power BI
-     * 
+     * Valida e retorna o payload do token Power BI.
+     *
+     * Sempre retorna no formato {user_id, apis} para callers; payload legado
+     * em cache (apenas $apiTokens direto) eh normalizado para user_id=null.
+     *
      * @param string $powerBIToken Token do Power BI
-     * @return array|null Array com tokens das APIs ou null se inválido
+     * @return array{user_id: int|null, apis: array}|null null se invalido/expirado
      */
     public function validatePowerBIToken(string $powerBIToken): ?array
     {
-        return Cache::get($this->getPowerBICacheKey($powerBIToken));
+        $cached = Cache::get($this->getPowerBICacheKey($powerBIToken));
+
+        if ($cached === null) {
+            return null;
+        }
+
+        // Formato novo (com user_id): retorna direto
+        if (is_array($cached) && array_key_exists('user_id', $cached) && array_key_exists('apis', $cached)) {
+            return $cached;
+        }
+
+        // Formato legado (apiTokens direto): normaliza com user_id null
+        return [
+            'user_id' => null,
+            'apis' => is_array($cached) ? $cached : [],
+        ];
     }
 
     /**
