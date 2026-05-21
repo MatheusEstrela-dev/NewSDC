@@ -52,18 +52,25 @@ class ExportPowerBIJob implements ShouldQueue
             );
 
             $handle = fopen('php://temp', 'w+');
-            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            if (!empty($data)) {
-                fputcsv($handle, array_keys($data[0]), ';');
-            }
-            foreach ($data as $row) {
-                fputcsv($handle, array_values($row), ';');
+            if ($handle === false) {
+                throw new \RuntimeException('Falha ao abrir php://temp para export PowerBI');
             }
 
-            rewind($handle);
-            $contents = stream_get_contents($handle);
-            fclose($handle);
+            try {
+                fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+                if (!empty($data)) {
+                    fputcsv($handle, array_keys($data[0]), ';');
+                }
+                foreach ($data as $row) {
+                    fputcsv($handle, array_values($row), ';');
+                }
+
+                rewind($handle);
+                $contents = stream_get_contents($handle);
+            } finally {
+                fclose($handle);
+            }
 
             Storage::disk($disk)->put($path, $contents);
 
