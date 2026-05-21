@@ -102,7 +102,7 @@ trait AsynchronousResponse
      * @param string $type identificador do tipo (ex: 'export_decretacoes')
      * @param array<int, mixed> $args argumentos adicionais do construtor (apos $traceId)
      * @param array<string, mixed> $meta payload arbitrario salvo no trace
-     * @param string $queue queue de destino (default 'bulk' para baixa prioridade)
+     * @param string $queue queue de destino (default 'low' = connection redis-low)
      * @param int $estimatedSeconds tempo estimado para o cliente
      */
     protected function dispatchAsyncJob(
@@ -110,21 +110,46 @@ trait AsynchronousResponse
         string $type,
         array $args = [],
         array $meta = [],
-        string $queue = 'bulk',
+        string $queue = 'low',
         int $estimatedSeconds = 60,
     ): JsonResponse {
         $traceId = $this->generateTraceId();
-
-        RequestTrace::create([
-            'id' => $traceId,
-            'user_id' => optional(request()->user())->id,
-            'type' => $type,
-            'status' => RequestTrace::STATUS_PENDING,
-            'meta' => $meta,
-        ]);
-
         $job = new $jobClass($traceId, ...$args);
-        app(Dispatcher::class)->dispatch($job->onQueue($queue));
+
+        // Dispatch antes de persistir o trace: se a queue/Redis estiver
+        // indisponivel, retornamos 503 sem deixar trace orfao em "pending".
+        try {
+            app(Dispatcher::class)->dispatch($job->onQueue($queue));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('dispatchAsyncJob falhou', [
+                'type' => $type,
+                'job' => $jobClass,
+                'queue' => $queue,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'error' => 'Service Unavailable',
+                'message' => 'Fila indisponivel; tente novamente em instantes.',
+            ], 503, ['Retry-After' => '5']);
+        }
+
+        // Se a criacao do trace falhar apos dispatch, o job ainda roda; o
+        // TracksAsyncProgress tolera trace null (skip silencioso). Best-effort.
+        try {
+            RequestTrace::create([
+                'id' => $traceId,
+                'user_id' => optional(request()->user())->id,
+                'type' => $type,
+                'status' => RequestTrace::STATUS_PENDING,
+                'meta' => $meta,
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('RequestTrace::create falhou apos dispatch', [
+                'trace_id' => $traceId,
+                'type' => $type,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this->acceptedResponse(
             traceId: $traceId,
