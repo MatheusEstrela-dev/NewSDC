@@ -210,8 +210,23 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
     Route::get('notification-preferences', [NotificationPreferencesController::class, 'index']);
     Route::put('notification-preferences', [NotificationPreferencesController::class, 'update']);
 
+    // Integracoes pessoais do usuario (Telegram, futuro WhatsApp).
+    // Cada user gerencia suas proprias conexoes em Configuracoes > Integracoes.
+    Route::prefix('integrations/telegram')->name('api.v1.integrations.telegram.')->group(function () {
+        Route::post('connect', [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'connect'])->name('connect');
+        Route::get('status',   [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'status'])->name('status');
+        Route::delete('{id}',  [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'disconnect'])
+            ->whereNumber('id')
+            ->name('disconnect');
+    });
+
     // (Logs movidos para fora do auth:sanctum)
 });
+
+// Webhook publico do bot Telegram (sem auth do app — secret no path).
+// Configurar no Telegram via setWebhook apos deploy.
+Route::post('integrations/telegram/webhook/{secret}', [\App\Http\Controllers\Api\V1\Integrations\TelegramWebhookController::class, 'handle'])
+    ->name('integrations.telegram.webhook');
 
 // Log Viewer - Sistema avancado de visualizacao de logs
 // Protegido por autenticacao e permissao de logs.

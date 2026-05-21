@@ -15,12 +15,16 @@ class UserNotificationPreference extends Model
         'canal_sistema',
         'canal_email',
         'canal_push',
+        'canal_telegram',
+        'canal_whatsapp',
     ];
 
     protected $casts = [
-        'canal_sistema' => 'boolean',
-        'canal_email'   => 'boolean',
-        'canal_push'    => 'boolean',
+        'canal_sistema'  => 'boolean',
+        'canal_email'    => 'boolean',
+        'canal_push'     => 'boolean',
+        'canal_telegram' => 'boolean',
+        'canal_whatsapp' => 'boolean',
     ];
 
     public const MODULES = ['rat', 'pae', 'meteorologia', 'demandas', 'decretacoes'];
@@ -40,11 +44,13 @@ class UserNotificationPreference extends Model
         foreach (self::MODULES as $module) {
             if (!$existing->has($module)) {
                 $existing->put($module, static::create([
-                    'user_id'       => $userId,
-                    'module'        => $module,
-                    'canal_sistema' => true,
-                    'canal_email'   => false,
-                    'canal_push'    => false,
+                    'user_id'        => $userId,
+                    'module'         => $module,
+                    'canal_sistema'  => true,
+                    'canal_email'    => false,
+                    'canal_push'     => false,
+                    'canal_telegram' => false,
+                    'canal_whatsapp' => false,
                 ]));
             }
         }
