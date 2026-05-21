@@ -15,8 +15,11 @@
           <h1 class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             {{ pageTitle }}
           </h1>
-          <span v-if="rat.status" :class="['px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-xs font-semibold border whitespace-nowrap', getStatusClass(rat.status)]">
-            {{ getStatusLabel(rat.status) }}
+          <span
+            v-if="isCreate || rat.status"
+            :class="['px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-xs font-semibold border whitespace-nowrap', isCreate ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30' : getStatusClass(rat.status)]"
+          >
+            {{ isCreate ? 'Criando' : getStatusLabel(rat.status) }}
           </span>
         </div>
 
@@ -72,9 +75,9 @@ const props = defineProps({
 });
 
 const pageTitle = computed(() => {
-  if (!props.rat?.id) return 'Novo RAT';
-  if (props.viewOnly) return 'Visualizar RAT';
-  return 'Boletim de Ocorrência';
+  if (!props.rat?.id || props.isCreate) return 'Criar Boletim de Ocorrência';
+  if (props.viewOnly) return 'Visualizar Boletim de Ocorrência';
+  return 'Editar Boletim de Ocorrência';
 });
 
 const formattedLastUpdate = computed(() => {

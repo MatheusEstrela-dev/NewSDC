@@ -25,7 +25,7 @@
           :class="getTabClass(tab.id, tab.disabled)"
           :disabled="tab.disabled || undefined"
           :style="tab.disabled ? { pointerEvents: 'none' } : {}"
-          :title="tab.disabled ? 'Conclua a aba anterior para continuar' : tab.label"
+          :title="tab.disabled ? 'Salve a aba atual para navegar' : tab.label"
           type="button"
           class="snap-start"
         >

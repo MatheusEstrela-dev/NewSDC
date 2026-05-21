@@ -33,6 +33,12 @@ class Kernel extends ConsoleKernel
             ->hourly()
             ->withoutOverlapping()
             ->runInBackground();
+
+        // RAT: fecha automaticamente protocolos com prazo de edição (48h) expirado.
+        $schedule->command('rat:close-expired')
+            ->hourly()
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**

@@ -528,7 +528,11 @@ class RatUnifiedController extends BaseController
     public function storeAttachment(Request $request, string $ocorrenciaId): JsonResponse
     {
         $request->validate([
-            'arquivo'   => 'required|file|max:20480',
+            'arquivo' => [
+                'required', 'file',
+                'max:20480', // 20 MB
+                'mimes:jpeg,jpg,png,gif,webp,bmp,pdf,doc,docx,xls,xlsx,txt,csv,odt,ods',
+            ],
             'tipo'      => 'required|string|in:imagem,documento,video,audio',
             'descricao' => 'nullable|string|max:500',
         ]);

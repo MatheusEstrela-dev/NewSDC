@@ -336,9 +336,21 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 
 // ── Municípios de MG via IBGE ─────────────────────────────────────────────────
-const { municipioOptions, isLoadingMunicipios, loadMunicipios } = useLocationData();
+const { municipios, municipioOptions, isLoadingMunicipios, loadMunicipios } = useLocationData();
 
 onMounted(() => loadMunicipios('MG'));
+
+// Resolve nome do município quando o usuário seleciona ou ao carregar as opções
+watch(
+  [() => localData.value.imovel.municipio, municipios],
+  ([id]) => {
+    if (!id || !municipios.value.length) return;
+    const match = municipios.value.find(m => String(m.id) === String(id));
+    if (match && localData.value.imovel.municipio_nome !== match.nome) {
+      localData.value.imovel.municipio_nome = match.nome;
+    }
+  }
+);
 
 const mv = props.modelValue ?? {};
 
@@ -352,13 +364,14 @@ const localData = ref({
     cep:      mv.solicitante?.cep      ?? '',
   },
   imovel: {
-    endereco:    mv.imovel?.endereco    ?? '',
-    complemento: mv.imovel?.complemento ?? '',
-    bairro:      mv.imovel?.bairro      ?? '',
-    municipio:   mv.imovel?.municipio != null ? Number(mv.imovel.municipio) || '' : '',
-    cep:         mv.imovel?.cep         ?? '',
-    latitude:    mv.imovel?.latitude    ?? null,
-    longitude:   mv.imovel?.longitude   ?? null,
+    endereco:       mv.imovel?.endereco       ?? '',
+    complemento:    mv.imovel?.complemento    ?? '',
+    bairro:         mv.imovel?.bairro         ?? '',
+    municipio:      mv.imovel?.municipio_id != null ? Number(mv.imovel.municipio_id) || '' : (mv.imovel?.municipio != null ? Number(mv.imovel.municipio) || '' : ''),
+    municipio_nome: mv.imovel?.municipio_nome ?? '',
+    cep:            mv.imovel?.cep            ?? '',
+    latitude:       mv.imovel?.latitude       ?? null,
+    longitude:      mv.imovel?.longitude      ?? null,
   },
   estrutura: {
     tipo_imovel:         mv.estrutura?.tipo_imovel         ?? '',

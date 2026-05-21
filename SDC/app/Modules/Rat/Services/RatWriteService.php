@@ -35,6 +35,7 @@ class RatWriteService
                 'numero_bos'     => $protocolo,
                 'sequencial_ano' => now()->year,
                 'status'         => 0,
+                'prazo_edicao'   => now()->addHours(48),
                 'created_by'     => $userId,
                 'updated_by'     => $userId,
             ]);
@@ -51,6 +52,7 @@ class RatWriteService
                 'numero_bos'     => $protocolo,
                 'sequencial_ano' => now()->year,
                 'status'         => 0,
+                'prazo_edicao'   => now()->addHours(48),
                 'created_by'     => $userId,
                 'updated_by'     => $userId,
             ]);
@@ -170,9 +172,11 @@ class RatWriteService
     public function saveDadosGerais(string $ocorrenciaId, RatDadosGeraisDTO $dto): RatRelatoDadosGerais
     {
         return DB::transaction(function () use ($ocorrenciaId, $dto) {
+            $dadosArray = $dto->toArray();
+
             $dadosGerais = RatRelatoDadosGerais::updateOrCreate(
                 ['ocorrencia_id' => $ocorrenciaId],
-                array_merge($dto->toArray(), [
+                array_merge($dadosArray, [
                     'ocorrencia_id' => $ocorrenciaId,
                     'created_by'    => Auth::id(),
                 ])
@@ -272,16 +276,21 @@ class RatWriteService
                 return $entry;
             }, $historico);
 
-            RatOcorrencia::where('id', $ocorrenciaId)->update(['historico' => $historico]);
+            // where()->update() bypasses Eloquent casts — JSON-encode explicitly for jsonb column
+            RatOcorrencia::where('id', $ocorrenciaId)->update([
+                'historico' => json_encode($historico, JSON_UNESCAPED_UNICODE) ?: '[]',
+            ]);
         });
     }
 
     public function saveVistoria(string $ocorrenciaId, RatVistoriaDTO $dto): RatRelatoVistoria
     {
         return DB::transaction(function () use ($ocorrenciaId, $dto) {
+            $vistoriaArray = $dto->toArray();
+
             $vistoria = RatRelatoVistoria::updateOrCreate(
                 ['ocorrencia_id' => $ocorrenciaId],
-                array_merge($dto->toArray(), [
+                array_merge($vistoriaArray, [
                     'ocorrencia_id' => $ocorrenciaId,
                     'created_by'    => Auth::id(),
                 ])

@@ -1,6 +1,6 @@
 <template>
     <div>
-        <Head title="Gestão de RAT" />
+        <Head :title="props.isCreate ? 'Criar Boletim de Ocorrência' : props.viewOnly ? 'Visualizar Boletim de Ocorrência' : 'Editar Boletim de Ocorrência'" />
 
         <div class="rat-container">
           <!-- Header -->
@@ -184,13 +184,22 @@ onMounted(() => {
   else if (flash?.error)   toast(flash.error,   'error',   { noIcon: true });
 });
 
+// Só a aba que está sendo exibida no momento fica ativa.
+// Abas anteriores (já preenchidas) e posteriores (ainda não alcançadas) ficam bloqueadas.
+// Em edição sem isCreate: o mesmo princípio — só o tab atualmente visível é clicável.
+// Em viewOnly: nenhum bloqueio.
+function isTabDisabled(tabId) {
+  if (props.viewOnly) return false;
+  return tabId !== currentActiveTab.value;
+}
+
 const tabConfig = computed(() => [
-  { id: 1, label: 'Dados Gerais',        icon: DocumentTextIcon, disabled: false },
-  { id: 2, label: 'Recursos Empregados', icon: TruckIcon,    badge: recursosState.value?.length > 0  ? recursosState.value.length  : null, disabled: maxUnlockedTab.value < 2 },
-  { id: 3, label: 'Envolvidos',          icon: UsersIcon,    badge: envolvidosState.value?.length > 0 ? envolvidosState.value.length : null, disabled: maxUnlockedTab.value < 3 },
-  { id: 4, label: 'Vistoria',            icon: ClipboardIcon, hidden: !temVistoria.value, disabled: maxUnlockedTab.value < 4 },
-  { id: 5, label: 'Histórico',           icon: ClockIcon,    disabled: maxUnlockedTab.value < 5 },
-  { id: 6, label: 'Anexos',             icon: PaperClipIcon, badge: Array.isArray(anexosState.value) && anexosState.value.length > 0 ? anexosState.value.length : null, disabled: maxUnlockedTab.value < 6 },
+  { id: 1, label: 'Dados Gerais',        icon: DocumentTextIcon, disabled: isTabDisabled(1) },
+  { id: 2, label: 'Recursos Empregados', icon: TruckIcon,    badge: recursosState.value?.length > 0  ? recursosState.value.length  : null, disabled: isTabDisabled(2) },
+  { id: 3, label: 'Envolvidos',          icon: UsersIcon,    badge: envolvidosState.value?.length > 0 ? envolvidosState.value.length : null, disabled: isTabDisabled(3) },
+  { id: 4, label: 'Vistoria',            icon: ClipboardIcon, hidden: !temVistoria.value, disabled: isTabDisabled(4) },
+  { id: 5, label: 'Histórico',           icon: ClockIcon,    disabled: isTabDisabled(5) },
+  { id: 6, label: 'Anexos',             icon: PaperClipIcon, badge: Array.isArray(anexosState.value) && anexosState.value.length > 0 ? anexosState.value.length : null, disabled: isTabDisabled(6) },
 ]);
 
 // ─── Save-and-Advance ──────────────────────────────────────────────────────

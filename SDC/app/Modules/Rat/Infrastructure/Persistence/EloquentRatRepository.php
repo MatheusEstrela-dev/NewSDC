@@ -83,16 +83,31 @@ class EloquentRatRepository implements RatRepositoryInterface
 
     public function getLatestSequence(int $year): int
     {
-        $latest = RatOcorrencia::where('numero_bos', 'like', "RAT-{$year}-%")
+        $seq = 0;
+
+        // Formato atual: YYYY-NNNNNNNNN-XXX (sufixo 000 ou código real da unidade)
+        $latestNew = RatOcorrencia::withTrashed()
+            ->where('numero_bos', 'like', "{$year}-%-%")
+            ->where('numero_bos', 'not like', 'RAT-%')
             ->lockForUpdate()
             ->orderByDesc('numero_bos')
             ->value('numero_bos');
 
-        if (!$latest) {
-            return 0;
+        if ($latestNew && preg_match('/^\d{4}-(\d+)-\d{3}$/', $latestNew, $m)) {
+            $seq = max($seq, (int) $m[1]);
         }
 
-        return (int) substr($latest, strrpos($latest, '-') + 1);
+        // Formato legado: RAT-YYYY-NNNNNN
+        $latestOld = RatOcorrencia::where('numero_bos', 'like', "RAT-{$year}-%")
+            ->lockForUpdate()
+            ->orderByDesc('numero_bos')
+            ->value('numero_bos');
+
+        if ($latestOld) {
+            $seq = max($seq, (int) substr($latestOld, strrpos($latestOld, '-') + 1));
+        }
+
+        return $seq;
     }
 
     private function generateProtocolo(): string
@@ -100,6 +115,6 @@ class EloquentRatRepository implements RatRepositoryInterface
         $year = now()->year;
         $seq  = $this->getLatestSequence($year) + 1;
 
-        return sprintf('RAT-%d-%06d', $year, $seq);
+        return sprintf('%d-%09d-000', $year, $seq);
     }
 }

@@ -58,6 +58,7 @@ class RatRelatoVistoria extends RatRelato
         'v_endereco_imovel',
         'v_bairro',
         'v_municipio',
+        'v_municipio_nome',
         'v_cep',
         'v_latitude',
         'v_longitude',

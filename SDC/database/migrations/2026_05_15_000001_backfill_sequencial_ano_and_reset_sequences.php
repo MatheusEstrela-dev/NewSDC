@@ -42,10 +42,16 @@ return new class extends Migration
                 continue;
             }
 
+            // Skip tables where id is not a serial (e.g., UUID primary keys have no sequence)
+            $seq = DB::selectOne("SELECT pg_get_serial_sequence(?, 'id') AS seq", [$table]);
+            if (empty($seq->seq)) {
+                continue;
+            }
+
             DB::statement("
                 SELECT setval(
                     pg_get_serial_sequence('{$table}', 'id'),
-                    GREATEST(1, (SELECT MAX(id) FROM \"{$table}\")),
+                    GREATEST(1, (SELECT COALESCE(MAX(id), 1) FROM \"{$table}\")),
                     true
                 )
             ");
