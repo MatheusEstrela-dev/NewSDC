@@ -41,6 +41,14 @@ class Kernel extends ConsoleKernel
             ->onOneServer()
             ->withoutOverlapping()
             ->runInBackground();
+
+        // Async exports: remove artefatos do disk 'exports' com idade > 7 dias.
+        // Limpa tambem result_disk/result_path nos traces associados.
+        $schedule->command('exports:cleanup --days=7')
+            ->dailyAt('04:00')
+            ->onOneServer()
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**
