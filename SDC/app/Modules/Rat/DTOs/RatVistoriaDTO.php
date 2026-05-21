@@ -46,10 +46,11 @@ readonly class RatVistoriaDTO
         public ?bool   $vHaCriancas            = null,
         public ?string $vHaDificuldadeLocomocao = null,
         // Localização do imóvel
-        public ?string $vEnderecoImovel = null,
-        public ?string $vBairro         = null,
-        public ?int    $vMunicipio      = null,
-        public ?string $vCep            = null,
+        public ?string $vEnderecoImovel  = null,
+        public ?string $vBairro          = null,
+        public ?int    $vMunicipio       = null,
+        public ?string $vMunicipioNome   = null,
+        public ?string $vCep             = null,
         public ?float  $vLatitude       = null,
         public ?float  $vLongitude      = null,
         // Infraestrutura e acesso
@@ -185,10 +186,11 @@ readonly class RatVistoriaDTO
             vHaDificuldadeLocomocao: isset($mor['ha_pcd']) && $mor['ha_pcd'] ? 'sim' : ($data['v_ha_dificuldade_locomocao'] ?? null),
 
             // Localização do imóvel
-            vEnderecoImovel: $data['v_endereco_imovel'] ?? $imo['endereco']  ?? null,
-            vBairro:         $data['v_bairro']          ?? $imo['bairro']    ?? null,
+            vEnderecoImovel: $data['v_endereco_imovel']  ?? $imo['endereco']        ?? null,
+            vBairro:         $data['v_bairro']           ?? $imo['bairro']          ?? null,
             vMunicipio:      self::intOrNull($data['v_municipio'] ?? $imo['municipio'] ?? null),
-            vCep:            $data['v_cep']             ?? $imo['cep']       ?? null,
+            vMunicipioNome:  $data['v_municipio_nome']  ?? $imo['municipio_nome']   ?? null,
+            vCep:            $data['v_cep']              ?? $imo['cep']             ?? null,
             vLatitude:       isset($data['v_latitude'])  ? (float) $data['v_latitude']  : (isset($imo['latitude'])  ? (float) $imo['latitude']  : null),
             vLongitude:      isset($data['v_longitude']) ? (float) $data['v_longitude'] : (isset($imo['longitude']) ? (float) $imo['longitude'] : null),
 
@@ -333,6 +335,7 @@ readonly class RatVistoriaDTO
             'v_endereco_imovel'                     => $this->vEnderecoImovel,
             'v_bairro'                              => $this->vBairro,
             'v_municipio'                           => $this->vMunicipio,
+            'v_municipio_nome'                      => $this->vMunicipioNome,
             'v_cep'                                 => $this->vCep,
             'v_latitude'                            => $this->vLatitude,
             'v_longitude'                           => $this->vLongitude,

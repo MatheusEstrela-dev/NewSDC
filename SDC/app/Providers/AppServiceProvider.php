@@ -217,6 +217,14 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
+        // Em Docker (FrankenPHP): garante que public/storage → storage/app/public existe.
+        // Sem o symlink os URLs gerados por Storage::disk('public')->url() retornam 404.
+        if ($isDocker && !is_link(public_path('storage')) && !file_exists(public_path('storage'))) {
+            try {
+                Artisan::call('storage:link', ['--force' => true]);
+            } catch (\Throwable) {}
+        }
+
         if (app()->runningInConsole() === false) {
             $requestId = (string) Str::uuid();
 

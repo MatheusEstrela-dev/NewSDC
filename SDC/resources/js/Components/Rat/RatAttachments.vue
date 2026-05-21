@@ -25,27 +25,34 @@
       @remove-file="handleRemoveFile"
     />
 
-    <!-- Footer: Salvar Anexo + Finalizar RAT -->
+    <!-- Footer: botões de ação da aba Anexos -->
     <div v-if="!viewOnly" class="rat-actions-footer">
+      <!-- Aviso: upload em andamento -->
+      <div v-if="uploading" class="flex justify-center mb-3">
+        <span class="inline-flex items-center gap-2 text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-lg">
+          <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          Enviando arquivo ao servidor... aguarde antes de avançar.
+        </span>
+      </div>
+
       <div class="flex items-center justify-center gap-3 flex-wrap">
-        <!-- Salvar Anexo -->
+        <!-- Avançar etapa: NÃO faz upload. Upload ocorre ao selecionar/arrastar arquivos acima. -->
         <button
           type="button"
           :disabled="uploading"
           @click="$emit('save')"
           class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold
-                 bg-blue-600 hover:bg-blue-700 active:bg-blue-800
+                 bg-slate-600 hover:bg-slate-500 active:bg-slate-700
                  text-white shadow-sm transition-colors duration-150
-                 disabled:opacity-60 disabled:cursor-not-allowed min-w-[140px] justify-center"
+                 disabled:opacity-60 disabled:cursor-not-allowed min-w-[160px] justify-center"
         >
-          <svg v-if="uploading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
           </svg>
-          <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-          </svg>
-          {{ uploading ? 'Enviando...' : 'Salvar Anexo' }}
+          Avançar
         </button>
 
         <!-- Finalizar RAT -->
@@ -56,7 +63,7 @@
           class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold
                  bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800
                  text-white shadow-sm transition-colors duration-150
-                 disabled:opacity-60 disabled:cursor-not-allowed min-w-[140px] justify-center"
+                 disabled:opacity-60 disabled:cursor-not-allowed min-w-[160px] justify-center"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
