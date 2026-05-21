@@ -25,27 +25,37 @@ use Symfony\Component\HttpFoundation\Response;
 class QueryThresholdMiddleware
 {
     /**
+     * Estado static para sobreviver entre instances do middleware (que sao
+     * criadas por request) sem acumular DB::listen closures em Octane.
+     * Cada request reset $currentQueries; o listener eh registrado 1x por
+     * processo PHP. Em Octane, cada worker processa requests sequencialmente,
+     * entao o estado static eh seguro (1 request ativa por worker).
+     *
      * @var array<int, array{sql: string, time: float, bindings: array<int, mixed>}>
      */
-    private array $queries = [];
+    private static array $currentQueries = [];
+    private static bool $listenerRegistered = false;
 
     public function handle(Request $request, Closure $next, int|string $threshold = 15): Response
     {
         $threshold = (int) $threshold;
-        $this->queries = [];
+        self::$currentQueries = [];
 
-        DB::listen(function (QueryExecuted $event): void {
-            $this->queries[] = [
-                'sql' => $event->sql,
-                'time' => $event->time,
-                'bindings' => $event->bindings,
-            ];
-        });
+        if (!self::$listenerRegistered) {
+            self::$listenerRegistered = true;
+            DB::listen(function (QueryExecuted $event): void {
+                self::$currentQueries[] = [
+                    'sql' => $event->sql,
+                    'time' => $event->time,
+                    'bindings' => $event->bindings,
+                ];
+            });
+        }
 
         /** @var Response $response */
         $response = $next($request);
 
-        $count = count($this->queries);
+        $count = count(self::$currentQueries);
 
         if ($count > $threshold) {
             $totalTime = array_sum(array_column($this->queries, 'time'));

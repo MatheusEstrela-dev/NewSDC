@@ -13,6 +13,14 @@ class WebhookEvent extends Model
 {
     use HasUuids;
 
+    /**
+     * Isolamento de conexao: webhook events sempre vao pelo pool pgsql_webhook,
+     * separado do pool da web. Substitui o padrao anterior de
+     * DB::setDefaultConnection nos jobs, que alterava estado global e podia
+     * vazar para outros code paths em Octane.
+     */
+    protected $connection = 'pgsql_webhook';
+
     protected $fillable = [
         'external_event_id',
         'provider',
