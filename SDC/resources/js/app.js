@@ -28,6 +28,11 @@ const isUserFacingNavigation = (visit) => {
     return true;
 };
 
+// Reload automático quando a sessão/CSRF expira (419 Page Expired)
+router.on('invalid-token', () => {
+    window.location.reload();
+});
+
 let userFacingNavPending = false;
 
 router.on('start', (event) => {

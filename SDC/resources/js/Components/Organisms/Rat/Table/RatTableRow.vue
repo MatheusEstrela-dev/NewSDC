@@ -31,6 +31,7 @@
           :show-print="true"
           :show-edit="canEdit"
           :show-delete="canDelete"
+          attachments-label="Relacionar"
           @view="handleView"
           @print="handlePrint"
           @edit="handleEdit"

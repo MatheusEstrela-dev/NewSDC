@@ -360,6 +360,9 @@ class RatResource extends JsonResource
             // ── Anexos (rat_anexos table via relationship) ──
             'anexos' => $anexos,
 
+            // ── Permissões de ação ──
+            'pode_relacionar' => $this->status === 1 || ($this->prazo_edicao && $this->prazo_edicao->isPast()),
+
             // ── Meta ──
             'criado_por'     => $this->creator?->name ?? 'Sistema',
             'atualizado_por' => $this->updater?->name ?? null,

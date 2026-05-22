@@ -42,6 +42,24 @@ class RatWriteService
         });
     }
 
+    public function createRelacionado(string $origemId): RatOcorrencia
+    {
+        return DB::transaction(function () use ($origemId) {
+            $protocolo = $this->protocoloService->generate();
+            $userId    = Auth::id();
+
+            return RatOcorrencia::create([
+                'numero_bos'           => $protocolo,
+                'sequencial_ano'       => now()->year,
+                'status'               => 0,
+                'prazo_edicao'         => now()->addHours(48),
+                'created_by'           => $userId,
+                'updated_by'           => $userId,
+                'ocorrencia_origem_id' => $origemId,
+            ]);
+        });
+    }
+
     public function createWithData(array $data): RatOcorrencia
     {
         return DB::transaction(function () use ($data) {

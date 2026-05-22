@@ -36,8 +36,9 @@
       <TableActions
         :show-print="true"
         :show-edit="canEdit"
-        :show-attachments="!!rat.has_attachments"
+        :show-attachments="true"
         :show-delete="canDelete"
+        attachments-label="Relacionar"
         size="md"
         @view="$emit('view', rat.id)"
         @print="$emit('print', rat.id)"

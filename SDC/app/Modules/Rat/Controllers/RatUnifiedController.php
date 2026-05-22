@@ -83,11 +83,9 @@ class RatUnifiedController extends BaseController
         ]);
     }
 
-    public function create(): RedirectResponse
+    public function create(): Response
     {
-        $ocorrencia = $this->writeService->create();
-        return redirect()->to($this->boUrl($ocorrencia->id))
-            ->with('success', 'Novo RAT criado. Preencha os dados abaixo.');
+        return Inertia::render('Rat/RatCreate');
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
@@ -168,9 +166,9 @@ class RatUnifiedController extends BaseController
 
     private function boUrl(string $id, ?string $aba = null): string
     {
-        $url = route('rat.bo.index') . '?ocorrencia_id=' . $id;
+        $url = route('rat.edit', $id);
         if ($aba) {
-            $url .= '&aba=' . $aba;
+            $url .= '?aba=' . $aba;
         }
         return $url;
     }
@@ -224,13 +222,9 @@ class RatUnifiedController extends BaseController
         $ocorrencia = $this->writeService->findById($id);
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
-        // RAT recém-criado: ainda sem dados gerais preenchidos → começa na aba 1 travada
-        $isNew = !RatRelatoDadosGerais::where('ocorrencia_id', $id)->exists();
-
-        return Inertia::render('Rat', [
-            'rat'      => (new RatOcorrenciaResource($ocorrencia))->resolve(),
-            'viewOnly' => false,
-            'isCreate' => $isNew,
+        return Inertia::render('Rat/RatEdit', [
+            'rat'        => (new RatOcorrenciaResource($ocorrencia))->resolve(),
+            'lastUpdate' => $ocorrencia->updated_at?->toIso8601String(),
         ]);
     }
 
@@ -689,5 +683,41 @@ class RatUnifiedController extends BaseController
             'data' => [],
             'meta' => ['current_page' => 1, 'total' => 0],
         ]);
+    }
+
+    // =========================================================================
+    // API — Criar Boletim Relacionado
+    // =========================================================================
+
+    public function createRelacionado(Request $request, string $id): RedirectResponse|JsonResponse
+    {
+        $ocorrencia = RatOcorrencia::findOrFail($id);
+
+        $isFinalized = $ocorrencia->status === 1;
+        $isExpired   = $ocorrencia->prazo_edicao && $ocorrencia->prazo_edicao->isPast();
+
+        if (!$isFinalized && !$isExpired) {
+            $msg = 'Apenas boletins finalizados ou com prazo expirado podem ser relacionados.';
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return back()->withErrors(['error' => $msg]);
+        }
+
+        $novo = $this->writeService->createRelacionado($id);
+
+        $url = $this->boUrl($novo->id);
+
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success'    => true,
+                'message'    => "Boletim {$novo->numero_bos} criado com sucesso.",
+                'id'         => $novo->id,
+                'numero_bos' => $novo->numero_bos,
+                'url'        => $url,
+            ]);
+        }
+
+        return redirect()->to($url)->with('success', "Boletim {$novo->numero_bos} criado com sucesso!");
     }
 }

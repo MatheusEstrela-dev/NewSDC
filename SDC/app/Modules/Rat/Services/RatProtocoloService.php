@@ -30,32 +30,22 @@ class RatProtocoloService
     {
         $seq = 0;
 
-        // Formato atual: YYYY-NNNNNNNNN-XXX
         // O sufixo pode ser 000 (placeholder) ou o código real da unidade (ex: 123).
         // Busca por qualquer sufixo de 3 dígitos para não perder o sequencial
         // após o protocolo ser atualizado por saveDadosGerais.
-        $latestNew = RatOcorrencia::withTrashed()
+        $latestOld = RatOcorrencia::withTrashed()
             ->where('numero_bos', 'like', "{$year}-%-%")
             ->where('numero_bos', 'not like', 'RAT-%')
             ->lockForUpdate()
             ->orderByDesc('numero_bos')
             ->value('numero_bos');
 
-        if ($latestNew && preg_match('/^\d{4}-(\d+)-\d{3}$/', $latestNew, $m)) {
-            $seq = max($seq, (int) $m[1]);
-        }
-
-        // Formato legado: RAT-YYYY-NNNNNN
-        $latestOld = RatOcorrencia::withTrashed()
-            ->where('numero_bos', 'like', "RAT-{$year}-%")
-            ->lockForUpdate()
-            ->orderByDesc('numero_bos')
-            ->value('numero_bos');
-
-        if ($latestOld) {
+         if ($latestOld) {
             $seq = max($seq, (int) substr($latestOld, strrpos($latestOld, '-') + 1));
         }
 
         return $seq;
     }
 }
+
+
