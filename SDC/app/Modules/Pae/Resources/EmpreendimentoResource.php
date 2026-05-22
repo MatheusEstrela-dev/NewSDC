@@ -2,13 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Resources\Pae;
+namespace App\Modules\Pae\Resources;
 
+use App\Modules\Pae\Models\PaeEmpnto;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @property-read PaeEmpnto $resource
+ *
+ * @mixin PaeEmpnto
+ */
 class EmpreendimentoResource extends JsonResource
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(Request $request): array
     {
         return [
@@ -47,16 +56,11 @@ class EmpreendimentoResource extends JsonResource
                     return null;
                 }
 
-                $status = $this->latestProtocolo->status;
-                if (is_object($status) && property_exists($status, 'value')) {
-                    $status = $status->value;
-                }
-
                 return [
                     'id' => $this->latestProtocolo->id,
                     'num_protocolo' => $this->latestProtocolo->num_protocolo,
                     'sigibar' => $this->latestProtocolo->sigibar,
-                    'status' => $status,
+                    'status' => $this->latestProtocolo->status?->value,
                     'dt_entrada' => optional($this->latestProtocolo->dt_entrada)->toDateString(),
                     'ccpae_vencimento' => optional($this->latestProtocolo->ccpae_venc)->toDateString(),
                 ];

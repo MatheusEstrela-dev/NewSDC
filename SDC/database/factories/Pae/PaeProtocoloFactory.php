@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories\Pae;
 
+use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeProtocolo;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -16,7 +17,7 @@ class PaeProtocoloFactory extends Factory
         return [
             'num_protocolo' => $this->faker->unique()->numerify('2024.##.##.####'),
             'sigibar' => $this->faker->unique()->numerify('SIGIBAR-######'),
-            'status' => 'NOVO',
+            'status' => PaeProtocoloStatus::NOVO->value,
             'arquivado' => false,
             'dt_entrada' => now()->toDateString(),
         ];
