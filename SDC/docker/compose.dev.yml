@@ -111,6 +111,92 @@ services:
       retries: 5
       start_period: 60s
 
+  # Worker dedicado para Redis queues (welcome mail, reset password, webhooks,
+  # exports async, notifications). Sem ele, Mail::queue/dispatch ficam parados
+  # no Redis indefinidamente. Compartilha a imagem do app e bind-mounts.
+  queue:
+    image: newsdc-frankenphp-dev:latest
+    container_name: newsdc_dev_queue
+    hostname: queue
+    restart: unless-stopped
+
+    environment:
+      WORKDIR: /app
+      APP_NAME: "SDC Dev Queue"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: https://localhost:19444
+
+      # Banco (compartilhado com app)
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: sdc
+      DB_USERNAME: sdc
+      DB_PASSWORD: secret
+
+      # Redis (cache / session / queue)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+
+      # Mail. Mesmo default do app (Mailhog) — sobrescreva no docker/.env
+      # se quiser testar SMTP real (Prodemge) localmente.
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailhog}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-dev@sdc.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
+
+    volumes:
+      # Bind-mount identico ao app — codigo PHP eh visivel ao queue worker.
+      - ../app:/app/app
+      - ../core:/app/core
+      - ../bootstrap:/app/bootstrap
+      - ../config:/app/config
+      - ../database:/app/database
+      - ../routes:/app/routes
+      - ../resources:/app/resources
+      - ../public:/app/public
+      - ../tests:/app/tests
+      - ../composer.json:/app/composer.json:ro
+      - ../composer.lock:/app/composer.lock:ro
+      - ../artisan:/app/artisan:ro
+      # Logs visiveis no host
+      - ../storage/logs:/app/storage/logs
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    # Prioridade: critical > high > default > webhooks > low.
+    # --max-time=3600: restart de hora em hora para evitar memory leak.
+    # --tries=2: jobs com $tries proprio (export, webhook) sobrescrevem.
+    command:
+      - php
+      - artisan
+      - queue:work
+      - redis
+      - --queue=critical,high,default,webhooks,low
+      - --tries=2
+      - --timeout=60
+      - --max-time=3600
+      - --sleep=3
+
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   db:
     image: postgis/postgis:18-3.6-alpine
     container_name: newsdc_dev_db
