@@ -105,7 +105,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
 
     // Módulo PAE
     Route::prefix('pae')->name('api.v1.pae.')->group(function () {
-        Route::apiResource('empreendimentos', EmpreendimentoController::class);
+        Route::apiResource('empreendimentos', EmpreendimentoController::class)
+            ->parameters(['empreendimentos' => 'id'])
+            ->whereNumber('id');
     });
 
     // Módulo RAT — Protocolos (stub removido — rotas reais abaixo com auth dual)
