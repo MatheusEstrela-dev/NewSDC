@@ -58,7 +58,14 @@ class OnboardingService
                 'Cadastro inicial — aguardando primeiro acesso e troca de senha provisoria'
             );
 
-            Mail::to($user->email)->queue(new UserOnboardingMail($user, $plainPassword));
+            // UserOnboardingMail recebe PRIMITIVOS (nao o User model) para
+            // evitar SerializesModels que falhava com ModelNotFoundException
+            // no worker — mesmo padrao do reset password que ja funciona
+            // (vide AppServiceProvider::ResetPassword::toMailUsing).
+            // afterCommit() segura o dispatch ate o COMMIT da transacao atual.
+            Mail::to($user->email)->queue(
+                UserOnboardingMail::forUser($user, $plainPassword)->afterCommit()
+            );
 
             return $user;
         });

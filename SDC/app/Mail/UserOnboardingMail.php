@@ -8,7 +8,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Queue\SerializesModels;
 use Symfony\Component\Mime\Email;
 
 /**
@@ -17,21 +16,46 @@ use Symfony\Component\Mime\Email;
  *
  * Reusa o design do template de password reset (Oxford Blue + Orange) via
  * resources/views/emails/user_onboarding.blade.php e o mesmo CID 'logo-cedec'.
+ *
+ * Recebe PRIMITIVOS (nao o User model) — evita SerializesModels que tentava
+ * User::find($id) no worker e falhava com ModelNotFoundException mesmo com
+ * afterCommit() aplicado. Padrao identico ao reset password (que ja funciona)
+ * em ResetPassword::toMailUsing no AppServiceProvider.
  */
 class UserOnboardingMail extends Mailable implements ShouldQueue
 {
-    use Queueable, SerializesModels;
+    use Queueable;
 
     public function __construct(
-        public User $user,
+        public int $userId,
+        public string $name,
+        public string $emailAddress,
+        public ?string $cpf,
         public string $plainPassword,
+        public ?string $expiresAtIso,
     ) {
+    }
+
+    /**
+     * Factory de conveniencia para chamadas no codigo (mantém DX limpo
+     * sem precisar repetir a serializacao em cada caller).
+     */
+    public static function forUser(User $user, string $plainPassword): self
+    {
+        return new self(
+            userId: $user->id,
+            name: $user->name,
+            emailAddress: $user->email,
+            cpf: $user->cpf,
+            plainPassword: $plainPassword,
+            expiresAtIso: $user->pending_expires_at?->toIso8601String(),
+        );
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Bem-vindo ao SDC — dados de acesso',
+            subject: 'Bem-vindo ao SDC - dados de acesso',
             using: [
                 function (Email $message): void {
                     $logoPath = public_path('imgs/logo_dc.png');
@@ -48,11 +72,11 @@ class UserOnboardingMail extends Mailable implements ShouldQueue
         return new Content(
             view: 'emails.user_onboarding',
             with: [
-                'name' => $this->user->name,
-                'cpf' => $this->formatCpf($this->user->cpf),
-                'email' => $this->user->email,
+                'name' => $this->name,
+                'cpf' => $this->formatCpf($this->cpf),
+                'email' => $this->emailAddress,
                 'plainPassword' => $this->plainPassword,
-                'expiresAt' => $this->user->pending_expires_at,
+                'expiresAt' => $this->expiresAtIso ? \Carbon\Carbon::parse($this->expiresAtIso) : null,
                 'loginUrl' => url(route('login', absolute: false)),
             ],
         );
