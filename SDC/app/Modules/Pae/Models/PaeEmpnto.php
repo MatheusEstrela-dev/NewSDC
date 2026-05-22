@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Modules\Pae\Models;
 
+use App\Models\Municipio;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PaeEmpnto extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'pae_empntos';
 
@@ -35,15 +38,37 @@ class PaeEmpnto extends Model
         'coordenador_sub',
         'tel_coordenador_sub',
         'email_coord_sub',
+        'user_update',
     ];
+
+    protected $casts = [
+        'volume' => 'decimal:2',
+        'pop_zas' => 'integer',
+    ];
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\Pae\PaeEmpntoFactory::new();
+    }
 
     public function empdor(): BelongsTo
     {
         return $this->belongsTo(PaeEmpdor::class, 'pae_empdor_id');
     }
 
+    public function municipio(): BelongsTo
+    {
+        return $this->belongsTo(Municipio::class, 'municipio_id');
+    }
+
     public function protocolos(): HasMany
     {
         return $this->hasMany(PaeProtocolo::class, 'pae_empnto_id');
+    }
+
+    public function latestProtocolo(): HasOne
+    {
+        return $this->hasOne(PaeProtocolo::class, 'pae_empnto_id')
+            ->latestOfMany('created_at');
     }
 }
