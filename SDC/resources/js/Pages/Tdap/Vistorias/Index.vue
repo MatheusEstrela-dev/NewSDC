@@ -1,58 +1,61 @@
 <template>
   <Head title="TDAP — Vistorias" />
   <div class="p-6 space-y-6">
-    <TdapPageHeader
+    <PageHeader variant="gradient"
       title="Vistorias de Veículos"
       description="Inspeções técnicas dos caminhões-tanque (vigência 12 meses)"
       :icon="TruckIcon"
     >
       <template #actions>
         <Link v-if="canCreate" :href="route('tdap.vistorias.create')">
-          <PrimaryButton>Nova Vistoria</PrimaryButton>
+          <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
+            <span class="hidden sm:inline">Nova Vistoria</span>
+            <span class="sm:hidden">Nova</span>
+          </Button>
         </Link>
       </template>
-    </TdapPageHeader>
+    </PageHeader>
 
     <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Total</p>
-        <p class="text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ estatisticas.total }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Aprovadas</p>
-        <p class="text-2xl font-semibold text-emerald-600">{{ estatisticas.aprovadas }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Vigentes</p>
-        <p class="text-2xl font-semibold text-blue-600">{{ estatisticas.vigentes }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Expiradas</p>
-        <p class="text-2xl font-semibold text-amber-600">{{ estatisticas.expiradas }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Reprovadas</p>
-        <p class="text-2xl font-semibold text-red-600">{{ estatisticas.reprovadas }}</p>
-      </div>
+      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="ClipboardDocumentListIcon" variant="info" />
+      <StatCard title="Aprovadas" :value="estatisticas.aprovadas ?? 0" :icon="CheckBadgeIcon" variant="success" />
+      <StatCard title="Vigentes" :value="estatisticas.vigentes ?? 0" :icon="ClockIcon" variant="info" />
+      <StatCard title="Expiradas" :value="estatisticas.expiradas ?? 0" :icon="ExclamationTriangleIcon" variant="warning" />
+      <StatCard title="Reprovadas" :value="estatisticas.reprovadas ?? 0" :icon="ExclamationIcon" variant="danger" />
     </div>
 
-    <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-        <input v-model="filtroSearch" type="text" placeholder="Buscar vistoriador, edital, ficha..." class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm md:col-span-2" @keyup.enter="aplicarFiltros" />
-        <select v-model="filtroCaminhao" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" @change="aplicarFiltros">
-          <option value="">Caminhão</option>
-          <option v-for="c in caminhoes" :key="c.id" :value="c.id">{{ c.placa }}</option>
-        </select>
-        <select v-model="filtroParecer" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" @change="aplicarFiltros">
-          <option value="">Parecer</option>
-          <option v-for="p in pareceres" :key="p.value" :value="p.value">{{ p.label }}</option>
-        </select>
-        <label class="inline-flex items-center gap-2 text-sm">
+    <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="false">
+      <FilterField
+        label="Buscar"
+        type="text"
+        :model-value="filtroSearch"
+        placeholder="Vistoriador, edital ou ficha"
+        @update:model-value="filtroSearch = $event"
+      />
+      <FilterField
+        label="Caminhão"
+        type="select"
+        :model-value="filtroCaminhao"
+        :options="caminhaoOptions"
+        @update:model-value="filtroCaminhao = $event"
+      />
+      <FilterField
+        label="Parecer"
+        type="select"
+        :model-value="filtroParecer"
+        :options="parecerOptions"
+        @update:model-value="filtroParecer = $event"
+      />
+      <div class="flex items-end pb-2">
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
           <input type="checkbox" v-model="filtroVigente" @change="aplicarFiltros" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
           Apenas vigentes
         </label>
       </div>
-    </div>
+      <div class="md:col-span-2 lg:col-span-3 flex justify-end items-end pt-1">
+        <FilterActions @search="aplicarFiltros" @clear="limparFiltros" />
+      </div>
+    </FilterSection>
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
       <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
@@ -128,9 +131,20 @@
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
+import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
+import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import { computed } from 'vue';
+import CheckBadgeIcon from '@/Components/Icons/CheckBadgeIcon.vue';
+import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import ClockIcon from '@/Components/Icons/ClockIcon.vue';
+import ExclamationIcon from '@/Components/Icons/ExclamationIcon.vue';
+import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -149,6 +163,23 @@ const filtroSearch   = ref(props.filtros.search ?? '');
 const filtroCaminhao = ref(props.filtros.placa_id ?? '');
 const filtroParecer  = ref(props.filtros.parecer ?? '');
 const filtroVigente  = ref(Boolean(props.filtros.vigente));
+
+const caminhaoOptions = computed(() => [
+  { value: '', label: 'Todos os caminhões' },
+  ...props.caminhoes.map(c => ({ value: c.id, label: c.placa })),
+]);
+const parecerOptions = computed(() => [
+  { value: '', label: 'Todos os pareceres' },
+  ...props.pareceres.map(p => ({ value: p.value, label: p.label })),
+]);
+
+function limparFiltros() {
+  filtroSearch.value = '';
+  filtroCaminhao.value = '';
+  filtroParecer.value = '';
+  filtroVigente.value = false;
+  router.get(route('tdap.vistorias.index'), {}, { preserveState: false });
+}
 
 function aplicarFiltros() {
   router.get(route('tdap.vistorias.index'), {

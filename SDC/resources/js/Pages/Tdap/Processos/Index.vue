@@ -1,54 +1,60 @@
 <template>
   <Head title="TDAP — Processos" />
   <div class="p-6 space-y-6">
-    <TdapPageHeader
+    <PageHeader variant="gradient"
       title="Processos TDAP"
       description="Workflow de habilitação até liquidação"
       :icon="TruckIcon"
     >
       <template #actions>
         <Link :href="route('tdap.processos.swimlanes')">
-          <SecondaryButton>Ver Swimlanes</SecondaryButton>
+          <Button variant="secondary" size="md">
+            <span class="hidden sm:inline">Ver Swimlanes</span>
+            <span class="sm:hidden">Kanban</span>
+          </Button>
         </Link>
         <Link v-if="canCreate" :href="route('tdap.processos.create')">
-          <PrimaryButton>Novo Processo</PrimaryButton>
+          <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
+            <span class="hidden sm:inline">Novo Processo</span>
+            <span class="sm:hidden">Novo</span>
+          </Button>
         </Link>
       </template>
-    </TdapPageHeader>
+    </PageHeader>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Total</p>
-        <p class="text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ estatisticas.total }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Abertos</p>
-        <p class="text-2xl font-semibold text-blue-600">{{ estatisticas.abertos }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Em execução</p>
-        <p class="text-2xl font-semibold text-emerald-600">{{ estatisticas.em_execucao }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Encerrados</p>
-        <p class="text-2xl font-semibold text-slate-400">{{ estatisticas.encerrados }}</p>
-      </div>
+      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="ClipboardDocumentListIcon" variant="info" />
+      <StatCard title="Abertos" :value="estatisticas.abertos ?? 0" :icon="DocumentTextIcon" variant="info" />
+      <StatCard title="Em execução" :value="estatisticas.em_execucao ?? 0" :icon="CheckCircleIcon" variant="success" />
+      <StatCard title="Encerrados" :value="estatisticas.encerrados ?? 0" :icon="CheckIcon" variant="warning" />
     </div>
 
-    <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <input v-model="filtroSearch" type="text" placeholder="Buscar número..." class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" @keyup.enter="aplicarFiltros" />
-        <select v-model="filtroEstado" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" @change="aplicarFiltros">
-          <option value="">Estado</option>
-          <option v-for="e in estados" :key="e.value" :value="e.value">{{ e.label }}</option>
-        </select>
-        <select v-model="filtroSwimlane" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" @change="aplicarFiltros">
-          <option value="">Swimlane</option>
-          <option v-for="s in swimlanes" :key="s.value" :value="s.value">{{ s.label }}</option>
-        </select>
-        <PrimaryButton @click="aplicarFiltros">Filtrar</PrimaryButton>
+    <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="false">
+      <FilterField
+        label="Buscar número"
+        type="text"
+        :model-value="filtroSearch"
+        placeholder="Ex: 001/2026"
+        @update:model-value="filtroSearch = $event"
+      />
+      <FilterField
+        label="Estado"
+        type="select"
+        :model-value="filtroEstado"
+        :options="estadoOptions"
+        @update:model-value="filtroEstado = $event"
+      />
+      <FilterField
+        label="Swimlane"
+        type="select"
+        :model-value="filtroSwimlane"
+        :options="swimlaneOptions"
+        @update:model-value="filtroSwimlane = $event"
+      />
+      <div class="md:col-span-2 lg:col-span-3 flex justify-end items-end pt-1">
+        <FilterActions @search="aplicarFiltros" @clear="limparFiltros" />
       </div>
-    </div>
+    </FilterSection>
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
       <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
@@ -102,11 +108,20 @@
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import EstadoProcessoBadge from '@/Components/Organisms/Tdap/EstadoProcessoBadge.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
+import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
+import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
+import CheckIcon from '@/Components/Icons/CheckIcon.vue';
+import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import { computed } from 'vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -124,12 +139,29 @@ const filtroSearch   = ref(props.filtros.search ?? '');
 const filtroEstado   = ref(props.filtros.estado ?? '');
 const filtroSwimlane = ref(props.filtros.swimlane ?? '');
 
+const estadoOptions = computed(() => [
+  { value: '', label: 'Todos os estados' },
+  ...props.estados.map(e => ({ value: e.value, label: e.label })),
+]);
+
+const swimlaneOptions = computed(() => [
+  { value: '', label: 'Todas as swimlanes' },
+  ...props.swimlanes.map(s => ({ value: s.value, label: s.label })),
+]);
+
 function aplicarFiltros() {
   router.get(route('tdap.processos.index'), {
     search:   filtroSearch.value || undefined,
     estado:   filtroEstado.value || undefined,
     swimlane: filtroSwimlane.value || undefined,
   }, { preserveState: true, replace: true });
+}
+
+function limparFiltros() {
+  filtroSearch.value = '';
+  filtroEstado.value = '';
+  filtroSwimlane.value = '';
+  router.get(route('tdap.processos.index'), {}, { preserveState: false });
 }
 
 function fmtDate(d) {

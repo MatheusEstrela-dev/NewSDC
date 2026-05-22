@@ -1,62 +1,53 @@
 <template>
   <Head title="TDAP — Atas" />
   <div class="p-6 space-y-6">
-    <TdapPageHeader
+    <PageHeader variant="gradient"
       title="Atas de Registro de Preços"
       description="Contratos-pai que autorizam o fornecimento de água potável"
       :icon="CalendarIcon"
     >
       <template #actions>
         <Link v-if="canCreate" :href="route('tdap.atas.create')">
-          <PrimaryButton>Nova Ata</PrimaryButton>
+          <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
+            <span class="hidden sm:inline">Nova Ata</span>
+            <span class="sm:hidden">Nova</span>
+          </Button>
         </Link>
       </template>
-    </TdapPageHeader>
+    </PageHeader>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Total</p>
-        <p class="text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ estatisticas.total }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Ativas</p>
-        <p class="text-2xl font-semibold text-emerald-600">{{ estatisticas.ativos }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Vigentes</p>
-        <p class="text-2xl font-semibold text-blue-600">{{ estatisticas.vigentes }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Encerradas</p>
-        <p class="text-2xl font-semibold text-slate-400">{{ estatisticas.encerradas }}</p>
-      </div>
+      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="DocumentTextIcon" variant="info" />
+      <StatCard title="Ativas" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" />
+      <StatCard title="Vigentes" :value="estatisticas.vigentes ?? 0" :icon="ClockIcon" variant="info" />
+      <StatCard title="Encerradas" :value="estatisticas.encerradas ?? 0" :icon="CheckIcon" variant="warning" />
     </div>
 
-    <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-      <div class="flex flex-col md:flex-row gap-3">
-        <input
-          v-model="filtroSearch"
-          type="text"
-          placeholder="Buscar por número ou histórico..."
-          class="flex-1 border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
-          @keyup.enter="aplicarFiltros"
-        />
-        <select
-          v-model="filtroAtivo"
-          class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
-          @change="aplicarFiltros"
-        >
-          <option value="">Todas</option>
-          <option value="1">Ativas</option>
-          <option value="0">Inativas</option>
-        </select>
-        <label class="inline-flex items-center gap-2 text-sm">
+    <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="false">
+      <FilterField
+        label="Buscar"
+        type="text"
+        :model-value="filtroSearch"
+        placeholder="Por número ou histórico"
+        @update:model-value="filtroSearch = $event"
+      />
+      <FilterField
+        label="Status"
+        type="select"
+        :model-value="filtroAtivo"
+        :options="ativoOptions"
+        @update:model-value="filtroAtivo = $event"
+      />
+      <div class="flex items-end pb-2">
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
           <input type="checkbox" v-model="filtroVigente" @change="aplicarFiltros" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
           Apenas vigentes
         </label>
-        <PrimaryButton @click="aplicarFiltros">Filtrar</PrimaryButton>
       </div>
-    </div>
+      <div class="md:col-span-2 lg:col-span-3 flex justify-end items-end pt-1">
+        <FilterActions @search="aplicarFiltros" @clear="limparFiltros" />
+      </div>
+    </FilterSection>
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
       <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
@@ -117,9 +108,18 @@
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
+import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
+import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
+import CheckIcon from '@/Components/Icons/CheckIcon.vue';
+import ClockIcon from '@/Components/Icons/ClockIcon.vue';
+import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -136,12 +136,25 @@ const filtroSearch = ref(props.filtros.search ?? '');
 const filtroAtivo  = ref(props.filtros.ativo ?? '');
 const filtroVigente = ref(Boolean(props.filtros.vigente));
 
+const ativoOptions = [
+  { value: '', label: 'Todas' },
+  { value: '1', label: 'Ativas' },
+  { value: '0', label: 'Inativas' },
+];
+
 function aplicarFiltros() {
   router.get(route('tdap.atas.index'), {
     search:  filtroSearch.value || undefined,
     ativo:   filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
     vigente: filtroVigente.value ? 1 : undefined,
   }, { preserveState: true, replace: true });
+}
+
+function limparFiltros() {
+  filtroSearch.value = '';
+  filtroAtivo.value = '';
+  filtroVigente.value = false;
+  router.get(route('tdap.atas.index'), {}, { preserveState: false });
 }
 
 function formatDate(d) {

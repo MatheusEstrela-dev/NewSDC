@@ -1,63 +1,55 @@
 <template>
   <Head title="TDAP — Cronogramas" />
   <div class="p-6 space-y-6">
-    <TdapPageHeader
+    <PageHeader variant="gradient"
       title="Cronogramas de Fornecimento"
       description="Ordens operacionais de entrega de água potável"
       :icon="TruckIcon"
     >
       <template #actions>
         <Link v-if="canCreate" :href="route('tdap.cronogramas.create')">
-          <PrimaryButton>Novo Cronograma</PrimaryButton>
+          <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
+            <span class="hidden sm:inline">Novo Cronograma</span>
+            <span class="sm:hidden">Novo</span>
+          </Button>
         </Link>
       </template>
-    </TdapPageHeader>
+    </PageHeader>
 
     <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Total</p>
-        <p class="text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ estatisticas.total }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Ativos</p>
-        <p class="text-2xl font-semibold text-emerald-600">{{ estatisticas.ativos }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Rascunhos</p>
-        <p class="text-2xl font-semibold text-amber-600">{{ estatisticas.rascunhos }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Encerrados</p>
-        <p class="text-2xl font-semibold text-slate-400">{{ estatisticas.encerrados }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-sm text-slate-500">Volume ativo (m³)</p>
-        <p class="text-2xl font-semibold text-blue-600">{{ Number(estatisticas.volume_ativo_m3 || 0).toLocaleString('pt-BR', {minimumFractionDigits:0,maximumFractionDigits:0}) }}</p>
-      </div>
+      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="ClipboardDocumentListIcon" variant="info" />
+      <StatCard title="Ativos" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" />
+      <StatCard title="Rascunhos" :value="estatisticas.rascunhos ?? 0" :icon="DocumentTextIcon" variant="warning" />
+      <StatCard title="Encerrados" :value="estatisticas.encerrados ?? 0" :icon="CheckIcon" variant="info" />
+      <StatCard title="Volume ativo (m³)" :value="Number(estatisticas.volume_ativo_m3 || 0).toLocaleString('pt-BR', {minimumFractionDigits:0,maximumFractionDigits:0})" :icon="CubeIcon" variant="info" :format-number="false" />
     </div>
 
-    <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-        <input
-          v-model="filtroSearch"
-          type="text"
-          placeholder="Buscar numero/empenho..."
-          class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm md:col-span-2"
-          @keyup.enter="aplicarFiltros"
-        />
-        <select v-model="filtroEstado" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" @change="aplicarFiltros">
-          <option value="">Estado</option>
-          <option value="rascunho">Rascunho</option>
-          <option value="ativo">Ativo</option>
-          <option value="encerrado">Encerrado</option>
-        </select>
-        <select v-model="filtroAta" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" @change="aplicarFiltros">
-          <option value="">Ata</option>
-          <option v-for="a in atas" :key="a.id" :value="a.id">{{ a.numero }}</option>
-        </select>
-        <PrimaryButton @click="aplicarFiltros">Filtrar</PrimaryButton>
+    <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="false">
+      <FilterField
+        label="Buscar"
+        type="text"
+        :model-value="filtroSearch"
+        placeholder="Número ou empenho"
+        @update:model-value="filtroSearch = $event"
+      />
+      <FilterField
+        label="Estado"
+        type="select"
+        :model-value="filtroEstado"
+        :options="estadoOptions"
+        @update:model-value="filtroEstado = $event"
+      />
+      <FilterField
+        label="Ata"
+        type="select"
+        :model-value="filtroAta"
+        :options="ataOptions"
+        @update:model-value="filtroAta = $event"
+      />
+      <div class="md:col-span-2 lg:col-span-3 flex justify-end items-end pt-1">
+        <FilterActions @search="aplicarFiltros" @clear="limparFiltros" />
       </div>
-    </div>
+    </FilterSection>
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
       <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
@@ -126,10 +118,21 @@
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import EstadoBadge from '@/Components/Organisms/Tdap/EstadoBadge.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
+import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
+import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import { computed } from 'vue';
+import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
+import CheckIcon from '@/Components/Icons/CheckIcon.vue';
+import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import CubeIcon from '@/Components/Icons/CubeIcon.vue';
+import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -149,12 +152,30 @@ const filtroSearch = ref(props.filtros.search ?? '');
 const filtroEstado = ref(props.filtros.estado ?? '');
 const filtroAta    = ref(props.filtros.ata_id ?? '');
 
+const estadoOptions = [
+  { value: '', label: 'Todos' },
+  { value: 'rascunho', label: 'Rascunho' },
+  { value: 'ativo', label: 'Ativo' },
+  { value: 'encerrado', label: 'Encerrado' },
+];
+const ataOptions = computed(() => [
+  { value: '', label: 'Todas' },
+  ...props.atas.map(a => ({ value: a.id, label: a.numero })),
+]);
+
 function aplicarFiltros() {
   router.get(route('tdap.cronogramas.index'), {
     search: filtroSearch.value || undefined,
     estado: filtroEstado.value || undefined,
     ata_id: filtroAta.value || undefined,
   }, { preserveState: true, replace: true });
+}
+
+function limparFiltros() {
+  filtroSearch.value = '';
+  filtroEstado.value = '';
+  filtroAta.value = '';
+  router.get(route('tdap.cronogramas.index'), {}, { preserveState: false });
 }
 
 function fmtDate(d) {
