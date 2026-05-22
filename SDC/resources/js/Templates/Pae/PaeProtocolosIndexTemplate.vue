@@ -9,12 +9,13 @@
     >
       <template #actions>
         <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
+          <ViewModeToggle v-model="viewMode" />
+
+          <!-- Botao CCPAE - filtro rapido -->
           <Button variant="violet" size="md" @click="handleCcpaeFilter">
             CCPAE
           </Button>
-
-          <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
-          <ViewModeToggle v-model="viewMode" />
 
           <!-- Botao Exportar -->
           <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
@@ -47,7 +48,13 @@
       @assigned="handleAssignedAction"
     />
 
-    <PaeProtocolosStatsCards :stats="statsToUse" />
+    <PaeProtocolosStatsCards
+      :stats="statsToUse"
+      @total="handleTotalProtocolos"
+      @historico="handleHistoricoProtocolos"
+      @vencidos="handleVencidosProtocolos"
+      @ccpae="handleCcpaeFilter"
+    />
 
     <PaeProtocolosFilters
       :filters="filters"
@@ -394,6 +401,36 @@ function handleFilterReset() {
 
 function handleCcpaeFilter() {
   handleFilterChange({ status: 'ccpae' });
+}
+
+function handleTotalProtocolos() {
+  if (props.useMock) {
+    mockFilters.value = { buscar: '', situacao: '', analista: '', empreendedor: '', data_inicio: '', data_fim: '' };
+    currentPage.value = 1;
+    return;
+  }
+
+  router.get(route('pae.protocolos.index'), {}, { preserveState: false, replace: true });
+}
+
+function handleHistoricoProtocolos() {
+  if (props.useMock) {
+    mockFilters.value = { ...mockFilters.value, situacao: 'historico' };
+    currentPage.value = 1;
+    return;
+  }
+
+  router.get(route('pae.protocolos.index'), { status_grupo: 'historico' }, { preserveState: false, replace: true });
+}
+
+function handleVencidosProtocolos() {
+  if (props.useMock) {
+    mockFilters.value = { ...mockFilters.value, situacao: 'vencido' };
+    currentPage.value = 1;
+    return;
+  }
+
+  router.get(route('pae.protocolos.index'), { status_grupo: 'vencidos' }, { preserveState: false, replace: true });
 }
 
 function handlePageChange(page) {
