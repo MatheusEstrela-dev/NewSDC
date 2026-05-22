@@ -58,7 +58,13 @@ class OnboardingService
                 'Cadastro inicial — aguardando primeiro acesso e troca de senha provisoria'
             );
 
-            Mail::to($user->email)->queue(new UserOnboardingMail($user, $plainPassword));
+            // afterCommit() garante que o job so eh despachado apos COMMIT da
+            // transacao atual. Sem isso, com 'after_commit' => false em
+            // config/queue.php, o worker poderia tentar User::find($id) antes
+            // do commit e perder o registro recem-criado.
+            Mail::to($user->email)->queue(
+                (new UserOnboardingMail($user, $plainPassword))->afterCommit()
+            );
 
             return $user;
         });
