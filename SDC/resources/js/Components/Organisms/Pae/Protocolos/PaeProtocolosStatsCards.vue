@@ -5,24 +5,32 @@
       :value="stats.total"
       variant="info"
       :icon="DocumentTextIcon"
+      clickable
+      @click="$emit('total')"
     />
     <StatCard
       title="Histórico"
       :value="stats.historico"
       variant="success"
       :icon="ClockIcon"
+      clickable
+      @click="$emit('historico')"
     />
     <StatCard
       title="Vencidos"
       :value="stats.vencidos"
       variant="warning"
       :icon="ExclamationTriangleIcon"
+      clickable
+      @click="$emit('vencidos')"
     />
     <StatCard
       title="CCPAE"
       :value="stats.ccpae"
       variant="danger"
       :icon="UsersIcon"
+      clickable
+      @click="$emit('ccpae')"
     />
   </div>
 </template>
@@ -34,7 +42,7 @@ import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 
-const props = defineProps({
+defineProps({
   stats: {
     type: Object,
     required: true,
@@ -46,6 +54,6 @@ const props = defineProps({
     }),
   },
 });
+
+defineEmits(['total', 'historico', 'vencidos', 'ccpae']);
 </script>
-
-

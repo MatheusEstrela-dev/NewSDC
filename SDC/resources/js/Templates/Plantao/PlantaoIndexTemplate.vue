@@ -13,7 +13,8 @@ import PlantaoStatsCards from '@/Components/Organisms/Plantao/PlantaoStatsCards.
 import PlantaoTable from '@/Components/Organisms/Plantao/PlantaoTable.vue';
 import { useExport } from '@/Composables/useExport';
 import { useMobile } from '@/Composables/useMobile';
-import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { ArrowDownTrayIcon, NewspaperIcon } from '@heroicons/vue/24/outline';
+import { router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 const props = defineProps({
@@ -80,6 +81,10 @@ const {
 const handleExportCsv = (params) => {
   triggerExport(params, props.filters);
 };
+
+const handleBuscarNoticias = () => {
+  router.visit(route('plantao.noticias'));
+};
 </script>
 
 <template>
@@ -96,6 +101,17 @@ const handleExportCsv = (params) => {
         <div class="flex items-center gap-2 sm:gap-3">
           <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
           <ViewModeToggle v-model="viewMode" />
+
+          <Button
+            variant="secondary"
+            size="md"
+            :icon="NewspaperIcon"
+            icon-position="left"
+            @click="handleBuscarNoticias"
+          >
+            <span class="hidden sm:inline">Buscar Noticias</span>
+            <span class="sm:hidden">Noticias</span>
+          </Button>
 
           <Button
             v-if="canExport"
