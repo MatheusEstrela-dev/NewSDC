@@ -23,7 +23,7 @@ class StoreEmpreendimentoRequest extends FormRequest
             'status' => ['nullable', 'string', 'in:OPERACAO,DESATIVADA,CONSTRUCAO,DESCOMISSIONAMENTO'],
             'municipio_id' => ['required', 'integer', 'exists:municipios,id'],
             'pae_empdor_id' => ['required', 'integer', 'exists:pae_empdors,id'],
-            'pae_coordenador_id' => ['nullable', 'integer'],
+            'pae_coordenador_id' => ['nullable', 'integer', 'exists:pae_coordenador,id_coordenador'],
             'regiao_id' => ['nullable', 'integer'],
             'm_construcao' => ['nullable', 'string', 'max:255'],
             'material' => ['nullable', 'string', 'max:255'],

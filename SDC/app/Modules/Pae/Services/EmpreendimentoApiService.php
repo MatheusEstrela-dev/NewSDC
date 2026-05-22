@@ -10,6 +10,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class EmpreendimentoApiService
 {
     private const DEFAULT_PER_PAGE = 15;
+    private const MAX_PER_PAGE = 100;
 
     /** @var array<int, string> */
     private const RELATIONS_LIST = ['municipio', 'empdor', 'latestProtocolo'];
@@ -19,6 +20,8 @@ class EmpreendimentoApiService
      */
     public function listPaginated(array $filters = [], int $perPage = self::DEFAULT_PER_PAGE): LengthAwarePaginator
     {
+        $perPage = max(1, min(self::MAX_PER_PAGE, $perPage));
+
         return PaeEmpnto::query()
             ->with(self::RELATIONS_LIST)
             ->when($filters['municipio_id'] ?? null, fn ($q, $v) => $q->where('municipio_id', $v))

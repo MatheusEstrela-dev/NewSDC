@@ -23,7 +23,7 @@ class UpdateEmpreendimentoRequest extends FormRequest
             'status' => ['sometimes', 'string', 'in:OPERACAO,DESATIVADA,CONSTRUCAO,DESCOMISSIONAMENTO'],
             'municipio_id' => ['sometimes', 'integer', 'exists:municipios,id'],
             'pae_empdor_id' => ['sometimes', 'integer', 'exists:pae_empdors,id'],
-            'pae_coordenador_id' => ['sometimes', 'nullable', 'integer'],
+            'pae_coordenador_id' => ['sometimes', 'nullable', 'integer', 'exists:pae_coordenador,id_coordenador'],
             'regiao_id' => ['sometimes', 'nullable', 'integer'],
             'm_construcao' => ['sometimes', 'nullable', 'string', 'max:255'],
             'material' => ['sometimes', 'nullable', 'string', 'max:255'],

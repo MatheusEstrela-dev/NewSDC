@@ -105,9 +105,24 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
 
     // Módulo PAE
     Route::prefix('pae')->name('api.v1.pae.')->group(function () {
-        Route::apiResource('empreendimentos', EmpreendimentoController::class)
-            ->parameters(['empreendimentos' => 'id'])
-            ->whereNumber('id');
+        Route::get('empreendimentos', [EmpreendimentoController::class, 'index'])
+            ->name('empreendimentos.index')
+            ->middleware('can:pae.empreendimentos.view');
+        Route::post('empreendimentos', [EmpreendimentoController::class, 'store'])
+            ->name('empreendimentos.store')
+            ->middleware('can:pae.empreendimentos.create');
+        Route::get('empreendimentos/{id}', [EmpreendimentoController::class, 'show'])
+            ->name('empreendimentos.show')
+            ->whereNumber('id')
+            ->middleware('can:pae.empreendimentos.view');
+        Route::match(['put', 'patch'], 'empreendimentos/{id}', [EmpreendimentoController::class, 'update'])
+            ->name('empreendimentos.update')
+            ->whereNumber('id')
+            ->middleware('can:pae.empreendimentos.edit');
+        Route::delete('empreendimentos/{id}', [EmpreendimentoController::class, 'destroy'])
+            ->name('empreendimentos.destroy')
+            ->whereNumber('id')
+            ->middleware('can:pae.empreendimentos.delete');
     });
 
     // Módulo RAT — Protocolos (stub removido — rotas reais abaixo com auth dual)
