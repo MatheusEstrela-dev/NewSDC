@@ -75,7 +75,7 @@ class PaeFormularioService extends BaseService
     public function storeAnexo(PaeForm $form, PaeFormAnexoDTO $dto, User $user): PaeFormAnexo
     {
         $disk = 'pae';
-        $directory = 'formularios/' . $form->id;
+        $directory = $this->anexoDirectory($form);
         $extension = mb_strtolower($dto->arquivo->getClientOriginalExtension());
         $nomeArquivo = (string) Str::uuid() . ($extension !== '' ? '.' . $extension : '');
         $path = null;
@@ -102,6 +102,25 @@ class PaeFormularioService extends BaseService
         }
     }
 
+    public function storeAnexoForProtocolo(PaeProtocolo $protocolo, PaeFormAnexoDTO $dto, User $user): PaeFormAnexo
+    {
+        $form = PaeForm::query()
+            ->where('pae_protocolo_id', $protocolo->id)
+            ->first();
+
+        if (! $form) {
+            $form = PaeForm::create([
+                'pae_protocolo_id' => $protocolo->id,
+                'status' => 'RASCUNHO',
+                'pae_empnto_id' => $protocolo->pae_empnto_id,
+                'emp_responsavel_nome' => $protocolo->empnto_search,
+                'created_by' => $user->id,
+            ]);
+        }
+
+        return $this->storeAnexo($form, $dto, $user);
+    }
+
     public function deleteAnexo(PaeForm $form, PaeFormAnexo $anexo): void
     {
         $this->ensureAnexoBelongsToForm($form, $anexo);
@@ -117,6 +136,20 @@ class PaeFormularioService extends BaseService
         abort_unless(Storage::disk($anexo->disk)->exists($anexo->path), 404);
 
         return Storage::disk($anexo->disk)->download($anexo->path, $anexo->nome_original);
+    }
+
+    public function viewAnexo(PaeForm $form, PaeFormAnexo $anexo): StreamedResponse
+    {
+        $this->ensureAnexoBelongsToForm($form, $anexo);
+
+        abort_unless(Storage::disk($anexo->disk)->exists($anexo->path), 404);
+
+        return Storage::disk($anexo->disk)->response(
+            $anexo->path,
+            $anexo->nome_original,
+            ['Content-Type' => $anexo->mime_type],
+            'inline'
+        );
     }
 
     public function finalizar(PaeForm $form, User $user): void
@@ -217,9 +250,34 @@ class PaeFormularioService extends BaseService
                 'tamanho_bytes' => $anexo->tamanho_bytes,
                 'tamanho_formatado' => $anexo->tamanho_formatado,
                 'descricao' => $anexo->descricao,
+                'disk' => $anexo->disk,
+                'local_armazenamento' => dirname($anexo->path),
                 'created_at' => $anexo->created_at?->format('Y-m-d H:i:s'),
             ])
             ->all();
+    }
+
+    private function anexoDirectory(PaeForm $form): string
+    {
+        $form->loadMissing('protocolo');
+
+        if ($form->protocolo) {
+            $numero = $this->sanitizePathSegment(
+                $form->protocolo->num_protocolo ?: 'protocolo-' . $form->protocolo->id
+            );
+
+            return 'protocolos/' . $numero . '/documentos/anexos';
+        }
+
+        return 'formularios/' . $form->id . '/documentos/anexos';
+    }
+
+    private function sanitizePathSegment(string $value): string
+    {
+        $segment = preg_replace('/[^\pL\pN._-]+/u', '-', trim($value));
+        $segment = trim((string) $segment, '-');
+
+        return $segment !== '' ? $segment : 'sem-numero';
     }
 
     private function syncApontamentos(PaeForm $form, array $itens): void

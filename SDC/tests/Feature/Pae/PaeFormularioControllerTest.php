@@ -205,6 +205,44 @@ class PaeFormularioControllerTest extends TestCase
         $this->assertNotNull($anexo);
         $this->assertSame('relatorio.pdf', $anexo->nome_original);
         $this->assertSame('pae', $anexo->disk);
+        $this->assertStringStartsWith('formularios/' . $form->id . '/documentos/anexos/', $anexo->path);
+        Storage::disk('pae')->assertExists($anexo->path);
+    }
+
+    public function test_upload_por_protocolo_cria_formulario_e_salva_em_documentos_do_protocolo(): void
+    {
+        Storage::fake('pae');
+        $user = User::factory()->create();
+        $numeroProtocolo = '22.05.2026.' . random_int(100000, 999999);
+        $protocolo = PaeProtocolo::create([
+            'num_protocolo' => $numeroProtocolo,
+            'status'        => 'novo',
+            'user_id'       => $user->id,
+            'created_by'    => $user->id,
+            'dt_entrada'    => now()->toDateString(),
+            'arquivado'     => false,
+        ]);
+
+        $this->actingAsAnalista()
+            ->post("/pae/protocolo/{$protocolo->id}/anexos", [
+                'arquivo' => UploadedFile::fake()->image('vistoria.jpeg'),
+                'descricao' => 'Imagem enviada pela aba Anexos',
+            ])
+            ->assertRedirect();
+
+        $form = PaeForm::query()->where('pae_protocolo_id', $protocolo->id)->first();
+        $this->assertNotNull($form);
+
+        $anexo = PaeFormAnexo::query()->where('pae_form_id', $form->id)->first();
+        $this->assertNotNull($anexo);
+        $this->assertSame('vistoria.jpeg', $anexo->nome_original);
+        $this->assertSame('pae', $anexo->disk);
+        $this->assertStringStartsWith("protocolos/{$numeroProtocolo}/documentos/anexos/", $anexo->path);
+        $this->assertDatabaseHas('pae_form_anexos', [
+            'id' => $anexo->id,
+            'pae_form_id' => $form->id,
+            'descricao' => 'Imagem enviada pela aba Anexos',
+        ]);
         Storage::disk('pae')->assertExists($anexo->path);
     }
 
@@ -250,6 +288,28 @@ class PaeFormularioControllerTest extends TestCase
         $this->assertDatabaseHas('pae_form_anexos', [
             'pae_form_id' => $form->id,
             'nome_original' => 'mapa.png',
+        ]);
+    }
+
+    public function test_upload_imagem_corrompida_e_rejeitado(): void
+    {
+        Storage::fake('pae');
+        $form = PaeForm::factory()->create(['status' => 'RASCUNHO']);
+
+        $jpegCorrompido = base64_decode(
+            '/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxISEhUTEhMVFRUVFRUVFRUVFRUVFRUVFRUWFhUVFRUYHSggGBolGxUVITEhJSkrLi4uFx8zODMtNygtLisBCgoKDg0OGhAQGi0lHyUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAAEAAQMBIgACEQEDEQH/xAAXAAEBAQEAAAAAAAAAAAAAAAAABQYH/8QAHBAAAgICAwAAAAAAAAAAAAAAAQIAAwQFERIh/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAWEQEBAQAAAAAAAAAAAAAAAAABABH/2gAMAwEAAhEDEQA/ANqJNRvVjzOEqK0tKp6g7P/Z',
+            true
+        );
+
+        $this->actingAsAnalista()
+            ->post("/pae/formulario/{$form->id}/anexos", [
+                'arquivo' => UploadedFile::fake()->createWithContent('corrompida.jpeg', $jpegCorrompido),
+            ])
+            ->assertSessionHasErrors('arquivo');
+
+        $this->assertDatabaseMissing('pae_form_anexos', [
+            'pae_form_id' => $form->id,
+            'nome_original' => 'corrompida.jpeg',
         ]);
     }
 
@@ -324,6 +384,27 @@ class PaeFormularioControllerTest extends TestCase
             ->get("/pae/formulario/{$form->id}/anexos/{$anexo->id}/download")
             ->assertOk()
             ->assertHeader('content-disposition');
+    }
+
+    public function test_visualizar_anexo_retorna_arquivo_inline(): void
+    {
+        Storage::fake('pae');
+        $form = PaeForm::factory()->create(['status' => 'RASCUNHO']);
+        Storage::disk('pae')->put('formularios/' . $form->id . '/imagem.jpeg', 'conteudo');
+        $anexo = PaeFormAnexo::create([
+            'pae_form_id' => $form->id,
+            'nome_original' => 'imagem.jpeg',
+            'nome_arquivo' => 'imagem.jpeg',
+            'mime_type' => 'image/jpeg',
+            'tamanho_bytes' => 8,
+            'path' => 'formularios/' . $form->id . '/imagem.jpeg',
+            'disk' => 'pae',
+        ]);
+
+        $this->actingAsAnalista()
+            ->get("/pae/formulario/{$form->id}/anexos/{$anexo->id}/visualizar")
+            ->assertOk()
+            ->assertHeader('content-disposition', 'inline; filename=imagem.jpeg');
     }
 
     public function test_download_e_delete_de_anexo_de_outro_formulario_retorna_404(): void

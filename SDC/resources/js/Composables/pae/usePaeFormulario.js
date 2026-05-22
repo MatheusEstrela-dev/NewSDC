@@ -124,11 +124,15 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
     });
   }
 
-  function uploadAnexo(id, payload, callbacks = {}) {
+  function uploadAnexo(id, payload, callbacks = {}, protocoloId = null) {
     clearAnexoFeedback();
 
-    if (!id) {
-      const message = 'Salve as Informacoes Gerais antes de adicionar anexos.';
+    const endpoint = id
+      ? `/pae/formulario/${id}/anexos`
+      : (protocoloId ? `/pae/protocolo/${protocoloId}/anexos` : null);
+
+    if (!endpoint) {
+      const message = 'Salve as Informacoes Gerais ou abra um protocolo antes de adicionar anexos.';
       anexoError.value = message;
       toast(message);
       callbacks.onError?.(message);
@@ -139,7 +143,7 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
     anexoProgress.value = 8;
     anexoStatus.value = 'Validando arquivo...';
 
-    router.post(`/pae/formulario/${id}/anexos`, payload, {
+    router.post(endpoint, payload, {
       preserveScroll: true,
       forceFormData: true,
       onStart: () => {
@@ -224,6 +228,12 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
     window.location.assign(`/pae/formulario/${id}/anexos/${anexoId}/download`);
   }
 
+  function viewAnexo(id, anexoId) {
+    if (!id || !anexoId) return;
+
+    window.open(`/pae/formulario/${id}/anexos/${anexoId}/visualizar`, '_blank', 'noopener');
+  }
+
   function finalizarRelatorio(id) {
     saving.value = true;
     router.put(`/pae/formulario/${id}/finalizar`, { conclusao: conclusao.value }, {
@@ -269,6 +279,7 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
     uploadAnexo,
     deleteAnexo,
     downloadAnexo,
+    viewAnexo,
     saveConclusao,
     finalizarRelatorio,
     addItem,

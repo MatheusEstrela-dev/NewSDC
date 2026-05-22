@@ -96,7 +96,8 @@ services:
       - ../composer.json:/app/composer.json:ro
       - ../composer.lock:/app/composer.lock:ro
       - ../artisan:/app/artisan:ro
-      # Logs visiveis no host
+      # Storage e logs visiveis no host
+      - ../storage/app:/app/storage/app
       - ../storage/logs:/app/storage/logs
       # Caddyfile + entrypoint (read-only) — reaproveita os do frankenphp/
       - ./frankenphp/Caddyfile.local:/etc/caddy/Caddyfile.local:ro
@@ -174,7 +175,8 @@ services:
       - ../composer.json:/app/composer.json:ro
       - ../composer.lock:/app/composer.lock:ro
       - ../artisan:/app/artisan:ro
-      # Logs visiveis no host
+      # Storage e logs visiveis no host
+      - ../storage/app:/app/storage/app
       - ../storage/logs:/app/storage/logs
 
     depends_on:

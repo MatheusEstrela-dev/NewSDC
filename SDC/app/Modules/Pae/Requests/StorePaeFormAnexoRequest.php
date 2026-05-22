@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Pae\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class StorePaeFormAnexoRequest extends FormRequest
 {
@@ -21,6 +22,25 @@ class StorePaeFormAnexoRequest extends FormRequest
         return [
             'arquivo' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:51200'],
             'descricao' => ['nullable', 'string'],
+        ];
+    }
+
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $arquivo = $this->file('arquivo');
+
+                $extension = mb_strtolower($arquivo?->getClientOriginalExtension() ?? '');
+
+                if (! $arquivo || ! in_array($extension, ['jpg', 'jpeg', 'png'], true)) {
+                    return;
+                }
+
+                if (@getimagesize($arquivo->getRealPath()) === false) {
+                    $validator->errors()->add('arquivo', 'A imagem enviada esta corrompida ou nao pode ser aberta.');
+                }
+            },
         ];
     }
 
