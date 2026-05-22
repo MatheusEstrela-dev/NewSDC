@@ -13,10 +13,11 @@
             />
           </div>
 
-          <!-- Área de Drop Principal -->
+          <!-- Linha 1: KPIs (draggable isolado para servir de anchor estavel ao tour) -->
           <draggable
-            v-model="dashboardItems"
+            v-model="kpiItems"
             item-key="id"
+            data-tour="kpis-row"
             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6 mt-6"
             handle=".drag-handle"
             ghost-class="ghost-card"
@@ -26,20 +27,54 @@
               <div
                 :class="element.colSpan"
                 class="min-h-[100px]"
-                :data-tour="element.id.startsWith('metric-') ? 'kpi-card' : (element.id === 'chart-bar' || element.id === 'chart-donut' ? 'charts-card' : undefined)"
+                data-tour="kpi-card"
               >
-                <!-- Wrapper com Handle de Arraste -->
                 <div class="h-full relative group/item">
-                  <!-- Botão de Arraste -->
                   <div class="drag-handle absolute top-2 right-2 z-30 p-1.5 rounded-md bg-white/80 dark:bg-slate-800/80 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shadow-sm opacity-0 group-hover/item:opacity-100 transition-opacity cursor-grab active:cursor-grabbing hover:bg-slate-100 dark:hover:bg-slate-700">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                   </div>
+                  <component
+                    :is="element.component"
+                    v-bind="element.props"
+                    class="h-full"
+                    @select-module="openModuleModal"
+                  />
+                </div>
+              </div>
+            </template>
+          </draggable>
 
-                  <!-- Renderização Dinâmica do Widget -->
-                  <component 
-                    :is="element.component" 
+          <!-- Linhas 2+: graficos, listas e demais widgets -->
+          <draggable
+            v-model="widgetItems"
+            item-key="id"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6 mt-4 sm:mt-6"
+            handle=".drag-handle"
+            ghost-class="ghost-card"
+            :animation="200"
+          >
+            <template #item="{ element }">
+              <div
+                :class="element.colSpan"
+                class="min-h-[100px]"
+                :data-tour="
+                  element.id === 'chart-bar'
+                    ? 'chart-bar'
+                    : element.id === 'chart-donut'
+                      ? 'chart-donut'
+                      : undefined
+                "
+              >
+                <div class="h-full relative group/item">
+                  <div class="drag-handle absolute top-2 right-2 z-30 p-1.5 rounded-md bg-white/80 dark:bg-slate-800/80 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shadow-sm opacity-0 group-hover/item:opacity-100 transition-opacity cursor-grab active:cursor-grabbing hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </div>
+                  <component
+                    :is="element.component"
                     v-bind="element.props"
                     class="h-full"
                     @select-module="openModuleModal"
@@ -257,8 +292,9 @@ function trendClasses(trend) {
 }
 
 // Definição dos Itens do Dashboard
-const dashboardItems = ref([
-    // Métricas (Linha 1)
+// KPI cards (linha 1) — em um draggable separado para que o tour Shepherd
+// tenha um anchor unico (data-tour="kpis-row") cobrindo os 4 cards de uma vez.
+const kpiItems = ref([
     {
         id: 'metric-1',
         component: markRaw(DashboardMetricCard),
@@ -283,8 +319,10 @@ const dashboardItems = ref([
         colSpan: 'col-span-1 lg:col-span-3',
         props: { title: 'Demandas Concluídas', value: props.demandasConcluidas, trend: props.demandaTrend, subtitle: 'Resolvidas e fechadas', variant: 'danger', icon: markRaw(CheckCircleIcon) }
     },
+]);
 
-    // Gráficos Principais (Linha 2)
+// Widgets (linha 2+): graficos, listas, mapas. Continuam reordenaveis livremente.
+const widgetItems = ref([
     {
         id: 'chart-bar',
         component: markRaw(BarChartWidget),
@@ -297,8 +335,6 @@ const dashboardItems = ref([
         colSpan: 'col-span-1 lg:col-span-6',
         props: { moduleDistribution: props.moduleDistribution }
     },
-
-    // Linha 3 (Sparklines, PMDA, Timeline)
     {
         id: 'sparklines',
         component: markRaw(SparklinesWidget),
@@ -315,8 +351,6 @@ const dashboardItems = ref([
         component: markRaw(TimelineWidget),
         colSpan: 'col-span-1 lg:col-span-4'
     },
-
-    // Linha 4 (Tendência + Radar)
     {
         id: 'chart-trend',
         component: markRaw(TrendChartWidget),
@@ -327,8 +361,6 @@ const dashboardItems = ref([
         component: markRaw(RadarChartWidget),
         colSpan: 'col-span-1 lg:col-span-4'
     },
-
-    // Linha 5 (Plano de Contingencia - 2 blocos)
     {
         id: 'plancon-municipios',
         component: markRaw(PlanConMunicipiosWidget),

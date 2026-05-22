@@ -121,14 +121,73 @@ export function useWelcomeTour({ userName = '', skipPersist = false } = {}) {
     }
   }
 
+  // Bloqueia scroll do USUARIO via event listeners. Antes usavamos
+  // `body { overflow: hidden }`, que bloqueava tambem window.scrollTo
+  // programatico (impedia o tour de rolar para o anchor correto).
+  const SCROLL_KEYS = new Set([
+    'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ', 'Spacebar',
+  ]);
+
+  // Devolve true quando o evento pode passar — sempre que o alvo estiver
+  // dentro do card do Shepherd OU de qualquer overlay com z-index > 10000
+  // (Termos/Privacidade/Guia rodam em z-[10050], acima do tour).
+  function isAllowedTarget(target) {
+    if (!(target instanceof Node)) return false;
+    if (target.closest?.('.shepherd-element')) return true;
+    let cursor = target instanceof Element ? target : null;
+    while (cursor && cursor !== document.body) {
+      const z = parseInt(window.getComputedStyle(cursor).zIndex, 10);
+      if (Number.isFinite(z) && z > 10000) return true;
+      cursor = cursor.parentElement;
+    }
+    return false;
+  }
+
+  function preventUserScroll(event) {
+    if (isAllowedTarget(event.target)) return;
+    event.preventDefault();
+  }
+
+  function preventScrollKeys(event) {
+    if (!SCROLL_KEYS.has(event.key)) return;
+    if (isAllowedTarget(event.target)) return;
+    event.preventDefault();
+  }
+
+  // Trava interacao com a pagina por baixo do tour. Capture phase + stopImmediate
+  // garantem que o evento nao chegue nos delegated listeners do Inertia/Vue —
+  // sem isso, clicks na sidebar/topbar navegam e quebram o passo atual.
+  const INTERACTION_EVENTS = ['click', 'mousedown', 'mouseup', 'dblclick', 'pointerdown', 'auxclick'];
+
+  function preventOutsideInteraction(event) {
+    if (!(event.target instanceof Node)) return;
+    if (event.target.closest?.('.shepherd-modal-overlay-container')) return;
+    if (isAllowedTarget(event.target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+  }
+
   function lockBodyScroll() {
     if (typeof document === 'undefined') return;
     document.body.classList.add('shepherd-tour-locked');
+    window.addEventListener('wheel', preventUserScroll, { passive: false });
+    window.addEventListener('touchmove', preventUserScroll, { passive: false });
+    window.addEventListener('keydown', preventScrollKeys);
+    INTERACTION_EVENTS.forEach((evt) => {
+      document.addEventListener(evt, preventOutsideInteraction, true);
+    });
   }
 
   function unlockBodyScroll() {
     if (typeof document === 'undefined') return;
     document.body.classList.remove('shepherd-tour-locked');
+    window.removeEventListener('wheel', preventUserScroll);
+    window.removeEventListener('touchmove', preventUserScroll);
+    window.removeEventListener('keydown', preventScrollKeys);
+    INTERACTION_EVENTS.forEach((evt) => {
+      document.removeEventListener(evt, preventOutsideInteraction, true);
+    });
   }
 
   function ensureBackdrop() {
@@ -181,9 +240,9 @@ export function useWelcomeTour({ userName = '', skipPersist = false } = {}) {
       : scrollY + top - Math.max(80, (viewportHeight - height) / 2);
 
     const nextTop = Math.max(0, Math.round(targetTop));
+    // O lock atual usa event listeners pra bloquear o usuario, mas deixa
+    // window.scrollTo programatico funcionar — entao basta rolar direto.
     window.scrollTo({ top: nextTop, behavior: 'auto' });
-    document.documentElement.scrollTop = nextTop;
-    document.body.scrollTop = nextTop;
   }
 
   function syncVirtualTarget(selector, options = {}) {
@@ -414,7 +473,7 @@ export function useWelcomeTour({ userName = '', skipPersist = false } = {}) {
             </div>
             <div class="shepherd-hero-badge"><span class="shepherd-hero-dot"></span> SISTEMA OFICIAL - DEFESA CIVIL MG</div>
             <h1 class="shepherd-hero-title">${saudacao}, <span class="shepherd-hero-name">${firstName}</span>!</h1>
-            <p class="shepherd-hero-sub">Seja bem-vindo(a) a <strong>Equipe da Defesa Civil do Estado de Minas Gerais</strong>. Sua conta foi <em>ativada com sucesso</em> e a partir de agora voce faz parte de quem protege Minas. Em ~1 minuto vamos te mostrar como navegar pelo sistema.</p>
+            <p class="shepherd-hero-sub">Seja bem-vindo(a) a <strong>Equipe da Defesa Civil do Estado de Minas Gerais</strong>. Sua conta foi <em>ativada com sucesso</em> e a partir de agora voce faz parte de quem protege Minas. Em <strong>${TOTAL_STEPS} passos</strong> vamos explorar o sistema juntos.</p>
           </div>
         `,
         classes: 'shepherd-sdc shepherd-sdc--blue shepherd-sdc--cinematic shepherd-sdc--welcome',
@@ -580,13 +639,33 @@ export function useWelcomeTour({ userName = '', skipPersist = false } = {}) {
             <p>A seta colorida indica <em>tendencia mes a mes</em>. Os cartoes sao <strong>arrastaveis</strong> - reordene como preferir.</p>
           </div>
         `,
-        attachTo: { element: () => syncVirtualTarget('[data-tour="kpi-card"]', { scroll: true, block: 'start' }), on: 'bottom' },
-        classes: 'shepherd-sdc shepherd-sdc--blue shepherd-sdc--kpis',
+        // scrollSelectorIntoView poe os 4 KPI cards logo abaixo da topbar
+        // (viewport y=112) ANTES do Shepherd montar o passo. Com isso Floating
+        // UI ve ~800px de espaco livre abaixo e nao precisa flipar a modal
+        // pra cima (era a causa do overlap).
+        beforeShowPromise: () => new Promise((resolve) => {
+          scrollSelectorIntoView('[data-tour="kpis-row"]', 'start');
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }),
+        // Anchor estavel: Dashboard.vue isola os 4 KPI cards num draggable
+        // proprio com data-tour="kpis-row" no root. Shepherd cobre os 4 cards
+        // numa unica faixa, sem precisar de virtual target.
+        attachTo: { element: '[data-tour="kpis-row"]', on: 'bottom' },
+        // shepherd-sdc--kpis-gap aplica margin-top via CSS pra empurrar a modal
+        // pra longe do spotlight (Shepherd 15 usa Floating UI, popperOptions nao
+        // funciona). Ver shepherd-sdc.css.
+        classes: 'shepherd-sdc shepherd-sdc--blue shepherd-sdc--kpis-gap',
+        modalOverlayOpeningPadding: 12,
+        modalOverlayOpeningRadius: 16,
+        // scrollTo: false impede o Shepherd nativo de sobrescrever nossa
+        // posicao com block:'center' (que joga os cards pro meio do viewport
+        // e leva Floating UI a flipar a modal pra cima).
+        scrollTo: false,
         buttons: [
           { classes: 'shepherd-button-secondary', text: 'Voltar', action() { this.back(); } },
           { classes: 'shepherd-button-primary', text: 'Avancar', action() { this.next(); } },
         ],
-        when: { show() { onStepShown(() => focusVirtualTarget('[data-tour="kpi-card"]', 'start')); } },
+        when: { show() { onStepShown(); } },
       },
 
       // ===== Passo 7: Graficos e listas =====
@@ -605,13 +684,16 @@ export function useWelcomeTour({ userName = '', skipPersist = false } = {}) {
             </ul>
           </div>
         `,
-        attachTo: { element: () => syncVirtualTarget('[data-tour="charts-card"]'), on: 'top' },
+        attachTo: { element: '[data-tour="chart-donut"]', on: 'left' },
         classes: 'shepherd-sdc shepherd-sdc--blue',
+        modalOverlayOpeningPadding: 12,
+        modalOverlayOpeningRadius: 16,
+        scrollTo: { behavior: 'smooth', block: 'center' },
         buttons: [
           { classes: 'shepherd-button-secondary', text: 'Voltar', action() { this.back(); } },
           { classes: 'shepherd-button-primary', text: 'Avancar', action() { this.next(); } },
         ],
-        when: { show() { onStepShown(() => focusVirtualTarget('[data-tour="charts-card"]')); } },
+        when: { show() { onStepShown(); } },
       },
 
       // ===== Passo 8: Acoes (barra real do modulo) =====
@@ -736,7 +818,7 @@ export function useWelcomeTour({ userName = '', skipPersist = false } = {}) {
     installBackdropSync();
 
     tour = new Shepherd.Tour({
-      useModalOverlay: true,
+      useModalOverlay: false,
       exitOnEsc: false,
       keyboardNavigation: false,
       defaultStepOptions: {

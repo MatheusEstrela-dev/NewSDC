@@ -20,13 +20,21 @@
   --shepherd-border: #e2e8f0;
 }
 
-.shepherd-sdc--emerald  { --shepherd-accent: #2563eb; --shepherd-accent-soft: rgba(37,99,235,.12);  --shepherd-accent-strong: rgba(37,99,235,.35); }
-.shepherd-sdc--blue     { --shepherd-accent: #2563eb; --shepherd-accent-soft: rgba(37,99,235,.12);  --shepherd-accent-strong: rgba(37,99,235,.35); }
-.shepherd-sdc--cyan     { --shepherd-accent: #0891b2; --shepherd-accent-soft: rgba(8,145,178,.12);  --shepherd-accent-strong: rgba(8,145,178,.35); }
-.shepherd-sdc--sky      { --shepherd-accent: #0284c7; --shepherd-accent-soft: rgba(2,132,199,.12);   --shepherd-accent-strong: rgba(2,132,199,.35); }
-.shepherd-sdc--indigo   { --shepherd-accent: #2563eb; --shepherd-accent-soft: rgba(37,99,235,.12);  --shepherd-accent-strong: rgba(37,99,235,.35); }
-.shepherd-sdc--violet   { --shepherd-accent: #2563eb; --shepherd-accent-soft: rgba(37,99,235,.12);  --shepherd-accent-strong: rgba(37,99,235,.35); }
-.shepherd-sdc--amber    { --shepherd-accent: #d97706; --shepherd-accent-soft: rgba(217,119,6,.12);  --shepherd-accent-strong: rgba(217,119,6,.35); }
+/* Tom unico de azul institucional (#2563eb / blue-600 Tailwind) em todo o tour
+   para evitar inconsistencia visual entre passos. Mantemos a chave amber so
+   para o passo final (slogan laranja) preservado a parte. */
+.shepherd-sdc--emerald,
+.shepherd-sdc--blue,
+.shepherd-sdc--cyan,
+.shepherd-sdc--sky,
+.shepherd-sdc--indigo,
+.shepherd-sdc--violet {
+  --shepherd-accent: #2563eb;
+  --shepherd-accent-soft: rgba(37, 99, 235, 0.12);
+  --shepherd-accent-strong: rgba(37, 99, 235, 0.35);
+}
+
+.shepherd-sdc--amber { --shepherd-accent: #d97706; --shepherd-accent-soft: rgba(217,119,6,.12); --shepherd-accent-strong: rgba(217,119,6,.35); }
 
 /* ============================================================================
  * Card base
@@ -41,7 +49,10 @@
   max-width: 580px !important;
   width: calc(100vw - 32px) !important;
   padding: 0 !important;
-  font-family: 'Figtree', system-ui, -apple-system, sans-serif !important;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important;
+  font-feature-settings: 'cv11', 'ss03', 'ss05' !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
   color: var(--shepherd-text-base) !important;
   overflow: hidden !important;
   animation: shepherd-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both !important;
@@ -113,6 +124,24 @@
 .shepherd-element.shepherd-sdc--filters .shepherd-header,
 .shepherd-element.shepherd-sdc--filters .shepherd-progress-dots {
   flex-shrink: 0 !important;
+}
+
+/* Empurra o card do passo KPI 28px pra baixo do spotlight (gap visual entre
+   a linha de 4 cards destacados e o topo da modal). Shepherd 15 usa Floating
+   UI internamente — popperOptions/offset middleware nao sao expostos via
+   step config, entao usamos margin-top. */
+.shepherd-element.shepherd-sdc--kpis-gap {
+  margin-top: 40px !important;
+}
+
+/* Zoom-in nos KPI cards quando o passo KPI esta ativo. Shepherd adiciona a
+   classe `shepherd-target` ao elemento alvo do passo atual — entao o seletor
+   abaixo so dispara durante o passo KPI. Transform-origin top centraliza
+   a escala no topo, evitando que os cards "saiam" pra baixo da viewport. */
+[data-tour="kpis-row"].shepherd-target {
+  transform: scale(1.04);
+  transform-origin: 50% 0%;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .shepherd-element.shepherd-sdc--kpis {
@@ -308,9 +337,9 @@
 
 .shepherd-sdc .shepherd-title {
   color: var(--shepherd-text-strong) !important;
-  font-size: 1.2rem !important;
+  font-size: 1.4rem !important;
   font-weight: 700 !important;
-  letter-spacing: -0.01em !important;
+  letter-spacing: -0.015em !important;
   line-height: 1.3 !important;
   margin: 0 !important;
   flex: 1 !important;
@@ -327,9 +356,10 @@
  * ========================================================================= */
 .shepherd-sdc .shepherd-text {
   color: var(--shepherd-text-base) !important;
-  font-size: 0.95rem !important;
-  line-height: 1.65 !important;
-  padding: 18px 28px 4px !important;
+  font-size: 1.05rem !important;
+  line-height: 1.7 !important;
+  letter-spacing: -0.005em !important;
+  padding: 20px 28px 6px !important;
   background: transparent !important;
   position: relative;
   z-index: 1;
@@ -368,11 +398,12 @@
 
 .shepherd-sdc .shepherd-text ul li {
   position: relative;
-  padding: 10px 12px 10px 36px;
+  padding: 12px 14px 12px 38px;
   background: var(--shepherd-surface-soft);
   border: 1px solid var(--shepherd-border);
   border-radius: 10px;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  line-height: 1.55;
   color: var(--shepherd-text-base);
 }
 
@@ -533,12 +564,12 @@
 }
 
 .shepherd-hero-title {
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 800;
   color: var(--shepherd-text-strong);
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  margin: 0 0 8px;
+  letter-spacing: -0.025em;
+  line-height: 1.18;
+  margin: 0 0 10px;
   animation: shepherd-layer-rise 0.6s ease-out 0.15s both;
 }
 
@@ -550,11 +581,11 @@
 }
 
 .shepherd-hero-sub {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: var(--shepherd-text-muted);
-  max-width: 480px;
-  margin: 0 auto 18px;
-  line-height: 1.6;
+  max-width: 520px;
+  margin: 0 auto 20px;
+  line-height: 1.65;
   animation: shepherd-layer-rise 0.6s ease-out 0.3s both;
 }
 
@@ -855,11 +886,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.9rem;
+  font-size: 1.02rem;
   font-weight: 700;
   color: var(--shepherd-text-strong);
-  margin: 0 0 4px;
-  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+  letter-spacing: -0.015em;
 }
 
 .shepherd-accept-badge {
@@ -883,9 +914,9 @@
 
 .shepherd-accept-body p {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.94rem;
   color: var(--shepherd-text-muted);
-  line-height: 1.55;
+  line-height: 1.65;
 }
 
 .shepherd-accept-body p strong { color: var(--shepherd-text-strong); }
@@ -967,11 +998,11 @@
 }
 
 .shepherd-hero--finale .shepherd-hero-title {
-  font-size: 1.45rem;
+  font-size: 1.65rem;
 }
 
 .shepherd-hero--finale .shepherd-hero-sub {
-  font-size: 0.9rem;
+  font-size: 1rem;
   margin-bottom: 14px;
 }
 
@@ -1000,8 +1031,8 @@
 
 .shepherd-sdc .shepherd-button {
   appearance: none !important;
-  padding: 9px 22px !important;
-  font-size: 0.875rem !important;
+  padding: 10px 24px !important;
+  font-size: 0.95rem !important;
   font-weight: 600 !important;
   border-radius: 10px !important;
   border: none !important;
@@ -1058,12 +1089,13 @@
   height: 100dvh !important;
 }
 
-/* Quando o tour esta ativo, congela o body sem alterar escala visual. */
+/* Quando o tour esta ativo, congela o scroll do USUARIO mas mantem
+   window.scrollTo programatico funcional — o JS bloqueia wheel/touch/keys.
+   NAO usamos overflow:hidden aqui porque ele bloquearia tambem o scroll
+   programatico que o tour precisa pra rolar ate o anchor do passo. */
 body.shepherd-tour-locked {
-  overflow: hidden !important;
-  width: 100vw !important;
-  min-height: 100dvh !important;
   overscroll-behavior: none !important;
+  touch-action: pan-x !important;
 }
 
 /* Backdrop segmentado: o JS posiciona quatro faixas fora do recorte atual.
@@ -1182,8 +1214,10 @@ body.shepherd-tour-locked {
   }
 
   .shepherd-sdc .shepherd-header { padding: 14px 18px 12px !important; }
-  .shepherd-sdc .shepherd-text { padding: 14px 18px 4px !important; font-size: 0.9rem !important; }
+  .shepherd-sdc .shepherd-text { padding: 16px 18px 6px !important; font-size: 0.98rem !important; line-height: 1.65 !important; }
+  .shepherd-sdc .shepherd-text ul li { font-size: 0.95rem !important; }
   .shepherd-sdc .shepherd-footer { padding: 14px 18px 16px !important; }
-  .shepherd-hero-title { font-size: 1.4rem; }
-  .shepherd-hero-sub { font-size: 0.85rem; }
+  .shepherd-sdc .shepherd-title { font-size: 1.2rem !important; }
+  .shepherd-hero-title { font-size: 1.6rem; }
+  .shepherd-hero-sub { font-size: 0.98rem; }
 }

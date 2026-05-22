@@ -10,9 +10,9 @@
         <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
         <link rel="dns-prefetch" href="https://fonts.bunny.net">
 
-        <!-- Fonts com display=optional para não bloquear renderização -->
-        <!-- <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=optional" rel="stylesheet" media="print" onload="this.media='all'">
-        <noscript><link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=optional" rel="stylesheet"></noscript> -->
+        <!-- Fonts com display=swap para legibilidade imediata (fallback system-ui ate Inter carregar) -->
+        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet">
+        <noscript><link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet"></noscript>
 
         <!-- Scripts -->
         @routes

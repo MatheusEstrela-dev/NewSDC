@@ -1,5 +1,4 @@
 import { ref } from 'vue';
-import axios from 'axios';
 
 /**
  * Composable para gerenciar integracoes pessoais do usuario (Telegram).
@@ -16,7 +15,7 @@ export function useIntegrations() {
         loading.value = true;
         error.value = null;
         try {
-            const res = await axios.post('/api/v1/integrations/telegram/connect');
+            const res = await window.axios.post('/api/v1/integrations/telegram/connect');
             return res.data;
         } catch (e) {
             error.value = e?.response?.data?.message || e.message;
@@ -31,7 +30,7 @@ export function useIntegrations() {
      */
     async function getTelegramStatus() {
         try {
-            const res = await axios.get('/api/v1/integrations/telegram/status');
+            const res = await window.axios.get('/api/v1/integrations/telegram/status');
             return res.data;
         } catch (e) {
             error.value = e?.response?.data?.message || e.message;
@@ -46,7 +45,7 @@ export function useIntegrations() {
         loading.value = true;
         error.value = null;
         try {
-            await axios.delete(`/api/v1/integrations/telegram/${integrationId}`);
+            await window.axios.delete(`/api/v1/integrations/telegram/${integrationId}`);
         } catch (e) {
             error.value = e?.response?.data?.message || e.message;
             throw e;
