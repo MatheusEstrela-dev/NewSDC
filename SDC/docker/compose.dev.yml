@@ -52,6 +52,10 @@ services:
       # Redis (cache / session / queue)
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      # Prefix explicito e identico ao worker para que ambos leiam/escrevam
+      # nas mesmas chaves (config/database.php deriva do APP_NAME por padrao,
+      # mas o worker usa outro APP_NAME e ficaria isolado).
+      REDIS_PREFIX: sdc_dev_database_
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
@@ -138,6 +142,9 @@ services:
       # Redis (cache / session / queue)
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      # MESMO prefix do app — sem isso o worker leria de outra keyspace
+      # (sdc_dev_queue_database_*) e os jobs ficariam parados.
+      REDIS_PREFIX: sdc_dev_database_
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
