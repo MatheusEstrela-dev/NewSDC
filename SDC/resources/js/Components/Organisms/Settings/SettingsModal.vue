@@ -241,26 +241,31 @@
                  <!-- Tab: Integrações -->
                  <div v-if="currentTab === 'integrations'" class="space-y-8">
                      <div class="space-y-6">
-                         <div class="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
+                         <!-- Telegram (funcional - per-user pairing) -->
+                         <TelegramCard />
+
+                         <!-- WhatsApp (stub: requer Evolution API / Meta Business) -->
+                         <div class="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl opacity-60">
                              <div class="flex items-center gap-4">
                                  <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">W</div>
                                  <div>
-                                     <h4 class="font-bold text-slate-900 dark:text-white">WhatsApp / Telegram</h4>
-                                     <p class="text-sm text-slate-500">Receber resumos diários e alertas críticos.</p>
+                                     <h4 class="font-bold text-slate-900 dark:text-white">WhatsApp</h4>
+                                     <p class="text-sm text-slate-500">Em breve. Use o Telegram para alertas criticos por enquanto.</p>
                                  </div>
                              </div>
-                             <button class="px-4 py-2 text-sm font-medium border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">Conectar</button>
+                             <button disabled class="px-4 py-2 text-sm font-medium border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 cursor-not-allowed">Em breve</button>
                          </div>
 
-                          <div class="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
+                         <!-- N8N Webhook (stub: implementacao em feat/integracoes-personal-f3) -->
+                         <div class="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl opacity-60">
                              <div class="flex items-center gap-4">
                                  <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">N</div>
                                  <div>
                                      <h4 class="font-bold text-slate-900 dark:text-white">N8N Webhook</h4>
-                                     <p class="text-sm text-slate-500">Token pessoal para automações externas.</p>
+                                     <p class="text-sm text-slate-500">Token pessoal para automacoes externas.</p>
                                  </div>
                              </div>
-                             <button class="px-4 py-2 text-sm font-medium border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">Gerenciar Token</button>
+                             <button disabled class="px-4 py-2 text-sm font-medium border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 cursor-not-allowed">Em breve</button>
                          </div>
                      </div>
                  </div>
@@ -423,6 +428,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { usePage, useForm } from '@inertiajs/vue3';
+import TelegramCard from './integrations/TelegramCard.vue';
 import {
     UserIcon,
     BellIcon,
