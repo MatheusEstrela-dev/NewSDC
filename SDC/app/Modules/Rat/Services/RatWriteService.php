@@ -139,6 +139,7 @@ class RatWriteService
             'updater',
             'historicos',
             'ratAnexos',
+            'relatosMorph.conteudo', // Carrega vistoria, envolvidos, recursos, dados_gerais
         ])->find($id);
     }
 
