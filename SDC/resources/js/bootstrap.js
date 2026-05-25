@@ -4,16 +4,34 @@
  * CSRF token as a header based on the value of the "XSRF" token cookie.
  */
 
+async function clearSwCachesAndReload() {
+    try {
+        if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(r => r.unregister()));
+        }
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+        }
+    } catch (_) {}
+    window.location.reload();
+}
+
 export const initAxios = async () => {
     const axios = (await import('axios')).default;
     window.axios = axios;
     window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
     window.axios.defaults.withCredentials = true;
 
-    // Interceptor para Rate Limit (429)
     window.axios.interceptors.response.use(
         (response) => response,
-        (error) => {
+        async (error) => {
+            if (error.response?.status === 419) {
+                await clearSwCachesAndReload();
+                return;
+            }
+
             if (error.response && error.response.status === 429) {
                 const retryAfter = error.response.headers['retry-after'] || 60;
 

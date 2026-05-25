@@ -85,6 +85,8 @@ class RatUnifiedController extends BaseController
 
     public function create(): Response
     {
+        // Render create page - NO database operations here
+        // The form will use POST /rat to store data
         return Inertia::render('Rat/RatCreate');
     }
 
@@ -222,8 +224,25 @@ class RatUnifiedController extends BaseController
         $ocorrencia = $this->writeService->findById($id);
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
+        try {
+            $ratData = (new RatOcorrenciaResource($ocorrencia))->resolve();
+        } catch (\Throwable $e) {
+            Log::error('Error resolving RatOcorrenciaResource in edit()', [
+                'ocorrencia_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            // Fallback to minimal data if resource resolution fails
+            $ratData = [
+                'id' => $ocorrencia->id,
+                'status' => $ocorrencia->status,
+                'numero_bos' => $ocorrencia->numero_bos ?? null,
+                'protocolo' => $ocorrencia->protocolo ?? null,
+            ];
+        }
+
         return Inertia::render('Rat/RatEdit', [
-            'rat'        => (new RatOcorrenciaResource($ocorrencia))->resolve(),
+            'rat'        => $ratData,
             'lastUpdate' => $ocorrencia->updated_at?->toIso8601String(),
         ]);
     }

@@ -28,6 +28,10 @@ class ValidateOpenApiRequest
         'api/documentation',
         'api/health',
         'sanctum/csrf-cookie',
+        'rat/',           // RAT module - web routes, not API
+        'pae/',           // PAE module - web routes
+        'decretacoes/',   // Decretacoes - web routes
+        'admin/',         // Admin panel - web routes
     ];
 
     /**

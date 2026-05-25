@@ -29,7 +29,18 @@ const isUserFacingNavigation = (visit) => {
 };
 
 // Reload automático quando a sessão/CSRF expira (419 Page Expired)
-router.on('invalid-token', () => {
+router.on('invalid-token', async (event) => {
+    event.preventDefault();
+    try {
+        if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(r => r.unregister()));
+        }
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+        }
+    } catch (_) {}
     window.location.reload();
 });
 
@@ -64,6 +75,14 @@ const loadPageCSS = (pageName) => {
         'RatIndex': () => Promise.all([
             import('../css/pages/rat/rat.css'),
             import('../css/pages/rat/index.css'),
+        ]),
+        'RatCreate': () => Promise.all([
+            import('../css/pages/rat/rat.css'),
+            import('../css/pages/rat/sections.css'),
+        ]),
+        'RatEdit': () => Promise.all([
+            import('../css/pages/rat/rat.css'),
+            import('../css/pages/rat/sections.css'),
         ]),
         'Auth/Login': () => import('../css/pages/auth/login.css'),
         'Auth/Reset': () => import('../css/pages/auth/reset.css'),

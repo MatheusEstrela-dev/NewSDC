@@ -347,6 +347,11 @@ function handleEdit(id) {
 
 function handleAttachments(id) {
   const rat = ratsToUse.value.find(r => r.id === id);
+  if (!rat) {
+    toast('RAT não encontrado.', 'error', { noIcon: true });
+    return;
+  }
+
   relacionarRat.value = rat;
   showRelacionarConfirm.value = true;
 }
@@ -359,9 +364,20 @@ async function confirmCreateRelacionado() {
     const ax = window.axios || (await import('axios')).default;
     const res = await ax.post(`/rat/${relacionarRat.value.id}/relacionar`, {});
     toast(res.data.message || 'Boletim relacionado criado com sucesso.', 'success', { noIcon: true });
-    router.visit(res.data.url);
+    setTimeout(() => router.visit(res.data.url), 1000);
   } catch (e) {
-    const msg = e?.response?.data?.message || 'Erro ao criar boletim relacionado.';
+    console.error('[confirmCreateRelacionado] Error:', {
+      status: e?.response?.status,
+      message: e?.response?.data?.message,
+      data: e?.response?.data,
+      error: e?.message
+    });
+
+    // Mostrar modal de confirmação novamente para o usuário ver a mensagem
+    relacionarRat.value = relacionarRat.value;
+    showRelacionarConfirm.value = true;
+
+    const msg = e?.response?.data?.message || e?.message || 'Erro ao criar boletim relacionado.';
     toast(msg, 'error', { noIcon: true });
   }
 }

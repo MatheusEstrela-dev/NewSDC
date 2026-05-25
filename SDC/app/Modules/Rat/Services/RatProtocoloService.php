@@ -7,6 +7,7 @@ namespace App\Modules\Rat\Services;
 use App\Modules\Rat\Models\RatOcorrencia;
 use Illuminate\Support\Facades\DB;
 
+
 class RatProtocoloService
 {
     public function generate(): string
@@ -19,9 +20,9 @@ class RatProtocoloService
             $year = now()->year;
             $seq  = $this->getLatestSequence($year) + 1;
 
-            // Formato: YYYY-NNNNNNNNN-000
-            // O sufixo 000 é substituído pelo código real da unidade
-            // ao preencher os dados gerais (uni_bo_cod_unidade).
+            // Formato: YYYY-SEQUENCE-SUFFIX
+            // SEQUENCE: número sequencial único (incrementa a cada novo RAT raiz)
+            // SUFFIX: 000 para novo RAT, 001/002... para RATs relacionados
             return sprintf('%d-%09d-000', $year, $seq);
         });
     }
@@ -40,8 +41,10 @@ class RatProtocoloService
             ->orderByDesc('numero_bos')
             ->value('numero_bos');
 
-         if ($latestOld) {
-            $seq = max($seq, (int) substr($latestOld, strrpos($latestOld, '-') + 1));
+        if ($latestOld) {
+            // Extract sequence (middle part between hyphens): YYYY-SEQUENCE-UNITCODE
+            $parts = explode('-', $latestOld);
+            $seq = max($seq, (int) $parts[1]);
         }
 
         return $seq;
