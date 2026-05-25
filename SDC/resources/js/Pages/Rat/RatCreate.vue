@@ -2,7 +2,7 @@
   <Head title="Novo RAT" />
 
   <RatFormLayout
-    :rat="emptyRat"
+    :rat="ratData"
     :tab-config="tabConfig"
     :active-tab="currentActiveTab"
     :is-create="true"
@@ -65,7 +65,7 @@
 
       <div v-else-if="Number(activeTab) === 6">
         <RatAttachments
-          :rat-id="null"
+          :rat-id="ratData.id"
           :anexos="anexos"
           :view-only="false"
           @add="adicionarAnexo"
@@ -80,8 +80,8 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { computed, reactive, ref } from 'vue';
+import { Head } from '@inertiajs/vue3';
 import ClipboardIcon from '@/Components/Icons/ClipboardIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
@@ -101,17 +101,16 @@ import '../../../css/pages/rat/rat.css';
 
 defineOptions({ layout: AuthenticatedLayout });
 
-const emptyRat = { id: null, protocolo: null, status: 'rascunho' };
+// RAT reativo: começa vazio, atualizado após o primeiro save com id e numero_bos
+const ratData = reactive({ id: null, protocolo: null, numero_bos: null, status: 'rascunho' });
 
 const {
-  rat,
   recursos,
   envolvidos,
   vistoria,
   historico,
   anexos,
   tabs,
-  salvarRascunho,
   finalizarRat,
   adicionarRecurso,
   removerRecurso,
@@ -149,27 +148,19 @@ function unlockAndAdvanceTab(currentTabId) {
 const pendingAttachmentFiles = ref([]);
 
 /**
- * Salva o RAT via axios (sem Inertia) para controlar o fluxo de upload.
- * 1. POST /rat via axios (sem seguir redirect)
- * 2. Extrai o ID do RAT da URL de redirect
- * 3. Faz upload dos anexos pendentes
- * 4. Navega para a pagina de edicao via Inertia
+ * Salva o RAT via axios sem redirecionar.
+ * - Primeiro save: POST /rat → atualiza ratData com id e numero_bos
+ * - Saves seguintes: PATCH /rat/{id}/draft
+ * - Faz upload dos anexos pendentes após salvar
  */
 async function salvarComAnexos(formData) {
   const filesToUpload = [...pendingAttachmentFiles.value];
-  console.log('[salvarComAnexos] pendingFiles:', filesToUpload.length, 'formData keys:', Object.keys(formData || {}));
-
-  if (filesToUpload.length === 0) {
-    console.log('[salvarComAnexos] no pending files, using salvarRascunho');
-    salvarRascunho(formData);
-    return;
-  }
 
   const data = {
-    dadosGerais: formData.dadosGerais ?? {},
-    comunicacao: formData.comunicacao ?? {},
-    local:       formData.local ?? {},
-    endereco:    formData.endereco ?? {},
+    dadosGerais: formData?.dadosGerais ?? {},
+    comunicacao: formData?.comunicacao ?? {},
+    local:       formData?.local ?? {},
+    endereco:    formData?.endereco ?? {},
     recursos:    recursos.value,
     envolvidos:  envolvidos.value,
     vistoria:    vistoria.value,
@@ -178,29 +169,42 @@ async function salvarComAnexos(formData) {
 
   const ax = window.axios || (await import('axios')).default;
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+  const headers = { Accept: 'application/json', 'X-CSRF-TOKEN': csrf };
 
   try {
-    const response = await ax.post(route('rat.store'), data, {
-      headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf },
-    });
+    let currentId = ratData.id;
 
-    const newRatId = response.data?.id ?? null;
+    if (!currentId) {
+      // Cria o RAT pela primeira vez
+      const response = await ax.post(route('rat.store'), data, { headers });
+      currentId = response.data?.id ?? null;
+      if (currentId) {
+        ratData.id         = currentId;
+        ratData.numero_bos = response.data.numero_bos ?? null;
+        ratData.protocolo  = response.data.numero_bos ?? null;
+        ratData.status     = 'rascunho';
+      }
+    } else {
+      // Atualiza rascunho existente
+      await ax.patch(route('rat.draft', currentId), data, { headers });
+    }
 
-    if (newRatId) {
+    if (currentId && filesToUpload.length > 0) {
       for (const { file } of filesToUpload) {
         const form = new FormData();
         form.append('file', file);
-        const categoria = file.type?.startsWith('image/') ? 'imagem' : 'documento';
-        form.append('categoria', categoria);
-        await ax.post(route('rat.anexos.store', { id: newRatId }), form, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        form.append('tipo', file.type?.startsWith('image/') ? 'imagem' : 'documento');
+        await ax.post(
+          route('rat.ocorrencias.attachments.store', { ocorrencia: currentId }),
+          form,
+          { headers: { 'Content-Type': 'multipart/form-data', 'X-CSRF-TOKEN': csrf } },
+        );
       }
       pendingAttachmentFiles.value = [];
-      router.visit(route('rat.bo.index') + '?ocorrencia_id=' + newRatId);
     }
   } catch (e) {
     console.error('Erro ao salvar RAT:', e);
+    throw e;
   }
 }
 
