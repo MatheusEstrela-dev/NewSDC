@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Infrastructure\Persistence;
 
-use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
 use App\Modules\Rat\Models\RatOcorrencia;
 use App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
-class EloquentRatRepository implements RatRepositoryInterface
+class EloquentRatRepository
 {
     public function create(array $data): RatOcorrencia
     {
@@ -85,25 +84,17 @@ class EloquentRatRepository implements RatRepositoryInterface
     {
         $seq = 0;
 
-        // Formato atual: YYYY-NNNNNNNNN-XXX (sufixo 000 ou código real da unidade)
-        $latestNew = RatOcorrencia::withTrashed()
+        // O sufixo pode ser 000 (placeholder) ou o código real da unidade (ex: 123).
+        // Busca por qualquer sufixo de 3 dígitos para não perder o sequencial
+        // após o protocolo ser atualizado por saveDadosGerais.
+        $latestOld = RatOcorrencia::withTrashed()
             ->where('numero_bos', 'like', "{$year}-%-%")
             ->where('numero_bos', 'not like', 'RAT-%')
             ->lockForUpdate()
             ->orderByDesc('numero_bos')
             ->value('numero_bos');
 
-        if ($latestNew && preg_match('/^\d{4}-(\d+)-\d{3}$/', $latestNew, $m)) {
-            $seq = max($seq, (int) $m[1]);
-        }
-
-        // Formato legado: RAT-YYYY-NNNNNN
-        $latestOld = RatOcorrencia::where('numero_bos', 'like', "RAT-{$year}-%")
-            ->lockForUpdate()
-            ->orderByDesc('numero_bos')
-            ->value('numero_bos');
-
-        if ($latestOld) {
+         if ($latestOld) {
             $seq = max($seq, (int) substr($latestOld, strrpos($latestOld, '-') + 1));
         }
 
@@ -112,9 +103,11 @@ class EloquentRatRepository implements RatRepositoryInterface
 
     private function generateProtocolo(): string
     {
-        $year = now()->year;
-        $seq  = $this->getLatestSequence($year) + 1;
+        $year = (int) date('Y');
+        $nextSequence = $this->getLatestSequence($year) + 1;
 
-        return sprintf('%d-%09d-000', $year, $seq);
+        return sprintf('%s-%03d-000', $year, $nextSequence);
     }
 }
+
+

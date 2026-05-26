@@ -6,7 +6,6 @@ namespace App\Modules\Rat;
 
 use App\Core\Actions\Services\ActionConfigService;
 use App\Modules\Rat\Config\RatActionsConfig;
-use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
 use App\Modules\Rat\Infrastructure\Persistence\EloquentRatRepository;
 use App\Modules\Rat\Services\RatAnexoService;
 use App\Modules\Rat\Services\RatAttachmentService;
@@ -22,11 +21,6 @@ class RatServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->bind(
-            RatRepositoryInterface::class,
-            EloquentRatRepository::class
-        );
-
         $this->app->singleton(RatProtocoloService::class);
         $this->app->singleton(RatWriteService::class);
         $this->app->singleton(RatExportService::class);

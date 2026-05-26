@@ -42,6 +42,44 @@ class RatWriteService
         });
     }
 
+    public function createRelacionado(string $origemId): RatOcorrencia
+    {
+        return DB::transaction(function () use ($origemId) {
+            $origem = RatOcorrencia::findOrFail($origemId);
+
+            // Extrair sequência do RAT origem: YYYY-SEQUENCE-SUFFIX
+            $parts = explode('-', $origem->numero_bos);
+            $year = $parts[0];
+            $sequence = $parts[1]; // ex: 000000063
+
+            // Encontrar maior sufixo relacionado: YYYY-SEQUENCE-%
+            $latestRelated = RatOcorrencia::where('numero_bos', 'like', "{$year}-{$sequence}-%")
+                ->lockForUpdate()
+                ->orderByDesc('numero_bos')
+                ->value('numero_bos');
+
+            // Extrair sufixo e incrementar
+            $nextSuffix = 0;
+            if ($latestRelated) {
+                $relatedParts = explode('-', $latestRelated);
+                $nextSuffix = (int) $relatedParts[2] + 1;
+            }
+
+            $numeroBos = sprintf('%s-%s-%03d', $year, $sequence, $nextSuffix);
+            $userId = Auth::id();
+
+            return RatOcorrencia::create([
+                'numero_bos'           => $numeroBos,
+                'sequencial_ano'       => now()->year,
+                'status'               => 0,
+                'prazo_edicao'         => now()->addHours(48),
+                'created_by'           => $userId,
+                'updated_by'           => $userId,
+                'ocorrencia_origem_id' => $origemId,
+            ]);
+        });
+    }
+
     public function createWithData(array $data): RatOcorrencia
     {
         return DB::transaction(function () use ($data) {
@@ -101,6 +139,7 @@ class RatWriteService
             'updater',
             'historicos',
             'ratAnexos',
+            'relatosMorph.conteudo', // Carrega vistoria, envolvidos, recursos, dados_gerais
         ])->find($id);
     }
 

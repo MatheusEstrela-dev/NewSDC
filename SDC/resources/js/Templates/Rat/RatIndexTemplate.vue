@@ -105,6 +105,18 @@
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false"
     />
+
+    <!-- Modal de Criar Boletim Relacionado -->
+    <ConfirmDialog
+      :is-open="showRelacionarConfirm"
+      variant="info"
+      title="Criar Boletim Relacionado"
+      :message="`Deseja criar um novo boletim relacionado ao ${relacionarRat?.protocolo || relacionarRat?.numero_bos || ''}?`"
+      confirm-text="Sim, criar!"
+      cancel-text="Cancelar"
+      @confirm="confirmCreateRelacionado"
+      @cancel="showRelacionarConfirm = false"
+    />
   </div>
 </template>
 
@@ -203,6 +215,10 @@ const { show: toast } = useToast();
 // Estado para confirmação de exclusão
 const showDeleteModal = ref(false);
 const deletingRatId = ref(null);
+
+// Estado para criar boletim relacionado
+const showRelacionarConfirm = ref(false);
+const relacionarRat = ref(null);
 // IDs excluídos apenas no frontend (soft-delete no banco, sem reload)
 const excludedIds = ref(new Set());
 
@@ -326,11 +342,44 @@ function handleView(id) {
 }
 
 function handleEdit(id) {
-  router.visit(route('rat.bo.index') + '?ocorrencia_id=' + id);
+  router.visit(route('rat.edit', id));
 }
 
 function handleAttachments(id) {
-  router.visit(route('rat.bo.index') + '?ocorrencia_id=' + id + '&aba=anexos');
+  const rat = ratsToUse.value.find(r => r.id === id);
+  if (!rat) {
+    toast('RAT não encontrado.', 'error', { noIcon: true });
+    return;
+  }
+
+  relacionarRat.value = rat;
+  showRelacionarConfirm.value = true;
+}
+
+async function confirmCreateRelacionado() {
+  if (!relacionarRat.value) return;
+  showRelacionarConfirm.value = false;
+
+  try {
+    const ax = window.axios || (await import('axios')).default;
+    const res = await ax.post(`/rat/${relacionarRat.value.id}/relacionar`, {});
+    toast(res.data.message || 'Boletim relacionado criado com sucesso.', 'success', { noIcon: true });
+    setTimeout(() => router.visit(res.data.url), 1000);
+  } catch (e) {
+    console.error('[confirmCreateRelacionado] Error:', {
+      status: e?.response?.status,
+      message: e?.response?.data?.message,
+      data: e?.response?.data,
+      error: e?.message
+    });
+
+    // Mostrar modal de confirmação novamente para o usuário ver a mensagem
+    relacionarRat.value = relacionarRat.value;
+    showRelacionarConfirm.value = true;
+
+    const msg = e?.response?.data?.message || e?.message || 'Erro ao criar boletim relacionado.';
+    toast(msg, 'error', { noIcon: true });
+  }
 }
 
 function handleDelete(id) {

@@ -123,6 +123,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  attachmentsLabel: {
+    type: String,
+    default: 'Anexos',
+  },
   showFinalize: {
     type: Boolean,
     default: false,
@@ -168,7 +172,7 @@ const actions = computed(() => [
   { name: 'edit', event: 'edit', show: props.showEdit, label: 'Editar' },
   { name: 'warning', event: 'warning', show: props.showWarning, label: 'Aviso', variant: 'vibrant-warning' },
   { name: 'upload', event: 'upload', show: props.showUpload, label: 'Upload' },
-  { name: 'attachments', event: 'attachments', show: props.showAttachments, label: 'Anexos' },
+  { name: 'attachments', event: 'attachments', show: props.showAttachments, label: props.attachmentsLabel },
   { name: 'history', event: 'history', show: props.showHistory, label: 'Serie Historica' },
   { name: 'notifications', event: 'notifications', show: props.showNotifications, label: 'Notificacoes' },
   { name: 'export', event: 'export', show: props.showExport, label: 'Exportar' },

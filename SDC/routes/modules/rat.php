@@ -36,6 +36,7 @@ Route::prefix('rat')->name('rat.')->group(function () {
     });
 
     // ── Wildcards com {id} ───────────────────────────────────────────────────
+    Route::post('/{id}/relacionar', [RatUnifiedController::class, 'createRelacionado'])->name('relacionar.store');
     Route::get('/{id}/edit',     [RatUnifiedController::class, 'edit'])->name('edit');
     Route::get('/{id}/json',     [RatUnifiedController::class, 'showJson'])->name('show-json');
     Route::put('/{id}',          [RatUnifiedController::class, 'update'])->name('update');
