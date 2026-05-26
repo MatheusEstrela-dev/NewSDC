@@ -174,6 +174,17 @@ class PaeFormularioController extends Controller
         return back()->with('success', 'Anexo salvo.');
     }
 
+    public function storeAnexoPorProtocolo(StorePaeFormAnexoRequest $request, PaeProtocolo $paeProtocolo): RedirectResponse
+    {
+        $this->service->storeAnexoForProtocolo(
+            $paeProtocolo,
+            PaeFormAnexoDTO::fromArray($request->validated()),
+            $request->user(),
+        );
+
+        return back()->with('success', 'Anexo salvo.');
+    }
+
     public function destroyAnexo(PaeForm $paeForm, PaeFormAnexo $paeFormAnexo): RedirectResponse
     {
         $this->service->deleteAnexo($paeForm, $paeFormAnexo);
@@ -184,6 +195,11 @@ class PaeFormularioController extends Controller
     public function downloadAnexo(PaeForm $paeForm, PaeFormAnexo $paeFormAnexo): StreamedResponse
     {
         return $this->service->downloadAnexo($paeForm, $paeFormAnexo);
+    }
+
+    public function viewAnexo(PaeForm $paeForm, PaeFormAnexo $paeFormAnexo): StreamedResponse
+    {
+        return $this->service->viewAnexo($paeForm, $paeFormAnexo);
     }
 
     public function finalizar(Request $request, PaeForm $paeForm): RedirectResponse

@@ -2,16 +2,16 @@
   <PaeCard title="4. Anexos">
     <div class="space-y-6">
       <div
-        v-if="!formularioId"
+        v-if="!canUpload"
         class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-200"
       >
-        Salve as Informacoes Gerais antes de adicionar anexos.
+        Salve as Informacoes Gerais ou abra um protocolo antes de adicionar anexos.
       </div>
 
       <form class="space-y-4" @submit.prevent="handleSubmit">
         <div
           class="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-5"
-          :class="formularioId ? 'hover:border-blue-500/50' : 'opacity-60'"
+          :class="canUpload ? 'hover:border-blue-500/50' : 'opacity-60'"
         >
           <div class="flex flex-col sm:flex-row sm:items-center gap-4">
             <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-400">
@@ -30,7 +30,7 @@
               <input
                 ref="fileInput"
                 type="file"
-                :disabled="!formularioId || saving"
+                :disabled="!canUpload || saving"
                 accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                 class="mt-3 block w-full text-sm text-slate-600 dark:text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-500 disabled:cursor-not-allowed"
                 @change="onFileChange"
@@ -63,7 +63,7 @@
           </label>
           <textarea
             v-model="descricao"
-            :disabled="!formularioId || saving"
+            :disabled="!canUpload || saving"
             rows="2"
             placeholder="Descricao opcional do anexo"
             class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
@@ -73,7 +73,7 @@
         <div class="flex justify-end">
           <button
             type="submit"
-            :disabled="!formularioId || !selectedFile || !!fileError || saving"
+            :disabled="!canUpload || !selectedFile || !!fileError || saving"
             class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span v-if="saving" class="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
@@ -108,9 +108,19 @@
               <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {{ anexo.tamanho_formatado }} <span v-if="anexo.descricao">- {{ anexo.descricao }}</span>
               </p>
+              <p v-if="anexo.local_armazenamento" class="mt-1 text-xs text-slate-500 dark:text-slate-500">
+                Local: {{ anexo.local_armazenamento }}
+              </p>
             </div>
 
             <div class="flex flex-shrink-0 gap-2">
+              <button
+                type="button"
+                class="rounded-lg border border-blue-500/40 px-3 py-2 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-500/10 dark:text-blue-300"
+                @click="$emit('view', anexo.id)"
+              >
+                Visualizar
+              </button>
               <button
                 type="button"
                 class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
@@ -147,6 +157,10 @@ const props = defineProps({
     type: [Number, String],
     default: null,
   },
+  protocoloId: {
+    type: [Number, String],
+    default: null,
+  },
   saving: {
     type: Boolean,
     default: false,
@@ -165,7 +179,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['upload', 'remove', 'download']);
+const emit = defineEmits(['upload', 'remove', 'download', 'view']);
 
 const descricao = ref('');
 const selectedFile = ref(null);
@@ -175,6 +189,7 @@ const hideBackendError = ref(false);
 
 const maxFileBytes = 50 * 1024 * 1024;
 
+const canUpload = computed(() => !!props.formularioId || !!props.protocoloId);
 const visibleBackendError = computed(() => props.errorMessage && !fileError.value && !hideBackendError.value);
 const visibleError = computed(() => fileError.value || (hideBackendError.value ? '' : props.errorMessage));
 const showProgress = computed(() => props.saving || props.progress > 0);

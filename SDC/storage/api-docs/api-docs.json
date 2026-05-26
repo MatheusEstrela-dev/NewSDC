@@ -15,7 +15,7 @@
     },
     "servers": [
         {
-            "url": "https://localhost:19443",
+            "url": "https://localhost:19444",
             "description": "Servidor de Desenvolvimento (FrankenPHP HTTPS)"
         },
         {
@@ -25,6 +25,9 @@
         {
             "url": "https://api.sdc.gov.br",
             "description": "Servidor de Producao"
+        },
+        {
+            "url": "https://localhost:19444"
         }
     ],
     "paths": {
@@ -1366,6 +1369,29 @@
                 ]
             }
         },
+        "/api/v1/decretacoes/export/power-bi/async": {
+            "get": {
+                "tags": [
+                    "Decretacoes"
+                ],
+                "summary": "Export Power BI assincrono (recomendado para datasets grandes)",
+                "description": "Versao assincrona do export Power BI. Despacha job e retorna 202 com\ntrace_id. Cliente consulta GET /api/v1/traces/{traceId} e baixa CSV\nvia /download quando completed.",
+                "operationId": "decretacoesExportPowerBIAsync",
+                "responses": {
+                    "202": {
+                        "description": "Job enfileirado; consulte status via trace_id"
+                    },
+                    "401": {
+                        "description": "Nao autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/decretacoes/receive": {
             "post": {
                 "tags": [
@@ -2310,7 +2336,7 @@
                     {
                         "name": "page",
                         "in": "query",
-                        "description": "Número da página",
+                        "description": "Numero da pagina",
                         "required": false,
                         "schema": {
                             "type": "integer",
@@ -2320,7 +2346,7 @@
                     {
                         "name": "per_page",
                         "in": "query",
-                        "description": "Itens por página",
+                        "description": "Itens por pagina",
                         "required": false,
                         "schema": {
                             "type": "integer",
@@ -2330,7 +2356,7 @@
                     {
                         "name": "municipio_id",
                         "in": "query",
-                        "description": "Filtrar por município",
+                        "description": "Filtrar por municipio",
                         "required": false,
                         "schema": {
                             "type": "integer"
@@ -2344,11 +2370,20 @@
                         "schema": {
                             "type": "string",
                             "enum": [
-                                "aprovado",
-                                "em_analise",
-                                "pendente",
-                                "vencido"
+                                "OPERACAO",
+                                "DESATIVADA",
+                                "CONSTRUCAO",
+                                "DESCOMISSIONAMENTO"
                             ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Busca textual no nome do empreendimento",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 ],
@@ -2378,7 +2413,7 @@
                         }
                     },
                     "401": {
-                        "description": "Não autenticado",
+                        "description": "Nao autenticado",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2414,69 +2449,78 @@
                             "schema": {
                                 "required": [
                                     "nome",
-                                    "tipo",
                                     "municipio_id",
-                                    "latitude",
-                                    "longitude",
-                                    "nivel_emergencia",
-                                    "status"
+                                    "pae_empdor_id"
                                 ],
                                 "properties": {
                                     "nome": {
                                         "type": "string",
                                         "example": "Barragem Sul Superior"
                                     },
-                                    "tipo": {
+                                    "status": {
                                         "type": "string",
                                         "enum": [
-                                            "Barragem de Rejeitos",
-                                            "Barragem de Água",
-                                            "Outro"
-                                        ],
-                                        "example": "Barragem de Rejeitos"
+                                            "OPERACAO",
+                                            "DESATIVADA",
+                                            "CONSTRUCAO",
+                                            "DESCOMISSIONAMENTO"
+                                        ]
                                     },
                                     "municipio_id": {
                                         "type": "integer",
                                         "example": 123
                                     },
-                                    "latitude": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": -20.2547
-                                    },
-                                    "longitude": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": -43.8011
-                                    },
-                                    "nivel_emergencia": {
+                                    "pae_empdor_id": {
                                         "type": "integer",
-                                        "enum": [
-                                            1,
-                                            2,
-                                            3
-                                        ],
-                                        "example": 1
+                                        "example": 5
                                     },
-                                    "status": {
+                                    "m_construcao": {
                                         "type": "string",
-                                        "enum": [
-                                            "aprovado",
-                                            "em_analise",
-                                            "pendente",
-                                            "vencido"
-                                        ],
-                                        "example": "em_analise"
+                                        "example": "Alteamento a Jusante"
                                     },
-                                    "data_emissao": {
+                                    "material": {
                                         "type": "string",
-                                        "format": "date",
-                                        "example": "2024-10-15"
+                                        "example": "Rejeitos"
                                     },
-                                    "proximo_vencimento": {
+                                    "finalidade": {
                                         "type": "string",
-                                        "format": "date",
-                                        "example": "2025-10-15"
+                                        "example": "Contencao de Rejeitos"
+                                    },
+                                    "volume": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 12500000.5
+                                    },
+                                    "pop_zas": {
+                                        "type": "integer",
+                                        "example": 1500
+                                    },
+                                    "orgao_fisc": {
+                                        "type": "string",
+                                        "example": "ANM"
+                                    },
+                                    "coordenador": {
+                                        "type": "string"
+                                    },
+                                    "tel_coordenador": {
+                                        "type": "string"
+                                    },
+                                    "email_coord": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "mina": {
+                                        "type": "string"
+                                    },
+                                    "coordenador_sub": {
+                                        "type": "string"
+                                    },
+                                    "tel_coordenador_sub": {
+                                        "type": "string"
+                                    },
+                                    "email_coord_sub": {
+                                        "type": "string",
+                                        "format": "email"
                                     }
                                 },
                                 "type": "object"
@@ -2505,7 +2549,7 @@
                         }
                     },
                     "422": {
-                        "description": "Erro de validação",
+                        "description": "Erro de validacao",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2536,8 +2580,8 @@
                 "tags": [
                     "PAE"
                 ],
-                "summary": "Exibe um empreendimento específico",
-                "description": "Retorna os detalhes completos de um empreendimento PAE, incluindo documentos, histórico e comitê",
+                "summary": "Exibe um empreendimento especifico",
+                "description": "Retorna os detalhes completos de um empreendimento PAE",
                 "operationId": "showEmpreendimento",
                 "parameters": [
                     {
@@ -2568,14 +2612,14 @@
                         }
                     },
                     "404": {
-                        "description": "Empreendimento não encontrado",
+                        "description": "Empreendimento nao encontrado",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Empreendimento não encontrado."
+                                            "example": "Empreendimento nao encontrado."
                                         }
                                     },
                                     "type": "object"
@@ -2595,7 +2639,7 @@
                     "PAE"
                 ],
                 "summary": "Atualiza um empreendimento PAE",
-                "description": "Atualiza os dados de um empreendimento existente",
+                "description": "Atualiza os dados de um empreendimento existente. Todos os campos sao opcionais.",
                 "operationId": "updateEmpreendimento",
                 "parameters": [
                     {
@@ -2610,6 +2654,7 @@
                     }
                 ],
                 "requestBody": {
+                    "description": "Todos os campos sao opcionais.",
                     "required": true,
                     "content": {
                         "application/json": {
@@ -2622,19 +2667,67 @@
                                     "status": {
                                         "type": "string",
                                         "enum": [
-                                            "aprovado",
-                                            "em_analise",
-                                            "pendente",
-                                            "vencido"
+                                            "OPERACAO",
+                                            "DESATIVADA",
+                                            "CONSTRUCAO",
+                                            "DESCOMISSIONAMENTO"
                                         ]
                                     },
-                                    "nivel_emergencia": {
+                                    "municipio_id": {
                                         "type": "integer",
-                                        "enum": [
-                                            1,
-                                            2,
-                                            3
-                                        ]
+                                        "example": 123
+                                    },
+                                    "pae_empdor_id": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "m_construcao": {
+                                        "type": "string",
+                                        "example": "Alteamento a Jusante"
+                                    },
+                                    "material": {
+                                        "type": "string",
+                                        "example": "Rejeitos"
+                                    },
+                                    "finalidade": {
+                                        "type": "string",
+                                        "example": "Contencao de Rejeitos"
+                                    },
+                                    "volume": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 12500000.5
+                                    },
+                                    "pop_zas": {
+                                        "type": "integer",
+                                        "example": 1500
+                                    },
+                                    "orgao_fisc": {
+                                        "type": "string",
+                                        "example": "ANM"
+                                    },
+                                    "coordenador": {
+                                        "type": "string"
+                                    },
+                                    "tel_coordenador": {
+                                        "type": "string"
+                                    },
+                                    "email_coord": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "mina": {
+                                        "type": "string"
+                                    },
+                                    "coordenador_sub": {
+                                        "type": "string"
+                                    },
+                                    "tel_coordenador_sub": {
+                                        "type": "string"
+                                    },
+                                    "email_coord_sub": {
+                                        "type": "string",
+                                        "format": "email"
                                     }
                                 },
                                 "type": "object"
@@ -2663,7 +2756,7 @@
                         }
                     },
                     "404": {
-                        "description": "Empreendimento não encontrado"
+                        "description": "Empreendimento nao encontrado"
                     }
                 },
                 "security": [
@@ -2677,7 +2770,7 @@
                     "PAE"
                 ],
                 "summary": "Remove um empreendimento PAE",
-                "description": "Remove um empreendimento do sistema",
+                "description": "Remove um empreendimento do sistema (soft delete)",
                 "operationId": "deleteEmpreendimento",
                 "parameters": [
                     {
@@ -2696,7 +2789,7 @@
                         "description": "Empreendimento removido com sucesso"
                     },
                     "404": {
-                        "description": "Empreendimento não encontrado"
+                        "description": "Empreendimento nao encontrado"
                     }
                 },
                 "security": [
@@ -3018,436 +3111,34 @@
                 ]
             }
         },
-        "/api/v1/rat/protocolos": {
+        "/api/v1/traces/{traceId}": {
             "get": {
                 "tags": [
-                    "RAT"
+                    "Traces"
                 ],
-                "summary": "Lista protocolos RAT / export Power BI",
-                "description": "Lista protocolos RAT ou exporta flat para Power BI.\n\n?format=powerbi → retorna array flat desnormalizado (sem paginacao)\nsem parametro   → retorna lista paginada com RatListResource",
-                "operationId": "486604ef5445a5ba7b780014a0f41b12",
+                "summary": "Consulta status de um request assincrono",
+                "description": "Retorna o status atual (pending/processing/completed/failed),\r\n     *                  e quando completed inclui URL de download do artefato.",
+                "operationId": "getTrace",
                 "parameters": [
                     {
-                        "name": "format",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "powerbi"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "protocolo",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "status",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "municipio",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "ano",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "data_inicio",
-                        "in": "query",
-                        "description": "Filtro por data inicial (YYYY-MM-DD)",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "format": "date"
-                        }
-                    },
-                    {
-                        "name": "data_fim",
-                        "in": "query",
-                        "description": "Filtro por data final (YYYY-MM-DD)",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "format": "date"
-                        }
-                    },
-                    {
-                        "name": "per_page",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 15
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Sucesso",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "allOf": [
-                                        {
-                                            "$ref": "#/components/schemas/SuccessResponse"
-                                        },
-                                        {
-                                            "$ref": "#/components/schemas/PaginatedResponse"
-                                        }
-                                    ]
-                                },
-                                "examples": {
-                                    "listagemPaginada": {
-                                        "summary": "Listagem paginada padrao",
-                                        "value": {
-                                            "success": true,
-                                            "data": [
-                                                {
-                                                    "dados_gerais": {
-                                                        "id": 155,
-                                                        "numero_bos": "2025-000000001-001",
-                                                        "status": 1,
-                                                        "status_descricao": "Finalizado",
-                                                        "uf": "MG",
-                                                        "municipio": "620 - BELO HORIZONTE",
-                                                        "data_fato": "2025-12-23 08:53:00",
-                                                        "data_inicio_atividade": "2025-12-23 08:53:00",
-                                                        "data_termino_atividade": "2025-12-23 08:53:00",
-                                                        "comunicacao_data": "2025-12-23 08:53:00",
-                                                        "created_at": "2025-12-23 08:53:14",
-                                                        "updated_at": "2025-12-23 08:54:53"
-                                                    },
-                                                    "recursos": [
-                                                        {
-                                                            "id": 8,
-                                                            "tipo_recurso": "aquatico",
-                                                            "categoria": "comunicacao",
-                                                            "numero_viatura": "HNH 1932",
-                                                            "placa": "HNH 1932",
-                                                            "orgao": "samu",
-                                                            "descricao": "Voluptatem rerum qui"
-                                                        }
-                                                    ],
-                                                    "envolvidos": [
-                                                        {
-                                                            "id": 37,
-                                                            "tipo_pessoa": "juridica",
-                                                            "nome": "Quod ipsum omnis ir",
-                                                            "email": "buta@mailinator.com",
-                                                            "data_nascimento": "2017-09-23"
-                                                        }
-                                                    ],
-                                                    "vistoria": {
-                                                        "id": 9
-                                                    }
-                                                }
-                                            ],
-                                            "meta": {
-                                                "current_page": 1,
-                                                "per_page": 15,
-                                                "total": 1,
-                                                "last_page": 1
-                                            }
-                                        }
-                                    },
-                                    "exportPowerbi": {
-                                        "summary": "Exportacao flat para Power BI (?format=powerbi)",
-                                        "value": {
-                                            "success": true,
-                                            "data": [
-                                                {
-                                                    "rat_id": 155,
-                                                    "protocolo": "2025-000000001-001",
-                                                    "status": "finalizado",
-                                                    "created_at": "2025-12-23 08:53:14",
-                                                    "updated_at": "2025-12-23 08:54:53",
-                                                    "dados_gerais_data_fato": "2025-12-23 08:53:00",
-                                                    "dados_gerais_data_inicio_atividade": "2025-12-23 08:53:00",
-                                                    "dados_gerais_data_termino_atividade": "2025-12-23 08:53:00",
-                                                    "comunicacao_data": "2025-12-23 08:53:00",
-                                                    "recurso_data_saida": "2025-12-23 08:53:00",
-                                                    "recurso_data_chegada": "2025-12-23 08:53:00",
-                                                    "envolvido_data_nascimento": "2017-09-23"
-                                                }
-                                            ],
-                                            "meta": {
-                                                "total_registros": 1,
-                                                "gerado_em": "2025-12-23 09:00:00"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Requisicao invalida",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Nao autenticado",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Erro de validacao",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "429": {
-                        "description": "Rate limit excedido"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "RAT"
-                ],
-                "summary": "Recebe dados externos e cria protocolo RAT",
-                "description": "Recebe dados externos e cria um novo RAT.",
-                "operationId": "9f6a5759209f0da9c452a5f4794cc213",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "dados_gerais": {
-                                        "type": "object"
-                                    },
-                                    "comunicacao": {
-                                        "type": "object"
-                                    },
-                                    "local": {
-                                        "type": "object"
-                                    },
-                                    "endereco": {
-                                        "type": "object"
-                                    },
-                                    "recursos": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "envolvidos": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "vistoria": {
-                                        "type": "object"
-                                    },
-                                    "finalize": {
-                                        "type": "boolean",
-                                        "example": false,
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "RAT criado com sucesso",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SuccessResponse"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Requisicao invalida",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Nao autenticado",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Dados invalidos",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "429": {
-                        "description": "Rate limit excedido"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/rat/protocolos/{id}": {
-            "get": {
-                "tags": [
-                    "RAT"
-                ],
-                "summary": "Detalhe de um protocolo RAT",
-                "description": "Detalhe completo de um RAT por UUID.",
-                "operationId": "ccc6fb514f5307d9809ccb570d1fb6e6",
-                "parameters": [
-                    {
-                        "name": "id",
+                        "name": "traceId",
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Protocolo encontrado",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "allOf": [
-                                        {
-                                            "$ref": "#/components/schemas/SuccessResponse"
-                                        },
-                                        {
-                                            "properties": {
-                                                "data": {
-                                                    "required": [
-                                                        "dados_gerais",
-                                                        "recursos",
-                                                        "envolvidos",
-                                                        "vistoria"
-                                                    ],
-                                                    "properties": {
-                                                        "dados_gerais": {
-                                                            "type": "object"
-                                                        },
-                                                        "recursos": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "object"
-                                                            }
-                                                        },
-                                                        "envolvidos": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "type": "object"
-                                                            }
-                                                        },
-                                                        "vistoria": {
-                                                            "type": "object"
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Requisicao invalida",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Nao autenticado",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Erro de validacao",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
+                        "description": "Status retornado"
                     },
                     "404": {
-                        "description": "Nao encontrado",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
+                        "description": "Trace nao encontrado"
+                    },
+                    "403": {
+                        "description": "Trace de outro usuario"
                     }
                 },
                 "security": [
@@ -4315,6 +4006,7 @@
             },
             "Empreendimento": {
                 "title": "Empreendimento PAE",
+                "description": "Empreendimento (barragem) cadastrado no modulo PAE",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -4324,9 +4016,51 @@
                         "type": "string",
                         "example": "Barragem Sul Superior"
                     },
-                    "tipo": {
+                    "status": {
                         "type": "string",
-                        "example": "Barragem de Rejeitos"
+                        "enum": [
+                            "OPERACAO",
+                            "DESATIVADA",
+                            "CONSTRUCAO",
+                            "DESCOMISSIONAMENTO"
+                        ],
+                        "example": "OPERACAO"
+                    },
+                    "mina": {
+                        "type": "string",
+                        "example": "Mina Sul",
+                        "nullable": true
+                    },
+                    "metodo_construtivo": {
+                        "type": "string",
+                        "example": "Alteamento a Jusante",
+                        "nullable": true
+                    },
+                    "material": {
+                        "type": "string",
+                        "example": "Rejeitos",
+                        "nullable": true
+                    },
+                    "finalidade": {
+                        "type": "string",
+                        "example": "Contencao de Rejeitos",
+                        "nullable": true
+                    },
+                    "volume": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 12500000.5,
+                        "nullable": true
+                    },
+                    "populacao_zas": {
+                        "type": "integer",
+                        "example": 1500,
+                        "nullable": true
+                    },
+                    "orgao_fiscalizador": {
+                        "type": "string",
+                        "example": "ANM",
+                        "nullable": true
                     },
                     "municipio": {
                         "properties": {
@@ -4345,53 +4079,88 @@
                         },
                         "type": "object"
                     },
-                    "coordenadas": {
+                    "empreendedor": {
                         "properties": {
-                            "lat": {
-                                "type": "number",
-                                "format": "float",
-                                "example": -20.2547
+                            "id": {
+                                "type": "integer",
+                                "example": 5
                             },
-                            "lng": {
-                                "type": "number",
-                                "format": "float",
-                                "example": -43.8011
+                            "nome": {
+                                "type": "string",
+                                "example": "Vale S/A"
+                            },
+                            "cnpj": {
+                                "type": "string",
+                                "example": "33592510000154"
                             }
                         },
                         "type": "object"
                     },
-                    "protocolo": {
-                        "type": "string",
-                        "example": "2024.10.15.0081"
+                    "coordenador": {
+                        "properties": {
+                            "nome": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "telefone": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "email": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
                     },
-                    "status": {
-                        "type": "string",
-                        "enum": [
-                            "aprovado",
-                            "em_analise",
-                            "pendente",
-                            "vencido"
-                        ],
-                        "example": "aprovado"
+                    "coordenador_substituto": {
+                        "properties": {
+                            "nome": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "telefone": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "email": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
                     },
-                    "nivel_emergencia": {
-                        "type": "integer",
-                        "enum": [
-                            1,
-                            2,
-                            3
-                        ],
-                        "example": 1
-                    },
-                    "data_emissao": {
-                        "type": "string",
-                        "format": "date",
-                        "example": "2024-10-15"
-                    },
-                    "proximo_vencimento": {
-                        "type": "string",
-                        "format": "date",
-                        "example": "2025-10-15"
+                    "ultimo_protocolo": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 42
+                            },
+                            "num_protocolo": {
+                                "type": "string",
+                                "example": "2024.10.15.0081"
+                            },
+                            "sigibar": {
+                                "type": "string",
+                                "example": "SIG-001"
+                            },
+                            "status": {
+                                "type": "string",
+                                "example": "analise"
+                            },
+                            "dt_entrada": {
+                                "type": "string",
+                                "format": "date",
+                                "example": "2024-10-15"
+                            },
+                            "ccpae_vencimento": {
+                                "type": "string",
+                                "format": "date",
+                                "example": "2025-10-15"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
                     },
                     "created_at": {
                         "type": "string",
@@ -4524,8 +4293,8 @@
             "description": "Endpoints para integração com Power BI e geração de tokens para múltiplas APIs"
         },
         {
-            "name": "RAT",
-            "description": "Endpoints do modulo RAT (Registro de Atendimento Tecnico)"
+            "name": "Traces",
+            "description": "Consulta de status de requests assincronos (AsynchronousResponse)"
         }
     ],
     "security": [

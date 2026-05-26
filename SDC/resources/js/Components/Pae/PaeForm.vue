@@ -39,6 +39,7 @@
       <PaeFormAnexos
         :items="rat.anexos"
         :formulario-id="formularioId"
+        :protocolo-id="protocoloId"
         :saving="rat.saving"
         :progress="rat.anexoProgress"
         :status-message="rat.anexoStatus"
@@ -46,6 +47,7 @@
         @upload="handleUploadAnexo"
         @remove="handleRemoveAnexo"
         @download="handleDownloadAnexo"
+        @view="handleViewAnexo"
       />
     </div>
 
@@ -96,6 +98,10 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  protocolo: {
+    type: Object,
+    default: null,
+  },
 });
 
 const activeSubTab = ref(1);
@@ -142,6 +148,13 @@ const formularioId = computed(
     ?? null
 );
 
+const protocoloId = computed(
+  () => props.protocolo?.id
+    ?? props.formulario?.pae_protocolo_id
+    ?? rat.infoGerais?.pae_protocolo_id
+    ?? null
+);
+
 function handleSaveInfoGerais(data) {
   Object.assign(rat.infoGerais, data);
   // Após o POST de criação, o Inertia recarrega a página com o novo formulario
@@ -165,7 +178,7 @@ function handleSaveApontamentos() {
 
 function handleUploadAnexo(payload) {
   const { onSuccess, onError, ...data } = payload;
-  rat.uploadAnexo(formularioId.value, data, { onSuccess, onError });
+  rat.uploadAnexo(formularioId.value, data, { onSuccess, onError }, protocoloId.value);
 }
 
 function handleRemoveAnexo(anexoId) {
@@ -174,6 +187,10 @@ function handleRemoveAnexo(anexoId) {
 
 function handleDownloadAnexo(anexoId) {
   rat.downloadAnexo(formularioId.value, anexoId);
+}
+
+function handleViewAnexo(anexoId) {
+  rat.viewAnexo(formularioId.value, anexoId);
 }
 
 function handleSaveConclusao() {

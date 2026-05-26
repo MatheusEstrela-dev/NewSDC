@@ -46,6 +46,11 @@ class PaeProtocolo extends Model
         'ccpae_venc' => 'date',
     ];
 
+    protected static function newFactory()
+    {
+        return \Database\Factories\Pae\PaeProtocoloFactory::new();
+    }
+
     public function analistaAtual(): BelongsTo
     {
         return $this->belongsTo(User::class, 'analista_atual_id');

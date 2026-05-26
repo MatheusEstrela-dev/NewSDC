@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Pae\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PaeEmpdor extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'pae_empdors';
 
@@ -19,6 +20,11 @@ class PaeEmpdor extends Model
         'cnpj',
         'status',
     ];
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\Pae\PaeEmpdorFactory::new();
+    }
 
     public function empntos(): HasMany
     {
