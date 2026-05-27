@@ -22,18 +22,18 @@ use App\Http\Controllers\Controller;
  * )
  *
  * @OA\Server(
+ *     url="/",
+ *     description="Servidor atual (mesma origem da documentacao)"
+ * )
+ *
+ * @OA\Server(
+ *     url="https://sdcdefesa.azurewebsites.net",
+ *     description="Servidor de Producao (Azure App Service)"
+ * )
+ *
+ * @OA\Server(
  *     url="https://localhost:19444",
  *     description="Servidor de Desenvolvimento (FrankenPHP HTTPS)"
- * )
- *
- * @OA\Server(
- *     url="http://localhost:19080",
- *     description="Servidor de Desenvolvimento (HTTP)"
- * )
- *
- * @OA\Server(
- *     url="https://api.sdc.gov.br",
- *     description="Servidor de Producao"
  * )
  *
  * @OA\SecurityScheme(
