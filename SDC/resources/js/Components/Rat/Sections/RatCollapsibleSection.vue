@@ -59,7 +59,7 @@
 </template>
 
 <script setup>
-import { useCollapsible } from '@/composables/rat';
+import { useCollapsible } from '@/Composables/rat/useCollapsible';
 
 const props = defineProps({
   sectionId: {

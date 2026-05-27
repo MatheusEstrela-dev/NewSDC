@@ -41,10 +41,8 @@ class RatProtocoloService
             ->orderByDesc('numero_bos')
             ->value('numero_bos');
 
-        if ($latestOld) {
-            // Extract sequence (middle part between hyphens): YYYY-SEQUENCE-UNITCODE
-            $parts = explode('-', $latestOld);
-            $seq = max($seq, (int) $parts[1]);
+        if ($latestOld && preg_match('/^\d{4}-(\d+)-\d{3}$/', $latestOld, $m)) {
+            $seq = max($seq, (int) $m[1]);
         }
 
         return $seq;
