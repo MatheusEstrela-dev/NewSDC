@@ -164,7 +164,11 @@ export function useRat({
     }
 
     function atualizarHistorico(data) {
-        historico.value = Array.isArray(data) ? [...data] : [];
+        if (typeof data === 'string') {
+            historico.value = data;
+        } else {
+            historico.value = Array.isArray(data) ? [...data] : [];
+        }
     }
 
     // ─── Anexos ──────────────────────────────────────────────────────────────

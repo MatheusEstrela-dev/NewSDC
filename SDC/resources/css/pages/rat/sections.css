@@ -16,8 +16,7 @@
    ============================================ */
 
 .rat-actions-footer {
-  @apply rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50;
-  padding: 1rem 1.5rem;
+  padding: 1rem 0;
   margin-top: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -26,7 +25,7 @@
   .rat-actions-footer {
     margin-top: 0.75rem;
     margin-bottom: 1rem;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 0;
   }
 }
 

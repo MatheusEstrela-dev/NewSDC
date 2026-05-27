@@ -29,7 +29,7 @@
           @add="adicionarRecurso"
           @remove="removerRecurso"
           @update="atualizarRecursos"
-          @save="() => salvarComAnexos(currentFormData)"
+          @save="() => salvarComAnexos(currentFormData).then(() => unlockAndAdvanceTab(2)).catch(() => {})"
         />
       </div>
 
@@ -40,7 +40,7 @@
           @add="adicionarEnvolvido"
           @remove="removerEnvolvido"
           @update="atualizarEnvolvidos"
-          @save="() => salvarComAnexos(currentFormData)"
+          @save="() => salvarComAnexos(currentFormData).then(() => unlockAndAdvanceTab(3)).catch(() => {})"
         />
       </div>
 
@@ -49,7 +49,7 @@
           :vistoria="vistoria"
           :view-only="false"
           @update="atualizarVistoria"
-          @save="() => salvarComAnexos(currentFormData)"
+          @save="() => salvarComAnexos(currentFormData).then(() => unlockAndAdvanceTab(4)).catch(() => {})"
         />
       </div>
 
@@ -59,7 +59,7 @@
           :view-only="false"
           @add-observation="adicionarObservacao"
           @update="atualizarHistorico"
-          @save="() => salvarComAnexos(currentFormData)"
+          @save="() => salvarComAnexos(currentFormData).then(() => unlockAndAdvanceTab(5)).catch(() => {})"
         />
       </div>
 
@@ -137,9 +137,8 @@ function unlockAndAdvanceTab(currentTabId) {
   const idx = ordered.indexOf(Number(currentTabId));
   if (idx >= 0 && idx < ordered.length - 1) {
     const nextId = ordered[idx + 1];
-    if (!unlockedTabs.value.includes(nextId)) {
-      unlockedTabs.value = [...unlockedTabs.value, nextId];
-    }
+    // Bloqueio exclusivo: apenas a próxima aba fica ativa
+    unlockedTabs.value = [nextId];
     tabs.setActiveTab(nextId);
   }
 }
@@ -220,7 +219,7 @@ function onTabChange(tabId) {
 }
 
 const tabConfig = computed(() => [
-  { id: 1, label: 'Dados Gerais',        icon: DocumentTextIcon, disabled: false },
+  { id: 1, label: 'Dados Gerais',        icon: DocumentTextIcon, disabled: !unlockedTabs.value.includes(1) },
   { id: 2, label: 'Recursos Empregados', icon: TruckIcon,         badge: recursos.value?.length || null, disabled: !unlockedTabs.value.includes(2) },
   { id: 3, label: 'Envolvidos',          icon: UsersIcon,         badge: envolvidos.value?.length || null, disabled: !unlockedTabs.value.includes(3) },
   { id: 4, label: 'Vistoria',            icon: ClipboardIcon,     hidden: !temVistoria.value, disabled: !unlockedTabs.value.includes(4) },
