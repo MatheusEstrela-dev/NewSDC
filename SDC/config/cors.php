@@ -1,6 +1,7 @@
 <?php
 
 $defaultAllowedOrigins = [
+    'https://sdcdefesa.azurewebsites.net',
     'https://newsdc2027.azurewebsites.net',
     'https://localhost:19444',
     'http://localhost:3000',

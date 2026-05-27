@@ -15,19 +15,16 @@
     },
     "servers": [
         {
+            "url": "/",
+            "description": "Servidor atual (mesma origem da documentacao)"
+        },
+        {
+            "url": "https://sdcdefesa.azurewebsites.net",
+            "description": "Servidor de Producao (Azure App Service)"
+        },
+        {
             "url": "https://localhost:19444",
             "description": "Servidor de Desenvolvimento (FrankenPHP HTTPS)"
-        },
-        {
-            "url": "http://localhost:19080",
-            "description": "Servidor de Desenvolvimento (HTTP)"
-        },
-        {
-            "url": "https://api.sdc.gov.br",
-            "description": "Servidor de Producao"
-        },
-        {
-            "url": "https://localhost:19444"
         }
     ],
     "paths": {
