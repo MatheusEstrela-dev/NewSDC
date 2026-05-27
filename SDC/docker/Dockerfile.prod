@@ -96,6 +96,11 @@ COPY . .
 # Remover arquivo hot do Vite dev server
 RUN rm -f public/hot
 
+# Garantir que bootstrap/cache exista antes do dump-autoload
+# (o post-autoload-dump roda artisan package:discover, que escreve o manifest
+#  em bootstrap/cache; em contexto limpo o diretorio ainda nao existe)
+RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
+
 # Executar scripts do composer após copiar código
 RUN composer dump-autoload --optimize --classmap-authoritative
 
