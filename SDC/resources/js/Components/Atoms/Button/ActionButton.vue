@@ -253,23 +253,42 @@ const page = usePage();
 
 const isSuperAdmin = computed(() => Boolean(page.props.auth?.user?.is_super_admin));
 
+/**
+ * Decide se uma acao deve ser visivel para o usuario atual.
+ *
+ * Ordem de avaliacao (cada passo encerra se decidir):
+ *  1. Super-admin: bypass total (RBAC ignorado).
+ *  2. UI-only (`options`/`warning`/`notifications`): sempre visivel, nao tem slug.
+ *  3. `allowed === false` (regra de negocio nega): esconde, nao consulta RBAC.
+ *  4. Sem slug possivel (sem resource E module ausente/global):
+ *     fail-closed — so mostra se `allowed === true` explicito.
+ *  5. Caso geral: monta slug `{module}.{resource?}.{action}` e consulta `can()`.
+ *     `allowed` ja foi tratado nos passos 3-4 acima. Se chegou aqui,
+ *     `allowed` e `null` (default) ou `true` (regra de negocio nao bloqueou),
+ *     em ambos os casos delegamos a decisao final ao RBAC.
+ */
 function hasPermissionFor({ action, module = props.module, resource = props.resource, allowed = null, aliasOverride = null }) {
+  // 1. Super-admin bypass
   if (isSuperAdmin.value) return true;
+
+  // 2. UI-only actions nao consultam RBAC
   if (UI_ONLY_ACTIONS.includes(action)) return true;
 
-  const slugAction = aliasOverride ?? ACTION_ALIAS[action] ?? action;
+  // 3. Regra de negocio explicita bloqueia: short-circuit antes de qualquer consulta
+  if (allowed === false) return false;
 
-  let slug;
-  if (resource === '' || resource === null || resource === undefined) {
-    if (!module || module === 'global') return allowed === true;
-    slug = `${module}.${slugAction}`;
-  } else {
-    slug = `${module}.${resource}.${slugAction}`;
+  const slugAction = aliasOverride ?? ACTION_ALIAS[action] ?? action;
+  const noResource = resource === '' || resource === null || resource === undefined;
+  const hasUsableModule = module && module !== 'global';
+
+  // 4. Sem slug possivel: fail-closed
+  if (noResource && !hasUsableModule) {
+    return allowed === true;
   }
 
-  const canByPerm = can(slug);
-  if (allowed !== null) return canByPerm && allowed;
-  return canByPerm;
+  // 5. Consulta RBAC com slug montado
+  const slug = noResource ? `${module}.${slugAction}` : `${module}.${resource}.${slugAction}`;
+  return can(slug);
 }
 
 const isGroupMode = computed(() => Array.isArray(props.actions));
