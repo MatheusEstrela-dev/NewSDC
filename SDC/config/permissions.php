@@ -294,7 +294,7 @@ return [
                 'aprovar'  => 'compdec.plano.aprovar',
                 'download' => 'compdec.plano.download',
             ],
-            'UsuarioVinculo' => [
+            'Usuarios' => [
                 'manage' => 'compdec.usuarios.manage',
                 'desvincular' => 'compdec.usuarios.desvincular',
             ],
