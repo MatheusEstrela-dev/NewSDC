@@ -16,7 +16,7 @@
             :can-edit="can('rat.protocolos.edit')"
             :can-delete="can('rat.protocolos.delete')"
             :can-export="can('rat.protocolos.export')"
-            :can-finalize="can('rat.protocolos.finalize')"
+            :can-finalize="can('rat.protocolos.finalizar')"
         />
     </div>
 </template>

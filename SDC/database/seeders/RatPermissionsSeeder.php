@@ -40,7 +40,7 @@ class RatPermissionsSeeder extends Seeder
         'rat.protocolos.edit' => [
             'description' => 'Editar dados de RATs e ocorrências em rascunho/andamento',
         ],
-        'rat.protocolos.finalize' => [
+        'rat.protocolos.finalizar' => [
             'description' => 'Finalizar RATs e ocorrências (bloqueia edição)',
         ],
         'rat.protocolos.delete' => [
@@ -126,7 +126,7 @@ class RatPermissionsSeeder extends Seeder
             'rat.protocolos.view',
             'rat.protocolos.create',
             'rat.protocolos.edit',
-            'rat.protocolos.finalize',
+            'rat.protocolos.finalizar',
             'rat.protocolos.export',
             'rat.relatos.manage',
             'rat.historico.view',

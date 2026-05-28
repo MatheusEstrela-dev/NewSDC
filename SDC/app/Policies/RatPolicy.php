@@ -55,7 +55,7 @@ class RatPolicy extends BasePolicy
             return Response::deny('Este protocolo já está finalizado.');
         }
 
-        return $this->checkPermissionOrDeny($user, 'rat.protocolos.finalize');
+        return $this->checkPermissionOrDeny($user, 'rat.protocolos.finalizar');
     }
 
     public function export(User $user): bool

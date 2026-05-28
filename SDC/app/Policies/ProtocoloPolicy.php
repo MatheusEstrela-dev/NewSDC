@@ -55,6 +55,6 @@ class ProtocoloPolicy
 
     public function finalize(User $user, $protocolo): bool
     {
-        return $user->can('rat.protocolos.finalize');
+        return $user->can('rat.protocolos.finalizar');
     }
 }

@@ -116,7 +116,7 @@ return [
                 'create' => 'rat.protocolos.create',
                 'edit' => 'rat.protocolos.edit',
                 'delete' => 'rat.protocolos.delete',
-                'finalize' => 'rat.protocolos.finalize',
+                'finalize' => 'rat.protocolos.finalizar',
                 'export' => 'rat.protocolos.export',
             ],
         ],
@@ -386,7 +386,7 @@ return [
             'rat.protocolos.view',
             'rat.protocolos.create',
             'rat.protocolos.edit',
-            'rat.protocolos.finalize',
+            'rat.protocolos.finalizar',
             'rat.protocolos.export',
             // Demandas - gestao completa
             'demandas.chamados.view',
