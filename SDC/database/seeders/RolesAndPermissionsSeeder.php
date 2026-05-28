@@ -182,6 +182,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete' => 'Deletar',
             'approve' => 'Aprovar',
             'assign' => 'Atribuir',
+            'atribuir' => 'Atribuir',
             'finalize' => 'Finalizar',
             'manage' => 'Gerenciar',
             'execute' => 'Executar',
@@ -190,6 +191,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'logs' => 'Visualizar Logs',
             'cache' => 'Limpar Cache',
             'settings' => 'Configuracoes',
+            'print' => 'Imprimir',
+            'pdf' => 'Gerar PDF',
+            'history' => 'Visualizar Historico',
+            'arquivar' => 'Arquivar',
+            'validar' => 'Validar',
+            'attachments' => 'Gerenciar Anexos',
+            'desvincular' => 'Desvincular',
         ];
 
         $actionLabel = $actionLabels[$action] ?? ucfirst($action);
