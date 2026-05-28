@@ -119,6 +119,12 @@ return [
                 'finalize' => 'rat.protocolos.finalize',
                 'export' => 'rat.protocolos.export',
             ],
+            'Api' => [
+                'access' => 'rat.api.access',
+            ],
+            'Historico' => [
+                'view' => 'rat.historico.view',
+            ],
         ],
         'DEMANDAS' => [
             'Chamados' => [
@@ -181,6 +187,7 @@ return [
                 'view' => 'tdap.cronogramas.view',
                 'create' => 'tdap.cronogramas.create',
                 'edit' => 'tdap.cronogramas.edit',
+                'delete' => 'tdap.cronogramas.delete',
                 'ativar' => 'tdap.cronogramas.ativar',
                 'prorrogar' => 'tdap.cronogramas.prorrogar',
                 'export' => 'tdap.cronogramas.export',
@@ -194,6 +201,7 @@ return [
                 'view' => 'tdap.vistorias.view',
                 'create' => 'tdap.vistorias.create',
                 'edit' => 'tdap.vistorias.edit',
+                'delete' => 'tdap.vistorias.delete',
                 'aprovar' => 'tdap.vistorias.aprovar',
             ],
             'Historico' => [
@@ -366,6 +374,7 @@ return [
             'integrations.*',
             'webhooks.*',
             'system.*',
+            'cisternas.*',
             'compdec.*',
             'inventario.*',
             'estoque.*',
@@ -382,12 +391,14 @@ return [
             'pae.protocolos.edit',
             'pae.protocolos.atribuir',
             'pae.protocolos.export',
-            // RAT - CRUD completo exceto delete
+            // RAT - CRUD completo exceto delete + api + historico
             'rat.protocolos.view',
             'rat.protocolos.create',
             'rat.protocolos.edit',
             'rat.protocolos.finalize',
             'rat.protocolos.export',
+            'rat.api.access',
+            'rat.historico.view',
             // Demandas - gestao completa
             'demandas.chamados.view',
             'demandas.chamados.create',
@@ -453,6 +464,11 @@ return [
             'integrations.execute',
             'webhooks.send',
             'webhooks.logs.view',
+            // Cisternas - gestao sem delete
+            'cisternas.view',
+            'cisternas.create',
+            'cisternas.edit',
+            'cisternas.export',
             // COMPDEC - sem delete e sem aprovar
             'compdec.orgaos.view',
             'compdec.orgaos.create',
@@ -512,10 +528,12 @@ return [
             'pae.protocolos.create',
             'pae.protocolos.edit',
             'pae.protocolos.atribuir',
-            // RAT - view, create, edit
+            // RAT - view, create, edit + historico + api
             'rat.protocolos.view',
             'rat.protocolos.create',
             'rat.protocolos.edit',
+            'rat.historico.view',
+            'rat.api.access',
             // Demandas - view, create, edit
             'demandas.chamados.view',
             'demandas.chamados.create',
@@ -559,6 +577,10 @@ return [
             // Integracoes
             'integrations.view',
             'webhooks.logs.view',
+            // Cisternas - view/create/edit
+            'cisternas.view',
+            'cisternas.create',
+            'cisternas.edit',
             // COMPDEC - sem delete e sem aprovar
             'compdec.orgaos.view',
             'compdec.orgaos.create',
@@ -602,9 +624,11 @@ return [
             'pae.empreendimentos.create',
             'pae.protocolos.view',
             'pae.protocolos.create',
-            // RAT - view, create
+            // RAT - view, create + historico + api
             'rat.protocolos.view',
             'rat.protocolos.create',
+            'rat.historico.view',
+            'rat.api.access',
             // Demandas - view, create
             'demandas.chamados.view',
             'demandas.chamados.create',
@@ -630,6 +654,9 @@ return [
             'plantao.turnos.create',
             // BI - view
             'bi.dashboards.view',
+            // Cisternas - view/create
+            'cisternas.view',
+            'cisternas.create',
             // COMPDEC - leitura + downloads
             'compdec.orgaos.view',
             'compdec.prefeitura.view',
@@ -654,6 +681,7 @@ return [
             'pae.empreendimentos.view',
             'pae.protocolos.view',
             'rat.protocolos.view',
+            'rat.historico.view',
             'demandas.chamados.view',
             'decretacoes.processos.view',
             'humanitaria.beneficiarios.view',
@@ -670,6 +698,7 @@ return [
             'treinamento.cursos.view',
             'plantao.turnos.view',
             'bi.dashboards.view',
+            'cisternas.view',
             // COMPDEC - somente leitura
             'compdec.orgaos.view',
             'compdec.prefeitura.view',
