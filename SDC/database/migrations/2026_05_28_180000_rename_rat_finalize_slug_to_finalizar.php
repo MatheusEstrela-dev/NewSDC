@@ -16,20 +16,24 @@ return new class extends Migration
 
     public function up(): void
     {
-        foreach (self::RENAMES as $oldSlug => $newSlug) {
-            $this->renameOnPermissions($oldSlug, $newSlug);
-            $this->renameOnTokens($oldSlug, $newSlug);
-        }
+        DB::transaction(function () {
+            foreach (self::RENAMES as $oldSlug => $newSlug) {
+                $this->renameOnPermissions($oldSlug, $newSlug);
+                $this->renameOnTokens($oldSlug, $newSlug);
+            }
+        });
 
         $this->forgetSpatieCache();
     }
 
     public function down(): void
     {
-        foreach (self::RENAMES as $oldSlug => $newSlug) {
-            $this->renameOnPermissions($newSlug, $oldSlug);
-            $this->renameOnTokens($newSlug, $oldSlug);
-        }
+        DB::transaction(function () {
+            foreach (self::RENAMES as $oldSlug => $newSlug) {
+                $this->renameOnPermissions($newSlug, $oldSlug);
+                $this->renameOnTokens($newSlug, $oldSlug);
+            }
+        });
 
         $this->forgetSpatieCache();
     }
@@ -52,8 +56,12 @@ return new class extends Migration
 
     /**
      * Atualiza abilities JSON de tokens Sanctum vivos que contenham o slug antigo.
-     * Tokens Sanctum congelam abilities no momento da criacao (string textual),
+     * Tokens Sanctum congelam abilities no momento da criacao (JSON array textual),
      * por isso precisamos atualizar para preservar autorizacao das integracoes.
+     *
+     * Faz match exato por elemento do array (json_decode -> compare -> json_encode)
+     * para evitar falso-positivo de substring caso surja outro slug que CONTENHA
+     * o slug antigo como prefixo (ex: 'rat.protocolos.finalize' vs 'rat.protocolos.finalize_x').
      */
     private function renameOnTokens(string $from, string $to): void
     {
@@ -66,12 +74,23 @@ return new class extends Migration
             ->get(['id', 'abilities']);
 
         foreach ($tokens as $token) {
-            $updated = str_replace($from, $to, $token->abilities);
+            $abilities = json_decode((string) $token->abilities, true);
+            if (!is_array($abilities)) {
+                continue;
+            }
 
-            if ($updated !== $token->abilities) {
+            $changed = false;
+            foreach ($abilities as $i => $ability) {
+                if ($ability === $from) {
+                    $abilities[$i] = $to;
+                    $changed = true;
+                }
+            }
+
+            if ($changed) {
                 DB::table('personal_access_tokens')
                     ->where('id', $token->id)
-                    ->update(['abilities' => $updated]);
+                    ->update(['abilities' => json_encode(array_values($abilities))]);
             }
         }
     }
