@@ -156,16 +156,15 @@
             </div>
 
             <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
-              <TableActions
-                :show-view="true"
-                :show-edit="canEdit && !role.is_immutable"
-                :show-delete="canDelete && !role.is_immutable && role.users_count === 0"
-                :show-print="false"
-                :show-attachments="false"
+              <ActionButton
+                module="roles"
+                resource=""
                 size="sm"
-                @view="router.get(route('admin.permissions.roles.show', role.id))"
-                @edit="router.get(route('admin.permissions.roles.edit', role.id))"
-                @delete="confirmDelete(role)"
+                :actions="[
+                  { action: 'view',   handler: () => router.get(route('admin.permissions.roles.show', role.id)) },
+                  { action: 'edit',   handler: () => router.get(route('admin.permissions.roles.edit', role.id)), allowed: canEdit && !role.is_immutable },
+                  { action: 'delete', handler: () => confirmDelete(role), allowed: canDelete && !role.is_immutable && role.users_count === 0 },
+                ]"
               />
             </div>
           </div>
@@ -207,7 +206,7 @@
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import StatsCard from '@/Components/Admin/StatsCard.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import { usePermissions } from '@/Composables/usePermissions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';

@@ -70,17 +70,15 @@
 
             <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 w-32 min-w-32" @click.stop>
               <div class="flex items-center justify-end">
-                <TableActions
-                  :show-view="true"
-                  :show-print="false"
-                  :show-edit="canEdit"
-                  :show-attachments="false"
-                  :show-delete="canDelete"
-                  :show-options="false"
+                <ActionButton
+                  module="cisternas"
+                  resource=""
                   size="sm"
-                  @view="$emit('show', cisterna)"
-                  @edit="$emit('edit', cisterna)"
-                  @delete="$emit('delete', cisterna)"
+                  :actions="[
+                    { action: 'view',   handler: () => $emit('show', cisterna) },
+                    { action: 'edit',   handler: () => $emit('edit', cisterna),   allowed: canEdit },
+                    { action: 'delete', handler: () => $emit('delete', cisterna), allowed: canDelete },
+                  ]"
                 />
               </div>
             </td>
@@ -101,7 +99,7 @@
 
 <script setup>
 import CubeIcon from '@/Components/Icons/CubeIcon.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import StatusCisternaBadge from '@/Components/Molecules/Cisterna/StatusCisternaBadge.vue';
 import TipoCisternaBadge from '@/Components/Molecules/Cisterna/TipoCisternaBadge.vue';
 

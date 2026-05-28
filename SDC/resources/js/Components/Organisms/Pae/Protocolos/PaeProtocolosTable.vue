@@ -49,26 +49,18 @@
             <!-- Acoes -->
             <td class="px-4 py-3 w-44 min-w-44">
               <div class="flex items-center justify-end">
-                <TableActions
-                  :show-attachments="false"
-                  :show-delete="canDelete"
-                  :show-edit="canEdit"
-                  :show-history="true"
-                  :show-check="canCheck"
-                  :show-pdf="canPdf"
-                  :show-archive="true"
-                  :show-options="true"
-                  :show-assign="canAtribuir && isAssignableStatus(protocolo.situacao)"
-                  @view="$emit('view', protocolo.id)"
-                  @print="$emit('print', protocolo.id)"
-                  @edit="$emit('edit', protocolo.id)"
-                  @history="$emit('history', protocolo.id)"
-                  @check="$emit('check', protocolo.id)"
-                  @pdf="$emit('pdf', protocolo.id)"
-                  @archive="$emit('archive', protocolo.id)"
-                  @delete="$emit('delete', protocolo.id)"
-                  @options="$emit('options', protocolo.id)"
-                  @assign="$emit('assign', protocolo.id)"
+                <ActionButton
+                  module="pae"
+                  resource="protocolos"
+                  :actions="[
+                    { action: 'edit',    handler: () => $emit('edit', protocolo),    allowed: canEdit },
+                    { action: 'history', handler: () => $emit('history', protocolo) },
+                    { action: 'archive', handler: () => $emit('archive', protocolo) },
+                    { action: 'delete',  handler: () => $emit('delete', protocolo),  allowed: canDelete },
+                    { action: 'check',  placement: 'menu', handler: () => $emit('check', protocolo),  allowed: canCheck },
+                    { action: 'pdf',    placement: 'menu', handler: () => $emit('pdf', protocolo),    allowed: canPdf },
+                    { action: 'assign', placement: 'menu', handler: () => $emit('assign', protocolo), allowed: canAtribuir && isAssignableStatus(protocolo.situacao) },
+                  ]"
                 />
               </div>
             </td>
@@ -87,7 +79,7 @@
 <script setup>
 import PrazosPill from '@/Components/Molecules/Pae/Protocolos/PrazosPill.vue';
 import StatusPill from '@/Components/Molecules/Pae/Protocolos/StatusPill.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import { isAssignableStatus } from '@/Composables/usePaeAssignableStatus';
 
 defineProps({

@@ -69,16 +69,15 @@
 
     <!-- Actions -->
     <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-700/30 dark:border-slate-700/30 border-slate-200">
-      <TableActions
-        :show-view="true"
-        :show-print="true"
-        :show-edit="canEdit"
-        :show-attachments="false"
-        :show-delete="canDelete"
-        @view="$emit('view', processo.id)"
-        @print="$emit('print', processo.id)"
-        @edit="$emit('edit', processo.id)"
-        @delete="$emit('delete', processo.id)"
+      <ActionButton
+        module="decretacoes"
+        resource="processos"
+        :actions="[
+          { action: 'view',   handler: () => $emit('view', processo) },
+          { action: 'print',  handler: () => $emit('print', processo) },
+          { action: 'edit',   handler: () => $emit('edit', processo),   allowed: canEdit },
+          { action: 'delete', handler: () => $emit('delete', processo), allowed: canDelete },
+        ]"
       />
     </div>
   </CardBase>
@@ -89,7 +88,7 @@ import { computed } from 'vue';
 import CardBase from '../../Atoms/Card/CardBase.vue';
 import Heading from '../../Atoms/Typography/Heading.vue';
 import Text from '../../Atoms/Typography/Text.vue';
-import TableActions from '../../Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import PrazoBadge from './PrazoBadge.vue';
 import StatusBadge from './StatusBadge.vue';
 import TipoProcessoBadge from './TipoProcessoBadge.vue';

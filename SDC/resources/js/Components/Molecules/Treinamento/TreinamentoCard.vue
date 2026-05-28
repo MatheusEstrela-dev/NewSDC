@@ -3,7 +3,7 @@ import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import { computed } from 'vue';
 
 const props = defineProps({
@@ -114,16 +114,15 @@ const vagasText = computed(() => {
 
       <!-- Ações -->
       <div class="flex gap-1" @click.stop>
-        <TableActions
-          :show-view="true"
-          :show-print="false"
-          :show-edit="canEdit"
-          :show-attachments="false"
-          :show-delete="canDelete"
+        <ActionButton
+          module="treinamento"
+          resource="cursos"
           size="sm"
-          @view="emit('view', treinamento.id)"
-          @edit="emit('edit', treinamento.id)"
-          @delete="emit('delete', treinamento.id)"
+          :actions="[
+            { action: 'view',   handler: () => emit('view', treinamento.id) },
+            { action: 'edit',   handler: () => emit('edit', treinamento.id),   allowed: canEdit },
+            { action: 'delete', handler: () => emit('delete', treinamento.id), allowed: canDelete },
+          ]"
         />
       </div>
     </div>

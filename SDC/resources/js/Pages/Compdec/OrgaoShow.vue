@@ -107,14 +107,13 @@
             </td>
             <td v-if="canVincularUsuarios" class="actions-col">
               <div class="flex justify-end">
-                <TableActions
-                  :show-view="false"
-                  :show-print="false"
-                  :show-edit="false"
-                  :show-attachments="false"
-                  :show-delete="canVincularUsuarios"
+                <ActionButton
+                  module="compdec"
+                  resource="usuarios"
                   size="sm"
-                  @delete="handleDesvincularUsuario(usuario.id)"
+                  :actions="[
+                    { action: 'delete', aliasOverride: 'desvincular', handler: () => handleDesvincularUsuario(usuario.id), allowed: canVincularUsuarios, label: 'Desvincular' },
+                  ]"
                 />
               </div>
             </td>
@@ -185,7 +184,6 @@ import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vue';
 import TipoOrgaoBadge from '@/Components/Molecules/Compdec/TipoOrgaoBadge.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import CompdecTabs from '@/Components/Organisms/Compdec/CompdecTabs.vue';
 import GeralTab from '@/Components/Organisms/Compdec/Tabs/GeralTab.vue';
 import CapacidadesTab from '@/Components/Organisms/Compdec/Tabs/CapacidadesTab.vue';

@@ -1,4 +1,5 @@
 <script setup>
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
@@ -208,16 +209,15 @@ function handleExportCsv(params) {
             </td>
             <td class="px-4 py-3">
               <div class="flex items-center justify-end">
-                <TableActions
-                  :show-view="true"
-                  :show-print="false"
-                  :show-edit="canEdit"
-                  :show-attachments="false"
-                  :show-delete="canDelete"
+                <ActionButton
+                  module="treinamento"
+                  resource="cursos"
                   size="sm"
-                  @view="emit('view', treinamento.id)"
-                  @edit="emit('edit', treinamento.id)"
-                  @delete="emit('delete', treinamento.id)"
+                  :actions="[
+                    { action: 'view',   handler: () => emit('view', treinamento.id) },
+                    { action: 'edit',   handler: () => emit('edit', treinamento.id),   allowed: canEdit },
+                    { action: 'delete', handler: () => emit('delete', treinamento.id), allowed: canDelete },
+                  ]"
                 />
               </div>
             </td>
