@@ -139,6 +139,7 @@
       <ActionButton
         v-if="canDelete"
         module="compdec"
+        resource="orgaos"
         action="delete"
         :allowed="canDelete"
         label="Excluir"

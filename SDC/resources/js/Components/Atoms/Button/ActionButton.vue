@@ -251,7 +251,7 @@ const isUploading = ref(false);
 const { can } = usePermissions();
 const page = usePage();
 
-const isSuperAdmin = computed(() => page.props.auth?.user?.is_super_admin === true);
+const isSuperAdmin = computed(() => Boolean(page.props.auth?.user?.is_super_admin));
 
 function hasPermissionFor({ action, module = props.module, resource = props.resource, allowed = null, aliasOverride = null }) {
   if (isSuperAdmin.value) return true;
@@ -322,7 +322,7 @@ const buttonLoading = computed(() => props.loading || isUploading.value);
 
 const computedVariant = computed(() => props.variant || ActionVariants[props.action] || 'primary');
 const computedIconVariant = computed(() => props.variant || ActionIconVariants[props.action] || 'secondary');
-const computedIcon = computed(() => props.icon || ActionIcons[props.action] || null);
+const computedIcon = computed(() => props.icon || (props.action ? ActionIcons[props.action] : null) || null);
 const computedLabel = computed(() => props.label !== null ? props.label : ActionLabels[props.action] || '');
 
 const tooltipTitle = computed(() => {
