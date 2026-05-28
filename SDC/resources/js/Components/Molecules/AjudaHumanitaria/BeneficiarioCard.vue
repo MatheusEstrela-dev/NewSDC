@@ -88,16 +88,15 @@
 
     <!-- Actions -->
     <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-700/30 dark:border-slate-700/30 border-slate-200">
-      <TableActions
-        :show-view="true"
-        :show-print="true"
-        :show-edit="canEdit"
-        :show-attachments="false"
-        :show-delete="canDelete"
-        @view="$emit('view', beneficiario.id)"
-        @print="$emit('print', beneficiario.id)"
-        @edit="$emit('edit', beneficiario.id)"
-        @delete="$emit('delete', beneficiario.id)"
+      <ActionButton
+        module="humanitaria"
+        resource="beneficiarios"
+        :actions="[
+          { action: 'view',   handler: () => $emit('view', beneficiario) },
+          { action: 'print',  handler: () => $emit('print', beneficiario) },
+          { action: 'edit',   handler: () => $emit('edit', beneficiario),   allowed: canEdit },
+          { action: 'delete', handler: () => $emit('delete', beneficiario), allowed: canDelete },
+        ]"
       />
     </div>
   </div>
@@ -107,7 +106,7 @@
 import Badge from '../../Atoms/Badge/Badge.vue';
 import Heading from '../../Atoms/Typography/Heading.vue';
 import Text from '../../Atoms/Typography/Text.vue';
-import TableActions from '../Table/TableActions.vue';
+import ActionButton from '../../Atoms/Button/ActionButton.vue';
 
 const props = defineProps({
   beneficiario: {

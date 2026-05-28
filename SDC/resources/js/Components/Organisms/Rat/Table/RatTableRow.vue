@@ -27,16 +27,16 @@
     </TableCell>
     <TableCell align="right" class="w-44 whitespace-nowrap">
       <div class="flex justify-end">
-        <TableActions
-          :show-print="true"
-          :show-edit="canEdit"
-          :show-delete="canDelete"
-          attachments-label="Relacionar"
-          @view="handleView"
-          @print="handlePrint"
-          @edit="handleEdit"
-          @attachments="handleAttachments"
-          @delete="handleDelete"
+        <ActionButton
+          module="rat"
+          resource="protocolos"
+          :actions="[
+            { action: 'view',        handler: () => emit('view', props.rat) },
+            { action: 'print',       handler: () => emit('print', props.rat) },
+            { action: 'edit',        handler: () => emit('edit', props.rat),        allowed: canEdit },
+            { action: 'attachments', handler: () => emit('attachments', props.rat), label: 'Relacionar' },
+            { action: 'delete',      handler: () => emit('delete', props.rat),      allowed: canDelete },
+          ]"
         />
       </div>
     </TableCell>
@@ -49,7 +49,7 @@ import { ref, onMounted } from 'vue';
 import Badge from '../../../Atoms/Badge/Badge.vue';
 import StatusBadge from '../../../Atoms/Badge/StatusBadge.vue';
 import TableCell from '../../../Atoms/Table/TableCell.vue';
-import TableActions from '../../../Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TableDataRow from '../../../Molecules/Table/TableDataRow.vue';
 
 // Module-level cache so each IBGE code is fetched only once per page load

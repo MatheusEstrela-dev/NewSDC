@@ -101,16 +101,15 @@
         >
           <template #actions>
             <div class="flex items-center justify-end gap-1.5">
-              <TableActions
-                :show-view="true"
-                :show-print="false"
-                :show-edit="canEdit"
-                :show-attachments="false"
-                :show-delete="canDelete"
+              <ActionButton
+                module="users"
+                resource=""
                 size="sm"
-                @view="router.get(route('admin.permissions.users.show', user.id))"
-                @edit="router.get(route('admin.permissions.users.edit', user.id))"
-                @delete="confirmDelete(user)"
+                :actions="[
+                  { action: 'view',   handler: () => router.get(route('admin.permissions.users.show', user.id)) },
+                  { action: 'edit',   handler: () => router.get(route('admin.permissions.users.edit', user.id)), allowed: canEdit },
+                  { action: 'delete', handler: () => confirmDelete(user), allowed: canDelete },
+                ]"
               />
             </div>
           </template>
@@ -214,16 +213,15 @@
                   {{ formatDate(user.created_at) }}
                 </td>
                 <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-right">
-                  <TableActions
-                    :show-view="true"
-                    :show-print="false"
-                    :show-edit="canEdit"
-                    :show-attachments="false"
-                    :show-delete="canDelete"
+                  <ActionButton
+                    module="users"
+                    resource=""
                     size="sm"
-                    @view="router.get(route('admin.permissions.users.show', user.id))"
-                    @edit="router.get(route('admin.permissions.users.edit', user.id))"
-                    @delete="confirmDelete(user)"
+                    :actions="[
+                      { action: 'view',   handler: () => router.get(route('admin.permissions.users.show', user.id)) },
+                      { action: 'edit',   handler: () => router.get(route('admin.permissions.users.edit', user.id)), allowed: canEdit },
+                      { action: 'delete', handler: () => confirmDelete(user), allowed: canDelete },
+                    ]"
                   />
                 </td>
               </tr>
@@ -271,7 +269,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TableMobileCard from '@/Components/Molecules/Table/TableMobileCard.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import { useMobile } from '@/Composables/useMobile';

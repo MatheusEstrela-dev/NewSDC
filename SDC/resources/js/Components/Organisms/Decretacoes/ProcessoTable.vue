@@ -81,20 +81,16 @@
             <!-- Acoes -->
             <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 w-36 min-w-36">
               <div class="flex items-center justify-end">
-                <TableActions
-                  :show-view="true"
-                  :show-print="true"
-                  :show-edit="canEdit"
-                  :show-attachments="false"
-                  :show-delete="canDelete"
-                  :show-warning="true"
-                  :show-options="true"
-                  @view="openDetailModal(processo)"
-                  @print="$emit('print', processo.id)"
-                  @edit="openEditChoiceModal(processo.id)"
-                  @delete="$emit('delete', processo.id)"
-                  @warning="$emit('warning', processo.id)"
-                  @options="$emit('options', processo.id)"
+                <ActionButton
+                  module="decretacoes"
+                  resource="processos"
+                  :actions="[
+                    { action: 'view',    handler: () => openDetailModal(processo) },
+                    { action: 'print',   handler: () => emit('print', processo) },
+                    { action: 'edit',    handler: () => openEditChoiceModal(processo.id), allowed: canEdit },
+                    { action: 'delete',  handler: () => emit('delete', processo),  allowed: canDelete },
+                    { action: 'warning', handler: () => emit('warning', processo) },
+                  ]"
                 />
               </div>
             </td>
@@ -137,7 +133,7 @@ import DocumentIcon from '../../Icons/DocumentTextIcon.vue';
 import PrazoBadge from '../../Molecules/Decretacoes/PrazoBadge.vue';
 import StatusBadge from '../../Molecules/Decretacoes/StatusBadge.vue';
 import TipoProcessoBadge from '../../Molecules/Decretacoes/TipoProcessoBadge.vue';
-import TableActions from '../../Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Pagination from '../../Molecules/Navigation/Pagination.vue';
 import DecretacaoDetailModal from './Details/DecretacaoDetailModal.vue';
 import EditChoiceModal from './EditChoiceModal.vue';

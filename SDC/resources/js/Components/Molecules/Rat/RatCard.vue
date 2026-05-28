@@ -33,18 +33,17 @@
 
     <!-- Footer Actions -->
     <div class="rat-card-footer">
-      <TableActions
-        :show-print="true"
-        :show-edit="canEdit"
-        :show-attachments="true"
-        :show-delete="canDelete"
-        attachments-label="Relacionar"
+      <ActionButton
+        module="rat"
+        resource="protocolos"
         size="md"
-        @view="$emit('view', rat.id)"
-        @print="$emit('print', rat.id)"
-        @edit="$emit('edit', rat.id)"
-        @attachments="$emit('attachments', rat.id)"
-        @delete="$emit('delete', rat.id)"
+        :actions="[
+          { action: 'view',        handler: () => $emit('view', rat) },
+          { action: 'print',       handler: () => $emit('print', rat) },
+          { action: 'edit',        handler: () => $emit('edit', rat),        allowed: canEdit },
+          { action: 'attachments', handler: () => $emit('attachments', rat), label: 'Relacionar' },
+          { action: 'delete',      handler: () => $emit('delete', rat),      allowed: canDelete },
+        ]"
       />
     </div>
   </div>
@@ -52,7 +51,7 @@
 
 <script setup>
 import StatusBadge from '@/Components/Atoms/Badge/StatusBadge.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 
 const props = defineProps({
   rat: {

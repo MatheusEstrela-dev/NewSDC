@@ -55,15 +55,14 @@
           </td>
           <td v-if="canEdit || canDelete" class="actions-col">
             <div class="flex justify-end">
-              <TableActions
-                :show-view="false"
-                :show-print="false"
-                :show-attachments="false"
-                :show-edit="canEdit"
-                :show-delete="canDelete"
+              <ActionButton
+                module="compdec"
+                resource="equipe"
                 size="sm"
-                @edit="$emit('edit', membro)"
-                @delete="$emit('delete', membro)"
+                :actions="[
+                  { action: 'edit',   handler: () => $emit('edit', membro),   allowed: canEdit },
+                  { action: 'delete', handler: () => $emit('delete', membro), allowed: canDelete },
+                ]"
               />
             </div>
           </td>
@@ -81,7 +80,7 @@ import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import FuncaoEquipeBadge from '@/Components/Molecules/Compdec/FuncaoEquipeBadge.vue';
 import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import { PlusIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({

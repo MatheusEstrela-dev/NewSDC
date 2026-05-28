@@ -43,28 +43,20 @@
     </div>
 
     <div class="mt-5 flex items-center justify-between gap-2">
-      <TableActions
+      <ActionButton
         module="pae"
-        :show-attachments="false"
-        :show-delete="false"
-        :show-edit="canEdit"
-        :show-history="true"
-        :show-notifications="true"
-        :show-check="canCheck"
-        :show-pdf="canPdf"
-        :show-archive="canDelete"
-        :show-options="true"
-        :show-assign="canAtribuir && isAssignableStatus(protocolo.situacao)"
-        @view="$emit('view', protocolo.id)"
-        @print="$emit('print', protocolo.id)"
-        @edit="$emit('edit', protocolo.id)"
-        @history="$emit('history', protocolo.id)"
-        @notifications="$emit('notifications', protocolo.id)"
-        @check="$emit('check', protocolo.id)"
-        @pdf="$emit('pdf', protocolo.id)"
-        @archive="$emit('archive', protocolo.id)"
-        @options="$emit('options', protocolo.id)"
-        @assign="$emit('assign', protocolo.id)"
+        resource="protocolos"
+        :actions="[
+          { action: 'view',          handler: () => $emit('view', protocolo) },
+          { action: 'print',         handler: () => $emit('print', protocolo) },
+          { action: 'edit',          handler: () => $emit('edit', protocolo),          allowed: canEdit },
+          { action: 'history',       handler: () => $emit('history', protocolo) },
+          { action: 'notifications', handler: () => $emit('notifications', protocolo) },
+          { action: 'archive',       handler: () => $emit('archive', protocolo),       allowed: canDelete },
+          { action: 'check',  placement: 'menu', handler: () => $emit('check', protocolo),  allowed: canCheck },
+          { action: 'pdf',    placement: 'menu', handler: () => $emit('pdf', protocolo),    allowed: canPdf },
+          { action: 'assign', placement: 'menu', handler: () => $emit('assign', protocolo), allowed: canAtribuir && isAssignableStatus(protocolo.situacao) },
+        ]"
       />
     </div>
   </CardBase>
@@ -74,7 +66,7 @@
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';

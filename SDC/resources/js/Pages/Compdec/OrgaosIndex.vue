@@ -77,14 +77,14 @@
             </td>
             <td class="actions-column">
               <div class="flex items-center justify-end">
-                <TableActions
-                  :show-view="true"
-                  :show-edit="canManage"
-                  :show-attachments="false"
-                  :show-delete="canDeleteOrgao(orgao)"
-                  @view="handleView(orgao.id)"
-                  @edit="handleEdit(orgao.id)"
-                  @delete="handleDelete(orgao)"
+                <ActionButton
+                  module="compdec"
+                  resource="orgaos"
+                  :actions="[
+                    { action: 'view',   handler: () => handleView(orgao.id) },
+                    { action: 'edit',   handler: () => handleEdit(orgao.id),   allowed: canManage },
+                    { action: 'delete', handler: () => handleDelete(orgao),    allowed: canDeleteOrgao(orgao) },
+                  ]"
                 />
               </div>
             </td>
@@ -130,7 +130,7 @@ import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vu
 import TipoOrgaoBadge from '@/Components/Molecules/Compdec/TipoOrgaoBadge.vue';
 import OrgaoStatsCards from '@/Components/Organisms/Compdec/OrgaoStatsCards.vue';
 import OrgaosFiltersSection from '@/Components/Organisms/Compdec/OrgaosFiltersSection.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
