@@ -155,26 +155,50 @@ class AuditPermissionsCommand extends Command
     private function extractBackendUsages(): array
     {
         $usages = [];
-        $roots = [app_path(), base_path('routes')];
+        $slugRegex = "[a-z][a-z0-9_.-]+\.[a-z0-9_.-]+";
 
-        $patterns = [
-            // can:slug ou ability:slug em middlewares
-            "/->middleware\(\s*['\"](?:can|permission|role_or_permission|ability):([a-z][a-z0-9_.-]+\.[a-z0-9_.-]+)['\"]\s*\)/",
-            // \$user->can('slug') / Gate::allows('slug') / can('slug')
-            "/(?:->can|Gate::(?:allows|denies|authorize)|hasPermissionTo)\(\s*['\"]([a-z][a-z0-9_.-]+\.[a-z0-9_.-]+)['\"]/",
-            // checkPermissionOrDeny($user, 'slug')
-            "/checkPermissionOrDeny\([^,]+,\s*['\"]([a-z][a-z0-9_.-]+\.[a-z0-9_.-]+)['\"]/",
+        // Patterns aplicaveis a arquivos PHP (controllers, policies, routes)
+        $phpPatterns = [
+            // ->middleware('can:slug') | 'permission:slug' | 'role_or_permission:slug' | 'ability:slug'
+            "/->middleware\(\s*['\"](?:can|permission|role_or_permission|ability):({$slugRegex})['\"]/",
+            // can:slug DENTRO de array de middlewares: ['can:slug', ...]
+            "/['\"](?:can|permission|role_or_permission|ability):({$slugRegex})['\"]/",
+            // ->can('slug') / ->can('slug', \$model) | Gate::allows/denies/authorize | hasPermissionTo
+            "/(?:->can|->cannot|Gate::(?:allows|denies|authorize|forUser\([^)]+\)->(?:allows|denies|authorize))|hasPermissionTo|hasAnyPermission|hasAllPermissions)\(\s*['\"]({$slugRegex})['\"]/",
+            // \$this->authorize('action', \$model) | authorize('slug')
+            "/->authorize\(\s*['\"]({$slugRegex})['\"]/",
+            // checkPermissionOrDeny(\$user, 'slug') — padrao do BasePolicy
+            "/checkPermissionOrDeny\([^,]+,\s*['\"]({$slugRegex})['\"]/",
+        ];
+
+        // Patterns aplicaveis a arquivos Blade
+        // Cobre @can('slug') | @cannot('slug') | @canany(['slug', ...]) — primeiro slug do array
+        // Limitacao conhecida: arrays multi-slug em @canany capturam apenas o primeiro.
+        $bladePatterns = [
+            "/@(?:can|cannot|canany|canall)\(\s*['\"]({$slugRegex})['\"]/",
+            "/@(?:canany|canall)\(\s*\[\s*['\"]({$slugRegex})['\"]/",
+        ];
+
+        $roots = [
+            ['path' => app_path(), 'ext' => 'php', 'patterns' => $phpPatterns],
+            ['path' => base_path('routes'), 'ext' => 'php', 'patterns' => $phpPatterns],
+            ['path' => base_path('resources/views'), 'ext' => 'blade.php', 'patterns' => $bladePatterns],
         ];
 
         foreach ($roots as $root) {
-            if (!is_dir($root)) {
+            if (!is_dir($root['path'])) {
                 continue;
             }
 
-            $files = File::allFiles($root);
+            $files = File::allFiles($root['path']);
 
             foreach ($files as $file) {
-                if (!$file instanceof SplFileInfo || $file->getExtension() !== 'php') {
+                if (!$file instanceof SplFileInfo) {
+                    continue;
+                }
+
+                $filename = $file->getFilename();
+                if (!str_ends_with($filename, '.' . $root['ext'])) {
                     continue;
                 }
 
@@ -186,8 +210,34 @@ class AuditPermissionsCommand extends Command
                 $relative = str_replace(base_path() . DIRECTORY_SEPARATOR, '', $file->getRealPath());
                 $relative = str_replace('\\', '/', $relative);
 
+                $inBlockComment = false;
+
                 foreach ($lines as $i => $line) {
-                    foreach ($patterns as $pattern) {
+                    // Skip linhas vazias
+                    if (trim($line) === '') {
+                        continue;
+                    }
+
+                    // Skip linhas dentro de bloco de comentario /* ... */ (PHP)
+                    if ($root['ext'] === 'php') {
+                        $trimmed = trim($line);
+                        if ($inBlockComment) {
+                            if (str_contains($line, '*/')) {
+                                $inBlockComment = false;
+                            }
+                            continue;
+                        }
+                        if (str_starts_with($trimmed, '/*') && !str_contains($trimmed, '*/')) {
+                            $inBlockComment = true;
+                            continue;
+                        }
+                        // Skip linhas que sao comentarios de linha unica
+                        if (str_starts_with($trimmed, '//') || str_starts_with($trimmed, '*') || str_starts_with($trimmed, '#')) {
+                            continue;
+                        }
+                    }
+
+                    foreach ($root['patterns'] as $pattern) {
                         if (preg_match_all($pattern, $line, $matches)) {
                             foreach ($matches[1] as $slug) {
                                 $usages[] = [
