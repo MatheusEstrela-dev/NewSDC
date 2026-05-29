@@ -100,18 +100,24 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
     }
   }
 
-  function saveObjetivoContexto(id) {
+  function saveObjetivoContexto(id, onSaved) {
     saving.value = true;
     router.put(`/pae/formulario/${id}/objetivo`, objetivoContexto.value, {
-      onSuccess: () => toast('Objetivo e contextualização atualizados.'),
+      onSuccess: () => {
+        toast('Objetivo e contextualização atualizados.');
+        if (onSaved) onSaved();
+      },
       onFinish: () => { saving.value = false; },
     });
   }
 
-  function saveApontamentos(id) {
+  function saveApontamentos(id, onSaved) {
     saving.value = true;
     router.put(`/pae/formulario/${id}/aptecnico`, { apontamentos: apontamentos.value }, {
-      onSuccess: () => toast('Apontamentos técnicos salvos.'),
+      onSuccess: () => {
+        toast('Apontamentos técnicos salvos.');
+        if (onSaved) onSaved();
+      },
       onFinish: () => { saving.value = false; },
     });
   }
