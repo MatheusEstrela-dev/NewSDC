@@ -10,8 +10,10 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\UserStatusHistory;
 use App\Modules\Compdec\Models\Orgao;
+use App\Services\Auth\EmailChangeService;
 use App\Services\Auth\OnboardingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -463,6 +465,27 @@ class UserManagementController extends Controller
         }
 
         $oldStatus = $user->status ?? ($user->active ? 'active' : 'inactive');
+
+        // Troca de e-mail pelo admin segue o MESMO fluxo de magic code
+        // (sem bypass) — admin nao pode "forjar" posse de e-mail.
+        if (isset($payload['email']) && $payload['email'] !== $user->email) {
+            $newEmail = $payload['email'];
+            unset($payload['email']);
+
+            try {
+                app(EmailChangeService::class)->requestChange(
+                    $user, $newEmail, $request, byAdmin: auth()->user()
+                );
+                // Invalida cache para o user-alvo enxergar pending_email_change
+                // assim que carregar a proxima pagina.
+                Cache::forget("inertia_user_data_{$user->id}");
+            } catch (\App\Exceptions\Auth\EmailChange\EmailAlreadyInUseException) {
+                return back()->with('error', 'E-mail ja cadastrado em outro usuario.');
+            } catch (\App\Exceptions\Auth\EmailChange\SameEmailException) {
+                // silencioso
+            }
+        }
+
         $user->update($payload);
 
         if (array_key_exists('status', $payload) && $oldStatus !== $payload['status']) {

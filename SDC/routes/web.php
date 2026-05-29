@@ -2,6 +2,7 @@
 
 
 
+use App\Http\Controllers\Auth\EmailChangeVerificationController;
 use App\Http\Controllers\ProfileController;
 use App\Modules\Rat\Presentation\Http\Controllers\RatIndexController;
 use App\Http\Controllers\GlobalSearchController;
@@ -45,6 +46,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Email change verification (magic code flow)
+    Route::post('/profile/email/verify', [EmailChangeVerificationController::class, 'verify'])
+        ->name('profile.email.verify')
+        ->middleware('throttle:10,1');
+
+    Route::post('/profile/email/resend', [EmailChangeVerificationController::class, 'resend'])
+        ->name('profile.email.resend')
+        ->middleware('throttle:6,1');
+
+    Route::post('/profile/email/cancel', [EmailChangeVerificationController::class, 'cancel'])
+        ->name('profile.email.cancel');
 
     // Log Viewer - Sistema Avançado de Visualização de Logs
     Route::get('/log-viewer', function (Illuminate\Http\Request $request) {
