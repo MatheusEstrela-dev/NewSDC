@@ -21,8 +21,12 @@ class PaeProtocoloService extends BaseService
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = PaeProtocolo::query()
-            ->with(['analistaAtual:id,name', 'empreendimento:id,pae_empdor_id,nome', 'empreendimento.empdor:id,nome'])
-            ->ativo();
+            ->with(['analistaAtual:id,name', 'empreendimento:id,pae_empdor_id,nome', 'empreendimento.empdor:id,nome']);
+
+        $mostrarArquivados = filter_var($filters['arquivado'] ?? false, FILTER_VALIDATE_BOOL);
+        $mostrarArquivados
+            ? $query->where('arquivado', true)
+            : $query->ativo();
 
         if (!empty($filters['restringir_ao_analista'])) {
             $query->where('analista_atual_id', $filters['restringir_ao_analista']);
@@ -133,11 +137,21 @@ class PaeProtocoloService extends BaseService
         }
 
         $statusAnterior = $protocolo->status;
+        $estavaArquivado = (bool) $protocolo->arquivado;
+        $desarquivarAuto = $estavaArquivado && $novo === PaeProtocoloStatus::CCPAE;
 
-        $protocolo->update([
+        $atributos = [
             'status' => $novo->value,
             'updated_by' => $user->id,
-        ]);
+        ];
+
+        // Validar (transitar para CCPAE) reativa um protocolo arquivado:
+        // ao validar para CCPAE, o protocolo volta para fluxo ativo.
+        if ($desarquivarAuto) {
+            $atributos['arquivado'] = false;
+        }
+
+        $protocolo->update($atributos);
 
         PaeTramitacao::create([
             'protocolo_id' => $protocolo->id,
@@ -146,10 +160,15 @@ class PaeProtocoloService extends BaseService
             'obs' => $obs ?: null,
         ]);
 
+        $descricaoTimeline = "Status alterado de '{$statusAnterior->getLabel()}' para '{$novo->getLabel()}'. {$obs}";
+        if ($desarquivarAuto) {
+            $descricaoTimeline .= ' Protocolo desarquivado automaticamente pela transicao para CCPAE.';
+        }
+
         $this->registrarTimeline(
             $protocolo,
             'status_alterado',
-            "Status alterado de '{$statusAnterior->getLabel()}' para '{$novo->getLabel()}'. {$obs}",
+            $descricaoTimeline,
             $user
         );
 

@@ -17,6 +17,11 @@
             CCPAE
           </Button>
 
+          <!-- Botao Arquivados - filtro rapido -->
+          <Button variant="warning" size="md" :icon="ArchiveBoxIcon" icon-position="left" @click="handleArquivadosFilter">
+            Arquivados
+          </Button>
+
           <!-- Botao Exportar -->
           <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
             <span class="hidden sm:inline">Exportar</span>
@@ -73,6 +78,7 @@
       :pagination="paginationToUse"
       :can-edit="canEdit"
       :can-delete="canDelete"
+      :can-archive="canArchive"
       :can-atribuir="canAtribuirComputed"
       :can-check="canCheck"
       :can-pdf="canPdf"
@@ -94,6 +100,7 @@
       :protocolos="paginatedProtocolos"
       :can-edit="canEdit"
       :can-delete="canDelete"
+      :can-archive="canArchive"
       :can-atribuir="canAtribuirComputed"
       :can-check="canCheck"
       :can-pdf="canPdf"
@@ -164,11 +171,15 @@
     <!-- Modal de Confirmacao CCPAE -->
     <ConfirmDialog
       :is-open="showCcpaeConfirm"
-      title="Concluir para CCPAE"
-      message="Deseja concluir este protocolo para o CCPAE?"
-      description="Esta acao alterara o status do protocolo para CCPAE, registrando a movimentacao e mantendo o historico."
+      :title="protocoloCcpaeArquivado ? 'Reativar e Concluir para CCPAE' : 'Concluir para CCPAE'"
+      :message="protocoloCcpaeArquivado
+        ? 'Este protocolo esta ARQUIVADO. Deseja reativa-lo e conclui-lo para o CCPAE?'
+        : 'Deseja concluir este protocolo para o CCPAE?'"
+      :description="protocoloCcpaeArquivado
+        ? 'O protocolo sera desarquivado automaticamente, seu status ira para CCPAE e a movimentacao sera registrada no historico.'
+        : 'Esta acao alterara o status do protocolo para CCPAE, registrando a movimentacao e mantendo o historico.'"
       variant="success"
-      confirm-text="Concluir"
+      :confirm-text="protocoloCcpaeArquivado ? 'Reativar e Concluir' : 'Concluir'"
       cancel-text="Cancelar"
       :loading="ccpaeLoading"
       @confirm="confirmCcpae"
@@ -178,7 +189,7 @@
 </template>
 
 <script setup>
-import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { ArchiveBoxIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { useToast } from '@/composables/useToast';
@@ -233,6 +244,10 @@ const props = defineProps({
     default: false,
   },
   canDelete: {
+    type: Boolean,
+    default: false,
+  },
+  canArchive: {
     type: Boolean,
     default: false,
   },
@@ -314,7 +329,8 @@ function calcPrazo(limiteISO, situacao) {
 
 function mapProtocolo(p) {
   const limiteISO = p.limite_analise ?? null;
-  const situacao = p.status ?? p.situacao ?? '';
+  const arquivado = !!p.arquivado;
+  const situacao = arquivado ? 'arquivado' : (p.status ?? p.situacao ?? '');
   return {
     id: p.id,
     protocoloNumero: p.num_protocolo ?? p.protocoloNumero ?? '',
@@ -327,6 +343,7 @@ function mapProtocolo(p) {
     limiteAnaliseISO: limiteISO,
     prazo: calcPrazo(limiteISO, situacao),
     ccpae: !!p.ccpae,
+    arquivado,
   };
 }
 
@@ -416,7 +433,23 @@ function handleFilterReset() {
 }
 
 function handleCcpaeFilter() {
-  handleFilterChange({ status: 'ccpae' });
+  if (props.useMock) {
+    mockFilters.value = { ...mockFilters.value, situacao: 'ccpae', arquivado: false };
+    currentPage.value = 1;
+    return;
+  }
+
+  router.get(route('pae.protocolos.index'), { status: 'ccpae' }, { preserveState: false, replace: true });
+}
+
+function handleArquivadosFilter() {
+  if (props.useMock) {
+    mockFilters.value = { ...mockFilters.value, arquivado: true };
+    currentPage.value = 1;
+    return;
+  }
+
+  router.get(route('pae.protocolos.index'), { arquivado: 1 }, { preserveState: false, replace: true });
 }
 
 function handleTotalProtocolos() {
@@ -458,7 +491,7 @@ function handlePageChange(page) {
 }
 
 function handleView(id) {
-  router.visit(route('pae.index', { protocolo_id: id }));
+  router.visit(route('pae.index', { protocolo_id: id, readonly: 1 }));
 }
 
 function handleEdit(id) {
@@ -476,6 +509,7 @@ const protocoloJaArquivado = ref(false);
 const showCcpaeConfirm = ref(false);
 const ccpaeLoading = ref(false);
 const protocoloIdToCcpae = ref(null);
+const protocoloCcpaeArquivado = ref(false);
 
 function handleArchive(id) {
   const protocolo = (filteredProtocolos.value || []).find((p) => p.id === id);
@@ -554,6 +588,7 @@ function handleCheck(id) {
   if (!protocolo) return;
 
   protocoloIdToCcpae.value = id;
+  protocoloCcpaeArquivado.value = Boolean(protocolo.arquivado);
   showCcpaeConfirm.value = true;
 }
 
@@ -583,9 +618,16 @@ async function confirmCcpae() {
       headers: { Accept: 'application/json' },
     });
 
+    const eraArquivado = protocoloCcpaeArquivado.value;
     showCcpaeConfirm.value = false;
     protocoloIdToCcpae.value = null;
-    toast('Protocolo concluido para CCPAE.', 'success');
+    protocoloCcpaeArquivado.value = false;
+    toast(
+      eraArquivado
+        ? 'Protocolo reativado e concluido para CCPAE.'
+        : 'Protocolo concluido para CCPAE.',
+      'success'
+    );
     router.get(route('pae.protocolos.index'), { ...filters.value, status: 'ccpae' }, { preserveState: false, replace: true });
   } catch (error) {
     toast(getRequestErrorMessage(error), 'error');
@@ -597,6 +639,7 @@ async function confirmCcpae() {
 function cancelCcpae() {
   showCcpaeConfirm.value = false;
   protocoloIdToCcpae.value = null;
+  protocoloCcpaeArquivado.value = false;
 }
 
 function handlePdf(id) {
