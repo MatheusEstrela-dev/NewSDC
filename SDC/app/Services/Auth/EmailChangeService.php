@@ -100,27 +100,32 @@ class EmailChangeService
     {
         $providedCode = trim($providedCode);
 
-        return DB::transaction(function () use ($user, $providedCode) {
-            $ecr = EmailChangeRequest::activeFor($user->id)
-                ->lockForUpdate()       // anti-race: 2 abas validando em paralelo
+        // Lock + fetch fora da transacao de mutacao pra evitar que o increment
+        // de tentativa seja rolledback junto com a InvalidCodeException.
+        $ecr = DB::transaction(function () use ($user) {
+            return EmailChangeRequest::activeFor($user->id)
+                ->lockForUpdate()
                 ->latest()
                 ->firstOrFail();
+        });
 
-            if ($ecr->expires_at->isPast()) {
-                throw new CodeExpiredException();
-            }
+        if ($ecr->expires_at->isPast()) {
+            throw new CodeExpiredException();
+        }
 
-            if ($ecr->code_attempts >= EmailChangeRequest::MAX_ATTEMPTS) {
-                throw new TooManyAttemptsException();
-            }
+        if ($ecr->code_attempts >= EmailChangeRequest::MAX_ATTEMPTS) {
+            throw new TooManyAttemptsException();
+        }
 
-            if (! Hash::check($providedCode, $ecr->code_hash)) {
+        if (! Hash::check($providedCode, $ecr->code_hash)) {
+            // Persiste tentativa em transacao propria; depois lanca a exception.
+            // Se o teto foi atingido, ja cancela junto.
+            DB::transaction(function () use ($ecr, $user) {
                 $ecr->increment('code_attempts');
-                $remaining = EmailChangeRequest::MAX_ATTEMPTS - $ecr->code_attempts;
+                $ecr->refresh();
 
                 if ($ecr->code_attempts >= EmailChangeRequest::MAX_ATTEMPTS) {
-                    $ecr->update(['cancelled_at' => now()]);
-
+                    $ecr->forceFill(['cancelled_at' => now()])->save();
                     AuditLog::log(
                         AuditLog::EVENT_UPDATE,
                         'email_change_requests',
@@ -130,10 +135,16 @@ class EmailChangeService
                         $user->id,
                     );
                 }
+            });
+            $ecr->refresh();
 
-                throw new InvalidCodeException(remaining: $remaining);
-            }
+            throw new InvalidCodeException(
+                remaining: EmailChangeRequest::MAX_ATTEMPTS - $ecr->code_attempts
+            );
+        }
 
+        // Sucesso: promove email + marca used_at atomicamente.
+        return DB::transaction(function () use ($user, $ecr) {
             $oldEmail = $user->email;
 
             $user->forceFill([
@@ -141,7 +152,7 @@ class EmailChangeService
                 'email_verified_at' => now(),
             ])->save();
 
-            $ecr->update(['used_at' => now()]);
+            $ecr->forceFill(['used_at' => now()])->save();
 
             AuditLog::log(
                 AuditLog::EVENT_UPDATE,
@@ -184,14 +195,17 @@ class EmailChangeService
 
             $code = $this->generateCode();
 
-            $ecr->update([
+            // forceFill: campos de estado (code_attempts, resend_count,
+            // last_resend_at) NAO estao em $fillable por seguranca contra
+            // mass-assignment. Aqui o service ja validou o que precisa.
+            $ecr->forceFill([
                 'code_hash'      => Hash::make($code),
                 'code_attempts'  => 0,
                 'resend_count'   => $ecr->resend_count + 1,
                 'last_resend_at' => now(),
                 // Renova janela de validade para os 15min cheios apos reenvio.
                 'expires_at'     => now()->addMinutes(EmailChangeRequest::TTL_MINUTES),
-            ]);
+            ])->save();
 
             Mail::to($ecr->new_email)->queue(
                 EmailChangeVerificationCodeMail::for($user, $ecr->new_email, $code, $ecr->expires_at)
