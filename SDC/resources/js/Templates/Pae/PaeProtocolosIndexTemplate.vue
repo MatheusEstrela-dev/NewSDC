@@ -458,8 +458,22 @@ const ccpaeLoading = ref(false);
 const protocoloIdToCcpae = ref(null);
 
 function handleArchive(id) {
-  // O comportamento de arquivar pode ser direcionado para o delete por enquanto.
-  handleDelete(id);
+  const protocolo = (filteredProtocolos.value || []).find((p) => p.id === id);
+  if (!protocolo) return;
+
+  const acao = protocolo.arquivado ? 'desarquivar' : 'arquivar';
+  const confirmacao = protocolo.arquivado
+    ? 'Deseja realmente desarquivar este protocolo?'
+    : 'Deseja realmente arquivar este protocolo? Ele sairá da lista ativa, mas continuará disponível no histórico.';
+
+  if (!confirm(confirmacao)) return;
+
+  router.patch(route(`pae.protocolos.${acao}`, id), {}, {
+    preserveScroll: true,
+    onError: () => {
+      alert(`Erro ao ${acao} protocolo. Tente novamente.`);
+    },
+  });
 }
 
 function handleDelete(id) {

@@ -202,7 +202,21 @@ class PaeProtocoloController extends Controller
     {
         $this->service->delete($paeProtocolo);
 
-        return redirect()->back()->with('success', 'Protocolo arquivado/excluído com sucesso.');
+        return redirect()->back()->with('success', 'Protocolo excluído com sucesso.');
+    }
+
+    public function arquivar(PaeProtocolo $paeProtocolo): \Illuminate\Http\RedirectResponse
+    {
+        $this->service->arquivar($paeProtocolo);
+
+        return redirect()->back()->with('success', 'Protocolo arquivado com sucesso.');
+    }
+
+    public function desarquivar(PaeProtocolo $paeProtocolo): \Illuminate\Http\RedirectResponse
+    {
+        $this->service->desarquivar($paeProtocolo);
+
+        return redirect()->back()->with('success', 'Protocolo desarquivado com sucesso.');
     }
 
     public function export(Request $request): StreamedResponse

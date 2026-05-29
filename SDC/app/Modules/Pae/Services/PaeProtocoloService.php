@@ -195,6 +195,24 @@ class PaeProtocoloService extends BaseService
         $paeProtocolo->delete();
     }
 
+    public function arquivar(PaeProtocolo $paeProtocolo): PaeProtocolo
+    {
+        if (! $paeProtocolo->arquivado) {
+            $paeProtocolo->update(['arquivado' => true]);
+        }
+
+        return $paeProtocolo->fresh();
+    }
+
+    public function desarquivar(PaeProtocolo $paeProtocolo): PaeProtocolo
+    {
+        if ($paeProtocolo->arquivado) {
+            $paeProtocolo->update(['arquivado' => false]);
+        }
+
+        return $paeProtocolo->fresh();
+    }
+
     public function getStatistics(?int $analistaId = null): array
     {
         $base = fn() => $analistaId
