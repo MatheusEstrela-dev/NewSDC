@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -266,5 +267,17 @@ class User extends Authenticatable
     public function statusHistories(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(UserStatusHistory::class);
+    }
+
+    /**
+     * Pedido ativo de troca de e-mail (pending). Latest-of-many porque so
+     * um pode estar ativo por vez (regra mantida pelo EmailChangeService).
+     */
+    public function activeEmailChangeRequest(): HasOne
+    {
+        return $this->hasOne(EmailChangeRequest::class)
+            ->whereNull('used_at')
+            ->whereNull('cancelled_at')
+            ->latestOfMany();
     }
 }
