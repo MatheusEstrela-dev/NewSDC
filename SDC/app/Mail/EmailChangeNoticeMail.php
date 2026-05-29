@@ -55,15 +55,17 @@ class EmailChangeNoticeMail extends Mailable implements ShouldQueue
 
     public function content(): Content
     {
-        return new Content(
-            view: 'emails.email_change_notice',
-            with: [
-                'name'           => $this->name,
-                'newEmailMasked' => $this->newEmailMasked,
-                'byAdminName'    => $this->byAdminName,
+        $html = app(\App\Services\Mail\VueEmailRenderer::class)->render(
+            'EmailChangeNotice',
+            [
+                'name'             => $this->name,
+                'newEmailMasked'   => $this->newEmailMasked,
+                'byAdminName'      => $this->byAdminName,
                 'passwordResetUrl' => url(route('password.request', absolute: false)),
             ],
         );
+
+        return new Content(htmlString: $html);
     }
 
     /**

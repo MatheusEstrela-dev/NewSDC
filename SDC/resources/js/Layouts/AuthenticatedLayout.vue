@@ -5,6 +5,7 @@ import PullToRefresh from '@/Components/Molecules/PullToRefresh.vue';
 import ToastContainer from '@/Components/Atoms/Toast/ToastContainer.vue';
 import ContentAreaSkeleton from '@/Components/Molecules/Skeleton/ContentAreaSkeleton.vue';
 import NavigationHeader from '@/Components/Organisms/Navigation/NavigationHeader.vue';
+import EmailChangeVerifyModal from '@/Components/Organisms/EmailChangeVerifyModal.vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import TopBar from '@/Components/TopBar.vue';
 import { useMobile, useSidebarMobile } from '@/Composables/useMobile';
@@ -155,6 +156,12 @@ provide('openSidebar', openSidebar);
     <PrivacidadeModal :show="showPrivacidadeModal" @close="showPrivacidadeModal = false" />
     <!-- Guia do Sistema (disparado pelo passo final do tour) -->
     <GuiaSistemaModal :show="showGuiaModal" @close="showGuiaModal = false" />
+
+    <!-- Popup global de verificacao de troca de e-mail (nao-dismissable) -->
+    <EmailChangeVerifyModal
+        v-if="$page.props.auth?.user?.pending_email_change"
+        :pending-change="$page.props.auth.user.pending_email_change"
+    />
   </div>
 </template>
 
