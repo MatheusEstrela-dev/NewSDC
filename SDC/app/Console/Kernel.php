@@ -55,6 +55,14 @@ class Kernel extends ConsoleKernel
             ->hourly()
             ->withoutOverlapping()
             ->runInBackground();
+
+        // Auth: purga pedidos de troca de e-mail concluidos/cancelados/expirados
+        // com mais de 30 dias para manter a tabela enxuta.
+        $schedule->command('email-change:cleanup-expired')
+            ->daily()
+            ->onOneServer()
+            ->withoutOverlapping()
+            ->name('email-change-cleanup');
     }
 
     /**
