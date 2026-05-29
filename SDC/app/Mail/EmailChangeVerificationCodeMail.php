@@ -59,15 +59,17 @@ class EmailChangeVerificationCodeMail extends Mailable implements ShouldQueue
 
     public function content(): Content
     {
-        return new Content(
-            view: 'emails.email_change_verification',
-            with: [
+        $html = app(\App\Services\Mail\VueEmailRenderer::class)->render(
+            'EmailChangeVerification',
+            [
                 'name'      => $this->name,
                 'newEmail'  => $this->newEmail,
                 'code'      => $this->code,
-                'expiresAt' => \Carbon\Carbon::parse($this->expiresAtIso),
+                'expiresAt' => \Carbon\Carbon::parse($this->expiresAtIso)->format('d/m/Y H:i'),
                 'ttlMin'    => 15,
             ],
         );
+
+        return new Content(htmlString: $html);
     }
 }
