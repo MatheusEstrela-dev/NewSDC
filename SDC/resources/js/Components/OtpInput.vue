@@ -26,13 +26,22 @@ watch(() => props.modelValue, (mv) => {
     digits.value = arr;
 });
 
+function setDigit(index, char) {
+    // Reassign array completo pra garantir reactivity (mutacao por indice
+    // em ref<Array> as vezes nao dispara watchers/computeds dependendo de
+    // como o Proxy e acessado em compile time vs render time).
+    const next = [...digits.value];
+    next[index] = char;
+    digits.value = next;
+}
+
 function onInput(event, index) {
     const raw = event.target.value.replace(/\D/g, '');
     if (!raw) {
-        digits.value[index] = '';
+        setDigit(index, '');
         return;
     }
-    digits.value[index] = raw[0];
+    setDigit(index, raw[0]);
     if (index < props.length - 1) {
         nextTick(() => refs.value[index + 1]?.focus());
     }
@@ -51,9 +60,8 @@ function onPaste(event) {
     const clean = text.replace(/\D/g, '').slice(0, props.length);
     if (!clean) return;
     event.preventDefault();
-    for (let i = 0; i < props.length; i++) {
-        digits.value[i] = clean[i] || '';
-    }
+    const next = Array.from({ length: props.length }, (_, i) => clean[i] || '');
+    digits.value = next;
     const focusIdx = Math.min(clean.length, props.length - 1);
     nextTick(() => refs.value[focusIdx]?.focus());
 }
