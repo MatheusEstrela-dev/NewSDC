@@ -114,10 +114,10 @@
                   resource="beneficiarios"
                   size="sm"
                   :actions="[
-                    { action: 'view',   handler: () => $emit('view', beneficiario) },
+                    { action: 'view',   handler: () => $emit('view', beneficiario.id) },
                     { action: 'print',  handler: () => handlePrint(beneficiario.id) },
-                    { action: 'edit',   handler: () => $emit('edit', beneficiario),   allowed: canEdit },
-                    { action: 'delete', handler: () => $emit('delete', beneficiario), allowed: canDelete },
+                    { action: 'edit',   handler: () => $emit('edit', beneficiario.id),   allowed: canEdit },
+                    { action: 'delete', handler: () => $emit('delete', beneficiario.id), allowed: canDelete },
                   ]"
                 />
               </div>

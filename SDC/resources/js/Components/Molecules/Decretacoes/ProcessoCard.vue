@@ -73,10 +73,10 @@
         module="decretacoes"
         resource="processos"
         :actions="[
-          { action: 'view',   handler: () => $emit('view', processo) },
-          { action: 'print',  handler: () => $emit('print', processo) },
-          { action: 'edit',   handler: () => $emit('edit', processo),   allowed: canEdit },
-          { action: 'delete', handler: () => $emit('delete', processo), allowed: canDelete },
+          { action: 'view',   handler: () => $emit('view', processo.id) },
+          { action: 'print',  handler: () => $emit('print', processo.id) },
+          { action: 'edit',   handler: () => $emit('edit', processo.id),   allowed: canEdit },
+          { action: 'delete', handler: () => $emit('delete', processo.id), allowed: canDelete },
         ]"
       />
     </div>

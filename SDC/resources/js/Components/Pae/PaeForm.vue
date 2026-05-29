@@ -11,6 +11,7 @@
         :model-value="rat.infoGerais"
         :municipios="municipios"
         :saving="rat.saving"
+        :read-only="readOnly"
         @save="handleSaveInfoGerais"
       />
     </div>
@@ -19,6 +20,7 @@
       <PaeFormObjetivoContexto
         :model-value="rat.objetivoContexto"
         :saving="rat.saving"
+        :read-only="readOnly"
         @save="handleSaveObjetivo"
       />
     </div>
@@ -27,11 +29,12 @@
       <PaeFormApontamentos
         :items="rat.apontamentos"
         :saving="rat.saving"
+        :read-only="readOnly"
         @save="handleSaveApontamentos"
-        @add-item="rat.addItem('apontamentos')"
-        @remove-item="(i) => rat.removeItem('apontamentos', i)"
-        @add-sub="(i) => rat.addSubItem('apontamentos', i)"
-        @remove-sub="(i, j) => rat.removeSubItem('apontamentos', i, j)"
+        @add-item="handleAddItem('apontamentos')"
+        @remove-item="(i) => handleRemoveItem('apontamentos', i)"
+        @add-sub="(i) => handleAddSubItem('apontamentos', i)"
+        @remove-sub="(i, j) => handleRemoveSubItem('apontamentos', i, j)"
       />
     </div>
 
@@ -44,6 +47,7 @@
         :progress="rat.anexoProgress"
         :status-message="rat.anexoStatus"
         :error-message="rat.anexoError"
+        :read-only="readOnly"
         @upload="handleUploadAnexo"
         @remove="handleRemoveAnexo"
         @download="handleDownloadAnexo"
@@ -55,12 +59,13 @@
       <PaeFormConclusao
         :items="rat.conclusao"
         :saving="rat.saving"
+        :read-only="readOnly"
         @save="handleSaveConclusao"
         @finalizar="handleFinalizar"
-        @add-item="rat.addItem('conclusao')"
-        @remove-item="(i) => rat.removeItem('conclusao', i)"
-        @add-sub="(i) => rat.addSubItem('conclusao', i)"
-        @remove-sub="(i, j) => rat.removeSubItem('conclusao', i, j)"
+        @add-item="handleAddItem('conclusao')"
+        @remove-item="(i) => handleRemoveItem('conclusao', i)"
+        @add-sub="(i) => handleAddSubItem('conclusao', i)"
+        @remove-sub="(i, j) => handleRemoveSubItem('conclusao', i, j)"
       />
     </div>
   </div>
@@ -101,6 +106,10 @@ const props = defineProps({
   protocolo: {
     type: Object,
     default: null,
+  },
+  readOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -156,6 +165,8 @@ const protocoloId = computed(
 );
 
 function handleSaveInfoGerais(data) {
+  if (props.readOnly) return;
+
   Object.assign(rat.infoGerais, data);
   // Após o POST de criação, o Inertia recarrega a página com o novo formulario
   // no prop. Capturamos o ID e avançamos para a próxima aba automaticamente.
@@ -168,20 +179,32 @@ function handleSaveInfoGerais(data) {
 }
 
 function handleSaveObjetivo(data) {
+  if (props.readOnly) return;
+
   Object.assign(rat.objetivoContexto, data);
-  rat.saveObjetivoContexto(formularioId.value);
+  rat.saveObjetivoContexto(formularioId.value, () => {
+    activeSubTab.value = 3;
+  });
 }
 
 function handleSaveApontamentos() {
-  rat.saveApontamentos(formularioId.value);
+  if (props.readOnly) return;
+
+  rat.saveApontamentos(formularioId.value, () => {
+    activeSubTab.value = 4;
+  });
 }
 
 function handleUploadAnexo(payload) {
+  if (props.readOnly) return;
+
   const { onSuccess, onError, ...data } = payload;
   rat.uploadAnexo(formularioId.value, data, { onSuccess, onError }, protocoloId.value);
 }
 
 function handleRemoveAnexo(anexoId) {
+  if (props.readOnly) return;
+
   rat.deleteAnexo(formularioId.value, anexoId);
 }
 
@@ -194,10 +217,34 @@ function handleViewAnexo(anexoId) {
 }
 
 function handleSaveConclusao() {
+  if (props.readOnly) return;
+
   rat.saveConclusao(formularioId.value);
 }
 
 function handleFinalizar() {
+  if (props.readOnly) return;
+
   rat.finalizarRelatorio(formularioId.value);
+}
+
+function handleAddItem(section) {
+  if (props.readOnly) return;
+  rat.addItem(section);
+}
+
+function handleRemoveItem(section, index) {
+  if (props.readOnly) return;
+  rat.removeItem(section, index);
+}
+
+function handleAddSubItem(section, index) {
+  if (props.readOnly) return;
+  rat.addSubItem(section, index);
+}
+
+function handleRemoveSubItem(section, index, childIndex) {
+  if (props.readOnly) return;
+  rat.removeSubItem(section, index, childIndex);
 }
 </script>

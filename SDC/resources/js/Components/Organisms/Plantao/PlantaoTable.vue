@@ -80,9 +80,9 @@ import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
                   module="plantao"
                   resource="turnos"
                   :actions="[
-                    { action: 'view',   handler: () => emit('view', item) },
-                    { action: 'edit',   handler: () => emit('edit', item),   allowed: canEdit },
-                    { action: 'delete', handler: () => emit('delete', item), allowed: canDelete },
+                    { action: 'view',   handler: () => emit('view', item.id) },
+                    { action: 'edit',   handler: () => emit('edit', item.id),   allowed: canEdit },
+                    { action: 'delete', handler: () => emit('delete', item.id), allowed: canDelete },
                   ]"
                 />
               </div>

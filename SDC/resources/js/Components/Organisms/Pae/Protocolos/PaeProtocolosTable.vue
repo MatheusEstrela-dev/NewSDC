@@ -53,13 +53,14 @@
                   module="pae"
                   resource="protocolos"
                   :actions="[
-                    { action: 'edit',    handler: () => $emit('edit', protocolo),    allowed: canEdit },
-                    { action: 'history', handler: () => $emit('history', protocolo) },
-                    { action: 'archive', handler: () => $emit('archive', protocolo) },
-                    { action: 'delete',  handler: () => $emit('delete', protocolo),  allowed: canDelete },
-                    { action: 'check',  placement: 'menu', handler: () => $emit('check', protocolo),  allowed: canCheck },
-                    { action: 'pdf',    placement: 'menu', handler: () => $emit('pdf', protocolo),    allowed: canPdf },
-                    { action: 'assign', placement: 'menu', handler: () => $emit('assign', protocolo), allowed: canAtribuir && isAssignableStatus(protocolo.situacao) },
+                    { action: 'view',    handler: () => $emit('view', protocolo.id) },
+                    { action: 'edit',    handler: () => $emit('edit', protocolo.id),    allowed: canEdit },
+                    { action: 'history', handler: () => $emit('history', protocolo.id) },
+                    { action: 'archive', handler: () => $emit('archive', protocolo.id) },
+                    { action: 'delete',  handler: () => $emit('delete', protocolo.id),  allowed: canDelete },
+                    { action: 'check',  placement: 'menu', handler: () => $emit('check', protocolo.id),  allowed: canCheck },
+                    { action: 'pdf',    placement: 'menu', handler: () => $emit('pdf', protocolo.id),    allowed: canPdf },
+                    { action: 'assign', placement: 'menu', handler: () => $emit('assign', protocolo.id), allowed: canAtribuir && isAssignableStatus(protocolo.situacao) },
                   ]"
                 />
               </div>

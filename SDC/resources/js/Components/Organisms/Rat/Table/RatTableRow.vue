@@ -31,11 +31,11 @@
           module="rat"
           resource="protocolos"
           :actions="[
-            { action: 'view',        handler: () => emit('view', props.rat) },
-            { action: 'print',       handler: () => emit('print', props.rat) },
-            { action: 'edit',        handler: () => emit('edit', props.rat),        allowed: canEdit },
-            { action: 'attachments', handler: () => emit('attachments', props.rat), label: 'Relacionar' },
-            { action: 'delete',      handler: () => emit('delete', props.rat),      allowed: canDelete },
+            { action: 'view',        handler: () => emit('view', props.rat.id) },
+            { action: 'print',       handler: () => emit('print', props.rat.id) },
+            { action: 'edit',        handler: () => emit('edit', props.rat.id),        allowed: canEdit },
+            { action: 'attachments', handler: () => emit('attachments', props.rat.id), label: 'Relacionar' },
+            { action: 'delete',      handler: () => emit('delete', props.rat.id),      allowed: canDelete },
           ]"
         />
       </div>

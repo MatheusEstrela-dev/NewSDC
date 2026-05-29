@@ -87,6 +87,14 @@ Route::prefix('pae')->name('pae.')->group(function () {
         ->name('protocolos.destroy')
         ->middleware('can:pae.protocolos.delete');
 
+    Route::patch('/protocolos/{paeProtocolo}/arquivar', [PaeProtocoloController::class, 'arquivar'])
+        ->name('protocolos.arquivar')
+        ->middleware('can:pae.protocolos.arquivar');
+
+    Route::patch('/protocolos/{paeProtocolo}/desarquivar', [PaeProtocoloController::class, 'desarquivar'])
+        ->name('protocolos.desarquivar')
+        ->middleware('can:pae.protocolos.arquivar');
+
     Route::get('/export', [PaeProtocoloController::class, 'export'])
         ->name('export')
         ->middleware('can:pae.protocolos.export');
