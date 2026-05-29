@@ -145,6 +145,22 @@
       @cancel="cancelDelete"
     />
 
+    <!-- Modal de Confirmacao de Arquivamento -->
+    <ConfirmDialog
+      :is-open="showArchiveConfirm"
+      :title="protocoloJaArquivado ? 'Desarquivar Protocolo' : 'Arquivar Protocolo'"
+      :message="protocoloJaArquivado ? 'Deseja desarquivar este protocolo?' : 'Deseja arquivar este protocolo?'"
+      :description="protocoloJaArquivado
+        ? 'O protocolo voltara a aparecer na lista ativa. Nenhum dado e perdido nesta acao.'
+        : 'O protocolo saira da lista ativa, mas continuara disponivel no historico e podera ser desarquivado a qualquer momento.'"
+      variant="warning"
+      :confirm-text="protocoloJaArquivado ? 'Desarquivar' : 'Arquivar'"
+      cancel-text="Cancelar"
+      :loading="archiveLoading"
+      @confirm="confirmArchive"
+      @cancel="cancelArchive"
+    />
+
     <!-- Modal de Confirmacao CCPAE -->
     <ConfirmDialog
       :is-open="showCcpaeConfirm"
@@ -453,6 +469,10 @@ function handleEdit(id) {
 const showDeleteConfirm = ref(false);
 const deleteLoading = ref(false);
 const protocoloIdToDelete = ref(null);
+const showArchiveConfirm = ref(false);
+const archiveLoading = ref(false);
+const protocoloIdToArchive = ref(null);
+const protocoloJaArquivado = ref(false);
 const showCcpaeConfirm = ref(false);
 const ccpaeLoading = ref(false);
 const protocoloIdToCcpae = ref(null);
@@ -461,19 +481,37 @@ function handleArchive(id) {
   const protocolo = (filteredProtocolos.value || []).find((p) => p.id === id);
   if (!protocolo) return;
 
-  const acao = protocolo.arquivado ? 'desarquivar' : 'arquivar';
-  const confirmacao = protocolo.arquivado
-    ? 'Deseja realmente desarquivar este protocolo?'
-    : 'Deseja realmente arquivar este protocolo? Ele sairá da lista ativa, mas continuará disponível no histórico.';
+  protocoloIdToArchive.value = id;
+  protocoloJaArquivado.value = Boolean(protocolo.arquivado);
+  showArchiveConfirm.value = true;
+}
 
-  if (!confirm(confirmacao)) return;
+function confirmArchive() {
+  if (!protocoloIdToArchive.value) return;
 
-  router.patch(route(`pae.protocolos.${acao}`, id), {}, {
+  const acao = protocoloJaArquivado.value ? 'desarquivar' : 'arquivar';
+  archiveLoading.value = true;
+
+  router.patch(route(`pae.protocolos.${acao}`, protocoloIdToArchive.value), {}, {
     preserveScroll: true,
+    onSuccess: () => {
+      showArchiveConfirm.value = false;
+      protocoloIdToArchive.value = null;
+      protocoloJaArquivado.value = false;
+    },
     onError: () => {
       alert(`Erro ao ${acao} protocolo. Tente novamente.`);
     },
+    onFinish: () => {
+      archiveLoading.value = false;
+    },
   });
+}
+
+function cancelArchive() {
+  showArchiveConfirm.value = false;
+  protocoloIdToArchive.value = null;
+  protocoloJaArquivado.value = false;
 }
 
 function handleDelete(id) {
