@@ -86,10 +86,10 @@
                   resource="processos"
                   :actions="[
                     { action: 'view',    handler: () => openDetailModal(processo) },
-                    { action: 'print',   handler: () => emit('print', processo) },
+                    { action: 'print',   handler: () => emit('print', processo.id) },
                     { action: 'edit',    handler: () => openEditChoiceModal(processo.id), allowed: canEdit },
-                    { action: 'delete',  handler: () => emit('delete', processo),  allowed: canDelete },
-                    { action: 'warning', handler: () => emit('warning', processo) },
+                    { action: 'delete',  handler: () => emit('delete', processo.id),  allowed: canDelete },
+                    { action: 'warning', handler: () => emit('warning', processo.id) },
                   ]"
                 />
               </div>

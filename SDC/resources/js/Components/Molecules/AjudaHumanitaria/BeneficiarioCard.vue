@@ -92,10 +92,10 @@
         module="humanitaria"
         resource="beneficiarios"
         :actions="[
-          { action: 'view',   handler: () => $emit('view', beneficiario) },
-          { action: 'print',  handler: () => $emit('print', beneficiario) },
-          { action: 'edit',   handler: () => $emit('edit', beneficiario),   allowed: canEdit },
-          { action: 'delete', handler: () => $emit('delete', beneficiario), allowed: canDelete },
+          { action: 'view',   handler: () => $emit('view', beneficiario.id) },
+          { action: 'print',  handler: () => $emit('print', beneficiario.id) },
+          { action: 'edit',   handler: () => $emit('edit', beneficiario.id),   allowed: canEdit },
+          { action: 'delete', handler: () => $emit('delete', beneficiario.id), allowed: canDelete },
         ]"
       />
     </div>

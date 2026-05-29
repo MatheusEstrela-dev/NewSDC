@@ -38,11 +38,11 @@
         resource="protocolos"
         size="md"
         :actions="[
-          { action: 'view',        handler: () => $emit('view', rat) },
-          { action: 'print',       handler: () => $emit('print', rat) },
-          { action: 'edit',        handler: () => $emit('edit', rat),        allowed: canEdit },
-          { action: 'attachments', handler: () => $emit('attachments', rat), label: 'Relacionar' },
-          { action: 'delete',      handler: () => $emit('delete', rat),      allowed: canDelete },
+          { action: 'view',        handler: () => $emit('view', rat.id) },
+          { action: 'print',       handler: () => $emit('print', rat.id) },
+          { action: 'edit',        handler: () => $emit('edit', rat.id),        allowed: canEdit },
+          { action: 'attachments', handler: () => $emit('attachments', rat.id), label: 'Relacionar' },
+          { action: 'delete',      handler: () => $emit('delete', rat.id),      allowed: canDelete },
         ]"
       />
     </div>
