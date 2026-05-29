@@ -36,7 +36,7 @@
         >
           <component
             :is="ActionIcons[item.action]"
-            class="w-4 h-4 flex-shrink-0"
+            :class="['w-4 h-4 flex-shrink-0', item.iconClass ?? ActionMenuIconClasses[item.action] ?? 'text-slate-400']"
           />
           <span>{{ item.label ?? ActionLabels[item.action] ?? item.action }}</span>
         </button>
@@ -191,6 +191,30 @@ const ActionIconVariants = {
   options: 'secondary',
   assign: 'info',
   notifications: 'secondary',
+};
+
+// Cores dos icones dentro do dropdown de Opcoes (modo grupo).
+// Espelham as variantes inline (ActionIconVariants) em classes Tailwind diretas.
+// Sobrescrevivel por item via `iconClass: 'text-...'`.
+const ActionMenuIconClasses = {
+  create: 'text-blue-500',
+  view: 'text-blue-500',
+  edit: 'text-yellow-500',
+  delete: 'text-red-500',
+  print: 'text-cyan-500',
+  export: 'text-cyan-500',
+  duplicate: 'text-slate-400',
+  finalize: 'text-emerald-500',
+  check: 'text-emerald-400',
+  pdf: 'text-[#ff4d00]',
+  archive: 'text-yellow-500',
+  upload: 'text-slate-400',
+  attachments: 'text-emerald-500',
+  history: 'text-cyan-500',
+  warning: 'text-amber-500',
+  options: 'text-slate-400',
+  assign: 'text-sky-400',
+  notifications: 'text-slate-400',
 };
 
 const ACTION_ALIAS = {
