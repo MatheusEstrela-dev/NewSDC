@@ -4,7 +4,7 @@
       <slot />
       <span v-if="sortable" class="flex flex-col">
         <svg
-          :class="['w-3 h-3 transition-colors', sortDirection === 'asc' ? 'text-blue-400 dark:text-blue-400 text-blue-600' : 'text-slate-500 dark:text-slate-500 text-slate-400']"
+          :class="['w-3 h-3 transition-colors', sortDirection === 'asc' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500']"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -12,7 +12,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
         </svg>
         <svg
-          :class="['w-3 h-3 transition-colors -mt-1', sortDirection === 'desc' ? 'text-blue-400 dark:text-blue-400 text-blue-600' : 'text-slate-500 dark:text-slate-500 text-slate-400']"
+          :class="['w-3 h-3 transition-colors -mt-1', sortDirection === 'desc' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500']"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -77,8 +77,8 @@ const wrapperClasses = computed(() => {
 });
 
 const headerClasses = computed(() => {
-  const base = 'px-4 py-3 text-xs font-semibold text-slate-400 dark:text-slate-400 text-slate-600 uppercase tracking-wider bg-slate-900/50 dark:bg-slate-900/50 bg-slate-100';
-  const sortableClass = props.sortable ? 'cursor-pointer hover:bg-slate-800/50 dark:hover:bg-slate-800/50 hover:bg-slate-200 select-none' : '';
+  const base = 'px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider';
+  const sortableClass = props.sortable ? 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 select-none' : '';
 
   return [
     base,

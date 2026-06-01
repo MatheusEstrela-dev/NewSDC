@@ -1,7 +1,10 @@
 <template>
-  <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-visible shadow-sm">
-    <div class="overflow-visible">
-      <table class="w-full text-sm text-left">
+  <ListContainer
+    title="Lista de Protocolos"
+    :icon="ClipboardDocumentListIcon"
+    :count="protocolos.length"
+  >
+    <table class="w-full text-sm text-left">
         <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
           <tr>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Protocolo</th>
@@ -67,20 +70,22 @@
             </td>
           </tr>
           <tr v-if="protocolos.length === 0">
-            <td colspan="6" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
-              Nenhum protocolo encontrado
+            <td colspan="6" class="p-0">
+              <ListEmptyState title="Nenhum protocolo encontrado" />
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
-  </div>
+  </ListContainer>
 </template>
 
 <script setup>
 import PrazosPill from '@/Components/Molecules/Pae/Protocolos/PrazosPill.vue';
 import StatusPill from '@/Components/Molecules/Pae/Protocolos/StatusPill.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import ListContainer from '@/Components/Organisms/ListContainer.vue';
+import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import { isAssignableStatus } from '@/Composables/usePaeAssignableStatus';
 
 defineProps({

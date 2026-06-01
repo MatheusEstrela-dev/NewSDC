@@ -4,7 +4,7 @@
     <button
       type="button"
       class="w-full flex items-center justify-between gap-3 pb-3 text-left group transition-all duration-300
-             border-b border-slate-700/30 dark:border-slate-700/30 border-slate-200
+             border-b border-slate-200 dark:border-slate-700/30
              hover:border-primary-500/30 dark:hover:border-primary-500/30"
       @click="isExpanded = !isExpanded"
     >
@@ -253,7 +253,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:filters', 'apply', 'clear']);
 
-const isExpanded = ref(true);
+const isExpanded = ref(false);
 const showAdvanced = ref(false);
 const showCobrade = ref(false);
 const localFilters = ref({ ...props.filters });

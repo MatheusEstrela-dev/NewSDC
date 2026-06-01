@@ -39,7 +39,7 @@
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
       <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
-        <thead class="bg-slate-50 dark:bg-slate-800/40">
+        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
           <tr>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Quando</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Tipo</th>

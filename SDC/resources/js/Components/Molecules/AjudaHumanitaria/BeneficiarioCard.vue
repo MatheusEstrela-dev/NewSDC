@@ -79,7 +79,7 @@
         </span>
         <span
           v-if="beneficiario.situacoes_vulnerabilidade.length > 3"
-          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 text-xs text-slate-400"
+          class="px-2 py-0.5 sm:py-1 rounded bg-slate-200 dark:bg-slate-700/30 text-xs text-slate-600 dark:text-slate-400"
         >
           +{{ beneficiario.situacoes_vulnerabilidade.length - 3 }}
         </span>
@@ -87,7 +87,7 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-700/30 dark:border-slate-700/30 border-slate-200">
+    <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-200 dark:border-slate-700/30">
       <ActionButton
         module="humanitaria"
         resource="beneficiarios"
@@ -127,7 +127,7 @@ defineEmits(['click', 'view', 'print', 'edit', 'delete']);
 
 // Glow neon effect baseado no status
 const getCardClasses = () => {
-  const baseClasses = 'bg-slate-900/60 dark:bg-slate-900/60 bg-white hover:scale-[1.02] active:scale-[0.98]';
+  const baseClasses = 'bg-white dark:bg-slate-900/60 hover:scale-[1.02] active:scale-[0.98]';
 
   // Classe CSS customizada com efeito glow baseado no status
   const statusGlow = {

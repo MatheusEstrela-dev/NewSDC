@@ -124,14 +124,14 @@
               <span
                 v-for="tag in demanda.tags"
                 :key="tag"
-                class="px-2 py-1 rounded-md bg-slate-700/50 dark:bg-slate-700/50 bg-slate-200 text-slate-300 dark:text-slate-300 text-slate-700 text-xs"
+                class="px-2 py-1 rounded-md bg-slate-200 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 text-xs"
               >
                 #{{ tag }}
               </span>
             </div>
 
             <!-- Metadados -->
-            <div class="flex flex-wrap items-center gap-4 text-xs text-slate-400 dark:text-slate-400 text-slate-600">
+            <div class="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
               <div v-if="demanda.responsavel_nome" class="flex items-center gap-1">
                 <UserIcon class="w-4 h-4" />
                 <span>{{ demanda.responsavel_nome }}</span>
@@ -169,7 +169,7 @@
       class="text-center"
     >
       <div class="py-12">
-        <ClipboardDocumentListIcon class="w-16 h-16 text-slate-600 dark:text-slate-600 text-slate-400 mx-auto mb-4" />
+        <ClipboardDocumentListIcon class="w-16 h-16 text-slate-400 dark:text-slate-600 mx-auto mb-4" />
         <Heading :level="4" color="muted" class="mb-2">Nenhuma demanda encontrada</Heading>
         <Text size="sm" color="muted">
           {{ hasActiveFilters ? 'Tente ajustar os filtros' : 'Crie sua primeira demanda para começar' }}

@@ -2,7 +2,6 @@
   <div class="mb-6">
     <div class="rounded-2xl p-6 border
                 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-700/30
-                bg-white dark:bg-slate-900/25
                 border-slate-200 dark:border-slate-700/30">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="flex items-center gap-4">
