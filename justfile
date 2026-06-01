@@ -192,7 +192,7 @@ build:
 
 # Dev do frontend (watch)
 dev:
-    cd SDC && npm run dev
+    cd SDC && bun run dev
 
 # Instala dependências do NPM
 npm-install:
@@ -316,6 +316,7 @@ dev-status:
     @echo ""
     @echo "URLs:"
     @echo "  https://localhost:19444  (app)"
+    @echo "  http://localhost:8081     (Vite HMR no host)"
     @echo "  http://localhost:8025    (mailhog UI)"
 
 # Restart so do container app (apos mudanca de config/.env)
@@ -335,7 +336,7 @@ dev-clean:
 
 # Vite dev server no HOST (rodar em terminal separado)
 dev-vite:
-    cd SDC && npm run dev
+    cd SDC && bun run dev
 
 # ==================== ENV SWITCH ====================
 

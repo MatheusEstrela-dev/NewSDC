@@ -40,7 +40,7 @@ const cellClasses = computed(() => {
   return [
     alignClasses[props.align],
     paddingClasses[props.padding],
-    'text-slate-300 dark:text-slate-300 text-slate-700',
+    'text-slate-700 dark:text-slate-300',
   ].join(' ');
 });
 </script>

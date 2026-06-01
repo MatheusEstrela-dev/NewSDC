@@ -11,7 +11,7 @@
 # Mailhog: http://localhost:8025
 # Postgres host:5433  Redis host:6380
 #
-# Vite roda no HOST (just dev-vite), nao neste compose.
+# Vite roda no HOST em http://localhost:8081 (just dev-vite), nao neste compose.
 # ============================================================================
 
 name: newsdc-dev
@@ -95,6 +95,7 @@ services:
       - ../tests:/app/tests
       - ../composer.json:/app/composer.json:ro
       - ../composer.lock:/app/composer.lock:ro
+      - ../phpunit.xml:/app/phpunit.xml:ro
       - ../artisan:/app/artisan:ro
       # Storage e logs visiveis no host
       - ../storage/app:/app/storage/app
@@ -174,6 +175,7 @@ services:
       - ../tests:/app/tests
       - ../composer.json:/app/composer.json:ro
       - ../composer.lock:/app/composer.lock:ro
+      - ../phpunit.xml:/app/phpunit.xml:ro
       - ../artisan:/app/artisan:ro
       # Storage e logs visiveis no host
       - ../storage/app:/app/storage/app

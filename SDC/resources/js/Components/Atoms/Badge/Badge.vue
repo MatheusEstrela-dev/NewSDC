@@ -25,11 +25,11 @@ const props = defineProps({
 });
 
 const variantClasses = {
-  info: 'bg-cyan-500/20 dark:bg-cyan-500/20 bg-cyan-100 text-cyan-400 dark:text-cyan-400 text-cyan-700',
-  success: 'bg-emerald-500/20 dark:bg-emerald-500/20 bg-emerald-100 text-emerald-400 dark:text-emerald-400 text-emerald-700',
-  warning: 'bg-amber-500/20 dark:bg-amber-500/20 bg-amber-100 text-amber-400 dark:text-amber-400 text-amber-700',
-  danger: 'bg-red-500/20 dark:bg-red-500/20 bg-red-100 text-red-400 dark:text-red-400 text-red-700',
-  default: 'bg-slate-500/20 dark:bg-slate-500/20 bg-slate-100 text-slate-400 dark:text-slate-400 text-slate-700',
+  info: 'bg-cyan-100 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-400',
+  success: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400',
+  warning: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400',
+  danger: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400',
+  default: 'bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400',
 };
 
 const sizeClasses = {

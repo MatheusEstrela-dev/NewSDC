@@ -42,19 +42,19 @@ defineProps({
 });
 
 const variantBorderMap = {
-  info: 'border-cyan-500/25 dark:border-cyan-500/25 border-cyan-200',
-  success: 'border-emerald-500/25 dark:border-emerald-500/25 border-emerald-200',
-  warning: 'border-amber-500/25 dark:border-amber-500/25 border-amber-200',
-  danger: 'border-red-500/25 dark:border-red-500/25 border-red-200',
-  primary: 'border-violet-500/25 dark:border-violet-500/25 border-violet-200',
+  info: 'border-cyan-200 dark:border-cyan-500/25',
+  success: 'border-emerald-200 dark:border-emerald-500/25',
+  warning: 'border-amber-200 dark:border-amber-500/25',
+  danger: 'border-red-200 dark:border-red-500/25',
+  primary: 'border-violet-200 dark:border-violet-500/25',
 };
 
 const variantIconMap = {
-  info: 'bg-cyan-500/15 dark:bg-cyan-500/15 bg-cyan-100 text-cyan-300 dark:text-cyan-300 text-cyan-700 ring-1 ring-cyan-500/25 dark:ring-cyan-500/25 ring-cyan-300',
-  success: 'bg-emerald-500/15 dark:bg-emerald-500/15 bg-emerald-100 text-emerald-300 dark:text-emerald-300 text-emerald-700 ring-1 ring-emerald-500/25 dark:ring-emerald-500/25 ring-emerald-300',
-  warning: 'bg-amber-500/15 dark:bg-amber-500/15 bg-amber-100 text-amber-300 dark:text-amber-300 text-amber-700 ring-1 ring-amber-500/25 dark:ring-amber-500/25 ring-amber-300',
-  danger: 'bg-red-500/15 dark:bg-red-500/15 bg-red-100 text-red-300 dark:text-red-300 text-red-700 ring-1 ring-red-500/25 dark:ring-red-500/25 ring-red-300',
-  primary: 'bg-violet-500/15 dark:bg-violet-500/15 bg-violet-100 text-violet-300 dark:text-violet-300 text-violet-700 ring-1 ring-violet-500/25 dark:ring-violet-500/25 ring-violet-300',
+  info: 'bg-cyan-100 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 ring-1 ring-cyan-300 dark:ring-cyan-500/25',
+  success: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-300 dark:ring-emerald-500/25',
+  warning: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-300 dark:ring-amber-500/25',
+  danger: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-500/25',
+  primary: 'bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 ring-1 ring-violet-300 dark:ring-violet-500/25',
 };
 
 function metricCardClasses(variant) {

@@ -1,5 +1,5 @@
 <template>
-  <FilterSection title="Filtros de Pesquisa" :columns="4" :default-collapsed="false" class="mb-6">
+  <FilterSection title="Filtros de Pesquisa" :columns="4" :default-collapsed="true" class="mb-6">
     <FilterField
       label="Busca Geral"
       type="text"

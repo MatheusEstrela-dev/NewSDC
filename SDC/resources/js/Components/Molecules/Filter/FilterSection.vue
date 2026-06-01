@@ -3,24 +3,24 @@
     <button
       type="button"
       class="w-full flex items-center justify-between gap-3 mb-2 pb-2 text-left group transition-colors duration-300
-             border-b border-slate-700/30 dark:border-slate-700/30 border-slate-200
-             hover:border-primary-500/30 dark:hover:border-primary-500/30 hover:border-primary-300"
+             border-b border-slate-200 dark:border-slate-700/30
+             hover:border-primary-300 dark:hover:border-primary-500/30"
       @click="isCollapsed = !isCollapsed"
       :aria-expanded="(!isCollapsed).toString()"
     >
       <div class="flex items-center gap-2">
         <FunnelIcon class="w-5 h-5 transition-colors duration-300 group-hover:scale-110 transform
-                           text-slate-400 dark:text-slate-400 text-slate-600
-                           group-hover:text-primary-400 dark:group-hover:text-primary-400 group-hover:text-primary-600" />
+                           text-slate-600 dark:text-slate-400
+                           group-hover:text-primary-600 dark:group-hover:text-primary-400" />
         <Heading :level="5" class="transition-colors duration-300
-                                   group-hover:text-primary-400 dark:group-hover:text-primary-400 group-hover:text-primary-600">
+                                   group-hover:text-primary-600 dark:group-hover:text-primary-400">
           {{ title }}
         </Heading>
       </div>
       <ChevronDownIcon
         class="w-5 h-5 transition-colors duration-300 transform
-               text-slate-400 dark:text-slate-400 text-slate-600
-               group-hover:text-primary-400 dark:group-hover:text-primary-400 group-hover:text-primary-600"
+               text-slate-600 dark:text-slate-400
+               group-hover:text-primary-600 dark:group-hover:text-primary-400"
         :class="isCollapsed ? '-rotate-90' : 'rotate-0'"
       />
     </button>

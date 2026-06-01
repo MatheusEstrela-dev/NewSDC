@@ -1,114 +1,83 @@
-# 🚀 Como Iniciar o Vite do NewSDC
+# Vite local com Laravel no Docker
 
-## 📋 Comando para Iniciar
+O ambiente de desenvolvimento atual usa:
 
-### Opção 1: Usando o script PowerShell
+- Laravel/FrankenPHP no Docker: `https://localhost:19444`
+- Vite no host: `http://localhost:8081`
+- Aplicacao PAE: `https://localhost:19444/pae`
+
+## Subir o ambiente
+
+Na raiz `NewSDC/`, suba o Laravel e os servicos:
+
 ```powershell
-cd "c:\Users\x24679188\Documents\GitHub\NewSDC\SDC"
+just dev-up
+```
+
+Em outro terminal, inicie o Vite no host:
+
+```powershell
+just dev-vite
+```
+
+Tambem e possivel iniciar diretamente:
+
+```powershell
+cd SDC
+bun run dev
+```
+
+Para gerar os assets de producao sem derrubar o HMR:
+
+```powershell
+cd SDC
+bun run build
+```
+
+Se o PHP instalado no host for anterior ao `8.3`, a build gera o Ziggy
+automaticamente pelo container `newsdc_dev_app`.
+
+No Windows, os atalhos abaixo executam o mesmo fluxo:
+
+```powershell
+cd SDC
 .\iniciar-vite.ps1
 ```
 
-### Opção 2: Usando o script Batch
+ou:
+
 ```batch
-cd "c:\Users\x24679188\Documents\GitHub\NewSDC\SDC"
+cd SDC
 iniciar-vite.bat
 ```
 
-### Opção 3: Comando direto
-```bash
-cd "c:\Users\x24679188\Documents\GitHub\NewSDC\SDC"
-npm run dev
-```
+## Como a integracao funciona
 
-## ⚙️ Configuração do Vite
+O `laravel-vite-plugin` cria `SDC/public/hot` quando o Vite inicia e remove o
+arquivo quando o processo encerra normalmente. O compose de desenvolvimento
+monta `SDC/public` em `/app/public`, portanto o Laravel no container le o mesmo
+hot-file criado pelo Bun no host.
 
-O Vite está configurado em `SDC/vite.config.js`:
+Uma build local pode coexistir com o HMR e nao remove `public/hot`. Em ambiente
+local, o Laravel preserva o hot-file enquanto o Vite estiver acessivel e remove
+qualquer arquivo residual se o servidor cair. Em ambientes nao locais, o
+Laravel sempre remove o hot-file residual e usa `public/build/manifest.json`.
 
-- **Host:** `0.0.0.0` (acessível de qualquer interface de rede)
-- **Porta:** `5175` (porta diferente para evitar conflitos com outros projetos)
-- **HMR (Hot Module Replacement):** Habilitado
-- **Watch:** Polling habilitado (útil para Docker/WSL)
+## Verificacao rapida
 
-## 🌐 Acesso
+Com o Vite ativo:
 
-Após iniciar, o Vite estará disponível em:
-
-- **Local:** http://localhost:5175
-- **Rede:** http://[seu-ip]:5175
-
-## 📝 Scripts Disponíveis
-
-No `package.json`:
-
-- `npm run dev` - Inicia o servidor de desenvolvimento Vite
-- `npm run build` - Compila os assets para produção
-
-## ✅ Verificar se Está Rodando
-
-### Windows:
 ```powershell
-netstat -ano | findstr :5175
+Get-Content SDC\public\hot
+docker exec newsdc_dev_app cat /app/public/hot
 ```
 
-### Verificar no Navegador:
-Acesse: http://localhost:5175
+Os dois comandos devem mostrar:
 
-## 🔧 Troubleshooting
-
-### Porta já em uso:
-```bash
-# Verificar qual processo está usando a porta
-netstat -ano | findstr :5175
-
-# Matar o processo (substitua PID pelo número do processo)
-taskkill /PID <PID> /F
+```text
+http://localhost:8081
 ```
 
-### Dependências não instaladas:
-```bash
-cd "c:\Users\x24679188\Documents\GitHub\NewSDC\SDC"
-npm install
-```
-
-### Erro de permissão:
-Execute o terminal como Administrador
-
-## 📊 Status Esperado
-
-Quando o Vite iniciar corretamente, você verá:
-
-```
-  VITE v5.4.21  ready in XXX ms
-
-  ➜  Local:   http://localhost:5175/
-  ➜  Network: http://[seu-ip]:5175/
-  ➜  press h + enter to show help
-```
-
-## 🔗 Integração com Laravel
-
-O Vite está configurado para trabalhar com Laravel através do plugin `laravel-vite-plugin`. 
-
-No Laravel, use:
-```blade
-@vite(['resources/js/app.js'])
-```
-
-## ⚠️ Importante
-
-- O Vite precisa estar rodando durante o desenvolvimento
-- Para produção, use `npm run build` (os assets são compilados)
-- O HMR (Hot Module Replacement) permite ver mudanças sem recarregar a página
-
----
-
-**Data:** {{ date('d/m/Y H:i:s') }}
-
-
-
-
-
-
-
-
-
+Se a porta `8081` estiver ocupada, o script encerra antes de carregar uma
+segunda instancia do Vite. Isso preserva o hot-file da instancia existente e
+evita a troca silenciosa para outra porta.

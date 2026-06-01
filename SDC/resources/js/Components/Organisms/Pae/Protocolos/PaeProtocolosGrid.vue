@@ -10,17 +10,16 @@
     </div>
 
     <div v-if="loading" class="p-12 text-center">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 dark:border-blue-400 border-blue-600"></div>
-      <p class="mt-4 text-slate-400 dark:text-slate-400 text-slate-600">Carregando...</p>
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+      <p class="mt-4 text-slate-600 dark:text-slate-400">Carregando...</p>
     </div>
 
-    <div v-else-if="protocolos.length === 0" class="p-12 text-center">
-      <DocumentTextIcon class="w-12 h-12 text-slate-600 dark:text-slate-600 text-slate-400 mx-auto mb-4" />
-      <Heading :level="4" color="muted">Nenhum protocolo encontrado</Heading>
-      <Text size="sm" color="muted" class="mt-2">
-        Tente ajustar os filtros de busca
-      </Text>
-    </div>
+    <ListEmptyState
+      v-else-if="protocolos.length === 0"
+      :icon="DocumentTextIcon"
+      title="Nenhum protocolo encontrado"
+      helper="Tente ajustar os filtros de busca"
+    />
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <PaeProtocoloCard
@@ -50,9 +49,8 @@
 
 <script setup>
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import PaeProtocoloCard from '@/Components/Molecules/Pae/Protocolos/PaeProtocoloCard.vue';
 
 const props = defineProps({
