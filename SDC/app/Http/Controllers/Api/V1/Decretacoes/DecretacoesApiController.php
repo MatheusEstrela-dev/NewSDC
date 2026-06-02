@@ -88,10 +88,17 @@ class DecretacoesApiController extends Controller
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Response(
      *         response=200,
-     *         description="Dados completos do processo",
-     *         @OA\JsonContent(ref="#/components/schemas/ProcessoDecretacaoItem")
+     *         description="Dados completos do processo (envelope success + data rico)",
+     *         @OA\JsonContent(ref="#/components/schemas/ProcessoDecretacaoDetail")
      *     ),
-     *     @OA\Response(response=404, description="Processo nao encontrado"),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Processo nao encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Processo nao encontrado")
+     *         )
+     *     ),
      *     @OA\Response(response=401, description="Nao autenticado")
      * )
      */

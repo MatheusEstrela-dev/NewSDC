@@ -6,6 +6,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Redis habilitado
+    |--------------------------------------------------------------------------
+    |
+    | Liga/desliga os componentes que dependem de Redis cru (ConnectionSemaphore,
+    | ApiRateLimiter e bucket global). Quando false, esses componentes degradam
+    | graciosamente (no-op / fail-open), permitindo a aplicacao operar sem Redis.
+    | Em prod sem Redis defina REDIS_ENABLED=false.
+    */
+
+    'redis_enabled' => filter_var(env('REDIS_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+
+    /*
+    |--------------------------------------------------------------------------
     | DB Pool e Circuit Breaker
     |--------------------------------------------------------------------------
     |

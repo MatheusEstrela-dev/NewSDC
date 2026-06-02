@@ -7,7 +7,7 @@
 #   just dev-status
 #   just dev-logs
 #
-# App:     https://localhost:19444
+# App:     http://localhost:19444
 # Mailhog: http://localhost:8025
 # Postgres host:5433  Redis host:6380
 #
@@ -31,15 +31,26 @@ services:
       APP_NAME: "SDC Dev"
       APP_ENV: local
       APP_DEBUG: "true"
-      APP_URL: https://localhost:19444
+      # HTTP puro para permitir consumo por Power BI sem cert self-signed.
+      APP_URL: http://localhost:19444
 
       # Octane + FrankenPHP
       OCTANE_SERVER: frankenphp
-      OCTANE_HTTPS: "true"
+      # OCTANE_HTTPS=false -> entrypoint roda Octane em HTTP puro na porta 80
+      # (NAO usa o Caddyfile.local / tls internal).
+      OCTANE_HTTPS: "false"
       OCTANE_CADDYFILE: /etc/caddy/Caddyfile.local
-      PORT: 443
+      PORT: 80
       FRANKENPHP_WORKERS: 4
       FRANKENPHP_MAX_REQUESTS: 500
+
+      # Em HTTP o cookie Secure nao e enviado pelo browser; sem isso o login web
+      # quebra. config/session.php tem default true, entao sobrescrevemos aqui.
+      SESSION_SECURE_COOKIE: "false"
+
+      # Host base do Swagger (server URL do "Try it out"). Em HTTP para casar com
+      # a origem atual; env do compose vence o .env baked na imagem.
+      L5_SWAGGER_CONST_HOST: http://localhost:19444
 
       # Banco
       DB_CONNECTION: pgsql
@@ -78,8 +89,8 @@ services:
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
 
     ports:
-      - "19444:443"     # HTTPS (FrankenPHP)
-      - "19081:80"      # HTTP -> redirect HTTPS
+      - "19444:80"      # HTTP (FrankenPHP) - mesma porta de sempre, agora sem TLS
+      - "19081:80"      # HTTP alternativo
       - "2021:2019"     # Caddy admin API
 
     volumes:
@@ -111,7 +122,7 @@ services:
         condition: service_healthy
 
     healthcheck:
-      test: ["CMD", "curl", "-sfk", "https://localhost/health"]
+      test: ["CMD", "curl", "-sf", "http://localhost/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -131,7 +142,8 @@ services:
       APP_NAME: "SDC Dev Queue"
       APP_ENV: local
       APP_DEBUG: "true"
-      APP_URL: https://localhost:19444
+      # Mesma origem HTTP do app, para links gerados em jobs/emails baterem.
+      APP_URL: http://localhost:19444
 
       # Banco (compartilhado com app)
       DB_CONNECTION: pgsql

@@ -22,9 +22,9 @@ class GlobalSearchService
 
         $key = 'global_search:' . md5($normalized);
 
-        return Cache::store('redis')
-            ->tags(['global_search'])
-            ->remember($key, self::CACHE_TTL, fn () => $this->runSearch($normalized));
+        // Usa o store padrao (CACHE_DRIVER). Sem tags para compatibilidade com
+        // drivers file/database; a invalidacao se da pelo TTL curto.
+        return Cache::remember($key, self::CACHE_TTL, fn () => $this->runSearch($normalized));
     }
 
     private function runSearch(string $query): array

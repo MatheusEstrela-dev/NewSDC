@@ -67,22 +67,12 @@ return [
             ],
             'pattern' => '*.php',
         ],
+        // Os security schemes sao definidos via anotacoes @OA\SecurityScheme em
+        // app/Http/Controllers/Api/SwaggerController.php (bearerAuth + powerBiToken),
+        // mantendo uma unica fonte de verdade. Cada endpoint declara o seu security.
         'securityDefinitions' => [
-            'securitySchemes' => [
-                'sanctum' => [
-                    'type' => 'http',
-                    'description' => 'Enter token in format (Bearer <token>)',
-                    'name' => 'Authorization',
-                    'in' => 'header',
-                    'scheme' => 'Bearer',
-                    'bearerFormat' => 'JWT',
-                ],
-            ],
-            'security' => [
-                [
-                    'sanctum' => [],
-                ],
-            ],
+            'securitySchemes' => [],
+            'security' => [],
         ],
         'generate_always' => env('L5_SWAGGER_GENERATE_ALWAYS', false),
         'generate_yaml_copy' => env('L5_SWAGGER_GENERATE_YAML_COPY', false),

@@ -31,7 +31,7 @@ class ProxyController extends Controller
      *     description="Faz proxy de requisições para APIs externas. O sistema valida o token Power BI, busca o token individual da API e faz a requisição automaticamente.",
      *     operationId="proxyRequest",
      *     tags={"Power BI"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="api",
      *         in="path",
