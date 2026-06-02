@@ -29,7 +29,7 @@ class TokenController extends Controller
      *     description="Gera um token único que permite ao Power BI acessar todas as APIs configuradas (PAE, RAT, TDAP, BI). Este token contém tokens individuais para cada API.",
      *     operationId="generatePowerBIToken",
      *     tags={"Power BI"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\RequestBody(
      *         required=false,
      *         @OA\JsonContent(
@@ -106,7 +106,7 @@ class TokenController extends Controller
      *     description="Valida um token do Power BI e retorna os tokens individuais para cada API",
      *     operationId="validatePowerBIToken",
      *     tags={"Power BI"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="token",
      *         in="path",
@@ -160,7 +160,7 @@ class TokenController extends Controller
      *     description="Retorna tokens individuais para cada API configurada, útil para testes",
      *     operationId="listApiTokens",
      *     tags={"Power BI"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="apis",
      *         in="query",

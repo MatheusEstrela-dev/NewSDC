@@ -30,8 +30,19 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(ConnectionSemaphore::class, function ($app) {
             $cfg = $app['config']->get('resilience.db');
+
+            // Sem Redis: passa client null -> semaforo opera em modo no-op.
+            $client = null;
+            if ($app['config']->get('resilience.redis_enabled', true)) {
+                try {
+                    $client = Redis::connection()->client();
+                } catch (\Throwable $e) {
+                    $client = null;
+                }
+            }
+
             return new ConnectionSemaphore(
-                Redis::connection()->client(),
+                $client,
                 limit: $cfg['max_concurrent'],
                 waitMs: $cfg['acquire_poll_ms'],
                 maxWaitMs: $cfg['acquire_wait_ms'],

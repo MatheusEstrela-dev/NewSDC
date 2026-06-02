@@ -69,7 +69,7 @@ class RatNovoController extends Controller
      *     path="/api/v1/rat-novo/{id}",
      *     summary="Retorna dados completos e normalizados de uma ocorrência",
      *     tags={"RAT Novo"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -95,7 +95,7 @@ class RatNovoController extends Controller
      *     path="/api/v1/rat-novo/{id}/power-bi",
      *     summary="Payload otimizado para consumo direto pelo Power BI",
      *     tags={"RAT Novo"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -124,7 +124,7 @@ class RatNovoController extends Controller
      *     path="/api/v1/rat-novo",
      *     summary="Lista resumida de ocorrências para integrações externas",
      *     tags={"RAT Novo"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="per_page",
      *         in="query",
@@ -150,7 +150,7 @@ class RatNovoController extends Controller
      *     path="/api/v1/rat-novo",
      *     summary="Cria um novo registro de RAT",
      *     tags={"RAT Novo"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(ref="#/components/schemas/RatNovoStoreRequest")
@@ -186,7 +186,7 @@ class RatNovoController extends Controller
      *     path="/api/v1/rat-novo/{id}",
      *     summary="Atualiza dados básicos do RAT",
      *     tags={"RAT Novo"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -232,7 +232,7 @@ class RatNovoController extends Controller
      *     path="/api/v1/rat-novo/{id}",
      *     summary="Remove o registro (soft delete)",
      *     tags={"RAT Novo"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="id",
      *         in="path",

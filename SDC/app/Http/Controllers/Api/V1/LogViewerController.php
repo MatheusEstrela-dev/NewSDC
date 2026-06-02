@@ -365,6 +365,7 @@ class LogViewerController extends Controller
      *     description="Retorna lista de camadas (layers) disponíveis para filtragem",
      *     operationId="logsLayers",
      *     tags={"Log Viewer V1"},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Response(
      *         response=200,
      *         description="Camadas de log"
@@ -395,6 +396,7 @@ class LogViewerController extends Controller
      *     description="Retorna lista de níveis de severidade disponíveis",
      *     operationId="logsLevels",
      *     tags={"Log Viewer V1"},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Response(
      *         response=200,
      *         description="Níveis de log"

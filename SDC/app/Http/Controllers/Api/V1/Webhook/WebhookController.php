@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Webhook;
 
 use App\Http\Controllers\Controller;
 use App\Services\Webhook\WebhookService;
+use App\Services\Webhook\WebhookSignatureValidator;
 use App\Enums\RequestPriority;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -17,7 +18,8 @@ use Illuminate\Http\JsonResponse;
 class WebhookController extends Controller
 {
     public function __construct(
-        private WebhookService $webhookService
+        private WebhookService $webhookService,
+        private WebhookSignatureValidator $signatureValidator
     ) {}
 
     /**
@@ -92,6 +94,29 @@ class WebhookController extends Controller
         // 1. Geração de um ID de rastreio (Correlation ID / Trace ID)
         // Permite rastrear todo o fluxo do webhook do início ao fim
         $traceId = \Illuminate\Support\Str::uuid()->toString();
+
+        // Validacao de assinatura HMAC: garante que o payload veio de fonte
+        // confiavel (endpoint e publico/sem auth:sanctum). Assina-se o corpo raw
+        // com o secret compartilhado (config webhooks.providers.default.secret).
+        $webhookSecret = config('webhooks.providers.default.secret');
+        if ($webhookSecret) {
+            $signature = (string) $request->header('X-Webhook-Signature', '');
+            if ($signature === '' || ! $this->signatureValidator->validate($request->getContent(), $signature, 'default')) {
+                return response()->json([
+                    'error'    => 'Invalid Request',
+                    'message'  => 'Assinatura de webhook invalida ou ausente.',
+                    'trace_id' => $traceId,
+                ], 401);
+            }
+        } elseif (app()->environment('production')) {
+            // Fail-closed: em producao o secret e obrigatorio para nao expor
+            // ingestao anonima.
+            return response()->json([
+                'error'    => 'Server Misconfiguration',
+                'message'  => 'Webhook secret nao configurado.',
+                'trace_id' => $traceId,
+            ], 503);
+        }
 
         $validated = $request->validate([
             'type' => 'required|string|max:100',

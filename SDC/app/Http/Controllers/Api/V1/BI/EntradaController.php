@@ -31,7 +31,7 @@ class EntradaController extends Controller
      *     description="Retorna lista flat de processos de decretacoes com dados de municipios e totais de desastres, otimizada para consumo pelo Power BI",
      *     operationId="biEntradaIndex",
      *     tags={"BI - Entrada"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(name="search", in="query", required=false, @OA\Schema(type="string")),
      *     @OA\Parameter(name="data_entrada_inicio", in="query", required=false, @OA\Schema(type="string", format="date", example="2025-01-01")),
      *     @OA\Parameter(name="data_entrada_fim", in="query", required=false, @OA\Schema(type="string", format="date", example="2025-12-31")),
@@ -120,7 +120,7 @@ class EntradaController extends Controller
      *     summary="Detalhe de uma entrada de processo",
      *     operationId="biEntradaShow",
      *     tags={"BI - Entrada"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer", example=98)),
      *     @OA\Response(
      *         response=200,

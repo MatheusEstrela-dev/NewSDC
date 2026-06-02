@@ -99,7 +99,7 @@ class EmpreendimentoController extends Controller
      *     description="Retorna uma lista paginada de todos os empreendimentos cadastrados no sistema PAE",
      *     operationId="listEmpreendimentos",
      *     tags={"PAE"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
@@ -172,7 +172,7 @@ class EmpreendimentoController extends Controller
      *     description="Retorna os detalhes completos de um empreendimento PAE",
      *     operationId="showEmpreendimento",
      *     tags={"PAE"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -212,7 +212,7 @@ class EmpreendimentoController extends Controller
      *     description="Cadastra um novo empreendimento no sistema PAE",
      *     operationId="storeEmpreendimento",
      *     tags={"PAE"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -271,7 +271,7 @@ class EmpreendimentoController extends Controller
      *     description="Atualiza os dados de um empreendimento existente. Todos os campos sao opcionais.",
      *     operationId="updateEmpreendimento",
      *     tags={"PAE"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -334,7 +334,7 @@ class EmpreendimentoController extends Controller
      *     description="Remove um empreendimento do sistema (soft delete)",
      *     operationId="deleteEmpreendimento",
      *     tags={"PAE"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
