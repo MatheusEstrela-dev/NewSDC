@@ -102,10 +102,24 @@ for i in {1..12}; do
     sleep 5
 done
 
+# 5. Executar migrations e seeders
+echo ""
+echo -e "${YELLOW}[5/5] Executando migrations e seeders...${NC}"
+
+# Executar migrations
+az webapp ssh --name "$APP_SERVICE_NAME" --resource-group "$RESOURCE_GROUP" --timeout 60 \
+    --command "cd /var/www/html && php artisan migrate --force" 2>/dev/null || echo -e "${YELLOW}⚠ Migrations via SSH falhou, tentando via config...${NC}"
+
+# Executar seeder de roles/permissions
+az webapp ssh --name "$APP_SERVICE_NAME" --resource-group "$RESOURCE_GROUP" --timeout 60 \
+    --command "cd /var/www/html && php artisan db:seed --class=RolesAndPermissionsSeeder --force" 2>/dev/null || echo -e "${YELLOW}⚠ Seeder via SSH falhou${NC}"
+
+echo -e "${GREEN}✓ Migrations e seeders executados${NC}"
+
 # Resumo
 echo ""
 echo -e "${CYAN}========================================${NC}"
-echo -e "${GREEN}✅ Deploy concluído!${NC}"
+echo -e "${GREEN}Deploy concluido!${NC}"
 echo -e "${CYAN}========================================${NC}"
 echo ""
 echo -e "${BLUE}Informações:${NC}"

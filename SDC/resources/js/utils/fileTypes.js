@@ -47,7 +47,7 @@ export function getFileTypeInfo(filename) {
  * Valida se o arquivo é permitido
  */
 export function isAllowedFileType(filename) {
-  const allowedTypes = ['pdf', 'kml', 'doc', 'docx'];
+  const allowedTypes = ['pdf', 'kml', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'gif', 'xls', 'xlsx', 'txt'];
   const extension = filename.split('.').pop()?.toLowerCase();
   return allowedTypes.includes(extension);
 }

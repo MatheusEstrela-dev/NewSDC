@@ -65,7 +65,7 @@ class QueueMonitor extends Command
     {
         $stats = DeadLetterQueueService::stats();
 
-        $this->info('📊 Dead Letter Queue Statistics');
+        $this->info('Dead Letter Queue Statistics');
         $this->newLine();
 
         $this->line("Total failed jobs: <fg=red>{$stats['total']}</>");
@@ -85,9 +85,9 @@ class QueueMonitor extends Command
         }
 
         $this->newLine();
-        $this->comment('💡 Use --list para ver detalhes dos jobs');
-        $this->comment('💡 Use --errors para ver erros mais comuns');
-        $this->comment('💡 Use --health para verificar saúde da fila');
+        $this->comment('Use --list para ver detalhes dos jobs');
+        $this->comment('Use --errors para ver erros mais comuns');
+        $this->comment('Use --health para verificar saúde da fila');
     }
 
     /**
@@ -99,11 +99,11 @@ class QueueMonitor extends Command
         $jobs = DeadLetterQueueService::listFailedJobs($limit);
 
         if (empty($jobs)) {
-            $this->info('✅ Nenhum job falho encontrado!');
+            $this->info('Nenhum job falho encontrado!');
             return;
         }
 
-        $this->info("📋 Failed Jobs (últimos {$limit})");
+        $this->info("Failed Jobs (últimos {$limit})");
         $this->newLine();
 
         $headers = ['UUID', 'Queue', 'Connection', 'Failed At', 'Exception'];
@@ -120,8 +120,8 @@ class QueueMonitor extends Command
         $this->table($headers, $rows);
 
         $this->newLine();
-        $this->comment('💡 Para reprocessar: php artisan queue:retry {uuid}');
-        $this->comment('💡 Para reprocessar todos: php artisan queue:retry all');
+        $this->comment('Para reprocessar: php artisan queue:retry {uuid}');
+        $this->comment('Para reprocessar todos: php artisan queue:retry all');
     }
 
     /**
@@ -133,11 +133,11 @@ class QueueMonitor extends Command
         $errors = DeadLetterQueueService::topErrors($limit);
 
         if (empty($errors)) {
-            $this->info('✅ Nenhum erro encontrado!');
+            $this->info('Nenhum erro encontrado!');
             return;
         }
 
-        $this->info("🔥 Top {$limit} Erros Mais Comuns");
+        $this->info("Top {$limit} Erros Mais Comuns");
         $this->newLine();
 
         $headers = ['#', 'Ocorrências', 'Erro', 'Última Vez'];
@@ -156,7 +156,7 @@ class QueueMonitor extends Command
         $this->table($headers, $rows);
 
         $this->newLine();
-        $this->comment('💡 Analise os erros mais frequentes para identificar problemas sistêmicos');
+        $this->comment('Analise os erros mais frequentes para identificar problemas sistêmicos');
     }
 
     /**
@@ -169,9 +169,9 @@ class QueueMonitor extends Command
         $this->newLine();
 
         if ($health['status'] === 'healthy') {
-            $this->info('✅ Queue is HEALTHY');
+            $this->info('Queue is HEALTHY');
         } else {
-            $this->error('❌ Queue is UNHEALTHY');
+            $this->error('Queue is UNHEALTHY');
         }
 
         $this->newLine();
@@ -183,7 +183,7 @@ class QueueMonitor extends Command
         $this->newLine();
 
         if ($health['status'] === 'unhealthy') {
-            $this->warn('⚠️  AÇÃO RECOMENDADA: Investigue os erros com --errors');
+            $this->warn('AÇÃO RECOMENDADA: Investigue os erros com --errors');
         }
     }
 }

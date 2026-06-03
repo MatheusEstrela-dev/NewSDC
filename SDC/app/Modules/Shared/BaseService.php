@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared;
 
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 abstract class BaseService
 {
+    use LogsActivity;
     protected function paginate(Builder $query, int $perPage = 15): LengthAwarePaginator
     {
         return $query->paginate($perPage);
@@ -51,5 +55,30 @@ abstract class BaseService
         }
 
         return $query->orderBy($sortBy, $sortOrder);
+    }
+
+    protected function execute(string $operation, callable $callback, bool $useTransaction = false): mixed
+    {
+        return $this->wrapWithLogging($operation, function () use ($callback, $useTransaction) {
+            if ($useTransaction) {
+                return DB::transaction($callback);
+            }
+            return $callback();
+        });
+    }
+
+    protected function executeInTransaction(string $operation, callable $callback): mixed
+    {
+        return $this->execute($operation, $callback, true);
+    }
+
+    protected function safeExecute(string $operation, callable $callback, mixed $default = null): mixed
+    {
+        try {
+            return $this->execute($operation, $callback);
+        } catch (Throwable $e) {
+            $this->logException($e, ['operation' => $operation, 'fallback' => true]);
+            return $default;
+        }
     }
 }

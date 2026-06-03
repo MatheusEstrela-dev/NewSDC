@@ -483,7 +483,7 @@ def render_tool_modules(modules: list[dict[str, Any]]) -> str:
             lines.append(f"  Ordem: {', '.join(f'`{item}`' for item in module['read_order'])}.")
         if module.get("files"):
             selected = module["files"][:5]
-            lines.append(f"  Contexto: {', '.join(f'`{item['path']}`' for item in selected)}.")
+            lines.append(f"  Contexto: {', '.join('`' + item['path'] + '`' for item in selected)}.")
         if module.get("worktrees"):
             selected_worktrees = [item["name"] for item in module["worktrees"][:5]]
             lines.append(f"  Worktrees: {', '.join(selected_worktrees)}.")

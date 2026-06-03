@@ -46,7 +46,7 @@ class CreateAdminUser extends Command
             ->first();
 
         if ($existingUser) {
-            $this->warn("⚠️  Usuário já existe!");
+            $this->warn("Usuário já existe!");
             $this->table(
                 ['Campo', 'Valor'],
                 [
@@ -72,7 +72,7 @@ class CreateAdminUser extends Command
                 'email_verified_at' => now(),
             ]);
 
-            $this->info('✅ Usuário atualizado!');
+            $this->info('Usuário atualizado!');
         } else {
             // Criar novo usuário
             $user = User::create([
@@ -83,7 +83,7 @@ class CreateAdminUser extends Command
                 'email_verified_at' => now(),
             ]);
 
-            $this->info('✅ Usuário criado com sucesso!');
+            $this->info('Usuário criado com sucesso!');
         }
 
         // Atribuir role super-admin
@@ -93,7 +93,7 @@ class CreateAdminUser extends Command
             ->first();
 
         if (!$superAdminRole) {
-            $this->error('❌ Role super-admin não encontrada!');
+            $this->error('Role super-admin não encontrada!');
             $this->warn('Execute primeiro: php artisan db:seed --class=RolesAndPermissionsSeeder');
             return self::FAILURE;
         }
@@ -102,7 +102,7 @@ class CreateAdminUser extends Command
         $user->syncRoles([$superAdminRole]);
 
         $this->newLine();
-        $this->info('✅ Role super-admin atribuída!');
+        $this->info('Role super-admin atribuída!');
         $this->newLine();
 
         // Verificar permissões
@@ -121,8 +121,8 @@ class CreateAdminUser extends Command
         );
 
         $this->newLine();
-        $this->info('🎉 Administrador configurado com sucesso!');
-        $this->warn('⚠️  IMPORTANTE: Altere a senha no primeiro login!');
+        $this->info('Administrador configurado com sucesso!');
+        $this->warn('IMPORTANTE: Altere a senha no primeiro login!');
         $this->newLine();
 
         return self::SUCCESS;

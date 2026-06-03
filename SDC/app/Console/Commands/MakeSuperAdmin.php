@@ -56,7 +56,7 @@ class MakeSuperAdmin extends Command
 
         $user->roles()->sync([$superAdminRole->id]);
 
-        $this->info("✅ Usuário '{$user->name}' ({$user->email}) agora é Super Admin!");
+        $this->info("Usuário '{$user->name}' ({$user->email}) agora é Super Admin!");
         $this->info("Cargos: " . $user->roles->pluck('name')->join(', '));
 
         return 0;

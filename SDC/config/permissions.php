@@ -35,7 +35,7 @@ return [
             'is_active' => true,
         ],
         'manager' => [
-            'name' => 'Gestor',
+            'name' => 'Coordenador',
             'description' => 'Gestor de area - Pode aprovar e gerenciar modulos',
             'is_active' => true,
         ],
@@ -45,17 +45,17 @@ return [
             'is_active' => true,
         ],
         'operator' => [
-            'name' => 'Operador',
+            'name' => 'Compdec',
             'description' => 'Operador de sistema - Pode visualizar e criar registros basicos',
             'is_active' => true,
         ],
         'viewer' => [
-            'name' => 'Visualizador',
+            'name' => 'Externo',
             'description' => 'Acesso somente leitura - Pode apenas visualizar dados',
             'is_active' => true,
         ],
         'user' => [
-            'name' => 'Usuario',
+            'name' => 'Usuario base',
             'description' => 'Usuario padrao do sistema',
             'is_active' => true,
         ],

@@ -70,6 +70,8 @@ class RolesAndPermissionsSeeder extends Seeder
             $metadata = $rolesMetadata[$slug] ?? [];
             $displayName = $metadata['name'] ?? ucfirst($slug);
 
+            $displayName = $metadata['name'] ?? ucfirst($slug);
+
             Role::updateOrCreate(
                 [
                     'slug' => $slug,
