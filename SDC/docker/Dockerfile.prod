@@ -104,8 +104,10 @@ RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions 
 # Executar scripts do composer após copiar código
 RUN composer dump-autoload --optimize --classmap-authoritative
 
-# Criar symlink para resolver case-sensitivity (Linux e case-sensitive)
-RUN cd resources/js && ln -sf composables Composables
+# Symlink de compatibilidade: diretorio canonico e Composables (maiusculo).
+# Cria um alias minusculo -> maiusculo para resolver qualquer import literal
+# em filesystem case-sensitive (Linux).
+RUN cd resources/js && ln -sf Composables composables
 
 # Instalar dependencias e compilar assets com Bun
 RUN bun install --frozen-lockfile && \

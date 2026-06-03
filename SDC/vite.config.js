@@ -132,8 +132,8 @@ export default defineConfig({
     ],
     resolve: {
         alias: [
-            { find: '@/Composables', replacement: path.resolve(__dirname, 'resources/js/composables') },
-            { find: '@/composables', replacement: path.resolve(__dirname, 'resources/js/composables') },
+            { find: '@/Composables', replacement: path.resolve(__dirname, 'resources/js/Composables') },
+            { find: '@/composables', replacement: path.resolve(__dirname, 'resources/js/Composables') },
             { find: 'ziggy', replacement: path.resolve(__dirname, 'vendor/tightenco/ziggy/dist/index.esm.js') },
             { find: '@', replacement: path.resolve(__dirname, 'resources/js') },
         ],
