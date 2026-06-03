@@ -46,10 +46,13 @@ export function useDocuments(initialDocuments = []) {
   }
 
   /**
-   * Faz upload dos documentos
+   * Faz upload dos documentos para a URL informada.
+   * @param {string} uploadUrl - URL completa para o POST (ex: route('rat.anexos.store', id))
    */
-  function uploadDocuments(empreendimentoId) {
-    if (documents.value.length === 0) {
+  function uploadDocuments(uploadUrl) {
+    const pending = documents.value.filter(doc => doc.arquivo && doc.status === 'pending');
+
+    if (pending.length === 0) {
       return;
     }
 
@@ -58,13 +61,11 @@ export function useDocuments(initialDocuments = []) {
     uploadProgress.value = 0;
 
     const formData = new FormData();
-    documents.value.forEach((doc, index) => {
-      if (doc.arquivo) {
-        formData.append(`documents[${index}]`, doc.arquivo);
-      }
+    pending.forEach((doc, index) => {
+      formData.append(`documents[${index}]`, doc.arquivo);
     });
 
-    router.post(`/pae/${empreendimentoId}/documents`, formData, {
+    router.post(uploadUrl, formData, {
       forceFormData: true,
       onProgress: (progress) => {
         uploadProgress.value = progress.percentage;
@@ -72,7 +73,7 @@ export function useDocuments(initialDocuments = []) {
       onSuccess: () => {
         uploading.value = false;
         uploadProgress.value = 100;
-        // Atualizar lista de documentos
+        documents.value = documents.value.map(doc => ({ ...doc, arquivo: null, status: 'uploaded' }));
       },
       onError: (errors) => {
         uploading.value = false;

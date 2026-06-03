@@ -58,9 +58,9 @@
               <div v-else-if="Number(activeTab) === 6">
                 <RatAttachments
                   :anexos="anexos"
-                  @add="handleAddAnexo"
+                  :upload-error="documents.uploadError.value"
+                  @upload="handleUploadAnexos"
                   @remove="handleRemoveAnexo"
-                  @update="handleUpdateAnexos"
                 />
               </div>
             </template>
@@ -141,7 +141,7 @@ const {
   envolvidos: envolvidosState,
   vistoria: vistoriaState,
   historyEvents: historyEventsState,
-  anexos: anexosState,
+  documents,
   tabs,
   saveRat,
   saveDraft,
@@ -156,48 +156,33 @@ const {
   activeTab: initialTab,
 });
 
-// Usa dados do Inertia ou do composable
 const rat = computed(() => {
-  if (props.rat && props.rat.id) {
-    return props.rat;
-  }
+  if (props.rat && props.rat.id) return props.rat;
   return ratState.value;
 });
 
 const recursos = computed(() => {
-  if (props.recursos && Array.isArray(props.recursos) && props.recursos.length > 0) {
-    return props.recursos;
-  }
+  if (props.recursos && Array.isArray(props.recursos) && props.recursos.length > 0) return props.recursos;
   return recursosState.value || [];
 });
 
 const envolvidos = computed(() => {
-  if (props.envolvidos && Array.isArray(props.envolvidos) && props.envolvidos.length > 0) {
-    return props.envolvidos;
-  }
+  if (props.envolvidos && Array.isArray(props.envolvidos) && props.envolvidos.length > 0) return props.envolvidos;
   return envolvidosState.value || [];
 });
 
 const vistoria = computed(() => {
-  if (props.vistoria && props.vistoria.id) {
-    return props.vistoria;
-  }
+  if (props.vistoria && props.vistoria.id) return props.vistoria;
   return vistoriaState.value || {};
 });
 
 const historyEvents = computed(() => {
-  if (props.historyEvents && Array.isArray(props.historyEvents) && props.historyEvents.length > 0) {
-    return props.historyEvents;
-  }
+  if (props.historyEvents && Array.isArray(props.historyEvents) && props.historyEvents.length > 0) return props.historyEvents;
   return historyEventsState.value || [];
 });
 
-const anexos = computed(() => {
-  if (props.anexos && Array.isArray(props.anexos) && props.anexos.length > 0) {
-    return props.anexos;
-  }
-  return anexosState.value || [];
-});
+// Fonte única de verdade: sempre o composable (documents.documents)
+const anexos = computed(() => documents.documents.value || []);
 
 const currentActiveTab = computed(() => {
   const tabValue = tabs.activeTab;
@@ -207,60 +192,34 @@ const currentActiveTab = computed(() => {
   return Number(tabValue);
 });
 
-// Estado local para controlar visibilidade da aba Vistoria
 const temVistoria = ref(props.rat?.tem_vistoria || false);
 
-// Configuração das abas
-const tabConfig = computed(() => {
-  const tabs = [
-    { id: 1, label: 'Dados Gerais', icon: DocumentTextIcon },
-    { id: 2, label: 'Recursos Empregados', icon: TruckIcon, badge: recursos.value?.length > 0 ? recursos.value.length : null },
-    { id: 3, label: 'Envolvidos', icon: UsersIcon, badge: envolvidos.value?.length > 0 ? envolvidos.value.length : null },
-    { id: 4, label: 'Vistoria', icon: ClipboardIcon, hidden: !temVistoria.value },
-    { id: 5, label: 'Histórico', icon: ClockIcon },
-    { id: 6, label: 'Anexos', icon: PaperClipIcon, badge: (anexos.value && Array.isArray(anexos.value) && anexos.value.length > 0) ? anexos.value.length : null },
-  ];
-  return tabs;
-});
+const tabConfig = computed(() => [
+  { id: 1, label: 'Dados Gerais', icon: DocumentTextIcon },
+  { id: 2, label: 'Recursos Empregados', icon: TruckIcon, badge: recursos.value?.length > 0 ? recursos.value.length : null },
+  { id: 3, label: 'Envolvidos', icon: UsersIcon, badge: envolvidos.value?.length > 0 ? envolvidos.value.length : null },
+  { id: 4, label: 'Vistoria', icon: ClipboardIcon, hidden: !temVistoria.value },
+  { id: 5, label: 'Histórico', icon: ClockIcon },
+  { id: 6, label: 'Anexos', icon: PaperClipIcon, badge: anexos.value.length > 0 ? anexos.value.length : null },
+]);
 
-// Handlers
-function handleSave(data) {
-  saveRat(data);
-}
+function handleSave(data) { saveRat(data); }
+function handleSaveDraft(data) { saveDraft(data); }
+function handleCancel() { cancelRat(); }
 
-function handleSaveDraft(data) {
-  saveDraft(data);
-}
-
-function handleCancel() {
-  cancelRat();
-}
-
-function handleAddRecurso(recurso) {
-  recursosState.value.push(recurso);
-}
-
+function handleAddRecurso(recurso) { recursosState.value.push(recurso); }
 function handleRemoveRecurso(id) {
-  const index = recursosState.value.findIndex(r => r.id === id);
-  if (index > -1) {
-    recursosState.value.splice(index, 1);
-  }
+  const i = recursosState.value.findIndex(r => r.id === id);
+  if (i > -1) recursosState.value.splice(i, 1);
 }
 
-function handleAddEnvolvido(envolvido) {
-  envolvidosState.value.push(envolvido);
-}
-
+function handleAddEnvolvido(envolvido) { envolvidosState.value.push(envolvido); }
 function handleRemoveEnvolvido(id) {
-  const index = envolvidosState.value.findIndex(e => e.id === id);
-  if (index > -1) {
-    envolvidosState.value.splice(index, 1);
-  }
+  const i = envolvidosState.value.findIndex(e => e.id === id);
+  if (i > -1) envolvidosState.value.splice(i, 1);
 }
 
-function handleSaveVistoria(data) {
-  Object.assign(vistoriaState.value, data);
-}
+function handleSaveVistoria(data) { Object.assign(vistoriaState.value, data); }
 
 function handleAddObservation(observation) {
   historyEventsState.value.unshift({
@@ -270,30 +229,15 @@ function handleAddObservation(observation) {
   });
 }
 
-function handleAddAnexo(anexo) {
-  if (!anexosState.value) {
-    anexosState.value = [];
-  }
-  anexosState.value.push(anexo);
+function handleUploadAnexos(files) {
+  files.forEach(file => documents.addDocument(file));
 }
 
 function handleRemoveAnexo(id) {
-  if (!anexosState.value) return;
-  const index = anexosState.value.findIndex(a => a.id === id);
-  if (index > -1) {
-    anexosState.value.splice(index, 1);
-  }
+  documents.removeDocument(id);
 }
 
-function handleUpdateAnexos(updatedAnexos) {
-  if (Array.isArray(updatedAnexos)) {
-    anexosState.value = [...updatedAnexos];
-  }
-}
-
-function handleToggleVistoria(value) {
-  temVistoria.value = value;
-}
+function handleToggleVistoria(value) { temVistoria.value = value; }
 </script>
 
 <style scoped>
