@@ -1,5 +1,5 @@
+import axios from 'axios';
 import { ref } from 'vue';
-import { router } from '@inertiajs/vue3';
 import { isAllowedFileType, formatFileSize } from '../utils/fileTypes';
 
 /**
@@ -46,10 +46,13 @@ export function useDocuments(initialDocuments = []) {
   }
 
   /**
-   * Faz upload dos documentos
+   * Faz upload dos documentos para a URL informada.
+   * @param {string} uploadUrl - URL completa para o POST (ex: route('rat.anexos.store', id))
    */
-  function uploadDocuments(empreendimentoId) {
-    if (documents.value.length === 0) {
+  function uploadDocuments(uploadUrl) {
+    const pending = documents.value.filter(doc => doc.arquivo && doc.status === 'pending');
+
+    if (pending.length === 0) {
       return;
     }
 
@@ -58,26 +61,23 @@ export function useDocuments(initialDocuments = []) {
     uploadProgress.value = 0;
 
     const formData = new FormData();
-    documents.value.forEach((doc, index) => {
-      if (doc.arquivo) {
-        formData.append(`documents[${index}]`, doc.arquivo);
-      }
+    pending.forEach((doc, index) => {
+      formData.append(`documents[${index}]`, doc.arquivo);
     });
 
-    router.post(`/pae/${empreendimentoId}/documents`, formData, {
-      forceFormData: true,
-      onProgress: (progress) => {
-        uploadProgress.value = progress.percentage;
+    axios.post(uploadUrl, formData, {
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          uploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        }
       },
-      onSuccess: () => {
-        uploading.value = false;
-        uploadProgress.value = 100;
-        // Atualizar lista de documentos
-      },
-      onError: (errors) => {
-        uploading.value = false;
-        uploadError.value = errors.message || 'Erro ao fazer upload dos documentos';
-      },
+    }).then(() => {
+      uploading.value = false;
+      uploadProgress.value = 100;
+      documents.value = documents.value.map(doc => ({ ...doc, arquivo: null, status: 'uploaded' }));
+    }).catch((error) => {
+      uploading.value = false;
+      uploadError.value = error.response?.data?.message || 'Erro ao fazer upload dos documentos';
     });
   }
 

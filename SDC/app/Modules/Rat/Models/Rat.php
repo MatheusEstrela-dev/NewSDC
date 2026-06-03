@@ -62,6 +62,11 @@ class Rat extends Model
         );
     }
 
+    public function anexos(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(RatAnexo::class, 'rat_id');
+    }
+
     /**
      * Orgao emissor do RAT (COMPDEC responsavel)
      */

@@ -38,4 +38,12 @@ Route::prefix('rat')->name('rat.')->group(function () {
     Route::delete('/{id}', [RatController::class, 'destroy'])
         ->name('destroy')
         ->middleware('can:rat.protocolos.delete');
+
+    Route::post('/{id}/anexos', [RatController::class, 'storeAnexos'])
+        ->name('anexos.store')
+        ->middleware('can:rat.protocolos.edit');
+
+    Route::delete('/{id}/anexos/{anexoId}', [RatController::class, 'destroyAnexo'])
+        ->name('anexos.destroy')
+        ->middleware('can:rat.protocolos.edit');
 });
