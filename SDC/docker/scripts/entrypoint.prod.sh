@@ -130,11 +130,17 @@ chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 # Queue worker em background (processa emails, jobs assincronos).
 # Container unico no App Service: roda o worker junto do Octane.
 # Loop while reinicia o worker se ele cair ou atingir --max-time.
+# IMPORTANTE: o subshell herda o "set -e" do topo do script; sem o "set +e"
+# abaixo, qualquer saida != 0 do queue:work (crash, blip de Redis, job fatal)
+# encerraria o subshell e o loop de restart nunca rodaria -> worker morto ate
+# o proximo restart do container. As filas seguem a mesma prioridade do
+# supervisor (high-throughput,default,low) para nao deixar jobs orfaos.
 echo "Iniciando queue worker em background..."
 (
+    set +e
     while true; do
-        php artisan queue:work --queue=default --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
-        echo "[queue:work] worker reiniciando em 2s..."
+        php artisan queue:work --queue=high-throughput,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
+        echo "[queue:work] worker saiu (codigo $?); reiniciando em 2s..."
         sleep 2
     done
 ) &
