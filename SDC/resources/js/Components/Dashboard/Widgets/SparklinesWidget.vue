@@ -1,9 +1,9 @@
 <template>
   <div class="space-y-4 h-full">
     <div
-      v-for="mod in moduleSparklines"
+      v-for="mod in props.sparklines"
       :key="mod.name"
-      class="rounded-xl shadow-lg border bg-white dark:bg-slate-900/60 border-slate-100 dark:border-slate-800/50 p-4 transition-all duration-300 cursor-pointer group overflow-hidden relative"
+      class="rounded-xl shadow-lg border bg-white dark:bg-slate-900/60 border-slate-100 dark:border-slate-800/50 p-4 transition-colors duration-300 cursor-pointer group overflow-hidden relative"
       @click="$emit('select-module', mod)"
     >
       <!-- Background Decoration -->
@@ -12,7 +12,7 @@
       <div class="flex items-center justify-between gap-3 relative z-10">
         <div class="flex items-center gap-3 min-w-0">
           <div :class="sparklineIconClasses(mod.variant)" class="group-hover:scale-110 transition-transform duration-300">
-            <component :is="mod.icon" class="w-4 h-4" />
+            <component :is="DocumentTextIcon" class="w-4 h-4" />
           </div>
           <div class="min-w-0">
             <p class="text-sm font-bold text-slate-900 dark:text-slate-200 truncate">{{ mod.name }}</p>
@@ -31,7 +31,7 @@
           </div>
         </div>
         <!-- Mini Sparkline SVG Animado -->
-        <svg class="w-20 h-10 flex-shrink-0 drop-shadow-sm group-hover:drop-shadow-[0_0_8px_rgba(var(--spark-color),0.5)] transition-all duration-500" viewBox="0 0 80 32" fill="none" :style="`--spark-color: ${mod.variant === 'info' ? '6,182,212' : mod.variant === 'warning' ? '245,158,11' : '239,68,68'}`">
+        <svg class="w-20 h-10 flex-shrink-0 drop-shadow-sm group-hover:drop-shadow-[0_0_8px_rgba(var(--spark-color),0.5)] transition-colors duration-500" viewBox="0 0 80 32" fill="none" :style="`--spark-color: ${mod.variant === 'info' ? '6,182,212' : mod.variant === 'warning' ? '245,158,11' : '239,68,68'}`">
           <polyline
             :points="sparklinePoints(mod.data)"
             fill="none"
@@ -54,35 +54,29 @@
 </template>
 
 <script setup>
-import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
-import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
-import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
-import HeartIcon from '@/Components/Icons/HeartIcon.vue';
-import { markRaw, ref } from 'vue';
 
 defineEmits(['select-module']);
 
-const moduleSparklines = ref([
-  { name: 'RAT', value: 156, trend: 18, variant: 'info', icon: markRaw(DocumentTextIcon), data: [12, 19, 15, 22, 18, 25, 20] },
-  { name: 'Demandas', value: 43, trend: -5, variant: 'warning', icon: markRaw(ClipboardDocumentListIcon), data: [8, 12, 10, 7, 9, 6, 8] },
-  { name: 'Decretações', value: 28, trend: 32, variant: 'danger', icon: markRaw(ExclamationTriangleIcon), data: [3, 5, 4, 8, 6, 10, 9] },
-  { name: 'PAE', value: 12, trend: 5, variant: 'success', icon: markRaw(CheckCircleIcon), data: [2, 4, 3, 5, 4, 6, 5] },
-  { name: 'Ajuda Humanitária', value: 204, trend: 15, variant: 'primary', icon: markRaw(HeartIcon), data: [15, 25, 20, 30, 25, 35, 30] },
-]);
+const props = defineProps({
+  sparklines: {
+    type: Array,
+    default: () => [],
+  },
+});
 
 // Helpers de Estilo e SVG
 const variantIconMap = {
-  info: 'bg-cyan-500/15 dark:bg-cyan-500/15 bg-cyan-100 text-cyan-300 dark:text-cyan-300 text-cyan-700 ring-1 ring-cyan-500/25 dark:ring-cyan-500/25 ring-cyan-300',
-  success: 'bg-emerald-500/15 dark:bg-emerald-500/15 bg-emerald-100 text-emerald-300 dark:text-emerald-300 text-emerald-700 ring-1 ring-emerald-500/25 dark:ring-emerald-500/25 ring-emerald-300',
-  warning: 'bg-amber-500/15 dark:bg-amber-500/15 bg-amber-100 text-amber-300 dark:text-amber-300 text-amber-700 ring-1 ring-amber-500/25 dark:ring-amber-500/25 ring-amber-300',
-  danger: 'bg-red-500/15 dark:bg-red-500/15 bg-red-100 text-red-300 dark:text-red-300 text-red-700 ring-1 ring-red-500/25 dark:ring-red-500/25 ring-red-300',
-  primary: 'bg-violet-500/15 dark:bg-violet-500/15 bg-violet-100 text-violet-300 dark:text-violet-300 text-violet-700 ring-1 ring-violet-500/25 dark:ring-violet-500/25 ring-violet-300',
+  info: 'bg-cyan-100 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 ring-1 ring-cyan-300 dark:ring-cyan-500/25',
+  success: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-300 dark:ring-emerald-500/25',
+  warning: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-300 dark:ring-amber-500/25',
+  danger: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-500/25',
+  primary: 'bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 ring-1 ring-violet-300 dark:ring-violet-500/25',
 };
 
 function sparklineIconClasses(variant) {
   return [
-    'w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300',
+    'w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300',
     variantIconMap[variant] || variantIconMap.info
   ];
 }
@@ -110,7 +104,7 @@ function sparklinePoints(data) {
   const range = max - min || 1;
   
   return data.map((val, i) => {
-    const x = (i / (data.length - 1)) * 80;
+    const x = data.length > 1 ? (i / (data.length - 1)) * 80 : 40;
     const y = 32 - ((val - min) / range) * 20 - 6; // Padding bottom 6
     return `${x},${y}`;
   }).join(' ');

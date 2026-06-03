@@ -6,68 +6,45 @@ namespace App\Modules\Compdec\Enums;
 
 enum TipoOrgao: string
 {
-    case COMPDEC = 'compdec';
-    case REDEC = 'redec';
     case CEDEC = 'cedec';
+    case REDEC = 'redec';
+    case COMPDEC = 'compdec';
 
-    public function getLabel(): string
+    public function label(): string
     {
-        return match($this) {
-            self::COMPDEC => 'COMPDEC',
-            self::REDEC => 'REDEC',
-            self::CEDEC => 'CEDEC',
+        return match ($this) {
+            self::CEDEC => 'CEDEC - Coordenadoria Estadual',
+            self::REDEC => 'REDEC - Regional',
+            self::COMPDEC => 'COMPDEC - Coordenadoria Municipal',
         };
     }
 
-    public function getSigla(): string
+    public function nivelHierarquico(): int
     {
-        return $this->getLabel();
-    }
-
-    public function getBadgeColor(): string
-    {
-        return match($this) {
-            self::COMPDEC => 'blue',
-            self::REDEC => 'yellow',
-            self::CEDEC => 'purple',
+        return match ($this) {
+            self::CEDEC => 0,
+            self::REDEC => 1,
+            self::COMPDEC => 2,
         };
     }
 
-    public function podeSerSubordinadoDe(TipoOrgao $superior): bool
+    public function podeSerSuperiorDe(self $tipo): bool
     {
-        return match($this) {
-            self::COMPDEC => $superior === self::REDEC,
-            self::REDEC => $superior === self::CEDEC,
-            self::CEDEC => false,
+        return match ($this) {
+            self::CEDEC => $tipo === self::REDEC,
+            self::REDEC => $tipo === self::COMPDEC,
+            self::COMPDEC => false,
         };
     }
 
-    public function getTipoSuperiorValido(): ?TipoOrgao
-    {
-        return match($this) {
-            self::COMPDEC => self::REDEC,
-            self::REDEC => self::CEDEC,
-            self::CEDEC => null,
-        };
-    }
-
-    public function getNivelHierarquico(): int
-    {
-        return match($this) {
-            self::CEDEC => 1,
-            self::REDEC => 2,
-            self::COMPDEC => 3,
-        };
-    }
-
-    public static function toSelectArray(): array
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    public static function options(): array
     {
         return array_map(
-            fn(self $tipo) => [
-                'value' => $tipo->value,
-                'label' => $tipo->getLabel(),
-            ],
-            self::cases()
+            fn (self $case): array => ['value' => $case->value, 'label' => $case->label()],
+            self::cases(),
         );
     }
 }

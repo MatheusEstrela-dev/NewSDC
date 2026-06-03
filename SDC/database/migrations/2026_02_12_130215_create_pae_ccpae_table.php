@@ -30,7 +30,7 @@ return new class extends Migration
                 $table->string('status', 50)->default('ATIVO');
 
                 // timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+                $table->timestamp('updated_at')->useCurrent();
 
                 // Índice manual adicional conforme seu SQL
                 $table->index('protocolo_id', 'idx_ccpae_protocolo');

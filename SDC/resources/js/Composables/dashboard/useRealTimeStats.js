@@ -1,15 +1,10 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import axios from 'axios';
 
 /**
  * Composable para gerenciamento de estatisticas em tempo real
- *
- * @param {Object} options - Opcoes de configuracao
- * @param {string} options.endpoint - URL do endpoint da API
- * @param {number} options.refreshInterval - Intervalo de atualizacao em ms (default: 30000)
- * @param {boolean} options.autoStart - Iniciar polling automaticamente (default: true)
- * @param {Object} options.initialData - Dados iniciais
- * @param {Function} options.transformer - Funcao para transformar dados da API
+ * - Page Visibility API: pausa polling quando tab nao esta visivel
+ * - Exponential backoff: reduz frequencia em caso de erros consecutivos
+ * - Network-aware: respeita conexoes lentas e save-data
  */
 export function useRealTimeStats(options = {}) {
   const {
@@ -27,85 +22,81 @@ export function useRealTimeStats(options = {}) {
   const isPolling = ref(false);
 
   let pollingTimer = null;
+  let consecutiveErrors = 0;
+  let visibilityHandler = null;
 
-  /**
-   * Busca estatisticas da API
-   */
+  function getEffectiveInterval() {
+    if (consecutiveErrors === 0) return refreshInterval;
+    return Math.min(refreshInterval * Math.pow(2, consecutiveErrors), 300000);
+  }
+
+  function shouldReducePolling() {
+    if (!navigator.connection) return false;
+    const conn = navigator.connection;
+    return conn.saveData || ['slow-2g', '2g', '3g'].includes(conn.effectiveType);
+  }
+
   async function fetchStats() {
-    if (!endpoint) {
-      console.warn('[useRealTimeStats] Endpoint nao configurado');
-      return;
-    }
+    if (!endpoint) return;
+    if (document.hidden) return;
+    if (shouldReducePolling() && lastUpdate.value) return;
 
     loading.value = true;
     error.value = null;
 
     try {
+      const axios = window.axios;
       const response = await axios.get(endpoint);
-      const rawData = response.data;
-
-      statistics.value = transformer(rawData);
+      statistics.value = transformer(response.data);
       lastUpdate.value = new Date();
+      consecutiveErrors = 0;
     } catch (err) {
+      consecutiveErrors++;
       error.value = err.message || 'Erro ao carregar estatisticas';
-      console.error('[useRealTimeStats] Erro:', err);
     } finally {
       loading.value = false;
     }
   }
 
-  /**
-   * Inicia o polling de atualizacao
-   */
-  function startPolling() {
-    if (isPolling.value) return;
+  function scheduleNext() {
+    if (pollingTimer) clearTimeout(pollingTimer);
+    if (!isPolling.value) return;
 
-    isPolling.value = true;
-    fetchStats();
-
-    if (refreshInterval > 0) {
-      pollingTimer = setInterval(fetchStats, refreshInterval);
-    }
+    const interval = getEffectiveInterval();
+    pollingTimer = setTimeout(() => {
+      fetchStats().finally(scheduleNext);
+    }, interval);
   }
 
-  /**
-   * Para o polling de atualizacao
-   */
+  function startPolling() {
+    if (isPolling.value) return;
+    isPolling.value = true;
+    fetchStats().finally(scheduleNext);
+  }
+
   function stopPolling() {
     isPolling.value = false;
-
     if (pollingTimer) {
-      clearInterval(pollingTimer);
+      clearTimeout(pollingTimer);
       pollingTimer = null;
     }
   }
 
-  /**
-   * Atualiza manualmente as estatisticas
-   */
   async function refresh() {
+    consecutiveErrors = 0;
     await fetchStats();
   }
 
-  /**
-   * Atualiza estatisticas localmente (sem fetch)
-   */
   function updateLocal(newStats) {
     statistics.value = { ...statistics.value, ...newStats };
     lastUpdate.value = new Date();
   }
 
-  /**
-   * Tempo desde a ultima atualizacao (em segundos)
-   */
   const timeSinceUpdate = computed(() => {
     if (!lastUpdate.value) return null;
     return Math.floor((Date.now() - lastUpdate.value.getTime()) / 1000);
   });
 
-  /**
-   * Status formatado da ultima atualizacao
-   */
   const updateStatus = computed(() => {
     if (loading.value) return 'Atualizando...';
     if (error.value) return `Erro: ${error.value}`;
@@ -118,6 +109,15 @@ export function useRealTimeStats(options = {}) {
   });
 
   onMounted(() => {
+    visibilityHandler = () => {
+      if (document.hidden) {
+        if (pollingTimer) { clearTimeout(pollingTimer); pollingTimer = null; }
+      } else if (isPolling.value) {
+        fetchStats().finally(scheduleNext);
+      }
+    };
+    document.addEventListener('visibilitychange', visibilityHandler);
+
     if (autoStart && endpoint) {
       startPolling();
     }
@@ -125,6 +125,9 @@ export function useRealTimeStats(options = {}) {
 
   onUnmounted(() => {
     stopPolling();
+    if (visibilityHandler) {
+      document.removeEventListener('visibilitychange', visibilityHandler);
+    }
   });
 
   return {

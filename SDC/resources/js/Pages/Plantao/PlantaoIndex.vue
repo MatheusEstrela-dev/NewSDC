@@ -29,12 +29,10 @@ const props = defineProps({
 
 const handleView = (id) => {
   // TODO: Implementar visualização detalhada
-  console.log('Visualizar plantão', id);
 };
 
 const handleEdit = (id) => {
   // TODO: Implementar edição
-  console.log('Editar plantão', id);
 };
 
 const handleFilter = (filters) => {
@@ -46,7 +44,6 @@ const handleFilter = (filters) => {
 
 const handleAbrirPlantao = (data) => {
   // TODO: Implementar POST para criar plantão
-  console.log('Abrir plantão:', data);
 };
 </script>
 

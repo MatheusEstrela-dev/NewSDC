@@ -20,15 +20,15 @@
    ============================================ */
 
 .form-input {
-  @apply w-full px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-200
+  @apply w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-200
     placeholder-slate-400 dark:placeholder-slate-500 transition-all duration-200
     focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-950;
 }
 
 .form-input-normal {
-  @apply border border-slate-300 dark:border-slate-700/50
-    hover:border-slate-400 dark:hover:border-slate-600
-    focus:border-blue-500 focus:ring-blue-500/20;
+  @apply border border-slate-300 dark:border-slate-700/50;
+  @apply hover:border-slate-400 dark:hover:border-slate-600;
+  @apply focus:border-emerald-500 focus:ring-emerald-500/20;
 }
 
 .form-input-filled {
@@ -39,8 +39,8 @@
 }
 
 .form-input-error {
-  @apply border border-red-500/50
-    focus:border-red-500 focus:ring-red-500/20;
+  @apply border border-red-500;
+  @apply focus:border-red-600 focus:ring-red-500/30;
 }
 
 .form-input-readonly {
@@ -56,15 +56,15 @@
    ============================================ */
 
 .form-select {
-  @apply w-full px-4 py-2.5 pr-10 rounded-lg bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-200
+  @apply w-full px-4 py-2.5 pr-10 rounded-xl bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-200
     transition-all duration-200 appearance-none cursor-pointer
     focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-950;
 }
 
 .form-select-normal {
-  @apply border border-slate-300 dark:border-slate-700/50
-    hover:border-slate-400 dark:hover:border-slate-600
-    focus:border-blue-500 focus:ring-blue-500/20;
+  @apply border border-slate-300 dark:border-slate-700/50;
+  @apply hover:border-slate-400 dark:hover:border-slate-600;
+  @apply focus:border-emerald-500 focus:ring-emerald-500/20;
 }
 
 .form-select-filled {
@@ -75,8 +75,8 @@
 }
 
 .form-select-error {
-  @apply border border-red-500/50
-    focus:border-red-500 focus:ring-red-500/20;
+  @apply border border-red-500;
+  @apply focus:border-red-600 focus:ring-red-500/30;
 }
 
 .form-select-disabled {

@@ -16,14 +16,17 @@ class PlantoesMockSeeder extends Seeder
     {
         $this->command->info("\nCriando Plantões mockados...\n");
 
-        try {
+        $driver = DB::connection()->getDriverName();
+        if ($driver === 'sqlite') {
             DB::statement('PRAGMA foreign_keys=OFF');
             Plantao::truncate();
             DB::statement('PRAGMA foreign_keys=ON');
-        } catch (\Exception $e) {
+        } elseif ($driver === 'mysql') {
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
             Plantao::truncate();
             DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        } else {
+            Plantao::truncate();
         }
 
         $users = User::limit(3)->get();

@@ -51,7 +51,8 @@
         v-model="form.situacao_anormalidade"
         name="situacao_anormalidade"
         label="Situacao de Anormalidade"
-        :options="situacaoOptions"
+        :options="filteredSituacaoOptions"
+        :disabled="isRegistro"
         required
         :error="form.errors.situacao_anormalidade"
       />
@@ -108,12 +109,26 @@
       />
 
       <FormField
-        :model-value="protocoloFide"
+        v-model="protocoloFideModel"
         label="N. Protocolo FIDE"
-        readonly
-        hint="Gerado automaticamente"
+        :placeholder="protocoloFidePlaceholder"
+        :error="protocoloFideError"
+        :maxlength="protocoloFideMaxLength"
+        @focus="initProtocoloFide"
+        @blur="protocoloFideTouched = true"
       />
     </FormSection>
+
+    <!-- Aviso: campos desabilitados quando status Registro -->
+    <div v-if="isRegistro" class="bg-teal-800/50 border border-teal-600 rounded-lg p-4 flex items-start gap-3">
+      <svg class="w-5 h-5 text-teal-400 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+      </svg>
+      <p class="text-teal-200 text-sm">
+        Os campos abaixo nao precisam ser preenchidos para processos com status
+        <strong>Registro</strong>. Serao habilitados quando o status for alterado.
+      </p>
+    </div>
 
     <!-- Secao 4: Decreto Municipal -->
     <FormSection title="Decreto Municipal" :cols="4" collapsible>
@@ -121,18 +136,21 @@
         v-model="form.n_decreto_municipal"
         label="N. Decreto Municipal"
         placeholder="Ex: 1234/2024"
+        :disabled="isRegistro"
         :error="form.errors.n_decreto_municipal"
       />
 
       <FormDateField
         v-model="form.data_decreto_municipal"
         label="Data do Decreto Municipal"
+        :disabled="isRegistro"
         :error="form.errors.data_decreto_municipal"
       />
 
       <FormDateField
         v-model="form.data_publicacao_decreto_municipal"
         label="Data Publicacao do Decreto"
+        :disabled="isRegistro"
         :error="form.errors.data_publicacao_decreto_municipal"
       />
 
@@ -141,6 +159,7 @@
         label="Prazo Vigencia (dias)"
         type="number"
         placeholder="Ex: 180"
+        :disabled="isRegistro"
         :error="form.errors.prazo_vigencia_decreto"
       />
     </FormSection>
@@ -151,12 +170,14 @@
         v-model="form.n_decreto_estadual"
         label="N. Decreto Estadual"
         placeholder="Ex: 47.123"
+        :disabled="isRegistro"
         :error="form.errors.n_decreto_estadual"
       />
 
       <FormDateField
         v-model="form.data_decreto_estadual"
         label="Data do Decreto Estadual"
+        :disabled="isRegistro"
         :error="form.errors.data_decreto_estadual"
       />
 
@@ -164,12 +185,14 @@
         v-model="form.n_edicao_domg"
         label="N. Edicao DOMG"
         placeholder="Ex: 12345"
+        :disabled="isRegistro"
         :error="form.errors.n_edicao_domg"
       />
 
       <FormDateField
         v-model="form.data_publicacao_domg"
         label="Data Publicacao DOMG"
+        :disabled="isRegistro"
         :error="form.errors.data_publicacao_domg"
       />
     </FormSection>
@@ -180,12 +203,14 @@
         v-model="form.n_portaria_federal"
         label="N. Portaria Federal"
         placeholder="Ex: 123/2024"
+        :disabled="isRegistro"
         :error="form.errors.n_portaria_federal"
       />
 
       <FormDateField
         v-model="form.data_portaria_federal"
         label="Data da Portaria Federal"
+        :disabled="isRegistro"
         :error="form.errors.data_portaria_federal"
       />
 
@@ -193,12 +218,14 @@
         v-model="form.n_edicao_dou"
         label="N. Edicao DOU"
         placeholder="Ex: 456"
+        :disabled="isRegistro"
         :error="form.errors.n_edicao_dou"
       />
 
       <FormDateField
         v-model="form.data_publicacao_dou"
         label="Data Publicacao DOU"
+        :disabled="isRegistro"
         :error="form.errors.data_publicacao_dou"
       />
     </FormSection>
@@ -245,7 +272,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import FormSection from '@/Components/Organisms/FormSection.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
@@ -277,12 +304,7 @@ const props = defineProps({
   },
   statusOptions: {
     type: Array,
-    default: () => [
-      { value: 'pendente', label: 'Pendente' },
-      { value: 'em_analise', label: 'Em Analise' },
-      { value: 'aprovado', label: 'Aprovado' },
-      { value: 'rejeitado', label: 'Rejeitado' },
-    ],
+    default: () => [],
   },
   analistas: {
     type: Array,
@@ -308,7 +330,23 @@ const origensOptions = [
 const situacaoOptions = [
   { value: 'N1', label: 'N1 - Nivel 1' },
   { value: 'SE', label: 'SE - Situacao de Emergencia' },
+  { value: 'ECP', label: 'ECP - Estado de Calamidade Publica' },
 ];
+
+const isRegistro = computed(() => props.form.status === 'Registro');
+
+const filteredSituacaoOptions = computed(() => {
+  if (isRegistro.value) {
+    return situacaoOptions.filter(opt => opt.value === 'N1');
+  }
+  return situacaoOptions;
+});
+
+watch(() => props.form.status, (newVal) => {
+  if (newVal === 'Registro') {
+    props.form.situacao_anormalidade = 'N1';
+  }
+});
 
 const diasRestantes = computed(() => {
   if (!props.form.data_vencimento_decreto) return '--';
@@ -326,15 +364,94 @@ const diasRestantesHint = computed(() => {
   return '';
 });
 
-const protocoloFide = computed(() => {
-  const tipo = props.form.origem === 'estadual' ? 'E' : 'F';
-  const municipio = props.form.municipio_id || 'XXXX';
-  const ano = new Date().getFullYear();
-  const sequencia = props.isEditing ? props.form.sequencia || 'XXXX' : 'AUTO';
-  return `MG-${tipo}-${municipio}-${ano}-${sequencia}`;
+
+const PREFIXO = 'MG-F-';
+const protocoloFideTouched = ref(false);
+
+const protocoloFidePlaceholder = computed(() => {
+  return props.form.origem === 'estadual'
+    ? 'MG-F-31-14120-20251110'
+    : 'MG-F-3136520-14120-20251110';
+});
+
+const protocoloFideMaxLength = computed(() => {
+  return props.form.origem === 'estadual' ? 22 : 27;
+});
+
+function aplicarMascara(nums, isEstadual) {
+  if (isEstadual) {
+    if (nums.length <= 2) return nums;
+    if (nums.length <= 7) return nums.replace(/^(\d{2})(\d+)/, '$1-$2');
+    return nums.replace(/^(\d{2})(\d{1,5})(\d+)/, '$1-$2-$3');
+  } else {
+    if (nums.length <= 7) return nums;
+    if (nums.length <= 12) return nums.replace(/^(\d{7})(\d+)/, '$1-$2');
+    return nums.replace(/^(\d{7})(\d{1,5})(\d+)/, '$1-$2-$3');
+  }
+}
+
+const protocoloFideModel = computed({
+  get() {
+    return props.form.n_protocolo_fide;
+  },
+  set(val) {
+    if (!val || val.length < PREFIXO.length) {
+      props.form.n_protocolo_fide = PREFIXO;
+      return;
+    }
+
+    const isEstadual = props.form.origem === 'estadual';
+    const MAX_DIGITS = isEstadual ? 15 : 20;
+    const MAX_TOTAL = isEstadual ? 22 : 27;
+
+    let nums = val.replace(/^MG-?F?-?/i, '').replace(/\D/g, '');
+    nums = nums.substring(0, MAX_DIGITS);
+
+    let result = PREFIXO + aplicarMascara(nums, isEstadual);
+    props.form.n_protocolo_fide = result.substring(0, MAX_TOTAL);
+  },
+});
+
+function initProtocoloFide() {
+  if (!props.form.n_protocolo_fide) {
+    props.form.n_protocolo_fide = PREFIXO;
+  }
+}
+
+watch(() => props.form.origem, () => {
+  protocoloFideTouched.value = false;
+  if (props.form.n_protocolo_fide && props.form.n_protocolo_fide !== PREFIXO) {
+    const isEstadual = props.form.origem === 'estadual';
+    const MAX_DIGITS = isEstadual ? 15 : 20;
+    const MAX_TOTAL = isEstadual ? 22 : 27;
+    let nums = props.form.n_protocolo_fide.replace(/^MG-?F?-?/i, '').replace(/\D/g, '');
+    nums = nums.substring(0, MAX_DIGITS);
+    let result = PREFIXO + aplicarMascara(nums, isEstadual);
+    props.form.n_protocolo_fide = result.substring(0, MAX_TOTAL);
+  }
+});
+
+const REGEX_MUNICIPAL = /^MG-F-\d{7}-\d{4,5}-\d{8}$/;
+const REGEX_ESTADUAL = /^MG-F-\d{2}-\d{4,5}-\d{8}$/;
+
+const protocoloFideError = computed(() => {
+  const valor = props.form.n_protocolo_fide;
+  if (!protocoloFideTouched.value || !valor || valor === PREFIXO) return '';
+
+  const isEstadual = props.form.origem === 'estadual';
+
+  if (isEstadual) {
+    return REGEX_ESTADUAL.test(valor)
+      ? ''
+      : 'Formato invalido. Ex: MG-F-31-14120-20251110';
+  }
+  return REGEX_MUNICIPAL.test(valor)
+    ? ''
+    : 'Formato invalido. Ex: MG-F-3136520-14120-20251110';
 });
 
 function handleSubmit() {
+  if (protocoloFideError.value) return;
   emit('submit', props.form);
 }
 

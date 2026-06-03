@@ -1,157 +1,97 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1\Rat;
 
 use App\Http\Controllers\Controller;
-use App\Models\Protocolo;
+use App\Modules\Rat\Http\Requests\ReceiveRatBIRequest;
+use App\Modules\Rat\Http\Resources\RatListResource;
+use App\Modules\Rat\Http\Resources\RatResource;
+use App\Modules\Rat\Models\RatOcorrencia;
+use App\Modules\Rat\Services\RatWriteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/**
- * @OA\Tag(
- *     name="RAT",
- *     description="Endpoints do módulo RAT (Registro de Atendimento Técnico)"
- * )
- * 
- * @OA\Schema(
- *     schema="ProtocoloRAT",
- *     type="object",
- *     title="Protocolo RAT",
- *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="numero", type="string", example="2025/001"),
- *     @OA\Property(property="municipio_id", type="integer", example=123),
- *     @OA\Property(property="tipo", type="string", example="Vistoria Técnica"),
- *     @OA\Property(property="status", type="string", example="em_analise"),
- *     @OA\Property(property="data", type="string", format="date", example="2025-01-20")
- * )
- */
 class ProtocoloController extends Controller
 {
-    public function __construct()
-    {
-        $this->authorizeResource(Protocolo::class, 'protocolo');
-    }
+    public function __construct(
+        private readonly RatWriteService $writeService,
+    ) {}
 
-    /**
-     * @OA\Get(
-     *     path="/api/v1/rat/protocolos",
-     *     summary="Lista todos os protocolos RAT",
-     *     description="Retorna uma lista paginada de todos os protocolos RAT cadastrados",
-     *     operationId="listProtocolos",
-     *     tags={"RAT"},
-     *     security={{"sanctum": {}}},
-     *     @OA\Parameter(
-     *         name="page",
-     *         in="query",
-     *         description="Número da página",
-     *         required=false,
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Lista de protocolos retornada com sucesso",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/ProtocoloRAT")),
-     *             @OA\Property(property="meta", type="object", ref="#/components/schemas/PaginationMeta")
-     *         )
-     *     )
-     * )
-     */
     public function index(Request $request): JsonResponse
     {
-        return response()->json([
-            'data' => [],
-            'meta' => ['current_page' => 1, 'total' => 0],
-        ]);
-    }
+        $query = RatOcorrencia::query()
+            ->orderByDesc('created_at');
 
-    /**
-     * @OA\Get(
-     *     path="/api/v1/rat/protocolos/{id}",
-     *     summary="Exibe um protocolo RAT específico",
-     *     operationId="showProtocolo",
-     *     tags={"RAT"},
-     *     security={{"sanctum": {}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Protocolo encontrado",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="data", ref="#/components/schemas/ProtocoloRAT")
-     *         )
-     *     )
-     * )
-     */
-    public function show(int $id): JsonResponse
-    {
-        return response()->json([
-            'data' => ['id' => $id, 'numero' => '2025/001'],
-        ]);
-    }
+        if ($protocolo = $request->input('protocolo')) {
+            $query->where('numero_bos', 'like', '%' . $protocolo . '%');
+        }
 
-    /**
-     * @OA\Post(
-     *     path="/api/v1/rat/protocolos",
-     *     summary="Cria um novo protocolo RAT",
-     *     operationId="storeProtocolo",
-     *     tags={"RAT"},
-     *     security={{"sanctum": {}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"municipio_id", "tipo"},
-     *             @OA\Property(property="municipio_id", type="integer", example=123),
-     *             @OA\Property(property="tipo", type="string", example="Vistoria Técnica"),
-     *             @OA\Property(property="descricao", type="string", example="Solicitação de vistoria técnica")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Protocolo criado com sucesso",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="data", ref="#/components/schemas/ProtocoloRAT"),
-     *             @OA\Property(property="message", type="string", example="Protocolo criado com sucesso")
-     *         )
-     *     )
-     * )
-     */
-    public function store(Request $request): JsonResponse
-    {
-        return response()->json([
-            'data' => $request->all(),
-            'message' => 'Protocolo criado com sucesso',
-        ], 201);
-    }
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
 
-    public function update(Request $request, int $id): JsonResponse
-    {
-        return response()->json([
-            'data' => array_merge(['id' => $id], $request->all()),
-            'message' => 'Protocolo atualizado com sucesso',
-        ], 200);
-    }
+        if ($ano = $request->input('ano')) {
+            $query->whereYear('created_at', $ano);
+        }
 
-    public function destroy(int $id): JsonResponse
-    {
-        return response()->json(null, 204);
-    }
+        if ($dataInicio = $request->input('data_inicio')) {
+            $query->whereDate('created_at', '>=', $dataInicio);
+        }
 
-    public function finalize(Request $request, int $protocolo): JsonResponse
-    {
+        if ($dataFim = $request->input('data_fim')) {
+            $query->whereDate('created_at', '<=', $dataFim);
+        }
+
+        $perPage   = (int) $request->input('per_page', 15);
+        $paginator = $query->paginate($perPage);
+
         return response()->json([
             'success' => true,
-            'message' => 'Protocolo finalizado com sucesso',
-            'data' => [
-                'id' => $protocolo,
-                'finalized_by' => $request->user()?->id,
-                'finalized_at' => now()->toIso8601String(),
+            'data'    => RatListResource::collection($paginator)->resolve(),
+            'meta'    => [
+                'current_page' => $paginator->currentPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+                'last_page'    => $paginator->lastPage(),
             ],
-        ], 200);
+        ]);
+    }
+
+    public function show(string $id): JsonResponse
+    {
+        $rat = $this->writeService->findById($id);
+
+        if (!$rat) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Protocolo RAT nao encontrado.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => (new RatResource($rat))->resolve(),
+        ]);
+    }
+
+    public function receive(ReceiveRatBIRequest $request): JsonResponse
+    {
+        $rat = $this->writeService->createWithData([
+            'dadosGerais' => $request->input('dados_gerais', []),
+            'comunicacao' => $request->input('comunicacao', []),
+            'local'       => $request->input('local', []),
+            'endereco'    => $request->input('endereco', []),
+            'recursos'    => $request->input('recursos', []),
+            'envolvidos'  => $request->input('envolvidos', []),
+            'vistoria'    => $request->input('vistoria', []),
+            'finalize'    => (bool) $request->input('finalize', false),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data'    => (new RatResource($rat))->resolve(),
+        ], 201);
     }
 }
-

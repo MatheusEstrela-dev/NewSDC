@@ -4,7 +4,7 @@ import { computed, unref } from 'vue';
 const defaultQueryOptions = {
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
     retry: 1,
 };
 
@@ -16,7 +16,7 @@ export function useApiQuery(key, url, options = {}) {
 
     const queryFn = async () => {
         const urlValue = unref(url);
-        const axios = window.axios || (await import('axios')).default;
+        const axios = window.axios;
         const response = await axios.get(urlValue);
         return response.data;
     };
@@ -45,7 +45,7 @@ export function useApiMutation(options = {}) {
     return useMutation({
         mutationFn: async (data) => {
             const urlValue = unref(url);
-            const axios = window.axios || (await import('axios')).default;
+            const axios = window.axios;
             const response = await axios[method](urlValue, data);
             return response.data;
         },
@@ -100,7 +100,7 @@ export function usePaginatedQuery(key, urlBuilder, options = {}) {
     const queryFn = async ({ queryKey: qk }) => {
         const [, params] = qk;
         const url = urlBuilder(params);
-        const axios = window.axios || (await import('axios')).default;
+        const axios = window.axios;
         const response = await axios.get(url);
         return response.data;
     };
@@ -129,7 +129,7 @@ export function useInfiniteApiQuery(key, urlBuilder, options = {}) {
                 queryKey: [...queryKey.value, params],
                 queryFn: async () => {
                     const url = urlBuilder(params);
-                    const axios = window.axios || (await import('axios')).default;
+                    const axios = window.axios;
                     const response = await axios.get(url);
                     return response.data;
                 },
@@ -142,7 +142,7 @@ export function prefetchQuery(queryClient, key, url) {
     return queryClient.prefetchQuery({
         queryKey: Array.isArray(key) ? key : [key],
         queryFn: async () => {
-            const axios = window.axios || (await import('axios')).default;
+            const axios = window.axios;
             const response = await axios.get(url);
             return response.data;
         },

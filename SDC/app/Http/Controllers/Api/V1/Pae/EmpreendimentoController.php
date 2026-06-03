@@ -1,47 +1,71 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1\Pae;
 
 use App\Http\Controllers\Controller;
-use App\Models\Empreendimento;
+use App\Modules\Pae\Requests\StoreEmpreendimentoRequest;
+use App\Modules\Pae\Requests\UpdateEmpreendimentoRequest;
+use App\Modules\Pae\Resources\EmpreendimentoResource;
+use App\Modules\Pae\Services\EmpreendimentoApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * @OA\Tag(
  *     name="PAE",
  *     description="Endpoints do módulo PAE (Plano de Ação de Emergência)"
  * )
- * 
+ *
  * @OA\Schema(
  *     schema="Empreendimento",
  *     type="object",
  *     title="Empreendimento PAE",
+ *     description="Empreendimento (barragem) cadastrado no modulo PAE",
  *     @OA\Property(property="id", type="integer", example=1),
  *     @OA\Property(property="nome", type="string", example="Barragem Sul Superior"),
- *     @OA\Property(property="tipo", type="string", example="Barragem de Rejeitos"),
- *     @OA\Property(
- *         property="municipio",
- *         type="object",
+ *     @OA\Property(property="status", type="string", enum={"OPERACAO","DESATIVADA","CONSTRUCAO","DESCOMISSIONAMENTO"}, example="OPERACAO"),
+ *     @OA\Property(property="mina", type="string", nullable=true, example="Mina Sul"),
+ *     @OA\Property(property="metodo_construtivo", type="string", nullable=true, example="Alteamento a Jusante"),
+ *     @OA\Property(property="material", type="string", nullable=true, example="Rejeitos"),
+ *     @OA\Property(property="finalidade", type="string", nullable=true, example="Contencao de Rejeitos"),
+ *     @OA\Property(property="volume", type="number", format="float", nullable=true, example=12500000.50),
+ *     @OA\Property(property="populacao_zas", type="integer", nullable=true, example=1500),
+ *     @OA\Property(property="orgao_fiscalizador", type="string", nullable=true, example="ANM"),
+ *     @OA\Property(property="municipio", type="object",
  *         @OA\Property(property="id", type="integer", example=123),
  *         @OA\Property(property="nome", type="string", example="Itabirito"),
  *         @OA\Property(property="uf", type="string", example="MG")
  *     ),
- *     @OA\Property(
- *         property="coordenadas",
- *         type="object",
- *         @OA\Property(property="lat", type="number", format="float", example=-20.2547),
- *         @OA\Property(property="lng", type="number", format="float", example=-43.8011)
+ *     @OA\Property(property="empreendedor", type="object",
+ *         @OA\Property(property="id", type="integer", example=5),
+ *         @OA\Property(property="nome", type="string", example="Vale S/A"),
+ *         @OA\Property(property="cnpj", type="string", example="33592510000154")
  *     ),
- *     @OA\Property(property="protocolo", type="string", example="2024.10.15.0081"),
- *     @OA\Property(property="status", type="string", enum={"aprovado", "em_analise", "pendente", "vencido"}, example="aprovado"),
- *     @OA\Property(property="nivel_emergencia", type="integer", enum={1, 2, 3}, example=1),
- *     @OA\Property(property="data_emissao", type="string", format="date", example="2024-10-15"),
- *     @OA\Property(property="proximo_vencimento", type="string", format="date", example="2025-10-15"),
+ *     @OA\Property(property="coordenador", type="object",
+ *         @OA\Property(property="nome", type="string", nullable=true),
+ *         @OA\Property(property="telefone", type="string", nullable=true),
+ *         @OA\Property(property="email", type="string", nullable=true)
+ *     ),
+ *     @OA\Property(property="coordenador_substituto", type="object",
+ *         @OA\Property(property="nome", type="string", nullable=true),
+ *         @OA\Property(property="telefone", type="string", nullable=true),
+ *         @OA\Property(property="email", type="string", nullable=true)
+ *     ),
+ *     @OA\Property(property="ultimo_protocolo", type="object", nullable=true,
+ *         @OA\Property(property="id", type="integer", example=42),
+ *         @OA\Property(property="num_protocolo", type="string", example="2024.10.15.0081"),
+ *         @OA\Property(property="sigibar", type="string", example="SIG-001"),
+ *         @OA\Property(property="status", type="string", example="analise"),
+ *         @OA\Property(property="dt_entrada", type="string", format="date", example="2024-10-15"),
+ *         @OA\Property(property="ccpae_vencimento", type="string", format="date", example="2025-10-15")
+ *     ),
  *     @OA\Property(property="created_at", type="string", format="date-time"),
  *     @OA\Property(property="updated_at", type="string", format="date-time")
  * )
- * 
+ *
  * @OA\Schema(
  *     schema="PaginationMeta",
  *     type="object",
@@ -52,7 +76,7 @@ use Illuminate\Http\Request;
  *     @OA\Property(property="to", type="integer", example=15),
  *     @OA\Property(property="total", type="integer", example=75)
  * )
- * 
+ *
  * @OA\Schema(
  *     schema="PaginationLinks",
  *     type="object",
@@ -64,9 +88,8 @@ use Illuminate\Http\Request;
  */
 class EmpreendimentoController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly EmpreendimentoApiService $service)
     {
-        $this->authorizeResource(Empreendimento::class, 'empreendimento');
     }
 
     /**
@@ -76,25 +99,25 @@ class EmpreendimentoController extends Controller
      *     description="Retorna uma lista paginada de todos os empreendimentos cadastrados no sistema PAE",
      *     operationId="listEmpreendimentos",
      *     tags={"PAE"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
-     *         description="Número da página",
+     *         description="Numero da pagina",
      *         required=false,
      *         @OA\Schema(type="integer", example=1)
      *     ),
      *     @OA\Parameter(
      *         name="per_page",
      *         in="query",
-     *         description="Itens por página",
+     *         description="Itens por pagina",
      *         required=false,
      *         @OA\Schema(type="integer", example=15)
      *     ),
      *     @OA\Parameter(
      *         name="municipio_id",
      *         in="query",
-     *         description="Filtrar por município",
+     *         description="Filtrar por municipio",
      *         required=false,
      *         @OA\Schema(type="integer")
      *     ),
@@ -103,7 +126,14 @@ class EmpreendimentoController extends Controller
      *         in="query",
      *         description="Filtrar por status",
      *         required=false,
-     *         @OA\Schema(type="string", enum={"aprovado", "em_analise", "pendente", "vencido"})
+     *         @OA\Schema(type="string", enum={"OPERACAO","DESATIVADA","CONSTRUCAO","DESCOMISSIONAMENTO"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         description="Busca textual no nome do empreendimento",
+     *         required=false,
+     *         @OA\Schema(type="string")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -116,7 +146,7 @@ class EmpreendimentoController extends Controller
      *     ),
      *     @OA\Response(
      *         response=401,
-     *         description="Não autenticado",
+     *         description="Nao autenticado",
      *         @OA\JsonContent(
      *             @OA\Property(property="message", type="string", example="Unauthenticated.")
      *         )
@@ -125,24 +155,24 @@ class EmpreendimentoController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        // TODO: Implementar lógica real
-        return response()->json([
-            'data' => [],
-            'meta' => [
-                'current_page' => 1,
-                'total' => 0,
-            ],
-        ]);
+        $paginator = $this->service->listPaginated(
+            filters: $request->only(['municipio_id', 'status', 'search']),
+            perPage: (int) $request->input('per_page', 15),
+        );
+
+        return EmpreendimentoResource::collection($paginator)
+            ->response()
+            ->setStatusCode(200);
     }
 
     /**
      * @OA\Get(
      *     path="/api/v1/pae/empreendimentos/{id}",
-     *     summary="Exibe um empreendimento específico",
-     *     description="Retorna os detalhes completos de um empreendimento PAE, incluindo documentos, histórico e comitê",
+     *     summary="Exibe um empreendimento especifico",
+     *     description="Retorna os detalhes completos de um empreendimento PAE",
      *     operationId="showEmpreendimento",
      *     tags={"PAE"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -159,23 +189,20 @@ class EmpreendimentoController extends Controller
      *     ),
      *     @OA\Response(
      *         response=404,
-     *         description="Empreendimento não encontrado",
+     *         description="Empreendimento nao encontrado",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Empreendimento não encontrado.")
+     *             @OA\Property(property="message", type="string", example="Empreendimento nao encontrado.")
      *         )
      *     )
      * )
      */
     public function show(int $id): JsonResponse
     {
-        // TODO: Implementar lógica real
-        return response()->json([
-            'data' => [
-                'id' => $id,
-                'nome' => 'Barragem Sul Superior',
-                'tipo' => 'Barragem de Rejeitos',
-            ],
-        ]);
+        $emp = $this->service->findById($id);
+
+        return (new EmpreendimentoResource($emp))
+            ->response()
+            ->setStatusCode(200);
     }
 
     /**
@@ -185,20 +212,28 @@ class EmpreendimentoController extends Controller
      *     description="Cadastra um novo empreendimento no sistema PAE",
      *     operationId="storeEmpreendimento",
      *     tags={"PAE"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"nome", "tipo", "municipio_id", "latitude", "longitude", "nivel_emergencia", "status"},
+     *             required={"nome","municipio_id","pae_empdor_id"},
      *             @OA\Property(property="nome", type="string", example="Barragem Sul Superior"),
-     *             @OA\Property(property="tipo", type="string", enum={"Barragem de Rejeitos", "Barragem de Água", "Outro"}, example="Barragem de Rejeitos"),
+     *             @OA\Property(property="status", type="string", enum={"OPERACAO","DESATIVADA","CONSTRUCAO","DESCOMISSIONAMENTO"}),
      *             @OA\Property(property="municipio_id", type="integer", example=123),
-     *             @OA\Property(property="latitude", type="number", format="float", example=-20.2547),
-     *             @OA\Property(property="longitude", type="number", format="float", example=-43.8011),
-     *             @OA\Property(property="nivel_emergencia", type="integer", enum={1, 2, 3}, example=1),
-     *             @OA\Property(property="status", type="string", enum={"aprovado", "em_analise", "pendente", "vencido"}, example="em_analise"),
-     *             @OA\Property(property="data_emissao", type="string", format="date", example="2024-10-15"),
-     *             @OA\Property(property="proximo_vencimento", type="string", format="date", example="2025-10-15")
+     *             @OA\Property(property="pae_empdor_id", type="integer", example=5),
+     *             @OA\Property(property="m_construcao", type="string", example="Alteamento a Jusante"),
+     *             @OA\Property(property="material", type="string", example="Rejeitos"),
+     *             @OA\Property(property="finalidade", type="string", example="Contencao de Rejeitos"),
+     *             @OA\Property(property="volume", type="number", format="float", example=12500000.50),
+     *             @OA\Property(property="pop_zas", type="integer", example=1500),
+     *             @OA\Property(property="orgao_fisc", type="string", example="ANM"),
+     *             @OA\Property(property="coordenador", type="string"),
+     *             @OA\Property(property="tel_coordenador", type="string"),
+     *             @OA\Property(property="email_coord", type="string", format="email"),
+     *             @OA\Property(property="mina", type="string"),
+     *             @OA\Property(property="coordenador_sub", type="string"),
+     *             @OA\Property(property="tel_coordenador_sub", type="string"),
+     *             @OA\Property(property="email_coord_sub", type="string", format="email")
      *         )
      *     ),
      *     @OA\Response(
@@ -211,7 +246,7 @@ class EmpreendimentoController extends Controller
      *     ),
      *     @OA\Response(
      *         response=422,
-     *         description="Erro de validação",
+     *         description="Erro de validacao",
      *         @OA\JsonContent(
      *             @OA\Property(property="message", type="string", example="The given data was invalid."),
      *             @OA\Property(property="errors", type="object")
@@ -219,23 +254,24 @@ class EmpreendimentoController extends Controller
      *     )
      * )
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreEmpreendimentoRequest $request): JsonResponse
     {
-        // TODO: Implementar lógica real
-        return response()->json([
-            'data' => $request->all(),
-            'message' => 'Empreendimento criado com sucesso',
-        ], 201);
+        $emp = $this->service->create($request->validated());
+
+        return (new EmpreendimentoResource($emp))
+            ->additional(['message' => 'Empreendimento criado com sucesso'])
+            ->response()
+            ->setStatusCode(201);
     }
 
     /**
      * @OA\Put(
      *     path="/api/v1/pae/empreendimentos/{id}",
      *     summary="Atualiza um empreendimento PAE",
-     *     description="Atualiza os dados de um empreendimento existente",
+     *     description="Atualiza os dados de um empreendimento existente. Todos os campos sao opcionais.",
      *     operationId="updateEmpreendimento",
      *     tags={"PAE"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -245,10 +281,25 @@ class EmpreendimentoController extends Controller
      *     ),
      *     @OA\RequestBody(
      *         required=true,
+     *         description="Todos os campos sao opcionais.",
      *         @OA\JsonContent(
      *             @OA\Property(property="nome", type="string", example="Barragem Sul Superior"),
-     *             @OA\Property(property="status", type="string", enum={"aprovado", "em_analise", "pendente", "vencido"}),
-     *             @OA\Property(property="nivel_emergencia", type="integer", enum={1, 2, 3})
+     *             @OA\Property(property="status", type="string", enum={"OPERACAO","DESATIVADA","CONSTRUCAO","DESCOMISSIONAMENTO"}),
+     *             @OA\Property(property="municipio_id", type="integer", example=123),
+     *             @OA\Property(property="pae_empdor_id", type="integer", example=5),
+     *             @OA\Property(property="m_construcao", type="string", example="Alteamento a Jusante"),
+     *             @OA\Property(property="material", type="string", example="Rejeitos"),
+     *             @OA\Property(property="finalidade", type="string", example="Contencao de Rejeitos"),
+     *             @OA\Property(property="volume", type="number", format="float", example=12500000.50),
+     *             @OA\Property(property="pop_zas", type="integer", example=1500),
+     *             @OA\Property(property="orgao_fisc", type="string", example="ANM"),
+     *             @OA\Property(property="coordenador", type="string"),
+     *             @OA\Property(property="tel_coordenador", type="string"),
+     *             @OA\Property(property="email_coord", type="string", format="email"),
+     *             @OA\Property(property="mina", type="string"),
+     *             @OA\Property(property="coordenador_sub", type="string"),
+     *             @OA\Property(property="tel_coordenador_sub", type="string"),
+     *             @OA\Property(property="email_coord_sub", type="string", format="email")
      *         )
      *     ),
      *     @OA\Response(
@@ -261,27 +312,29 @@ class EmpreendimentoController extends Controller
      *     ),
      *     @OA\Response(
      *         response=404,
-     *         description="Empreendimento não encontrado"
+     *         description="Empreendimento nao encontrado"
      *     )
      * )
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateEmpreendimentoRequest $request, int $id): JsonResponse
     {
-        // TODO: Implementar lógica real
-        return response()->json([
-            'data' => array_merge(['id' => $id], $request->all()),
-            'message' => 'Empreendimento atualizado com sucesso',
-        ]);
+        $emp = $this->service->findById($id);
+        $emp = $this->service->update($emp, $request->validated());
+
+        return (new EmpreendimentoResource($emp))
+            ->additional(['message' => 'Empreendimento atualizado com sucesso'])
+            ->response()
+            ->setStatusCode(200);
     }
 
     /**
      * @OA\Delete(
      *     path="/api/v1/pae/empreendimentos/{id}",
      *     summary="Remove um empreendimento PAE",
-     *     description="Remove um empreendimento do sistema",
+     *     description="Remove um empreendimento do sistema (soft delete)",
      *     operationId="deleteEmpreendimento",
      *     tags={"PAE"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -295,30 +348,15 @@ class EmpreendimentoController extends Controller
      *     ),
      *     @OA\Response(
      *         response=404,
-     *         description="Empreendimento não encontrado"
+     *         description="Empreendimento nao encontrado"
      *     )
      * )
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(int $id): Response
     {
-        // TODO: Implementar lógica real
-        return response()->json(null, 204);
-    }
+        $emp = $this->service->findById($id);
+        $this->service->delete($emp);
 
-    /**
-     * Aprova um empreendimento (ação customizada)
-     */
-    public function approve(Request $request, int $empreendimento): JsonResponse
-    {
-        return response()->json([
-            'success' => true,
-            'message' => 'Empreendimento aprovado com sucesso',
-            'data' => [
-                'id' => $empreendimento,
-                'approved_by' => $request->user()?->id,
-                'approved_at' => now()->toIso8601String(),
-            ],
-        ], 200);
+        return response()->noContent();
     }
 }
-

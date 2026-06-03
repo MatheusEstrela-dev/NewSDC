@@ -68,7 +68,7 @@ const maxWidthClass = computed(() => {
         <Transition leave-active-class="duration-200">
             <div 
                 v-show="show" 
-                class="fixed inset-0 overflow-y-auto px-3 py-4 pt-16 sm:px-0 sm:pt-20" 
+                class="fixed inset-0 overflow-y-auto scrollbar-hide px-3 py-4 pt-16 sm:px-0 sm:pt-20" 
                 style="z-index: 9999 !important; position: fixed !important; isolation: isolate !important;" 
                 scroll-region
             >
@@ -106,3 +106,13 @@ const maxWidthClass = computed(() => {
         </Transition>
     </Teleport>
 </template>
+
+<style scoped>
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+</style>

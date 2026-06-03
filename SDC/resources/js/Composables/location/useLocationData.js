@@ -57,8 +57,52 @@ export function useLocationData() {
   });
 
   /**
-   * Carrega municípios de uma UF específica
-   * Usa API do IBGE
+   * Busca municípios na tabela local (endpoint interno).
+   * Retorna [] se a UF não tiver dados locais, sinalizando para o fallback.
+   * @param {string} uf - Sigla da UF
+   * @returns {Promise<Array>}
+   */
+  const fetchMunicipiosLocais = async (uf) => {
+    const response = await fetch(`/municipios?uf=${encodeURIComponent(uf)}`, {
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin',
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao carregar municípios (tabela local)');
+    }
+
+    return response.json();
+  };
+
+  /**
+   * Busca municípios direto na API pública do IBGE (fallback).
+   * @param {string} uf - Sigla da UF
+   * @returns {Promise<Array>}
+   */
+  const fetchMunicipiosIbge = async (uf) => {
+    const response = await fetch(
+      `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`
+    );
+
+    if (!response.ok) {
+      throw new Error('Erro ao carregar municípios (IBGE)');
+    }
+
+    const data = await response.json();
+
+    return data.map(municipio => ({
+      id: municipio.id,
+      nome: municipio.nome,
+      codigo_ibge: municipio.id,
+    }));
+  };
+
+  /**
+   * Carrega municípios de uma UF específica.
+   * Prioriza a tabela local (resiliente, sem dependência externa) e usa a
+   * API do IBGE como fallback quando a UF não está na base local ou o
+   * endpoint interno falha.
    * @param {string} uf - Sigla da UF
    */
   const loadMunicipios = async (uf) => {
@@ -70,23 +114,26 @@ export function useLocationData() {
     isLoadingMunicipios.value = true;
 
     try {
-      const response = await fetch(
-        `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`
-      );
+      let data = [];
 
-      if (!response.ok) {
-        throw new Error('Erro ao carregar municípios');
+      try {
+        data = await fetchMunicipiosLocais(uf);
+      } catch (localError) {
+        data = [];
       }
 
-      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        data = await fetchMunicipiosIbge(uf);
+      }
 
-      municipios.value = data.map(municipio => ({
-        id: municipio.id,
-        nome: municipio.nome,
-        codigo_ibge: municipio.id,
-      })).sort((a, b) => a.nome.localeCompare(b.nome));
+      municipios.value = data
+        .map(municipio => ({
+          id: municipio.id,
+          nome: municipio.nome,
+          codigo_ibge: municipio.codigo_ibge ?? municipio.id,
+        }))
+        .sort((a, b) => a.nome.localeCompare(b.nome));
     } catch (error) {
-      console.error('Erro ao carregar municípios:', error);
       municipios.value = [];
     } finally {
       isLoadingMunicipios.value = false;
@@ -117,7 +164,6 @@ export function useLocationData() {
         codigo_ibge: data.id,
       };
     } catch (error) {
-      console.error('Erro ao buscar município:', error);
       return null;
     }
   };

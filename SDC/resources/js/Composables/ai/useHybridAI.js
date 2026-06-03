@@ -1,6 +1,5 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 
-// Import URL instead of constructor to manual bypass CORS
 import AIWorkerUrl from '../../Workers/ai.worker.js?url';
 
 export function useHybridAI() {
@@ -48,19 +47,17 @@ export function useHybridAI() {
         terminateWorker();
     });
 
-    // Main interaction function
-    const ask = async (prompt, onChunk = () => { }, onDone = () => { }) => {
+    const ask = async (prompt, onChunk = () => {}, onDone = () => {}, convId = null) => {
         isThinking.value = true;
         currentResponse.value = '';
         error.value = null;
 
         return new Promise((resolve, reject) => {
             if (!isReady.value) {
-                handleServerStream(prompt, onChunk, onDone).then(resolve).catch(reject);
+                handleServerStream(prompt, onChunk, onDone, convId).then(resolve).catch(reject);
                 return;
             }
 
-            // Create a one-time handler for the classification result
             const handleClassification = async (e) => {
                 const { type, payload } = e.data;
 
@@ -70,10 +67,10 @@ export function useHybridAI() {
                     if (payload.isLocal) {
                         const localReply = getLocalResponse(payload.intent);
                         simulateStream(localReply, onChunk, onDone);
-                        resolve(localReply);
+                        resolve(convId);
                     } else {
-                        await handleServerStream(prompt, onChunk, onDone);
-                        resolve();
+                        const resolvedConvId = await handleServerStream(prompt, onChunk, onDone, convId);
+                        resolve(resolvedConvId);
                     }
                 }
             };
@@ -83,11 +80,16 @@ export function useHybridAI() {
         });
     };
 
-    const handleServerStream = async (prompt, onChunk, onDone) => {
+    const handleServerStream = async (prompt, onChunk, onDone, convId = null) => {
+        let resolvedConvId = convId;
+
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
             const endpoint = isDev ? '/api/ai/dev/chat/stream' : '/api/ai/chat/stream';
+
+            const body = { message: prompt };
+            if (convId) body.conversation_id = convId;
 
             const response = await fetch(endpoint, {
                 method: 'POST',
@@ -97,7 +99,7 @@ export function useHybridAI() {
                     'X-CSRF-TOKEN': csrfToken || '',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ message: prompt })
+                body: JSON.stringify(body)
             });
 
             if (!response.ok) {
@@ -121,12 +123,15 @@ export function useHybridAI() {
 
                         try {
                             const json = JSON.parse(data);
+                            if (json.conversation_id) {
+                                resolvedConvId = json.conversation_id;
+                            }
                             if (json.content) {
                                 currentResponse.value += json.content;
                                 onChunk(json.content);
                             }
                         } catch (e) {
-                            // In case of split JSON, simplified handling
+                            // ignore parse errors on partial chunks
                         }
                     }
                 }
@@ -139,13 +144,15 @@ export function useHybridAI() {
         } finally {
             isThinking.value = false;
         }
+
+        return resolvedConvId;
     };
 
     const getLocalResponse = (intent) => {
         const responses = {
-            'local_greeting': "Olá! Sou o Assistente Inteligente da Defesa Civil (NewSDC). Estou operando localmente para maior velocidade. Como posso ajudar com os protocolos hoje?",
-            'local_help': "Posso ajudar com: \n1. Consulta de Protocolos RAT\n2. Alertas Meteorológicos\n3. Gestão de Abrigos\n\nO que você precisa?",
-            'local_clear': "Histórico limpo."
+            'local_greeting': "Ola! Sou o Assistente Inteligente da Defesa Civil (NewSDC). Estou operando localmente para maior velocidade. Como posso ajudar com os protocolos hoje?",
+            'local_help': "Posso ajudar com: \n1. Consulta de Protocolos RAT\n2. Alertas Meteorologicos\n3. Gestao de Abrigos\n\nO que voce precisa?",
+            'local_clear': "Historico limpo."
         };
         return responses[intent] || "Processando localmente...";
     };

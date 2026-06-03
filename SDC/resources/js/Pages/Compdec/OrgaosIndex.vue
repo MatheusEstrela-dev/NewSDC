@@ -1,158 +1,147 @@
 <template>
+  <div class="orgaos-index">
+    <!-- Header -->
+    <PageHeader
+      title="Orgaos de Defesa Civil"
+      description="Gestao de COMPDEC, REDEC e CEDEC"
+      :icon="BuildingOfficeIcon"
+      variant="gradient"
+    >
+      <template #actions>
+        <Button
+          v-if="canManage"
+          variant="primary"
+          size="md"
+          :icon="PlusIcon"
+          icon-position="left"
+          @click="handleCreate"
+        >
+          Novo Orgao
+        </Button>
+      </template>
+    </PageHeader>
 
-    <div class="orgaos-index">
-      <!-- Header Padronizado -->
-      <PageHeader
-        title="Órgãos de Defesa Civil"
-        description="Gestão de COMPDEC, REDEC e CEDEC"
-        :icon="BuildingOfficeIcon"
-        variant="gradient"
-      >
-        <template #actions>
-          <Button
-            v-if="canManage"
-            variant="primary"
-            size="md"
-            :icon="PlusIcon"
-            icon-position="left"
-            @click="handleCreate"
-          >
-            Novo Órgão
-          </Button>
-        </template>
-      </PageHeader>
+    <!-- Stats Cards (Organism reusavel) -->
+    <OrgaoStatsCards :statistics="statistics" />
 
-      <!-- Cards de Estatísticas -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" v-if="statistics">
-        <StatCard
-          title="Total de Órgãos"
-          :value="statistics.total"
-          variant="info"
-          :icon="BuildingOfficeIcon"
-        />
-        <StatCard
-          title="COMPDECs"
-          :value="statistics?.por_tipo?.compdec || 0"
-          variant="success"
-          :icon="BuildingOfficeIcon"
-        />
-        <StatCard
-          title="REDECs"
-          :value="statistics?.por_tipo?.redec || 0"
-          variant="warning"
-          :icon="BuildingOfficeIcon"
-        />
-        <StatCard
-          title="Ativos"
-          :value="statistics.ativos"
-          variant="success"
-          :icon="CheckCircleIcon"
-        />
+    <!-- Filtros -->
+    <OrgaosFiltersSection
+      :filters="localFilters"
+      :municipalities="filterOptions?.municipalities || []"
+      @filter-change="handleFilterChange"
+      @filter-reset="handleFilterReset"
+    />
+
+    <ListContainer
+      title="Lista de Órgãos"
+      :icon="BuildingOfficeIcon"
+      :count="orgaos.total ?? orgaos.data.length"
+    >
+      <div v-if="loading" class="loading-overlay">
+        <div class="spinner"></div>
       </div>
 
-      <!-- Filtros Padronizados -->
-      <OrgaosFiltersSection
-        :filters="localFilters"
-        :municipalities="filterOptions?.municipalities || []"
-        @filter-change="handleFilterChange"
-        @filter-reset="handleFilterReset"
-      />
+      <table class="orgaos-table">
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Nome</th>
+            <th>Tipo</th>
+            <th>Municipio</th>
+            <th>Status</th>
+            <th>Usuarios</th>
+            <th class="actions-column">Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="orgaos.data.length === 0">
+            <td colspan="7" class="p-0">
+              <ListEmptyState title="Nenhum órgão encontrado" />
+            </td>
+          </tr>
+          <tr v-for="orgao in orgaos.data" :key="orgao.id" class="table-row">
+            <td>
+              <Text variant="mono">{{ orgao.codigo }}</Text>
+            </td>
+            <td>
+              <Text variant="bold">{{ orgao.nome }}</Text>
+            </td>
+            <td>
+              <TipoOrgaoBadge :tipo="orgao.tipo" />
+            </td>
+            <td>
+              <Text variant="muted">{{ orgao.municipio?.nome || '-' }}</Text>
+            </td>
+            <td>
+              <StatusOrgaoBadge :status="orgao.status" />
+            </td>
+            <td>
+              <Text variant="muted">{{ orgao.usuarios_count || 0 }}</Text>
+            </td>
+            <td class="actions-column">
+              <div class="flex items-center justify-end">
+                <ActionButton
+                  module="compdec"
+                  resource="orgaos"
+                  :actions="[
+                    { action: 'view',   handler: () => handleView(orgao.id) },
+                    { action: 'edit',   handler: () => handleEdit(orgao.id),   allowed: canManage },
+                    { action: 'delete', handler: () => handleDelete(orgao),    allowed: canDeleteOrgao(orgao) },
+                  ]"
+                />
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </ListContainer>
 
-      <!-- Tabela de Órgãos -->
-      <div class="table-container">
-        <div v-if="loading" class="loading-overlay">
-          <div class="spinner"></div>
-        </div>
+    <!-- Paginacao -->
+    <Pagination
+      v-if="orgaos.data.length > 0"
+      :current-page="orgaos.current_page"
+      :last-page="orgaos.last_page"
+      :total="orgaos.total"
+      @page-change="handlePageChange"
+    />
 
-        <table class="orgaos-table">
-          <thead>
-            <tr>
-              <th>Código</th>
-              <th>Nome</th>
-              <th>Tipo</th>
-              <th>Município</th>
-              <th>Status</th>
-              <th>Usuários</th>
-              <th class="actions-column">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="orgaos.data.length === 0">
-              <td colspan="7" class="empty-state">
-                Nenhum órgão encontrado
-              </td>
-            </tr>
-            <tr v-for="orgao in orgaos.data" :key="orgao.id" class="table-row">
-              <td>
-                <Text variant="mono">{{ orgao.codigo }}</Text>
-              </td>
-              <td>
-                <Text variant="bold">{{ orgao.nome }}</Text>
-              </td>
-              <td>
-                <Badge :color="getTipoBadgeColor(orgao.tipo)">
-                  {{ orgao.tipoLabel }}
-                </Badge>
-              </td>
-              <td>
-                <Text variant="muted">
-                  {{ orgao.municipio?.nome || '—' }}
-                </Text>
-              </td>
-              <td>
-                <Badge :color="orgao.statusBadgeColor">
-                  {{ orgao.statusLabel }}
-                </Badge>
-              </td>
-              <td>
-                <Text variant="muted">{{ orgao.usuarios_count || 0 }}</Text>
-              </td>
-              <td class="actions-column">
-                <div class="flex items-center justify-end">
-                  <TableActions
-                    :show-view="true"
-                    :show-edit="canManage"
-                    :show-attachments="false"
-                    :show-delete="false"
-                    @view="handleView(orgao.id)"
-                    @edit="handleEdit(orgao.id)"
-                  />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Paginação -->
-      <Pagination
-        v-if="orgaos.data.length > 0"
-        :current-page="orgaos.current_page"
-        :last-page="orgaos.last_page"
-        :total="orgaos.total"
-        @page-change="handlePageChange"
-      />
-    </div>
-
+    <ConfirmDialog
+      :is-open="deleteDialog.open"
+      variant="danger"
+      title="Excluir Orgao"
+      :message="deleteDialog.message"
+      description="Esta acao remove o orgao do cadastro. Orgaos com usuarios vinculados ou subordinados nao podem ser excluidos."
+      confirm-text="Excluir"
+      cancel-text="Cancelar"
+      :loading="deleteDialog.loading"
+      @confirm="confirmDelete"
+      @cancel="closeDeleteDialog"
+    />
+  </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-
-defineOptions({ layout: AuthenticatedLayout });
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
-import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
-import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vue';
+import TipoOrgaoBadge from '@/Components/Molecules/Compdec/TipoOrgaoBadge.vue';
+import OrgaoStatsCards from '@/Components/Organisms/Compdec/OrgaoStatsCards.vue';
 import OrgaosFiltersSection from '@/Components/Organisms/Compdec/OrgaosFiltersSection.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
-import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import ListContainer from '@/Components/Organisms/ListContainer.vue';
+import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
+import { useToast } from '@/composables/useToast';
+
+defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   orgaos: {
@@ -161,9 +150,17 @@ const props = defineProps({
   },
   statistics: {
     type: Object,
-    default: () => ({}),
+    default: () => ({
+      total: 0,
+      ativos: 0,
+      por_tipo: { compdec: 0, redec: 0, cedec: 0 },
+    }),
   },
   filters: {
+    type: Object,
+    default: () => ({}),
+  },
+  filterOptions: {
     type: Object,
     default: () => ({}),
   },
@@ -171,26 +168,23 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canDelete: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const loading = ref(false);
 const localFilters = ref({ ...props.filters });
-let debounceTimer = null;
-
-const hasActiveFilters = computed(() => {
-  return Object.values(localFilters.value).some(v => v !== '' && v !== null);
+const { toast } = useToast();
+const deleteDialog = ref({
+  open: false,
+  loading: false,
+  orgao: null,
+  message: '',
 });
 
-const getTipoBadgeColor = (tipo) => {
-  const colors = {
-    compdec: 'blue',
-    redec: 'yellow',
-    cedec: 'purple',
-  };
-  return colors[tipo] || 'gray';
-};
-
-const applyFilters = () => {
+function applyFilters() {
   loading.value = true;
   router.get(route('compdec.index'), localFilters.value, {
     preserveState: true,
@@ -199,30 +193,19 @@ const applyFilters = () => {
       loading.value = false;
     },
   });
-};
+}
 
-const debouncedSearch = () => {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    applyFilters();
-  }, 500);
-};
-
-const clearFilters = () => {
-  localFilters.value = { tipo: '', status: '', search: '' };
-  applyFilters();
-};
-
-const handleFilterChange = (newFilters) => {
+function handleFilterChange(newFilters) {
   localFilters.value = { ...newFilters };
   applyFilters();
-};
+}
 
-const handleFilterReset = () => {
-  clearFilters();
-};
+function handleFilterReset() {
+  localFilters.value = { tipo: '', status: '', search: '', municipio: '' };
+  applyFilters();
+}
 
-const handlePageChange = (page) => {
+function handlePageChange(page) {
   loading.value = true;
   router.get(route('compdec.index'), {
     ...localFilters.value,
@@ -234,40 +217,72 @@ const handlePageChange = (page) => {
       loading.value = false;
     },
   });
-};
+}
 
-const handleCreate = () => {
+function handleCreate() {
   router.visit(route('compdec.create'));
-};
+}
 
-const handleView = (id) => {
+function handleView(id) {
   router.visit(route('compdec.show', id));
-};
+}
 
-const handleEdit = (id) => {
+function handleEdit(id) {
   router.visit(route('compdec.edit', id));
-};
+}
+
+function canDeleteOrgao(orgao) {
+  return props.canDelete
+    && Number(orgao?.usuarios_count || 0) === 0
+    && Number(orgao?.subordinados_count || 0) === 0;
+}
+
+function handleDelete(orgao) {
+  deleteDialog.value = {
+    open: true,
+    loading: false,
+    orgao,
+    message: `Tem certeza que deseja excluir ${orgao.nome}?`,
+  };
+}
+
+function closeDeleteDialog() {
+  if (deleteDialog.value.loading) return;
+  deleteDialog.value.open = false;
+  deleteDialog.value.orgao = null;
+}
+
+function confirmDelete() {
+  const orgao = deleteDialog.value.orgao;
+  if (!orgao) return;
+
+  let handled = false;
+  deleteDialog.value.loading = true;
+  router.delete(route('compdec.destroy', orgao.id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      handled = true;
+      toast('Orgao excluido com sucesso.', 'success');
+      deleteDialog.value.loading = false;
+      closeDeleteDialog();
+    },
+    onError: () => {
+      handled = true;
+      toast('Nao foi possivel excluir este orgao. Verifique vinculos, subordinados e permissoes.', 'error');
+    },
+    onFinish: () => {
+      deleteDialog.value.loading = false;
+      if (!handled) {
+        toast('Nao foi possivel excluir este orgao. A requisicao foi rejeitada pelo servidor.', 'error');
+      }
+    },
+  });
+}
 </script>
 
 <style scoped>
 .orgaos-index {
   @apply w-full min-h-screen bg-slate-50 dark:bg-slate-950;
-  /* Padding removed for global alignment */
-}
-
-.filters-section {
-  @apply bg-white dark:bg-slate-800;
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  align-items: end;
 }
 
 .table-container {
@@ -308,28 +323,19 @@ const handleEdit = (id) => {
 }
 
 .orgaos-table thead {
-  @apply bg-gray-50 dark:bg-slate-700;
-  border-bottom: 2px solid #e5e7eb;
+  @apply bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700;
 }
 
 .orgaos-table th {
-  @apply text-gray-700 dark:text-gray-300;
-  padding: 1rem;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  @apply text-slate-700 dark:text-slate-200 px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider;
 }
 
 .orgaos-table td {
-  @apply border-b border-gray-200 dark:border-slate-700;
-  padding: 1rem;
+  @apply border-b border-slate-200 dark:border-slate-700 px-4 py-3;
 }
 
 .table-row {
-  @apply hover:bg-gray-50 dark:hover:bg-slate-700/50;
-  transition: background-color 0.15s ease;
+  @apply hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors;
 }
 
 .empty-state {
@@ -341,11 +347,5 @@ const handleEdit = (id) => {
 .actions-column {
   width: 180px;
   text-align: right;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
 }
 </style>

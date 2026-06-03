@@ -24,7 +24,7 @@
             :stroke="segment.color"
             :stroke-dasharray="segment.dashArray"
             :stroke-dashoffset="segment.dashOffset"
-            class="transition-all duration-300 ease-out cursor-pointer origin-center hover:opacity-100"
+            class="transition-colors duration-300 ease-out cursor-pointer origin-center hover:opacity-100"
             :class="[
               hoveredSegment === index ? 'scale-110 opacity-100 brightness-110 drop-shadow-[0_0_8px_rgba(0,0,0,0.5)]' : 'scale-100 opacity-90 hover:scale-105'
             ]"
@@ -38,11 +38,11 @@
           <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white dark:bg-slate-900 shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)] flex flex-col items-center justify-center z-10 transition-transform duration-300"
                :class="{'scale-105': hoveredSegment !== null}">
             <span class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 transition-colors duration-300"
-                  :style="{ color: hoveredSegment !== null ? moduleDistribution[hoveredSegment].color : '' }">
-              {{ hoveredSegment !== null ? moduleDistribution[hoveredSegment].value : totalRegistros.toLocaleString('pt-BR') }}
+                  :style="{ color: hoveredSegment !== null ? props.moduleDistribution[hoveredSegment].color : '' }">
+              {{ hoveredSegment !== null ? props.moduleDistribution[hoveredSegment].value : totalRegistros.toLocaleString('pt-BR') }}
             </span>
             <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              {{ hoveredSegment !== null ? moduleDistribution[hoveredSegment].name : 'Total' }}
+              {{ hoveredSegment !== null ? props.moduleDistribution[hoveredSegment].name : 'Total' }}
             </span>
           </div>
         </div>
@@ -50,9 +50,9 @@
       <!-- Legenda -->
       <div class="flex-1 space-y-3 w-full">
         <div
-          v-for="(mod, index) in moduleDistribution"
+          v-for="(mod, index) in props.moduleDistribution"
           :key="mod.name"
-          class="flex items-center justify-between gap-3 group cursor-pointer transition-all duration-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 p-2 rounded-lg"
+          class="flex items-center justify-between gap-3 group cursor-pointer transition-colors duration-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 p-2 rounded-lg"
           :class="{'bg-slate-50 dark:bg-slate-800/50 scale-[1.02] shadow-sm ring-1 ring-slate-100 dark:ring-slate-700': hoveredSegment === index}"
           @mouseenter="hoveredSegment = index"
           @mouseleave="hoveredSegment = null"
@@ -74,34 +74,30 @@
 <script setup>
 import { computed, ref } from 'vue';
 
+const props = defineProps({
+  moduleDistribution: {
+    type: Array,
+    default: () => [],
+  },
+});
+
 const hoveredSegment = ref(null);
 
-const moduleDistribution = ref([
-  { name: 'RAT', value: 892, percent: 35, color: '#06b6d4' },
-  { name: 'Demandas', value: 637, percent: 25, color: '#f59e0b' },
-  { name: 'Decretações', value: 510, percent: 20, color: '#ef4444' },
-  { name: 'PAE', value: 306, percent: 12, color: '#10b981' },
-  { name: 'Ajuda Humanitária', value: 204, percent: 8, color: '#8b5cf6' },
-]);
-
-const totalRegistros = computed(() => moduleDistribution.value.reduce((sum, m) => sum + m.value, 0));
+const totalRegistros = computed(() =>
+  props.moduleDistribution.reduce((sum, m) => sum + m.value, 0)
+);
 
 const donutSegments = computed(() => {
-  const radius = 40;
+  const radius        = 40;
   const circumference = 2 * Math.PI * radius;
   let accumulatedPercent = 0;
 
-  return moduleDistribution.value.map((m, index) => {
-    const percent = m.percent / 100;
-    const dashArray = `${percent * circumference} ${circumference}`;
+  return props.moduleDistribution.map((m) => {
+    const percent    = m.percent / 100;
+    const dashArray  = `${percent * circumference} ${circumference}`;
     const dashOffset = -accumulatedPercent * circumference;
     accumulatedPercent += percent;
-
-    return {
-      ...m,
-      dashArray,
-      dashOffset
-    };
+    return { ...m, dashArray, dashOffset };
   });
 });
 </script>

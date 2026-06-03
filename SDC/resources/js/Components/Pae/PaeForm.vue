@@ -1,137 +1,250 @@
 <template>
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 animate-fade-in-up">
-    <!-- Coluna Principal -->
-    <div class="lg:col-span-2 space-y-4 sm:space-y-6 order-2 lg:order-1">
-      <!-- Card 1: Dados Gerais -->
-      <PaeCard title="1. Dados Gerais do Empreendimento">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          <FormField label="Nome do Empreendimento" :value="empreendimento.nome" readonly />
-          <FormField label="Tipo" :value="empreendimento.tipo" readonly />
-          <FormField label="Município" :value="empreendimento.municipio" readonly />
-          <FormField
-            label="Coordenadas (Lat/Long)"
-            :value="empreendimento.coordenadas ? `${empreendimento.coordenadas.lat}, ${empreendimento.coordenadas.lng}` : 'N/A'"
-            readonly
-            class="font-mono text-xs"
-          />
-        </div>
-      </PaeCard>
+  <div class="space-y-4 sm:space-y-6 animate-fade-in-up">
+    <PaeFormTabs
+      :active-tab="activeSubTab"
+      :tabs="tabConfig"
+      @tab-change="activeSubTab = $event"
+    />
 
-      <!-- Card 2: Dados do PAE -->
-      <PaeCard title="2. Dados do PAE (Plano de Ação de Emergência)">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          <FormField
-            label="Protocolo SDC"
-            v-model="localData.protocolo"
-            icon="DocumentTextIcon"
-            class="font-mono tracking-wide"
-          />
-          <FormSelect
-            label="Status do PAE"
-            v-model="localData.status"
-            :options="statusOptions"
-            icon="CheckCircleIcon"
-          />
-          <FormField label="Data de Emissão" type="date" v-model="localData.dataEmissao" />
-          <FormField
-            label="Próximo Vencimento"
-            type="date"
-            v-model="localData.proximoVencimento"
-            :class="{ 'border-l-4 border-yellow-500': isNearExpiration }"
-          />
-        </div>
-      </PaeCard>
+    <div v-if="activeSubTab === 1">
+      <PaeFormInfoGerais
+        :model-value="rat.infoGerais"
+        :municipios="municipios"
+        :saving="rat.saving"
+        :read-only="readOnly"
+        @save="handleSaveInfoGerais"
+      />
     </div>
 
-    <!-- Coluna Lateral -->
-    <div class="lg:col-span-1 space-y-4 sm:space-y-6 order-1 lg:order-2">
-      <!-- Card 3: Documentos -->
-      <PaeDocumentsCard :documents="documents" @upload="handleUpload" @remove="handleRemove" />
+    <div v-else-if="activeSubTab === 2">
+      <PaeFormObjetivoContexto
+        :model-value="rat.objetivoContexto"
+        :saving="rat.saving"
+        :read-only="readOnly"
+        @save="handleSaveObjetivo"
+      />
+    </div>
 
-      <!-- Card 4: Ações -->
-      <PaeActionsCard
-        @save="handleSave"
-        @save-draft="handleSaveDraft"
-        @archive="handleArchive"
+    <div v-else-if="activeSubTab === 3">
+      <PaeFormApontamentos
+        :items="rat.apontamentos"
+        :saving="rat.saving"
+        :read-only="readOnly"
+        @save="handleSaveApontamentos"
+        @add-item="handleAddItem('apontamentos')"
+        @remove-item="(i) => handleRemoveItem('apontamentos', i)"
+        @add-sub="(i) => handleAddSubItem('apontamentos', i)"
+        @remove-sub="(i, j) => handleRemoveSubItem('apontamentos', i, j)"
+      />
+    </div>
+
+    <div v-else-if="activeSubTab === 4">
+      <PaeFormAnexos
+        :items="rat.anexos"
+        :formulario-id="formularioId"
+        :protocolo-id="protocoloId"
+        :saving="rat.saving"
+        :progress="rat.anexoProgress"
+        :status-message="rat.anexoStatus"
+        :error-message="rat.anexoError"
+        :read-only="readOnly"
+        @upload="handleUploadAnexo"
+        @remove="handleRemoveAnexo"
+        @download="handleDownloadAnexo"
+        @view="handleViewAnexo"
+      />
+    </div>
+
+    <div v-else-if="activeSubTab === 5">
+      <PaeFormConclusao
+        :items="rat.conclusao"
+        :saving="rat.saving"
+        :read-only="readOnly"
+        @save="handleSaveConclusao"
+        @finalizar="handleFinalizar"
+        @add-item="handleAddItem('conclusao')"
+        @remove-item="(i) => handleRemoveItem('conclusao', i)"
+        @add-sub="(i) => handleAddSubItem('conclusao', i)"
+        @remove-sub="(i, j) => handleRemoveSubItem('conclusao', i, j)"
       />
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
-import FormField from './FormField.vue';
-import FormSelect from './FormSelect.vue';
-import PaeActionsCard from './PaeActionsCard.vue';
-import PaeCard from './PaeCard.vue';
-import PaeDocumentsCard from './PaeDocumentsCard.vue';
+import { ref, h, reactive, computed } from 'vue';
+import { usePaeFormulario } from '@/composables/pae/usePaeFormulario';
+import { usePage } from '@inertiajs/vue3';
+import PaeFormTabs from './PaeFormTabs.vue';
+import PaeFormInfoGerais from './PaeFormInfoGerais.vue';
+import PaeFormObjetivoContexto from './PaeFormObjetivoContexto.vue';
+import PaeFormApontamentos from './PaeFormApontamentos.vue';
+import PaeFormAnexos from './PaeFormAnexos.vue';
+import PaeFormConclusao from './PaeFormConclusao.vue';
+
+function svgIcon(d) {
+  return {
+    render: () => h('svg', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d }),
+    ]),
+  };
+}
 
 const props = defineProps({
   empreendimento: {
     type: Object,
-    required: true,
+    default: () => ({}),
   },
-  documents: {
-    type: Array,
-    default: () => [],
+  municipios: {
+    type: Object,
+    default: () => ({}),
+  },
+  formulario: {
+    type: Object,
+    default: null,
+  },
+  protocolo: {
+    type: Object,
+    default: null,
+  },
+  readOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 
-const emit = defineEmits(['save', 'save-draft', 'archive', 'upload', 'remove']);
+const activeSubTab = ref(1);
+const page = usePage();
 
-const localData = ref({
-  protocolo: props.empreendimento.protocolo || '',
-  status: props.empreendimento.status || 'aprovado',
-  dataEmissao: props.empreendimento.dataEmissao || '',
-  proximoVencimento: props.empreendimento.proximoVencimento || '',
-});
+// ID local: captura o ID retornado pelo backend após o primeiro save (POST)
+// e tem prioridade sobre os props (que podem ainda não ter sido atualizados)
+const localFormularioId = ref(props.formulario?.id ?? null);
 
-const statusOptions = [
-  { value: 'aprovado', label: 'Aprovado' },
-  { value: 'analise', label: 'Em Análise' },
-  { value: 'pendente', label: 'Pendente de Correção' },
-  { value: 'vencido', label: 'Vencido' },
+const rat = reactive(usePaeFormulario(props.empreendimento, props.formulario));
+
+const tabConfig = [
+  {
+    id: 1,
+    label: 'Informações Gerais',
+    icon: svgIcon('M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'),
+  },
+  {
+    id: 2,
+    label: 'Objetivo e Contexto',
+    icon: svgIcon('M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'),
+  },
+  {
+    id: 3,
+    label: 'Apontamentos Técnicos',
+    icon: svgIcon('M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'),
+  },
+  {
+    id: 4,
+    label: 'Anexos',
+    icon: svgIcon('M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m0-12l-4 4m4-4l4 4'),
+  },
+  {
+    id: 5,
+    label: 'Conclusão',
+    icon: svgIcon('M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'),
+  },
 ];
 
-const isNearExpiration = computed(() => {
-  if (!localData.value.proximoVencimento) return false;
-  const vencimento = new Date(localData.value.proximoVencimento);
-  const hoje = new Date();
-  const diffDays = Math.ceil((vencimento - hoje) / (1000 * 60 * 60 * 24));
-  return diffDays <= 30 && diffDays > 0;
-});
-
-watch(
-  () => props.empreendimento,
-  (newVal) => {
-    localData.value = {
-      protocolo: newVal.protocolo || '',
-      status: newVal.status || 'aprovado',
-      dataEmissao: newVal.dataEmissao || '',
-      proximoVencimento: newVal.proximoVencimento || '',
-    };
-  },
-  { deep: true }
+const formularioId = computed(
+  () => localFormularioId.value
+    ?? props.formulario?.id
+    ?? props.empreendimento?.formulario_id
+    ?? null
 );
 
-function handleSave() {
-  emit('save', localData.value);
+const protocoloId = computed(
+  () => props.protocolo?.id
+    ?? props.formulario?.pae_protocolo_id
+    ?? rat.infoGerais?.pae_protocolo_id
+    ?? null
+);
+
+function handleSaveInfoGerais(data) {
+  if (props.readOnly) return;
+
+  Object.assign(rat.infoGerais, data);
+  // Após o POST de criação, o Inertia recarrega a página com o novo formulario
+  // no prop. Capturamos o ID e avançamos para a próxima aba automaticamente.
+  rat.saveInfoGerais(formularioId.value, (newId) => {
+    if (newId) {
+      localFormularioId.value = newId;
+      activeSubTab.value = 2;
+    }
+  });
 }
 
-function handleSaveDraft() {
-  emit('save-draft', localData.value);
+function handleSaveObjetivo(data) {
+  if (props.readOnly) return;
+
+  Object.assign(rat.objetivoContexto, data);
+  rat.saveObjetivoContexto(formularioId.value, () => {
+    activeSubTab.value = 3;
+  });
 }
 
-function handleArchive() {
-  emit('archive');
+function handleSaveApontamentos() {
+  if (props.readOnly) return;
+
+  rat.saveApontamentos(formularioId.value, () => {
+    activeSubTab.value = 4;
+  });
 }
 
-function handleUpload(files) {
-  emit('upload', files);
+function handleUploadAnexo(payload) {
+  if (props.readOnly) return;
+
+  const { onSuccess, onError, ...data } = payload;
+  rat.uploadAnexo(formularioId.value, data, { onSuccess, onError }, protocoloId.value);
 }
 
-function handleRemove(id) {
-  emit('remove', id);
+function handleRemoveAnexo(anexoId) {
+  if (props.readOnly) return;
+
+  rat.deleteAnexo(formularioId.value, anexoId);
+}
+
+function handleDownloadAnexo(anexoId) {
+  rat.downloadAnexo(formularioId.value, anexoId);
+}
+
+function handleViewAnexo(anexoId) {
+  rat.viewAnexo(formularioId.value, anexoId);
+}
+
+function handleSaveConclusao() {
+  if (props.readOnly) return;
+
+  rat.saveConclusao(formularioId.value);
+}
+
+function handleFinalizar() {
+  if (props.readOnly) return;
+
+  rat.finalizarRelatorio(formularioId.value);
+}
+
+function handleAddItem(section) {
+  if (props.readOnly) return;
+  rat.addItem(section);
+}
+
+function handleRemoveItem(section, index) {
+  if (props.readOnly) return;
+  rat.removeItem(section, index);
+}
+
+function handleAddSubItem(section, index) {
+  if (props.readOnly) return;
+  rat.addSubItem(section, index);
+}
+
+function handleRemoveSubItem(section, index, childIndex) {
+  if (props.readOnly) return;
+  rat.removeSubItem(section, index, childIndex);
 }
 </script>
-

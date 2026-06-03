@@ -4,36 +4,77 @@
 
         <div class="dashboard-container">
           <!-- Header Padronizado -->
-          <PageHeader
-            title="Painel Gerencial"
-            :description="`Exercício ${currentYear} - Visão consolidada dos processos.`"
-            :icon="HomeIcon"
-            variant="gradient"
-          />
+          <div data-tour="painel-header">
+            <PageHeader
+              title="Painel Gerencial"
+              :description="`Exercício ${currentYear} - Visão consolidada dos processos.`"
+              :icon="HomeIcon"
+              variant="gradient"
+            />
+          </div>
 
-          <!-- Área de Drop Principal -->
+          <!-- Linha 1: KPIs (draggable isolado para servir de anchor estavel ao tour) -->
           <draggable
-            v-model="dashboardItems"
+            v-model="kpiItems"
             item-key="id"
+            data-tour="kpis-row"
             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6 mt-6"
             handle=".drag-handle"
             ghost-class="ghost-card"
             :animation="200"
           >
             <template #item="{ element }">
-              <div :class="element.colSpan" class="min-h-[100px]">
-                <!-- Wrapper com Handle de Arraste -->
+              <div
+                :class="element.colSpan"
+                class="min-h-[100px]"
+                data-tour="kpi-card"
+              >
                 <div class="h-full relative group/item">
-                  <!-- Botão de Arraste -->
                   <div class="drag-handle absolute top-2 right-2 z-30 p-1.5 rounded-md bg-white/80 dark:bg-slate-800/80 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shadow-sm opacity-0 group-hover/item:opacity-100 transition-opacity cursor-grab active:cursor-grabbing hover:bg-slate-100 dark:hover:bg-slate-700">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                   </div>
+                  <component
+                    :is="element.component"
+                    v-bind="element.props"
+                    class="h-full"
+                    @select-module="openModuleModal"
+                  />
+                </div>
+              </div>
+            </template>
+          </draggable>
 
-                  <!-- Renderização Dinâmica do Widget -->
-                  <component 
-                    :is="element.component" 
+          <!-- Linhas 2+: graficos, listas e demais widgets -->
+          <draggable
+            v-model="widgetItems"
+            item-key="id"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6 mt-4 sm:mt-6"
+            handle=".drag-handle"
+            ghost-class="ghost-card"
+            :animation="200"
+          >
+            <template #item="{ element }">
+              <div
+                :class="element.colSpan"
+                class="min-h-[100px]"
+                :data-tour="
+                  element.id === 'chart-bar'
+                    ? 'chart-bar'
+                    : element.id === 'chart-donut'
+                      ? 'chart-donut'
+                      : undefined
+                "
+              >
+                <div class="h-full relative group/item">
+                  <div class="drag-handle absolute top-2 right-2 z-30 p-1.5 rounded-md bg-white/80 dark:bg-slate-800/80 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shadow-sm opacity-0 group-hover/item:opacity-100 transition-opacity cursor-grab active:cursor-grabbing hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </div>
+                  <component
+                    :is="element.component"
                     v-bind="element.props"
                     class="h-full"
                     @select-module="openModuleModal"
@@ -114,10 +155,10 @@
 
                 <!-- Actions -->
                 <div class="flex gap-3">
-                  <button @click="closeModal" class="flex-1 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all">
+                  <button @click="closeModal" class="flex-1 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors">
                     Cancelar
                   </button>
-                  <button class="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 focus:ring-2 focus:ring-offset-2 transition-all shadow-lg shadow-blue-500/20" :class="variantButtonClass(selectedModule.variant)">
+                  <button class="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 focus:ring-2 focus:ring-offset-2 transition-colors shadow-lg shadow-blue-500/20" :class="variantButtonClass(selectedModule.variant)">
                     Acessar Módulo
                   </button>
                 </div>
@@ -135,10 +176,29 @@ import Modal from '@/Components/Modal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import draggable from '@/lib/vuedraggable-src/vuedraggable.js';
-import { Head } from '@inertiajs/vue3';
-import { defineAsyncComponent, markRaw, ref } from 'vue';
+import { Head, usePage } from '@inertiajs/vue3';
+import { defineAsyncComponent, markRaw, nextTick, onMounted, ref } from 'vue';
+import { useWelcomeTour } from '@/composables/auth/useWelcomeTour';
 
 defineOptions({ layout: AuthenticatedLayout });
+
+// Tour de onboarding: dispara apenas se o backend sinalizar
+// auth.show_welcome_tour=true (vide HandleInertiaRequests::share).
+const inertiaPage = usePage();
+const { startWelcomeTour } = useWelcomeTour({
+    userName: inertiaPage.props.auth?.user?.name ?? '',
+});
+
+onMounted(async () => {
+    if (!inertiaPage.props.auth?.show_welcome_tour) return;
+
+    // Garante que sidebar, topbar e widgets async ja estejam no DOM antes
+    // do Shepherd resolver os seletores [data-tour="*"].
+    await nextTick();
+    requestAnimationFrame(() => {
+        requestAnimationFrame(startWelcomeTour);
+    });
+});
 
 // Widgets carregados sob demanda (lazy) para reduzir bundle inicial
 const DashboardMetricCard = defineAsyncComponent(() => import('@/Components/Dashboard/Widgets/DashboardMetricCard.vue'));
@@ -156,6 +216,21 @@ const PlanConSituacaoWidget = defineAsyncComponent(() => import('@/Components/Da
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import PencilSquareIcon from '@/Components/Icons/PencilSquareIcon.vue';
+
+const props = defineProps({
+    ratAbertas:         { type: Number, default: 0 },
+    paeEmAnalise:       { type: Number, default: 0 },
+    decretosAprovados:  { type: Number, default: 0 },
+    demandasConcluidas: { type: Number, default: 0 },
+    ratTrend:           { type: Number, default: 0 },
+    paeTrend:           { type: Number, default: 0 },
+    decretoTrend:       { type: Number, default: 0 },
+    demandaTrend:       { type: Number, default: 0 },
+    moduleDistribution: { type: Array,  default: () => [] },
+    barData6M:          { type: Array,  default: () => [] },
+    barData12M:         { type: Array,  default: () => [] },
+    sparklines:         { type: Array,  default: () => [] },
+});
 
 const currentYear = ref(new Date().getFullYear());
 
@@ -217,85 +292,85 @@ function trendClasses(trend) {
 }
 
 // Definição dos Itens do Dashboard
-const dashboardItems = ref([
-  // Métricas (Linha 1)
-  { 
-    id: 'metric-1', 
-    component: markRaw(DashboardMetricCard), 
-    colSpan: 'col-span-1 lg:col-span-3', 
-    props: { title: 'Em Edição', value: 24, trend: 12, subtitle: '3 novos hoje', variant: 'info', icon: markRaw(PencilSquareIcon) } 
-  },
-  { 
-    id: 'metric-2', 
-    component: markRaw(DashboardMetricCard), 
-    colSpan: 'col-span-1 lg:col-span-3', 
-    props: { title: 'Em Análise', value: 5, trend: -8, subtitle: 'Tempo médio: 4 dias', variant: 'warning', icon: markRaw(ClockIcon) } 
-  },
-  { 
-    id: 'metric-3', 
-    component: markRaw(DashboardMetricCard), 
-    colSpan: 'col-span-1 lg:col-span-3', 
-    props: { title: 'Aprovados', value: 77, trend: 15, subtitle: '12 esta semana', variant: 'success', icon: markRaw(CheckCircleIcon) } 
-  },
-  { 
-    id: 'metric-4', 
-    component: markRaw(DashboardMetricCard), 
-    colSpan: 'col-span-1 lg:col-span-3', 
-    props: { title: 'Atendidos', value: 12, trend: 5, subtitle: '98% resolução', variant: 'danger', icon: markRaw(CheckCircleIcon) } 
-  },
-  
-  // Gráficos Principais (Linha 2)
-  { 
-    id: 'chart-bar', 
-    component: markRaw(BarChartWidget), 
-    colSpan: 'col-span-1 lg:col-span-6' 
-  },
-  { 
-    id: 'chart-donut', 
-    component: markRaw(DonutChartWidget), 
-    colSpan: 'col-span-1 lg:col-span-6' 
-  },
+// KPI cards (linha 1) — em um draggable separado para que o tour Shepherd
+// tenha um anchor unico (data-tour="kpis-row") cobrindo os 4 cards de uma vez.
+const kpiItems = ref([
+    {
+        id: 'metric-1',
+        component: markRaw(DashboardMetricCard),
+        colSpan: 'col-span-1 lg:col-span-3',
+        props: { title: 'RAT Abertas', value: props.ratAbertas, trend: props.ratTrend, subtitle: 'Total de ocorrências', variant: 'info', icon: markRaw(PencilSquareIcon) }
+    },
+    {
+        id: 'metric-2',
+        component: markRaw(DashboardMetricCard),
+        colSpan: 'col-span-1 lg:col-span-3',
+        props: { title: 'PAE Em Análise', value: props.paeEmAnalise, trend: props.paeTrend, subtitle: 'Aguardando análise', variant: 'warning', icon: markRaw(ClockIcon) }
+    },
+    {
+        id: 'metric-3',
+        component: markRaw(DashboardMetricCard),
+        colSpan: 'col-span-1 lg:col-span-3',
+        props: { title: 'Decretos Aprovados', value: props.decretosAprovados, trend: props.decretoTrend, subtitle: 'Reconhecidos', variant: 'success', icon: markRaw(CheckCircleIcon) }
+    },
+    {
+        id: 'metric-4',
+        component: markRaw(DashboardMetricCard),
+        colSpan: 'col-span-1 lg:col-span-3',
+        props: { title: 'Demandas Concluídas', value: props.demandasConcluidas, trend: props.demandaTrend, subtitle: 'Resolvidas e fechadas', variant: 'danger', icon: markRaw(CheckCircleIcon) }
+    },
+]);
 
-  // Linha 3 (Sparklines, PMDA, Timeline)
-  { 
-    id: 'sparklines', 
-    component: markRaw(SparklinesWidget), 
-    colSpan: 'col-span-1 lg:col-span-4' 
-  },
-  { 
-    id: 'pmda-list', 
-    component: markRaw(PmdaListWidget), 
-    colSpan: 'col-span-1 lg:col-span-4' 
-  },
-  { 
-    id: 'timeline', 
-    component: markRaw(TimelineWidget), 
-    colSpan: 'col-span-1 lg:col-span-4' 
-  },
-
-  // Linha 4 (Tendência + Radar)
-  {
-    id: 'chart-trend',
-    component: markRaw(TrendChartWidget),
-    colSpan: 'col-span-1 lg:col-span-8'
-  },
-  {
-    id: 'chart-radar',
-    component: markRaw(RadarChartWidget),
-    colSpan: 'col-span-1 lg:col-span-4'
-  },
-
-  // Linha 5 (Plano de Contingencia - 2 blocos)
-  {
-    id: 'plancon-municipios',
-    component: markRaw(PlanConMunicipiosWidget),
-    colSpan: 'col-span-1 lg:col-span-6'
-  },
-  {
-    id: 'plancon-situacao',
-    component: markRaw(PlanConSituacaoWidget),
-    colSpan: 'col-span-1 lg:col-span-6'
-  },
+// Widgets (linha 2+): graficos, listas, mapas. Continuam reordenaveis livremente.
+const widgetItems = ref([
+    {
+        id: 'chart-bar',
+        component: markRaw(BarChartWidget),
+        colSpan: 'col-span-1 lg:col-span-6',
+        props: { barData6M: props.barData6M, barData12M: props.barData12M }
+    },
+    {
+        id: 'chart-donut',
+        component: markRaw(DonutChartWidget),
+        colSpan: 'col-span-1 lg:col-span-6',
+        props: { moduleDistribution: props.moduleDistribution }
+    },
+    {
+        id: 'sparklines',
+        component: markRaw(SparklinesWidget),
+        colSpan: 'col-span-1 lg:col-span-4',
+        props: { sparklines: props.sparklines }
+    },
+    {
+        id: 'pmda-list',
+        component: markRaw(PmdaListWidget),
+        colSpan: 'col-span-1 lg:col-span-4'
+    },
+    {
+        id: 'timeline',
+        component: markRaw(TimelineWidget),
+        colSpan: 'col-span-1 lg:col-span-4'
+    },
+    {
+        id: 'chart-trend',
+        component: markRaw(TrendChartWidget),
+        colSpan: 'col-span-1 lg:col-span-8'
+    },
+    {
+        id: 'chart-radar',
+        component: markRaw(RadarChartWidget),
+        colSpan: 'col-span-1 lg:col-span-4'
+    },
+    {
+        id: 'plancon-municipios',
+        component: markRaw(PlanConMunicipiosWidget),
+        colSpan: 'col-span-1 lg:col-span-6'
+    },
+    {
+        id: 'plancon-situacao',
+        component: markRaw(PlanConSituacaoWidget),
+        colSpan: 'col-span-1 lg:col-span-6'
+    },
 ]);
 
 </script>

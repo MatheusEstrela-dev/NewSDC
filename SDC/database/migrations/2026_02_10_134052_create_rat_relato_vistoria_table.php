@@ -81,63 +81,63 @@ return new class extends Migration
             $table->string('v_tipo_localizacao', 20)->nullable()->comment('Tipo de Localizacao');
 
             // --- Encaminhamentos (Booleanos) ---
-            $table->boolean('v_enc_interdicao_parcial')->default(0)->comment('Interdicao Parcial');
-            $table->boolean('v_enc_interdicao_total')->default(0)->comment('Interdicao Total');
-            $table->boolean('v_enc_remocao_temporaria')->default(0)->comment('Remocao Temporaria');
-            $table->boolean('v_enc_remocao_definitiva')->default(0)->comment('Remocao Definitiva');
-            $table->boolean('v_enc_isolamento_area')->default(0)->comment('Isolamento da Area');
-            $table->boolean('v_enc_desocupacao_abrigo')->default(0)->comment('Desocupacao Abrigo');
-            $table->boolean('v_enc_notificacao_responsavel')->default(0)->comment('Notificacao Responsavel');
-            $table->boolean('v_enc_contratacao_responsavel')->default(0)->comment('Contratacao Responsavel');
-            $table->boolean('v_enc_comunicacao_orgaos')->default(0)->comment('Comunicacao Orgaos');
-            $table->boolean('v_enc_apoio_social')->default(0)->comment('Apoio Social');
-            $table->boolean('v_enc_outros')->default(0)->comment('Outros Encaminhamentos');
+            $table->boolean('v_enc_interdicao_parcial')->default(false)->comment('Interdicao Parcial');
+            $table->boolean('v_enc_interdicao_total')->default(false)->comment('Interdicao Total');
+            $table->boolean('v_enc_remocao_temporaria')->default(false)->comment('Remocao Temporaria');
+            $table->boolean('v_enc_remocao_definitiva')->default(false)->comment('Remocao Definitiva');
+            $table->boolean('v_enc_isolamento_area')->default(false)->comment('Isolamento da Area');
+            $table->boolean('v_enc_desocupacao_abrigo')->default(false)->comment('Desocupacao Abrigo');
+            $table->boolean('v_enc_notificacao_responsavel')->default(false)->comment('Notificacao Responsavel');
+            $table->boolean('v_enc_contratacao_responsavel')->default(false)->comment('Contratacao Responsavel');
+            $table->boolean('v_enc_comunicacao_orgaos')->default(false)->comment('Comunicacao Orgaos');
+            $table->boolean('v_enc_apoio_social')->default(false)->comment('Apoio Social');
+            $table->boolean('v_enc_outros')->default(false)->comment('Outros Encaminhamentos');
             $table->text('v_enc_outros_descricao')->nullable()->comment('Descricao Outros Encaminhamentos');
 
             // --- Patologias (Booleanos) ---
-            $table->boolean('v_patologia_rachaduras')->default(0)->comment('Rachaduras');
-            $table->boolean('v_patologia_trincas')->default(0)->comment('Trincas');
-            $table->boolean('v_patologia_fissuras_estruturais')->default(0)->comment('Fissuras Estruturais');
-            $table->boolean('v_patologia_deformacoes_estruturais')->default(0)->comment('Deformacoes Estruturais');
-            $table->boolean('v_patologia_infiltracoes')->default(0)->comment('Infiltracoes');
-            $table->boolean('v_patologia_corrosao_armaduras')->default(0)->comment('Corrosao de Armaduras');
-            $table->boolean('v_patologia_desagregacao')->default(0)->comment('Desagregacao');
-            $table->boolean('v_patologia_eflorescencia')->default(0)->comment('Eflorescencia');
-            $table->boolean('v_patologia_desplacamento')->default(0)->comment('Desplacamento');
-            $table->boolean('v_patologia_fundacoes')->default(0)->comment('Comprometimento Fundacoes');
-            $table->boolean('v_patologia_instabilidade_talude')->default(0)->comment('Instabilidade Talude');
-            $table->boolean('v_patologia_movimentacao_solo')->default(0)->comment('Movimentacao Solo');
-            $table->boolean('v_patologia_tombamento_muralhas')->default(0)->comment('Tombamento Muralhas');
-            $table->boolean('v_patologia_inundacoes')->default(0)->comment('Inundacoes');
-            $table->boolean('v_patologia_alagamentos')->default(0)->comment('Alagamentos');
-            $table->boolean('v_patologia_enxurradas')->default(0)->comment('Enxurradas');
-            $table->boolean('v_patologia_madeira')->default(0)->comment('Patologia Madeira');
-            $table->boolean('v_patologia_elementos_nao_estruturais')->default(0)->comment('Elementos Nao Estruturais');
-            $table->boolean('v_patologia_falha_drenagem')->default(0)->comment('Falha Drenagem');
-            $table->boolean('v_patologia_queda_arvores')->default(0)->comment('Queda Arvores');
-            $table->boolean('v_patologia_outros')->default(0)->comment('Outras Patologias');
+            $table->boolean('v_patologia_rachaduras')->default(false)->comment('Rachaduras');
+            $table->boolean('v_patologia_trincas')->default(false)->comment('Trincas');
+            $table->boolean('v_patologia_fissuras_estruturais')->default(false)->comment('Fissuras Estruturais');
+            $table->boolean('v_patologia_deformacoes_estruturais')->default(false)->comment('Deformacoes Estruturais');
+            $table->boolean('v_patologia_infiltracoes')->default(false)->comment('Infiltracoes');
+            $table->boolean('v_patologia_corrosao_armaduras')->default(false)->comment('Corrosao de Armaduras');
+            $table->boolean('v_patologia_desagregacao')->default(false)->comment('Desagregacao');
+            $table->boolean('v_patologia_eflorescencia')->default(false)->comment('Eflorescencia');
+            $table->boolean('v_patologia_desplacamento')->default(false)->comment('Desplacamento');
+            $table->boolean('v_patologia_fundacoes')->default(false)->comment('Comprometimento Fundacoes');
+            $table->boolean('v_patologia_instabilidade_talude')->default(false)->comment('Instabilidade Talude');
+            $table->boolean('v_patologia_movimentacao_solo')->default(false)->comment('Movimentacao Solo');
+            $table->boolean('v_patologia_tombamento_muralhas')->default(false)->comment('Tombamento Muralhas');
+            $table->boolean('v_patologia_inundacoes')->default(false)->comment('Inundacoes');
+            $table->boolean('v_patologia_alagamentos')->default(false)->comment('Alagamentos');
+            $table->boolean('v_patologia_enxurradas')->default(false)->comment('Enxurradas');
+            $table->boolean('v_patologia_madeira')->default(false)->comment('Patologia Madeira');
+            $table->boolean('v_patologia_elementos_nao_estruturais')->default(false)->comment('Elementos Nao Estruturais');
+            $table->boolean('v_patologia_falha_drenagem')->default(false)->comment('Falha Drenagem');
+            $table->boolean('v_patologia_queda_arvores')->default(false)->comment('Queda Arvores');
+            $table->boolean('v_patologia_outros')->default(false)->comment('Outras Patologias');
             $table->text('v_patologia_outros_descricao')->nullable()->comment('Descricao Outras Patologias');
 
             // --- Bens Afetados (Booleanos) ---
-            $table->boolean('v_bens_residencia')->default(0)->comment('Residencia');
-            $table->boolean('v_bens_muros')->default(0)->comment('Muros');
-            $table->boolean('v_bens_vias_publicas')->default(0)->comment('Vias Publicas');
-            $table->boolean('v_bens_pontes')->default(0)->comment('Pontes');
-            $table->boolean('v_bens_viadutos')->default(0)->comment('Viadutos');
-            $table->boolean('v_bens_comercios')->default(0)->comment('Comercios');
-            $table->boolean('v_bens_galpoes')->default(0)->comment('Galpoes');
-            $table->boolean('v_bens_predios_publicos')->default(0)->comment('Predios Publicos');
-            $table->boolean('v_bens_edificios_publicos')->default(0)->comment('Edificios Publicos');
-            $table->boolean('v_bens_outros')->default(0)->comment('Outros Bens');
+            $table->boolean('v_bens_residencia')->default(false)->comment('Residencia');
+            $table->boolean('v_bens_muros')->default(false)->comment('Muros');
+            $table->boolean('v_bens_vias_publicas')->default(false)->comment('Vias Publicas');
+            $table->boolean('v_bens_pontes')->default(false)->comment('Pontes');
+            $table->boolean('v_bens_viadutos')->default(false)->comment('Viadutos');
+            $table->boolean('v_bens_comercios')->default(false)->comment('Comercios');
+            $table->boolean('v_bens_galpoes')->default(false)->comment('Galpoes');
+            $table->boolean('v_bens_predios_publicos')->default(false)->comment('Predios Publicos');
+            $table->boolean('v_bens_edificios_publicos')->default(false)->comment('Edificios Publicos');
+            $table->boolean('v_bens_outros')->default(false)->comment('Outros Bens');
             $table->text('v_bens_outros_descricao')->nullable()->comment('Descricao Outros Bens');
 
             // --- Órgãos Acionados (Booleanos e Legado) ---
-            $table->boolean('v_orgao_copasa')->default(0)->comment('COPASA');
-            $table->boolean('v_orgao_cemig')->default(0)->comment('CEMIG');
-            $table->boolean('v_orgao_secretaria_municipal')->default(0)->comment('Secretaria Municipal');
-            $table->boolean('v_orgao_defesa_civil_estadual')->default(0)->comment('Defesa Civil Estadual');
-            $table->boolean('v_orgao_dnit')->default(0)->comment('DNIT');
-            $table->boolean('v_orgao_outros')->default(0)->comment('Outros Orgaos');
+            $table->boolean('v_orgao_copasa')->default(false)->comment('COPASA');
+            $table->boolean('v_orgao_cemig')->default(false)->comment('CEMIG');
+            $table->boolean('v_orgao_secretaria_municipal')->default(false)->comment('Secretaria Municipal');
+            $table->boolean('v_orgao_defesa_civil_estadual')->default(false)->comment('Defesa Civil Estadual');
+            $table->boolean('v_orgao_dnit')->default(false)->comment('DNIT');
+            $table->boolean('v_orgao_outros')->default(false)->comment('Outros Orgaos');
             $table->text('v_orgao_outros_descricao')->nullable()->comment('Descricao Outros Orgaos');
             $table->text('v_bens_afetados')->nullable()->comment('Bens Afetados (legado)');
             $table->text('v_orgaos_acionados')->nullable()->comment('Orgaos Acionados (legado)');
@@ -145,9 +145,9 @@ return new class extends Migration
 
             $table->string('v_orgao_pm', 255)->nullable();
             $table->string('v_orgao_bm', 255)->nullable();
-            $table->boolean('v_orgao_crea')->default(0)->comment('CREA');
-            $table->boolean('v_orgao_emater')->default(0)->comment('EMATER');
-            $table->boolean('v_orgao_seapa')->default(0)->comment('SEAPA');
+            $table->boolean('v_orgao_crea')->default(false)->comment('CREA');
+            $table->boolean('v_orgao_emater')->default(false)->comment('EMATER');
+            $table->boolean('v_orgao_seapa')->default(false)->comment('SEAPA');
 
             // --- Timestamps e SoftDeletes ---
             $table->timestamps();
@@ -157,9 +157,11 @@ return new class extends Migration
             $table->index('v_tipo_imovel', 'idx_v_tipo_imovel');
             $table->index('v_municipio', 'idx_v_municipio');
 
-            $table->engine = 'InnoDB';
-            $table->charset = 'utf8mb4';
-            $table->collation = 'utf8mb4_unicode_ci';
+            if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                $table->engine    = 'InnoDB';
+                $table->charset   = 'utf8mb4';
+                $table->collation = 'utf8mb4_unicode_ci';
+            }
         });
     }
 

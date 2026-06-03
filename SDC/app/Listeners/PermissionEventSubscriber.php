@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Models\PermissionAuditLog;
 use Illuminate\Events\Dispatcher;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Contracts\Permission;
 use Spatie\Permission\Contracts\Role;
 
@@ -125,7 +126,9 @@ class PermissionEventSubscriber
         ?array $beforeState,
         ?array $afterState
     ): void {
-        $userId = auth()->id();
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        $userId = $user?->id;
 
         if (!$userId) {
             return;

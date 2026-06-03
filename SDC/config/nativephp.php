@@ -197,7 +197,7 @@ return [
         'http_port' => env('NATIVEPHP_HTTP_PORT', 3000),
 
         // WebSocket server port for hot reload communication
-        'ws_port' => env('NATIVEPHP_WS_PORT', 8081),
+        'ws_port' => env('NATIVEPHP_WS_PORT', 18081),
 
         // Service name advertised on the network
         'service_name' => env('NATIVEPHP_SERVICE_NAME', 'NativePHP Server'),

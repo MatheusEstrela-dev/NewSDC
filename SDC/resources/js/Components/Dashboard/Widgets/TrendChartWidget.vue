@@ -26,7 +26,7 @@
 
     <!-- Chart Area -->
     <div class="relative w-full bg-gradient-to-b from-slate-50/30 to-white dark:from-slate-800/10 dark:to-slate-900 pt-16 pb-4 px-4 h-full flex-1 min-h-[320px]">
-      <VueApexCharts type="area" height="100%" width="100%" :options="trendChartOptions" :series="trendChartSeries" />
+      <LazyChart type="area" height="100%" width="100%" :options="trendChartOptions" :series="trendChartSeries" />
     </div>
 
   </div>
@@ -34,7 +34,7 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import VueApexCharts from 'vue3-apexcharts';
+import LazyChart from '@/Components/Common/LazyChart.vue';
 
 // Dados
 const trendMonths = ref(['Set', 'Out', 'Nov', 'Dez', 'Jan', 'Fev']);

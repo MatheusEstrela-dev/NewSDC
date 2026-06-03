@@ -72,6 +72,12 @@ class AuthController extends Controller
             ]);
         }
 
+        if (!$user->active || in_array($user->status, ['inactive', 'suspended', 'blocked'], true)) {
+            throw ValidationException::withMessages([
+                'cpf' => ['Seu usuario esta desativado. Entre em contato com o suporte ou com o gestor do sistema.'],
+            ]);
+        }
+
         // Revogar tokens anteriores (opcional)
         $user->tokens()->delete();
 
@@ -100,7 +106,7 @@ class AuthController extends Controller
      *     description="Revoga o token atual do usuário autenticado",
      *     operationId="logout",
      *     tags={"Autenticação"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Response(
      *         response=200,
      *         description="Logout realizado com sucesso",
@@ -130,7 +136,7 @@ class AuthController extends Controller
      *     description="Retorna os dados do usuário atualmente autenticado",
      *     operationId="me",
      *     tags={"Autenticação"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Response(
      *         response=200,
      *         description="Dados do usuário",
@@ -157,4 +163,3 @@ class AuthController extends Controller
         ]);
     }
 }
-

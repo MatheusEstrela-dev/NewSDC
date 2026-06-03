@@ -224,6 +224,20 @@ export function usePae(initialData = {}) {
     });
   }
 
+  async function changeStatus(protocoloId, novoStatus, obs = '') {
+    return new Promise((resolve, reject) => {
+      router.post(
+        `/pae/protocolo/${protocoloId}/status`,
+        { novo_status: novoStatus, obs },
+        {
+          onSuccess: () => resolve(true),
+          onError: (errors) => reject(errors),
+          preserveScroll: true,
+        }
+      );
+    });
+  }
+
   return {
     // State
     empreendimento,
@@ -245,6 +259,7 @@ export function usePae(initialData = {}) {
     removeCommitteeMember,
     updateEmpreendedor,
     refreshPaeData,
+    changeStatus,
   };
 }
 

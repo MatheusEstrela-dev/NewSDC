@@ -40,7 +40,10 @@ class ProcessInboundWebhook implements ShouldQueue
     ) {}
 
     /**
-     * Processa o webhook
+     * Processa o webhook. O isolamento da conexao pgsql_webhook eh feito
+     * pelo proprio model WebhookEvent (protected $connection = 'pgsql_webhook'),
+     * dispensando o padrao anterior de DB::setDefaultConnection que alterava
+     * estado global e podia vazar em Octane.
      */
     public function handle(): void
     {

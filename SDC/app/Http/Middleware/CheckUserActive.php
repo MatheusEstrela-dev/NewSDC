@@ -16,23 +16,46 @@ class CheckUserActive
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $user = $request->user();
+
+        if (!$user) {
+            return $next($request);
+        }
+
+        if (!$request->hasSession()) {
+            if (!$user->active) {
+                return response()->json([
+                    'message' => 'Seu usuario esta desativado. Entre em contato com o suporte ou com o gestor do sistema.',
+                ], 403);
+            }
+
+            return $next($request);
+        }
+
         if (Auth::check()) {
-            // Check session cache first to avoid DB query every time
-            if (!$request->session()->has('user_last_active_check') || 
-                now()->diffInMinutes($request->session()->get('user_last_active_check')) > 5) {
-                
-                if (!Auth::user()->active) {
+            $shouldCheck = true;
+            $lastCheck = $request->session()->get('user_last_active_check');
+
+            if ($lastCheck instanceof \Carbon\Carbon) {
+                $shouldCheck = now()->diffInMinutes($lastCheck) > 5;
+            } elseif (is_int($lastCheck)) {
+                $shouldCheck = (time() - $lastCheck) > 300;
+            } else {
+                $request->session()->forget('user_last_active_check');
+            }
+
+            if ($shouldCheck) {
+                if (!$user->active) {
                     Auth::logout();
                     $request->session()->invalidate();
                     $request->session()->regenerateToken();
 
                     return redirect()->route('login')->withErrors([
-                        'email' => 'Sua conta foi desativada por falta de atualização cadastral (prazo de 6 meses excedido). Entre em contato com o suporte para reativação.',
+                        'cpf' => 'Seu usuario esta desativado. Entre em contato com o suporte ou com o gestor do sistema.',
                     ]);
                 }
-                
-                // Update check time
-                $request->session()->put('user_last_active_check', now());
+
+                $request->session()->put('user_last_active_check', time());
             }
         }
 

@@ -1,8 +1,10 @@
 <template>
-  <Link
+  <component
+    :is="external ? 'a' : Link"
     :href="href"
-    prefetch
-    cache-for="30s"
+    :target="external ? '_blank' : undefined"
+    :prefetch="!external"
+    :cache-for="!external ? '30s' : undefined"
     :class="[
       'nav-item',
       {
@@ -54,6 +56,38 @@
     <svg v-else-if="icon === 'shield'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
     </svg>
+    <svg v-else-if="icon === 'code'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+    </svg>
+    <svg v-else-if="icon === 'map'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 4m0 16l6-3m-6 3V4m6 16l5.447 2.724A1 1 0 0021 21.382V10.618a1 1 0 00-.553-.894L15 7m0 13V7m0 0L9 4" />
+    </svg>
+    <svg v-else-if="icon === 'server'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+    </svg>
+    <svg v-else-if="icon === 'cisterna'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 7c0-1.657 2.686-3 6-3s6 1.343 6 3-2.686 3-6 3-6-1.343-6-3z" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 7v10c0 1.657 2.686 3 6 3s6-1.343 6-3V7" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12c0 1.657 2.686 3 6 3s6-1.343 6-3" />
+    </svg>
+    <svg v-else-if="icon === 'inventory'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 8.25l-9-5.25-9 5.25 9 5.25 9-5.25z" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8.25v7.5l9 5.25 9-5.25v-7.5" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 13.5V21" />
+    </svg>
+    <svg v-else-if="icon === 'stock'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7.5l8-4.5 8 4.5-8 4.5-8-4.5z" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7.5v9l8 4.5 8-4.5v-9" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12v9M8 9.75v4.5m8-4.5v4.5" />
+    </svg>    <svg v-else-if="icon === 'rat-clipboard'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+    </svg>
+    <svg v-else-if="icon === 'pae-bolt'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+    <svg v-else-if="icon === 'logs-list'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10M4 18h8" />
+    </svg>
     <svg v-else class="nav-item-icon" fill="currentColor" viewBox="0 0 8 8">
       <circle cx="4" cy="4" r="3" />
     </svg>
@@ -61,7 +95,7 @@
       <slot />
     </span>
     <span v-if="active && !isSubmenu && !collapsed" class="nav-item-dot"></span>
-  </Link>
+  </component>
 </template>
 
 <script setup>
@@ -89,6 +123,10 @@ const props = defineProps({
     default: false,
   },
   collapsed: {
+    type: Boolean,
+    default: false,
+  },
+  external: {
     type: Boolean,
     default: false,
   },

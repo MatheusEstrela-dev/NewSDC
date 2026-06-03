@@ -31,14 +31,14 @@ echo -e "${GREEN}📦 Instalando dependências PHP (Composer)...${NC}"
 run_in_container "sdc_app_dev" "composer install --no-interaction --prefer-dist --optimize-autoloader"
 
 echo ""
-echo -e "${GREEN}📦 Instalando dependências Node.js (NPM)...${NC}"
-if docker ps | grep -q "sdc_node"; then
-    run_in_container "sdc_node" "npm install"
+echo -e "${GREEN}📦 Instalando dependencias frontend (Bun)...${NC}"
+if docker ps | grep -q "newsdc_bun"; then
+    run_in_container "newsdc_bun" "bun install"
 else
-    echo -e "${YELLOW}⚠️  Container sdc_node não está rodando. Iniciando...${NC}"
-    docker-compose -f docker-compose.dev.yml up -d node
+    echo -e "${YELLOW}⚠️  Container newsdc_bun nao esta rodando. Iniciando...${NC}"
+    docker-compose -f docker-compose.yml up -d bun
     sleep 3
-    run_in_container "sdc_node" "npm install"
+    run_in_container "newsdc_bun" "bun install"
 fi
 
 echo ""

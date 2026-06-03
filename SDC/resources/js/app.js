@@ -1,11 +1,67 @@
 import '../css/app.css';
 import { initAxios } from './bootstrap';
+import { installClientIpInterceptor } from '@/Composables/auth/useClientIp';
 
 import { createInertiaApp, router } from '@inertiajs/vue3';
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
+import { startLoading, stopLoading } from '@/Composables/usePageLoading';
+
+const isSamePagePath = (url) => {
+    if (!url || typeof window === 'undefined') return false;
+    try {
+        const parsed = url instanceof URL ? url : new URL(url, window.location.origin);
+        return parsed.pathname === window.location.pathname;
+    } catch {
+        return false;
+    }
+};
+
+const isUserFacingNavigation = (visit) => {
+    if (!visit || visit.method !== 'get') return false;
+    if (visit.prefetch) return false;
+    if (visit.only?.length > 0 || visit.except?.length > 0) return false;
+    if (visit.async) return false;
+    if (isSamePagePath(visit.url)) return false;
+    return true;
+};
+
+// Reload automático quando a sessão/CSRF expira (419 Page Expired)
+router.on('invalid-token', async (event) => {
+    event.preventDefault();
+    try {
+        if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(r => r.unregister()));
+        }
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+        }
+    } catch (_) {}
+    window.location.reload();
+});
+
+let userFacingNavPending = false;
+
+router.on('start', (event) => {
+    if (isUserFacingNavigation(event.detail?.visit)) {
+        startLoading();
+        userFacingNavPending = true;
+    }
+});
+const finishUserFacingNav = () => {
+    if (userFacingNavPending) {
+        stopLoading();
+        userFacingNavPending = false;
+    }
+};
+router.on('finish', finishUserFacingNav);
+router.on('error', finishUserFacingNav);
+router.on('exception', finishUserFacingNav);
+router.on('navigate', finishUserFacingNav);
 
 const loadPageCSS = (pageName) => {
     const cssMap = {
@@ -19,6 +75,14 @@ const loadPageCSS = (pageName) => {
         'RatIndex': () => Promise.all([
             import('../css/pages/rat/rat.css'),
             import('../css/pages/rat/index.css'),
+        ]),
+        'RatCreate': () => Promise.all([
+            import('../css/pages/rat/rat.css'),
+            import('../css/pages/rat/sections.css'),
+        ]),
+        'RatEdit': () => Promise.all([
+            import('../css/pages/rat/rat.css'),
+            import('../css/pages/rat/sections.css'),
         ]),
         'Auth/Login': () => import('../css/pages/auth/login.css'),
         'Auth/Reset': () => import('../css/pages/auth/reset.css'),
@@ -50,30 +114,44 @@ const queryClient = new QueryClient({
 const prefetchedRoutes = new Set();
 
 const setupPrefetching = () => {
+    let hoverTimer = null;
+
+    const shouldPrefetch = () => {
+        if (!navigator.connection) return true;
+        const conn = navigator.connection;
+        return conn.effectiveType === '4g' && !conn.saveData;
+    };
+
+    const doPrefetch = (href) => {
+        if (!href || href.startsWith('#') || href.startsWith('http') || prefetchedRoutes.has(href)) {
+            return;
+        }
+        if (!shouldPrefetch()) return;
+
+        prefetchedRoutes.add(href);
+        router.prefetch(href, { method: 'get' });
+    };
+
     document.addEventListener('mouseover', (e) => {
         const link = e.target.closest('a[href]');
         if (!link) return;
 
-        const href = link.getAttribute('href');
-        if (!href || href.startsWith('#') || href.startsWith('http') || prefetchedRoutes.has(href)) {
-            return;
-        }
+        clearTimeout(hoverTimer);
+        hoverTimer = setTimeout(() => {
+            doPrefetch(link.getAttribute('href'));
+        }, 150);
+    }, { passive: true });
 
-        prefetchedRoutes.add(href);
-        router.prefetch(href, { method: 'get' });
+    document.addEventListener('mouseout', (e) => {
+        if (e.target.closest('a[href]')) {
+            clearTimeout(hoverTimer);
+        }
     }, { passive: true });
 
     document.addEventListener('touchstart', (e) => {
         const link = e.target.closest('a[href]');
         if (!link) return;
-
-        const href = link.getAttribute('href');
-        if (!href || href.startsWith('#') || href.startsWith('http') || prefetchedRoutes.has(href)) {
-            return;
-        }
-
-        prefetchedRoutes.add(href);
-        router.prefetch(href, { method: 'get' });
+        doPrefetch(link.getAttribute('href'));
     }, { passive: true });
 };
 
@@ -86,18 +164,23 @@ const registerServiceWorker = async () => {
             registerSW({
                 immediate: true,
                 onRegistered(registration) {
-                    if (registration) {
-                        setInterval(() => {
-                            registration.update();
-                        }, 1000 * 60 * 60);
-                    }
+                    if (!registration) return;
+
+                    // Check for SW updates on Inertia page navigation
+                    router.on('navigate', () => {
+                        registration.update();
+                    });
+
+                    // Fallback: check every 2 hours
+                    setInterval(() => {
+                        registration.update();
+                    }, 1000 * 60 * 120);
                 },
                 onOfflineReady() {
-                    console.log('App ready to work offline');
                 },
             });
         } catch (e) {
-            console.error('Service Worker registration failed:', e);
+            // Service Worker registration failed silently
         }
     }
 };
@@ -105,6 +188,10 @@ const registerServiceWorker = async () => {
 const appName = import.meta.env.VITE_APP_NAME || 'SDC';
 
 await initAxios();
+// Best-effort: anexa header X-Client-IP em toda request (WebRTC + ipify).
+// Cobre Inertia router (POST /login, navegacao) E axios (XHR diretos).
+// Falhas silenciosas — nao bloqueia o boot do app.
+installClientIpInterceptor({ router });
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -150,7 +237,6 @@ createInertiaApp({
 
 Object.defineProperty(window, 'egg', {
     get: function () {
-        console.log('%c\u2B50 DESENVOLVIDO POR MATHEUS ESTRELA \u2B50', 'color: #FFD700; font-size: 24px; font-weight: bold; text-shadow: 2px 2px 4px #000;');
         return '\u2B50';
     }
 });

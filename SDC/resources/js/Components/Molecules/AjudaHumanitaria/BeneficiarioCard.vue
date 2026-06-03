@@ -79,7 +79,7 @@
         </span>
         <span
           v-if="beneficiario.situacoes_vulnerabilidade.length > 3"
-          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 text-xs text-slate-400"
+          class="px-2 py-0.5 sm:py-1 rounded bg-slate-200 dark:bg-slate-700/30 text-xs text-slate-600 dark:text-slate-400"
         >
           +{{ beneficiario.situacoes_vulnerabilidade.length - 3 }}
         </span>
@@ -87,17 +87,16 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-700/30 dark:border-slate-700/30 border-slate-200">
-      <TableActions
-        :show-view="true"
-        :show-print="true"
-        :show-edit="canEdit"
-        :show-attachments="false"
-        :show-delete="canDelete"
-        @view="$emit('view', beneficiario.id)"
-        @print="$emit('print', beneficiario.id)"
-        @edit="$emit('edit', beneficiario.id)"
-        @delete="$emit('delete', beneficiario.id)"
+    <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-200 dark:border-slate-700/30">
+      <ActionButton
+        module="humanitaria"
+        resource="beneficiarios"
+        :actions="[
+          { action: 'view',   handler: () => $emit('view', beneficiario.id) },
+          { action: 'print',  handler: () => $emit('print', beneficiario.id) },
+          { action: 'edit',   handler: () => $emit('edit', beneficiario.id),   allowed: canEdit },
+          { action: 'delete', handler: () => $emit('delete', beneficiario.id), allowed: canDelete },
+        ]"
       />
     </div>
   </div>
@@ -107,7 +106,7 @@
 import Badge from '../../Atoms/Badge/Badge.vue';
 import Heading from '../../Atoms/Typography/Heading.vue';
 import Text from '../../Atoms/Typography/Text.vue';
-import TableActions from '../Table/TableActions.vue';
+import ActionButton from '../../Atoms/Button/ActionButton.vue';
 
 const props = defineProps({
   beneficiario: {
@@ -128,7 +127,7 @@ defineEmits(['click', 'view', 'print', 'edit', 'delete']);
 
 // Glow neon effect baseado no status
 const getCardClasses = () => {
-  const baseClasses = 'bg-slate-900/60 dark:bg-slate-900/60 bg-white hover:scale-[1.02] active:scale-[0.98]';
+  const baseClasses = 'bg-white dark:bg-slate-900/60 hover:scale-[1.02] active:scale-[0.98]';
 
   // Classe CSS customizada com efeito glow baseado no status
   const statusGlow = {

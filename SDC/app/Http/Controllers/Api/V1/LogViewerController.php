@@ -279,7 +279,7 @@ class LogViewerController extends Controller
      *     path="/api/v1/logs/recent",
      *     summary="Logs recentes (Redis)",
      *     description="Retorna logs recentes armazenados no Redis (tempo real)",
-     *     operationId="logsRecent",
+     *     operationId="logsRecentV1",
      *     tags={"Log Viewer V1"},
      *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
@@ -360,11 +360,43 @@ class LogViewerController extends Controller
 
     /**
      * @OA\Get(
+     *     path="/api/v1/logs/layers",
+     *     summary="Camadas de log disponíveis",
+     *     description="Retorna lista de camadas (layers) disponíveis para filtragem",
+     *     operationId="logsLayers",
+     *     tags={"Log Viewer V1"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Camadas de log"
+     *     )
+     * )
+     */
+    public function layers(): JsonResponse
+    {
+        return response()->json([
+            'layers' => [
+                'api',
+                'backend',
+                'frontend',
+                'system',
+                'security',
+                'database',
+                'queue',
+                'integration'
+            ],
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * @OA\Get(
      *     path="/api/v1/logs/levels",
      *     summary="Níveis de log disponíveis",
      *     description="Retorna lista de níveis de severidade disponíveis",
      *     operationId="logsLevels",
      *     tags={"Log Viewer V1"},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Response(
      *         response=200,
      *         description="Níveis de log"

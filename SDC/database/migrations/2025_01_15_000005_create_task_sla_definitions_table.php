@@ -44,16 +44,19 @@ return new class extends Migration
             $table->time('horario_fim')->default('18:00:00');
 
             // Dias de Funcionamento (JSON array de números 0-6, onde 0=Domingo)
-            $table->json('dias_funcionamento')
+            $table->jsonb('dias_funcionamento')
                 ->comment('Array de dias úteis: [1,2,3,4,5] = Segunda-Sexta');
+            $table->index('dias_funcionamento', 'idx_task_sla_definitions_dias_funcionamento', 'gin');
 
             // Feriados (JSON array de datas no formato YYYY-MM-DD)
-            $table->json('feriados')->nullable()
+            $table->jsonb('feriados')->nullable()
                 ->comment('Array de datas: ["2025-01-01", "2025-12-25"]');
+            $table->index('feriados', 'idx_task_sla_definitions_feriados', 'gin');
 
             // Alertas de Violação
-            $table->json('alertas')
+            $table->jsonb('alertas')
                 ->comment('Percentuais para disparo de alertas: [50, 75, 90]');
+            $table->index('alertas', 'idx_task_sla_definitions_alertas', 'gin');
 
             $table->boolean('ativo')->default(true)->index();
 

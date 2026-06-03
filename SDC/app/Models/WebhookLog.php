@@ -11,6 +11,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class WebhookLog extends Model
 {
+    /**
+     * Isolamento de conexao: webhook logs sempre vao pelo pool pgsql_webhook,
+     * separado do pool da web. Substitui o padrao anterior de
+     * DB::setDefaultConnection nos jobs.
+     */
+    protected $connection = 'pgsql_webhook';
+
     protected $fillable = [
         'url',
         'payload',

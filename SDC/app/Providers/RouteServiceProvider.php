@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Models\Empreendimento;
-use App\Models\Entrada;
 use App\Models\Protocolo;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
@@ -31,6 +30,32 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        RateLimiter::for('login', function (Request $request) {
+            $identifier = $request->input('cpf') ?: $request->input('email') ?: $request->ip();
+
+            return Limit::perMinute(5)->by(strtolower((string) $identifier) . '|' . $request->ip());
+        });
+
+        RateLimiter::for('register', function (Request $request) {
+            return Limit::perMinute(3)->by($request->ip());
+        });
+
+        RateLimiter::for('default', function (Request $request) {
+            return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('premium', function (Request $request) {
+            return Limit::perMinute(300)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('enterprise', function (Request $request) {
+            return Limit::perMinute(1000)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('webhook', function (Request $request) {
+            return Limit::perMinute(500)->by($request->ip());
+        });
+
         /**
          * Bindings explícitos para resources que ainda não têm persistência real.
          *
@@ -39,7 +64,6 @@ class RouteServiceProvider extends ServiceProvider
          */
         Route::bind('empreendimento', fn ($value) => new Empreendimento(['id' => (int) $value]));
         Route::bind('protocolo', fn ($value) => new Protocolo(['id' => (int) $value]));
-        Route::bind('entrada', fn ($value) => new Entrada(['id' => (int) $value]));
 
         $this->routes(function () {
             Route::middleware('api')

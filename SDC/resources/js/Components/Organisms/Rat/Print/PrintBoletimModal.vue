@@ -36,11 +36,13 @@ const dadosGerais = computed(() => {
 });
 
 const envolvidos = computed(() => {
-  return props.ocorrencia?.envolvidos || [];
+  const e = props.ocorrencia?.envolvidos;
+  return Array.isArray(e) ? e : [];
 });
 
 const recursos = computed(() => {
-  return props.ocorrencia?.recursos || [];
+  const r = props.ocorrencia?.recursos;
+  return Array.isArray(r) ? r : [];
 });
 
 const vistoria = computed(() => {
@@ -50,8 +52,8 @@ const vistoria = computed(() => {
 const agentes = computed(() => {
   const allAgentes = [];
   recursos.value.forEach((recurso) => {
-    if (recurso?.componentesGuarnicao) {
-      allAgentes.push(...recurso.componentesGuarnicao);
+    if (recurso?.agentes) {
+      allAgentes.push(...recurso.agentes);
     }
   });
   return allAgentes;

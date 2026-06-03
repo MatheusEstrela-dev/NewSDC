@@ -69,7 +69,7 @@ services:
 
       # ===== CACHE (Performance) =====
       - jenkins_cache_m2:/var/jenkins_home/.m2
-      - jenkins_cache_npm:/var/jenkins_home/.npm
+      - jenkins_cache_bun:/var/jenkins_home/.bun
 
       # ===== WORKSPACE (Compartilhado com SDC) =====
       - ../:/workspace/sdc:rw
@@ -121,5 +121,5 @@ volumes:
   jenkins_cache_m2:
     driver: local
 
-  jenkins_cache_npm:
+  jenkins_cache_bun:
     driver: local

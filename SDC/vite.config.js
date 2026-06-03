@@ -55,6 +55,20 @@ export default defineConfig({
                 globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
                 runtimeCaching: [
                     {
+                        urlPattern: /\/build\/.*\.(js|css)$/i,
+                        handler: 'NetworkFirst',
+                        options: {
+                            cacheName: 'build-assets',
+                            expiration: {
+                                maxEntries: 200,
+                                maxAgeSeconds: 60 * 60 * 24 * 7,
+                            },
+                            cacheableResponse: {
+                                statuses: [0, 200],
+                            },
+                        },
+                    },
+                    {
                         urlPattern: /^https:\/\/api\..*/i,
                         handler: 'StaleWhileRevalidate',
                         options: {
@@ -106,52 +120,51 @@ export default defineConfig({
                     },
                 ],
                 navigateFallback: null,
-                navigateFallbackDenylist: [/.*/],
+                navigateFallbackDenylist: [/^\/api\//, /^\/sanctum\//, /^\/broadcasting\//],
                 cleanupOutdatedCaches: true,
                 skipWaiting: true,
                 clientsClaim: true,
             },
             devOptions: {
-                enabled: false,
+                enabled: process.env.NODE_ENV === 'production',
             },
         }),
     ],
     resolve: {
-        alias: {
-            '@': path.resolve(__dirname, 'resources/js'),
-            '@/Composables': path.resolve(__dirname, 'resources/js/composables'),
-            ziggy: path.resolve(__dirname, 'vendor/tightenco/ziggy/dist/index.esm.js'),
-        },
+        alias: [
+            { find: '@/Composables', replacement: path.resolve(__dirname, 'resources/js/Composables') },
+            { find: '@/composables', replacement: path.resolve(__dirname, 'resources/js/Composables') },
+            { find: 'ziggy', replacement: path.resolve(__dirname, 'vendor/tightenco/ziggy/dist/index.esm.js') },
+            { find: '@', replacement: path.resolve(__dirname, 'resources/js') },
+        ],
     },
     build: {
         rollupOptions: {
             output: {
                 manualChunks: (id) => {
                     if (id.includes('node_modules')) {
-                        // Framework core (~80KB) - carregado em toda página
-                        if (id.includes('vue') || id.includes('@inertiajs')) {
+                        // Lazy chunks (nao preload) - Charts, Maps, DnD
+                        if (
+                            id.includes('apexcharts') ||
+                            id.includes('leaflet') ||
+                            id.includes('vuedraggable') || id.includes('sortablejs')
+                        ) {
+                            return undefined;
+                        }
+                        // Framework core (Vue + Inertia + Query + Ziggy)
+                        if (
+                            id.includes('vue') ||
+                            id.includes('@inertiajs') ||
+                            id.includes('@tanstack') ||
+                            id.includes('ziggy')
+                        ) {
                             return 'vendor-vue';
                         }
-                        // Data fetching (~30KB)
-                        if (id.includes('@tanstack')) {
-                            return 'vendor-query';
+                        // Icons separados (lazy load)
+                        if (id.includes('@heroicons')) {
+                            return 'vendor-icons';
                         }
-                        // Charts (~500KB) - só carregado em páginas com gráficos
-                        if (id.includes('apexcharts') || id.includes('vue3-apexcharts')) {
-                            return 'vendor-charts';
-                        }
-                        // Maps (~200KB) - só carregado em páginas com mapa
-                        if (id.includes('leaflet')) {
-                            return 'vendor-maps';
-                        }
-                        // Drag & Drop (~40KB) - só Dashboard
-                        if (id.includes('vuedraggable') || id.includes('sortablejs')) {
-                            return 'vendor-dnd';
-                        }
-                        // Routing
-                        if (id.includes('ziggy')) {
-                            return 'vendor-utils';
-                        }
+                        // Resto agrupado
                         return 'vendor-other';
                     }
                 },
@@ -169,24 +182,26 @@ export default defineConfig({
         target: 'esnext',
     },
     optimizeDeps: {
-        include: ['vue', '@inertiajs/vue3', 'ziggy-js', '@tanstack/vue-query', 'vuedraggable', 'sortablejs'],
+        include: ['vue', '@inertiajs/vue3', 'ziggy-js', '@tanstack/vue-query'],
         exclude: ['virtual:pwa-register'],
     },
     server: {
         host: '0.0.0.0',
-        port: 5175,
-        strictPort: false,
+        port: 8081,
+        strictPort: true,
         hmr: {
             host: 'localhost',
-            clientPort: 15175,
+            clientPort: 8081,
             protocol: 'ws',
         },
         watch: {
+            usePolling: true,
+            interval: 1000,
             ignored: ['**/storage/**', '**/vendor/**'],
         },
         cors: true,
-        origin: 'http://localhost:15175',
-        allowedHosts: ['node', 'localhost', '127.0.0.1'],
+        origin: 'http://localhost:8081',
+        allowedHosts: ['bun', 'node', 'localhost', '127.0.0.1'],
     },
     worker: {
         format: 'es',

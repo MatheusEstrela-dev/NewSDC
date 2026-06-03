@@ -134,6 +134,28 @@
 
                 <!-- Tab: Notificações -->
                 <div v-if="currentTab === 'notifications'" class="space-y-8">
+                    <!-- Modo de Atualizacao do Feed -->
+                    <div class="p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
+                        <h4 class="font-bold text-slate-900 dark:text-white mb-1">Modo de Atualizacao</h4>
+                        <p class="text-xs text-slate-500 mb-4">Como o bloco "Ultimas Movimentacoes" do dashboard se atualiza.</p>
+                        <div class="flex gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" v-model="updateMode" value="polling" class="text-blue-600 focus:ring-blue-500">
+                                <div>
+                                    <span class="text-sm font-medium text-slate-900 dark:text-white">Polling (60s)</span>
+                                    <p class="text-xs text-slate-500">Consulta automatica a cada 60 segundos</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" v-model="updateMode" value="realtime" class="text-blue-600 focus:ring-blue-500">
+                                <div>
+                                    <span class="text-sm font-medium text-slate-900 dark:text-white">Tempo Real</span>
+                                    <p class="text-xs text-slate-500">Atualizacoes instantaneas via WebSocket</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <div v-for="module in notificationModules" :key="module.id" class="p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-3">
@@ -219,28 +241,157 @@
                  <!-- Tab: Integrações -->
                  <div v-if="currentTab === 'integrations'" class="space-y-8">
                      <div class="space-y-6">
-                         <div class="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
+                         <!-- Telegram (funcional - per-user pairing) -->
+                         <TelegramCard />
+
+                         <!-- WhatsApp (stub: requer Evolution API / Meta Business) -->
+                         <div class="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl opacity-60">
                              <div class="flex items-center gap-4">
                                  <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">W</div>
                                  <div>
-                                     <h4 class="font-bold text-slate-900 dark:text-white">WhatsApp / Telegram</h4>
-                                     <p class="text-sm text-slate-500">Receber resumos diários e alertas críticos.</p>
+                                     <h4 class="font-bold text-slate-900 dark:text-white">WhatsApp</h4>
+                                     <p class="text-sm text-slate-500">Em breve. Use o Telegram para alertas criticos por enquanto.</p>
                                  </div>
                              </div>
-                             <button class="px-4 py-2 text-sm font-medium border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">Conectar</button>
+                             <button disabled class="px-4 py-2 text-sm font-medium border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 cursor-not-allowed">Em breve</button>
                          </div>
 
-                          <div class="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
+                         <!-- N8N Webhook (stub: implementacao em feat/integracoes-personal-f3) -->
+                         <div class="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl opacity-60">
                              <div class="flex items-center gap-4">
                                  <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">N</div>
                                  <div>
                                      <h4 class="font-bold text-slate-900 dark:text-white">N8N Webhook</h4>
-                                     <p class="text-sm text-slate-500">Token pessoal para automações externas.</p>
+                                     <p class="text-sm text-slate-500">Token pessoal para automacoes externas.</p>
                                  </div>
                              </div>
-                             <button class="px-4 py-2 text-sm font-medium border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">Gerenciar Token</button>
+                             <button disabled class="px-4 py-2 text-sm font-medium border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 cursor-not-allowed">Em breve</button>
                          </div>
                      </div>
+                 </div>
+
+                 <!-- Tab: Seguranca -->
+                 <div v-if="currentTab === 'security'" class="space-y-8">
+                     <!-- Secao: Alterar E-mail -->
+                     <section>
+                         <h4 class="text-sm font-medium text-slate-900 dark:text-white uppercase tracking-wider mb-4">Alterar E-mail</h4>
+                         <div class="space-y-4 max-w-lg">
+                             <div class="space-y-1">
+                                 <label class="text-sm font-medium text-slate-700 dark:text-slate-300">E-mail</label>
+                                 <input
+                                     type="email"
+                                     v-model="emailForm.email"
+                                     class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-colors"
+                                     :class="emailForm.errors.email ? 'border-red-500 dark:border-red-500' : emailForm.email ? 'border-green-500 dark:border-green-500' : 'border-slate-200 dark:border-slate-700'"
+                                     placeholder="seu@email.com"
+                                 >
+                                 <p v-if="emailForm.errors.email" class="text-sm text-red-500 mt-1">{{ emailForm.errors.email }}</p>
+                             </div>
+                             <div class="flex items-center gap-3">
+                                 <button
+                                     @click="updateEmail"
+                                     :disabled="emailForm.processing"
+                                     class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                 >
+                                     <span v-if="emailForm.processing">Salvando...</span>
+                                     <span v-else>Salvar E-mail</span>
+                                 </button>
+                                 <Transition enter-active-class="transition ease-in-out" enter-from-class="opacity-0" leave-active-class="transition ease-in-out" leave-to-class="opacity-0">
+                                     <p v-if="emailForm.recentlySuccessful" class="text-sm text-green-600 dark:text-green-400">E-mail atualizado com sucesso.</p>
+                                 </Transition>
+                             </div>
+                         </div>
+                     </section>
+
+                     <!-- Secao: Alterar Senha -->
+                     <section>
+                         <h4 class="text-sm font-medium text-slate-900 dark:text-white uppercase tracking-wider mb-4">Alterar Senha</h4>
+                         <div class="space-y-4 max-w-lg">
+                             <div class="space-y-1">
+                                 <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Senha Atual</label>
+                                 <div class="relative">
+                                     <input
+                                         :type="showCurrentPassword ? 'text' : 'password'"
+                                         v-model="passwordForm.current_password"
+                                         class="w-full px-3 py-2 pr-10 bg-slate-50 dark:bg-slate-800 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-colors"
+                                         :class="passwordForm.errors.current_password ? 'border-red-500 dark:border-red-500' : passwordForm.current_password ? 'border-green-500 dark:border-green-500' : 'border-slate-200 dark:border-slate-700'"
+                                         placeholder="Digite sua senha atual"
+                                     >
+                                     <button
+                                         type="button"
+                                         @click="showCurrentPassword = !showCurrentPassword"
+                                         class="absolute inset-y-0 right-0 z-20 flex w-11 items-center justify-center text-slate-400 transition-colors hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:hover:text-slate-300 dark:focus:ring-offset-slate-800"
+                                         :aria-label="showCurrentPassword ? 'Ocultar senha atual' : 'Mostrar senha atual'"
+                                         :title="showCurrentPassword ? 'Ocultar senha atual' : 'Mostrar senha atual'"
+                                     >
+                                         <EyeSlashIcon v-if="showCurrentPassword" class="w-5 h-5" />
+                                         <EyeIcon v-else class="w-5 h-5" />
+                                     </button>
+                                 </div>
+                                 <p v-if="passwordForm.errors.current_password" class="text-sm text-red-500 mt-1">{{ passwordForm.errors.current_password }}</p>
+                             </div>
+                             <div class="space-y-1">
+                                 <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Nova Senha</label>
+                                 <div class="relative">
+                                     <input
+                                         :type="showNewPassword ? 'text' : 'password'"
+                                         v-model="passwordForm.password"
+                                         class="w-full px-3 py-2 pr-10 bg-slate-50 dark:bg-slate-800 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-colors"
+                                         :class="passwordForm.errors.password ? 'border-red-500 dark:border-red-500' : passwordForm.password ? 'border-green-500 dark:border-green-500' : 'border-slate-200 dark:border-slate-700'"
+                                         placeholder="Digite a nova senha"
+                                     >
+                                     <button
+                                         type="button"
+                                         @click="showNewPassword = !showNewPassword"
+                                         class="absolute inset-y-0 right-0 z-20 flex w-11 items-center justify-center text-slate-400 transition-colors hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:hover:text-slate-300 dark:focus:ring-offset-slate-800"
+                                         :aria-label="showNewPassword ? 'Ocultar nova senha' : 'Mostrar nova senha'"
+                                         :title="showNewPassword ? 'Ocultar nova senha' : 'Mostrar nova senha'"
+                                     >
+                                         <EyeSlashIcon v-if="showNewPassword" class="w-5 h-5" />
+                                         <EyeIcon v-else class="w-5 h-5" />
+                                     </button>
+                                 </div>
+                                 <p v-if="passwordForm.errors.password" class="text-sm text-red-500 mt-1">{{ passwordForm.errors.password }}</p>
+                             </div>
+                             <div class="space-y-1">
+                                 <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Confirmar Nova Senha</label>
+                                 <div class="relative">
+                                     <input
+                                         :type="showConfirmPassword ? 'text' : 'password'"
+                                         v-model="passwordForm.password_confirmation"
+                                         class="w-full px-3 py-2 pr-10 bg-slate-50 dark:bg-slate-800 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-colors"
+                                         :class="passwordForm.errors.password_confirmation || passwordMismatch ? 'border-red-500 dark:border-red-500' : passwordForm.password_confirmation && !passwordMismatch ? 'border-green-500 dark:border-green-500' : 'border-slate-200 dark:border-slate-700'"
+                                         placeholder="Confirme a nova senha"
+                                     >
+                                     <button
+                                         type="button"
+                                         @click="showConfirmPassword = !showConfirmPassword"
+                                         class="absolute inset-y-0 right-0 z-20 flex w-11 items-center justify-center text-slate-400 transition-colors hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:hover:text-slate-300 dark:focus:ring-offset-slate-800"
+                                         :aria-label="showConfirmPassword ? 'Ocultar confirmacao de senha' : 'Mostrar confirmacao de senha'"
+                                         :title="showConfirmPassword ? 'Ocultar confirmacao de senha' : 'Mostrar confirmacao de senha'"
+                                     >
+                                         <EyeSlashIcon v-if="showConfirmPassword" class="w-5 h-5" />
+                                         <EyeIcon v-else class="w-5 h-5" />
+                                     </button>
+                                 </div>
+                                 <p v-if="passwordMismatch" class="text-sm text-red-500 mt-1">As senhas nao coincidem.</p>
+                                 <p v-else-if="passwordForm.errors.password_confirmation" class="text-sm text-red-500 mt-1">{{ passwordForm.errors.password_confirmation }}</p>
+                             </div>
+                             <div class="flex items-center gap-3">
+                                 <button
+                                     @click="updatePassword"
+                                     :disabled="passwordForm.processing"
+                                     class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                 >
+                                     <span v-if="passwordForm.processing">Alterando...</span>
+                                     <span v-else>Alterar Senha</span>
+                                 </button>
+                                 <Transition enter-active-class="transition ease-in-out" enter-from-class="opacity-0" leave-active-class="transition ease-in-out" leave-to-class="opacity-0">
+                                     <p v-if="passwordForm.recentlySuccessful" class="text-sm text-green-600 dark:text-green-400">Senha alterada com sucesso.</p>
+                                 </Transition>
+                             </div>
+                         </div>
+                     </section>
                  </div>
 
               </div>
@@ -276,14 +427,17 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { usePage } from '@inertiajs/vue3';
-import { 
-    UserIcon, 
-    BellIcon, 
-    ComputerDesktopIcon, 
-    MapIcon, 
-    CpuChipIcon, 
-    ShieldCheckIcon 
+import { usePage, useForm } from '@inertiajs/vue3';
+import TelegramCard from './integrations/TelegramCard.vue';
+import {
+    UserIcon,
+    BellIcon,
+    ComputerDesktopIcon,
+    MapIcon,
+    CpuChipIcon,
+    ShieldCheckIcon,
+    EyeIcon,
+    EyeSlashIcon
 } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -298,6 +452,7 @@ watch(
   (newVal) => {
     if (newVal) {
       document.body.style.overflow = 'hidden';
+      loadPreferences();
     } else {
       document.body.style.overflow = null;
     }
@@ -308,6 +463,26 @@ watch(
 const page = usePage();
 const currentTab = ref('profile');
 const isSaving = ref(false);
+const updateMode = ref('polling');
+
+async function loadPreferences() {
+    try {
+        const res = await window.axios.get('/api/v1/notification-preferences');
+        updateMode.value = res.data.update_mode ?? 'polling';
+
+        const serverModules = res.data.modules ?? [];
+        serverModules.forEach(serverMod => {
+            const local = notificationModules.value.find(m => m.id === serverMod.module);
+            if (local) {
+                local.channels.bell  = serverMod.canal_sistema;
+                local.channels.email = serverMod.canal_email;
+                local.channels.push  = serverMod.canal_push;
+            }
+        });
+    } catch (e) {
+        // silencioso - mantém defaults
+    }
+}
 
 const tabs = [
   { id: 'profile', label: 'Meu Perfil', icon: UserIcon, description: 'Gerencie suas informações pessoais e assinatura digital.' },
@@ -326,11 +501,32 @@ const form = ref({
     regions: ['bh'],
 });
 
+const emailForm = useForm({
+    name: page.props.auth?.user?.name || '',
+    email: page.props.auth?.user?.email || '',
+});
+
+const passwordForm = useForm({
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+});
+
+const showCurrentPassword = ref(false);
+const showNewPassword = ref(false);
+const showConfirmPassword = ref(false);
+
+const passwordMismatch = computed(() =>
+    passwordForm.password_confirmation.length > 0
+    && passwordForm.password !== passwordForm.password_confirmation
+);
+
 const notificationModules = ref([
-    { id: 'rat', name: 'Relatórios (RAT)', description: 'Alertas sobre novos relatórios, vistorias e aprovações.', icon: 'DocumentTextIcon', channels: { bell: true, email: true, push: false } },
-    { id: 'pae', name: 'Planos (PAE)', description: 'Vencimentos de prazos e atualizações de status.', icon: 'MapIcon', channels: { bell: true, email: false, push: true } },
-    { id: 'meteo', name: 'Meteorologia', description: 'Alertas críticos de chuva e mudanças climáticas (INMET).', icon: 'CloudIcon', channels: { bell: true, email: true, push: true } },
-    { id: 'demanda', name: 'Demandas/Chamados', description: 'Atribuições de tarefas e novos comentários.', icon: 'CheckBadgeIcon', channels: { bell: true, email: false, push: false } },
+    { id: 'rat',          name: 'Relatorios (RAT)',  description: 'Alertas sobre novos relatorios, vistorias e aprovacoes.',  icon: 'DocumentTextIcon', channels: { bell: true,  email: true,  push: false } },
+    { id: 'pae',          name: 'Planos (PAE)',       description: 'Vencimentos de prazos e atualizacoes de status.',          icon: 'MapIcon',          channels: { bell: true,  email: false, push: true  } },
+    { id: 'meteorologia', name: 'Meteorologia',       description: 'Alertas criticos de chuva e mudancas climaticas (INMET).', icon: 'CloudIcon',        channels: { bell: true,  email: true,  push: true  } },
+    { id: 'demandas',     name: 'Demandas/Chamados',  description: 'Atribuicoes de tarefas e novos comentarios.',              icon: 'CheckBadgeIcon',   channels: { bell: true,  email: false, push: false } },
+    { id: 'decretacoes',  name: 'Decretacoes',        description: 'Movimentacoes em decretos e reconhecimentos.',             icon: 'DocumentTextIcon', channels: { bell: true,  email: false, push: false } },
 ]);
 
 const regions = [
@@ -357,7 +553,6 @@ const closeOnEscape = (e) => {
 };
 
 onMounted(() => {
-    console.log('SettingsModal Mounted!');
     document.addEventListener('keydown', closeOnEscape);
 });
 
@@ -366,12 +561,38 @@ onUnmounted(() => {
     document.body.style.overflow = null;
 });
 
+const updateEmail = () => {
+    emailForm.patch(route('profile.update'), {
+        preserveScroll: true,
+    });
+};
+
+const updatePassword = () => {
+    passwordForm.put(route('password.update'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            passwordForm.reset();
+        },
+    });
+};
+
 const save = async () => {
     isSaving.value = true;
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    isSaving.value = false;
-    emit('close');
-    // In real app: Show toast success
+    try {
+        await window.axios.put('/api/v1/notification-preferences', {
+            modules: notificationModules.value.map(m => ({
+                module:        m.id,
+                canal_sistema: m.channels.bell,
+                canal_email:   m.channels.email,
+                canal_push:    m.channels.push,
+            })),
+            update_mode: updateMode.value,
+        });
+        emit('close');
+    } catch (e) {
+        // manter modal aberto se falhar
+    } finally {
+        isSaving.value = false;
+    }
 };
 </script>

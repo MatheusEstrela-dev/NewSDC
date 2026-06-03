@@ -3,7 +3,7 @@
     variant="default"
     :hover="true"
     padding="md"
-    class="cursor-pointer transition-all duration-200 hover:scale-[1.01] touch-manipulation sm:p-5"
+    class="cursor-pointer transition-colors duration-200 hover:scale-[1.01] touch-manipulation sm:p-5"
     @click="$emit('click')"
   >
     <!-- Header -->
@@ -54,13 +54,13 @@
         <span
           v-for="municipio in processo.municipios.slice(0, 3)"
           :key="municipio.id"
-          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 dark:bg-slate-700/30 bg-slate-200 text-xs text-slate-300 dark:text-slate-300 text-slate-700"
+          class="px-2 py-0.5 sm:py-1 rounded bg-slate-200 dark:bg-slate-700/30 text-xs text-slate-700 dark:text-slate-300"
         >
           {{ municipio.nome }}
         </span>
         <span
           v-if="processo.municipios.length > 3"
-          class="px-2 py-0.5 sm:py-1 rounded bg-slate-700/30 dark:bg-slate-700/30 bg-slate-200 text-xs text-slate-400 dark:text-slate-400 text-slate-600"
+          class="px-2 py-0.5 sm:py-1 rounded bg-slate-200 dark:bg-slate-700/30 text-xs text-slate-600 dark:text-slate-400"
         >
           +{{ processo.municipios.length - 3 }}
         </span>
@@ -68,16 +68,16 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-700/30 dark:border-slate-700/30 border-slate-200">
-      <TableActions
-        :show-view="true"
-        :show-print="true"
-        :show-edit="canEdit"
-        :show-attachments="false"
-        :show-delete="canDelete"
-        @view="$emit('view', processo.id)"
-        @print="$emit('print', processo.id)"
-        @edit="$emit('edit', processo.id)"
+    <div class="flex items-center justify-end gap-1 sm:gap-2 pt-3 sm:pt-4 border-t border-slate-200 dark:border-slate-700/30">
+      <ActionButton
+        module="decretacoes"
+        resource="processos"
+        :actions="[
+          { action: 'view',   handler: () => $emit('view', processo.id) },
+          { action: 'print',  handler: () => $emit('print', processo.id) },
+          { action: 'edit',   handler: () => $emit('edit', processo.id),   allowed: canEdit },
+          { action: 'delete', handler: () => $emit('delete', processo.id), allowed: canDelete },
+        ]"
       />
     </div>
   </CardBase>
@@ -88,7 +88,7 @@ import { computed } from 'vue';
 import CardBase from '../../Atoms/Card/CardBase.vue';
 import Heading from '../../Atoms/Typography/Heading.vue';
 import Text from '../../Atoms/Typography/Text.vue';
-import TableActions from '../../Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import PrazoBadge from './PrazoBadge.vue';
 import StatusBadge from './StatusBadge.vue';
 import TipoProcessoBadge from './TipoProcessoBadge.vue';
@@ -108,7 +108,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['click', 'view', 'print', 'edit']);
+defineEmits(['click', 'view', 'print', 'edit', 'delete']);
 
 const municipiosCount = computed(() => {
   if (!props.processo.municipios?.length) return '—';

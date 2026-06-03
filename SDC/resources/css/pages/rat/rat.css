@@ -23,7 +23,7 @@
 
 /* Campos de Formulário */
 .form-input {
-  @apply w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition-all duration-200;
+  @apply w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition-all duration-200;
 }
 
 .form-input:hover {
@@ -40,12 +40,12 @@
 
 /* Campos Readonly */
 .form-input-readonly {
-  @apply w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/30 rounded-lg px-4 py-2.5 text-slate-500 dark:text-slate-400 cursor-default outline-none;
+  @apply w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/30 rounded-xl px-4 py-2.5 text-slate-500 dark:text-slate-400 cursor-default outline-none;
 }
 
 /* Select Fields */
 .form-select {
-  @apply w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition-all duration-200 appearance-none cursor-pointer;
+  @apply w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition-all duration-200 appearance-none cursor-pointer;
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
   background-position: right 0.5rem center;
   background-repeat: no-repeat;
@@ -60,24 +60,7 @@
   @apply border-blue-500 dark:border-blue-500 bg-white dark:bg-slate-900;
 }
 
-/* Fix for date inputs in Webkit browsers - only invert in dark mode */
-.dark input[type="date"]::-webkit-calendar-picker-indicator,
-.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  opacity: 0.6;
-  cursor: pointer;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: 0.6;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator:hover,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-}
+/* Date/time picker indicator styles are defined in sections.css */
 
 /* Scrollbar Customization */
 .custom-scrollbar::-webkit-scrollbar {

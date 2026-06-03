@@ -1,1 +1,1 @@
-export { useHybridAI } from '../composables/ai/useHybridAI';
+export { useHybridAI } from './ai/useHybridAI';

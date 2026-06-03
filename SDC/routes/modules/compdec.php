@@ -1,29 +1,220 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Modules\Compdec\Controllers\AnexoController;
+use App\Modules\Compdec\Controllers\EquipeController;
 use App\Modules\Compdec\Controllers\OrgaoController;
+use App\Modules\Compdec\Controllers\PlanoContingenciaController;
+use App\Modules\Compdec\Controllers\PrefeituraController;
+use App\Modules\Compdec\Models\CompdecAnexo;
+use App\Modules\Compdec\Models\CompdecEquipe;
+use App\Modules\Compdec\Models\CompdecPlanoContingencia;
+use App\Modules\Compdec\Models\Orgao;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('compdec')->name('compdec.')->group(function () {
+/*
+|--------------------------------------------------------------------------
+| Modulo COMPDEC - Orgaos de Defesa Civil
+|--------------------------------------------------------------------------
+| Permissoes em config/permissions.php (grupo COMPDEC).
+| Threshold de queries em config/compdec.php (default 15).
+|
+| Sub-recursos da F1: Prefeitura.
+| Sub-recursos das F2-F4 (equipe, anexos, plano) sao adicionados
+| em PRs subsequentes.
+*/
 
-    Route::get('/orgaos', [OrgaoController::class, 'index'])->name('index');
-    Route::get('/orgaos/{id}', [OrgaoController::class, 'show'])
-        ->name('show')
-        ->where('id', '[0-9]+');
+Route::model('orgao', Orgao::class);
+Route::model('equipe', CompdecEquipe::class);
+Route::model('anexo', CompdecAnexo::class);
+Route::model('plano', CompdecPlanoContingencia::class);
+Route::model('anexo', CompdecAnexo::class);
 
-    Route::middleware('can:compdec.manage')->group(function () {
-        Route::get('/orgaos/novo', [OrgaoController::class, 'create'])->name('create');
-        Route::post('/orgaos', [OrgaoController::class, 'store'])->name('store');
-        Route::get('/orgaos/{id}/editar', [OrgaoController::class, 'edit'])
-            ->name('edit')
-            ->where('id', '[0-9]+');
-        Route::put('/orgaos/{id}', [OrgaoController::class, 'update'])
-            ->name('update')
-            ->where('id', '[0-9]+');
-        Route::delete('/orgaos/{id}', [OrgaoController::class, 'destroy'])
-            ->name('destroy')
-            ->where('id', '[0-9]+');
-        Route::post('/orgaos/{id}/usuarios', [OrgaoController::class, 'vincularUsuario'])
-            ->name('usuarios.vincular')
-            ->where('id', '[0-9]+');
+Route::middleware(['auth', 'compdec.query-threshold:' . config('compdec.query_threshold', 15)])
+    ->prefix('compdec')
+    ->name('compdec.')
+    ->group(function () {
+
+        // Listagem e visualizacao
+        Route::middleware('can:compdec.orgaos.view')->group(function () {
+            Route::get('/orgaos', [OrgaoController::class, 'index'])->name('index');
+            Route::get('/orgaos/arvore', [OrgaoController::class, 'arvore'])
+                ->middleware('compdec.query-threshold:25')
+                ->name('arvore');
+            Route::get('/orgaos/{orgao}', [OrgaoController::class, 'show'])
+                ->name('show')
+                ->whereNumber('orgao');
+        });
+
+        // Criacao
+        Route::middleware('can:compdec.orgaos.create')->group(function () {
+            Route::get('/orgaos/novo', [OrgaoController::class, 'create'])->name('create');
+            Route::post('/orgaos', [OrgaoController::class, 'store'])->name('store');
+        });
+
+        // Edicao + Foto coordenador
+        Route::middleware('can:compdec.orgaos.edit')->group(function () {
+            Route::get('/orgaos/{orgao}/editar', [OrgaoController::class, 'edit'])
+                ->name('edit')
+                ->whereNumber('orgao');
+            Route::put('/orgaos/{orgao}', [OrgaoController::class, 'update'])
+                ->name('update')
+                ->whereNumber('orgao');
+            Route::post('/orgaos/{orgao}/foto', [OrgaoController::class, 'uploadFotoCoordenador'])
+                ->name('foto.upload')
+                ->whereNumber('orgao');
+            Route::delete('/orgaos/{orgao}/foto', [OrgaoController::class, 'removerFotoCoordenador'])
+                ->name('foto.destroy')
+                ->whereNumber('orgao');
+        });
+
+        // Exclusao
+        Route::middleware('can:compdec.orgaos.delete')->group(function () {
+            Route::delete('/orgaos/{orgao}', [OrgaoController::class, 'destroy'])
+                ->name('destroy')
+                ->whereNumber('orgao');
+        });
+
+        // Vinculo de usuarios ao orgao (compdec_orgao_user)
+        Route::middleware('can:compdec.usuarios.manage')->group(function () {
+            Route::post('/orgaos/{orgao}/usuarios', [OrgaoController::class, 'vincularUsuario'])
+                ->name('usuarios.vincular')
+                ->whereNumber('orgao');
+            Route::delete('/orgaos/{orgao}/usuarios/{usuario}', [OrgaoController::class, 'desvincularUsuario'])
+                ->name('usuarios.desvincular')
+                ->whereNumber('orgao')
+                ->whereNumber('usuario');
+        });
+
+        // Sub-recurso: Prefeitura (1:1 via municipio_id do orgao)
+        Route::middleware('can:compdec.prefeitura.view')->group(function () {
+            Route::get('/orgaos/{orgao}/prefeitura', [PrefeituraController::class, 'show'])
+                ->name('prefeitura.show')
+                ->whereNumber('orgao');
+        });
+
+        Route::middleware('can:compdec.prefeitura.edit')->group(function () {
+            Route::match(['post', 'put'], '/orgaos/{orgao}/prefeitura', [PrefeituraController::class, 'upsert'])
+                ->name('prefeitura.upsert')
+                ->whereNumber('orgao');
+            Route::post('/orgaos/{orgao}/prefeitura/foto', [PrefeituraController::class, 'uploadFoto'])
+                ->name('prefeitura.foto.upload')
+                ->whereNumber('orgao');
+            Route::delete('/orgaos/{orgao}/prefeitura/foto', [PrefeituraController::class, 'removerFoto'])
+                ->name('prefeitura.foto.destroy')
+                ->whereNumber('orgao');
+        });
+
+        // Sub-recurso: Equipe (1:N por orgao, scoped binding)
+        Route::scopeBindings()->group(function () {
+            Route::middleware('can:compdec.equipe.view')->group(function () {
+                Route::get('/orgaos/{orgao}/equipe', [EquipeController::class, 'index'])
+                    ->name('equipe.index')
+                    ->whereNumber('orgao');
+                Route::get('/orgaos/{orgao}/equipe/{equipe}', [EquipeController::class, 'show'])
+                    ->name('equipe.show')
+                    ->whereNumber('orgao')->whereNumber('equipe');
+            });
+
+            Route::middleware('can:compdec.equipe.create')->group(function () {
+                Route::post('/orgaos/{orgao}/equipe', [EquipeController::class, 'store'])
+                    ->name('equipe.store')
+                    ->whereNumber('orgao');
+            });
+
+            Route::middleware('can:compdec.equipe.edit')->group(function () {
+                Route::put('/orgaos/{orgao}/equipe/{equipe}', [EquipeController::class, 'update'])
+                    ->name('equipe.update')
+                    ->whereNumber('orgao')->whereNumber('equipe');
+                Route::post('/orgaos/{orgao}/equipe/{equipe}/restaurar', [EquipeController::class, 'restore'])
+                    ->name('equipe.restore')
+                    ->whereNumber('orgao')->whereNumber('equipe');
+            });
+
+            Route::middleware('can:compdec.equipe.delete')->group(function () {
+                Route::delete('/orgaos/{orgao}/equipe/{equipe}', [EquipeController::class, 'destroy'])
+                    ->name('equipe.destroy')
+                    ->whereNumber('orgao')->whereNumber('equipe');
+            });
+
+            // Sub-recurso: Anexos Legais (1:N por orgao, scoped binding)
+            Route::middleware('can:compdec.anexos.view')->group(function () {
+                Route::get('/orgaos/{orgao}/anexos', [AnexoController::class, 'index'])
+                    ->name('anexos.index')
+                    ->whereNumber('orgao');
+                Route::get('/orgaos/{orgao}/anexos/{anexo}', [AnexoController::class, 'show'])
+                    ->name('anexos.show')
+                    ->whereNumber('orgao')->whereNumber('anexo');
+            });
+
+            Route::middleware('can:compdec.anexos.create')->group(function () {
+                Route::post('/orgaos/{orgao}/anexos', [AnexoController::class, 'store'])
+                    ->name('anexos.store')
+                    ->whereNumber('orgao');
+            });
+
+            Route::middleware('can:compdec.anexos.edit')->group(function () {
+                Route::match(['put', 'post'], '/orgaos/{orgao}/anexos/{anexo}', [AnexoController::class, 'update'])
+                    ->name('anexos.update')
+                    ->whereNumber('orgao')->whereNumber('anexo');
+            });
+
+            Route::middleware('can:compdec.anexos.delete')->group(function () {
+                Route::delete('/orgaos/{orgao}/anexos/{anexo}', [AnexoController::class, 'destroy'])
+                    ->name('anexos.destroy')
+                    ->whereNumber('orgao')->whereNumber('anexo');
+            });
+
+            Route::middleware('can:compdec.anexos.download')->group(function () {
+                Route::get('/orgaos/{orgao}/anexos/{anexo}/download', [AnexoController::class, 'download'])
+                    ->name('anexos.download')
+                    ->whereNumber('orgao')->whereNumber('anexo');
+            });
+
+            // Sub-recurso: Plano de Contingencia (1:N, partial unique 1 ativo por orgao)
+            Route::middleware('can:compdec.plano.view')->group(function () {
+                Route::get('/orgaos/{orgao}/planos', [PlanoContingenciaController::class, 'index'])
+                    ->name('planos.index')
+                    ->whereNumber('orgao');
+                Route::get('/orgaos/{orgao}/planos/{plano}', [PlanoContingenciaController::class, 'show'])
+                    ->name('planos.show')
+                    ->whereNumber('orgao')->whereNumber('plano');
+            });
+
+            Route::middleware('can:compdec.plano.create')->group(function () {
+                Route::post('/orgaos/{orgao}/planos', [PlanoContingenciaController::class, 'store'])
+                    ->name('planos.store')
+                    ->whereNumber('orgao');
+            });
+
+            Route::middleware('can:compdec.plano.edit')->group(function () {
+                Route::match(['put', 'post'], '/orgaos/{orgao}/planos/{plano}', [PlanoContingenciaController::class, 'update'])
+                    ->name('planos.update')
+                    ->whereNumber('orgao')->whereNumber('plano');
+                Route::post('/orgaos/{orgao}/planos/{plano}/ativar', [PlanoContingenciaController::class, 'ativar'])
+                    ->name('planos.ativar')
+                    ->whereNumber('orgao')->whereNumber('plano');
+            });
+
+            // permission aprovar e separada de edit (CEDEC/admin)
+            Route::middleware('can:compdec.plano.aprovar')->group(function () {
+                Route::post('/orgaos/{orgao}/planos/{plano}/aprovar', [PlanoContingenciaController::class, 'aprovar'])
+                    ->name('planos.aprovar')
+                    ->whereNumber('orgao')->whereNumber('plano');
+            });
+
+            Route::middleware('can:compdec.plano.delete')->group(function () {
+                Route::delete('/orgaos/{orgao}/planos/{plano}', [PlanoContingenciaController::class, 'destroy'])
+                    ->name('planos.destroy')
+                    ->whereNumber('orgao')->whereNumber('plano');
+            });
+
+            Route::middleware('can:compdec.plano.download')->group(function () {
+                Route::get('/orgaos/{orgao}/planos/{plano}/download', [PlanoContingenciaController::class, 'download'])
+                    ->name('planos.download')
+                    ->whereNumber('orgao')->whereNumber('plano');
+            });
+        });
+
     });
-});

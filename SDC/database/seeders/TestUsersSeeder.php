@@ -24,7 +24,7 @@ class TestUsersSeeder extends Seeder
             return;
         }
 
-        $orgaos = DB::table('orgaos')
+        $orgaos = DB::table('compdec_orgaos')
             ->where('codigo', 'LIKE', 'TEST-%')
             ->pluck('id', 'codigo')
             ->toArray();

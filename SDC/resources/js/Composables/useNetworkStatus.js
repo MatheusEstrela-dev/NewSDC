@@ -1,1 +1,1 @@
-export { useNetworkStatus } from '../composables/mobile/useNetworkStatus';
+export { useNetworkStatus } from './mobile/useNetworkStatus';

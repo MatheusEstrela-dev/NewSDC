@@ -13,7 +13,6 @@ use Laravel\Octane\Events\WorkerStarting;
 use Laravel\Octane\Events\WorkerStopping;
 use Laravel\Octane\Listeners\CloseMonologHandlers;
 use Laravel\Octane\Listeners\CollectGarbage;
-use Laravel\Octane\Listeners\DisconnectFromDatabases;
 use Laravel\Octane\Listeners\EnsureUploadedFilesAreValid;
 use Laravel\Octane\Listeners\EnsureUploadedFilesCanBeMoved;
 use Laravel\Octane\Listeners\FlushOnce;
@@ -105,8 +104,8 @@ return [
         OperationTerminated::class => [
             FlushOnce::class,
             FlushTemporaryContainerInstances::class,
-            // DisconnectFromDatabases::class,
-            // CollectGarbage::class,
+            \App\Listeners\Octane\SelectiveDisconnectFromDatabases::class,
+            CollectGarbage::class,
         ],
 
         WorkerErrorOccurred::class => [
@@ -132,10 +131,13 @@ return [
 
     'warm' => [
         ...Octane::defaultServicesToWarm(),
+        \App\Modules\Decretacoes\Services\ProcessoStatsService::class,
+        \App\Modules\Decretacoes\Services\ProcessoQueryService::class,
+        \App\Modules\Decretacoes\Filters\ProcessoFilter::class,
     ],
 
     'flush' => [
-        //
+        \App\Modules\Decretacoes\Services\EntradaProcessoService::class,
     ],
 
     /*

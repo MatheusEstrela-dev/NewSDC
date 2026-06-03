@@ -1,0 +1,269 @@
+# ============================================================================
+# SDC - Compose DEV self-contained (FrankenPHP + PG18+PostGIS + Redis + Mailhog)
+#
+# Uso (da raiz NewSDC/):
+#   just dev-build       # primeira vez (build da imagem)
+#   just dev-up
+#   just dev-status
+#   just dev-logs
+#
+# App:     http://localhost:19444
+# Mailhog: http://localhost:8025
+# Postgres host:5433  Redis host:6380
+#
+# Vite roda no HOST em http://localhost:8081 (just dev-vite), nao neste compose.
+# ============================================================================
+
+name: newsdc-dev
+
+services:
+  app:
+    build:
+      context: ../..                          # raiz NewSDC/
+      dockerfile: SDC/docker/Dockerfile.frankenphp-dev
+    image: newsdc-frankenphp-dev:latest
+    container_name: newsdc_dev_app
+    hostname: app
+    restart: unless-stopped
+
+    environment:
+      WORKDIR: /app
+      APP_NAME: "SDC Dev"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      # HTTP puro para permitir consumo por Power BI sem cert self-signed.
+      APP_URL: http://localhost:19444
+
+      # Octane + FrankenPHP
+      OCTANE_SERVER: frankenphp
+      # OCTANE_HTTPS=false -> entrypoint roda Octane em HTTP puro na porta 80
+      # (NAO usa o Caddyfile.local / tls internal).
+      OCTANE_HTTPS: "false"
+      OCTANE_CADDYFILE: /etc/caddy/Caddyfile.local
+      PORT: 80
+      FRANKENPHP_WORKERS: 4
+      FRANKENPHP_MAX_REQUESTS: 500
+
+      # Em HTTP o cookie Secure nao e enviado pelo browser; sem isso o login web
+      # quebra. config/session.php tem default true, entao sobrescrevemos aqui.
+      SESSION_SECURE_COOKIE: "false"
+
+      # Host base do Swagger (server URL do "Try it out"). Em HTTP para casar com
+      # a origem atual; env do compose vence o .env baked na imagem.
+      L5_SWAGGER_CONST_HOST: http://localhost:19444
+
+      # Banco
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: sdc
+      DB_USERNAME: sdc
+      DB_PASSWORD: secret
+
+      # Redis (cache / session / queue)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Prefix explicito e identico ao worker para que ambos leiam/escrevam
+      # nas mesmas chaves (config/database.php deriva do APP_NAME por padrao,
+      # mas o worker usa outro APP_NAME e ficaria isolado).
+      REDIS_PREFIX: sdc_dev_database_
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+
+      # Mail. Default: Mailhog (capturado em http://localhost:8025).
+      # Para usar SMTP real (Prodemge, etc.) sobrescreva via docker/.env:
+      #   MAIL_HOST=smtpprdm.prodemge.gov.br
+      #   MAIL_PORT=587
+      #   MAIL_USERNAME=...
+      #   MAIL_PASSWORD=...
+      #   MAIL_ENCRYPTION=tls
+      #   MAIL_FROM_ADDRESS=sdc@defesacivil.mg.gov.br
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailhog}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-dev@sdc.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
+
+    ports:
+      - "19444:80"      # HTTP (FrankenPHP) - mesma porta de sempre, agora sem TLS
+      - "19081:80"      # HTTP alternativo
+      - "2021:2019"     # Caddy admin API
+
+    volumes:
+      # Codigo da app (bind-mount p/ hot reload via Octane --max-requests=1)
+      - ../app:/app/app
+      - ../core:/app/core
+      - ../bootstrap:/app/bootstrap
+      - ../config:/app/config
+      - ../database:/app/database
+      - ../routes:/app/routes
+      - ../resources:/app/resources
+      - ../public:/app/public
+      - ../tests:/app/tests
+      - ../composer.json:/app/composer.json:ro
+      - ../composer.lock:/app/composer.lock:ro
+      - ../phpunit.xml:/app/phpunit.xml:ro
+      - ../artisan:/app/artisan:ro
+      # Storage e logs visiveis no host
+      - ../storage/app:/app/storage/app
+      - ../storage/logs:/app/storage/logs
+      # Caddyfile + entrypoint (read-only) — reaproveita os do frankenphp/
+      - ./frankenphp/Caddyfile.local:/etc/caddy/Caddyfile.local:ro
+      - ./frankenphp/scripts/entrypoint.sh:/start.sh:ro
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # Worker dedicado para Redis queues (welcome mail, reset password, webhooks,
+  # exports async, notifications). Sem ele, Mail::queue/dispatch ficam parados
+  # no Redis indefinidamente. Compartilha a imagem do app e bind-mounts.
+  queue:
+    image: newsdc-frankenphp-dev:latest
+    container_name: newsdc_dev_queue
+    hostname: queue
+    restart: unless-stopped
+
+    environment:
+      WORKDIR: /app
+      APP_NAME: "SDC Dev Queue"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      # Mesma origem HTTP do app, para links gerados em jobs/emails baterem.
+      APP_URL: http://localhost:19444
+
+      # Banco (compartilhado com app)
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: sdc
+      DB_USERNAME: sdc
+      DB_PASSWORD: secret
+
+      # Redis (cache / session / queue)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # MESMO prefix do app — sem isso o worker leria de outra keyspace
+      # (sdc_dev_queue_database_*) e os jobs ficariam parados.
+      REDIS_PREFIX: sdc_dev_database_
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+
+      # Mail. Mesmo default do app (Mailhog) — sobrescreva no docker/.env
+      # se quiser testar SMTP real (Prodemge) localmente.
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailhog}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-dev@sdc.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
+
+    volumes:
+      # Bind-mount identico ao app — codigo PHP eh visivel ao queue worker.
+      - ../app:/app/app
+      - ../core:/app/core
+      - ../bootstrap:/app/bootstrap
+      - ../config:/app/config
+      - ../database:/app/database
+      - ../routes:/app/routes
+      - ../resources:/app/resources
+      - ../public:/app/public
+      - ../tests:/app/tests
+      - ../composer.json:/app/composer.json:ro
+      - ../composer.lock:/app/composer.lock:ro
+      - ../phpunit.xml:/app/phpunit.xml:ro
+      - ../artisan:/app/artisan:ro
+      # Storage e logs visiveis no host
+      - ../storage/app:/app/storage/app
+      - ../storage/logs:/app/storage/logs
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    # Prioridade: critical > high > default > webhooks > low.
+    # --max-time=3600: restart de hora em hora para evitar memory leak.
+    # --tries=2: jobs com $tries proprio (export, webhook) sobrescrevem.
+    command:
+      - php
+      - artisan
+      - queue:work
+      - redis
+      - --queue=critical,high,default,webhooks,low
+      - --tries=2
+      - --timeout=60
+      - --max-time=3600
+      - --sleep=3
+
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  db:
+    image: postgis/postgis:18-3.6-alpine
+    container_name: newsdc_dev_db
+    hostname: db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sdc
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: sdc
+    ports:
+      - "5433:5432"       # 5433 no host (evita colisao com legacy 5432)
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sdc -d sdc"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: newsdc_dev_redis
+    hostname: redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6380:6379"       # 6380 no host
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: newsdc_dev_mailhog
+    hostname: mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"       # SMTP
+      - "8025:8025"       # UI
+
+volumes:
+  pgdata:
+  redisdata:

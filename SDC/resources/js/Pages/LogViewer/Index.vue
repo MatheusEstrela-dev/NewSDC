@@ -1,96 +1,83 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { Head } from '@inertiajs/vue3'
-import MinimalLayout from '@/Layouts/MinimalLayout.vue'
-import LogViewerSidebar from '@/Components/Molecules/LogViewer/LogViewerSidebar.vue'
+import { ref, watch, computed } from 'vue'
+import { Head, router } from '@inertiajs/vue3'
+import SidebarOnlyLayout from '@/Layouts/SidebarOnlyLayout.vue'
 import LogViewerTopbar from '@/Components/Molecules/LogViewer/LogViewerTopbar.vue'
 import LogViewerTable from '@/Components/Organisms/LogViewer/LogViewerTable.vue'
 import LogViewerDetail from '@/Components/Organisms/LogViewer/LogViewerDetail.vue'
-import axios from 'axios'
 
-defineOptions({ layout: MinimalLayout })
+defineOptions({ layout: SidebarOnlyLayout })
 
-// State
-const logs = ref([])
-const files = ref([])
-const statistics = ref({})
+const props = defineProps({
+    initialLogs: {
+        type: Array,
+        default: () => []
+    },
+    initialStats: {
+        type: Object,
+        default: () => ({})
+    },
+    availableLayers: {
+        type: Array,
+        default: () => []
+    },
+    availableLevels: {
+        type: Array,
+        default: () => []
+    },
+    availableTypes: {
+        type: Array,
+        default: () => []
+    }
+})
+
 const loading = ref(false)
-const selectedFile = ref('laravel.log')
 const selectedLog = ref(null)
 const showDetail = ref(false)
 
+const urlParams = new URLSearchParams(window.location.search)
+
 const filters = ref({
-    search: '',
-    level: '',
-    type: 'laravel',
-    limit: 1000
+    search: urlParams.get('search') || '',
+    level: urlParams.get('level') || '',
+    layer: urlParams.get('layer') || '',
+    date_from: urlParams.get('date_from') || '',
+    date_to: urlParams.get('date_to') || '',
+    errors_only: urlParams.get('errors_only') === '1',
+    limit: parseInt(urlParams.get('limit')) || 100,
+    type: urlParams.get('type') || ''
 })
 
-// Simple Debounce Implementation
 const debounce = (fn, delay) => {
     let timeoutId
     return (...args) => {
         if (timeoutId) clearTimeout(timeoutId)
-        timeoutId = setTimeout(() => {
-            fn(...args)
-        }, delay)
+        timeoutId = setTimeout(() => fn(...args), delay)
     }
 }
 
-// Methods
-const loadFiles = async () => {
-    try {
-        const response = await axios.get('/api/v1/logs/files')
-        files.value = response.data.files
-        
-        // Selecionar o mais recente se nada selecionado
-        if (files.value.length > 0 && !selectedFile.value) {
-            selectedFile.value = files.value[0].name
-        }
-    } catch (error) {
-        console.error('Error loading files:', error)
-    }
-}
-
-const loadLogs = async () => {
+// ÚNICA função para carregar dados via backend
+const reloadData = () => {
     loading.value = true
-    try {
-        const params = {
-            ...filters.value,
-            file: selectedFile.value
-        }
-        
-        // Se level for 'error', queremos incluir critical e emergency
-        if (params.level === 'error') {
-            params.include_higher_levels = true
-        }
-
-        const response = await axios.get('/api/v1/logs', { params })
-        logs.value = response.data.logs
-        
-        // Carrega estatísticas se necessário
-        loadStatistics()
-    } catch (error) {
-        console.error('Error loading logs:', error)
-    } finally {
-        loading.value = false
+    const query = { ...filters.value }
+    if (query.errors_only) {
+        query.errors_only = '1'
+    } else {
+        delete query.errors_only
     }
-}
+    
+    Object.keys(query).forEach(key => {
+        if (query[key] === '' || query[key] === null) {
+            delete query[key]
+        }
+    })
 
-const loadStatistics = async () => {
-    try {
-        const response = await axios.get('/api/v1/logs/statistics', {
-            params: { file: selectedFile.value }
-        })
-        statistics.value = response.data.statistics
-    } catch (error) {
-        console.error('Error loading statistics:', error)
-    }
-}
-
-const selectFile = (fileName) => {
-    selectedFile.value = fileName
-    loadLogs()
+    router.get(window.route('log-viewer.index'), query, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ['initialLogs', 'initialStats', 'availableLayers'],
+        onFinish: () => loading.value = false
+    })
 }
 
 const selectLog = (log) => {
@@ -98,64 +85,83 @@ const selectLog = (log) => {
     showDetail.value = true
 }
 
-// Watchers
-const debouncedLoadLogs = debounce(() => {
-    loadLogs()
-}, 300)
+const debouncedReload = debounce(() => reloadData(), 300)
 
-watch(() => filters.value.search, () => {
-    debouncedLoadLogs()
+watch(() => filters.value.search, () => debouncedReload())
+watch(() => filters.value.level, () => reloadData())
+watch(() => filters.value.layer, () => reloadData())
+watch(() => filters.value.errors_only, () => reloadData())
+watch(() => filters.value.date_from, () => reloadData())
+watch(() => filters.value.date_to, () => reloadData())
+watch(() => filters.value.type, () => reloadData())
+
+const errorCount = computed(() => {
+    const byLevel = props.initialStats?.by_level || {}
+    return (byLevel.error || 0) + (byLevel.critical || 0) + (byLevel.emergency || 0) + (byLevel.alert || 0)
 })
-
-watch(() => filters.value.level, () => {
-    loadLogs()
-})
-
-// Lifecycle
-onMounted(() => {
-    loadFiles()
-    loadLogs()
+const totalCount = computed(() => props.initialStats?.total_logs || 0)
+const todayCount = computed(() => {
+    const today = new Date().toISOString().split('T')[0]
+    return props.initialStats?.by_day?.[today] || 0
 })
 </script>
 
 <template>
-    <Head title="Logger - SDC" />
+    <Head title="Log Viewer" />
 
-        <div class="flex h-full overflow-hidden bg-[#0b0e14] text-gray-300">
-            <!-- Sidebar -->
-            <LogViewerSidebar 
-                :files="files" 
-                :selected-file="selectedFile" 
-                @select-file="selectFile" 
-            />
-
-            <!-- Main Content -->
-            <div class="flex-1 flex flex-col min-w-0">
-                <LogViewerTopbar 
-                    v-model:filters="filters" 
-                    :stats="statistics"
-                    :loading="loading"
-                    @refresh="loadLogs"
-                />
-
-                <LogViewerTable 
-                    :logs="logs" 
-                    :loading="loading"
-                    :filters="filters"
-                    @select-log="selectLog"
-                />
+    <div class="h-screen flex flex-col overflow-hidden bg-[#0b0e14] text-gray-300">
+        <!-- Stats Bar -->
+        <div class="px-4 py-3 bg-[#0d1117] border-b border-gray-800 flex items-center gap-6">
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 uppercase tracking-wider">Total</span>
+                <span class="text-lg font-bold text-white">{{ totalCount }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 uppercase tracking-wider">Hoje</span>
+                <span class="text-lg font-bold text-blue-400">{{ todayCount }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 uppercase tracking-wider">Erros Hoje</span>
+                <span class="text-lg font-bold" :class="errorCount > 0 ? 'text-red-400' : 'text-green-400'">
+                    {{ errorCount }}
+                </span>
             </div>
 
-            <!-- Modal Detalhe -->
-            <LogViewerDetail
-                :show="showDetail"
-                :log="selectedLog"
-                @close="showDetail = false"
-            />
+            <div class="ml-auto flex items-center gap-3">
+                <span class="text-xs text-gray-500">
+                    {{ filters.date_from || 'Ultimos 7 dias' }}
+                    <template v-if="filters.date_to"> - {{ filters.date_to }}</template>
+                </span>
+            </div>
         </div>
 
+        <!-- Topbar com Level + Search -->
+        <LogViewerTopbar
+            v-model:filters="filters"
+            :stats="initialStats"
+            :loading="loading"
+            :levels="availableLevels"
+            :types="availableTypes"
+            :layers="availableLayers"
+            @refresh="reloadData"
+        />
+
+        <!-- Tabela -->
+        <LogViewerTable
+            :logs="initialLogs"
+            :loading="loading"
+            :filters="filters"
+            @select-log="selectLog"
+        />
+
+        <!-- Modal Detalhe -->
+        <LogViewerDetail
+            :show="showDetail"
+            :log="selectedLog"
+            @close="showDetail = false"
+        />
+    </div>
 </template>
 
 <style scoped>
-/* LogViewer preenche o espaco disponivel */
 </style>

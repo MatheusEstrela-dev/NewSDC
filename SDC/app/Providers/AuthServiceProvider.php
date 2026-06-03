@@ -16,10 +16,15 @@ class AuthServiceProvider extends ServiceProvider
         \App\Models\User::class => \App\Policies\UserPolicy::class,
         \App\Models\Role::class => \App\Policies\RolePolicy::class,
         \App\Models\Permission::class => \App\Policies\PermissionPolicy::class,
+        \App\Modules\Rat\Models\RatOcorrencia::class => \App\Policies\RatPolicy::class,
         \App\Models\Empreendimento::class => \App\Policies\EmpreendimentoPolicy::class,
         \App\Models\Protocolo::class => \App\Policies\ProtocoloPolicy::class,
-        \App\Models\Entrada::class => \App\Policies\EntradaPolicy::class,
-        \App\Modules\Compdec\Domain\Entities\Orgao::class => \App\Policies\OrgaoPolicy::class,
+        \App\Modules\Compdec\Models\Orgao::class => \App\Policies\OrgaoPolicy::class,
+        \App\Modules\Compdec\Models\Prefeitura::class => \App\Policies\PrefeituraPolicy::class,
+        \App\Modules\Compdec\Models\CompdecEquipe::class => \App\Policies\CompdecEquipePolicy::class,
+        \App\Modules\Compdec\Models\CompdecAnexo::class => \App\Policies\CompdecAnexoPolicy::class,
+        \App\Modules\Compdec\Models\CompdecPlanoContingencia::class => \App\Policies\CompdecPlanoContingenciaPolicy::class,
+        \App\Modules\Cisterna\Models\Cisterna::class => \App\Policies\CisternaPolicy::class,
     ];
 
     /**

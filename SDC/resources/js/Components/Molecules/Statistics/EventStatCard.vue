@@ -152,7 +152,7 @@ const trendClass = computed(() => {
 
 <style scoped>
 .event-stat-card {
-  @apply relative bg-white rounded-2xl p-5 text-center transition-all duration-200;
+  @apply relative bg-white rounded-2xl p-5 text-center transition-colors duration-200;
   @apply border border-slate-100 shadow-sm;
   min-height: 140px;
 }
@@ -168,7 +168,7 @@ const trendClass = computed(() => {
 
 .card-value {
   @apply text-4xl md:text-5xl font-bold mb-3;
-  @apply transition-all duration-300;
+  @apply transition-colors duration-300;
 }
 
 .card-breakdown {

@@ -47,14 +47,14 @@
       @filter-change="handleFilterChange"
       @filter-reset="handleFilterReset"
     />
-    <!-- Grid View -->
+    <!-- Visualização em Grade -->
     <RatGrid
       v-if="viewMode === 'grid'"
       :rats="ratsToUse"
       :loading="loading"
       :pagination="paginationToUse"
-      :can-edit="canEdit"
-      :can-delete="canDelete"
+      :can-edit="canEdit && !useMock"
+      :can-delete="!useMock"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -62,14 +62,14 @@
       @delete="handleDelete"
     />
 
-    <!-- Table View -->
+    <!-- Visualização em Tabela -->
     <RatTable
       v-else
       :rats="ratsToUse"
       :loading="loading"
       :pagination="paginationToUse"
-      :can-edit="canEdit"
-      :can-delete="canDelete"
+      :can-edit="canEdit && !useMock"
+      :can-delete="!useMock"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -92,11 +92,37 @@
       :loading="printLoading"
       @close="closePrintModal"
     />
+
+    <!-- Modal de confirmação de exclusão -->
+    <ConfirmDialog
+      :is-open="showDeleteModal"
+      variant="danger"
+      title="Excluir RAT"
+      message="Tem certeza que deseja excluir este RAT?"
+      description="Esta ação não pode ser desfeita."
+      confirm-text="Excluir"
+      cancel-text="Cancelar"
+      @confirm="confirmDelete"
+      @cancel="showDeleteModal = false"
+    />
+
+    <!-- Modal de Criar Boletim Relacionado -->
+    <ConfirmDialog
+      :is-open="showRelacionarConfirm"
+      variant="info"
+      title="Criar Boletim Relacionado"
+      :message="`Deseja criar um novo boletim relacionado ao ${relacionarRat?.protocolo || relacionarRat?.numero_bos || ''}?`"
+      confirm-text="Sim, criar!"
+      cancel-text="Cancelar"
+      @confirm="confirmCreateRelacionado"
+      @cancel="showRelacionarConfirm = false"
+    />
   </div>
 </template>
 
 <script setup>
 import Button from '@/Components/Atoms/Button/Button.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
@@ -105,10 +131,10 @@ import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { useModalState } from '@/Composables/useModalState';
 import { MESSAGES } from '@/constants/messages';
-import { getMockStatisticsFromRats } from '@/mocks/rat';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { Link, router } from '@inertiajs/vue3';
 import { useMobile } from '@/Composables/useMobile';
+import { useToast } from '@/Composables/useToast';
 import { computed, ref, watch } from 'vue';
 import RatFiltersSection from '../../Components/Organisms/Rat/Filters/RatFiltersSection.vue';
 import RatGrid from '../../Components/Organisms/Rat/Grid/RatGrid.vue';
@@ -176,13 +202,25 @@ const props = defineProps({
 });
 
 // =========================
-// Frontend-only behavior
+// Comportamento apenas no frontend
 // =========================
 const perPage = 15;
 const currentPage = ref(1);
 const localFilters = ref({ ...(props.filters || {}) });
 const { isMobile } = useMobile();
 const viewMode = ref(isMobile.value ? 'grid' : 'table'); // grid no mobile, table no desktop
+
+const { show: toast } = useToast();
+
+// Estado para confirmação de exclusão
+const showDeleteModal = ref(false);
+const deletingRatId = ref(null);
+
+// Estado para criar boletim relacionado
+const showRelacionarConfirm = ref(false);
+const relacionarRat = ref(null);
+// IDs excluídos apenas no frontend (soft-delete no banco, sem reload)
+const excludedIds = ref(new Set());
 
 watch(
   () => props.filters,
@@ -243,8 +281,13 @@ const filteredRats = computed(() => {
 });
 
 const statisticsToUse = computed(() => {
-  if (!props.useMock) return props.statistics;
-  return getMockStatisticsFromRats(filteredRats.value);
+  const s = props.statistics;
+  return {
+    total:   s?.total   ?? 0,
+    hoje:    s?.hoje    ?? 0,
+    esteMes: s?.esteMes ?? 0,
+    esteAno: s?.esteAno ?? 0,
+  };
 });
 
 const paginationToUse = computed(() => {
@@ -262,10 +305,14 @@ const paginationToUse = computed(() => {
 });
 
 const ratsToUse = computed(() => {
-  if (!props.useMock) return props.rats || [];
+  if (!props.useMock) {
+    return (props.rats || []).filter(r => !excludedIds.value.has(r.id));
+  }
   const p = paginationToUse.value;
   const start = (p.current_page - 1) * p.per_page;
-  return filteredRats.value.slice(start, start + p.per_page);
+  return filteredRats.value
+    .filter(r => !excludedIds.value.has(r.id))
+    .slice(start, start + p.per_page);
 });
 
 const filtersToUse = computed(() => (props.useMock ? localFilters.value : props.filters));
@@ -295,18 +342,73 @@ function handleView(id) {
 }
 
 function handleEdit(id) {
-  router.visit(route('rat.show', id));
+  router.visit(route('rat.edit', id));
 }
 
 function handleAttachments(id) {
-  // Abrir diretamente na aba "Anexos" (id 6) no detalhe do RAT
-  router.visit(`${route('rat.show', id)}?tab=6`);
+  const rat = ratsToUse.value.find(r => r.id === id);
+  if (!rat) {
+    toast('RAT não encontrado.', 'error', { noIcon: true });
+    return;
+  }
+
+  relacionarRat.value = rat;
+  showRelacionarConfirm.value = true;
+}
+
+async function confirmCreateRelacionado() {
+  if (!relacionarRat.value) return;
+  showRelacionarConfirm.value = false;
+
+  try {
+    const ax = window.axios || (await import('axios')).default;
+    const res = await ax.post(`/rat/${relacionarRat.value.id}/relacionar`, {});
+    toast(res.data.message || 'Boletim relacionado criado com sucesso.', 'success', { noIcon: true });
+    setTimeout(() => router.visit(res.data.url), 1000);
+  } catch (e) {
+    console.error('[confirmCreateRelacionado] Error:', {
+      status: e?.response?.status,
+      message: e?.response?.data?.message,
+      data: e?.response?.data,
+      error: e?.message
+    });
+
+    // Mostrar modal de confirmação novamente para o usuário ver a mensagem
+    relacionarRat.value = relacionarRat.value;
+    showRelacionarConfirm.value = true;
+
+    const msg = e?.response?.data?.message || e?.message || 'Erro ao criar boletim relacionado.';
+    toast(msg, 'error', { noIcon: true });
+  }
 }
 
 function handleDelete(id) {
-  if (confirm(MESSAGES.confirmations.deleteRat)) {
-    // TODO: Implementar delete
-    console.log('Delete RAT:', id);
+  deletingRatId.value = id;
+  showDeleteModal.value = true;
+}
+
+async function confirmDelete() {
+  if (!deletingRatId.value) return;
+  const id = deletingRatId.value;
+  showDeleteModal.value = false;
+  deletingRatId.value = null;
+
+  // Remove imediatamente do frontend (soft-delete — dado permanece no banco)
+  excludedIds.value = new Set([...excludedIds.value, id]);
+
+  try {
+    const ax = window.axios || (await import('axios')).default;
+    await ax.delete(route('rat.destroy', id), {
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        'Accept': 'application/json',
+      },
+    });
+    toast('RAT excluído com sucesso.', 'success', { noIcon: true });
+  } catch {
+    excludedIds.value.delete(id);
+    excludedIds.value = new Set([...excludedIds.value]);
+    toast('Erro ao excluir o RAT.', 'error', { noIcon: true });
   }
 }
 
@@ -324,7 +426,7 @@ const {
 async function handlePrint(id) {
   await openWithLoading(
     async () => {
-      const url = route('rat.show.json', id);
+      const url = route('rat.show-json', id);
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Erro ao carregar dados: ${response.status} ${response.statusText}`);
@@ -344,9 +446,9 @@ async function handlePrint(id) {
 // =========================
 import { useExport } from '@/Composables/useExport';
 
-const { 
-  showExportModal, 
-  handleExport: triggerExport 
+const {
+  showExportModal,
+  handleExport: triggerExport
 } = useExport('rat.export');
 
 function handleExportCsv(params) {

@@ -174,3 +174,35 @@ groups:
           summary: "Container com memória alta"
           description: "Container {{ $labels.name }} está usando mais de 90% da memória alocada."
 
+  # ============================================================================
+  # SDC Resilience (semaforo, circuit breaker, rate limit global)
+  # ============================================================================
+  - name: sdc-resilience
+    rules:
+      - alert: DBCircuitBreakerOpen
+        expr: sdc_db_circuit_breaker_state == 2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database circuit breaker está OPEN"
+          description: "Timeouts de query excederam o threshold. Backpressure dropando tiers public/free."
+
+      - alert: DBSemaphoreSaturated
+        expr: (sdc_db_slots_active / sdc_db_slots_limit) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Semáforo de DB acima de 80% por 5min"
+          description: "{{ $value | humanizePercentage }} dos slots em uso. Backpressure pode acionar."
+
+      - alert: RateLimitGlobalSaturated
+        expr: sdc_rate_limit_global_current > 1200
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Bucket global de rate limit acima de 80% do threshold"
+          description: "{{ $value }} req/s no bucket global; threshold default = 1500."
+

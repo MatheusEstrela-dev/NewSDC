@@ -2,19 +2,15 @@ import { db } from '@/infrastructure/database/db';
 import { router } from '@inertiajs/vue3';
 import { v4 as uuidv4 } from 'uuid';
 import { ref } from 'vue';
+import { useDocuments } from '@/composables/useDocuments';
 import { useModal } from '../core/useModal';
 import { useTabs } from '../core/useTabs';
 
-/**
- * Composable principal do RAT
- * Orchestrates outros composables e gerencia dados do RAT
- * Single Responsibility: Coordenar lógica do RAT
- */
 export function useRat(initialData = {}) {
   const tabs = useTabs(initialData.activeTab || 1);
   const modal = useModal();
+  const documents = useDocuments(initialData.anexos || []);
 
-  // Dados do RAT
   const rat = ref(initialData.rat || {
     id: null,
     protocolo: '',
@@ -30,16 +26,9 @@ export function useRat(initialData = {}) {
     },
   });
 
-  // Recursos empregados
   const recursos = ref(initialData.recursos || []);
-
-  // Pessoas envolvidas
   const envolvidos = ref(initialData.envolvidos || []);
-
-  // Dados de vistoria
   const vistoria = ref(initialData.vistoria || {});
-
-  // Histórico de eventos
   const historyEvents = ref(initialData.historyEvents || [
     {
       id: 1,
@@ -51,23 +40,15 @@ export function useRat(initialData = {}) {
     },
   ]);
 
-  // Anexos
-  const anexos = ref(initialData.anexos || []);
-
-  /**
-   * Salva o RAT
-   */
   async function saveRat(data) {
     const payload = {
       ...rat.value,
       recursos: recursos.value,
       envolvidos: envolvidos.value,
       vistoria: vistoria.value,
-      anexos: anexos.value,
-      ...data
+      ...data,
     };
 
-    // Garante ID para offline
     if (!payload.id) {
       payload.id = uuidv4();
       rat.value.id = payload.id;
@@ -78,100 +59,61 @@ export function useRat(initialData = {}) {
         await db.rat_pendentes.add({
           ...payload,
           sync_status: 'pending',
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         });
         alert('Você está offline. O RAT foi salvo no dispositivo e será enviado quando houver conexão.');
-        // Opcional: Redirecionar para lista ou limpar form
       } catch (error) {
         console.error('Erro ao salvar offline:', error);
         alert('Erro ao salvar no dispositivo.');
       }
-    } else {
-      // Se estiver online, envia via Inertia (ou axios se preferir não recarregar)
-      console.log('Enviando Online:', payload);
-
-      // Usa router.post do Inertia para manter o fluxo SPA padrão
-      router.post(route('rat.sync'), payload, {
-        preserveScroll: true,
-        preserveState: true,
-        onSuccess: () => {
-          // Limpa ou atualiza estado se necessário
-        },
-        onError: (errors) => {
-          console.error('Erro no envio online:', errors);
-          // Fallback: se falhar por rede (não validação), salva offline?
-          // Por simplicidade, mantemos o erro visível
-        }
-      });
+      return;
     }
+
+    router.post(route('rat.sync'), payload, {
+      preserveScroll: true,
+      preserveState: true,
+      onSuccess: () => {
+        const currentId = rat.value.id;
+        if (currentId) {
+          documents.uploadDocuments(route('rat.anexos.store', currentId));
+        }
+      },
+      onError: (errors) => {
+        console.error('Erro no envio online:', errors);
+      },
+    });
   }
 
-  /**
-   * Salva como rascunho
-   */
   async function saveDraft(data) {
-    // TODO: Implementar chamada à API
     console.log('Salvar rascunho:', data || rat.value);
-    // router.post('/rat/draft', rat.value);
   }
 
-  /**
-   * Cancela o RAT
-   */
   function cancelRat() {
     router.visit('/dashboard');
   }
 
-  /**
-   * Adiciona recurso
-   */
   function addRecurso(recurso) {
-    recursos.value.push({
-      id: Date.now(),
-      ...recurso,
-    });
+    recursos.value.push({ id: Date.now(), ...recurso });
   }
 
-  /**
-   * Remove recurso
-   */
   function removeRecurso(id) {
     const index = recursos.value.findIndex(r => r.id === id);
-    if (index > -1) {
-      recursos.value.splice(index, 1);
-    }
+    if (index > -1) recursos.value.splice(index, 1);
   }
 
-  /**
-   * Adiciona envolvido
-   */
   function addEnvolvido(envolvido) {
-    envolvidos.value.push({
-      id: Date.now(),
-      ...envolvido,
-    });
+    envolvidos.value.push({ id: Date.now(), ...envolvido });
   }
 
-  /**
-   * Remove envolvido
-   */
   function removeEnvolvido(id) {
     const index = envolvidos.value.findIndex(e => e.id === id);
-    if (index > -1) {
-      envolvidos.value.splice(index, 1);
-    }
+    if (index > -1) envolvidos.value.splice(index, 1);
   }
 
-  /**
-   * Salva vistoria
-   */
   function saveVistoria(data) {
     Object.assign(vistoria.value, data);
   }
 
-  /**
-   * Adiciona observação ao histórico
-   */
   function addObservation(observation) {
     historyEvents.value.unshift({
       id: Date.now(),
@@ -183,40 +125,15 @@ export function useRat(initialData = {}) {
     });
   }
 
-  /**
-   * Adiciona anexo
-   */
-  function addAnexo(anexo) {
-    anexos.value.push({
-      id: Date.now(),
-      ...anexo,
-    });
-  }
-
-  /**
-   * Remove anexo
-   */
-  function removeAnexo(id) {
-    const index = anexos.value.findIndex(a => a.id === id);
-    if (index > -1) {
-      anexos.value.splice(index, 1);
-    }
-  }
-
   return {
-    // State
     rat,
     recursos,
     envolvidos,
     vistoria,
     historyEvents,
-    anexos,
-
-    // Composables
+    documents,
     tabs,
     modal,
-
-    // Methods
     saveRat,
     saveDraft,
     cancelRat,
@@ -226,8 +143,5 @@ export function useRat(initialData = {}) {
     removeEnvolvido,
     saveVistoria,
     addObservation,
-    addAnexo,
-    removeAnexo,
   };
 }
-

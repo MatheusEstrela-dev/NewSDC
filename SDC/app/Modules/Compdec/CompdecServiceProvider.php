@@ -4,48 +4,36 @@ declare(strict_types=1);
 
 namespace App\Modules\Compdec;
 
-use App\Modules\Compdec\Application\UseCases\CreateOrgaoUseCase;
-use App\Modules\Compdec\Application\UseCases\GetHierarquiaOrgaoUseCase;
-use App\Modules\Compdec\Application\UseCases\GetOrgaoStatisticsUseCase;
-use App\Modules\Compdec\Application\UseCases\ListOrgaosUseCase;
-use App\Modules\Compdec\Application\UseCases\UpdateOrgaoUseCase;
-use App\Modules\Compdec\Application\UseCases\VincularUsuarioUseCase;
-use App\Modules\Compdec\Domain\Repositories\OrgaoRepositoryInterface;
-use App\Modules\Compdec\Infrastructure\Persistence\EloquentOrgaoRepository;
+use App\Modules\Compdec\Models\CompdecEquipe;
+use App\Modules\Compdec\Models\CompdecPlanoContingencia;
+use App\Modules\Compdec\Observers\CompdecEquipeObserver;
+use App\Modules\Compdec\Observers\CompdecPlanoContingenciaObserver;
+use App\Modules\Compdec\Services\AnexoService;
+use App\Modules\Compdec\Services\EquipeService;
+use App\Modules\Compdec\Services\OrgaoService;
+use App\Modules\Compdec\Services\PlanoContingenciaService;
+use App\Modules\Compdec\Services\PrefeituraService;
 use Illuminate\Support\ServiceProvider;
 
 class CompdecServiceProvider extends ServiceProvider
 {
-    /**
-     * Register services.
-     */
     public function register(): void
     {
-        // Bind Repository Interface → Implementação
-        $this->app->bind(
-            OrgaoRepositoryInterface::class,
-            EloquentOrgaoRepository::class
-        );
-
-        // Registrar Use Cases como Singletons (performance)
-        $this->app->singleton(CreateOrgaoUseCase::class);
-        $this->app->singleton(UpdateOrgaoUseCase::class);
-        $this->app->singleton(ListOrgaosUseCase::class);
-        $this->app->singleton(VincularUsuarioUseCase::class);
-        $this->app->singleton(GetHierarquiaOrgaoUseCase::class);
-        $this->app->singleton(GetOrgaoStatisticsUseCase::class);
+        $this->app->singleton(OrgaoService::class);
+        $this->app->singleton(PrefeituraService::class);
+        $this->app->singleton(EquipeService::class);
+        $this->app->singleton(AnexoService::class);
+        $this->app->singleton(PlanoContingenciaService::class);
     }
 
-    /**
-     * Bootstrap services.
-     *
-     * NOTA: As rotas do módulo são carregadas via routes/web.php dentro do
-     * middleware group 'auth' (que inclui 'web'). NÃO usar loadRoutesFrom()
-     * aqui, pois isso registra rotas SEM os middlewares web/auth, causando
-     * 403 para todos os usuários. Padrão: mesmo que RatServiceProvider.
-     */
     public function boot(): void
     {
-        // Rotas carregadas via routes/web.php -> routes/modules/compdec.php
+        // Observers (cache derivado em compdec_orgaos)
+        CompdecEquipe::observe(CompdecEquipeObserver::class);
+        CompdecPlanoContingencia::observe(CompdecPlanoContingenciaObserver::class);
+
+        // Rotas carregadas via routes/web.php (require routes/modules/compdec.php)
+        // Policies registradas em AuthServiceProvider
+        // Permissoes sincronizadas via config/permissions.php + RolesAndPermissionsSeeder
     }
 }

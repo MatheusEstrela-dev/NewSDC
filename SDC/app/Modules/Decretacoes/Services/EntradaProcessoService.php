@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\DB;
  * SERVICES DELEGADOS:
  * - ProcessoQueryService: Consultas e filtros
  * - ProcessoStatsService: Estatisticas do dashboard
- * - ProcessoExportService: Exportacao para PowerBI
+ * - ProcessoExportBIService: Exportacao para PowerBI
  * - HexagonIntegrationService: Integracao externa
  */
 class EntradaProcessoService
@@ -37,7 +37,7 @@ class EntradaProcessoService
         private readonly HexagonIntegrationService $hexagonService,
         private readonly ProcessoQueryService $queryService,
         private readonly ProcessoStatsService $statsService,
-        private readonly ProcessoExportService $exportService
+        private readonly ProcessoExportBIService $exportService
     ) {
     }
 
@@ -69,7 +69,13 @@ class EntradaProcessoService
      */
     public function findById(int $id): ?Processo
     {
-        return Processo::with(['logs', 'municipios'])->find($id);
+        $processo = Processo::with(['logs', 'municipios'])->find($id);
+        
+        if ($processo) {
+            $processo->totais = $this->queryService->calculateTotaisForProcesso($id);
+        }
+        
+        return $processo;
     }
 
     /**
@@ -88,6 +94,7 @@ class EntradaProcessoService
             $processo = Processo::create($dto->allData);
             $this->syncMunicipalities($processo, $dto->municipios);
             $this->syncInformacoesDecreto($processo, $dto->informacoesDecreto);
+
             return $processo;
         });
     }
@@ -120,15 +127,29 @@ class EntradaProcessoService
     }
 
     /**
-     * Remove processo.
+     * Remove processo (soft delete).
      *
      * @param int $id ID do processo
-     * @return bool True se removido, false se nao encontrado
+     * @return array Resultado com success e message
      */
-    public function delete(int $id): bool
+    public function delete(int $id): array
     {
         $processo = Processo::find($id);
-        return $processo ? $processo->delete() : false;
+
+        if (!$processo) {
+            return ['success' => false, 'message' => 'Processo nao encontrado.'];
+        }
+
+        if (!$processo->podeSerExcluido()) {
+            return [
+                'success' => false,
+                'message' => 'Este processo nao pode ser excluido. Somente processos com status "Registro" podem ser removidos.'
+            ];
+        }
+
+        $processo->delete();
+
+        return ['success' => true, 'message' => 'Processo removido com sucesso!'];
     }
 
     // =========================================================================
@@ -140,11 +161,12 @@ class EntradaProcessoService
      *
      * DELEGADO PARA: ProcessoStatsService
      *
+     * @param array $filters Filtros opcionais 
      * @return array Estatisticas formatadas
      */
-    public function getStatistics(): array
+    public function getStatistics(array $filters = []): array
     {
-        return $this->statsService->getDashboardStatistics();
+        return $this->statsService->getDashboardStatistics($filters);
     }
 
     /**
@@ -201,7 +223,7 @@ class EntradaProcessoService
     /**
      * Obtem dados normalizados para PowerBI.
      *
-     * DELEGADO PARA: ProcessoExportService
+     * DELEGADO PARA: ProcessoExportBIService
      *
      * DESTINO: Integracao PowerBI (dashboard externo)
      *
@@ -211,6 +233,31 @@ class EntradaProcessoService
     public function getNormalizedDataForPowerBI(\Illuminate\Http\Request $request): array
     {
         return $this->exportService->getNormalizedDataForPowerBI($request);
+    }
+
+    /**
+     * Enriquece processos do paginador com totais de desastres (batch).
+     *
+     * DELEGADO PARA: ProcessoQueryService
+     *
+     * @param \Illuminate\Pagination\LengthAwarePaginator $paginator Paginador com processos
+     */
+    public function enrichWithTotais(\Illuminate\Pagination\LengthAwarePaginator $paginator): void
+    {
+        $this->queryService->enrichPaginatorWithTotais($paginator);
+    }
+
+    /**
+     * Carrega municipios com dados de desastres para edicao.
+     *
+     * DELEGADO PARA: ProcessoQueryService
+     *
+     * @param Processo $processo Processo pai
+     * @return array Municipios com dados de desastres hierarquicos
+     */
+    public function loadMunicipiosWithDesastreData(Processo $processo): array
+    {
+        return $this->queryService->loadMunicipiosWithDesastreData($processo)->toArray();
     }
 
     // =========================================================================

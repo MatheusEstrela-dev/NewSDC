@@ -1,157 +1,199 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
-use App\Modules\Rat\Domain\Repositories\RatRepositoryInterface;
-use App\Modules\Demandas\Domain\Repositories\TaskRepositoryInterface;
-use App\Modules\Compdec\Domain\Repositories\OrgaoRepositoryInterface;
-use App\Modules\Decretacoes\Domain\Repositories\ProcessoRepositoryInterface;
-use App\Modules\Treinamento\Domain\Repositories\TreinamentoRepositoryInterface;
-use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class GlobalSearchService
 {
-    public function __construct(
-        protected RatRepositoryInterface $ratRepository,
-        protected TaskRepositoryInterface $taskRepository,
-        protected ProcessoRepositoryInterface $processoRepository,
-        protected OrgaoRepositoryInterface $orgaoRepository,
-        protected TreinamentoRepositoryInterface $treinamentoRepository
-    ) {}
+    private const LIMIT     = 7;
+    private const CACHE_TTL = 60;
 
-    public function search(string $query, int $limitPerCategory = 5): array
+    public function search(string $query): array
     {
-        if (strlen($query) < 2) {
-            return [];
+        $normalized = $this->normalize($query);
+
+        if (mb_strlen($normalized) < 2) {
+            return $this->emptyResult();
         }
 
-        $results = [
-            'actions' => $this->searchActions($query),
-            'rats' => $this->searchRats($query, $limitPerCategory),
-            'demandas' => $this->searchDemandas($query, $limitPerCategory),
-            'orgaos' => $this->searchOrgaos($query, $limitPerCategory),
-            'processos' => $this->searchProcessos($query, $limitPerCategory),
-            'treinamentos' => $this->searchTreinamentos($query, $limitPerCategory),
+        $key = 'global_search:' . md5($normalized);
+
+        // Usa o store padrao (CACHE_DRIVER). Sem tags para compatibilidade com
+        // drivers file/database; a invalidacao se da pelo TTL curto.
+        return Cache::remember($key, self::CACHE_TTL, fn () => $this->runSearch($normalized));
+    }
+
+    private function runSearch(string $query): array
+    {
+        return [
+            'pae'         => $this->searchPae($query),
+            'decretacoes' => $this->searchDecretacoes($query),
+            'rat'         => $this->searchRat($query),
+            'demandas'    => $this->searchDemandas($query),
         ];
-
-        // Filter out empty categories
-        return array_filter($results, fn($category) => !empty($category) && count($category) > 0);
     }
 
-    protected function searchActions(string $query): array
+    private function searchPae(string $query): array
     {
-        $actions = [
-            ['id' => 'act_1', 'title' => 'Novo RAT', 'subtitle' => 'Criar novo relatório', 'url' => route('rat.create'), 'icon' => 'document', 'tag' => 'Criar'],
-            ['id' => 'act_2', 'title' => 'Nova Demanda', 'subtitle' => 'Abrir chamado técnico', 'url' => route('demandas.create'), 'icon' => 'checkbadge', 'tag' => 'Criar'],
-            ['id' => 'act_3', 'title' => 'Meu Perfil', 'subtitle' => 'Gerenciar conta', 'url' => route('profile.edit'), 'icon' => 'user', 'tag' => 'Config'],
-            ['id' => 'act_4', 'title' => 'Dashboard', 'subtitle' => 'Ir para página inicial', 'url' => route('dashboard'), 'icon' => 'home', 'tag' => 'Nav'],
-            ['id' => 'act_5', 'title' => 'Log Viewer', 'subtitle' => 'Logs do sistema', 'url' => route('log-viewer.index'), 'icon' => 'bolt', 'tag' => 'Admin'],
-            ['id' => 'act_6', 'title' => 'Sair', 'subtitle' => 'Fazer logout', 'url' => route('logout'), 'icon' => 'logout', 'tag' => 'Auth'],
-        ];
+        $like = '%' . $query . '%';
 
-        return collect($actions)
-            ->filter(fn($action) => str_contains(strtolower($action['title']), strtolower($query)) || str_contains(strtolower($action['subtitle']), strtolower($query)))
-            ->values()
-            ->toArray();
+        $rows = DB::select("
+            SELECT
+                id,
+                num_protocolo,
+                sei_numero,
+                sigibar,
+                status,
+                GREATEST(
+                    similarity(num_protocolo,            :q1),
+                    similarity(COALESCE(sei_numero,  ''), :q2),
+                    similarity(COALESCE(sigibar,      ''), :q3),
+                    similarity(COALESCE(empnto_search,''), :q4)
+                ) AS score
+            FROM pae_protocolos
+            WHERE
+                num_protocolo    ILIKE :like1
+                OR sei_numero    ILIKE :like2
+                OR sigibar       ILIKE :like3
+                OR empnto_search ILIKE :like4
+            ORDER BY score DESC
+            LIMIT :lim
+        ", [
+            'q1' => $query, 'q2' => $query, 'q3' => $query, 'q4' => $query,
+            'like1' => $like, 'like2' => $like, 'like3' => $like, 'like4' => $like,
+            'lim'   => self::LIMIT,
+        ]);
+
+        return array_map(fn ($p) => [
+            'id'       => $p->id,
+            'title'    => $p->num_protocolo,
+            'subtitle' => $p->sei_numero ? 'SEI: ' . $p->sei_numero : ($p->sigibar ?? 'PAE'),
+            'url'      => route('pae.protocolos.index') . '?search=' . urlencode($p->num_protocolo),
+            'icon'     => 'document',
+            'tag'      => 'PAE',
+        ], $rows);
     }
 
-    protected function searchRats(string $query, int $limit): array
+    private function searchDecretacoes(string $query): array
     {
-        try {
-            $paginator = $this->ratRepository->findAll(['search' => $query], $limit);
-            return collect($paginator->items())->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'title' => $item->protocolo,
-                    'subtitle' => 'RAT - ' . ($item->status ?? 'N/A'),
-                    // Using JSON endpoint/dashboard as fallback since rat.show doesn't exist in module routes yet
-                    // Ideally this should point to the RAT view page
-                    'url' => route('rat.show.json', $item->id), 
-                    'type' => 'rat',
-                    'icon' => 'document'
-                ];
-            })->toArray();
-        } catch (\Throwable $e) {
-            return [];
-        }
+        $like = '%' . $query . '%';
+
+        $rows = DB::select("
+            SELECT
+                id,
+                n_protocolo_fide,
+                tipo_desastre_nome,
+                GREATEST(
+                    similarity(COALESCE(n_protocolo_fide,   ''), :q1),
+                    similarity(COALESCE(tipo_desastre_nome, ''), :q2)
+                ) AS score
+            FROM processos
+            WHERE deleted_at IS NULL
+              AND (
+                    n_protocolo_fide   ILIKE :like1
+                 OR tipo_desastre_nome ILIKE :like2
+              )
+            ORDER BY score DESC
+            LIMIT :lim
+        ", [
+            'q1' => $query, 'q2' => $query,
+            'like1' => $like, 'like2' => $like,
+            'lim'   => self::LIMIT,
+        ]);
+
+        return array_map(fn ($p) => [
+            'id'       => $p->id,
+            'title'    => $p->n_protocolo_fide ?? '—',
+            'subtitle' => $p->tipo_desastre_nome ?? 'Decretacao',
+            'url'      => route('decretacoes.show', $p->id),
+            'icon'     => 'scale',
+            'tag'      => 'DECRETO',
+        ], $rows);
     }
 
-    protected function searchDemandas(string $query, int $limit): array
+    private function searchRat(string $query): array
     {
-        try {
-            $paginator = $this->taskRepository->findAll(['search' => $query], $limit);
-            return collect($paginator->items())->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'title' => $item->titulo ?? $item->protocolo,
-                    'subtitle' => 'Demanda',
-                    'url' => route('demandas.show', $item->id),
-                    'type' => 'demanda',
-                    'icon' => 'checkbadge'
-                ];
-            })->toArray();
-        } catch (\Throwable $e) {
-            return [];
-        }
+        $like = '%' . $query . '%';
+
+        $rows = DB::select("
+            SELECT
+                id,
+                protocolo,
+                status,
+                similarity(COALESCE(protocolo, ''), :q) AS score
+            FROM rats
+            WHERE protocolo ILIKE :like
+            ORDER BY score DESC
+            LIMIT :lim
+        ", [
+            'q' => $query, 'like' => $like, 'lim' => self::LIMIT,
+        ]);
+
+        return array_map(fn ($r) => [
+            'id'       => $r->id,
+            'title'    => $r->protocolo,
+            'subtitle' => ucfirst($r->status ?? 'RAT'),
+            'url'      => route('rat.show', $r->id),
+            'icon'     => 'document',
+            'tag'      => 'RAT',
+        ], $rows);
     }
 
-    protected function searchOrgaos(string $query, int $limit): array
+    private function searchDemandas(string $query): array
     {
-        try {
-            $paginator = $this->orgaoRepository->findAll(['search' => $query], $limit);
-            return collect($paginator->items())->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'title' => $item->nome,
-                    'subtitle' => $item->municipio->nome ?? 'Órgão',
-                    // Assuming compdec.show uses ID, or route name might be different.
-                    // If compdec.show fails, we might need to check compdec.php.
-                    // But usually module routes are straightforward.
-                    'url' => route('compdec.show', $item->id), 
-                    'type' => 'orgao',
-                    'icon' => 'building'
-                ];
-            })->toArray();
-        } catch (\Throwable $e) {
-            return [];
-        }
+        $like = '%' . $query . '%';
+
+        $rows = DB::select("
+            SELECT
+                id,
+                protocolo,
+                titulo,
+                status,
+                GREATEST(
+                    similarity(COALESCE(titulo,    ''), :q1),
+                    similarity(COALESCE(protocolo, ''), :q2)
+                ) AS score
+            FROM tasks
+            WHERE deleted_at IS NULL
+              AND (titulo ILIKE :like1 OR protocolo ILIKE :like2)
+            ORDER BY score DESC
+            LIMIT :lim
+        ", [
+            'q1' => $query, 'q2' => $query,
+            'like1' => $like, 'like2' => $like,
+            'lim'   => self::LIMIT,
+        ]);
+
+        return array_map(fn ($t) => [
+            'id'       => $t->id,
+            'title'    => $t->titulo,
+            'subtitle' => ($t->protocolo ?? '') . ' · ' . ($t->status ?? ''),
+            'url'      => route('demandas.show', $t->id),
+            'icon'     => 'checkbadge',
+            'tag'      => 'DEMANDA',
+        ], $rows);
     }
 
-    protected function searchProcessos(string $query, int $limit): array
+    private function normalize(string $query): string
     {
-        try {
-            $paginator = $this->processoRepository->findAll(['search' => $query], $limit);
-            return collect($paginator->items())->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'title' => 'FIDE: ' . ($item->n_protocolo_fide ?? 'N/A'),
-                    'subtitle' => 'Processo',
-                    'url' => route('decretacoes.show', $item->id),
-                    'type' => 'processo',
-                    'icon' => 'folder'
-                ];
-            })->toArray();
-        } catch (\Throwable $e) {
-            return [];
-        }
+        // Strip leading special prefixes (#, @)
+        $clean = ltrim(trim($query), '#@');
+
+        // Remove caracteres nao-ASCII de controle e NBSP (preserva acentos latinos \xC0-\xFF)
+        $clean = preg_replace('/[^\x20-\x7E\xC0-\xFF]/u', '', $clean) ?? $clean;
+
+        // Normaliza espacos multiplos (preserva pontos e barras — importantes em numeros de protocolo)
+        $clean = preg_replace('/\s+/', ' ', $clean) ?? $clean;
+
+        return trim($clean);
     }
 
-    protected function searchTreinamentos(string $query, int $limit): array
+    private function emptyResult(): array
     {
-        try {
-            $paginator = $this->treinamentoRepository->findAll(['search' => $query], $limit);
-            return collect($paginator->items())->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'title' => $item->titulo,
-                    'subtitle' => 'Treinamento - ' . ($item->status ?? 'N/A'),
-                    'url' => route('treinamentos.show', $item->id),
-                    'type' => 'treinamento',
-                    'icon' => 'academic-cap'
-                ];
-            })->toArray();
-        } catch (\Throwable $e) {
-            return [];
-        }
+        return ['pae' => [], 'decretacoes' => [], 'rat' => [], 'demandas' => []];
     }
 }

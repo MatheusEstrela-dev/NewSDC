@@ -24,6 +24,7 @@ class Kernel extends HttpKernel
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         \App\Http\Middleware\SecurityHeaders::class,
+        \App\Http\Middleware\EarlyHints::class,
     ];
 
     /**
@@ -40,16 +41,22 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
-            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            \App\Http\Middleware\SetTenant::class,
             \App\Http\Middleware\LogSystemActivity::class, // Capture ALL Web requests
+            \App\Http\Middleware\ResolveClientIp::class,
             \App\Http\Middleware\CheckUserActive::class,
+            \App\Http\Middleware\EnsurePasswordChanged::class,
         ],
 
         'api' => [
-            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
+            // Resiliencia: backpressure antes de tocar DB; semaforo logo apos
+            // para garantir contagem global de requests concorrentes.
+            \App\Http\Middleware\Backpressure::class,
+            \App\Http\Middleware\AcquireConnectionSlot::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\SetTenant::class,
             \App\Http\Middleware\LogApiRequests::class, // Mantendo específico para API
             \App\Http\Middleware\LogSystemActivity::class, // Capture ALL API requests too (audit)
             \App\Http\Middleware\CheckUserActive::class,
@@ -69,6 +76,7 @@ class Kernel extends HttpKernel
         'auth.session' => \Illuminate\Session\Middleware\AuthenticateSession::class,
         'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
+        'email.verified' => \App\Http\Middleware\RequireEmailVerified::class,
         'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
         'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
         'precognitive' => \Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests::class,
@@ -79,5 +87,12 @@ class Kernel extends HttpKernel
         'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'hierarchy' => \App\Http\Middleware\CheckHierarchy::class,
+        'api-rate-limiter'     => \App\Http\Middleware\ApiRateLimiter::class,
+        'decretacoes.api.auth' => \App\Http\Middleware\DecretacoesApiAuth::class,
+        'compdec.query-threshold' => \App\Http\Middleware\QueryThresholdMiddleware::class,
+        'statement_timeout' => \App\Http\Middleware\SetStatementTimeout::class,
+        'acquire_slot' => \App\Http\Middleware\AcquireConnectionSlot::class,
+        'backpressure' => \App\Http\Middleware\Backpressure::class,
+        'cache_swagger' => \App\Http\Middleware\CacheSwaggerUi::class,
     ];
 }

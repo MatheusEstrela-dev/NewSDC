@@ -12,11 +12,11 @@ jenkins:
       allowsSignup: false
       users:
         - id: "${JENKINS_ADMIN_USER:-admin}"
-          password: "${JENKINS_ADMIN_PASSWORD:-admin123}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
         - id: "omlioes"
-          password: "${JENKINS_OMLIOES_PASSWORD:-omlioes123}"
+          password: "${JENKINS_OMLIOES_PASSWORD}"
         - id: "matheus.estrela"
-          password: "${JENKINS_MATHEUS_PASSWORD:-matheus123}"
+          password: "${JENKINS_MATHEUS_PASSWORD}"
 
   authorizationStrategy:
     loggedInUsersCanDoAnything:
@@ -66,6 +66,7 @@ unclassified:
   # Workspace cleanup
   globalDefaultFlowDurabilityLevel:
     durabilityHint: PERFORMANCE_OPTIMIZED
+
 
 # ===== CREDENTIALS =====
 credentials:

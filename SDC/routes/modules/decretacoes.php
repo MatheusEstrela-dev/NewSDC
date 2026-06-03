@@ -41,6 +41,10 @@ Route::prefix('decretacoes')->name('decretacoes.')->group(function () {
         ->name('desastres.store')
         ->middleware('can:decretacoes.processos.edit');
 
+    Route::get('/{id}/desastres/edit', [DecretacoesController::class, 'editDesastres'])
+        ->name('desastres.edit')
+        ->middleware('can:decretacoes.processos.edit');
+
     // API Routes
     Route::prefix('api')->name('api.')->group(function () {
         Route::get('/', [DecretacoesController::class, 'apiIndex'])

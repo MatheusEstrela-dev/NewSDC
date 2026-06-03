@@ -12,7 +12,7 @@
           :model-value="modelValue"
           v-bind="fieldProps"
           @update:model-value="$emit('update:modelValue', $event)"
-          class="transition-all duration-200 ease-in-out focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+          class="transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
         />
       </slot>
     </div>

@@ -64,16 +64,21 @@
       :loading="loading"
       :can-edit="canEdit"
       :can-delete="canDelete"
+      @print="handlePrint"
+      @delete="handleDelete"
     />
 
     <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
     <ProcessoTable
       v-else-if="viewMode === 'table' && !isMobile"
       :processos="processos"
+      :total="pagination?.total"
       :can-edit="canEdit"
       :can-delete="canDelete"
       @view="(id) => $emit('view', id)"
+      @print="handlePrint"
       @edit="(id) => $emit('edit', id)"
+      @delete="handleDelete"
     />
 
     <!-- Pagination -->
@@ -83,6 +88,27 @@
         @page-change="handlePageChange"
       />
     </div>
+
+    <!-- Modal de Impressao -->
+    <PrintDecretacaoModal
+      :show="printModalOpen"
+      :processo="selectedProcesso"
+      @close="closePrintModal"
+    />
+
+    <!-- Modal de Confirmacao de Exclusao -->
+    <ConfirmDialog
+      :is-open="showDeleteConfirm"
+      title="Excluir Processo"
+      message="Tem certeza que deseja excluir este processo?"
+      description="Esta acao ira marcar o processo como excluido. Os dados serao preservados para auditoria."
+      variant="danger"
+      confirm-text="Excluir"
+      cancel-text="Cancelar"
+      :loading="deleteLoading"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>
 
@@ -92,7 +118,9 @@ import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import DecretacoesStatsCards from '@/Components/Organisms/Decretacoes/DecretacoesStatsCards.vue';
+import PrintDecretacaoModal from '@/Components/Organisms/Decretacoes/Print/PrintDecretacaoModal.vue';
 import ProcessoFilters from '@/Components/Organisms/Decretacoes/ProcessoFilters.vue';
 import ProcessoGrid from '@/Components/Organisms/Decretacoes/ProcessoGrid.vue';
 import ProcessoTable from '@/Components/Organisms/Decretacoes/ProcessoTable.vue';
@@ -100,7 +128,8 @@ import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import { ref } from 'vue';
+import { router } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
 
 // Detecção mobile
 const { isMobile } = useMobile();
@@ -113,10 +142,21 @@ const props = defineProps({
   statistics: {
     type: Object,
     default: () => ({
-      total: 0,
-      vigentes: 0,
-      vencidos: 0,
-      proximos_vencer: 0,
+      totalEventos: 0,
+      totalEventosEcp: 0,
+      totalEventosSe: 0,
+      registros: 0,
+      registrosEcp: 0,
+      registrosSe: 0,
+      decretacoes: 0,
+      decretacoesEcp: 0,
+      decretacoesSe: 0,
+      municipiosAtingidos: 0,
+      municipiosAtingidosEcp: 0,
+      municipiosAtingidosSe: 0,
+      decretacoesVigentes: 0,
+      decretacoesVigentesEcp: 0,
+      decretacoesVigentesSe: 0,
     }),
   },
   filters: {
@@ -188,6 +228,60 @@ const {
 
 function handleExportCsv(params) {
   triggerExport(params, localFilters.value);
+}
+
+// =========================
+// Modal de Impressao
+// =========================
+const printModalOpen = ref(false);
+const selectedProcessoId = ref(null);
+
+const selectedProcesso = computed(() => {
+  if (!selectedProcessoId.value) return null;
+  return props.processos.find(p => p.id === selectedProcessoId.value) || null;
+});
+
+function handlePrint(id) {
+  selectedProcessoId.value = id;
+  printModalOpen.value = true;
+}
+
+function closePrintModal() {
+  printModalOpen.value = false;
+  selectedProcessoId.value = null;
+}
+
+// =========================
+// Modal de Confirmacao de Exclusao
+// =========================
+const showDeleteConfirm = ref(false);
+const deleteLoading = ref(false);
+const processoIdToDelete = ref(null);
+
+function handleDelete(id) {
+  processoIdToDelete.value = id;
+  showDeleteConfirm.value = true;
+}
+
+function confirmDelete() {
+  if (processoIdToDelete.value) {
+    deleteLoading.value = true;
+    router.delete(route('decretacoes.destroy', processoIdToDelete.value), {
+      preserveScroll: true,
+      onSuccess: () => {
+        showDeleteConfirm.value = false;
+        processoIdToDelete.value = null;
+      },
+      onFinish: () => {
+        deleteLoading.value = false;
+      },
+    });
+  }
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false;
+  processoIdToDelete.value = null;
 }
 </script>
 

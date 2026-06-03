@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-xl shadow-lg border bg-white dark:bg-slate-800/80 border-slate-100 dark:border-slate-700/50 overflow-hidden h-full group hover:shadow-xl hover:border-blue-500/30 transition-all duration-300">
+  <div class="rounded-xl shadow-lg border bg-white dark:bg-slate-800/80 border-slate-100 dark:border-slate-700/50 overflow-hidden h-full group hover:shadow-xl hover:border-blue-500/30 transition-colors duration-300">
     <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
       <h3 class="font-bold text-base text-slate-900 dark:text-slate-200">Situacao dos Planos Inseridos no Sistema</h3>
     </div>
@@ -24,7 +24,7 @@
             :stroke="segment.color"
             :stroke-dasharray="segment.dashArray"
             :stroke-dashoffset="segment.dashOffset"
-            class="transition-all duration-500 cursor-pointer hover:opacity-80"
+            class="transition-colors duration-500 cursor-pointer hover:opacity-80"
             :class="{ 'filter drop-shadow-lg': hoveredIndex === index }"
             @mouseenter="hoveredIndex = index"
             @mouseleave="hoveredIndex = null"
@@ -44,7 +44,7 @@
 
       <div class="flex-1 space-y-3 w-full">
         <div
-          class="flex items-center justify-between p-3 rounded-lg transition-all duration-200 cursor-pointer"
+          class="flex items-center justify-between p-3 rounded-lg transition-colors duration-200 cursor-pointer"
           :class="hoveredIndex === 0 ? 'bg-blue-500/10 scale-[1.02]' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'"
           @mouseenter="hoveredIndex = 0"
           @mouseleave="hoveredIndex = null"
@@ -60,7 +60,7 @@
         </div>
 
         <div
-          class="flex items-center justify-between p-3 rounded-lg transition-all duration-200 cursor-pointer"
+          class="flex items-center justify-between p-3 rounded-lg transition-colors duration-200 cursor-pointer"
           :class="hoveredIndex === 1 ? 'bg-orange-500/10 scale-[1.02]' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'"
           @mouseenter="hoveredIndex = 1"
           @mouseleave="hoveredIndex = null"

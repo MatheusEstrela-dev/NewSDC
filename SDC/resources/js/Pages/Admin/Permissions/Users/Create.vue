@@ -95,33 +95,31 @@
                 <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                Segurança
+                Acesso e Onboarding
               </h3>
             </div>
-            
-            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- Password -->
-              <div class="space-y-1.5">
-                <label for="password" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Senha</label>
-                <input
-                  v-model="form.password"
-                  id="password"
-                  type="password"
-                  class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100 transition-all outline-none"
-                />
-                <div v-if="form.errors.password" class="text-xs text-red-500 mt-1">{{ form.errors.password }}</div>
+
+            <div class="p-6 space-y-4">
+              <div class="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/10 p-4">
+                <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
+                  <p class="font-semibold mb-1">Senha provisoria gerada automaticamente</p>
+                  <p>
+                    O usuario recebera por e-mail uma senha provisoria de uso unico.
+                    No primeiro acesso ele sera obrigado a definir uma nova senha. Caso a troca
+                    nao ocorra em <strong>24 horas</strong>, a conta sera <strong>desativada</strong>
+                    automaticamente.
+                  </p>
+                </div>
               </div>
 
-              <!-- Password Confirmation -->
-              <div class="space-y-1.5">
-                <label for="password_confirmation" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Confirmar Senha</label>
-                <input
-                  v-model="form.password_confirmation"
-                  id="password_confirmation"
-                  type="password"
-                  class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100 transition-all outline-none"
-                />
-              </div>
+              <ul class="text-xs text-slate-500 dark:text-slate-400 space-y-1 pl-2">
+                <li>- Status inicial: <span class="font-mono text-amber-600 dark:text-amber-400">pending</span></li>
+                <li>- Login: o usuario faz login com CPF + senha provisoria recebida no e-mail.</li>
+                <li>- Voce nao precisa repassar a senha — ela e enviada diretamente para o destinatario.</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -156,7 +154,7 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  <span v-else>Salvar Usuário</span>
+                  <span v-else>Cadastrar e enviar e-mail</span>
                 </button>
                 
                 <Link
@@ -192,9 +190,8 @@ const form = useForm({
   name: '',
   email: '',
   cpf: '',
-  password: '',
-  password_confirmation: '',
-  roles: []
+  roles: [],
+  orgao_principal_id: null,
 });
 
 const toggleRole = (roleId) => {
@@ -207,11 +204,12 @@ const toggleRole = (roleId) => {
 };
 
 const submit = () => {
-  form.post(route('admin.permissions.users.store'), {
-    onSuccess: () => {
-      // Logic handled by Laravel redirect
-    }
-  });
+  form
+    .transform((data) => ({
+      ...data,
+      cpf: (data.cpf || '').replace(/\D/g, ''),
+    }))
+    .post(route('admin.permissions.users.store'));
 };
 
 // Scroll Sticky Logic

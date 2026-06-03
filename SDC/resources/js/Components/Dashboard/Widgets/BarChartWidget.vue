@@ -10,7 +10,7 @@
           v-for="period in ['6M', '12M']"
           :key="period"
           :class="[
-            'px-2.5 py-1 text-xs font-medium rounded-md transition-all',
+            'px-2.5 py-1 text-xs font-medium rounded-md transition-colors',
             barPeriod === period
               ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
@@ -25,7 +25,7 @@
       <!-- Custom Tooltip for Bars -->
       <div 
         v-if="hoveredBarIndex !== null"
-        class="absolute z-50 pointer-events-none bg-slate-900/95 text-white px-3 py-1.5 rounded-lg shadow-xl border border-slate-700 text-xs transition-all duration-200 whitespace-nowrap"
+        class="absolute z-50 pointer-events-none bg-slate-900/95 text-white px-3 py-1.5 rounded-lg shadow-xl border border-slate-700 text-xs transition-colors duration-200 whitespace-nowrap"
         :style="{ 
           left: `${(30 + hoveredBarIndex * ((600 - 60) / (activeBarData.length - 1))) / 6}%`, 
           top: `${200 - (activeBarData[hoveredBarIndex].value / maxBarValue) * 160 - 40}px`,
@@ -57,13 +57,13 @@
         <!-- Bars -->
         <g v-for="(item, index) in activeBarData" :key="item.label + barPeriod">
           <rect
-            :x="30 + index * ((600 - 60) / (activeBarData.length - 1)) - (activeBarData.length > 6 ? 8 : 12)"
+            :x="30 + index * ((600 - 60) / Math.max(activeBarData.length - 1, 1)) - (activeBarData.length > 6 ? 8 : 12)"
             :y="200 - (item.value / maxBarValue) * 160"
             :width="activeBarData.length > 6 ? 16 : 24"
             :height="(item.value / maxBarValue) * 160"
             rx="4"
             fill="url(#barGradient)"
-            class="transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) cursor-pointer"
+            class="transition-colors duration-500 cubic-bezier(0.4, 0, 0.2, 1) cursor-pointer"
             :class="[
               hoveredBarIndex === index ? 'opacity-100 filter url(#glow)' : 'opacity-80 hover:opacity-100'
             ]"
@@ -76,7 +76,7 @@
           />
           
           <text
-            :x="30 + index * ((600 - 60) / (activeBarData.length - 1))"
+            :x="30 + index * ((600 - 60) / Math.max(activeBarData.length - 1, 1))"
             y="215"
             text-anchor="middle"
             class="text-[10px] font-medium transition-colors duration-200"
@@ -93,35 +93,21 @@
 <script setup>
 import { computed, ref } from 'vue';
 
+const props = defineProps({
+  barData6M:  { type: Array, default: () => [] },
+  barData12M: { type: Array, default: () => [] },
+});
+
 const barPeriod = ref('6M');
 const hoveredBarIndex = ref(null);
 
-const barData6M = ref([
-  { label: 'Set', value: 45 },
-  { label: 'Out', value: 62 },
-  { label: 'Nov', value: 58 },
-  { label: 'Dez', value: 71 },
-  { label: 'Jan', value: 83 },
-  { label: 'Fev', value: 47 },
-]);
-
-const barData12M = ref([
-  { label: 'Mar', value: 32 },
-  { label: 'Abr', value: 38 },
-  { label: 'Mai', value: 41 },
-  { label: 'Jun', value: 55 },
-  { label: 'Jul', value: 48 },
-  { label: 'Ago', value: 39 },
-  { label: 'Set', value: 45 },
-  { label: 'Out', value: 62 },
-  { label: 'Nov', value: 58 },
-  { label: 'Dez', value: 71 },
-  { label: 'Jan', value: 83 },
-  { label: 'Fev', value: 47 },
-]);
-
-const activeBarData = computed(() => barPeriod.value === '6M' ? barData6M.value : barData12M.value);
-const maxBarValue = computed(() => Math.max(...activeBarData.value.map(b => b.value)));
+const activeBarData = computed(() =>
+  barPeriod.value === '6M' ? props.barData6M : props.barData12M
+);
+const maxBarValue = computed(() => {
+    const values = activeBarData.value.map(b => b.value);
+    return values.length > 0 ? (Math.max(...values) || 1) : 1;
+});
 </script>
 <style scoped>
 @keyframes growUp {

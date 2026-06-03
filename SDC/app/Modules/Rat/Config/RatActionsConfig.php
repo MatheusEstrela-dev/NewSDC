@@ -87,17 +87,13 @@ class RatActionsConfig extends AbstractModuleActions
         $overrides = [];
         $status = $entity->status ?? null;
 
-        if ($status === 'finalizado') {
+        if ($status === 1) {
             $overrides[ActionType::EDIT->value] = ['enabled' => false];
             $overrides[ActionType::DELETE->value] = ['enabled' => false];
             $overrides[ActionType::FINALIZE->value] = ['enabled' => false];
         }
 
-        if ($status === 'em_andamento') {
-            $overrides[ActionType::DELETE->value] = ['enabled' => false];
-        }
-
-        if ($status === 'rascunho') {
+        if ($status === 0) {
             $overrides[ActionType::FINALIZE->value] = ['enabled' => false];
         }
 
@@ -111,7 +107,7 @@ class RatActionsConfig extends AbstractModuleActions
     {
         if ($action === ActionType::FINALIZE) {
             $status = $entity->status ?? null;
-            return $status !== 'finalizado' && $status !== 'rascunho';
+            return $status !== 1;
         }
 
         return parent::canExecute($action, $entity);

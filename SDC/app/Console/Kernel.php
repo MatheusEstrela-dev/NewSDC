@@ -21,6 +21,48 @@ class Kernel extends ConsoleKernel
             ->dailyAt('02:00')
             ->withoutOverlapping()
             ->runInBackground();
+
+        // COMPDEC: alerta diario sobre anexos legais com vencimento proximo (09:00)
+        $schedule->command('compdec:alertar-anexos-vencimento')
+            ->dailyAt('09:00')
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Onboarding: desativa contas pending cuja senha provisoria expirou (24h).
+        $schedule->command('users:deactivate-expired-pending')
+            ->hourly()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Resiliencia: arquiva webhook_events completed com idade > 90 dias.
+        // Roda semanalmente (domingo 03:00) para manter tabela operacional pequena.
+        $schedule->command('webhooks:archive --days=90 --chunk=500')
+            ->weeklyOn(0, '03:00')
+            ->onOneServer()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Async exports: remove artefatos do disk 'exports' com idade > 7 dias.
+        // Limpa tambem result_disk/result_path nos traces associados.
+        $schedule->command('exports:cleanup --days=7')
+            ->dailyAt('04:00')
+            ->onOneServer()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // RAT: fecha automaticamente protocolos com prazo de edição (48h) expirado.
+        $schedule->command('rat:close-expired')
+            ->hourly()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Auth: purga pedidos de troca de e-mail concluidos/cancelados/expirados
+        // com mais de 30 dias para manter a tabela enxuta.
+        $schedule->command('email-change:cleanup-expired')
+            ->daily()
+            ->onOneServer()
+            ->withoutOverlapping()
+            ->name('email-change-cleanup');
     }
 
     /**

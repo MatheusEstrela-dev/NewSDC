@@ -24,7 +24,7 @@ const getStatusClasses = (status) => {
   return 'bg-slate-500/15 text-slate-400 ring-1 ring-slate-500/25';
 };
 
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 </script>
 
 <template>
@@ -64,15 +64,14 @@ import TableActions from '@/Components/Molecules/Table/TableActions.vue';
       </div>
 
       <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-        <TableActions
-          :show-view="true"
-          :show-edit="canEdit"
-          :show-delete="canDelete"
-          :show-print="false"
-          :show-attachments="false"
-          @view="emit('view', item.id)"
-          @edit="emit('edit', item.id)"
-          @delete="emit('delete', item.id)"
+        <ActionButton
+          module="plantao"
+          resource="turnos"
+          :actions="[
+            { action: 'view',   handler: () => emit('view', item.id) },
+            { action: 'edit',   handler: () => emit('edit', item.id),   allowed: canEdit },
+            { action: 'delete', handler: () => emit('delete', item.id), allowed: canDelete },
+          ]"
         />
       </div>
     </div>

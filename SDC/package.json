@@ -2,13 +2,26 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "vite",
-        "build": "rm -f public/hot && vite build",
-        "build:ssr": "rm -rf public/hot bootstrap/ssr/* && vite build && vite build --ssr",
-        "ssr": "node $(ls -t bootstrap/ssr/js/ssr-*.js | head -n 1)",
-        "build:pwa": "vite build && workbox generateSW workbox-config.js"
+        "dev": "node scripts/ensure-vite-port-free.mjs && vite",
+        "clean:hot": "node -e \"require('fs').rmSync('public/hot',{force:true})\"",
+        "prebuild": "node scripts/generate-ziggy.mjs",
+        "build": "vite build",
+        "build:ssr": "vite build && vite build --ssr && vite build --config vite.email-ssr.config.js --ssr",
+        "build:email-ssr": "vite build --config vite.email-ssr.config.js --ssr",
+        "ssr": "bun $(ls -t bootstrap/ssr/js/ssr-*.js | head -n 1)",
+        "build:pwa": "vite build && workbox generateSW workbox-config.js",
+        "test:e2e": "dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test",
+        "test:e2e:crud": "dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test tests/e2e/decretacoes-crud.spec.js",
+        "test:e2e:ui": "dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test --ui",
+        "docker:up": "dotenvx run -f docker/.env -- docker compose -f docker/compose.dev.yml up -d",
+        "docker:up:rebuild": "dotenvx run -f docker/.env -- docker compose -f docker/compose.dev.yml up -d --force-recreate",
+        "docker:down": "docker compose -f docker/compose.dev.yml down",
+        "docker:logs": "docker compose -f docker/compose.dev.yml logs -f app",
+        "secrets:encrypt": "dotenvx encrypt -f docker/.env",
+        "secrets:decrypt": "dotenvx decrypt -f docker/.env"
     },
     "devDependencies": {
+        "@dotenvx/dotenvx": "^1.57.2",
         "@inertiajs/server": "^0.1.0",
         "@inertiajs/vue3": "^2.2.19",
         "@playwright/test": "^1.57.0",
@@ -18,8 +31,10 @@
         "autoprefixer": "^10.4.12",
         "axios": "^1.6.4",
         "laravel-vite-plugin": "^1.0.0",
+        "mysql2": "^3.20.0",
         "playwright": "^1.57.0",
         "postcss": "^8.4.31",
+        "sharp": "^0.34.5",
         "tailwindcss": "^3.2.1",
         "vite": "^5.0.0",
         "vite-plugin-pwa": "^0.21.1",
@@ -34,6 +49,7 @@
         "dexie": "^3.2.4",
         "idb-keyval": "^6.2.1",
         "leaflet": "^1.9.4",
+        "shepherd.js": "^15.2.2",
         "uuid": "^9.0.1",
         "vue3-apexcharts": "^1.10.0",
         "vuedraggable": "^4.1.0",
@@ -41,6 +57,6 @@
     },
     "optionalDependencies": {
         "@esbuild/linux-x64": "^0.27.3",
-        "@rollup/rollup-linux-x64-musl": "^4.57.1"
+        "@rollup/rollup-linux-x64-musl": "^4.59.0"
     }
 }

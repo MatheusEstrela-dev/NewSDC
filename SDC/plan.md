@@ -1,125 +1,35 @@
-# Plano: Implementar Finalize RAT com Motor CRUD
+# PAE Aba Anexos
 
-## Objetivo
-Validar a integracao do Motor CRUD Inteligente com o sistema de permissionamento hierarquico atraves da funcionalidade "Finalizar RAT".
+## Summary
 
----
+Implementar a aba **Anexos** no formulario PAE do novo SDC, posicionada entre **Apontamentos Tecnicos** e **Conclusao**.
 
-## Arquitetura Base Existente (Core/Actions)
+O fluxo segue a arquitetura:
 
-A arquitetura ja implementada fornece:
+`Request -> DTO -> Controller -> Service -> Model`
 
-1. **ActionConfigDTO** - Transporta configuracoes com:
-   - `requiredLevel` - nivel minimo para executar acao
-   - `getActionLevelMap()` - mapeamento nivel por acao
-   - `userHasRequiredLevel()` - verificacao de nivel
+## Backend
 
-2. **ActionPolicy** - Server-side Enforcement:
-   - `canExecute()` - verificacao completa (permissao + nivel + entidade)
-   - Registra Gates automaticamente via `registerGates()`
+- Criar tabela `pae_form_anexos` para guardar metadados e endereco do arquivo no storage.
+- Usar disk privado `pae`, apontando para `storage/app/pae`.
+- Salvar arquivos em `formularios/{pae_form_id}`.
+- Aceitar apenas `pdf`, `jpg`, `jpeg` e `png`, com limite de 10 MB.
+- Expor rotas para upload, download e remocao.
+- Bloquear download/remocao quando o anexo nao pertencer ao formulario informado.
 
-3. **AbstractModuleActions** - Base para modulos:
-   - `canExecute()` - verifica condicoes da entidade
-   - `getConditionalOverrides()` - overrides por status
-   - `createActionConfig()` - helper para criar DTOs
+## Frontend
 
----
+- Inserir aba **Anexos** como etapa 4.
+- Mover **Conclusao** para etapa 5.
+- Bloquear upload enquanto o formulario ainda nao tiver ID.
+- Enviar upload como `multipart/form-data`.
+- Listar anexos com nome, tamanho, descricao e acoes de baixar/remover.
 
-## Arquivos a Modificar
+## Tests
 
-### Backend
-
-| # | Arquivo | Alteracao |
-|---|---------|-----------|
-| 1 | `app/Core/Actions/Enums/ActionType.php` | Adicionar case FINALIZE |
-| 2 | `app/Core/Actions/DTOs/ActionConfigDTO.php` | Adicionar 'finalize' no getActionLevelMap e fromActionType |
-| 3 | `app/Modules/Rat/Config/RatActionsConfig.php` | Adicionar FINALIZE nas acoes + condicoes |
-| 4 | `app/Modules/Rat/Application/DTOs/FinalizeRatDTO.php` | CRIAR - DTO para transporte |
-| 5 | `app/Modules/Rat/Application/Services/RatService.php` | CRIAR - Logica de negocio |
-| 6 | `app/Modules/Rat/Presentation/Http/Controllers/RatIndexController.php` | Adicionar metodo finalize() |
-| 7 | `routes/modules/rat.php` | Adicionar rota PATCH /rat/{id}/finalize |
-| 8 | `app/Modules/Rat/RatServiceProvider.php` | Registrar RatService |
-
-### Frontend
-
-| # | Arquivo | Alteracao |
-|---|---------|-----------|
-| 9 | `resources/js/domain/actions/ActionTypes.js` | Adicionar FINALIZE |
-
----
-
-## Detalhamento das Alteracoes
-
-### 1. ActionType.php
-- Adicionar `case FINALIZE = 'finalize'`
-- label: 'Finalizar'
-- variant: 'success'
-- icon: 'CheckIcon'
-
-### 2. ActionConfigDTO.php
-- Em `getActionLevelMap()`: adicionar `'finalize' => config('permissions.levels.manager', 2)`
-- Em `fromActionType()`: adicionar FINALIZE em requiresConfirmation e confirmationMessage
-
-### 3. RatActionsConfig.php
-- Adicionar `ActionType::FINALIZE` em `getAvailableActions()`
-- Configurar em `getDefaultConfig()` com order: 7
-- Em `getConditionalOverrides()`: desabilitar se status = 'finalizado' ou 'rascunho'
-- Sobrescrever `canExecute()` para validar status
-
-### 4-5. FinalizeRatDTO e RatService
-- DTO: readonly class com id e userId
-- Service: injeta RatRepositoryInterface, valida regras de dominio
-
-### 6. RatIndexController
-- Injetar RatService via construtor
-- Metodo `finalize(int $id)` com Gate::authorize + Service
-
-### 7. Rotas
-- `Route::patch('/{id}/finalize', ...)->middleware('can:rat.finalize')`
-
-### 9. ActionTypes.js
-- Adicionar em ActionTypes, ActionDefaults e ActionToPropMap
-
----
-
-## Fluxo de Validacao (Defense in Depth)
-
-```
-[1. Frontend - useActionConfig]
-isActionEnabled('finalize')
-  |-- isSuperAdmin? -> bypass
-  |-- overrides[finalize] === false? -> block
-  |-- moduleConfig.finalize.enabled? -> block
-  |-- can('rat.finalize')? -> block
-  |-- userLevel > requiredLevel(2)? -> block
-  |-- return true
-
-[2. Controller - Gate]
-Gate::authorize('rat.finalize', $rat)
-  |-- ActionPolicy.canExecute()
-  |   |-- isSuperAdmin? -> bypass
-  |   |-- actionConfig.enabled? -> block
-  |   |-- checkPermission()? -> block
-  |   |-- checkLevel()? -> block
-  |   |-- RatActionsConfig.canExecute($entity)? -> block
-
-[3. Service - Regras de Dominio]
-RatService.finalize(FinalizeRatDTO)
-  |-- status === 'finalizado'? -> DomainException
-  |-- status === 'rascunho'? -> DomainException
-  |-- Repository.update()
-```
-
----
-
-## Principios Validados
-
-| Principio | Implementacao |
-|-----------|---------------|
-| **SRP** | DTO (dados), Service (negocio), Controller (orquestracao), Policy (seguranca) |
-| **OCP** | ActionType enum extensivel sem modificar logica existente |
-| **LSP** | RatActionsConfig substitui AbstractModuleActions |
-| **ISP** | Interfaces segregadas (ActionConfigInterface, ModuleActionsInterface) |
-| **DIP** | Service depende de RatRepositoryInterface, nao EloquentRatRepository |
-| **DRY** | Configuracao centralizada, createActionConfig() reutilizado |
-| **Defense in Depth** | 3 camadas independentes de validacao |
+- Upload valido de PDF e imagem.
+- Rejeicao de extensao invalida.
+- Rejeicao de arquivo acima de 10 MB.
+- Remocao apaga registro e arquivo fisico.
+- Download retorna arquivo correto.
+- Download/remocao de anexo de outro formulario retorna 404.

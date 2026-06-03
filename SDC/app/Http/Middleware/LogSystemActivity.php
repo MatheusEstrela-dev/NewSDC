@@ -25,33 +25,31 @@ class LogSystemActivity
 
         $startTime = microtime(true);
 
-        // Executa a requisição
+        // Executa a requisicao
         $response = $next($request);
 
-        // Calcula duração
-        $duration = (microtime(true) - $startTime) * 1000; // em ms
+        // Log assincrono via terminate para nao bloquear a resposta
+        // O registro acontece APOS a resposta ser enviada ao cliente
+        app()->terminating(function () use ($request, $response, $startTime) {
+            $duration = (microtime(true) - $startTime) * 1000;
+            $type = $request->expectsJson() ? 'api_request' : 'web_request';
 
-        // Determina o tipo de evento (API ou WEB)
-        $type = $request->expectsJson() ? 'api_request' : 'web_request';
-
-        // Log detalhado
-        ActivityLogger::logEvent(
-            type: 'system_activity',
-            event: $type,
-            data: [
-                'method' => $request->method(),
-                'url' => $request->fullUrl(),
-                'route' => $request->route()?->getName(),
-                'status_code' => $response->getStatusCode(),
-                'duration_ms' => round($duration, 2),
-                'ip' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'user_id' => auth()->id() ?? 'guest',
-                'inputs' => $request->except(['password', 'password_confirmation', '_token']),
-            ],
-            userId: auth()->id() ? (string) auth()->id() : null,
-            level: $response->getStatusCode() >= 400 ? 'warning' : 'info'
-        );
+            ActivityLogger::logEvent(
+                type: 'system_activity',
+                event: $type,
+                data: [
+                    'method' => $request->method(),
+                    'url' => $request->fullUrl(),
+                    'route' => $request->route()?->getName(),
+                    'status_code' => $response->getStatusCode(),
+                    'duration_ms' => round($duration, 2),
+                    'ip' => $request->ip(),
+                    'user_id' => auth()->id() ?? 'guest',
+                ],
+                userId: auth()->id() ? (string) auth()->id() : null,
+                level: $response->getStatusCode() >= 400 ? 'warning' : 'info'
+            );
+        });
 
         return $response;
     }

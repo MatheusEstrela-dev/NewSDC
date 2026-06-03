@@ -1,1 +1,1 @@
-export { usePermissions } from '../composables/auth/usePermissions';
+export { usePermissions } from './auth/usePermissions';

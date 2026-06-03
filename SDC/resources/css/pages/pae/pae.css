@@ -14,7 +14,7 @@
 
 /* Campos de Formulário */
 .form-input {
-  @apply w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition-all duration-200;
+  @apply w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition-all duration-200;
 }
 
 .form-input:hover {
@@ -22,21 +22,45 @@
 }
 
 .form-input:focus {
-  @apply border-blue-500 dark:border-blue-500 bg-white dark:bg-slate-900 shadow-[0_0_0_1px_rgba(59,130,246,0.5)];
+  @apply border-blue-500 dark:border-blue-500 bg-white dark:bg-slate-900;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5);
 }
 
 .form-input::placeholder {
   @apply text-slate-400 dark:text-slate-500;
 }
 
+/* Estado preenchido — verde igual ao módulo RAT */
+.form-input.form-input-filled {
+  @apply border-2 border-emerald-500 bg-emerald-50 text-emerald-900;
+  @apply dark:bg-emerald-900/20 dark:text-emerald-100 dark:border-emerald-500;
+  @apply hover:border-emerald-500 shadow-sm shadow-emerald-500/10;
+}
+
+.form-input.form-input-filled:focus {
+  @apply border-emerald-500 ring-2 ring-emerald-500/30;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4);
+}
+
+.form-select.form-select-filled {
+  @apply border-2 border-emerald-500 bg-emerald-50 text-emerald-900;
+  @apply dark:bg-emerald-900/20 dark:text-emerald-100 dark:border-emerald-500;
+  @apply hover:border-emerald-500 shadow-sm shadow-emerald-500/10;
+}
+
+.form-select.form-select-filled:focus {
+  @apply border-emerald-500 ring-2 ring-emerald-500/30;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.4);
+}
+
 /* Campos Readonly */
 .form-input-readonly {
-  @apply w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700/30 rounded-lg px-4 py-2.5 text-slate-500 dark:text-slate-400 cursor-default outline-none;
+  @apply w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700/30 rounded-xl px-4 py-2.5 text-slate-500 dark:text-slate-400 cursor-default outline-none;
 }
 
 /* Select Fields */
 .form-select {
-  @apply w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition-all duration-200 appearance-none cursor-pointer;
+  @apply w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 outline-none transition-all duration-200 appearance-none cursor-pointer;
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
   background-position: right 0.5rem center;
   background-repeat: no-repeat;
@@ -98,6 +122,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -112,6 +137,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -162,15 +188,15 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   .pae-container {
     padding: 1rem;
   }
-  
+
   .pae-card {
     @apply rounded-lg;
   }
-  
+
   .pae-card-header {
     @apply px-4 py-3;
   }
-  
+
   .pae-card-title {
     @apply text-base;
   }
@@ -190,6 +216,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 /* Responsive form fields */
 @media (max-width: 640px) {
+
   .form-input,
   .form-select {
     @apply text-sm;
@@ -203,4 +230,3 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     @apply -mx-4 px-4;
   }
 }
-

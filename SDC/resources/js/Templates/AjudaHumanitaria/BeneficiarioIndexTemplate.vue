@@ -77,16 +77,21 @@
     />
 
     <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
-    <div v-else-if="viewMode === 'table' && !isMobile" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <table class="w-full">
-        <thead class="bg-slate-50 dark:bg-slate-700/50">
+    <ListContainer
+      v-else-if="viewMode === 'table' && !isMobile"
+      title="Lista de Beneficiários"
+      :icon="UsersIcon"
+      :count="beneficiarios.length"
+    >
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Nome</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">CPF</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Status</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Contato</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Município</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider w-40 min-w-40">Ações</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Nome</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">CPF</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Status</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Contato</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Município</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-40 min-w-40">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
@@ -109,29 +114,28 @@
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ beneficiario.municipio?.nome || beneficiario.municipio || '—' }}</td>
             <td class="px-4 py-3 text-right w-40 min-w-40">
               <div class="flex justify-end">
-                <TableActions
-                  :show-view="true"
-                  :show-print="true"
-                  :show-edit="canEdit"
-                  :show-attachments="false"
-                  :show-delete="canDelete"
+                <ActionButton
+                  module="humanitaria"
+                  resource="beneficiarios"
                   size="sm"
-                  @view="$emit('view', beneficiario.id)"
-                  @print="handlePrint(beneficiario.id)"
-                  @edit="$emit('edit', beneficiario.id)"
-                  @delete="$emit('delete', beneficiario.id)"
+                  :actions="[
+                    { action: 'view',   handler: () => $emit('view', beneficiario.id) },
+                    { action: 'print',  handler: () => handlePrint(beneficiario.id) },
+                    { action: 'edit',   handler: () => $emit('edit', beneficiario.id),   allowed: canEdit },
+                    { action: 'delete', handler: () => $emit('delete', beneficiario.id), allowed: canDelete },
+                  ]"
                 />
               </div>
             </td>
           </tr>
           <tr v-if="!beneficiarios || beneficiarios.length === 0">
-            <td colspan="6" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
-              Nenhum beneficiário encontrado
+            <td colspan="6" class="p-0">
+              <ListEmptyState title="Nenhum beneficiário encontrado" />
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
+    </ListContainer>
 
     <!-- Pagination -->
     <div v-if="pagination" class="mt-6">
@@ -146,9 +150,12 @@
 <script setup>
 import Button from '@/Components/Atoms/Button/Button.vue';
 import HeartIcon from '@/Components/Icons/HeartIcon.vue';
+import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import ListContainer from '@/Components/Organisms/ListContainer.vue';
+import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import BeneficiarioFiltersSection from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioFiltersSection.vue';
 import BeneficiarioGrid from '@/Components/Organisms/AjudaHumanitaria/BeneficiarioGrid.vue';
@@ -235,7 +242,7 @@ const {
 } = useExport('ajuda-humanitaria.beneficiarios.export');
 
 function handleExportCsv(params) {
-  triggerExport(params, filters.value);
+  triggerExport(params, localFilters.value);
 }
 
 // =========================

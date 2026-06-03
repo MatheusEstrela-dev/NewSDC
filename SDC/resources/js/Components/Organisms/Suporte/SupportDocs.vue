@@ -15,13 +15,27 @@ import {
     InformationCircleIcon,
     LockClosedIcon,
     MagnifyingGlassIcon,
+    PlayCircleIcon,
     ScaleIcon,
     Squares2X2Icon,
     XMarkIcon
 } from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
+import { usePage } from '@inertiajs/vue3';
+import { useWelcomeTour } from '@/composables/auth/useWelcomeTour';
 
 const emit = defineEmits(['open-tickets', 'close']);
+
+const page = usePage();
+const { startWelcomeTour } = useWelcomeTour({
+    userName: page.props.auth?.user?.name ?? '',
+    skipPersist: true,
+});
+
+const restartTour = () => {
+    emit('close');
+    setTimeout(() => startWelcomeTour(), 350);
+};
 
 const activeModuleId = ref(null);
 const searchTerm = ref('');
@@ -152,7 +166,14 @@ activeModuleId.value = 'rat';
                 </div>
             </nav>
 
-            <div class="p-3 sm:p-4 bg-slate-100/50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700">
+            <div class="p-3 sm:p-4 bg-slate-100/50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 space-y-2">
+                <button
+                    @click="restartTour"
+                    class="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-200 dark:shadow-emerald-900/30 active:scale-95"
+                >
+                    <PlayCircleIcon class="w-4 h-4" />
+                    Reiniciar Tour Guiado
+                </button>
                 <button
                     @click="$emit('open-tickets')"
                     class="w-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-all"

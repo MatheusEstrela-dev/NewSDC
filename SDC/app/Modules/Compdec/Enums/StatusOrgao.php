@@ -11,31 +11,13 @@ enum StatusOrgao: string
     case EM_IMPLANTACAO = 'em_implantacao';
     case SUSPENSO = 'suspenso';
 
-    public function getLabel(): string
+    public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::ATIVO => 'Ativo',
             self::INATIVO => 'Inativo',
             self::EM_IMPLANTACAO => 'Em Implantacao',
             self::SUSPENSO => 'Suspenso',
-        };
-    }
-
-    public function getBadgeColor(): string
-    {
-        return match($this) {
-            self::ATIVO => 'green',
-            self::INATIVO => 'gray',
-            self::EM_IMPLANTACAO => 'blue',
-            self::SUSPENSO => 'yellow',
-        };
-    }
-
-    public function podeReceberUsuarios(): bool
-    {
-        return match($this) {
-            self::ATIVO, self::EM_IMPLANTACAO => true,
-            self::INATIVO, self::SUSPENSO => false,
         };
     }
 
@@ -44,14 +26,14 @@ enum StatusOrgao: string
         return $this === self::ATIVO;
     }
 
-    public static function toSelectArray(): array
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    public static function options(): array
     {
         return array_map(
-            fn(self $status) => [
-                'value' => $status->value,
-                'label' => $status->getLabel(),
-            ],
-            self::cases()
+            fn (self $case): array => ['value' => $case->value, 'label' => $case->label()],
+            self::cases(),
         );
     }
 }

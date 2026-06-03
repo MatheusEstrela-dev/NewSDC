@@ -1,427 +1,439 @@
 <template>
-  <div class="rat-section-card">
-    <!-- Header -->
-    <div class="rat-section-header">
-      <div class="rat-section-icon rat-section-icon-purple">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      </div>
-      <div class="flex-1">
-        <h3 class="rat-section-title">Pessoas Envolvidas</h3>
-        <p class="text-xs text-slate-500 mt-0.5">Registro de vítimas, testemunhas e outras pessoas relacionadas à ocorrência</p>
-      </div>
-    </div>
-
-    <div class="rat-section-content">
-      <!-- Formulário Inline - Sempre visível por padrão -->
-      <div class="mb-6 p-6 rounded-lg bg-slate-50 dark:bg-slate-950/50 border-2 border-purple-500/30">
-        <h4 class="text-base font-semibold text-purple-600 dark:text-purple-400 mb-4">
-          {{ envolvidoEditIndex !== null ? 'Editar Envolvido' : 'Novo Envolvido' }}
-        </h4>
-
-        <div class="space-y-6">
-          <!-- Dados Pessoais -->
-          <div>
-            <h5 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4 pb-2 border-b border-slate-200 dark:border-slate-700/30">Dados Pessoais</h5>
-            <div class="space-y-4">
-              <div class="rat-grid-2">
-                <FormSelect
-                  label="Tipo de Pessoa"
-                  v-model="formEnvolvido.tipo_pessoa"
-                  :options="tipoPessoaOptions"
-                  required
-                />
-                <FormField
-                  label="CPF"
-                  v-model="formEnvolvido.cpf"
-                  mask="cpf"
-                  required
-                />
-              </div>
-              <div class="rat-grid-2">
-                <FormField
-                  label="Nome Completo / Razão Social"
-                  v-model="formEnvolvido.nome"
-                  required
-                />
-                <FormField
-                  label="Nome Social"
-                  v-model="formEnvolvido.nome_social"
-                />
-              </div>
-              <div class="rat-grid-3">
-                <FormField
-                  label="Data de Nascimento"
-                  type="date"
-                  v-model="formEnvolvido.data_nascimento"
-                />
-                <FormField
-                  label="Idade Aparente"
-                  type="number"
-                  v-model="formEnvolvido.idade_aparente"
-                />
-                <FormSelect
-                  label="Sexo"
-                  v-model="formEnvolvido.sexo"
-                  :options="sexoOptions"
-                />
-              </div>
-              <div class="rat-grid-2">
-                <FormField
-                  label="Nome da Mãe"
-                  v-model="formEnvolvido.nome_mae"
-                />
-                <FormField
-                  label="Nome do Pai"
-                  v-model="formEnvolvido.nome_pai"
-                />
-              </div>
-              <div class="rat-grid-2">
-                <FormField
-                  label="Ocupação Atual"
-                  v-model="formEnvolvido.ocupacao"
-                />
-                <FormSelect
-                  label="Escolaridade"
-                  v-model="formEnvolvido.escolaridade"
-                  :options="escolaridadeOptions"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- Endereço -->
-          <div>
-            <h5 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4 pb-2 border-b border-slate-200 dark:border-slate-700/30">Endereço</h5>
-            <div class="space-y-4">
-              <div class="rat-grid-3">
-                <FormField
-                  label="CEP"
-                  v-model="formEnvolvido.cep"
-                  mask="cep"
-                  @blur="buscarCepEnvolvido"
-                />
-                <FormField
-                  label="UF"
-                  v-model="formEnvolvido.uf"
-                  maxlength="2"
-                />
-                <FormField
-                  label="Município"
-                  v-model="formEnvolvido.municipio"
-                />
-              </div>
-              <div class="rat-grid-2">
-                <FormField
-                  label="Logradouro"
-                  v-model="formEnvolvido.logradouro"
-                />
-                <FormField
-                  label="Bairro"
-                  v-model="formEnvolvido.bairro"
-                />
-              </div>
-              <div class="rat-grid-3">
-                <FormField
-                  label="Número"
-                  v-model="formEnvolvido.numero"
-                />
-                <FormField
-                  label="Complemento"
-                  v-model="formEnvolvido.complemento"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- Contato -->
-          <div>
-            <h5 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4 pb-2 border-b border-slate-200 dark:border-slate-700/30">Contato</h5>
-            <div class="rat-grid-2">
-              <FormField
-                label="Telefone"
-                v-model="formEnvolvido.telefone"
-                mask="phone"
-              />
-              <FormField
-                label="E-mail"
-                type="email"
-                v-model="formEnvolvido.email"
-              />
-            </div>
-          </div>
-
-          <!-- Ações -->
-          <div class="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700/30">
-            <button
-              v-if="envolvidoEditIndex !== null"
-              @click="cancelarFormulario"
-              type="button"
-              class="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-300 dark:border-slate-700"
-            >
-              Cancelar Edição
-            </button>
-            <button
-              @click="salvarEnvolvido"
-              type="button"
-              class="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium bg-purple-600 text-white hover:bg-purple-500 transition-all"
-            >
-              {{ envolvidoEditIndex !== null ? 'Salvar Alterações' : 'Adicionar' }}
-            </button>
-          </div>
+  <fieldset :disabled="props.viewOnly" style="border:none;padding:0;margin:0;min-width:0;">
+    <div class="rat-section-card">
+      <div class="rat-section-header">
+        <div class="rat-section-icon rat-section-icon-purple">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="rat-section-title">Dados do Envolvido</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Informações pessoais, documentação e contato</p>
         </div>
       </div>
 
-      <!-- Lista de Envolvidos -->
-      <div v-if="localData.length > 0" class="space-y-4">
-        <p class="text-sm text-slate-400 mb-4">
-          {{ localData.length }} pessoa(s) registrada(s)
-        </p>
+      <div class="rat-section-content">
 
-        <div
-          v-for="(envolvido, index) in localData"
-          :key="index"
-          class="p-5 rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-700/30 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all"
-        >
-          <div class="flex items-start justify-between gap-4">
-            <div class="flex-1">
-              <!-- Nome e Tipo -->
-              <div class="flex items-center gap-3 mb-3">
-                <h4 class="text-base font-semibold text-slate-800 dark:text-slate-200">{{ envolvido.nome }}</h4>
-                <span class="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400">
-                  {{ envolvido.tipo_pessoa }}
-                </span>
-              </div>
-
-              <!-- Informações Principais -->
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-3">
-                <div v-if="envolvido.cpf">
-                  <span class="text-slate-500">CPF:</span>
-                  <span class="text-slate-700 dark:text-slate-300 ml-2">{{ envolvido.cpf }}</span>
-                </div>
-                <div v-if="envolvido.data_nascimento">
-                  <span class="text-slate-500">Data Nasc.:</span>
-                  <span class="text-slate-700 dark:text-slate-300 ml-2">{{ formatarData(envolvido.data_nascimento) }}</span>
-                </div>
-                <div v-if="envolvido.sexo">
-                  <span class="text-slate-500">Sexo:</span>
-                  <span class="text-slate-700 dark:text-slate-300 ml-2">{{ envolvido.sexo }}</span>
-                </div>
-                <div v-if="envolvido.telefone">
-                  <span class="text-slate-500">Telefone:</span>
-                  <span class="text-slate-700 dark:text-slate-300 ml-2">{{ envolvido.telefone }}</span>
-                </div>
-                <div v-if="envolvido.ocupacao">
-                  <span class="text-slate-500">Ocupação:</span>
-                  <span class="text-slate-700 dark:text-slate-300 ml-2">{{ envolvido.ocupacao }}</span>
-                </div>
-              </div>
-
-              <!-- Endereço -->
-              <div v-if="envolvido.logradouro" class="text-xs text-slate-500">
-                <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                {{ envolvido.logradouro }}{{ envolvido.numero ? ', ' + envolvido.numero : '' }}
-                {{ envolvido.bairro ? ' - ' + envolvido.bairro : '' }}
-                {{ envolvido.municipio ? ' - ' + envolvido.municipio : '' }}
-              </div>
+        <!-- === Dados Pessoais === -->
+        <div class="space-y-4">
+          <h4 class="subsection-label">Dados Pessoais</h4>
+          <div class="rat-grid-3">
+            <FormSelect
+              label="Tipo de Envolvimento"
+              v-model="localData.g_tipo_pessoa"
+              :options="tipoEnvolvimentoOptions"
+              required
+            />
+            <FormField label="Nome Completo" v-model="localData.p_nome_completo" placeholder="Nome da pessoa" required />
+            <FormField label="Nome Social" v-model="localData.p_nome_social" placeholder="Se houver" />
+          </div>
+          <div class="rat-grid-4">
+            <FormField label="CPF" v-model="localData.p_cpf" mask="cpf" />
+            <div>
+              <label class="form-label">Data de Nascimento</label>
+              <DatePicker v-model="localData.p_data_nascimento" />
             </div>
-
-            <!-- Ações -->
-            <div class="flex gap-2">
-              <button
-                @click="editarEnvolvido(index)"
-                type="button"
-                class="p-2 rounded-lg text-blue-400 hover:bg-blue-500/10 transition-all"
-                title="Editar"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              <button
-                @click="removerEnvolvido(index)"
-                type="button"
-                class="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-all"
-                title="Remover"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
+            <FormSelect label="Sexo" v-model="localData.p_sexo" :options="sexoOptions" />
+            <FormSelect label="Grau de Lesão" v-model="localData.g_lesao_grau" :options="lesaoOptions" />
+          </div>
+          <div class="rat-grid-3">
+            <FormField label="Nome da Mãe" v-model="localData.p_nome_mae" />
+            <FormField label="Nome do Pai" v-model="localData.p_nome_pai" />
+            <FormField label="Ocupação Atual" v-model="localData.p_ocupacao_atual" />
+          </div>
+          <div class="rat-grid-3">
+            <FormSelect label="Escolaridade" v-model="localData.p_escolaridade" :options="escolaridadeOptions" />
+            <FormSelect label="Estado Civil" v-model="localData.p_estado_civil" :options="estadoCivilOptions" />
+            <FormSelect label="Etnia / Cor" v-model="localData.p_cor_raca" :options="corRacaOptions" />
+          </div>
+          <div class="rat-grid-3">
+            <FormSelect label="Orientação Sexual" v-model="localData.p_orientacao_sexual" :options="orientacaoSexualOptions" />
+            <FormSelect label="Identidade de Gênero" v-model="localData.p_identidade_genero" :options="identidadeGeneroOptions" />
+            <FormField label="Nacionalidade" v-model="localData.p_nacionalidade" />
+          </div>
+          <div class="rat-grid-3">
+            <FormSelect label="País de Origem" v-model="localData.p_pais_origem" :options="paisOptions" />
+            <FormSelect label="Naturalidade / UF" v-model="localData.p_naturalidade_uf" :options="ufOptions" />
+            <div>
+              <label class="form-label">Turista</label>
+              <div class="flex gap-5 mt-2.5">
+                <label class="radio-label">
+                  <input type="radio" :value="true" v-model="localData.p_turista" class="radio-input" />
+                  Sim
+                </label>
+                <label class="radio-label">
+                  <input type="radio" :value="false" v-model="localData.p_turista" class="radio-input" />
+                  Não
+                </label>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Empty State - Só aparece quando não há envolvidos e não está editando -->
-      <div v-if="localData.length === 0 && envolvidoEditIndex === null" class="text-center py-8 mt-4">
-        <p class="text-slate-500 text-sm">Nenhuma pessoa registrada ainda. Preencha o formulário acima para adicionar.</p>
+        <!-- === Documentação de Identificação === -->
+        <div class="pt-5 border-t border-slate-200 dark:border-slate-700/30 space-y-4">
+          <h4 class="subsection-label">Documentação de Identificação</h4>
+          <div class="rat-grid-4">
+            <FormSelect label="Tipo de Documento" v-model="localData.p_tipo" :options="tipoDocOptions" />
+            <FormField label="Número do Documento" v-model="localData.p_numero" />
+            <FormField label="Órgão Expedidor" v-model="localData.p_orgao_expedidor" />
+            <FormSelect label="UF Expedidora" v-model="localData.p_uf" :options="ufOptions" />
+          </div>
+        </div>
+
+        <!-- === Endereço === -->
+        <div class="pt-5 border-t border-slate-200 dark:border-slate-700/30 space-y-4">
+          <h4 class="subsection-label">Endereço</h4>
+          <div class="rat-grid-4">
+            <div>
+              <label class="form-label">CEP</label>
+              <div class="flex gap-1.5">
+                <input
+                  type="text"
+                  :value="localData.p_end_cep"
+                  @input="localData.p_end_cep = applyCepMask($event.target.value)"
+                  maxlength="9"
+                  placeholder="00000-000"
+                  class="cep-input flex-1 min-w-0"
+                />
+                <button type="button" @click="buscarEnderecoCep" class="cep-btn" title="Buscar CEP">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <FormSelect label="País" v-model="localData.p_end_pais" :options="paisOptions" />
+            <FormSelect label="Estado / UF" v-model="localData.p_end_estado_uf" :options="ufOptions" />
+            <FormField label="Município" v-model="localData.p_end_municipio" />
+          </div>
+          <div class="rat-grid-3">
+            <FormField label="Bairro" v-model="localData.p_end_bairro" />
+            <FormField label="Logradouro" v-model="localData.p_end_logradouro" />
+            <FormField label="Número" v-model="localData.p_end_numero" />
+          </div>
+          <div class="rat-grid-3">
+            <FormField label="Complemento" v-model="localData.p_end_complemento" />
+            <FormField label="KM" type="number" v-model="localData.p_end_km" />
+            <FormField label="Código IBGE" v-model="localData.p_end_ibge" />
+          </div>
+        </div>
+
+        <!-- === Contato === -->
+        <div class="pt-5 border-t border-slate-200 dark:border-slate-700/30 space-y-4">
+          <h4 class="subsection-label">Contato</h4>
+          <div class="rat-grid-3">
+            <FormField label="Telefone Residencial" v-model="localData.p_telefone_residencial" mask="phone" />
+            <FormField label="Telefone Comercial" v-model="localData.p_telefone_comercial" mask="phone" />
+            <FormField label="E-mail" v-model="localData.p_email" type="email" />
+          </div>
+          <FormField label="Motivo de Ausência de Contato" v-model="localData.p_motivo_ausencia_contato" type="textarea" />
+        </div>
+
+        <!-- === Informações Adicionais === -->
+        <div class="pt-5 border-t border-slate-200 dark:border-slate-700/30 space-y-4">
+          <h4 class="subsection-label">Informações Adicionais</h4>
+          <div class="rat-grid-2">
+            <div>
+              <label class="form-label">Militar / Policial em Serviço</label>
+              <div class="flex gap-5 mt-2.5">
+                <label class="radio-label">
+                  <input type="radio" :value="true" v-model="localData.g_envolvido_presenca" class="radio-input" />
+                  Sim
+                </label>
+                <label class="radio-label">
+                  <input type="radio" :value="false" v-model="localData.g_envolvido_presenca" class="radio-input" />
+                  Não
+                </label>
+              </div>
+            </div>
+            <div>
+              <label class="form-label">Situação de Rua</label>
+              <div class="flex gap-5 mt-2.5">
+                <label class="radio-label">
+                  <input type="radio" :value="true" v-model="localData.p_situacao_rua" class="radio-input" />
+                  Sim
+                </label>
+                <label class="radio-label">
+                  <input type="radio" :value="false" v-model="localData.p_situacao_rua" class="radio-input" />
+                  Não
+                </label>
+                <label class="radio-label">
+                  <input type="radio" :value="null" v-model="localData.p_situacao_rua" class="radio-input" />
+                  Não informado
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
-  </div>
+  </fieldset>
 </template>
 
 <script setup>
-import { useCep } from '@/composables/location';
 import { ref, watch } from 'vue';
+import { useCep } from '@/composables/location';
 import FormField from '../../Form/FormField.vue';
 import FormSelect from '../../Form/FormSelect.vue';
+import DatePicker from '../../Form/DatePicker.vue';
 
 const props = defineProps({
-  modelValue: {
-    type: Array,
-    default: () => [],
-  },
+  modelValue: { type: Object, default: () => ({}) },
+  viewOnly:   { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
 
-const localData = ref([...props.modelValue]);
-const mostrarFormulario = ref(true); // Sempre visível por padrão
-const envolvidoEditIndex = ref(null);
+const mv = props.modelValue ?? {};
 
-const formEnvolvido = ref({});
-
-const resetForm = () => {
-  formEnvolvido.value = {
-    tipo_pessoa: 'Vítima',
-    nome: '',
-    nome_social: '',
-    cpf: '',
-    data_nascimento: '',
-    idade_aparente: '',
-    sexo: '',
-    nome_mae: '',
-    nome_pai: '',
-    ocupacao: '',
-    escolaridade: '',
-    cep: '',
-    uf: '',
-    municipio: '',
-    logradouro: '',
-    bairro: '',
-    numero: '',
-    complemento: '',
-    telefone: '',
-    email: '',
-  };
-};
+const localData = ref({
+  id: mv.id || Date.now(),
+  // Dados Gerais
+  g_tipo_pessoa:        mv.g_tipo_pessoa        || mv.tipo_envolvimento || '',
+  g_lesao_grau:         mv.g_lesao_grau         || '',
+  // Dados Pessoais
+  p_nome_completo:      mv.p_nome_completo      || mv.nome             || '',
+  p_nome_social:        mv.p_nome_social        || '',
+  p_cpf:                mv.p_cpf                || mv.cpf              || '',
+  p_data_nascimento:    mv.p_data_nascimento    || mv.data_nascimento  || '',
+  p_sexo:               mv.p_sexo               || mv.sexo             || '',
+  p_nome_mae:           mv.p_nome_mae           || '',
+  p_nome_pai:           mv.p_nome_pai           || '',
+  p_ocupacao_atual:     mv.p_ocupacao_atual     || '',
+  p_escolaridade:       mv.p_escolaridade       || '',
+  p_estado_civil:       mv.p_estado_civil       || '',
+  p_cor_raca:           mv.p_cor_raca           || '',
+  p_orientacao_sexual:  mv.p_orientacao_sexual  || '',
+  p_identidade_genero:  mv.p_identidade_genero  || '',
+  p_nacionalidade:      mv.p_nacionalidade      || '',
+  p_pais_origem:        mv.p_pais_origem        || '',
+  p_naturalidade_uf:    mv.p_naturalidade_uf    || '',
+  p_turista:            mv.p_turista            ?? null,
+  // Documentação
+  p_tipo:               mv.p_tipo               || '',
+  p_numero:             mv.p_numero             || mv.rg               || '',
+  p_orgao_expedidor:    mv.p_orgao_expedidor    || '',
+  p_uf:                 mv.p_uf                 || '',
+  // Endereço
+  p_end_cep:            mv.p_end_cep            || mv.cep              || '',
+  p_end_pais:           mv.p_end_pais           || '',
+  p_end_estado_uf:      mv.p_end_estado_uf      || mv.uf               || '',
+  p_end_municipio:      mv.p_end_municipio      || mv.municipio        || '',
+  p_end_bairro:         mv.p_end_bairro         || mv.bairro           || '',
+  p_end_logradouro:     mv.p_end_logradouro     || mv.endereco         || '',
+  p_end_numero:         mv.p_end_numero         || '',
+  p_end_complemento:    mv.p_end_complemento    || '',
+  p_end_km:             mv.p_end_km             || '',
+  p_end_ibge:           mv.p_end_ibge           || '',
+  // Contato
+  p_telefone_residencial:    mv.p_telefone_residencial    || mv.telefone || '',
+  p_telefone_comercial:      mv.p_telefone_comercial      || '',
+  p_email:                   mv.p_email                   || '',
+  p_motivo_ausencia_contato: mv.p_motivo_ausencia_contato || '',
+  // Informações Adicionais
+  g_envolvido_presenca: mv.g_envolvido_presenca ?? null,
+  p_situacao_rua:       mv.p_situacao_rua       ?? null,
+});
 
 // Options
-const tipoPessoaOptions = [
-  { value: 'Vítima', label: 'Vítima' },
-  { value: 'Testemunha', label: 'Testemunha' },
-  { value: 'Solicitante', label: 'Solicitante' },
-  { value: 'Proprietário', label: 'Proprietário' },
-  { value: 'Outros', label: 'Outros' },
+const tipoEnvolvimentoOptions = [
+  { value: 'vitima',       label: 'Vítima' },
+  { value: 'testemunha',   label: 'Testemunha' },
+  { value: 'solicitante',  label: 'Solicitante' },
+  { value: 'proprietario', label: 'Proprietário' },
+  { value: 'condutor',     label: 'Condutor' },
+  { value: 'passageiro',   label: 'Passageiro' },
+  { value: 'pedestre',     label: 'Pedestre' },
+  { value: 'autor',        label: 'Autor' },
+  { value: 'suspeito',     label: 'Suspeito' },
+  { value: 'outros',       label: 'Outros' },
 ];
 
 const sexoOptions = [
   { value: 'M', label: 'Masculino' },
   { value: 'F', label: 'Feminino' },
   { value: 'O', label: 'Outro' },
+  { value: 'N', label: 'Não informado' },
+];
+
+const lesaoOptions = [
+  { value: 'sem_lesao',  label: 'Sem Lesão' },
+  { value: 'leve',       label: 'Leve' },
+  { value: 'moderada',   label: 'Moderada' },
+  { value: 'grave',      label: 'Grave' },
+  { value: 'gravissima', label: 'Gravíssima' },
+  { value: 'fatal',      label: 'Fatal' },
 ];
 
 const escolaridadeOptions = [
+  { value: 'nenhuma',                label: 'Nenhuma' },
   { value: 'fundamental_incompleto', label: 'Fundamental Incompleto' },
-  { value: 'fundamental_completo', label: 'Fundamental Completo' },
-  { value: 'medio_incompleto', label: 'Médio Incompleto' },
-  { value: 'medio_completo', label: 'Médio Completo' },
-  { value: 'superior_incompleto', label: 'Superior Incompleto' },
-  { value: 'superior_completo', label: 'Superior Completo' },
+  { value: 'fundamental_completo',   label: 'Fundamental Completo' },
+  { value: 'medio_incompleto',       label: 'Médio Incompleto' },
+  { value: 'medio_completo',         label: 'Médio Completo' },
+  { value: 'superior_incompleto',    label: 'Superior Incompleto' },
+  { value: 'superior_completo',      label: 'Superior Completo' },
+  { value: 'pos_graduacao',          label: 'Pós-Graduação' },
+  { value: 'nao_informado',          label: 'Não Informado' },
 ];
 
-// Função removida - formulário sempre visível
+const estadoCivilOptions = [
+  { value: 'solteiro',      label: 'Solteiro(a)' },
+  { value: 'casado',        label: 'Casado(a)' },
+  { value: 'uniao_estavel', label: 'União Estável' },
+  { value: 'separado',      label: 'Separado(a)' },
+  { value: 'divorciado',    label: 'Divorciado(a)' },
+  { value: 'viuvo',         label: 'Viúvo(a)' },
+  { value: 'nao_informado', label: 'Não Informado' },
+];
 
-const cancelarFormulario = () => {
-  resetForm();
-  envolvidoEditIndex.value = null;
-  // Formulário permanece visível, apenas reseta os campos
-};
+const corRacaOptions = [
+  { value: 'branca',        label: 'Branca' },
+  { value: 'preta',         label: 'Preta' },
+  { value: 'parda',         label: 'Parda' },
+  { value: 'amarela',       label: 'Amarela' },
+  { value: 'indigena',      label: 'Indígena' },
+  { value: 'nao_informado', label: 'Não Informado' },
+];
 
-const editarEnvolvido = (index) => {
-  formEnvolvido.value = { ...localData.value[index] };
-  envolvidoEditIndex.value = index;
-  // Scroll suave para o formulário
-  setTimeout(() => {
-    const formElement = document.querySelector('.rat-section-content');
-    if (formElement) {
-      formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, 100);
-};
+const orientacaoSexualOptions = [
+  { value: 'heterossexual', label: 'Heterossexual' },
+  { value: 'homossexual',   label: 'Homossexual' },
+  { value: 'bissexual',     label: 'Bissexual' },
+  { value: 'outros',        label: 'Outros' },
+  { value: 'nao_informado', label: 'Não Informado' },
+];
 
-const salvarEnvolvido = () => {
-  if (!formEnvolvido.value.nome || !formEnvolvido.value.cpf) {
-    alert('Nome e CPF são obrigatórios');
-    return;
-  }
+const identidadeGeneroOptions = [
+  { value: 'cisgenero',    label: 'Cisgênero' },
+  { value: 'transgenero',  label: 'Transgênero' },
+  { value: 'nao_binario',  label: 'Não-Binário' },
+  { value: 'outros',       label: 'Outros' },
+  { value: 'nao_informado',label: 'Não Informado' },
+];
 
-  if (envolvidoEditIndex.value !== null) {
-    localData.value[envolvidoEditIndex.value] = { ...formEnvolvido.value };
-  } else {
-    localData.value.push({ ...formEnvolvido.value });
-  }
+const tipoDocOptions = [
+  { value: 'rg',                  label: 'RG - Identidade' },
+  { value: 'cnh',                 label: 'CNH' },
+  { value: 'passaporte',          label: 'Passaporte' },
+  { value: 'certidao_nascimento', label: 'Certidão de Nascimento' },
+  { value: 'ctps',                label: 'CTPS' },
+  { value: 'outros',              label: 'Outros' },
+];
 
-  emit('update:modelValue', localData.value);
-  
-  // Após salvar, reseta o formulário mas mantém visível para adicionar mais
-  resetForm();
-  envolvidoEditIndex.value = null;
-  
-  // Scroll suave para o topo do formulário
-  setTimeout(() => {
-    const formElement = document.querySelector('.rat-section-content');
-    if (formElement) {
-      formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, 100);
-};
+const ufOptions = [
+  { value: 'AC', label: 'AC' }, { value: 'AL', label: 'AL' }, { value: 'AP', label: 'AP' },
+  { value: 'AM', label: 'AM' }, { value: 'BA', label: 'BA' }, { value: 'CE', label: 'CE' },
+  { value: 'DF', label: 'DF' }, { value: 'ES', label: 'ES' }, { value: 'GO', label: 'GO' },
+  { value: 'MA', label: 'MA' }, { value: 'MT', label: 'MT' }, { value: 'MS', label: 'MS' },
+  { value: 'MG', label: 'MG' }, { value: 'PA', label: 'PA' }, { value: 'PB', label: 'PB' },
+  { value: 'PR', label: 'PR' }, { value: 'PE', label: 'PE' }, { value: 'PI', label: 'PI' },
+  { value: 'RJ', label: 'RJ' }, { value: 'RN', label: 'RN' }, { value: 'RS', label: 'RS' },
+  { value: 'RO', label: 'RO' }, { value: 'RR', label: 'RR' }, { value: 'SC', label: 'SC' },
+  { value: 'SP', label: 'SP' }, { value: 'SE', label: 'SE' }, { value: 'TO', label: 'TO' },
+];
 
-const removerEnvolvido = (index) => {
-  if (confirm('Deseja realmente remover esta pessoa?')) {
-    localData.value.splice(index, 1);
-    emit('update:modelValue', localData.value);
-  }
-};
+const paisOptions = [
+  { value: 'BR',     label: 'Brasil' },
+  { value: 'AR',     label: 'Argentina' },
+  { value: 'BO',     label: 'Bolívia' },
+  { value: 'CL',     label: 'Chile' },
+  { value: 'CO',     label: 'Colômbia' },
+  { value: 'EC',     label: 'Equador' },
+  { value: 'PY',     label: 'Paraguai' },
+  { value: 'PE',     label: 'Peru' },
+  { value: 'UY',     label: 'Uruguai' },
+  { value: 'VE',     label: 'Venezuela' },
+  { value: 'US',     label: 'Estados Unidos' },
+  { value: 'PT',     label: 'Portugal' },
+  { value: 'ES',     label: 'Espanha' },
+  { value: 'DE',     label: 'Alemanha' },
+  { value: 'FR',     label: 'França' },
+  { value: 'IT',     label: 'Itália' },
+  { value: 'JP',     label: 'Japão' },
+  { value: 'CN',     label: 'China' },
+  { value: 'outros', label: 'Outros' },
+];
+
+// CEP
+function applyCepMask(value) {
+  return value.replace(/\D/g, '').replace(/^(\d{5})(\d)/, '$1-$2').substring(0, 9);
+}
 
 const { buscarCep } = useCep();
 
-const buscarCepEnvolvido = async () => {
-  if (formEnvolvido.value.cep) {
-    const cepLimpo = formEnvolvido.value.cep.replace(/\D/g, '');
-    if (cepLimpo.length === 8) {
-      const resultado = await buscarCep(cepLimpo);
-      if (resultado) {
-        formEnvolvido.value.logradouro = resultado.logradouro || formEnvolvido.value.logradouro;
-        formEnvolvido.value.bairro = resultado.bairro || formEnvolvido.value.bairro;
-        formEnvolvido.value.municipio = resultado.localidade || formEnvolvido.value.municipio;
-        formEnvolvido.value.uf = resultado.uf || formEnvolvido.value.uf;
-      }
-    }
+async function buscarEnderecoCep() {
+  const cepLimpo = (localData.value.p_end_cep || '').replace(/\D/g, '');
+  if (cepLimpo.length !== 8) return;
+  const resultado = await buscarCep(cepLimpo);
+  if (resultado) {
+    localData.value.p_end_logradouro = resultado.logradouro || localData.value.p_end_logradouro;
+    localData.value.p_end_bairro     = resultado.bairro     || localData.value.p_end_bairro;
+    localData.value.p_end_municipio  = resultado.localidade || localData.value.p_end_municipio;
+    localData.value.p_end_estado_uf  = resultado.uf         || localData.value.p_end_estado_uf;
+    if (resultado.ibge) localData.value.p_end_ibge = resultado.ibge;
   }
-};
+}
 
-const formatarData = (data) => {
-  if (!data) return '';
-  const [ano, mes, dia] = data.split('-');
-  return `${dia}/${mes}/${ano}`;
-};
-
+// Sync local → parent
 watch(
-  () => props.modelValue,
-  (newValue) => {
-    if (newValue) {
-      localData.value = [...newValue];
+  () => localData.value,
+  (nv) => {
+    if (JSON.stringify(nv) !== JSON.stringify(props.modelValue)) {
+      emit('update:modelValue', nv);
     }
   },
   { deep: true }
 );
 
-// Inicializa o form vazio
-resetForm();
+// Sync parent → local
+watch(
+  () => props.modelValue,
+  (nv) => {
+    if (nv && JSON.stringify(nv) !== JSON.stringify(localData.value)) {
+      localData.value = JSON.parse(JSON.stringify(nv));
+    }
+  },
+  { deep: true }
+);
 </script>
+
+<style scoped>
+.form-label {
+  @apply block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 sm:mb-2;
+}
+
+.subsection-label {
+  @apply text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest;
+}
+
+.radio-label {
+  @apply flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer select-none;
+}
+
+.radio-input {
+  @apply h-4 w-4 text-blue-600 border-slate-300 dark:border-slate-600 focus:ring-blue-500 cursor-pointer;
+}
+
+.cep-input {
+  @apply px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-900/50
+    text-slate-900 dark:text-slate-200
+    placeholder-slate-400 dark:placeholder-slate-500
+    border border-slate-300 dark:border-slate-700/50
+    hover:border-slate-400 dark:hover:border-slate-600
+    focus:outline-none focus:ring-2 focus:ring-offset-0 focus:border-emerald-500 focus:ring-emerald-500/20
+    transition-all duration-200;
+}
+
+.cep-btn {
+  @apply px-2.5 rounded-xl bg-white dark:bg-slate-900/50
+    border border-slate-300 dark:border-slate-700/50
+    text-slate-600 dark:text-slate-400
+    hover:bg-slate-50 dark:hover:bg-slate-800
+    hover:border-slate-400 transition-all duration-200
+    flex items-center;
+}
+</style>

@@ -1,7 +1,11 @@
+/* Vendor CSS (importado antes do nosso para que possamos sobrescrever) */
+@import 'shepherd.js/dist/css/shepherd.css';
+
 /* Component Styles */
 @import './components/forms.css';
 @import './components/atoms/input.css';
 @import './components/beneficiario-card.css';
+@import './components/shepherd-sdc.css';
 
 /* Page Styles */
 @import './pages/rat/sections.css';

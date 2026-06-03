@@ -20,7 +20,7 @@ class HandleInertiaRequests extends Middleware
      */
     public function version(Request $request): string|null
     {
-        return parent::version($request);
+        return getenv('INERTIA_VERSION') ?: parent::version($request);
     }
 
     /**
@@ -36,9 +36,37 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => fn() => $user ? $this->getCachedUserData($user) : null,
+                // Flags de onboarding NAO sao cacheadas: variam por carregamento
+                // (must_change_password vira false apos o submit; show_welcome_tour
+                // vem da session flash logo apos a troca de senha).
+                'must_change_password' => fn() => $user ? (bool) $user->must_change_password : false,
+                'show_welcome_tour' => fn() => $user && $this->shouldShowWelcomeTour($request, $user),
             ],
-            'acl' => fn() => $this->getCachedAclConfig(),
+            // Nao vazar a arvore de ACL/permissoes em paginas publicas (login, etc).
+            // Antes: era exposta no data-page do Inertia mesmo sem usuario autenticado.
+            'acl' => fn() => $user ? $this->getCachedAclConfig() : (object) [],
+            'flash' => [
+                'success' => fn() => $request->session()->get('success'),
+                'error'   => fn() => $request->session()->get('error'),
+                'warning' => fn() => $request->session()->get('warning'),
+                'info'    => fn() => $request->session()->get('info'),
+            ],
         ];
+    }
+
+    /**
+     * Mostra o tour quando o usuario acabou de concluir o primeiro acesso
+     * (flash da session) OU quando ainda nao concluiu o tour e ja esta ativo.
+     */
+    protected function shouldShowWelcomeTour(Request $request, $user): bool
+    {
+        if ($request->session()->get('show_welcome_tour') === true) {
+            return true;
+        }
+
+        return $user->status === 'active'
+            && $user->welcome_tour_completed_at === null
+            && $user->must_change_password === false;
     }
 
     /**
@@ -49,7 +77,12 @@ class HandleInertiaRequests extends Middleware
     {
         $cacheKey = "inertia_user_data_{$user->id}";
 
-        return Cache::remember($cacheKey, 60, function () use ($user) {
+        return Cache::remember($cacheKey, 300, function () use ($user) {
+            $user->loadMissing('activeEmailChangeRequest');
+            // Eager load roles+permissions se nao carregados
+            if (!$user->relationLoaded('roles')) {
+                $user->load(['roles.permissions', 'permissions']);
+            }
             return $this->getUserData($user);
         });
     }
@@ -81,6 +114,7 @@ class HandleInertiaRequests extends Middleware
             'hierarchy_level' => method_exists($user, 'getHierarchyLevel')
                 ? $user->getHierarchyLevel()
                 : 99,
+            'pending_email_change' => $this->buildPendingEmailChange($user),
         ];
     }
 
@@ -95,12 +129,16 @@ class HandleInertiaRequests extends Middleware
      */
     protected function getEffectivePermissions($user): array
     {
-        if (!method_exists($user, 'permissions') || !method_exists($user, 'getPermissionsViaRoles')) {
+        if (!method_exists($user, 'permissions') || !method_exists($user, 'roles')) {
             return [];
         }
 
-        $rolePermissions = $user->getPermissionsViaRoles()->pluck('name')->values()->toArray();
-        $directPermissions = $user->permissions->pluck('name')->values()->toArray();
+        // Usar relationships ja eager-loaded para evitar N+1
+        $rolePermissions = $user->roles
+            ->flatMap(fn($role) => $role->permissions->pluck('name'))
+            ->toArray();
+
+        $directPermissions = $user->permissions->pluck('name')->toArray();
 
         return array_values(array_unique(array_merge($rolePermissions, $directPermissions)));
     }
@@ -128,5 +166,49 @@ class HandleInertiaRequests extends Middleware
             'immutable_permissions' => config('permissions.immutable_permissions', []),
             'default_level' => config('permissions.default_level', 99),
         ];
+    }
+
+    /**
+     * Snapshot do pedido de troca de e-mail ativo, para o frontend
+     * decidir se monta o popup de verificacao.
+     *
+     * Retorna null quando nao ha pedido pending — assim o front pode
+     * tratar com `v-if="user.pending_email_change"`.
+     */
+    protected function buildPendingEmailChange($user): ?array
+    {
+        $ecr = $user->activeEmailChangeRequest;
+
+        if (!$ecr || !$ecr->isPending()) {
+            return null;
+        }
+
+        $resendCooldown = \App\Models\EmailChangeRequest::RESEND_COOLDOWN_SECONDS;
+        $resendAvailableAt = $ecr->last_resend_at
+            ? $ecr->last_resend_at->copy()->addSeconds($resendCooldown)
+            : null;
+
+        return [
+            'id'                   => $ecr->id,
+            'new_email_masked'     => $this->maskEmail($ecr->new_email),
+            'current_email_masked' => $this->maskEmail($ecr->current_email),
+            'expires_at'           => $ecr->expires_at->toIso8601String(),
+            'attempts_remaining'   => \App\Models\EmailChangeRequest::MAX_ATTEMPTS - $ecr->code_attempts,
+            'resend_available_at'  => $resendAvailableAt?->toIso8601String(),
+            'resends_remaining'    => \App\Models\EmailChangeRequest::MAX_RESENDS_PER_REQUEST - $ecr->resend_count,
+            'requested_by_admin'   => $ecr->requested_by_admin_id !== null,
+        ];
+    }
+
+    /**
+     * "matheus.estrela@gmail.com" -> "ma***@gmail.com"
+     */
+    protected function maskEmail(string $email): string
+    {
+        [$local, $domain] = explode('@', $email, 2) + ['', ''];
+        if ($local === '' || $domain === '') {
+            return $email;
+        }
+        return substr($local, 0, 2) . '***@' . $domain;
     }
 }

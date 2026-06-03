@@ -31,4 +31,19 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'google' => [
+        'ai_key' => env('GEMINI_API_KEY'),
+    ],
+
+    // Bot Telegram global do SDC: cada usuario faz pairing pelo /start CODE
+    // no chat com o bot. Token vem do @BotFather; bot_username eh o handle
+    // sem '@'; webhook_secret eh string random qualquer no path do webhook
+    // (curl -X POST .../setWebhook).
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'bot_username' => env('TELEGRAM_BOT_USERNAME'),
+        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
+        'api_base_url' => env('TELEGRAM_API_BASE_URL', 'https://api.telegram.org'),
+    ],
+
 ];

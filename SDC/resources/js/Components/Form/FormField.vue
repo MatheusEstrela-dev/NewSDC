@@ -38,6 +38,8 @@
         :readonly="readonly"
         :disabled="disabled"
         :required="required"
+        :inputmode="numericInputMode"
+        :maxlength="maskedMaxLength"
         :class="[
           'form-input',
           error ? 'form-input-error' : isFilled ? 'form-input-filled' : 'form-input-normal',
@@ -62,6 +64,12 @@
 
 <script setup>
 import { computed, ref } from 'vue';
+
+const MASK_PATTERNS = {
+  phone: '(##) #####-####',
+  cpf:   '###.###.###-##',
+  cep:   '#####-###',
+};
 
 const props = defineProps({
   modelValue: {
@@ -115,6 +123,13 @@ const emit = defineEmits(['update:modelValue', 'blur']);
 // ID estável gerado uma única vez na inicialização do componente
 const fieldId = ref(`field-${Math.random().toString(36).substring(2, 11)}`);
 
+const resolvedMask = computed(() => MASK_PATTERNS[props.mask] ?? props.mask);
+const numericInputMode = computed(() => (props.mask && props.mask in MASK_PATTERNS ? 'numeric' : undefined));
+const maskedMaxLength = computed(() => {
+  if (!resolvedMask.value) return undefined;
+  return resolvedMask.value.length || undefined;
+});
+
 // Computed para verificar se o campo está preenchido
 const isFilled = computed(() => {
   if (props.readonly || props.disabled) return false;
@@ -125,9 +140,9 @@ const isFilled = computed(() => {
 const handleInput = (event) => {
   let value = event.target.value;
 
-  // Aplica máscara se fornecida
   if (props.mask) {
     value = applyMask(value, props.mask);
+    event.target.value = value;
   }
 
   emit('update:modelValue', value);
@@ -137,21 +152,19 @@ const handleBlur = (event) => {
   emit('blur', event);
 };
 
-/**
- * Aplica máscara ao valor
- * Suporta: #####-### para CEP, (##) #####-#### para telefone, etc.
- */
 const applyMask = (value, mask) => {
+  const pattern = MASK_PATTERNS[mask] ?? mask;
+  if (!pattern) return value;
   const cleanValue = value.replace(/\D/g, '');
   let maskedValue = '';
   let valueIndex = 0;
 
-  for (let i = 0; i < mask.length && valueIndex < cleanValue.length; i++) {
-    if (mask[i] === '#') {
+  for (let i = 0; i < pattern.length && valueIndex < cleanValue.length; i++) {
+    if (pattern[i] === '#') {
       maskedValue += cleanValue[valueIndex];
       valueIndex++;
     } else {
-      maskedValue += mask[i];
+      maskedValue += pattern[i];
     }
   }
 

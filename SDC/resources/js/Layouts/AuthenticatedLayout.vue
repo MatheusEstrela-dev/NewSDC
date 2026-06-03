@@ -1,22 +1,63 @@
 <script setup>
+import FlashNotification from '@/Components/Molecules/FlashNotification.vue';
 import OfflineIndicator from '@/Components/Molecules/OfflineIndicator.vue';
 import PullToRefresh from '@/Components/Molecules/PullToRefresh.vue';
+import ToastContainer from '@/Components/Atoms/Toast/ToastContainer.vue';
+import ContentAreaSkeleton from '@/Components/Molecules/Skeleton/ContentAreaSkeleton.vue';
 import NavigationHeader from '@/Components/Organisms/Navigation/NavigationHeader.vue';
+import EmailChangeVerifyModal from '@/Components/Organisms/EmailChangeVerifyModal.vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import TopBar from '@/Components/TopBar.vue';
 import { useMobile, useSidebarMobile } from '@/Composables/useMobile';
-import { defineAsyncComponent, provide, ref } from 'vue';
+import { usePageLoading } from '@/Composables/usePageLoading';
+import { defineAsyncComponent, onMounted, onUnmounted, provide, ref } from 'vue';
+
+const { isPageLoading } = usePageLoading();
 
 // Modais carregados sob demanda (raramente usados, reduz bundle de ~50KB+ por página)
 const SupportModal = defineAsyncComponent(() => import('@/Components/Organisms/Suporte/SupportModal.vue'));
 const TermosUsoModal = defineAsyncComponent(() => import('@/Components/Organisms/TermosUsoModal.vue'));
 const PrivacidadeModal = defineAsyncComponent(() => import('@/Components/Organisms/PrivacidadeModal.vue'));
+const GuiaSistemaModal = defineAsyncComponent(() => import('@/Components/Organisms/GuiaSistemaModal.vue'));
 
 // Estado compartilhado da sidebar desktop
 const sidebarCollapsed = ref(false);
 const showSupportModal = ref(false);
 const showTermosModal = ref(false);
 const showPrivacidadeModal = ref(false);
+const showGuiaModal = ref(false);
+
+// Listeners para eventos disparados pelo passo final do tour de boas-vindas.
+// Quando o tour abre Termos via "open-termos", encadeamos Privacidade ao fechar
+// para completar o ciclo de aceite institucional (LGPD).
+const chainPrivacidadeAfterTermos = ref(false);
+
+const handleOpenGuia = () => { showGuiaModal.value = true; };
+const handleOpenTermos = () => {
+  chainPrivacidadeAfterTermos.value = true;
+  showTermosModal.value = true;
+};
+const handleOpenPrivacidade = () => { showPrivacidadeModal.value = true; };
+
+const closeTermos = () => {
+  showTermosModal.value = false;
+  if (chainPrivacidadeAfterTermos.value) {
+    chainPrivacidadeAfterTermos.value = false;
+    setTimeout(() => { showPrivacidadeModal.value = true; }, 250);
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('sdc-tour:open-guia', handleOpenGuia);
+  window.addEventListener('sdc-tour:open-termos', handleOpenTermos);
+  window.addEventListener('sdc-tour:open-privacidade', handleOpenPrivacidade);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('sdc-tour:open-guia', handleOpenGuia);
+  window.removeEventListener('sdc-tour:open-termos', handleOpenTermos);
+  window.removeEventListener('sdc-tour:open-privacidade', handleOpenPrivacidade);
+});
 
 // Estado e funções para sidebar mobile
 const { isMobile, isTablet, isDesktop } = useMobile();
@@ -35,6 +76,10 @@ provide('openSidebar', openSidebar);
 
 <template>
   <div class="flex min-h-screen bg-slate-50 dark:bg-slate-950">
+    <!-- Toast Notifications -->
+    <ToastContainer />
+    <FlashNotification />
+
     <!-- Offline/Slow Connection Indicator -->
     <OfflineIndicator />
 
@@ -58,10 +103,9 @@ provide('openSidebar', openSidebar);
 
     <!-- Main Content Area -->
     <div
-      class="flex-1 flex flex-col min-h-screen transition-all duration-300 ml-0 md:ml-20"
+      class="flex-1 flex flex-col min-h-screen ml-0 md:ml-20 lg:ml-[280px]"
       :class="{
-        'lg:ml-[280px]': !sidebarCollapsed,
-        'lg:ml-20': sidebarCollapsed
+        'lg:!ml-20': sidebarCollapsed
       }"
       :data-collapsed="sidebarCollapsed"
     >
@@ -69,22 +113,27 @@ provide('openSidebar', openSidebar);
       <NavigationHeader class="mt-12 md:mt-16 flex-shrink-0" :style="{ marginTop: `calc(max(env(safe-area-inset-top, 0px), var(--inset-top, 12px)) + ${isMobile ? '3rem' : '4rem'})` }" />
 
       <!-- Page Content -->
-      <main class="flex-1 pt-4 bg-slate-50 dark:bg-slate-950 overflow-x-hidden px-4 sm:px-6 lg:px-8">
-        <Transition name="page" appear>
-          <slot />
-        </Transition>
+      <main class="flex-1 pt-4 bg-slate-50 dark:bg-slate-950 [overflow-x:clip] px-4 sm:px-6 lg:px-8">
+        <ContentAreaSkeleton v-if="isPageLoading" />
+        <slot v-else />
       </main>
 
       <!-- Footer -->
       <footer class="flex flex-col sm:flex-row justify-between items-center gap-4 px-4 sm:px-6 lg:px-8 py-6 mt-auto bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
         <div class="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
-          <img
-            src="https://www.mg.gov.br/sites/default/files/styles/large/public/media/image/2025/02/logo-defesa-civil-2.png?itok=NhfQmxcj"
-            alt="MG Logo"
-            class="h-5 sm:h-6"
-            loading="lazy"
-            decoding="async"
-          />
+          <picture>
+            <source srcset="/imgs/logo-defesa-civil.webp" type="image/webp" />
+            <img
+              src="/imgs/logo-defesa-civil.png"
+              alt="MG Logo"
+              width="120"
+              height="24"
+              class="h-5 sm:h-6 w-auto"
+              loading="lazy"
+              decoding="async"
+              style="aspect-ratio: 5/1;"
+            />
+          </picture>
           <span class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 text-center sm:text-left">
             CEDEC - Defesa Civil de Minas Gerais
           </span>
@@ -102,9 +151,17 @@ provide('openSidebar', openSidebar);
     <!-- Support Modal -->
     <SupportModal :show="showSupportModal" @close="showSupportModal = false" />
     <!-- Termos Uso Modal -->
-    <TermosUsoModal :show="showTermosModal" @close="showTermosModal = false" />
+    <TermosUsoModal :show="showTermosModal" @close="closeTermos" />
     <!-- Privacidade Modal -->
     <PrivacidadeModal :show="showPrivacidadeModal" @close="showPrivacidadeModal = false" />
+    <!-- Guia do Sistema (disparado pelo passo final do tour) -->
+    <GuiaSistemaModal :show="showGuiaModal" @close="showGuiaModal = false" />
+
+    <!-- Popup global de verificacao de troca de e-mail (nao-dismissable) -->
+    <EmailChangeVerifyModal
+        v-if="$page.props.auth?.user?.pending_email_change"
+        :pending-change="$page.props.auth.user.pending_email_change"
+    />
   </div>
 </template>
 
@@ -135,21 +192,6 @@ provide('openSidebar', openSidebar);
   .flex-1.flex.flex-col {
     margin-left: 0 !important;
   }
-}
-
-/* Page transitions (SPA feel) */
-.page-enter-active {
-  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
-}
-.page-leave-active {
-  transition: opacity 0.1s ease-in;
-}
-.page-enter-from {
-  opacity: 0;
-  transform: translateY(4px);
-}
-.page-leave-to {
-  opacity: 0;
 }
 
 /* Ajustes para dispositivos muito pequenos */

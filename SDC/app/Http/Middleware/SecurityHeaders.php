@@ -18,11 +18,14 @@ class SecurityHeaders
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+        $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+        $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
 
         $isLocal = app()->environment(['local', 'development']);
         $isNativePHP = env('NATIVEPHP_RUNNING') || env('NATIVE_PHP') || str_contains(strtolower(php_uname('a')), 'android');
+        $viteDevActive = $isLocal || $isNativePHP || file_exists(public_path('hot'));
 
-        $csp = $this->buildCspHeader($isLocal, $isNativePHP);
+        $csp = $this->buildCspHeader($isLocal, $isNativePHP, $viteDevActive);
 
         $response->headers->set('Content-Security-Policy', $csp);
 
@@ -33,29 +36,35 @@ class SecurityHeaders
         return $response;
     }
 
-    private function buildCspHeader(bool $isLocal, bool $isNativePHP): string
+    private function buildCspHeader(bool $isLocal, bool $isNativePHP, bool $viteDevActive): string
     {
-        // Em producao, usa cache. Em local, sempre recalcula para evitar tela branca apos rebuild
-        if (!$isLocal) {
+        // Em producao sem Vite dev, usa cache. Em local ou com hot file ativo, sempre recalcula
+        // para evitar tela branca apos rebuild ou divergencia quando o dev server liga/desliga
+        if (!$viteDevActive) {
             $cacheKey = 'csp_header_' . app()->environment() . ($isNativePHP ? '_native' : '');
-            return Cache::remember($cacheKey, 3600, fn() => $this->generateCspDirectives($isLocal, $isNativePHP));
+            return Cache::remember($cacheKey, 3600, fn() => $this->generateCspDirectives($isLocal, $isNativePHP, $viteDevActive));
         }
 
-        return $this->generateCspDirectives($isLocal, $isNativePHP);
+        return $this->generateCspDirectives($isLocal, $isNativePHP, $viteDevActive);
     }
 
-    private function generateCspDirectives(bool $isLocal, bool $isNativePHP): string
+    private function generateCspDirectives(bool $isLocal, bool $isNativePHP, bool $viteDevActive): string
     {
         $scriptSrc = [
             "'self'",
             "'unsafe-inline'",
-            "'unsafe-eval'",
             "blob:",
+            "https://cdn.jsdelivr.net",
         ];
+
+        if ($viteDevActive) {
+            $scriptSrc[] = "'unsafe-eval'";
+        }
 
         $styleSrc = [
             "'self'",
             "'unsafe-inline'",
+            "https://fonts.bunny.net",
         ];
 
         $imgSrc = [
@@ -67,17 +76,33 @@ class SecurityHeaders
         $fontSrc = [
             "'self'",
             "data:",
+            "https://fonts.bunny.net",
         ];
 
         $connectSrc = [
             "'self'",
+            "https://cdn.jsdelivr.net",
+            // Best-effort para auditoria de IP do client (composable useClientIp).
+            // Bloqueio = sem dado, nao quebra fluxo.
+            "https://api.ipify.org",
+            "https://ipapi.co",
         ];
 
-        // Em ambiente local, liberamos Vite (HTTP + WebSocket) e fontes externas usadas pelo layout
+        // Allow app URL
+        $appUrl = config('app.url');
+        if ($appUrl) {
+            $scriptSrc[] = $appUrl;
+            $styleSrc[] = $appUrl;
+            $connectSrc[] = $appUrl;
+            $imgSrc[] = $appUrl;
+        }
+
+        // Quando Vite dev esta ativo (ambiente local, NativePHP ou hot file presente),
+        // liberamos Vite (HTTP + WebSocket) e fontes externas usadas pelo layout
         // para evitar tela em branco por CSP bloqueando assets.
-        if ($isLocal || $isNativePHP) {
-            // Vite ports: internal (5173/5175) and host-mapped (15175) for Docker
-            $vitePorts = [5173, 5175, 5176, 15175];
+        if ($viteDevActive) {
+            // Vite ports: internal (5173/5175), host-mapped (15175) for Docker, and HMR WS (18081)
+            $vitePorts = [5173, 5175, 5176, 8081, 15175, 18081];
             $viteHosts = [];
             foreach ($vitePorts as $p) {
                 $viteHosts[] = "http://localhost:{$p}";
@@ -87,17 +112,23 @@ class SecurityHeaders
             }
 
             $scriptSrc = array_merge($scriptSrc, [
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "http://localhost:5175",
-                "http://127.0.0.1:5175",
-                "http://localhost:5176",
-                "http://127.0.0.1:5176",
-                "http://localhost:15175",
-                "http://127.0.0.1:15175",
+                "http://localhost:*",
+                "http://127.0.0.1:*",
             ]);
 
-            $connectSrc = array_merge($connectSrc, $viteHosts);
+            $styleSrc = array_merge($styleSrc, [
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+            ]);
+
+            $connectSrc = array_merge($connectSrc, $viteHosts, [
+                'https://servicodados.ibge.gov.br',
+                'https://viacep.com.br',
+                'https://nominatim.openstreetmap.org',
+                'http://host.docker.internal:8000',
+                'http://localhost:18001',
+                'http://127.0.0.1:18001',
+            ]);
 
             $styleSrc[] = "https://fonts.bunny.net";
             $fontSrc[] = "https://fonts.bunny.net";
@@ -125,15 +156,24 @@ class SecurityHeaders
             }
         }
 
-        return implode('; ', [
+        $workerSrc = "'self' blob: data: https://cdn.jsdelivr.net";
+        if ($viteDevActive) {
+            $workerSrc .= " http://localhost:8081 http://127.0.0.1:8081 http://localhost:15175 http://127.0.0.1:15175 http://localhost:5175 http://127.0.0.1:5175";
+        }
+
+        return implode('; ', array_filter([
             "default-src 'self'",
+            "base-uri 'self'",
             'script-src ' . implode(' ', array_unique($scriptSrc)),
             'style-src ' . implode(' ', array_unique($styleSrc)),
             'img-src ' . implode(' ', array_unique($imgSrc)),
             'font-src ' . implode(' ', array_unique($fontSrc)),
             'connect-src ' . implode(' ', array_unique($connectSrc)),
+            "object-src 'none'",
+            "form-action 'self'",
             "frame-ancestors 'self'",
-            "worker-src 'self' blob:",
-        ]);
+            "worker-src {$workerSrc}",
+            app()->environment('production') ? 'upgrade-insecure-requests' : '',
+        ]));
     }
 }

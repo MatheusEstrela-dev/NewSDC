@@ -22,6 +22,9 @@ class ProductionSeeder extends Seeder
         // Garantir que roles e permissões existam
         $this->call(RolesAndPermissionsSeeder::class);
 
+        // Dados de referência: municípios de Minas Gerais (idempotente)
+        $this->call(MunicipiosMGSeeder::class);
+
         // Verificar se o admin já existe (por email ou CPF)
         $adminExists = User::where('email', 'admin@defesa.mg.gov.br')
             ->orWhere('cpf', '12345678900')
@@ -42,7 +45,7 @@ class ProductionSeeder extends Seeder
         ]);
 
         // Atribuir role super-admin
-        $superAdminRole = Role::where('name', 'super-admin')
+        $superAdminRole = Role::where('slug', 'super-admin')
             ->where('guard_name', $guard)
             ->first();
 

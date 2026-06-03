@@ -68,21 +68,52 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
-const localData = computed({
-  get() {
-    return props.modelValue;
-  },
-  set(value) {
-    emit('update:modelValue', value);
-  },
+const localData = ref({
+  municipio_nome: '',
+  ...props.modelValue,
 });
+
+// Sincroniza local -> pai apenas se houver mudança real
+watch(
+  () => localData.value,
+  (nv) => {
+    if (JSON.stringify(nv) !== JSON.stringify(props.modelValue)) {
+      emit('update:modelValue', nv);
+    }
+  },
+  { deep: true }
+);
+
+// Sincroniza pai -> local apenas se os dados externos mudarem
+watch(
+  () => props.modelValue,
+  (nv) => {
+    if (nv && JSON.stringify(nv) !== JSON.stringify(localData.value)) {
+      localData.value = JSON.parse(JSON.stringify(nv));
+    }
+  },
+  { deep: true }
+);
 
 const {
   paisOptions,
   ufOptions,
+  municipios,
   municipioOptions,
   loadMunicipios
 } = useLocationData();
+
+// Resolve municipality name from IBGE code whenever id or options change
+watch(
+  [() => localData.value.municipio_id, municipios],
+  ([id]) => {
+    if (!id || !municipios.value.length) return;
+    const match = municipios.value.find(m => String(m.id) === String(id));
+    if (match && localData.value.municipio_nome !== match.nome) {
+      localData.value.municipio_nome = match.nome;
+    }
+  }
+);
 
 const handleUfChange = (uf) => {
   localData.value.municipio_id = null;

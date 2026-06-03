@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Filters;
 
+use App\Models\Municipio;
 use App\Modules\Decretacoes\Models\DecretoMunicipio;
 use App\Modules\Decretacoes\Models\Processo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ProcessoFilter
@@ -70,13 +72,20 @@ class ProcessoFilter
     {
         if ($this->request->filled('search')) {
             $search = $this->request->input('search');
-            $this->builder->where(function ($q) use ($search) {
+            $table = $this->builder->getModel()->getTable();
+
+            $this->builder->where(function ($q) use ($search, $table) {
                 $q->where('analista', 'like', "%$search%")
                   ->orWhere('n_protocolo_fide', 'like', "%$search%")
-                  ->orWhereHas('municipios', function ($q2) use ($search) {
-                      $q2->where('cedec_municipio.p_nome', 'like', "%$search%")
-                         ->orWhere('cedec_municipio.nome', 'like', "%$search%")
-                         ->orWhere('cedec_municipio.id', 'like', "%$search%");
+                  ->orWhereExists(function ($sub) use ($search, $table) {
+                      $sub->select(DB::raw(1))
+                          ->from('dec_decreto_municipios as dm')
+                          ->join('municipios as m', 'm.id', '=', 'dm.municipio_id')
+                          ->whereColumn('dm.entrada_processos_id', "{$table}.id")
+                          ->where(function ($w) use ($search) {
+                              $w->where('m.nome', 'like', "%$search%")
+                                ->orWhere('m.codigo_ibge', 'like', "%$search%");
+                          });
                   });
             });
         }
@@ -95,12 +104,15 @@ class ProcessoFilter
 
     protected function filterByDateRange(): self
     {
-        if ($this->request->filled('data_entrada_inicio')) {
-            $this->builder->whereDate('data_entrada', '>=', $this->request->input('data_entrada_inicio'));
+        $dataInicio = $this->request->input('data_entrada_inicio') ?? $this->request->input('data_inicio');
+        $dataFim = $this->request->input('data_entrada_fim') ?? $this->request->input('data_fim');
+
+        if ($dataInicio) {
+            $this->builder->whereDate('data_entrada', '>=', $dataInicio);
         }
 
-        if ($this->request->filled('data_entrada_fim')) {
-            $this->builder->whereDate('data_entrada', '<=', $this->request->input('data_entrada_fim'));
+        if ($dataFim) {
+            $this->builder->whereDate('data_entrada', '<=', $dataFim);
         }
 
         return $this;
@@ -165,13 +177,19 @@ class ProcessoFilter
                 case 'vigente':
                     $this->builder->where(function ($q) {
                         $q->whereNull('data_publicacao_mg')
-                          ->orWhereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) >= CURDATE()');
+                          ->orWhereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE");
                     });
                     break;
 
                 case 'vencido':
                     $this->builder->whereNotNull('data_publicacao_mg')
-                                 ->whereRaw('DATE_ADD(data_publicacao_mg, INTERVAL prazo_vigencia DAY) < CURDATE()');
+                                 ->whereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) < CURRENT_DATE");
+                    break;
+
+                case 'proximo_vencer':
+                    $this->builder->whereNotNull('data_publicacao_mg')
+                                 ->whereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE")
+                                 ->whereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) <= (CURRENT_DATE + INTERVAL '30 days')");
                     break;
 
                 case 'sem_data':
@@ -186,8 +204,14 @@ class ProcessoFilter
     protected function filterByMunicipio(): self
     {
         if ($this->request->filled('municipio_id')) {
-            $this->builder->whereHas('municipios', function ($q) {
-                $q->where('cedec_municipio.id', $this->request->input('municipio_id'));
+            $municipioId = $this->request->input('municipio_id');
+            $table = $this->builder->getModel()->getTable();
+
+            $this->builder->whereExists(function ($sub) use ($municipioId, $table) {
+                $sub->select(DB::raw(1))
+                    ->from('dec_decreto_municipios as dm')
+                    ->whereColumn('dm.entrada_processos_id', "{$table}.id")
+                    ->where('dm.municipio_id', $municipioId);
             });
         }
 
@@ -197,10 +221,18 @@ class ProcessoFilter
     protected function filterByProtocoloFide(): self
     {
         if ($this->request->filled('n_protocolo_fide')) {
-            $this->builder->whereHas('decretoMunicipios', function ($q) {
-                $q->where('n_protocolo_fide', 'like', $this->request->input('n_protocolo_fide') . '%');
-            })
-            ->orWhere('n_protocolo_fide', 'like', $this->request->input('n_protocolo_fide') . '%');
+            $protocolo = $this->request->input('n_protocolo_fide');
+            $table = $this->builder->getModel()->getTable();
+
+            $this->builder->where(function ($q) use ($protocolo, $table) {
+                $q->where('n_protocolo_fide', 'like', $protocolo . '%')
+                  ->orWhereExists(function ($sub) use ($protocolo, $table) {
+                      $sub->select(DB::raw(1))
+                          ->from('dec_decreto_municipios as dm')
+                          ->whereColumn('dm.entrada_processos_id', "{$table}.id")
+                          ->where('dm.n_protocolo_fide', 'like', $protocolo . '%');
+                  });
+            });
         }
 
         return $this;
@@ -239,27 +271,31 @@ class ProcessoFilter
      */
     public static function getFilterOptions(): array
     {
+        $tiposDesastre = collect(include app_path('Enums/classificacao_desastres.php'));
+
         return [
-            'analistas' => Processo::distinct('analista')
-                ->whereNotNull('analista')
-                ->where('analista', '!=', '')
-                ->pluck('analista')
-                ->sort()
-                ->values(),
+            'status_options' => \App\Modules\Decretacoes\Enums\StatusProcesso::toSelectOptions(),
+            'analistas' => self::getAnalistasOptions(),
             'reconhecimentos' => Processo::distinct('reconhecimento')
                 ->whereNotNull('reconhecimento')
                 ->where('reconhecimento', '!=', '')
                 ->pluck('reconhecimento')
                 ->sort()
                 ->values(),
-            'municipios' => DecretoMunicipio::select('cedec_municipio.p_nome', DB::raw('count(dec_decreto_municipios.municipio_id) as total'), 'cedec_municipio.id')
-                ->groupBy('dec_decreto_municipios.municipio_id')
-                ->join('cedec_municipio', 'cedec_municipio.id', '=', 'dec_decreto_municipios.municipio_id')
-                ->join('dec_entrada_processos', 'dec_entrada_processos.id', '=', 'dec_decreto_municipios.entrada_processos_id')
-                ->whereNull('dec_entrada_processos.deleted_at')
-                ->get()
-                ->values(),
-            'tipos_desastre' => collect(include app_path('Enums/classificacao_desastres.php'))
+            'municipios' => self::getMunicipiosOptions(),
+            'redecs' => \App\Modules\Decretacoes\Enums\MockRedec::toSelectOptions(),
+            'situacoes_anormalidade' => [
+                ['value' => 'ECP', 'label' => 'ECP - Estado de Calamidade Publica'],
+                ['value' => 'SE', 'label' => 'SE - Situacao de Emergencia'],
+                ['value' => 'N1', 'label' => 'N1 - Nivel 1'],
+            ],
+            'vigencia_status_options' => [
+                ['value' => 'vigente', 'label' => 'Vigente'],
+                ['value' => 'vencido', 'label' => 'Vencido'],
+                ['value' => 'proximo_vencer', 'label' => 'Proximo ao Vencimento (30 dias)'],
+                ['value' => 'sem_data', 'label' => 'Sem Data de Publicacao'],
+            ],
+            'tipos_desastre' => $tiposDesastre
                 ->map(function ($item) {
                     $label = $item['a_definicao']
                         ?? $item['subtipo']
@@ -273,10 +309,154 @@ class ProcessoFilter
                         'id' => $item['id'],
                         'cobrade' => $item['cobrade'] ?? null,
                         'label' => $label,
+                        'grupo' => $item['grupo'] ?? null,
+                        'subgrupo' => $item['subgrupo'] ?? null,
+                        'tipo' => $item['tipo'] ?? null,
+                        'subtipo' => $item['subtipo'] ?? null,
                     ];
                 })
                 ->sortBy('label', SORT_NATURAL | SORT_FLAG_CASE)
                 ->values(),
+            'tipos_desastre_hierarquico' => self::buildCobradeHierarchy($tiposDesastre),
+            'cobrade_quick_filters' => self::getCobradeQuickFilters(),
+        ];
+    }
+
+    /**
+     * Get municipios from database for select options.
+     * Cached for 24 hours (data rarely changes).
+     */
+    protected static function getMunicipiosOptions(): array
+    {
+        return Cache::remember('decretacoes.filter.municipios', 86400, function () {
+            return Municipio::query()
+                ->select('id', 'nome', 'codigo_ibge')
+                ->orderBy('nome')
+                ->get()
+                ->map(fn ($m) => [
+                    'id' => $m->id,
+                    'label' => $m->nome,
+                    'codigo_ibge' => $m->codigo_ibge,
+                ])
+                ->toArray();
+        });
+    }
+
+    /**
+     * Get analistas from database for select options.
+     * Cached for 1 hour.
+     */
+    protected static function getAnalistasOptions(): array
+    {
+        return Cache::remember('decretacoes.filter.analistas', 3600, function () {
+            return Processo::query()
+                ->distinct()
+                ->whereNotNull('analista')
+                ->where('analista', '!=', '')
+                ->pluck('analista')
+                ->sort()
+                ->values()
+                ->toArray();
+        });
+    }
+
+    /**
+     * Build hierarchical COBRADE structure for tree view.
+     */
+    protected static function buildCobradeHierarchy($tiposDesastre): array
+    {
+        $hierarchy = [];
+
+        foreach ($tiposDesastre as $item) {
+            $grupo = $item['grupo'] ?? 'Outros';
+            $subgrupo = $item['subgrupo'] ?? 'Geral';
+
+            if (!isset($hierarchy[$grupo])) {
+                $hierarchy[$grupo] = [
+                    'label' => $grupo,
+                    'subgrupos' => [],
+                    'ids' => [],
+                ];
+            }
+
+            if (!isset($hierarchy[$grupo]['subgrupos'][$subgrupo])) {
+                $hierarchy[$grupo]['subgrupos'][$subgrupo] = [
+                    'label' => $subgrupo,
+                    'items' => [],
+                    'ids' => [],
+                ];
+            }
+
+            $label = $item['a_definicao']
+                ?? $item['subtipo']
+                ?? $item['tipo']
+                ?? $subgrupo;
+
+            $hierarchy[$grupo]['subgrupos'][$subgrupo]['items'][] = [
+                'id' => $item['id'],
+                'cobrade' => $item['cobrade'] ?? null,
+                'label' => $label,
+                'tipo' => $item['tipo'] ?? null,
+                'subtipo' => $item['subtipo'] ?? null,
+            ];
+
+            $hierarchy[$grupo]['subgrupos'][$subgrupo]['ids'][] = $item['id'];
+            $hierarchy[$grupo]['ids'][] = $item['id'];
+        }
+
+        // Convert to indexed arrays and sort
+        $result = [];
+        foreach ($hierarchy as $grupoKey => $grupo) {
+            $subgrupos = [];
+            foreach ($grupo['subgrupos'] as $subgrupoKey => $subgrupo) {
+                $subgrupos[] = [
+                    'label' => $subgrupo['label'],
+                    'items' => $subgrupo['items'],
+                    'ids' => array_unique($subgrupo['ids']),
+                ];
+            }
+
+            $result[] = [
+                'label' => $grupo['label'],
+                'subgrupos' => $subgrupos,
+                'ids' => array_unique($grupo['ids']),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get predefined quick filter mappings for COBRADE categories.
+     */
+    protected static function getCobradeQuickFilters(): array
+    {
+        return [
+            [
+                'key' => 'BIOLOGICO',
+                'label' => 'Biologico',
+                'ids' => [34, 35, 36, 37, 38, 39, 40, 41],
+            ],
+            [
+                'key' => 'CHUVA',
+                'label' => 'Chuva',
+                'ids' => [4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 21, 22, 23, 24, 25, 42],
+            ],
+            [
+                'key' => 'OUTROS',
+                'label' => 'Outros',
+                'ids' => [1, 2, 3, 12, 13, 18, 19, 20, 26, 27, 28, 33, 43],
+            ],
+            [
+                'key' => 'SECA',
+                'label' => 'Seca',
+                'ids' => [29, 30, 31, 32],
+            ],
+            [
+                'key' => 'TECNOLOGICO',
+                'label' => 'Tecnologico',
+                'ids' => [44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65],
+            ],
         ];
     }
 }

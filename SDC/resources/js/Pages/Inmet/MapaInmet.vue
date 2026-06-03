@@ -238,7 +238,7 @@ function getMarkerColor(nivel) {
   border: 1px solid #374151;
   border-radius: 8px;
   padding: 16px;
-  z-index: 10;
+  z-index: 1000;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
 }

@@ -4,11 +4,14 @@
   <div class="reset-container">
     <div class="reset-card">
       <header class="card-header">
-        <img
-          src="https://www.mg.gov.br/sites/default/files/styles/large/public/media/image/2025/02/logo-defesa-civil-2.png?itok=NhfQmxcj"
-          alt="Logo Defesa Civil"
-          class="main-logo"
-        />
+        <picture>
+          <source srcset="/imgs/logo-defesa-civil.webp" type="image/webp" />
+          <img
+            src="/imgs/logo-defesa-civil.png"
+            alt="Logo Defesa Civil"
+            class="main-logo"
+          />
+        </picture>
         <div class="system-title">Sistema Integrado de Defesa Civil</div>
       </header>
 

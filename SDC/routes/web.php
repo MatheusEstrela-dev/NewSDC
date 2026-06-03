@@ -2,36 +2,34 @@
 
 
 
+use App\Http\Controllers\Auth\EmailChangeVerificationController;
 use App\Http\Controllers\ProfileController;
 use App\Modules\Rat\Presentation\Http\Controllers\RatIndexController;
 use App\Http\Controllers\GlobalSearchController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Modules\Tdap\Application\UseCases\ListMovimentacoesUseCase;
 
-// DEBUG: Rota para testar executeAsDTO (requer container)
-Route::get('/debug/test-dto', function () {
+// Rota local para gerar logs propositais durante desenvolvimento.
+if (app()->environment(['local', 'development'])) {
+    Route::get('/debug/test-log-error', function () {
+    $logger = app(\App\Services\Logging\ActivityLogger::class);
+
+    // Log de evento comum
+    $logger->logEvent('system', 'test_event', ['info' => 'Isso é um teste'], 1, 'info');
+
+    // Log de erro crítico proposital
     try {
-        $useCase = app(ListMovimentacoesUseCase::class);
-        $result = $useCase->executeAsDTO([], 15);
-
-        return response()->json([
-            'debug' => 'Testing executeAsDTO method',
-            'result_type' => gettype($result),
-            'is_array' => is_array($result),
-            'keys' => array_keys($result),
-            'data_type' => gettype($result['data'] ?? null),
-            'data_count' => is_array($result['data'] ?? null) ? count($result['data']) : 'N/A',
-            'pagination' => $result['pagination'] ?? null,
-            'first_item' => $result['data'][0] ?? null,
-        ]);
+        throw new \Exception("ERRO PROPOSITAL PARA TESTE DE INTERFACE");
     } catch (\Exception $e) {
-        return response()->json([
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-        ], 500);
+        $logger->logCriticalError("Falha crítica detectada no teste", $e, [
+            'user_id' => 1,
+            'test_mode' => true
+        ]);
     }
-});
+
+    return "Logs gerados! Verifique o Log Viewer em /log-viewer. Certifique-se de que o LOG_CHANNEL está correto (ex: stack ou daily).";
+    })->name('debug.test-log-error');
+}
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -49,10 +47,58 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // Email change verification (magic code flow)
+    Route::post('/profile/email/verify', [EmailChangeVerificationController::class, 'verify'])
+        ->name('profile.email.verify')
+        ->middleware('throttle:10,1');
+
+    Route::post('/profile/email/resend', [EmailChangeVerificationController::class, 'resend'])
+        ->name('profile.email.resend')
+        ->middleware('throttle:6,1');
+
+    Route::post('/profile/email/cancel', [EmailChangeVerificationController::class, 'cancel'])
+        ->name('profile.email.cancel');
+
     // Log Viewer - Sistema Avançado de Visualização de Logs
-    Route::get('/log-viewer', function () {
-        return Inertia::render('LogViewer/Index');
+    Route::get('/log-viewer', function (Illuminate\Http\Request $request) {
+        $logReader = app(\App\Services\Logging\LogFileReaderService::class);
+
+        $filters = $request->only(['level', 'layer', 'search', 'date_from', 'date_to', 'errors_only', 'limit']);
+        $filters['limit'] = $filters['limit'] ?? 100;
+
+        $logs = $logReader->readLogs($filters);
+        $statistics = $logReader->getStatistics($filters);
+
+        return Inertia::render('LogViewer/Index', [
+            'initialLogs' => $logs->toArray(),
+            'initialStats' => $statistics,
+            'availableLayers' => ['api', 'backend', 'frontend', 'system', 'security', 'database', 'queue', 'integration'],
+            'availableLevels' => ['debug', 'info', 'warning', 'error', 'critical']
+        ]);
     })->middleware('can:system.logs.view')->name('log-viewer.index');
+
+    // Rota de Teste para Gerar Logs Propositais
+    Route::get('/test-log-error', function (Illuminate\Http\Request $request) {
+        $logger = app(\App\Services\Logging\ActivityLogger::class);
+        /** @var \App\Models\User|null $user */
+        $user = $request->user();
+        $userId = $user?->id;
+
+        // Log de evento comum
+        $logger->logEvent('system', 'test_event', ['info' => 'Isso é um teste'], $userId, 'info');
+
+        // Log de erro crítico proposital
+        try {
+            throw new \Exception("ERRO PROPOSITAL PARA TESTE DE INTERFACE");
+        } catch (\Exception $e) {
+            $logger->logCriticalError("Falha crítica detectada no teste", $e, [
+                'user_id' => $userId,
+                'test_mode' => true
+            ]);
+        }
+
+        return "Logs gerados! Verifique o Log Viewer em /log-viewer.";
+    })->name('test.log.error');
 
     // Redirect Legacy Log Viewer to New Premium Viewer
     Route::get('logs', function () {
@@ -65,7 +111,13 @@ Route::middleware('auth')->group(function () {
     })->name('health.dashboard');
 
     // Global Search
-    Route::get('/global-search', [GlobalSearchController::class, 'index'])->name('global.search');
+    Route::get('/global-search', [GlobalSearchController::class, 'search'])
+        ->middleware('throttle:30,1')
+        ->name('global.search');
+
+    // Consulta de municipios (tabela local, fonte resiliente para os selects)
+    Route::get('/municipios', [\App\Http\Controllers\MunicipioController::class, 'index'])
+        ->name('municipios.index');
 
     // Permissionamento (Admin)
     require __DIR__ . '/modules/permissions.php';
@@ -83,6 +135,16 @@ Route::middleware('auth')->group(function () {
     // Módulo: TDAP (Gestão de Depósito)
     require __DIR__ . '/modules/tdap.php';
 
+    // Modulo: Inventario
+    require __DIR__ . '/modules/inventario.php';
+
+    // Modulo: Estoque
+    require __DIR__ . '/modules/estoque.php';
+
+    if (file_exists(__DIR__ . '/modules/cisterna.php')) {
+        require __DIR__ . '/modules/cisterna.php';
+    }
+
     // Módulo: Compdec (Órgãos e Competências)
     require __DIR__ . '/modules/compdec.php';
 
@@ -95,23 +157,22 @@ Route::middleware('auth')->group(function () {
     // Módulo: Treinamento
     require __DIR__ . '/modules/treinamento.php';
 
-    // Módulo: RAT (Registro de Atendimento Técnico)
-    require __DIR__ . '/modules/rat.php';
-
     // Módulo: Suporte
     require __DIR__ . '/modules/suporte.php';
 
     // Modulo: IA
     require __DIR__ . '/modules/ia.php';
 
-    // Modulo: Inmet (Meteorologia)
-    require __DIR__ . '/modules/inmet.php';
-
     // Módulo: Plantão Diário
     require __DIR__ . '/modules/plantao.php';
 
-    // Módulo: PlanCon (Plano de Contingência)
+    // Modulos operacionais
+    require __DIR__ . '/modules/rat.php';
     require __DIR__ . '/modules/plancon.php';
+    require __DIR__ . '/modules/inmet.php';
 });
 
 require __DIR__ . '/auth.php';
+
+// Health check - sem middleware para evitar dependencia de DB/session
+Route::get('/health', fn() => response()->json(['status' => 'ok', 'timestamp' => now()->toIso8601String()]))->withoutMiddleware('web');

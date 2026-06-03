@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -23,6 +24,58 @@ class User extends Authenticatable
      * @var string
      */
     protected $guard_name = 'web';
+
+    /**
+     * Spatie usa roles.name como identificador, mas o NewSDC guarda o codigo
+     * estavel em roles.slug e o nome de exibicao em roles.name.
+     */
+    public function hasRole($roles, ?string $guard = null): bool
+    {
+        $this->loadMissing('roles');
+
+        if (is_string($roles) && str_contains($roles, '|')) {
+            $roles = explode('|', $roles);
+        }
+
+        if ($roles instanceof \BackedEnum) {
+            $roles = $roles->value;
+        }
+
+        if (is_int($roles) || (is_string($roles) && ctype_digit($roles))) {
+            return $this->roles
+                ->when($guard, fn ($q) => $q->where('guard_name', $guard))
+                ->contains('id', (int) $roles);
+        }
+
+        if (is_string($roles)) {
+            return $this->roles
+                ->when($guard, fn ($q) => $q->where('guard_name', $guard))
+                ->contains(fn ($role) => $role->name === $roles || $role->slug === $roles);
+        }
+
+        if ($roles instanceof Role) {
+            return $this->roles->contains($roles->getKeyName(), $roles->getKey());
+        }
+
+        if (is_array($roles) || $roles instanceof \Illuminate\Support\Collection) {
+            foreach ($roles as $role) {
+                if ($this->hasRole($role, $guard)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        throw new \TypeError('Unsupported type for $roles parameter to hasRole().');
+    }
+
+    public function hasAnyRole(...$roles): bool
+    {
+        return $this->hasRole($roles);
+    }
+
+
 
     /**
      * The attributes that are mass assignable.
@@ -40,8 +93,14 @@ class User extends Authenticatable
         'last_login_at',
         'last_login_ip',
         'user_agent',
+        'last_login_browser',
         'created_by',
         'updated_by',
+        'notification_update_mode',
+        'pending_expires_at',
+        'must_change_password',
+        'password_changed_at',
+        'welcome_tour_completed_at',
     ];
 
     /**
@@ -64,6 +123,10 @@ class User extends Authenticatable
         'last_login_at' => 'datetime',
         'password' => 'hashed',
         'active' => 'boolean',
+        'pending_expires_at' => 'datetime',
+        'password_changed_at' => 'datetime',
+        'welcome_tour_completed_at' => 'datetime',
+        'must_change_password' => 'boolean',
     ];
 
     /**
@@ -96,11 +159,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Órgão principal do usuário (cache de performance)
+     * Órgão principal do usuário
      */
     public function orgaoPrincipal(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_principal_id');
+        return $this->belongsTo(\App\Modules\Compdec\Models\Orgao::class, 'orgao_principal_id');
     }
 
     /**
@@ -108,7 +171,7 @@ class User extends Authenticatable
      */
     public function orgaos(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->belongsToMany(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_user')
+        return $this->belongsToMany(\App\Modules\Compdec\Models\Orgao::class, 'compdec_orgao_user', 'user_id', 'orgao_id')
             ->withPivot('funcao', 'is_principal')
             ->withTimestamps();
     }
@@ -165,21 +228,35 @@ class User extends Authenticatable
     }
 
     /**
-     * Registra o ultimo login do usuario
+     * Registra o ultimo login do usuario.
+     *
+     * Mantem o status em 'pending' enquanto must_change_password=true para preservar
+     * o fluxo de primeiro acesso (a promocao para 'active' acontece apos a troca da
+     * senha provisoria em FirstAccessController). Caso contrario, qualquer login
+     * efetivamente ativa a conta.
      */
     public function recordLogin(?string $ip = null, ?string $userAgent = null): void
     {
         $oldStatus = $this->status;
+        $isPendingFirstAccess = $this->must_change_password === true;
 
-        $this->update([
+        $resolvedUa = $userAgent ?? request()->userAgent();
+
+        $payload = [
             'last_login_at' => now(),
             'last_login_ip' => $ip ?? request()->ip(),
-            'user_agent' => $userAgent ?? request()->userAgent(),
-            'status' => 'active',
-            'active' => true,
-        ]);
+            'user_agent' => $resolvedUa,
+            'last_login_browser' => \App\Support\UserAgentParser::summarize($resolvedUa),
+        ];
 
-        if ($oldStatus !== 'active') {
+        if (!$isPendingFirstAccess) {
+            $payload['status'] = 'active';
+            $payload['active'] = true;
+        }
+
+        $this->update($payload);
+
+        if (!$isPendingFirstAccess && $oldStatus !== 'active') {
             UserStatusHistory::logStatusChange($this, $oldStatus, 'active', 'Login realizado');
         }
     }
@@ -190,5 +267,17 @@ class User extends Authenticatable
     public function statusHistories(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(UserStatusHistory::class);
+    }
+
+    /**
+     * Pedido ativo de troca de e-mail (pending). Latest-of-many porque so
+     * um pode estar ativo por vez (regra mantida pelo EmailChangeService).
+     */
+    public function activeEmailChangeRequest(): HasOne
+    {
+        return $this->hasOne(EmailChangeRequest::class)
+            ->whereNull('used_at')
+            ->whereNull('cancelled_at')
+            ->latestOfMany();
     }
 }

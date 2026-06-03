@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'mysql'),
+    'default' => env('DB_CONNECTION', 'pgsql'),
 
     /*
     |--------------------------------------------------------------------------
@@ -83,19 +83,118 @@ return [
             ]) : [],
         ],
 
+        // Conexão para carga/queries otimizadas (leitura intensiva, ETL, BI)
+        // Aponta para réplica de leitura ou banco dedicado a carga de dados
+        'carga' => [
+            'driver' => 'mysql',
+            'host' => env('DB_CARGA_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_CARGA_PORT', '3306'),
+            'database' => env('DB_CARGA_DATABASE', env('DB_DATABASE', 'forge')),
+            'username' => env('DB_CARGA_USERNAME', env('DB_USERNAME', 'forge')),
+            'password' => env('DB_CARGA_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('DB_CARGA_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false, // modo relaxado para queries analíticas/BI
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        // Conexão de tenancy: database por tenant (configurada em runtime pelo SetTenant middleware)
+        'tenancy' => [
+            'driver' => 'mysql',
+            'host' => env('DB_TENANCY_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_TENANCY_PORT', '3306'),
+            'database' => env('DB_TENANCY_DATABASE', ''),
+            'username' => env('DB_TENANCY_USERNAME', env('DB_USERNAME', 'forge')),
+            'password' => env('DB_TENANCY_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('DB_TENANCY_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        // Conexao principal Postgres - usada em producao (Azure Flexible Server PG17)
+        // e em dev (db_ai container Docker com Citus + pgvector + PostGIS).
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'forge'),
-            'username' => env('DB_USERNAME', 'forge'),
+            'database' => env('DB_DATABASE', 'sdc'),
+            'username' => env('DB_USERNAME', 'sdc'),
             'password' => env('DB_PASSWORD', ''),
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
-            'sslmode' => 'prefer',
+            'search_path' => env('DB_SEARCH_PATH', 'public'),
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'sslrootcert' => env('DB_SSL_CA') ?: null,
+            'application_name' => env('APP_NAME', 'sdc-laravel'),
+            'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
+            'options' => [
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', true),
+            ],
+        ],
+
+        // Conexao isolada para jobs de webhook (ProcessWebhook, ProcessInboundWebhook).
+        // Aponta para o mesmo host do pgsql, mas com application_name distinto e
+        // sem ATTR_PERSISTENT — jobs nao reusam conexao entre execucoes.
+        // Combinado com semaforo proprio (DB_MAX_CONCURRENT_WEBHOOK), isola pico
+        // de webhooks externos do pool da web.
+        'pgsql_webhook' => [
+            'driver' => 'pgsql',
+            'url' => env('DATABASE_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'sdc'),
+            'username' => env('DB_USERNAME', 'sdc'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => env('DB_SEARCH_PATH', 'public'),
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'sslrootcert' => env('DB_SSL_CA') ?: null,
+            'application_name' => env('APP_NAME', 'sdc-laravel').'-webhook',
+            'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
+            'options' => [
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ],
+        ],
+
+        // Conexao para workload de IA/embeddings (db_ai container ou schema dedicado).
+        // Aponta para o container Docker em dev; em prod aponta para o mesmo Azure
+        // PG17 (database separada ou schema 'sdc_ai') quando DB_PGSQL_HOST nao for definido.
+        'pgsql_read' => [
+            'driver' => 'pgsql',
+            'host' => env('DB_PGSQL_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_PGSQL_PORT', env('DB_PORT', '5432')),
+            'database' => env('DB_PGSQL_DATABASE', env('DB_DATABASE', 'sdc_ai')),
+            'username' => env('DB_PGSQL_USERNAME', env('DB_USERNAME', 'sdc')),
+            'password' => env('DB_PGSQL_PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => env('DB_PGSQL_SEARCH_PATH', 'public'),
+            'sslmode' => env('DB_PGSQL_SSLMODE', env('DB_SSLMODE', 'prefer')),
+            'sslrootcert' => env('DB_SSL_CA') ?: null,
+            'application_name' => env('APP_NAME', 'sdc-laravel') . '-ai',
+            'options' => [
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', true),
+            ],
         ],
 
         'sqlsrv' => [
@@ -149,6 +248,7 @@ return [
         ],
 
         'default' => [
+            'scheme' => env('REDIS_SCHEME', 'tcp'),
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
             'username' => env('REDIS_USERNAME'),
@@ -158,6 +258,7 @@ return [
         ],
 
         'cache' => [
+            'scheme' => env('REDIS_SCHEME', 'tcp'),
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
             'username' => env('REDIS_USERNAME'),

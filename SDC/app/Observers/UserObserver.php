@@ -43,26 +43,34 @@ class UserObserver
     public function updated(User $user): void
     {
         $changedFields = array_keys($user->getChanges());
-        $relevantFields = ['name', 'email', 'cpf', 'status', 'active', 'orgao_principal_id'];
+        $relevantFields = ['name', 'email', 'cpf', 'status', 'active', 'orgao_principal_id', 'password'];
         $hasRelevantChanges = !empty(array_intersect($changedFields, $relevantFields));
 
         if ($hasRelevantChanges) {
-            AuditLog::logUpdate(
-                'users',
-                $user->id,
-                collect($user->getOriginal())->only($relevantFields)->toArray(),
-                collect($user->getAttributes())->only($relevantFields)->toArray()
-            );
+            $old = collect($user->getOriginal())->only($relevantFields)->toArray();
+            $new = collect($user->getAttributes())->only($relevantFields)->toArray();
+
+            if (array_key_exists('password', $old)) {
+                $old['password'] = '***';
+            }
+            if (array_key_exists('password', $new)) {
+                $new['password'] = '***';
+            }
+
+            AuditLog::logUpdate('users', $user->id, $old, $new);
         }
 
         if (Auth::check()) {
+            $before = collect($user->getOriginal())->except(['password', 'remember_token'])->toArray();
+            $after = collect($user->getAttributes())->except(['password', 'remember_token'])->toArray();
+
             PermissionAuditLog::logAction(
                 userId: Auth::id(),
                 action: PermissionAuditLog::ACTION_USER_UPDATED,
                 entityType: 'User',
                 entityId: $user->id,
-                beforeState: $user->getOriginal(),
-                afterState: $user->getAttributes()
+                beforeState: $before,
+                afterState: $after
             );
         }
     }

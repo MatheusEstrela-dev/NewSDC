@@ -9,11 +9,14 @@
     <!-- Header -->
     <div class="sidebar-header">
       <div class="logo-container">
-        <img
-          src="/imgs/flag.png"
-          alt="SDC Logo"
-          class="logo-image"
-        />
+        <picture>
+          <source srcset="/imgs/flag.webp" type="image/webp" />
+          <img
+            src="/imgs/flag.png"
+            alt="SDC Logo"
+            class="logo-image"
+          />
+        </picture>
         <div v-show="!isCollapsed || (isMobile || isTablet)" class="logo-text">
           <div class="logo-title">SDC MG</div>
           <div class="logo-subtitle">SISTEMA INTEGRADO</div>
@@ -57,16 +60,18 @@
         :class="{ 'is-visible': showTopGradient && isHovering }"
       ></div>
 
+      <div class="sidebar-views" :class="{ 'show-submenu': activeSubmenu !== null }">
       <nav
         ref="sidebarNav"
-        class="sidebar-nav"
+        class="sidebar-nav sidebar-view sidebar-view-main"
+        :inert="activeSubmenu !== null"
         @mouseenter="onMouseEnter"
         @mouseleave="onMouseLeave"
         @mousemove="onMouseMove"
         @scroll="onScroll"
       >
         <!-- PRINCIPAL -->
-      <div class="nav-section">
+      <div class="nav-section" data-tour="sidebar-principal">
         <div v-show="!isCollapsed" class="nav-section-title">PRINCIPAL</div>
         <NavItem
           :href="route('dashboard')"
@@ -75,15 +80,6 @@
           :collapsed="isCollapsed"
         >
           Visão Geral
-        </NavItem>
-        <NavItem
-          v-if="canSeeRat && _routes.hasRat"
-          :href="ratHref"
-          :active="isRouteActive('rat.*')"
-          icon="document"
-          :collapsed="isCollapsed"
-        >
-          RAT
         </NavItem>
         <NavItem
           v-if="canSeeDemandas && _routes.hasDemandas"
@@ -95,10 +91,19 @@
           DEMANDAS
         </NavItem>
         <NavItem
+          v-if="canSeeRat && _routes.hasRat"
+          :href="ratHref"
+          :active="isRouteActive('rat.*')"
+          icon="rat-clipboard"
+          :collapsed="isCollapsed"
+        >
+          RAT
+        </NavItem>
+        <NavItem
           v-if="canSeePae && _routes.hasPae"
           :href="paeHref"
           :active="isRouteActive('pae.*')"
-          icon="document"
+          icon="pae-bolt"
           :collapsed="isCollapsed"
         >
           PAE
@@ -115,7 +120,7 @@
       </div>
 
       <!-- MÓDULOS DE GESTÃO -->
-      <div class="nav-section">
+      <div class="nav-section" data-tour="sidebar-modulos">
         <div v-show="!isCollapsed" class="nav-section-title">MÓDULOS DE GESTÃO</div>
 
         <!-- DECRETACOES -->
@@ -151,72 +156,63 @@
           Orgaos
         </NavItem>
 
-        <!-- TDAP com submenu -->
-        <div v-if="canSeeTdap" class="nav-group">
-          <button
-            @click="toggleSubMenu('tdap')"
-            class="nav-group-toggle"
-            :class="{ 'is-open': openSubMenus.tdap }"
-            :title="isCollapsed ? 'TDAP' : ''"
+        <!-- TDAP - drill-down (abre submenu como nova seccao) -->
+        <button
+          v-if="canSeeTdap"
+          @click="openSubmenu('tdap')"
+          class="nav-group-toggle nav-drilldown"
+          :class="{ 'is-active-route': isRouteActive('tdap.*') }"
+          :title="isCollapsed ? 'TDAP' : ''"
+        >
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+          <span v-show="!isCollapsed">TDAP</span>
+          <svg
+            v-show="!isCollapsed"
+            class="nav-arrow nav-arrow-drill"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            </svg>
-            <span v-show="!isCollapsed">TDAP</span>
-            <svg
-              v-show="!isCollapsed"
-              class="nav-arrow"
-              :class="{ 'rotate-90': openSubMenus.tdap }"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <div v-show="openSubMenus.tdap && !isCollapsed" class="nav-submenu">
-            <NavItem
-              v-if="_routes.hasTdapDashboard"
-              :href="route('tdap.dashboard')"
-              :active="isRouteActive('tdap.dashboard')"
-              icon="dot"
-              is-submenu
-              :collapsed="isCollapsed"
-            >
-              Dashboard
-            </NavItem>
-            <NavItem
-              v-if="_routes.hasTdapProducts"
-              :href="route('tdap.products.index')"
-              :active="isRouteActive('tdap.products.*')"
-              icon="dot"
-              is-submenu
-              :collapsed="isCollapsed"
-            >
-              Produtos
-            </NavItem>
-            <NavItem
-              v-if="_routes.hasTdapRecebimentos"
-              :href="route('tdap.recebimentos.index')"
-              :active="isRouteActive('tdap.recebimentos.*')"
-              icon="dot"
-              is-submenu
-              :collapsed="isCollapsed"
-            >
-              Recebimentos
-            </NavItem>
-            <NavItem
-              v-if="_routes.hasTdapMovimentacoes"
-              :href="route('tdap.movimentacoes.index')"
-              :active="isRouteActive('tdap.movimentacoes.*')"
-              icon="dot"
-              is-submenu
-              :collapsed="isCollapsed"
-            >
-              Movimentações
-            </NavItem>
-          </div>
-        </div>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        <!-- ESTOQUE - drill-down (abre submenu como nova seccao) -->
+        <button
+          v-if="canSeeEstoque"
+          @click="openSubmenu('estoque')"
+          class="nav-group-toggle nav-drilldown"
+          :class="{ 'is-active-route': isRouteActive('estoque.*') }"
+          :title="isCollapsed ? 'Estoque' : ''"
+        >
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7.5l8-4.5 8 4.5-8 4.5-8-4.5z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7.5v9l8 4.5 8-4.5v-9" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12v9M8 9.75v4.5m8-4.5v4.5" />
+          </svg>
+          <span v-show="!isCollapsed">Estoque</span>
+          <svg
+            v-show="!isCollapsed"
+            class="nav-arrow nav-arrow-drill"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        <NavItem
+          v-if="canSeeCisterna && _routes.hasCisterna"
+          :href="route('cisternas.index')"
+          :active="isRouteActive('cisternas.*')"
+          icon="cisterna"
+          :collapsed="isCollapsed"
+        >
+          Cisternas
+        </NavItem>
 
         <!-- Treinamento -->
         <NavItem
@@ -264,11 +260,12 @@
       </div>
 
       <!-- ADMINISTRACAO - Visivel apenas para usuarios com permissao -->
-      <div v-if="canSeeAdminSection" class="nav-section">
+      <div v-if="canSeeAdminSection" class="nav-section" data-tour="sidebar-admin">
         <div v-show="!isCollapsed" class="nav-section-title">ADMINISTRACAO</div>
 
         <!-- Permissionamento - Link direto sem submenu -->
         <NavItem
+          v-if="canSeePermissionamento"
           :href="permissionamentoHref"
           :active="isRouteActive('admin.permissions.*')"
           icon="lock"
@@ -276,8 +273,231 @@
         >
           Permissionamento
         </NavItem>
+
+        <NavItem
+          v-if="canSeeInventario && _routes.hasInventario"
+          :href="route('inventario.index')"
+          :active="isRouteActive('inventario.*')"
+          icon="inventory"
+          :collapsed="isCollapsed"
+        >
+          Inventario
+        </NavItem>
+
+        <NavItem
+          v-if="canSeeLogs"
+          :href="route('log-viewer.index')"
+          :active="isRouteActive('log-viewer.*')"
+          icon="logs-list"
+          :collapsed="isCollapsed"
+        >
+          Logs
+        </NavItem>
+      </div>
+
+      <!-- INTEGRACOES -->
+      <div class="nav-section">
+        <div v-show="!isCollapsed" class="nav-section-title">INTEGRACOES</div>
+        <NavItem
+          href="/api/documentation"
+          :active="false"
+          icon="code"
+          :collapsed="isCollapsed"
+          external
+        >
+          API Docs
+        </NavItem>
+      </div>
+
+
+    </nav>
+
+    <!-- SUBMENU VIEW: ESTOQUE -->
+    <nav
+      v-if="canSeeEstoque"
+      class="sidebar-nav sidebar-view sidebar-view-submenu"
+      :class="{ 'is-active': activeSubmenu === 'estoque' }"
+      :inert="activeSubmenu !== 'estoque'"
+    >
+      <button
+        type="button"
+        class="submenu-back"
+        @click="closeSubmenu"
+        v-show="!isCollapsed"
+      >
+        <svg class="submenu-back-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span class="submenu-back-title">{{ submenuTitle || 'Estoque' }}</span>
+      </button>
+
+      <div class="nav-section">
+        <NavItem
+          v-if="_routes.hasEstoque"
+          :href="route('estoque.index')"
+          :active="isRouteActive('estoque.index')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Dashboard
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasEstoqueProdutos"
+          :href="route('estoque.produtos.index')"
+          :active="isRouteActive('estoque.produtos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Produtos e Lotes
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasEstoqueKits"
+          :href="route('estoque.kits.index')"
+          :active="isRouteActive('estoque.kits.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Kits
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasEstoqueMovimentacoes"
+          :href="route('estoque.movimentacoes.index')"
+          :active="isRouteActive('estoque.movimentacoes.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Movimentacoes
+        </NavItem>
       </div>
     </nav>
+    <!-- SUBMENU VIEW: TDAP -->
+    <nav
+      v-if="canSeeTdap"
+      class="sidebar-nav sidebar-view sidebar-view-submenu"
+      :class="{ 'is-active': activeSubmenu === 'tdap' }"
+      :inert="activeSubmenu !== 'tdap'"
+    >
+      <button
+        type="button"
+        class="submenu-back"
+        @click="closeSubmenu"
+        v-show="!isCollapsed"
+      >
+        <svg class="submenu-back-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span class="submenu-back-title">{{ submenuTitle || 'TDAP' }}</span>
+      </button>
+
+      <div class="nav-section">
+        <NavItem
+          v-if="_routes.hasTdapDashboard"
+          :href="route('tdap.dashboard')"
+          :active="isRouteActive('tdap.dashboard')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Dashboard
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapPrestadores"
+          :href="route('tdap.prestadores.index')"
+          :active="isRouteActive('tdap.prestadores.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Prestadores
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapCaminhoes"
+          :href="route('tdap.caminhoes.index')"
+          :active="isRouteActive('tdap.caminhoes.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Caminhões
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapAtas"
+          :href="route('tdap.atas.index')"
+          :active="isRouteActive('tdap.atas.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Atas
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapLotes"
+          :href="route('tdap.lotes.index')"
+          :active="isRouteActive('tdap.lotes.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Lotes
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapCronogramas"
+          :href="route('tdap.cronogramas.index')"
+          :active="isRouteActive('tdap.cronogramas.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Cronogramas
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapViagensPendentes"
+          :href="route('tdap.viagens.pendentes')"
+          :active="isRouteActive('tdap.viagens.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Viagens pendentes
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapVistorias"
+          :href="route('tdap.vistorias.index')"
+          :active="isRouteActive('tdap.vistorias.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Vistorias
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapHistoricos"
+          :href="route('tdap.historicos.index')"
+          :active="isRouteActive('tdap.historicos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Histórico
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasTdapProcessos"
+          :href="route('tdap.processos.swimlanes')"
+          :active="isRouteActive('tdap.processos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Processos (Workflow)
+        </NavItem>
+      </div>
+    </nav>
+
+    </div><!-- /.sidebar-views -->
 
     <!-- Gradiente inferior -->
     <div
@@ -309,7 +529,7 @@ const closeSidebar = inject('closeSidebar', () => {});
 const page = usePage();
 
 // ============================================================================
-// Verificação de rotas existentes — estáticas, calculadas 1x (rotas não mudam)
+// Verificação de rotas existentes — estáticas, calculadas 1x (rotas não mudam)
 // ============================================================================
 const _routes = {
   hasRat: route().has('rat.index') || route().has('rat.create'),
@@ -320,16 +540,28 @@ const _routes = {
   hasHumanitaria: route().has('ajuda-humanitaria.beneficiarios.index'),
   hasCompdec: route().has('compdec.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
-  hasTdapProducts: route().has('tdap.products.index'),
-  hasTdapRecebimentos: route().has('tdap.recebimentos.index'),
-  hasTdapMovimentacoes: route().has('tdap.movimentacoes.index'),
+  hasTdapPrestadores: route().has('tdap.prestadores.index'),
+  hasTdapCaminhoes: route().has('tdap.caminhoes.index'),
+  hasTdapAtas: route().has('tdap.atas.index'),
+  hasTdapLotes: route().has('tdap.lotes.index'),
+  hasTdapCronogramas: route().has('tdap.cronogramas.index'),
+  hasTdapViagensPendentes: route().has('tdap.viagens.pendentes'),
+  hasTdapVistorias: route().has('tdap.vistorias.index'),
+  hasTdapHistoricos: route().has('tdap.historicos.index'),
+  hasTdapProcessos: route().has('tdap.processos.swimlanes'),
+  hasCisterna: route().has('cisternas.index'),
+  hasInventario: route().has('inventario.index'),
+  hasEstoque: route().has('estoque.index'),
+  hasEstoqueProdutos: route().has('estoque.produtos.index'),
+  hasEstoqueKits: route().has('estoque.kits.index'),
+  hasEstoqueMovimentacoes: route().has('estoque.movimentacoes.index'),
   hasTreinamentos: route().has('treinamentos.index'),
   hasPlancon: route().has('plancon.index'),
   hasInmet: route().has('inmet.index'),
 };
 
 // ============================================================================
-// Rotas ativas — recalculadas 1x por navegação em um único computed
+// Rotas ativas — recalculadas 1x por navegação em um único computed
 // (em vez de 15+ chamadas individuais route().current() no template)
 // ============================================================================
 const _activeRoutes = computed(() => {
@@ -345,20 +577,34 @@ const _activeRoutes = computed(() => {
     'compdec.*': route().current('compdec.*'),
     'tdap.*': route().current('tdap.*'),
     'tdap.dashboard': route().current('tdap.dashboard'),
-    'tdap.products.*': route().current('tdap.products.*'),
-    'tdap.recebimentos.*': route().current('tdap.recebimentos.*'),
-    'tdap.movimentacoes.*': route().current('tdap.movimentacoes.*'),
+    'tdap.prestadores.*': route().current('tdap.prestadores.*'),
+    'tdap.caminhoes.*': route().current('tdap.caminhoes.*'),
+    'tdap.atas.*': route().current('tdap.atas.*'),
+    'tdap.lotes.*': route().current('tdap.lotes.*'),
+    'tdap.cronogramas.*': route().current('tdap.cronogramas.*'),
+    'tdap.viagens.*': route().current('tdap.viagens.*'),
+    'tdap.vistorias.*': route().current('tdap.vistorias.*'),
+    'tdap.historicos.*': route().current('tdap.historicos.*'),
+    'tdap.processos.*': route().current('tdap.processos.*'),
+    'cisternas.*': route().current('cisternas.*'),
+    'inventario.*': route().current('inventario.*'),
+    'estoque.*': route().current('estoque.*'),
+    'estoque.index': route().current('estoque.index'),
+    'estoque.produtos.*': route().current('estoque.produtos.*'),
+    'estoque.kits.*': route().current('estoque.kits.*'),
+    'estoque.movimentacoes.*': route().current('estoque.movimentacoes.*'),
     'treinamentos.*': route().current('treinamentos.*'),
     'plancon.*': route().current('plancon.*'),
     'inmet.*': route().current('inmet.*'),
     'admin.permissions.*': route().current('admin.permissions.*'),
+    'log-viewer.*': route().current('log-viewer.*'),
   };
 });
 
 const isRouteActive = (pattern) => _activeRoutes.value[pattern] ?? false;
 
 // ============================================================================
-// Cache estável de permissões — não re-executa em cada navegação.
+// Cache estável de permissões — não re-executa em cada navegação.
 // Atualiza apenas quando o ID do usuário muda (login/logout).
 // ============================================================================
 const _permSet = shallowRef(new Set(page.props?.auth?.user?.permissions ?? []));
@@ -394,7 +640,9 @@ const hasRole = (roleList) => {
 
 // PRINCIPAL
 const canSeeRat = computed(() => {
-  return hasPermission(['rat.protocolos.view']);
+  // RAT é visível para todos os usuários autenticados (módulo crítico)
+  // TODO: Configurar permissão rat.protocolos.view quando sistema de permissões estiver completo
+  return true;
 });
 
 const canSeeDemandas = computed(() => {
@@ -421,12 +669,39 @@ const canSeeOrgaos = computed(() => {
 
 const canSeeTdap = computed(() => {
   return hasPermission([
-    'tdap.products.view',
-    'tdap.recebimentos.view',
-    'tdap.movimentacoes.view'
+    'tdap.dashboard.view',
+    'tdap.prestadores.view',
+    'tdap.caminhoes.view',
+    'tdap.atas.view',
+    'tdap.lotes.view',
+    'tdap.cronogramas.view',
+    'tdap.viagens.view',
+    'tdap.vistorias.view',
+    'tdap.historico.view',
+    'tdap.processos.view',
   ]);
 });
 
+const canSeeCisterna = computed(() => {
+  return hasPermission(['cisternas.view']);
+});
+
+const canSeeInventario = computed(() => {
+  return hasPermission(['inventario.equipamentos.view', 'inventario.emprestimos.view']);
+});
+
+const canSeeEstoque = computed(() => {
+  return hasPermission([
+    'estoque.produtos.view',
+    'estoque.lotes.view',
+    'estoque.kits.view',
+    'estoque.movimentacoes.view'
+  ]);
+});
+
+const canSeeEstoqueExport = computed(() => {
+  return hasPermission(['estoque.produtos.export', 'estoque.movimentacoes.export']);
+});
 const canSeeTreinamento = computed(() => {
   return hasPermission(['treinamento.cursos.view']);
 });
@@ -451,17 +726,35 @@ const canSeeVistoria = computed(() => {
 });
 
 // ADMINISTRACAO
-const canSeeAdminSection = computed(() => {
+const canSeePermissionamento = computed(() => {
   return hasPermission(['users.view', 'roles.view', 'permissions.view']);
 });
 
-const openSubMenus = ref({
-  tdap: false,
-  ajudaHumanitaria: false,
+const canSeeAdminSection = computed(() => {
+  return canSeePermissionamento.value || canSeeInventario.value || canSeeLogs.value;
 });
 
+const canSeeLogs = computed(() => {
+  return hasPermission(['system.logs.view']);
+});
+
+// DEBUG - apenas em dev ou super admin
+const canSeeDebug = computed(() => {
+  const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
+  return isDev || _isSuper.value;
+});
+
+const activeSubmenu = ref(null);
+
+const submenuTitles = {
+  tdap: 'TDAP',
+  estoque: 'Estoque',
+};
+
+const submenuTitle = computed(() => submenuTitles[activeSubmenu.value] ?? '');
+
 // Links resilientes (evita tela branca quando uma rota nao existir no Ziggy)
-// URLs estáticas — rotas não mudam em runtime, sem necessidade de computed reativo
+// URLs estáticas — rotas não mudam em runtime, sem necessidade de computed reativo
 const ratHref = route().has('rat.index') ? route('rat.index') :
                 route().has('rat.create') ? route('rat.create') :
                 route('dashboard');
@@ -477,16 +770,18 @@ const permissionamentoHref = route().has('admin.permissions.users.index') ? rout
 
 function toggleSidebar() {
   isCollapsed.value = !isCollapsed.value;
-  // Fechar submenus quando colapsar
   if (isCollapsed.value) {
-    openSubMenus.value.tdap = false;
-    openSubMenus.value.ajudaHumanitaria = false;
+    activeSubmenu.value = null;
   }
 }
 
-function toggleSubMenu(menu) {
+function openSubmenu(name) {
   if (isCollapsed.value) return;
-  openSubMenus.value[menu] = !openSubMenus.value[menu];
+  activeSubmenu.value = name;
+}
+
+function closeSubmenu() {
+  activeSubmenu.value = null;
 }
 
 // Fechar sidebar mobile ao clicar em um link (será propagado aos NavItems)
@@ -606,447 +901,13 @@ onUnmounted(() => {
 provide('sidebarCollapsed', isCollapsed);
 </script>
 
-<style scoped>
-.sidebar {
-  width: 280px;
-  height: 100vh;
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: 50;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  transition: width 0.3s ease, transform 0.3s ease;
-  /* padding-top safe-area is now handled by .sidebar-header */
-}
+<!--
+  Estilos extraidos para ./Sidebar.styles.css (Fase 5.0 da auditoria).
+  Estrutura dos estilos externos (busque os marcadores [REGION:*] em Sidebar.styles.css):
+    - base, header, nav, views, submenu, gradients, mobile-ui
 
-.sidebar.is-collapsed {
-  width: 80px;
-}
-
-/* Tablet (768px - 1023px): Sidebar collapsed por padrao, expande quando drawer abre */
-@media (min-width: 768px) and (max-width: 1023px) {
-  .sidebar {
-    width: 80px;
-    transform: translateX(0);
-    transition: width 0.3s ease, transform 0.3s ease;
-  }
-
-  /* Quando drawer abre em tablet, expandir completamente */
-  .sidebar.is-mobile-open {
-    width: 280px !important;
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
-  }
-
-  /* Estado collapsed padrao (sem drawer aberto) */
-  .sidebar:not(.is-mobile-open) .logo-text,
-  .sidebar:not(.is-mobile-open) .nav-section-title,
-  .sidebar:not(.is-mobile-open) .nav-arrow {
-    display: none;
-    opacity: 0;
-    visibility: hidden;
-  }
-
-  /* Mostrar textos quando drawer esta aberto */
-  .sidebar.is-mobile-open .logo-text,
-  .sidebar.is-mobile-open .nav-section-title,
-  .sidebar.is-mobile-open .nav-arrow {
-    display: flex;
-    opacity: 1;
-    visibility: visible;
-  }
-
-  .sidebar.is-mobile-open .logo-text {
-    flex-direction: column;
-  }
-
-  /* Esconder submenu quando collapsed */
-  .sidebar:not(.is-mobile-open) .nav-submenu {
-    display: none;
-  }
-
-  /* Mostrar submenu quando drawer aberto */
-  .sidebar.is-mobile-open .nav-submenu {
-    display: block;
-  }
-
-  /* Ajustar header no estado collapsed */
-  .sidebar:not(.is-mobile-open) .sidebar-header {
-    padding: 1rem;
-    justify-content: center;
-  }
-
-  .sidebar:not(.is-mobile-open) .logo-container {
-    justify-content: center;
-  }
-
-  /* Ajustar header quando drawer aberto */
-  .sidebar.is-mobile-open .sidebar-header {
-    padding: 1.5rem 1.25rem;
-    justify-content: space-between;
-  }
-
-  .sidebar.is-mobile-open .logo-container {
-    justify-content: flex-start;
-  }
-
-  /* Esconder botao toggle desktop em tablet */
-  .sidebar-toggle {
-    display: none !important;
-  }
-
-  /* nav-group-toggle collapsed */
-  .sidebar:not(.is-mobile-open) .nav-group-toggle {
-    justify-content: center;
-    padding: 0.75rem;
-  }
-
-  .sidebar:not(.is-mobile-open) .nav-group-toggle span {
-    display: none;
-  }
-
-  /* nav-group-toggle expandido */
-  .sidebar.is-mobile-open .nav-group-toggle {
-    justify-content: flex-start;
-    padding: 0.75rem 1.25rem;
-    gap: 0.75rem;
-  }
-
-  .sidebar.is-mobile-open .nav-group-toggle span {
-    display: inline;
-  }
-
-  /* Ajustar icones quando collapsed */
-  .sidebar:not(.is-mobile-open) .nav-icon {
-    margin: 0;
-  }
-}
-
-/* Mobile (< 768px): Esconder sidebar por padrão e mostrar como drawer */
-@media (max-width: 767px) {
-  .sidebar {
-    transform: translateX(-100%);
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
-    z-index: 50;
-  }
-
-  .sidebar.is-mobile-open {
-    transform: translateX(0);
-  }
-
-  /* Desabilitar collapsed mode em mobile quando drawer aberto */
-  .sidebar.is-collapsed {
-    width: 280px;
-  }
-}
-
-.sidebar-header {
-  padding: 0 1.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  position: relative;
-  height: 77px;
-  box-sizing: border-box;
-}
-
-.logo-container {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-  min-width: 0;
-}
-
-.logo-image {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  flex-shrink: 0;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 1.25rem;
-  flex-shrink: 0;
-}
-
-.logo-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.logo-title {
-  color: white;
-  font-weight: 700;
-  font-size: 1.125rem;
-  line-height: 1.2;
-}
-
-.logo-subtitle {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.75rem;
-  line-height: 1.2;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.sidebar-toggle {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.sidebar-toggle:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.toggle-icon {
-  width: 18px;
-  height: 18px;
-  transition: transform 0.3s ease;
-}
-
-.toggle-icon.rotated {
-  transform: rotate(180deg);
-}
-
-.sidebar-nav {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 1rem 0;
-  scroll-behavior: smooth;
-  overscroll-behavior: contain;
-  min-height: 0; /* Critical: allows flexbox to shrink below content size */
-}
-
-.nav-section {
-  margin-bottom: 1.5rem;
-}
-
-.nav-section-title {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0 1.25rem;
-  margin-bottom: 0.5rem;
-}
-
-.nav-group {
-  margin-bottom: 0.25rem;
-}
-
-.nav-group-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1.25rem;
-  color: rgba(255, 255, 255, 0.8);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.9375rem;
-}
-
-.sidebar.is-collapsed .nav-group-toggle {
-  padding: 0.75rem;
-  justify-content: center;
-  gap: 0;
-}
-
-.sidebar.is-collapsed .nav-group-toggle.is-open {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-  box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.35);
-  border-radius: 12px;
-  margin: 0 0.5rem;
-}
-
-.nav-group-toggle:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
-}
-
-.nav-group-toggle.is-open {
-  color: white;
-}
-
-.nav-icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-
-.nav-arrow {
-  width: 16px;
-  height: 16px;
-  margin-left: auto;
-  transition: transform 0.2s;
-}
-
-.nav-arrow.rotate-90 {
-  transform: rotate(90deg);
-}
-
-.nav-submenu {
-  padding-left: 1.25rem;
-  margin-top: 0.25rem;
-}
-
-/* Scrollbar styling */
-.sidebar-nav::-webkit-scrollbar {
-  width: 6px;
-}
-
-.sidebar-nav::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-}
-
-.sidebar-nav::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* Wrapper para os gradientes */
-.sidebar-nav-wrapper {
-  position: relative;
-  flex: 1 1 auto; /* Allow shrinking and growing */
-  overflow: hidden;
-  min-height: 0; /* Critical: Fix flexbox overflow issue */
-  display: flex;
-  flex-direction: column;
-}
-
-/* Gradientes de indicação de scroll */
-.scroll-gradient {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 60px;
-  pointer-events: none;
-  z-index: 10;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.scroll-gradient.is-visible {
-  opacity: 1;
-}
-
-.scroll-gradient-top {
-  top: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(30, 41, 59, 0.95) 0%,
-    rgba(30, 41, 59, 0.8) 40%,
-    rgba(30, 41, 59, 0) 100%
-  );
-}
-
-.scroll-gradient-bottom {
-  bottom: 0;
-  background: linear-gradient(
-    to top,
-    rgba(15, 23, 42, 0.95) 0%,
-    rgba(15, 23, 42, 0.8) 40%,
-    rgba(15, 23, 42, 0) 100%
-  );
-}
-
-/* Indicador visual de zona de scroll ao hover */
-.sidebar-nav-wrapper:hover .scroll-gradient.is-visible {
-  opacity: 0.7;
-}
-
-/* Efeito de brilho nas bordas durante hover */
-.sidebar-nav-wrapper:hover .scroll-gradient-top.is-visible::after,
-.sidebar-nav-wrapper:hover .scroll-gradient-bottom.is-visible::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(59, 130, 246, 0.5) 50%,
-    transparent 100%
-  );
-  animation: shimmer 2s ease-in-out infinite;
-}
-
-.sidebar-nav-wrapper:hover .scroll-gradient-top.is-visible::after {
-  top: 0;
-}
-
-.sidebar-nav-wrapper:hover .scroll-gradient-bottom.is-visible::after {
-  bottom: 0;
-}
-
-@keyframes shimmer {
-  0%, 100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
-/* Mobile close button */
-.sidebar-close-mobile {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.sidebar-close-mobile:hover,
-.sidebar-close-mobile:active {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.sidebar-close-mobile:active {
-  transform: scale(0.95);
-}
-
-.sidebar-close-mobile svg {
-  width: 24px;
-  height: 24px;
-}
-</style>
+  REGRA: para garantir que selectors recebam o atributo data-v-* (scoped),
+  adicione todos os estilos em Sidebar.styles.css. NAO use @import dentro
+  de Sidebar.styles.css - imports aninhados podem perder o scope.
+-->
+<style src="./Sidebar.styles.css" scoped></style>

@@ -15,9 +15,7 @@ class TreinamentosMockSeeder extends Seeder
     {
         $this->command->info("\nCriando Treinamentos mockados...\n");
 
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
         Treinamento::truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $treinamentos = [
             [

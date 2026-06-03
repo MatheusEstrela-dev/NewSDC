@@ -3,11 +3,11 @@
     <!-- Header -->
     <div class="rat-card-header">
       <div class="rat-card-title-section">
-        <h3 class="rat-card-number">{{ rat.numero_rat }}</h3>
-        <p class="rat-card-subtitle">{{ rat.municipio || 'Sem município' }}</p>
+        <h3 class="rat-card-number">{{ rat.numero_bos || `RAT #${rat.id}` }}</h3>
+        <p class="rat-card-subtitle">{{ rat.dados_gerais?.municipio || rat.local?.municipio || 'Sem município' }}</p>
       </div>
       <div class="rat-card-year">
-        <span class="year-badge">{{ rat.ano }}</span>
+        <span class="year-badge">{{ getYear(rat.created_at) }}</span>
       </div>
     </div>
 
@@ -27,23 +27,23 @@
 
       <div class="rat-card-field rat-card-field-full">
         <span class="field-label">Criado por</span>
-        <span class="field-value">{{ rat.usuario_nome || '-' }}</span>
+        <span class="field-value">{{ rat.criado_por || 'Sistema' }}</span>
       </div>
     </div>
 
     <!-- Footer Actions -->
     <div class="rat-card-footer">
-      <TableActions
-        :show-print="true"
-        :show-edit="canEdit"
-        :show-attachments="!!rat.has_attachments"
-        :show-delete="canDelete"
+      <ActionButton
+        module="rat"
+        resource="protocolos"
         size="md"
-        @view="$emit('view', rat.id)"
-        @print="$emit('print', rat.id)"
-        @edit="$emit('edit', rat.id)"
-        @attachments="$emit('attachments', rat.id)"
-        @delete="$emit('delete', rat.id)"
+        :actions="[
+          { action: 'view',        handler: () => $emit('view', rat.id) },
+          { action: 'print',       handler: () => $emit('print', rat.id) },
+          { action: 'edit',        handler: () => $emit('edit', rat.id),        allowed: canEdit },
+          { action: 'attachments', handler: () => $emit('attachments', rat.id), label: 'Relacionar' },
+          { action: 'delete',      handler: () => $emit('delete', rat.id),      allowed: canDelete },
+        ]"
       />
     </div>
   </div>
@@ -51,7 +51,7 @@
 
 <script setup>
 import StatusBadge from '@/Components/Atoms/Badge/StatusBadge.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 
 const props = defineProps({
   rat: {
@@ -82,6 +82,11 @@ const formatDateTime = (dateTime) => {
     minute: '2-digit',
   });
 };
+
+function getYear(date) {
+  if (!date) return new Date().getFullYear();
+  return new Date(date).getFullYear();
+}
 </script>
 
 <style scoped>

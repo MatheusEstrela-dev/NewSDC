@@ -29,7 +29,7 @@ class TokenController extends Controller
      *     description="Gera um token único que permite ao Power BI acessar todas as APIs configuradas (PAE, RAT, TDAP, BI). Este token contém tokens individuais para cada API.",
      *     operationId="generatePowerBIToken",
      *     tags={"Power BI"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\RequestBody(
      *         required=false,
      *         @OA\JsonContent(
@@ -81,7 +81,11 @@ class TokenController extends Controller
                 $this->tokenService->clearAllTokenCache();
             }
 
-            $tokenData = $this->tokenService->generatePowerBIToken($allowedApis);
+            // Vincula token ao user autenticado (Sanctum) que esta gerando.
+            // Esse user_id sera resolvido por DecretacoesApiAuth quando o
+            // token for usado via X-PowerBI-Token, garantindo isolamento
+            // de recursos (especialmente RequestTrace) por dono.
+            $tokenData = $this->tokenService->generatePowerBIToken($allowedApis, $request->user());
 
             return response()->json([
                 'success' => true,
@@ -102,7 +106,7 @@ class TokenController extends Controller
      *     description="Valida um token do Power BI e retorna os tokens individuais para cada API",
      *     operationId="validatePowerBIToken",
      *     tags={"Power BI"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="token",
      *         in="path",
@@ -130,9 +134,9 @@ class TokenController extends Controller
      */
     public function validateToken(string $token): JsonResponse
     {
-        $apiTokens = $this->tokenService->validatePowerBIToken($token);
+        $tokenData = $this->tokenService->validatePowerBIToken($token);
 
-        if (!$apiTokens) {
+        if (!$tokenData) {
             return response()->json([
                 'success' => false,
                 'message' => 'Token inválido ou expirado',
@@ -143,7 +147,8 @@ class TokenController extends Controller
             'success' => true,
             'data' => [
                 'valid' => true,
-                'apis' => $apiTokens,
+                'user_id' => $tokenData['user_id'] ?? null,
+                'apis' => $tokenData['apis'] ?? [],
             ],
         ]);
     }
@@ -155,7 +160,7 @@ class TokenController extends Controller
      *     description="Retorna tokens individuais para cada API configurada, útil para testes",
      *     operationId="listApiTokens",
      *     tags={"Power BI"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="apis",
      *         in="query",

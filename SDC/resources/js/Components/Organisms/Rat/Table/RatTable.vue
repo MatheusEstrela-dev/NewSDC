@@ -1,28 +1,21 @@
 <template>
-  <CardBase variant="default" padding="none" class="overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/30">
-      <div class="flex items-center justify-between">
-        <Heading :level="5" color="default" class="flex items-center gap-2">
-          <DocumentTextIcon class="w-5 h-5" />
-          Lista de RATs ({{ pagination?.total || rats.length }} registros)
-        </Heading>
-      </div>
-    </div>
-
+  <ListContainer
+    title="Lista de RATs"
+    :icon="DocumentTextIcon"
+    :count="pagination?.total ?? rats.length"
+  >
     <div v-if="loading" class="p-12 text-center">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
       <p class="mt-4 text-slate-600 dark:text-slate-400">Carregando...</p>
     </div>
 
-    <div v-else-if="rats.length === 0" class="p-12 text-center">
-      <DocumentTextIcon class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-4" />
-      <Heading :level="4" color="muted">Nenhum RAT encontrado</Heading>
-      <Text size="sm" color="muted" class="mt-2">
-        Tente ajustar os filtros de busca ou crie um novo RAT
-      </Text>
-    </div>
+    <ListEmptyState
+      v-else-if="rats.length === 0"
+      :icon="DocumentTextIcon"
+      title="Nenhum RAT encontrado"
+      helper="Tente ajustar os filtros de busca ou crie um novo RAT"
+    />
 
-    <!-- Desktop: Tabela -->
     <div v-else-if="!isMobile" class="overflow-x-auto">
       <table class="w-full">
         <TableHeaderRow>
@@ -67,17 +60,16 @@
         class="m-4 first:mt-0 last:mb-0"
       />
     </div>
-  </CardBase>
+  </ListContainer>
 </template>
 
 <script setup>
-import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import TableHeader from '@/Components/Atoms/Table/TableHeader.vue';
-import Heading from '@/Components/Atoms/Typography/Heading.vue';
-import Text from '@/Components/Atoms/Typography/Text.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import RatCard from '@/Components/Molecules/Rat/RatCard.vue';
+import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import TableHeaderRow from '@/Components/Molecules/Table/TableHeaderRow.vue';
+import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import { useMobile } from '@/Composables/useMobile';
 import RatTableRow from './RatTableRow.vue';
 

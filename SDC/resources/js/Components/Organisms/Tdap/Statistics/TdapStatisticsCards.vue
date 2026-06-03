@@ -1,48 +1,56 @@
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
     <StatCard
-      title="Total de Produtos"
-      :value="statistics.total_produtos"
+      title="Cronogramas Ativos"
+      :value="kpis.cronogramas_ativos"
       variant="info"
-      :icon="CubeIcon"
+      :icon="CalendarIcon"
     />
     <StatCard
-      title="Recebimentos Finalizados"
-      :value="statistics.recebimentos_finalizados"
+      title="Cronogramas Encerrados"
+      :value="kpis.cronogramas_encerrados"
       variant="success"
       :icon="CheckCircleIcon"
     />
     <StatCard
-      title="Pendentes"
-      :value="statistics.recebimentos_pendentes"
-      variant="warning"
-      :icon="ClockIcon"
+      title="M³ Entregues (Mês)"
+      :value="kpis.m3_entregues_mes"
+      variant="info"
+      :icon="TruckIcon"
     />
     <StatCard
-      title="Movimentações (Mês)"
-      :value="statistics.movimentacoes_mes"
-      variant="danger"
-      :icon="ArrowsRightLeftIcon"
+      title="Prestadores Ativos"
+      :value="kpis.prestadores_ativos"
+      variant="success"
+      :icon="BuildingIcon"
+    />
+    <StatCard
+      title="Viagens p/ Validar"
+      :value="kpis.viagens_pendentes_validar"
+      variant="warning"
+      :icon="ClockIcon"
     />
   </div>
 </template>
 
 <script setup>
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
-import CubeIcon from '@/Components/Icons/CubeIcon.vue';
+import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
+import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
-import ArrowsRightLeftIcon from '@/Components/Icons/ArrowsRightLeftIcon.vue';
 
-const props = defineProps({
-  statistics: {
+defineProps({
+  kpis: {
     type: Object,
     required: true,
     default: () => ({
-      total_produtos: 0,
-      recebimentos_finalizados: 0,
-      recebimentos_pendentes: 0,
-      movimentacoes_mes: 0,
+      cronogramas_ativos: 0,
+      cronogramas_encerrados: 0,
+      m3_entregues_mes: 0,
+      prestadores_ativos: 0,
+      viagens_pendentes_validar: 0,
     }),
   },
 });

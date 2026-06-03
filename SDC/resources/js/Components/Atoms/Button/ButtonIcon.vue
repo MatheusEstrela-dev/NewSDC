@@ -24,7 +24,7 @@ const props = defineProps({
   variant: {
     type: String,
     default: 'secondary',
-    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'topaz'].includes(value),
+    validator: (value) => ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'black', 'topaz', 'vibrant-warning', 'vibrant-danger'].includes(value),
   },
   size: {
     type: String,
@@ -78,7 +78,10 @@ const variantClasses = {
   danger: 'text-red-400 hover:text-red-300 hover:bg-red-500/10',
   warning: 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10',
   info: 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10',
+  black: 'text-white bg-black hover:bg-neutral-800',
   topaz: 'text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10',
+  'vibrant-warning': 'text-[#ff800d] hover:text-[#ff9d47] hover:bg-[#ff800d]/10',
+  'vibrant-danger': 'text-[#ff4d00] hover:text-[#ff6a26] hover:bg-[#ff4d00]/10',
 };
 
 const SIZE_CONFIG = {
@@ -104,7 +107,7 @@ const SIZE_CONFIG = {
 
 const buttonClasses = computed(() => {
   const config = SIZE_CONFIG[props.size];
-  const base = 'inline-flex items-center justify-center rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation';
+  const base = 'inline-flex items-center justify-center rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation';
 
   return [
     base,

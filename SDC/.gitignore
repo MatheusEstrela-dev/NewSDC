@@ -1,5 +1,6 @@
 /.phpunit.cache
 /node_modules
+replace.ps1
 /public/build
 /public/hot
 /public/storage
@@ -8,6 +9,9 @@
 .env
 .env.backup
 .env.production
+.env.test
+.env.keys
+tests/e2e/.env.keys
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml
@@ -20,7 +24,10 @@ yarn-error.log
 rr
 .rr.yaml
 /docker/logs
+/docker/storage/logs/*.json
 *.log
 .DS_Store
 .gemini
 /nativephp
+bootstrap/ssr/
+frankephp

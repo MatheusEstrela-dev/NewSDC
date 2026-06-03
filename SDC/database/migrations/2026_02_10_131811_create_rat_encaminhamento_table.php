@@ -32,10 +32,12 @@ return new class extends Migration
             // Índice para a coluna descrição
             $table->index('descricao', 'idx_rat_encaminhamento_descricao');
             
-            // Definições de Engine e Charset
-            $table->engine = 'InnoDB';
-            $table->charset = 'utf8mb4';
-            $table->collation = 'utf8mb4_unicode_ci';
+            // Configuracoes especificas do MySQL (Postgres ignora)
+            if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                $table->engine = 'InnoDB';
+                $table->charset = 'utf8mb4';
+                $table->collation = 'utf8mb4_unicode_ci';
+            }
         });
     }
 

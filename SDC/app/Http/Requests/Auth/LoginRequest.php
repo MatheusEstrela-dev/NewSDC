@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -28,7 +28,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cpf' => ['required', 'string', 'min:11', 'max:14'],
+            'cpf' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -42,34 +42,43 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $cpf = preg_replace('/\D/', '', $this->string('cpf'));
-        $password = $this->string('password');
+        // Get CPF from request
+        $cpf = $this->input('cpf');
+        $password = $this->input('password');
 
-        $user = \App\Models\User::where('cpf', $cpf)->first();
+        // Look up user by CPF to get their email
+        $user = User::where('cpf', $cpf)->first();
 
-        // LOG DE DEBUG SUPER VISÍVEL
-        \Log::warning('MOBILE_DEBUG: Autenticando no Celular...', [
-            'cpf' => $cpf,
-            'user_found' => (bool) $user,
-            'is_android' => str_contains(strtolower(php_uname('a')), 'android'),
-        ]);
-
-        // BYPASS EMERGENCIAL PARA O CELULAR (CPF 12345678900)
-        if ($user && ($cpf === '12345678900') && (env('NATIVEPHP_RUNNING') || env('NATIVE_PHP') || str_contains(strtolower(php_uname('a')), 'android'))) {
-            \Log::warning('MOBILE_DEBUG: Aplicando BYPASS para CPF 12345678900');
-            Auth::login($user, $this->boolean('remember'));
-            RateLimiter::clear($this->throttleKey());
-            return;
-        }
-
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (!$user) {
             RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([
                 'cpf' => trans('auth.failed'),
             ]);
         }
 
-        Auth::login($user, $this->boolean('remember'));
+        // 'pending' eh permitido propositalmente: representa o primeiro acesso com
+        // senha provisoria. O EnsurePasswordChanged middleware obriga a troca em
+        // /first-access antes de qualquer outra rota autenticada.
+        if (!$user->active || in_array($user->status, ['inactive', 'suspended', 'blocked'], true)) {
+            RateLimiter::hit($this->throttleKey());
+            throw ValidationException::withMessages([
+                'cpf' => 'Seu usuário está desativado. Entre em contato com o suporte ou com o gestor do sistema.',
+            ]);
+        }
+
+        // Now attempt auth with email instead of CPF
+        $credentials = [
+            'email' => $user->email,
+            'password' => $password,
+        ];
+
+        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
+            RateLimiter::hit($this->throttleKey());
+            throw ValidationException::withMessages([
+                'cpf' => trans('auth.failed'),
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 
@@ -80,7 +89,7 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (!RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
             return;
         }
 
@@ -89,7 +98,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
+            'cpf' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -101,6 +110,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('cpf')) . '|' . $this->ip());
+        return Str::transliterate(Str::lower($this->string('cpf')).'|'.$this->ip());
     }
 }

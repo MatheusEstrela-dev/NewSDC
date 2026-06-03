@@ -1,7 +1,10 @@
 <template>
-  <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm text-left">
+  <ListContainer
+    title="Lista de Protocolos"
+    :icon="ClipboardDocumentListIcon"
+    :count="protocolos.length"
+  >
+    <table class="w-full text-sm text-left">
         <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
           <tr>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Protocolo</th>
@@ -49,36 +52,41 @@
             <!-- Acoes -->
             <td class="px-4 py-3 w-44 min-w-44">
               <div class="flex items-center justify-end">
-                <TableActions
-                  :show-attachments="false"
-                  :show-delete="canDelete"
-                  :show-edit="canEdit"
-                  :show-history="true"
-                  :show-archive="true"
-                  @view="$emit('view', protocolo.id)"
-                  @print="$emit('print', protocolo.id)"
-                  @edit="$emit('edit', protocolo.id)"
-                  @history="$emit('history', protocolo.id)"
-                  @archive="$emit('archive', protocolo.id)"
+                <ActionButton
+                  module="pae"
+                  resource="protocolos"
+                  :actions="[
+                    { action: 'view',    handler: () => $emit('view', protocolo.id) },
+                    { action: 'edit',    handler: () => $emit('edit', protocolo.id),    allowed: canEdit },
+                    { action: 'history', handler: () => $emit('history', protocolo.id) },
+                    { action: 'archive', handler: () => $emit('archive', protocolo.id) },
+                    { action: 'delete',  handler: () => $emit('delete', protocolo.id),  allowed: canDelete },
+                    { action: 'check',  placement: 'menu', handler: () => $emit('check', protocolo.id),  allowed: canCheck },
+                    { action: 'pdf',    placement: 'menu', handler: () => $emit('pdf', protocolo.id),    allowed: canPdf },
+                    { action: 'assign', placement: 'menu', handler: () => $emit('assign', protocolo.id), allowed: canAtribuir && isAssignableStatus(protocolo.situacao) },
+                  ]"
                 />
               </div>
             </td>
           </tr>
           <tr v-if="protocolos.length === 0">
-            <td colspan="6" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
-              Nenhum protocolo encontrado
+            <td colspan="6" class="p-0">
+              <ListEmptyState title="Nenhum protocolo encontrado" />
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
-  </div>
+  </ListContainer>
 </template>
 
 <script setup>
 import PrazosPill from '@/Components/Molecules/Pae/Protocolos/PrazosPill.vue';
 import StatusPill from '@/Components/Molecules/Pae/Protocolos/StatusPill.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
+import ListContainer from '@/Components/Organisms/ListContainer.vue';
+import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
+import { isAssignableStatus } from '@/Composables/usePaeAssignableStatus';
 
 defineProps({
   protocolos: {
@@ -93,7 +101,19 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  canAtribuir: {
+    type: Boolean,
+    default: false,
+  },
+  canCheck: {
+    type: Boolean,
+    default: false,
+  },
+  canPdf: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['view', 'print', 'edit', 'history', 'archive']);
+defineEmits(['view', 'print', 'edit', 'history', 'check', 'pdf', 'archive', 'delete', 'options', 'assign']);
 </script>

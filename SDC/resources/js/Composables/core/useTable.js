@@ -24,7 +24,7 @@ export function useTable(initialPagination = null, routeName = 'rat.index') {
 
   function goToPage(page) {
     if (page < 1 || page > totalPages.value) return;
-    
+
     router.get(route(routeName), { page }, {
       preserveState: true,
       preserveScroll: true,

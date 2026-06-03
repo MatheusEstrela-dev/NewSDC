@@ -9,17 +9,17 @@ Set-Location $PSScriptRoot
 # Verificar se node_modules existe
 if (-not (Test-Path "node_modules")) {
     Write-Host "📦 Instalando dependências..." -ForegroundColor Yellow
-    npm install
+    bun install
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Erro ao instalar dependências!" -ForegroundColor Red
         exit 1
     }
 }
 
-# Verificar se a porta 5175 está em uso
-$portaEmUso = Get-NetTCPConnection -LocalPort 5175 -ErrorAction SilentlyContinue
+# Verificar se a porta 8081 está em uso
+$portaEmUso = Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue
 if ($portaEmUso) {
-    Write-Host "⚠️  Porta 5175 já está em uso!" -ForegroundColor Yellow
+    Write-Host "⚠️  Porta 8081 já está em uso!" -ForegroundColor Yellow
     Write-Host "Processo usando a porta:" -ForegroundColor Yellow
     Get-Process -Id $portaEmUso.OwningProcess | Select-Object Id, ProcessName, Path
     Write-Host ""
@@ -36,14 +36,13 @@ if ($portaEmUso) {
 
 # Iniciar o Vite
 Write-Host "🔥 Iniciando servidor Vite..." -ForegroundColor Cyan
-Write-Host "📍 URL: http://localhost:5175" -ForegroundColor Cyan
-Write-Host "📍 Network: http://0.0.0.0:5175" -ForegroundColor Cyan
+Write-Host "📍 URL: http://localhost:8081" -ForegroundColor Cyan
+Write-Host "📍 Laravel: https://localhost:19444/pae" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Pressione Ctrl+C para parar o servidor" -ForegroundColor Yellow
 Write-Host ""
 
-npm run dev
-
+bun run dev
 
 
 

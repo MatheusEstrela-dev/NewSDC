@@ -27,6 +27,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     jq \
+    pigz \
     python3 \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
@@ -53,6 +54,10 @@ RUN curl -L "https://github.com/docker/compose/releases/latest/download/docker-c
     chmod +x /usr/local/bin/docker-compose && \
     docker-compose --version
 
+# ===== AZURE CLI =====
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash \
+    && az --version
+
 # ===== RESOLVER PROBLEMA 2B: Acesso ao Docker Socket =====
 # Criar grupo docker com GID dinâmico (será configurado via ARG)
 ARG DOCKER_GID=999
@@ -60,24 +65,6 @@ RUN groupadd -g ${DOCKER_GID} docker || groupmod -g ${DOCKER_GID} docker
 RUN usermod -aG docker jenkins
 
 # ===== INSTALAR FERRAMENTAS ADICIONAIS PARA BUILDS =====
-
-# Node.js e NPM (para builds frontend)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
-    npm install -g npm@latest && \
-    node --version && npm --version
-
-# PHP e Composer (para projetos Laravel/PHP)
-RUN apt-get update && apt-get install -y \
-    php8.2-cli \
-    php8.2-curl \
-    php8.2-mbstring \
-    php8.2-xml \
-    php8.2-zip \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
-    composer --version
 
 # ===== PLUGINS JENKINS ESSENCIAIS =====
 # Instalar plugins via jenkins-plugin-cli (mais rápido e confiável)
@@ -96,16 +83,14 @@ RUN jenkins-plugin-cli --plugins \
     github \
     gitlab-plugin \
     slack \
+    office-365-connector \
     email-ext \
     prometheus \
+    cloudbees-disk-usage-simple \
     timestamper \
     ws-cleanup \
     build-timeout \
     ansicolor
-
-# ===== CONFIGURAÇÃO DE SEGURANÇA =====
-# Desabilitar assistente de setup (configuraremos via JCasC)
-ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
 
 # ===== SCRIPTS DE INICIALIZAÇÃO =====
 COPY --chown=jenkins:jenkins init.groovy.d/ /usr/share/jenkins/ref/init.groovy.d/
@@ -121,7 +106,7 @@ RUN chown -R jenkins:jenkins /var/jenkins_home
 # ===== RESOLVER PROBLEMA 2A: Java Heap vs Docker Limit =====
 # As variáveis JAVA_OPTS serão configuradas no docker-compose.yml
 # mas garantimos valores padrão seguros aqui
-ENV JAVA_OPTS="-Xms512m -Xmx2g -Djava.awt.headless=true"
+ENV JAVA_OPTS="-Xms512m -Xmx2g -Djava.awt.headless=true -Djenkins.install.runSetupWizard=false"
 
 # ===== EXPOR PORTAS =====
 EXPOSE 8080 50000

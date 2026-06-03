@@ -5,7 +5,7 @@
         :href="route('rat.show', rat.id)"
         class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
       >
-        {{ rat.protocolo || `RAT #${rat.id}` }}
+        {{ rat.protocolo || rat.numero_bos || `RAT #${rat.id}` }}
       </Link>
     </TableCell>
     <TableCell class="w-44 whitespace-nowrap">
@@ -20,22 +20,23 @@
       <StatusBadge :status="rat.status" />
     </TableCell>
     <TableCell class="w-auto whitespace-nowrap">
-      {{ rat.local?.municipio || 'Não informado' }}
+      {{ municipioDisplay || 'Não informado' }}
     </TableCell>
     <TableCell class="w-44 whitespace-nowrap">
       {{ rat.criado_por || 'Sistema' }}
     </TableCell>
     <TableCell align="right" class="w-44 whitespace-nowrap">
       <div class="flex justify-end">
-        <TableActions
-          :show-print="true"
-          :show-edit="canEdit"
-          :show-delete="canDelete"
-          @view="handleView"
-          @print="handlePrint"
-          @edit="handleEdit"
-          @attachments="handleAttachments"
-          @delete="handleDelete"
+        <ActionButton
+          module="rat"
+          resource="protocolos"
+          :actions="[
+            { action: 'view',        handler: () => emit('view', props.rat.id) },
+            { action: 'print',       handler: () => emit('print', props.rat.id) },
+            { action: 'edit',        handler: () => emit('edit', props.rat.id),        allowed: canEdit },
+            { action: 'attachments', handler: () => emit('attachments', props.rat.id), label: 'Relacionar' },
+            { action: 'delete',      handler: () => emit('delete', props.rat.id),      allowed: canDelete },
+          ]"
         />
       </div>
     </TableCell>
@@ -44,11 +45,15 @@
 
 <script setup>
 import { Link } from '@inertiajs/vue3';
+import { ref, onMounted } from 'vue';
 import Badge from '../../../Atoms/Badge/Badge.vue';
 import StatusBadge from '../../../Atoms/Badge/StatusBadge.vue';
 import TableCell from '../../../Atoms/Table/TableCell.vue';
-import TableActions from '../../../Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TableDataRow from '../../../Molecules/Table/TableDataRow.vue';
+
+// Module-level cache so each IBGE code is fetched only once per page load
+const _municipioCache = {};
 
 const props = defineProps({
   rat: {
@@ -63,6 +68,31 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+});
+
+const municipioDisplay = ref(props.rat.municipio ?? '');
+
+onMounted(async () => {
+  const raw = props.rat.municipio ?? props.rat.local?.municipio_id ?? '';
+  if (!raw || !/^\d+$/.test(String(raw))) {
+    municipioDisplay.value = raw || 'Não informado';
+    return;
+  }
+  const code = String(raw);
+  if (_municipioCache[code]) {
+    municipioDisplay.value = _municipioCache[code];
+    return;
+  }
+  try {
+    const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios/${code}`);
+    if (res.ok) {
+      const d = await res.json();
+      _municipioCache[code] = d.nome;
+      municipioDisplay.value = d.nome;
+    }
+  } catch {
+    // keep raw code if API fails
+  }
 });
 
 const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);

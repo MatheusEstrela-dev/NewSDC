@@ -1,0 +1,50 @@
+<template>
+  <span :class="badgeClasses">
+    {{ label }}
+  </span>
+</template>
+
+<script setup>
+import { computed } from 'vue';
+
+const props = defineProps({
+  status: {
+    type: String,
+    required: false,
+    default: null,
+  },
+});
+
+const statusConfig = {
+  vigente: {
+    label: 'Vigente',
+    classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+  },
+  prox_vencimento: {
+    label: 'Prox. Vencimento',
+    classes: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+  },
+  vencido: {
+    label: 'Vencido',
+    classes: 'bg-red-500/20 text-red-300 border border-red-500/30',
+  },
+  sem_validade: {
+    label: 'Sem Validade',
+    classes: 'bg-slate-500/20 text-slate-300 border border-slate-500/30',
+  },
+};
+
+const label = computed(() => {
+  if (!props.status) return 'N/A';
+  return statusConfig[props.status]?.label || props.status;
+});
+
+const badgeClasses = computed(() => {
+  return [
+    'px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold inline-block whitespace-nowrap',
+    props.status
+      ? (statusConfig[props.status]?.classes || 'bg-slate-500/20 text-slate-300 border border-slate-500/20')
+      : 'bg-slate-500/20 text-slate-400 border border-slate-500/20',
+  ].join(' ');
+});
+</script>

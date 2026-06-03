@@ -27,7 +27,7 @@ return new class extends Migration
                 // Timestamp que atualiza automaticamente na alteração (comportamento do SQL original)
                 $table->timestamp('dt_status')
                       ->useCurrent()
-                      ->useCurrentOnUpdate()
+                      
                       ->comment('Data de Movimentação');
 
                 $table->string('obs', 100)->nullable()->comment('Observação');

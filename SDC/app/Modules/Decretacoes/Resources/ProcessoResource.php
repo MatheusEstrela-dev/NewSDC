@@ -36,17 +36,25 @@ class ProcessoResource extends JsonResource
         return [
             'id' => $this->id,
             'processo' => $this->safeGet('processo'),
+            'origem' => $this->safeGet('processo'), // Alias para frontend (municipal/estadual)
             'tipo_decreto' => $this->safeGet('tipo_decreto'),
             'status' => $this->safeGet('status'),
             'protocolo_fide' => $this->safeGet('n_protocolo_fide'),
             'decreto_municipal' => $this->safeGet('decreto_municipal'),
+            'redec_id' => $this->safeGetInt('redec_id'),
+            'municipio_id' => $this->getFirstMunicipioId(), // Primeiro municipio para edicao
 
             // Datas - formatadas para API (ISO) e para exibicao (BR)
             'data_entrada' => $this->formatDate('data_entrada'),
             'data_entrada_formatada' => $this->formatDate('data_entrada', 'd/m/Y'),
             'data_ocorrencia' => $this->formatDate('data_ocorrencia_desastre'),
+            'data_ocorrencia_desastre' => $this->formatDate('data_ocorrencia_desastre'),
             'data_decreto_municipal' => $this->formatDate('data_decreto_municipal'),
             'data_publicacao_mg' => $this->formatDate('data_publicacao_mg'),
+            'data_decreto_estadual' => $this->formatDate('data_decreto_estadual'),
+            'data_portaria_federal' => $this->formatDate('data_portaria_federal'),
+            'data_publicacao_diario' => $this->formatDate('data_publicacao_diario'),
+            'data_publicacao_domg' => $this->formatDate('data_publicacao_domg'),
 
             // Vigencia - campos calculados
             'prazo_vigencia' => $this->safeGetInt('prazo_vigencia'),
@@ -56,23 +64,47 @@ class ProcessoResource extends JsonResource
             'vigente' => $this->isVigente(),
             'proximo_vencer' => $this->isProximoVencer(),
 
-            // Desastre
+            // Desastre - dados basicos
             'tipo_desastre_id' => $this->safeGetInt('tipo_desastre_id'),
+            'cobrade_id' => $this->safeGetInt('tipo_desastre_id'), // Alias para frontend
             'tipo_desastre_nome' => $this->safeGet('tipo_desastre_nome') ?? $this->safeGet('tipo_desastre'),
             'tipo_desastre_cobrade' => $this->getTipoDesastreCobrade(),
 
+            // Desastre - dados completos (quando carregados)
+            'tipo_desastre' => $this->safeGet('tipo_desastre'),
+            'tipo_desastre_completo' => $this->safeGet('tipo_desastre_completo'),
+            'tipo_desastre_info' => $this->safeGet('tipo_desastre_completo'),
+
+            // Totais de desastres (quando carregados)
+            'totais' => $this->safeGet('totais'),
+
+            // Pedidos de ajuda humanitaria (quando carregados)
+            'pedidos_ah' => $this->formatPedidosAh(),
+
             // Outros campos
+            'analista' => $this->safeGet('analista'),
             'reconhecimento' => $this->safeGet('reconhecimento'),
             'observacoes' => $this->safeGet('observacoes'),
             'orgao_responsavel_id' => $this->safeGetInt('orgao_responsavel_id'),
+            'n_protocolo_fide' => $this->safeGet('n_protocolo_fide'),
+            'processo_inserido_sei' => $this->safeGet('processo_inserido_sei'),
+            'situacao_anormalidade' => $this->safeGet('tipo_desastre'),
 
-            // Relacionamentos - carregados sob demanda
-            'municipios' => $this->whenLoaded('municipios', fn() => $this->mapMunicipios()),
-            'desastres' => $this->whenLoaded('desastres', fn() => $this->mapDesastres()),
-            'municipios_count' => $this->when(
-                $this->relationLoaded('municipios'),
-                fn() => $this->municipios->count()
-            ),
+            // Campos para edicao - Decreto Estadual
+            'n_decreto_estadual' => $this->safeGet('n_decreto_estadual'),
+            'n_edicao_domg' => $this->safeGet('n_edicao_domg'),
+
+            // Campos para edicao - Reconhecimento Federal
+            'portaria_reconhecimento_fed' => $this->safeGet('portaria_reconhecimento_fed'),
+            'n_portaria_federal' => $this->safeGet('portaria_reconhecimento_fed'),
+            'portaria_diario_oficial' => $this->safeGet('portaria_diario_oficial'),
+            'n_edicao_dou' => $this->safeGet('portaria_diario_oficial'),
+            'reconhecimento_federal' => $this->safeGet('reconhecimento_federal'),
+
+            // Relacionamentos - sempre incluidos (Model tem $with)
+            'municipios' => $this->mapMunicipios(),
+            'desastres' => $this->mapDesastres(),
+            'municipios_count' => count($this->mapMunicipios()),
 
             // Timestamps
             'created_at' => $this->created_at?->toIso8601String(),
@@ -94,13 +126,19 @@ class ProcessoResource extends JsonResource
             'processo' => $this->safeGet('processo'),
             'tipo_decreto' => $this->safeGet('tipo_decreto'),
             'status' => $this->safeGet('status'),
+            'reconhecimento' => $this->safeGet('reconhecimento'),
             'protocolo_fide' => $this->safeGet('n_protocolo_fide'),
+            'n_protocolo_fide' => $this->safeGet('n_protocolo_fide'),
+            'data_entrada' => $this->formatDate('data_entrada'),
             'data_entrada_formatada' => $this->formatDate('data_entrada', 'd/m/Y'),
+            'data_vencimento' => $this->getDataVencimento()?->format('Y-m-d'),
             'data_vencimento_formatada' => $this->getDataVencimento()?->format('d/m/Y'),
             'dias_restantes' => $this->getDiasRestantes(),
             'vigente' => $this->isVigente(),
             'proximo_vencer' => $this->isProximoVencer(),
             'tipo_desastre_nome' => $this->safeGet('tipo_desastre_nome') ?? $this->safeGet('tipo_desastre'),
+            'tipo_desastre_cobrade' => $this->getTipoDesastreCobrade(),
+            'analista' => $this->safeGet('analista'),
             'municipios_count' => $this->relationLoaded('municipios') ? $this->municipios->count() : 0,
         ];
     }
@@ -149,12 +187,23 @@ class ProcessoResource extends JsonResource
     protected function formatDate(string $key, string $format = 'Y-m-d'): ?string
     {
         $value = $this->safeGet($key);
-        if ($value === null) {
+        if ($value === null || $value === '') {
             return null;
         }
         try {
-            $date = $value instanceof Carbon ? $value : Carbon::parse($value);
-            return $date->format($format);
+            if ($value instanceof Carbon) {
+                return $value->format($format);
+            }
+            // Tenta formato ISO primeiro
+            if (preg_match('/^\d{4}-\d{2}-\d{2}/', $value)) {
+                return Carbon::parse($value)->format($format);
+            }
+            // Tenta formato BR (dd/mm/yyyy)
+            if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})/', $value, $matches)) {
+                return Carbon::createFromFormat('d/m/Y', $matches[0])->format($format);
+            }
+            // Fallback
+            return Carbon::parse($value)->format($format);
         } catch (\Throwable) {
             return null;
         }
@@ -200,7 +249,7 @@ class ProcessoResource extends JsonResource
         }
 
         $hoje = Carbon::today();
-        return $dataVencimento->lt($hoje) ? 0 : $hoje->diffInDays($dataVencimento);
+        return $dataVencimento->lt($hoje) ? 0 : (int) $hoje->diffInDays($dataVencimento);
     }
 
     /**
@@ -256,6 +305,22 @@ class ProcessoResource extends JsonResource
     // =========================================================================
 
     /**
+     * Obtem ID do primeiro municipio para edicao.
+     *
+     * @return int|null ID do primeiro municipio ou null
+     */
+    protected function getFirstMunicipioId(): ?int
+    {
+        try {
+            $municipios = $this->mapMunicipios();
+
+            return !empty($municipios) ? (int) $municipios[0]['id'] : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * Mapeia municipios para array simplificado.
      *
      * DESTINO: Frontend (lista de municipios do processo)
@@ -265,6 +330,16 @@ class ProcessoResource extends JsonResource
     protected function mapMunicipios(): array
     {
         try {
+            $preloadedMunicipios = $this->resource->getAttribute('_municipios');
+
+            if (is_array($preloadedMunicipios) && !empty($preloadedMunicipios)) {
+                return array_values(array_map(fn($m) => [
+                    'id' => $m['id'] ?? null,
+                    'nome' => $m['nome'] ?? null,
+                    'codigo_ibge' => $m['codigo_ibge'] ?? null,
+                ], $preloadedMunicipios));
+            }
+
             return $this->municipios->map(fn($m) => [
                 'id' => $m->id,
                 'nome' => $m->nome,
@@ -293,5 +368,40 @@ class ProcessoResource extends JsonResource
         } catch (\Throwable) {
             return [];
         }
+    }
+
+    /**
+     * Formata pedidos de ajuda humanitaria para o frontend.
+     *
+     * DESTINO: Tab de Pedidos AH no modal de detalhes
+     *
+     * @return array Lista de pedidos formatados
+     */
+    protected function formatPedidosAh(): array
+    {
+        $pedidosAh = $this->safeGet('pedidos_ah');
+
+        if (!$pedidosAh || !is_iterable($pedidosAh)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($pedidosAh as $codigo => $items) {
+            if (!is_iterable($items)) {
+                continue;
+            }
+            foreach ($items as $item) {
+                $result[] = [
+                    'id' => $codigo,
+                    'numero' => $item['codigo'] ?? $codigo,
+                    'tipo' => $item['descricao_item'] ?? 'Ajuda Humanitaria',
+                    'status' => $item['status'] ?? 'N/A',
+                    'tp_item' => $item['tp_item'] ?? null,
+                    'quantidade' => $item['total_qtd'] ?? 0,
+                ];
+            }
+        }
+
+        return $result;
     }
 }

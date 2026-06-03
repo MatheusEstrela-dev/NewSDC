@@ -101,12 +101,15 @@ return [
             'after_commit' => false,
         ],
 
-        // Fila baixa - processamento em background
+        // Fila baixa - processamento em background.
+        // retry_after > maior timeout de job consumido nesta fila (export jobs
+        // assincronos tem timeout=600s) para evitar re-enfileiramento duplicado
+        // do mesmo job enquanto ainda executa.
         'redis-low' => [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => 'low',
-            'retry_after' => 300,
+            'retry_after' => 660,
             'block_for' => 10,
             'after_commit' => false,
         ],

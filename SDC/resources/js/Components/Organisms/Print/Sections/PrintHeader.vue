@@ -18,7 +18,7 @@ defineProps({
   },
   logoSrc: {
     type: String,
-    default: '/imgs/logo_dc.png',
+    default: '/imgs/logo_dc.webp',
   },
 });
 </script>

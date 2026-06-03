@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Services;
 
+use App\Modules\Decretacoes\Constants\DesastreConstants;
+use App\Modules\Decretacoes\Resources\ProcessoFlatResource;
 use App\Modules\Decretacoes\Resources\ProcessoResource;
 use App\Modules\Decretacoes\Filters\ProcessoFilter;
 use App\Modules\Decretacoes\Models\DecretoMunicipio;
@@ -16,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Service responsavel por consultas complexas, filtragem e agregacao de dados de Processos.
@@ -235,7 +238,63 @@ class ProcessoQueryService
     {
         $processoId = $processo->id;
 
-        return $processo->municipios->transform(function ($municipio) use ($processoId) {
+        // Fonte principal: dec_decreto_municipios com n_protocolo_fide (IBGE embutido)
+        $decRows = DB::table('dec_decreto_municipios')
+            ->where('entrada_processos_id', $processoId)
+            ->whereNull('deleted_at')
+            ->select('municipio_id', 'n_protocolo_fide')
+            ->get();
+
+        if ($decRows->isEmpty()) {
+            return collect();
+        }
+
+        // Extrai codigos IBGE (formato MG-F-{7-digitos}-...)
+        $ibgeCodes = [];
+        $directIds = [];
+        $rowMap    = [];
+
+        foreach ($decRows as $row) {
+            $mid   = (int) $row->municipio_id;
+            $parts = explode('-', (string) $row->n_protocolo_fide);
+            $ibge  = (isset($parts[2]) && strlen($parts[2]) === 7) ? $parts[2] : null;
+
+            if ($ibge) {
+                $ibgeCodes[$ibge] = true;
+                $rowMap[$mid]     = ['ibge' => $ibge];
+            } else {
+                $directIds[$mid]  = true;
+                $rowMap[$mid]     = ['direct_id' => $mid];
+            }
+        }
+
+        $byIbge = !empty($ibgeCodes)
+            ? DB::table('municipios')->whereIn('codigo_ibge', array_keys($ibgeCodes))
+                ->select('id', 'nome', 'codigo_ibge')->get()->keyBy('codigo_ibge')
+            : collect();
+
+        $byId = !empty($directIds)
+            ? DB::table('municipios')->whereIn('id', array_keys($directIds))
+                ->select('id', 'nome', 'codigo_ibge')->get()->keyBy('id')
+            : collect();
+
+        $resolvedList = [];
+        foreach ($rowMap as $mid => $meta) {
+            if (isset($meta['ibge']) && isset($byIbge[$meta['ibge']])) {
+                $m = $byIbge[$meta['ibge']];
+                $resolvedList[$mid] = (object) ['id' => $mid, 'real_id' => $m->id, 'nome' => $m->nome, 'codigo_ibge' => $m->codigo_ibge ?? null];
+            } elseif (isset($meta['direct_id']) && isset($byId[$meta['direct_id']])) {
+                $m = $byId[$meta['direct_id']];
+                $resolvedList[$mid] = (object) ['id' => $mid, 'real_id' => $m->id, 'nome' => $m->nome, 'codigo_ibge' => $m->codigo_ibge ?? null];
+            } else {
+                // Fallback para processos TEMPORARIO: municipio_id CEDEC sem correspondencia na tabela municipios
+                $resolvedList[$mid] = (object) ['id' => $mid, 'real_id' => null, 'nome' => "Municipio $mid", 'codigo_ibge' => null];
+            }
+        }
+
+        $municipios = collect($resolvedList)->sortBy('nome')->values();
+
+        return collect($municipios)->transform(function ($municipio) use ($processoId) {
             $municipioId = $municipio->id;
 
             // Carrega protocolo FIDE do municipio
@@ -322,18 +381,23 @@ class ProcessoQueryService
             ->join('dec_entrada_desastres as ed', 'ecd.id', '=', 'ed.entrada_categoria_desastre_id')
             ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
             ->join('dec_desastre_categorias as dc', 'ecd.categoria_id', '=', 'dc.id')
-            ->join('cedec_municipio as m', 'ed.municipio_id', '=', 'm.id')
+            ->leftJoin('municipios as m', function ($join) {
+                $join->on('ed.municipio_id', '=', 'm.id')
+                     ->orWhereRaw("m.codigo_ibge LIKE CONCAT('31', ed.municipio_id, '_')");
+            })
             ->whereIn('ecd.entrada_processo_id', $processoIds)
             ->whereIn('dic.tipo', ['number', 'currency'])
+            ->whereNull('ecd.deleted_at')
+            ->whereNull('ed.deleted_at')
             ->select(
                 'ecd.entrada_processo_id',
-                'm.p_nome as municipio',
+                'm.nome as municipio',
                 'dc.titulo as categoria_titulo',
                 'dic.titulo as desastre_campo_titulo',
                 'dic.tipo',
-                DB::raw('SUM(ed.valor) as total_valor')
+                DB::raw("SUM(CAST(COALESCE(ed.valor, '0') AS NUMERIC)) as total_valor")
             )
-            ->groupBy('ecd.entrada_processo_id', 'm.p_nome', 'dc.titulo', 'dic.titulo', 'dic.tipo')
+            ->groupBy('ecd.entrada_processo_id', 'm.nome', 'dc.titulo', 'dic.titulo', 'dic.tipo')
             ->get();
 
         // Agrupa por municipio
@@ -389,7 +453,7 @@ class ProcessoQueryService
 
         $tpItemCase = "CASE WHEN LOWER(aju_h_pedido_pedid.tramit) = 'atendido' THEN 'RECEBIDO' ELSE aju_h_pedido_itens.tp_item END";
 
-        $registros = DB::connection('sdc')->table('aju_h_pedido_pedid')
+        $registros = DB::table('aju_h_pedido_pedid')
             ->join('aju_h_pedido_itens', 'aju_h_pedido_pedid.id', '=', 'aju_h_pedido_itens.id_pedido')
             ->select(
                 'aju_h_pedido_itens.codigo',
@@ -517,6 +581,38 @@ class ProcessoQueryService
     }
 
     /**
+     * Lista processos com estrutura plana legada para API externa.
+     *
+     * FLUXO:
+     *   Filtros -> list() -> enrichPaginatorWithTotais() -> enrichWithGeoData() -> ProcessoFlatResource
+     *
+     * DESTINO: GET /api/v1/decretacoes (consumidores externos, BI, integracoes)
+     *
+     * @param array $filters Filtros de busca
+     * @param int $perPage Itens por pagina
+     * @return array Dados com estrutura plana e meta de paginacao
+     */
+    public function listForApiFlat(array $filters = [], int $perPage = 15): array
+    {
+        $paginator = $this->list($filters, $perPage);
+
+        $processos = collect($paginator->items());
+
+        $this->enrichPaginatorWithTotais($paginator);
+        $this->enrichWithGeoData($processos);
+
+        return [
+            'data' => ProcessoFlatResource::collection($paginator)->resolve(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+        ];
+    }
+
+    /**
      * Retorna detalhes completos de um processo para API.
      *
      * FLUXO: ID -> Processo (com relacionamentos) -> ProcessoResource -> JSON
@@ -529,7 +625,564 @@ class ProcessoQueryService
     public function showForApi(int $id): ?array
     {
         $processo = Processo::with(['municipios', 'desastres'])->find($id);
-        return $processo ? ProcessoResource::make($processo)->resolve() : null;
+
+        if (!$processo) {
+            return null;
+        }
+
+        $totais = $this->calculateTotaisForProcesso($id);
+        $pedidosAh = $this->getPedidoAhData($processo->decreto_municipal);
+        $tipoDesastre = $this->getTipoDesastreCompleto($processo->tipo_desastre_id);
+
+        $processo->setAttribute('totais', $totais);
+        $processo->setAttribute('pedidos_ah', $pedidosAh);
+        $processo->setAttribute('tipo_desastre_completo', $tipoDesastre);
+
+        return ProcessoResource::make($processo)->resolve();
+    }
+
+    /**
+     * Retorna detalhes de um processo no formato plano (mesma estrutura de listForApiFlat).
+     *
+     * FLUXO: ID -> Processo -> geo + totais batch -> ProcessoFlatResource -> JSON
+     *
+     * DESTINO: POST /api/v1/decretacoes/receive (resposta apos criacao)
+     *
+     * @param int $id ID do processo
+     * @return array|null Dados no formato plano ou null se nao encontrado
+     */
+    public function showForApiFlat(int $id): ?array
+    {
+        $processo = Processo::find($id);
+
+        if (!$processo) {
+            return null;
+        }
+
+        $processos = collect([$processo]);
+
+        $this->enrichWithGeoData($processos);
+
+        $totais = $this->calculateTotaisForProcesso($id);
+        $processo->setAttribute('totais', $totais);
+
+        return ProcessoFlatResource::make($processo)->resolve();
+    }
+
+    /**
+     * Exporta todos os processos no formato plano para consumidores externos (BI, integracoes).
+     *
+     * FLUXO: Request (filtros + include_deleted) -> get() sem paginacao
+     *         -> enrichPaginatorWithTotais (via fake paginator) -> enrichWithGeoData
+     *         -> ProcessoFlatResource::collection -> JSON
+     *
+     * DESTINO: GET /api/v1/decretacoes/export/power-bi
+     *
+     * @param Request $request Request com filtros opcionais e include_deleted
+     * @return array Lista plana de processos
+     */
+    public function exportAllForApiFlat(Request $request): array
+    {
+        $query = $this->applyFilters($request);
+
+        if ($request->input('include_deleted', false)) {
+            $query->withTrashed();
+        }
+
+        $allProcessos = $query->get();
+
+        if ($allProcessos->isEmpty()) {
+            return [];
+        }
+
+        $fakePaginator = new \Illuminate\Pagination\LengthAwarePaginator(
+            $allProcessos->all(),
+            $allProcessos->count(),
+            $allProcessos->count(),
+            1
+        );
+
+        $this->enrichPaginatorWithTotais($fakePaginator);
+        $this->enrichWithGeoData($allProcessos);
+
+        return ProcessoFlatResource::collection($allProcessos)->resolve();
+    }
+
+    // Mapeamento de titulo de item para tipo de dano humano (fallback por nome)
+    private const DANOS_HUMANOS_TITLES = [
+        'obito' => 'obitos',
+        'morto' => 'obitos',
+        'ferido' => 'feridos',
+        'enfermo' => 'feridos',
+        'desabrigado' => 'desabrigados',
+        'desalojado' => 'desalojados',
+        'desaparecido' => 'desaparecidos',
+        'outros' => 'outros_afetados',
+        'afetados' => 'outros_afetados',
+    ];
+
+    /**
+     * Enriquece processos do paginador com totais de desastres (batch).
+     * Usa apenas 2 queries no total, independente do numero de processos.
+     *
+     * DESTINO: Controller index (Inertia) - entrega direta sem API
+     *
+     * @param \Illuminate\Pagination\LengthAwarePaginator $paginator Paginador com processos
+     */
+    public function enrichPaginatorWithTotais(\Illuminate\Pagination\LengthAwarePaginator $paginator): void
+    {
+        $processos = collect($paginator->items());
+        $processoIds = $processos->pluck('id');
+
+        if ($processoIds->isEmpty()) {
+            return;
+        }
+
+        // Query batch: totais (materiais, prejuizos) - 1 query para todos os processos
+        $allTotals = DB::table('dec_entrada_categoria_desastres as ecd')
+            ->join('dec_entrada_desastres as ed', 'ecd.id', '=', 'ed.entrada_categoria_desastre_id')
+            ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
+            ->join('dec_desastre_categorias as dc', 'ecd.categoria_id', '=', 'dc.id')
+            ->leftJoin('municipios as m', function ($join) {
+                $join->on('ed.municipio_id', '=', 'm.id')
+                     ->orWhereRaw("m.codigo_ibge LIKE CONCAT('31', ed.municipio_id, '_')");
+            })
+            ->whereIn('ecd.entrada_processo_id', $processoIds)
+            ->whereIn('dic.tipo', ['number', 'currency'])
+            ->whereNull('ecd.deleted_at')
+            ->whereNull('ed.deleted_at')
+            ->select(
+                'ecd.entrada_processo_id',
+                'ed.municipio_id',
+                'm.nome as municipio_nome',
+                'dc.titulo as categoria_titulo',
+                'dic.titulo as desastre_campo_titulo',
+                'dic.tipo',
+                DB::raw("SUM(CAST(COALESCE(ed.valor, '0') AS NUMERIC)) as total_valor")
+            )
+            ->groupBy('ecd.entrada_processo_id', 'ed.municipio_id', 'm.nome', 'dc.titulo', 'dic.titulo', 'dic.tipo')
+            ->get();
+
+        // Query batch: danos humanos - 1 query para todos os processos
+        $danosHumanosBatch = DB::table('dec_entrada_desastres as ed')
+            ->join('dec_entrada_categoria_desastres as ecd', 'ed.entrada_categoria_desastre_id', '=', 'ecd.id')
+            ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
+            ->join('dec_desastre_items as di', 'dic.desastre_item_id', '=', 'di.id')
+            ->join('dec_desastre_categorias as dc', 'di.categoria_id', '=', 'dc.id')
+            ->whereIn('ecd.entrada_processo_id', $processoIds)
+            ->where('dc.id', DesastreConstants::CATEGORIA_DANOS_HUMANOS_ID)
+            ->whereNull('ecd.deleted_at')
+            ->whereNull('ed.deleted_at')
+            ->select(
+                'ecd.entrada_processo_id',
+                'ed.municipio_id',
+                'di.id as item_id',
+                DB::raw("COALESCE(NULLIF(TRIM(ed.valor), ''), '0')::bigint as valor_numerico")
+            )
+            ->get();
+
+        // Agrupa por processo
+        $totalsByProcesso = $allTotals->groupBy('entrada_processo_id');
+        $dhByProcesso = $danosHumanosBatch->groupBy('entrada_processo_id');
+
+        foreach ($processos as $processo) {
+            $id = $processo->id;
+            $processoTotals = $totalsByProcesso->get($id, collect());
+            $processoDH = $dhByProcesso->get($id, collect());
+
+            // Agrupa por municipio -> categoria -> campo
+            $groupedByMunicipio = $processoTotals->groupBy('municipio_id')->map(function ($municipioItems) {
+                return $municipioItems->groupBy('categoria_titulo')->map(function ($categoriaItems) {
+                    return $categoriaItems->keyBy('desastre_campo_titulo')->map(function ($item) {
+                        return $item->tipo === 'currency' ? (float) $item->total_valor : (int) $item->total_valor;
+                    });
+                });
+            });
+
+            // Danos humanos por municipio
+            $danosHumanosByMunicipio = $processoDH->groupBy('municipio_id')->map(function ($municipioItems) {
+                $result = array_fill_keys(array_unique(array_values(DesastreConstants::DANOS_HUMANOS_MAP)), 0);
+                foreach ($municipioItems as $item) {
+                    $key = DesastreConstants::DANOS_HUMANOS_MAP[(int) $item->item_id] ?? null;
+                    if ($key) {
+                        $result[$key] += (int) $item->valor_numerico;
+                    }
+                }
+                $result['total'] = array_sum($result);
+                return $result;
+            });
+
+            $geral = $this->aggregateTotaisGeralFromGrouped($groupedByMunicipio, $danosHumanosByMunicipio);
+            $porMunicipio = $this->aggregateTotaisPorMunicipioFromGrouped($groupedByMunicipio, $danosHumanosByMunicipio, $processoTotals);
+
+            $processo->totais = [
+                'geral' => $geral,
+                'por_municipio' => $porMunicipio,
+            ];
+
+            // Tipo desastre completo para modal de detalhes
+            $tipoDesastre = $this->getTipoDesastreCompleto($processo->tipo_desastre_id);
+            if ($tipoDesastre) {
+                $processo->tipo_desastre_info = $tipoDesastre;
+            }
+        }
+    }
+
+    /**
+     * Enriquece processos com dados geograficos do primeiro municipio.
+     * Usa 2 queries batch para todos os processos — sem N+1.
+     *
+     * Seta o atributo `_geo` em cada processo com:
+     *   uf, municipio, codigo_ibge, macroregiao, latitude, longitude, latitude_dec, longitude_dec
+     *
+     * PREREQUISITO: dec_decreto_municipios populado com n_protocolo_fide no formato MG-F-{ibge7}-...
+     *
+     * @param \Illuminate\Support\Collection $processos Collection de modelos Processo
+     */
+    private function enrichWithGeoData(\Illuminate\Support\Collection $processos): void
+    {
+        $processoIds = $processos->pluck('id');
+
+        if ($processoIds->isEmpty()) {
+            return;
+        }
+
+        // Query 1: primeiro dec_decreto_municipio de cada processo (extrai IBGE do protocolo)
+        $firstDecRows = DB::table('dec_decreto_municipios')
+            ->whereIn('entrada_processos_id', $processoIds)
+            ->whereNull('deleted_at')
+            ->select('entrada_processos_id', 'municipio_id', 'n_protocolo_fide')
+            ->get()
+            ->groupBy('entrada_processos_id')
+            ->map(fn($rows) => $rows->first());
+
+        // Monta mapa processo_id -> ibge_code
+        $processoToIbge = [];
+        $ibgeCodes = [];
+
+        foreach ($firstDecRows as $processoId => $row) {
+            $parts = explode('-', (string) $row->n_protocolo_fide);
+            $ibge = (isset($parts[2]) && strlen($parts[2]) === 7) ? $parts[2] : null;
+
+            if ($ibge) {
+                $processoToIbge[(int) $processoId] = $ibge;
+                $ibgeCodes[$ibge] = true;
+            }
+        }
+
+        if (empty($ibgeCodes)) {
+            $processos->each(fn($p) => $p->setAttribute('_geo', []));
+            return;
+        }
+
+        // Query 2: municipios com LEFT JOIN em cedec_municipio por codigo IBGE
+        $geoData = DB::table('municipios as m')
+            ->leftJoin('cedec_municipio as cm', DB::raw('LEFT(cm.Codmundv, 7)'), '=', 'm.codigo_ibge')
+            ->whereIn('m.codigo_ibge', array_keys($ibgeCodes))
+            ->select(
+                'm.codigo_ibge',
+                'm.uf',
+                'm.nome',
+                'cm.macroregiao',
+                'cm.latitude as latitude_str',
+                'cm.longitude as longitude_str',
+                'cm.latitude_dec',
+                'cm.longitude_dec'
+            )
+            ->get()
+            ->keyBy('codigo_ibge');
+
+        foreach ($processos as $processo) {
+            $ibge = $processoToIbge[$processo->id] ?? null;
+
+            if (!$ibge || !isset($geoData[$ibge])) {
+                $processo->setAttribute('_geo', [
+                    'uf' => 'MG', 'municipio' => null, 'codigo_ibge' => $ibge,
+                    'macroregiao' => null, 'latitude' => null, 'longitude' => null,
+                    'latitude_dec' => null, 'longitude_dec' => null,
+                ]);
+                continue;
+            }
+
+            $geo = $geoData[$ibge];
+            $processo->setAttribute('_geo', [
+                'uf'           => $geo->uf ?? 'MG',
+                'municipio'    => $geo->nome ?? null,
+                'codigo_ibge'  => $geo->codigo_ibge ?? null,
+                'macroregiao'  => $geo->macroregiao ?? null,
+                'latitude'     => $geo->latitude_str ?? null,
+                'longitude'    => $geo->longitude_str ?? null,
+                'latitude_dec'   => $geo->latitude_dec !== null ? (float) $geo->latitude_dec : null,
+                'longitude_dec'  => $geo->longitude_dec !== null ? (float) $geo->longitude_dec : null,
+            ]);
+        }
+    }
+
+    /**
+     * Calcula totais de desastres para um processo especifico.
+     * Usa a mesma logica do ProcessoExportService para garantir consistencia.
+     *
+     * @param int $processoId ID do processo
+     * @return array Totais formatados (geral e por municipio)
+     */
+    public function calculateTotaisForProcesso(int $processoId): array
+    {
+        $processoIds = collect([$processoId]);
+
+        // Query identica ao ProcessoExportService
+        $allTotals = DB::table('dec_entrada_categoria_desastres as ecd')
+            ->join('dec_entrada_desastres as ed', 'ecd.id', '=', 'ed.entrada_categoria_desastre_id')
+            ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
+            ->join('dec_desastre_categorias as dc', 'ecd.categoria_id', '=', 'dc.id')
+            ->leftJoin('municipios as m', function ($join) {
+                $join->on('ed.municipio_id', '=', 'm.id')
+                     ->orWhereRaw("m.codigo_ibge LIKE CONCAT('31', ed.municipio_id, '_')");
+            })
+            ->whereIn('ecd.entrada_processo_id', $processoIds)
+            ->whereIn('dic.tipo', ['number', 'currency'])
+            ->whereNull('ecd.deleted_at')
+            ->whereNull('ed.deleted_at')
+            ->select(
+                'ed.municipio_id',
+                'm.nome as municipio_nome',
+                'dc.titulo as categoria_titulo',
+                'dic.titulo as desastre_campo_titulo',
+                'dic.tipo',
+                DB::raw("SUM(CAST(COALESCE(ed.valor, '0') AS NUMERIC)) as total_valor")
+            )
+            ->groupBy('ed.municipio_id', 'm.nome', 'dc.titulo', 'dic.titulo', 'dic.tipo')
+            ->get();
+
+        // Agrupa identico ao ExportService: municipio -> categoria -> campo
+        $groupedByMunicipio = $allTotals->groupBy('municipio_id')->map(function ($municipioItems) {
+            return $municipioItems->groupBy('categoria_titulo')->map(function ($categoriaItems) {
+                return $categoriaItems->keyBy('desastre_campo_titulo')->map(function ($item) {
+                    return $item->tipo === 'currency' ? (float) $item->total_valor : (int) $item->total_valor;
+                });
+            });
+        });
+
+        // Danos humanos separado (categoria ID = 1)
+        $danosHumanosByMunicipio = $this->calculateDanosHumanosForProcesso($processoIds);
+
+        // Agrega totais gerais
+        $geral = $this->aggregateTotaisGeralFromGrouped($groupedByMunicipio, $danosHumanosByMunicipio);
+
+        // Agrega por municipio
+        $porMunicipio = $this->aggregateTotaisPorMunicipioFromGrouped($groupedByMunicipio, $danosHumanosByMunicipio, $allTotals);
+
+        return [
+            'geral' => $geral,
+            'por_municipio' => $porMunicipio,
+        ];
+    }
+
+    /**
+     * Calcula danos humanos detalhados para um processo.
+     *
+     * @param \Illuminate\Support\Collection $processoIds IDs dos processos
+     * @return \Illuminate\Support\Collection Danos humanos por municipio
+     */
+    private function calculateDanosHumanosForProcesso($processoIds): \Illuminate\Support\Collection
+    {
+        $danosHumanos = DB::table('dec_entrada_desastres as ed')
+            ->join('dec_entrada_categoria_desastres as ecd', 'ed.entrada_categoria_desastre_id', '=', 'ecd.id')
+            ->join('dec_desastre_item_campos as dic', 'ed.item_campo_id', '=', 'dic.id')
+            ->join('dec_desastre_items as di', 'dic.desastre_item_id', '=', 'di.id')
+            ->join('dec_desastre_categorias as dc', 'di.categoria_id', '=', 'dc.id')
+            ->whereIn('ecd.entrada_processo_id', $processoIds)
+            ->where('dc.id', DesastreConstants::CATEGORIA_DANOS_HUMANOS_ID)
+            ->whereNull('ecd.deleted_at')
+            ->whereNull('ed.deleted_at')
+            ->select(
+                'ed.municipio_id',
+                'di.id as item_id',
+                'di.titulo as desastre_item_titulo',
+                DB::raw("COALESCE(NULLIF(TRIM(ed.valor), ''), '0')::bigint as valor_numerico")
+            )
+            ->get();
+
+        return $danosHumanos->groupBy('municipio_id')->map(function ($municipioItems) {
+            $result = array_fill_keys(array_unique(array_values(DesastreConstants::DANOS_HUMANOS_MAP)), 0);
+
+            foreach ($municipioItems as $item) {
+                // Tenta pelo ID primeiro (mapeamento legado/fixo)
+                $key = DesastreConstants::DANOS_HUMANOS_MAP[(int) $item->item_id] ?? null;
+                
+                // Fallback pelo título (mais robusto para bancos externos/dinâmicos)
+                if (!$key && isset($item->desastre_item_titulo)) {
+                    $tituloNormalizado = strtolower(Str::ascii($item->desastre_item_titulo));
+                    foreach (self::DANOS_HUMANOS_TITLES as $mapTitle => $mapKey) {
+                        if (str_contains($tituloNormalizado, $mapTitle)) {
+                            $key = $mapKey;
+                            break;
+                        }
+                    }
+                }
+
+                if ($key) {
+                    $result[$key] += (int) $item->valor_numerico;
+                }
+            }
+
+            $result['total'] = array_sum($result);
+            return $result;
+        });
+    }
+
+    /**
+     * Agrega totais gerais usando estrutura agrupada (mesmo padrao do ExportService).
+     *
+     * @param \Illuminate\Support\Collection $groupedByMunicipio Dados agrupados por municipio->categoria->campo
+     * @param \Illuminate\Support\Collection $danosHumanos Danos humanos por municipio
+     * @return array Totais agregados
+     */
+    private function aggregateTotaisGeralFromGrouped($groupedByMunicipio, $danosHumanos): array
+    {
+        // Soma danos humanos de todos os municipios
+        $totaisDanosHumanos = [
+            'total' => 0,
+            'obitos' => 0,
+            'feridos' => 0,
+            'desalojados' => 0,
+            'desabrigados' => 0,
+            'desaparecidos' => 0,
+            'outros_afetados' => 0,
+        ];
+
+        foreach ($danosHumanos as $municipioDanos) {
+            foreach ($municipioDanos as $key => $valor) {
+                if (isset($totaisDanosHumanos[$key])) {
+                    $totaisDanosHumanos[$key] += $valor;
+                }
+            }
+        }
+        $totaisDanosHumanos['total'] = $totaisDanosHumanos['obitos'] + $totaisDanosHumanos['feridos']
+            + $totaisDanosHumanos['desalojados'] + $totaisDanosHumanos['desabrigados']
+            + $totaisDanosHumanos['desaparecidos'] + $totaisDanosHumanos['outros_afetados'];
+
+        $danosMateriais    = ['quantidade' => 0, 'danificadas' => 0, 'destruidas' => 0, 'valor' => 0];
+        $prejuizosPublicos = ['total' => 0];
+        $prejuizosPrivados = ['total' => 0];
+
+        foreach ($groupedByMunicipio as $municipioData) {
+            if (isset($municipioData[DesastreConstants::CAT_DANOS_MATERIAIS])) {
+                $dm          = $municipioData[DesastreConstants::CAT_DANOS_MATERIAIS];
+                $danificadas = (int) ($dm['Quantidades danificadas'] ?? 0);
+                $destruidas  = (int) ($dm['Quantidades destruídas'] ?? $dm['Quantidades destruidas'] ?? 0);
+                $danosMateriais['danificadas'] += $danificadas;
+                $danosMateriais['destruidas']  += $destruidas;
+                $danosMateriais['quantidade']  += $danificadas + $destruidas;
+                $danosMateriais['valor']       += $dm['Valor (R$)'] ?? 0;
+            }
+
+            if (isset($municipioData[DesastreConstants::CAT_PREJUIZOS_PUBLICOS])) {
+                $pp = $municipioData[DesastreConstants::CAT_PREJUIZOS_PUBLICOS];
+                $prejuizosPublicos['total'] += $pp['Valor do prejuízo (R$)'] ?? $pp['Valor do prejuizo (R$)'] ?? 0;
+            }
+
+            if (isset($municipioData[DesastreConstants::CAT_PREJUIZOS_PRIVADOS])) {
+                $ppv = $municipioData[DesastreConstants::CAT_PREJUIZOS_PRIVADOS];
+                $prejuizosPrivados['total'] += $ppv['Valor do prejuízo (R$)'] ?? $ppv['Valor do prejuizo (R$)'] ?? 0;
+            }
+        }
+
+        return [
+            'danos_humanos' => $totaisDanosHumanos,
+            'danos_materiais' => $danosMateriais,
+            'prejuizos_publicos' => $prejuizosPublicos,
+            'prejuizos_privados' => $prejuizosPrivados,
+        ];
+    }
+
+    /**
+     * Agrega totais por municipio usando estrutura agrupada.
+     *
+     * @param \Illuminate\Support\Collection $groupedByMunicipio Dados agrupados
+     * @param \Illuminate\Support\Collection $danosHumanos Danos humanos por municipio
+     * @param \Illuminate\Support\Collection $allTotals Query original para nomes
+     * @return array Totais por municipio
+     */
+    private function aggregateTotaisPorMunicipioFromGrouped($groupedByMunicipio, $danosHumanos, $allTotals): array
+    {
+        // Mapa de nomes de municipios
+        $municipioNomes = [];
+        foreach ($allTotals as $item) {
+            $municipioNomes[$item->municipio_id] = $item->municipio_nome;
+        }
+
+        $municipios = [];
+
+        // Processa cada municipio
+        $allMunicipioIds = $groupedByMunicipio->keys()->merge($danosHumanos->keys())->unique();
+
+        foreach ($allMunicipioIds as $munId) {
+            $municipioData = $groupedByMunicipio[$munId] ?? collect();
+            $dh = $danosHumanos[$munId] ?? [];
+
+            // Calcula danos humanos
+            $danosHumanosTotal = is_array($dh) ? array_merge(['total' => array_sum($dh)], $dh) : ['total' => 0];
+
+            // Calcula danos materiais
+            $dm = $municipioData[DesastreConstants::CAT_DANOS_MATERIAIS] ?? [];
+            $danosMateriais = [
+                'quantidade' => ($dm['Quantidades danificadas'] ?? 0) + ($dm['Quantidades destruídas'] ?? $dm['Quantidades destruidas'] ?? 0),
+                'valor' => $dm['Valor (R$)'] ?? 0,
+            ];
+
+            // Prejuizos publicos
+            $pp = $municipioData[DesastreConstants::CAT_PREJUIZOS_PUBLICOS] ?? [];
+            $prejuizosPublicos = ['total' => $pp['Valor do prejuízo (R$)'] ?? $pp['Valor do prejuizo (R$)'] ?? 0];
+
+            // Prejuizos privados
+            $ppv = $municipioData[DesastreConstants::CAT_PREJUIZOS_PRIVADOS] ?? [];
+            $prejuizosPrivados = ['total' => $ppv['Valor do prejuízo (R$)'] ?? $ppv['Valor do prejuizo (R$)'] ?? 0];
+
+            $municipios[] = [
+                'municipio_id' => $munId,
+                'municipio_nome' => $municipioNomes[$munId] ?? null,
+                'totais' => [
+                    'danos_humanos' => $danosHumanosTotal,
+                    'danos_materiais' => $danosMateriais,
+                    'prejuizos_publicos' => $prejuizosPublicos,
+                    'prejuizos_privados' => $prejuizosPrivados,
+                ],
+            ];
+        }
+
+        return $municipios;
+    }
+
+    /**
+     * Obtem dados completos do tipo de desastre (COBRADE).
+     *
+     * @param int|null $tipoDesastreId ID do tipo de desastre
+     * @return array|null Dados completos do tipo de desastre
+     */
+    public function getTipoDesastreCompleto(?int $tipoDesastreId): ?array
+    {
+        if (!$tipoDesastreId) {
+            return null;
+        }
+
+        $cobrade = $this->getClassificacaoDesastres();
+        $match = $cobrade->firstWhere('id', $tipoDesastreId);
+
+        if (!$match) {
+            return null;
+        }
+
+        return [
+            'id' => $match['id'] ?? null,
+            'cobrade' => $match['cobrade'] ?? null,
+            'categoria' => $match['categoria'] ?? null,
+            'grupo' => $match['grupo'] ?? null,
+            'subgrupo' => $match['subgrupo'] ?? null,
+            'tipo' => $match['tipo'] ?? null,
+            'subtipo' => $match['subtipo'] ?? null,
+            'nome' => $match['a_definicao'] ?? $match['subtipo'] ?? $match['tipo'] ?? null,
+            'definicao' => $match['a_definicao'] ?? null,
+        ];
     }
 
     /**

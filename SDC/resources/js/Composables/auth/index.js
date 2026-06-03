@@ -3,3 +3,5 @@
  */
 export * from './useLogin';
 export * from './usePermissions';
+export * from './useWelcomeTour';
+export * from './useClientIp';

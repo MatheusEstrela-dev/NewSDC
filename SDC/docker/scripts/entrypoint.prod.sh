@@ -17,32 +17,65 @@ if [ ! -f composer.json ]; then
     exit 1
 fi
 
-# Criar arquivo .env se não existir (usando variáveis de ambiente do Azure)
-if [ ! -f .env ]; then
-    echo "Criando arquivo .env a partir de variáveis de ambiente..."
-    cat > .env <<EOF
+# Sempre regenerar .env a partir das variaveis de ambiente do Azure App Service
+# (com WEBSITES_ENABLE_APP_SERVICE_STORAGE=false o FS e efemero a cada restart,
+# mas mantemos a sobrescrita para garantir que mudancas em app settings tenham efeito imediato).
+# Garantir diretorios de storage existem (Symfony/Laravel exige cache/sessions/views).
+# Necessario porque WEBSITES_ENABLE_APP_SERVICE_STORAGE=false torna o FS efemero.
+mkdir -p storage/framework/cache/data \
+         storage/framework/sessions \
+         storage/framework/views \
+         storage/framework/testing \
+         storage/logs \
+         storage/app/public \
+         storage/app/compdec \
+         storage/app/pae \
+         storage/app/exports \
+         bootstrap/cache
+chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+
+echo "Regenerando .env a partir de variaveis de ambiente..."
+# IMPORTANTE: aspar TODOS os valores (phpdotenv trata # como comentario em valores nao-aspeados)
+cat > .env <<EOF
 APP_NAME="${APP_NAME:-SDC - Sistema de Defesa Civil}"
-APP_ENV=${APP_ENV:-production}
-APP_KEY=${APP_KEY:-}
-APP_DEBUG=${APP_DEBUG:-false}
-APP_URL=${APP_URL:-https://newsdc2027.azurewebsites.net}
-DB_CONNECTION=${DB_CONNECTION:-mysql}
-DB_HOST=${DB_HOST:-localhost}
-DB_PORT=${DB_PORT:-3306}
-DB_DATABASE=${DB_DATABASE:-sdc}
-DB_USERNAME=${DB_USERNAME:-sdc}
-DB_PASSWORD=${DB_PASSWORD:-}
-REDIS_HOST=${REDIS_HOST:-}
-REDIS_PORT=${REDIS_PORT:-6379}
-REDIS_PASSWORD=${REDIS_PASSWORD:-}
-CACHE_DRIVER=${CACHE_DRIVER:-file}
-SESSION_DRIVER=${SESSION_DRIVER:-file}
-QUEUE_CONNECTION=${QUEUE_CONNECTION:-sync}
-LOG_CHANNEL=${LOG_CHANNEL:-stack}
-LOG_LEVEL=${LOG_LEVEL:-error}
+APP_ENV="${APP_ENV:-production}"
+APP_KEY="${APP_KEY:-}"
+APP_DEBUG="${APP_DEBUG:-false}"
+APP_URL="${APP_URL:-https://sdcdefesa.azurewebsites.net}"
+DB_CONNECTION="${DB_CONNECTION:-pgsql}"
+DB_HOST="${DB_HOST:-sdc-postgres.postgres.database.azure.com}"
+DB_PORT="${DB_PORT:-5432}"
+DB_DATABASE="${DB_DATABASE:-sdc}"
+DB_USERNAME="${DB_USERNAME:-sdcdata}"
+DB_PASSWORD="${DB_PASSWORD:-}"
+DB_SSLMODE="${DB_SSLMODE:-require}"
+REDIS_HOST="${REDIS_HOST:-sdcdefesa.redis.cache.windows.net}"
+REDIS_PORT="${REDIS_PORT:-6380}"
+REDIS_PASSWORD="${REDIS_PASSWORD:-}"
+REDIS_CLIENT="${REDIS_CLIENT:-predis}"
+REDIS_SCHEME="${REDIS_SCHEME:-tls}"
+REDIS_PREFIX="${REDIS_PREFIX:-sdc_prod_}"
+CACHE_PREFIX="${CACHE_PREFIX:-sdc_prod_cache_}"
+CACHE_DRIVER="${CACHE_DRIVER:-redis}"
+SESSION_DRIVER="${SESSION_DRIVER:-redis}"
+SESSION_DOMAIN="${SESSION_DOMAIN:-sdcdefesa.azurewebsites.net}"
+SESSION_SECURE_COOKIE="${SESSION_SECURE_COOKIE:-true}"
+SESSION_SAME_SITE="${SESSION_SAME_SITE:-lax}"
+QUEUE_CONNECTION="${QUEUE_CONNECTION:-redis}"
+OCTANE_SERVER="${OCTANE_SERVER:-roadrunner}"
+OCTANE_HTTPS="${OCTANE_HTTPS:-true}"
+FILESYSTEM_DISK="${FILESYSTEM_DISK:-public}"
+AZURE_STORAGE_CONNECTION_STRING="${AZURE_STORAGE_CONNECTION_STRING:-}"
+AZURE_STORAGE_URL="${AZURE_STORAGE_URL:-}"
+AZURE_STORAGE_CONTAINER_PUBLIC="${AZURE_STORAGE_CONTAINER_PUBLIC:-sdc-public}"
+AZURE_STORAGE_CONTAINER_COMPDEC="${AZURE_STORAGE_CONTAINER_COMPDEC:-sdc-compdec}"
+AZURE_STORAGE_CONTAINER_PAE="${AZURE_STORAGE_CONTAINER_PAE:-sdc-pae}"
+AZURE_STORAGE_CONTAINER_RAT="${AZURE_STORAGE_CONTAINER_RAT:-sdc-rat}"
+AZURE_STORAGE_CONTAINER_EXPORTS="${AZURE_STORAGE_CONTAINER_EXPORTS:-sdc-exports}"
+LOG_CHANNEL="${LOG_CHANNEL:-stack}"
+LOG_LEVEL="${LOG_LEVEL:-info}"
 EOF
-    echo "Arquivo .env criado"
-fi
+echo "Arquivo .env regenerado"
 
 # Gerar APP_KEY se não existir ou estiver vazia
 if ! grep -q "^APP_KEY=base64:" .env 2>/dev/null || grep -q "^APP_KEY=$" .env 2>/dev/null || grep -q "^APP_KEY=\"\"" .env 2>/dev/null; then
@@ -81,6 +114,11 @@ echo "   Admin: admin@defesa.mg.gov.br / password"
 echo "   Hierarquias: super-admin, admin, manager, analyst, operator, viewer, user"
 echo "   RATs: 15 registros (em_andamento, rascunho, finalizado)"
 
+# Gerar documentacao Swagger (l5-swagger)
+echo "Gerando documentacao Swagger..."
+mkdir -p storage/api-docs
+php artisan l5-swagger:generate 2>/dev/null || echo "Aviso: falha ao gerar swagger"
+
 # Limpar caches
 php artisan config:clear 2>/dev/null || true
 php artisan route:clear 2>/dev/null || true
@@ -88,6 +126,24 @@ php artisan view:clear 2>/dev/null || true
 
 # Ajustar permissões
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+
+# Queue worker em background (processa emails, jobs assincronos).
+# Container unico no App Service: roda o worker junto do Octane.
+# Loop while reinicia o worker se ele cair ou atingir --max-time.
+# IMPORTANTE: o subshell herda o "set -e" do topo do script; sem o "set +e"
+# abaixo, qualquer saida != 0 do queue:work (crash, blip de Redis, job fatal)
+# encerraria o subshell e o loop de restart nunca rodaria -> worker morto ate
+# o proximo restart do container. As filas seguem a mesma prioridade do
+# supervisor (high-throughput,default,low) para nao deixar jobs orfaos.
+echo "Iniciando queue worker em background..."
+(
+    set +e
+    while true; do
+        php artisan queue:work --queue=high-throughput,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
+        echo "[queue:work] worker saiu (codigo $?); reiniciando em 2s..."
+        sleep 2
+    done
+) &
 
 # Iniciar servidor Octane (RoadRunner)
 echo "Iniciando servidor Octane (RoadRunner)..."

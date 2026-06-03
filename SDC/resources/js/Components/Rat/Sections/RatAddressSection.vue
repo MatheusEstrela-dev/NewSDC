@@ -1,9 +1,9 @@
 <template>
   <div class="rat-section-card">
     <div class="rat-section-header">
-      <div class="rat-section-icon rat-section-icon-success">
+      <div class="rat-section-icon rat-section-icon-default">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
       </div>
       <div>
@@ -13,97 +13,95 @@
     </div>
 
     <div class="rat-section-content">
-      <div class="space-y-6">
-      <!-- Linha 1: CEP e Logradouro -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <!-- Linha 1: CEP, Logradouro, Bairro, Complemento -->
+      <div class="rat-grid-4">
         <FormField
           label="CEP"
           v-model="localData.cep"
-          mask="#####-###"
+          mask="cep"
           placeholder="00000-000"
+          hint="Preencha para buscar o endereço"
           :error="errors.cep"
           @blur="handleCepBlur"
         >
           <template #suffix>
             <button
-              v-if="isLoadingCep"
               type="button"
-              class="text-blue-400 text-xs"
-              disabled
+              class="text-slate-400 hover:text-emerald-500 transition-colors"
+              @click="handleCepBlur"
             >
-              <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <svg v-if="isLoadingCep" class="animate-spin h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
           </template>
         </FormField>
 
-        <div class="md:col-span-3">
-          <FormField
-            label="Logradouro"
-            v-model="localData.logradouro"
-            placeholder="Rua, Avenida, Rodovia..."
-            required
-            :error="errors.logradouro"
-          />
-        </div>
-      </div>
-
-      <!-- Linha 2: Bairro, Número, Complemento -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <FormField
-          label="Bairro"
-          v-model="localData.bairro"
-          placeholder="Nome do bairro"
-          :error="errors.bairro"
+          label="Logradouro 1"
+          v-model="localData.logradouro"
+          placeholder="Ex: Rua São Paulo"
+          required
+          :error="errors.logradouro"
         />
 
         <FormField
-          label="Número"
-          v-model="localData.numero"
-          placeholder="S/N"
-          :error="errors.numero"
+          label="Bairro"
+          v-model="localData.bairro"
+          placeholder="Ex: Centro"
+          :error="errors.bairro"
         />
 
         <FormField
           label="Complemento"
           v-model="localData.complemento"
-          placeholder="Apto, Bloco, Sala..."
+          placeholder="Ex: Apto 101"
           :error="errors.complemento"
         />
       </div>
 
-      <!-- Linha 3: KM, Cruzamento, Ponto de Referência -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Linha 2: Número, KM, Cruzamento, Ponto de Referência -->
+      <div class="rat-grid-4">
+        <FormField
+          label="Número"
+          v-model="localData.numero"
+          placeholder="Ex: 123"
+          :error="errors.numero"
+        />
+
         <FormField
           label="KM"
           v-model="localData.km"
-          placeholder="Ex: KM 345"
+          placeholder="Ex: 45"
           :error="errors.km"
         />
 
         <FormField
           label="Cruzamento"
           v-model="localData.cruzamento"
-          placeholder="Cruzamento com..."
+          placeholder="Ex: Rua das Flores"
           :error="errors.cruzamento"
         />
 
         <FormField
           label="Ponto de Referência"
           v-model="localData.ponto_referencia"
-          placeholder="Próximo a..."
+          placeholder="Ao lado da padaria, próximo ao mercado"
           :error="errors.ponto_referencia"
         />
       </div>
 
-      <!-- Linha 4: Tipo de Localização -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Linha 3: Tipo de Localização -->
+      <div class="rat-grid-2">
         <FormSelect
           label="Tipo de Localização"
           v-model="localData.tipo_localizacao"
           :options="tipoLocalizacaoOptions"
+          placeholder="Selecione uma opção"
           required
           :error="errors.tipo_localizacao"
         />
@@ -113,7 +111,7 @@
             v-if="localData.latitude && localData.longitude"
             type="button"
             @click="viewOnMap"
-            class="w-full px-4 py-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2"
+            class="w-full px-4 py-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
@@ -121,16 +119,11 @@
             </svg>
             Ver no Mapa
           </button>
-          <p v-else class="text-xs text-slate-500 px-4 py-2">
-            Coordenadas não disponíveis
-          </p>
         </div>
       </div>
 
-      <!-- Coordenadas (hidden inputs) -->
       <input type="hidden" v-model="localData.latitude" />
       <input type="hidden" v-model="localData.longitude" />
-      </div>
     </div>
   </div>
 </template>
@@ -139,7 +132,7 @@
 import FormField from '@/Components/Form/FormField.vue';
 import FormSelect from '@/Components/Form/FormSelect.vue';
 import { useCep } from '@/composables/location';
-import { computed } from 'vue';
+import { watch, ref } from 'vue';
 
 const props = defineProps({
   modelValue: {
@@ -166,16 +159,55 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'location-updated']);
 
-const localData = computed({
-  get() {
-    return props.modelValue;
+const localData = ref({ ...props.modelValue });
+
+watch(
+  () => localData.value,
+  (nv) => {
+    if (JSON.stringify(nv) !== JSON.stringify(props.modelValue)) {
+      emit('update:modelValue', nv);
+    }
   },
-  set(value) {
-    emit('update:modelValue', value);
+  { deep: true }
+);
+
+watch(
+  () => props.modelValue,
+  (nv) => {
+    if (nv && JSON.stringify(nv) !== JSON.stringify(localData.value)) {
+      localData.value = JSON.parse(JSON.stringify(nv));
+    }
   },
-});
+  { deep: true }
+);
 
 const { buscarCep, isLoading: isLoadingCep } = useCep();
+
+const aplicarResultadoCep = (resultado) => {
+  if (!resultado) return;
+  localData.value = {
+    ...localData.value,
+    logradouro: resultado.logradouro || localData.value.logradouro,
+    bairro:     resultado.bairro     || localData.value.bairro,
+    complemento: resultado.complemento || localData.value.complemento,
+    latitude:   resultado.latitude,
+    longitude:  resultado.longitude,
+  };
+  emit('location-updated', {
+    uf:        resultado.uf,
+    municipio: resultado.localidade,
+  });
+};
+
+watch(
+  () => props.modelValue?.cep,
+  async (newCep) => {
+    if (!newCep) return;
+    const cepLimpo = newCep.replace(/\D/g, '');
+    if (cepLimpo.length !== 8) return;
+    aplicarResultadoCep(await buscarCep(cepLimpo));
+  }
+);
 
 const tipoLocalizacaoOptions = [
   { value: 'urbana', label: 'Área Urbana' },
@@ -191,26 +223,9 @@ const tipoLocalizacaoOptions = [
 
 const handleCepBlur = async () => {
   if (!localData.value.cep) return;
-
   const cepLimpo = localData.value.cep.replace(/\D/g, '');
   if (cepLimpo.length !== 8) return;
-
-  const resultado = await buscarCep(cepLimpo);
-
-  if (resultado) {
-    localData.value = {
-      ...localData.value,
-      logradouro: resultado.logradouro || localData.value.logradouro,
-      bairro: resultado.bairro || localData.value.bairro,
-      latitude: resultado.latitude,
-      longitude: resultado.longitude,
-    };
-
-    emit('location-updated', {
-      uf: resultado.uf,
-      municipio: resultado.localidade,
-    });
-  }
+  aplicarResultadoCep(await buscarCep(cepLimpo));
 };
 
 const viewOnMap = () => {

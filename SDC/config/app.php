@@ -70,7 +70,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'America/Sao_Paulo'),
 
     /*
     |--------------------------------------------------------------------------
@@ -156,19 +156,13 @@ return [
     */
 
     'providers' => ServiceProvider::defaultProviders()->merge([
-        /*
-         * Package Service Providers...
-         */
-
-        /*
-         * Application Service Providers...
-         */
         App\Providers\AppServiceProvider::class,
+        App\Providers\FilesystemServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
-        // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        App\Providers\LoggingServiceProvider::class,
+        App\Providers\OctaneServiceProvider::class,
+        App\Providers\TelescopeServiceProvider::class,
 
         // Module Service Providers
         App\Modules\Rat\RatServiceProvider::class,
@@ -176,12 +170,13 @@ return [
         App\Modules\Tdap\TdapServiceProvider::class,
         App\Modules\Decretacoes\DecretacoesServiceProvider::class,
         App\Modules\AjudaHumanitaria\AjudaHumanitariaServiceProvider::class,
-        App\Modules\Compdec\CompdecServiceProvider::class,
         App\Modules\Treinamento\TreinamentoServiceProvider::class,
         App\Modules\Inmet\InmetServiceProvider::class,
         App\Modules\Suporte\SuporteServiceProvider::class,
-        App\Modules\Plantao\PlantaoServiceProvider::class,
         App\Modules\PlanCon\PlanConServiceProvider::class,
+        App\Modules\Dashboard\DashboardServiceProvider::class,
+        App\Modules\Compdec\CompdecServiceProvider::class,
+        App\Modules\Cisterna\CisternaServiceProvider::class,
     ])->toArray(),
 
     /*
@@ -197,6 +192,7 @@ return [
 
     'aliases' => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
+        'Auth' => Illuminate\Auth\AuthManager::class,
     ])->toArray(),
 
 ];

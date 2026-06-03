@@ -1,1 +1,1 @@
-export { useBreadcrumb } from '../composables/ui/useBreadcrumb';
+export { useBreadcrumb } from './ui/useBreadcrumb';

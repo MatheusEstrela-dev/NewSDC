@@ -36,15 +36,18 @@ class ActivityLogger
         // Obtém request_id do contexto global (definido no AppServiceProvider)
         $requestId = self::getRequestId();
 
+        // Captura informacoes de origem uma unica vez
+        $sourceInfo = self::getCallerInfo();
+
         $logData = [
             'timestamp' => now()->toIso8601String(),
             'event_type' => $type,
             'event_name' => $event,
             'severity' => $level,
 
-            // Contexto da requisição
+            // Contexto da requisicao
             'request_id' => $requestId,
-            'user_id' => $userId ?? auth()->id(),
+            'user_id' => $userId ?? (app()->bound('auth') ? auth()->id() : null),
             'ip_address' => app()->bound('request') ? request()->ip() : null,
             'user_agent' => app()->bound('request') ? request()->userAgent() : null,
             'url' => app()->bound('request') ? request()->fullUrl() : null,
@@ -58,8 +61,16 @@ class ActivityLogger
             // Dados do evento
             'data' => $data,
 
-            // Contexto de código (útil para debugging)
-            'source' => self::getCallerInfo(),
+            // Contexto de codigo completo (para retrocompatibilidade)
+            'source' => $sourceInfo,
+
+            // Campos FLAT para compatibilidade direta com UI (LogViewerTable espera estes no root)
+            'class' => $sourceInfo['class'],
+            'method' => $sourceInfo['function'],
+            'file' => $sourceInfo['file'],
+            'file_path' => $sourceInfo['file_path'],
+            'line' => $sourceInfo['line'],
+            'layer' => $sourceInfo['layer'],
         ];
 
         try {
@@ -96,19 +107,74 @@ class ActivityLogger
     }
 
     /**
-     * Obtém informações do código que chamou o log
+     * Obtém informações do codigo que chamou o log
+     * Inclui path completo e layer para facilitar debug
      */
     private static function getCallerInfo(): array
     {
-        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
-        $caller = $trace[2] ?? $trace[1] ?? [];
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5);
+
+        // Encontra o primeiro caller fora do ActivityLogger
+        $caller = null;
+        foreach ($trace as $frame) {
+            $class = $frame['class'] ?? '';
+            if ($class !== self::class && !str_contains($class, 'ActivityLogger')) {
+                $caller = $frame;
+                break;
+            }
+        }
+
+        $caller = $caller ?? $trace[2] ?? $trace[1] ?? [];
+
+        $file = $caller['file'] ?? null;
+        $relativePath = $file ? str_replace(base_path() . DIRECTORY_SEPARATOR, '', $file) : null;
+        $relativePath = $relativePath ? str_replace('\\', '/', $relativePath) : null;
+
+        $className = $caller['class'] ?? null;
+        $layer = self::detectLayer($className, $relativePath);
 
         return [
-            'file' => basename($caller['file'] ?? 'unknown'),
+            'file' => $relativePath ? basename($relativePath) : 'unknown',
+            'file_path' => $relativePath,
             'line' => $caller['line'] ?? 0,
-            'class' => $caller['class'] ?? null,
+            'class' => $className,
             'function' => $caller['function'] ?? null,
+            'layer' => $layer,
         ];
+    }
+
+    /**
+     * Detecta a camada arquitetural no momento do log
+     */
+    private static function detectLayer(?string $className, ?string $filePath): string
+    {
+        $patterns = [
+            'Controller' => ['Controller', 'Controllers'],
+            'Service'    => ['Service', 'Services'],
+            'Repository' => ['Repository', 'Repositories'],
+            'Model'      => ['Model', 'Models'],
+            'Middleware' => ['Middleware'],
+            'Request'    => ['Request', 'Requests'],
+            'Job'        => ['Job', 'Jobs'],
+            'Event'      => ['Event', 'Events'],
+            'Listener'   => ['Listener', 'Listeners'],
+            'Command'    => ['Command', 'Commands'],
+            'DTO'        => ['DTO', 'DataTransferObject'],
+            'Resource'   => ['Resource', 'Resources'],
+            'Policy'     => ['Policy', 'Policies'],
+        ];
+
+        $searchIn = ($className ?? '') . '|' . ($filePath ?? '');
+
+        foreach ($patterns as $layer => $keywords) {
+            foreach ($keywords as $keyword) {
+                if (stripos($searchIn, $keyword) !== false) {
+                    return $layer;
+                }
+            }
+        }
+
+        return 'System';
     }
 
     /**

@@ -68,6 +68,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         foreach ($levels as $slug => $hierarchyLevel) {
             $metadata = $rolesMetadata[$slug] ?? [];
+            $displayName = $metadata['name'] ?? ucfirst($slug);
 
             $displayName = $metadata['name'] ?? ucfirst($slug);
 
@@ -109,13 +110,13 @@ class RolesAndPermissionsSeeder extends Seeder
             $role->syncPermissions($expandedPermissions);
         }
 
-        $this->assignSuperAdminAllPermissions($guard);
+        $this->assignFullAccessRoles($guard);
     }
 
     /**
-     * Super Admin recebe TODAS as permissoes automaticamente.
+     * Desenvolvedor (super-admin) recebe TODAS as permissoes automaticamente.
      */
-    protected function assignSuperAdminAllPermissions(string $guard): void
+    protected function assignFullAccessRoles(string $guard): void
     {
         $superAdmin = Role::where('slug', 'super-admin')
             ->where('guard_name', $guard)
@@ -182,6 +183,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit' => 'Editar',
             'delete' => 'Deletar',
             'approve' => 'Aprovar',
+            'assign' => 'Atribuir',
+            'atribuir' => 'Atribuir',
             'finalize' => 'Finalizar',
             'manage' => 'Gerenciar',
             'execute' => 'Executar',
@@ -190,6 +193,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'logs' => 'Visualizar Logs',
             'cache' => 'Limpar Cache',
             'settings' => 'Configuracoes',
+            'print' => 'Imprimir',
+            'pdf' => 'Gerar PDF',
+            'history' => 'Visualizar Historico',
+            'arquivar' => 'Arquivar',
+            'validar' => 'Validar',
+            'attachments' => 'Gerenciar Anexos',
+            'desvincular' => 'Desvincular',
         ];
 
         $actionLabel = $actionLabels[$action] ?? ucfirst($action);

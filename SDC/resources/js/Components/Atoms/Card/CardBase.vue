@@ -40,7 +40,7 @@ const paddingClasses = {
 };
 
 const cardClasses = computed(() => {
-  const base = 'rounded-xl border backdrop-blur-sm transition-all duration-200';
+  const base = 'rounded-xl border backdrop-blur-sm transition-colors duration-200';
   const hoverClass = props.hover ? 'hover:border-slate-300 dark:hover:border-slate-600/50 hover:shadow-lg' : '';
 
   return [

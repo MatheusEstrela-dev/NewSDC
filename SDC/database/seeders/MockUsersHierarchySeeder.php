@@ -17,7 +17,7 @@ class MockUsersHierarchySeeder extends Seeder
         $roles = Role::where('guard_name', $guard)->get()->keyBy('slug');
 
         // Buscar IDs de órgãos existentes (se o OrgaosSeeder já rodou)
-        $orgaos = DB::table('orgaos')->pluck('id', 'codigo')->toArray();
+        $orgaos = DB::table('compdec_orgaos')->pluck('id', 'codigo')->toArray();
 
         $defaultPassword = 'password';
 
@@ -314,10 +314,16 @@ class MockUsersHierarchySeeder extends Seeder
 
             // Vincular ao orgão na tabela pivot
             if ($orgaoPrincipalId) {
+                $funcaoMap = [
+                    'super-admin' => 'coordenador',
+                    'admin'       => 'coordenador',
+                ];
+                $funcao = $funcaoMap[$roleName] ?? 'agente';
+
                 DB::table('orgao_user')->insertOrIgnore([
                     'user_id'      => $user->id,
                     'orgao_id'     => $orgaoPrincipalId,
-                    'funcao'       => $roleName ?? 'membro',
+                    'funcao'       => $funcao,
                     'is_principal'  => true,
                     'created_at'   => now(),
                     'updated_at'   => now(),

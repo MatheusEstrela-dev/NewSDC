@@ -25,13 +25,16 @@ class TokenService
      */
     public function revokeToken(User $user, int $tokenId): bool
     {
+        \Illuminate\Support\Facades\Log::info("TokenService::revokeToken user: {$user->id}, tokenId: {$tokenId}");
         $token = $user->tokens()->find($tokenId);
 
         if (!$token) {
+            \Illuminate\Support\Facades\Log::warning("Token {$tokenId} não encontrado para o usuário {$user->id}. Tokens do usuário: " . $user->tokens()->pluck('id')->implode(', '));
             return false;
         }
 
         $token->delete();
+        \Illuminate\Support\Facades\Log::info("Token {$tokenId} deletado com sucesso.");
         return true;
     }
 

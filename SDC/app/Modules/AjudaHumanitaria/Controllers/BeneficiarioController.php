@@ -31,18 +31,8 @@ class BeneficiarioController extends Controller
             'abrigo_id',
         ]);
 
-        try {
-            $beneficiarios = $this->beneficiarioService->list($filters, 15);
-
-            if ($beneficiarios->total() === 0) {
-                throw new \Exception("Table is empty, using mocks.");
-            }
-
-            $statistics = $this->beneficiarioService->getStatistics();
-        } catch (\Exception $e) {
-            $beneficiarios = \App\Support\MockDataHelper::getBeneficiarios();
-            $statistics = \App\Support\MockDataHelper::getBeneficiarioStatistics();
-        }
+        $beneficiarios = $this->beneficiarioService->list($filters, 15);
+        $statistics = $this->beneficiarioService->getStatistics();
 
         return Inertia::render('AjudaHumanitaria/Beneficiarios/BeneficiarioIndex', [
             'beneficiarios' => $beneficiarios,

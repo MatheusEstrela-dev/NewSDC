@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api;
 
+use App\Database\ConnectionSemaphore;
 use App\Http\Controllers\Controller;
+use App\Services\Database\DatabaseCircuitBreaker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
@@ -34,13 +38,22 @@ class HealthCheckController extends Controller
      *     )
      * )
      */
-    public function basic(): JsonResponse
+    public function basic(ConnectionSemaphore $sem, DatabaseCircuitBreaker $cb): JsonResponse
     {
+        $semSaturated = $sem->active() / max(1, $sem->limit()) > 0.95;
+        $cbOpen = $cb->isOpen();
+        $degraded = $semSaturated || $cbOpen;
+
         return response()->json([
-            'status' => 'ok',
+            'status' => $degraded ? 'degraded' : 'ok',
             'timestamp' => now()->toIso8601String(),
             'uptime' => $this->getUptime(),
-        ]);
+            'db' => [
+                'semaphore_active' => $sem->active(),
+                'semaphore_limit' => $sem->limit(),
+                'circuit_breaker' => $cb->state(),
+            ],
+        ], $degraded ? 503 : 200);
     }
 
     /**
@@ -360,25 +373,46 @@ class HealthCheckController extends Controller
      */
     private function getDatabaseConnections(): array
     {
-        try {
-            $result = DB::select("SHOW STATUS WHERE Variable_name IN ('Threads_connected', 'Max_used_connections', 'Threads_running')");
+        $empty = ['active' => 0, 'max_used' => 0, 'running' => 0];
 
-            $connections = [];
-            foreach ($result as $row) {
-                $connections[strtolower($row->Variable_name)] = (int) $row->Value;
+        try {
+            $driver = DB::connection()->getDriverName();
+
+            if ($driver === 'pgsql') {
+                $result = DB::selectOne("
+                    SELECT
+                        COUNT(*) FILTER (WHERE state IS NOT NULL) AS active,
+                        COUNT(*) FILTER (WHERE state = 'active')  AS running
+                    FROM pg_stat_activity
+                    WHERE datname = current_database()
+                ");
+
+                return [
+                    'active'   => (int) ($result->active  ?? 0),
+                    'max_used' => 0,
+                    'running'  => (int) ($result->running ?? 0),
+                ];
             }
 
-            return [
-                'active' => $connections['threads_connected'] ?? 0,
-                'max_used' => $connections['max_used_connections'] ?? 0,
-                'running' => $connections['threads_running'] ?? 0,
-            ];
+            if ($driver === 'mysql') {
+                $result = DB::selectOne("
+                    SELECT
+                        COUNT(*) AS active,
+                        SUM(CASE WHEN COMMAND <> 'Sleep' THEN 1 ELSE 0 END) AS running
+                    FROM INFORMATION_SCHEMA.PROCESSLIST
+                    WHERE DB = DATABASE()
+                ");
+
+                return [
+                    'active'   => (int) ($result->active  ?? 0),
+                    'max_used' => 0,
+                    'running'  => (int) ($result->running ?? 0),
+                ];
+            }
+
+            return $empty;
         } catch (\Exception $e) {
-            return [
-                'active' => 0,
-                'max_used' => 0,
-                'running' => 0,
-            ];
+            return $empty;
         }
     }
 

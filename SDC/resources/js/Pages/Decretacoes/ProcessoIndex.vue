@@ -91,4 +91,5 @@ const handlePageChange = (page) => {
 const handleCreate = () => {
   router.visit(route('decretacoes.create'));
 };
+
 </script>

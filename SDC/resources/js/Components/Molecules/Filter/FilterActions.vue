@@ -2,7 +2,7 @@
   <div class="flex items-center gap-3 justify-end">
     <button
       type="button"
-      @click="$emit('apply')"
+      @click="$emit('search')"
       class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 flex items-center gap-2"
       title="Aplicar Filtros"
     >
@@ -26,6 +26,6 @@
 <script setup>
 import XMarkIcon from '../../Icons/XMarkIcon.vue';
 
-defineEmits(['apply', 'clear']);
+defineEmits(['search', 'clear']);
 </script>
 

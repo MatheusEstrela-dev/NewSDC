@@ -7,7 +7,7 @@ cd /d "%~dp0"
 REM Verificar se node_modules existe
 if not exist "node_modules" (
     echo 📦 Instalando dependências...
-    call npm install
+    call bun install
     if errorlevel 1 (
         echo ❌ Erro ao instalar dependências!
         pause
@@ -16,16 +16,16 @@ if not exist "node_modules" (
 )
 
 REM Verificar se a porta está em uso
-netstat -ano | findstr :5175 >nul
+netstat -ano | findstr :8081 >nul
 if %errorlevel% equ 0 (
-    echo ⚠️  Porta 5175 já está em uso!
+    echo ⚠️  Porta 8081 já está em uso!
     echo.
     echo Verificando processo...
-    netstat -ano | findstr :5175
+    netstat -ano | findstr :8081
     echo.
     set /p resposta="Deseja encerrar o processo e continuar? (S/N): "
     if /i "%resposta%"=="S" (
-        for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5175') do (
+        for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8081') do (
             taskkill /PID %%a /F >nul 2>&1
         )
         echo ✅ Processo encerrado
@@ -40,17 +40,15 @@ if %errorlevel% equ 0 (
 REM Iniciar o Vite
 echo.
 echo 🔥 Iniciando servidor Vite...
-echo 📍 URL: http://localhost:5175
-echo 📍 Network: http://0.0.0.0:5175
+echo 📍 URL: http://localhost:8081
+echo 📍 Laravel: https://localhost:19444/pae
 echo.
 echo Pressione Ctrl+C para parar o servidor
 echo.
 
-call npm run dev
+call bun run dev
 
 pause
-
-
 
 
 

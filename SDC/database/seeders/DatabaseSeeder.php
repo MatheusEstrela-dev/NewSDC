@@ -14,8 +14,21 @@ class DatabaseSeeder extends Seeder
         // 1. Roles e Permissões (base do sistema)
         $this->call(RolesAndPermissionsSeeder::class);
 
+        // 1b. Permissões específicas do módulo RAT (roles + 9 permissões)
+        $this->call(RatPermissionsSeeder::class);
+
         // 2. Órgãos (hierarquia CEDEC > REDEC > COMPDEC)
         $this->call(OrgaosSeeder::class);
+
+        // 2b. Municípios de MG (tabela de referência consumida pelos selects
+        //     Estado→Município de RAT/Decretações). Idempotente (upsert por
+        //     codigo_ibge). Sem isto a tabela fica vazia e o select cai no
+        //     fallback IBGE, que é inacessível na rede de produção.
+        if (\Illuminate\Support\Facades\Schema::hasTable('municipios')) {
+            $this->call(MunicipiosMGSeeder::class);
+        } else {
+            $this->command->warn('Tabela "municipios" não encontrada - MunicipiosMGSeeder pulado.');
+        }
 
         // 3. Admin principal do sistema
         $admin = \App\Models\User::updateOrCreate(
@@ -29,7 +42,7 @@ class DatabaseSeeder extends Seeder
         );
 
         $guard = config('auth.defaults.guard', 'web');
-        $superAdminRole = \App\Models\Role::where('name', 'super-admin')
+        $superAdminRole = \App\Models\Role::where('slug', 'super-admin')
             ->where('guard_name', $guard)
             ->first();
 
@@ -44,11 +57,18 @@ class DatabaseSeeder extends Seeder
         // 5. Usuários com hierarquias diversas (30 usuários em todos os níveis)
         $this->call(MockUsersHierarchySeeder::class);
 
-        // 6. RATs mock (15 registros com status variados)
+        // 6. RATs mock (15 registros com status variados — tabela legada)
         if (\Illuminate\Support\Facades\Schema::hasTable('rats')) {
             $this->call(RatMockSeeder::class);
         } else {
             $this->command->warn('Tabela "rats" não encontrada - RatMockSeeder pulado.');
+        }
+
+        // 6b. REDECs de Minas Gerais (tabela de referência rat_redec)
+        if (\Illuminate\Support\Facades\Schema::hasTable('rat_redec')) {
+            $this->call(RatRedecSeeder::class);
+        } else {
+            $this->command->warn('Tabela "rat_redec" não encontrada - RatRedecSeeder pulado.');
         }
 
         // 7. Orgaos de teste (hierarquia completa para testes)
@@ -56,5 +76,13 @@ class DatabaseSeeder extends Seeder
 
         // 8. Usuarios de teste com hierarquia e diferentes status
         $this->call(TestUsersSeeder::class);
+
+        // 9. Estrutura canonica do FIDE/S2iD (grupos -> categorias -> itens -> campos)
+        //    Indispensavel para a aba "Dados de Desastre" exibir os campos de input.
+        if (\Illuminate\Support\Facades\Schema::hasTable('dec_desastre_grupos')) {
+            $this->call(DesastreEstruturaSeeder::class);
+        } else {
+            $this->command->warn('Tabela "dec_desastre_grupos" nao encontrada - DesastreEstruturaSeeder pulado.');
+        }
     }
 }
