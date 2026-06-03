@@ -20,6 +20,16 @@ class DatabaseSeeder extends Seeder
         // 2. Órgãos (hierarquia CEDEC > REDEC > COMPDEC)
         $this->call(OrgaosSeeder::class);
 
+        // 2b. Municípios de MG (tabela de referência consumida pelos selects
+        //     Estado→Município de RAT/Decretações). Idempotente (upsert por
+        //     codigo_ibge). Sem isto a tabela fica vazia e o select cai no
+        //     fallback IBGE, que é inacessível na rede de produção.
+        if (\Illuminate\Support\Facades\Schema::hasTable('municipios')) {
+            $this->call(MunicipiosMGSeeder::class);
+        } else {
+            $this->command->warn('Tabela "municipios" não encontrada - MunicipiosMGSeeder pulado.');
+        }
+
         // 3. Admin principal do sistema
         $admin = \App\Models\User::updateOrCreate(
             ['cpf' => '12345678900'],
