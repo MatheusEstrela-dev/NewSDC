@@ -96,10 +96,13 @@ class ProcessosIndexResource extends ResourceCollection
                 SUM(CASE WHEN reconhecimento != 'Registro' THEN 1 ELSE 0 END) as decretos,
                 SUM(CASE WHEN tipo_desastre = 'ECP' THEN 1 ELSE 0 END) as total_ecp,
                 SUM(CASE WHEN tipo_desastre = 'SE' THEN 1 ELSE 0 END) as total_se,
+                SUM(CASE WHEN tipo_desastre = 'N1' THEN 1 ELSE 0 END) as total_n1,
                 SUM(CASE WHEN reconhecimento = 'Registro' AND tipo_desastre = 'ECP' THEN 1 ELSE 0 END) as registros_ecp,
                 SUM(CASE WHEN reconhecimento = 'Registro' AND tipo_desastre = 'SE' THEN 1 ELSE 0 END) as registros_se,
+                SUM(CASE WHEN reconhecimento = 'Registro' AND tipo_desastre = 'N1' THEN 1 ELSE 0 END) as registros_n1,
                 SUM(CASE WHEN reconhecimento != 'Registro' AND tipo_desastre = 'ECP' THEN 1 ELSE 0 END) as decretos_ecp,
-                SUM(CASE WHEN reconhecimento != 'Registro' AND tipo_desastre = 'SE' THEN 1 ELSE 0 END) as decretos_se
+                SUM(CASE WHEN reconhecimento != 'Registro' AND tipo_desastre = 'SE' THEN 1 ELSE 0 END) as decretos_se,
+                SUM(CASE WHEN reconhecimento != 'Registro' AND tipo_desastre = 'N1' THEN 1 ELSE 0 END) as decretos_n1
             ")->first();
 
             $municipiosStats = DecretoMunicipio::whereIn('entrada_processos_id', $processosIds)
@@ -107,7 +110,8 @@ class ProcessosIndexResource extends ResourceCollection
                 ->selectRaw("
                     COUNT(DISTINCT municipio_id) as total,
                     COUNT(DISTINCT CASE WHEN tipo_desastre = 'ECP' THEN municipio_id END) as ecp,
-                    COUNT(DISTINCT CASE WHEN tipo_desastre = 'SE' THEN municipio_id END) as se
+                    COUNT(DISTINCT CASE WHEN tipo_desastre = 'SE' THEN municipio_id END) as se,
+                    COUNT(DISTINCT CASE WHEN tipo_desastre = 'N1' THEN municipio_id END) as n1
                 ")
                 ->first();
 
@@ -117,7 +121,8 @@ class ProcessosIndexResource extends ResourceCollection
                 ->selectRaw("
                     COUNT(*) as total,
                     SUM(CASE WHEN tipo_desastre = 'ECP' THEN 1 ELSE 0 END) as ecp,
-                    SUM(CASE WHEN tipo_desastre = 'SE' THEN 1 ELSE 0 END) as se
+                    SUM(CASE WHEN tipo_desastre = 'SE' THEN 1 ELSE 0 END) as se,
+                    SUM(CASE WHEN tipo_desastre = 'N1' THEN 1 ELSE 0 END) as n1
                 ")
                 ->first();
 
@@ -127,16 +132,21 @@ class ProcessosIndexResource extends ResourceCollection
                 'decretos' => (int) ($mainStats->decretos ?? 0),
                 'total_ecp' => (int) ($mainStats->total_ecp ?? 0),
                 'total_se' => (int) ($mainStats->total_se ?? 0),
+                'total_n1' => (int) ($mainStats->total_n1 ?? 0),
                 'registros_ecp' => (int) ($mainStats->registros_ecp ?? 0),
                 'registros_se' => (int) ($mainStats->registros_se ?? 0),
+                'registros_n1' => (int) ($mainStats->registros_n1 ?? 0),
                 'decretos_ecp' => (int) ($mainStats->decretos_ecp ?? 0),
                 'decretos_se' => (int) ($mainStats->decretos_se ?? 0),
+                'decretos_n1' => (int) ($mainStats->decretos_n1 ?? 0),
                 'municipios' => (int) ($municipiosStats->total ?? 0),
                 'municipios_ecp' => (int) ($municipiosStats->ecp ?? 0),
                 'municipios_se' => (int) ($municipiosStats->se ?? 0),
+                'municipios_n1' => (int) ($municipiosStats->n1 ?? 0),
                 'vigentes' => (int) ($vigentesStats->total ?? 0),
                 'vigentes_ecp' => (int) ($vigentesStats->ecp ?? 0),
                 'vigentes_se' => (int) ($vigentesStats->se ?? 0),
+                'vigentes_n1' => (int) ($vigentesStats->n1 ?? 0),
             ];
         });
     }

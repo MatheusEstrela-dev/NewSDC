@@ -4,6 +4,7 @@ storage/
 public/storage
 bootstrap/cache/*
 .env
+.env.*
 .git
 .composer
 .config

@@ -9,7 +9,7 @@
           {{ formattedValue }}
         </Heading>
 
-        <!-- Breakdown ECP/SE -->
+        <!-- Breakdown ECP/SE/N1 -->
         <div v-if="showBreakdown" class="breakdown mt-2 pt-2 border-t border-slate-200 dark:border-slate-700/50 flex gap-4">
           <div class="breakdown-item flex flex-col">
             <span class="text-[10px] sm:text-xs font-medium text-slate-500 uppercase">ECP</span>
@@ -21,6 +21,12 @@
             <span class="text-[10px] sm:text-xs font-medium text-slate-500 uppercase">SE</span>
             <span :class="['text-sm sm:text-base font-bold', se > 0 ? 'text-cyan-400' : 'text-slate-400']">
               {{ formatNumber(se) }}
+            </span>
+          </div>
+          <div class="breakdown-item flex flex-col">
+            <span class="text-[10px] sm:text-xs font-medium text-slate-500 uppercase">N1</span>
+            <span :class="['text-sm sm:text-base font-bold', n1 > 0 ? 'text-cyan-400' : 'text-slate-400']">
+              {{ formatNumber(n1) }}
             </span>
           </div>
         </div>
@@ -52,6 +58,10 @@ const props = defineProps({
     default: 0,
   },
   se: {
+    type: Number,
+    default: 0,
+  },
+  n1: {
     type: Number,
     default: 0,
   },
