@@ -58,7 +58,7 @@
               <div v-else-if="Number(activeTab) === 6">
                 <RatAttachments
                   :anexos="anexos"
-                  :upload-error="documents.uploadError.value"
+                  :upload-error="documents.uploadError"
                   @upload="handleUploadAnexos"
                   @remove="handleRemoveAnexo"
                 />
@@ -84,7 +84,7 @@ import RatInspection from '@/Components/Rat/RatInspection.vue';
 import RatInvolved from '@/Components/Rat/RatInvolved.vue';
 import RatResources from '@/Components/Rat/RatResources.vue';
 import RatTabs from '@/Components/Rat/RatTabs.vue';
-import { useRat } from '@/composables/rat';
+import { useRat } from '@/Composables/rat';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -234,6 +234,13 @@ function handleUploadAnexos(files) {
 }
 
 function handleRemoveAnexo(id) {
+  const doc = documents.documents.value.find(d => d.id === id);
+  if (doc && doc.status !== 'pending' && rat.value.id) {
+    router.delete(route('rat.anexos.destroy', { id: rat.value.id, anexoId: id }), {
+      preserveScroll: true,
+      preserveState: true,
+    });
+  }
   documents.removeDocument(id);
 }
 

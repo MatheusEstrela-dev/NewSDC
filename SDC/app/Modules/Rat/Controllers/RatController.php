@@ -126,7 +126,7 @@ class RatController extends Controller
         ], 201);
     }
 
-    public function destroyAnexo(string $id, int $anexoId): JsonResponse
+    public function destroyAnexo(string $id, string $anexoId): JsonResponse
     {
         $deleted = $this->ratService->deleteAnexo($id, $anexoId);
 

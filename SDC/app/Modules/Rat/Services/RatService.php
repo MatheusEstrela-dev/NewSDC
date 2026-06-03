@@ -9,6 +9,7 @@ use App\Modules\Rat\Models\RatAnexo;
 use App\Modules\Shared\BaseService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class RatService extends BaseService
@@ -85,31 +86,33 @@ class RatService extends BaseService
 
     public function storeAnexos(string $ratId, array $files, ?int $userId = null): array
     {
-        $created = [];
+        return DB::transaction(function () use ($ratId, $files, $userId) {
+            $created = [];
 
-        foreach ($files as $file) {
-            if (!($file instanceof UploadedFile)) {
-                continue;
+            foreach ($files as $file) {
+                if (!($file instanceof UploadedFile)) {
+                    continue;
+                }
+
+                $nomeArquivo = uniqid() . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs("rat-anexos/{$ratId}", $nomeArquivo, 'local');
+
+                $created[] = RatAnexo::create([
+                    'rat_id'        => $ratId,
+                    'user_id'       => $userId,
+                    'nome_original' => $file->getClientOriginalName(),
+                    'nome_arquivo'  => $nomeArquivo,
+                    'mime_type'     => $file->getMimeType(),
+                    'tamanho_bytes' => $file->getSize(),
+                    'path'          => $path,
+                ]);
             }
 
-            $nomeArquivo = uniqid() . '_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs("rat-anexos/{$ratId}", $nomeArquivo, 'local');
-
-            $created[] = RatAnexo::create([
-                'rat_id'        => $ratId,
-                'user_id'       => $userId,
-                'nome_original' => $file->getClientOriginalName(),
-                'nome_arquivo'  => $nomeArquivo,
-                'mime_type'     => $file->getMimeType(),
-                'tamanho_bytes' => $file->getSize(),
-                'path'          => $path,
-            ]);
-        }
-
-        return $created;
+            return $created;
+        });
     }
 
-    public function deleteAnexo(string $ratId, int $anexoId): bool
+    public function deleteAnexo(string $ratId, string $anexoId): bool
     {
         $anexo = RatAnexo::where('rat_id', $ratId)->find($anexoId);
 

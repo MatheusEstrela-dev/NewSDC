@@ -41,8 +41,6 @@ export function useRat(initialData = {}) {
   ]);
 
   async function saveRat(data) {
-    const ratId = rat.value.id;
-
     const payload = {
       ...rat.value,
       recursos: recursos.value,
@@ -75,8 +73,9 @@ export function useRat(initialData = {}) {
       preserveScroll: true,
       preserveState: true,
       onSuccess: () => {
-        if (ratId) {
-          documents.uploadDocuments(route('rat.anexos.store', ratId));
+        const currentId = rat.value.id;
+        if (currentId) {
+          documents.uploadDocuments(route('rat.anexos.store', currentId));
         }
       },
       onError: (errors) => {

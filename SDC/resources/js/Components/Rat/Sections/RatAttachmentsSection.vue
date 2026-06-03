@@ -146,6 +146,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import { formatFileSize } from '@/utils/fileTypes';
 import PaperClipIcon from '../../Icons/PaperClipIcon.vue';
 import UploadIcon from '../../Icons/UploadIcon.vue';
 import DocumentIcon from '../../Icons/DocumentIcon.vue';
@@ -168,14 +169,6 @@ const emit = defineEmits(['upload', 'remove']);
 
 const fileInput = ref(null);
 const isDragging = ref(false);
-
-function formatFileSize(bytes) {
-  if (!bytes) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-}
 
 function handleDrop(event) {
   isDragging.value = false;

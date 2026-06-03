@@ -1,5 +1,5 @@
+import axios from 'axios';
 import { ref } from 'vue';
-import { router } from '@inertiajs/vue3';
 import { isAllowedFileType, formatFileSize } from '../utils/fileTypes';
 
 /**
@@ -65,20 +65,19 @@ export function useDocuments(initialDocuments = []) {
       formData.append(`documents[${index}]`, doc.arquivo);
     });
 
-    router.post(uploadUrl, formData, {
-      forceFormData: true,
-      onProgress: (progress) => {
-        uploadProgress.value = progress.percentage;
+    axios.post(uploadUrl, formData, {
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          uploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        }
       },
-      onSuccess: () => {
-        uploading.value = false;
-        uploadProgress.value = 100;
-        documents.value = documents.value.map(doc => ({ ...doc, arquivo: null, status: 'uploaded' }));
-      },
-      onError: (errors) => {
-        uploading.value = false;
-        uploadError.value = errors.message || 'Erro ao fazer upload dos documentos';
-      },
+    }).then(() => {
+      uploading.value = false;
+      uploadProgress.value = 100;
+      documents.value = documents.value.map(doc => ({ ...doc, arquivo: null, status: 'uploaded' }));
+    }).catch((error) => {
+      uploading.value = false;
+      uploadError.value = error.response?.data?.message || 'Erro ao fazer upload dos documentos';
     });
   }
 
