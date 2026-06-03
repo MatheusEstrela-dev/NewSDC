@@ -115,6 +115,10 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:30,1')
         ->name('global.search');
 
+    // Consulta de municipios (tabela local, fonte resiliente para os selects)
+    Route::get('/municipios', [\App\Http\Controllers\MunicipioController::class, 'index'])
+        ->name('municipios.index');
+
     // Permissionamento (Admin)
     require __DIR__ . '/modules/permissions.php';
 
