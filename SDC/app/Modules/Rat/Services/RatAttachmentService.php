@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Storage;
 
 class RatAttachmentService
 {
-    private string $disk = 'public';
+    // Disco dedicado: local (symlink public) em dev, Azure Blob (sdc-rat) em
+    // producao, onde o FS do App Service e efemero. Mantem o prefixo "rat/{id}".
+    private string $disk = 'rat';
 
     public function store(object $rat, UploadedFile $file, string $tipo = 'documento'): RatAnexo
     {
