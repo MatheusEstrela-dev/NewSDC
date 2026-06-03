@@ -32,12 +32,13 @@ class ProcessoStatsService
      * Get dashboard statistics for DecretacoesStatsCards component.
      * Cached for 30 minutes if no active filters.
      *
-     * Retorna estrutura compativel com o componente Vue:
-     * - totalEventos, totalEventosEcp, totalEventosSe
-     * - registros, registrosEcp, registrosSe
-     * - decretacoes, decretacoesEcp, decretacoesSe
-     * - municipiosAtingidos, municipiosAtingidosEcp, municipiosAtingidosSe
-     * - decretacoesVigentes, decretacoesVigentesEcp, decretacoesVigentesSe
+     * Retorna estrutura compativel com o componente Vue. Cada metrica tem
+     * breakdown nas tres classes de situacao_anormalidade (ECP/SE/N1):
+     * - totalEventos, totalEventosEcp, totalEventosSe, totalEventosN1
+     * - registros, registrosEcp, registrosSe, registrosN1
+     * - decretacoes, decretacoesEcp, decretacoesSe, decretacoesN1
+     * - municipiosAtingidos, municipiosAtingidosEcp, municipiosAtingidosSe, municipiosAtingidosN1
+     * - decretacoesVigentes, decretacoesVigentesEcp, decretacoesVigentesSe, decretacoesVigentesN1
      *
      * @param array $filters Filtros opcionais aplicados na interface
      * @return array<string, int>
@@ -59,26 +60,31 @@ class ProcessoStatsService
             'totalEventos'    => $this->getTotalEventos($baseQuery),
             'totalEventosEcp' => $this->getTotalEventos($baseQuery, 'ECP'),
             'totalEventosSe'  => $this->getTotalEventos($baseQuery, 'SE'),
+            'totalEventosN1'  => $this->getTotalEventos($baseQuery, 'N1'),
 
             // Registros (reconhecimento = 'Registro')
             'registros'    => $this->getRegistros($baseQuery),
             'registrosEcp' => $this->getRegistros($baseQuery, 'ECP'),
             'registrosSe'  => $this->getRegistros($baseQuery, 'SE'),
+            'registrosN1'  => $this->getRegistros($baseQuery, 'N1'),
 
             // Decretacoes (reconhecimento != 'Registro')
             'decretacoes'    => $this->getDecretacoes($baseQuery),
             'decretacoesEcp' => $this->getDecretacoes($baseQuery, 'ECP'),
             'decretacoesSe'  => $this->getDecretacoes($baseQuery, 'SE'),
+            'decretacoesN1'  => $this->getDecretacoes($baseQuery, 'N1'),
 
             // Municipios Atingidos (distinct municipio_id)
             'municipiosAtingidos'    => $this->getMunicipiosAtingidos($baseQuery),
             'municipiosAtingidosEcp' => $this->getMunicipiosAtingidos($baseQuery, 'ECP'),
             'municipiosAtingidosSe'  => $this->getMunicipiosAtingidos($baseQuery, 'SE'),
+            'municipiosAtingidosN1'  => $this->getMunicipiosAtingidos($baseQuery, 'N1'),
 
             // Decretacoes Vigentes
             'decretacoesVigentes'    => $this->getDecretacoesVigentes($baseQuery),
             'decretacoesVigentesEcp' => $this->getDecretacoesVigentes($baseQuery, 'ECP'),
             'decretacoesVigentesSe'  => $this->getDecretacoesVigentes($baseQuery, 'SE'),
+            'decretacoesVigentesN1'  => $this->getDecretacoesVigentes($baseQuery, 'N1'),
             ];
         };
 
@@ -93,9 +99,12 @@ class ProcessoStatsService
             ->filter(fn ($v) => $v !== null && $v !== '')
             ->isNotEmpty();
 
-        // Se não houver filtros ativos, usa cache infinito
+        // Sem filtros ativos: cacheia por 30 minutos. TTL (em vez de rememberForever)
+        // garante auto-recuperacao apos cargas que nao passam pelo Eloquent/Observer
+        // (ex.: import SQL bruto), que de outra forma deixariam a estatistica presa.
+        // O sufixo '.v2' aposenta a chave legada 'dashboard' (gravada sem expiracao).
         if (!$hasFilters) {
-            return Cache::rememberForever(self::CACHE_PREFIX . 'dashboard', $calculaEstatisticas);
+            return Cache::remember(self::CACHE_PREFIX . 'dashboard.v2', now()->addMinutes(30), $calculaEstatisticas);
         }
 
         // Se houver filtros, recalcula on the fly sem tocar no cache
@@ -222,9 +231,10 @@ class ProcessoStatsService
         });
     }
 
-    /** Limpa todo o cache de estatisticas de Decretacoes. */
+    /** Limpa todo o cache de estatisticas de Decretacoes (inclui a chave legada). */
     public function clearCache(): void
     {
+        Cache::forget(self::CACHE_PREFIX . 'dashboard.v2');
         Cache::forget(self::CACHE_PREFIX . 'dashboard');
         Cache::forget(self::CACHE_PREFIX . 'vigentes');
     }

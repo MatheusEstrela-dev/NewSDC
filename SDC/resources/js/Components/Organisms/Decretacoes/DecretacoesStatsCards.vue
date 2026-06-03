@@ -6,6 +6,7 @@
       :value="statistics.totalEventos"
       :ecp="statistics.totalEventosEcp"
       :se="statistics.totalEventosSe"
+      :n1="statistics.totalEventosN1"
       variant="info"
       :icon="BoltIcon"
       @click="handleFilter('eventos')"
@@ -17,6 +18,7 @@
       :value="statistics.registros"
       :ecp="statistics.registrosEcp"
       :se="statistics.registrosSe"
+      :n1="statistics.registrosN1"
       variant="info"
       :icon="ClipboardDocumentListIcon"
       @click="handleFilter('registros')"
@@ -28,6 +30,7 @@
       :value="statistics.decretacoes"
       :ecp="statistics.decretacoesEcp"
       :se="statistics.decretacoesSe"
+      :n1="statistics.decretacoesN1"
       variant="info"
       :icon="DocumentTextIcon"
       @click="handleFilter('decretacoes')"
@@ -39,6 +42,7 @@
       :value="statistics.municipiosAtingidos"
       :ecp="statistics.municipiosAtingidosEcp"
       :se="statistics.municipiosAtingidosSe"
+      :n1="statistics.municipiosAtingidosN1"
       variant="warning"
       :icon="MapIcon"
       @click="handleFilter('municipios')"
@@ -50,6 +54,7 @@
       :value="statistics.decretacoesVigentes"
       :ecp="statistics.decretacoesVigentesEcp"
       :se="statistics.decretacoesVigentesSe"
+      :n1="statistics.decretacoesVigentesN1"
       variant="success"
       :icon="CheckCircleIcon"
       @click="handleFilter('vigentes')"
@@ -72,18 +77,23 @@ const props = defineProps({
       totalEventos: 0,
       totalEventosEcp: 0,
       totalEventosSe: 0,
+      totalEventosN1: 0,
       registros: 0,
       registrosEcp: 0,
       registrosSe: 0,
+      registrosN1: 0,
       decretacoes: 0,
       decretacoesEcp: 0,
       decretacoesSe: 0,
+      decretacoesN1: 0,
       municipiosAtingidos: 0,
       municipiosAtingidosEcp: 0,
       municipiosAtingidosSe: 0,
+      municipiosAtingidosN1: 0,
       decretacoesVigentes: 0,
       decretacoesVigentesEcp: 0,
       decretacoesVigentesSe: 0,
+      decretacoesVigentesN1: 0,
     }),
   },
 });
