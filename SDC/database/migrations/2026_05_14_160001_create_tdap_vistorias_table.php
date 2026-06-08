@@ -86,12 +86,14 @@ return new class extends Migration
             $table->index(['parecer', 'data']);
         });
 
-        // Constraint CHECK para o parecer (Postgres-friendly)
-        \DB::statement("
-            ALTER TABLE tdap_vistorias
-            ADD CONSTRAINT chk_tdap_vistorias_parecer
-            CHECK (parecer IN ('aprovada', 'reprovada'))
-        ");
+        // Constraint CHECK para o parecer — apenas PostgreSQL
+        if (\DB::getDriverName() === 'pgsql') {
+            \DB::statement("
+                ALTER TABLE tdap_vistorias
+                ADD CONSTRAINT chk_tdap_vistorias_parecer
+                CHECK (parecer IN ('aprovada', 'reprovada'))
+            ");
+        }
     }
 
     public function down(): void

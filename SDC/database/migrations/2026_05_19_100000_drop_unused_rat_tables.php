@@ -18,16 +18,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Fix missing FK on rat_ocorrencia_historico (dropped by UUID migration but not re-added)
-        DB::statement(<<<'SQL'
-            ALTER TABLE rat_ocorrencia_historico
-              DROP CONSTRAINT IF EXISTS rat_ocorrencia_historico_ocorrencia_id_foreign
-        SQL);
-        DB::statement(<<<'SQL'
-            ALTER TABLE rat_ocorrencia_historico
-              ADD CONSTRAINT rat_ocorrencia_historico_ocorrencia_id_foreign
-              FOREIGN KEY (ocorrencia_id) REFERENCES rat_ocorrencias(id) ON DELETE CASCADE
-        SQL);
+        // Fix missing FK on rat_ocorrencia_historico — apenas PostgreSQL
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement(<<<'SQL'
+                ALTER TABLE rat_ocorrencia_historico
+                  DROP CONSTRAINT IF EXISTS rat_ocorrencia_historico_ocorrencia_id_foreign
+            SQL);
+            DB::statement(<<<'SQL'
+                ALTER TABLE rat_ocorrencia_historico
+                  ADD CONSTRAINT rat_ocorrencia_historico_ocorrencia_id_foreign
+                  FOREIGN KEY (ocorrencia_id) REFERENCES rat_ocorrencias(id) ON DELETE CASCADE
+            SQL);
+        }
 
         // Drop orphaned tables (CASCADE removes any remaining FK constraints)
         Schema::dropIfExists('rat_ocorrencia_historicos');  // plural duplicate, no model

@@ -7,6 +7,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         // ── 1. Truncate all RAT data (CASCADE empties child tables) ──────────
         DB::statement('TRUNCATE TABLE rat_ocorrencias CASCADE');
 

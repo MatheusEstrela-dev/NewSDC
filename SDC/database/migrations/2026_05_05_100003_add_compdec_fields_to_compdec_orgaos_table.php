@@ -86,17 +86,19 @@ return new class extends Migration
         $this->createIndexIfNotExists('compdec_orgaos', 'idx_compdec_orgaos_tem_plano', '(tem_plano_contingencia)');
         $this->createIndexIfNotExists('compdec_orgaos', 'idx_compdec_orgaos_qtd_efetivo', '(qtd_efetivo)');
 
-        // Indice trigram (busca fuzzy por codigo/nome)
-        $this->createIndexIfNotExists(
-            'compdec_orgaos',
-            'idx_compdec_orgaos_codigo_trgm',
-            'USING gin (codigo gin_trgm_ops)'
-        );
-        $this->createIndexIfNotExists(
-            'compdec_orgaos',
-            'idx_compdec_orgaos_nome_trgm',
-            'USING gin (nome gin_trgm_ops)'
-        );
+        // Indice trigram (busca fuzzy) — apenas PostgreSQL com pg_trgm
+        if (DB::getDriverName() === 'pgsql') {
+            $this->createIndexIfNotExists(
+                'compdec_orgaos',
+                'idx_compdec_orgaos_codigo_trgm',
+                'USING gin (codigo gin_trgm_ops)'
+            );
+            $this->createIndexIfNotExists(
+                'compdec_orgaos',
+                'idx_compdec_orgaos_nome_trgm',
+                'USING gin (nome gin_trgm_ops)'
+            );
+        }
     }
 
     public function down(): void
@@ -128,12 +130,23 @@ return new class extends Migration
 
     private function createIndexIfNotExists(string $table, string $indexName, string $expression): void
     {
-        $exists = DB::selectOne(
-            "SELECT 1 FROM pg_indexes WHERE tablename = ? AND indexname = ?",
-            [$table, $indexName]
-        );
-        if (! $exists) {
-            DB::statement("CREATE INDEX {$indexName} ON {$table} {$expression}");
+        try {
+            if (DB::getDriverName() === 'pgsql') {
+                $exists = DB::selectOne(
+                    "SELECT 1 FROM pg_indexes WHERE tablename = ? AND indexname = ?",
+                    [$table, $indexName]
+                );
+            } else {
+                // SQLite: usa PRAGMA index_list
+                $indexes = DB::select("PRAGMA index_list(\"{$table}\")");
+                $exists = collect($indexes)->firstWhere('name', $indexName);
+            }
+
+            if (! $exists) {
+                DB::statement("CREATE INDEX IF NOT EXISTS {$indexName} ON {$table} {$expression}");
+            }
+        } catch (\Throwable) {
+            // Ignora falhas de criação de índice (ex: sintaxe não suportada no driver atual)
         }
     }
 };

@@ -7,6 +7,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         // The UUID migration (2026_05_18_000001) incorrectly targeted 'recurso_id' instead of
         // 'relato_recurso_id' when converting rat_recursos_componentes_guarnicao FK to UUID.
         // This left relato_recurso_id as bigint while the app inserts UUID values — causing 500.

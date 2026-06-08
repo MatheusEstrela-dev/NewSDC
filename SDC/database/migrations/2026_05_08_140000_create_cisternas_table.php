@@ -61,15 +61,17 @@ return new class extends Migration
             $table->index('legacy_id');
         });
 
-        // CHECK constraints para enums textuais (PG)
-        DB::statement(
-            "ALTER TABLE cisternas ADD CONSTRAINT cisternas_tipo_check "
-            ."CHECK (tipo IN ('comunitaria', 'individual', 'escolar'))"
-        );
-        DB::statement(
-            "ALTER TABLE cisternas ADD CONSTRAINT cisternas_status_check "
-            ."CHECK (status IN ('ativa', 'pendente', 'inativa', 'em_obras'))"
-        );
+        // CHECK constraints para enums textuais — apenas PostgreSQL
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement(
+                "ALTER TABLE cisternas ADD CONSTRAINT cisternas_tipo_check "
+                ."CHECK (tipo IN ('comunitaria', 'individual', 'escolar'))"
+            );
+            DB::statement(
+                "ALTER TABLE cisternas ADD CONSTRAINT cisternas_status_check "
+                ."CHECK (status IN ('ativa', 'pendente', 'inativa', 'em_obras'))"
+            );
+        }
     }
 
     public function down(): void

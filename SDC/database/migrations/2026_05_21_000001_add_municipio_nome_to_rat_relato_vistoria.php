@@ -1,17 +1,26 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement("ALTER TABLE rat_relato_vistoria ADD COLUMN IF NOT EXISTS v_municipio_nome varchar(255) NULL");
+        if (Schema::hasTable('rat_relato_vistoria') && ! Schema::hasColumn('rat_relato_vistoria', 'v_municipio_nome')) {
+            Schema::table('rat_relato_vistoria', function (Blueprint $table) {
+                $table->string('v_municipio_nome', 255)->nullable();
+            });
+        }
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE rat_relato_vistoria DROP COLUMN IF EXISTS v_municipio_nome");
+        if (Schema::hasTable('rat_relato_vistoria') && Schema::hasColumn('rat_relato_vistoria', 'v_municipio_nome')) {
+            Schema::table('rat_relato_vistoria', function (Blueprint $table) {
+                $table->dropColumn('v_municipio_nome');
+            });
+        }
     }
 };

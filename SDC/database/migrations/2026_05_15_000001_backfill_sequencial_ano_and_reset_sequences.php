@@ -8,11 +8,20 @@ return new class extends Migration
     public function up(): void
     {
         // ── 1. Backfill sequencial_ano para registros com valor NULL ─────────
-        DB::statement("
-            UPDATE rat_ocorrencias
-            SET sequencial_ano = EXTRACT(YEAR FROM created_at)::bigint
-            WHERE sequencial_ano IS NULL
-        ");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("
+                UPDATE rat_ocorrencias
+                SET sequencial_ano = EXTRACT(YEAR FROM created_at)::bigint
+                WHERE sequencial_ano IS NULL
+            ");
+        } else {
+            // SQLite: usa strftime para extrair o ano
+            DB::statement("
+                UPDATE rat_ocorrencias
+                SET sequencial_ano = CAST(strftime('%Y', created_at) AS INTEGER)
+                WHERE sequencial_ano IS NULL
+            ");
+        }
 
         if (DB::getDriverName() !== 'pgsql') {
             return;
