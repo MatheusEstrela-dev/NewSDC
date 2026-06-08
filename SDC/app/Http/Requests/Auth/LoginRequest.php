@@ -6,6 +6,8 @@ use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -42,12 +44,18 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        // Get CPF from request
         $cpf = $this->input('cpf');
         $password = $this->input('password');
 
-        // Look up user by CPF to get their email
-        $user = User::where('cpf', $cpf)->first();
+        // Busca unica por CPF, cacheada por 30s. Em burst de inicio de plantao
+        // (todos logam juntos) o Postgres recebe 1 query por CPF a cada 30s em
+        // vez de N. Cacheia o model inteiro de proposito: Auth::login precisa do
+        // model completo para o restante do request (Inertia share etc.).
+        $user = Cache::remember(
+            "user:cpf:{$cpf}",
+            30,
+            fn () => User::where('cpf', $cpf)->first(),
+        );
 
         if (!$user) {
             RateLimiter::hit($this->throttleKey());
@@ -66,18 +74,23 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        // Now attempt auth with email instead of CPF
-        $credentials = [
-            'email' => $user->email,
-            'password' => $password,
-        ];
-
-        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
+        // Verificacao direta do hash (sem segunda consulta por email que o
+        // Auth::attempt fazia). Hash::check usa o driver atual (argon2id).
+        if (!Hash::check($password, $user->password)) {
             RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([
                 'cpf' => trans('auth.failed'),
             ]);
         }
+
+        // Rehash progressivo: usuarios com hash bcrypt antigo sao migrados para
+        // argon2id no proximo login, sem quebrar quem ainda nao migrou.
+        if (Hash::needsRehash($user->password)) {
+            $user->forceFill(['password' => Hash::make($password)])->save();
+            Cache::forget("user:cpf:{$cpf}");
+        }
+
+        Auth::login($user, $this->boolean('remember'));
 
         RateLimiter::clear($this->throttleKey());
     }

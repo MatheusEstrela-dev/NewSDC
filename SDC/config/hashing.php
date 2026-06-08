@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'driver' => 'bcrypt',
+    'driver' => env('HASH_DRIVER', 'argon2id'),
 
     /*
     |--------------------------------------------------------------------------
@@ -45,9 +45,9 @@ return [
     */
 
     'argon' => [
-        'memory' => 65536,
-        'threads' => 1,
-        'time' => 4,
+        'memory' => (int) env('ARGON_MEMORY', 65536),
+        'threads' => (int) env('ARGON_THREADS', 2),
+        'time' => (int) env('ARGON_TIME', 2),
         'verify' => true,
     ],
 

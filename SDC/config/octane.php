@@ -54,6 +54,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Swoole Server Options
+    |--------------------------------------------------------------------------
+    |
+    | Opcoes passadas ao Swoole quando OCTANE_SERVER=swoole. Coroutines com
+    | SWOOLE_HOOK_ALL tornam Eloquent/PDO e predis (PHP puro) assincronos sem
+    | reescrita. IMPORTANTE: DB_PERSISTENT deve ser false sob hook (PDO
+    | persistente compartilhado entre coroutines quebra). Task workers isolam
+    | CPU pesada (hash) do pool HTTP. enable_reuse_port elimina o lock de
+    | accept(); http_compression reduz I/O de rede em respostas grandes.
+    |
+    */
+
+    'swoole' => [
+        'options' => [
+            'enable_coroutine' => true,
+            'hook_flags' => defined('SWOOLE_HOOK_ALL') ? SWOOLE_HOOK_ALL : 0,
+            'task_worker_num' => (int) env('OCTANE_TASK_WORKERS', 4),
+            'task_enable_coroutine' => true,
+            'enable_reuse_port' => true,
+            'http_compression' => true,
+            'compression_min_length' => 1024,
+            'max_request' => (int) env('OCTANE_MAX_REQUESTS', 500),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Octane Listeners
     |--------------------------------------------------------------------------
     |
