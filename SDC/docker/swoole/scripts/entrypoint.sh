@@ -129,12 +129,24 @@ echo "Iniciando queue worker em background..."
     done
 ) &
 
+# Oversubscribe de workers: ~83% do tempo de um request e I/O (DB/Redis), entao
+# rodar mais workers que vCores preenche a CPU enquanto uns esperam I/O. Default
+# = vCores x OCTANE_WORKER_MULTIPLIER (3). OCTANE_WORKERS explicito tem prioridade.
+# Em tier com pouca RAM (B1), reduza OCTANE_WORKER_MULTIPLIER para 2.
+WORKERS="${OCTANE_WORKERS:-}"
+if [ -z "$WORKERS" ]; then
+    CORES=$(nproc 2>/dev/null || echo 1)
+    MULT="${OCTANE_WORKER_MULTIPLIER:-3}"
+    WORKERS=$((CORES * MULT))
+fi
+echo "vCores=$(nproc 2>/dev/null || echo '?'); workers=${WORKERS}; task-workers=${OCTANE_TASK_WORKERS:-4}"
+
 # Iniciar servidor Octane (Swoole)
 echo "Iniciando servidor Octane (Swoole)..."
 exec php artisan octane:start \
     --server=swoole \
     --host=0.0.0.0 \
     --port="${PORT:-8000}" \
-    --workers="${OCTANE_WORKERS:-auto}" \
+    --workers="${WORKERS}" \
     --task-workers="${OCTANE_TASK_WORKERS:-4}" \
     --max-requests="${OCTANE_MAX_REQUESTS:-500}"

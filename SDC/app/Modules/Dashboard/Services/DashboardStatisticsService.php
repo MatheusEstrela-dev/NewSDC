@@ -18,6 +18,13 @@ use Illuminate\Support\Facades\Schema;
 
 class DashboardStatisticsService
 {
+    /**
+     * TTL do cache das estatisticas globais do dashboard, em segundos.
+     * Stats globais (nao por usuario) nao precisam de frescor ao segundo;
+     * cachear o DTO inteiro elimina ~12 queries sequenciais por load.
+     */
+    private const STATS_TTL = 60;
+
     private array $tableExistsCache = [];
 
     public function __construct(
@@ -31,6 +38,18 @@ class DashboardStatisticsService
             return $this->getLightweightStats();
         }
 
+        // Antes: ~12 queries sequenciais (4 counts + 4 trends x2) a cada load,
+        // sem cache. Em burst de inicio de plantao o Postgres recebia N recomputos.
+        // Agora: 1 recomputo a cada STATS_TTL; nas demais loads, zero query.
+        return Cache::remember(
+            'dashboard.stats.full',
+            self::STATS_TTL,
+            fn () => $this->computeStats(),
+        );
+    }
+
+    private function computeStats(): DashboardStatsDTO
+    {
         $processoStats = $this->tableExists(Processo::class)
             ? $this->processoStats->getStatistics()
             : ['aprovados' => 0];
@@ -45,9 +64,10 @@ class DashboardStatisticsService
         $decretoTrend = $this->calcTrendWithLike(Processo::class, 'reconhecimento', 'Reconhecido%');
         $demandaTrend = $this->calcTrendWithWhere(Task::class, 'status', 'concluida');
 
-        $barData6M  = Cache::remember('dashboard.bar_data_6m', 60, fn () => $this->buildBarData(6));
-        $barData12M = Cache::remember('dashboard.bar_data_12m', 60, fn () => $this->buildBarData(12));
-        $sparklines = Cache::remember('dashboard.sparklines', 60, fn () => $this->buildSparklines());
+        // Sem cache interno aqui: o getStats() ja cacheia o DTO inteiro.
+        $barData6M  = $this->buildBarData(6);
+        $barData12M = $this->buildBarData(12);
+        $sparklines = $this->buildSparklines();
 
         $ahTotal            = $this->ahStats->getTotal();
         $moduleDistribution = $this->buildDistribution($ratAbertas, $paeEmAnalise, $decretosAprovados, $demandasConcluidas, $ahTotal);
