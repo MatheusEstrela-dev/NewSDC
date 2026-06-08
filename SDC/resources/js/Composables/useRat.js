@@ -57,16 +57,16 @@ export function useRat({
     /**
      * Salva/atualiza o RAT completo.
      */
-    function salvarRat(formData = {}) {
+    function salvarRat(formData = {}, successMessage = 'Dados Gerais salvo com sucesso!') {
         const data = buildPayload(formData);
         if (!rat.value?.id) {
             router.post(route('rat.store'), data, requestOptions({
-                onSuccess: () => toast('RAT criado com sucesso!', 'success'),
+                onSuccess: () => toast(successMessage, 'success'),
                 onError: () => toast('Erro ao criar RAT. Verifique os dados.', 'error'),
             }));
         } else {
             router.put(route('rat.update', rat.value.id), data, requestOptions({
-                onSuccess: () => toast('RAT salvo com sucesso!', 'success'),
+                onSuccess: () => toast(successMessage, 'success'),
                 onError: () => toast('Erro ao salvar RAT. Verifique os dados.', 'error'),
             }));
         }
@@ -75,16 +75,16 @@ export function useRat({
     /**
      * Salva como rascunho (não altera status para em_andamento).
      */
-    function salvarRascunho(formData = {}) {
+    function salvarRascunho(formData = {}, successMessage = 'RAT salvo com sucesso!') {
         const data = buildPayload(formData);
         if (!rat.value?.id) {
             router.post(route('rat.store'), data, requestOptions({
-                onSuccess: () => toast('RAT salvo com sucesso!', 'success'),
+                onSuccess: () => toast(successMessage, 'success'),
                 onError: () => toast('Erro ao salvar RAT.', 'error'),
             }));
         } else {
             router.patch(route('rat.draft', rat.value.id), data, requestOptions({
-                onSuccess: () => toast('RAT salvo com sucesso!', 'success'),
+                onSuccess: () => toast(successMessage, 'success'),
                 onError: () => toast('Erro ao salvar RAT.', 'error'),
             }));
         }

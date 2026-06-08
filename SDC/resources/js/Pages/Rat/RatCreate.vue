@@ -15,7 +15,7 @@
         <RatDadosGeraisForm
           :rat="null"
           :view-only="false"
-          @save="(data) => salvarComAnexos(data).then(() => unlockAndAdvanceTab(1)).catch(() => {})"
+          @save="(data) => salvarComAnexos(data, 'Dados Gerais salvo com sucesso!').then(() => unlockAndAdvanceTab(1)).catch(() => {})"
           @finalize="finalizarRat"
           @update:tem-vistoria="temVistoria = $event"
           @update:form-data="currentFormData = $event"
@@ -29,7 +29,7 @@
           @add="adicionarRecurso"
           @remove="removerRecurso"
           @update="atualizarRecursos"
-          @save="() => salvarComAnexos(currentFormData).then(() => unlockAndAdvanceTab(2)).catch(() => {})"
+          @save="() => salvarComAnexos(currentFormData, 'Recursos Empregados salvo com sucesso!').then(() => unlockAndAdvanceTab(2)).catch(() => {})"
         />
       </div>
 
@@ -40,7 +40,7 @@
           @add="adicionarEnvolvido"
           @remove="removerEnvolvido"
           @update="atualizarEnvolvidos"
-          @save="() => salvarComAnexos(currentFormData).then(() => unlockAndAdvanceTab(3)).catch(() => {})"
+          @save="() => salvarComAnexos(currentFormData, 'Envolvidos salvo com sucesso!').then(() => unlockAndAdvanceTab(3)).catch(() => {})"
         />
       </div>
 
@@ -49,7 +49,7 @@
           :vistoria="vistoria"
           :view-only="false"
           @update="atualizarVistoria"
-          @save="() => salvarComAnexos(currentFormData).then(() => unlockAndAdvanceTab(4)).catch(() => {})"
+          @save="() => salvarComAnexos(currentFormData, 'Vistoria salva com sucesso!').then(() => unlockAndAdvanceTab(4)).catch(() => {})"
         />
       </div>
 
@@ -59,7 +59,7 @@
           :view-only="false"
           @add-observation="adicionarObservacao"
           @update="atualizarHistorico"
-          @save="() => salvarComAnexos(currentFormData).then(() => unlockAndAdvanceTab(5)).catch(() => {})"
+          @save="() => salvarComAnexos(currentFormData, 'Histórico salvo com sucesso!').then(() => unlockAndAdvanceTab(5)).catch(() => {})"
         />
       </div>
 
@@ -72,7 +72,7 @@
           @remove="removerAnexo"
           @update="atualizarAnexos"
           @update:pending-files="pendingAttachmentFiles = $event"
-          @save="() => salvarComAnexos(currentFormData)"
+          @save="() => salvarComAnexos(currentFormData, 'Anexo salvo com sucesso!')"
           @finalize="handleFinalizar"
         />
       </div>
@@ -156,7 +156,7 @@ const pendingAttachmentFiles = ref([]);
  * - Saves seguintes: PATCH /rat/{id}/draft
  * - Faz upload dos anexos pendentes após salvar
  */
-async function salvarComAnexos(formData) {
+async function salvarComAnexos(formData, successMessage = 'RAT salvo com sucesso!') {
   const filesToUpload = [...pendingAttachmentFiles.value];
 
   const data = {
@@ -205,7 +205,7 @@ async function salvarComAnexos(formData) {
       }
       pendingAttachmentFiles.value = [];
     }
-    toast('RAT salvo com sucesso!', 'success');
+    toast(successMessage, 'success');
   } catch (e) {
     console.error('Erro ao salvar RAT:', e);
     toast('Erro ao salvar RAT. Tente novamente.', 'error');

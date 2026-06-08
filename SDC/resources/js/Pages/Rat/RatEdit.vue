@@ -31,7 +31,7 @@
                   @add="handleAddRecurso"
                   @remove="handleRemoveRecurso"
                   @update="handleUpdateRecurso"
-                  @save="handleSaveFromSubTab"
+                  @save="handleSaveRecursos"
                 />
               </div>
 
@@ -43,7 +43,7 @@
                   @add="handleAddEnvolvido"
                   @remove="handleRemoveEnvolvido"
                   @update="handleUpdateEnvolvidos"
-                  @save="handleSaveFromSubTab"
+                  @save="handleSaveEnvolvidos"
                 />
               </div>
 
@@ -52,7 +52,7 @@
                 <RatInspection
                   :vistoria="vistoria"
                   :view-only="false"
-                  @save="handleSaveFromSubTab"
+                  @save="handleSaveVistoria"
                   @update="handleUpdateVistoria"
                 />
               </div>
@@ -64,7 +64,7 @@
                   :view-only="false"
                   @add-observation="handleAddObservation"
                   @update="handleUpdateHistorico"
-                  @save="handleSaveFromSubTab"
+                  @save="handleSaveHistorico"
                 />
               </div>
 
@@ -77,7 +77,7 @@
                   @add="handleAddAnexo"
                   @remove="handleRemoveAnexo"
                   @update="handleUpdateAnexos"
-                  @save="handleSaveFromSubTab"
+                  @save="handleSaveAnexos"
                   @finalize="handleFinalize"
                 />
               </div>
@@ -208,23 +208,27 @@ function onTabChange(tabId) {
   }
 }
 
-function handleSave(data)     { salvarRat(data);     unlockAndAdvanceTab(1); }
-function handleSaveDraft(data){ salvarRascunho(data); unlockAndAdvanceTab(1); }
-function handleFinalize(data) { finalizarRat(data); }
-function handleCancel()       { cancelarRat(); }
-function handleFormDataUpdate(data) { currentFormData.value = data; }
-function handleToggleVistoria(value) { temVistoria.value = value; }
-
-function handleSaveFromSubTab() {
-  const formData = currentFormData.value ?? {
+function getFormData() {
+  return currentFormData.value ?? {
     dadosGerais: props.rat?.dados_gerais ?? {},
     comunicacao: props.rat?.comunicacao ?? {},
     local: props.rat?.local ?? {},
     endereco: props.rat?.endereco ?? {},
   };
-  salvarRascunho(formData);
-  unlockAndAdvanceTab(currentActiveTab.value);
 }
+
+function handleSave(data)      { salvarRat(data, 'Dados Gerais salvo com sucesso!');      unlockAndAdvanceTab(1); }
+function handleSaveDraft(data) { salvarRascunho(data, 'Dados Gerais salvo com sucesso!'); unlockAndAdvanceTab(1); }
+function handleFinalize(data)  { finalizarRat(data); }
+function handleCancel()        { cancelarRat(); }
+function handleFormDataUpdate(data)  { currentFormData.value = data; }
+function handleToggleVistoria(value) { temVistoria.value = value; }
+
+function handleSaveRecursos()  { salvarRascunho(getFormData(), 'Recursos Empregados salvo com sucesso!'); unlockAndAdvanceTab(2); }
+function handleSaveEnvolvidos(){ salvarRascunho(getFormData(), 'Envolvidos salvo com sucesso!');          unlockAndAdvanceTab(3); }
+function handleSaveVistoria()  { salvarRascunho(getFormData(), 'Vistoria salva com sucesso!');            unlockAndAdvanceTab(4); }
+function handleSaveHistorico() { salvarRascunho(getFormData(), 'Histórico salvo com sucesso!');           unlockAndAdvanceTab(5); }
+function handleSaveAnexos()    { salvarRascunho(getFormData(), 'Anexo salvo com sucesso!'); }
 
 function handleAddRecurso(recurso) {
   if (!Array.isArray(recursosState.value)) recursosState.value = [];
