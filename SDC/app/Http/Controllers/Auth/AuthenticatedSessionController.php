@@ -4,12 +4,12 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Jobs\RecordUserLogin;
 use App\Models\AuditLog;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -42,12 +42,10 @@ class AuthenticatedSessionController extends Controller
         // Docker o $request->ip() seria so o gateway (172.x.x.x); o do client
         // e mais informativo para auditoria.
         $clientIp = $request->attributes->get('client_ip') ?? $request->ip();
-        $user->recordLogin($clientIp, $request->userAgent());
 
-        // Invalidar cache do usuario para garantir dados frescos no dashboard
-        Cache::forget("inertia_user_data_{$user->id}");
-
-        AuditLog::logLogin($user->id);
+        // Pos-processamento (recordLogin + AuditLog + invalidacao de cache) fora
+        // do caminho critico da resposta. Ver Jobs\RecordUserLogin.
+        RecordUserLogin::dispatch($user->id, $clientIp, $request->userAgent());
 
         // Onboarding: usuario com senha provisoria precisa troca-la antes de
         // qualquer outra navegacao. Quebra o redirect->intended para nao cair
