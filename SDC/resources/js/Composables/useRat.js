@@ -26,6 +26,7 @@ export function useRat({
     const loading    = ref(false);
 
     const tabs = useTabs(activeTab);
+    const { show: toast } = useToast();
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
@@ -59,9 +60,15 @@ export function useRat({
     function salvarRat(formData = {}) {
         const data = buildPayload(formData);
         if (!rat.value?.id) {
-            router.post(route('rat.store'), data, requestOptions());
+            router.post(route('rat.store'), data, requestOptions({
+                onSuccess: () => toast('RAT criado com sucesso!', 'success'),
+                onError: () => toast('Erro ao criar RAT. Verifique os dados.', 'error'),
+            }));
         } else {
-            router.put(route('rat.update', rat.value.id), data, requestOptions());
+            router.put(route('rat.update', rat.value.id), data, requestOptions({
+                onSuccess: () => toast('RAT salvo com sucesso!', 'success'),
+                onError: () => toast('Erro ao salvar RAT. Verifique os dados.', 'error'),
+            }));
         }
     }
 
@@ -71,9 +78,15 @@ export function useRat({
     function salvarRascunho(formData = {}) {
         const data = buildPayload(formData);
         if (!rat.value?.id) {
-            router.post(route('rat.store'), data, requestOptions());
+            router.post(route('rat.store'), data, requestOptions({
+                onSuccess: () => toast('RAT salvo com sucesso!', 'success'),
+                onError: () => toast('Erro ao salvar RAT.', 'error'),
+            }));
         } else {
-            router.patch(route('rat.draft', rat.value.id), data, requestOptions());
+            router.patch(route('rat.draft', rat.value.id), data, requestOptions({
+                onSuccess: () => toast('RAT salvo com sucesso!', 'success'),
+                onError: () => toast('Erro ao salvar RAT.', 'error'),
+            }));
         }
     }
 
@@ -87,15 +100,23 @@ export function useRat({
             router.post(
                 route('rat.store'),
                 { ...data, finalize: true },
-                requestOptions(),
+                requestOptions({
+                    onSuccess: () => router.visit(route('rat.index')),
+                    onError: () => toast('Erro ao finalizar RAT.', 'error'),
+                }),
             );
             return;
         }
 
-        if (!confirm('Deseja finalizar este RAT? Esta ação não poderá ser desfeita.')) return;
-
         router.patch(route('rat.finalize', rat.value.id), data, requestOptions({
-            onSuccess: () => router.visit(route('rat.index')),
+            onSuccess: () => {
+                toast('RAT finalizado com sucesso!', 'success');
+                router.visit(route('rat.index'));
+            },
+            onError: (errors) => {
+                const msg = Object.values(errors)[0] ?? 'Erro ao finalizar RAT.';
+                toast(msg, 'error');
+            },
         }));
     }
 

@@ -163,18 +163,19 @@ const registerServiceWorker = async () => {
             const { registerSW } = await import('virtual:pwa-register');
             registerSW({
                 immediate: true,
+                scope: '/',
                 onRegistered(registration) {
                     if (!registration) return;
 
+                    const tryUpdate = () => {
+                        try { registration.update(); } catch (_) {}
+                    };
+
                     // Check for SW updates on Inertia page navigation
-                    router.on('navigate', () => {
-                        registration.update();
-                    });
+                    router.on('navigate', tryUpdate);
 
                     // Fallback: check every 2 hours
-                    setInterval(() => {
-                        registration.update();
-                    }, 1000 * 60 * 120);
+                    setInterval(tryUpdate, 1000 * 60 * 120);
                 },
                 onOfflineReady() {
                 },

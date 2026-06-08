@@ -21,6 +21,7 @@ export default defineConfig({
         }),
         VitePWA({
             registerType: 'autoUpdate',
+            buildBase: '/build/',
             includeAssets: ['favicon.ico', 'robots.txt', 'imgs/**/*'],
             manifest: {
                 name: 'SDC - Sistema de Defesa Civil',
