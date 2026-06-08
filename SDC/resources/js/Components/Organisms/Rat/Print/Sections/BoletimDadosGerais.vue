@@ -23,7 +23,7 @@ function formatDateTime(date) {
 const municipioNome = computed(() => {
   if (!props.dados) return '';
   // Prioridade: nome resolvido > campo nome explícito > fallback para código IBGE
-  return props.dados.local_municipio_nome || props.dados.municipio?.nome || props.dados.municipio || '';
+  return props.dados.local_municipio_nome || props.dados.municipio?.nome || props.dados.municipio || props.dados.local_municipio || '';
 });
 
 const cobradeInfo = computed(() => {

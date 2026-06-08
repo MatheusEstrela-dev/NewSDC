@@ -94,7 +94,9 @@ export function useRat({
 
         if (!confirm('Deseja finalizar este RAT? Esta ação não poderá ser desfeita.')) return;
 
-        router.patch(route('rat.finalize', rat.value.id), data, requestOptions());
+        router.patch(route('rat.finalize', rat.value.id), data, requestOptions({
+            onSuccess: () => router.visit(route('rat.index')),
+        }));
     }
 
     /**

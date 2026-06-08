@@ -57,15 +57,17 @@ return new class extends Migration
             $table->index(['estado', 'swimlane_atual']);
         });
 
-        // CHECK constraint para estado (Postgres-native)
-        DB::statement("
-            ALTER TABLE tdap_processos
-            ADD CONSTRAINT chk_tdap_processos_estado
-            CHECK (estado IN (
-                'rascunho','em_habilitacao','decreto_pendente','em_licitacao',
-                'em_execucao','liquidacao_pendente','pago','encerrado'
-            ))
-        ");
+        // CHECK constraint para estado — apenas PostgreSQL
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("
+                ALTER TABLE tdap_processos
+                ADD CONSTRAINT chk_tdap_processos_estado
+                CHECK (estado IN (
+                    'rascunho','em_habilitacao','decreto_pendente','em_licitacao',
+                    'em_execucao','liquidacao_pendente','pago','encerrado'
+                ))
+            ");
+        }
 
         // Garante a coluna processo_tdap_id em tdap_cronogramas antes da FK.
         // Necessario porque a migration de tdap_cronogramas pode ter rodado

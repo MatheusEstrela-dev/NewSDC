@@ -105,7 +105,7 @@ readonly class RatDadosGeraisDTO
             localComplemento:         $merged['local_complemento']          ?? $merged['complemento'] ?? null,
             localNumero:              $merged['local_numero']               ?? $merged['numero'] ?? null,
             localKm:                  $merged['local_km']                   ?? $merged['km'] ?? null,
-            localCruzamento:          $merged['local_cruzamento']           ?? null,
+            localCruzamento:          $merged['local_cruzamento'] ?? $merged['cruzamento'] ?? null,
             localPontoReferencia:    $merged['local_ponto_referencia']     ?? $merged['ponto_referencia'] ?? null,
             localLatitude:           isset($merged['local_latitude'])
                                           ? (float) $merged['local_latitude']

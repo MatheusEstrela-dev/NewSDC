@@ -34,12 +34,11 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
           </svg>
-          Enviando arquivo ao servidor... aguarde antes de avançar.
+          Enviando arquivo ao servidor... aguarde antes de salvar.
         </span>
       </div>
 
       <div class="flex items-center justify-center gap-3 flex-wrap">
-        <!-- Avançar etapa: NÃO faz upload. Upload ocorre ao selecionar/arrastar arquivos acima. -->
         <button
           type="button"
           :disabled="uploading"
@@ -50,9 +49,10 @@
                  disabled:opacity-60 disabled:cursor-not-allowed min-w-[160px] justify-center"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
           </svg>
-          Avançar
+          Salvar
         </button>
 
         <!-- Finalizar RAT -->

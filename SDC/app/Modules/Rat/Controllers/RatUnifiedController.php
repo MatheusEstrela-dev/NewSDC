@@ -15,6 +15,7 @@ use App\Modules\Rat\Http\Requests\RatEnvolvidoRequest;
 use App\Modules\Rat\Http\Requests\RatHistoricoRequest;
 use App\Modules\Rat\Http\Requests\RatRecursoRequest;
 use App\Modules\Rat\Http\Requests\RatVistoriaRequest;
+use App\Modules\Rat\Http\Resources\RatListResource;
 use App\Modules\Rat\Http\Resources\RatResource as RatOcorrenciaResource;
 use App\Modules\Rat\Models\RatOcorrencia;
 use App\Modules\Rat\Models\RatOcorrenciaHistorico;
@@ -38,6 +39,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Arr;
 use Inertia\Inertia;
@@ -65,19 +67,28 @@ class RatUnifiedController extends BaseController
 
     public function index(Request $request): Response
     {
-        $rats = RatOcorrencia::with(['creator'])
+        // Eager load apenas dados_gerais (conteudo_type específico) para evitar N+1.
+        // Carrega creator + relatos de dados gerais em 3 queries totais em vez de 15+.
+        $rats = RatOcorrencia::with([
+            'creator',
+            'relatosMorph' => fn ($q) => $q
+                ->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais::class)
+                ->with('conteudo'),
+        ])
             ->orderByDesc('created_at')
             ->paginate(15);
 
-        $statistics = [
+        // Estatísticas cacheadas por 5 minutos — não precisam ser em tempo real.
+        $statistics = Cache::remember('rat:statistics', 300, fn () => [
             'total'    => RatOcorrencia::count(),
             'hoje'     => RatOcorrencia::whereDate('created_at', today())->count(),
             'esteMes'  => RatOcorrencia::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
             'esteAno'  => RatOcorrencia::whereYear('created_at', now()->year)->count(),
-        ];
+        ]);
 
         return Inertia::render('RatIndex', [
-            'rats'       => RatOcorrenciaResource::collection($rats),
+            // RatListResource: ~10 campos × 15 registros (antes: 200+ campos × 15)
+            'rats'       => RatListResource::collection($rats),
             'statistics' => $statistics,
             'filters'    => [],
         ]);

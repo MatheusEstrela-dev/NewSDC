@@ -10,27 +10,49 @@ return new class extends Migration
     {
         // rat_relato_dados_gerais: campos de comunicação adicionados via frontend/backend
         if (Schema::hasTable('rat_relato_dados_gerais')) {
-            DB::statement("ALTER TABLE rat_relato_dados_gerais ADD COLUMN IF NOT EXISTS com_telefone_contato varchar(20) NULL");
-            DB::statement("ALTER TABLE rat_relato_dados_gerais ADD COLUMN IF NOT EXISTS com_nome_solicitante varchar(255) NULL");
+            Schema::table('rat_relato_dados_gerais', function (\Illuminate\Database\Schema\Blueprint $table) {
+                if (! Schema::hasColumn('rat_relato_dados_gerais', 'com_telefone_contato')) {
+                    $table->string('com_telefone_contato', 20)->nullable();
+                }
+                if (! Schema::hasColumn('rat_relato_dados_gerais', 'com_nome_solicitante')) {
+                    $table->string('com_nome_solicitante', 255)->nullable();
+                }
+            });
         }
 
         // rat_relato_envolvidos: campos de documento e idade
         if (Schema::hasTable('rat_relato_envolvidos')) {
-            DB::statement("ALTER TABLE rat_relato_envolvidos ADD COLUMN IF NOT EXISTS p_uf varchar(2) NULL");
-            DB::statement("ALTER TABLE rat_relato_envolvidos ADD COLUMN IF NOT EXISTS p_idade_aparente integer NULL CHECK (p_idade_aparente IS NULL OR (p_idade_aparente >= 0 AND p_idade_aparente <= 150))");
+            Schema::table('rat_relato_envolvidos', function (\Illuminate\Database\Schema\Blueprint $table) {
+                if (! Schema::hasColumn('rat_relato_envolvidos', 'p_uf')) {
+                    $table->string('p_uf', 2)->nullable();
+                }
+                if (! Schema::hasColumn('rat_relato_envolvidos', 'p_idade_aparente')) {
+                    $table->integer('p_idade_aparente')->nullable();
+                }
+            });
         }
     }
 
     public function down(): void
     {
         if (Schema::hasTable('rat_relato_dados_gerais')) {
-            DB::statement("ALTER TABLE rat_relato_dados_gerais DROP COLUMN IF EXISTS com_telefone_contato");
-            DB::statement("ALTER TABLE rat_relato_dados_gerais DROP COLUMN IF EXISTS com_nome_solicitante");
+            Schema::table('rat_relato_dados_gerais', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $columns = array_filter(['com_telefone_contato', 'com_nome_solicitante'],
+                    fn ($c) => Schema::hasColumn('rat_relato_dados_gerais', $c));
+                if ($columns) {
+                    $table->dropColumn(array_values($columns));
+                }
+            });
         }
 
         if (Schema::hasTable('rat_relato_envolvidos')) {
-            DB::statement("ALTER TABLE rat_relato_envolvidos DROP COLUMN IF EXISTS p_uf");
-            DB::statement("ALTER TABLE rat_relato_envolvidos DROP COLUMN IF EXISTS p_idade_aparente");
+            Schema::table('rat_relato_envolvidos', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $columns = array_filter(['p_uf', 'p_idade_aparente'],
+                    fn ($c) => Schema::hasColumn('rat_relato_envolvidos', $c));
+                if ($columns) {
+                    $table->dropColumn(array_values($columns));
+                }
+            });
         }
     }
 };

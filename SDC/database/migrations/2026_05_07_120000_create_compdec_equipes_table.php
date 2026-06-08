@@ -52,11 +52,13 @@ return new class extends Migration
             $table->index('legacy_id');
         });
 
-        // CHECK constraint para enum textual (PG)
-        DB::statement(
-            "ALTER TABLE compdec_equipes ADD CONSTRAINT compdec_equipes_funcao_check "
-            ."CHECK (funcao IN ('coordenador', 'agente', 'tecnico', 'apoio', 'outro'))"
-        );
+        // CHECK constraint para enum textual — apenas PostgreSQL (SQLite não suporta ADD CONSTRAINT via ALTER)
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement(
+                "ALTER TABLE compdec_equipes ADD CONSTRAINT compdec_equipes_funcao_check "
+                ."CHECK (funcao IN ('coordenador', 'agente', 'tecnico', 'apoio', 'outro'))"
+            );
+        }
     }
 
     public function down(): void

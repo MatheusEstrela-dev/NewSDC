@@ -15,6 +15,10 @@ return new class extends Migration
 
     public function up(): void
     {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         foreach ($this->relatoTables as $table) {
             $this->fixOcorrenciaForeignKey($table);
         }
