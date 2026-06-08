@@ -106,7 +106,7 @@ class AuthController extends Controller
      *     description="Revoga o token atual do usuário autenticado",
      *     operationId="logout",
      *     tags={"Autenticação"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Response(
      *         response=200,
      *         description="Logout realizado com sucesso",
@@ -136,7 +136,7 @@ class AuthController extends Controller
      *     description="Retorna os dados do usuário atualmente autenticado",
      *     operationId="me",
      *     tags={"Autenticação"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Response(
      *         response=200,
      *         description="Dados do usuário",

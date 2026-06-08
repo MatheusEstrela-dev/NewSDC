@@ -24,7 +24,7 @@
       <StatCard title="Reprovadas" :value="estatisticas.reprovadas ?? 0" :icon="ExclamationIcon" variant="danger" />
     </div>
 
-    <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="false">
+    <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="true">
       <FilterField
         label="Buscar"
         type="text"
@@ -59,7 +59,7 @@
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
       <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
-        <thead class="bg-slate-50 dark:bg-slate-800/40">
+        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
           <tr>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Data</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Caminhão</th>

@@ -20,7 +20,7 @@ class IntegracaoController extends Controller
      *     description="Retorna o empreendimento PAE relacionado a um protocolo RAT através do município ou referência",
      *     operationId="getPaeByRat",
      *     tags={"Integração"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="ratId",
      *         in="path",
@@ -67,7 +67,7 @@ class IntegracaoController extends Controller
      *     description="Retorna todos os protocolos RAT relacionados a um empreendimento PAE",
      *     operationId="getRatByPae",
      *     tags={"Integração"},
-     *     security={{"sanctum": {}}},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="paeId",
      *         in="path",

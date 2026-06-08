@@ -30,8 +30,19 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(ConnectionSemaphore::class, function ($app) {
             $cfg = $app['config']->get('resilience.db');
+
+            // Sem Redis: passa client null -> semaforo opera em modo no-op.
+            $client = null;
+            if ($app['config']->get('resilience.redis_enabled', true)) {
+                try {
+                    $client = Redis::connection()->client();
+                } catch (\Throwable $e) {
+                    $client = null;
+                }
+            }
+
             return new ConnectionSemaphore(
-                Redis::connection()->client(),
+                $client,
                 limit: $cfg['max_concurrent'],
                 waitMs: $cfg['acquire_poll_ms'],
                 maxWaitMs: $cfg['acquire_wait_ms'],
@@ -129,6 +140,12 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $this->removeViteHotFileWhenBuildAssetsShouldBeUsed();
+        if (class_exists(RequestReceived::class)) {
+            $this->app['events']->listen(
+                RequestReceived::class,
+                fn () => $this->removeViteHotFileWhenBuildAssetsShouldBeUsed()
+            );
+        }
 
         // Spatie permissions: reset cache entre requests no Octane
         if (class_exists(\Laravel\Octane\Events\RequestReceived::class)) {
@@ -334,19 +351,43 @@ class AppServiceProvider extends ServiceProvider
 
     private function removeViteHotFileWhenBuildAssetsShouldBeUsed(): void
     {
-        $buildManifestExists = file_exists(public_path('build/manifest.json'));
-        $shouldUseBuildAssets = !app()->environment('local') || $buildManifestExists;
-
-        if (!$shouldUseBuildAssets) {
-            return;
-        }
-
         $hotFile = public_path('hot');
         if (!file_exists($hotFile)) {
             return;
         }
 
+        // A local build can coexist with the host Vite server. Keep the hot
+        // file only while that server is reachable; abrupt exits can leave a
+        // stale file behind and make the browser request unavailable assets.
+        if (app()->environment('local') && $this->viteDevServerIsReachable($hotFile)) {
+            return;
+        }
+
         @unlink($hotFile);
+    }
+
+    private function viteDevServerIsReachable(string $hotFile): bool
+    {
+        $hotUrl = trim((string) @file_get_contents($hotFile));
+        $parts = parse_url($hotUrl);
+        if (!is_array($parts) || empty($parts['host'])) {
+            return false;
+        }
+
+        $host = $parts['host'];
+        if (file_exists('/.dockerenv') && in_array($host, ['localhost', '127.0.0.1', '0.0.0.0'], true)) {
+            $host = 'host.docker.internal';
+        }
+
+        $port = (int) ($parts['port'] ?? (($parts['scheme'] ?? 'http') === 'https' ? 443 : 80));
+        $socket = @fsockopen($host, $port, $errorCode, $errorMessage, 0.2);
+        if ($socket === false) {
+            return false;
+        }
+
+        fclose($socket);
+
+        return true;
     }
 
     private function getQueryCaller(): array

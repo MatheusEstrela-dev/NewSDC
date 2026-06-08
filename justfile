@@ -192,7 +192,7 @@ build:
 
 # Dev do frontend (watch)
 dev:
-    cd SDC && npm run dev
+    cd SDC && bun run dev
 
 # Instala dependências do NPM
 npm-install:
@@ -273,6 +273,34 @@ setup:
     just build
     @echo "✅ Setup completo finalizado!"
 
+# ==================== PROXY CORPORATIVO (Prodemge) ====================
+
+proxy_url := "http://proxycamg.prodemge.gov.br:8080"
+
+# Necessario p/ `just npm-install`, `just build` e o composer install do build dev.
+# Ativa o proxy Prodemge para npm e composer (persistente, roda 1x)
+proxy-on:
+    npm config set proxy {{proxy_url}}
+    npm config set https-proxy {{proxy_url}}
+    composer config -g http-proxy {{proxy_url}}
+    composer config -g https-proxy {{proxy_url}}
+    @echo "Proxy Prodemge ATIVADO (npm + composer): {{proxy_url}}"
+
+# Remove o proxy Prodemge (use fora da rede corporativa).
+proxy-off:
+    -npm config delete proxy
+    -npm config delete https-proxy
+    -composer config -g --unset http-proxy
+    -composer config -g --unset https-proxy
+    @echo "Proxy Prodemge REMOVIDO (npm + composer)."
+
+# Mostra o proxy configurado em npm e composer.
+proxy-status:
+    @echo "npm proxy:        $(npm config get proxy)"
+    @echo "npm https-proxy:  $(npm config get https-proxy)"
+    @echo "composer http:    $(composer config -g http-proxy 2>/dev/null || echo '(nao definido)')"
+    @echo "composer https:   $(composer config -g https-proxy 2>/dev/null || echo '(nao definido)')"
+
 # ==================== DEV LOCAL (FrankenPHP self-contained) ====================
 
 dev_compose := "SDC/docker/compose.dev.yml"
@@ -283,10 +311,25 @@ dev_db := "newsdc_dev_db"
 dev-build:
     docker compose -f {{dev_compose}} build app
 
+# Aplica o proxy Prodemge (proxy-on) e repassa HTTP(S)_PROXY ao docker build,
+# pois o composer install roda DENTRO da imagem. Fora da rede: rode `just proxy-off`.
+# Os bind-mounts ja dao hot-reload do codigo, entao nao rebuilda a cada subida;
+# para forcar rebuild apos mudar o Dockerfile use `just dev-build` antes.
+# Proxy + build (so se a imagem nao existir) + sobe o stack dev essencial (app, queue, db, redis, mailhog)
+dev-start: proxy-on
+    @if [ -z "$(docker images -q newsdc-frankenphp-dev:latest)" ]; then \
+        echo "Imagem dev nao encontrada - buildando (via proxy Prodemge)..."; \
+        HTTP_PROXY={{proxy_url}} HTTPS_PROXY={{proxy_url}} docker compose -f {{dev_compose}} build app; \
+    fi
+    docker compose -f {{dev_compose}} up -d
+    @echo "App:     http://localhost:19444"
+    @echo "Mailhog: http://localhost:8025"
+    @echo "Postgres host:5433  Redis host:6380"
+
 # Sobe stack dev (app + db + redis + mailhog)
 dev-up:
     docker compose -f {{dev_compose}} up -d
-    @echo "App:     https://localhost:19444"
+    @echo "App:     http://localhost:19444"
     @echo "Mailhog: http://localhost:8025"
     @echo "Postgres host:5433  Redis host:6380"
 
@@ -315,7 +358,8 @@ dev-status:
     @docker compose -f {{dev_compose}} ps
     @echo ""
     @echo "URLs:"
-    @echo "  https://localhost:19444  (app)"
+    @echo "  http://localhost:19444   (app)"
+    @echo "  http://localhost:8081     (Vite HMR no host)"
     @echo "  http://localhost:8025    (mailhog UI)"
 
 # Restart so do container app (apos mudanca de config/.env)
@@ -335,7 +379,7 @@ dev-clean:
 
 # Vite dev server no HOST (rodar em terminal separado)
 dev-vite:
-    cd SDC && npm run dev
+    cd SDC && bun run dev
 
 # ==================== ENV SWITCH ====================
 

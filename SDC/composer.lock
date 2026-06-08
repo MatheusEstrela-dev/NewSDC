@@ -4,8 +4,205 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7bb9f46a4cacaf5f523dde33abcaaf21",
+    "content-hash": "52718b31c94920e20462992c0254881a",
     "packages": [
+        {
+            "name": "azure-oss/identity",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Azure-OSS/azure-identity-php.git",
+                "reference": "419e221cb1b29a8189f19c1e253bb6a54c1accc1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Azure-OSS/azure-identity-php/zipball/419e221cb1b29a8189f19c1e253bb6a54c1accc1",
+                "reference": "419e221cb1b29a8189f19c1e253bb6a54c1accc1",
+                "shasum": ""
+            },
+            "require": {
+                "ext-openssl": "*",
+                "php": "^8.1",
+                "php-http/discovery": "^1.20",
+                "psr/http-client": "^1.0",
+                "psr/http-factory": "^1.0",
+                "psr/http-message": "^1.1"
+            },
+            "require-dev": {
+                "guzzlehttp/guzzle": "^7.10",
+                "laravel/pint": "^1.27",
+                "phpstan/extension-installer": "^1.4",
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-deprecation-rules": "^2.0",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpstan/phpstan-strict-rules": "^2.0",
+                "phpunit/phpunit": "^13.0"
+            },
+            "suggest": {
+                "guzzlehttp/guzzle": "Provides a PSR-18 HTTP client and PSR-17 factories (used by default when installed)."
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "AzureOss\\Identity\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "support": {
+                "issues": "https://github.com/Azure-OSS/azure-identity-php/issues",
+                "source": "https://github.com/Azure-OSS/azure-identity-php/tree/1.0.0"
+            },
+            "time": "2026-03-13T18:32:57+00:00"
+        },
+        {
+            "name": "azure-oss/storage",
+            "version": "1.9.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Azure-OSS/azure-storage-php.git",
+                "reference": "ed2d4ad652cc90fa8067d9e47468666ed942cf76"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Azure-OSS/azure-storage-php/zipball/ed2d4ad652cc90fa8067d9e47468666ed942cf76",
+                "reference": "ed2d4ad652cc90fa8067d9e47468666ed942cf76",
+                "shasum": ""
+            },
+            "require": {
+                "azure-oss/storage-common": "^1.0",
+                "ext-curl": "*",
+                "ext-json": "*",
+                "ext-simplexml": "*",
+                "guzzlehttp/guzzle": "^7.8",
+                "php": "^8.1"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "aliases.php"
+                ],
+                "psr-4": {
+                    "AzureOss\\Storage\\Blob\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Brecht Vermeersch",
+                    "email": "brechtvermeersch@outlook.be"
+                },
+                {
+                    "name": "Pim Jansen",
+                    "email": "pimjansen@gmail.com"
+                }
+            ],
+            "description": "Azure Blob Storage PHP SDK",
+            "keywords": [
+                "azure",
+                "php",
+                "sdk",
+                "storage"
+            ],
+            "support": {
+                "source": "https://github.com/Azure-OSS/azure-storage-php/tree/1.9.0"
+            },
+            "time": "2026-03-15T06:57:10+00:00"
+        },
+        {
+            "name": "azure-oss/storage-blob-flysystem",
+            "version": "1.6.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Azure-OSS/azure-storage-php-adapter-flysystem.git",
+                "reference": "2d6438b98a3779886ba90d20703e81a14a256837"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Azure-OSS/azure-storage-php-adapter-flysystem/zipball/2d6438b98a3779886ba90d20703e81a14a256837",
+                "reference": "2d6438b98a3779886ba90d20703e81a14a256837",
+                "shasum": ""
+            },
+            "require": {
+                "azure-oss/storage": "^1.4",
+                "league/flysystem": "^3.28",
+                "php": "^8.1"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "aliases.php"
+                ],
+                "psr-4": {
+                    "AzureOss\\Storage\\BlobFlysystem\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Brecht Vermeersch",
+                    "email": "brechtvermeersch@outlook.be"
+                },
+                {
+                    "name": "Pim Jansen",
+                    "email": "pimjansen@gmail.com"
+                }
+            ],
+            "description": "Flysystem adapter for Azure Storage PHP",
+            "support": {
+                "source": "https://github.com/Azure-OSS/azure-storage-php-adapter-flysystem/tree/1.6.0"
+            },
+            "time": "2026-03-05T20:52:01+00:00"
+        },
+        {
+            "name": "azure-oss/storage-common",
+            "version": "1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Azure-OSS/azure-storage-php-common.git",
+                "reference": "3169c2f19475a087963e71aeb2cbf183eb676025"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Azure-OSS/azure-storage-php-common/zipball/3169c2f19475a087963e71aeb2cbf183eb676025",
+                "reference": "3169c2f19475a087963e71aeb2cbf183eb676025",
+                "shasum": ""
+            },
+            "require": {
+                "azure-oss/identity": "^1.0",
+                "caseyamcl/guzzle_retry_middleware": "^2.10",
+                "guzzlehttp/guzzle": "^7.8",
+                "php": "^8.1"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "aliases.php"
+                ],
+                "psr-4": {
+                    "AzureOss\\Storage\\Common\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Brecht Vermeersch",
+                    "email": "brechtvermeersch@outlook.be"
+                }
+            ],
+            "support": {
+                "source": "https://github.com/Azure-OSS/azure-storage-php-common/tree/1.1.0"
+            },
+            "time": "2026-03-13T19:18:28+00:00"
+        },
         {
             "name": "bacon/bacon-qr-code",
             "version": "v3.0.3",
@@ -189,6 +386,79 @@
                 }
             ],
             "time": "2024-02-09T16:56:22+00:00"
+        },
+        {
+            "name": "caseyamcl/guzzle_retry_middleware",
+            "version": "v2.13.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/caseyamcl/guzzle_retry_middleware.git",
+                "reference": "17c9299cde438b00bbeb099c6480319a81636a60"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/caseyamcl/guzzle_retry_middleware/zipball/17c9299cde438b00bbeb099c6480319a81636a60",
+                "reference": "17c9299cde438b00bbeb099c6480319a81636a60",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^6.3|^7.0",
+                "php": "^7.1|^8.0"
+            },
+            "require-dev": {
+                "jaschilz/php-coverage-badger": "^2.0",
+                "nesbot/carbon": "^2.0|^3.0",
+                "phpstan/extension-installer": "^1.0",
+                "phpstan/phpstan": "^1.0",
+                "phpunit/phpunit": "^7.5|^8.0|^9.0",
+                "squizlabs/php_codesniffer": "^3.5",
+                "symfony/var-dumper": "^5.0|^6.0|^7.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.0-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "GuzzleRetry\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Casey McLaughlin",
+                    "email": "caseyamcl@gmail.com",
+                    "homepage": "https://caseymclaughlin.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Guzzle v6+ retry middleware that handles 429/503 status codes and connection timeouts",
+            "homepage": "https://github.com/caseyamcl/guzzle_retry_middleware",
+            "keywords": [
+                "Guzzle",
+                "back-off",
+                "caseyamcl",
+                "guzzle_retry_middleware",
+                "middleware",
+                "retry",
+                "retry-after"
+            ],
+            "support": {
+                "issues": "https://github.com/caseyamcl/guzzle_retry_middleware/issues",
+                "source": "https://github.com/caseyamcl/guzzle_retry_middleware/tree/v2.13.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/caseyamcl",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-07-11T12:33:22+00:00"
         },
         {
             "name": "composer/semver",
@@ -14244,7 +14514,7 @@
     },
     "platform-dev": {},
     "platform-overrides": {
-        "php": "8.4.20"
+        "php": "8.3.30"
     },
     "plugin-api-version": "2.6.0"
 }

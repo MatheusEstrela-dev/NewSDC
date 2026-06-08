@@ -95,10 +95,12 @@ class ApiRateLimiter
         // 5. Adiciona headers informativos (Padrão de mercado)
         $response = $next($request);
 
-        $response->headers->set('X-RateLimit-Limit', $limits['max_attempts']);
-        $response->headers->set('X-RateLimit-Remaining', max(0, $limits['max_attempts'] - $limitCheck['current_usage']));
-        $response->headers->set('X-RateLimit-Reset', now()->addSeconds($limits['decay_seconds'])->timestamp);
-        $response->headers->set('X-RateLimit-Cost', $cost);
+        // Symfony ResponseHeaderBag::set() exige array|string|null no valor;
+        // os limites/custos sao int/float, entao convertemos para string.
+        $response->headers->set('X-RateLimit-Limit', (string) $limits['max_attempts']);
+        $response->headers->set('X-RateLimit-Remaining', (string) max(0, $limits['max_attempts'] - $limitCheck['current_usage']));
+        $response->headers->set('X-RateLimit-Reset', (string) now()->addSeconds($limits['decay_seconds'])->timestamp);
+        $response->headers->set('X-RateLimit-Cost', (string) $cost);
 
         return $response;
     }
@@ -111,6 +113,11 @@ class ApiRateLimiter
     private function checkRateLimit(string $key, float $cost, array $limits, string $tier = 'default'): array
     {
         try {
+            // Sem Redis: fail-open — rate limit desativado, libera a requisicao.
+            if (!config('resilience.redis_enabled', true)) {
+                return ['allowed' => true, 'current_usage' => 0, 'retry_after' => 0];
+            }
+
             // Verifica se Redis está disponível
             if (!class_exists('Redis') && !class_exists('Predis\Client')) {
                 return ['allowed' => true, 'current_usage' => 0, 'retry_after' => 0];
@@ -166,6 +173,11 @@ class ApiRateLimiter
     {
         $tiersBypass = ['internal', 'admin', 'enterprise', 'webhook'];
         if (in_array($tier, $tiersBypass, true)) {
+            return null;
+        }
+
+        // Sem Redis: bucket global desativado — nao bloqueia.
+        if (!config('resilience.redis_enabled', true)) {
             return null;
         }
 

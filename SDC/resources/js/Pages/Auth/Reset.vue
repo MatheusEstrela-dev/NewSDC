@@ -172,7 +172,7 @@
 
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
-import { useReset } from '../../Composables/useReset';
+import { useReset } from '../../composables/useReset';
 import '../../../css/pages/auth/reset.css';
 
 defineProps({

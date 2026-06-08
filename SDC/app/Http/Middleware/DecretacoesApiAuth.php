@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
-use App\Services\IntegrationTokenService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,13 +11,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 class DecretacoesApiAuth
 {
-    public function __construct(
-        private readonly IntegrationTokenService $tokenService
-    ) {
-    }
-
     public function handle(Request $request, Closure $next): Response
     {
+        // Padrao de auth: sessao web (frontend logado) OU token pessoal Sanctum
+        // (Bearer). O caminho legado X-PowerBI-Token foi aposentado em favor do
+        // Sanctum Bearer (DB-backed, revogavel em /admin/permissions/users).
         if ($this->authenticateViaWebSession($request)) {
             return $next($request);
         }
@@ -27,13 +24,9 @@ class DecretacoesApiAuth
             return $next($request);
         }
 
-        if ($this->authenticateViaPowerBIToken($request)) {
-            return $next($request);
-        }
-
         return response()->json([
             'error'   => 'Unauthorized',
-            'message' => 'Valid Bearer token or X-PowerBI-Token required.',
+            'message' => 'Valid Bearer token required.',
         ], 401);
     }
 
@@ -59,34 +52,5 @@ class DecretacoesApiAuth
         }
 
         return false;
-    }
-
-    private function authenticateViaPowerBIToken(Request $request): bool
-    {
-        $token = $request->header('X-PowerBI-Token');
-
-        if (!$token) {
-            return false;
-        }
-
-        $tokenData = $this->tokenService->validatePowerBIToken($token);
-
-        if ($tokenData === null) {
-            return false;
-        }
-
-        // Vincula o user dono do token ao request para que controllers
-        // downstream (AsynchronousResponse, TraceController) consigam
-        // isolar recursos por user. Tokens legados (sem user_id) continuam
-        // passando sem user setado — comportamento anterior preservado.
-        $userId = $tokenData['user_id'] ?? null;
-        if ($userId !== null) {
-            $user = \App\Models\User::find($userId);
-            if ($user) {
-                Auth::setUser($user);
-            }
-        }
-
-        return true;
     }
 }

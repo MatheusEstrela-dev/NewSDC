@@ -32,17 +32,16 @@ use App\Http\Controllers\Controller;
  * )
  *
  * @OA\Server(
- *     url="https://localhost:19444",
- *     description="Servidor de Desenvolvimento (FrankenPHP HTTPS)"
+ *     url="http://localhost:19444",
+ *     description="Servidor de Desenvolvimento (FrankenPHP HTTP)"
  * )
  *
  * @OA\SecurityScheme(
  *     type="http",
- *     description="Autenticação via Bearer Token (Sanctum)",
+ *     description="Token de acesso pessoal (Bearer). Emitido por um administrador com acesso ao modulo de Permissionamento e vinculado ao usuario. Informe no campo abaixo apenas o token (o prefixo 'Bearer ' e adicionado automaticamente). Token Sanctum, nao e JWT.",
  *     name="bearerAuth",
  *     in="header",
  *     scheme="bearer",
- *     bearerFormat="JWT",
  *     securityScheme="bearerAuth"
  * )
  *
@@ -142,6 +141,59 @@ use App\Http\Controllers\Controller;
  *     @OA\Property(property="danos_materiais_valor", type="number", format="float", example=122000),
  *     @OA\Property(property="prejuizos_publicos_valor", type="number", format="float", example=71400),
  *     @OA\Property(property="prejuizos_privados_valor", type="number", format="float", example=2100)
+ * )
+ *
+ * @OA\Schema(
+ *     schema="ProcessoDecretacaoDetail",
+ *     type="object",
+ *     title="Detalhe de Processo de Decretacao (formato rico)",
+ *     description="Resposta do GET /api/v1/decretacoes/{id}. Usa ProcessoResource (estrutura aninhada), diferente do formato plano da listagem.",
+ *     @OA\Property(property="success", type="boolean", example=true),
+ *     @OA\Property(property="data", type="object",
+ *         @OA\Property(property="id", type="integer", example=261),
+ *         @OA\Property(property="processo", type="string", nullable=true, example="MUNICIPAL"),
+ *         @OA\Property(property="origem", type="string", nullable=true, example="MUNICIPAL"),
+ *         @OA\Property(property="tipo_decreto", type="string", nullable=true, enum={"SE", "ECP"}, example="SE"),
+ *         @OA\Property(property="status", type="string", nullable=true, example="Reconhecido pelo Estado e pela Uniao"),
+ *         @OA\Property(property="protocolo_fide", type="string", nullable=true, example="2025.001.001"),
+ *         @OA\Property(property="n_protocolo_fide", type="string", nullable=true, example="2025.001.001"),
+ *         @OA\Property(property="municipio_id", type="integer", nullable=true, example=123),
+ *         @OA\Property(property="data_entrada", type="string", format="date", nullable=true, example="2026-01-21"),
+ *         @OA\Property(property="data_entrada_formatada", type="string", nullable=true, example="21/01/2026"),
+ *         @OA\Property(property="data_decreto_municipal", type="string", format="date", nullable=true),
+ *         @OA\Property(property="data_publicacao_mg", type="string", format="date", nullable=true),
+ *         @OA\Property(property="prazo_vigencia", type="integer", nullable=true, example=180),
+ *         @OA\Property(property="data_vencimento", type="string", format="date", nullable=true, example="2026-07-21"),
+ *         @OA\Property(property="dias_restantes", type="integer", nullable=true, example=85),
+ *         @OA\Property(property="vigente", type="boolean", example=true),
+ *         @OA\Property(property="proximo_vencer", type="boolean", example=false),
+ *         @OA\Property(property="tipo_desastre_id", type="integer", nullable=true, example=5),
+ *         @OA\Property(property="cobrade_id", type="integer", nullable=true, example=5),
+ *         @OA\Property(property="tipo_desastre_nome", type="string", nullable=true, example="Tempestade local: chuvas intensas."),
+ *         @OA\Property(property="tipo_desastre_cobrade", type="string", nullable=true, example="1.3.2.1.4"),
+ *         @OA\Property(property="analista", type="string", nullable=true, example="SC Cristina"),
+ *         @OA\Property(property="reconhecimento", type="string", nullable=true),
+ *         @OA\Property(property="observacoes", type="string", nullable=true),
+ *         @OA\Property(property="municipios_count", type="integer", example=1),
+ *         @OA\Property(property="municipios", type="array",
+ *             @OA\Items(type="object",
+ *                 @OA\Property(property="id", type="integer", example=123),
+ *                 @OA\Property(property="nome", type="string", example="Ouro Verde de Minas"),
+ *                 @OA\Property(property="codigo_ibge", type="string", nullable=true, example="3146206")
+ *             )
+ *         ),
+ *         @OA\Property(property="desastres", type="array",
+ *             @OA\Items(type="object",
+ *                 @OA\Property(property="id", type="integer", example=1),
+ *                 @OA\Property(property="categoria_id", type="integer", nullable=true, example=2),
+ *                 @OA\Property(property="descricao", type="string", nullable=true)
+ *             )
+ *         ),
+ *         @OA\Property(property="totais", type="object", nullable=true, description="Totais agregados (geral e por municipio): danos_humanos, danos_materiais, prejuizos_publicos, prejuizos_privados"),
+ *         @OA\Property(property="pedidos_ah", type="array", @OA\Items(type="object"), description="Pedidos de ajuda humanitaria vinculados ao decreto"),
+ *         @OA\Property(property="created_at", type="string", format="date-time", nullable=true),
+ *         @OA\Property(property="updated_at", type="string", format="date-time", nullable=true)
+ *     )
  * )
  *
  * @OA\Schema(

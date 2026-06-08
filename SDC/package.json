@@ -2,11 +2,10 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "vite",
+        "dev": "node scripts/ensure-vite-port-free.mjs && vite",
         "clean:hot": "node -e \"require('fs').rmSync('public/hot',{force:true})\"",
-        "prebuild": "npm run clean:hot && php artisan ziggy:generate resources/js/ziggy.js",
+        "prebuild": "node scripts/generate-ziggy.mjs",
         "build": "vite build",
-        "postbuild": "npm run clean:hot",
         "build:ssr": "vite build && vite build --ssr && vite build --config vite.email-ssr.config.js --ssr",
         "build:email-ssr": "vite build --config vite.email-ssr.config.js --ssr",
         "ssr": "bun $(ls -t bootstrap/ssr/js/ssr-*.js | head -n 1)",

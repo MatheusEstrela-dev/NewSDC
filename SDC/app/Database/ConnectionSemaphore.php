@@ -29,7 +29,7 @@ class ConnectionSemaphore
     private const TTL_SECONDS = 60;
 
     public function __construct(
-        private Redis $redis,
+        private ?Redis $redis,
         private int $limit,
         private int $waitMs = 50,
         private int $maxWaitMs = 2000,
@@ -49,6 +49,11 @@ class ConnectionSemaphore
 
     public function acquire(string $owner): bool
     {
+        // Sem Redis: no-op — concede sempre (backpressure desativado).
+        if ($this->redis === null) {
+            return true;
+        }
+
         $start = microtime(true);
 
         do {
@@ -73,6 +78,10 @@ class ConnectionSemaphore
 
     public function release(string $owner): void
     {
+        if ($this->redis === null) {
+            return;
+        }
+
         if ((int) $this->redis->sRem(self::KEY_OWNERS, $owner) === 1) {
             $this->redis->decr(self::KEY_ACTIVE);
         }
@@ -80,6 +89,10 @@ class ConnectionSemaphore
 
     public function active(): int
     {
+        if ($this->redis === null) {
+            return 0;
+        }
+
         return (int) $this->redis->get(self::KEY_ACTIVE);
     }
 

@@ -32,8 +32,11 @@
       @filter-reset="handleFilterReset"
     />
 
-    <!-- Tabela -->
-    <div class="table-container">
+    <ListContainer
+      title="Lista de Órgãos"
+      :icon="BuildingOfficeIcon"
+      :count="orgaos.total ?? orgaos.data.length"
+    >
       <div v-if="loading" class="loading-overlay">
         <div class="spinner"></div>
       </div>
@@ -52,8 +55,8 @@
         </thead>
         <tbody>
           <tr v-if="orgaos.data.length === 0">
-            <td colspan="7" class="empty-state">
-              Nenhum orgao encontrado
+            <td colspan="7" class="p-0">
+              <ListEmptyState title="Nenhum órgão encontrado" />
             </td>
           </tr>
           <tr v-for="orgao in orgaos.data" :key="orgao.id" class="table-row">
@@ -91,7 +94,7 @@
           </tr>
         </tbody>
       </table>
-    </div>
+    </ListContainer>
 
     <!-- Paginacao -->
     <Pagination
@@ -134,6 +137,8 @@ import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import ListContainer from '@/Components/Organisms/ListContainer.vue';
+import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import { useToast } from '@/composables/useToast';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -318,28 +323,19 @@ function confirmDelete() {
 }
 
 .orgaos-table thead {
-  @apply bg-gray-50 dark:bg-slate-700;
-  border-bottom: 2px solid #e5e7eb;
+  @apply bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700;
 }
 
 .orgaos-table th {
-  @apply text-gray-700 dark:text-gray-300;
-  padding: 1rem;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  @apply text-slate-700 dark:text-slate-200 px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider;
 }
 
 .orgaos-table td {
-  @apply border-b border-gray-200 dark:border-slate-700;
-  padding: 1rem;
+  @apply border-b border-slate-200 dark:border-slate-700 px-4 py-3;
 }
 
 .table-row {
-  @apply hover:bg-gray-50 dark:hover:bg-slate-700/50;
-  transition: background-color 0.15s ease;
+  @apply hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors;
 }
 
 .empty-state {

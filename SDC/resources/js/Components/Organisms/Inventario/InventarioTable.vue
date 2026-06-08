@@ -1,61 +1,53 @@
 <template>
-  <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
-    <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-800/70">
-      <div class="flex items-center justify-between gap-3">
-        <div class="min-w-0">
-          <h3 class="truncate text-sm font-bold text-slate-900 dark:text-slate-100">Equipamentos</h3>
-          <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Lista inicial do acervo patrimonial</p>
-        </div>
-        <span class="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/15 dark:text-blue-300">
-          {{ equipamentos.length }}
-        </span>
-      </div>
-    </div>
-
+  <ListContainer
+    title="Equipamentos"
+    :icon="ArchiveBoxIcon"
+    subtitle="Lista inicial do acervo patrimonial"
+    :count="equipamentos.length"
+  >
     <div v-if="loading" class="p-10 text-center">
       <div class="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
       <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">Carregando equipamentos...</p>
     </div>
 
-    <div v-else class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase text-slate-500 dark:border-slate-700/50 dark:bg-slate-800 dark:text-slate-400">
+    <table v-else class="w-full text-sm text-left">
+        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
           <tr>
-            <th class="px-4 py-3 text-left">Equipamento</th>
-            <th class="px-4 py-3 text-left">Patrimonio</th>
-            <th class="px-4 py-3 text-left">Categoria</th>
-            <th class="px-4 py-3 text-left">Responsavel</th>
-            <th class="px-4 py-3 text-left">Situacao</th>
-            <th class="px-4 py-3 text-left">Ultima movimentacao</th>
-            <th class="w-28 px-4 py-3 text-right">Acoes</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Equipamento</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Patrimônio</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Categoria</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Responsável</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Situação</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Última movimentação</th>
+            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-28">Ações</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
           <tr
             v-for="equipamento in equipamentos"
             :key="equipamento.id"
-            class="transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
+            class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
           >
-            <td class="px-4 py-4">
+            <td class="px-4 py-3">
               <div class="font-semibold text-slate-900 dark:text-slate-100">{{ equipamento.nome }}</div>
               <div class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ equipamento.diretoria }}</div>
             </td>
-            <td class="whitespace-nowrap px-4 py-4 font-medium text-slate-700 dark:text-slate-300">
+            <td class="whitespace-nowrap px-4 py-3 font-medium text-slate-700 dark:text-slate-300">
               {{ equipamento.patrimonio }}
             </td>
-            <td class="whitespace-nowrap px-4 py-4 text-slate-600 dark:text-slate-300">
+            <td class="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">
               {{ equipamento.categoria }}
             </td>
             <td class="px-4 py-4 text-slate-600 dark:text-slate-300">
               {{ equipamento.responsavel }}
             </td>
-            <td class="whitespace-nowrap px-4 py-4">
+            <td class="whitespace-nowrap px-4 py-3">
               <InventarioStatusBadge :status="equipamento.situacao" />
             </td>
-            <td class="whitespace-nowrap px-4 py-4 text-slate-600 dark:text-slate-300">
+            <td class="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">
               {{ formatDate(equipamento.ultima_movimentacao) }}
             </td>
-            <td class="px-4 py-4">
+            <td class="px-4 py-3">
               <div class="flex items-center justify-end gap-1">
                 <ActionButton
                   module="inventario"
@@ -82,21 +74,24 @@
           </tr>
 
           <tr v-if="equipamentos.length === 0">
-            <td colspan="7" class="px-4 py-10 text-center">
-              <ArchiveBoxIcon class="mx-auto h-12 w-12 text-slate-400" />
-              <p class="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Nenhum equipamento encontrado</p>
-              <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajuste os filtros para ampliar a consulta.</p>
+            <td colspan="7" class="p-0">
+              <ListEmptyState
+                :icon="ArchiveBoxIcon"
+                title="Nenhum equipamento encontrado"
+                helper="Ajuste os filtros para ampliar a consulta."
+              />
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
-  </div>
+  </ListContainer>
 </template>
 
 <script setup>
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import InventarioStatusBadge from '@/Components/Molecules/Inventario/InventarioStatusBadge.vue';
+import ListContainer from '@/Components/Organisms/ListContainer.vue';
+import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import { ArchiveBoxIcon } from '@heroicons/vue/24/outline';
 
 defineProps({

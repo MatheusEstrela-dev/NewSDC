@@ -24,7 +24,7 @@
       <StatCard title="Volume ativo (m³)" :value="Number(estatisticas.volume_ativo_m3 || 0).toLocaleString('pt-BR', {minimumFractionDigits:0,maximumFractionDigits:0})" :icon="CubeIcon" variant="info" :format-number="false" />
     </div>
 
-    <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="false">
+    <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="true">
       <FilterField
         label="Buscar"
         type="text"
@@ -53,16 +53,16 @@
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
       <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-        <thead class="bg-slate-50 dark:bg-slate-800/40">
+        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Número</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Vigência</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Ata / Lote</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Município / Prestador</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Volume (m³)</th>
-            <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Caminhões</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Estado</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Ações</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Número</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Vigência</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ata / Lote</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Município / Prestador</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Volume (m³)</th>
+            <th class="px-4 py-3 text-center text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Caminhões</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Estado</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700">

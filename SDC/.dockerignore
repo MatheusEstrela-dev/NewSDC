@@ -1,8 +1,10 @@
 node_modules
 vendor
 storage/
+public/storage
 bootstrap/cache/*
 .env
+.env.*
 .git
 .composer
 .config
