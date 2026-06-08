@@ -73,6 +73,7 @@
           @update="atualizarAnexos"
           @update:pending-files="pendingAttachmentFiles = $event"
           @save="() => salvarComAnexos(currentFormData)"
+          @finalize="handleFinalizar"
         />
       </div>
     </template>
@@ -81,7 +82,8 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
+import { useToast } from '@/Composables/useToast';
 import ClipboardIcon from '@/Components/Icons/ClipboardIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
@@ -125,6 +127,8 @@ const {
   removerAnexo,
   atualizarAnexos,
 } = useRat({ rat: null, recursos: [], envolvidos: [], vistoria: {}, historico: [], anexos: [], activeTab: 1 });
+
+const { show: toast } = useToast();
 
 const temVistoria = ref(false);
 const currentFormData = ref({ dadosGerais: {}, comunicacao: {}, local: {}, endereco: {} });
@@ -201,9 +205,31 @@ async function salvarComAnexos(formData) {
       }
       pendingAttachmentFiles.value = [];
     }
+    toast('RAT salvo com sucesso!', 'success');
   } catch (e) {
     console.error('Erro ao salvar RAT:', e);
+    toast('Erro ao salvar RAT. Tente novamente.', 'error');
     throw e;
+  }
+}
+
+async function handleFinalizar() {
+  if (!ratData.id) {
+    toast('Salve o RAT antes de finalizar.', 'error');
+    return;
+  }
+  const ax = window.axios || (await import('axios')).default;
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+  try {
+    await ax.patch(
+      route('rat.finalize', ratData.id),
+      {},
+      { headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf } },
+    );
+    toast('RAT finalizado com sucesso!', 'success');
+    router.visit(route('rat.index'));
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Erro ao finalizar RAT.', 'error');
   }
 }
 
