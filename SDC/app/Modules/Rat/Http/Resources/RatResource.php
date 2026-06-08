@@ -223,8 +223,8 @@ class RatResource extends JsonResource
                 ]);
             })->filter()->values()->toArray(),
 
-            // ── Vistoria: estrutura aninhada que RatVistoriaSection.vue usa ──
-            'vistoria' => empty($vis) ? null : [
+            // ── Vistoria: estrutura aninhada (edit form) + chaves v_* planas (BoletimVistoria) ──
+            'vistoria' => empty($vis) ? null : array_merge(is_array($vis) ? $vis : (array) $vis, [
                 'solicitante' => [
                     'nome'     => $vis['v_solicitante_nome']     ?? null,
                     'cpf'      => $vis['v_solicitante_cpf']      ?? null,
@@ -352,7 +352,7 @@ class RatResource extends JsonResource
                     'outros_descricao'      => $vis['v_orgao_outros_descricao']             ?? null,
                 ],
                 'observacoes' => $vis['v_historico'] ?? null,
-            ],
+            ]),
 
             // ── Histórico (JSON column em rat_ocorrencias) ──
             'historico' => $this->historico ?? [],

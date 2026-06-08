@@ -78,6 +78,7 @@
                   @remove="handleRemoveAnexo"
                   @update="handleUpdateAnexos"
                   @save="handleSaveFromSubTab"
+                  @finalize="handleFinalize"
                 />
               </div>
             </template>
