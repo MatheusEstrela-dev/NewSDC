@@ -40,9 +40,8 @@ if errorlevel 1 (
 
 echo.
 echo [3/5] Starting containers...
-echo   - App (Laravel + PHP-FPM)
-echo   - Nginx (Web Server)
-echo   - MySQL (Database)
+echo   - App (Laravel Octane + Swoole)
+echo   - PostgreSQL/PostGIS (Database)
 echo   - Redis (Cache/Queue/Session)
 echo   - Mailhog (Email Testing)
 echo   - Queue (Workers)
@@ -51,9 +50,7 @@ echo   - Grafana (Dashboards)
 echo   - Alertmanager (Alerts)
 echo   - Node Exporter
 echo   - cAdvisor
-echo   - MySQL Exporter
 echo   - Redis Exporter
-echo   - Nginx Exporter
 echo   - Blackbox Exporter
 echo.
 docker compose -f docker-compose.yml up -d
@@ -72,12 +69,11 @@ echo   ALL CONTAINERS STARTED!
 echo ========================================
 echo.
 echo APLICACAO:
-echo   App (Laravel):     http://localhost:8001
-echo   Nginx:             http://localhost:8082
+echo   App (Swoole):      http://localhost:18001
 echo   Mailhog:           http://localhost:8026
 echo.
 echo BANCO DE DADOS:
-echo   MySQL:             localhost:3307 (user: sdc, pass: secret)
+echo   PostgreSQL:        localhost:5432 (user: sdc, pass: secret)
 echo   Redis:             localhost:6380
 echo.
 echo MONITORAMENTO:

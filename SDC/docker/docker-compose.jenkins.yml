@@ -1,11 +1,11 @@
+﻿# ============================================================================
+# SDC - Jenkins CI/CD - PRODUÃ‡ÃƒO 24/7
+# Arquitetura resiliente para sistema crÃ­tico
 # ============================================================================
-# SDC - Jenkins CI/CD - PRODUÇÃO 24/7
-# Arquitetura resiliente para sistema crítico
-# ============================================================================
-# IMPORTANTE: Este é um sistema CRÍTICO 24/7
-# - Backup multi-tier com verificação
-# - Monitoramento contínuo
-# - Segurança hardened
+# IMPORTANTE: Este Ã© um sistema CRÃTICO 24/7
+# - Backup multi-tier com verificaÃ§Ã£o
+# - Monitoramento contÃ­nuo
+# - SeguranÃ§a hardened
 # - Alta disponibilidade
 # ============================================================================
 
@@ -33,7 +33,7 @@ services:
     # ===== SECURITY HARDENING =====
     security_opt:
       - no-new-privileges:true
-    # NÃO usar privileged em produção!
+    # NÃƒO usar privileged em produÃ§Ã£o!
     privileged: false
     # Read-only root filesystem (Jenkins escreve apenas em volumes)
     read_only: true
@@ -51,29 +51,30 @@ services:
 
       # ===== JAVA HEAP (Ajustar conforme recursos) =====
       # REGRA: -Xmx deve ser 75% de memory limit
-      # Se memory=4GB → -Xmx=3g
-      - JAVA_OPTS=-Xms512m -Xmx3g
-          -Djava.awt.headless=true
-          -Djenkins.install.runSetupWizard=false
-          -Dhudson.model.DirectoryBrowserSupport.CSP=
-          -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=false
-          -Djenkins.model.Jenkins.slaveAgentPort=50000
-          -Djenkins.model.Jenkins.slaveAgentPortEnforce=true
+      # Se memory=4GB â†’ -Xmx=3g
+      JAVA_OPTS: >-
+        -Xms512m -Xmx3g
+        -Djava.awt.headless=true
+        -Djenkins.install.runSetupWizard=false
+        -Dhudson.model.DirectoryBrowserSupport.CSP=
+        -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=false
+        -Djenkins.model.Jenkins.slaveAgentPort=50000
+        -Djenkins.model.Jenkins.slaveAgentPortEnforce=true
 
       # ===== DOCKER (via Proxy - Mais Seguro) =====
-      - DOCKER_HOST=tcp://docker-proxy:2375
-      - DOCKER_TLS_VERIFY=
+      DOCKER_HOST: tcp://docker-proxy:2375
+      DOCKER_TLS_VERIFY: ""
 
       # ===== NETWORK =====
-      - JENKINS_OPTS=--prefix=/
+      JENKINS_OPTS: --prefix=/
 
       # ===== BACKUP CONFIG =====
-      - BACKUP_ENABLED=true
-      - BACKUP_RETENTION_DAYS=30
+      BACKUP_ENABLED: "true"
+      BACKUP_RETENTION_DAYS: "30"
 
     volumes:
       # ===== VOLUME PERSISTENTE =====
-      # CRÍTICO: Usar volume nomeado (melhor que bind mount)
+      # CRÃTICO: Usar volume nomeado (melhor que bind mount)
       - jenkins_home:/var/jenkins_home
 
       # ===== CACHE (Performance) =====
@@ -85,9 +86,8 @@ services:
       - jenkins_backups:/backups:ro
 
     networks:
-      - jenkins_internal  # Comunicação interna
-      - jenkins_dmz       # Comunicação externa (nginx)
-      - sdc_network       # Comunicação com app SDC
+      - jenkins_internal  # ComunicaÃ§Ã£o interna
+      - sdc_network       # ComunicaÃ§Ã£o com app SDC
 
     depends_on:
       docker-proxy:
@@ -124,7 +124,7 @@ services:
       - "com.sdc.criticality=high"
 
   # ==========================================================================
-  # DOCKER SOCKET PROXY (Segurança)
+  # DOCKER SOCKET PROXY (SeguranÃ§a)
   # Evita expor /var/run/docker.sock diretamente
   # ==========================================================================
   docker-proxy:
@@ -134,20 +134,20 @@ services:
     restart: unless-stopped
 
     environment:
-      # ===== PERMISSÕES MÍNIMAS =====
-      # Apenas o necessário para Jenkins
+      # ===== PERMISSÃ•ES MÃNIMAS =====
+      # Apenas o necessÃ¡rio para Jenkins
       - CONTAINERS=1  # Permitir listar/gerenciar containers
       - IMAGES=1      # Permitir listar/gerenciar imagens
       - NETWORKS=1    # Permitir gerenciar redes
       - VOLUMES=1     # Permitir gerenciar volumes
       - BUILD=1       # Permitir builds
-      - COMMIT=0      # NÃO permitir commits
-      - CONFIGS=0     # NÃO permitir configs
-      - SECRETS=0     # NÃO permitir secrets
-      - SWARM=0       # NÃO permitir swarm
-      - SERVICES=0    # NÃO permitir services
-      - TASKS=0       # NÃO permitir tasks
-      - POST=1        # Permitir operações POST (build, create)
+      - COMMIT=0      # NÃƒO permitir commits
+      - CONFIGS=0     # NÃƒO permitir configs
+      - SECRETS=0     # NÃƒO permitir secrets
+      - SWARM=0       # NÃƒO permitir swarm
+      - SERVICES=0    # NÃƒO permitir services
+      - TASKS=0       # NÃƒO permitir tasks
+      - POST=1        # Permitir operaÃ§Ãµes POST (build, create)
 
     volumes:
       # Socket read-only
@@ -171,7 +171,7 @@ services:
     logging: *default-logging
 
   # ==========================================================================
-  # JENKINS AGENT (Docker - Dinâmico)
+  # JENKINS AGENT (Docker - DinÃ¢mico)
   # ==========================================================================
   jenkins-agent:
     image: jenkins/inbound-agent:latest-jdk17
@@ -207,46 +207,7 @@ services:
     logging: *default-logging
 
   # ==========================================================================
-  # NGINX REVERSE PROXY (SSL + Security Headers)
-  # ==========================================================================
-  nginx:
-    image: nginx:alpine
-    container_name: sdc_jenkins_nginx
-    hostname: jenkins-nginx
-    restart: unless-stopped
-
-    ports:
-      - "80:80"
-      - "443:443"
-
-    volumes:
-      - ./jenkins/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./jenkins/ssl:/etc/nginx/ssl:ro
-      - nginx_logs:/var/log/nginx
-
-    networks:
-      - jenkins_dmz
-
-    depends_on:
-      jenkins:
-        condition: service_healthy
-
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 256M
-
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-    logging: *default-logging
-
-  # ==========================================================================
-  # BACKUP SERVICE (Multi-Tier com Verificação)
+  # BACKUP SERVICE (Multi-Tier com VerificaÃ§Ã£o)
   # ==========================================================================
   backup-local:
     build:
@@ -258,15 +219,15 @@ services:
 
     environment:
       <<: *common-env
-      - BACKUP_TYPE=local
-      - BACKUP_SCHEDULE=0 */6 * * *  # A cada 6 horas
-      - BACKUP_RETENTION_DAILY=7
-      - BACKUP_RETENTION_WEEKLY=4
-      - BACKUP_RETENTION_MONTHLY=12
-      - BACKUP_VERIFY=true
-      - BACKUP_NOTIFY=true
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
-      - PROMETHEUS_PUSHGATEWAY=${PROMETHEUS_PUSHGATEWAY:-}
+      BACKUP_TYPE: local
+      BACKUP_SCHEDULE: "0 */6 * * *"
+      BACKUP_RETENTION_DAILY: "7"
+      BACKUP_RETENTION_WEEKLY: "4"
+      BACKUP_RETENTION_MONTHLY: "12"
+      BACKUP_VERIFY: "true"
+      BACKUP_NOTIFY: "true"
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      PROMETHEUS_PUSHGATEWAY: ${PROMETHEUS_PUSHGATEWAY:-}
 
     volumes:
       - jenkins_home:/source:ro
@@ -310,18 +271,18 @@ services:
 
     environment:
       <<: *common-env
-      - BACKUP_TYPE=remote
-      - BACKUP_SCHEDULE=0 2 * * *  # Diariamente às 2h
-      - BACKUP_REMOTE_TYPE=${BACKUP_REMOTE_TYPE:-s3}  # s3, rsync, nfs
+      BACKUP_TYPE: remote
+      BACKUP_SCHEDULE: "0 2 * * *"
+      BACKUP_REMOTE_TYPE: ${BACKUP_REMOTE_TYPE:-s3}
       # S3
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
-      - S3_BUCKET=${S3_BUCKET:-sdc-jenkins-backups}
-      - S3_REGION=${S3_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-sdc-jenkins-backups}
+      S3_REGION: ${S3_REGION:-us-east-1}
       # Rsync
-      - RSYNC_HOST=${RSYNC_HOST:-}
-      - RSYNC_USER=${RSYNC_USER:-}
-      - RSYNC_PATH=${RSYNC_PATH:-/backups/jenkins}
+      RSYNC_HOST: ${RSYNC_HOST:-}
+      RSYNC_USER: ${RSYNC_USER:-}
+      RSYNC_PATH: ${RSYNC_PATH:-/backups/jenkins}
 
     volumes:
       - jenkins_backups:/backups:ro
@@ -348,7 +309,7 @@ services:
     logging: *default-logging
 
   # ==========================================================================
-  # PROMETHEUS EXPORTER (Métricas)
+  # PROMETHEUS EXPORTER (MÃ©tricas)
   # ==========================================================================
   prometheus-exporter:
     image: prom/jenkins-exporter:latest
@@ -415,7 +376,7 @@ services:
 
     logging: *default-logging
 
-    # Desabilitar em produção se preferir updates manuais
+    # Desabilitar em produÃ§Ã£o se preferir updates manuais
     profiles:
       - autoupdate
 
@@ -433,16 +394,6 @@ networks:
         - subnet: 172.25.0.0/24
     labels:
       - "com.sdc.network=jenkins_internal"
-
-  # DMZ (Jenkins + Nginx)
-  jenkins_dmz:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.26.0.0/24
-    labels:
-      - "com.sdc.network=jenkins_dmz"
 
   # Rede externa (SDC Application)
   sdc_network:
@@ -498,6 +449,4 @@ volumes:
   backup_remote:
     driver: local
 
-  # Logs
-  nginx_logs:
-    driver: local
+

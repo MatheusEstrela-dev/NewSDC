@@ -1,8 +1,8 @@
 # ============================================================================
 # SDC - DOCKERFILE SWOOLE (Producao)
 # Octane sobre Swoole: coroutines + I/O assincrono + task workers.
-# Baseado em docker/frankenphp/Dockerfile (tuning opcache/JIT) e
-# docker/Dockerfile.prod (estrutura de build). FrankenPHP segue como rollback.
+# Baseado em docker/Dockerfile.prod (estrutura de build) com tuning
+# opcache/JIT para workers persistentes.
 # ============================================================================
 
 FROM php:8.4-cli-alpine
@@ -70,7 +70,7 @@ RUN docker-php-ext-configure gd \
 # borda Azure). Combinacao validada localmente: SWOOLE_SSL=true.
 RUN pecl install igbinary \
     && docker-php-ext-enable igbinary \
-    && pecl install redis-6.0.2 \
+    && pecl install redis \
     && docker-php-ext-enable redis \
     && pecl install --configureoptions 'enable-openssl="yes" enable-sockets="yes" enable-brotli="no"' swoole \
     && docker-php-ext-enable swoole \
@@ -86,7 +86,7 @@ RUN apk add --no-cache curl bash unzip \
     && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx
 
 # Configuracao PHP: memoria, limites de upload e opcache/JIT calibrado para
-# workers persistentes (mesmos valores do Dockerfile FrankenPHP).
+# workers persistentes.
 RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
     && { \
         echo "memory_limit=512M"; \

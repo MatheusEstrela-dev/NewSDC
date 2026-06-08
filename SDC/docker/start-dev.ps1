@@ -51,9 +51,8 @@ else {
 # Start containers
 Write-Host ""
 Write-Host "[3/5] Starting containers..." -ForegroundColor Yellow
-Write-Host "  - App (Laravel + PHP-FPM)"
-Write-Host "  - Nginx (Web Server)"
-Write-Host "  - MySQL (Database)"
+Write-Host "  - App (Laravel Octane + Swoole)"
+Write-Host "  - PostgreSQL/PostGIS (Database)"
 Write-Host "  - Redis (Cache/Queue/Session)"
 Write-Host "  - Mailhog (Email Testing)"
 Write-Host "  - Queue (Workers)"
@@ -62,9 +61,7 @@ Write-Host "  - Grafana (Dashboards)"
 Write-Host "  - Alertmanager (Alerts)"
 Write-Host "  - Node Exporter"
 Write-Host "  - cAdvisor"
-Write-Host "  - MySQL Exporter"
 Write-Host "  - Redis Exporter"
-Write-Host "  - Nginx Exporter"
 Write-Host "  - Blackbox Exporter"
 Write-Host ""
 docker compose -f docker-compose.yml up -d
@@ -86,12 +83,11 @@ Write-Host "  ALL CONTAINERS STARTED!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "APLICACAO:" -ForegroundColor Cyan
-Write-Host "  App (Laravel):     http://localhost:8001" -ForegroundColor Green
-Write-Host "  Nginx:             http://localhost:8082" -ForegroundColor Green
+Write-Host "  App (Swoole):      http://localhost:18001" -ForegroundColor Green
 Write-Host "  Mailhog:           http://localhost:8026" -ForegroundColor Green
 Write-Host ""
 Write-Host "BANCO DE DADOS:" -ForegroundColor Cyan
-Write-Host "  MySQL:             localhost:3307 (user: sdc, pass: secret)" -ForegroundColor Green
+Write-Host "  PostgreSQL:        localhost:5432 (user: sdc, pass: secret)" -ForegroundColor Green
 Write-Host "  Redis:             localhost:6380" -ForegroundColor Green
 Write-Host ""
 Write-Host "MONITORAMENTO:" -ForegroundColor Cyan

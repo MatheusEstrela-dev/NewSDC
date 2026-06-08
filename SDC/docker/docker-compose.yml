@@ -10,13 +10,13 @@ name: newsdc
 
 services:
   # ==========================================================================
-  # PHP Application (Laravel + FrankenPHP/Octane)
+  # PHP Application (Laravel + Swoole/Octane)
   # ==========================================================================
   app:
     build:
       context: ..
-      dockerfile: docker/frankenphp/Dockerfile
-    image: newsdc-app:latest
+      dockerfile: docker/swoole/Dockerfile
+    image: newsdc-swoole-app:latest
     container_name: newsdc_app
     hostname: app
     restart: unless-stopped
@@ -26,16 +26,11 @@ services:
 
     volumes:
       # Código-fonte da aplicação
-      - ../:/app:cached
+      - ../:/var/www:cached
       # Logs persistentes
-      - ../storage/logs:/app/storage/logs
+      - ../storage/logs:/var/www/storage/logs
       # Assets frontend (Vite build) montados para refletir builds locais
-      - ../public/build:/app/public/build:ro
-      # Caddyfile atualizado (sem precisar rebuild)
-      - ./frankenphp/Caddyfile.dev:/app/Caddyfile:ro
-      # Certificados Caddy (persistir CA interna entre restarts)
-      - newsdc_caddy_data:/data/caddy
-      - newsdc_caddy_config:/config/caddy
+      - ../public/build:/var/www/public/build:ro
 
     secrets:
       - db_password
@@ -51,20 +46,22 @@ services:
       - ../.env.local
 
     environment:
-      # Diretorio de trabalho do entrypoint (Laravel esta montado em /app)
-      WORKDIR: /app
+      # Diretorio de trabalho do entrypoint (Laravel esta montado em /var/www)
+      WORKDIR: /var/www
 
       # Laravel
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
       APP_URL: http://localhost:18001
 
-      # Octane FrankenPHP - HTTP para dev local (TLS desnecessario em local)
-      OCTANE_SERVER: frankenphp
+      # Octane Swoole - HTTP para dev local
+      OCTANE_SERVER: swoole
       OCTANE_HTTPS: "false"
-      FRANKENPHP_WORKERS: ${FRANKENPHP_WORKERS:-4}
-      FRANKENPHP_MAX_REQUESTS: ${FRANKENPHP_MAX_REQUESTS:-500}
-      PORT: 80
+      OCTANE_WORKERS: ${OCTANE_WORKERS:-4}
+      OCTANE_TASK_WORKERS: ${OCTANE_TASK_WORKERS:-4}
+      OCTANE_MAX_REQUESTS: ${OCTANE_MAX_REQUESTS:-500}
+      DB_PERSISTENT: "false"
+      PORT: 8000
 
       # Inertia SSR
       INERTIA_SSR_ENABLED: ${INERTIA_SSR_ENABLED:-false}
@@ -93,7 +90,7 @@ services:
       MAIL_PORT: 1025
 
     ports:
-      - "18001:80"       # HTTP dev local
+      - "18001:8000"     # HTTP dev local
 
     deploy:
       resources:
@@ -105,30 +102,11 @@ services:
           memory: 512M
 
     healthcheck:
-      test: [ "CMD", "curl", "-sf", "http://localhost/health" ]
+      test: [ "CMD", "curl", "-sf", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 120s
-
-  # ==========================================================================
-  # NGINX (Web Server / Reverse Proxy)
-  # ==========================================================================
-  nginx:
-    image: nginx:1.25-alpine
-    container_name: newsdc_nginx
-    hostname: nginx
-    restart: unless-stopped
-    ports:
-      - "18082:80"
-      - "18443:443"
-    volumes:
-      - ./nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
-      - ../storage/logs/nginx:/var/log/nginx
-    networks:
-      - sdc_network
-    depends_on:
-      - app
 
   # ==========================================================================
   # PostgreSQL 18 + PostGIS 3.6
@@ -823,10 +801,6 @@ volumes:
   newsdc_grafana_data:
     driver: local
   newsdc_alertmanager_data:
-    driver: local
-  newsdc_caddy_data:
-    driver: local
-  newsdc_caddy_config:
     driver: local
   newsdc_vault_data:
     driver: local

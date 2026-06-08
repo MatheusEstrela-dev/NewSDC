@@ -80,16 +80,6 @@ scrape_configs:
           tier: 'cache'
 
   # ==========================================================================
-  # Nginx Exporter - Web Server
-  # ==========================================================================
-  - job_name: 'nginx'
-    static_configs:
-      - targets: ['nginx-exporter:9113']
-        labels:
-          service: 'nginx'
-          tier: 'webserver'
-
-  # ==========================================================================
   # Blackbox Exporter - External Probes
   # HTTP, TCP, ICMP monitoring
   # ==========================================================================
@@ -99,7 +89,6 @@ scrape_configs:
       module: [http_2xx]
     static_configs:
       - targets:
-          - http://newsdc_nginx:80
           - http://newsdc_app:8000
         labels:
           probe_type: 'http'
@@ -119,7 +108,7 @@ scrape_configs:
       module: [http_2xx]
     static_configs:
       - targets:
-          - http://newsdc_nginx:80/health
+          - http://newsdc_app:8000/health
         labels:
           probe_type: 'health_check'
           tier: 'critical'

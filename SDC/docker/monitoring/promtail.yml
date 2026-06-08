@@ -24,15 +24,6 @@ scrape_configs:
           job: laravel
           __path__: /var/log/sdc/laravel/*.log
 
-  # Logs do Nginx
-  - job_name: nginx
-    static_configs:
-      - targets:
-          - localhost
-        labels:
-          job: nginx
-          __path__: /var/log/sdc/nginx/*.log
-
   # Logs do PHP
   - job_name: php
     static_configs:
@@ -75,4 +66,3 @@ scrape_configs:
           format: RFC3339Nano
       - output:
           source: log
-

@@ -4,7 +4,6 @@
 # Variáveis
 docker_app := "newsdc_app"
 docker_db := "newsdc_db"
-docker_nginx := "newsdc_nginx"
 
 # Lista todos os comandos disponíveis
 default:
@@ -301,13 +300,13 @@ proxy-status:
     @echo "composer http:    $(composer config -g http-proxy 2>/dev/null || echo '(nao definido)')"
     @echo "composer https:   $(composer config -g https-proxy 2>/dev/null || echo '(nao definido)')"
 
-# ==================== DEV LOCAL (FrankenPHP self-contained) ====================
+# ==================== DEV LOCAL (Swoole self-contained) ====================
 
 dev_compose := "SDC/docker/compose.dev.yml"
 dev_app := "newsdc_dev_app"
 dev_db := "newsdc_dev_db"
 
-# Builda a imagem newsdc-frankenphp-dev (primeira vez ou apos mudanca no Dockerfile)
+# Builda a imagem newsdc-swoole-dev (primeira vez ou apos mudanca no Dockerfile)
 dev-build:
     docker compose -f {{dev_compose}} build app
 
@@ -317,7 +316,7 @@ dev-build:
 # para forcar rebuild apos mudar o Dockerfile use `just dev-build` antes.
 # Proxy + build (so se a imagem nao existir) + sobe o stack dev essencial (app, queue, db, redis, mailhog)
 dev-start: proxy-on
-    @if [ -z "$(docker images -q newsdc-frankenphp-dev:latest)" ]; then \
+    @if [ -z "$(docker images -q newsdc-swoole-dev:latest)" ]; then \
         echo "Imagem dev nao encontrada - buildando (via proxy Prodemge)..."; \
         HTTP_PROXY={{proxy_url}} HTTPS_PROXY={{proxy_url}} docker compose -f {{dev_compose}} build app; \
     fi

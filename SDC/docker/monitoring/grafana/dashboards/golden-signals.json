@@ -6,26 +6,18 @@
     "tags": ["prometheus", "golden-signals"],
     "timezone": "browser",
     "schemaVersion": 16,
-    "version": 0,
+    "version": 1,
     "refresh": "30s",
     "panels": [
       {
         "id": 1,
         "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
         "type": "graph",
-        "title": "1️⃣ LATÊNCIA - Tempo de Resposta (P50, P95, P99)",
+        "title": "LATENCIA - Probes HTTP",
         "targets": [
           {
-            "expr": "histogram_quantile(0.50, sum(rate(nginx_http_request_duration_seconds_bucket[5m])) by (le))",
-            "legendFormat": "P50"
-          },
-          {
-            "expr": "histogram_quantile(0.95, sum(rate(nginx_http_request_duration_seconds_bucket[5m])) by (le))",
-            "legendFormat": "P95"
-          },
-          {
-            "expr": "histogram_quantile(0.99, sum(rate(nginx_http_request_duration_seconds_bucket[5m])) by (le))",
-            "legendFormat": "P99"
+            "expr": "probe_duration_seconds{probe_type=~\"http|health_check\"}",
+            "legendFormat": "{{ instance }}"
           }
         ],
         "yaxes": [
@@ -37,15 +29,15 @@
         "id": 2,
         "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
         "type": "graph",
-        "title": "2️⃣ TRÁFEGO - Requisições por Segundo",
+        "title": "DISPONIBILIDADE - Probe Success",
         "targets": [
           {
-            "expr": "sum(rate(nginx_http_requests_total[5m]))",
-            "legendFormat": "RPS Total"
+            "expr": "probe_success{probe_type=~\"http|health_check\"}",
+            "legendFormat": "{{ instance }}"
           }
         ],
         "yaxes": [
-          { "format": "reqps", "label": "Req/s" },
+          { "format": "short", "label": "0/1", "max": 1, "min": 0 },
           { "format": "short" }
         ]
       },
@@ -53,35 +45,23 @@
         "id": 3,
         "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
         "type": "graph",
-        "title": "3️⃣ ERROS - Taxa de Erro HTTP",
+        "title": "HTTP - Status Code",
         "targets": [
           {
-            "expr": "sum(rate(nginx_http_requests_total{status=~\"4..\"}[5m])) / sum(rate(nginx_http_requests_total[5m])) * 100",
-            "legendFormat": "4xx (%)"
-          },
-          {
-            "expr": "sum(rate(nginx_http_requests_total{status=~\"5..\"}[5m])) / sum(rate(nginx_http_requests_total[5m])) * 100",
-            "legendFormat": "5xx (%)"
+            "expr": "probe_http_status_code{probe_type=~\"http|health_check\"}",
+            "legendFormat": "{{ instance }}"
           }
         ],
         "yaxes": [
-          { "format": "percent", "label": "Taxa" },
+          { "format": "short", "label": "Status" },
           { "format": "short" }
-        ],
-        "alert": {
-          "conditions": [
-            {
-              "evaluator": { "params": [5], "type": "gt" },
-              "query": { "params": ["B", "5m", "now"] }
-            }
-          ]
-        }
+        ]
       },
       {
         "id": 4,
         "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
         "type": "graph",
-        "title": "4️⃣ SATURAÇÃO - Recursos do Sistema",
+        "title": "SATURACAO - Recursos do Sistema",
         "targets": [
           {
             "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
@@ -89,7 +69,7 @@
           },
           {
             "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
-            "legendFormat": "Memória %"
+            "legendFormat": "Memoria %"
           }
         ],
         "yaxes": [

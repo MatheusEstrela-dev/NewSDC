@@ -1,28 +1,20 @@
 # ============================================================================
-# Prometheus Alert Rules - Services Critical
-# Alertas para serviços e aplicações
+# Prometheus Alert Rules - Critical Services
 # ============================================================================
 
 groups:
   - name: services_critical
     interval: 30s
     rules:
-      # ======================================================================
-      # DEADMAN SWITCH - Alerta que sempre dispara
-      # Se parar = sistema de monitoramento caiu
-      # ======================================================================
       - alert: DeadMansSwitch
         expr: vector(1)
         labels:
           severity: none
           category: healthcheck
         annotations:
-          summary: "Sistema de monitoramento está vivo"
-          description: "Este alerta SEMPRE dispara. Se parar = Prometheus caiu!"
+          summary: "Sistema de monitoramento esta vivo"
+          description: "Este alerta sempre dispara. Se parar, o Prometheus caiu."
 
-      # ======================================================================
-      # SERVICES DOWN - Serviços fora do ar
-      # ======================================================================
       - alert: ServiceDown
         expr: up == 0
         for: 2m
@@ -30,18 +22,18 @@ groups:
           severity: critical
           category: availability
         annotations:
-          summary: "Serviço {{ $labels.job }} está DOWN"
-          description: "Target {{ $labels.instance }} não respondendo há 2 minutos"
+          summary: "Servico {{ $labels.job }} esta DOWN"
+          description: "Target {{ $labels.instance }} nao responde ha 2 minutos."
 
-      - alert: MySQLDown
-        expr: mysql_up == 0
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
         for: 1m
         labels:
           severity: critical
           category: availability
         annotations:
-          summary: "MySQL está DOWN"
-          description: "Banco de dados indisponível - aplicação não funcionará"
+          summary: "PostgreSQL esta DOWN"
+          description: "Banco de dados indisponivel."
 
       - alert: RedisDown
         expr: redis_up == 0
@@ -50,22 +42,9 @@ groups:
           severity: critical
           category: availability
         annotations:
-          summary: "Redis está DOWN"
-          description: "Cache/Sessions/Queue indisponíveis"
+          summary: "Redis esta DOWN"
+          description: "Cache, sessoes e filas indisponiveis."
 
-      - alert: NginxDown
-        expr: up{job="nginx"} == 0
-        for: 1m
-        labels:
-          severity: critical
-          category: availability
-        annotations:
-          summary: "Nginx está DOWN"
-          description: "Web server não está respondendo - site fora do ar"
-
-      # ======================================================================
-      # HEALTH CHECKS - Endpoints de saúde
-      # ======================================================================
       - alert: HealthCheckFailing
         expr: probe_success{probe_type="health_check"} == 0
         for: 3m
@@ -74,69 +53,37 @@ groups:
           category: health
         annotations:
           summary: "Health check falhando em {{ $labels.instance }}"
-          description: "Endpoint de saúde não retornando HTTP 200"
-
-      - alert: HTTPProbeFailed
-        expr: probe_success{probe_type="http"} == 0
-        for: 5m
-        labels:
-          severity: warning
-          category: health
-        annotations:
-          summary: "HTTP probe falhando em {{ $labels.instance }}"
-          description: "Endpoint HTTP não acessível"
-
-      # ======================================================================
-      # PERFORMANCE - Performance degradada
-      # ======================================================================
-      - alert: SlowQueries
-        expr: rate(mysql_global_status_slow_queries[5m]) > 10
-        for: 5m
-        labels:
-          severity: warning
-          category: performance
-        annotations:
-          summary: "Queries lentas no MySQL (> 10/s)"
-          description: "{{ $value }} queries/s demorando mais que slow_query_time"
+          description: "Endpoint de saude nao retornou HTTP 2xx."
 
       - alert: RedisCacheHitRateLow
-        expr: |
-          (
-            redis_keyspace_hits_total / 
-            (redis_keyspace_hits_total + redis_keyspace_misses_total)
-          ) * 100 < 80
+        expr: (redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)) * 100 < 80
         for: 10m
         labels:
           severity: warning
           category: performance
         annotations:
-          summary: "Taxa de cache hit baixa (< 80%)"
-          description: "Apenas {{ $value | humanizePercentage }} das consultas atingindo cache"
+          summary: "Taxa de cache hit baixa"
+          description: "Apenas {{ $value | humanizePercentage }} das consultas atingiram cache."
 
-      # ======================================================================
-      # CONTAINERS - Docker containers
-      # ======================================================================
       - alert: ContainerHighCPU
-        expr: |
-          sum(rate(container_cpu_usage_seconds_total{name!=""}[5m])) by (name) * 100 > 80
+        expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[5m])) by (name) * 100 > 80
         for: 10m
         labels:
           severity: warning
           category: containers
         annotations:
           summary: "Container {{ $labels.name }} com CPU alta"
-          description: "CPU em {{ $value | humanizePercentage }}"
+          description: "CPU em {{ $value | humanizePercentage }}."
 
       - alert: ContainerHighMemory
-        expr: |
-          (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 90
+        expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 90
         for: 5m
         labels:
           severity: critical
           category: containers
         annotations:
-          summary: "Container {{ $labels.name }} com memória alta"
-          description: "Usando {{ $value | humanizePercentage }} do limite - risco de OOM"
+          summary: "Container {{ $labels.name }} com memoria alta"
+          description: "Usando {{ $value | humanizePercentage }} do limite."
 
       - alert: ContainerRestarting
         expr: rate(container_last_seen{name!=""}[5m]) > 0
@@ -146,4 +93,4 @@ groups:
           category: containers
         annotations:
           summary: "Container {{ $labels.name }} reiniciando"
-          description: "Container está em restart loop"
+          description: "Container esta em restart loop."
