@@ -1,5 +1,5 @@
 # ============================================================================
-# SDC - Compose DEV self-contained (FrankenPHP + PG18+PostGIS + Redis + Mailhog)
+# SDC - Compose DEV self-contained (Swoole + PG18+PostGIS + Redis + Mailhog)
 #
 # Uso (da raiz NewSDC/):
 #   just dev-build       # primeira vez (build da imagem)
@@ -19,30 +19,29 @@ name: newsdc-dev
 services:
   app:
     build:
-      context: ../..                          # raiz NewSDC/
-      dockerfile: SDC/docker/Dockerfile.frankenphp-dev
-    image: newsdc-frankenphp-dev:latest
+      context: ..                            # raiz SDC/
+      dockerfile: docker/swoole/Dockerfile
+    image: newsdc-swoole-dev:latest
     container_name: newsdc_dev_app
     hostname: app
     restart: unless-stopped
 
     environment:
-      WORKDIR: /app
+      WORKDIR: /var/www
       APP_NAME: "SDC Dev"
       APP_ENV: local
       APP_DEBUG: "true"
       # HTTP puro para permitir consumo por Power BI sem cert self-signed.
       APP_URL: http://localhost:19444
 
-      # Octane + FrankenPHP
-      OCTANE_SERVER: frankenphp
-      # OCTANE_HTTPS=false -> entrypoint roda Octane em HTTP puro na porta 80
-      # (NAO usa o Caddyfile.local / tls internal).
+      # Octane + Swoole
+      OCTANE_SERVER: swoole
       OCTANE_HTTPS: "false"
-      OCTANE_CADDYFILE: /etc/caddy/Caddyfile.local
-      PORT: 80
-      FRANKENPHP_WORKERS: 4
-      FRANKENPHP_MAX_REQUESTS: 500
+      PORT: 8000
+      OCTANE_WORKERS: 4
+      OCTANE_TASK_WORKERS: 4
+      OCTANE_MAX_REQUESTS: 500
+      DB_PERSISTENT: "false"
 
       # Em HTTP o cookie Secure nao e enviado pelo browser; sem isso o login web
       # quebra. config/session.php tem default true, entao sobrescrevemos aqui.
@@ -59,10 +58,12 @@ services:
       DB_DATABASE: sdc
       DB_USERNAME: sdc
       DB_PASSWORD: secret
+      DB_SSLMODE: disable
 
       # Redis (cache / session / queue)
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_SCHEME: tcp
       # Prefix explicito e identico ao worker para que ambos leiam/escrevam
       # nas mesmas chaves (config/database.php deriva do APP_NAME por padrao,
       # mas o worker usa outro APP_NAME e ficaria isolado).
@@ -89,31 +90,27 @@ services:
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
 
     ports:
-      - "19444:80"      # HTTP (FrankenPHP) - mesma porta de sempre, agora sem TLS
-      - "19081:80"      # HTTP alternativo
-      - "2021:2019"     # Caddy admin API
+      - "19444:8000"    # HTTP (Swoole)
+      - "19081:8000"    # HTTP alternativo
 
     volumes:
-      # Codigo da app (bind-mount p/ hot reload via Octane --max-requests=1)
-      - ../app:/app/app
-      - ../core:/app/core
-      - ../bootstrap:/app/bootstrap
-      - ../config:/app/config
-      - ../database:/app/database
-      - ../routes:/app/routes
-      - ../resources:/app/resources
-      - ../public:/app/public
-      - ../tests:/app/tests
-      - ../composer.json:/app/composer.json:ro
-      - ../composer.lock:/app/composer.lock:ro
-      - ../phpunit.xml:/app/phpunit.xml:ro
-      - ../artisan:/app/artisan:ro
+      # Codigo da app sobre o build Swoole; vendor fica na imagem.
+      - ../app:/var/www/app
+      - ../core:/var/www/core
+      - ../bootstrap:/var/www/bootstrap
+      - ../config:/var/www/config
+      - ../database:/var/www/database
+      - ../routes:/var/www/routes
+      - ../resources:/var/www/resources
+      - ../public:/var/www/public
+      - ../tests:/var/www/tests
+      - ../composer.json:/var/www/composer.json:ro
+      - ../composer.lock:/var/www/composer.lock:ro
+      - ../phpunit.xml:/var/www/phpunit.xml:ro
+      - ../artisan:/var/www/artisan:ro
       # Storage e logs visiveis no host
-      - ../storage/app:/app/storage/app
-      - ../storage/logs:/app/storage/logs
-      # Caddyfile + entrypoint (read-only) — reaproveita os do frankenphp/
-      - ./frankenphp/Caddyfile.local:/etc/caddy/Caddyfile.local:ro
-      - ./frankenphp/scripts/entrypoint.sh:/start.sh:ro
+      - ../storage/app:/var/www/storage/app
+      - ../storage/logs:/var/www/storage/logs
 
     depends_on:
       db:
@@ -122,7 +119,7 @@ services:
         condition: service_healthy
 
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost/health"]
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -132,13 +129,16 @@ services:
   # exports async, notifications). Sem ele, Mail::queue/dispatch ficam parados
   # no Redis indefinidamente. Compartilha a imagem do app e bind-mounts.
   queue:
-    image: newsdc-frankenphp-dev:latest
+    build:
+      context: ..
+      dockerfile: docker/swoole/Dockerfile
+    image: newsdc-swoole-dev:latest
     container_name: newsdc_dev_queue
     hostname: queue
     restart: unless-stopped
 
     environment:
-      WORKDIR: /app
+      WORKDIR: /var/www
       APP_NAME: "SDC Dev Queue"
       APP_ENV: local
       APP_DEBUG: "true"
@@ -152,10 +152,12 @@ services:
       DB_DATABASE: sdc
       DB_USERNAME: sdc
       DB_PASSWORD: secret
+      DB_SSLMODE: disable
 
       # Redis (cache / session / queue)
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_SCHEME: tcp
       # MESMO prefix do app — sem isso o worker leria de outra keyspace
       # (sdc_dev_queue_database_*) e os jobs ficariam parados.
       REDIS_PREFIX: sdc_dev_database_
@@ -175,23 +177,23 @@ services:
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
 
     volumes:
-      # Bind-mount identico ao app — codigo PHP eh visivel ao queue worker.
-      - ../app:/app/app
-      - ../core:/app/core
-      - ../bootstrap:/app/bootstrap
-      - ../config:/app/config
-      - ../database:/app/database
-      - ../routes:/app/routes
-      - ../resources:/app/resources
-      - ../public:/app/public
-      - ../tests:/app/tests
-      - ../composer.json:/app/composer.json:ro
-      - ../composer.lock:/app/composer.lock:ro
-      - ../phpunit.xml:/app/phpunit.xml:ro
-      - ../artisan:/app/artisan:ro
+      # Bind-mount identico ao app; vendor fica na imagem.
+      - ../app:/var/www/app
+      - ../core:/var/www/core
+      - ../bootstrap:/var/www/bootstrap
+      - ../config:/var/www/config
+      - ../database:/var/www/database
+      - ../routes:/var/www/routes
+      - ../resources:/var/www/resources
+      - ../public:/var/www/public
+      - ../tests:/var/www/tests
+      - ../composer.json:/var/www/composer.json:ro
+      - ../composer.lock:/var/www/composer.lock:ro
+      - ../phpunit.xml:/var/www/phpunit.xml:ro
+      - ../artisan:/var/www/artisan:ro
       # Storage e logs visiveis no host
-      - ../storage/app:/app/storage/app
-      - ../storage/logs:/app/storage/logs
+      - ../storage/app:/var/www/storage/app
+      - ../storage/logs:/var/www/storage/logs
 
     depends_on:
       db:

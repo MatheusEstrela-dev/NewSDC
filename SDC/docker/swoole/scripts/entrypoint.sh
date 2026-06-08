@@ -29,6 +29,15 @@ mkdir -p storage/framework/cache/data \
          bootstrap/cache
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
+# Em dev/local, bootstrap/cache pode vir do bind mount do host. Caches antigos
+# quebram o bootstrap antes mesmo de config:clear/package:discover rodarem.
+rm -f bootstrap/cache/config.php \
+      bootstrap/cache/events.php \
+      bootstrap/cache/packages.php \
+      bootstrap/cache/routes.php \
+      bootstrap/cache/routes-v7.php \
+      bootstrap/cache/services.php
+
 echo "Regenerando .env a partir de variaveis de ambiente..."
 # IMPORTANTE: aspar TODOS os valores (phpdotenv trata # como comentario em valores nao-aspeados)
 cat > .env <<EOF
@@ -106,7 +115,7 @@ php artisan view:clear 2>/dev/null || true
 
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
-# Queue worker em background (mesmo padrao do entrypoint FrankenPHP/RoadRunner).
+# Queue worker em background (mesmo padrao do entrypoint de producao).
 # Container unico no App Service: worker roda junto do Octane. O subshell herda
 # o "set -e"; o "set +e" abaixo garante que um crash do queue:work nao mate o
 # loop de restart.

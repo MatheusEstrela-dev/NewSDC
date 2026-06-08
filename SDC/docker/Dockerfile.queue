@@ -1,38 +1,75 @@
-FROM dunglas/frankenphp:1-php8.4-alpine
+FROM php:8.4-cli-alpine
 
 # Argumentos de build
 ARG UID=1000
 ARG GID=1000
 
-# Instalar dependências do sistema
+# Instalar dependencias do sistema e extensoes PHP usadas pelos jobs Laravel.
 RUN apk add --no-cache \
     bash \
     git \
     curl \
-    libpng-dev \
-    libzip-dev \
-    zip \
-    unzip \
-    supervisor \
+    libpng \
+    libjpeg-turbo \
+    freetype \
+    libwebp \
+    oniguruma \
+    libxml2 \
+    libzip \
+    postgresql-libs \
+    icu-libs \
     mysql-client \
     postgresql-client \
+    supervisor \
+    && apk add --no-cache --virtual .build-deps \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    libwebp-dev \
+    oniguruma-dev \
+    libxml2-dev \
+    libzip-dev \
     postgresql-dev \
-    composer
+    icu-dev \
+    linux-headers \
+    $PHPIZE_DEPS \
+    && docker-php-ext-configure gd \
+        --with-freetype \
+        --with-jpeg \
+        --with-webp \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        pdo_pgsql \
+        mysqli \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        gd \
+        zip \
+        intl \
+        opcache \
+        sockets \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del .build-deps
+
+COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
 # Configurar working directory
 WORKDIR /var/www
 
-# Copiar código da aplicação
+# Copiar codigo da aplicacao
 COPY --chown=www-data:www-data . /var/www
 
-# Copiar configuração do Supervisor
+# Copiar configuracao do Supervisor
 COPY docker/supervisor/supervisord.conf /etc/supervisord.conf
 COPY docker/supervisor/laravel-worker.conf /etc/supervisor/conf.d/laravel-worker.conf
 
-# Criar diretórios necessários
+# Criar diretorios necessarios
 RUN mkdir -p /var/www/storage/logs /var/log/supervisor \
     && chown -R www-data:www-data /var/www/storage /var/log/supervisor \
     && chmod -R 775 /var/www/storage /var/log/supervisor
 
-# Comando de inicialização
+# Comando de inicializacao
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
