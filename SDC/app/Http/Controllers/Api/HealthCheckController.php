@@ -456,6 +456,18 @@ class HealthCheckController extends Controller
     private function checkDockerNetwork(): array
     {
         try {
+            // Introspeccao via shell_exec (docker ps/inspect) so faz sentido em
+            // dev local. Em producao (Azure) o container tem /.dockerenv mas nao
+            // ha socket Docker: os comandos falham e, pior, sob Swoole o
+            // shell_exec NAO e hookado e bloqueia o worker. Pula fora de local.
+            if (! app()->environment('local')) {
+                return [
+                    'status' => 'skipped',
+                    'message' => 'Introspeccao Docker desabilitada fora de ambiente local',
+                    'containers' => [],
+                ];
+            }
+
             // Verifica se estamos em um container Docker
             if (!file_exists('/.dockerenv')) {
                 return [
