@@ -139,6 +139,14 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
+        // Exposicao via tunel (ngrok/cloudflare): o proxy reescreve o Host para o
+        // upstream interno, fazendo os redirects cairem em localhost:8000. Forcar o
+        // root URL publico corrige isso. Inerte quando TUNNEL_URL nao esta definida.
+        if ($tunnelUrl = env('TUNNEL_URL')) {
+            URL::forceRootUrl($tunnelUrl);
+            URL::forceScheme('https');
+        }
+
         $this->removeViteHotFileWhenBuildAssetsShouldBeUsed();
         if (class_exists(RequestReceived::class)) {
             $this->app['events']->listen(

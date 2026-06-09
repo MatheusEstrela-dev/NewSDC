@@ -69,8 +69,11 @@ class DatabaseSeeder extends Seeder
 
         // 9. Estrutura canonica do FIDE/S2iD (grupos -> categorias -> itens -> campos)
         //    Indispensavel para a aba "Dados de Desastre" exibir os campos de input.
-        if (\Illuminate\Support\Facades\Schema::hasTable('dec_desastre_grupos')) {
-            $this->call(DesastreEstruturaSeeder::class);
+        $desastreSeeder = DesastreEstruturaSeeder::class;
+        if (! class_exists($desastreSeeder)) {
+            $this->command->warn('Seeder "DesastreEstruturaSeeder" nao encontrado - estrutura de desastre pulada.');
+        } elseif (\Illuminate\Support\Facades\Schema::hasTable('dec_desastre_grupos')) {
+            $this->call($desastreSeeder);
         } else {
             $this->command->warn('Tabela "dec_desastre_grupos" nao encontrada - DesastreEstruturaSeeder pulado.');
         }

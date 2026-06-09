@@ -65,14 +65,13 @@ RUN docker-php-ext-configure gd \
 # Redis da Azure via tls:// (porta 6380) e o hook de stream do Swoole so trata
 # TLS se a extensao tiver openssl (define SWOOLE_SSL). A extensao 'sockets'
 # nativa ja foi instalada acima (swoole --enable-sockets exige php_sockets.h).
-# brotli e desligado de proposito: vem ligado por padrao no Swoole 6 e exige
-# libbrotlienc; compressao HTTP usa gzip (suficiente, TLS/HTTP2 terminam na
-# borda Azure). Combinacao validada localmente: SWOOLE_SSL=true.
+# Pin explicito para evitar mudanca silenciosa do PECL em rebuilds.
+ARG SWOOLE_VERSION=6.2.1
 RUN pecl install igbinary \
     && docker-php-ext-enable igbinary \
     && pecl install redis \
     && docker-php-ext-enable redis \
-    && pecl install --configureoptions 'enable-openssl="yes" enable-sockets="yes" enable-brotli="no"' swoole \
+    && pecl install --configureoptions 'enable-openssl="yes" enable-sockets="yes" enable-brotli="no"' swoole-${SWOOLE_VERSION} \
     && docker-php-ext-enable swoole \
     && apk del .build-deps
 

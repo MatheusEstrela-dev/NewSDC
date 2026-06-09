@@ -1,0 +1,21 @@
+# ============================================================================
+# Caddy - edge do SDC (R760). TLS automatico (Let's Encrypt) + proxy reverso.
+# Troque {$APP_DOMAIN} pelo dominio real via .env.prod (ex.: sdc.defesacivil.mg.gov.br).
+# Para certificado interno/corporativo, substitua o bloco por `tls /caminho/cert /caminho/key`.
+# ============================================================================
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	# Octane escuta na 8000 dentro da rede sdc_edge.
+	reverse_proxy app:8000 {
+		health_uri /health
+		health_interval 15s
+		header_up X-Forwarded-Proto https
+	}
+
+	log {
+		output file /var/log/caddy/access.log
+		format json
+	}
+}

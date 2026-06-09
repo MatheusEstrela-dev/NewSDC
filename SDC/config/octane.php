@@ -71,7 +71,10 @@ return [
             'enable_coroutine' => true,
             'hook_flags' => defined('SWOOLE_HOOK_ALL') ? SWOOLE_HOOK_ALL : 0,
             'task_worker_num' => (int) env('OCTANE_TASK_WORKERS', 4),
-            'task_enable_coroutine' => true,
+            // Octane 2.13 registra o callback task com a assinatura classica.
+            // Com task coroutine ativo, Swoole 6 entrega Swoole\Server\Task
+            // como segundo argumento e o servidor cai com TypeError.
+            'task_enable_coroutine' => false,
             'enable_reuse_port' => true,
             'http_compression' => true,
             'compression_min_length' => 1024,
