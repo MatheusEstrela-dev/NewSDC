@@ -340,18 +340,6 @@ const { municipios, municipioOptions, isLoadingMunicipios, loadMunicipios } = us
 
 onMounted(() => loadMunicipios('MG'));
 
-// Resolve nome do município quando o usuário seleciona ou ao carregar as opções
-watch(
-  [() => localData.value.imovel.municipio, municipios],
-  ([id]) => {
-    if (!id || !municipios.value.length) return;
-    const match = municipios.value.find(m => String(m.id) === String(id));
-    if (match && localData.value.imovel.municipio_nome !== match.nome) {
-      localData.value.imovel.municipio_nome = match.nome;
-    }
-  }
-);
-
 const mv = props.modelValue ?? {};
 
 const localData = ref({
@@ -640,6 +628,18 @@ const ORGAOS = [
 ];
 
 // ── Sync ─────────────────────────────────────────────────────────────────────
+
+// Resolve nome do município quando o usuário seleciona ou ao carregar as opções
+watch(
+  [() => localData.value.imovel.municipio, municipios],
+  ([id]) => {
+    if (!id || !municipios.value.length) return;
+    const match = municipios.value.find(m => String(m.id) === String(id));
+    if (match && localData.value.imovel.municipio_nome !== match.nome) {
+      localData.value.imovel.municipio_nome = match.nome;
+    }
+  }
+);
 
 watch(
   () => localData.value,

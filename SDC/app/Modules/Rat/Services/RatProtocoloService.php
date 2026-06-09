@@ -31,14 +31,13 @@ class RatProtocoloService
     {
         $seq = 0;
 
-        // O sufixo pode ser 000 (placeholder) ou o código real da unidade (ex: 123).
-        // Busca por qualquer sufixo de 3 dígitos para não perder o sequencial
-        // após o protocolo ser atualizado por saveDadosGerais.
+        // Ordena pela parte numérica do sequencial (segundo segmento) para não
+        // ser afetado pelo sufixo (terceiro segmento: 000 para raiz, 001+ para relacionados).
         $latestOld = RatOcorrencia::withTrashed()
             ->where('numero_bos', 'like', "{$year}-%-%")
             ->where('numero_bos', 'not like', 'RAT-%')
             ->lockForUpdate()
-            ->orderByDesc('numero_bos')
+            ->orderByRaw("CAST(SPLIT_PART(numero_bos, '-', 2) AS BIGINT) DESC")
             ->value('numero_bos');
 
         if ($latestOld && preg_match('/^\d{4}-(\d+)-\d{3}$/', $latestOld, $m)) {

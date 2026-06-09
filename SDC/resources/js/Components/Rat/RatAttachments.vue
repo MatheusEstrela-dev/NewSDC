@@ -59,7 +59,7 @@
         <button
           type="button"
           :disabled="uploading"
-          @click="$emit('finalize')"
+          @click="handleFinalizeClick"
           class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold
                  bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800
                  text-white shadow-sm transition-colors duration-150
@@ -77,8 +77,9 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import RatAttachmentsSection from './Sections/RatAttachmentsSection.vue';
+import { useToast } from '@/Composables/useToast';
 
 // MIME types aceitos: imagens, PDF, Word, Excel, texto
 const acceptedTypes = [
@@ -100,9 +101,13 @@ const props = defineProps({
 
 const emit = defineEmits(['add', 'remove', 'update', 'save', 'finalize', 'update:pending-files']);
 
+const { show: toast } = useToast();
+
 const uploading   = ref(false);
 const uploadError = ref(null);
 const pendingFiles = ref([]);
+
+const hasAttachments = computed(() => (localAnexos.value.anexos?.length ?? 0) > 0);
 
 watch(pendingFiles, (files) => {
   emit('update:pending-files', [...files]);
@@ -174,6 +179,7 @@ async function doUpload(file, tempId) {
     localAnexos.value.anexos = [...localAnexos.value.anexos, serverAnexo];
     emit('add', serverAnexo);
     emit('update', localAnexos.value.anexos);
+    toast('Anexo salvo com sucesso!', 'success');
   } catch (err) {
     uploadError.value = err.response?.data?.message ?? 'Erro ao fazer upload. Tente novamente.';
     emit('update', localAnexos.value.anexos);
@@ -211,5 +217,13 @@ function handleUpdate(newValue) {
   if (newValue?.anexos) {
     emit('update', newValue.anexos);
   }
+}
+
+function handleFinalizeClick() {
+  if (!hasAttachments.value) {
+    toast('Adicione pelo menos um documento antes de finalizar o RAT.', 'error');
+    return;
+  }
+  emit('finalize');
 }
 </script>

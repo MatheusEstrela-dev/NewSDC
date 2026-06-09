@@ -273,8 +273,6 @@ async function handleFinalize() {
     toast('Salve o RAT antes de finalizar.', 'warning', { noIcon: true });
     return;
   }
-  if (!confirm('Deseja finalizar este RAT? Esta ação não poderá ser desfeita.')) return;
-
   const axios  = window.axios || (await import('axios')).default;
   const csrf   = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
   loading.value = true;

@@ -222,19 +222,6 @@ class RatWriteService
             );
             $this->ensureRelatoLink($ocorrenciaId, $dadosGerais);
 
-            // Gera o número do BOS no formato {ano}-{seq 9 dígitos}-{cod 3 dígitos}
-            // quando todos os campos identificadores do BO estiverem preenchidos.
-            if ($dto->uniBoAno && $dto->uniBoSequencial && $dto->uniBoCodUnidade) {
-                $ano      = str_pad((string) $dto->uniBoAno, 4, '0', STR_PAD_LEFT);
-                $seq      = str_pad((string) $dto->uniBoSequencial, 9, '0', STR_PAD_LEFT);
-                $cod      = str_pad((string) $dto->uniBoCodUnidade, 3, '0', STR_PAD_LEFT);
-                $numeroBos = "{$ano}-{$seq}-{$cod}";
-                RatOcorrencia::where('id', $ocorrenciaId)->update([
-                    'numero_bos'     => $numeroBos,
-                    'sequencial_ano' => (int) $dto->uniBoAno,
-                ]);
-            }
-
             return $dadosGerais;
         });
     }

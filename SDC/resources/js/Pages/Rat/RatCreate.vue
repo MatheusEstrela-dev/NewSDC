@@ -15,7 +15,7 @@
         <RatDadosGeraisForm
           :rat="null"
           :view-only="false"
-          @save="(data) => salvarComAnexos(data).then(() => unlockAndAdvanceTab(1)).catch(() => {})"
+          @save="(data) => salvarComAnexos(data, 'Dados Gerais salvo com sucesso!').then(() => unlockAndAdvanceTab(1)).catch(() => {})"
           @finalize="finalizarRat"
           @update:tem-vistoria="temVistoria = $event"
           @update:form-data="currentFormData = $event"
@@ -29,7 +29,7 @@
           @add="adicionarRecurso"
           @remove="removerRecurso"
           @update="atualizarRecursos"
-          @save="() => salvarComAnexos(currentFormData).then(() => unlockAndAdvanceTab(2)).catch(() => {})"
+          @save="() => salvarComAnexos(currentFormData, 'Recursos Empregados salvo com sucesso!').then(() => unlockAndAdvanceTab(2)).catch(() => {})"
         />
       </div>
 
@@ -40,7 +40,7 @@
           @add="adicionarEnvolvido"
           @remove="removerEnvolvido"
           @update="atualizarEnvolvidos"
-          @save="() => salvarComAnexos(currentFormData).then(() => unlockAndAdvanceTab(3)).catch(() => {})"
+          @save="() => salvarComAnexos(currentFormData, 'Envolvidos salvo com sucesso!').then(() => unlockAndAdvanceTab(3)).catch(() => {})"
         />
       </div>
 
@@ -49,7 +49,7 @@
           :vistoria="vistoria"
           :view-only="false"
           @update="atualizarVistoria"
-          @save="() => salvarComAnexos(currentFormData).then(() => unlockAndAdvanceTab(4)).catch(() => {})"
+          @save="() => salvarComAnexos(currentFormData, 'Vistoria salva com sucesso!').then(() => unlockAndAdvanceTab(4)).catch(() => {})"
         />
       </div>
 
@@ -59,7 +59,7 @@
           :view-only="false"
           @add-observation="adicionarObservacao"
           @update="atualizarHistorico"
-          @save="() => salvarComAnexos(currentFormData).then(() => unlockAndAdvanceTab(5)).catch(() => {})"
+          @save="() => salvarComAnexos(currentFormData, 'Histórico salvo com sucesso!').then(() => unlockAndAdvanceTab(5)).catch(() => {})"
         />
       </div>
 
@@ -72,7 +72,8 @@
           @remove="removerAnexo"
           @update="atualizarAnexos"
           @update:pending-files="pendingAttachmentFiles = $event"
-          @save="() => salvarComAnexos(currentFormData)"
+          @save="() => salvarComAnexos(currentFormData, 'Anexo salvo com sucesso!')"
+          @finalize="handleFinalizar"
         />
       </div>
     </template>
@@ -81,7 +82,8 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
+import { useToast } from '@/Composables/useToast';
 import ClipboardIcon from '@/Components/Icons/ClipboardIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
@@ -126,6 +128,8 @@ const {
   atualizarAnexos,
 } = useRat({ rat: null, recursos: [], envolvidos: [], vistoria: {}, historico: [], anexos: [], activeTab: 1 });
 
+const { show: toast } = useToast();
+
 const temVistoria = ref(false);
 const currentFormData = ref({ dadosGerais: {}, comunicacao: {}, local: {}, endereco: {} });
 
@@ -152,7 +156,7 @@ const pendingAttachmentFiles = ref([]);
  * - Saves seguintes: PATCH /rat/{id}/draft
  * - Faz upload dos anexos pendentes após salvar
  */
-async function salvarComAnexos(formData) {
+async function salvarComAnexos(formData, successMessage = 'RAT salvo com sucesso!') {
   const filesToUpload = [...pendingAttachmentFiles.value];
 
   const data = {
@@ -201,9 +205,31 @@ async function salvarComAnexos(formData) {
       }
       pendingAttachmentFiles.value = [];
     }
+    toast(successMessage, 'success');
   } catch (e) {
     console.error('Erro ao salvar RAT:', e);
+    toast('Erro ao salvar RAT. Tente novamente.', 'error');
     throw e;
+  }
+}
+
+async function handleFinalizar() {
+  if (!ratData.id) {
+    toast('Salve o RAT antes de finalizar.', 'error');
+    return;
+  }
+  const ax = window.axios || (await import('axios')).default;
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+  try {
+    await ax.patch(
+      route('rat.finalize', ratData.id),
+      {},
+      { headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf } },
+    );
+    toast('RAT finalizado com sucesso!', 'success');
+    router.visit(route('rat.index'));
+  } catch (e) {
+    toast(e.response?.data?.message ?? 'Erro ao finalizar RAT.', 'error');
   }
 }
 

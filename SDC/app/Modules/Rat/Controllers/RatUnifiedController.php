@@ -723,11 +723,11 @@ class RatUnifiedController extends BaseController
     {
         $ocorrencia = RatOcorrencia::findOrFail($id);
 
-        $isFinalized = $ocorrencia->status === 1;
-        $isExpired   = $ocorrencia->prazo_edicao && $ocorrencia->prazo_edicao->isPast();
+        $horasDesde = $ocorrencia->created_at->diffInHours(now());
 
-        if (!$isFinalized && !$isExpired) {
-            $msg = 'Apenas boletins finalizados ou com prazo expirado podem ser relacionados.';
+        if ($horasDesde < 42) {
+            $horasRestantes = 42 - $horasDesde;
+            $msg = "Este boletim só poderá ser relacionado após 42 horas da criação. Aguarde mais {$horasRestantes} hora(s).";
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }
