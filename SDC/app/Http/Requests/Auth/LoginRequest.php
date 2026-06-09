@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -78,6 +79,10 @@ class LoginRequest extends FormRequest
         // Auth::attempt fazia). Hash::check usa o driver atual (argon2id).
         if (!Hash::check($password, $user->password)) {
             RateLimiter::hit($this->throttleKey());
+            // Dispara o evento Failed que o Auth::attempt disparava, para manter
+            // a auditoria de login_failed (EventServiceProvider). Sem isso a
+            // verificacao manual do hash silenciaria o log de seguranca.
+            event(new Failed('web', $user, ['email' => $user->email]));
             throw ValidationException::withMessages([
                 'cpf' => trans('auth.failed'),
             ]);

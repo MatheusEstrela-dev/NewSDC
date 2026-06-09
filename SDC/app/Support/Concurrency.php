@@ -33,12 +33,18 @@ final class Concurrency
 
         $wg = new WaitGroup();
         $results = [];
+        $errors = [];
 
         foreach ($tasks as $key => $task) {
             $wg->add();
-            Coroutine::create(static function () use ($wg, $task, $key, &$results): void {
+            Coroutine::create(static function () use ($wg, $task, $key, &$results, &$errors): void {
                 try {
                     $results[$key] = $task();
+                } catch (\Throwable $e) {
+                    // Sem capturar, a task falha em silencio e a chave some do
+                    // resultado -> undefined index no chamador. Coletamos e
+                    // relancamos a primeira apos o wait (fail-fast).
+                    $errors[$key] = $e;
                 } finally {
                     $wg->done();
                 }
@@ -46,6 +52,10 @@ final class Concurrency
         }
 
         $wg->wait();
+
+        if ($errors !== []) {
+            throw reset($errors);
+        }
 
         return $results;
     }

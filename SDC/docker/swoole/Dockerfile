@@ -160,7 +160,8 @@ RUN test -f /var/www/composer.json \
     && test -d /var/www/vendor \
     && test -f /var/www/public/build/manifest.json \
     && php -m | grep -qi swoole \
-    && echo "Build verificado: Swoole pronto"
+    && php -r 'exit(defined("PASSWORD_ARGON2ID") ? 0 : 1);' \
+    && echo "Build verificado: Swoole + Argon2id prontos"
 
 # Swoole escuta na 8000 (Azure precisa de WEBSITES_PORT=8000)
 EXPOSE 8000
