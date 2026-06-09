@@ -96,10 +96,20 @@ final class SwoolePdoPool
         $pdo = $this->acquire();
 
         try {
-            return $fn($pdo);
-        } finally {
+            $result = $fn($pdo);
+        } catch (\PDOException $e) {
+            // Erro de PDO pode significar conexao morta (idle timeout da Azure,
+            // server gone away). Nao devolve ao pool: descarta e libera o slot.
+            $this->discard();
+            throw $e;
+        } catch (\Throwable $e) {
             $this->release($pdo);
+            throw $e;
         }
+
+        $this->release($pdo);
+
+        return $result;
     }
 
     private function acquire(): PDO
@@ -110,7 +120,14 @@ final class SwoolePdoPool
         if ($this->created < $this->size && $this->channel->isEmpty()) {
             $this->created++;
 
-            return new PDO($this->dsn, $this->username, $this->password, $this->options);
+            try {
+                return new PDO($this->dsn, $this->username, $this->password, $this->options);
+            } catch (\Throwable $e) {
+                // Rollback do contador: sem isso, falhas transitorias de conexao
+                // esgotam a capacidade ate created>=size e o pop() trava o pool.
+                $this->discard();
+                throw $e;
+            }
         }
 
         return $this->channel->pop();
@@ -118,6 +135,28 @@ final class SwoolePdoPool
 
     private function release(PDO $pdo): void
     {
+        // Conexao com transacao aberta nao pode voltar suja ao pool.
+        try {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+        } catch (\Throwable $e) {
+            $this->discard();
+
+            return;
+        }
+
         $this->channel->push($pdo);
+    }
+
+    /**
+     * Libera um slot do pool sem devolver conexao (descarte). O contador volta
+     * abaixo do teto, permitindo que uma nova conexao seja criada no lugar.
+     */
+    private function discard(): void
+    {
+        if ($this->created > 0) {
+            $this->created--;
+        }
     }
 }

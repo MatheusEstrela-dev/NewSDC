@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\AuditLog;
 use App\Models\PermissionAuditLog;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class UserObserver
 {
@@ -46,6 +47,13 @@ class UserObserver
         $relevantFields = ['name', 'email', 'cpf', 'status', 'active', 'orgao_principal_id', 'password'];
         $hasRelevantChanges = !empty(array_intersect($changedFields, $relevantFields));
 
+        // Invalida o cache de login por CPF (LoginRequest) quando muda algo que
+        // afeta a decisao de autenticacao. Sem isso, senha antiga ou usuario
+        // recem-bloqueado continuariam validos pela janela do cache.
+        if (!empty(array_intersect($changedFields, ['cpf', 'status', 'active', 'password']))) {
+            $this->forgetCpfLoginCache($user);
+        }
+
         if ($hasRelevantChanges) {
             $old = collect($user->getOriginal())->only($relevantFields)->toArray();
             $new = collect($user->getAttributes())->only($relevantFields)->toArray();
@@ -77,6 +85,8 @@ class UserObserver
 
     public function deleted(User $user): void
     {
+        $this->forgetCpfLoginCache($user);
+
         AuditLog::logDelete('users', $user->id, $user->only([
             'id', 'name', 'email', 'cpf', 'status', 'active'
         ]));
@@ -89,6 +99,20 @@ class UserObserver
                 entityId: $user->id,
                 beforeState: $user->only(['id', 'name', 'email', 'cpf'])
             );
+        }
+    }
+
+    /**
+     * Esquece o cache de login por CPF (LoginRequest::authenticate). Limpa tanto
+     * o CPF atual quanto o original (caso o CPF em si tenha mudado).
+     */
+    private function forgetCpfLoginCache(User $user): void
+    {
+        foreach (array_unique(array_filter([
+            $user->getOriginal('cpf'),
+            $user->cpf,
+        ])) as $cpf) {
+            Cache::forget("user:cpf:{$cpf}");
         }
     }
 }
