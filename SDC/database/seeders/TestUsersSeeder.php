@@ -67,7 +67,7 @@ class TestUsersSeeder extends Seeder
             }
 
             if ($orgaoId) {
-                DB::table('orgao_user')->insertOrIgnore([
+                DB::table('compdec_orgao_user')->insertOrIgnore([
                     'user_id' => $user->id,
                     'orgao_id' => $orgaoId,
                     'funcao' => $funcao,

@@ -7,7 +7,7 @@
 #   just dev-status
 #   just dev-logs
 #
-# App:     http://localhost:19444
+# App:     http://localhost:8000
 # Mailhog: http://localhost:8025
 # Postgres host:5433  Redis host:6380
 #
@@ -32,7 +32,10 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       # HTTP puro para permitir consumo por Power BI sem cert self-signed.
-      APP_URL: http://localhost:19444
+      # Porta de acesso padronizada em 8000 (externo=interno): sob port-forward
+      # com portas diferentes, o Swoole ve a request na porta interna e gera URLs
+      # de asset erradas (404). Com 8000:8000, request == acesso -> assets OK.
+      APP_URL: http://localhost:8000
 
       # Octane + Swoole
       OCTANE_SERVER: swoole
@@ -49,7 +52,7 @@ services:
 
       # Host base do Swagger (server URL do "Try it out"). Em HTTP para casar com
       # a origem atual; env do compose vence o .env baked na imagem.
-      L5_SWAGGER_CONST_HOST: http://localhost:19444
+      L5_SWAGGER_CONST_HOST: http://localhost:8000
 
       # Banco
       DB_CONNECTION: pgsql
@@ -64,6 +67,11 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_SCHEME: tcp
+      # phpredis (extensao C), NAO predis: o app tem App\Database\ConnectionSemaphore
+      # tipado para ?Redis (phpredis). Com predis da TypeError e quebra /login e
+      # /api/health. Trade-off: phpredis nao e auto-hookado pelo SWOOLE_HOOK_ALL
+      # (Redis I/O bloqueia a coroutine) ate existir um RedisPool nativo (Fase 3).
+      REDIS_CLIENT: phpredis
       # Prefix explicito e identico ao worker para que ambos leiam/escrevam
       # nas mesmas chaves (config/database.php deriva do APP_NAME por padrao,
       # mas o worker usa outro APP_NAME e ficaria isolado).
@@ -90,8 +98,7 @@ services:
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
 
     ports:
-      - "19444:8000"    # HTTP (Swoole)
-      - "19081:8000"    # HTTP alternativo
+      - "8000:8000"     # HTTP (Swoole) — externo=interno p/ assets baterem
 
     volumes:
       # Codigo da app sobre o build Swoole; vendor fica na imagem.
@@ -143,7 +150,7 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       # Mesma origem HTTP do app, para links gerados em jobs/emails baterem.
-      APP_URL: http://localhost:19444
+      APP_URL: http://localhost:8000
 
       # Banco (compartilhado com app)
       DB_CONNECTION: pgsql
@@ -158,6 +165,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_SCHEME: tcp
+      # phpredis (igual ao app) — ConnectionSemaphore exige ?Redis.
+      REDIS_CLIENT: phpredis
       # MESMO prefix do app — sem isso o worker leria de outra keyspace
       # (sdc_dev_queue_database_*) e os jobs ficariam parados.
       REDIS_PREFIX: sdc_dev_database_

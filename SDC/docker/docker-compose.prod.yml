@@ -1,348 +1,299 @@
 # ============================================================================
-# SDC - Docker Compose para PRODUÇÃO
-# Sistema Crítico 24/7 - Alta Disponibilidade
-# ============================================================================
-# Uso: cd docker && docker compose -f docker-compose.prod.yml up -d
+# SDC - Docker Compose PRODUCAO (Dell R760 on-premise)
+# Arquitetura ESSENCIAL: Octane/Swoole + PostgreSQL/PostGIS + Redis + Queue
+# ----------------------------------------------------------------------------
+# Sizing: projetado para OCTANE_WORKERS=10 (+ 4 task workers).
+# O queue roda via Supervisor e ja inclui o scheduler (laravel-scheduler).
+#
+# Uso:  cd docker && docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 # ============================================================================
 
 name: sdc-prod
 
+# ----------------------------------------------------------------------------
+# Bloco reaproveitado: build da imagem da aplicacao (Swoole). app e queue
+# compartilham o MESMO codigo; queue tem Dockerfile proprio (Supervisor).
+# ----------------------------------------------------------------------------
+x-app-build: &app-build
+  context: ..
+  dockerfile: docker/swoole/Dockerfile
+
 services:
   # ==========================================================================
-  # PHP Application (Laravel Octane)
+  # APP - Laravel Octane sobre Swoole (10 workers + 4 task workers)
   # ==========================================================================
   app:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.prod
-      args:
-        BUILD_DATE: ${BUILD_DATE:-}
-        VCS_REF: ${VCS_REF:-}
-        VERSION: ${VERSION:-1.0.0}
+    build: *app-build
     image: sdc/app:${VERSION:-latest}
     restart: always
-
-    deploy:
-      mode: replicated
-      replicas: 3
-      update_config:
-        parallelism: 1
-        delay: 10s
-        failure_action: rollback
-        order: start-first
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 3
-        window: 120s
-      resources:
-        limits:
-          cpus: '2'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 256M
-
-    networks:
-      - sdc_internal
+    hostname: app
 
     depends_on:
-      db-primary:
+      db:
         condition: service_healthy
-      redis-master:
+      redis:
         condition: service_healthy
 
     environment:
+      APP_NAME: ${APP_NAME:-SDC - Sistema de Defesa Civil}
       APP_ENV: production
       APP_DEBUG: "false"
       APP_KEY: ${APP_KEY}
       APP_URL: ${APP_URL}
-      DB_HOST: db-primary
-      DB_DATABASE: ${DB_DATABASE}
-      DB_USERNAME: ${DB_USERNAME}
+
+      # Octane / Swoole
+      OCTANE_SERVER: swoole
+      OCTANE_HTTPS: "true"
+      OCTANE_WORKERS: "10"
+      OCTANE_TASK_WORKERS: "4"
+      OCTANE_MAX_REQUESTS: "500"
+      PORT: "8000"
+
+      # Banco (PostgreSQL/PostGIS local). DB_PERSISTENT=false e OBRIGATORIO
+      # sob SWOOLE_HOOK_ALL (PDO persistente compartilhado entre coroutines quebra).
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: ${DB_DATABASE:-sdc}
+      DB_USERNAME: ${DB_USERNAME:-sdc}
       DB_PASSWORD: ${DB_PASSWORD}
-      REDIS_HOST: redis-master
+      DB_SSLMODE: disable
+      DB_PERSISTENT: "false"
+
+      # Redis (rede interna, sem TLS). REDIS_PREFIX EXPLICITO e identico ao do
+      # queue: sem ele, APP_NAME divergente isola keyspaces e dessincroniza app/worker.
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_CLIENT: phpredis
+      REDIS_SCHEME: tcp
+      REDIS_PREFIX: ${REDIS_PREFIX:-sdc_prod_}
+      CACHE_PREFIX: ${CACHE_PREFIX:-sdc_prod_cache_}
+
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
-      OCTANE_SERVER: roadrunner
+
+      LOG_CHANNEL: stack
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+    volumes:
+      # Anexos/exports persistentes (FS do container e efemero)
+      - app_storage:/var/www/storage/app
+      - ./logs/app:/var/www/storage/logs
+
+    networks:
+      - sdc_internal
+      - sdc_edge
+
+    deploy:
+      resources:
+        limits:
+          cpus: "6"
+          memory: 4G
+        reservations:
+          cpus: "1"
+          memory: 1G
 
     healthcheck:
-      test: [ "CMD", "curl", "-sf", "http://localhost:8000/health" ]
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
       interval: 15s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      start_period: 120s
 
     logging:
-      driver: "json-file"
+      driver: json-file
       options:
         max-size: "50m"
         max-file: "5"
 
   # ==========================================================================
-  # Queue Workers
+  # QUEUE - Workers + Scheduler (Supervisor: numprocs=4 + laravel-scheduler)
   # ==========================================================================
   queue:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.prod
+      dockerfile: docker/Dockerfile.queue
     image: sdc/queue:${VERSION:-latest}
     restart: always
+    hostname: queue
 
-    deploy:
-      mode: replicated
-      replicas: 2
-      resources:
-        limits:
-          cpus: '1'
-          memory: 512M
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    environment:
+      APP_ENV: production
+      APP_KEY: ${APP_KEY}
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: ${DB_DATABASE:-sdc}
+      DB_USERNAME: ${DB_USERNAME:-sdc}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_CLIENT: phpredis
+      REDIS_PREFIX: ${REDIS_PREFIX:-sdc_prod_}
+      CACHE_PREFIX: ${CACHE_PREFIX:-sdc_prod_cache_}
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+
+    volumes:
+      - app_storage:/var/www/storage/app
+      - ./logs/queue:/var/www/storage/logs
 
     networks:
       - sdc_internal
 
-    depends_on:
-      - db-primary
-      - redis-master
-
-    environment:
-      APP_ENV: production
-      DB_HOST: db-primary
-      REDIS_HOST: redis-master
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-
-  # ==========================================================================
-  # Scheduler
-  # ==========================================================================
-  scheduler:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.prod
-    image: sdc/scheduler:${VERSION:-latest}
-    restart: always
-
     deploy:
-      mode: replicated
-      replicas: 1
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.25"
           memory: 256M
 
+    healthcheck:
+      test: ["CMD", "supervisorctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ==========================================================================
+  # DB - PostgreSQL 18 + PostGIS 3.6 (tuning via postgres/prod.conf)
+  # ==========================================================================
+  db:
+    image: postgis/postgis:18-3.6-alpine
+    restart: always
+    hostname: db
+
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-sdc}
+      POSTGRES_USER: ${DB_USERNAME:-sdc}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: America/Sao_Paulo
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./postgres/prod.conf:/etc/postgresql/postgresql.conf:ro
+      - ./logs/postgres:/var/log/postgresql
+
     networks:
       - sdc_internal
 
-    depends_on:
-      - db-primary
-      - redis-master
+    deploy:
+      resources:
+        limits:
+          cpus: "6"
+          memory: 24G
+        reservations:
+          cpus: "1"
+          memory: 4G
 
-    environment:
-      APP_ENV: production
-      DB_HOST: db-primary
-      REDIS_HOST: redis-master
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-sdc} -d ${DB_DATABASE:-sdc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # ==========================================================================
-  # Traefik (Load Balancer + SSL)
+  # REDIS - Cache / Session / Queue
   # ==========================================================================
-  traefik:
-    image: traefik:v3.0
-    container_name: sdc_traefik
+  redis:
+    image: redis:7-alpine
     restart: always
+    hostname: redis
 
-    command:
-      - "--api.dashboard=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      - "--metrics.prometheus=true"
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 3gb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD}
+
+    volumes:
+      - redis_data:/data
+
+    networks:
+      - sdc_internal
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 4G
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ==========================================================================
+  # EDGE - Caddy (TLS automatico + proxy reverso para o Octane)
+  # Remova se houver um load balancer corporativo na frente.
+  # ==========================================================================
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    hostname: caddy
+
+    depends_on:
+      - app
 
     ports:
       - "80:80"
       - "443:443"
 
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik_letsencrypt:/letsencrypt
-      - ./logs/traefik:/var/log/traefik
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
 
     networks:
-      - sdc_external
-      - sdc_internal
-
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.${APP_DOMAIN}`)"
-      - "traefik.http.routers.dashboard.service=api@internal"
-
-  # ==========================================================================
-  # MySQL Primary
-  # ==========================================================================
-  db-primary:
-    image: mysql:8.0
-    container_name: sdc_db_primary
-    hostname: db-primary
-    restart: always
-
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_DATABASE}
-      MYSQL_USER: ${DB_USERNAME}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      TZ: America/Sao_Paulo
-
-    volumes:
-      - db_primary_data:/var/lib/mysql
-      - ./mysql/prod-primary.cnf:/etc/mysql/conf.d/custom.cnf:ro
-      - ./logs/mysql:/var/log/mysql
-
-    networks:
-      - sdc_internal
-
-    command: >
-      --default-authentication-plugin=mysql_native_password --server-id=1 --log-bin=mysql-bin --gtid-mode=ON --enforce-gtid-consistency=ON
+      - sdc_edge
 
     deploy:
       resources:
         limits:
-          cpus: '2'
-          memory: 2G
+          cpus: "1"
+          memory: 512M
 
-    healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-
-  # ==========================================================================
-  # Redis Master
-  # ==========================================================================
-  redis-master:
-    image: redis:7-alpine
-    container_name: sdc_redis_master
-    hostname: redis-master
-    restart: always
-
-    command: >
-      redis-server --appendonly yes --maxmemory 1gb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
-
-    volumes:
-      - redis_master_data:/data
-
-    networks:
-      - sdc_internal
-
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1.5G
-
-    healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-
-  # ==========================================================================
-  # Prometheus
-  # ==========================================================================
-  prometheus:
-    image: prom/prometheus:v2.50.1
-    container_name: sdc_prometheus
-    restart: always
-    profiles:
-      - monitoring
-
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/alerts:/etc/prometheus/alerts:ro
-      - prometheus_data:/prometheus
-
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
-
-    networks:
-      - sdc_internal
-      - sdc_monitoring
-
-  # ==========================================================================
-  # Grafana
-  # ==========================================================================
-  grafana:
-    image: grafana/grafana:10.3.3
-    container_name: sdc_grafana
-    restart: always
-    profiles:
-      - monitoring
-
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SERVER_ROOT_URL: https://grafana.${APP_DOMAIN}
-      GF_SERVER_DOMAIN: grafana.${APP_DOMAIN}
-      GF_ANALYTICS_REPORTING_ENABLED: "false"
-      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
-
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-
-    networks:
-      - sdc_monitoring
-      - sdc_external
-
-    depends_on:
-      - prometheus
-
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=sdc_external"
-      # Rota principal: grafana.seudominio.com
-      - "traefik.http.routers.grafana.rule=Host(`grafana.${APP_DOMAIN}`)"
-      - "traefik.http.routers.grafana.entrypoints=websecure"
-      - "traefik.http.routers.grafana.tls=true"
-      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.grafana.service=grafana"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-      # Middleware: IP allowlist (apenas acesso interno/VPN)
-      - "traefik.http.routers.grafana.middlewares=grafana-ipallowlist"
-      - "traefik.http.middlewares.grafana-ipallowlist.ipallowlist.sourcerange=${GRAFANA_ALLOWED_IPS:-127.0.0.1/32}"
-
-# ==========================================================================
+# ============================================================================
 # Networks
-# ==========================================================================
+#   sdc_internal -> app/queue/db/redis (isolada, sem acesso externo)
+#   sdc_edge     -> caddy <-> app (entrada HTTP/S)
+# ============================================================================
 networks:
-  sdc_external:
-    driver: bridge
   sdc_internal:
     driver: bridge
     internal: true
-  sdc_monitoring:
+  sdc_edge:
     driver: bridge
-    internal: true
 
-# ==========================================================================
-# Volumes
-# ==========================================================================
+# ============================================================================
+# Volumes (RAID NVMe do R760 - aponte o data-root do Docker para o array)
+# ============================================================================
 volumes:
-  db_primary_data:
+  db_data:
     driver: local
-  redis_master_data:
+  redis_data:
     driver: local
-  prometheus_data:
+  app_storage:
     driver: local
-  grafana_data:
+  caddy_data:
     driver: local
-  traefik_letsencrypt:
+  caddy_config:
     driver: local

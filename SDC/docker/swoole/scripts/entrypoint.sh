@@ -57,13 +57,16 @@ DB_PERSISTENT="${DB_PERSISTENT:-false}"
 REDIS_HOST="${REDIS_HOST:-sdcdefesa.redis.cache.windows.net}"
 REDIS_PORT="${REDIS_PORT:-6380}"
 REDIS_PASSWORD="${REDIS_PASSWORD:-}"
-REDIS_CLIENT="${REDIS_CLIENT:-predis}"
+# phpredis (nao predis): App\Database\ConnectionSemaphore e tipado para ?Redis
+# (phpredis). Com predis da TypeError e derruba o app. Trade-off: phpredis nao e
+# auto-hookado pelo SWOOLE_HOOK_ALL ate existir um RedisPool nativo (Fase 3).
+REDIS_CLIENT="${REDIS_CLIENT:-phpredis}"
 REDIS_SCHEME="${REDIS_SCHEME:-tls}"
 REDIS_PREFIX="${REDIS_PREFIX:-sdc_prod_}"
 CACHE_PREFIX="${CACHE_PREFIX:-sdc_prod_cache_}"
 CACHE_DRIVER="${CACHE_DRIVER:-redis}"
 SESSION_DRIVER="${SESSION_DRIVER:-redis}"
-SESSION_DOMAIN="${SESSION_DOMAIN:-sdcdefesa.azurewebsites.net}"
+SESSION_DOMAIN="${SESSION_DOMAIN:-}"
 SESSION_SECURE_COOKIE="${SESSION_SECURE_COOKIE:-true}"
 SESSION_SAME_SITE="${SESSION_SAME_SITE:-lax}"
 QUEUE_CONNECTION="${QUEUE_CONNECTION:-redis}"

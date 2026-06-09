@@ -1,0 +1,17 @@
+# Override LOCAL (untracked) para expor a stack newsdc-dev via tunel (ngrok).
+# Uso:
+#   docker compose -f compose.dev.yml -f compose.ngrok.yml up -d app queue
+# TUNNEL_URL casa com a URL publica atual do ngrok; se o tunel reiniciar e a
+# URL mudar, atualize aqui e recrie app+queue.
+services:
+  app:
+    environment:
+      TUNNEL_URL: https://parasitic-portfolio-module.ngrok-free.dev
+      APP_URL: https://parasitic-portfolio-module.ngrok-free.dev
+      L5_SWAGGER_CONST_HOST: https://parasitic-portfolio-module.ngrok-free.dev
+      SESSION_SECURE_COOKIE: "true"
+
+  queue:
+    environment:
+      TUNNEL_URL: https://parasitic-portfolio-module.ngrok-free.dev
+      APP_URL: https://parasitic-portfolio-module.ngrok-free.dev
