@@ -13,6 +13,7 @@
       :form="form"
       :atas="atas"
       :lotes="lotes"
+      :pontos-captacao="pontosCaptacao"
       submit-label="Salvar alterações"
       @submit="submit"
       @cancel="cancelar"
@@ -30,11 +31,12 @@ import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
-  cronograma:  { type: Object, required: true },
-  atas:        { type: Array, default: () => [] },
-  lotes:       { type: Array, default: () => [] },
-  municipios:  { type: Array, default: () => [] },
-  prestadores: { type: Array, default: () => [] },
+  cronograma:     { type: Object, required: true },
+  atas:           { type: Array, default: () => [] },
+  lotes:          { type: Array, default: () => [] },
+  municipios:     { type: Array, default: () => [] },
+  prestadores:    { type: Array, default: () => [] },
+  pontosCaptacao: { type: Array, default: () => [] },
 });
 
 const c = props.cronograma.data;
@@ -47,11 +49,14 @@ const form = useForm({
   municipio_id: c.municipio_id,
   prestador_id: c.prestador_id,
   cnpj: c.cnpj,
-  consumo_diario: c.consumo_diario ?? '',
-  dias: c.dias ?? '',
-  fator: c.fator ?? 1,
+  consumo_diario: c.consumo_diario ?? 20,
+  dias: c.dias ?? 30,
+  fator: c.fator ?? 0,
+  usar_fator_manual: c.usar_fator_manual ?? false,
   dt_inicio: c.dt_inicio || '',
   dt_final: c.dt_final || '',
+  dt_inicio_prorrogacao: c.dt_inicio_prorrogacao || '',
+  dt_final_prorrogacao: c.dt_final_prorrogacao || '',
   justificativa: c.justificativa || '',
   nota_empenho: c.nota_empenho || '',
   ponto_captacao_id: c.ponto_captacao_id,

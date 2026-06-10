@@ -108,6 +108,9 @@ return [
         // Arquivos sao temporarios; podem ser limpos por job de retencao.
         'exports' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_EXPORTS', 'sdc-exports'), 'app/exports'),
 
+        // Anexos do modulo TDAP (comprovantes de prorrogacao de cronograma).
+        'tdap' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_TDAP', 'sdc-tdap'), 'app/tdap'),
+
     ],
 
     /*

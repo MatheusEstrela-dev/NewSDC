@@ -17,6 +17,7 @@ final readonly class CronogramaDTO
         public float $consumo_diario,
         public int $dias,
         public float $fator,
+        public bool $usar_fator_manual,
         public string $dt_inicio,
         public string $dt_final,
         public ?string $dt_inicio_prorrogacao,
@@ -32,6 +33,16 @@ final readonly class CronogramaDTO
      */
     public static function fromRequest(array $data): self
     {
+        $consumoDiario = (float) ($data['consumo_diario'] ?? 0);
+        $dias = (int) ($data['dias'] ?? 0);
+        $usarFatorManual = (bool) ($data['usar_fator_manual'] ?? false);
+
+        // Alinhado ao legado: no modo automatico o fator (volume contratado em
+        // m3) e derivado de (consumo_diario_litros * dias) / 1000.
+        $fator = $usarFatorManual
+            ? (float) ($data['fator'] ?? 0)
+            : round(($consumoDiario * $dias) / 1000, 2);
+
         return new self(
             numero:                mb_strtoupper(trim((string) ($data['numero'] ?? ''))),
             empenho:               self::nullable($data['empenho'] ?? null),
@@ -40,9 +51,10 @@ final readonly class CronogramaDTO
             municipio_id:          (int) ($data['municipio_id'] ?? 0),
             prestador_id:          (int) ($data['prestador_id'] ?? 0),
             cnpj:                  self::nullable($data['cnpj'] ?? null),
-            consumo_diario:        (float) ($data['consumo_diario'] ?? 0),
-            dias:                  (int) ($data['dias'] ?? 0),
-            fator:                 (float) ($data['fator'] ?? 1),
+            consumo_diario:        $consumoDiario,
+            dias:                  $dias,
+            fator:                 $fator,
+            usar_fator_manual:     $usarFatorManual,
             dt_inicio:             (string) ($data['dt_inicio'] ?? ''),
             dt_final:              (string) ($data['dt_final'] ?? ''),
             dt_inicio_prorrogacao: self::nullable($data['dt_inicio_prorrogacao'] ?? null),
@@ -70,6 +82,7 @@ final readonly class CronogramaDTO
             'consumo_diario'        => $this->consumo_diario,
             'dias'                  => $this->dias,
             'fator'                 => $this->fator,
+            'usar_fator_manual'     => $this->usar_fator_manual,
             'dt_inicio'             => $this->dt_inicio,
             'dt_final'              => $this->dt_final,
             'dt_inicio_prorrogacao' => $this->dt_inicio_prorrogacao,

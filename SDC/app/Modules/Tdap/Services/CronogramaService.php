@@ -59,6 +59,7 @@ class CronogramaService
                 'municipio:id,nome,uf',
                 'prestador:id,nome,cnpj,email',
                 'user:id,name,email',
+                'pontoCaptacao:id,nome,tipo,municipio_id',
                 'caminhoes.caminhao:id,placa,marca,modelo,capacidade_m3',
             ])
             ->withCount(['caminhoes'])
@@ -232,7 +233,7 @@ class CronogramaService
                 COUNT(*) FILTER (WHERE ativo = TRUE AND encerrado_em IS NULL) AS ativos,
                 COUNT(*) FILTER (WHERE ativo = FALSE AND encerrado_em IS NULL) AS rascunhos,
                 COUNT(*) FILTER (WHERE encerrado_em IS NOT NULL) AS encerrados,
-                COALESCE(SUM(consumo_diario * dias * fator) FILTER (WHERE ativo = TRUE AND encerrado_em IS NULL), 0) AS volume_ativo_m3
+                COALESCE(SUM(fator) FILTER (WHERE ativo = TRUE AND encerrado_em IS NULL), 0) AS volume_ativo_m3
             ')
             ->first();
 

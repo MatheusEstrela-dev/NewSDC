@@ -43,9 +43,12 @@ return new class extends Migration
 
             $table->string('cnpj', 18)->nullable()->comment('Snapshot do CNPJ do prestador');
 
-            $table->decimal('consumo_diario', 12, 2)->default(0)->comment('m3/dia');
+            $table->decimal('consumo_diario', 12, 2)->default(0)->comment('Litros/dia (per capita) - alinhado ao legado');
             $table->unsignedSmallInteger('dias')->default(0);
-            $table->decimal('fator', 5, 2)->default(1.0);
+            // fator = volume contratado em m3. Auto: (consumo_diario * dias) / 1000.
+            $table->decimal('fator', 12, 2)->default(0)->comment('Volume contratado (m3)');
+            $table->boolean('usar_fator_manual')->default(false)
+                ->comment('false = fator calculado automaticamente (consumo*dias/1000)');
 
             $table->date('dt_inicio');
             $table->date('dt_final');
@@ -55,8 +58,11 @@ return new class extends Migration
             $table->text('justificativa')->nullable();
             $table->string('nota_empenho', 50)->nullable();
 
-            $table->unsignedBigInteger('ponto_captacao_id')->nullable()
-                ->comment('Referencia opcional para ponto de captacao PMDA');
+            $table->foreignId('ponto_captacao_id')->nullable()
+                ->constrained('pip_pmda_ponto')
+                ->cascadeOnUpdate()
+                ->nullOnDelete()
+                ->comment('Ponto de captacao PMDA (origem da agua)');
 
             $table->foreignId('user_id')
                 ->nullable()
