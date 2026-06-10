@@ -187,6 +187,19 @@ function selectNow() {
 </script>
 
 <style scoped>
+/* Estilo proprio (portavel): nao depende mais do CSS do RAT. */
+.dt-input {
+  @apply px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base rounded-lg bg-slate-50 dark:bg-slate-900/50
+    text-slate-900 dark:text-slate-200
+    border border-slate-300 dark:border-slate-700/50
+    focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500
+    transition-all duration-200;
+}
+.dt-input-filled {
+  /* !important para vencer .dark .dt-input (especificidade maior pelo .dark) */
+  @apply !border-2 !border-emerald-500/60 hover:!border-emerald-500/80;
+}
+
 .hide-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;

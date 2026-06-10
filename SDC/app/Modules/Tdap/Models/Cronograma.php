@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property float           $consumo_diario
  * @property int             $dias
  * @property float           $fator
+ * @property bool            $usar_fator_manual
  * @property \Carbon\Carbon  $dt_inicio
  * @property \Carbon\Carbon  $dt_final
  * @property ?\Carbon\Carbon $dt_inicio_prorrogacao
@@ -59,6 +60,7 @@ class Cronograma extends Model
         'consumo_diario',
         'dias',
         'fator',
+        'usar_fator_manual',
         'dt_inicio',
         'dt_final',
         'dt_inicio_prorrogacao',
@@ -86,6 +88,7 @@ class Cronograma extends Model
         'consumo_diario'         => 'decimal:2',
         'dias'                   => 'integer',
         'fator'                  => 'decimal:2',
+        'usar_fator_manual'      => 'boolean',
         'dt_inicio'              => 'date',
         'dt_final'               => 'date',
         'dt_inicio_prorrogacao'  => 'date',
@@ -124,6 +127,11 @@ class Cronograma extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function pontoCaptacao(): BelongsTo
+    {
+        return $this->belongsTo(PontoCaptacao::class, 'ponto_captacao_id');
+    }
+
     public function processoTdap(): BelongsTo
     {
         return $this->belongsTo(ProcessoTdap::class, 'processo_tdap_id');
@@ -160,9 +168,21 @@ class Cronograma extends Model
         return $this->dt_final_prorrogacao ?? $this->dt_final;
     }
 
+    /**
+     * Volume contratado em m3. Alinhado ao legado: o "fator" e o proprio
+     * volume contratado (auto = consumo_diario_litros * dias / 1000).
+     */
     public function getVolumeContratadoAttribute(): float
     {
-        return (float) $this->consumo_diario * (int) $this->dias * (float) $this->fator;
+        return (float) $this->fator;
+    }
+
+    /**
+     * Fator calculado a partir do consumo (litros) e dias, em m3.
+     */
+    public function getFatorCalculadoAttribute(): float
+    {
+        return round(((float) $this->consumo_diario * (int) $this->dias) / 1000, 2);
     }
 
     /* Scopes */

@@ -35,11 +35,18 @@ class CronogramaResource extends JsonResource
             'consumo_diario'        => (float) $this->consumo_diario,
             'dias'                  => (int) $this->dias,
             'fator'                 => (float) $this->fator,
+            'usar_fator_manual'     => (bool) $this->usar_fator_manual,
             'volume_contratado_m3'  => $this->volume_contratado,
             'justificativa'         => $this->justificativa,
             'observacao'            => $this->observacao,
             'cnpj'                  => $this->cnpj,
             'ponto_captacao_id'     => $this->ponto_captacao_id,
+            'ponto_captacao'        => $this->whenLoaded('pontoCaptacao', fn () => [
+                'id'        => $this->pontoCaptacao->id,
+                'nome'      => $this->pontoCaptacao->nome,
+                'tipo'      => $this->pontoCaptacao->tipo,
+                'tipo_nome' => $this->pontoCaptacao->tipo_nome,
+            ]),
 
             'ata_id'         => $this->ata_id,
             'ata'            => $this->whenLoaded('ata', fn () => [

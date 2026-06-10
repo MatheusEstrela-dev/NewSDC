@@ -10,6 +10,7 @@
       :form="form"
       :atas="atas"
       :lotes="lotes"
+      :pontos-captacao="pontosCaptacao"
       submit-label="Cadastrar"
       @submit="submit"
       @cancel="cancelar"
@@ -27,10 +28,11 @@ import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 defineOptions({ layout: AuthenticatedLayout });
 
 defineProps({
-  atas:        { type: Array, default: () => [] },
-  lotes:       { type: Array, default: () => [] },
-  municipios:  { type: Array, default: () => [] },
-  prestadores: { type: Array, default: () => [] },
+  atas:           { type: Array, default: () => [] },
+  lotes:          { type: Array, default: () => [] },
+  municipios:     { type: Array, default: () => [] },
+  prestadores:    { type: Array, default: () => [] },
+  pontosCaptacao: { type: Array, default: () => [] },
 });
 
 const form = useForm({
@@ -41,11 +43,14 @@ const form = useForm({
   municipio_id: null,
   prestador_id: null,
   cnpj: null,
-  consumo_diario: '',
-  dias: '',
-  fator: 1,
+  consumo_diario: 20,
+  dias: 30,
+  fator: 0,
+  usar_fator_manual: false,
   dt_inicio: '',
   dt_final: '',
+  dt_inicio_prorrogacao: '',
+  dt_final_prorrogacao: '',
   justificativa: '',
   nota_empenho: '',
   ponto_captacao_id: null,

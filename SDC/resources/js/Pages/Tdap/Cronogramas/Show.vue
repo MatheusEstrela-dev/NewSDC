@@ -40,9 +40,10 @@
             <div><dt class="text-slate-500">Vigência</dt><dd>{{ fmtDate(c.dt_inicio) }} — {{ fmtDate(c.dt_final) }}</dd></div>
             <div v-if="c.dt_inicio_prorrogacao"><dt class="text-slate-500">Prorrogação</dt><dd>{{ fmtDate(c.dt_inicio_prorrogacao) }} — {{ fmtDate(c.dt_final_prorrogacao) }}</dd></div>
             <div><dt class="text-slate-500">Volume contratado</dt><dd class="font-mono text-blue-600 font-semibold">{{ Number(c.volume_contratado_m3).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }} m³</dd></div>
-            <div><dt class="text-slate-500">Consumo diário</dt><dd class="font-mono">{{ Number(c.consumo_diario).toFixed(2) }} m³</dd></div>
+            <div><dt class="text-slate-500">Consumo diário</dt><dd class="font-mono">{{ Number(c.consumo_diario).toFixed(2) }} L</dd></div>
             <div><dt class="text-slate-500">Dias</dt><dd>{{ c.dias }}</dd></div>
-            <div><dt class="text-slate-500">Fator</dt><dd>{{ Number(c.fator).toFixed(2) }}</dd></div>
+            <div><dt class="text-slate-500">Fator (m³)</dt><dd>{{ Number(c.fator).toFixed(2) }}<span v-if="c.usar_fator_manual" class="ml-1 text-xs text-amber-600">(manual)</span></dd></div>
+            <div v-if="c.ponto_captacao"><dt class="text-slate-500">Ponto de captação</dt><dd>{{ c.ponto_captacao.nome }} <span class="text-xs text-slate-400">({{ c.ponto_captacao.tipo_nome }})</span></dd></div>
           </dl>
         </div>
 

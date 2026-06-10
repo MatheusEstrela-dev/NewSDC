@@ -4,7 +4,7 @@
       type="button"
       @click.stop="toggleOpen"
       class="dt-input w-full flex items-center justify-between gap-2"
-      :class="[modelValue ? 'dt-input-filled' : '', extraClass]"
+      :class="[error ? 'dt-input-error' : (modelValue ? 'dt-input-filled' : ''), extraClass]"
     >
       <span :class="modelValue ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'">
         {{ displayDate || 'dd/mm/aaaa' }}
@@ -87,6 +87,7 @@ import { onClickOutside } from '@vueuse/core';
 const props = defineProps({
   modelValue: { type: String, default: '' },
   extraClass: { type: String, default: '' },
+  error:      { type: Boolean, default: false },
 });
 const emit = defineEmits(['update:modelValue']);
 
@@ -206,6 +207,24 @@ function nextMonth() {
 </script>
 
 <style scoped>
+/* Estilo proprio (portavel): o componente nao depende mais do CSS do RAT.
+   Espelha .dt-input do modulo RAT para manter consistencia visual. */
+.dt-input {
+  @apply px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base rounded-lg bg-slate-50 dark:bg-slate-900/50
+    text-slate-900 dark:text-slate-200
+    border border-slate-300 dark:border-slate-700/50
+    focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500
+    transition-all duration-200;
+}
+.dt-input-filled {
+  /* !important para vencer .dark .dt-input (que tem especificidade maior pelo .dark) */
+  @apply !border-2 !border-emerald-500/60 hover:!border-emerald-500/80;
+}
+.dt-input-error {
+  /* Campo obrigatorio nao preenchido ao salvar: alerta em vermelho */
+  @apply !border-2 !border-red-500/70 hover:!border-red-500/80;
+}
+
 .picker-nav-btn {
   @apply w-7 h-7 rounded-lg flex items-center justify-center
     text-slate-500 dark:text-slate-400

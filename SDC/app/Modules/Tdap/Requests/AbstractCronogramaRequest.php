@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Tdap\Requests;
 
 use App\Modules\Tdap\Models\Lote;
+use App\Modules\Tdap\Models\PontoCaptacao;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
@@ -36,12 +37,15 @@ abstract class AbstractCronogramaRequest extends FormRequest
             'cnpj'                  => ['nullable', 'string', 'max:18'],
             'consumo_diario'        => ['required', 'numeric', 'min:0.01', 'max:9999999.99'],
             'dias'                  => ['required', 'integer', 'min:1', 'max:1000'],
-            'fator'                 => ['nullable', 'numeric', 'min:0.01', 'max:99.99'],
+            'usar_fator_manual'     => ['nullable', 'boolean'],
+            'fator'                 => ['nullable', 'numeric', 'min:0.01', 'max:9999999.99', 'required_if:usar_fator_manual,1,true'],
             'dt_inicio'             => ['required', 'date'],
             'dt_final'              => ['required', 'date', 'after_or_equal:dt_inicio'],
+            'dt_inicio_prorrogacao' => ['nullable', 'date', 'after_or_equal:dt_final'],
+            'dt_final_prorrogacao'  => ['nullable', 'date', 'after_or_equal:dt_inicio_prorrogacao', 'required_with:dt_inicio_prorrogacao'],
             'justificativa'         => ['nullable', 'string', 'max:5000'],
             'nota_empenho'          => ['nullable', 'string', 'max:50'],
-            'ponto_captacao_id'     => ['nullable', 'integer'],
+            'ponto_captacao_id'     => ['required', 'integer', Rule::exists('pip_pmda_ponto', 'id')->whereNull('deleted_at')],
             'observacao'            => ['nullable', 'string', 'max:5000'],
         ];
     }
@@ -71,6 +75,14 @@ abstract class AbstractCronogramaRequest extends FormRequest
             }
             if ((int) $lote->prestador_id !== (int) $this->input('prestador_id')) {
                 $v->errors()->add('prestador_id', 'O Prestador nao confere com o Lote escolhido.');
+            }
+
+            $pontoId = (int) $this->input('ponto_captacao_id');
+            if ($pontoId > 0) {
+                $ponto = PontoCaptacao::find($pontoId);
+                if ($ponto && (int) $ponto->municipio_id !== (int) $this->input('municipio_id')) {
+                    $v->errors()->add('ponto_captacao_id', 'O Ponto de Captacao nao pertence ao Municipio do Lote.');
+                }
             }
         });
     }
