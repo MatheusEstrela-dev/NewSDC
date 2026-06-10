@@ -25,49 +25,70 @@ use Symfony\Component\HttpFoundation\Response;
 class QueryThresholdMiddleware
 {
     /**
-     * Estado static para sobreviver entre instances do middleware (que sao
-     * criadas por request) sem acumular DB::listen closures em Octane.
-     * Cada request reset $currentQueries; o listener eh registrado 1x por
-     * processo PHP. Em Octane, cada worker processa requests sequencialmente,
-     * entao o estado static eh seguro (1 request ativa por worker).
-     *
-     * @var array<int, array{sql: string, time: float, bindings: array<int, mixed>}>
+     * Chave em $request->attributes onde as queries da request corrente sao
+     * acumuladas. Estado por-request (nao static, nao de instancia): sob
+     * Octane/Swoole com enable_coroutine, requests podem intercalar no mesmo
+     * worker e estado static misturaria queries de usuarios distintos.
      */
-    private static array $currentQueries = [];
+    private const REQUEST_ATTRIBUTE = 'query_threshold.queries';
+
+    /**
+     * O DB::listen e registrado uma unica vez por processo PHP; registrar a
+     * cada request acumularia closures no worker persistente do Octane.
+     */
     private static bool $listenerRegistered = false;
 
     public function handle(Request $request, Closure $next, int|string $threshold = 15): Response
     {
         $threshold = (int) $threshold;
-        self::$currentQueries = [];
+        $request->attributes->set(self::REQUEST_ATTRIBUTE, []);
 
         if (!self::$listenerRegistered) {
             self::$listenerRegistered = true;
-            DB::listen(function (QueryExecuted $event): void {
-                self::$currentQueries[] = [
+
+            DB::listen(static function (QueryExecuted $event): void {
+                $current = app()->bound('request') ? app('request') : null;
+
+                if (!$current instanceof Request) {
+                    return;
+                }
+
+                $queries = $current->attributes->get(self::REQUEST_ATTRIBUTE);
+
+                if (!is_array($queries)) {
+                    return;
+                }
+
+                $queries[] = [
                     'sql' => $event->sql,
                     'time' => $event->time,
                     'bindings' => $event->bindings,
                 ];
+
+                $current->attributes->set(self::REQUEST_ATTRIBUTE, $queries);
             });
         }
 
         /** @var Response $response */
         $response = $next($request);
 
-        $count = count(self::$currentQueries);
+        /** @var array<int, array{sql: string, time: float, bindings: array<int, mixed>}> $queries */
+        $queries = $request->attributes->get(self::REQUEST_ATTRIBUTE, []);
+        $request->attributes->remove(self::REQUEST_ATTRIBUTE);
+
+        $count = count($queries);
 
         if ($count > $threshold) {
-            $totalTime = array_sum(array_column($this->queries, 'time'));
+            $totalTime = array_sum(array_column($queries, 'time'));
 
-            $duplicadas = collect($this->queries)
+            $duplicadas = collect($queries)
                 ->groupBy('sql')
                 ->filter(fn ($group): bool => $group->count() > 1)
                 ->map(fn ($group): int => $group->count())
                 ->take(10)
                 ->all();
 
-            $topLentas = collect($this->queries)
+            $topLentas = collect($queries)
                 ->sortByDesc('time')
                 ->take(5)
                 ->map(fn (array $q): array => [

@@ -159,15 +159,23 @@ return [
     |
     */
 
+    // ProcessoFilter NAO entra no warm: nao e singleton e o construtor captura
+    // Request -- aquecer no boot resolveria um Request vazio de console. Os
+    // services abaixo sao singletons sem estado de request (apenas cache de
+    // enums imutaveis); nada user-scoped pode ser guardado em propriedades de
+    // instancia deles.
     'warm' => [
         ...Octane::defaultServicesToWarm(),
         \App\Modules\Decretacoes\Services\ProcessoStatsService::class,
         \App\Modules\Decretacoes\Services\ProcessoQueryService::class,
-        \App\Modules\Decretacoes\Filters\ProcessoFilter::class,
     ],
 
+    // 'tenant' e registrado por request via app()->instance() no middleware
+    // SetTenant; o flush garante que uma request sem tenant resolvido nunca
+    // herde o tenant da request anterior no mesmo worker.
     'flush' => [
         \App\Modules\Decretacoes\Services\EntradaProcessoService::class,
+        'tenant',
     ],
 
     /*
