@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Tdap\Controllers\AtaController;
 use App\Modules\Tdap\Controllers\CaminhaoController;
 use App\Modules\Tdap\Controllers\CronoCaminhaoController;
+use App\Modules\Tdap\Controllers\CronogramaComprovanteController;
 use App\Modules\Tdap\Controllers\CronogramaController;
 use App\Modules\Tdap\Controllers\CronoViagemController;
 use App\Modules\Tdap\Controllers\LoteController;
@@ -165,6 +166,15 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
             Route::get('/', [CronogramaController::class, 'index'])->name('index');
             Route::get('/{cronograma}', [CronogramaController::class, 'show'])
                 ->name('show')->whereNumber('cronograma');
+            Route::get('/{cronograma}/comprovantes/{comprovante}/download', [CronogramaComprovanteController::class, 'download'])
+                ->name('comprovantes.download')->whereNumber('cronograma')->whereNumber('comprovante');
+        });
+
+        Route::middleware('can:tdap.cronogramas.edit')->group(function () {
+            Route::post('/{cronograma}/comprovantes', [CronogramaComprovanteController::class, 'store'])
+                ->name('comprovantes.store')->whereNumber('cronograma');
+            Route::delete('/{cronograma}/comprovantes/{comprovante}', [CronogramaComprovanteController::class, 'destroy'])
+                ->name('comprovantes.destroy')->whereNumber('cronograma')->whereNumber('comprovante');
         });
 
         Route::middleware('can:tdap.cronogramas.create')->group(function () {

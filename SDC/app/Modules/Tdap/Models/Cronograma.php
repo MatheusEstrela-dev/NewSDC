@@ -142,6 +142,11 @@ class Cronograma extends Model
         return $this->hasMany(CronoCaminhao::class, 'cronograma_id')->orderBy('ordem');
     }
 
+    public function comprovantes(): HasMany
+    {
+        return $this->hasMany(CronogramaComprovante::class, 'cronograma_id')->latest();
+    }
+
     public function viagens(): HasMany
     {
         // helper indireto: todas as viagens deste cronograma

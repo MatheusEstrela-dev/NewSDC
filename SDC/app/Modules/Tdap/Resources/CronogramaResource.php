@@ -94,6 +94,16 @@ class CronogramaResource extends JsonResource
                 'percentual'     => $cc->percentual_entregue,
             ])),
 
+            'comprovantes' => $this->whenLoaded('comprovantes', fn () => $this->comprovantes->map(fn ($cp) => [
+                'id'                => $cp->id,
+                'nome_original'     => $cp->nome_original,
+                'descricao'         => $cp->descricao,
+                'mime_type'         => $cp->mime_type,
+                'tamanho_formatado' => $cp->tamanho_formatado,
+                'download_url'      => route('tdap.cronogramas.comprovantes.download', [$this->id, $cp->id]),
+                'created_at'        => $cp->created_at?->toIso8601String(),
+            ])),
+
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

@@ -58,6 +58,7 @@ class TdapServiceProvider extends ServiceProvider
 
         // Cronograma (Fase 3)
         $this->app->singleton(CronogramaService::class);
+        $this->app->singleton(\App\Modules\Tdap\Services\CronogramaComprovanteService::class);
         $this->app->singleton(CronoCaminhaoService::class);
         $this->app->singleton(CronoViagemService::class);
 

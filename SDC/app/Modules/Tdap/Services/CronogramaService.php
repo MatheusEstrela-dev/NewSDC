@@ -61,6 +61,7 @@ class CronogramaService
                 'user:id,name,email',
                 'pontoCaptacao:id,nome,tipo,municipio_id',
                 'caminhoes.caminhao:id,placa,marca,modelo,capacidade_m3',
+                'comprovantes',
             ])
             ->withCount(['caminhoes'])
             ->findOrFail($id);

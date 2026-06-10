@@ -126,6 +126,12 @@
           <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Observação</h3>
           <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">{{ c.observacao }}</p>
         </div>
+
+        <CronogramaComprovantesSection
+          :cronograma-id="c.id"
+          :comprovantes="c.comprovantes || []"
+          :can-edit="canEdit && c.estado !== 'encerrado'"
+        />
       </div>
 
       <aside class="space-y-4">
@@ -168,6 +174,7 @@ import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vu
 import EstadoBadge from '@/Components/Organisms/Tdap/EstadoBadge.vue';
 import AlocarCaminhaoModal from '@/Components/Organisms/Tdap/AlocarCaminhaoModal.vue';
 import RegistrarViagemModal from '@/Components/Organisms/Tdap/RegistrarViagemModal.vue';
+import CronogramaComprovantesSection from '@/Components/Organisms/Tdap/CronogramaComprovantesSection.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
