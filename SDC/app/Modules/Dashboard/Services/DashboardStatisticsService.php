@@ -25,6 +25,14 @@ class DashboardStatisticsService
      */
     private const STATS_TTL = 60;
 
+    /**
+     * Janela stale (segundos): apos STATS_TTL, o valor antigo continua sendo
+     * servido enquanto UMA request recomputa em background (Cache::flexible).
+     * Evita stampede: sem isso, N requests concorrentes no miss recomputam
+     * as ~35 queries juntas.
+     */
+    private const STATS_STALE_TTL = 300;
+
     private array $tableExistsCache = [];
 
     public function __construct(
@@ -40,10 +48,12 @@ class DashboardStatisticsService
 
         // Antes: ~12 queries sequenciais (4 counts + 4 trends x2) a cada load,
         // sem cache. Em burst de inicio de plantao o Postgres recebia N recomputos.
-        // Agora: 1 recomputo a cada STATS_TTL; nas demais loads, zero query.
-        return Cache::remember(
+        // Cache::flexible (stale-while-revalidate): dentro de STATS_TTL serve
+        // do cache; entre STATS_TTL e STATS_STALE_TTL serve o valor antigo e
+        // apenas UMA request recomputa apos enviar a resposta (defer).
+        return Cache::flexible(
             'dashboard.stats.full',
-            self::STATS_TTL,
+            [self::STATS_TTL, self::STATS_STALE_TTL],
             fn () => $this->computeStats(),
         );
     }

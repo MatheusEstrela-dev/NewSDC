@@ -174,5 +174,6 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__ . '/auth.php';
 
-// Health check - sem middleware para evitar dependencia de DB/session
-Route::get('/health', fn() => response()->json(['status' => 'ok', 'timestamp' => now()->toIso8601String()]))->withoutMiddleware('web');
+// Health check - sem middleware para evitar dependencia de DB/session.
+// Controller (nao closure) para manter as rotas cacheaveis via route:cache.
+Route::get('/health', [\App\Http\Controllers\Api\HealthCheckController::class, 'ping'])->withoutMiddleware('web');

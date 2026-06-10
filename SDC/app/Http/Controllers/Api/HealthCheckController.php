@@ -38,6 +38,18 @@ class HealthCheckController extends Controller
      *     )
      * )
      */
+    /**
+     * Ping minimo para load balancer (rota web /health): sem DB, Redis ou
+     * sessao. Em controller (nao closure) para nao bloquear route:cache.
+     */
+    public function ping(): JsonResponse
+    {
+        return response()->json([
+            'status' => 'ok',
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    }
+
     public function basic(ConnectionSemaphore $sem, DatabaseCircuitBreaker $cb): JsonResponse
     {
         $semSaturated = $sem->active() / max(1, $sem->limit()) > 0.95;

@@ -64,13 +64,24 @@ class TaskService extends BaseService
         return $task->delete();
     }
 
+    /**
+     * Agregacao em 1 query (antes: 4 counts sequenciais por load do index).
+     * SUM(CASE) e portavel entre PostgreSQL e MySQL.
+     */
     public function getStatistics(): array
     {
+        $row = Task::query()
+            ->selectRaw("COUNT(*) as total")
+            ->selectRaw("SUM(CASE WHEN status = 'aberta' THEN 1 ELSE 0 END) as abertas")
+            ->selectRaw("SUM(CASE WHEN status = 'em_andamento' THEN 1 ELSE 0 END) as em_andamento")
+            ->selectRaw("SUM(CASE WHEN status = 'concluida' THEN 1 ELSE 0 END) as concluidas")
+            ->first();
+
         return [
-            'total' => Task::count(),
-            'abertas' => Task::where('status', 'aberta')->count(),
-            'em_andamento' => Task::where('status', 'em_andamento')->count(),
-            'concluidas' => Task::where('status', 'concluida')->count(),
+            'total' => (int) $row->total,
+            'abertas' => (int) $row->abertas,
+            'em_andamento' => (int) $row->em_andamento,
+            'concluidas' => (int) $row->concluidas,
         ];
     }
 
