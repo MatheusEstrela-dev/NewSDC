@@ -100,21 +100,32 @@ fi
 echo "Executando migrations..."
 php artisan migrate --force || echo "Aviso: Erro ao executar migrations"
 
-# Seeders idempotentes (updateOrCreate/insertOrIgnore)
-echo "Executando seeders (dados mock + hierarquias)..."
-php artisan db:seed --force --class=DatabaseSeeder || echo "Aviso: Erro ao executar seeders"
-
-echo "Banco inicializado"
+# Seeders de dados mock apenas quando SEED_MOCK_DATA=true. Sao idempotentes
+# (updateOrCreate): rodar em todo restart de producao RESETARIA as senhas dos
+# usuarios mock para o default, reabrindo credenciais conhecidas. Em ambiente
+# novo (banco vazio), setar SEED_MOCK_DATA=true no primeiro deploy e remover.
+if [ "${SEED_MOCK_DATA:-false}" = "true" ]; then
+    echo "Executando seeders (dados mock + hierarquias)..."
+    php artisan db:seed --force --class=DatabaseSeeder || echo "Aviso: Erro ao executar seeders"
+    echo "Banco inicializado"
+else
+    echo "SEED_MOCK_DATA != true; pulando seeders de dados mock."
+fi
 
 # Documentacao Swagger
 echo "Gerando documentacao Swagger..."
 mkdir -p storage/api-docs
 php artisan l5-swagger:generate 2>/dev/null || echo "Aviso: falha ao gerar swagger"
 
-# Limpar caches
+# Limpar e RECONSTRUIR caches: sem o rebuild, todo worker boota com config e
+# views frias (parse de config/*.php e Blade a cada boot de worker).
 php artisan config:clear 2>/dev/null || true
 php artisan route:clear 2>/dev/null || true
 php artisan view:clear 2>/dev/null || true
+php artisan config:cache || echo "Aviso: falha em config:cache"
+php artisan view:cache 2>/dev/null || echo "Aviso: falha em view:cache"
+# route:cache exige zero rotas closure; se falhar, segue sem cache de rotas.
+php artisan route:cache 2>/dev/null || echo "Aviso: route:cache pulado (rotas closure presentes)"
 
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 

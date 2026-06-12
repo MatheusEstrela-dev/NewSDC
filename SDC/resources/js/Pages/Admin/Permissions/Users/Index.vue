@@ -198,7 +198,7 @@
                 </td>
                 <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-center hidden md:table-cell">
                   <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300">
-                    {{ user.permissions?.length || 0 }}
+                    {{ user.permissions_count ?? 0 }}
                   </span>
                 </td>
                 <td class="px-4 lg:px-6 py-4 whitespace-nowrap">

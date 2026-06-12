@@ -104,25 +104,33 @@ fi
 echo "Executando migrations..."
 php artisan migrate --force || echo "⚠️  Aviso: Erro ao executar migrations"
 
-# Executar seeders completos (idempotentes — usam updateOrCreate/insertOrIgnore)
-# Inclui: Roles, Órgãos, Admin, Usuários Mock (diversas hierarquias), RATs Mock
-echo "Executando seeders (dados mock + hierarquias)..."
-php artisan db:seed --force --class=DatabaseSeeder || echo "⚠️  Aviso: Erro ao executar seeders"
-
-echo "✅ Banco inicializado com dados mock completos"
-echo "   Admin: admin@defesa.mg.gov.br / password"
-echo "   Hierarquias: super-admin, admin, manager, analyst, operator, viewer, user"
-echo "   RATs: 15 registros (em_andamento, rascunho, finalizado)"
+# Seeders de dados mock (Roles, Orgaos, Admin, Usuarios Mock, RATs Mock) apenas
+# quando SEED_MOCK_DATA=true. Eles sao idempotentes (updateOrCreate): rodar em
+# todo restart de producao RESETARIA as senhas dos usuarios mock para o default,
+# reabrindo credenciais conhecidas no ambiente. Em ambiente novo (banco vazio),
+# setar SEED_MOCK_DATA=true no primeiro deploy e remover em seguida.
+if [ "${SEED_MOCK_DATA:-false}" = "true" ]; then
+    echo "Executando seeders (dados mock + hierarquias)..."
+    php artisan db:seed --force --class=DatabaseSeeder || echo "⚠️  Aviso: Erro ao executar seeders"
+    echo "✅ Banco inicializado com dados mock completos"
+else
+    echo "SEED_MOCK_DATA != true; pulando seeders de dados mock."
+fi
 
 # Gerar documentacao Swagger (l5-swagger)
 echo "Gerando documentacao Swagger..."
 mkdir -p storage/api-docs
 php artisan l5-swagger:generate 2>/dev/null || echo "Aviso: falha ao gerar swagger"
 
-# Limpar caches
+# Limpar e RECONSTRUIR caches: sem o rebuild, todo worker boota com config e
+# views frias (parse de config/*.php e Blade a cada boot de worker).
 php artisan config:clear 2>/dev/null || true
 php artisan route:clear 2>/dev/null || true
 php artisan view:clear 2>/dev/null || true
+php artisan config:cache || echo "Aviso: falha em config:cache"
+php artisan view:cache 2>/dev/null || echo "Aviso: falha em view:cache"
+# route:cache exige zero rotas closure; se falhar, segue sem cache de rotas.
+php artisan route:cache 2>/dev/null || echo "Aviso: route:cache pulado (rotas closure presentes)"
 
 # Ajustar permissões
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true

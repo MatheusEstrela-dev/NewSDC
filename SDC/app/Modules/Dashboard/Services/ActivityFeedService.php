@@ -70,43 +70,40 @@ class ActivityFeedService
             ->get();
     }
 
+    /**
+     * Uma unica query com subqueries no lugar de pluck + whereIn por modulo:
+     * antes eram ate 4 queries sequenciais (2 plucks carregando listas de IDs
+     * no PHP + 2 selects de AuditLog); agora o banco resolve tudo de uma vez.
+     */
     private function queryAssignedActions(int $userId, array $tables): Collection
     {
-        $result = collect();
+        $watchPae   = in_array('pae_protocolos', $tables, true);
+        $watchTasks = in_array('tasks', $tables, true);
 
-        if (in_array('pae_protocolos', $tables, true)) {
-            $paeIds = PaeProtocolo::where('analista_atual_id', $userId)->pluck('id');
-
-            if ($paeIds->isNotEmpty()) {
-                $result = $result->merge(
-                    AuditLog::where('table_name', 'pae_protocolos')
-                        ->whereIn('row_id', $paeIds)
-                        ->where('user_id', '!=', $userId)
-                        ->whereNotIn('event', [AuditLog::EVENT_LOGIN, AuditLog::EVENT_LOGOUT])
-                        ->latest('created_at')
-                        ->limit(10)
-                        ->get()
-                );
-            }
+        if (!$watchPae && !$watchTasks) {
+            return collect();
         }
 
-        if (in_array('tasks', $tables, true)) {
-            $taskIds = Task::where('atribuido_para_id', $userId)->pluck('id');
+        return AuditLog::where('user_id', '!=', $userId)
+            ->whereNotIn('event', [AuditLog::EVENT_LOGIN, AuditLog::EVENT_LOGOUT])
+            ->where(function ($query) use ($userId, $watchPae, $watchTasks) {
+                if ($watchPae) {
+                    $query->orWhere(function ($q) use ($userId) {
+                        $q->where('table_name', 'pae_protocolos')
+                            ->whereIn('row_id', PaeProtocolo::where('analista_atual_id', $userId)->select('id'));
+                    });
+                }
 
-            if ($taskIds->isNotEmpty()) {
-                $result = $result->merge(
-                    AuditLog::where('table_name', 'tasks')
-                        ->whereIn('row_id', $taskIds)
-                        ->where('user_id', '!=', $userId)
-                        ->whereNotIn('event', [AuditLog::EVENT_LOGIN, AuditLog::EVENT_LOGOUT])
-                        ->latest('created_at')
-                        ->limit(10)
-                        ->get()
-                );
-            }
-        }
-
-        return $result;
+                if ($watchTasks) {
+                    $query->orWhere(function ($q) use ($userId) {
+                        $q->where('table_name', 'tasks')
+                            ->whereIn('row_id', Task::where('atribuido_para_id', $userId)->select('id'));
+                    });
+                }
+            })
+            ->latest('created_at')
+            ->limit(20)
+            ->get();
     }
 
     private function formatItem(AuditLog $log): array

@@ -32,8 +32,11 @@ class UserManagementController extends Controller
 
     public function index(Request $request): Response
     {
+        // A listagem so exibe a CONTAGEM de permissoes diretas; withCount evita
+        // serializar todos os objetos de permissao de cada usuario no payload.
         $query = User::query()
-            ->with(['roles', 'permissions'])
+            ->with('roles')
+            ->withCount('permissions')
             ->select(['id', 'name', 'email', 'cpf', 'active', 'status', 'email_verified_at', 'created_at']);
 
         if ($request->filled('search')) {

@@ -7,7 +7,7 @@ namespace App\Http\Middleware;
 use App\Models\Tenant;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -31,16 +31,24 @@ class SetTenant
         try {
             $tenant = null;
 
+            // Na sessao fica apenas o tenant_id (escalar): serializar o model
+            // inteiro no Redis pesa a sessao e congela dados stale do tenant.
             if ($request->hasSession()) {
-                $tenant = $request->session()->get('resolved_tenant');
+                $request->session()->forget('resolved_tenant');
+
+                $tenantId = $request->session()->get('tenant_id');
+
+                if ($tenantId) {
+                    $tenant = Cache::remember(
+                        "tenant:{$tenantId}",
+                        300,
+                        fn (): ?Tenant => Tenant::find($tenantId),
+                    );
+                }
             }
 
             if (!$tenant) {
                 $tenant = Tenant::resolveFromRequest($request);
-
-                if ($tenant && $request->hasSession()) {
-                    $request->session()->put('resolved_tenant', $tenant);
-                }
             }
 
             if ($tenant) {
@@ -51,7 +59,7 @@ class SetTenant
                     $request->session()->put('tenant_id', $tenant->id);
                 }
             }
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (\Illuminate\Database\QueryException) {
             // Tabela tenants ainda nao existe (migration pendente) -- continua sem tenant
         }
 
