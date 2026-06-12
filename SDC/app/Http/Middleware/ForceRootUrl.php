@@ -28,8 +28,13 @@ class ForceRootUrl
             $port = $request->getPort();
             $localUrl = "{$scheme}://{$requestHost}" . ($port && $port != 80 && $port != 443 ? ":{$port}" : '');
             URL::forceRootUrl($localUrl);
+            // Reset explicito do scheme por request: sob Octane, o forceScheme('https')
+            // do AppServiceProvider fica preso na memoria do worker e vazaria para
+            // acessos locais via http. Aqui o scheme acompanha a origem real.
+            URL::forceScheme($scheme);
         } elseif (config('app.url') && app()->environment('local')) {
             URL::forceRootUrl(config('app.url'));
+            URL::forceScheme('https');
         }
 
         return $next($request);

@@ -17,6 +17,7 @@ class CronogramaService
 {
     public function __construct(
         private readonly OutboxDispatcher $outbox,
+        private readonly HistoricoService $historico,
     ) {}
 
 
@@ -33,6 +34,11 @@ class CronogramaService
                 'prestador:id,nome,cnpj',
             ])
             ->withCount('caminhoes')
+            ->when(
+                ($filtros['estado'] ?? null) === 'arquivado',
+                fn ($q) => $q->arquivado(),
+                fn ($q) => $q->naoArquivado(),
+            )
             ->when($filtros['estado'] ?? null, function ($q, $estado) {
                 match ($estado) {
                     'rascunho'  => $q->rascunho(),
@@ -48,6 +54,63 @@ class CronogramaService
             ->orderByDesc('dt_inicio')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    /**
+     * Linhas planas para exportacao CSV (respeita os filtros da listagem).
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return array<int, array<string, mixed>>
+     */
+    public function exportar(array $filtros = []): array
+    {
+        $rows = Cronograma::query()
+            ->with([
+                'ata:id,numero',
+                'lote:id,numero',
+                'municipio:id,nome,uf',
+                'prestador:id,nome,cnpj',
+            ])
+            ->withCount('caminhoes')
+            ->when(
+                ($filtros['estado'] ?? null) === 'arquivado',
+                fn ($q) => $q->arquivado(),
+                fn ($q) => $q->naoArquivado(),
+            )
+            ->when($filtros['estado'] ?? null, function ($q, $estado) {
+                match ($estado) {
+                    'rascunho'  => $q->rascunho(),
+                    'ativo'     => $q->ativo(),
+                    'encerrado' => $q->encerrado(),
+                    default     => null,
+                };
+            })
+            ->when($filtros['ata_id'] ?? null, fn ($q, $id) => $q->where('ata_id', (int) $id))
+            ->when($filtros['prestador_id'] ?? null, fn ($q, $id) => $q->where('prestador_id', (int) $id))
+            ->when($filtros['municipio_id'] ?? null, fn ($q, $id) => $q->where('municipio_id', (int) $id))
+            ->when($filtros['search'] ?? null, fn ($q, $termo) => $q->buscar((string) $termo))
+            ->when($filtros['data_inicio'] ?? null, fn ($q, $d) => $q->whereDate('dt_inicio', '>=', (string) $d))
+            ->when($filtros['data_fim'] ?? null, fn ($q, $d) => $q->whereDate('dt_inicio', '<=', (string) $d))
+            ->orderByDesc('dt_inicio')
+            ->get();
+
+        return $rows->map(fn (Cronograma $c) => [
+            'Numero'                 => $c->numero,
+            'Estado'                 => $c->estado,
+            'Vigencia Inicio'        => $c->dt_inicio?->format('d/m/Y'),
+            'Vigencia Fim'           => $c->dt_final?->format('d/m/Y'),
+            'Ata'                    => $c->ata?->numero,
+            'Lote'                   => $c->lote?->numero,
+            'Municipio'              => $c->municipio?->nome,
+            'UF'                     => $c->municipio?->uf,
+            'Prestador'              => $c->prestador?->nome,
+            'CNPJ'                   => $c->prestador?->cnpj,
+            'Volume Contratado (m3)' => number_format((float) $c->fator, 2, ',', '.'),
+            'Caminhoes'              => (int) $c->caminhoes_count,
+            'Consumo Diario (L)'     => number_format((float) $c->consumo_diario, 2, ',', '.'),
+            'Dias'                   => (int) $c->dias,
+            'Arquivado'              => $c->arquivado_em ? 'Sim' : 'Nao',
+        ])->all();
     }
 
     public function obter(int $id): Cronograma
@@ -99,6 +162,38 @@ class CronogramaService
         }
 
         return (bool) $cronograma->delete();
+    }
+
+    /**
+     * Arquiva o cronograma (estado distinto do soft delete).
+     * Idempotente: arquivar um cronograma ja arquivado nao gera novo evento.
+     */
+    public function arquivar(int $id): Cronograma
+    {
+        return DB::transaction(function () use ($id): Cronograma {
+            $cronograma = Cronograma::findOrFail($id);
+            if (! $cronograma->arquivado_em) {
+                $cronograma->arquivado_em = now();
+                $cronograma->save();
+                $this->historico->registrar('cronograma.arquivado', $cronograma, 'Cronograma arquivado.');
+            }
+
+            return $cronograma->fresh();
+        });
+    }
+
+    public function desarquivar(int $id): Cronograma
+    {
+        return DB::transaction(function () use ($id): Cronograma {
+            $cronograma = Cronograma::findOrFail($id);
+            if ($cronograma->arquivado_em) {
+                $cronograma->arquivado_em = null;
+                $cronograma->save();
+                $this->historico->registrar('cronograma.desarquivado', $cronograma, 'Cronograma desarquivado.');
+            }
+
+            return $cronograma->fresh();
+        });
     }
 
     /**

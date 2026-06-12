@@ -41,6 +41,20 @@
       />
       <TextInput v-model="form.descricao" type="text" maxlength="255" placeholder="Descrição (opcional)" class="block w-full" />
       <InputError :message="form.errors.comprovantes || form.errors['comprovantes.0'] || form.errors.descricao" />
+
+      <!-- Progresso de upload -->
+      <div v-if="form.progress" class="space-y-1">
+        <div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+          <div
+            class="h-full rounded-full bg-blue-600 transition-all duration-150 ease-out"
+            :style="{ width: (form.progress.percentage || 0) + '%' }"
+          ></div>
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400">
+          Enviando arquivo(s)... {{ Math.round(form.progress.percentage || 0) }}%
+        </p>
+      </div>
+
       <div class="flex justify-end">
         <PrimaryButton type="submit" :disabled="form.processing || form.comprovantes.length === 0">
           {{ form.processing ? 'Enviando...' : 'Anexar comprovante(s)' }}

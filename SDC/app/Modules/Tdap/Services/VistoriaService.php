@@ -32,6 +32,39 @@ class VistoriaService
             ->withQueryString();
     }
 
+    /**
+     * Linhas planas para exportacao CSV (respeita os filtros da listagem).
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return array<int, array<string, mixed>>
+     */
+    public function exportar(array $filtros = []): array
+    {
+        $rows = Vistoria::query()
+            ->with(['caminhao:id,placa,marca,modelo,capacidade_m3,prestador_id', 'caminhao.prestador:id,nome'])
+            ->when($filtros['parecer'] ?? null, fn ($q, $p) => $q->where('parecer', (string) $p))
+            ->when($filtros['placa_id'] ?? null, fn ($q, $id) => $q->doCaminhao((int) $id))
+            ->when(! empty($filtros['vigente']), fn ($q) => $q->vigente())
+            ->when($filtros['search'] ?? null, fn ($q, $termo) => $q->buscar((string) $termo))
+            ->orderByDesc('data')
+            ->get();
+
+        return $rows->map(fn (Vistoria $v) => [
+            'Placa'        => $v->caminhao?->placa,
+            'Modelo'       => $v->caminhao?->modelo ?? $v->modelo,
+            'Prestador'    => $v->caminhao?->prestador?->nome,
+            'Data'         => $v->data?->format('d/m/Y'),
+            'Vistoriador'  => $v->nome,
+            'Edital'       => $v->edital,
+            'Lote'         => $v->lote,
+            'Ficha'        => $v->ficha,
+            'Parecer'      => $v->parecer?->label() ?? (string) $v->parecer?->value,
+            'Vigente'      => $v->esta_vigente ? 'Sim' : 'Nao',
+            'Validade'     => $v->data?->copy()->addMonths(Vistoria::VIGENCIA_MESES)->format('d/m/Y'),
+            'Capacidade (m3)' => number_format((float) $v->capacidade, 2, ',', '.'),
+        ])->all();
+    }
+
     public function obter(int $id): Vistoria
     {
         return Vistoria::query()

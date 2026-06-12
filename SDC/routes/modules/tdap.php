@@ -60,6 +60,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
     Route::prefix('prestadores')->name('prestadores.')->group(function () {
         Route::middleware('can:tdap.prestadores.view')->group(function () {
             Route::get('/', [PrestadorController::class, 'index'])->name('index');
+            Route::get('/export', [PrestadorController::class, 'export'])->name('export');
             Route::get('/{prestador}', [PrestadorController::class, 'show'])
                 ->name('show')->whereNumber('prestador');
         });
@@ -86,6 +87,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
     Route::prefix('caminhoes')->name('caminhoes.')->group(function () {
         Route::middleware('can:tdap.caminhoes.view')->group(function () {
             Route::get('/', [CaminhaoController::class, 'index'])->name('index');
+            Route::get('/export', [CaminhaoController::class, 'export'])->name('export');
             Route::get('/{caminhao}', [CaminhaoController::class, 'show'])
                 ->name('show')->whereNumber('caminhao');
         });
@@ -112,6 +114,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
     Route::prefix('atas')->name('atas.')->group(function () {
         Route::middleware('can:tdap.atas.view')->group(function () {
             Route::get('/', [AtaController::class, 'index'])->name('index');
+            Route::get('/export', [AtaController::class, 'export'])->name('export');
             Route::get('/{ata}', [AtaController::class, 'show'])
                 ->name('show')->whereNumber('ata');
         });
@@ -138,6 +141,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
     Route::prefix('lotes')->name('lotes.')->group(function () {
         Route::middleware('can:tdap.lotes.view')->group(function () {
             Route::get('/', [LoteController::class, 'index'])->name('index');
+            Route::get('/export', [LoteController::class, 'export'])->name('export');
             Route::get('/{lote}', [LoteController::class, 'show'])
                 ->name('show')->whereNumber('lote');
         });
@@ -164,6 +168,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
     Route::prefix('cronogramas')->name('cronogramas.')->group(function () {
         Route::middleware('can:tdap.cronogramas.view')->group(function () {
             Route::get('/', [CronogramaController::class, 'index'])->name('index');
+            Route::get('/export', [CronogramaController::class, 'export'])->name('export');
             Route::get('/{cronograma}', [CronogramaController::class, 'show'])
                 ->name('show')->whereNumber('cronograma');
             Route::get('/{cronograma}/comprovantes/{comprovante}/download', [CronogramaComprovanteController::class, 'download'])
@@ -204,6 +209,10 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
         Route::middleware('can:tdap.cronogramas.delete')->group(function () {
             Route::delete('/{cronograma}', [CronogramaController::class, 'destroy'])
                 ->name('destroy')->whereNumber('cronograma');
+            Route::patch('/{cronograma}/arquivar', [CronogramaController::class, 'arquivar'])
+                ->name('arquivar')->whereNumber('cronograma');
+            Route::patch('/{cronograma}/desarquivar', [CronogramaController::class, 'desarquivar'])
+                ->name('desarquivar')->whereNumber('cronograma');
         });
     });
 
@@ -237,6 +246,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
     Route::prefix('vistorias')->name('vistorias.')->group(function () {
         Route::middleware('can:tdap.vistorias.view')->group(function () {
             Route::get('/', [VistoriaController::class, 'index'])->name('index');
+            Route::get('/export', [VistoriaController::class, 'export'])->name('export');
             Route::get('/{vistoria}', [VistoriaController::class, 'show'])
                 ->name('show')->whereNumber('vistoria');
         });
@@ -263,6 +273,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
     Route::prefix('historicos')->name('historicos.')->group(function () {
         Route::middleware('can:tdap.historico.view')->group(function () {
             Route::get('/', [HistoricoController::class, 'index'])->name('index');
+            Route::get('/export', [HistoricoController::class, 'export'])->name('export');
             Route::get('/por-entidade', [HistoricoController::class, 'porEntidade'])->name('por_entidade');
             Route::get('/{historico}', [HistoricoController::class, 'show'])
                 ->name('show')->whereNumber('historico');
@@ -273,6 +284,7 @@ Route::prefix('tdap')->name('tdap.')->group(function () {
     Route::prefix('processos')->name('processos.')->group(function () {
         Route::middleware('can:tdap.processos.view')->group(function () {
             Route::get('/', [ProcessoTdapController::class, 'index'])->name('index');
+            Route::get('/export', [ProcessoTdapController::class, 'export'])->name('export');
             Route::get('/swimlanes', [ProcessoTdapController::class, 'swimlanes'])->name('swimlanes');
             Route::get('/{processo}', [ProcessoTdapController::class, 'show'])
                 ->name('show')->whereUuid('processo');

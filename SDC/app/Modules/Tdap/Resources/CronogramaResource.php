@@ -26,6 +26,8 @@ class CronogramaResource extends JsonResource
             'ativo'                 => (bool) $this->ativo,
             'ativado_em'            => $this->ativado_em?->toIso8601String(),
             'encerrado_em'          => $this->encerrado_em?->toIso8601String(),
+            'arquivado'             => $this->arquivado_em !== null,
+            'arquivado_em'          => $this->arquivado_em?->toIso8601String(),
             'dt_inicio'             => $this->dt_inicio?->toDateString(),
             'dt_final'              => $this->dt_final?->toDateString(),
             'dt_inicio_prorrogacao' => $this->dt_inicio_prorrogacao?->toDateString(),

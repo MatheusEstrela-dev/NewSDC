@@ -32,6 +32,42 @@ class CaminhaoService
             ->withQueryString();
     }
 
+    /**
+     * Linhas planas para exportacao CSV (respeita os filtros da listagem).
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return array<int, array<string, mixed>>
+     */
+    public function exportar(array $filtros = []): array
+    {
+        $rows = Caminhao::query()
+            ->with(['prestador:id,nome,cnpj'])
+            ->when(
+                array_key_exists('ativo', $filtros) && $filtros['ativo'] !== null && $filtros['ativo'] !== '',
+                fn ($q) => $q->where('ativo', (bool) $filtros['ativo']),
+            )
+            ->when(
+                $filtros['prestador_id'] ?? null,
+                fn ($q, $id) => $q->doPrestador((int) $id),
+            )
+            ->when($filtros['search'] ?? null, fn ($q, $termo) => $q->buscar((string) $termo))
+            ->orderBy('placa')
+            ->get();
+
+        return $rows->map(fn (Caminhao $c) => [
+            'Placa'          => $c->placa,
+            'Marca'          => $c->marca,
+            'Modelo'         => $c->modelo,
+            'Cor'            => $c->cor,
+            'Ano'            => $c->ano,
+            'Capacidade m3'  => number_format((float) $c->capacidade_m3, 2, ',', '.'),
+            'Prestador'      => $c->prestador?->nome,
+            'CNPJ'           => $c->prestador?->cnpj,
+            'Situacao'       => $c->ativo ? 'Ativo' : 'Inativo',
+            'Observacoes'    => $c->observacoes,
+        ])->all();
+    }
+
     public function obter(int $id): Caminhao
     {
         return Caminhao::query()

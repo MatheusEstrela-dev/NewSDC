@@ -72,6 +72,7 @@ class Cronograma extends Model
         'ativo',
         'ativado_em',
         'encerrado_em',
+        'arquivado_em',
         'observacao',
         'stored_caminhoes',
         'stored_pmda_ponto',
@@ -96,6 +97,7 @@ class Cronograma extends Model
         'ativo'                  => 'boolean',
         'ativado_em'             => 'datetime',
         'encerrado_em'           => 'datetime',
+        'arquivado_em'           => 'datetime',
         'stored_caminhoes'       => 'array',
         'stored_pmda_ponto'      => 'array',
         'stored_municipio'       => 'array',
@@ -205,6 +207,16 @@ class Cronograma extends Model
     public function scopeEncerrado(Builder $query): Builder
     {
         return $query->whereNotNull('encerrado_em');
+    }
+
+    public function scopeArquivado(Builder $query): Builder
+    {
+        return $query->whereNotNull('arquivado_em');
+    }
+
+    public function scopeNaoArquivado(Builder $query): Builder
+    {
+        return $query->whereNull('arquivado_em');
     }
 
     public function scopeDoPrestador(Builder $query, int $prestadorId): Builder

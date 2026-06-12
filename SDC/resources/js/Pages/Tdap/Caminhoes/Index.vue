@@ -9,6 +9,13 @@
     >
       <template #actions>
         <ActionButton
+          action="export"
+          :allowed="true"
+          variant="success"
+          label="Exportar"
+          @click="openExportModal"
+        />
+        <ActionButton
           action="create"
           module="tdap"
           resource="caminhoes"
@@ -157,6 +164,13 @@
         </div>
       </div>
     </div>
+
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="Caminhoes"
+      @close="closeExportModal"
+      @export="onExport"
+    />
   </div>
 </template>
 
@@ -165,6 +179,9 @@ import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TdapStatusBadge from '@/Components/Atoms/Tdap/TdapStatusBadge.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import { useExport } from '@/composables/data/useExport';
+import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import TdapCaminhoesFiltersSection from '@/Components/Organisms/Tdap/TdapCaminhoesFiltersSection.vue';
@@ -199,5 +216,16 @@ function aplicarFiltros(filters = activeFilters.value) {
 function limparFiltros() {
   activeFilters.value = {};
   router.get(route('tdap.caminhoes.index'), {}, { preserveState: true, replace: true });
+}
+
+// Exportacao CSV (mesmo padrao do Cronograma)
+const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.caminhoes.export');
+
+function onExport(params) {
+  handleExport(params, {
+    search:       activeFilters.value.search || undefined,
+    prestador_id: activeFilters.value.prestador_id || undefined,
+    ativo:        activeFilters.value.ativo !== '' ? activeFilters.value.ativo : undefined,
+  });
 }
 </script>

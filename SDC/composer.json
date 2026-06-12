@@ -50,7 +50,11 @@
             "App\\Core\\": "core/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        }
+        },
+        "classmap": [
+            "app/Modules/Tdap/Requests/CronogramaRequest.php",
+            "app/Modules/Tdap/Requests/PrestadoresRequest.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

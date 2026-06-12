@@ -21,6 +21,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CronogramaController extends Controller
 {
@@ -45,6 +46,33 @@ class CronogramaController extends Controller
             'canEdit'      => $request->user()?->can('tdap.cronogramas.edit') ?? false,
             'canAtivar'    => $request->user()?->can('tdap.cronogramas.ativar') ?? false,
             'canDelete'    => $request->user()?->can('tdap.cronogramas.delete') ?? false,
+        ]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $filtros = $request->only(['estado', 'ata_id', 'prestador_id', 'municipio_id', 'search', 'data_inicio', 'data_fim']);
+        $data = $this->service->exportar($filtros);
+
+        $filename = 'cronogramas_'.now()->format('Y-m-d_H-i-s').'.csv';
+
+        return response()->streamDownload(function () use ($data): void {
+            $handle = fopen('php://output', 'w');
+
+            // BOM UTF-8 para Excel reconhecer acentuacao.
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            if (! empty($data)) {
+                fputcsv($handle, array_keys($data[0]), ';');
+            }
+
+            foreach ($data as $row) {
+                fputcsv($handle, array_values($row), ';');
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
@@ -160,6 +188,20 @@ class CronogramaController extends Controller
         } catch (\DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
+    }
+
+    public function arquivar(Cronograma $cronograma): RedirectResponse
+    {
+        $this->service->arquivar($cronograma->id);
+
+        return back()->with('success', "Cronograma {$cronograma->numero} arquivado.");
+    }
+
+    public function desarquivar(Cronograma $cronograma): RedirectResponse
+    {
+        $this->service->desarquivar($cronograma->id);
+
+        return back()->with('success', "Cronograma {$cronograma->numero} desarquivado.");
     }
 
     public function destroy(Cronograma $cronograma, Request $request): RedirectResponse

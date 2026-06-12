@@ -7,21 +7,26 @@
       :icon="TruckIcon"
     >
       <template #actions>
-        <Link :href="route('tdap.cronogramas.index')">
-          <SecondaryButton>Voltar</SecondaryButton>
-        </Link>
-        <Link v-if="canEdit && c.estado === 'rascunho'" :href="route('tdap.cronogramas.edit', c.id)">
-          <PrimaryButton>Editar</PrimaryButton>
-        </Link>
         <PrimaryButton v-if="canAtivar && c.estado === 'rascunho'" :disabled="!podeAtivar || ativando" @click="ativar">
           {{ ativando ? 'Ativando...' : 'Ativar' }}
         </PrimaryButton>
         <DangerButton v-if="canAtivar && c.estado === 'ativo'" @click="encerrar">
           Encerrar
         </DangerButton>
-        <DangerButton v-if="canDelete && c.estado === 'rascunho'" @click="excluir">
-          Excluir
-        </DangerButton>
+        <ActionButton
+          action="history"
+          :allowed="true"
+          :show-label="false"
+          tooltip-text="Histórico"
+          @click="abrirHistorico"
+        />
+        <ActionButton
+          action="archive"
+          :allowed="canDelete"
+          :show-label="false"
+          :tooltip-text="c.arquivado ? 'Desarquivar' : 'Arquivar'"
+          @click="arquivarToggle"
+        />
       </template>
     </TdapPageHeader>
 
@@ -163,6 +168,27 @@
       :placa="cronoCaminhaoSelecionado?.placa ?? ''"
       @close="showViagem = false"
     />
+
+    <CronogramaHistoricoModal
+      :open="historicoOpen"
+      :numero="c.numero"
+      :timeline="historicoTimeline"
+      :loading="historicoLoading"
+      @close="historicoOpen = false"
+    />
+
+    <ConfirmDialog
+      :is-open="showArchiveConfirm"
+      :title="c.arquivado ? 'Desarquivar Cronograma' : 'Arquivar Cronograma'"
+      :message="`Deseja ${c.arquivado ? 'desarquivar' : 'arquivar'} o cronograma ${c.numero}?`"
+      description="Arquivar nao exclui o cronograma: ele apenas sai da listagem padrao e pode ser restaurado a qualquer momento."
+      :variant="c.arquivado ? 'info' : 'warning'"
+      :confirm-text="c.arquivado ? 'Desarquivar' : 'Arquivar'"
+      cancel-text="Cancelar"
+      :loading="archiveLoading"
+      @confirm="confirmArchive"
+      @cancel="cancelArchive"
+    />
   </div>
 </template>
 
@@ -175,6 +201,9 @@ import EstadoBadge from '@/Components/Organisms/Tdap/EstadoBadge.vue';
 import AlocarCaminhaoModal from '@/Components/Organisms/Tdap/AlocarCaminhaoModal.vue';
 import RegistrarViagemModal from '@/Components/Organisms/Tdap/RegistrarViagemModal.vue';
 import CronogramaComprovantesSection from '@/Components/Organisms/Tdap/CronogramaComprovantesSection.vue';
+import CronogramaHistoricoModal from '@/Components/Organisms/Tdap/CronogramaHistoricoModal.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
@@ -256,9 +285,68 @@ function encerrar() {
   router.post(route('tdap.cronogramas.encerrar', c.id), { observacao: obs });
 }
 
-function excluir() {
-  if (!confirm(`Excluir cronograma ${c.numero}?`)) return;
-  router.delete(route('tdap.cronogramas.destroy', c.id));
+// Histórico / timeline (reusa endpoint generico tdap.historicos.por_entidade)
+const EVENTO_LABELS = {
+  'cronograma.criado':       'Cronograma criado',
+  'cronograma.ativado':      'Cronograma ativado',
+  'cronograma.encerrado':    'Cronograma encerrado',
+  'cronograma.prorrogado':   'Cronograma prorrogado',
+  'cronograma.arquivado':    'Cronograma arquivado',
+  'cronograma.desarquivado': 'Cronograma desarquivado',
+};
+
+function tipoCategoria(tipoEvento) {
+  if (tipoEvento?.includes('criado')) return 'criacao';
+  if (tipoEvento?.includes('arquiv')) return 'arquivo';
+  return 'edicao';
+}
+
+const historicoOpen = ref(false);
+const historicoLoading = ref(false);
+const historicoTimeline = ref([]);
+
+async function abrirHistorico() {
+  historicoTimeline.value = [];
+  historicoOpen.value = true;
+  historicoLoading.value = true;
+  try {
+    const url = `${route('tdap.historicos.por_entidade')}?entity_type=cronograma&entity_id=${c.id}`;
+    const res = await fetch(url, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+    if (res.ok) {
+      const json = await res.json();
+      historicoTimeline.value = (json?.data ?? []).map((h) => ({
+        id:          h.id,
+        tipo:        tipoCategoria(h.tipo_evento),
+        titulo:      EVENTO_LABELS[h.tipo_evento] ?? h.tipo_evento,
+        descricao:   h.obs ?? '',
+        data:        fmtDateTime(h.data_evento),
+        responsavel: h.user?.name ?? null,
+      }));
+    }
+  } catch (_) { /* silencioso: timeline vazia */ }
+  historicoLoading.value = false;
+}
+
+// Arquivar / desarquivar (distinto do soft delete)
+const showArchiveConfirm = ref(false);
+const archiveLoading = ref(false);
+
+function arquivarToggle() {
+  showArchiveConfirm.value = true;
+}
+
+function confirmArchive() {
+  const routeName = c.arquivado ? 'tdap.cronogramas.desarquivar' : 'tdap.cronogramas.arquivar';
+  router.patch(route(routeName, c.id), {}, {
+    preserveScroll: true,
+    onStart: () => { archiveLoading.value = true; },
+    onFinish: () => { archiveLoading.value = false; },
+    onSuccess: () => { showArchiveConfirm.value = false; },
+  });
+}
+
+function cancelArchive() {
+  showArchiveConfirm.value = false;
 }
 
 function fmtDate(d) {

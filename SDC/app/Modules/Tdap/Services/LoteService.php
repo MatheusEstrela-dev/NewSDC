@@ -34,6 +34,45 @@ class LoteService
             ->withQueryString();
     }
 
+    /**
+     * Linhas planas para exportacao CSV (respeita os filtros da listagem).
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return array<int, array<string, mixed>>
+     */
+    public function exportar(array $filtros = []): array
+    {
+        $rows = Lote::query()
+            ->with([
+                'ata:id,numero',
+                'municipio:id,nome,uf',
+                'prestador:id,nome,cnpj',
+            ])
+            ->when(
+                array_key_exists('ativo', $filtros) && $filtros['ativo'] !== null && $filtros['ativo'] !== '',
+                fn ($q) => $q->where('ativo', (bool) $filtros['ativo']),
+            )
+            ->when($filtros['ata_id'] ?? null, fn ($q, $id) => $q->daAta((int) $id))
+            ->when($filtros['municipio_id'] ?? null, fn ($q, $id) => $q->doMunicipio((int) $id))
+            ->when($filtros['prestador_id'] ?? null, fn ($q, $id) => $q->doPrestador((int) $id))
+            ->orderByDesc('id')
+            ->get();
+
+        return $rows->map(fn (Lote $l) => [
+            'Numero'         => $l->numero,
+            'Nome'           => $l->nome,
+            'Ata'            => $l->ata?->numero,
+            'Municipio'      => $l->municipio?->nome,
+            'UF'             => $l->municipio?->uf,
+            'Prestador'      => $l->prestador?->nome,
+            'CNPJ'           => $l->prestador?->cnpj,
+            'Volume (m3)'    => number_format((float) $l->qtd_agua_m3, 2, ',', '.'),
+            'Valor m3 (R$)'  => number_format((float) $l->valor_m3, 2, ',', '.'),
+            'Valor Total (R$)' => number_format($l->valor_total, 2, ',', '.'),
+            'Situacao'       => $l->ativo ? 'Ativo' : 'Inativo',
+        ])->all();
+    }
+
     public function obter(int $id): Lote
     {
         return Lote::query()

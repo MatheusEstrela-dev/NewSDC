@@ -5,7 +5,17 @@
       title="Histórico TDAP"
       description="Auditoria cronológica de eventos de negócio"
       :icon="ClockIcon"
-    />
+    >
+      <template #actions>
+        <ActionButton
+          action="export"
+          :allowed="true"
+          variant="success"
+          label="Exportar"
+          @click="openExportModal"
+        />
+      </template>
+    </TdapPageHeader>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
@@ -59,7 +69,18 @@
             <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ h.obs || '—' }}</td>
             <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ h.user?.name || 'Sistema' }}</td>
             <td class="px-4 py-3 text-right">
-              <Link :href="route('tdap.historicos.show', h.id)" class="text-blue-600 hover:text-blue-800 text-xs">Detalhes</Link>
+              <div class="flex items-center justify-end gap-1">
+                <ActionButton
+                  action="view"
+                  module="tdap"
+                  resource="historicos"
+                  :allowed="true"
+                  :show-label="false"
+                  size="sm"
+                  tooltip-text="Ver detalhes do evento"
+                  @click="router.visit(route('tdap.historicos.show', h.id))"
+                />
+              </div>
             </td>
           </tr>
           <tr v-if="historicos.data.length === 0">
@@ -82,6 +103,13 @@
         </div>
       </div>
     </div>
+
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="Historicos"
+      @close="closeExportModal"
+      @export="onExport"
+    />
   </div>
 </template>
 
@@ -89,8 +117,12 @@
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import { useExport } from '@/composables/data/useExport';
+import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -112,6 +144,18 @@ function aplicarFiltros() {
     de:          filtroDe.value || undefined,
     ate:         filtroAte.value || undefined,
   }, { preserveState: true, replace: true });
+}
+
+// Exportacao CSV (mesmo padrao do Cronograma)
+const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.historicos.export');
+
+function onExport(params) {
+  handleExport(params, {
+    entity_type: filtroEntityType.value || undefined,
+    tipo_evento: filtroTipo.value || undefined,
+    de:          filtroDe.value || undefined,
+    ate:         filtroAte.value || undefined,
+  });
 }
 
 function badgeTipo(tipo) {

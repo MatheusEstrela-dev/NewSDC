@@ -405,3 +405,19 @@ switch:
 # Mostra qual ambiente esta ativo
 env-status:
     @grep "DB_HOST=" SDC/.env | head -1
+
+# ==================== NGROK (TUNEL PUBLICO) ====================
+
+ngrok_domain := "parasitic-portfolio-module.ngrok-free.dev"
+ngrok_port := "8000"
+
+# Inicia o tunel ngrok: https://{{ngrok_domain}} -> http://localhost:{{ngrok_port}}.
+# O dominio reservado deve bater com TUNNEL_URL/APP_URL do SDC/.env.
+# Requer ngrok instalado e autenticado (ngrok config add-authtoken <token>).
+# Roda em foreground; use Ctrl+C para encerrar o tunel.
+ngrok:
+    ngrok http {{ngrok_port}} --domain={{ngrok_domain}}
+
+# Mostra o status/tuneis ativos via API local do ngrok (web inspector na 4040).
+ngrok-status:
+    @curl -s http://localhost:4040/api/tunnels || echo "ngrok nao esta rodando (porta 4040 indisponivel)."

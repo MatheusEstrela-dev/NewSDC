@@ -5,7 +5,17 @@ declare(strict_types=1);
 namespace App\Modules\Tdap\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
+
+/*
+|--------------------------------------------------------------------------
+| Requests centralizados do dominio Prestador (TDAP)
+|--------------------------------------------------------------------------
+| Arquivo unico mapeado via classmap (composer.json). Classe abstrata vem
+| ANTES das subclasses, pois o PHP declara as classes deste arquivo na ordem
+| em que aparecem; uma subclasse antes da pai causa fatal error.
+*/
 
 /**
  * Base SOLID/DRY: regras comuns Prestador (Fase 1 TDAP).
@@ -68,5 +78,33 @@ abstract class AbstractPrestadorRequest extends FormRequest
         $clean = preg_replace('/\D+/', '', (string) $value) ?? '';
 
         return $clean === '' ? null : $clean;
+    }
+}
+
+class StorePrestadorRequest extends AbstractPrestadorRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()?->can('tdap.prestadores.create') ?? false;
+    }
+
+    protected function cnpjUniqueRule(): Unique
+    {
+        return Rule::unique('tdap_prestadores', 'cnpj')->whereNull('deleted_at');
+    }
+}
+
+class UpdatePrestadorRequest extends AbstractPrestadorRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()?->can('tdap.prestadores.edit') ?? false;
+    }
+
+    protected function cnpjUniqueRule(): Unique
+    {
+        return Rule::unique('tdap_prestadores', 'cnpj')
+            ->ignore((int) $this->route('prestador'))
+            ->whereNull('deleted_at');
     }
 }
