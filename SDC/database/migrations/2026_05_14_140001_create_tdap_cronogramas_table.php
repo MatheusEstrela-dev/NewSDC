@@ -75,6 +75,8 @@ return new class extends Migration
                 ->comment('false = rascunho, true = ativo');
             $table->timestampTz('ativado_em')->nullable();
             $table->timestampTz('encerrado_em')->nullable();
+            $table->timestampTz('arquivado_em')->nullable()
+                ->comment('Arquivamento (distinto do soft delete deleted_at)');
 
             $table->text('observacao')->nullable();
 

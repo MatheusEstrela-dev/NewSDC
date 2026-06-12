@@ -7,6 +7,10 @@
       :icon="MapIcon"
     >
       <template #actions>
+        <Button variant="success" size="md" :icon="DownloadIcon" icon-position="left" @click="openExportModal">
+          <span class="hidden sm:inline">Exportar</span>
+          <span class="sm:hidden">CSV</span>
+        </Button>
         <Link v-if="canCreate" :href="route('tdap.lotes.create')">
           <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
             <span class="hidden sm:inline">Novo Lote</span>
@@ -80,9 +84,30 @@
                 {{ l.ativo ? 'Ativo' : 'Inativo' }}
               </span>
             </td>
-            <td class="px-4 py-3 text-right text-sm space-x-2">
-              <Link :href="route('tdap.lotes.show', l.id)" class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200">Ver</Link>
-              <Link v-if="canEdit" :href="route('tdap.lotes.edit', l.id)" class="text-blue-600 hover:text-blue-800">Editar</Link>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1">
+                <ActionButton
+                  action="view"
+                  module="tdap"
+                  resource="lotes"
+                  :allowed="true"
+                  :show-label="false"
+                  size="sm"
+                  tooltip-text="Visualizar lote"
+                  @click="router.visit(route('tdap.lotes.show', l.id))"
+                />
+                <ActionButton
+                  v-if="canEdit"
+                  action="edit"
+                  module="tdap"
+                  resource="lotes"
+                  :allowed="canEdit"
+                  :show-label="false"
+                  size="sm"
+                  tooltip-text="Editar lote"
+                  @click="router.visit(route('tdap.lotes.edit', l.id))"
+                />
+              </div>
             </td>
           </tr>
           <tr v-if="lotes.data.length === 0">
@@ -107,6 +132,13 @@
         </div>
       </div>
     </div>
+
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="Lotes"
+      @close="closeExportModal"
+      @export="onExport"
+    />
   </div>
 </template>
 
@@ -114,8 +146,12 @@
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import { useExport } from '@/composables/data/useExport';
+import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
 import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
 import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
 import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
@@ -172,5 +208,16 @@ function limparFiltros() {
   filtroPrestador.value = '';
   filtroAtivo.value = '';
   router.get(route('tdap.lotes.index'), {}, { preserveState: false });
+}
+
+// Exportacao CSV (mesmo padrao dos outros modulos)
+const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.lotes.export');
+
+function onExport(params) {
+  handleExport(params, {
+    ata_id:       filtroAta.value || undefined,
+    prestador_id: filtroPrestador.value || undefined,
+    ativo:        filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
+  });
 }
 </script>

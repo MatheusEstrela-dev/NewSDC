@@ -43,6 +43,35 @@ class ProcessoTdapService
             ->withQueryString();
     }
 
+    /**
+     * Linhas planas para exportacao CSV (respeita os filtros da listagem).
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return array<int, array<string, mixed>>
+     */
+    public function exportar(array $filtros = []): array
+    {
+        $rows = ProcessoTdap::query()
+            ->with(['municipio:id,nome,uf', 'abertoPor:id,name'])
+            ->when($filtros['estado'] ?? null, fn ($q, $e) => $q->where('estado', (string) $e))
+            ->when($filtros['swimlane'] ?? null, fn ($q, $s) => $q->where('swimlane_atual', (string) $s))
+            ->when($filtros['municipio_id'] ?? null, fn ($q, $id) => $q->where('municipio_id', (int) $id))
+            ->when($filtros['search'] ?? null, fn ($q, $termo) => $q->whereRaw('UPPER(numero) LIKE ?', ['%'.mb_strtoupper((string) $termo).'%']))
+            ->orderByDesc('aberto_em')
+            ->get();
+
+        return $rows->map(fn (ProcessoTdap $p) => [
+            'Numero'      => $p->numero,
+            'Estado'      => $p->estado->label(),
+            'Swimlane'    => $p->swimlane_atual->label(),
+            'Municipio'   => $p->municipio?->nome,
+            'UF'          => $p->municipio?->uf,
+            'Aberto Em'   => $p->aberto_em?->format('d/m/Y H:i'),
+            'Encerrado Em' => $p->encerrado_em?->format('d/m/Y H:i'),
+            'Aberto Por'  => $p->abertoPor?->name,
+        ])->all();
+    }
+
     public function obter(string $id): ProcessoTdap
     {
         return ProcessoTdap::query()

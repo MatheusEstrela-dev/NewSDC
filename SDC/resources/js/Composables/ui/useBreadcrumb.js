@@ -114,26 +114,33 @@ export function useBreadcrumb() {
         const segments = componentName.split('/');
         const items = [{ label: 'Início', route: 'dashboard' }];
 
+        const actionMap = {
+            'Index': null,
+            'Create': 'Novo',
+            'Edit': 'Edição',
+            'Show': 'Visualizar',
+        };
+
+        const humanize = (segment) => segment.replace(/([A-Z])/g, ' $1').trim();
+
+        // A ultima parte costuma ser a acao (Index/Create/Edit/Show).
+        const last = segments[segments.length - 1];
+        const isAction = Object.prototype.hasOwnProperty.call(actionMap, last);
+
+        // Modulo (primeiro segmento): ex. Tdap
         if (segments[0]) {
-            const moduleName = segments[0]
-                .replace(/([A-Z])/g, ' $1')
-                .trim();
-            // TODO: Try to infer route? e.g. lower(moduleName) + '.index'
-            items.push({ label: moduleName, route: null });
+            items.push({ label: humanize(segments[0]), route: null });
         }
 
-        if (segments[1]) {
-            const actionMap = {
-                'Index': null,
-                'Create': 'Novo',
-                'Edit': 'Edição',
-                'Show': 'Visualizar',
-            };
+        // Recursos intermediarios (entre modulo e acao): ex. Cronogramas, Prestadores
+        const middleEnd = isAction ? segments.length - 1 : segments.length;
+        for (let i = 1; i < middleEnd; i++) {
+            items.push({ label: humanize(segments[i]), route: null });
+        }
 
-            const action = actionMap[segments[1]];
-            if (action) {
-                items.push({ label: action, route: null });
-            }
+        // Acao final (so quando mapeia para um rotulo nao nulo)
+        if (isAction && actionMap[last]) {
+            items.push({ label: actionMap[last], route: null });
         }
 
         return items;

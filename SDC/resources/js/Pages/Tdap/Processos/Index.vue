@@ -7,6 +7,7 @@
       :icon="TruckIcon"
     >
       <template #actions>
+        <ActionButton action="export" :allowed="true" variant="success" label="Exportar" @click="openExportModal" />
         <Link :href="route('tdap.processos.swimlanes')">
           <Button variant="secondary" size="md">
             <span class="hidden sm:inline">Ver Swimlanes</span>
@@ -77,8 +78,19 @@
             <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ p.swimlane_label }}</td>
             <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ p.municipio_nome }}<span v-if="p.municipio_uf" class="text-slate-400">/{{ p.municipio_uf }}</span></td>
             <td class="px-4 py-3 text-xs text-slate-500">{{ fmtDate(p.aberto_em) }}</td>
-            <td class="px-4 py-3 text-right">
-              <Link :href="route('tdap.processos.show', p.id)" class="text-blue-600 hover:text-blue-800 text-sm">Abrir</Link>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1">
+                <ActionButton
+                  action="view"
+                  module="tdap"
+                  resource="processos"
+                  :allowed="true"
+                  :show-label="false"
+                  size="sm"
+                  tooltip-text="Visualizar processo"
+                  @click="router.visit(route('tdap.processos.show', p.id))"
+                />
+              </div>
             </td>
           </tr>
           <tr v-if="processos.data.length === 0">
@@ -101,6 +113,13 @@
         </div>
       </div>
     </div>
+
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="Processos"
+      @close="closeExportModal"
+      @export="onExport"
+    />
   </div>
 </template>
 
@@ -111,6 +130,9 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import EstadoProcessoBadge from '@/Components/Organisms/Tdap/EstadoProcessoBadge.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import { useExport } from '@/composables/data/useExport';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
@@ -162,6 +184,17 @@ function limparFiltros() {
   filtroEstado.value = '';
   filtroSwimlane.value = '';
   router.get(route('tdap.processos.index'), {}, { preserveState: false });
+}
+
+// Exportacao CSV (mesmo padrao do Cronograma)
+const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.processos.export');
+
+function onExport(params) {
+  handleExport(params, {
+    search:   filtroSearch.value || undefined,
+    estado:   filtroEstado.value || undefined,
+    swimlane: filtroSwimlane.value || undefined,
+  });
 }
 
 function fmtDate(d) {

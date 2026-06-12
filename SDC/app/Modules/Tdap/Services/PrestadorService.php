@@ -29,6 +29,39 @@ class PrestadorService
             ->withQueryString();
     }
 
+    /**
+     * Linhas planas para exportacao CSV (respeita os filtros da listagem).
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return array<int, array<string, mixed>>
+     */
+    public function exportar(array $filtros = []): array
+    {
+        $rows = Prestador::query()
+            ->withCount('caminhoes')
+            ->when(
+                array_key_exists('ativo', $filtros) && $filtros['ativo'] !== null && $filtros['ativo'] !== '',
+                fn ($q) => $q->where('ativo', (bool) $filtros['ativo']),
+            )
+            ->when($filtros['uf'] ?? null, fn ($q, $uf) => $q->where('uf', mb_strtoupper((string) $uf)))
+            ->when($filtros['search'] ?? null, fn ($q, $termo) => $q->buscar((string) $termo))
+            ->orderBy('nome')
+            ->get();
+
+        return $rows->map(fn (Prestador $p) => [
+            'CNPJ'          => $p->cnpj,
+            'Nome'          => $p->nome,
+            'Representante' => $p->representante,
+            'Email'         => $p->email,
+            'Telefone 1'    => $p->tel1,
+            'Telefone 2'    => $p->tel2,
+            'Cidade'        => $p->cidade,
+            'UF'            => $p->uf,
+            'Caminhoes'     => (int) $p->caminhoes_count,
+            'Situacao'      => $p->ativo ? 'Ativo' : 'Inativo',
+        ])->all();
+    }
+
     public function obter(int $id): Prestador
     {
         return Prestador::query()

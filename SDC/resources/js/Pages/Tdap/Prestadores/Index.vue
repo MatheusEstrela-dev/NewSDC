@@ -9,6 +9,13 @@
     >
       <template #actions>
         <ActionButton
+          action="export"
+          :allowed="true"
+          variant="success"
+          label="Exportar"
+          @click="openExportModal"
+        />
+        <ActionButton
           action="create"
           module="tdap"
           resource="prestadores"
@@ -151,6 +158,13 @@
         </div>
       </div>
     </div>
+
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="Prestadores"
+      @close="closeExportModal"
+      @export="onExport"
+    />
   </div>
 </template>
 
@@ -160,6 +174,9 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TdapStatusBadge from '@/Components/Atoms/Tdap/TdapStatusBadge.vue';
 import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
+import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import { useExport } from '@/composables/data/useExport';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import TdapPrestadoresFiltersSection from '@/Components/Organisms/Tdap/TdapPrestadoresFiltersSection.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -190,5 +207,15 @@ function aplicarFiltros(filters = activeFilters.value) {
 function limparFiltros() {
   activeFilters.value = {};
   router.get(route('tdap.prestadores.index'), {}, { preserveState: true, replace: true });
+}
+
+// Exportacao CSV (mesmo padrao dos outros modulos)
+const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.prestadores.export');
+
+function onExport(params) {
+  handleExport(params, {
+    search: activeFilters.value.search || undefined,
+    ativo:  activeFilters.value.ativo !== '' ? activeFilters.value.ativo : undefined,
+  });
 }
 </script>

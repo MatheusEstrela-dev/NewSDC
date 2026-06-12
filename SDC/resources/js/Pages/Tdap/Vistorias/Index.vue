@@ -7,6 +7,7 @@
       :icon="TruckIcon"
     >
       <template #actions>
+        <ActionButton action="export" :allowed="true" variant="success" label="Exportar" @click="openExportModal" />
         <Link v-if="canCreate" :href="route('tdap.vistorias.create')">
           <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
             <span class="hidden sm:inline">Nova Vistoria</span>
@@ -99,9 +100,29 @@
                 Expirada
               </span>
             </td>
-            <td class="px-4 py-3 text-right space-x-2">
-              <Link :href="route('tdap.vistorias.show', v.id)" class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200">Ver</Link>
-              <Link v-if="canEdit" :href="route('tdap.vistorias.edit', v.id)" class="text-blue-600 hover:text-blue-800">Editar</Link>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1">
+                <ActionButton
+                  action="view"
+                  module="tdap"
+                  resource="vistorias"
+                  :allowed="true"
+                  :show-label="false"
+                  size="sm"
+                  tooltip-text="Visualizar vistoria"
+                  @click="router.visit(route('tdap.vistorias.show', v.id))"
+                />
+                <ActionButton
+                  action="edit"
+                  module="tdap"
+                  resource="vistorias"
+                  :allowed="canEdit"
+                  :show-label="false"
+                  size="sm"
+                  tooltip-text="Editar vistoria"
+                  @click="router.visit(route('tdap.vistorias.edit', v.id))"
+                />
+              </div>
             </td>
           </tr>
           <tr v-if="vistorias.data.length === 0">
@@ -124,6 +145,13 @@
         </div>
       </div>
     </div>
+
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="Vistorias"
+      @close="closeExportModal"
+      @export="onExport"
+    />
   </div>
 </template>
 
@@ -133,6 +161,10 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import { useExport } from '@/composables/data/useExport';
+import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
 import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
 import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
 import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
@@ -188,6 +220,18 @@ function aplicarFiltros() {
     parecer:  filtroParecer.value || undefined,
     vigente:  filtroVigente.value ? 1 : undefined,
   }, { preserveState: true, replace: true });
+}
+
+// Exportacao CSV (mesmo padrao dos outros modulos)
+const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.vistorias.export');
+
+function onExport(params) {
+  handleExport(params, {
+    search:   filtroSearch.value || undefined,
+    placa_id: filtroCaminhao.value || undefined,
+    parecer:  filtroParecer.value || undefined,
+    vigente:  filtroVigente.value ? 1 : undefined,
+  });
 }
 
 function fmtDate(d) {

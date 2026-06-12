@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class HistoricoController extends Controller
 {
@@ -30,6 +31,33 @@ class HistoricoController extends Controller
             'historicos'   => HistoricoResource::collection($historicos),
             'estatisticas' => fn () => $this->service->obterEstatisticas(),
             'filtros'      => $filtros,
+        ]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $filtros = $request->only(['entity_type', 'entity_id', 'tipo_evento', 'user_id', 'de', 'ate']);
+        $data = $this->service->exportar($filtros);
+
+        $filename = 'historicos_'.now()->format('Y-m-d_H-i-s').'.csv';
+
+        return response()->streamDownload(function () use ($data): void {
+            $handle = fopen('php://output', 'w');
+
+            // BOM UTF-8 para Excel reconhecer acentuacao.
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            if (! empty($data)) {
+                fputcsv($handle, array_keys($data[0]), ';');
+            }
+
+            foreach ($data as $row) {
+                fputcsv($handle, array_values($row), ';');
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 

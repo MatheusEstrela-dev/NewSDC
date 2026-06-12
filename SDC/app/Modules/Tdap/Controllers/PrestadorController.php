@@ -16,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PrestadorController extends Controller
 {
@@ -37,6 +38,33 @@ class PrestadorController extends Controller
             'canCreate'    => $request->user()?->can('tdap.prestadores.create') ?? false,
             'canEdit'      => $request->user()?->can('tdap.prestadores.edit') ?? false,
             'canDelete'    => $request->user()?->can('tdap.prestadores.delete') ?? false,
+        ]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $filtros = $request->only(['ativo', 'uf', 'search']);
+        $data = $this->service->exportar($filtros);
+
+        $filename = 'prestadores_'.now()->format('Y-m-d_H-i-s').'.csv';
+
+        return response()->streamDownload(function () use ($data): void {
+            $handle = fopen('php://output', 'w');
+
+            // BOM UTF-8 para Excel reconhecer acentuacao.
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            if (! empty($data)) {
+                fputcsv($handle, array_keys($data[0]), ';');
+            }
+
+            foreach ($data as $row) {
+                fputcsv($handle, array_values($row), ';');
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 

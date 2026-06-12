@@ -83,6 +83,37 @@ class HistoricoService
     }
 
     /**
+     * Linhas planas para exportacao CSV (respeita os filtros da listagem).
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return array<int, array<string, mixed>>
+     */
+    public function exportar(array $filtros = []): array
+    {
+        $rows = Historico::query()
+            ->with('user:id,name')
+            ->when($filtros['entity_type'] ?? null, fn ($q, $t) => $q->where('entity_type', (string) $t))
+            ->when($filtros['entity_id'] ?? null, fn ($q, $id) => $q->where('entity_id', (int) $id))
+            ->when($filtros['tipo_evento'] ?? null, fn ($q, $t) => $q->where('tipo_evento', (string) $t))
+            ->when($filtros['user_id'] ?? null, fn ($q, $id) => $q->where('user_id', (int) $id))
+            ->when($filtros['de'] ?? null, fn ($q, $de) => $q->whereDate('data_evento', '>=', (string) $de))
+            ->when($filtros['ate'] ?? null, fn ($q, $ate) => $q->whereDate('data_evento', '<=', (string) $ate))
+            ->orderByDesc('data_evento')
+            ->orderByDesc('id')
+            ->limit(5000)
+            ->get();
+
+        return $rows->map(fn (Historico $h) => [
+            'Data Evento' => $h->data_evento?->format('d/m/Y H:i:s'),
+            'Tipo Evento' => $h->tipo_evento,
+            'Entidade'    => $h->entity_type,
+            'Entidade Id' => (int) $h->entity_id,
+            'Responsavel' => $h->user?->name ?? 'Sistema',
+            'Observacao'  => $h->obs,
+        ])->all();
+    }
+
+    /**
      * @return array<string, int>
      */
     public function obterEstatisticas(): array
