@@ -53,19 +53,16 @@ class Tenant extends Model
     }
 
     /**
-     * Retorna o nome da conexão de banco que deve ser usada para este tenant.
-     * Se o tenant tiver database próprio, configura a conexão 'tenancy' em runtime.
+     * Nome da conexão de banco do tenant.
+     *
+     * @deprecated Modelo A (single-DB): a tenancy é isolada por tenant_id (trait
+     * HasTenant), não por banco. Trocar a conexão por request mutava config
+     * global (`database.connections.tenancy.database`) e vazava entre coroutines
+     * concorrentes no Swoole. Sempre retorna a conexão padrão; a coluna
+     * `database` deixou de comutar conexão.
      */
     public function getDatabaseConnection(): string
     {
-        if ($this->database) {
-            config([
-                'database.connections.tenancy.database' => $this->database,
-            ]);
-
-            return 'tenancy';
-        }
-
         return config('database.default');
     }
 
