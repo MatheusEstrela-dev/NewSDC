@@ -142,6 +142,12 @@ return [
             'sslrootcert' => env('DB_SSL_CA') ?: null,
             'application_name' => env('APP_NAME', 'sdc-laravel'),
             'timezone' => env('DB_TIMEZONE', 'America/Sao_Paulo'),
+            // SwoolePdoPool (App\Support\Database\SwoolePdoPool) usa esta conexao.
+            // TETO DE CONEXOES (restricao dura, sobretudo on-premise):
+            //   SWOOLE_PG_POOL_SIZE x OCTANE_WORKERS x instancias <= max_connections - reserva
+            // Azure: max_connections alto -> default 16 ok.
+            // On-premise modesto: medir max_connections do servidor e reduzir
+            //   SWOOLE_PG_POOL_SIZE (ex.: 8) para nao esgotar o Postgres.
             'options' => [
                 PDO::ATTR_EMULATE_PREPARES => false,
                 PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', true),
