@@ -136,6 +136,15 @@ RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions 
 # Autoloader otimizado com codigo presente
 RUN composer dump-autoload --optimize --classmap-authoritative
 
+# Gate de build: toda classe type-hintada nas rotas (ex.: FormRequest) deve
+# resolver pelo autoloader, senao o BUILD falha. Evita publicar imagem com
+# classmap inconsistente com o codigo -> 500 em toda pagina via Ziggy (10/06).
+# APP_KEY dummy inline so para bootar o artisan -- route:verify-signatures nao
+# toca em DB/rede; o entrypoint injeta o ambiente real em runtime. (.env e
+# .dockerignored, entao nao existe no contexto de build.)
+RUN APP_ENV=production APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
+    php artisan route:verify-signatures
+
 # Symlink para case-sensitivity (Linux)
 RUN cd resources/js && ln -sf composables Composables
 
