@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Traits;
 
 use App\Models\Tenant;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -19,8 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Requer coluna `tenant_id` na tabela (nullable para compatibilidade com
  * registros globais/sistema sem tenant específico).
  *
- * Quando um tenant estiver ativo no container (app('tenant')),
- * todas as queries automaticamente filtram por tenant_id.
+ * Quando um tenant estiver ativo no contexto da request (TenantContext, seguro
+ * para coroutine), todas as queries automaticamente filtram por tenant_id.
  */
 trait HasTenant
 {
@@ -30,7 +31,7 @@ trait HasTenant
     protected static function bootHasTenant(): void
     {
         static::addGlobalScope('tenant', function (Builder $query) {
-            $tenant = app()->bound('tenant') ? app('tenant') : null;
+            $tenant = TenantContext::get();
 
             if ($tenant instanceof Tenant) {
                 $query->where($query->getModel()->getTable() . '.tenant_id', $tenant->id);
@@ -39,7 +40,7 @@ trait HasTenant
 
         // Preenche tenant_id automaticamente ao criar
         static::creating(function ($model) {
-            $tenant = app()->bound('tenant') ? app('tenant') : null;
+            $tenant = TenantContext::get();
 
             if ($tenant instanceof Tenant && empty($model->tenant_id)) {
                 $model->tenant_id = $tenant->id;

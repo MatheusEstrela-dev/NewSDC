@@ -127,6 +127,12 @@ php artisan view:cache 2>/dev/null || echo "Aviso: falha em view:cache"
 # route:cache exige zero rotas closure; se falhar, segue sem cache de rotas.
 php artisan route:cache 2>/dev/null || echo "Aviso: route:cache pulado (rotas closure presentes)"
 
+# Gate fail-closed: aborta ANTES de servir se alguma classe type-hintada em rota
+# (ex.: FormRequest) for irresolvivel. Repete a reflexao que o Ziggy faz em todo
+# render; sem isto, um classmap inconsistente com o codigo derruba TODA pagina em
+# runtime (incidente de 10/06). Falhar aqui mata o deploy, nao o usuario.
+php artisan route:verify-signatures || { echo "FATAL: assinaturas de rota irresoluveis -- abortando boot"; exit 1; }
+
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
 # Queue worker em background (mesmo padrao do entrypoint de producao).

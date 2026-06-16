@@ -170,12 +170,11 @@ return [
         \App\Modules\Decretacoes\Services\ProcessoQueryService::class,
     ],
 
-    // 'tenant' e registrado por request via app()->instance() no middleware
-    // SetTenant; o flush garante que uma request sem tenant resolvido nunca
-    // herde o tenant da request anterior no mesmo worker.
+    // O tenant da request agora vive no TenantContext (escopo de coroutine,
+    // seguro sob Swoole), nao mais no container -- por isso 'tenant' saiu do
+    // flush. EntradaProcessoService segue flushado por guardar estado de request.
     'flush' => [
         \App\Modules\Decretacoes\Services\EntradaProcessoService::class,
-        'tenant',
     ],
 
     /*
