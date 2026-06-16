@@ -61,18 +61,32 @@ RUN docker-php-ext-configure gd \
     sockets
 
 # Extensoes PECL: swoole (coroutines), igbinary, redis.
-# swoole DEVE ser compilado com openssl: sob SWOOLE_HOOK_ALL o predis abre o
-# Redis da Azure via tls:// (porta 6380) e o hook de stream do Swoole so trata
-# TLS se a extensao tiver openssl (define SWOOLE_SSL). A extensao 'sockets'
-# nativa ja foi instalada acima (swoole --enable-sockets exige php_sockets.h).
-# Pin explicito para evitar mudanca silenciosa do PECL em rebuilds.
+# swoole DEVE ser compilado com:
+#  - openssl: sob SWOOLE_HOOK_ALL o predis abre o Redis da Azure via tls:// (porta
+#    6380) e o hook de stream do Swoole so trata TLS se a extensao tiver openssl.
+#  - swoole-pgsql: SEM ele o SWOOLE_HOOK_ALL NAO hooka o pdo_pgsql e as queries
+#    Postgres BLOQUEIAM o worker (zero paralelismo de I/O sob coroutine). Validado
+#    por benchmark 2x pg_sleep(0.3): 600ms (serial) -> 336ms (paralelo, 2 conexoes).
+# A extensao 'sockets' nativa ja foi instalada acima (--enable-sockets exige
+# php_sockets.h); postgresql-dev (libpq) ja consta nos build-deps acima.
+# Build MANUAL (configure+make) do swoole em vez de pecl --configureoptions: o
+# pecl se mostrou instavel ao passar enable-swoole-pgsql; o manual e deterministico.
 ARG SWOOLE_VERSION=6.2.1
 RUN pecl install igbinary \
     && docker-php-ext-enable igbinary \
     && pecl install redis \
     && docker-php-ext-enable redis \
-    && pecl install --configureoptions 'enable-openssl="yes" enable-sockets="yes" enable-brotli="no"' swoole-${SWOOLE_VERSION} \
+    && cd /tmp \
+    && pecl download swoole-${SWOOLE_VERSION} \
+    && tar xzf swoole-*.tgz \
+    && cd swoole-${SWOOLE_VERSION} \
+    && phpize \
+    && ./configure --enable-openssl --enable-sockets --enable-swoole-pgsql \
+    && make -j"$(nproc)" \
+    && make install \
     && docker-php-ext-enable swoole \
+    && cd / \
+    && rm -rf /tmp/swoole* \
     && apk del .build-deps
 
 # Composer
