@@ -169,6 +169,7 @@ return [
         App\Modules\Demandas\DemandasServiceProvider::class,
         App\Modules\Tdap\TdapServiceProvider::class,
         App\Modules\Decretacoes\DecretacoesServiceProvider::class,
+        App\Modules\Pmda\PmdaServiceProvider::class,
         App\Modules\AjudaHumanitaria\AjudaHumanitariaServiceProvider::class,
         App\Modules\Treinamento\TreinamentoServiceProvider::class,
         App\Modules\Inmet\InmetServiceProvider::class,
