@@ -31,18 +31,17 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ConnectionSemaphore::class, function ($app) {
             $cfg = $app['config']->get('resilience.db');
 
-            // Sem Redis: passa client null -> semaforo opera em modo no-op.
-            $client = null;
+            // Resolver lazy: cada acquire/release pega a conexao da coroutine
+            // atual (coroutine-safe sob Swoole+pool). NAO capturar o client aqui
+            // -- este binding e singleton e a conexao seria compartilhada entre
+            // coroutines. Sem Redis: resolver null -> semaforo em modo no-op.
+            $resolver = null;
             if ($app['config']->get('resilience.redis_enabled', true)) {
-                try {
-                    $client = Redis::connection()->client();
-                } catch (\Throwable $e) {
-                    $client = null;
-                }
+                $resolver = static fn () => Redis::connection()->client();
             }
 
             return new ConnectionSemaphore(
-                $client,
+                $resolver,
                 limit: $cfg['max_concurrent'],
                 waitMs: $cfg['acquire_poll_ms'],
                 maxWaitMs: $cfg['acquire_wait_ms'],
