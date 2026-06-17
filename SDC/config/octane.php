@@ -69,7 +69,13 @@ return [
     'swoole' => [
         'options' => [
             'enable_coroutine' => true,
-            'hook_flags' => defined('SWOOLE_HOOK_ALL') ? SWOOLE_HOOK_ALL : 0,
+            // Fase 3 (RedisPool nativo) pendente: sob SWOOLE_HOOK_ALL as conexoes
+            // Redis (sessao+cache+permissoes, usadas em todo request) sao
+            // compartilhadas entre coroutines e colidem ("Socket already bound to
+            // another coroutine"). Ate o pool existir, os hooks ficam OFF por
+            // padrao -> I/O bloqueante por worker, sem interleaving = estavel.
+            // Reabilitar com OCTANE_HOOK_FLAGS_ENABLED=true quando o pool entrar.
+            'hook_flags' => env('OCTANE_HOOK_FLAGS_ENABLED', false) && defined('SWOOLE_HOOK_ALL') ? SWOOLE_HOOK_ALL : 0,
             'task_worker_num' => (int) env('OCTANE_TASK_WORKERS', 4),
             // Octane 2.13 registra o callback task com a assinatura classica.
             // Com task coroutine ativo, Swoole 6 entrega Swoole\Server\Task

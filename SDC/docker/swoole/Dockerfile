@@ -135,7 +135,7 @@ RUN composer install \
     --no-dev \
     --no-interaction \
     --prefer-dist \
-    --optimize-autoloader \
+    --no-autoloader \
     --ignore-platform-reqs \
     --no-scripts || (echo "ERRO ao instalar dependencias" && cat composer.json && exit 1)
 
