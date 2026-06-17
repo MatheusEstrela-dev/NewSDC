@@ -80,6 +80,25 @@ final class SwooleRedisPool
     }
 
     /**
+     * Pre-cria as conexoes ate o teto (chamar no WorkerStarting). Move o custo
+     * de handshake TLS do burst do request para o boot do worker, evitando
+     * timeout de acquire no pico inicial. Falha de criacao interrompe o warm
+     * sem derrubar (as restantes sobem on-demand).
+     */
+    public function warm(): void
+    {
+        while ($this->created < $this->size) {
+            try {
+                $conn = ($this->factory)();
+            } catch (\Throwable $e) {
+                break;
+            }
+            $this->created++;
+            $this->channel->push($conn);
+        }
+    }
+
+    /**
      * Empresta uma conexao, executa a closure e devolve ao final (mesmo em
      * excecao). Conexao morta (\RedisException) e descartada, nao devolvida.
      */

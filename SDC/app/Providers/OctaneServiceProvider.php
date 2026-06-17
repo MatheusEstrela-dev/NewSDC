@@ -113,7 +113,9 @@ class OctaneServiceProvider extends ServiceProvider
             $timeout = (float) env('OCTANE_REDIS_POOL_TIMEOUT', 3.0);
 
             foreach (['default', 'cache'] as $name) {
-                $redis->registerPool($name, SwooleRedisPool::fromConnection($name, $size, $timeout));
+                $pool = SwooleRedisPool::fromConnection($name, $size, $timeout);
+                $pool->warm(); // pre-aquece no boot: evita handshake TLS no burst -> sem timeout de acquire
+                $redis->registerPool($name, $pool);
             }
         } catch (\Throwable $e) {
             // Pool e otimizacao opcional; nunca derruba o worker se falhar.
