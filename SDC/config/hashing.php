@@ -48,7 +48,10 @@ return [
         'memory' => (int) env('ARGON_MEMORY', 65536),
         'threads' => (int) env('ARGON_THREADS', 2),
         'time' => (int) env('ARGON_TIME', 2),
-        'verify' => true,
+        // verify=false permite que Hash::check valide hashes legados (bcrypt)
+        // via password_verify, que detecta o algoritmo pelo prefixo do hash, sem
+        // lancar excecao. O rehash-on-login (LoginRequest) migra para argon2id.
+        'verify' => env('HASH_VERIFY', false),
     ],
 
 ];

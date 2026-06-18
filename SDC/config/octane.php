@@ -69,7 +69,18 @@ return [
     'swoole' => [
         'options' => [
             'enable_coroutine' => true,
-            'hook_flags' => defined('SWOOLE_HOOK_ALL') ? SWOOLE_HOOK_ALL : 0,
+            // Paralelismo por coroutine ligado com OCTANE_HOOK_FLAGS_ENABLED=true.
+            // Os pools por-coroutine (PDO + Redis) tornam Eloquent/predis seguros
+            // sob hooks. EXCLUIMOS o hook de curl: o SWOOLE_HOOK_CURL troca o handle
+            // por Swoole\Curl\Handler, que o CurlMultiHandler do Guzzle nao consegue
+            // usar (Object ... could not be converted to int) -> quebra qualquer SDK
+            // baseada em Guzzle (ex.: upload Azure Blob dos anexos). Curl fica
+            // bloqueante (ok, nao e hot path); PDO/Redis/stream seguem assincronos.
+            'hook_flags' => env('OCTANE_HOOK_FLAGS_ENABLED', false) && defined('SWOOLE_HOOK_ALL')
+                ? SWOOLE_HOOK_ALL
+                    & ~(defined('SWOOLE_HOOK_CURL') ? SWOOLE_HOOK_CURL : 0)
+                    & ~(defined('SWOOLE_HOOK_NATIVE_CURL') ? SWOOLE_HOOK_NATIVE_CURL : 0)
+                : 0,
             'task_worker_num' => (int) env('OCTANE_TASK_WORKERS', 4),
             // Octane 2.13 registra o callback task com a assinatura classica.
             // Com task coroutine ativo, Swoole 6 entrega Swoole\Server\Task
