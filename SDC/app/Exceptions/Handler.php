@@ -286,6 +286,14 @@ class Handler extends ExceptionHandler
         }
 
         if ($e instanceof ModelNotFoundException || ($e instanceof HttpException && $e->getStatusCode() === 404)) {
+            // Seguranca: URL invalida nao pode revelar a aplicacao. Sem usuario
+            // autenticado, NAO renderiza o shell Inertia (branding, estrutura de
+            // navegacao, csrf) — devolve 404 generico (Symfony). Usuario logado
+            // mantem o 404 dentro do layout (UX), pois ja tem acesso ao sistema.
+            if (! $request->user()) {
+                return parent::render($request, $e);
+            }
+
             // FIX: Same issue - re-share auth/acl for error pages
             Inertia::share($this->getInertiaSharedData($request));
 
