@@ -1,8 +1,7 @@
+# OBSOLETO: aponta para newsdcdefesa/newsdc (inexistentes) e Dockerfile frankenphp. Alvo real: sdcdefesa / acrdefesacivil / SDC/docker/swoole/Dockerfile. Reescrever antes de reativar push.
 name: Deploy newsdcdefesa
 
 on:
-  push:
-    branches: [main, master, dev]
   workflow_dispatch:
     inputs:
       branch:
