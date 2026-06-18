@@ -87,6 +87,39 @@ final class SwoolePdoPool
         );
     }
 
+    public function available(): int
+    {
+        return $this->channel->length();
+    }
+
+    /**
+     * Pre-cria as conexoes ate o teto (chamar no WorkerStarting). Move o custo
+     * de abrir conexao/handshake TLS do burst do request para o boot do worker.
+     * Falha de criacao interrompe sem derrubar (restantes sobem on-demand).
+     */
+    public function warm(): void
+    {
+        // Channel->push exige contexto de coroutine. O WorkerStarting pode nao
+        // estar em coroutine -> embrulha num Coroutine\run quando preciso.
+        $fill = function (): void {
+            while ($this->created < $this->size) {
+                try {
+                    $pdo = new \PDO($this->dsn, $this->username, $this->password, $this->options);
+                } catch (\Throwable $e) {
+                    break;
+                }
+                $this->created++;
+                $this->channel->push($pdo);
+            }
+        };
+
+        if (\Swoole\Coroutine::getCid() > 0) {
+            $fill();
+        } else {
+            \Swoole\Coroutine\run($fill);
+        }
+    }
+
     /**
      * Empresta uma conexao do pool para a closure e a devolve ao final, mesmo
      * em caso de excecao. Retorna o que a closure retornar.
@@ -112,7 +145,7 @@ final class SwoolePdoPool
         return $result;
     }
 
-    private function acquire(): PDO
+    public function acquire(): PDO
     {
         // Cria sob demanda ate o teto; senao espera uma conexao ser devolvida.
         // A checagem + incremento sao contiguos (sem yield), seguros no
@@ -133,7 +166,7 @@ final class SwoolePdoPool
         return $this->channel->pop();
     }
 
-    private function release(PDO $pdo): void
+    public function release(PDO $pdo): void
     {
         // Conexao com transacao aberta nao pode voltar suja ao pool.
         try {
@@ -153,7 +186,7 @@ final class SwoolePdoPool
      * Libera um slot do pool sem devolver conexao (descarte). O contador volta
      * abaixo do teto, permitindo que uma nova conexao seja criada no lugar.
      */
-    private function discard(): void
+    public function discard(): void
     {
         if ($this->created > 0) {
             $this->created--;

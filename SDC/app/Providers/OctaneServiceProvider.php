@@ -40,6 +40,13 @@ class OctaneServiceProvider extends ServiceProvider
                     $config
                 );
             });
+
+            // Sob hooks, troca o DatabaseManager por um coroutine-aware: a conexao
+            // 'pgsql' passa a ser resolvida por-coroutine (PDO do SwoolePdoPool),
+            // isolando socket e estado de transacao entre coroutines.
+            $this->app->extend('db', function ($manager, $app) {
+                return new \App\Support\Database\CoroutineDatabaseManager($app, $app['db.factory']);
+            });
         }
     }
 
@@ -62,6 +69,7 @@ class OctaneServiceProvider extends ServiceProvider
         $this->app['events']->listen(RequestTerminated::class, function () {
             $this->flushRequestState();
             $this->releaseRedisCoroutine();
+            $this->releasePgsqlCoroutine();
         });
     }
 
@@ -88,6 +96,9 @@ class OctaneServiceProvider extends ServiceProvider
             $size = (int) env('SWOOLE_PG_POOL_SIZE', 16);
 
             $this->app->singleton('swoole.pgsql.pool', fn () => SwoolePdoPool::fromConnection('pgsql', $size));
+            if ($this->hooksEnabled()) {
+                $this->app->make('swoole.pgsql.pool')->warm();
+            }
         } catch (\Throwable $e) {
             // Pool e otimizacao opcional; nunca derruba o worker se falhar.
         }
@@ -140,6 +151,25 @@ class OctaneServiceProvider extends ServiceProvider
             $redis = $this->app->make('redis');
             if ($redis instanceof CoroutineRedisManager) {
                 $redis->releaseCoroutine($cid);
+            }
+        } catch (\Throwable $e) {
+        }
+    }
+
+    /**
+     * Devolve ao pool a conexao pgsql emprestada pela coroutine do request
+     * (rollback de transacao aberta antes de devolver). Inerte fora de hooks.
+     */
+    protected function releasePgsqlCoroutine(): void
+    {
+        if (! $this->hooksEnabled()) {
+            return;
+        }
+
+        try {
+            $db = $this->app->make('db');
+            if ($db instanceof \App\Support\Database\CoroutineDatabaseManager) {
+                $db->releaseCurrentCoroutine();
             }
         } catch (\Throwable $e) {
         }
