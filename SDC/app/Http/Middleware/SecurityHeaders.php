@@ -86,6 +86,15 @@ class SecurityHeaders
             // Bloqueio = sem dado, nao quebra fluxo.
             "https://api.ipify.org",
             "https://ipapi.co",
+            // APIs externas chamadas pelo frontend tambem em PRODUCAO:
+            // - IBGE: fallback de municipios para UFs fora da base local (useLocationData)
+            // - ViaCEP: busca de endereco por CEP (useCep)
+            // - Nominatim: geocoding do endereco (useCep)
+            // Sem estas no connect-src, o navegador bloqueia o fetch e o select
+            // de municipio/CEP fica vazio para qualquer UF que dependa do fallback.
+            "https://servicodados.ibge.gov.br",
+            "https://viacep.com.br",
+            "https://nominatim.openstreetmap.org",
         ];
 
         // Allow app URL
@@ -122,9 +131,6 @@ class SecurityHeaders
             ]);
 
             $connectSrc = array_merge($connectSrc, $viteHosts, [
-                'https://servicodados.ibge.gov.br',
-                'https://viacep.com.br',
-                'https://nominatim.openstreetmap.org',
                 'http://host.docker.internal:8000',
                 'http://localhost:18001',
                 'http://127.0.0.1:18001',
