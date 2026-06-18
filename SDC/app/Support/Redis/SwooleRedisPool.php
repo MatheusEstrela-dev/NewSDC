@@ -87,14 +87,24 @@ final class SwooleRedisPool
      */
     public function warm(): void
     {
-        while ($this->created < $this->size) {
-            try {
-                $conn = ($this->factory)();
-            } catch (\Throwable $e) {
-                break;
+        // Channel->push exige contexto de coroutine. O WorkerStarting pode nao
+        // estar em coroutine -> embrulha num Coroutine\run quando preciso.
+        $fill = function (): void {
+            while ($this->created < $this->size) {
+                try {
+                    $conn = ($this->factory)();
+                } catch (\Throwable $e) {
+                    break;
+                }
+                $this->created++;
+                $this->channel->push($conn);
             }
-            $this->created++;
-            $this->channel->push($conn);
+        };
+
+        if (\Swoole\Coroutine::getCid() > 0) {
+            $fill();
+        } else {
+            \Swoole\Coroutine\run($fill);
         }
     }
 
