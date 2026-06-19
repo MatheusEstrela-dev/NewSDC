@@ -21,6 +21,14 @@ class DatabaseCircuitBreaker
     private const KEY_TIMEOUTS = self::PREFIX.'timeouts';
     private const KEY_OPENED_AT = self::PREFIX.'opened_at';
 
+    private string $localState = 'closed';
+
+    private int $localTimeouts = 0;
+
+    private int $localTimeoutWindowStartedAt = 0;
+
+    private int $localOpenedAt = 0;
+
     public function __construct(
         private int $timeoutThreshold = 5,
         private int $windowSeconds = 60,
@@ -32,7 +40,7 @@ class DatabaseCircuitBreaker
         $state = $this->state();
 
         if ($state === 'open') {
-            $openedAt = (int) Cache::get(self::KEY_OPENED_AT, 0);
+            $openedAt = $this->localOpenedAt;
             if ($openedAt && (time() - $openedAt) >= $this->resetSeconds) {
                 $this->setState('half-open');
                 return false;
@@ -45,15 +53,28 @@ class DatabaseCircuitBreaker
 
     public function state(): string
     {
-        return (string) Cache::get(self::KEY_STATE, 'closed');
+        return $this->localState;
     }
 
     public function recordTimeout(): void
     {
-        $count = (int) Cache::get(self::KEY_TIMEOUTS, 0) + 1;
-        Cache::put(self::KEY_TIMEOUTS, $count, $this->windowSeconds);
+        $now = time();
+        if ($this->localTimeoutWindowStartedAt === 0
+            || ($now - $this->localTimeoutWindowStartedAt) >= $this->windowSeconds) {
+            $this->localTimeoutWindowStartedAt = $now;
+            $this->localTimeouts = 0;
+        }
 
-        if ($count >= $this->timeoutThreshold) {
+        $this->localTimeouts++;
+
+        try {
+            Cache::put(self::KEY_TIMEOUTS, $this->localTimeouts, $this->windowSeconds);
+        } catch (\Throwable) {
+            // Observabilidade best-effort: o circuit breaker nao pode derrubar
+            // worker por falha/concorrencia de Redis.
+        }
+
+        if ($this->localTimeouts >= $this->timeoutThreshold) {
             $this->trip();
         }
     }
@@ -68,25 +89,43 @@ class DatabaseCircuitBreaker
     private function trip(): void
     {
         $this->setState('open');
-        Cache::put(self::KEY_OPENED_AT, time(), $this->resetSeconds * 3);
+        $this->localOpenedAt = time();
+
+        try {
+            Cache::put(self::KEY_OPENED_AT, $this->localOpenedAt, $this->resetSeconds * 3);
+        } catch (\Throwable) {
+        }
 
         Log::warning('Database circuit breaker tripped (OPEN)', [
-            'timeouts_in_window' => Cache::get(self::KEY_TIMEOUTS),
+            'timeouts_in_window' => $this->localTimeouts,
             'reset_in_seconds' => $this->resetSeconds,
         ]);
     }
 
     private function close(): void
     {
-        Cache::forget(self::KEY_STATE);
-        Cache::forget(self::KEY_TIMEOUTS);
-        Cache::forget(self::KEY_OPENED_AT);
+        $this->localState = 'closed';
+        $this->localTimeouts = 0;
+        $this->localTimeoutWindowStartedAt = 0;
+        $this->localOpenedAt = 0;
+
+        try {
+            Cache::forget(self::KEY_STATE);
+            Cache::forget(self::KEY_TIMEOUTS);
+            Cache::forget(self::KEY_OPENED_AT);
+        } catch (\Throwable) {
+        }
 
         Log::info('Database circuit breaker reset (CLOSED)');
     }
 
     private function setState(string $state): void
     {
-        Cache::put(self::KEY_STATE, $state, $this->resetSeconds * 3);
+        $this->localState = $state;
+
+        try {
+            Cache::put(self::KEY_STATE, $state, $this->resetSeconds * 3);
+        } catch (\Throwable) {
+        }
     }
 }

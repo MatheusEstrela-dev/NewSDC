@@ -154,12 +154,11 @@ class AppServiceProvider extends ServiceProvider
             );
         }
 
-        // Spatie permissions: reset cache entre requests no Octane
-        if (class_exists(\Laravel\Octane\Events\RequestReceived::class)) {
-            $this->app['events']->listen(RequestReceived::class, function () {
-                app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
-            });
-        }
+        // Spatie permissions: nao limpar cache em toda request sob Octane.
+        // forgetCachedPermissions() faz Cache::forget() no Redis; com Swoole
+        // coroutines isso virou hot path e pode compartilhar socket Redis entre
+        // coroutines. O cache deve ser limpo em deploy/comando admin ou quando
+        // permissoes forem alteradas, nao no RequestReceived.
 
         // Query budget guard: bind globalmente e zera contador por request.
         $budget = $this->app->make(QueryBudgetGuard::class);
@@ -274,10 +273,10 @@ class AppServiceProvider extends ServiceProvider
         $circuitBreaker = $this->app->make(DatabaseCircuitBreaker::class);
 
         DB::listen(function ($query) use ($slowQueryThreshold, $circuitBreaker) {
-            // Circuit breaker: timeout suspeito (>30s) abre. recordSuccess()
-            // so eh chamado quando o breaker esta em half-open para evitar
-            // overhead Redis em todas queries (pico de 1k req/s x 30 queries
-            // gerava 30k Cache::get/s desnecessarios no estado 'closed').
+            // Circuit breaker: timeout suspeito (>30s) abre. O estado agora e
+            // local em memoria por worker no caminho comum; Redis so e usado
+            // best-effort em transicoes. Evita Cache::get() por query sob
+            // Swoole, que pode compartilhar socket Redis entre coroutines.
             if ($query->time > 30000) {
                 $circuitBreaker->recordTimeout();
             } elseif ($circuitBreaker->state() === 'half-open') {

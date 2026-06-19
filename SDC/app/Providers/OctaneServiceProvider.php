@@ -40,6 +40,7 @@ class OctaneServiceProvider extends ServiceProvider
                     $config
                 );
             });
+            $this->forgetRedisBackedSingletons();
 
             // Sob hooks, troca o DatabaseManager por um coroutine-aware: a conexao
             // 'pgsql' passa a ser resolvida por-coroutine (PDO do SwoolePdoPool),
@@ -57,6 +58,9 @@ class OctaneServiceProvider extends ServiceProvider
         }
 
         $this->app['events']->listen(WorkerStarting::class, function () {
+            if ($this->hooksEnabled()) {
+                $this->forgetRedisBackedSingletons();
+            }
             $this->warmCaches();
             $this->bootSwoolePdoPool();
             $this->bootSwooleRedisPools();
@@ -189,6 +193,15 @@ class OctaneServiceProvider extends ServiceProvider
     {
         return $this->isSwoole()
             && (int) config('octane.swoole.options.hook_flags', 0) !== 0;
+    }
+
+    protected function forgetRedisBackedSingletons(): void
+    {
+        foreach (['redis', 'cache', 'cache.store', 'cache.psr6'] as $abstract) {
+            if ($this->app->resolved($abstract)) {
+                $this->app->forgetInstance($abstract);
+            }
+        }
     }
 
     protected function warmCaches(): void
