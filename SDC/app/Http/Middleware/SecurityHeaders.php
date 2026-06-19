@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 class SecurityHeaders
@@ -36,16 +35,24 @@ class SecurityHeaders
         return $response;
     }
 
+    /** Memoizacao em processo do CSP por worker Octane (chave: env[_native]). */
+    private static array $cspCache = [];
+
     private function buildCspHeader(bool $isLocal, bool $isNativePHP, bool $viteDevActive): string
     {
-        // Em producao sem Vite dev, usa cache. Em local ou com hot file ativo, sempre recalcula
-        // para evitar tela branca apos rebuild ou divergencia quando o dev server liga/desliga
-        if (!$viteDevActive) {
-            $cacheKey = 'csp_header_' . app()->environment() . ($isNativePHP ? '_native' : '');
-            return Cache::remember($cacheKey, 3600, fn() => $this->generateCspDirectives($isLocal, $isNativePHP, $viteDevActive));
+        // Vite dev (local/native/hot file): sempre recalcula — o estado muda em
+        // runtime quando o dev server liga/desliga (evita tela branca por CSP).
+        if ($viteDevActive) {
+            return $this->generateCspDirectives($isLocal, $isNativePHP, $viteDevActive);
         }
 
-        return $this->generateCspDirectives($isLocal, $isNativePHP, $viteDevActive);
+        // Producao: memoiza EM PROCESSO (por worker), nao no Redis. O CSP so
+        // varia por environment/native — constantes dentro do worker. Sob Octane
+        // o worker persiste, entao calcula 1x por worker e reusa, eliminando um
+        // GET no Redis em TODA request (era hot path de 100% do trafego).
+        $cacheKey = app()->environment() . ($isNativePHP ? '_native' : '');
+
+        return self::$cspCache[$cacheKey] ??= $this->generateCspDirectives($isLocal, $isNativePHP, $viteDevActive);
     }
 
     private function generateCspDirectives(bool $isLocal, bool $isNativePHP, bool $viteDevActive): string
