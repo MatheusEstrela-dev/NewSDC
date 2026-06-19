@@ -49,6 +49,13 @@ services:
       OCTANE_MAX_REQUESTS: "500"
       PORT: "8000"
 
+      # Guardrail de conexoes PG (hooks off = ~1 conexao por worker). O entrypoint
+      # aborta o boot se (WORKERS + TASK + QUEUE) * APP_INSTANCES + reserva passar
+      # do teto. Aqui: (10 + 4 + 1) * 1 + 5 = 20 <= 100. Ajuste PG_MAX_CONNECTIONS
+      # ao 'SHOW max_connections;' real e APP_INSTANCES ao numero de replicas.
+      PG_MAX_CONNECTIONS: "100"
+      APP_INSTANCES: "1"
+
       # Banco (PostgreSQL/PostGIS local). DB_PERSISTENT=false e OBRIGATORIO
       # sob SWOOLE_HOOK_ALL (PDO persistente compartilhado entre coroutines quebra).
       DB_CONNECTION: pgsql

@@ -165,6 +165,36 @@ if [ -z "$WORKERS" ]; then
 fi
 echo "vCores=$(nproc 2>/dev/null || echo '?'); workers=${WORKERS}; task-workers=${OCTANE_TASK_WORKERS:-4}"
 
+# ----------------------------------------------------------------------------
+# Guardrail de conexoes Postgres (Swoole hooks OFF = ~1 conexao PDO por worker)
+# ----------------------------------------------------------------------------
+# Sob hooks off cada worker HTTP mantem 1 conexao pgsql quente; cada task worker
+# abre 1 quando roda closure de DB (Octane::concurrently); o queue:work mantem +1.
+# O teto fisico e o max_connections do Postgres, COMPARTILHADO por TODAS as
+# instancias do App Service. Conta:
+#   (WORKERS + TASK_WORKERS + QUEUE_WORKERS) * APP_INSTANCES + PG_ADMIN_RESERVE
+#       <= PG_MAX_CONNECTIONS
+# Descubra o real: psql -c 'SHOW max_connections;'  (dev = 100)
+#   az postgres flexible-server parameter show -g <rg> -s <srv> -n max_connections
+QUEUE_WORKERS="${QUEUE_WORKERS:-1}"
+APP_INSTANCES="${APP_INSTANCES:-1}"
+PG_ADMIN_RESERVE="${PG_ADMIN_RESERVE:-5}"
+CONN_PER_INSTANCE=$((WORKERS + ${OCTANE_TASK_WORKERS:-4} + QUEUE_WORKERS))
+CONN_PROJECTED=$((CONN_PER_INSTANCE * APP_INSTANCES + PG_ADMIN_RESERVE))
+echo "Conexoes PG projetadas: ${CONN_PER_INSTANCE}/instancia x ${APP_INSTANCES} inst + ${PG_ADMIN_RESERVE} reserva = ${CONN_PROJECTED}"
+if [ -n "${PG_MAX_CONNECTIONS:-}" ]; then
+    if [ "${CONN_PROJECTED}" -gt "${PG_MAX_CONNECTIONS}" ]; then
+        echo "FATAL: conexoes projetadas (${CONN_PROJECTED}) excedem PG_MAX_CONNECTIONS (${PG_MAX_CONNECTIONS})."
+        echo "       Reduza OCTANE_WORKERS / OCTANE_WORKER_MULTIPLIER / OCTANE_TASK_WORKERS,"
+        echo "       diminua APP_INSTANCES, ou suba o tier do Postgres. Abortando boot."
+        exit 1
+    fi
+    echo "OK: dentro do teto de ${PG_MAX_CONNECTIONS} conexoes do Postgres."
+else
+    echo "AVISO: PG_MAX_CONNECTIONS nao definido -- guardrail de conexoes inativo."
+    echo "       Defina PG_MAX_CONNECTIONS (= SHOW max_connections) para ativar o gate."
+fi
+
 # Iniciar servidor Octane (Swoole)
 echo "Iniciando servidor Octane (Swoole)..."
 exec php artisan octane:start \
