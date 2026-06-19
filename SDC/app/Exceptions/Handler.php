@@ -7,7 +7,6 @@ use App\Services\Logging\ActivityLogger;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
@@ -109,12 +108,7 @@ class Handler extends ExceptionHandler
     protected function logQueryException(QueryException $e): void
     {
         try {
-            $userId = null;
-            if (app()->bound('auth')) {
-                /** @var Guard $auth */
-                $auth = auth();
-                $userId = (int) $auth->id();
-            }
+            $userId = $this->resolveUserIdSafely();
             $sql = $e->getSql();
             $bindings = $e->getBindings();
             $errorInfo = $e->errorInfo ?? [];
@@ -159,6 +153,32 @@ class Handler extends ExceptionHandler
     }
 
     /**
+     * Resolve o id do usuario autenticado sem nunca lancar.
+     *
+     * Durante o report de uma excecao o container pode estar degradado: sob
+     * Octane/Swoole o sandbox do request pode ja ter sido esvaziado quando o
+     * guard 'auth' e resolvido. Nesse estado, resolver 'auth' dispara
+     * "Target class [config] does not exist" -- um fatal SECUNDARIO que sobe
+     * pelo reportable, mascara a excecao original e entra em loop de 500.
+     * Aqui qualquer falha de resolucao vira null, preservando o report do erro
+     * de verdade.
+     */
+    protected function resolveUserIdSafely(): ?int
+    {
+        try {
+            if (! app()->bound('auth')) {
+                return null;
+            }
+
+            $id = auth()->id();
+
+            return $id !== null ? (int) $id : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * Log detalhado de exceções para sistema crítico 24/7
      */
     protected function logDetailedException(Throwable $e): void
@@ -166,12 +186,7 @@ class Handler extends ExceptionHandler
         // Determina severidade baseada no tipo de erro
         $severity = $this->determineSeverity($e);
 
-        $userId = null;
-        if (app()->bound('auth')) {
-            /** @var Guard $auth */
-            $auth = auth();
-            $userId = (int) $auth->id();
-        }
+        $userId = $this->resolveUserIdSafely();
 
         try {
             ActivityLogger::logCriticalError(
