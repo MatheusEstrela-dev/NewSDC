@@ -64,10 +64,11 @@ REDIS_CLIENT="${REDIS_CLIENT:-phpredis}"
 REDIS_SCHEME="${REDIS_SCHEME:-tls}"
 REDIS_PREFIX="${REDIS_PREFIX:-sdc_prod_}"
 CACHE_PREFIX="${CACHE_PREFIX:-sdc_prod_cache_}"
-# Redis/phpredis nao pode ser compartilhado por coroutines no mesmo worker
-# Swoole. Mantemos Redis para queue em processo separado, mas o caminho HTTP
-# usa cache local e sessao cookie ate existir RedisPool por-coroutine.
-CACHE_DRIVER="${CACHE_DRIVER:-file}"
+# Com hooks Swoole OFF (modelo seguro: 1 request por worker, sem overlap de
+# coroutine), o phpredis NAO e compartilhado entre coroutines -> Redis volta a
+# ser seguro. file cache perde coerencia no scale-out (FS efemero por-container),
+# entao cache volta pro Redis. Sessao segue cookie (stateless, escala horizontal).
+CACHE_DRIVER="${CACHE_DRIVER:-redis}"
 SESSION_DRIVER="${SESSION_DRIVER:-cookie}"
 SESSION_DOMAIN="${SESSION_DOMAIN:-}"
 SESSION_SECURE_COOKIE="${SESSION_SECURE_COOKIE:-true}"
