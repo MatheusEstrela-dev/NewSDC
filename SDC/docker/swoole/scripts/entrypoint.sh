@@ -64,8 +64,11 @@ REDIS_CLIENT="${REDIS_CLIENT:-phpredis}"
 REDIS_SCHEME="${REDIS_SCHEME:-tls}"
 REDIS_PREFIX="${REDIS_PREFIX:-sdc_prod_}"
 CACHE_PREFIX="${CACHE_PREFIX:-sdc_prod_cache_}"
-CACHE_DRIVER="${CACHE_DRIVER:-redis}"
-SESSION_DRIVER="${SESSION_DRIVER:-redis}"
+# Redis/phpredis nao pode ser compartilhado por coroutines no mesmo worker
+# Swoole. Mantemos Redis para queue em processo separado, mas o caminho HTTP
+# usa cache local e sessao cookie ate existir RedisPool por-coroutine.
+CACHE_DRIVER="${CACHE_DRIVER:-file}"
+SESSION_DRIVER="${SESSION_DRIVER:-cookie}"
 SESSION_DOMAIN="${SESSION_DOMAIN:-}"
 SESSION_SECURE_COOKIE="${SESSION_SECURE_COOKIE:-true}"
 SESSION_SAME_SITE="${SESSION_SAME_SITE:-lax}"

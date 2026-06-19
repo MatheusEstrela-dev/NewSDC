@@ -70,8 +70,10 @@ services:
       REDIS_PREFIX: ${REDIS_PREFIX:-sdc_prod_}
       CACHE_PREFIX: ${CACHE_PREFIX:-sdc_prod_cache_}
 
-      CACHE_DRIVER: redis
-      SESSION_DRIVER: redis
+      # Redis/phpredis compartilhado entre coroutines derruba o worker Swoole.
+      # Queue permanece em Redis; cache/sessao saem do hot path HTTP.
+      CACHE_DRIVER: file
+      SESSION_DRIVER: cookie
       QUEUE_CONNECTION: redis
 
       LOG_CHANNEL: stack
