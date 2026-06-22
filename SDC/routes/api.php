@@ -88,6 +88,15 @@ Route::prefix('v1/auth')->group(function () {
 });
 
 // API v1
+// Protecao de conexao DB: AcquireConnectionSlot/Backpressure foram retirados do
+// grupo 'api' global de proposito. Sob Swoole hooks-off a concorrencia real e
+// limitada por OCTANE_WORKERS (1 conexao pgsql/worker), e o guardrail do
+// entrypoint garante workers x instancias <= max_connections -- entao o PG nao
+// satura por conexao sem precisar do semaforo. Re-adicionar o slot aqui seria
+// inerte (limit=DB_MAX_CONCURRENT=100 nunca e atingido com ~10-12 workers) e so
+// somaria round-trips Redis por request. Se um dia for preciso SHEDDING explicito
+// (503) em vez de fila no worker, reduza DB_MAX_CONCURRENT abaixo do total de
+// workers E aplique 'backpressure'+'acquire_slot' neste grupo.
 Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class, 'statement_timeout:10000'])->group(function () {
 
     // Activity Feed
@@ -458,5 +467,28 @@ if (app()->environment('local', 'development')) {
                     : true,
             ]);
         });
+    });
+}
+
+// ============================================================================
+// >>> TEMP DTO TEST — REMOVER APOS VALIDACAO (regra de ouro #6/#10) <<<
+// Exercita Request -> validated() -> RatDadosGeraisDTO -> RatWriteService -> BD
+// sem auth/CSRF. POST /api/_dev/rat-dados-gerais
+// ============================================================================
+if (app()->environment('local', 'development')) {
+    Route::post('_dev/rat-dados-gerais', function (\App\Modules\Rat\Http\Requests\RatDadosGeraisRequest $request) {
+        $validated = $request->validated();
+        $dto       = \App\Modules\Rat\DTOs\RatDadosGeraisDTO::fromArray($validated);
+
+        $ocorrencia = \App\Modules\Rat\Models\RatOcorrencia::create(['status' => 0]);
+        $model      = app(\App\Modules\Rat\Services\RatWriteService::class)
+            ->saveDadosGerais($ocorrencia->id, $dto);
+
+        return response()->json([
+            'etapa_1_validated'  => $validated,
+            'etapa_2_dto_array'  => $dto->toArray(),
+            'etapa_3_persistido' => $model->fresh(),
+            'ocorrencia_id'      => $ocorrencia->id,
+        ], 201);
     });
 }
