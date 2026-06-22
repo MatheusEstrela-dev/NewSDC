@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Jobs\RecordActivityLog;
 use App\Services\Logging\ActivityLogger;
 use Closure;
 use Illuminate\Http\Request;
@@ -28,14 +29,19 @@ class LogApiRequests
 
         $status = $response->getStatusCode();
 
-        // Log detalhado da requisição (amostrado em 2xx; ver shouldLog)
+        // Log detalhado da requisição (amostrado em 2xx; ver shouldLog).
+        // Despacha pra fila: o ActivityLogger (debug_backtrace + Redis + arquivo)
+        // sai do hot path; aqui so monta o array e da um push.
         if ($this->shouldLog($request, $status)) {
-            ActivityLogger::logApiRequest(
-                endpoint: $request->path(),
-                statusCode: $status,
-                duration: $duration,
-                userId: auth()->id(),
-                extra: [
+            $userId = auth()->id();
+            RecordActivityLog::dispatch(
+                'api',
+                'request',
+                [
+                    'endpoint' => $request->path(),
+                    'status_code' => $status,
+                    'duration_ms' => $duration,
+                    'user_id' => $userId,
                     'method' => $request->method(),
                     'ip' => $request->ip(),
                     'user_agent' => $request->userAgent(),
@@ -43,7 +49,9 @@ class LogApiRequests
                     'query_params' => $request->query(),
                     'has_body' => $request->getContent() ? true : false,
                     'response_size' => strlen($response->getContent()),
-                ]
+                ],
+                $userId ? (string) $userId : null,
+                $status >= 500 ? 'error' : ($status >= 400 ? 'warning' : 'info'),
             );
         }
 
