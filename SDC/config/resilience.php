@@ -41,6 +41,18 @@ return [
         // Intervalo de polling (ms) entre tentativas de acquire.
         'acquire_poll_ms' => (int) env('DB_ACQUIRE_POLL_MS', 50),
 
+        // SetStatementTimeout: aplicar statement_timeout POR REQUEST (SET de
+        // sessao). true = comportamento atual (per-rota, mas ~4 round-trips DB/
+        // request -- pesa no hot path). false = no-op no middleware: confia no
+        // statement_timeout DEFAULT da conexao/servidor (0 round-trip). Atras de
+        // um pooler em transaction mode e SEMPRE no-op (SET de sessao vaza no pool).
+        // Flag pra A/B: medir qual performa melhor sem rebuild (so restart).
+        'statement_timeout_per_route' => filter_var(env('DB_STMT_TIMEOUT_PER_ROUTE', true), FILTER_VALIDATE_BOOLEAN),
+
+        // Modo do pooler externo (PgBouncer): '' (direto), 'transaction', 'session'.
+        // Em 'transaction', desativa SET de sessao por request (incorreto no pool).
+        'pooler_mode' => (string) env('DB_POOLER_MODE', ''),
+
         'circuit_breaker' => [
             // p95 de duração de query (ms) que sinaliza degradação. Acima disso, contabiliza.
             'p95_threshold_ms' => (int) env('DB_CB_P95_MS', 500),
