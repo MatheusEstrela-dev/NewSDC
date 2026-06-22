@@ -57,7 +57,7 @@ class SetTenant
             }
 
             if (!$tenant) {
-                $tenant = Tenant::resolveFromRequest($request);
+                $tenant = $this->resolveFromRequestCached($request);
             }
 
             if ($tenant && $request->hasSession()) {
@@ -95,6 +95,41 @@ class SetTenant
         );
 
         self::$tenantMemo[$tenantId] = ['tenant' => $tenant, 'exp' => $now + self::TENANT_MEMO_TTL];
+
+        return $tenant;
+    }
+
+    /**
+     * Memoizacao em processo (por worker) da resolucao por header/host.
+     *
+     * Sem isto, TODA request sem tenant_id na sessao (ex.: /api/health, rotas
+     * API stateless) dispara `SELECT * FROM tenants WHERE dominio = ?` -- um
+     * round-trip ao Postgres por request, que sob Azure (I/O gerenciado) domina
+     * a latencia da cadeia api (Fase 1.2). O mapeamento host->tenant e
+     * read-mostly; cacheamos por chave (X-Tenant header ou host), inclusive o
+     * resultado null (negative cache). O caminho user-scoped NAO e cacheado por
+     * host (varia por usuario).
+     *
+     * @var array<string, array{tenant: ?Tenant, exp: float}>
+     */
+    private static array $resolveMemo = [];
+
+    private function resolveFromRequestCached(Request $request): ?Tenant
+    {
+        // Resolucao por usuario autenticado nao e cacheavel por host.
+        if ($request->user()) {
+            return Tenant::resolveFromRequest($request);
+        }
+
+        $key = $request->header('X-Tenant') ?: ('host:' . $request->getHost());
+        $now = microtime(true);
+        $hit = self::$resolveMemo[$key] ?? null;
+        if ($hit !== null && $hit['exp'] > $now) {
+            return $hit['tenant'];
+        }
+
+        $tenant = Tenant::resolveFromRequest($request);
+        self::$resolveMemo[$key] = ['tenant' => $tenant, 'exp' => $now + self::TENANT_MEMO_TTL];
 
         return $tenant;
     }
