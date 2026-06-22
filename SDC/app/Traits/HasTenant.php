@@ -35,7 +35,16 @@ trait HasTenant
 
             if ($tenant instanceof Tenant) {
                 $query->where($query->getModel()->getTable() . '.tenant_id', $tenant->id);
+
+                return;
             }
+
+            // Fail-closed: SEM tenant no contexto, nao retorna NADA (em vez de
+            // todos os tenants). O default permissivo vazaria dados entre tenants
+            // em qualquer caminho sem SetTenant (job de fila, comando console,
+            // task worker, codigo futuro). Acesso cross-tenant/global e EXPLICITO
+            // via scopeSemFiltroTenant().
+            $query->whereRaw('1 = 0');
         });
 
         // Preenche tenant_id automaticamente ao criar
