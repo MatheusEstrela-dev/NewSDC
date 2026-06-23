@@ -64,8 +64,12 @@ REDIS_CLIENT="${REDIS_CLIENT:-phpredis}"
 REDIS_SCHEME="${REDIS_SCHEME:-tls}"
 REDIS_PREFIX="${REDIS_PREFIX:-sdc_prod_}"
 CACHE_PREFIX="${CACHE_PREFIX:-sdc_prod_cache_}"
+# Com hooks Swoole OFF (modelo seguro: 1 request por worker, sem overlap de
+# coroutine), o phpredis NAO e compartilhado entre coroutines -> Redis volta a
+# ser seguro. file cache perde coerencia no scale-out (FS efemero por-container),
+# entao cache volta pro Redis. Sessao segue cookie (stateless, escala horizontal).
 CACHE_DRIVER="${CACHE_DRIVER:-redis}"
-SESSION_DRIVER="${SESSION_DRIVER:-redis}"
+SESSION_DRIVER="${SESSION_DRIVER:-cookie}"
 SESSION_DOMAIN="${SESSION_DOMAIN:-}"
 SESSION_SECURE_COOKIE="${SESSION_SECURE_COOKIE:-true}"
 SESSION_SAME_SITE="${SESSION_SAME_SITE:-lax}"
@@ -153,13 +157,70 @@ echo "Iniciando queue worker em background..."
 # rodar mais workers que vCores preenche a CPU enquanto uns esperam I/O. Default
 # = vCores x OCTANE_WORKER_MULTIPLIER (3). OCTANE_WORKERS explicito tem prioridade.
 # Em tier com pouca RAM (B1), reduza OCTANE_WORKER_MULTIPLIER para 2.
+# Valida que um valor e inteiro nao-negativo; aborta com mensagem clara senao.
+# Sem isto: (a) $(( )) com valor nao-numerico aborta o boot sob set -e com erro
+# cripto; (b) o gate abaixo, com PG_MAX_CONNECTIONS malformado, falharia ABERTO
+# (a comparacao erra, o if vira falso e segue como "ok"). Validar na entrada
+# torna o erro de config explicito (fail-closed em config).
+require_uint() {
+    case "$2" in
+        ''|*[!0-9]*)
+            echo "FATAL: ${1}='${2}' nao e um inteiro valido. Corrija a App Setting/env. Abortando boot."
+            exit 1
+            ;;
+    esac
+}
+
 WORKERS="${OCTANE_WORKERS:-}"
-if [ -z "$WORKERS" ]; then
+if [ -n "$WORKERS" ]; then
+    require_uint OCTANE_WORKERS "$WORKERS"
+else
     CORES=$(nproc 2>/dev/null || echo 1)
     MULT="${OCTANE_WORKER_MULTIPLIER:-3}"
+    require_uint OCTANE_WORKER_MULTIPLIER "$MULT"
     WORKERS=$((CORES * MULT))
 fi
 echo "vCores=$(nproc 2>/dev/null || echo '?'); workers=${WORKERS}; task-workers=${OCTANE_TASK_WORKERS:-4}"
+
+# ----------------------------------------------------------------------------
+# Guardrail de conexoes Postgres (Swoole hooks OFF = ~1 conexao PDO por worker)
+# ----------------------------------------------------------------------------
+# Sob hooks off cada worker HTTP mantem 1 conexao pgsql quente; cada task worker
+# abre 1 quando roda closure de DB; o queue:work em background NESTE container
+# mantem +QUEUE_WORKERS. Containers SEPARADOS (ex.: um servico 'queue' dedicado
+# com supervisord) entram em EXTERNAL_DB_CONSUMERS -- somado UMA vez, nao por
+# instancia. O teto e o max_connections do Postgres, COMPARTILHADO por todos.
+# Conta:
+#   (WORKERS + TASK_WORKERS + QUEUE_WORKERS) * APP_INSTANCES
+#       + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE  <= PG_MAX_CONNECTIONS
+# Descubra o real: psql -c 'SHOW max_connections;'  (dev = 100)
+#   az postgres flexible-server parameter show -g <rg> -s <srv> -n max_connections
+TASK_WORKERS="${OCTANE_TASK_WORKERS:-4}"
+QUEUE_WORKERS="${QUEUE_WORKERS:-1}"
+APP_INSTANCES="${APP_INSTANCES:-1}"
+EXTERNAL_DB_CONSUMERS="${EXTERNAL_DB_CONSUMERS:-0}"
+PG_ADMIN_RESERVE="${PG_ADMIN_RESERVE:-5}"
+require_uint OCTANE_TASK_WORKERS "$TASK_WORKERS"
+require_uint QUEUE_WORKERS "$QUEUE_WORKERS"
+require_uint APP_INSTANCES "$APP_INSTANCES"
+require_uint EXTERNAL_DB_CONSUMERS "$EXTERNAL_DB_CONSUMERS"
+require_uint PG_ADMIN_RESERVE "$PG_ADMIN_RESERVE"
+CONN_PER_INSTANCE=$((WORKERS + TASK_WORKERS + QUEUE_WORKERS))
+CONN_PROJECTED=$((CONN_PER_INSTANCE * APP_INSTANCES + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE))
+echo "Conexoes PG projetadas: ${CONN_PER_INSTANCE}/inst x ${APP_INSTANCES} + ${EXTERNAL_DB_CONSUMERS} externas + ${PG_ADMIN_RESERVE} reserva = ${CONN_PROJECTED}"
+if [ -n "${PG_MAX_CONNECTIONS:-}" ]; then
+    require_uint PG_MAX_CONNECTIONS "$PG_MAX_CONNECTIONS"
+    if [ "${CONN_PROJECTED}" -gt "${PG_MAX_CONNECTIONS}" ]; then
+        echo "FATAL: conexoes projetadas (${CONN_PROJECTED}) excedem PG_MAX_CONNECTIONS (${PG_MAX_CONNECTIONS})."
+        echo "       Reduza OCTANE_WORKERS / OCTANE_WORKER_MULTIPLIER / OCTANE_TASK_WORKERS,"
+        echo "       diminua APP_INSTANCES/EXTERNAL_DB_CONSUMERS, ou suba o tier do Postgres. Abortando boot."
+        exit 1
+    fi
+    echo "OK: dentro do teto de ${PG_MAX_CONNECTIONS} conexoes do Postgres."
+else
+    echo "AVISO: PG_MAX_CONNECTIONS nao definido -- guardrail de conexoes inativo."
+    echo "       Defina PG_MAX_CONNECTIONS (= SHOW max_connections) para ativar o gate."
+fi
 
 # Iniciar servidor Octane (Swoole)
 echo "Iniciando servidor Octane (Swoole)..."
@@ -168,5 +229,5 @@ exec php artisan octane:start \
     --host=0.0.0.0 \
     --port="${PORT:-8000}" \
     --workers="${WORKERS}" \
-    --task-workers="${OCTANE_TASK_WORKERS:-4}" \
+    --task-workers="${TASK_WORKERS}" \
     --max-requests="${OCTANE_MAX_REQUESTS:-500}"

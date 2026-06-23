@@ -50,9 +50,21 @@ class HealthCheckController extends Controller
         ]);
     }
 
+    /** Cache por-worker do contador de slots ativos (1 GET Redis/s, nao 2/request). */
+    private static array $semActiveCache = ['v' => 0, 'exp' => 0.0];
+
     public function basic(ConnectionSemaphore $sem, DatabaseCircuitBreaker $cb): JsonResponse
     {
-        $semSaturated = $sem->active() / max(1, $sem->limit()) > 0.95;
+        // active() ia ao Redis 2x por request neste handler. Memoiza por-worker
+        // por 1s: /api/health (martelado por LB/monitoramento) deixa de fazer
+        // round-trip Redis em toda chamada. O contador e best-effort aqui.
+        $now = microtime(true);
+        if (self::$semActiveCache['exp'] <= $now) {
+            self::$semActiveCache = ['v' => $sem->active(), 'exp' => $now + 1.0];
+        }
+        $active = self::$semActiveCache['v'];
+
+        $semSaturated = $active / max(1, $sem->limit()) > 0.95;
         $cbOpen = $cb->isOpen();
         $degraded = $semSaturated || $cbOpen;
 
@@ -61,7 +73,7 @@ class HealthCheckController extends Controller
             'timestamp' => now()->toIso8601String(),
             'uptime' => $this->getUptime(),
             'db' => [
-                'semaphore_active' => $sem->active(),
+                'semaphore_active' => $active,
                 'semaphore_limit' => $sem->limit(),
                 'circuit_breaker' => $cb->state(),
             ],

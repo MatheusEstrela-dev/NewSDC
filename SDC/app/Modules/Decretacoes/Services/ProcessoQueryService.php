@@ -877,7 +877,7 @@ class ProcessoQueryService
 
         // Query 2: municipios com LEFT JOIN em cedec_municipio por codigo IBGE
         $geoData = DB::table('municipios as m')
-            ->leftJoin('cedec_municipio as cm', DB::raw('LEFT(cm.Codmundv, 7)'), '=', 'm.codigo_ibge')
+            ->leftJoin('cedec_municipio as cm', DB::raw('LEFT(cm."Codmundv", 7)'), '=', 'm.codigo_ibge')
             ->whereIn('m.codigo_ibge', array_keys($ibgeCodes))
             ->select(
                 'm.codigo_ibge',

@@ -35,15 +35,41 @@ trait HasTenant
 
             if ($tenant instanceof Tenant) {
                 $query->where($query->getModel()->getTable() . '.tenant_id', $tenant->id);
+
+                return;
             }
+
+            // Fail-closed: SEM tenant no contexto, nao retorna NADA (em vez de
+            // todos os tenants). O default permissivo vazaria dados entre tenants
+            // em qualquer caminho sem SetTenant (job de fila, comando console,
+            // task worker, codigo futuro). Acesso cross-tenant/global e EXPLICITO
+            // via scopeSemFiltroTenant().
+            $query->whereRaw('1 = 0');
         });
 
-        // Preenche tenant_id automaticamente ao criar
+        // Preenche tenant_id automaticamente ao criar.
         static::creating(function ($model) {
             $tenant = TenantContext::get();
 
-            if ($tenant instanceof Tenant && empty($model->tenant_id)) {
-                $model->tenant_id = $tenant->id;
+            if ($tenant instanceof Tenant) {
+                if (empty($model->tenant_id)) {
+                    $model->tenant_id = $tenant->id;
+                }
+
+                return;
+            }
+
+            // Fail-closed na escrita (simetrico ao scope de leitura): criar SEM
+            // tenant no contexto e sem tenant_id explicito geraria uma linha orfa
+            // (tenant_id null) invisivel para qualquer leitura tenant-scoped --
+            // um vazamento silencioso de dados "perdidos". Aborta alto e claro.
+            // Criacao cross-tenant/sistema deve atribuir tenant_id ANTES de salvar.
+            if (empty($model->tenant_id)) {
+                throw new \RuntimeException(sprintf(
+                    'HasTenant: tentativa de criar %s sem tenant no contexto. '
+                    .'Defina o TenantContext (via SetTenant) ou atribua tenant_id explicitamente.',
+                    $model::class
+                ));
             }
         });
     }

@@ -74,9 +74,22 @@ class RatAnexo extends Model
     // Accessors
     // -------------------------------------------------------------------------
 
-    public function getUrlAttribute(): string
+    public function getUrlAttribute(): ?string
     {
-        return Storage::disk($this->disk)->url($this->path);
+        $disk = Storage::disk($this->disk);
+
+        // Azure Blob (container privado, prod): URL assinada (SAS) temporaria.
+        // Local/public (dev): nao suporta SAS -> cai pra url publica direta.
+        // Nunca lanca: anexo sem url resolvel retorna null em vez de 500 na listagem.
+        try {
+            return $disk->temporaryUrl($this->path, now()->addMinutes(30));
+        } catch (\Throwable) {
+            try {
+                return $disk->url($this->path);
+            } catch (\Throwable) {
+                return null;
+            }
+        }
     }
 
     public function getTamanhoFormatadoAttribute(): string

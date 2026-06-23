@@ -27,6 +27,18 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class SetTenant
 {
+    /**
+     * Memoizacao em processo (por worker Octane) do tenant resolvido, na frente
+     * do cache Redis. Evita um GET no Redis a cada navegacao do mesmo tenant
+     * dentro do worker. TTL curto (< TTL do Redis) mantem a tolerancia a stale
+     * compativel com o Cache::remember de 300s ja existente.
+     *
+     * @var array<int, array{tenant: ?Tenant, exp: float}>
+     */
+    private static array $tenantMemo = [];
+
+    private const TENANT_MEMO_TTL = 30;
+
     public function handle(Request $request, Closure $next): Response
     {
         $tenant = null;
@@ -40,16 +52,12 @@ class SetTenant
                 $tenantId = $request->session()->get('tenant_id');
 
                 if ($tenantId) {
-                    $tenant = Cache::remember(
-                        "tenant:{$tenantId}",
-                        300,
-                        fn (): ?Tenant => Tenant::find($tenantId),
-                    );
+                    $tenant = $this->resolveTenantCached((int) $tenantId);
                 }
             }
 
             if (!$tenant) {
-                $tenant = Tenant::resolveFromRequest($request);
+                $tenant = $this->resolveFromRequestCached($request);
             }
 
             if ($tenant && $request->hasSession()) {
@@ -67,5 +75,62 @@ class SetTenant
         TenantContext::set($tenant);
 
         return $next($request);
+    }
+
+    /**
+     * Resolve o tenant memoizando em processo (por worker) na frente do Redis.
+     */
+    private function resolveTenantCached(int $tenantId): ?Tenant
+    {
+        $now = microtime(true);
+        $hit = self::$tenantMemo[$tenantId] ?? null;
+        if ($hit !== null && $hit['exp'] > $now) {
+            return $hit['tenant'];
+        }
+
+        $tenant = Cache::remember(
+            "tenant:{$tenantId}",
+            300,
+            fn (): ?Tenant => Tenant::find($tenantId),
+        );
+
+        self::$tenantMemo[$tenantId] = ['tenant' => $tenant, 'exp' => $now + self::TENANT_MEMO_TTL];
+
+        return $tenant;
+    }
+
+    /**
+     * Memoizacao em processo (por worker) da resolucao por header/host.
+     *
+     * Sem isto, TODA request sem tenant_id na sessao (ex.: /api/health, rotas
+     * API stateless) dispara `SELECT * FROM tenants WHERE dominio = ?` -- um
+     * round-trip ao Postgres por request, que sob Azure (I/O gerenciado) domina
+     * a latencia da cadeia api (Fase 1.2). O mapeamento host->tenant e
+     * read-mostly; cacheamos por chave (X-Tenant header ou host), inclusive o
+     * resultado null (negative cache). O caminho user-scoped NAO e cacheado por
+     * host (varia por usuario).
+     *
+     * @var array<string, array{tenant: ?Tenant, exp: float}>
+     */
+    private static array $resolveMemo = [];
+
+    private function resolveFromRequestCached(Request $request): ?Tenant
+    {
+        // Resolucao por usuario autenticado nao e cacheavel por host.
+        if ($request->user()) {
+            return Tenant::resolveFromRequest($request);
+        }
+
+        $key = $request->header('X-Tenant') ?: ('host:' . $request->getHost());
+        $now = microtime(true);
+        $hit = self::$resolveMemo[$key] ?? null;
+        if ($hit !== null && $hit['exp'] > $now) {
+            return $hit['tenant'];
+        }
+
+        $tenant = Tenant::resolveFromRequest($request);
+        self::$resolveMemo[$key] = ['tenant' => $tenant, 'exp' => $now + self::TENANT_MEMO_TTL];
+
+        return $tenant;
     }
 }

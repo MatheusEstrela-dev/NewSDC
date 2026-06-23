@@ -22,6 +22,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | API Request Sampling
+    |--------------------------------------------------------------------------
+    |
+    | Taxa de amostragem do log de auditoria de requests API 2xx (LogApiRequests).
+    | Cada log faz debug_backtrace + ~5 round-trips Redis; sob Swoole isso pesa
+    | no hot path. 1 = loga todas (padrao, sem mudanca de comportamento); N = loga
+    | ~1 em N respostas 2xx. Erros (>=400) e respostas lentas SEMPRE sao logados,
+    | independente desta taxa. Endpoints de infra (health/metrics) nunca logam.
+    |
+    */
+
+    'api_request_sample_rate' => (int) env('LOG_API_SAMPLE_RATE', 1),
+
+    /*
+    |--------------------------------------------------------------------------
     | Deprecations Log Channel
     |--------------------------------------------------------------------------
     |

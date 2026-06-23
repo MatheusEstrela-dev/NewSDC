@@ -49,6 +49,16 @@ services:
       OCTANE_MAX_REQUESTS: "500"
       PORT: "8000"
 
+      # Guardrail de conexoes PG (hooks off = ~1 conexao por worker). O entrypoint
+      # aborta o boot se (WORKERS + TASK + QUEUE) * APP_INSTANCES
+      # + EXTERNAL_DB_CONSUMERS + reserva passar do teto. EXTERNAL_DB_CONSUMERS
+      # cobre o container 'queue' dedicado (supervisord numprocs=4 + scheduler).
+      # Aqui: (10 + 4 + 1) * 1 + 5 + 5 = 25 <= 100. Ajuste PG_MAX_CONNECTIONS ao
+      # 'SHOW max_connections;' real e APP_INSTANCES ao numero de replicas.
+      PG_MAX_CONNECTIONS: "100"
+      APP_INSTANCES: "1"
+      EXTERNAL_DB_CONSUMERS: "5"
+
       # Banco (PostgreSQL/PostGIS local). DB_PERSISTENT=false e OBRIGATORIO
       # sob SWOOLE_HOOK_ALL (PDO persistente compartilhado entre coroutines quebra).
       DB_CONNECTION: pgsql
@@ -70,8 +80,11 @@ services:
       REDIS_PREFIX: ${REDIS_PREFIX:-sdc_prod_}
       CACHE_PREFIX: ${CACHE_PREFIX:-sdc_prod_cache_}
 
+      # Hooks Swoole OFF (1 request por worker): phpredis nao e compartilhado
+      # entre coroutines -> Redis seguro e coerente no scale-out (file cache nao
+      # e). Sessao em cookie (stateless). Queue permanece em Redis.
       CACHE_DRIVER: redis
-      SESSION_DRIVER: redis
+      SESSION_DRIVER: cookie
       QUEUE_CONNECTION: redis
 
       LOG_CHANNEL: stack
