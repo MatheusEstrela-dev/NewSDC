@@ -10,6 +10,7 @@ use App\Modules\Pmda\Requests\StorePmdaPlanoRequest;
 use App\Modules\Pmda\Requests\UpdatePmdaPlanoRequest;
 use App\Modules\Pmda\Resources\PmdaPlanoListResource;
 use App\Modules\Pmda\Resources\PmdaPlanoResource;
+use App\Modules\Pmda\Services\PlanoPontoService;
 use App\Modules\Pmda\Services\PmdaCopiaService;
 use App\Modules\Pmda\Services\PmdaPlanoService;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +23,7 @@ class PmdaPlanoController extends Controller
     public function __construct(
         private readonly PmdaPlanoService $service,
         private readonly PmdaCopiaService $copia,
+        private readonly PlanoPontoService $pontos,
     ) {}
 
     public function index(Request $request): Response
@@ -47,11 +49,16 @@ class PmdaPlanoController extends Controller
 
     public function edit(PmdaPlano $plano): Response
     {
-        $plano->load(['municipio', 'comunidades.representantes'])
+        $plano->load(['municipio', 'comunidades.representantes', 'pontos'])
             ->loadCount('comunidades');
 
         return Inertia::render('Pmda/Edit', [
-            'plano' => new PmdaPlanoResource($plano),
+            'plano'             => new PmdaPlanoResource($plano),
+            'pontos_disponiveis' => $this->pontos->disponiveis($plano)->map(fn ($p) => [
+                'id'         => $p->id,
+                'nome'       => $p->nome,
+                'capacidade' => $p->capacidade,
+            ])->values(),
         ]);
     }
 
