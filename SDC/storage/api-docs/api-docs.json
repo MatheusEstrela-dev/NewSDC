@@ -25,48 +25,9 @@
         {
             "url": "http://localhost:19444",
             "description": "Servidor de Desenvolvimento (FrankenPHP HTTP)"
-        },
-        {
-            "url": "http://localhost:19444"
         }
     ],
     "paths": {
-        "/api/health": {
-            "get": {
-                "tags": [
-                    "Health Check"
-                ],
-                "summary": "Health check básico",
-                "description": "Verifica se a aplicação está respondendo",
-                "operationId": "healthBasic",
-                "responses": {
-                    "200": {
-                        "description": "Sistema operacional",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ok"
-                                        },
-                                        "timestamp": {
-                                            "type": "string",
-                                            "format": "date-time"
-                                        },
-                                        "uptime": {
-                                            "type": "integer",
-                                            "example": 3600
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/health/detailed": {
             "get": {
                 "tags": [
@@ -3138,6 +3099,339 @@
                 ]
             }
         },
+        "/api/v1/rat/protocolos": {
+            "get": {
+                "tags": [
+                    "RAT"
+                ],
+                "summary": "Listar RATs paginado (Power BI / BI)",
+                "description": "Retorna a lista paginada de Relatórios de Atividade Técnica com suporte a filtros de data, status, município e protocolo. Projetado para consumo pelo Power BI via Bearer token.",
+                "operationId": "ratProtocolosIndex",
+                "parameters": [
+                    {
+                        "name": "protocolo",
+                        "in": "query",
+                        "description": "Busca parcial no número do BOS (ex: 2026-000000001)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "2026-000000001"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filtrar por status do RAT",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "em_andamento",
+                                "finalizado"
+                            ],
+                            "example": "finalizado"
+                        }
+                    },
+                    {
+                        "name": "ano",
+                        "in": "query",
+                        "description": "Ano de criação do RAT (YYYY)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2026
+                        }
+                    },
+                    {
+                        "name": "data_inicio",
+                        "in": "query",
+                        "description": "Data mínima de criação (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-01-01"
+                        }
+                    },
+                    {
+                        "name": "data_fim",
+                        "in": "query",
+                        "description": "Data máxima de criação (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-12-31"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Itens por página (padrão: 15, máx: 200)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Listagem paginada retornada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RatProtocoloList"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado — Bearer token ausente ou inválido",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit atingido",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "RAT"
+                ],
+                "summary": "Criar RAT via sistema externo",
+                "description": "Cria um novo RAT a partir de dados enviados por sistema externo (Power BI, TDAP, integração). O campo `finalize` controla se o RAT é salvo como rascunho (`false`, padrão) ou já finalizado (`true`). Ao finalizar, `dados_gerais.data_fato`, `dados_gerais.nat_ocorrencia`, `local.uf` e `local.municipio_id` tornam-se obrigatórios.",
+                "operationId": "ratProtocolosReceive",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReceiveRatProtocoloRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "RAT criado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RatProtocoloDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Dados inválidos ou campos obrigatórios ausentes",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/rat/protocolos/{id}": {
+            "get": {
+                "tags": [
+                    "RAT"
+                ],
+                "summary": "Detalhe completo de um RAT",
+                "description": "Retorna todos os dados de um RAT pelo UUID: dados gerais, comunicação, local, endereço, recursos (com agentes), envolvidos, vistoria, histórico, anexos e RATs relacionados.",
+                "operationId": "ratProtocolosShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "UUID do RAT",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "018f2a3b-0000-7000-8000-000000000001"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detalhe completo do RAT",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RatProtocoloDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "RAT não encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/rat/protocolos/export/power-bi": {
+            "get": {
+                "tags": [
+                    "RAT"
+                ],
+                "summary": "Exportar RATs — formato nested Power BI (PAE)",
+                "description": "Retorna TODOS os RATs (sem paginação) em formato nested compatível com o Power BI e o contrato PAE. Cada item contém os objetos: `dados_gerais`, `recursos[]`, `envolvidos[]`, `vistoria` e `historico`. Datas retornadas no formato `Y-m-d H:i:s`. Suporta os mesmos filtros do endpoint de listagem.",
+                "operationId": "ratProtocolosExportBI",
+                "parameters": [
+                    {
+                        "name": "protocolo",
+                        "in": "query",
+                        "description": "Busca parcial no número do BOS",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filtrar por status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "em_andamento",
+                                "finalizado"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "ano",
+                        "in": "query",
+                        "description": "Ano de criação (YYYY)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2025
+                        }
+                    },
+                    {
+                        "name": "data_inicio",
+                        "in": "query",
+                        "description": "Data mínima (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2025-01-01"
+                        }
+                    },
+                    {
+                        "name": "data_fim",
+                        "in": "query",
+                        "description": "Data máxima (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2025-12-31"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exportação nested retornada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RatBIExportResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit atingido",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/traces/{traceId}": {
             "get": {
                 "tags": [
@@ -3181,7 +3475,7 @@
                     "Webhooks"
                 ],
                 "summary": "Receber webhook de sistema externo",
-                "description": "Endpoint para receber webhooks de sistemas externos com validação de segurança.<br><br>\n     *                  **Arquitetura Assíncrona (Fire & Forget):**<br>\n     *                  - Valida o básico (schema OpenAPI)<br>\n     *                  - Enfileira para processamento (Redis Queue)<br>\n     *                  - Responde imediatamente com 202 Accepted<br>\n     *                  - Cliente usa o `trace_id` para consultar status depois<br><br>\n     *                  **Headers Opcionais:**<br>\n     *                  - `X-Webhook-Source`: Identificação do sistema origem<br>\n     *                  - `X-Webhook-Signature`: Assinatura HMAC SHA-256<br>\n     *                  - `Idempotency-Key`: UUID v4 para evitar duplicatas",
+                "description": "Endpoint para receber webhooks de sistemas externos com validação de segurança.<br><br>\r\n     *                  **Arquitetura Assíncrona (Fire & Forget):**<br>\r\n     *                  - Valida o básico (schema OpenAPI)<br>\r\n     *                  - Enfileira para processamento (Redis Queue)<br>\r\n     *                  - Responde imediatamente com 202 Accepted<br>\r\n     *                  - Cliente usa o `trace_id` para consultar status depois<br><br>\r\n     *                  **Headers Opcionais:**<br>\r\n     *                  - `X-Webhook-Source`: Identificação do sistema origem<br>\r\n     *                  - `X-Webhook-Signature`: Assinatura HMAC SHA-256<br>\r\n     *                  - `Idempotency-Key`: UUID v4 para evitar duplicatas",
                 "operationId": "receiveWebhook",
                 "requestBody": {
                     "description": "Payload do webhook",
@@ -4236,6 +4530,1291 @@
                 },
                 "type": "object"
             },
+            "RatProtocoloItem": {
+                "title": "RAT — Item de listagem (paginado)",
+                "description": "Retornado pelo GET /api/v1/rat/protocolos (RatListResource). Campos leves para grid/tabela.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "018f2a3b-0000-7000-8000-000000000001"
+                    },
+                    "numero_bos": {
+                        "type": "string",
+                        "example": "2025-000000001-001"
+                    },
+                    "protocolo": {
+                        "type": "string",
+                        "example": "2025-000000001-001"
+                    },
+                    "sequencial_ano": {
+                        "type": "integer",
+                        "example": 1,
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "em_andamento",
+                            "finalizado"
+                        ],
+                        "example": "finalizado"
+                    },
+                    "status_label": {
+                        "type": "string",
+                        "example": "Finalizado"
+                    },
+                    "municipio": {
+                        "type": "string",
+                        "example": "Belo Horizonte",
+                        "nullable": true
+                    },
+                    "local": {
+                        "properties": {
+                            "municipio": {
+                                "type": "string",
+                                "example": "Belo Horizonte",
+                                "nullable": true
+                            },
+                            "municipio_nome": {
+                                "type": "string",
+                                "example": "Belo Horizonte",
+                                "nullable": true
+                            },
+                            "uf": {
+                                "type": "string",
+                                "example": "MG",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "criado_por": {
+                        "type": "string",
+                        "example": "Maria Silva"
+                    },
+                    "pode_relacionar": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-12-23T08:53:14+00:00"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-12-23T08:54:53+00:00"
+                    }
+                },
+                "type": "object"
+            },
+            "RatProtocoloList": {
+                "title": "RAT — Listagem paginada",
+                "description": "Resposta do GET /api/v1/rat/protocolos. Segue o padrão PaginatedResponse com success/data/meta.",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RatProtocoloItem"
+                        }
+                    },
+                    "meta": {
+                        "properties": {
+                            "current_page": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "per_page": {
+                                "type": "integer",
+                                "example": 15
+                            },
+                            "total": {
+                                "type": "integer",
+                                "example": 120
+                            },
+                            "last_page": {
+                                "type": "integer",
+                                "example": 8
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "RatBIExportItem": {
+                "title": "RAT — Item export Power BI (nested)",
+                "description": "Estrutura de cada item retornado por GET /api/v1/rat/protocolos/export/power-bi. Datas em 'Y-m-d H:i:s'. Espelha o contrato do módulo PAE.",
+                "properties": {
+                    "dados_gerais": {
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "example": "018f2a3b-0000-7000-8000-000000000001"
+                            },
+                            "numero_bos": {
+                                "type": "string",
+                                "example": "2025-000000001-001"
+                            },
+                            "status": {
+                                "description": "1=Finalizado, 0=Em andamento",
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "status_descricao": {
+                                "type": "string",
+                                "example": "Finalizado"
+                            },
+                            "uf": {
+                                "type": "string",
+                                "example": "MG",
+                                "nullable": true
+                            },
+                            "municipio": {
+                                "type": "string",
+                                "example": "620 - BELO HORIZONTE",
+                                "nullable": true
+                            },
+                            "data_fato": {
+                                "type": "string",
+                                "example": "2025-12-23 08:53:00",
+                                "nullable": true
+                            },
+                            "ano": {
+                                "type": "string",
+                                "example": "2025",
+                                "nullable": true
+                            },
+                            "mes": {
+                                "type": "string",
+                                "example": "12",
+                                "nullable": true
+                            },
+                            "cod_cobrade": {
+                                "type": "string",
+                                "example": "Transporte aéreo",
+                                "nullable": true
+                            },
+                            "cobrade_descricao": {
+                                "type": "string",
+                                "example": "Transporte aéreo",
+                                "nullable": true
+                            },
+                            "cod_ocorrencia": {
+                                "type": "string",
+                                "example": "Id et enim mollitia",
+                                "nullable": true
+                            },
+                            "nome_operacao": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "nome_unidade": {
+                                "type": "string",
+                                "example": "2",
+                                "nullable": true
+                            },
+                            "municipio_responsavel": {
+                                "type": "string",
+                                "example": "6230",
+                                "nullable": true
+                            },
+                            "codigo_unidade": {
+                                "type": "string",
+                                "example": "123",
+                                "nullable": true
+                            },
+                            "latitude": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            },
+                            "longitude": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            },
+                            "local_pais": {
+                                "type": "string",
+                                "example": "BR",
+                                "nullable": true
+                            },
+                            "local_logradouro": {
+                                "type": "string",
+                                "example": "Rua Fortaleza",
+                                "nullable": true
+                            },
+                            "local_bairro": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "local_cep": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "local_numero": {
+                                "type": "string",
+                                "example": "123",
+                                "nullable": true
+                            },
+                            "local_complemento": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "local_tipo_ocorrencia": {
+                                "type": "string",
+                                "enum": [
+                                    "urbana",
+                                    "rural",
+                                    "rodovia",
+                                    "estrada",
+                                    "mata",
+                                    "montanha",
+                                    "rio",
+                                    "lago",
+                                    "outros"
+                                ],
+                                "example": "rodovia",
+                                "nullable": true
+                            },
+                            "data_inicio_atividade": {
+                                "type": "string",
+                                "example": "2025-12-23 08:53:00",
+                                "nullable": true
+                            },
+                            "data_termino_atividade": {
+                                "type": "string",
+                                "example": "2025-12-23 08:53:00",
+                                "nullable": true
+                            },
+                            "comunicacao_data": {
+                                "type": "string",
+                                "example": "2025-12-23 08:53:00",
+                                "nullable": true
+                            },
+                            "comunicacao_atendimento": {
+                                "type": "string",
+                                "enum": [
+                                    "telefone",
+                                    "radio",
+                                    "pessoal",
+                                    "sistema",
+                                    "email",
+                                    "outro"
+                                ],
+                                "example": "pessoal",
+                                "nullable": true
+                            },
+                            "created_at": {
+                                "type": "string",
+                                "example": "2025-12-23 08:53:14"
+                            },
+                            "updated_at": {
+                                "type": "string",
+                                "example": "2025-12-23 08:54:53"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "recursos": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "seq": {
+                                    "type": "integer",
+                                    "example": 0
+                                },
+                                "tipo_recurso": {
+                                    "type": "string",
+                                    "example": "aquatico",
+                                    "nullable": true
+                                },
+                                "categoria": {
+                                    "type": "string",
+                                    "example": "comunicacao",
+                                    "nullable": true
+                                },
+                                "numero_viatura": {
+                                    "type": "string",
+                                    "example": "HNH 1932",
+                                    "nullable": true
+                                },
+                                "placa": {
+                                    "type": "string",
+                                    "example": "HNH 1932",
+                                    "nullable": true
+                                },
+                                "padrao": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "orgao": {
+                                    "type": "string",
+                                    "example": "samu",
+                                    "nullable": true
+                                },
+                                "descricao": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "problemas": {
+                                    "type": "boolean",
+                                    "example": false
+                                },
+                                "descricao_problemas": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "envolvidos": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "tipo_pessoa": {
+                                    "type": "string",
+                                    "enum": [
+                                        "fisica",
+                                        "juridica"
+                                    ],
+                                    "example": "juridica",
+                                    "nullable": true
+                                },
+                                "nome": {
+                                    "type": "string",
+                                    "example": "João da Silva",
+                                    "nullable": true
+                                },
+                                "cpf": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "email": {
+                                    "type": "string",
+                                    "example": "email@example.com",
+                                    "nullable": true
+                                },
+                                "telefone_residencial": {
+                                    "type": "string",
+                                    "example": "(31) 00000-0000",
+                                    "nullable": true
+                                },
+                                "telefone_comercial": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "sexo": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "estado_civil": {
+                                    "type": "string",
+                                    "example": "solteiro",
+                                    "nullable": true
+                                },
+                                "data_nascimento": {
+                                    "type": "string",
+                                    "example": "1990-01-15",
+                                    "nullable": true
+                                },
+                                "cor_raca": {
+                                    "type": "string",
+                                    "example": "parda",
+                                    "nullable": true
+                                },
+                                "escolaridade": {
+                                    "type": "string",
+                                    "example": "analfabeto",
+                                    "nullable": true
+                                },
+                                "ocupacao": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "morador_rua": {
+                                    "type": "boolean",
+                                    "example": false
+                                },
+                                "estrangeiro": {
+                                    "type": "boolean",
+                                    "example": false
+                                },
+                                "endereco_municipio": {
+                                    "type": "string",
+                                    "example": "620",
+                                    "nullable": true
+                                },
+                                "endereco_uf": {
+                                    "type": "string",
+                                    "example": "MG",
+                                    "nullable": true
+                                },
+                                "endereco_logradouro": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "endereco_bairro": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "vistoria": {
+                        "description": "null quando tem_vistoria=false",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "solicitante": {
+                                "properties": {
+                                    "nome": {
+                                        "type": "string",
+                                        "example": "MATHEUS KEVIN ESTRELA DA SILVA",
+                                        "nullable": true
+                                    },
+                                    "cpf": {
+                                        "type": "string",
+                                        "example": "312.312.312-38",
+                                        "nullable": true
+                                    },
+                                    "telefone": {
+                                        "type": "string",
+                                        "example": "(23) 13123-1231",
+                                        "nullable": true
+                                    },
+                                    "endereco": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "bairro": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "cep": {
+                                        "type": "string",
+                                        "example": "31210-260",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "imovel": {
+                                "properties": {
+                                    "tipo_imovel": {
+                                        "type": "string",
+                                        "example": "comercial",
+                                        "nullable": true
+                                    },
+                                    "tipo_construcao": {
+                                        "type": "string",
+                                        "example": "outro",
+                                        "nullable": true
+                                    },
+                                    "tipo_edificacao": {
+                                        "type": "string",
+                                        "example": "construcoes_area_risco",
+                                        "nullable": true
+                                    },
+                                    "sistema_estrutural": {
+                                        "type": "string",
+                                        "example": "alvenaria",
+                                        "nullable": true
+                                    },
+                                    "numero_pavimentos": {
+                                        "type": "integer",
+                                        "example": 9,
+                                        "nullable": true
+                                    },
+                                    "estado_conservacao": {
+                                        "type": "string",
+                                        "example": "pessimo",
+                                        "nullable": true
+                                    },
+                                    "regime_ocupacao": {
+                                        "type": "string",
+                                        "example": "proprio",
+                                        "nullable": true
+                                    },
+                                    "bairro": {
+                                        "type": "string",
+                                        "example": "Bonfim",
+                                        "nullable": true
+                                    },
+                                    "municipio": {
+                                        "type": "integer",
+                                        "example": 1580,
+                                        "nullable": true
+                                    },
+                                    "cep": {
+                                        "type": "string",
+                                        "example": "31210-260",
+                                        "nullable": true
+                                    },
+                                    "latitude": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "longitude": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "proprietario_morador": {
+                                "properties": {
+                                    "nome": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "telefone": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "numero_moradores": {
+                                        "type": "integer",
+                                        "example": 61,
+                                        "nullable": true
+                                    },
+                                    "ha_idosos": {
+                                        "type": "string",
+                                        "enum": [
+                                            "sim",
+                                            "nao"
+                                        ],
+                                        "example": "nao"
+                                    },
+                                    "ha_criancas": {
+                                        "type": "string",
+                                        "enum": [
+                                            "sim",
+                                            "nao"
+                                        ],
+                                        "example": "sim"
+                                    },
+                                    "ha_dificuldade_locomocao": {
+                                        "type": "string",
+                                        "enum": [
+                                            "sim",
+                                            "nao"
+                                        ],
+                                        "example": "nao"
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "infraestrutura": {
+                                "properties": {
+                                    "abastecimento_agua": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "esgotamento_sanitario": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "drenagem_superficial": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "sistema_viario_acesso": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "tipo_revestimento": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "numero_moradias_terreno": {
+                                        "type": "integer",
+                                        "example": 79,
+                                        "nullable": true
+                                    },
+                                    "material_construtivo": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "conservacao_estrutural": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "analise_tecnica": {
+                                "properties": {
+                                    "elementos_estruturais": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "elementos_construtivos": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "agentes_potencializadores": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "processos_geodinamicos": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "patologias": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "example": [
+                                    "Trincas",
+                                    "Desagregação",
+                                    "Instabilidade de Talude",
+                                    "Outros: descrição"
+                                ]
+                            },
+                            "bens_afetados": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "example": [
+                                    "Muros",
+                                    "Vias Públicas",
+                                    "Outros: descrição"
+                                ]
+                            },
+                            "orgaos_acionados": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "example": [
+                                    "CEMIG",
+                                    "Secretaria Municipal",
+                                    "Polícia Militar",
+                                    "CREA"
+                                ]
+                            },
+                            "encaminhamentos": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "example": [
+                                    "Interdição Parcial",
+                                    "Remoção Temporária",
+                                    "Comunicação a Órgãos"
+                                ]
+                            },
+                            "destinacao_localizacao": {
+                                "properties": {
+                                    "tipo_destinacao": {
+                                        "type": "string",
+                                        "example": "publico",
+                                        "nullable": true
+                                    },
+                                    "tipo_localizacao": {
+                                        "type": "string",
+                                        "example": "rural",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "historico": {
+                        "properties": {
+                            "historico_ocorrencia": {
+                                "type": "string",
+                                "enum": [
+                                    "sim",
+                                    "nao"
+                                ],
+                                "example": "sim"
+                            },
+                            "criado_por": {
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "example": "1083"
+                                    },
+                                    "nome": {
+                                        "type": "string",
+                                        "example": "Matheus Kevin Estrela da Silva"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "matheus.estrela@defesacivil.mg.gov.br"
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "criado_em": {
+                                "type": "string",
+                                "example": "2025-12-23 08:53:14"
+                            },
+                            "atualizado_em": {
+                                "type": "string",
+                                "example": "2025-12-23 08:54:53"
+                            },
+                            "prazo_edicao": {
+                                "type": "string",
+                                "example": "2025-12-25 08:53:14",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "RatBIExportResponse": {
+                "title": "RAT — Resposta Export Power BI",
+                "description": "Resposta do GET /api/v1/rat/protocolos/export/power-bi. Sem paginação, formato nested compatível com Power BI.",
+                "properties": {
+                    "sucesso": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "dados": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RatBIExportItem"
+                        }
+                    },
+                    "meta": {
+                        "properties": {
+                            "total_registros": {
+                                "type": "integer",
+                                "example": 45
+                            },
+                            "gerado_em": {
+                                "type": "string",
+                                "format": "date-time",
+                                "example": "2025-12-23T10:00:00Z"
+                            },
+                            "filtros_aplicados": {
+                                "description": "Filtros query params ativos nesta requisição",
+                                "type": "object"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "RatProtocoloDetail": {
+                "title": "RAT — Detalhe completo (show / create)",
+                "description": "Retornado pelo GET /api/v1/rat/protocolos/{id} e POST /api/v1/rat/protocolos (via RatResource).",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "example": "018f2a3b-0000-7000-8000-000000000001"
+                            },
+                            "numero_bos": {
+                                "type": "string",
+                                "example": "2025-000000001-001"
+                            },
+                            "protocolo": {
+                                "type": "string",
+                                "example": "2025-000000001-001"
+                            },
+                            "status": {
+                                "type": "string",
+                                "enum": [
+                                    "em_andamento",
+                                    "finalizado"
+                                ],
+                                "example": "finalizado"
+                            },
+                            "status_label": {
+                                "type": "string",
+                                "example": "Finalizado"
+                            },
+                            "municipio": {
+                                "type": "string",
+                                "example": "Belo Horizonte",
+                                "nullable": true
+                            },
+                            "tem_vistoria": {
+                                "type": "boolean",
+                                "example": false
+                            },
+                            "dados_gerais": {
+                                "properties": {
+                                    "data_fato": {
+                                        "type": "string",
+                                        "example": "2025-12-23 08:53:00",
+                                        "nullable": true
+                                    },
+                                    "data_inicio_atividade": {
+                                        "type": "string",
+                                        "example": "2025-12-23 08:53:00",
+                                        "nullable": true
+                                    },
+                                    "data_termino_atividade": {
+                                        "type": "string",
+                                        "example": "2025-12-23 08:53:00",
+                                        "nullable": true
+                                    },
+                                    "nat_cobrade_id": {
+                                        "type": "integer",
+                                        "example": 15,
+                                        "nullable": true
+                                    },
+                                    "nat_ocorrencia": {
+                                        "type": "string",
+                                        "example": "Deslizamento de terra",
+                                        "nullable": true
+                                    },
+                                    "nat_nome_operacao": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "local_municipio_nome": {
+                                        "type": "string",
+                                        "example": "Belo Horizonte",
+                                        "nullable": true
+                                    },
+                                    "local_estadouf": {
+                                        "type": "string",
+                                        "example": "MG",
+                                        "nullable": true
+                                    },
+                                    "local_cep": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "local_logradoura_1": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "local_bairro": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "local_tipo_ocorrencia": {
+                                        "type": "string",
+                                        "example": "rodovia",
+                                        "nullable": true
+                                    },
+                                    "comunicacao_data": {
+                                        "type": "string",
+                                        "example": "2025-12-23 08:53:00",
+                                        "nullable": true
+                                    },
+                                    "comunicacao_atendimento": {
+                                        "type": "string",
+                                        "enum": [
+                                            "telefone",
+                                            "radio",
+                                            "pessoal",
+                                            "sistema",
+                                            "email",
+                                            "outro"
+                                        ],
+                                        "example": "pessoal",
+                                        "nullable": true
+                                    },
+                                    "tem_vistoria": {
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "recursos": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/RatBIExportItem/properties/recursos/items"
+                                }
+                            },
+                            "envolvidos": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/RatBIExportItem/properties/envolvidos/items"
+                                }
+                            },
+                            "vistoria": {
+                                "type": "object",
+                                "nullable": true
+                            },
+                            "historico": {
+                                "properties": {
+                                    "historico_ocorrencia": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "criado_por": {
+                                        "properties": {
+                                            "id": {
+                                                "type": "string"
+                                            },
+                                            "nome": {
+                                                "type": "string"
+                                            },
+                                            "email": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "criado_em": {
+                                        "type": "string",
+                                        "example": "2025-12-23 08:53:14"
+                                    },
+                                    "atualizado_em": {
+                                        "type": "string",
+                                        "example": "2025-12-23 08:54:53"
+                                    },
+                                    "prazo_edicao": {
+                                        "type": "string",
+                                        "example": "2025-12-25 08:53:14",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "anexos": {
+                                "type": "array",
+                                "items": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        },
+                                        "nome_original": {
+                                            "type": "string"
+                                        },
+                                        "mime_type": {
+                                            "type": "string"
+                                        },
+                                        "tamanho_bytes": {
+                                            "type": "integer"
+                                        },
+                                        "url": {
+                                            "type": "string"
+                                        },
+                                        "created_at": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            },
+                            "ocorrencia_origem": {
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "numero_bos": {
+                                        "type": "string",
+                                        "example": "2025-000000001-001"
+                                    }
+                                },
+                                "type": "object",
+                                "nullable": true
+                            },
+                            "ocorrencias_filhas": {
+                                "type": "array",
+                                "items": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        },
+                                        "numero_bos": {
+                                            "type": "string",
+                                            "example": "2025-000000001-002"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            },
+                            "criado_por": {
+                                "type": "string",
+                                "example": "Maria Silva",
+                                "nullable": true
+                            },
+                            "atualizado_por": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "created_at": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "updated_at": {
+                                "type": "string",
+                                "format": "date-time"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "ReceiveRatProtocoloRequest": {
+                "title": "RAT — Corpo do POST /api/v1/rat/protocolos",
+                "properties": {
+                    "dados_gerais": {
+                        "properties": {
+                            "data_fato": {
+                                "type": "string",
+                                "example": "2025-12-23 08:53:00"
+                            },
+                            "nat_cobrade_id": {
+                                "type": "integer",
+                                "example": 15,
+                                "nullable": true
+                            },
+                            "nat_nome_operacao": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "tem_vistoria": {
+                                "type": "boolean",
+                                "example": false
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "comunicacao": {
+                        "properties": {
+                            "tipo_solicitacao": {
+                                "type": "string",
+                                "enum": [
+                                    "telefone",
+                                    "radio",
+                                    "pessoal",
+                                    "sistema",
+                                    "email",
+                                    "outro"
+                                ],
+                                "example": "pessoal",
+                                "nullable": true
+                            },
+                            "data_comunicacao": {
+                                "type": "string",
+                                "example": "2025-12-23 08:53:00",
+                                "nullable": true
+                            },
+                            "telefone_contato": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "nome_solicitante": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "local": {
+                        "properties": {
+                            "uf": {
+                                "type": "string",
+                                "example": "MG",
+                                "nullable": true
+                            },
+                            "municipio_id": {
+                                "type": "integer",
+                                "example": 620,
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "endereco": {
+                        "properties": {
+                            "cep": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "logradouro": {
+                                "type": "string",
+                                "example": "Rua Fortaleza",
+                                "nullable": true
+                            },
+                            "numero": {
+                                "type": "string",
+                                "example": "123",
+                                "nullable": true
+                            },
+                            "bairro": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "tipo_localizacao": {
+                                "type": "string",
+                                "enum": [
+                                    "urbana",
+                                    "rural",
+                                    "rodovia",
+                                    "estrada",
+                                    "mata",
+                                    "montanha",
+                                    "rio",
+                                    "lago",
+                                    "outros"
+                                ],
+                                "example": "rodovia",
+                                "nullable": true
+                            },
+                            "latitude": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            },
+                            "longitude": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "recursos": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "tipo_recurso": {
+                                    "type": "string",
+                                    "example": "aquatico",
+                                    "nullable": true
+                                },
+                                "categoria": {
+                                    "type": "string",
+                                    "example": "comunicacao",
+                                    "nullable": true
+                                },
+                                "orgao_responsavel": {
+                                    "type": "string",
+                                    "example": "samu",
+                                    "nullable": true
+                                },
+                                "identificacao": {
+                                    "type": "string",
+                                    "example": "HNH 1932",
+                                    "nullable": true
+                                },
+                                "data_saida": {
+                                    "type": "string",
+                                    "example": "2025-12-23 08:00:00",
+                                    "nullable": true
+                                },
+                                "data_chegada": {
+                                    "type": "string",
+                                    "example": "2025-12-23 10:00:00",
+                                    "nullable": true
+                                },
+                                "km_percorrido": {
+                                    "type": "number",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "nullable": true
+                    },
+                    "envolvidos": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "tipo_pessoa": {
+                                    "type": "string",
+                                    "enum": [
+                                        "fisica",
+                                        "juridica"
+                                    ],
+                                    "example": "fisica",
+                                    "nullable": true
+                                },
+                                "nome": {
+                                    "type": "string",
+                                    "example": "João da Silva",
+                                    "nullable": true
+                                },
+                                "cpf": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "sexo": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "data_nascimento": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "example": "1990-01-15",
+                                    "nullable": true
+                                },
+                                "municipio": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "uf": {
+                                    "type": "string",
+                                    "example": "MG",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "nullable": true
+                    },
+                    "vistoria": {
+                        "description": "Preencher apenas se tem_vistoria=true",
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "finalize": {
+                        "description": "true para finalizar imediatamente; false (padrão) salva como rascunho. Ao finalizar, data_fato e local.uf tornam-se obrigatórios.",
+                        "type": "boolean",
+                        "example": false,
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
             "Empreendimento": {
                 "title": "Empreendimento PAE",
                 "description": "Empreendimento (barragem) cadastrado no modulo PAE",
@@ -4486,6 +6065,10 @@
         {
             "name": "Decretacoes",
             "description": "Endpoints do modulo de Decretacoes — listagem, detalhe, export BI e recebimento externo"
+        },
+        {
+            "name": "RAT",
+            "description": "Relatório de Atividade Técnica — listagem paginada, detalhe, exportação Power BI e recebimento externo"
         },
         {
             "name": "Autenticação",

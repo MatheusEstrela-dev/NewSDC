@@ -387,8 +387,9 @@ Route::prefix('v1/rat')
         'api-rate-limiter:pro',
     ])
     ->group(function () {
-        Route::get('protocolos',      [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'index'])->name('protocolos.index');
-        Route::get('protocolos/{id}', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'show'])->name('protocolos.show');
+        Route::get('protocolos',               [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'index'])->name('protocolos.index');
+        Route::get('protocolos/export/power-bi', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'exportPowerBI'])->name('protocolos.export.powerbi');
+        Route::get('protocolos/{id}',          [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'show'])->name('protocolos.show');
     });
 
 // Rota de escrita — limite restrito (default: 300 creditos/min)
