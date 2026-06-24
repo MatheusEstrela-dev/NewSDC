@@ -1,6 +1,9 @@
 <template>
   <div class="animate-fade-in-up pb-6 space-y-6">
 
+    <!-- ── Cards de formulário: visíveis somente em modo edição ─────────── -->
+    <template v-if="!viewOnly">
+
     <!-- ── Card 1: Dados Pessoais ─────────────────────────────────────────── -->
     <div class="rat-section-card">
       <div class="rat-section-header">
@@ -207,8 +210,10 @@
       </fieldset>
     </div>
 
+    </template><!-- /v-if="!viewOnly" form cards 1-5 -->
+
     <!-- ── Botões: Adicionar Envolvido + Salvar ───────────────────────────── -->
-    <div v-if="!viewOnly" class="flex items-center justify-between gap-3">
+    <div v-if="!viewOnly" class="flex items-center justify-end gap-3">
       <button
         type="button"
         @click="adicionarEnvolvido"

@@ -23,7 +23,7 @@ class RatProtocoloService
             // Formato: YYYY-SEQUENCE-SUFFIX
             // SEQUENCE: número sequencial único (incrementa a cada novo RAT raiz)
             // SUFFIX: 000 para novo RAT, 001/002... para RATs relacionados
-            return sprintf('%d-%09d-000', $year, $seq);
+            return sprintf('%d-%09d-001', $year, $seq);
         });
     }
 

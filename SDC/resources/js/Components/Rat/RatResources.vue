@@ -1,6 +1,9 @@
 <template>
   <div class="animate-fade-in-up pb-6 space-y-6">
 
+    <!-- ── Cards de formulário: visíveis somente em modo edição ─────────── -->
+    <template v-if="!viewOnly || editingIndex >= 0">
+
     <!-- ── Card 1: Dados do Recurso ──────────────────────────────────────── -->
     <div class="rat-section-card">
       <div class="rat-section-header">
@@ -114,6 +117,8 @@
       </fieldset>
     </div>
 
+    </template><!-- /v-if="!viewOnly" forma cards 1-3 -->
+
     <!-- ── Botão Adicionar Recurso ────────────────────────────────────────── -->
     <div v-if="!viewOnly" class="flex">
       <button
@@ -198,7 +203,7 @@
     </div>
 
     <!-- ── Card 4: Agentes / Integrantes da Guarnição ────────────────────── -->
-    <div class="rat-section-card">
+    <div v-if="!viewOnly" class="rat-section-card">
       <div class="rat-section-header">
         <div class="rat-section-icon rat-section-icon-default">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,7 +234,7 @@
             <FormField label="Função no Atendimento" v-model="agentForm.funcao" placeholder="Ex: Comandante de Socorro, Socorrista" />
           </div>
         </div>
-        <div v-if="!viewOnly" class="flex items-center justify-between gap-3 mt-6">
+        <div v-if="!viewOnly" class="flex mt-6">
           <button
             type="button"
             @click="adicionarAgente"
@@ -239,17 +244,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             Adicionar Agente
-          </button>
-          <button
-            type="button"
-            @click="handleSave"
-            :disabled="loading"
-            class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-sm transition-colors shadow-sm"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-            {{ loading ? 'Salvando...' : 'Salvar Recursos e Agentes' }}
           </button>
         </div>
       </fieldset>
@@ -304,6 +298,27 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ── Footer de ações ──────────────────────────────────────────────────── -->
+    <div v-if="!viewOnly" class="rat-actions-footer">
+      <div class="flex items-center justify-end gap-3 flex-wrap">
+        <button
+          type="button"
+          @click="handleSave"
+          :disabled="loading"
+          class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed min-w-[140px] justify-center"
+        >
+          <svg v-if="loading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          {{ loading ? 'Salvando...' : 'Salvar Recursos e Agentes' }}
+        </button>
       </div>
     </div>
 

@@ -260,6 +260,15 @@ class RatUnifiedController extends BaseController
 
     public function update(Request $request, string $id): RedirectResponse|JsonResponse
     {
+        $ocorrencia = RatOcorrencia::findOrFail($id);
+        if ($ocorrencia->prazo_edicao && $ocorrencia->prazo_edicao->isPast()) {
+            $msg = 'O prazo de edição de 48h foi encerrado. Este RAT não pode mais ser alterado.';
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->withErrors(['error' => $msg]);
+        }
+
         \Illuminate\Support\Facades\DB::transaction(function () use ($request, $id) {
             if ($request->has('dadosGerais') || $request->has('comunicacao') || $request->has('local') || $request->has('endereco')) {
                 $this->writeService->saveDadosGerais($id, RatDadosGeraisDTO::fromArray($request->all()));
@@ -598,6 +607,34 @@ class RatUnifiedController extends BaseController
     // API — Export / Statistics / JSON
     // =========================================================================
 
+    public function print(string $id): \Illuminate\Contracts\View\View
+    {
+        $ocorrencia = $this->writeService->findById($id);
+        abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
+
+        $relatos = $ocorrencia->relatosMorph;
+
+        $dg = $relatos
+            ->first(fn ($r) => $r->conteudo_type === \App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais::class)
+            ?->conteudo;
+
+        $recursos = $relatos
+            ->filter(fn ($r) => $r->conteudo_type === \App\Modules\Rat\Models\Relatos\RatRelatoRecurso::class);
+
+        $envolvidos = $relatos
+            ->filter(fn ($r) => $r->conteudo_type === \App\Modules\Rat\Models\Relatos\RatRelatoEnvolvidos::class);
+
+        $agentes = $recursos->flatMap(function ($r) {
+            $conteudo = $r->conteudo;
+            if ($conteudo && !$conteudo->relationLoaded('agentes')) {
+                $conteudo->load('agentes');
+            }
+            return $conteudo?->agentes ?? collect();
+        });
+
+        return view('rat.print', compact('ocorrencia', 'dg', 'recursos', 'envolvidos', 'agentes'));
+    }
+
     public function export(Request $request): StreamedResponse
     {
         return $this->exportService->exportToCsv($request);
@@ -723,11 +760,14 @@ class RatUnifiedController extends BaseController
     {
         $ocorrencia = RatOcorrencia::findOrFail($id);
 
-        $horasDesde = $ocorrencia->created_at->diffInHours(now());
-
-        if ($horasDesde < 42) {
-            $horasRestantes = 42 - $horasDesde;
-            $msg = "Este boletim só poderá ser relacionado após 42 horas da criação. Aguarde mais {$horasRestantes} hora(s).";
+        // Só é possível criar boletim relacionado após o RAT estar finalizado (prazo 48h expirado)
+        if ($ocorrencia->status !== 1) {
+            if ($ocorrencia->prazo_edicao && $ocorrencia->prazo_edicao->isFuture()) {
+                $restantes = $ocorrencia->prazo_edicao->diffForHumans(now(), true);
+                $msg = "Este boletim só poderá ser relacionado após ser finalizado. Prazo de edição expira em {$restantes}.";
+            } else {
+                $msg = 'Finalize o RAT antes de criar um boletim relacionado.';
+            }
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }

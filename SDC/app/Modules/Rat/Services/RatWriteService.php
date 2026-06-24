@@ -58,8 +58,8 @@ class RatWriteService
                 ->orderByDesc('numero_bos')
                 ->value('numero_bos');
 
-            // Extrair sufixo e incrementar
-            $nextSuffix = 0;
+            // Extrair sufixo e incrementar (sequência sempre começa em 001)
+            $nextSuffix = 1;
             if ($latestRelated) {
                 $relatedParts = explode('-', $latestRelated);
                 $nextSuffix = (int) $relatedParts[2] + 1;
@@ -140,6 +140,8 @@ class RatWriteService
             'historicos',
             'ratAnexos',
             'relatosMorph.conteudo', // Carrega vistoria, envolvidos, recursos, dados_gerais
+            'ocorrenciaOrigem',
+            'ocorrenciasFilhas',
         ])->find($id);
     }
 
@@ -147,6 +149,13 @@ class RatWriteService
     {
         $ocorrencia = RatOcorrencia::findOrFail($id);
         abort_if($ocorrencia->status === 1, 422, 'RAT já está finalizado.');
+
+        // Só é possível finalizar após o prazo de edição de 48h
+        if ($ocorrencia->prazo_edicao && $ocorrencia->prazo_edicao->isFuture()) {
+            $horas = (int) now()->diffInHours($ocorrencia->prazo_edicao, false) * -1;
+            $restantes = $ocorrencia->prazo_edicao->diffForHumans(now(), true);
+            abort(422, "O RAT ainda está dentro do prazo de edição. Finalização liberada em {$restantes}.");
+        }
 
         $ocorrencia->update([
             'status'     => 1,
@@ -159,6 +168,13 @@ class RatWriteService
     public function saveDraft(string $id, array $data): RatOcorrencia
     {
         return DB::transaction(function () use ($id, $data) {
+            $ocorrencia = RatOcorrencia::findOrFail($id);
+
+            // Após o prazo de 48h, o RAT fica bloqueado para edição
+            if ($ocorrencia->prazo_edicao && $ocorrencia->prazo_edicao->isPast()) {
+                abort(422, 'O prazo de edição de 48h foi encerrado. Este RAT não pode mais ser alterado.');
+            }
+
             $userId = Auth::id();
 
             RatOcorrencia::where('id', $id)->update([

@@ -360,6 +360,16 @@ class RatResource extends JsonResource
             // ── Anexos (rat_anexos table via relationship) ──
             'anexos' => $anexos,
 
+            // ── RATs relacionados (número do BOS, não UUID) ──
+            'ocorrencia_origem' => $this->ocorrenciaOrigem ? [
+                'id'         => $this->ocorrenciaOrigem->id,
+                'numero_bos' => $this->ocorrenciaOrigem->numero_bos,
+            ] : null,
+            'ocorrencias_filhas' => collect($this->relationLoaded('ocorrenciasFilhas') ? $this->ocorrenciasFilhas : [])->map(fn ($f) => [
+                'id'         => $f->id,
+                'numero_bos' => $f->numero_bos,
+            ])->values()->all(),
+
             // ── Permissões de ação ──
             'pode_relacionar' => $this->status === 1 || ($this->prazo_edicao && $this->prazo_edicao->isPast()),
 

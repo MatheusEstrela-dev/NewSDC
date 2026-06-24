@@ -30,6 +30,26 @@
             {{ rat.numero_bos || rat.protocolo }}
           </span>
         </div>
+
+        <!-- RATs relacionados (número do BOS, não UUID) -->
+        <div v-if="rat.ocorrencia_origem || rat.ocorrencias_filhas?.length" class="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 items-center">
+          <div v-if="rat.ocorrencia_origem" class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"/>
+            </svg>
+            <span>Origem:</span>
+            <span class="font-mono font-semibold text-slate-700 dark:text-slate-300">{{ rat.ocorrencia_origem.numero_bos }}</span>
+          </div>
+          <div v-if="rat.ocorrencias_filhas?.length" class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+            </svg>
+            <span>Relacionados:</span>
+            <span v-for="(f, i) in rat.ocorrencias_filhas" :key="f.id" class="font-mono font-semibold text-slate-700 dark:text-slate-300">
+              {{ f.numero_bos }}<span v-if="i < rat.ocorrencias_filhas.length - 1">,&nbsp;</span>
+            </span>
+          </div>
+        </div>
       </div>
 
       <!-- Última Atualização - visível apenas em sm+ -->
@@ -81,7 +101,7 @@ const pageTitle = computed(() => {
 });
 
 const formattedLastUpdate = computed(() => {
-  return props.lastUpdate || formatDateTime(new Date());
+  return formatDateTime(props.lastUpdate) || formatDateTime(new Date());
 });
 
 function getStatusClass(status) {

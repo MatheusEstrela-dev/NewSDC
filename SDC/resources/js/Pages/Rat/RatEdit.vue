@@ -74,6 +74,7 @@
                   :rat-id="rat?.id"
                   :anexos="anexos"
                   :view-only="false"
+                  :rat-status="rat?.status"
                   @add="handleAddAnexo"
                   @remove="handleRemoveAnexo"
                   @update="handleUpdateAnexos"

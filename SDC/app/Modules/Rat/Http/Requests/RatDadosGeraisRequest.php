@@ -18,20 +18,24 @@ class RatDadosGeraisRequest extends FormRequest
 
     public function rules(): array
     {
-        // Regras flexíveis para suportar tanto envio aninhado (frontend) quanto plano (DTO/Mobile)
-        // e permitir salvamento parcial (Rascunho).
-        // IMPORTANTE: todo campo que o DTO/Model persiste precisa estar listado aqui,
-        // senao validated() o descarta silenciosamente (perda de dados).
+        // Campos obrigatórios apenas na finalização; rascunho aceita tudo nullable.
+        $isFinalizing = (bool) $this->input('finalize');
+
+        $required = $isFinalizing ? 'required' : 'nullable';
+
         return [
+            // Finalização
+            'finalize' => ['nullable', 'boolean'],
+
             // Datas (podem vir na raiz ou em 'dadosGerais')
-            'data_fato'               => ['nullable', 'string'],
-            'dadosGerais.data_fato'    => ['nullable', 'string'],
+            'data_fato'               => [$required, 'string'],
+            'dadosGerais.data_fato'   => [$required, 'string'],
 
-            'data_inicio_atividade'   => ['nullable', 'string'],
-            'dadosGerais.data_inicio_atividade' => ['nullable', 'string'],
+            'data_inicio_atividade'               => ['nullable', 'string'],
+            'dadosGerais.data_inicio_atividade'   => ['nullable', 'string'],
 
-            'data_termino_atividade'  => ['nullable', 'string'],
-            'dadosGerais.data_termino_atividade' => ['nullable', 'string'],
+            'data_termino_atividade'              => ['nullable', 'string'],
+            'dadosGerais.data_termino_atividade'  => ['nullable', 'string'],
 
             // Natureza e codigos
             'nat_codigo'              => ['nullable', 'string'],
@@ -40,8 +44,8 @@ class RatDadosGeraisRequest extends FormRequest
             'nat_cobrade_id'          => ['nullable'],
             'dadosGerais.nat_cobrade_id' => ['nullable'],
 
-            'nat_ocorrencia'          => ['nullable', 'string'],
-            'dadosGerais.nat_ocorrencia' => ['nullable', 'string'],
+            'nat_ocorrencia'          => [$required, 'string'],
+            'dadosGerais.nat_ocorrencia' => [$required, 'string'],
 
             'nat_nome_operacao'       => ['nullable', 'string'],
             'dadosGerais.nat_nome_operacao' => ['nullable', 'string'],
@@ -75,12 +79,12 @@ class RatDadosGeraisRequest extends FormRequest
             'comunicacao.telefone_contato' => ['nullable', 'string'],
             'comunicacao.nome_solicitante' => ['nullable', 'string'],
 
-            // Localização (pode vir em 'local'). O frontend envia 'pais' (sigla); 'pais_id' mantido por compatibilidade.
+            // Localização (pode vir em 'local')
             'local.pais'              => ['nullable', 'string'],
             'local.pais_id'           => ['nullable'],
-            'local.uf'                => ['nullable', 'string', 'max:2'],
+            'local.uf'                => [$required, 'string', 'max:2'],
             'local.municipio_id'      => ['nullable'],
-            'local.municipio_nome'    => ['nullable', 'string'],
+            'local.municipio_nome'    => [$required, 'string'],
 
             // Endereço (pode vir em 'endereco')
             'endereco.cep'            => ['nullable', 'string'],
@@ -103,7 +107,13 @@ class RatDadosGeraisRequest extends FormRequest
     public function messages(): array
     {
         return [
-            // Mensagens personalizadas se necessário
+            'data_fato.required'            => 'A data/hora do fato é obrigatória para finalizar o RAT.',
+            'dadosGerais.data_fato.required' => 'A data/hora do fato é obrigatória para finalizar o RAT.',
+            'nat_ocorrencia.required'        => 'O tipo de ocorrência é obrigatório para finalizar o RAT.',
+            'dadosGerais.nat_ocorrencia.required' => 'O tipo de ocorrência é obrigatório para finalizar o RAT.',
+            'local.uf.required'              => 'O estado/UF é obrigatório para finalizar o RAT.',
+            'local.municipio_nome.required'  => 'O município é obrigatório para finalizar o RAT.',
         ];
     }
+
 }
