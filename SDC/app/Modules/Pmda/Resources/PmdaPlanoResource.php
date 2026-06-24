@@ -30,6 +30,8 @@ class PmdaPlanoResource extends JsonResource
             'resp_cob_iss'      => $this->resp_cob_iss,
             'data_aprov'        => $this->data_aprov?->toIso8601String(),
             'dt_ultima_alteracao' => $this->dt_ultima_alteracao?->toIso8601String(),
+            'comunidades_count' => $this->whenCounted('comunidades'),
+            'comunidades'       => ComunidadeResource::collection($this->whenLoaded('comunidades')),
         ];
     }
 }

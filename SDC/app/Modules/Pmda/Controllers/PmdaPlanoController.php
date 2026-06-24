@@ -47,8 +47,11 @@ class PmdaPlanoController extends Controller
 
     public function edit(PmdaPlano $plano): Response
     {
+        $plano->load(['municipio', 'comunidades.representantes'])
+            ->loadCount('comunidades');
+
         return Inertia::render('Pmda/Edit', [
-            'plano' => new PmdaPlanoResource($plano->load('municipio')),
+            'plano' => new PmdaPlanoResource($plano),
         ]);
     }
 

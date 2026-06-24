@@ -29,7 +29,23 @@ class PmdaCopiaService
         $copia->created_by = $userId;
         $copia->save();
 
-        // Fase 2 estende este service para duplicar comunidades + representantes.
-        return $copia;
+        $this->duplicarComunidades($origem, $copia);
+
+        return $copia->refresh();
+    }
+
+    private function duplicarComunidades(PmdaPlano $origem, PmdaPlano $copia): void
+    {
+        foreach ($origem->comunidades()->with('representantes')->get() as $comunidade) {
+            $novaComunidade = $comunidade->replicate(['pmda_plano_id']);
+            $novaComunidade->pmda_plano_id = $copia->id;
+            $novaComunidade->save();
+
+            foreach ($comunidade->representantes as $representante) {
+                $novoRepresentante = $representante->replicate(['pmda_comunidade_id']);
+                $novoRepresentante->pmda_comunidade_id = $novaComunidade->id;
+                $novoRepresentante->save();
+            }
+        }
     }
 }
