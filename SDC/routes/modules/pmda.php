@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Pmda\Controllers\ComunidadeController;
+use App\Modules\Pmda\Controllers\PlanoPontoController;
 use App\Modules\Pmda\Controllers\PmdaPlanoController;
 use App\Modules\Pmda\Controllers\RepresentanteController;
 use App\Modules\Pmda\Models\PmdaComunidade;
@@ -28,6 +29,12 @@ Route::prefix('pmda')->name('pmda.')->group(function () {
         // Comunidades do plano
         Route::post('/{plano}/comunidades', [ComunidadeController::class, 'store'])
             ->name('comunidades.store')->middleware('can:pmda.comunidades.create');
+
+        // Pontos de captacao do plano
+        Route::post('/{plano}/pontos', [PlanoPontoController::class, 'store'])
+            ->name('pontos.store')->middleware('can:pmda.pontos.create');
+        Route::delete('/{plano}/pontos/{ponto}', [PlanoPontoController::class, 'destroy'])
+            ->name('pontos.destroy')->middleware('can:pmda.pontos.delete');
     });
 
     Route::delete('/comunidades/{comunidade}', [ComunidadeController::class, 'destroy'])
