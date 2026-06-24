@@ -270,15 +270,13 @@ Route::prefix('v1/logs')->name('api.v1.logs.')->middleware([
 
             switch ($type) {
                 case 'sql':
-                    \DB::select('SELECT * FROM tabela_inexistente_xyz');
+                    \Illuminate\Support\Facades\DB::select('SELECT * FROM tabela_inexistente_xyz');
                     break;
                 case 'division':
                     $x = 1 / 0;
                     break;
                 case 'null':
-                    $obj = null;
-                    $obj->method();
-                    break;
+                    throw new \Error('Simulated null dereference: ' . now()->toIso8601String());
                 case 'custom':
                     throw new \Exception('Erro de teste customizado: ' . now()->toIso8601String());
                 default:
