@@ -109,15 +109,6 @@
           PAE
         </NavItem>
         <NavItem
-          v-if="canSeePmda && _routes.hasPmda"
-          :href="pmdaHref"
-          :active="isRouteActive('pmda.*')"
-          icon="pae-bolt"
-          :collapsed="isCollapsed"
-        >
-          PMDA
-        </NavItem>
-        <NavItem
           v-if="canSeePlantao && _routes.hasPlantao"
           :href="route('plantao.index')"
           :active="isRouteActive('plantao.*')"
@@ -187,6 +178,15 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </button>
+        <NavItem
+          v-if="canSeePmda && _routes.hasPmda"
+          :href="pmdaHref"
+          :active="isRouteActive('pmda.*')"
+          icon="pmda-drop"
+          :collapsed="isCollapsed"
+        >
+          PMDA
+        </NavItem>
 
         <!-- ESTOQUE - drill-down (abre submenu como nova seccao) -->
         <button

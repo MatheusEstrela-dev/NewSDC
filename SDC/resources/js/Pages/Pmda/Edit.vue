@@ -4,6 +4,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PmdaDetailTemplate from '@/Templates/Pmda/PmdaDetailTemplate.vue';
 import PmdaStatusBadge from '@/Components/Atoms/Pmda/PmdaStatusBadge.vue';
 import PmdaIssForm from '@/Components/Organisms/Pmda/PmdaIssForm.vue';
+import PmdaComunidadesSection from '@/Components/Organisms/Pmda/PmdaComunidadesSection.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 const props = defineProps({
@@ -36,6 +37,10 @@ function voltar() {
 
     <template #iss>
       <PmdaIssForm :plano="dados" />
+    </template>
+
+    <template #comunidades>
+      <PmdaComunidadesSection :plano-id="dados.id" :comunidades="dados.comunidades ?? []" />
     </template>
   </PmdaDetailTemplate>
 </template>

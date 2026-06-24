@@ -8,6 +8,7 @@ use App\Models\Municipio;
 use App\Modules\Pmda\Enums\PmdaStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PmdaPlano extends Model
@@ -39,5 +40,10 @@ class PmdaPlano extends Model
     public function municipio(): BelongsTo
     {
         return $this->belongsTo(Municipio::class, 'municipio_id');
+    }
+
+    public function comunidades(): HasMany
+    {
+        return $this->hasMany(PmdaComunidade::class, 'pmda_plano_id');
     }
 }

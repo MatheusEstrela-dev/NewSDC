@@ -85,6 +85,10 @@
     <svg v-else-if="icon === 'pae-bolt'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
     </svg>
+    <svg v-else-if="icon === 'pmda-drop'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2.25c3.5 4 6 7.5 6 10.5a6 6 0 11-12 0c0-3 2.5-6.5 6-10.5z" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.5 13.5a2.5 2.5 0 002.5 2.5" />
+    </svg>
     <svg v-else-if="icon === 'logs-list'" class="nav-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10M4 18h8" />
     </svg>

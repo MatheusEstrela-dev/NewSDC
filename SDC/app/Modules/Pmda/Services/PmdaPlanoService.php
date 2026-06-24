@@ -46,4 +46,35 @@ class PmdaPlanoService extends BaseService
 
         return $this->paginate($query, $perPage);
     }
+
+    /**
+     * Recalcula RASCUNHO <-> COMPLETO conforme comunidades e representantes.
+     * Nao mexe em planos ja submetidos (EM_ANALISE/APROVADO/ATENDIDO e terminais).
+     */
+    public const REPRESENTANTES_POR_COMUNIDADE = 3;
+
+    public function recalcularStatus(PmdaPlano $plano): PmdaPlano
+    {
+        $intocaveis = [
+            PmdaStatus::EM_ANALISE, PmdaStatus::APROVADO, PmdaStatus::ATENDIDO,
+            PmdaStatus::ARQUIVADO, PmdaStatus::ANULADO, PmdaStatus::CANCELADO, PmdaStatus::ENCERRADO,
+        ];
+        if (in_array($plano->status, $intocaveis, true)) {
+            return $plano;
+        }
+
+        $totComunidades = $plano->comunidades()->count();
+        $todasComRepresentantes = $totComunidades > 0
+            && $plano->comunidades()
+                ->withCount('representantes')
+                ->get()
+                ->every(fn ($c) => $c->representantes_count >= self::REPRESENTANTES_POR_COMUNIDADE);
+
+        $novo = $todasComRepresentantes ? PmdaStatus::COMPLETO : PmdaStatus::RASCUNHO;
+        if ($plano->status !== $novo) {
+            $plano->update(['status' => $novo]);
+        }
+
+        return $plano->refresh();
+    }
 }
