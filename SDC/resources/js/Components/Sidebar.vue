@@ -109,6 +109,15 @@
           PAE
         </NavItem>
         <NavItem
+          v-if="canSeePmda && _routes.hasPmda"
+          :href="pmdaHref"
+          :active="isRouteActive('pmda.*')"
+          icon="pae-bolt"
+          :collapsed="isCollapsed"
+        >
+          PMDA
+        </NavItem>
+        <NavItem
           v-if="canSeePlantao && _routes.hasPlantao"
           :href="route('plantao.index')"
           :active="isRouteActive('plantao.*')"
@@ -535,6 +544,7 @@ const _routes = {
   hasRat: route().has('rat.index') || route().has('rat.create'),
   hasDemandas: route().has('demandas.index'),
   hasPae: route().has('pae.protocolos.index') || route().has('pae.index'),
+  hasPmda: route().has('pmda.planos.index'),
   hasPlantao: route().has('plantao.index'),
   hasDecretacoes: route().has('decretacoes.index'),
   hasHumanitaria: route().has('ajuda-humanitaria.beneficiarios.index'),
@@ -653,6 +663,10 @@ const canSeePae = computed(() => {
   return hasPermission(['pae.protocolos.view', 'pae.empreendimentos.view']);
 });
 
+const canSeePmda = computed(() => {
+  return hasPermission(['pmda.planos.view']);
+});
+
 // MODULOS DE GESTAO
 const canSeeDecretacoes = computed(() => {
   return hasPermission(['decretacoes.processos.view']);
@@ -761,6 +775,9 @@ const ratHref = route().has('rat.index') ? route('rat.index') :
 
 const paeHref = route().has('pae.protocolos.index') ? route('pae.protocolos.index') :
                 route().has('pae.index') ? route('pae.index') :
+                route('dashboard');
+
+const pmdaHref = route().has('pmda.planos.index') ? route('pmda.planos.index') :
                 route('dashboard');
 
 const permissionamentoHref = route().has('admin.permissions.users.index') ? route('admin.permissions.users.index') :

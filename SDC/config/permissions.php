@@ -224,6 +224,54 @@ return [
                 'admin' => 'tdap.admin',
             ],
         ],
+        'PMDA' => [
+            // PMDA - Plano Municipal de Defesa Agropecuaria
+            'Dashboard' => [
+                'view' => 'pmda.dashboard.view',
+            ],
+            'Planos' => [
+                'view'   => 'pmda.planos.view',
+                'create' => 'pmda.planos.create',
+                'edit'   => 'pmda.planos.edit',
+                'delete' => 'pmda.planos.delete',
+                'copiar' => 'pmda.planos.copiar',
+                'export' => 'pmda.planos.export',
+            ],
+            'Comunidades' => [
+                'view'   => 'pmda.comunidades.view',
+                'create' => 'pmda.comunidades.create',
+                'edit'   => 'pmda.comunidades.edit',
+                'delete' => 'pmda.comunidades.delete',
+            ],
+            'Representantes' => [
+                'view'   => 'pmda.representantes.view',
+                'create' => 'pmda.representantes.create',
+                'edit'   => 'pmda.representantes.edit',
+                'delete' => 'pmda.representantes.delete',
+            ],
+            'Pontos' => [
+                'view'   => 'pmda.pontos.view',
+                'create' => 'pmda.pontos.create',
+                'edit'   => 'pmda.pontos.edit',
+                'delete' => 'pmda.pontos.delete',
+            ],
+            'Analise' => [
+                'view'            => 'pmda.analise.view',
+                'enviar'          => 'pmda.analise.enviar',
+                'aprovar'         => 'pmda.analise.aprovar',
+                'arquivar'        => 'pmda.analise.arquivar',
+                'pedir_alteracao' => 'pmda.analise.pedir_alteracao',
+            ],
+            'Mensagens' => [
+                'view'   => 'pmda.mensagens.view',
+                'create' => 'pmda.mensagens.create',
+            ],
+            'Anexos' => [
+                'view'   => 'pmda.anexos.view',
+                'create' => 'pmda.anexos.create',
+                'delete' => 'pmda.anexos.delete',
+            ],
+        ],
         'TREINAMENTO' => [
             'Cursos' => [
                 'view' => 'treinamento.cursos.view',

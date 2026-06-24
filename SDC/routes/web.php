@@ -154,6 +154,9 @@ Route::middleware('auth')->group(function () {
     // Módulo: PAE
     require __DIR__ . '/modules/pae.php';
 
+    // Módulo: PMDA
+    require __DIR__ . '/modules/pmda.php';
+
     // Módulo: Treinamento
     require __DIR__ . '/modules/treinamento.php';
 
