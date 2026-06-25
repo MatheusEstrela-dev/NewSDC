@@ -47,6 +47,20 @@ class PmdaPlanoService extends BaseService
         return $this->paginate($query, $perPage);
     }
 
+    /** Linhas para exportacao CSV (respeita filtros). */
+    public function exportar(array $filtros = []): array
+    {
+        $query = PmdaPlano::query()->with('municipio')->latest('data');
+        $query = $this->applyFilters($query, $filtros, ['municipio_id', 'status']);
+
+        return $query->get()->map(fn (PmdaPlano $p) => [
+            'Protocolo' => $p->protocolo,
+            'Municipio' => $p->municipio?->nome,
+            'Situacao'  => $p->status->getLabel(),
+            'Criacao'   => $p->data?->format('d/m/Y'),
+        ])->all();
+    }
+
     /**
      * Recalcula RASCUNHO <-> COMPLETO conforme comunidades e representantes.
      * Nao mexe em planos ja submetidos (EM_ANALISE/APROVADO/ATENDIDO e terminais).

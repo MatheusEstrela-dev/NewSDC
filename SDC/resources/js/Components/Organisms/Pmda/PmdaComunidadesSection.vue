@@ -1,33 +1,33 @@
 <template>
-  <section class="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
+  <section class="space-y-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-900/60">
     <header class="flex items-center justify-between">
-      <h2 class="text-base font-semibold text-gray-800">Comunidades e Representantes</h2>
-      <span class="text-xs text-gray-500">{{ comunidades.length }} comunidade(s)</span>
+      <h2 class="text-base font-semibold text-slate-800 dark:text-slate-100">Comunidades e Representantes</h2>
+      <span class="text-xs text-slate-500 dark:text-slate-400">{{ comunidades.length }} comunidade(s)</span>
     </header>
 
     <!-- Adicionar comunidade -->
     <form class="flex flex-wrap items-end gap-2" @submit.prevent="adicionarComunidade">
       <div class="flex-1 min-w-[180px]">
-        <label class="mb-1 block text-xs text-gray-600">Nome da comunidade</label>
-        <input v-model="formComunidade.nome" type="text" maxlength="150" class="w-full rounded-md border-gray-300 text-sm" />
+        <label class="mb-1 block text-xs text-slate-600 dark:text-slate-400">Nome da comunidade</label>
+        <input v-model="formComunidade.nome" type="text" maxlength="150" class="w-full rounded-md border-slate-300 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" />
       </div>
       <div class="w-32">
-        <label class="mb-1 block text-xs text-gray-600">ID comunidade</label>
-        <input v-model="formComunidade.comunidade_id" type="number" class="w-full rounded-md border-gray-300 text-sm" />
+        <label class="mb-1 block text-xs text-slate-600 dark:text-slate-400">ID comunidade</label>
+        <input v-model="formComunidade.comunidade_id" type="number" class="w-full rounded-md border-slate-300 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" />
       </div>
       <button type="submit" :disabled="formComunidade.processing" class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
         Adicionar
       </button>
     </form>
 
-    <p v-if="!comunidades.length" class="py-4 text-center text-sm text-gray-400">
+    <p v-if="!comunidades.length" class="py-4 text-center text-sm text-slate-400">
       Nenhuma comunidade. Cada comunidade precisa de {{ minRepresentantes }} representantes para o PMDA ficar Completo.
     </p>
 
     <!-- Lista de comunidades -->
-    <div v-for="com in comunidades" :key="com.id" class="rounded-md border border-gray-100 p-3">
+    <div v-for="com in comunidades" :key="com.id" class="rounded-md border border-slate-100 p-3 dark:border-slate-700/50">
       <div class="flex items-center justify-between">
-        <div class="font-medium text-gray-800">{{ com.nome ?? `Comunidade #${com.comunidade_id}` }}</div>
+        <div class="font-medium text-slate-800 dark:text-slate-100">{{ com.nome ?? `Comunidade #${com.comunidade_id}` }}</div>
         <div class="flex items-center gap-3">
           <span
             class="rounded-full px-2 py-0.5 text-xs font-medium"
@@ -42,8 +42,8 @@
       </div>
 
       <ul class="mt-2 space-y-1">
-        <li v-for="rep in (com.representantes ?? [])" :key="rep.id" class="flex items-center justify-between text-sm text-gray-600">
-          <span>{{ rep.nome }}<span v-if="rep.tel" class="text-gray-400"> — {{ rep.tel }}</span></span>
+        <li v-for="rep in (com.representantes ?? [])" :key="rep.id" class="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+          <span>{{ rep.nome }}<span v-if="rep.tel" class="text-slate-400"> — {{ rep.tel }}</span></span>
           <button type="button" class="text-xs text-red-500 hover:underline" @click="removerRepresentante(rep.id)">remover</button>
         </li>
       </ul>
@@ -55,14 +55,14 @@
           type="text"
           maxlength="100"
           placeholder="Nome do representante"
-          class="flex-1 min-w-[160px] rounded-md border-gray-300 text-sm"
+          class="flex-1 min-w-[160px] rounded-md border-slate-300 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
         />
         <input
           v-model="formsRepresentante[com.id].tel"
           type="text"
           maxlength="20"
           placeholder="Telefone"
-          class="w-36 rounded-md border-gray-300 text-sm"
+          class="w-36 rounded-md border-slate-300 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
         />
         <button type="submit" class="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">
           + Representante

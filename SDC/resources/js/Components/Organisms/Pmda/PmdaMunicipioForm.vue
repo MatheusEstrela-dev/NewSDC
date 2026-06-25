@@ -1,64 +1,64 @@
 <template>
-  <form class="space-y-4 rounded-lg border border-gray-200 bg-white p-4" @submit.prevent="submit">
-    <h2 class="text-base font-semibold text-gray-800">Informações do Município / Prefeitura</h2>
+  <form class="space-y-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-900/60" @submit.prevent="submit">
+    <h2 class="text-base font-semibold text-slate-800 dark:text-slate-100">Informações do Município / Prefeitura</h2>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">Prefeito(a)</span>
-        <input v-model="form.nome_prefeito" type="text" maxlength="110" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">Tel. Prefeitura</span>
-        <input v-model="form.tel_prefeitura" type="text" maxlength="20" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">E-mail Prefeitura</span>
-        <input v-model="form.email_prefeitura" type="email" maxlength="110" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">Tel. Prefeito</span>
-        <input v-model="form.tel_prefeito" type="text" maxlength="20" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">Cel. Prefeito</span>
-        <input v-model="form.cel_prefeito" type="text" maxlength="20" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">CEP</span>
-        <input v-model="form.cep" type="text" maxlength="10" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block lg:col-span-2">
-        <span class="mb-1 block text-xs text-gray-600">Endereço</span>
-        <input v-model="form.endereco" type="text" maxlength="150" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">Bairro</span>
-        <input v-model="form.bairro" type="text" maxlength="60" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">População urbana</span>
-        <input v-model="form.populacao" type="number" min="0" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">População rural</span>
-        <input v-model="form.pop_rural" type="number" min="0" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">Área (km²)</span>
-        <input v-model="form.area" type="number" step="0.01" min="0" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Prefeito(a)</span>
+        <TextInput v-model="form.nome_prefeito" :maxlength="110" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Tel. Prefeitura</span>
+        <TextInput v-model="form.tel_prefeitura" :maxlength="20" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">E-mail Prefeitura</span>
+        <TextInput v-model="form.email_prefeitura" type="email" :maxlength="110" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Tel. Prefeito</span>
+        <TextInput v-model="form.tel_prefeito" :maxlength="20" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Cel. Prefeito</span>
+        <TextInput v-model="form.cel_prefeito" :maxlength="20" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">CEP</span>
+        <TextInput v-model="form.cep" :maxlength="10" />
+      </div>
+      <div class="lg:col-span-2">
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Endereço</span>
+        <TextInput v-model="form.endereco" :maxlength="150" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Bairro</span>
+        <TextInput v-model="form.bairro" :maxlength="60" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">População urbana</span>
+        <TextInput v-model="form.populacao" type="number" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">População rural</span>
+        <TextInput v-model="form.pop_rural" type="number" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Área (km²)</span>
+        <TextInput v-model="form.area" type="number" />
+      </div>
     </div>
 
     <div class="flex justify-end">
-      <button type="submit" :disabled="form.processing" class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
-        Salvar
-      </button>
+      <Button variant="success" size="sm" :disabled="form.processing" @click="submit">Salvar</Button>
     </div>
   </form>
 </template>
 
 <script setup>
 import { useForm } from '@inertiajs/vue3';
+import TextInput from '@/Components/Atoms/Input/TextInput.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 
 const props = defineProps({ plano: { type: Object, required: true } });
 
