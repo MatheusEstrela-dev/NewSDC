@@ -11,15 +11,34 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class PmdaPlanoService extends BaseService
 {
+    /**
+     * Status que consideram o municipio com PMDA "pendente" (em aberto),
+     * impedindo abrir outro. Espelha o legado (gestaocedec verificaCriarPmda:
+     * status IN 0,2) ampliado com COMPLETO, que e parte do ciclo de edicao.
+     *
+     * @return list<string>
+     */
+    public static function statusPendente(): array
+    {
+        return [
+            PmdaStatus::RASCUNHO->value,
+            PmdaStatus::COMPLETO->value,
+            PmdaStatus::EM_ANALISE->value,
+        ];
+    }
+
     public function criar(int $municipioId, int $userId, array $data): PmdaPlano
     {
-        $existeRascunho = PmdaPlano::query()
+        $pendente = PmdaPlano::query()
             ->where('municipio_id', $municipioId)
-            ->where('status', PmdaStatus::RASCUNHO->value)
-            ->exists();
+            ->whereIn('status', self::statusPendente())
+            ->first();
 
-        if ($existeRascunho) {
-            throw new \DomainException('Já existe um PMDA em edição para este município.');
+        if ($pendente !== null) {
+            throw new \DomainException(
+                'Este município já possui um PMDA em aberto ('.$pendente->status->getLabel().
+                ', protocolo '.($pendente->protocolo ?? '—').'). Conclua, cancele ou edite o existente antes de criar outro.'
+            );
         }
 
         return PmdaPlano::create(array_merge($data, [
@@ -43,6 +62,20 @@ class PmdaPlanoService extends BaseService
     {
         $query = PmdaPlano::query()->with('municipio')->latest('data');
         $query = $this->applyFilters($query, $filtros, ['municipio_id', 'status']);
+
+        if (! empty($filtros['buscar'])) {
+            $termo = $filtros['buscar'];
+            $query->where(function ($q) use ($termo) {
+                $q->where('protocolo', 'ilike', "%{$termo}%")
+                    ->orWhereHas('municipio', fn ($m) => $m->where('nome', 'ilike', "%{$termo}%"));
+            });
+        }
+        if (! empty($filtros['data_inicio'])) {
+            $query->whereDate('data', '>=', $filtros['data_inicio']);
+        }
+        if (! empty($filtros['data_fim'])) {
+            $query->whereDate('data', '<=', $filtros['data_fim']);
+        }
 
         return $this->paginate($query, $perPage);
     }

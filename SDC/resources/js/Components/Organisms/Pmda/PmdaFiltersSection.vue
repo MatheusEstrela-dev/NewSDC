@@ -1,47 +1,52 @@
 <template>
-  <div class="rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
-    <button
-      type="button"
-      class="flex w-full items-center justify-between px-4 py-3"
-      @click="aberto = !aberto"
-    >
-      <span class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-        <FunnelIcon class="h-4 w-4 text-slate-400" />
-        Filtros de Pesquisa
-      </span>
-      <ChevronDownIcon class="h-4 w-4 text-slate-400 transition" :class="{ 'rotate-180': aberto }" />
-    </button>
+  <FilterSection title="Filtros de Pesquisa" :columns="4" class="mb-6" :default-collapsed="true">
+    <FilterField
+      label="Buscar"
+      type="text"
+      :model-value="local.buscar"
+      placeholder="Protocolo ou município"
+      @update:model-value="local.buscar = $event"
+    />
 
-    <div v-show="aberto" class="border-t border-slate-200 p-4 dark:border-slate-700/50">
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <label class="block">
-          <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Situação</span>
-          <select v-model="local.status" class="w-full rounded-md border-slate-300 text-sm dark:bg-slate-800 dark:border-slate-700">
-            <option value="">Todas</option>
-            <option v-for="s in statusOpcoes" :key="s.value" :value="s.value">{{ s.label }}</option>
-          </select>
-        </label>
-        <label class="block sm:col-span-2">
-          <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Município</span>
-          <select v-model="local.municipio_id" class="w-full rounded-md border-slate-300 text-sm dark:bg-slate-800 dark:border-slate-700">
-            <option value="">Todos</option>
-            <option v-for="m in municipios" :key="m.id" :value="m.id">{{ m.nome }} / {{ m.uf }}</option>
-          </select>
-        </label>
-      </div>
-      <div class="mt-4 flex justify-end gap-2">
-        <Button variant="secondary" size="sm" @click="$emit('clear')">Limpar</Button>
-        <Button variant="primary" size="sm" @click="$emit('apply', local)">Aplicar</Button>
-      </div>
+    <FilterField
+      label="Situação"
+      type="select"
+      :model-value="local.status"
+      :options="statusOpcoes"
+      placeholder="Todas as situações"
+      @update:model-value="local.status = $event"
+    />
+
+    <FilterField
+      label="Município"
+      type="select"
+      :model-value="local.municipio_id"
+      :options="municipioOptions"
+      placeholder="Todos os municípios"
+      @update:model-value="local.municipio_id = $event"
+    />
+
+    <FormDateRange
+      label="Período (Criação)"
+      start-label="Data Inicial"
+      end-label="Data Final"
+      :model-value="{ start: local.data_inicio, end: local.data_fim }"
+      label-size="sm"
+      @update:model-value="(v) => { local.data_inicio = v.start; local.data_fim = v.end; }"
+    />
+
+    <div class="md:col-span-2 lg:col-span-4 flex items-end justify-end pt-1">
+      <FilterActions @search="$emit('apply', { ...local })" @clear="limpar" />
     </div>
-  </div>
+  </FilterSection>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
-import FunnelIcon from '@/Components/Icons/FunnelIcon.vue';
-import ChevronDownIcon from '@/Components/Icons/ChevronDownIcon.vue';
+import { computed, reactive } from 'vue';
+import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
+import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
+import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
+import FormDateRange from '@/Components/Molecules/Form/FormDateRange.vue';
 
 const props = defineProps({
   filters: { type: Object, default: () => ({}) },
@@ -49,11 +54,26 @@ const props = defineProps({
   municipios: { type: Array, default: () => [] },
 });
 
-defineEmits(['apply', 'clear']);
+const emit = defineEmits(['apply', 'clear']);
 
-const aberto = ref(false);
+const municipioOptions = computed(() =>
+  props.municipios.map((m) => ({ value: m.id, label: `${m.nome} / ${m.uf}` }))
+);
+
 const local = reactive({
+  buscar: props.filters.buscar ?? '',
   status: props.filters.status ?? '',
   municipio_id: props.filters.municipio_id ?? '',
+  data_inicio: props.filters.data_inicio ?? '',
+  data_fim: props.filters.data_fim ?? '',
 });
+
+function limpar() {
+  local.buscar = '';
+  local.status = '';
+  local.municipio_id = '';
+  local.data_inicio = '';
+  local.data_fim = '';
+  emit('clear');
+}
 </script>

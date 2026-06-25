@@ -25,7 +25,7 @@
           resource="planos"
           label="Novo PMDA"
           :allowed="true"
-          @click="abrirCriar"
+          @click="showCriar = true"
         />
       </template>
     </PageHeader>
@@ -144,35 +144,16 @@
       @export="onExport"
     />
 
-    <!-- Modal Novo PMDA -->
-    <div v-if="showCriar" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="showCriar = false">
-      <div class="w-full max-w-md rounded-lg bg-white p-5 shadow-xl dark:bg-slate-900">
-        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Novo PMDA</h3>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Selecione o município. O plano nasce em modo de edição.</p>
-        <label class="mt-4 block">
-          <span class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Município</span>
-          <select v-model="formCriar.municipio_id" class="w-full rounded-md border-slate-300 text-sm dark:bg-slate-800 dark:border-slate-700">
-            <option value="">Selecione…</option>
-            <option v-for="m in municipios" :key="m.id" :value="m.id">{{ m.nome }} / {{ m.uf }}</option>
-          </select>
-          <span v-if="formCriar.errors.municipio_id" class="mt-1 block text-xs text-red-600">{{ formCriar.errors.municipio_id }}</span>
-        </label>
-        <div class="mt-5 flex justify-end gap-2">
-          <Button variant="secondary" size="sm" @click="showCriar = false">Cancelar</Button>
-          <Button variant="success" size="sm" :disabled="!formCriar.municipio_id || formCriar.processing" @click="criar">Criar</Button>
-        </div>
-      </div>
-    </div>
+    <PmdaCreateModal :show="showCriar" :municipios="municipios" @close="showCriar = false" />
   </div>
 </template>
 
 <script setup>
 import { computed, reactive, ref } from 'vue';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { usePermissions } from '@/Composables/usePermissions';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
@@ -182,12 +163,14 @@ import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import PmdaStatusBadge from '@/Components/Atoms/Pmda/PmdaStatusBadge.vue';
 import PmdaStatisticsCards from '@/Components/Organisms/Pmda/PmdaStatisticsCards.vue';
 import PmdaFiltersSection from '@/Components/Organisms/Pmda/PmdaFiltersSection.vue';
+import PmdaCreateModal from '@/Components/Organisms/Pmda/PmdaCreateModal.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
 const { can } = usePermissions();
 
 const viewMode = ref('table');
+const showCriar = ref(false);
 
 const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('pmda.planos.export');
 
@@ -219,10 +202,13 @@ const pagination = computed(() => {
   };
 });
 
-function aplicar(filtros) {
+function aplicar(f) {
   router.get(route('pmda.planos.index'), {
-    status: filtros.status || undefined,
-    municipio_id: filtros.municipio_id || undefined,
+    buscar: f.buscar || undefined,
+    status: f.status || undefined,
+    municipio_id: f.municipio_id || undefined,
+    data_inicio: f.data_inicio || undefined,
+    data_fim: f.data_fim || undefined,
   }, { preserveState: true, replace: true });
 }
 
@@ -235,19 +221,6 @@ function irParaPagina(page) {
     ...props.filtros,
     page,
   }, { preserveState: true, replace: true });
-}
-
-const showCriar = ref(false);
-const formCriar = useForm({ municipio_id: '' });
-
-function abrirCriar() {
-  formCriar.reset();
-  formCriar.clearErrors();
-  showCriar.value = true;
-}
-
-function criar() {
-  formCriar.post(route('pmda.planos.store'), { onSuccess: () => { showCriar.value = false; } });
 }
 
 function copiar(id) {
