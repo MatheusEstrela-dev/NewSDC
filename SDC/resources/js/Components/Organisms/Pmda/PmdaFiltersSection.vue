@@ -26,14 +26,14 @@
       @update:model-value="local.municipio_id = $event"
     />
 
-    <FormDateRange
-      label="Período (Criação)"
-      start-label="Data Inicial"
-      end-label="Data Final"
-      :model-value="{ start: local.data_inicio, end: local.data_fim }"
-      label-size="sm"
-      @update:model-value="(v) => { local.data_inicio = v.start; local.data_fim = v.end; }"
-    />
+    <div>
+      <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Criação — Data inicial</span>
+      <DatePicker v-model="local.data_inicio" />
+    </div>
+    <div>
+      <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Criação — Data final</span>
+      <DatePicker v-model="local.data_fim" />
+    </div>
 
     <div class="md:col-span-2 lg:col-span-4 flex items-end justify-end pt-1">
       <FilterActions @search="$emit('apply', { ...local })" @clear="limpar" />
@@ -46,7 +46,7 @@ import { computed, reactive } from 'vue';
 import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
 import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
 import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
-import FormDateRange from '@/Components/Molecules/Form/FormDateRange.vue';
+import DatePicker from '@/Components/Form/DatePicker.vue';
 
 const props = defineProps({
   filters: { type: Object, default: () => ({}) },
