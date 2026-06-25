@@ -9,24 +9,26 @@
       variant="gradient"
     >
       <template #actions>
-        <ViewModeToggle v-model="viewMode" />
-        <ActionButton
-          v-if="can('pmda.planos.export')"
-          action="export"
-          :allowed="true"
-          variant="success"
-          label="Exportar"
-          @click="openExportModal"
-        />
-        <ActionButton
-          v-if="can('pmda.planos.create')"
-          action="create"
-          module="pmda"
-          resource="planos"
-          label="Novo PMDA"
-          :allowed="true"
-          @click="showCriar = true"
-        />
+        <div class="flex w-full flex-wrap items-center justify-end gap-2">
+          <ViewModeToggle v-model="viewMode" />
+          <ActionButton
+            v-if="can('pmda.planos.export')"
+            action="export"
+            :allowed="true"
+            variant="success"
+            label="Exportar"
+            @click="openExportModal"
+          />
+          <ActionButton
+            v-if="can('pmda.planos.create')"
+            action="create"
+            module="pmda"
+            resource="planos"
+            label="Novo PMDA"
+            :allowed="true"
+            @click="showCriar = true"
+          />
+        </div>
       </template>
     </PageHeader>
 
@@ -41,8 +43,8 @@
       @clear="limpar"
     />
 
-    <!-- Tabela -->
-    <div v-if="viewMode === 'table'" class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
+    <!-- Tabela (md+) -->
+    <div v-if="viewMode === 'table'" class="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60 md:block">
       <div class="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-800/70">
         <h3 class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
           <DocumentTextIcon class="h-4 w-4 text-slate-400" />
@@ -98,43 +100,32 @@
         </table>
       </div>
 
-      <div v-if="pagination && pagination.last_page > 1" class="border-t border-slate-200 px-4 py-3 dark:border-slate-700/50">
-        <Pagination :pagination="pagination" @page-change="irParaPagina" />
-      </div>
     </div>
 
+    <!-- Mobile: cards (fallback da tabela) -->
+    <PmdaPlanosCards
+      v-if="viewMode === 'table'"
+      class="md:hidden"
+      :planos="planos.data"
+      :can-edit="can('pmda.planos.edit')"
+      :can-copiar="can('pmda.planos.copiar')"
+      @edit="(id) => router.visit(route('pmda.planos.edit', id))"
+      @copiar="copiar"
+    />
+
     <!-- Grade -->
-    <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div
-        v-for="plano in planos.data"
-        :key="plano.id"
-        class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60"
-      >
-        <div class="flex items-start justify-between gap-2">
-          <span class="font-mono text-sm text-slate-700 dark:text-slate-300">{{ plano.protocolo ?? '—' }}</span>
-          <PmdaStatusBadge :label="plano.status_label" :color-class="plano.status_color" />
-        </div>
-        <p class="mt-2 font-semibold text-slate-900 dark:text-slate-100">{{ plano.municipio ?? '—' }}</p>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Criação: {{ formatDate(plano.data) }}</p>
-        <div class="mt-3 flex items-center justify-end gap-1 border-t border-slate-100 pt-3 dark:border-slate-700/50">
-          <ActionButton
-            action="edit" module="pmda" resource="planos"
-            :allowed="can('pmda.planos.edit')" :show-label="false" size="sm"
-            tooltip-text="Editar PMDA"
-            @click="router.visit(route('pmda.planos.edit', plano.id))"
-          />
-          <ActionButton
-            v-if="plano.pode_copiar"
-            action="duplicate" module="pmda" resource="planos"
-            :allowed="can('pmda.planos.copiar')" :show-label="false" size="sm"
-            tooltip-text="Criar cópia"
-            @click="copiar(plano.id)"
-          />
-        </div>
-      </div>
-      <div v-if="planos.data.length === 0" class="col-span-full rounded-lg border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500 dark:border-slate-700">
-        Nenhum PMDA encontrado.
-      </div>
+    <PmdaPlanosCards
+      v-else
+      :planos="planos.data"
+      :can-edit="can('pmda.planos.edit')"
+      :can-copiar="can('pmda.planos.copiar')"
+      @edit="(id) => router.visit(route('pmda.planos.edit', id))"
+      @copiar="copiar"
+    />
+
+    <!-- Paginacao compartilhada -->
+    <div v-if="pagination && pagination.last_page > 1" class="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/50 dark:bg-slate-900/60">
+      <Pagination :pagination="pagination" @page-change="irParaPagina" />
     </div>
 
     <ExportCsvModal
@@ -164,6 +155,7 @@ import PmdaStatusBadge from '@/Components/Atoms/Pmda/PmdaStatusBadge.vue';
 import PmdaStatisticsCards from '@/Components/Organisms/Pmda/PmdaStatisticsCards.vue';
 import PmdaFiltersSection from '@/Components/Organisms/Pmda/PmdaFiltersSection.vue';
 import PmdaCreateModal from '@/Components/Organisms/Pmda/PmdaCreateModal.vue';
+import PmdaPlanosCards from '@/Components/Organisms/Pmda/PmdaPlanosCards.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
