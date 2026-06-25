@@ -1,8 +1,9 @@
 <script setup>
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PmdaDetailTemplate from '@/Templates/Pmda/PmdaDetailTemplate.vue';
 import PmdaStatusBadge from '@/Components/Atoms/Pmda/PmdaStatusBadge.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import PmdaIssForm from '@/Components/Organisms/Pmda/PmdaIssForm.vue';
 import PmdaMunicipioForm from '@/Components/Organisms/Pmda/PmdaMunicipioForm.vue';
 import PmdaCompdecForm from '@/Components/Organisms/Pmda/PmdaCompdecForm.vue';
@@ -15,8 +16,37 @@ const props = defineProps({
   pontos_disponiveis: { type: Array, default: () => [] },
 });
 
-// O Controller retorna um JsonResource: os dados ficam em `plano.data` quando empacotado.
 const dados = props.plano?.data ?? props.plano;
+
+const form = useForm({
+  // ISS
+  cobra_iss: dados.cobra_iss ?? false,
+  num_lei_iss: dados.num_lei_iss ?? '',
+  aliquota_iss: dados.aliquota_iss ?? '',
+  resp_cob_iss: dados.resp_cob_iss ?? '',
+  // Municipio / Prefeitura
+  nome_prefeito: dados.nome_prefeito ?? '',
+  tel_prefeitura: dados.tel_prefeitura ?? '',
+  email_prefeitura: dados.email_prefeitura ?? '',
+  tel_prefeito: dados.tel_prefeito ?? '',
+  cel_prefeito: dados.cel_prefeito ?? '',
+  cep: dados.cep ?? '',
+  endereco: dados.endereco ?? '',
+  bairro: dados.bairro ?? '',
+  populacao: dados.populacao ?? '',
+  pop_rural: dados.pop_rural ?? '',
+  area: dados.area ?? '',
+  // COMPDEC
+  compdec_coordenador: dados.compdec_coordenador ?? '',
+  compdec_email: dados.compdec_email ?? '',
+  compdec_tel: dados.compdec_tel ?? '',
+  compdec_decreto: dados.compdec_decreto ?? '',
+  compdec_lei: dados.compdec_lei ?? '',
+});
+
+function salvar() {
+  form.put(route('pmda.planos.update', dados.id), { preserveScroll: true });
+}
 
 function voltar() {
   router.visit(route('pmda.planos.index'));
@@ -39,15 +69,16 @@ function voltar() {
       </div>
     </template>
 
+    <!-- Form do plano: ISS + Municipio + COMPDEC, um unico Salvar no final -->
     <template #iss>
-      <PmdaIssForm :plano="dados" />
-    </template>
-
-    <template #municipio>
-      <div class="space-y-6">
-        <PmdaMunicipioForm :plano="dados" />
-        <PmdaCompdecForm :plano="dados" />
-      </div>
+      <form class="space-y-6" @submit.prevent="salvar">
+        <PmdaIssForm :form="form" />
+        <PmdaMunicipioForm :form="form" />
+        <PmdaCompdecForm :form="form" />
+        <div class="flex justify-end">
+          <Button variant="success" :disabled="form.processing" @click="salvar">Salvar PMDA</Button>
+        </div>
+      </form>
     </template>
 
     <template #pontos>

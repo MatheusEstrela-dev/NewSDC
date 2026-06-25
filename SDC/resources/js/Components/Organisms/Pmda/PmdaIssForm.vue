@@ -1,5 +1,5 @@
 <template>
-  <form class="space-y-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-900/60" @submit.prevent="submit">
+  <div class="space-y-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-900/60">
     <h2 class="text-base font-semibold text-slate-800 dark:text-slate-100">Informações ISS</h2>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -23,28 +23,11 @@
         <TextInput v-model="form.resp_cob_iss" :maxlength="30" />
       </div>
     </div>
-
-    <div class="flex justify-end">
-      <Button variant="success" size="sm" :disabled="form.processing" @click="submit">Salvar</Button>
-    </div>
-  </form>
+  </div>
 </template>
 
 <script setup>
-import { useForm } from '@inertiajs/vue3';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
 
-const props = defineProps({ plano: { type: Object, required: true } });
-
-const form = useForm({
-  cobra_iss: props.plano.cobra_iss ?? false,
-  num_lei_iss: props.plano.num_lei_iss ?? '',
-  aliquota_iss: props.plano.aliquota_iss ?? '',
-  resp_cob_iss: props.plano.resp_cob_iss ?? '',
-});
-
-function submit() {
-  form.put(route('pmda.planos.update', props.plano.id), { preserveScroll: true });
-}
+defineProps({ form: { type: Object, required: true } });
 </script>

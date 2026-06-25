@@ -29,11 +29,11 @@ class PmdaPlanoController extends Controller
 
     public function index(Request $request): Response
     {
+        $filtros = $request->only(['buscar', 'status', 'municipio_id', 'data_inicio', 'data_fim']);
+
         return Inertia::render('Pmda/Index', [
-            'planos'  => PmdaPlanoListResource::collection(
-                $this->service->listar($request->only(['municipio_id', 'status']))
-            ),
-            'filtros'      => $request->only(['municipio_id', 'status']),
+            'planos'  => PmdaPlanoListResource::collection($this->service->listar($filtros)),
+            'filtros'      => $filtros,
             'statistics'   => [
                 'total'     => \App\Modules\Pmda\Models\PmdaPlano::count(),
                 'emEdicao'  => \App\Modules\Pmda\Models\PmdaPlano::where('status', \App\Modules\Pmda\Enums\PmdaStatus::RASCUNHO->value)->count(),
@@ -45,6 +45,32 @@ class PmdaPlanoController extends Controller
             'municipios' => \App\Models\Municipio::query()
                 ->orderBy('nome')->get(['id', 'nome', 'uf'])
                 ->map(fn ($m) => ['id' => $m->id, 'nome' => $m->nome, 'uf' => $m->uf]),
+        ]);
+    }
+
+    public function create(Request $request): Response|RedirectResponse
+    {
+        $municipioId = (int) $request->query('municipio_id');
+        $municipio = \App\Models\Municipio::find($municipioId);
+
+        if ($municipio === null) {
+            return to_route('pmda.planos.index')->withErrors(['municipio_id' => 'Selecione um município válido.']);
+        }
+
+        $pendente = \App\Modules\Pmda\Models\PmdaPlano::query()
+            ->where('municipio_id', $municipioId)
+            ->whereIn('status', PmdaPlanoService::statusPendente())
+            ->first();
+
+        if ($pendente !== null) {
+            return to_route('pmda.planos.index')->withErrors([
+                'municipio_id' => 'Este município já possui um PMDA em aberto ('.$pendente->status->getLabel().
+                    ', protocolo '.($pendente->protocolo ?? '—').').',
+            ]);
+        }
+
+        return Inertia::render('Pmda/Create', [
+            'municipio' => ['id' => $municipio->id, 'nome' => $municipio->nome, 'uf' => $municipio->uf],
         ]);
     }
 
@@ -69,11 +95,15 @@ class PmdaPlanoController extends Controller
 
     public function store(StorePmdaPlanoRequest $request): RedirectResponse
     {
-        $plano = $this->service->criar(
-            municipioId: (int) $request->validated('municipio_id'),
-            userId: (int) $request->user()->id,
-            data: [],
-        );
+        try {
+            $plano = $this->service->criar(
+                municipioId: (int) $request->validated('municipio_id'),
+                userId: (int) $request->user()->id,
+                data: collect($request->validated())->except('municipio_id')->toArray(),
+            );
+        } catch (\DomainException $e) {
+            return back()->withErrors(['municipio_id' => $e->getMessage()]);
+        }
 
         return to_route('pmda.planos.edit', $plano->id)->with('success', 'PMDA criado.');
     }
@@ -102,7 +132,11 @@ class PmdaPlanoController extends Controller
 
     public function copiar(Request $request, PmdaPlano $plano): RedirectResponse
     {
-        $copia = $this->copia->copiar($plano, (int) $request->user()->id);
+        try {
+            $copia = $this->copia->copiar($plano, (int) $request->user()->id);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['copiar' => $e->getMessage()]);
+        }
 
         return to_route('pmda.planos.edit', $copia->id)->with('success', 'Cópia criada.');
     }
