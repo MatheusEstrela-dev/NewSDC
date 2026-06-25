@@ -1,27 +1,264 @@
+<template>
+  <Head title="Gestão de PMDA" />
+
+  <div class="p-4 sm:p-6">
+    <PageHeader
+      title="Gestão de PMDA"
+      description="Planos Municipais de Defesa Agropecuária — fornecimento emergencial de água potável."
+      :icon="DocumentTextIcon"
+      variant="gradient"
+    >
+      <template #actions>
+        <ViewModeToggle v-model="viewMode" />
+        <ActionButton
+          v-if="can('pmda.planos.export')"
+          action="export"
+          :allowed="true"
+          variant="success"
+          label="Exportar"
+          @click="openExportModal"
+        />
+        <ActionButton
+          v-if="can('pmda.planos.create')"
+          action="create"
+          module="pmda"
+          resource="planos"
+          label="Novo PMDA"
+          :allowed="true"
+          @click="abrirCriar"
+        />
+      </template>
+    </PageHeader>
+
+    <PmdaStatisticsCards :statistics="statistics" />
+
+    <PmdaFiltersSection
+      class="mb-6"
+      :filters="filtros"
+      :status-opcoes="statusOpcoes"
+      :municipios="municipios"
+      @apply="aplicar"
+      @clear="limpar"
+    />
+
+    <!-- Tabela -->
+    <div v-if="viewMode === 'table'" class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
+      <div class="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-800/70">
+        <h3 class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
+          <DocumentTextIcon class="h-4 w-4 text-slate-400" />
+          Histórico dos PMDA
+          <span class="font-normal text-slate-400">({{ planos.data.length }} registros)</span>
+        </h3>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase text-slate-500 dark:border-slate-700/50 dark:bg-slate-800 dark:text-slate-400">
+            <tr>
+              <th class="px-4 py-3 text-left">Protocolo</th>
+              <th class="px-4 py-3 text-left">Município</th>
+              <th class="px-4 py-3 text-left">Situação</th>
+              <th class="px-4 py-3 text-left">Criação</th>
+              <th class="w-28 px-4 py-3 text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+            <tr v-for="plano in planos.data" :key="plano.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/60">
+              <td class="whitespace-nowrap px-4 py-4 font-mono text-slate-700 dark:text-slate-300">{{ plano.protocolo ?? '—' }}</td>
+              <td class="px-4 py-4 text-slate-700 dark:text-slate-300">{{ plano.municipio ?? '—' }}</td>
+              <td class="px-4 py-4"><PmdaStatusBadge :label="plano.status_label" :color-class="plano.status_color" /></td>
+              <td class="whitespace-nowrap px-4 py-4 text-slate-500">{{ formatDate(plano.data) }}</td>
+              <td class="px-4 py-4">
+                <div class="flex items-center justify-end gap-1">
+                  <ActionButton
+                    action="edit" module="pmda" resource="planos"
+                    :allowed="can('pmda.planos.edit')" :show-label="false" size="sm"
+                    tooltip-text="Editar PMDA"
+                    @click="router.visit(route('pmda.planos.edit', plano.id))"
+                  />
+                  <ActionButton
+                    v-if="plano.pode_copiar"
+                    action="duplicate" module="pmda" resource="planos"
+                    :allowed="can('pmda.planos.copiar')" :show-label="false" size="sm"
+                    tooltip-text="Criar cópia"
+                    @click="copiar(plano.id)"
+                  />
+                </div>
+              </td>
+            </tr>
+
+            <tr v-if="planos.data.length === 0">
+              <td colspan="5" class="px-4 py-12 text-center">
+                <DocumentTextIcon class="mx-auto h-12 w-12 text-slate-300" />
+                <p class="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Nenhum PMDA encontrado</p>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajuste os filtros ou crie um novo PMDA.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-if="pagination && pagination.last_page > 1" class="border-t border-slate-200 px-4 py-3 dark:border-slate-700/50">
+        <Pagination :pagination="pagination" @page-change="irParaPagina" />
+      </div>
+    </div>
+
+    <!-- Grade -->
+    <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        v-for="plano in planos.data"
+        :key="plano.id"
+        class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <span class="font-mono text-sm text-slate-700 dark:text-slate-300">{{ plano.protocolo ?? '—' }}</span>
+          <PmdaStatusBadge :label="plano.status_label" :color-class="plano.status_color" />
+        </div>
+        <p class="mt-2 font-semibold text-slate-900 dark:text-slate-100">{{ plano.municipio ?? '—' }}</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Criação: {{ formatDate(plano.data) }}</p>
+        <div class="mt-3 flex items-center justify-end gap-1 border-t border-slate-100 pt-3 dark:border-slate-700/50">
+          <ActionButton
+            action="edit" module="pmda" resource="planos"
+            :allowed="can('pmda.planos.edit')" :show-label="false" size="sm"
+            tooltip-text="Editar PMDA"
+            @click="router.visit(route('pmda.planos.edit', plano.id))"
+          />
+          <ActionButton
+            v-if="plano.pode_copiar"
+            action="duplicate" module="pmda" resource="planos"
+            :allowed="can('pmda.planos.copiar')" :show-label="false" size="sm"
+            tooltip-text="Criar cópia"
+            @click="copiar(plano.id)"
+          />
+        </div>
+      </div>
+      <div v-if="planos.data.length === 0" class="col-span-full rounded-lg border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500 dark:border-slate-700">
+        Nenhum PMDA encontrado.
+      </div>
+    </div>
+
+    <ExportCsvModal
+      :show="showExportModal"
+      module-name="PMDA"
+      @close="closeExportModal"
+      @export="onExport"
+    />
+
+    <!-- Modal Novo PMDA -->
+    <div v-if="showCriar" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="showCriar = false">
+      <div class="w-full max-w-md rounded-lg bg-white p-5 shadow-xl dark:bg-slate-900">
+        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Novo PMDA</h3>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Selecione o município. O plano nasce em modo de edição.</p>
+        <label class="mt-4 block">
+          <span class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Município</span>
+          <select v-model="formCriar.municipio_id" class="w-full rounded-md border-slate-300 text-sm dark:bg-slate-800 dark:border-slate-700">
+            <option value="">Selecione…</option>
+            <option v-for="m in municipios" :key="m.id" :value="m.id">{{ m.nome }} / {{ m.uf }}</option>
+          </select>
+          <span v-if="formCriar.errors.municipio_id" class="mt-1 block text-xs text-red-600">{{ formCriar.errors.municipio_id }}</span>
+        </label>
+        <div class="mt-5 flex justify-end gap-2">
+          <Button variant="secondary" size="sm" @click="showCriar = false">Cancelar</Button>
+          <Button variant="success" size="sm" :disabled="!formCriar.municipio_id || formCriar.processing" @click="criar">Criar</Button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup>
-import { Head, router } from '@inertiajs/vue3';
+import { computed, reactive, ref } from 'vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import PmdaCrudTemplate from '@/Templates/Pmda/PmdaCrudTemplate.vue';
-import PmdaPlanosTable from '@/Components/Organisms/Pmda/PmdaPlanosTable.vue';
+import { usePermissions } from '@/Composables/usePermissions';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import { useExport } from '@/composables/data/useExport';
+import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import PmdaStatusBadge from '@/Components/Atoms/Pmda/PmdaStatusBadge.vue';
+import PmdaStatisticsCards from '@/Components/Organisms/Pmda/PmdaStatisticsCards.vue';
+import PmdaFiltersSection from '@/Components/Organisms/Pmda/PmdaFiltersSection.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
-defineProps({
-  planos: { type: Object, default: () => ({ data: [] }) },
+
+const { can } = usePermissions();
+
+const viewMode = ref('table');
+
+const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('pmda.planos.export');
+
+function onExport(params) {
+  handleExport(params, {
+    status: filtros.status || undefined,
+    municipio_id: filtros.municipio_id || undefined,
+  });
+}
+
+const props = defineProps({
+  planos: { type: Object, default: () => ({ data: [], meta: {} }) },
   filtros: { type: Object, default: () => ({}) },
+  statistics: { type: Object, default: () => ({ total: 0, emEdicao: 0, emAnalise: 0, aprovados: 0 }) },
+  statusOpcoes: { type: Array, default: () => [] },
+  municipios: { type: Array, default: () => [] },
 });
 
-function editar(id) {
-  router.visit(route('pmda.planos.edit', id));
+const pagination = computed(() => {
+  const m = props.planos?.meta;
+  if (!m) return null;
+  return {
+    current_page: m.current_page ?? 1,
+    last_page: m.last_page ?? 1,
+    per_page: m.per_page ?? 15,
+    total: m.total ?? 0,
+    from: m.from ?? null,
+    to: m.to ?? null,
+  };
+});
+
+function aplicar(filtros) {
+  router.get(route('pmda.planos.index'), {
+    status: filtros.status || undefined,
+    municipio_id: filtros.municipio_id || undefined,
+  }, { preserveState: true, replace: true });
+}
+
+function limpar() {
+  router.get(route('pmda.planos.index'), {}, { preserveState: true, replace: true });
+}
+
+function irParaPagina(page) {
+  router.get(route('pmda.planos.index'), {
+    ...props.filtros,
+    page,
+  }, { preserveState: true, replace: true });
+}
+
+const showCriar = ref(false);
+const formCriar = useForm({ municipio_id: '' });
+
+function abrirCriar() {
+  formCriar.reset();
+  formCriar.clearErrors();
+  showCriar.value = true;
+}
+
+function criar() {
+  formCriar.post(route('pmda.planos.store'), { onSuccess: () => { showCriar.value = false; } });
 }
 
 function copiar(id) {
   router.post(route('pmda.planos.copiar', id));
 }
-</script>
 
-<template>
-  <Head title="PMDA — Planos" />
-  <PmdaCrudTemplate title="Planos Municipais de Defesa Agropecuária">
-    <PmdaPlanosTable :planos="planos" @edit="editar" @copiar="copiar" />
-  </PmdaCrudTemplate>
-</template>
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('pt-BR');
+}
+
+const filtros = reactive({ ...props.filtros });
+</script>

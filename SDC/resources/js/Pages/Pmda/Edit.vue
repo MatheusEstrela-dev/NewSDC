@@ -31,7 +31,7 @@ function voltar() {
         <PmdaStatusBadge :label="dados.status_label" :color-class="dados.status_color" />
         <button
           type="button"
-          class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           @click="voltar"
         >
           Voltar

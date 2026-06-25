@@ -17,6 +17,8 @@ Route::prefix('pmda')->name('pmda.')->group(function () {
     Route::prefix('planos')->name('planos.')->group(function () {
         Route::get('/', [PmdaPlanoController::class, 'index'])
             ->name('index')->middleware('can:pmda.planos.view');
+        Route::get('/export', [PmdaPlanoController::class, 'export'])
+            ->name('export')->middleware('can:pmda.planos.export');
         Route::post('/', [PmdaPlanoController::class, 'store'])
             ->name('store')->middleware('can:pmda.planos.create');
         Route::get('/{plano}/edit', [PmdaPlanoController::class, 'edit'])

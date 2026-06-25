@@ -1,40 +1,40 @@
 <template>
-  <form class="space-y-4 rounded-lg border border-gray-200 bg-white p-4" @submit.prevent="submit">
-    <h2 class="text-base font-semibold text-gray-800">COMPDEC — Coordenadoria Municipal de Proteção e Defesa Civil</h2>
+  <form class="space-y-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-900/60" @submit.prevent="submit">
+    <h2 class="text-base font-semibold text-slate-800 dark:text-slate-100">COMPDEC — Coordenadoria Municipal de Proteção e Defesa Civil</h2>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">Coordenador(a)</span>
-        <input v-model="form.compdec_coordenador" type="text" maxlength="110" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">E-mail</span>
-        <input v-model="form.compdec_email" type="email" maxlength="110" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">Telefone</span>
-        <input v-model="form.compdec_tel" type="text" maxlength="20" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">Decreto de criação</span>
-        <input v-model="form.compdec_decreto" type="text" maxlength="50" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
-      <label class="block">
-        <span class="mb-1 block text-xs text-gray-600">Lei de criação</span>
-        <input v-model="form.compdec_lei" type="text" maxlength="50" class="w-full rounded-md border-gray-300 text-sm" />
-      </label>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Coordenador(a)</span>
+        <TextInput v-model="form.compdec_coordenador" :maxlength="110" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">E-mail</span>
+        <TextInput v-model="form.compdec_email" type="email" :maxlength="110" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Telefone</span>
+        <TextInput v-model="form.compdec_tel" :maxlength="20" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Decreto de criação</span>
+        <TextInput v-model="form.compdec_decreto" :maxlength="50" />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Lei de criação</span>
+        <TextInput v-model="form.compdec_lei" :maxlength="50" />
+      </div>
     </div>
 
     <div class="flex justify-end">
-      <button type="submit" :disabled="form.processing" class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
-        Salvar
-      </button>
+      <Button variant="success" size="sm" :disabled="form.processing" @click="submit">Salvar</Button>
     </div>
   </form>
 </template>
 
 <script setup>
 import { useForm } from '@inertiajs/vue3';
+import TextInput from '@/Components/Atoms/Input/TextInput.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 
 const props = defineProps({ plano: { type: Object, required: true } });
 

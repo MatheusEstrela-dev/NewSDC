@@ -1,7 +1,7 @@
 <template>
   <div class="p-4 sm:p-6 space-y-6">
     <header class="flex items-center justify-between">
-      <h1 class="text-xl font-semibold">{{ title }}</h1>
+      <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ title }}</h1>
       <slot name="actions" />
     </header>
     <slot name="iss" />
