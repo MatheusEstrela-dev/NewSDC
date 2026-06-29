@@ -17,12 +17,13 @@ class PmdaComunidade extends Model
 
     protected $fillable = [
         'pmda_plano_id', 'comunidade_id', 'municipio_id', 'ponto_id', 'nome',
-        'latitude', 'longitude', 'trecho_pav', 'trecho_n_pav', 'pop_atendida',
+        'latitude', 'longitude', 'trecho_pav', 'trecho_n_pav', 'distancia_km', 'pop_atendida',
     ];
 
     protected $casts = [
         'trecho_pav'   => 'decimal:2',
         'trecho_n_pav' => 'decimal:2',
+        'distancia_km' => 'decimal:2',
         'pop_atendida' => 'integer',
     ];
 

@@ -238,10 +238,12 @@ return [
                 'export' => 'pmda.planos.export',
             ],
             'Comunidades' => [
-                'view'   => 'pmda.comunidades.view',
-                'create' => 'pmda.comunidades.create',
-                'edit'   => 'pmda.comunidades.edit',
-                'delete' => 'pmda.comunidades.delete',
+                'view'     => 'pmda.comunidades.view',
+                'create'   => 'pmda.comunidades.create',
+                'edit'     => 'pmda.comunidades.edit',
+                'delete'   => 'pmda.comunidades.delete',
+                'solicitar' => 'pmda.comunidades.solicitar', // municipio solicita inclusao
+                'aprovar'  => 'pmda.comunidades.aprovar',    // CEDEC aprova/rejeita
             ],
             'Representantes' => [
                 'view'   => 'pmda.representantes.view',

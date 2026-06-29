@@ -22,8 +22,14 @@ class PmdaPlanoResource extends JsonResource
             'pode_copiar'       => $this->status->permiteCopia(),
             'data'              => $this->data?->toIso8601String(),
             'acoes'             => $this->acoes,
+            'motivo'            => $this->motivo,
             'qtd_caminhao'      => $this->qtd_caminhao,
             'pop_at_municipio'  => $this->pop_at_municipio,
+            // Etapa 6: acoes de resposta
+            'acao_decreto_se'     => (bool) $this->acao_decreto_se,
+            'acao_caminhao_pipa'  => (bool) $this->acao_caminhao_pipa,
+            'acao_cestas_basicas' => (bool) $this->acao_cestas_basicas,
+            'justificativa_apoio' => $this->justificativa_apoio,
             'cobra_iss'         => $this->cobra_iss,
             'num_lei_iss'       => $this->num_lei_iss,
             'aliquota_iss'      => $this->aliquota_iss,
@@ -49,12 +55,46 @@ class PmdaPlanoResource extends JsonResource
             'pontos'            => $this->whenLoaded('pontos', fn () => $this->pontos->map(fn ($p) => [
                 'id'         => $p->id,
                 'nome'       => $p->nome,
+                'tipo'       => $p->tipo,
+                'tipo_label' => self::TIPOS_PONTO[$p->tipo] ?? '—',
+                'situacao'   => $p->pivot->situacao ?? 'ATIVO',
                 'capacidade' => $p->capacidade,
             ])->values()),
+            'compdec_membros'   => $this->whenLoaded('compdecMembros', fn () => $this->compdecMembros->map(fn ($m) => [
+                'id'       => $m->id,
+                'nome'     => $m->nome,
+                'cargo'    => $m->cargo,
+                'telefone' => $m->telefone,
+            ])->values()),
+            'anexos'            => [
+                'termo'  => $this->anexoInfo(\App\Modules\Pmda\Models\PmdaPlano::MEDIA_TERMO),
+                'oficio' => $this->anexoInfo(\App\Modules\Pmda\Models\PmdaPlano::MEDIA_OFICIO),
+            ],
             'data_aprov'        => $this->data_aprov?->toIso8601String(),
             'dt_ultima_alteracao' => $this->dt_ultima_alteracao?->toIso8601String(),
             'comunidades_count' => $this->whenCounted('comunidades'),
             'comunidades'       => ComunidadeResource::collection($this->whenLoaded('comunidades')),
+        ];
+    }
+
+    /** Rotulos de tipo de ponto de captacao (pip_pmda_ponto.tipo 1..6). */
+    private const TIPOS_PONTO = [
+        1 => 'COPASA',
+        2 => 'COPANOR',
+        3 => 'Barragem',
+        4 => 'SAAE/DMAE',
+        5 => 'Poço Público',
+        6 => 'Poço Particular',
+    ];
+
+    /** Metadados do anexo de uma colecao (URL + nome do arquivo), ou null. */
+    private function anexoInfo(string $colecao): ?array
+    {
+        $media = $this->resource->getFirstMedia($colecao);
+
+        return $media === null ? null : [
+            'url'  => $media->getUrl(),
+            'nome' => $media->file_name,
         ];
     }
 }

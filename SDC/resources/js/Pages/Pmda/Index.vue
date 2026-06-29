@@ -1,7 +1,7 @@
 <template>
   <Head title="Gestão de PMDA" />
 
-  <div class="p-4 sm:p-6">
+  <div class="pb-6">
     <PageHeader
       title="Gestão de PMDA"
       description="Planos Municipais de Defesa Agropecuária — fornecimento emergencial de água potável."

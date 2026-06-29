@@ -15,6 +15,12 @@ return new class extends Migration {
             $table->string('status', 20)->default('RASCUNHO')->index();
             $table->timestamp('data')->nullable();           // data de criacao do plano
             $table->text('acoes')->nullable();
+            $table->text('motivo')->nullable();               // Etapa 1: motivo/descricao do pedido
+            // Etapa 6: acoes de resposta ja executadas pelo municipio
+            $table->boolean('acao_decreto_se')->default(false);
+            $table->boolean('acao_caminhao_pipa')->default(false);
+            $table->boolean('acao_cestas_basicas')->default(false);
+            $table->text('justificativa_apoio')->nullable();  // Etapa 6: justificativa da necessidade de apoio estadual
             $table->unsignedInteger('qtd_caminhao')->nullable();
             $table->unsignedInteger('pop_at_municipio')->nullable();
             $table->boolean('pedido_altera')->default(false);

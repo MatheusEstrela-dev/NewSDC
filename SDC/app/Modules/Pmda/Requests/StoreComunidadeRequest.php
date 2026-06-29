@@ -24,6 +24,7 @@ class StoreComunidadeRequest extends FormRequest
             'longitude'     => ['nullable', 'string', 'max:30'],
             'trecho_pav'    => ['nullable', 'numeric', 'min:0'],
             'trecho_n_pav'  => ['nullable', 'numeric', 'min:0'],
+            'distancia_km'  => ['nullable', 'numeric', 'min:0'],
             'pop_atendida'  => ['nullable', 'integer', 'min:0'],
         ];
     }
