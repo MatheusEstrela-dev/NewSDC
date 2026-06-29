@@ -1,0 +1,134 @@
+/* ==========================================================================
+   PMDA — Wizard de 7 etapas (Create/Edit)
+   Chrome compartilhado dos cards de etapa. Componentes usam Tailwind para o
+   conteudo; aqui ficam apenas os estilos repetidos do "card de etapa".
+   ========================================================================== */
+
+.pmda-wizard-card {
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.75rem;
+    background: #fff;
+    overflow: hidden;
+}
+.dark .pmda-wizard-card {
+    border-color: rgb(51 65 85 / 0.6);
+    background: rgb(15 23 42 / 0.6);
+}
+
+/* Cabecalho do card */
+.pmda-step-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgb(241 245 249);
+}
+.dark .pmda-step-head {
+    border-bottom-color: rgb(51 65 85 / 0.5);
+}
+.pmda-step-icon {
+    flex-shrink: 0;
+    width: 2.75rem;
+    height: 2.75rem;
+    display: grid;
+    place-items: center;
+    border-radius: 0.625rem;
+    background: rgb(238 242 255);
+    color: rgb(79 70 229);
+}
+.dark .pmda-step-icon {
+    background: rgb(79 70 229 / 0.15);
+    color: rgb(165 180 252);
+}
+.pmda-step-icon svg { width: 1.4rem; height: 1.4rem; }
+.pmda-step-title { font-size: 1.0625rem; font-weight: 700; color: rgb(15 23 42); }
+.dark .pmda-step-title { color: rgb(241 245 249); }
+.pmda-step-sub { font-size: 0.8125rem; color: rgb(100 116 139); margin-top: 0.125rem; }
+.dark .pmda-step-sub { color: rgb(148 163 184); }
+.pmda-step-count {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: rgb(148 163 184);
+    white-space: nowrap;
+}
+
+/* Corpo e rodape */
+.pmda-step-body { padding: 1.5rem; }
+.pmda-step-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgb(241 245 249);
+}
+.dark .pmda-step-foot { border-top-color: rgb(51 65 85 / 0.5); }
+
+/* Botoes de navegacao */
+.pmda-btn-next {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgb(37 99 235);
+    transition: background-color 0.15s;
+}
+.pmda-btn-next:hover { background: rgb(29 78 216); }
+.pmda-btn-next:disabled { opacity: 0.6; cursor: not-allowed; }
+.pmda-btn-next svg { width: 1rem; height: 1rem; }
+.pmda-btn-send {
+    background: rgb(22 163 74);
+}
+.pmda-btn-send:hover { background: rgb(21 128 61); }
+.pmda-btn-back {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgb(100 116 139);
+    transition: color 0.15s;
+}
+.pmda-btn-back:hover { color: rgb(15 23 42); }
+.dark .pmda-btn-back { color: rgb(148 163 184); }
+.dark .pmda-btn-back:hover { color: rgb(241 245 249); }
+
+/* Rotulo de campo padrao do wizard */
+.pmda-field-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: rgb(51 65 85);
+}
+.dark .pmda-field-label { color: rgb(203 213 225); }
+.pmda-field-label .req { color: rgb(239 68 68); margin-left: 0.125rem; }
+
+/* Caixa de informacao / alerta */
+.pmda-info-box {
+    border-radius: 0.5rem;
+    padding: 0.875rem 1rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+}
+.pmda-info-box.info {
+    background: rgb(239 246 255);
+    color: rgb(30 64 175);
+    border: 1px solid rgb(191 219 254);
+}
+.dark .pmda-info-box.info {
+    background: rgb(30 58 138 / 0.2);
+    color: rgb(191 219 254);
+    border-color: rgb(30 58 138 / 0.5);
+}
+.pmda-info-box.warn {
+    background: rgb(254 252 232);
+    color: rgb(133 77 14);
+    border: 1px solid rgb(254 240 138);
+}
+.dark .pmda-info-box.warn {
+    background: rgb(113 63 18 / 0.2);
+    color: rgb(253 230 138);
+    border-color: rgb(133 77 14 / 0.5);
+}

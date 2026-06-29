@@ -67,6 +67,9 @@ const loadPageCSS = (pageName) => {
     const cssMap = {
         'Dashboard': () => import('../css/pages/dashboard/dashboard.css'),
         'Pae': () => import('../css/pages/pae/pae.css'),
+        'Pmda/Create': () => import('../css/pages/pmda/pmda.css'),
+        'Pmda/Edit': () => import('../css/pages/pmda/pmda.css'),
+        'Pmda/Index': () => import('../css/pages/pmda/pmda.css'),
         'Rat': () => Promise.all([
             import('../css/pages/rat/rat.css'),
             import('../css/pages/rat/index.css'),

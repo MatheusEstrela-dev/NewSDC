@@ -1,51 +1,86 @@
 <script setup>
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import PmdaDetailTemplate from '@/Templates/Pmda/PmdaDetailTemplate.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import RatTabs from '@/Components/Rat/RatTabs.vue';
 import PmdaStatusBadge from '@/Components/Atoms/Pmda/PmdaStatusBadge.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
-import PmdaIssForm from '@/Components/Organisms/Pmda/PmdaIssForm.vue';
-import PmdaMunicipioForm from '@/Components/Organisms/Pmda/PmdaMunicipioForm.vue';
-import PmdaCompdecForm from '@/Components/Organisms/Pmda/PmdaCompdecForm.vue';
-import PmdaPontosSection from '@/Components/Organisms/Pmda/PmdaPontosSection.vue';
-import PmdaComunidadesSection from '@/Components/Organisms/Pmda/PmdaComunidadesSection.vue';
+import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import PmdaInicioSection from '@/Components/Organisms/Pmda/PmdaInicioSection.vue';
+import PmdaIssSection from '@/Components/Organisms/Pmda/PmdaIssSection.vue';
+import PmdaCompdecSection from '@/Components/Organisms/Pmda/PmdaCompdecSection.vue';
+import PmdaPontoSection from '@/Components/Organisms/Pmda/PmdaPontoSection.vue';
+import PmdaDistribuicaoSection from '@/Components/Organisms/Pmda/PmdaDistribuicaoSection.vue';
+import PmdaAcoesSection from '@/Components/Organisms/Pmda/PmdaAcoesSection.vue';
+import PmdaAnexosSection from '@/Components/Organisms/Pmda/PmdaAnexosSection.vue';
+import { usePmdaWizard } from '@/Composables/pmda/usePmdaWizard.js';
 
 defineOptions({ layout: AuthenticatedLayout });
 const props = defineProps({
   plano: { type: Object, required: true },
   pontos_disponiveis: { type: Array, default: () => [] },
+  comunidades_disponiveis: { type: Array, default: () => [] },
+  comunidade_solicitacoes: { type: Array, default: () => [] },
 });
 
-const dados = props.plano?.data ?? props.plano;
+const dados = computed(() => props.plano?.data ?? props.plano);
+
+// Vindo do "Novo PMDA": continua o preenchimento na etapa 2, sem cara de "Edição".
+const page = usePage();
+const criando = computed(() => String(page.url).includes('novo=1'));
+
+// Edit: todas as etapas liberadas.
+const { activeTab, tabs, goTo, next, prev } = usePmdaWizard({
+  allUnlocked: true,
+  initialTab: criando.value ? 2 : 1,
+});
+
+const tabsComBadge = computed(() =>
+  tabs.value.map((t) => {
+    if (t.id === 3) return { ...t, badge: dados.value.compdec_membros?.length || null };
+    if (t.id === 4) return { ...t, badge: dados.value.pontos?.length || null };
+    if (t.id === 5) return { ...t, badge: dados.value.comunidades?.length || null };
+    return t;
+  })
+);
 
 const form = useForm({
-  // ISS
-  cobra_iss: dados.cobra_iss ?? false,
-  num_lei_iss: dados.num_lei_iss ?? '',
-  aliquota_iss: dados.aliquota_iss ?? '',
-  resp_cob_iss: dados.resp_cob_iss ?? '',
-  // Municipio / Prefeitura
-  nome_prefeito: dados.nome_prefeito ?? '',
-  tel_prefeitura: dados.tel_prefeitura ?? '',
-  email_prefeitura: dados.email_prefeitura ?? '',
-  tel_prefeito: dados.tel_prefeito ?? '',
-  cel_prefeito: dados.cel_prefeito ?? '',
-  cep: dados.cep ?? '',
-  endereco: dados.endereco ?? '',
-  bairro: dados.bairro ?? '',
-  populacao: dados.populacao ?? '',
-  pop_rural: dados.pop_rural ?? '',
-  area: dados.area ?? '',
+  motivo: dados.value.motivo ?? '',
+  // ISS / Prefeitura
+  cobra_iss: dados.value.cobra_iss ?? false,
+  num_lei_iss: dados.value.num_lei_iss ?? '',
+  aliquota_iss: dados.value.aliquota_iss ?? '',
+  resp_cob_iss: dados.value.resp_cob_iss ?? '',
+  nome_prefeito: dados.value.nome_prefeito ?? '',
+  tel_prefeitura: dados.value.tel_prefeitura ?? '',
+  email_prefeitura: dados.value.email_prefeitura ?? '',
+  tel_prefeito: dados.value.tel_prefeito ?? '',
+  cel_prefeito: dados.value.cel_prefeito ?? '',
+  cep: dados.value.cep ?? '',
+  endereco: dados.value.endereco ?? '',
+  bairro: dados.value.bairro ?? '',
+  populacao: dados.value.populacao ?? '',
+  pop_rural: dados.value.pop_rural ?? '',
+  area: dados.value.area ?? '',
   // COMPDEC
-  compdec_coordenador: dados.compdec_coordenador ?? '',
-  compdec_email: dados.compdec_email ?? '',
-  compdec_tel: dados.compdec_tel ?? '',
-  compdec_decreto: dados.compdec_decreto ?? '',
-  compdec_lei: dados.compdec_lei ?? '',
+  compdec_coordenador: dados.value.compdec_coordenador ?? '',
+  compdec_email: dados.value.compdec_email ?? '',
+  compdec_tel: dados.value.compdec_tel ?? '',
+  compdec_decreto: dados.value.compdec_decreto ?? '',
+  compdec_lei: dados.value.compdec_lei ?? '',
+  // Acoes de resposta
+  acao_decreto_se: dados.value.acao_decreto_se ?? false,
+  acao_caminhao_pipa: dados.value.acao_caminhao_pipa ?? false,
+  acao_cestas_basicas: dados.value.acao_cestas_basicas ?? false,
+  justificativa_apoio: dados.value.justificativa_apoio ?? '',
 });
 
-function salvar() {
-  form.put(route('pmda.planos.update', dados.id), { preserveScroll: true });
+// Persiste os campos de nivel do plano e avanca para a proxima etapa.
+function salvarEAvancar() {
+  form.put(route('pmda.planos.update', dados.value.id), {
+    preserveScroll: true,
+    onSuccess: () => next(),
+  });
 }
 
 function voltar() {
@@ -55,42 +90,69 @@ function voltar() {
 
 <template>
   <Head :title="`PMDA — ${dados.protocolo ?? 'Plano'}`" />
-  <PmdaDetailTemplate :title="`PMDA ${dados.protocolo ?? ''}`">
-    <template #actions>
-      <div class="flex items-center gap-3">
+
+  <div class="pb-6">
+    <PageHeader
+      :title="criando ? `Novo PMDA — ${dados.municipio ?? ''}` : `PMDA ${dados.protocolo ?? ''}`"
+      :icon="DocumentTextIcon"
+      variant="gradient"
+    >
+      <template #actions>
         <PmdaStatusBadge :label="dados.status_label" :color-class="dados.status_color" />
-        <button
-          type="button"
-          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-          @click="voltar"
-        >
-          Voltar
-        </button>
-      </div>
-    </template>
+      </template>
+    </PageHeader>
 
-    <!-- Form do plano: ISS + Municipio + COMPDEC, um unico Salvar no final -->
-    <template #iss>
-      <form class="space-y-6" @submit.prevent="salvar">
-        <PmdaIssForm :form="form" />
-        <PmdaMunicipioForm :form="form" />
-        <PmdaCompdecForm :form="form" />
-        <div class="flex justify-end">
-          <Button variant="success" :disabled="form.processing" @click="salvar">Salvar PMDA</Button>
-        </div>
-      </form>
-    </template>
-
-    <template #pontos>
-      <PmdaPontosSection
-        :plano-id="dados.id"
-        :pontos="dados.pontos ?? []"
-        :disponiveis="pontos_disponiveis"
+    <RatTabs :tabs="tabsComBadge" :active-tab="activeTab" @tab-change="goTo">
+      <PmdaInicioSection
+        v-if="activeTab === 1"
+        :form="form"
+        :protocolo="dados.protocolo"
+        :saving="form.processing"
+        @next="salvarEAvancar"
+        @prev="prev"
       />
-    </template>
-
-    <template #comunidades>
-      <PmdaComunidadesSection :plano-id="dados.id" :comunidades="dados.comunidades ?? []" />
-    </template>
-  </PmdaDetailTemplate>
+      <PmdaIssSection
+        v-else-if="activeTab === 2"
+        :form="form"
+        :saving="form.processing"
+        @next="salvarEAvancar"
+        @prev="prev"
+      />
+      <PmdaCompdecSection
+        v-else-if="activeTab === 3"
+        :form="form"
+        :plano="dados"
+        :saving="form.processing"
+        @next="salvarEAvancar"
+        @prev="prev"
+      />
+      <PmdaPontoSection
+        v-else-if="activeTab === 4"
+        :plano="dados"
+        @next="next"
+        @prev="prev"
+      />
+      <PmdaDistribuicaoSection
+        v-else-if="activeTab === 5"
+        :plano="dados"
+        :comunidades-disponiveis="comunidades_disponiveis"
+        :solicitacoes="comunidade_solicitacoes"
+        @next="next"
+        @prev="prev"
+      />
+      <PmdaAcoesSection
+        v-else-if="activeTab === 6"
+        :form="form"
+        :saving="form.processing"
+        @next="salvarEAvancar"
+        @prev="prev"
+      />
+      <PmdaAnexosSection
+        v-else-if="activeTab === 7"
+        :plano="dados"
+        @prev="prev"
+        @revisar="goTo(1)"
+      />
+    </RatTabs>
+  </div>
 </template>
