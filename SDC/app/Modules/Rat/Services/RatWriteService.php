@@ -46,6 +46,7 @@ class RatWriteService
     {
         return DB::transaction(function () use ($origemId) {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
             $origem = RatOcorrencia::findOrFail($origemId);
 
             // Extrair sequência do RAT origem: YYYY-SEQUENCE-SUFFIX
@@ -72,11 +73,16 @@ class RatWriteService
             return RatOcorrencia::create([
                 'numero_bos'           => $numeroBos,
 =======
+=======
+>>>>>>> Stashed changes
             $protocolo = $this->protocoloService->generate();
             $userId    = Auth::id();
 
             return RatOcorrencia::create([
                 'numero_bos'           => $protocolo,
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
                 'sequencial_ano'       => now()->year,
                 'status'               => 0,

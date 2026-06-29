@@ -361,6 +361,7 @@ class RatResource extends JsonResource
             'anexos' => $anexos,
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
             // ── RATs relacionados (número do BOS, não UUID) ──
             'ocorrencia_origem' => $this->ocorrenciaOrigem ? [
                 'id'         => $this->ocorrenciaOrigem->id,
@@ -371,6 +372,8 @@ class RatResource extends JsonResource
                 'numero_bos' => $f->numero_bos,
             ])->values()->all(),
 
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
             // ── Permissões de ação ──
