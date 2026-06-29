@@ -96,8 +96,11 @@ class RatUnifiedController extends BaseController
 
     public function create(): Response
     {
+<<<<<<< Updated upstream
         // Render create page - NO database operations here
         // The form will use POST /rat to store data
+=======
+>>>>>>> Stashed changes
         return Inertia::render('Rat/RatCreate');
     }
 
@@ -235,6 +238,7 @@ class RatUnifiedController extends BaseController
         $ocorrencia = $this->writeService->findById($id);
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
+<<<<<<< Updated upstream
         try {
             $ratData = (new RatOcorrenciaResource($ocorrencia))->resolve();
         } catch (\Throwable $e) {
@@ -254,6 +258,10 @@ class RatUnifiedController extends BaseController
 
         return Inertia::render('Rat/RatEdit', [
             'rat'        => $ratData,
+=======
+        return Inertia::render('Rat/RatEdit', [
+            'rat'        => (new RatOcorrenciaResource($ocorrencia))->resolve(),
+>>>>>>> Stashed changes
             'lastUpdate' => $ocorrencia->updated_at?->toIso8601String(),
         ]);
     }
@@ -760,6 +768,7 @@ class RatUnifiedController extends BaseController
     {
         $ocorrencia = RatOcorrencia::findOrFail($id);
 
+<<<<<<< Updated upstream
         // Só é possível criar boletim relacionado após o RAT estar finalizado (prazo 48h expirado)
         if ($ocorrencia->status !== 1) {
             if ($ocorrencia->prazo_edicao && $ocorrencia->prazo_edicao->isFuture()) {
@@ -768,6 +777,13 @@ class RatUnifiedController extends BaseController
             } else {
                 $msg = 'Finalize o RAT antes de criar um boletim relacionado.';
             }
+=======
+        $isFinalized = $ocorrencia->status === 1;
+        $isExpired   = $ocorrencia->prazo_edicao && $ocorrencia->prazo_edicao->isPast();
+
+        if (!$isFinalized && !$isExpired) {
+            $msg = 'Apenas boletins finalizados ou com prazo expirado podem ser relacionados.';
+>>>>>>> Stashed changes
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }

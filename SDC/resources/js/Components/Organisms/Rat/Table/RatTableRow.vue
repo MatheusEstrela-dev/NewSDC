@@ -27,6 +27,7 @@
     </TableCell>
     <TableCell align="right" class="w-44 whitespace-nowrap">
       <div class="flex justify-end">
+<<<<<<< Updated upstream
         <ActionButton
           module="rat"
           resource="protocolos"
@@ -37,6 +38,18 @@
             { action: 'attachments', handler: () => emit('attachments', props.rat.id), label: 'Relacionar' },
             { action: 'delete',      handler: () => emit('delete', props.rat.id),      allowed: canDelete },
           ]"
+=======
+        <TableActions
+          :show-print="true"
+          :show-edit="canEdit"
+          :show-delete="canDelete"
+          attachments-label="Relacionar"
+          @view="handleView"
+          @print="handlePrint"
+          @edit="handleEdit"
+          @attachments="handleAttachments"
+          @delete="handleDelete"
+>>>>>>> Stashed changes
         />
       </div>
     </TableCell>
