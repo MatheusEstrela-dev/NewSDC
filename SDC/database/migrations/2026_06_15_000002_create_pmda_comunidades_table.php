@@ -18,6 +18,7 @@ return new class extends Migration {
             $table->string('longitude', 30)->nullable();
             $table->decimal('trecho_pav', 8, 2)->nullable();
             $table->decimal('trecho_n_pav', 8, 2)->nullable();
+            $table->decimal('distancia_km', 8, 2)->nullable(); // Etapa 5: distancia ate a sede
             $table->unsignedInteger('pop_atendida')->nullable();
             $table->timestamps();
             $table->softDeletes();
