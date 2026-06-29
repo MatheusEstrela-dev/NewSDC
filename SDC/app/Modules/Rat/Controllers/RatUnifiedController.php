@@ -97,11 +97,8 @@ class RatUnifiedController extends BaseController
     public function create(): Response
     {
 <<<<<<< Updated upstream
-<<<<<<< Updated upstream
         // Render create page - NO database operations here
         // The form will use POST /rat to store data
-=======
->>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
         return Inertia::render('Rat/RatCreate');
@@ -242,7 +239,6 @@ class RatUnifiedController extends BaseController
         abort_if(!$ocorrencia, 404, 'Ocorrência não encontrada.');
 
 <<<<<<< Updated upstream
-<<<<<<< Updated upstream
         try {
             $ratData = (new RatOcorrenciaResource($ocorrencia))->resolve();
         } catch (\Throwable $e) {
@@ -262,10 +258,6 @@ class RatUnifiedController extends BaseController
 
         return Inertia::render('Rat/RatEdit', [
             'rat'        => $ratData,
-=======
-        return Inertia::render('Rat/RatEdit', [
-            'rat'        => (new RatOcorrenciaResource($ocorrencia))->resolve(),
->>>>>>> Stashed changes
 =======
         return Inertia::render('Rat/RatEdit', [
             'rat'        => (new RatOcorrenciaResource($ocorrencia))->resolve(),
@@ -777,7 +769,6 @@ class RatUnifiedController extends BaseController
         $ocorrencia = RatOcorrencia::findOrFail($id);
 
 <<<<<<< Updated upstream
-<<<<<<< Updated upstream
         // Só é possível criar boletim relacionado após o RAT estar finalizado (prazo 48h expirado)
         if ($ocorrencia->status !== 1) {
             if ($ocorrencia->prazo_edicao && $ocorrencia->prazo_edicao->isFuture()) {
@@ -787,16 +778,11 @@ class RatUnifiedController extends BaseController
                 $msg = 'Finalize o RAT antes de criar um boletim relacionado.';
             }
 =======
-=======
->>>>>>> Stashed changes
         $isFinalized = $ocorrencia->status === 1;
         $isExpired   = $ocorrencia->prazo_edicao && $ocorrencia->prazo_edicao->isPast();
 
         if (!$isFinalized && !$isExpired) {
             $msg = 'Apenas boletins finalizados ou com prazo expirado podem ser relacionados.';
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
 >>>>>>> Stashed changes
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);

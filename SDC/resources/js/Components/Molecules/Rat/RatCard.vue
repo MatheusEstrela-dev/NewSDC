@@ -44,9 +44,6 @@
         :show-attachments="true"
         :show-delete="canDelete"
         attachments-label="Relacionar"
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
 >>>>>>> Stashed changes
         size="md"
         :actions="[

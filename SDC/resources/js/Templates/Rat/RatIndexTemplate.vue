@@ -348,14 +348,11 @@ function handleEdit(id) {
 function handleAttachments(id) {
   const rat = ratsToUse.value.find(r => r.id === id);
 <<<<<<< Updated upstream
-<<<<<<< Updated upstream
   if (!rat) {
     toast('RAT não encontrado.', 'error', { noIcon: true });
     return;
   }
 
-=======
->>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
   relacionarRat.value = rat;
@@ -371,7 +368,6 @@ async function confirmCreateRelacionado() {
     const res = await ax.post(`/rat/${relacionarRat.value.id}/relacionar`, {});
     toast(res.data.message || 'Boletim relacionado criado com sucesso.', 'success', { noIcon: true });
 <<<<<<< Updated upstream
-<<<<<<< Updated upstream
     setTimeout(() => router.visit(res.data.url), 1000);
   } catch (e) {
     console.error('[confirmCreateRelacionado] Error:', {
@@ -386,11 +382,6 @@ async function confirmCreateRelacionado() {
     showRelacionarConfirm.value = true;
 
     const msg = e?.response?.data?.message || e?.message || 'Erro ao criar boletim relacionado.';
-=======
-    router.visit(res.data.url);
-  } catch (e) {
-    const msg = e?.response?.data?.message || 'Erro ao criar boletim relacionado.';
->>>>>>> Stashed changes
 =======
     router.visit(res.data.url);
   } catch (e) {
