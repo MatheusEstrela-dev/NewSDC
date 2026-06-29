@@ -19,6 +19,13 @@ class UpdatePmdaPlanoRequest extends FormRequest
             'acoes'            => ['nullable', 'string'],
             'qtd_caminhao'     => ['nullable', 'integer', 'min:0'],
             'pop_at_municipio' => ['nullable', 'integer', 'min:0'],
+            // Etapa 1: motivo
+            'motivo'              => ['nullable', 'string'],
+            // Etapa 6: acoes de resposta + justificativa
+            'acao_decreto_se'     => ['nullable', 'boolean'],
+            'acao_caminhao_pipa'  => ['nullable', 'boolean'],
+            'acao_cestas_basicas' => ['nullable', 'boolean'],
+            'justificativa_apoio' => ['nullable', 'string'],
             // ISS
             'cobra_iss'        => ['nullable', 'boolean'],
             'num_lei_iss'      => ['nullable', 'string', 'max:30'],

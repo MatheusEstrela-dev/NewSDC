@@ -1,17 +1,23 @@
 <?php
 
+use App\Modules\Pmda\Controllers\CompdecMembroController;
 use App\Modules\Pmda\Controllers\ComunidadeController;
+use App\Modules\Pmda\Controllers\ComunidadeSolicitacaoController;
 use App\Modules\Pmda\Controllers\PlanoPontoController;
 use App\Modules\Pmda\Controllers\PmdaPlanoController;
 use App\Modules\Pmda\Controllers\RepresentanteController;
+use App\Modules\Pmda\Models\ComunidadeSolicitacao;
 use App\Modules\Pmda\Models\PmdaComunidade;
+use App\Modules\Pmda\Models\PmdaCompdecMembro;
 use App\Modules\Pmda\Models\PmdaPlano;
 use App\Modules\Pmda\Models\PmdaRepresentante;
 use Illuminate\Support\Facades\Route;
 
 Route::model('plano', PmdaPlano::class);
 Route::model('comunidade', PmdaComunidade::class);
+Route::model('solicitacao', ComunidadeSolicitacao::class);
 Route::model('representante', PmdaRepresentante::class);
+Route::model('membro', PmdaCompdecMembro::class);
 
 Route::prefix('pmda')->name('pmda.')->group(function () {
     Route::prefix('planos')->name('planos.')->group(function () {
@@ -30,9 +36,23 @@ Route::prefix('pmda')->name('pmda.')->group(function () {
         Route::post('/{plano}/copiar', [PmdaPlanoController::class, 'copiar'])
             ->name('copiar')->middleware('can:pmda.planos.copiar');
 
+        // Etapa 7: anexos (PDF) e envio para analise
+        Route::post('/{plano}/anexos', [PmdaPlanoController::class, 'storeAnexo'])
+            ->name('anexos.store')->middleware('can:pmda.anexos.create');
+        Route::post('/{plano}/enviar', [PmdaPlanoController::class, 'enviar'])
+            ->name('enviar')->middleware('can:pmda.analise.enviar');
+
+        // Etapa 3: equipe COMPDEC (membros)
+        Route::post('/{plano}/membros', [CompdecMembroController::class, 'store'])
+            ->name('membros.store')->middleware('can:pmda.planos.edit');
+
         // Comunidades do plano
         Route::post('/{plano}/comunidades', [ComunidadeController::class, 'store'])
             ->name('comunidades.store')->middleware('can:pmda.comunidades.create');
+
+        // Municipio solicita o cadastro de uma comunidade ainda inexistente
+        Route::post('/{plano}/comunidades/solicitar', [ComunidadeSolicitacaoController::class, 'store'])
+            ->name('comunidades.solicitar')->middleware('can:pmda.comunidades.solicitar');
 
         // Pontos de captacao do plano
         Route::post('/{plano}/pontos', [PlanoPontoController::class, 'store'])
@@ -43,6 +63,18 @@ Route::prefix('pmda')->name('pmda.')->group(function () {
 
     Route::delete('/comunidades/{comunidade}', [ComunidadeController::class, 'destroy'])
         ->name('comunidades.destroy')->middleware('can:pmda.comunidades.delete');
+
+    // Fila CEDEC: analise das solicitacoes de inclusao de comunidade
+    Route::get('/solicitacoes', [ComunidadeSolicitacaoController::class, 'index'])
+        ->name('solicitacoes.index')->middleware('can:pmda.comunidades.aprovar');
+    Route::post('/solicitacoes/{solicitacao}/aprovar', [ComunidadeSolicitacaoController::class, 'aprovar'])
+        ->name('solicitacoes.aprovar')->middleware('can:pmda.comunidades.aprovar');
+    Route::post('/solicitacoes/{solicitacao}/rejeitar', [ComunidadeSolicitacaoController::class, 'rejeitar'])
+        ->name('solicitacoes.rejeitar')->middleware('can:pmda.comunidades.aprovar');
+
+    // Membros COMPDEC
+    Route::delete('/membros/{membro}', [CompdecMembroController::class, 'destroy'])
+        ->name('membros.destroy')->middleware('can:pmda.planos.edit');
 
     // Representantes da comunidade
     Route::post('/comunidades/{comunidade}/representantes', [RepresentanteController::class, 'store'])

@@ -1,0 +1,494 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Pmda\Services;
+
+use App\Modules\Pmda\Enums\PmdaStatus;
+use App\Modules\Pmda\Enums\SolicitacaoComunidadeStatus;
+use App\Modules\Pmda\Models\Comunidade;
+use App\Modules\Pmda\Models\ComunidadeSolicitacao;
+use App\Modules\Pmda\Models\PmdaComunidade;
+use App\Modules\Pmda\Models\PmdaCompdecMembro;
+use App\Modules\Pmda\Models\PmdaPlano;
+use App\Modules\Pmda\Models\PmdaPonto;
+use App\Modules\Pmda\Models\PmdaRepresentante;
+use App\Modules\Shared\BaseService;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+
+class PmdaPlanoService extends BaseService
+{
+    /**
+     * Status que consideram o municipio com PMDA "pendente" (em aberto),
+     * impedindo abrir outro. Espelha o legado (gestaocedec verificaCriarPmda:
+     * status IN 0,2) ampliado com COMPLETO, que e parte do ciclo de edicao.
+     *
+     * @return list<string>
+     */
+    public static function statusPendente(): array
+    {
+        return [
+            PmdaStatus::RASCUNHO->value,
+            PmdaStatus::COMPLETO->value,
+            PmdaStatus::EM_ANALISE->value,
+        ];
+    }
+
+    public function criar(int $municipioId, int $userId, array $data): PmdaPlano
+    {
+        $pendente = PmdaPlano::query()
+            ->where('municipio_id', $municipioId)
+            ->whereIn('status', self::statusPendente())
+            ->first();
+
+        if ($pendente !== null) {
+            throw new \DomainException(
+                'Este município já possui um PMDA em aberto ('.$pendente->status->getLabel().
+                ', protocolo '.($pendente->protocolo ?? '—').'). Conclua, cancele ou edite o existente antes de criar outro.'
+            );
+        }
+
+        return PmdaPlano::create(array_merge($data, [
+            'municipio_id' => $municipioId,
+            'status'       => PmdaStatus::RASCUNHO,
+            'created_by'   => $userId,
+        ]));
+    }
+
+    public function atualizar(PmdaPlano $plano, array $data, int $userId): PmdaPlano
+    {
+        $plano->update(array_merge($data, [
+            'updated_by'          => $userId,
+            'dt_ultima_alteracao' => now(),
+        ]));
+
+        return $plano->refresh();
+    }
+
+    public function listar(array $filtros = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = PmdaPlano::query()->with('municipio')->latest('data');
+        $query = $this->applyFilters($query, $filtros, ['municipio_id', 'status']);
+
+        if (! empty($filtros['buscar'])) {
+            $termo = $filtros['buscar'];
+            $query->where(function ($q) use ($termo) {
+                $q->where('protocolo', 'ilike', "%{$termo}%")
+                    ->orWhereHas('municipio', fn ($m) => $m->where('nome', 'ilike', "%{$termo}%"));
+            });
+        }
+        if (! empty($filtros['data_inicio'])) {
+            $query->whereDate('data', '>=', $filtros['data_inicio']);
+        }
+        if (! empty($filtros['data_fim'])) {
+            $query->whereDate('data', '<=', $filtros['data_fim']);
+        }
+
+        return $this->paginate($query, $perPage);
+    }
+
+    /** Linhas para exportacao CSV (respeita filtros). */
+    public function exportar(array $filtros = []): array
+    {
+        $query = PmdaPlano::query()->with('municipio')->latest('data');
+        $query = $this->applyFilters($query, $filtros, ['municipio_id', 'status']);
+
+        return $query->get()->map(fn (PmdaPlano $p) => [
+            'Protocolo' => $p->protocolo,
+            'Municipio' => $p->municipio?->nome,
+            'Situacao'  => $p->status->getLabel(),
+            'Criacao'   => $p->data?->format('d/m/Y'),
+        ])->all();
+    }
+
+    /**
+     * Recalcula RASCUNHO <-> COMPLETO conforme comunidades e representantes.
+     * Nao mexe em planos ja submetidos (EM_ANALISE/APROVADO/ATENDIDO e terminais).
+     */
+    public const REPRESENTANTES_POR_COMUNIDADE = 3;
+
+    public function recalcularStatus(PmdaPlano $plano): PmdaPlano
+    {
+        $intocaveis = [
+            PmdaStatus::EM_ANALISE, PmdaStatus::APROVADO, PmdaStatus::ATENDIDO,
+            PmdaStatus::ARQUIVADO, PmdaStatus::ANULADO, PmdaStatus::CANCELADO, PmdaStatus::ENCERRADO,
+        ];
+        if (in_array($plano->status, $intocaveis, true)) {
+            return $plano;
+        }
+
+        $totComunidades = $plano->comunidades()->count();
+        $todasComRepresentantes = $totComunidades > 0
+            && $plano->comunidades()
+                ->withCount('representantes')
+                ->get()
+                ->every(fn ($c) => $c->representantes_count >= self::REPRESENTANTES_POR_COMUNIDADE);
+
+        $novo = $todasComRepresentantes ? PmdaStatus::COMPLETO : PmdaStatus::RASCUNHO;
+        if ($plano->status !== $novo) {
+            $plano->update(['status' => $novo]);
+        }
+
+        return $plano->refresh();
+    }
+
+    /**
+     * Envia o PMDA para analise da CEDEC (Etapa 7). Exige os anexos obrigatorios
+     * (Termo de Compromisso + Oficio) e que o plano ainda esteja em edicao.
+     */
+    public function enviar(PmdaPlano $plano, int $userId): PmdaPlano
+    {
+        if (! in_array($plano->status, [PmdaStatus::RASCUNHO, PmdaStatus::COMPLETO], true)) {
+            throw new \DomainException('Este PMDA já foi enviado ou não está mais em edição.');
+        }
+
+        if ($plano->getMedia(PmdaPlano::MEDIA_TERMO)->isEmpty() || $plano->getMedia(PmdaPlano::MEDIA_OFICIO)->isEmpty()) {
+            throw new \DomainException('Anexe o Termo de Compromisso e o Ofício de Solicitação (PDF) antes de enviar.');
+        }
+
+        $plano->update([
+            'status'              => PmdaStatus::EM_ANALISE,
+            'dt_analise'          => now(),
+            'dt_ultima_alteracao' => now(),
+            'updated_by'          => $userId,
+        ]);
+
+        return $plano->refresh();
+    }
+}
+
+class PmdaCopiaService
+{
+    private const DATA_MINIMA_COPIA = '2021-04-03';
+
+    public function copiar(PmdaPlano $origem, int $userId): PmdaPlano
+    {
+        if ($origem->data->lte(Carbon::parse(self::DATA_MINIMA_COPIA))) {
+            throw new \DomainException('PMDA anterior a 03/04/2021 não pode ser copiado.');
+        }
+
+        if (! $origem->status->permiteCopia()) {
+            throw new \DomainException('Status atual não permite cópia.');
+        }
+
+        $copia = $origem->replicate(['protocolo', 'status', 'data', 'data_aprov', 'dt_analise']);
+        $copia->status     = PmdaStatus::RASCUNHO;
+        $copia->data       = now();
+        $copia->protocolo  = null; // regerado pelo Observer
+        $copia->created_by = $userId;
+        $copia->save();
+
+        $this->duplicarComunidades($origem, $copia);
+
+        return $copia->refresh();
+    }
+
+    private function duplicarComunidades(PmdaPlano $origem, PmdaPlano $copia): void
+    {
+        foreach ($origem->comunidades()->with('representantes')->get() as $comunidade) {
+            $novaComunidade = $comunidade->replicate(['pmda_plano_id']);
+            $novaComunidade->pmda_plano_id = $copia->id;
+            $novaComunidade->save();
+
+            foreach ($comunidade->representantes as $representante) {
+                $novoRepresentante = $representante->replicate(['pmda_comunidade_id']);
+                $novoRepresentante->pmda_comunidade_id = $novaComunidade->id;
+                $novoRepresentante->save();
+            }
+        }
+    }
+}
+
+class ComunidadeService
+{
+    /**
+     * Status em que uma comunidade e considerada "em uso" e nao pode estar em outro plano.
+     * Metodo (e nao const) porque enum->value em constant expression exige PHP 8.2+.
+     *
+     * @return list<string>
+     */
+    private static function statusAtivos(): array
+    {
+        return [
+            PmdaStatus::RASCUNHO->value,
+            PmdaStatus::COMPLETO->value,
+            PmdaStatus::EM_ANALISE->value,
+            PmdaStatus::APROVADO->value,
+            PmdaStatus::ATENDIDO->value,
+        ];
+    }
+
+    public function __construct(private readonly PmdaPlanoService $planos) {}
+
+    public function adicionar(PmdaPlano $plano, array $data): PmdaComunidade
+    {
+        $comunidadeId = $data['comunidade_id'] ?? null;
+
+        // Vinculo de comunidade ja cadastrada: dados-mestre (nome, coordenadas)
+        // sao autoritativos; o municipio so informa populacao/distancia do plano.
+        if ($comunidadeId !== null) {
+            $mestre = Comunidade::where('municipio_id', $plano->municipio_id)
+                ->where('ativo', true)
+                ->find((int) $comunidadeId);
+
+            if ($mestre === null) {
+                throw new \DomainException('Comunidade não encontrada para este município.');
+            }
+            if ($this->jaEmPlanoAtivo((int) $comunidadeId, $plano->id)) {
+                throw new \DomainException('Esta comunidade já está vinculada a outro PMDA ativo.');
+            }
+
+            $data['nome']      = $mestre->nome;
+            $data['latitude']  = $data['latitude'] ?? $mestre->latitude;
+            $data['longitude'] = $data['longitude'] ?? $mestre->longitude;
+        }
+
+        $data['municipio_id'] = $plano->municipio_id;
+
+        $comunidade = $plano->comunidades()->create($data);
+        $this->planos->recalcularStatus($plano);
+
+        return $comunidade;
+    }
+
+    public function remover(PmdaComunidade $comunidade): void
+    {
+        $plano = $comunidade->plano;
+        $comunidade->delete();
+        if ($plano) {
+            $this->planos->recalcularStatus($plano);
+        }
+    }
+
+    /**
+     * Comunidades-mestre ativas do municipio do plano ainda nao vinculadas a ele.
+     * Alimenta o seletor "Adicionar Comunidade" da aba de distribuicao.
+     */
+    public function disponiveis(PmdaPlano $plano): Collection
+    {
+        $jaVinculadas = $plano->comunidades()
+            ->whereNotNull('comunidade_id')
+            ->pluck('comunidade_id')
+            ->all();
+
+        return Comunidade::query()
+            ->where('municipio_id', $plano->municipio_id)
+            ->where('ativo', true)
+            ->when($jaVinculadas, fn ($q) => $q->whereNotIn('id', $jaVinculadas))
+            ->orderBy('nome')
+            ->get();
+    }
+
+    private function jaEmPlanoAtivo(int $comunidadeId, int $planoIdAtual): bool
+    {
+        return PmdaComunidade::query()
+            ->where('comunidade_id', $comunidadeId)
+            ->where('pmda_plano_id', '!=', $planoIdAtual)
+            ->whereHas('plano', fn ($q) => $q->whereIn('status', self::statusAtivos()))
+            ->exists();
+    }
+}
+
+/**
+ * Fluxo de solicitacao de inclusao de comunidade (municipio) e analise (CEDEC).
+ */
+class ComunidadeSolicitacaoService
+{
+    /** Registra uma solicitacao pendente vinda do municipio (aba de distribuicao). */
+    public function criar(PmdaPlano $plano, array $data, int $userId): ComunidadeSolicitacao
+    {
+        $nome = trim($data['nome']);
+
+        $duplicada = ComunidadeSolicitacao::query()
+            ->where('municipio_id', $plano->municipio_id)
+            ->where('status', SolicitacaoComunidadeStatus::PENDENTE->value)
+            ->whereRaw('LOWER(nome) = ?', [mb_strtolower($nome)])
+            ->exists();
+
+        if ($duplicada) {
+            throw new \DomainException('Já existe uma solicitação pendente com este nome para o município.');
+        }
+
+        $jaCadastrada = Comunidade::query()
+            ->where('municipio_id', $plano->municipio_id)
+            ->whereRaw('LOWER(nome) = ?', [mb_strtolower($nome)])
+            ->exists();
+
+        if ($jaCadastrada) {
+            throw new \DomainException('Esta comunidade já está cadastrada. Use "Adicionar Comunidade".');
+        }
+
+        return ComunidadeSolicitacao::create([
+            'municipio_id'   => $plano->municipio_id,
+            'pmda_plano_id'  => $plano->id,
+            'nome'           => $nome,
+            'latitude'       => $data['latitude'] ?? null,
+            'longitude'      => $data['longitude'] ?? null,
+            'status'         => SolicitacaoComunidadeStatus::PENDENTE,
+            'solicitado_por' => $userId,
+        ]);
+    }
+
+    /** Historico de solicitacoes do municipio (exibido na aba de distribuicao). */
+    public function historicoDoMunicipio(int $municipioId): Collection
+    {
+        return ComunidadeSolicitacao::query()
+            ->where('municipio_id', $municipioId)
+            ->latest()
+            ->get();
+    }
+
+    /** Fila de pendencias para a CEDEC (com filtro opcional por municipio). */
+    public function pendentes(array $filtros = [], int $perPage = 15): LengthAwarePaginator
+    {
+        return ComunidadeSolicitacao::query()
+            ->with('municipio')
+            ->where('status', SolicitacaoComunidadeStatus::PENDENTE->value)
+            ->when($filtros['municipio_id'] ?? null, fn ($q, $m) => $q->where('municipio_id', $m))
+            ->oldest()
+            ->paginate($perPage);
+    }
+
+    /**
+     * Aprova a solicitacao: promove para o registro mestre (comunidades) e
+     * marca a solicitacao como APROVADA. Idempotente no nome (municipio, nome).
+     */
+    public function aprovar(ComunidadeSolicitacao $solicitacao, int $userId): Comunidade
+    {
+        if ($solicitacao->status !== SolicitacaoComunidadeStatus::PENDENTE) {
+            throw new \DomainException('Esta solicitação já foi analisada.');
+        }
+
+        return DB::transaction(function () use ($solicitacao, $userId) {
+            $comunidade = Comunidade::firstOrCreate(
+                [
+                    'municipio_id' => $solicitacao->municipio_id,
+                    'nome'         => $solicitacao->nome,
+                ],
+                [
+                    'latitude'   => $solicitacao->latitude,
+                    'longitude'  => $solicitacao->longitude,
+                    'ativo'      => true,
+                    'created_by' => $userId,
+                ]
+            );
+
+            $solicitacao->update([
+                'status'        => SolicitacaoComunidadeStatus::APROVADA,
+                'comunidade_id' => $comunidade->id,
+                'analisado_por' => $userId,
+                'analisado_em'  => now(),
+            ]);
+
+            return $comunidade;
+        });
+    }
+
+    /** Rejeita a solicitacao com motivo (visivel ao municipio no historico). */
+    public function rejeitar(ComunidadeSolicitacao $solicitacao, string $motivo, int $userId): void
+    {
+        if ($solicitacao->status !== SolicitacaoComunidadeStatus::PENDENTE) {
+            throw new \DomainException('Esta solicitação já foi analisada.');
+        }
+
+        $solicitacao->update([
+            'status'          => SolicitacaoComunidadeStatus::REJEITADA,
+            'motivo_rejeicao' => $motivo,
+            'analisado_por'   => $userId,
+            'analisado_em'    => now(),
+        ]);
+    }
+}
+
+class RepresentanteService
+{
+    public function __construct(private readonly PmdaPlanoService $planos) {}
+
+    public function adicionar(PmdaComunidade $comunidade, array $data): PmdaRepresentante
+    {
+        $representante = $comunidade->representantes()->create($data);
+        $this->recalcular($comunidade);
+
+        return $representante;
+    }
+
+    public function atualizar(PmdaRepresentante $representante, array $data): PmdaRepresentante
+    {
+        $representante->update($data);
+
+        return $representante->refresh();
+    }
+
+    public function remover(PmdaRepresentante $representante): void
+    {
+        $comunidade = $representante->comunidade;
+        $representante->delete();
+        if ($comunidade) {
+            $this->recalcular($comunidade);
+        }
+    }
+
+    private function recalcular(PmdaComunidade $comunidade): void
+    {
+        $plano = $comunidade->plano;
+        if ($plano) {
+            $this->planos->recalcularStatus($plano);
+        }
+    }
+}
+
+class PlanoPontoService
+{
+    public function vincular(PmdaPlano $plano, int $pontoId, string $situacao = 'ATIVO'): void
+    {
+        // syncWithoutDetaching evita duplicar o vinculo (unique no pivot).
+        $plano->pontos()->syncWithoutDetaching([$pontoId => ['situacao' => $situacao]]);
+    }
+
+    /** Cria um ponto de captacao do municipio do plano e ja o vincula (Etapa 4). */
+    public function criarEVincular(PmdaPlano $plano, array $data): PmdaPonto
+    {
+        $ponto = PmdaPonto::create([
+            'municipio_id' => $plano->municipio_id,
+            'nome'         => $data['nome'],
+            'tipo'         => (int) ($data['tipo'] ?? 1),
+            'ativo'        => true,
+        ]);
+
+        $plano->pontos()->attach($ponto->id, ['situacao' => $data['situacao'] ?? 'ATIVO']);
+
+        return $ponto;
+    }
+
+    public function desvincular(PmdaPlano $plano, int $pontoId): void
+    {
+        $plano->pontos()->detach($pontoId);
+    }
+
+    /** Pontos ativos do municipio do plano disponiveis para vinculo. */
+    public function disponiveis(PmdaPlano $plano): Collection
+    {
+        return PmdaPonto::query()
+            ->where('municipio_id', $plano->municipio_id)
+            ->where('ativo', true)
+            ->orderBy('nome')
+            ->get();
+    }
+}
+
+class CompdecMembroService
+{
+    public function adicionar(PmdaPlano $plano, array $data): PmdaCompdecMembro
+    {
+        return $plano->compdecMembros()->create($data);
+    }
+
+    public function remover(PmdaCompdecMembro $membro): void
+    {
+        $membro->delete();
+    }
+}
+

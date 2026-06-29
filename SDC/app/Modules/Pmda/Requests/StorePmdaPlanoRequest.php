@@ -17,6 +17,7 @@ class StorePmdaPlanoRequest extends FormRequest
     {
         return [
             'municipio_id' => ['required', 'integer', 'exists:municipios,id'],
+            'motivo'       => ['nullable', 'string'],
             // ISS
             'cobra_iss'        => ['nullable', 'boolean'],
             'num_lei_iss'      => ['nullable', 'string', 'max:30'],
