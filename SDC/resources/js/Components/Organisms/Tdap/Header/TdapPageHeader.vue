@@ -6,8 +6,17 @@
                 border-slate-200 dark:border-slate-700/30">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="flex items-center gap-4">
-          <div class="w-11 h-11 rounded-full bg-transparent flex items-center justify-center
-                      border border-slate-300 dark:border-slate-600/40">
+          <div
+            v-if="iconImage"
+            class="w-16 h-16 flex items-center justify-center shrink-0"
+          >
+            <img :src="iconImage" :alt="title" class="h-14 w-14 object-contain" />
+          </div>
+          <div
+            v-else
+            class="w-11 h-11 rounded-full bg-transparent flex items-center justify-center
+                      border border-slate-300 dark:border-slate-600/40"
+          >
             <component :is="icon" class="w-6 h-6 text-slate-600 dark:text-slate-200" />
           </div>
           <div>
@@ -36,5 +45,6 @@ defineProps({
   title: { type: String, required: true },
   description: { type: String, default: '' },
   icon: { type: Object, default: () => TruckIcon },
+  iconImage: { type: String, default: '' },
 });
 </script>

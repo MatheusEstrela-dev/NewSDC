@@ -5,6 +5,7 @@
       title="Orgaos de Defesa Civil"
       description="Gestao de COMPDEC, REDEC e CEDEC"
       :icon="BuildingOfficeIcon"
+      :icon-image="moduleIcon('orgaos')"
       variant="gradient"
     >
       <template #actions>
@@ -127,6 +128,7 @@ import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import StatusOrgaoBadge from '@/Components/Molecules/Compdec/StatusOrgaoBadge.vue';

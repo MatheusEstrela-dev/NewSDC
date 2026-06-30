@@ -26,6 +26,13 @@ const props = defineProps({
     default: null,
   },
   /**
+   * URL de uma imagem (SVG/PNG) para o ícone do módulo — tem prioridade sobre `icon`.
+   */
+  iconImage: {
+    type: String,
+    default: '',
+  },
+  /**
    * Variante do header
    * - default: fundo simples
    * - gradient: fundo com gradiente
@@ -55,6 +62,10 @@ const containerClasses = computed(() => {
 });
 
 const iconContainerClasses = computed(() => {
+  // Icone-imagem do modulo: maior e sem moldura (a arte colorida fala por si).
+  if (props.iconImage) {
+    return 'w-16 h-16 flex items-center justify-center shrink-0';
+  }
   if (props.variant === 'gradient') {
     return 'w-11 h-11 rounded-full bg-transparent flex items-center justify-center border border-slate-300 dark:border-slate-600/40';
   }
@@ -66,11 +77,18 @@ const iconContainerClasses = computed(() => {
   <div :class="containerClasses">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div class="flex items-center gap-4">
-        <!-- Ícone opcional -->
-        <div v-if="icon" :class="iconContainerClasses">
-          <component 
-            :is="icon" 
-            :class="['w-6 h-6', iconClass || 'text-slate-600 dark:text-slate-200']" 
+        <!-- Ícone opcional: imagem do módulo (SVG/PNG) tem prioridade sobre o componente -->
+        <div v-if="iconImage || icon" :class="iconContainerClasses">
+          <img
+            v-if="iconImage"
+            :src="iconImage"
+            :alt="title"
+            class="h-14 w-14 object-contain"
+          />
+          <component
+            v-else
+            :is="icon"
+            :class="['w-6 h-6', iconClass || 'text-slate-600 dark:text-slate-200']"
           />
         </div>
         

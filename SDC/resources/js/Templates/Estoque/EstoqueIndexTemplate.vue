@@ -4,6 +4,7 @@
       title="Estoque"
       description="MVP de produtos, lotes, kits, validade e movimentacoes"
       :icon="ArchiveBoxIcon"
+      :icon-image="moduleIcon('estoque')"
       variant="gradient"
     >
       <template #actions>
@@ -113,6 +114,7 @@ import EstoqueStatsCards from '@/Components/Organisms/Estoque/EstoqueStatsCards.
 import EstoqueTable from '@/Components/Organisms/Estoque/EstoqueTable.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import { useExport } from '@/Composables/useExport';
 import { useMobile } from '@/Composables/useMobile';

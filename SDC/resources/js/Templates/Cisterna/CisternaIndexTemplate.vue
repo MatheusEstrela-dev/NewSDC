@@ -6,6 +6,7 @@
       title="Cisternas"
       description="Cadastro e acompanhamento das cisternas vinculadas aos municipios"
       :icon="CubeIcon"
+      :icon-image="moduleIcon('cisternas')"
       variant="gradient"
     >
       <template #actions>
@@ -66,6 +67,7 @@ import { Head, router } from '@inertiajs/vue3';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import CubeIcon from '@/Components/Icons/CubeIcon.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';

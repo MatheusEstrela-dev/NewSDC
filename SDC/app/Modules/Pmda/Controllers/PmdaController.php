@@ -5,6 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Pmda\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Compdec\DTOs\AnexoDTO;
+use App\Modules\Compdec\DTOs\EquipeDTO;
+use App\Modules\Compdec\Enums\FuncaoEquipe;
+use App\Modules\Compdec\Models\CompdecAnexo;
+use App\Modules\Compdec\Models\CompdecEquipe;
+use App\Modules\Compdec\Resources\AnexoIndexResource;
+use App\Modules\Compdec\Services\AnexoService;
+use App\Modules\Compdec\Services\EquipeService;
 use App\Modules\Pmda\Models\ComunidadeSolicitacao;
 use App\Modules\Pmda\Models\PmdaComunidade;
 use App\Modules\Pmda\Models\PmdaCompdecMembro;
@@ -13,6 +21,9 @@ use App\Modules\Pmda\Models\PmdaRepresentante;
 use App\Modules\Pmda\Requests\RejeitarComunidadeSolicitacaoRequest;
 use App\Modules\Pmda\Requests\StoreComunidadeRequest;
 use App\Modules\Pmda\Requests\StoreComunidadeSolicitacaoRequest;
+use App\Modules\Pmda\Requests\StoreCompdecAnexoRequest;
+use App\Modules\Pmda\Requests\StoreCompdecEquipeRequest;
+use App\Modules\Pmda\Requests\UpdateCompdecFichaRequest;
 use App\Modules\Pmda\Requests\StorePmdaPlanoRequest;
 use App\Modules\Pmda\Requests\StoreRepresentanteRequest;
 use App\Modules\Pmda\Requests\UpdatePmdaPlanoRequest;
@@ -20,6 +31,7 @@ use App\Modules\Pmda\Requests\UpdateRepresentanteRequest;
 use App\Modules\Pmda\Resources\ComunidadeSolicitacaoResource;
 use App\Modules\Pmda\Resources\PmdaPlanoListResource;
 use App\Modules\Pmda\Resources\PmdaPlanoResource;
+use App\Modules\Pmda\Services\CompdecFichaService;
 use App\Modules\Pmda\Services\CompdecMembroService;
 use App\Modules\Pmda\Services\ComunidadeService;
 use App\Modules\Pmda\Services\ComunidadeSolicitacaoService;
@@ -151,6 +163,9 @@ class PmdaPlanoController extends Controller
         private readonly PlanoPontoService $pontos,
         private readonly ComunidadeService $comunidades,
         private readonly ComunidadeSolicitacaoService $solicitacoes,
+        private readonly CompdecFichaService $compdecFicha,
+        private readonly AnexoService $compdecAnexos,
+        private readonly EquipeService $compdecEquipes,
     ) {}
 
     public function index(Request $request): Response
@@ -219,7 +234,7 @@ class PmdaPlanoController extends Controller
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    public function store(StorePmdaPlanoRequest $request): RedirectResponse
+    public function store(StorePmdaPlanoRequest $request): \Symfony\Component\HttpFoundation\Response
     {
         try {
             $plano = $this->service->criar(
@@ -231,17 +246,30 @@ class PmdaPlanoController extends Controller
             return back()->withErrors(['municipio_id' => $e->getMessage()]);
         }
 
-        return to_route('pmda.planos.edit', ['plano' => $plano->id, 'novo' => 1])
-            ->with('success', 'PMDA iniciado. Continue o preenchimento.');
+        // Redirect HARD (full reload) para a continuacao: o componente Pmda/Create
+        // e reutilizado entre /create e /continuar; sem remount os props (plano_id)
+        // ficavam defasados e o "Salvar e Avancar" chamava store de novo. O
+        // Inertia::location forca um remount limpo com o plano ja persistido.
+        // Mantem o contexto de CRIACAO (componente Pmda/Create, URL /continuar).
+        session()->flash('success', 'PMDA iniciado. Continue o preenchimento.');
+
+        return Inertia::location(route('pmda.planos.continuar', ['plano' => $plano->id]));
     }
 
-    public function edit(PmdaPlano $plano): Response
+    /**
+     * Props compartilhados pelo wizard (Create-continuacao e Edit): plano + listas
+     * de apoio (pontos/comunidades disponiveis, historico de solicitacoes, ficha COMPDEC).
+     *
+     * @return array<string, mixed>
+     */
+    private function wizardProps(PmdaPlano $plano): array
     {
         $plano->load(['municipio', 'comunidades.representantes', 'pontos', 'compdecMembros', 'media'])
             ->loadCount('comunidades');
 
-        return Inertia::render('Pmda/Edit', [
+        return [
             'plano'             => new PmdaPlanoResource($plano),
+            'plano_id'          => $plano->id, // escalar confiavel p/ o front decidir create x update
             'pontos_disponiveis' => $this->pontos->disponiveis($plano)->map(fn ($p) => [
                 'id'         => $p->id,
                 'nome'       => $p->nome,
@@ -256,7 +284,60 @@ class PmdaPlanoController extends Controller
             'comunidade_solicitacoes' => ComunidadeSolicitacaoResource::collection(
                 $this->solicitacoes->historicoDoMunicipio((int) $plano->municipio_id)
             ),
-        ]);
+            'compdec_ficha' => $this->compdecFicha->fichaDoPlano($plano),
+            'compdec_anexos' => $this->compdecAnexosDoPlano($plano),
+            'compdec_equipe' => $this->compdecEquipeDoPlano($plano),
+        ];
+    }
+
+    /** Equipe (ativos + inativos/anteriores) do orgao COMPDEC do municipio do plano. */
+    private function compdecEquipeDoPlano(PmdaPlano $plano): array
+    {
+        $orgao = $this->compdecFicha->orgaoDoMunicipio($plano);
+        if ($orgao === null) {
+            return [];
+        }
+
+        return $this->compdecEquipes->listarPorOrgao($orgao->id, 200)
+            ->getCollection()
+            ->map(fn (CompdecEquipe $m) => [
+                'id'           => $m->id,
+                'nome'         => $m->nome,
+                'funcao'       => $m->funcao instanceof FuncaoEquipe ? $m->funcao->value : $m->funcao,
+                'funcao_label' => $m->funcao instanceof FuncaoEquipe ? $m->funcao->label() : (string) $m->funcao,
+                'cpf'          => $m->cpf,
+                'telefone'     => $m->telefone,
+                'celular'      => $m->celular,
+                'email'        => $m->email,
+                'ativo'        => (bool) $m->ativo,
+            ])->values()->all();
+    }
+
+    /** Lista de documentos (anexos) do orgao COMPDEC do municipio do plano. */
+    private function compdecAnexosDoPlano(PmdaPlano $plano): array
+    {
+        $orgao = $this->compdecFicha->orgaoDoMunicipio($plano);
+        if ($orgao === null) {
+            return [];
+        }
+
+        return AnexoIndexResource::collection(
+            $this->compdecAnexos->listarPorOrgao($orgao->id, 100)
+        )->resolve();
+    }
+
+    /**
+     * Continuacao da CRIACAO apos o 1o POST: renderiza o mesmo componente Pmda/Create
+     * (breadcrumb "Novo", URL de criacao) com o plano ja persistido para as abas-filhas.
+     */
+    public function continuar(PmdaPlano $plano): Response
+    {
+        return Inertia::render('Pmda/Create', $this->wizardProps($plano));
+    }
+
+    public function edit(PmdaPlano $plano): Response
+    {
+        return Inertia::render('Pmda/Edit', $this->wizardProps($plano));
     }
 
     public function update(UpdatePmdaPlanoRequest $request, PmdaPlano $plano): RedirectResponse
@@ -351,5 +432,130 @@ class CompdecMembroController extends Controller
         $this->service->remover($membro);
 
         return back()->with('success', 'Membro removido.');
+    }
+}
+
+class CompdecFichaController extends Controller
+{
+    public function __construct(private readonly CompdecFichaService $service) {}
+
+    /** Grava a ficha cadastral do COMPDEC (registro mestre do municipio do plano). */
+    public function update(UpdateCompdecFichaRequest $request, PmdaPlano $plano): RedirectResponse
+    {
+        $this->service->salvar($plano, $request->validated());
+
+        return back()->with('success', 'Ficha do COMPDEC atualizada.');
+    }
+
+    /** Foto do coordenador do COMPDEC (upload/alterar). */
+    public function uploadFoto(Request $request, PmdaPlano $plano): RedirectResponse
+    {
+        $request->validate([
+            'foto' => ['required', 'file', 'mimes:jpeg,png,webp', 'max:5120'],
+        ]);
+
+        $this->service->uploadFoto($plano, $request->file('foto'));
+
+        return back()->with('success', 'Foto atualizada.');
+    }
+
+    public function removerFoto(PmdaPlano $plano): RedirectResponse
+    {
+        $this->service->removerFoto($plano);
+
+        return back()->with('success', 'Foto removida.');
+    }
+}
+
+/**
+ * Documentos (Leis e Decretos) do COMPDEC a partir do PMDA. Reusa o AnexoService
+ * do modulo Compdec, gravando nos anexos do orgao COMPDEC do municipio do plano.
+ */
+class CompdecAnexoController extends Controller
+{
+    public function __construct(
+        private readonly AnexoService $anexos,
+        private readonly CompdecFichaService $ficha,
+    ) {}
+
+    public function store(StoreCompdecAnexoRequest $request, PmdaPlano $plano): RedirectResponse
+    {
+        $orgao = $this->ficha->garantirOrgao($plano);
+
+        $this->anexos->criar(
+            $orgao->id,
+            AnexoDTO::fromRequest($request->validated()),
+            $request->file('arquivo'),
+        );
+
+        return back()->with('success', 'Documento anexado.');
+    }
+
+    public function destroy(PmdaPlano $plano, CompdecAnexo $anexo): RedirectResponse
+    {
+        // Garante que o anexo pertence ao orgao COMPDEC do municipio do plano.
+        $orgao = $this->ficha->orgaoDoMunicipio($plano);
+        abort_unless($orgao !== null && $anexo->orgao_id === $orgao->id, 404);
+
+        $this->anexos->deletar($orgao->id, $anexo->id);
+
+        return back()->with('success', 'Documento removido.');
+    }
+
+    public function download(PmdaPlano $plano, CompdecAnexo $anexo)
+    {
+        $orgao = $this->ficha->orgaoDoMunicipio($plano);
+        abort_unless($orgao !== null && $anexo->orgao_id === $orgao->id, 404);
+
+        return $this->anexos->download($orgao->id, $anexo->id);
+    }
+}
+
+/**
+ * Equipe COMPDEC (Editar Equipe) a partir do PMDA. Reusa o EquipeService do
+ * modulo Compdec, gravando nos membros do orgao COMPDEC do municipio do plano.
+ */
+class CompdecEquipeController extends Controller
+{
+    public function __construct(
+        private readonly EquipeService $equipes,
+        private readonly CompdecFichaService $ficha,
+    ) {}
+
+    public function store(StoreCompdecEquipeRequest $request, PmdaPlano $plano): RedirectResponse
+    {
+        $orgao = $this->ficha->garantirOrgao($plano);
+
+        try {
+            $this->equipes->criar($orgao->id, EquipeDTO::fromRequest($request->validated()));
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors(['equipe' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'Membro da equipe adicionado.');
+    }
+
+    public function update(StoreCompdecEquipeRequest $request, PmdaPlano $plano, CompdecEquipe $equipe): RedirectResponse
+    {
+        $orgao = $this->ficha->orgaoDoMunicipio($plano);
+        abort_unless($orgao !== null && $equipe->orgao_id === $orgao->id, 404);
+
+        try {
+            $this->equipes->atualizar($orgao->id, $equipe->id, EquipeDTO::fromRequest($request->validated()));
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors(['equipe' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'Membro da equipe atualizado.');
+    }
+
+    public function destroy(PmdaPlano $plano, CompdecEquipe $equipe): RedirectResponse
+    {
+        $orgao = $this->ficha->orgaoDoMunicipio($plano);
+        abort_unless($orgao !== null && $equipe->orgao_id === $orgao->id, 404);
+
+        $this->equipes->deletar($orgao->id, $equipe->id);
+
+        return back()->with('success', 'Membro da equipe removido.');
     }
 }

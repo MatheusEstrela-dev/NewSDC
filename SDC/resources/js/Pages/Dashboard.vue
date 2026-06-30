@@ -9,6 +9,7 @@
               title="Painel Gerencial"
               :description="`Exercício ${currentYear} - Visão consolidada dos processos.`"
               :icon="HomeIcon"
+              :icon-image="moduleIcon('inicio')"
               variant="gradient"
             />
           </div>
@@ -174,6 +175,7 @@
 import HomeIcon from '@/Components/Icons/HomeIcon.vue';
 import Modal from '@/Components/Modal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import draggable from '@/lib/vuedraggable-src/vuedraggable.js';
 import { Head, usePage } from '@inertiajs/vue3';

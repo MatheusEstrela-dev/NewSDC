@@ -8,7 +8,7 @@
         <component :is="icon" class="w-6 h-6" />
       </div>
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-medium text-slate-200 dark:text-slate-200">
+        <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
           <span v-html="formattedTitle"></span>
         </p>
       </div>
@@ -48,24 +48,24 @@ const props = defineProps({
 
 const variantStyles = {
   default: {
-    icon: 'bg-slate-700/50 dark:bg-slate-700/50 text-slate-300 dark:text-slate-300',
-    border: 'border-slate-700/50 dark:border-slate-700/50 hover:border-slate-600 dark:hover:border-slate-600',
-    highlight: 'text-amber-400',
+    icon: 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300',
+    border: 'border-slate-200 hover:border-slate-300 dark:border-slate-700/50 dark:hover:border-slate-600',
+    highlight: 'text-amber-600 dark:text-amber-400',
   },
   success: {
-    icon: 'bg-emerald-500/15 dark:bg-emerald-500/15 text-emerald-400 dark:text-emerald-400',
-    border: 'border-emerald-500/25 dark:border-emerald-500/25 hover:border-emerald-500/50 dark:hover:border-emerald-500/50',
-    highlight: 'text-emerald-400',
+    icon: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400',
+    border: 'border-emerald-500/20 hover:border-emerald-500/40 dark:border-emerald-500/25 dark:hover:border-emerald-500/50',
+    highlight: 'text-emerald-600 dark:text-emerald-400',
   },
   warning: {
-    icon: 'bg-amber-500/15 dark:bg-amber-500/15 text-amber-400 dark:text-amber-400',
-    border: 'border-amber-500/25 dark:border-amber-500/25 hover:border-amber-500/50 dark:hover:border-amber-500/50',
-    highlight: 'text-amber-400',
+    icon: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400',
+    border: 'border-amber-500/20 hover:border-amber-500/40 dark:border-amber-500/25 dark:hover:border-amber-500/50',
+    highlight: 'text-amber-600 dark:text-amber-400',
   },
 };
 
 const cardClasses = computed(() => {
-  const base = 'group flex items-center rounded-xl border backdrop-blur-sm px-4 py-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.01] bg-slate-800/60 dark:bg-slate-800/60 hover:bg-slate-800/80 dark:hover:bg-slate-800/80 cursor-pointer';
+  const base = 'group flex items-center rounded-xl border backdrop-blur-sm px-4 py-4 transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-[1.01] bg-white hover:bg-slate-50 dark:bg-slate-800/60 dark:hover:bg-slate-800/80 cursor-pointer';
   return [base, variantStyles[props.variant].border].join(' ');
 });
 

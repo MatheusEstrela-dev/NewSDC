@@ -4,6 +4,7 @@
       title="Plano de Contingencia"
       description="Gestao de Planos de Contingencia dos Municipios Mineiros"
       :icon="ShieldCheckIcon"
+      :icon-image="moduleIcon('plano-contingencia')"
       variant="gradient"
     >
       <template #actions>
@@ -99,20 +100,20 @@
 
       <div
         v-if="recentActivities && recentActivities.length > 0"
-        class="rounded-xl border border-slate-700/50 bg-slate-800/60 overflow-hidden"
+        class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/60"
       >
-        <div class="px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-700/50">
-          <h3 class="font-semibold text-slate-200">Atividade Recente</h3>
+        <div class="border-b border-slate-200 px-4 py-3 sm:px-5 sm:py-4 dark:border-slate-700/50">
+          <h3 class="font-semibold text-slate-800 dark:text-slate-200">Atividade Recente</h3>
         </div>
-        <div class="divide-y divide-slate-700/50">
+        <div class="divide-y divide-slate-100 dark:divide-slate-700/50">
           <div
             v-for="activity in recentActivities"
             :key="activity.id"
-            class="px-4 py-3 sm:px-5 sm:py-4 flex items-center gap-3 hover:bg-slate-700/30 transition-colors"
+            class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50 sm:px-5 sm:py-4 dark:hover:bg-slate-700/30"
           >
             <div class="w-2 h-2 rounded-full" :class="getActivityColor(activity.type)"></div>
             <div class="flex-1 min-w-0">
-              <p class="text-sm text-slate-200 truncate">{{ activity.description }}</p>
+              <p class="truncate text-sm text-slate-700 dark:text-slate-200">{{ activity.description }}</p>
               <p class="text-xs text-slate-400">{{ activity.date }}</p>
             </div>
           </div>
@@ -126,6 +127,7 @@
 import { computed } from 'vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import PlanConStatCard from '@/Components/Molecules/PlanCon/PlanConStatCard.vue';
 import PlanConLinkCard from '@/Components/Molecules/PlanCon/PlanConLinkCard.vue';
 import PlanConPieChart from '@/Components/Organisms/PlanCon/PlanConPieChart.vue';

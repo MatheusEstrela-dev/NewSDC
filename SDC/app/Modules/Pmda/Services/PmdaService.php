@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Pmda\Services;
 
+use App\Modules\Compdec\Enums\StatusOrgao;
+use App\Modules\Compdec\Enums\TipoOrgao;
+use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Pmda\Enums\PmdaStatus;
 use App\Modules\Pmda\Enums\SolicitacaoComunidadeStatus;
 use App\Modules\Pmda\Models\Comunidade;
@@ -14,10 +17,15 @@ use App\Modules\Pmda\Models\PmdaPlano;
 use App\Modules\Pmda\Models\PmdaPonto;
 use App\Modules\Pmda\Models\PmdaRepresentante;
 use App\Modules\Shared\BaseService;
+use App\Support\Cache\CachedRepository;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class PmdaPlanoService extends BaseService
 {
@@ -489,6 +497,178 @@ class CompdecMembroService
     public function remover(PmdaCompdecMembro $membro): void
     {
         $membro->delete();
+    }
+}
+
+/**
+ * Ficha cadastral do COMPDEC acessada de dentro do PMDA. Reaproveita o
+ * registro mestre do municipio (Compdec\Orgao tipo COMPDEC): o PMDA le como
+ * fallback e grava no proprio orgao, mantendo o cadastro unico e autoritativo.
+ */
+class CompdecFichaService
+{
+    /** Colunas reais de compdec_orgaos editaveis pela ficha (exclui tem_plano_contingencia, gerido por observer). */
+    private const COLUNAS = [
+        'status', 'lei_criacao_numero', 'lei_criacao_data', 'decreto_numero', 'decreto_data',
+        'portaria_numero', 'portaria_data', 'email', 'email_secundario', 'email_terciario',
+        'telefone', 'telefone_secundario', 'fax', 'endereco', 'qtd_efetivo', 'qtd_nupdec',
+        'tem_sede_propria', 'tem_viatura', 'tem_mapeamento_risco', 'tem_simulado', 'tem_cartao_pdc',
+    ];
+
+    /** Campos sem coluna propria: guardados em metadata.capacidades (sem migracao). */
+    private const META = [
+        'tem_computador', 'tem_curso_gestao', 'data_curso_gestao', 'tem_curso_sco', 'data_curso_sco',
+        'tem_workshop_pdc', 'data_workshop_pdc', 'tem_experiencia', 'tempo_experiencia_anos',
+        'capacitacao_nupdec', 'possui_capacitacao_pdc', 'data_capacitacao_pdc',
+        'possui_compdec', 'possui_nupdec', 'possui_efetivo', 'nao_possui_lei', 'nao_possui_decreto',
+        'nao_possui_portaria', 'associacao',
+    ];
+
+    /** Orgao COMPDEC do municipio do plano (ou null se ainda nao cadastrado). */
+    public function orgaoDoMunicipio(PmdaPlano $plano): ?Orgao
+    {
+        return Orgao::query()
+            ->where('municipio_id', $plano->municipio_id)
+            ->where('tipo', TipoOrgao::COMPDEC->value)
+            ->first();
+    }
+
+    /** Localiza ou cria (em memoria) o orgao COMPDEC do municipio do plano. */
+    public function orgaoOuNovo(PmdaPlano $plano): Orgao
+    {
+        return $this->orgaoDoMunicipio($plano) ?? new Orgao([
+            'tipo'         => TipoOrgao::COMPDEC->value,
+            'status'       => StatusOrgao::ATIVO->value,
+            'municipio_id' => $plano->municipio_id,
+            'nome'         => $plano->municipio?->nome ?? ('COMPDEC '.$plano->municipio_id),
+            'codigo'       => 'COMPDEC-'.$plano->municipio_id,
+        ]);
+    }
+
+    /** Garante o orgao persistido (para anexar arquivos/foto). */
+    public function garantirOrgao(PmdaPlano $plano): Orgao
+    {
+        $orgao = $this->orgaoOuNovo($plano);
+        if (! $orgao->exists) {
+            $orgao->save();
+            (new CachedRepository('orgaos', ttlSeconds: 3600))->flush();
+        }
+
+        return $orgao;
+    }
+
+    /** Dados de fallback para preencher a ficha (vazios com default quando inexistente). */
+    public function fichaDoPlano(PmdaPlano $plano): array
+    {
+        $orgao = $this->orgaoDoMunicipio($plano);
+        $cap = $orgao?->metadata['capacidades'] ?? [];
+        $plano->loadMissing('municipio');
+
+        return [
+            'existe'               => $orgao !== null,
+            'orgao_nome'           => $orgao?->nome,
+            'municipio_nome'       => $plano->municipio?->nome,
+            'municipio_regiao'     => $plano->municipio?->regiao,
+            'municipio_mesorregiao' => $plano->municipio?->mesorregiao,
+            // Prefeitura/municipio (read-only na ficha; editavel na aba ISS).
+            'prefeito_nome'        => $plano->nome_prefeito,
+            'prefeitura_email'     => $plano->email_prefeitura,
+            'prefeitura_telefone'  => $plano->tel_prefeitura,
+            'prefeito_telefone'    => $plano->tel_prefeito,
+            'prefeito_celular'     => $plano->cel_prefeito,
+            'prefeitura_endereco'  => $plano->endereco,
+            'prefeitura_bairro'    => $plano->bairro,
+            'prefeitura_cep'       => $plano->cep,
+            'foto_coordenador_url' => $orgao?->foto_coordenador_url,
+            'status'               => $orgao?->status?->value ?? StatusOrgao::ATIVO->value,
+            'possui_compdec'       => (bool) ($cap['possui_compdec'] ?? ($orgao !== null)),
+            // Atos legais
+            'lei_criacao_numero'   => $orgao?->lei_criacao_numero,
+            'lei_criacao_data'     => $orgao?->lei_criacao_data?->toDateString(),
+            'decreto_numero'       => $orgao?->decreto_numero,
+            'decreto_data'         => $orgao?->decreto_data?->toDateString(),
+            'portaria_numero'      => $orgao?->portaria_numero,
+            'portaria_data'        => $orgao?->portaria_data?->toDateString(),
+            // Contato
+            'email'                => $orgao?->email,
+            'email_secundario'     => $orgao?->email_secundario,
+            'email_terciario'      => $orgao?->email_terciario,
+            'telefone'             => $orgao?->telefone,
+            'telefone_secundario'  => $orgao?->telefone_secundario,
+            'fax'                  => $orgao?->fax,
+            'endereco'             => $orgao?->endereco,
+            // Quantitativos
+            'qtd_efetivo'          => $orgao?->qtd_efetivo ?? 0,
+            'qtd_nupdec'           => $orgao?->qtd_nupdec ?? 0,
+            // Estrutura / capacidades (colunas)
+            'tem_sede_propria'     => (bool) ($orgao?->tem_sede_propria ?? false),
+            'tem_viatura'          => (bool) ($orgao?->tem_viatura ?? false),
+            'tem_mapeamento_risco' => (bool) ($orgao?->tem_mapeamento_risco ?? false),
+            'tem_simulado'         => (bool) ($orgao?->tem_simulado ?? false),
+            'tem_cartao_pdc'       => (bool) ($orgao?->tem_cartao_pdc ?? false),
+            'tem_plano_contingencia' => (bool) ($orgao?->tem_plano_contingencia ?? false), // read-only
+            // Capacidades / capacitacao (metadata)
+            'tem_computador'        => (bool) ($cap['tem_computador'] ?? false),
+            'tem_curso_gestao'      => (bool) ($cap['tem_curso_gestao'] ?? false),
+            'data_curso_gestao'     => $cap['data_curso_gestao'] ?? null,
+            'tem_curso_sco'         => (bool) ($cap['tem_curso_sco'] ?? false),
+            'data_curso_sco'        => $cap['data_curso_sco'] ?? null,
+            'tem_workshop_pdc'      => (bool) ($cap['tem_workshop_pdc'] ?? false),
+            'data_workshop_pdc'     => $cap['data_workshop_pdc'] ?? null,
+            'tem_experiencia'       => (bool) ($cap['tem_experiencia'] ?? false),
+            'tempo_experiencia_anos' => $cap['tempo_experiencia_anos'] ?? null,
+            'capacitacao_nupdec'    => $cap['capacitacao_nupdec'] ?? null,
+            'possui_capacitacao_pdc' => (bool) ($cap['possui_capacitacao_pdc'] ?? false),
+            'data_capacitacao_pdc'  => $cap['data_capacitacao_pdc'] ?? null,
+            'possui_nupdec'         => (bool) ($cap['possui_nupdec'] ?? false),
+            'possui_efetivo'        => (bool) ($cap['possui_efetivo'] ?? false),
+            'nao_possui_lei'        => (bool) ($cap['nao_possui_lei'] ?? false),
+            'nao_possui_decreto'    => (bool) ($cap['nao_possui_decreto'] ?? false),
+            'nao_possui_portaria'   => (bool) ($cap['nao_possui_portaria'] ?? false),
+            'associacao'            => $cap['associacao'] ?? null,
+        ];
+    }
+
+    /** Localiza ou cria o orgao COMPDEC do municipio e grava a ficha (colunas + metadata). */
+    public function salvar(PmdaPlano $plano, array $data): Orgao
+    {
+        $orgao = $this->orgaoOuNovo($plano);
+
+        $orgao->fill(collect($data)->only(self::COLUNAS)->toArray());
+
+        // Merge das capacidades em metadata sem perder chaves nao editadas.
+        $metadata = $orgao->metadata ?? [];
+        $metadata['capacidades'] = array_replace(
+            $metadata['capacidades'] ?? [],
+            collect($data)->only(self::META)->toArray()
+        );
+        $orgao->metadata = $metadata;
+
+        $orgao->save();
+
+        (new CachedRepository('orgaos', ttlSeconds: 3600))->flush();
+
+        return $orgao;
+    }
+
+    /** Sobe/atualiza a foto do coordenador do orgao COMPDEC do municipio. */
+    public function uploadFoto(PmdaPlano $plano, UploadedFile $arquivo): Media
+    {
+        $orgao = $this->garantirOrgao($plano);
+        $disk = (string) config('compdec.disk', 'compdec');
+        File::ensureDirectoryExists(Storage::disk($disk)->path(''));
+
+        return $orgao
+            ->addMedia($arquivo->getRealPath())
+            ->usingFileName($arquivo->hashName())
+            ->usingName($arquivo->getClientOriginalName())
+            ->toMediaCollection(Orgao::MEDIA_FOTO_COORDENADOR, $disk);
+    }
+
+    public function removerFoto(PmdaPlano $plano): void
+    {
+        $orgao = $this->orgaoDoMunicipio($plano);
+        $orgao?->clearMediaCollection(Orgao::MEDIA_FOTO_COORDENADOR);
     }
 }
 

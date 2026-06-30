@@ -6,6 +6,7 @@ import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import TreinamentoFiltersSection from '@/Components/Organisms/Treinamento/TreinamentoFiltersSection.vue';
 import TreinamentoGrid from '@/Components/Organisms/Treinamento/TreinamentoGrid.vue';
 import TreinamentoStatsCards from '@/Components/Organisms/Treinamento/TreinamentoStatsCards.vue';
@@ -112,6 +113,7 @@ function handleExportCsv(params) {
       title="Treinamentos"
       description="Gestão de treinamentos e cursos"
       :icon="BookOpenIcon"
+      :icon-image="moduleIcon('treinamento')"
       variant="gradient"
     >
       <template #actions>
