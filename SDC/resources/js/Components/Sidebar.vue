@@ -181,20 +181,11 @@
         <NavItem
           v-if="canSeePmda && _routes.hasPmda"
           :href="pmdaHref"
-          :active="isRouteActive('pmda.planos.*') || isRouteActive('pmda.dashboard.*')"
+          :active="isRouteActive('pmda.*')"
           icon="pmda-drop"
           :collapsed="isCollapsed"
         >
           PMDA
-        </NavItem>
-        <NavItem
-          v-if="canSeePmdaSolicitacoes && _routes.hasPmdaSolicitacoes"
-          :href="pmdaSolicitacoesHref"
-          :active="isRouteActive('pmda.solicitacoes.*')"
-          icon="pmda-drop"
-          :collapsed="isCollapsed"
-        >
-          Solicitações PMDA
         </NavItem>
 
         <!-- ESTOQUE - drill-down (abre submenu como nova seccao) -->
@@ -554,7 +545,6 @@ const _routes = {
   hasDemandas: route().has('demandas.index'),
   hasPae: route().has('pae.protocolos.index') || route().has('pae.index'),
   hasPmda: route().has('pmda.planos.index'),
-  hasPmdaSolicitacoes: route().has('pmda.solicitacoes.index'),
   hasPlantao: route().has('plantao.index'),
   hasDecretacoes: route().has('decretacoes.index'),
   hasHumanitaria: route().has('ajuda-humanitaria.beneficiarios.index'),
@@ -607,6 +597,7 @@ const _activeRoutes = computed(() => {
     'tdap.historicos.*': route().current('tdap.historicos.*'),
     'tdap.processos.*': route().current('tdap.processos.*'),
     'cisternas.*': route().current('cisternas.*'),
+    'pmda.*': route().current('pmda.*'),
     'inventario.*': route().current('inventario.*'),
     'estoque.*': route().current('estoque.*'),
     'estoque.index': route().current('estoque.index'),
@@ -675,10 +666,6 @@ const canSeePae = computed(() => {
 
 const canSeePmda = computed(() => {
   return hasPermission(['pmda.planos.view']);
-});
-
-const canSeePmdaSolicitacoes = computed(() => {
-  return hasPermission(['pmda.comunidades.aprovar']);
 });
 
 // MODULOS DE GESTAO
@@ -792,9 +779,6 @@ const paeHref = route().has('pae.protocolos.index') ? route('pae.protocolos.inde
                 route('dashboard');
 
 const pmdaHref = route().has('pmda.planos.index') ? route('pmda.planos.index') :
-                route('dashboard');
-
-const pmdaSolicitacoesHref = route().has('pmda.solicitacoes.index') ? route('pmda.solicitacoes.index') :
                 route('dashboard');
 
 const permissionamentoHref = route().has('admin.permissions.users.index') ? route('admin.permissions.users.index') :
