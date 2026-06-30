@@ -6,11 +6,23 @@
       title="Gestão de PMDA"
       description="Planos Municipais de Defesa Agropecuária — fornecimento emergencial de água potável."
       :icon="DocumentTextIcon"
+      :icon-image="moduleIcon('pmda')"
       variant="gradient"
     >
       <template #actions>
         <div class="flex w-full flex-wrap items-center justify-end gap-2">
           <ViewModeToggle v-model="viewMode" />
+          <button
+            v-if="can('pmda.comunidades.aprovar')"
+            type="button"
+            class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95"
+            style="background-color: #00AAFF;"
+            title="Solicitações de comunidades enviadas pelos municípios (análise CEDEC)"
+            @click="router.visit(route('pmda.solicitacoes.index'))"
+          >
+            <InboxArrowDownIcon class="h-4 w-4" />
+            Solicitações PMDA
+          </button>
           <ActionButton
             v-if="can('pmda.planos.export')"
             action="export"
@@ -151,6 +163,8 @@ import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import { useExport } from '@/composables/data/useExport';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import { InboxArrowDownIcon } from '@heroicons/vue/24/outline';
+import { moduleIcon } from '@/Support/moduleIcons';
 import PmdaStatusBadge from '@/Components/Atoms/Pmda/PmdaStatusBadge.vue';
 import PmdaStatisticsCards from '@/Components/Organisms/Pmda/PmdaStatisticsCards.vue';
 import PmdaFiltersSection from '@/Components/Organisms/Pmda/PmdaFiltersSection.vue';

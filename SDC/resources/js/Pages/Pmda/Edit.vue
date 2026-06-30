@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import RatTabs from '@/Components/Rat/RatTabs.vue';
@@ -21,18 +21,18 @@ const props = defineProps({
   pontos_disponiveis: { type: Array, default: () => [] },
   comunidades_disponiveis: { type: Array, default: () => [] },
   comunidade_solicitacoes: { type: Array, default: () => [] },
+  compdec_ficha: { type: Object, default: () => ({}) },
+  compdec_anexos: { type: Array, default: () => [] },
+  compdec_equipe: { type: Array, default: () => [] },
 });
 
 const dados = computed(() => props.plano?.data ?? props.plano);
 
-// Vindo do "Novo PMDA": continua o preenchimento na etapa 2, sem cara de "Edição".
-const page = usePage();
-const criando = computed(() => String(page.url).includes('novo=1'));
-
-// Edit: todas as etapas liberadas.
+// Edit: edicao de um PMDA existente — todas as etapas liberadas.
+// (A CRIACAO roda inteira no contexto Create/continuar, nunca aqui.)
 const { activeTab, tabs, goTo, next, prev } = usePmdaWizard({
   allUnlocked: true,
-  initialTab: criando.value ? 2 : 1,
+  initialTab: 1,
 });
 
 const tabsComBadge = computed(() =>
@@ -93,7 +93,7 @@ function voltar() {
 
   <div class="pb-6">
     <PageHeader
-      :title="criando ? `Novo PMDA — ${dados.municipio ?? ''}` : `PMDA ${dados.protocolo ?? ''}`"
+      :title="`PMDA ${dados.protocolo ?? ''}`"
       :icon="DocumentTextIcon"
       variant="gradient"
     >
@@ -101,6 +101,13 @@ function voltar() {
         <PmdaStatusBadge :label="dados.status_label" :color-class="dados.status_color" />
       </template>
     </PageHeader>
+
+    <div v-if="Object.keys(form.errors).length" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+      <p class="font-semibold">Não foi possível salvar. Corrija:</p>
+      <ul class="ml-5 mt-1 list-disc">
+        <li v-for="(msg, key) in form.errors" :key="key">{{ msg }}</li>
+      </ul>
+    </div>
 
     <RatTabs :tabs="tabsComBadge" :active-tab="activeTab" @tab-change="goTo">
       <PmdaInicioSection
@@ -122,6 +129,9 @@ function voltar() {
         v-else-if="activeTab === 3"
         :form="form"
         :plano="dados"
+        :ficha="compdec_ficha"
+        :anexos="compdec_anexos"
+        :equipe="compdec_equipe"
         :saving="form.processing"
         @next="salvarEAvancar"
         @prev="prev"

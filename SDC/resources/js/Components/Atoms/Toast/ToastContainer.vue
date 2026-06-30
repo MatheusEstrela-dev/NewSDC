@@ -65,7 +65,7 @@ onUnmounted(() => window.removeEventListener('toast', onToastEvent));
     position: fixed;
     bottom: 1.5rem;
     right: 1.5rem;
-    z-index: 9999;
+    z-index: 11050;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
