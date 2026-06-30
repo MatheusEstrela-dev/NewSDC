@@ -5,6 +5,7 @@
       title="Protocolos PAE"
       description="Gerencie os protocolos de análise de PAE"
       :icon="ClipboardDocumentListIcon"
+      :icon-image="moduleIcon('pae')"
       variant="gradient"
     >
       <template #actions>
@@ -201,6 +202,7 @@ import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 
 import PrintPaeProtocoloModal from '@/Components/Organisms/Pae/Print/PrintPaeProtocoloModal.vue';

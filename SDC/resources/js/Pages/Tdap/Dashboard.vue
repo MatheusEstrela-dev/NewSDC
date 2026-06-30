@@ -5,6 +5,7 @@
       title="TDAP — Transporte e Distribuição de Água Potável"
       description="Gestão de cronogramas, prestadores, caminhões-tanque, vistorias e viagens"
       :icon="TruckIcon"
+      :icon-image="moduleIcon('tdap')"
     />
 
     <!-- KPIs -->
@@ -99,6 +100,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });

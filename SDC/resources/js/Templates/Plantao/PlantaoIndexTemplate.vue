@@ -6,6 +6,7 @@ import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import AbrirPlantaoModal from '@/Components/Organisms/Plantao/AbrirPlantaoModal.vue';
 import PlantaoFiltersSection from '@/Components/Organisms/Plantao/PlantaoFiltersSection.vue';
 import PlantaoGrid from '@/Components/Organisms/Plantao/PlantaoGrid.vue';
@@ -94,6 +95,7 @@ const handleBuscarNoticias = () => {
       title="Plantão Diário"
       description="Gestão de turnos e lançamentos operacionais"
       :icon="ClockIcon"
+      :icon-image="moduleIcon('plantao')"
       variant="gradient"
       icon-class="text-blue-600 dark:text-blue-400"
     >

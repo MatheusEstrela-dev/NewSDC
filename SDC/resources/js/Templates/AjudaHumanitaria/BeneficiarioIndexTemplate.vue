@@ -5,6 +5,7 @@
       title="Beneficiários"
       description="Gestão de beneficiários e famílias afetadas por desastres"
       :icon="HeartIcon"
+      :icon-image="moduleIcon('ajuda-humanitaria')"
       variant="gradient"
     >
       <template #actions>
@@ -163,6 +164,7 @@ import BeneficiarioStatsCards from '@/Components/Organisms/AjudaHumanitaria/Bene
 import PrintBeneficiarioModal from '@/Components/Organisms/AjudaHumanitaria/Print/PrintBeneficiarioModal.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import { useExport } from '@/Composables/useExport';
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';

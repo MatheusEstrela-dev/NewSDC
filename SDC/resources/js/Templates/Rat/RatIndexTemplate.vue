@@ -7,6 +7,7 @@
       :title="MESSAGES.rat.title"
       :description="MESSAGES.rat.description"
       :icon="DocumentTextIcon"
+      :icon-image="moduleIcon('rat')"
       variant="gradient"
     >
       <template #actions>
@@ -129,6 +130,7 @@ import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import { useModalState } from '@/Composables/useModalState';
 import { MESSAGES } from '@/constants/messages';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';

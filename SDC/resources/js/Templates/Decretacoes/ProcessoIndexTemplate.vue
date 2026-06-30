@@ -5,6 +5,7 @@
       title="Reconhecimentos de Desastre"
       description="Gerencie os processos de decretação de emergência e calamidade pública"
       :icon="ExclamationTriangleIcon"
+      :icon-image="moduleIcon('decretacoes')"
       variant="gradient"
     >
       <template #actions>
@@ -126,6 +127,7 @@ import ProcessoGrid from '@/Components/Organisms/Decretacoes/ProcessoGrid.vue';
 import ProcessoTable from '@/Components/Organisms/Decretacoes/ProcessoTable.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { router } from '@inertiajs/vue3';
