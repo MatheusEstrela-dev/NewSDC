@@ -22,6 +22,8 @@ class AnexoIndexResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $media = $this->getFirstMedia(CompdecAnexo::MEDIA_ARQUIVO);
+
         return [
             'id' => $this->id,
             'tipo' => $this->tipo?->value,
@@ -33,7 +35,15 @@ class AnexoIndexResource extends JsonResource
             'data_validade' => $this->data_validade?->toDateString(),
             'status_validade' => $this->status_validade->value,
             'status_validade_label' => $this->status_validade->label(),
-            'tem_arquivo' => $this->getFirstMedia(CompdecAnexo::MEDIA_ARQUIVO) !== null,
+            'created_at' => $this->created_at?->toDateTimeString(),
+            'created_at_formatado' => $this->created_at?->format('d/m/Y H:i'),
+            'tem_arquivo' => $media !== null,
+            'arquivo_nome' => $media?->file_name,
+            'arquivo_nome_original' => $media?->name,
+            'arquivo_tamanho' => $media?->size,
+            'arquivo_tamanho_formatado' => $media ? number_format((float) $media->size / 1024, 1, ',', '.') . ' KB' : null,
+            'arquivo_enviado_em' => $media?->created_at?->toDateTimeString(),
+            'arquivo_enviado_em_formatado' => $media?->created_at?->format('d/m/Y H:i'),
         ];
     }
 }
