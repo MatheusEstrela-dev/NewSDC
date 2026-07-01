@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
+import DatePicker from '@/Components/Form/DatePicker.vue';
 import { 
   XMarkIcon, 
   ArrowDownTrayIcon,
@@ -182,21 +183,13 @@ const handleExport = async () => {
                 <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
                   Data Inicial
                 </label>
-                <input 
-                  type="date" 
-                  v-model="dataInicio"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                />
+                <DatePicker v-model="dataInicio" class="w-full" />
               </div>
               <div>
                 <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
                   Data Final
                 </label>
-                <input 
-                  type="date" 
-                  v-model="dataFim"
-                  class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                />
+                <DatePicker v-model="dataFim" class="w-full" />
               </div>
             </div>
           </Transition>

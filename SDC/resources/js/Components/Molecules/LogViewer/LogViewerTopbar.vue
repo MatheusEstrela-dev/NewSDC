@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import Dropdown from '@/Components/Dropdown.vue'
+import DatePicker from '@/Components/Form/DatePicker.vue'
 
 const props = defineProps({
     stats: {
@@ -150,20 +151,16 @@ const toggleLevel = (level) => {
 
             <!-- Date Range -->
             <div class="flex items-center gap-2">
-                <input
-                    type="date"
-                    :value="filters.date_from"
-                    @change="e => emit('update:filters', { ...filters, date_from: e.target.value })"
-                    class="px-2 py-1 bg-gray-800 border-gray-700 rounded text-[10px] text-gray-300 focus:ring-1 focus:ring-blue-500 border min-w-[110px]"
-                    title="Data Inicial"
+                <DatePicker
+                    :model-value="filters.date_from"
+                    @update:model-value="v => emit('update:filters', { ...filters, date_from: v })"
+                    extra-class="min-w-[110px]"
                 />
                 <span class="text-gray-600">-</span>
-                <input
-                    type="date"
-                    :value="filters.date_to"
-                    @change="e => emit('update:filters', { ...filters, date_to: e.target.value })"
-                    class="px-2 py-1 bg-gray-800 border-gray-700 rounded text-[10px] text-gray-300 focus:ring-1 focus:ring-blue-500 border min-w-[110px]"
-                    title="Data Final"
+                <DatePicker
+                    :model-value="filters.date_to"
+                    @update:model-value="v => emit('update:filters', { ...filters, date_to: v })"
+                    extra-class="min-w-[110px]"
                 />
             </div>
 

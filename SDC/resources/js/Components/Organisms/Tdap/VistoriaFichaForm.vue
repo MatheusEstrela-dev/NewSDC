@@ -10,7 +10,7 @@
         </div>
         <div>
           <InputLabel for="data" value="Data da vistoria *" />
-          <TextInput id="data" v-model="form.data" type="date" class="mt-1 block w-full" required />
+          <DatePicker id="data" v-model="form.data" class="mt-1 block w-full" required />
           <InputError :message="form.errors.data" class="mt-2" />
         </div>
         <div>
@@ -133,6 +133,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import DatePicker from '@/Components/Form/DatePicker.vue';
 import VistoriaChecklistGroup from '@/Components/Organisms/Tdap/VistoriaChecklistGroup.vue';
 
 const props = defineProps({

@@ -33,12 +33,7 @@
                   Data do Plantão
                 </Text>
               </label>
-              <input
-                v-model="form.data"
-                type="date"
-                required
-                class="w-full px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-              />
+              <DatePicker v-model="form.data" required class="w-full" />
             </div>
 
             <div>
@@ -117,6 +112,7 @@ import Text from '@/Components/Atoms/Typography/Text.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import XMarkIcon from '@/Components/Icons/XMarkIcon.vue';
 import Modal from '@/Components/Modal.vue';
+import DatePicker from '@/Components/Form/DatePicker.vue';
 import { usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
