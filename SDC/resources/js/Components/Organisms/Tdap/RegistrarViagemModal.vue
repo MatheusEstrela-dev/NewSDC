@@ -9,7 +9,7 @@
       <form @submit.prevent="submit" class="space-y-4">
         <div>
           <InputLabel for="data_registro" value="Data e hora da viagem *" />
-          <TextInput id="data_registro" v-model="form.data_registro" type="datetime-local" class="mt-1 block w-full" required />
+          <DatePicker id="data_registro" v-model="form.data_registro" type="datetime" :required="true" extra-class="mt-1" />
           <InputError :message="form.errors.data_registro" class="mt-2" />
         </div>
 
@@ -45,7 +45,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
+import DatePicker from '@/Components/Form/DatePicker.vue';
 
 const props = defineProps({
   show:            { type: Boolean, default: false },

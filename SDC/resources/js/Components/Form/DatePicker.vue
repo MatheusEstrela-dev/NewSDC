@@ -2,14 +2,20 @@
   <div class="relative" ref="el">
     <button
       type="button"
+      :id="id || undefined"
+      :disabled="disabled"
       @click.stop="toggleOpen"
       class="dt-input w-full flex items-center justify-between gap-2"
-      :class="[error ? 'dt-input-error' : (modelValue ? 'dt-input-filled' : ''), extraClass]"
+      :class="[
+        error ? 'dt-input-error' : (modelValue ? 'dt-input-filled' : ''),
+        disabled ? 'dt-input-disabled' : '',
+        extraClass,
+      ]"
     >
       <span :class="modelValue ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'">
-        {{ displayDate || 'dd/mm/aaaa' }}
+        {{ displayDate || placeholder }}
       </span>
-      <svg class="w-4 h-4 flex-shrink-0 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg v-if="showIcon" class="w-4 h-4 flex-shrink-0 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
       </svg>
@@ -63,6 +69,13 @@
             </div>
           </div>
 
+          <!-- Time picker (apenas quando type=datetime) -->
+          <div v-if="isDateTime"
+            class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/40 flex items-center justify-between gap-2">
+            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Hora</span>
+            <input type="time" :value="timePart" @input="onTimeInput" class="dt-time-input" />
+          </div>
+
           <!-- Footer -->
           <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/40 flex items-center justify-between">
             <button type="button" @click="clearDate"
@@ -85,11 +98,20 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { onClickOutside } from '@vueuse/core';
 
 const props = defineProps({
-  modelValue: { type: String, default: '' },
-  extraClass: { type: String, default: '' },
-  error:      { type: Boolean, default: false },
+  modelValue:  { type: String, default: '' },
+  extraClass:  { type: String, default: '' },
+  error:       { type: Boolean, default: false },
+  id:          { type: String, default: '' },
+  placeholder: { type: String, default: 'dd/mm/aaaa' },
+  disabled:    { type: Boolean, default: false },
+  readonly:    { type: Boolean, default: false },
+  required:    { type: Boolean, default: false },
+  showIcon:    { type: Boolean, default: true },
+  type:        { type: String, default: 'date', validator: (v) => ['date', 'datetime'].includes(v) },
 });
 const emit = defineEmits(['update:modelValue']);
+
+const isDateTime = computed(() => props.type === 'datetime');
 
 const el          = ref(null);
 const dropdownRef = ref(null);
@@ -98,7 +120,10 @@ const dropdownStyle = ref({});
 
 onClickOutside(el, () => { open.value = false; }, { ignore: [dropdownRef] });
 
-function toggleOpen() { open.value = !open.value; }
+function toggleOpen() {
+  if (props.disabled || props.readonly) return;
+  open.value = !open.value;
+}
 
 function calculatePosition() {
   if (!el.value) return;
@@ -150,11 +175,19 @@ watch(open, async (isOpen) => {
 const MONTHS   = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const DAY_NAMES = ['D','S','T','Q','Q','S','S'];
 
+const timePart = computed(() => {
+  if (!props.modelValue) return '';
+  const t = props.modelValue.split('T')[1];
+  return t ? t.slice(0, 5) : '';
+});
+
 const displayDate = computed(() => {
   if (!props.modelValue) return '';
-  const dateOnly = props.modelValue.split('T')[0];
-  const [y, m, d] = dateOnly.split('-');
-  return `${d}/${m}/${y}`;
+  const [datePart, rawTime] = props.modelValue.split('T');
+  const [y, m, d] = datePart.split('-');
+  let out = `${d}/${m}/${y}`;
+  if (isDateTime.value && rawTime) out += ` ${rawTime.slice(0, 5)}`;
+  return out;
 });
 
 const calendarDays = computed(() => {
@@ -180,9 +213,23 @@ function getDayClass(day) {
   return 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60';
 }
 
+// Monta o valor emitido conforme o tipo (date -> YYYY-MM-DD, datetime -> YYYY-MM-DDTHH:mm)
+function buildValue(dateIso) {
+  if (!dateIso) return '';
+  if (!isDateTime.value) return dateIso;
+  return `${dateIso}T${timePart.value || '00:00'}`;
+}
+
 function selectDay(day) {
-  emit('update:modelValue', isoFor(day));
-  open.value = false;
+  emit('update:modelValue', buildValue(isoFor(day)));
+  if (!isDateTime.value) open.value = false;
+}
+
+function onTimeInput(e) {
+  const time = e.target.value;
+  if (!time) return;
+  const dateIso = (props.modelValue ? props.modelValue.split('T')[0] : '') || now.toISOString().split('T')[0];
+  emit('update:modelValue', `${dateIso}T${time}`);
 }
 
 function clearDate() { emit('update:modelValue', ''); open.value = false; }
@@ -191,8 +238,14 @@ function selectToday() {
   const t = now.toISOString().split('T')[0];
   viewMonth.value = now.getMonth();
   viewYear.value  = now.getFullYear();
-  emit('update:modelValue', t);
-  open.value = false;
+  if (isDateTime.value) {
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    emit('update:modelValue', `${t}T${hh}:${mm}`);
+  } else {
+    emit('update:modelValue', t);
+    open.value = false;
+  }
 }
 
 function prevMonth() {
@@ -223,6 +276,16 @@ function nextMonth() {
 .dt-input-error {
   /* Campo obrigatorio nao preenchido ao salvar: alerta em vermelho */
   @apply !border-2 !border-red-500/70 hover:!border-red-500/80;
+}
+.dt-input-disabled {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+.dt-time-input {
+  @apply px-2 py-1 text-sm rounded-lg bg-slate-50 dark:bg-slate-900/50
+    text-slate-900 dark:text-slate-200
+    border border-slate-300 dark:border-slate-700/50
+    focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500;
 }
 
 .picker-nav-btn {

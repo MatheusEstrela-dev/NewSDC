@@ -42,8 +42,8 @@
           <option value="crono_caminhao">Caminhão alocado</option>
         </select>
         <input v-model="filtroTipo" type="text" placeholder="tipo_evento (ex: cronograma.ativado)" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm md:col-span-2" @keyup.enter="aplicarFiltros" />
-        <input v-model="filtroDe" type="date" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" @change="aplicarFiltros" />
-        <input v-model="filtroAte" type="date" class="border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" @change="aplicarFiltros" />
+        <DatePicker v-model="filtroDe" placeholder="Data inicial" @update:model-value="aplicarFiltros" />
+        <DatePicker v-model="filtroAte" placeholder="Data final" @update:model-value="aplicarFiltros" />
       </div>
     </div>
 
@@ -121,6 +121,7 @@ import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import DatePicker from '@/Components/Form/DatePicker.vue';
 import { useExport } from '@/composables/data/useExport';
 import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
 

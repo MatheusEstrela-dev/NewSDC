@@ -10,11 +10,9 @@
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Data Inicial
         </label>
-        <input
-          type="date"
-          :value="filters.start_date"
-          @input="updateFilter('start_date', $event.target.value)"
-          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+        <DatePicker
+          :model-value="filters.start_date"
+          @update:model-value="updateFilter('start_date', $event)"
         />
       </div>
 
@@ -23,11 +21,9 @@
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Data Final
         </label>
-        <input
-          type="date"
-          :value="filters.end_date"
-          @input="updateFilter('end_date', $event.target.value)"
-          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+        <DatePicker
+          :model-value="filters.end_date"
+          @update:model-value="updateFilter('end_date', $event)"
         />
       </div>
 
@@ -152,6 +148,7 @@
 
 <script setup>
 import { defineEmits } from 'vue'
+import DatePicker from '@/Components/Form/DatePicker.vue'
 
 const props = defineProps({
   filters: {
