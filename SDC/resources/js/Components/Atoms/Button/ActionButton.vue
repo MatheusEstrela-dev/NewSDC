@@ -15,6 +15,7 @@
       v-if="visibleMenuActions.length > 0"
       align="right"
       width="48"
+      teleport
       content-classes="py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
     >
       <template #trigger>
@@ -98,6 +99,7 @@ import TrashIcon from '../../Icons/TrashIcon.vue';
 import PrinterIcon from '../../Icons/PrinterIcon.vue';
 import DownloadIcon from '../../Icons/DownloadIcon.vue';
 import DocumentIcon from '../../Icons/DocumentIcon.vue';
+import DocumentDuplicateIcon from '../../Icons/DocumentDuplicateIcon.vue';
 import DocumentTextIcon from '../../Icons/DocumentTextIcon.vue';
 import CheckIcon from '../../Icons/CheckIcon.vue';
 import ArchiveBoxIcon from '../../Icons/ArchiveBoxIcon.vue';
@@ -116,7 +118,7 @@ const ActionIcons = {
   delete: markRaw(TrashIcon),
   print: markRaw(PrinterIcon),
   export: markRaw(DownloadIcon),
-  duplicate: markRaw(DocumentIcon),
+  duplicate: markRaw(DocumentDuplicateIcon),
   finalize: markRaw(CheckIcon),
   check: markRaw(CheckIcon),
   pdf: markRaw(DocumentTextIcon),
