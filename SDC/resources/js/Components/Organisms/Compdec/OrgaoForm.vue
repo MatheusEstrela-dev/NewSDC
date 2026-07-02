@@ -75,11 +75,9 @@
           :error="errors.lei_criacao_numero"
         />
 
-        <TextInput
+        <DatePicker
           v-model="formData.lei_criacao_data"
-          label="Lei de Criacao - Data"
-          type="date"
-          :error="errors.lei_criacao_data"
+          :error="!!errors.lei_criacao_data"
         />
 
         <TextInput
@@ -89,11 +87,9 @@
           :error="errors.decreto_numero"
         />
 
-        <TextInput
+        <DatePicker
           v-model="formData.decreto_data"
-          label="Decreto - Data"
-          type="date"
-          :error="errors.decreto_data"
+          :error="!!errors.decreto_data"
         />
 
         <TextInput
@@ -103,11 +99,9 @@
           :error="errors.portaria_numero"
         />
 
-        <TextInput
+        <DatePicker
           v-model="formData.portaria_data"
-          label="Portaria - Data"
-          type="date"
-          :error="errors.portaria_data"
+          :error="!!errors.portaria_data"
         />
       </div>
     </div>
@@ -256,28 +250,22 @@
       </div>
 
       <div class="form-grid">
-        <TextInput
+        <DatePicker
           v-if="formData.capacidades.tem_curso_gestao"
           v-model="formData.capacidades.data_curso_gestao"
-          label="Data do Curso de Gestao"
-          type="date"
-          :error="errors['capacidades.data_curso_gestao']"
+          :error="!!errors['capacidades.data_curso_gestao']"
         />
 
-        <TextInput
+        <DatePicker
           v-if="formData.capacidades.tem_curso_sco"
           v-model="formData.capacidades.data_curso_sco"
-          label="Data do Curso SCO"
-          type="date"
-          :error="errors['capacidades.data_curso_sco']"
+          :error="!!errors['capacidades.data_curso_sco']"
         />
 
-        <TextInput
+        <DatePicker
           v-if="formData.capacidades.tem_workshop_pdc"
           v-model="formData.capacidades.data_workshop_pdc"
-          label="Data do Workshop PDC"
-          type="date"
-          :error="errors['capacidades.data_workshop_pdc']"
+          :error="!!errors['capacidades.data_workshop_pdc']"
         />
 
         <TextInput
@@ -369,6 +357,7 @@ import { computed } from 'vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
+import DatePicker from '@/Components/Form/DatePicker.vue';
 import SelectInput from '@/Components/Atoms/Input/SelectInput.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ToggleField from '@/Components/Molecules/Form/ToggleField.vue';

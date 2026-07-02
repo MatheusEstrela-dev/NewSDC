@@ -120,11 +120,7 @@
                   Prazo
                 </Text>
               </label>
-              <input
-                v-model="form.prazo"
-                type="date"
-                class="w-full px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
-              />
+              <DatePicker v-model="form.prazo" class="w-full" />
             </div>
           </div>
 
@@ -173,6 +169,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import Modal from '@/Components/Modal.vue';
+import DatePicker from '@/Components/Form/DatePicker.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';

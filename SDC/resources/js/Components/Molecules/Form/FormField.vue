@@ -3,7 +3,20 @@
     <Label v-if="label" :for-id="inputId" :required="required" :size="labelSize">
       {{ label }}
     </Label>
+    <DatePicker
+      v-if="isDateType"
+      :id="inputId"
+      :model-value="modelValue"
+      :type="pickerType"
+      :placeholder="placeholder"
+      :disabled="disabled"
+      :readonly="readonly"
+      :required="required"
+      :error="!!error"
+      @update:model-value="$emit('update:modelValue', $event)"
+    />
     <TextInput
+      v-else
       :id="inputId"
       :model-value="modelValue"
       :type="type"
@@ -31,6 +44,7 @@
 import { computed } from 'vue';
 import Label from '../../Atoms/Typography/Label.vue';
 import TextInput from '../../Atoms/Input/TextInput.vue';
+import DatePicker from '../../Form/DatePicker.vue';
 
 const props = defineProps({
   modelValue: {
@@ -88,6 +102,10 @@ defineEmits(['update:modelValue', 'blur', 'focus']);
 const inputId = computed(() => {
   return props.label ? `field-${props.label.toLowerCase().replace(/\s+/g, '-')}` : `field-${Math.random().toString(36).substr(2, 9)}`;
 });
+
+// Campos de data usam o DatePicker padronizado no lugar do input nativo
+const isDateType = computed(() => ['date', 'datetime', 'datetime-local'].includes(props.type));
+const pickerType = computed(() => (props.type === 'date' ? 'date' : 'datetime'));
 </script>
 
 <style scoped>

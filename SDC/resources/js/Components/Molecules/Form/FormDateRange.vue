@@ -8,7 +8,7 @@
         <Label v-if="startLabel" :for-id="startId" :size="'sm'" color="muted" class="mb-1.5 transition-colors duration-200">
           {{ startLabel }}
         </Label>
-        <DateInput
+        <DatePicker
           :id="startId"
           :model-value="startValue"
           :placeholder="startPlaceholder"
@@ -22,7 +22,7 @@
         <Label v-if="endLabel" :for-id="endId" :size="'sm'" color="muted" class="mb-1.5 transition-colors duration-200">
           {{ endLabel }}
         </Label>
-        <DateInput
+        <DatePicker
           :id="endId"
           :model-value="endValue"
           :placeholder="endPlaceholder"
@@ -41,7 +41,7 @@
 <script setup>
 import { computed } from 'vue';
 import Label from '../../Atoms/Typography/Label.vue';
-import DateInput from '../../Atoms/Input/DateInput.vue';
+import DatePicker from '../../Form/DatePicker.vue';
 
 const props = defineProps({
   modelValue: {

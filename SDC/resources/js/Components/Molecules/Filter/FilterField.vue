@@ -21,7 +21,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import DateInput from '../../Atoms/Input/DateInput.vue';
+import DatePicker from '../../Form/DatePicker.vue';
 import SearchInput from '../../Atoms/Input/SearchInput.vue';
 import SelectInput from '../../Atoms/Input/SelectInput.vue';
 import TextInput from '../../Atoms/Input/TextInput.vue';
@@ -65,7 +65,7 @@ const fieldComponent = computed(() => {
   const components = {
     text: TextInput,
     select: SelectInput,
-    date: DateInput,
+    date: DatePicker,
     search: SearchInput,
   };
   return components[props.type] || TextInput;

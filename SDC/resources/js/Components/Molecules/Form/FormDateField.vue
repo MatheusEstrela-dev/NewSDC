@@ -3,10 +3,10 @@
     <Label v-if="label" :for-id="inputId" :required="required" :size="labelSize">
       {{ label }}
     </Label>
-    <DateInput
+    <DatePicker
       :id="inputId"
       :model-value="modelValue"
-      :type="type"
+      :type="pickerType"
       :placeholder="placeholder"
       :disabled="disabled"
       :readonly="readonly"
@@ -14,8 +14,6 @@
       :error="!!error"
       :show-icon="showIcon"
       @update:model-value="$emit('update:modelValue', $event)"
-      @blur="$emit('blur', $event)"
-      @focus="$emit('focus', $event)"
     />
     <p v-if="error" class="mt-1 text-xs text-red-400">
       {{ error }}
@@ -29,7 +27,7 @@
 <script setup>
 import { computed } from 'vue';
 import Label from '../../Atoms/Typography/Label.vue';
-import DateInput from '../../Atoms/Input/DateInput.vue';
+import DatePicker from '../../Form/DatePicker.vue';
 
 const props = defineProps({
   modelValue: {
@@ -43,7 +41,7 @@ const props = defineProps({
   type: {
     type: String,
     default: 'date',
-    validator: (value) => ['date', 'datetime-local'].includes(value),
+    validator: (value) => ['date', 'datetime-local', 'datetime'].includes(value),
   },
   placeholder: {
     type: String,
@@ -86,6 +84,9 @@ const inputId = computed(() => {
     ? `date-field-${props.label.toLowerCase().replace(/\s+/g, '-')}`
     : `date-field-${Math.random().toString(36).substr(2, 9)}`;
 });
+
+// Normaliza o tipo para o contrato do DatePicker (date | datetime)
+const pickerType = computed(() => (props.type === 'date' ? 'date' : 'datetime'));
 </script>
 
 <style scoped>

@@ -18,10 +18,9 @@
         </div>
         <div>
           <InputLabel for="dt_inicio" value="Data Inicial *" />
-          <TextInput
+          <DatePicker
             id="dt_inicio"
             v-model="form.dt_inicio"
-            type="date"
             class="mt-1 block w-full"
             required
           />
@@ -29,10 +28,9 @@
         </div>
         <div>
           <InputLabel for="dt_final" value="Data Final *" />
-          <TextInput
+          <DatePicker
             id="dt_final"
             v-model="form.dt_final"
-            type="date"
             class="mt-1 block w-full"
             required
           />
@@ -89,6 +87,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import DatePicker from '@/Components/Form/DatePicker.vue';
 
 defineProps({
   form: { type: Object, required: true },
