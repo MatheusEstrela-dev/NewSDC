@@ -102,9 +102,10 @@
         </tbody>
       </table>
 
-      <div v-if="processos.meta && processos.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/50">
-        <Pagination :pagination="processos.meta" @page-change="irParaPagina" />
-      </div>
+    </div>
+
+    <div v-if="processos.meta && processos.meta.last_page > 1" class="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/50 dark:bg-slate-900/60">
+      <Pagination :pagination="processos.meta" @page-change="irParaPagina" />
     </div>
 
     <ExportCsvModal
