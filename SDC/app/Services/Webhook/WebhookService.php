@@ -7,7 +7,6 @@ use App\Exceptions\CircuitBreakerOpenException;
 use App\Jobs\ProcessWebhook;
 use App\Jobs\ProcessInboundWebhook;
 use App\Models\WebhookLog;
-use App\Models\WebhookEvent;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -138,50 +137,27 @@ class WebhookService
      * @param string $traceId UUID para rastreamento
      * @return array Status do enfileiramento
      */
-    public function receive(array $payload, string $source, string $traceId): array
+    public function receive(array $payload, string $source, string $traceId, ?string $idempotencyKey = null): array
     {
-        // Gera external_event_id unico se nao fornecido
-        $externalEventId = $payload['event_id'] ?? $payload['id'] ?? $traceId;
+        // Prioridade da chave de idempotencia: header Idempotency-Key ->
+        // event_id/id do payload -> trace_id gerado.
+        $externalEventId = $idempotencyKey ?? $payload['event_id'] ?? $payload['id'] ?? $traceId;
         $eventType = $payload['type'] ?? 'unknown';
 
-        // Verifica idempotencia - evita processamento duplicado
-        $existingEvent = WebhookEvent::where('external_event_id', $externalEventId)
-            ->where('provider', $source)
-            ->first();
-
-        if ($existingEvent && $existingEvent->isProcessedOrProcessing()) {
-            Log::channel('webhooks')->info('Webhook already processed (idempotency)', [
-                'external_event_id' => $externalEventId,
-                'provider' => $source,
-                'status' => $existingEvent->status,
-            ]);
-
-            return [
-                'status' => 'already_processed',
-                'event_id' => $existingEvent->id,
-                'original_status' => $existingEvent->status,
-            ];
-        }
-
-        // Cria ou atualiza registro de evento
-        $event = WebhookEvent::updateOrCreate(
-            [
-                'external_event_id' => $externalEventId,
-                'provider' => $source,
-            ],
-            [
-                'event_type' => $eventType,
-                'payload' => $payload,
-                'status' => WebhookEvent::STATUS_PENDING,
-            ]
-        );
-
-        // Despacha job para processamento assincrono
-        ProcessInboundWebhook::dispatch($event)
-            ->onQueue(config('webhooks.queue.inbound', 'webhooks'));
+        // Zero I/O de banco no hot path HTTP: a idempotencia (SELECT + upsert
+        // em webhook_events) roda dentro do ProcessInboundWebhook, no worker de
+        // fila. O indice unico (external_event_id, provider) garante uma unica
+        // linha mesmo com entregas duplicadas concorrentes; o cliente recebe o
+        // 202 apos apenas um push no Redis.
+        ProcessInboundWebhook::dispatch(null, [
+            'payload'           => $payload,
+            'source'            => $source,
+            'external_event_id' => (string) $externalEventId,
+            'event_type'        => $eventType,
+            'trace_id'          => $traceId,
+        ])->onQueue(config('webhooks.queue.inbound', 'webhooks'));
 
         Log::channel('webhooks')->info('Webhook received and queued', [
-            'event_id' => $event->id,
             'external_event_id' => $externalEventId,
             'provider' => $source,
             'type' => $eventType,
@@ -190,7 +166,6 @@ class WebhookService
 
         return [
             'status' => 'queued',
-            'event_id' => $event->id,
             'trace_id' => $traceId,
         ];
     }

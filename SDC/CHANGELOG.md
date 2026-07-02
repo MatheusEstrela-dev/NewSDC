@@ -71,6 +71,23 @@ e memória do browser.
   de container no Octane (sem isolamento por coroutine); caminhos alternativos registrados:
   canário medido multi-IP ou avaliação Hypervel.
 
+### 🚑 Terceira leva — Webhooks e filas (Flautista de Hamelin)
+
+- **Ingestão de webhooks sem I/O de banco antes do 202**: o `receive()` só valida e
+  enfileira (push Redis); idempotência (SELECT + upsert em `webhook_events`) movida para o
+  `ProcessInboundWebhook` no worker de fila, distinguindo retry travado (PROCESSING antigo,
+  retoma) de duplicata concorrente (PROCESSING recente/COMPLETED, descarta). O índice único
+  `(external_event_id, provider)` garante linha única em corrida. Header `Idempotency-Key`
+  (já documentado no Swagger) agora é honrado como chave de deduplicação. Despacho legado
+  `dispatch($event)` continua funcionando.
+- **Fix de jobs órfãos em produção**: os workers de prod (`entrypoint.prod.sh`,
+  `docker/swoole/entrypoint.sh`, `supervisor/laravel-worker.conf`) consumiam apenas
+  `high-throughput,default,low` — as filas `critical`, `high` (RequestPriority) e
+  `webhooks` (inbound) **nunca eram consumidas**. Lista alinhada em ordem de prioridade:
+  `critical,high,high-throughput,webhooks,default,low`.
+- Verificado end-to-end em dev: POST duplo com mesmo `Idempotency-Key` → 202 em 18ms
+  (quente), uma única linha `completed` com `attempts=1` no `webhook_events`.
+
 ### ✅ Verificação
 
 - Fallback sequencial provado em CLI (tinker); task workers confirmados no caminho HTTP.
