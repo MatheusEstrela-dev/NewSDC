@@ -9,6 +9,7 @@ use App\Modules\Pmda\Controllers\CompdecMembroController;
 use App\Modules\Pmda\Controllers\ComunidadeController;
 use App\Modules\Pmda\Controllers\ComunidadeSolicitacaoController;
 use App\Modules\Pmda\Controllers\PlanoPontoController;
+use App\Modules\Pmda\Controllers\PmdaAnaliseController;
 use App\Modules\Pmda\Controllers\PmdaPlanoController;
 use App\Modules\Pmda\Controllers\RepresentanteController;
 use App\Modules\Pmda\Models\ComunidadeSolicitacao;
@@ -43,8 +44,24 @@ Route::prefix('pmda')->name('pmda.')->group(function () {
             ->name('continuar')->middleware('can:pmda.planos.create');
         Route::put('/{plano}', [PmdaPlanoController::class, 'update'])
             ->name('update')->middleware('can:pmda.planos.edit');
+        Route::delete('/{plano}', [PmdaPlanoController::class, 'destroy'])
+            ->name('destroy')->middleware('can:pmda.planos.delete');
         Route::post('/{plano}/copiar', [PmdaPlanoController::class, 'copiar'])
             ->name('copiar')->middleware('can:pmda.planos.copiar');
+        // Ficha COMPDEC (JSON) para impressao
+        Route::get('/{plano}/ficha', [PmdaPlanoController::class, 'ficha'])
+            ->name('ficha')->middleware('can:pmda.planos.view');
+        // Serie historica / situacao geral (JSON) estilo PAE
+        Route::get('/{plano}/historico', [PmdaPlanoController::class, 'historico'])
+            ->name('historico')->middleware('can:pmda.planos.view');
+
+        // Analise CEDEC: decisoes sobre o PMDA em analise
+        Route::post('/{plano}/aprovar', [PmdaAnaliseController::class, 'aprovar'])
+            ->name('aprovar')->middleware('can:pmda.analise.aprovar');
+        Route::post('/{plano}/arquivar', [PmdaAnaliseController::class, 'arquivar'])
+            ->name('arquivar')->middleware('can:pmda.analise.arquivar');
+        Route::post('/{plano}/pedir-alteracao', [PmdaAnaliseController::class, 'pedirAlteracao'])
+            ->name('pedir-alteracao')->middleware('can:pmda.analise.pedir_alteracao');
 
         // Etapa 7: anexos (PDF) e envio para analise
         Route::post('/{plano}/anexos', [PmdaPlanoController::class, 'storeAnexo'])
@@ -98,9 +115,11 @@ Route::prefix('pmda')->name('pmda.')->group(function () {
     Route::delete('/comunidades/{comunidade}', [ComunidadeController::class, 'destroy'])
         ->name('comunidades.destroy')->middleware('can:pmda.comunidades.delete');
 
-    // Fila CEDEC: analise das solicitacoes de inclusao de comunidade
-    Route::get('/solicitacoes', [ComunidadeSolicitacaoController::class, 'index'])
-        ->name('solicitacoes.index')->middleware('can:pmda.comunidades.aprovar');
+    // Central de Analises CEDEC (tela dividida): PMDA em analise + solicitacoes de comunidade
+    Route::get('/analises', [PmdaAnaliseController::class, 'index'])
+        ->name('analises.index')->middleware('can:pmda.analise.view');
+
+    // Fila CEDEC: acoes sobre solicitacoes de inclusao de comunidade (painel direito)
     Route::post('/solicitacoes/{solicitacao}/aprovar', [ComunidadeSolicitacaoController::class, 'aprovar'])
         ->name('solicitacoes.aprovar')->middleware('can:pmda.comunidades.aprovar');
     Route::post('/solicitacoes/{solicitacao}/rejeitar', [ComunidadeSolicitacaoController::class, 'rejeitar'])

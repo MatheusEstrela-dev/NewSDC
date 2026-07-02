@@ -53,7 +53,9 @@
         },
         "classmap": [
             "app/Modules/Tdap/Requests/CronogramaRequest.php",
-            "app/Modules/Tdap/Requests/PrestadoresRequest.php"
+            "app/Modules/Tdap/Requests/PrestadoresRequest.php",
+            "app/Modules/Pmda/Controllers/PmdaController.php",
+            "app/Modules/Pmda/Services/PmdaService.php"
         ]
     },
     "autoload-dev": {

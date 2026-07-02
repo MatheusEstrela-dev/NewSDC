@@ -31,6 +31,7 @@ return new class extends Migration {
             $table->timestamp('data_aprov')->nullable();
             $table->string('resp_estado', 100)->nullable();
             $table->timestamp('dt_estado')->nullable();
+            $table->text('motivo_analise')->nullable();       // Analise CEDEC: motivo de arquivamento ou pedido de alteracao
             // Dados ISS (especificos do plano; nome/uf do municipio derivam de "municipios")
             $table->boolean('cobra_iss')->nullable();
             $table->string('num_lei_iss', 30)->nullable();

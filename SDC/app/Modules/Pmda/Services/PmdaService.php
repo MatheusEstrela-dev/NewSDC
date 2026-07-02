@@ -76,6 +76,19 @@ class PmdaPlanoService extends BaseService
         return $plano->refresh();
     }
 
+    /**
+     * Exclui o plano (e dependencias em cascata). Regra de negocio: CEDEC (manager) so
+     * exclui PMDA ATENDIDO; admin/super-admin ($bypassStatus=true) excluem qualquer status.
+     */
+    public function excluir(PmdaPlano $plano, bool $bypassStatus = false): void
+    {
+        if (! $bypassStatus && $plano->status !== PmdaStatus::ATENDIDO) {
+            throw new \DomainException('Só é possível excluir um PMDA com status "Atendido".');
+        }
+
+        $plano->delete();
+    }
+
     public function listar(array $filtros = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = PmdaPlano::query()->with('municipio')->latest('data');
@@ -153,6 +166,17 @@ class PmdaPlanoService extends BaseService
             throw new \DomainException('Este PMDA já foi enviado ou não está mais em edição.');
         }
 
+        // Alinhado ao legado (gestaocedec): so envia quando COMPLETO — cada comunidade
+        // precisa de REPRESENTANTES_POR_COMUNIDADE representantes. Recalcula para garantir
+        // o status atual antes de barrar.
+        $plano = $this->recalcularStatus($plano);
+        if ($plano->status !== PmdaStatus::COMPLETO) {
+            throw new \DomainException(
+                'Complete o PMDA antes de enviar: é preciso ao menos 1 comunidade e '.
+                self::REPRESENTANTES_POR_COMUNIDADE.' representantes por comunidade.'
+            );
+        }
+
         if ($plano->getMedia(PmdaPlano::MEDIA_TERMO)->isEmpty() || $plano->getMedia(PmdaPlano::MEDIA_OFICIO)->isEmpty()) {
             throw new \DomainException('Anexe o Termo de Compromisso e o Ofício de Solicitação (PDF) antes de enviar.');
         }
@@ -160,11 +184,85 @@ class PmdaPlanoService extends BaseService
         $plano->update([
             'status'              => PmdaStatus::EM_ANALISE,
             'dt_analise'          => now(),
+            'resp_homolog'        => \App\Models\User::find($userId)?->name, // quem enviou (municipio), como no legado
             'dt_ultima_alteracao' => now(),
             'updated_by'          => $userId,
         ]);
 
         return $plano->refresh();
+    }
+
+    /** Fila de analise CEDEC: planos EM_ANALISE (mais antigos primeiro). */
+    public function pendentesAnalise(array $filtros = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = PmdaPlano::query()
+            ->with('municipio')
+            ->where('status', PmdaStatus::EM_ANALISE->value)
+            ->oldest('dt_analise');
+        $query = $this->applyFilters($query, $filtros, ['municipio_id']);
+
+        return $this->paginate($query, $perPage);
+    }
+
+    /** Aprova o PMDA (EM_ANALISE -> APROVADO). */
+    public function aprovar(PmdaPlano $plano, int $userId, ?string $resp = null): PmdaPlano
+    {
+        $this->garantirEmAnalise($plano);
+
+        $plano->update([
+            'status'              => PmdaStatus::APROVADO,
+            'data_aprov'          => now(),
+            'dt_estado'           => now(),
+            'resp_estado'         => $resp ?: (\App\Models\User::find($userId)?->name),
+            'dt_ultima_alteracao' => now(),
+            'updated_by'          => $userId,
+        ]);
+
+        return $plano->refresh();
+    }
+
+    /** Arquiva/rejeita o PMDA (EM_ANALISE -> ARQUIVADO) com motivo. */
+    public function arquivar(PmdaPlano $plano, string $motivo, int $userId): PmdaPlano
+    {
+        $this->garantirEmAnalise($plano);
+
+        $plano->update([
+            'status'              => PmdaStatus::ARQUIVADO,
+            'motivo_analise'      => $motivo,
+            'dt_estado'           => now(),
+            'resp_estado'         => \App\Models\User::find($userId)?->name,
+            'dt_ultima_alteracao' => now(),
+            'updated_by'          => $userId,
+        ]);
+
+        return $plano->refresh();
+    }
+
+    /** Devolve o PMDA ao municipio para correcao (EM_ANALISE -> RASCUNHO) com motivo. */
+    public function pedirAlteracao(PmdaPlano $plano, string $motivo, int $userId): PmdaPlano
+    {
+        $this->garantirEmAnalise($plano);
+
+        $plano->update([
+            'status'              => PmdaStatus::RASCUNHO,
+            'pedido_altera'       => true,
+            'alterar_com'         => true, // legado: libera edicao de comunidades apos devolucao
+            'motivo_analise'      => $motivo,
+            'resp_estado'         => \App\Models\User::find($userId)?->name, // quem devolveu (CEDEC)
+            'dt_estado'           => now(),
+            'dt_ultima_alteracao' => now(),
+            'updated_by'          => $userId,
+        ]);
+
+        return $plano->refresh();
+    }
+
+    /** Garante que o plano esta EM_ANALISE (unico estado analisavel pela CEDEC). */
+    private function garantirEmAnalise(PmdaPlano $plano): void
+    {
+        if ($plano->status !== PmdaStatus::EM_ANALISE) {
+            throw new \DomainException('Este PMDA não está em análise (status atual: '.$plano->status->getLabel().').');
+        }
     }
 }
 

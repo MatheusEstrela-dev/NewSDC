@@ -35,7 +35,10 @@ enum PmdaStatus: string
 
     public function permiteCopia(): bool
     {
-        return ! in_array($this, [self::RASCUNHO, self::COMPLETO, self::EM_ANALISE, self::APROVADO], true);
+        // Duplicacao disponivel em qualquer status: gera sempre um novo PMDA em
+        // RASCUNHO com os mesmos dados (fallback identico) e proximo protocolo
+        // sequencial. A regra de data minima de copia segue no PmdaCopiaService.
+        return true;
     }
 
     public function getLabel(): string
@@ -61,12 +64,12 @@ enum PmdaStatus: string
     public function getColorClass(): string
     {
         return match ($this) {
-            self::RASCUNHO   => 'bg-slate-100 text-slate-800',
-            self::COMPLETO   => 'bg-blue-100 text-blue-800',
-            self::EM_ANALISE => 'bg-indigo-100 text-indigo-800',
-            self::APROVADO   => 'bg-green-100 text-green-800',
+            self::RASCUNHO   => 'bg-amber-100 text-amber-800',   // Em Edicao = amarelo
+            self::COMPLETO   => 'bg-indigo-100 text-indigo-800',
+            self::EM_ANALISE => 'bg-blue-100 text-blue-800',     // Em Analise = azul
+            self::APROVADO   => 'bg-green-100 text-green-800',   // Aprovado = verde
             self::ATENDIDO   => 'bg-emerald-100 text-emerald-800',
-            self::ARQUIVADO  => 'bg-yellow-100 text-yellow-800',
+            self::ARQUIVADO  => 'bg-red-100 text-red-800',       // Arquivado = vermelho
             self::ANULADO, self::CANCELADO => 'bg-red-100 text-red-800',
             self::ENCERRADO  => 'bg-gray-200 text-gray-700',
         };

@@ -438,6 +438,7 @@ return [
             'compdec.*',
             'inventario.*',
             'estoque.*',
+            'pmda.*',
         ],
         'manager' => [
             // PAE - CRUD completo exceto delete
@@ -587,6 +588,17 @@ return [
             'estoque.inventarios.view',
             'estoque.inventarios.create',
             'estoque.inventarios.audit',
+            // PMDA - perfil CEDEC: consulta de planos + analise/aprovacao e aprovacao de comunidades
+            'pmda.dashboard.view',
+            'pmda.planos.view',
+            'pmda.planos.delete', // CEDEC: excluir PMDA (permitido apenas quando status = Atendido)
+            'pmda.comunidades.view',
+            'pmda.comunidades.aprovar',
+            'pmda.analise.view',
+            'pmda.analise.enviar',
+            'pmda.analise.aprovar',
+            'pmda.analise.arquivar',
+            'pmda.analise.pedir_alteracao',
         ],
         'analyst' => [
             // PAE - view, create, edit

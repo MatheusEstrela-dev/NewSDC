@@ -18,6 +18,8 @@ use App\Modules\Pmda\Models\PmdaComunidade;
 use App\Modules\Pmda\Models\PmdaCompdecMembro;
 use App\Modules\Pmda\Models\PmdaPlano;
 use App\Modules\Pmda\Models\PmdaRepresentante;
+use App\Modules\Pmda\Requests\ArquivarPmdaPlanoRequest;
+use App\Modules\Pmda\Requests\PedirAlteracaoPmdaPlanoRequest;
 use App\Modules\Pmda\Requests\RejeitarComunidadeSolicitacaoRequest;
 use App\Modules\Pmda\Requests\StoreComunidadeRequest;
 use App\Modules\Pmda\Requests\StoreComunidadeSolicitacaoRequest;
@@ -81,20 +83,6 @@ class ComunidadeSolicitacaoController extends Controller
         return back()->with('success', 'Solicitação enviada para análise da CEDEC.');
     }
 
-    /** CEDEC: fila de solicitacoes pendentes. */
-    public function index(Request $request): Response
-    {
-        $filtros = $request->only(['municipio_id']);
-
-        return Inertia::render('Pmda/Solicitacoes/Index', [
-            'solicitacoes' => ComunidadeSolicitacaoResource::collection($this->service->pendentes($filtros)),
-            'filtros'      => $filtros,
-            'municipios'   => \App\Models\Municipio::query()
-                ->orderBy('nome')->get(['id', 'nome', 'uf'])
-                ->map(fn ($m) => ['id' => $m->id, 'nome' => $m->nome, 'uf' => $m->uf]),
-        ]);
-    }
-
     /** CEDEC: aprova e promove para o registro mestre de comunidades. */
     public function aprovar(Request $request, ComunidadeSolicitacao $solicitacao): RedirectResponse
     {
@@ -117,6 +105,66 @@ class ComunidadeSolicitacaoController extends Controller
         }
 
         return back()->with('success', 'Solicitação rejeitada.');
+    }
+}
+
+/**
+ * Central de Analises CEDEC: tela dividida com a fila de PMDA em analise (esquerda)
+ * e a fila de solicitacoes de comunidade (direita). As acoes de comunidade continuam
+ * em ComunidadeSolicitacaoController; aqui ficam a listagem combinada e as decisoes de plano.
+ */
+class PmdaAnaliseController extends Controller
+{
+    public function __construct(
+        private readonly PmdaPlanoService $planos,
+        private readonly ComunidadeSolicitacaoService $solicitacoes,
+    ) {}
+
+    public function index(Request $request): Response
+    {
+        $filtros = $request->only(['municipio_id']);
+
+        return Inertia::render('Pmda/Analises/Index', [
+            'analises'     => PmdaPlanoListResource::collection($this->planos->pendentesAnalise($filtros)),
+            'solicitacoes' => ComunidadeSolicitacaoResource::collection($this->solicitacoes->pendentes($filtros)),
+            'filtros'      => $filtros,
+            'municipios'   => \App\Models\Municipio::query()
+                ->orderBy('nome')->get(['id', 'nome', 'uf'])
+                ->map(fn ($m) => ['id' => $m->id, 'nome' => $m->nome, 'uf' => $m->uf]),
+        ]);
+    }
+
+    public function aprovar(Request $request, PmdaPlano $plano): RedirectResponse
+    {
+        try {
+            $this->planos->aprovar($plano, (int) $request->user()->id);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['analise' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'PMDA aprovado.');
+    }
+
+    public function arquivar(ArquivarPmdaPlanoRequest $request, PmdaPlano $plano): RedirectResponse
+    {
+        try {
+            $this->planos->arquivar($plano, $request->validated('motivo'), (int) $request->user()->id);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['analise' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'PMDA arquivado.');
+    }
+
+    public function pedirAlteracao(PedirAlteracaoPmdaPlanoRequest $request, PmdaPlano $plano): RedirectResponse
+    {
+        try {
+            $this->planos->pedirAlteracao($plano, $request->validated('motivo'), (int) $request->user()->id);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['analise' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'PMDA devolvido ao município para alteração.');
     }
 }
 
@@ -212,7 +260,41 @@ class PmdaPlanoController extends Controller
 
         return Inertia::render('Pmda/Create', [
             'municipio' => ['id' => $municipio->id, 'nome' => $municipio->nome, 'uf' => $municipio->uf],
+            // Fallback: pre-preenche a aba ISS com os dados do ultimo PMDA do municipio.
+            'iss_fallback' => $this->issFallback($municipioId),
         ]);
+    }
+
+    /** Dados de ISS/prefeitura do ultimo PMDA do municipio, para pre-preencher um novo. */
+    private function issFallback(int $municipioId): ?array
+    {
+        $ultimo = \App\Modules\Pmda\Models\PmdaPlano::query()
+            ->where('municipio_id', $municipioId)
+            ->whereNotNull('nome_prefeito')
+            ->latest('id')
+            ->first();
+
+        if ($ultimo === null) {
+            return null;
+        }
+
+        return [
+            'cobra_iss'        => (bool) $ultimo->cobra_iss,
+            'num_lei_iss'      => $ultimo->num_lei_iss,
+            'aliquota_iss'     => $ultimo->aliquota_iss,
+            'resp_cob_iss'     => $ultimo->resp_cob_iss,
+            'nome_prefeito'    => $ultimo->nome_prefeito,
+            'tel_prefeitura'   => $ultimo->tel_prefeitura,
+            'tel_prefeito'     => $ultimo->tel_prefeito,
+            'cel_prefeito'     => $ultimo->cel_prefeito,
+            'endereco'         => $ultimo->endereco,
+            'bairro'           => $ultimo->bairro,
+            'cep'              => $ultimo->cep,
+            'email_prefeitura' => $ultimo->email_prefeitura,
+            'populacao'        => $ultimo->populacao,
+            'pop_rural'        => $ultimo->pop_rural,
+            'area'             => $ultimo->area,
+        ];
     }
 
     public function export(Request $request): StreamedResponse
@@ -234,7 +316,7 @@ class PmdaPlanoController extends Controller
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    public function store(StorePmdaPlanoRequest $request): \Symfony\Component\HttpFoundation\Response
+    public function store(StorePmdaPlanoRequest $request): RedirectResponse
     {
         try {
             $plano = $this->service->criar(
@@ -246,14 +328,12 @@ class PmdaPlanoController extends Controller
             return back()->withErrors(['municipio_id' => $e->getMessage()]);
         }
 
-        // Redirect HARD (full reload) para a continuacao: o componente Pmda/Create
-        // e reutilizado entre /create e /continuar; sem remount os props (plano_id)
-        // ficavam defasados e o "Salvar e Avancar" chamava store de novo. O
-        // Inertia::location forca um remount limpo com o plano ja persistido.
-        // Mantem o contexto de CRIACAO (componente Pmda/Create, URL /continuar).
-        session()->flash('success', 'PMDA iniciado. Continue o preenchimento.');
-
-        return Inertia::location(route('pmda.planos.continuar', ['plano' => $plano->id]));
+        // Redirect Inertia (SPA, via XHR) para a continuacao: mantem o contexto de
+        // CRIACAO (componente Pmda/Create, URL /continuar, breadcrumb "Novo") e atualiza
+        // os props reativamente com o plano ja persistido (plano_id/protocolo). Nao usar
+        // Inertia::location aqui: ele faz full reload e causa "piscada" na tela.
+        return to_route('pmda.planos.continuar', ['plano' => $plano->id])
+            ->with('success', 'PMDA iniciado. Continue o preenchimento.');
     }
 
     /**
@@ -270,6 +350,9 @@ class PmdaPlanoController extends Controller
         return [
             'plano'             => new PmdaPlanoResource($plano),
             'plano_id'          => $plano->id, // escalar confiavel p/ o front decidir create x update
+            'municipio'         => $plano->municipio
+                ? ['id' => $plano->municipio->id, 'nome' => $plano->municipio->nome, 'uf' => $plano->municipio->uf]
+                : null,
             'pontos_disponiveis' => $this->pontos->disponiveis($plano)->map(fn ($p) => [
                 'id'         => $p->id,
                 'nome'       => $p->nome,
@@ -345,6 +428,151 @@ class PmdaPlanoController extends Controller
         $this->service->atualizar($plano, $request->validated(), (int) $request->user()->id);
 
         return back()->with('success', 'PMDA atualizado.');
+    }
+
+    public function destroy(Request $request, PmdaPlano $plano): RedirectResponse
+    {
+        // admin/super-admin excluem qualquer status; demais cargos (CEDEC) so ATENDIDO.
+        $bypass = (bool) $request->user()?->hasAnyRole('super-admin', 'admin');
+
+        try {
+            $this->service->excluir($plano, $bypass);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['plano' => $e->getMessage()]);
+        }
+
+        return to_route('pmda.planos.index')->with('success', 'PMDA excluído.');
+    }
+
+    /**
+     * Dados consolidados da ficha COMPDEC para impressao (modelo BasePrintModal):
+     * coordenador/orgao, equipe (ativos + anteriores) e anexos de leis/decretos.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function ficha(PmdaPlano $plano): \Illuminate\Http\JsonResponse
+    {
+        $plano->loadMissing('municipio');
+        $equipe = $this->compdecEquipeDoPlano($plano);
+
+        return response()->json([
+            'protocolo'      => $plano->protocolo,
+            'municipio'      => $plano->municipio?->nome,
+            'uf'             => $plano->municipio?->uf,
+            'data'           => $plano->data?->toIso8601String(),
+            'ficha'          => $this->compdecFicha->fichaDoPlano($plano),
+            'equipe_ativos'  => array_values(array_filter($equipe, fn ($m) => $m['ativo'] === true)),
+            'equipe_anteriores' => array_values(array_filter($equipe, fn ($m) => $m['ativo'] === false)),
+            'anexos'         => $this->compdecAnexosDoPlano($plano),
+        ]);
+    }
+
+    /**
+     * Serie historica (situacao geral) do PMDA no estilo PAE: timeline + analises
+     * a partir dos marcos do ciclo de vida do plano (criacao, edicoes, analise, aprovacao).
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function historico(PmdaPlano $plano): \Illuminate\Http\JsonResponse
+    {
+        $plano->loadMissing('municipio');
+        $nomePor = fn (?int $id) => $id ? (\App\Models\User::find($id)?->name ?? '—') : 'Sistema';
+        $fmt = fn ($d) => $d?->format('d/m/Y, H:i');
+
+        $timeline = [];
+        $timeline[] = [
+            'id' => 'criacao',
+            'tipo' => 'criacao',
+            'titulo' => 'Protocolo Criado',
+            'descricao' => 'PMDA criado no sistema SDC.',
+            'data' => $fmt($plano->created_at),
+            'responsavel' => $nomePor($plano->created_by),
+        ];
+
+        // "Ultima Atualizacao" so quando for edicao real de conteudo — nao quando o
+        // dt_ultima_alteracao apenas acompanha uma acao de status (enviar/aprovar/
+        // arquivar/devolver), que ja tem evento proprio abaixo.
+        $tsAcoes = array_filter([
+            $plano->dt_analise?->getTimestamp(),
+            $plano->data_aprov?->getTimestamp(),
+            $plano->dt_estado?->getTimestamp(),
+        ]);
+        if ($plano->dt_ultima_alteracao && $plano->created_at
+            && $plano->dt_ultima_alteracao->gt($plano->created_at)
+            && ! in_array($plano->dt_ultima_alteracao->getTimestamp(), $tsAcoes, true)) {
+            $timeline[] = [
+                'id' => 'edicao',
+                'tipo' => 'edicao',
+                'titulo' => 'Última Atualização',
+                'descricao' => 'Dados do PMDA atualizados.',
+                'data' => $fmt($plano->dt_ultima_alteracao),
+                'responsavel' => $nomePor($plano->updated_by),
+            ];
+        }
+
+        $analises = [];
+        if ($plano->dt_analise) {
+            $ev = [
+                'id' => 'analise',
+                'tipo' => 'analise',
+                'titulo' => 'Enviado para Análise',
+                'descricao' => 'PMDA encaminhado para análise da CEDEC-MG.',
+                'data' => $fmt($plano->dt_analise),
+                'responsavel' => $plano->resp_homolog ?: '—',
+            ];
+            $timeline[] = $ev;
+            $analises[] = $ev;
+        }
+        if ($plano->data_aprov) {
+            $ev = [
+                'id' => 'aprovacao',
+                'tipo' => 'analise',
+                'titulo' => 'PMDA Aprovado',
+                'descricao' => 'Plano aprovado pela CEDEC-MG.',
+                'data' => $fmt($plano->data_aprov),
+                'responsavel' => $plano->resp_estado ?: '—',
+            ];
+            $timeline[] = $ev;
+            $analises[] = $ev;
+        }
+        if ($plano->status === \App\Modules\Pmda\Enums\PmdaStatus::ARQUIVADO) {
+            $ev = [
+                'id' => 'arquivamento',
+                'tipo' => 'notificacao',
+                'titulo' => 'PMDA Arquivado',
+                'descricao' => $plano->motivo_analise
+                    ? ('Arquivado pela CEDEC-MG. Motivo: '.$plano->motivo_analise)
+                    : 'Plano arquivado pela CEDEC-MG.',
+                'data' => $fmt($plano->dt_estado),
+                'responsavel' => $plano->resp_estado ?: '—',
+            ];
+            $timeline[] = $ev;
+            $analises[] = $ev;
+        }
+        // Devolutiva: plano devolvido ao municipio para ajustes (nao aprovado, nao arquivado).
+        if ($plano->pedido_altera && $plano->motivo_analise
+            && ! $plano->data_aprov
+            && $plano->status !== \App\Modules\Pmda\Enums\PmdaStatus::ARQUIVADO) {
+            $ev = [
+                'id' => 'pedido_alteracao',
+                'tipo' => 'notificacao',
+                'titulo' => 'Devolvido para Alteração',
+                'descricao' => 'CEDEC-MG devolveu o PMDA ao município para ajustes. Motivo: '.$plano->motivo_analise,
+                'data' => $fmt($plano->dt_estado ?? $plano->dt_ultima_alteracao),
+                'responsavel' => $plano->resp_estado ?: 'CEDEC-MG',
+            ];
+            $timeline[] = $ev;
+            $analises[] = $ev;
+        }
+
+        return response()->json([
+            'protocolo'     => $plano->protocolo,
+            'municipio'     => $plano->municipio?->nome,
+            'status'        => $plano->status->getLabel(),
+            'timeline'      => $timeline,
+            'analises'      => $analises,
+            'notificacoes'  => [],
+        ]);
     }
 
     public function copiar(Request $request, PmdaPlano $plano): RedirectResponse

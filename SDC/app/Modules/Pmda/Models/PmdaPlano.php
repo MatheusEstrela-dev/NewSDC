@@ -28,7 +28,7 @@ class PmdaPlano extends Model implements HasMedia
     protected $fillable = [
         'protocolo', 'municipio_id', 'status', 'data', 'acoes', 'qtd_caminhao',
         'pop_at_municipio', 'pedido_altera', 'alterar_com', 'resp_homolog', 'dt_analise',
-        'dt_ultima_alteracao', 'data_aprov', 'resp_estado', 'dt_estado',
+        'dt_ultima_alteracao', 'data_aprov', 'resp_estado', 'dt_estado', 'motivo_analise',
         'motivo', 'acao_decreto_se', 'acao_caminhao_pipa', 'acao_cestas_basicas', 'justificativa_apoio',
         'cobra_iss', 'num_lei_iss', 'aliquota_iss', 'resp_cob_iss',
         'nome_prefeito', 'tel_prefeitura', 'tel_prefeito', 'cel_prefeito', 'endereco',
