@@ -139,23 +139,8 @@
         </table>
       </div>
 
-      <div
-        v-if="prestadores.meta && prestadores.meta.last_page > 1"
-        class="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 dark:border-slate-700/50"
-      >
-        <p class="text-xs text-slate-500 dark:text-slate-400">
-          Página {{ prestadores.meta.current_page }} de {{ prestadores.meta.last_page }} ({{ prestadores.meta.total }} registros)
-        </p>
-        <div class="flex flex-wrap justify-end gap-2">
-          <Link
-            v-for="(link, index) in prestadores.meta.links || []"
-            :key="index"
-            :href="link.url || '#'"
-            v-html="link.label"
-            class="rounded-md border px-3 py-1 text-sm"
-            :class="link.active ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'"
-          />
-        </div>
+      <div v-if="prestadores.meta && prestadores.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/50">
+        <Pagination :pagination="prestadores.meta" @page-change="irParaPagina" />
       </div>
     </div>
 
@@ -171,6 +156,7 @@
 <script setup>
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TdapStatusBadge from '@/Components/Atoms/Tdap/TdapStatusBadge.vue';
 import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
@@ -217,5 +203,8 @@ function onExport(params) {
     search: activeFilters.value.search || undefined,
     ativo:  activeFilters.value.ativo !== '' ? activeFilters.value.ativo : undefined,
   });
+}
+function irParaPagina(page) {
+  router.get(route('tdap.prestadores.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
 }
 </script>

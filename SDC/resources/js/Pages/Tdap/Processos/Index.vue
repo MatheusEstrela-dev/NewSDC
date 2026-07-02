@@ -24,10 +24,13 @@
     </PageHeader>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="ClipboardDocumentListIcon" variant="info" />
+      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="ClipboardDocumentListIcon" variant="info"
+        clickable @click="filtrarPorEstado('')" />
       <StatCard title="Abertos" :value="estatisticas.abertos ?? 0" :icon="DocumentTextIcon" variant="info" />
-      <StatCard title="Em execução" :value="estatisticas.em_execucao ?? 0" :icon="CheckCircleIcon" variant="success" />
-      <StatCard title="Encerrados" :value="estatisticas.encerrados ?? 0" :icon="CheckIcon" variant="warning" />
+      <StatCard title="Em execução" :value="estatisticas.em_execucao ?? 0" :icon="CheckCircleIcon" variant="success"
+        clickable @click="filtrarPorEstado('em_execucao')" />
+      <StatCard title="Encerrados" :value="estatisticas.encerrados ?? 0" :icon="CheckIcon" variant="warning"
+        clickable @click="filtrarPorEstado('encerrado')" />
     </div>
 
     <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="true">
@@ -99,18 +102,8 @@
         </tbody>
       </table>
 
-      <div v-if="processos.meta && processos.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-        <p class="text-xs text-slate-500">Página {{ processos.meta.current_page }} de {{ processos.meta.last_page }} ({{ processos.meta.total }} registros)</p>
-        <div class="space-x-2">
-          <Link
-            v-for="(link, i) in processos.meta.links || []"
-            :key="i"
-            :href="link.url || '#'"
-            v-html="link.label"
-            class="px-3 py-1 text-sm rounded border"
-            :class="link.active ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-700 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'"
-          />
-        </div>
+      <div v-if="processos.meta && processos.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/50">
+        <Pagination :pagination="processos.meta" @page-change="irParaPagina" />
       </div>
     </div>
 
@@ -126,6 +119,7 @@
 <script setup>
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import EstadoProcessoBadge from '@/Components/Organisms/Tdap/EstadoProcessoBadge.vue';
@@ -177,6 +171,17 @@ function aplicarFiltros() {
     estado:   filtroEstado.value || undefined,
     swimlane: filtroSwimlane.value || undefined,
   }, { preserveState: true, replace: true });
+}
+
+function irParaPagina(page) {
+  router.get(route('tdap.processos.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
+}
+
+// Cards de estatistica como filtros rapidos: '' = Total (limpa o filtro de estado),
+// preservando busca e swimlane, como no padrao PMDA.
+function filtrarPorEstado(estado) {
+  filtroEstado.value = estado || '';
+  aplicarFiltros();
 }
 
 function limparFiltros() {

@@ -21,9 +21,9 @@
     </PageHeader>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="DocumentTextIcon" variant="info" />
-      <StatCard title="Ativas" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" />
-      <StatCard title="Vigentes" :value="estatisticas.vigentes ?? 0" :icon="ClockIcon" variant="info" />
+      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="DocumentTextIcon" variant="info" clickable @click="filtrarPorStatus({ ativo: '', vigente: false })" />
+      <StatCard title="Ativas" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" clickable @click="filtrarPorStatus({ ativo: '1', vigente: false })" />
+      <StatCard title="Vigentes" :value="estatisticas.vigentes ?? 0" :icon="ClockIcon" variant="info" clickable @click="filtrarPorStatus({ ativo: '', vigente: true })" />
       <StatCard title="Encerradas" :value="estatisticas.encerradas ?? 0" :icon="CheckIcon" variant="warning" />
     </div>
 
@@ -110,20 +110,8 @@
         </tbody>
       </table>
 
-      <div v-if="atas.meta && atas.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-        <p class="text-xs text-slate-500">
-          Página {{ atas.meta.current_page }} de {{ atas.meta.last_page }} ({{ atas.meta.total }} registros)
-        </p>
-        <div class="space-x-2">
-          <Link
-            v-for="(link, i) in atas.meta.links || []"
-            :key="i"
-            :href="link.url || '#'"
-            v-html="link.label"
-            class="px-3 py-1 text-sm rounded border"
-            :class="link.active ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-700 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'"
-          />
-        </div>
+      <div v-if="atas.meta && atas.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/50">
+        <Pagination :pagination="atas.meta" @page-change="irParaPagina" />
       </div>
     </div>
 
@@ -139,6 +127,7 @@
 <script setup>
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
@@ -193,6 +182,17 @@ function limparFiltros() {
   router.get(route('tdap.atas.index'), {}, { preserveState: false });
 }
 
+// Cards de estatistica como filtros rapidos: Total limpa status/vigencia, preservando a busca textual.
+function filtrarPorStatus({ ativo, vigente }) {
+  filtroAtivo.value = ativo ?? '';
+  filtroVigente.value = Boolean(vigente);
+  router.get(route('tdap.atas.index'), {
+    search:  filtroSearch.value || undefined,
+    ativo:   filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
+    vigente: filtroVigente.value ? 1 : undefined,
+  }, { preserveState: true, replace: true });
+}
+
 // Exportacao CSV (mesmo padrao dos outros modulos)
 const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.atas.export');
 
@@ -208,5 +208,8 @@ function formatDate(d) {
   if (!d) return '—';
   const date = typeof d === 'string' ? new Date(d) : d;
   return date.toLocaleDateString('pt-BR');
+}
+function irParaPagina(page) {
+  router.get(route('tdap.atas.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
 }
 </script>

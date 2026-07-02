@@ -52,20 +52,8 @@
         </tbody>
       </table>
 
-      <div v-if="viagens.meta && viagens.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-        <p class="text-xs text-slate-500">
-          Página {{ viagens.meta.current_page }} de {{ viagens.meta.last_page }} ({{ viagens.meta.total }} registros)
-        </p>
-        <div class="space-x-2">
-          <Link
-            v-for="(link, i) in viagens.meta.links || []"
-            :key="i"
-            :href="link.url || '#'"
-            v-html="link.label"
-            class="px-3 py-1 text-sm rounded border"
-            :class="link.active ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-700 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'"
-          />
-        </div>
+      <div v-if="viagens.meta && viagens.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/50">
+        <Pagination :pagination="viagens.meta" @page-change="irParaPagina" />
       </div>
     </div>
   </div>
@@ -73,6 +61,7 @@
 
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -105,5 +94,9 @@ function fmtDateTime(d) {
   if (!d) return '—';
   const date = typeof d === 'string' ? new Date(d) : d;
   return date.toLocaleString('pt-BR');
+}
+
+function irParaPagina(page) {
+  router.get(route(route().current()), { page }, { preserveState: true, replace: true });
 }
 </script>

@@ -18,11 +18,15 @@
     </PageHeader>
 
     <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="ClipboardDocumentListIcon" variant="info" />
-      <StatCard title="Aprovadas" :value="estatisticas.aprovadas ?? 0" :icon="CheckBadgeIcon" variant="success" />
-      <StatCard title="Vigentes" :value="estatisticas.vigentes ?? 0" :icon="ClockIcon" variant="info" />
+      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="ClipboardDocumentListIcon" variant="info"
+        clickable @click="filtrarRapido({})" />
+      <StatCard title="Aprovadas" :value="estatisticas.aprovadas ?? 0" :icon="CheckBadgeIcon" variant="success"
+        clickable @click="filtrarRapido({ parecer: 'aprovada' })" />
+      <StatCard title="Vigentes" :value="estatisticas.vigentes ?? 0" :icon="ClockIcon" variant="info"
+        clickable @click="filtrarRapido({ vigente: true })" />
       <StatCard title="Expiradas" :value="estatisticas.expiradas ?? 0" :icon="ExclamationTriangleIcon" variant="warning" />
-      <StatCard title="Reprovadas" :value="estatisticas.reprovadas ?? 0" :icon="ExclamationIcon" variant="danger" />
+      <StatCard title="Reprovadas" :value="estatisticas.reprovadas ?? 0" :icon="ExclamationIcon" variant="danger"
+        clickable @click="filtrarRapido({ parecer: 'reprovada' })" />
     </div>
 
     <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="true">
@@ -131,18 +135,8 @@
         </tbody>
       </table>
 
-      <div v-if="vistorias.meta && vistorias.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-        <p class="text-xs text-slate-500">Página {{ vistorias.meta.current_page }} de {{ vistorias.meta.last_page }} ({{ vistorias.meta.total }} registros)</p>
-        <div class="space-x-2">
-          <Link
-            v-for="(link, i) in vistorias.meta.links || []"
-            :key="i"
-            :href="link.url || '#'"
-            v-html="link.label"
-            class="px-3 py-1 text-sm rounded border"
-            :class="link.active ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-700 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'"
-          />
-        </div>
+      <div v-if="vistorias.meta && vistorias.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/50">
+        <Pagination :pagination="vistorias.meta" @page-change="irParaPagina" />
       </div>
     </div>
 
@@ -158,6 +152,7 @@
 <script setup>
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
@@ -222,6 +217,14 @@ function aplicarFiltros() {
   }, { preserveState: true, replace: true });
 }
 
+// Cards de estatistica como filtros rapidos: objeto vazio limpa parecer/vigente (Total),
+// preservando os demais filtros (busca e caminhao), como no padrao PMDA.
+function filtrarRapido({ parecer = '', vigente = false } = {}) {
+  filtroParecer.value = parecer;
+  filtroVigente.value = vigente;
+  aplicarFiltros();
+}
+
 // Exportacao CSV (mesmo padrao dos outros modulos)
 const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.vistorias.export');
 
@@ -238,5 +241,9 @@ function fmtDate(d) {
   if (!d) return '—';
   const date = typeof d === 'string' ? new Date(d) : d;
   return date.toLocaleDateString('pt-BR');
+}
+
+function irParaPagina(page) {
+  router.get(route('tdap.vistorias.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
 }
 </script>

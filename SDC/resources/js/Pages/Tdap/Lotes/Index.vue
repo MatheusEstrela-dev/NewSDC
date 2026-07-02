@@ -21,8 +21,8 @@
     </PageHeader>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="DocumentIcon" variant="info" />
-      <StatCard title="Ativos" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" />
+      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="DocumentIcon" variant="info" clickable @click="filtrarPorAtivo('')" />
+      <StatCard title="Ativos" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" clickable @click="filtrarPorAtivo('1')" />
       <StatCard title="Volume contratado (m³)" :value="Number(estatisticas.volume_total_m3 || 0).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2})" :icon="CubeIcon" variant="info" :format-number="false" />
       <StatCard title="Valor total (R$)" :value="Number(estatisticas.valor_total || 0).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2})" :icon="CheckBadgeIcon" variant="info" :format-number="false" />
     </div>
@@ -116,20 +116,8 @@
         </tbody>
       </table>
 
-      <div v-if="lotes.meta && lotes.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-        <p class="text-xs text-slate-500">
-          Página {{ lotes.meta.current_page }} de {{ lotes.meta.last_page }} ({{ lotes.meta.total }} registros)
-        </p>
-        <div class="space-x-2">
-          <Link
-            v-for="(link, i) in lotes.meta.links || []"
-            :key="i"
-            :href="link.url || '#'"
-            v-html="link.label"
-            class="px-3 py-1 text-sm rounded border"
-            :class="link.active ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-700 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'"
-          />
-        </div>
+      <div v-if="lotes.meta && lotes.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/50">
+        <Pagination :pagination="lotes.meta" @page-change="irParaPagina" />
       </div>
     </div>
 
@@ -145,6 +133,7 @@
 <script setup>
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
@@ -210,6 +199,16 @@ function limparFiltros() {
   router.get(route('tdap.lotes.index'), {}, { preserveState: false });
 }
 
+// Cards de estatistica como filtros rapidos: '' = Total (limpa o filtro de status), preservando ata/prestador.
+function filtrarPorAtivo(ativo) {
+  filtroAtivo.value = ativo ?? '';
+  router.get(route('tdap.lotes.index'), {
+    ata_id:       filtroAta.value || undefined,
+    prestador_id: filtroPrestador.value || undefined,
+    ativo:        filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
+  }, { preserveState: true, replace: true });
+}
+
 // Exportacao CSV (mesmo padrao dos outros modulos)
 const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.lotes.export');
 
@@ -219,5 +218,8 @@ function onExport(params) {
     prestador_id: filtroPrestador.value || undefined,
     ativo:        filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
   });
+}
+function irParaPagina(page) {
+  router.get(route('tdap.lotes.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
 }
 </script>

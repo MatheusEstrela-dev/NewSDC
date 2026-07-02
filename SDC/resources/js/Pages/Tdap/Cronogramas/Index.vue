@@ -21,10 +21,10 @@
     </PageHeader>
 
     <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="ClipboardDocumentListIcon" variant="info" />
-      <StatCard title="Ativos" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" />
-      <StatCard title="Rascunhos" :value="estatisticas.rascunhos ?? 0" :icon="DocumentTextIcon" variant="warning" />
-      <StatCard title="Encerrados" :value="estatisticas.encerrados ?? 0" :icon="CheckIcon" variant="info" />
+      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="ClipboardDocumentListIcon" variant="info" clickable @click="filtrarPorEstado('')" />
+      <StatCard title="Ativos" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" clickable @click="filtrarPorEstado('ativo')" />
+      <StatCard title="Rascunhos" :value="estatisticas.rascunhos ?? 0" :icon="DocumentTextIcon" variant="warning" clickable @click="filtrarPorEstado('rascunho')" />
+      <StatCard title="Encerrados" :value="estatisticas.encerrados ?? 0" :icon="CheckIcon" variant="info" clickable @click="filtrarPorEstado('encerrado')" />
       <StatCard title="Volume ativo (m³)" :value="Number(estatisticas.volume_ativo_m3 || 0).toLocaleString('pt-BR', {minimumFractionDigits:0,maximumFractionDigits:0})" :icon="CubeIcon" variant="info" :format-number="false" />
     </div>
 
@@ -147,20 +147,8 @@
         </tbody>
       </table>
 
-      <div v-if="cronogramas.meta && cronogramas.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-        <p class="text-xs text-slate-500">
-          Página {{ cronogramas.meta.current_page }} de {{ cronogramas.meta.last_page }} ({{ cronogramas.meta.total }} registros)
-        </p>
-        <div class="space-x-2">
-          <Link
-            v-for="(link, i) in cronogramas.meta.links || []"
-            :key="i"
-            :href="link.url || '#'"
-            v-html="link.label"
-            class="px-3 py-1 text-sm rounded border"
-            :class="link.active ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-700 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'"
-          />
-        </div>
+      <div v-if="cronogramas.meta && cronogramas.meta.last_page > 1" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/50">
+        <Pagination :pagination="cronogramas.meta" @page-change="irParaPagina" />
       </div>
     </div>
 
@@ -210,6 +198,7 @@
 <script setup>
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import EstadoBadge from '@/Components/Organisms/Tdap/EstadoBadge.vue';
@@ -276,6 +265,16 @@ function limparFiltros() {
   filtroEstado.value = '';
   filtroAta.value = '';
   router.get(route('tdap.cronogramas.index'), {}, { preserveState: false });
+}
+
+// Cards de estatistica como filtros rapidos: '' = Total (limpa o filtro de estado), preservando os demais filtros.
+function filtrarPorEstado(estado) {
+  filtroEstado.value = estado || '';
+  router.get(route('tdap.cronogramas.index'), {
+    search: filtroSearch.value || undefined,
+    estado: estado || undefined,
+    ata_id: filtroAta.value || undefined,
+  }, { preserveState: true, replace: true });
 }
 
 // Exportacao CSV (mesmo padrao dos outros modulos)
@@ -393,5 +392,8 @@ function fmtDate(d) {
   if (!d) return '—';
   const date = typeof d === 'string' ? new Date(d) : d;
   return date.toLocaleDateString('pt-BR');
+}
+function irParaPagina(page) {
+  router.get(route('tdap.cronogramas.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
 }
 </script>
