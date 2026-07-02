@@ -72,7 +72,7 @@ class PaeFormularioController extends Controller
         }
 
         return Inertia::render('Pae', [
-            'municipios' => Municipio::orderBy('nome')->pluck('nome', 'id'),
+            'municipios' => Municipio::catalogo()->pluck('nome', 'id'),
             'formulario' => $formulario,
             'protocolo'  => $protocolo,
         ]);
@@ -96,7 +96,7 @@ class PaeFormularioController extends Controller
                 'num_protocolo' => $paeProtocolo->num_protocolo,
                 'status'        => $paeProtocolo->status?->value ?? $paeProtocolo->status,
             ],
-            'municipios' => Municipio::orderBy('nome')->pluck('nome', 'id'),
+            'municipios' => Municipio::catalogo()->pluck('nome', 'id'),
             'formulario' => $this->service->formatForView($form),
         ]);
     }

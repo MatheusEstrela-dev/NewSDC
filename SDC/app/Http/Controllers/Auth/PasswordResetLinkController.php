@@ -22,7 +22,7 @@ class PasswordResetLinkController extends Controller
      */
     public function create(): Response
     {
-        $municipios = Municipio::orderBy('nome')->get(['id', 'nome']);
+        $municipios = Municipio::catalogo();
         
         return Inertia::render('Auth/Reset', [
             'municipios' => $municipios,

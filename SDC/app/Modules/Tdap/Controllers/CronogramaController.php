@@ -81,7 +81,7 @@ class CronogramaController extends Controller
         return Inertia::render('Tdap/Cronogramas/Create', [
             'atas'           => Ata::ativo()->orderByDesc('dt_inicio')->get(['id', 'numero', 'dt_inicio', 'dt_final']),
             'lotes'          => Lote::ativo()->with(['ata:id,numero', 'municipio:id,nome,uf', 'prestador:id,nome,cnpj'])->get(),
-            'municipios'     => Municipio::orderBy('nome')->get(['id', 'nome', 'uf']),
+            'municipios'     => Municipio::catalogo(),
             'prestadores'    => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
             'pontosCaptacao' => PontoCaptacao::ativo()->orderBy('nome')->get(['id', 'nome', 'tipo', 'municipio_id']),
         ]);
@@ -120,7 +120,7 @@ class CronogramaController extends Controller
             'cronograma'     => CronogramaResource::make($cronograma->load(['ata', 'lote', 'municipio', 'prestador'])),
             'atas'           => Ata::ativo()->orderByDesc('dt_inicio')->get(['id', 'numero', 'dt_inicio', 'dt_final']),
             'lotes'          => Lote::ativo()->with(['ata:id,numero', 'municipio:id,nome,uf', 'prestador:id,nome,cnpj'])->get(),
-            'municipios'     => Municipio::orderBy('nome')->get(['id', 'nome', 'uf']),
+            'municipios'     => Municipio::catalogo(),
             'prestadores'    => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
             'pontosCaptacao' => PontoCaptacao::ativo()->orderBy('nome')->get(['id', 'nome', 'tipo', 'municipio_id']),
         ]);
