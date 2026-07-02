@@ -91,6 +91,10 @@ final class Concurrency
      * Contrato das closures (estrategia 1 serializa para OUTRO processo):
      *  - usar static fn () => ... e NUNCA capturar $this, request, auth ou
      *    models; capture apenas escalares e arrays;
+     *  - NUNCA definir a closure aninhada em outra closure na mesma expressao
+     *    (ex.: array_map de fn que retorna fn): a serializacao extrai o fonte
+     *    pela posicao no arquivo e closures na mesma linha serializam a
+     *    closure errada; montar em foreach com static function () use (...);
      *  - resolver services dentro da closure: app(Service::class)->metodo();
      *  - retornos precisam ser serializaveis e nunca false legitimo (false e
      *    o marcador de task nao concluida e dispara recomputo sequencial);

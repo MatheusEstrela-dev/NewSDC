@@ -49,6 +49,9 @@ class ProcessoStatsService
     {
         // Cada familia de card (4 counts) vira uma task independente: paralelas
         // nos task workers do Swoole, sequenciais no fallback (mesmo resultado).
+        // As closures sao montadas em foreach (nunca aninhadas na mesma
+        // expressao): a serializacao extrai o fonte pela posicao no arquivo e
+        // closures aninhadas na mesma linha serializam a closure errada.
         $calculaEstatisticas = function () use ($filters) {
             $familias = [
                 'totalEventos',
@@ -58,14 +61,14 @@ class ProcessoStatsService
                 'decretacoesVigentes',
             ];
 
-            $resultados = Concurrency::tasks(array_combine(
-                $familias,
-                array_map(
-                    static fn (string $familia) => static fn () => app(ProcessoStatsService::class)
-                        ->computeFamilia($familia, $filters),
-                    $familias,
-                ),
-            ));
+            $closures = [];
+            foreach ($familias as $familia) {
+                $closures[$familia] = static function () use ($familia, $filters) {
+                    return app(ProcessoStatsService::class)->computeFamilia($familia, $filters);
+                };
+            }
+
+            $resultados = Concurrency::tasks($closures);
 
             return array_merge(...array_values($resultados));
         };
