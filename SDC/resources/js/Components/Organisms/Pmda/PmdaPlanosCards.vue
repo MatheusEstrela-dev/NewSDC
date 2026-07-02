@@ -13,6 +13,18 @@
       <p class="text-xs text-slate-500 dark:text-slate-400">Criação: {{ formatDate(plano.data) }}</p>
       <div class="mt-3 flex items-center justify-end gap-1 border-t border-slate-100 pt-3 dark:border-slate-700/50">
         <ActionButton
+          action="history"
+          :allowed="canView" :show-label="false" size="sm"
+          tooltip-text="Situação geral / histórico"
+          @click="$emit('historico', plano.id)"
+        />
+        <ActionButton
+          action="print"
+          :allowed="canView" :show-label="false" size="sm"
+          tooltip-text="Imprimir ficha COMPDEC"
+          @click="$emit('imprimir', plano.id)"
+        />
+        <ActionButton
           action="edit" module="pmda" resource="planos"
           :allowed="canEdit" :show-label="false" size="sm"
           tooltip-text="Editar PMDA"
@@ -22,8 +34,15 @@
           v-if="plano.pode_copiar"
           action="duplicate" module="pmda" resource="planos"
           :allowed="canCopiar" :show-label="false" size="sm"
-          tooltip-text="Criar cópia"
+          tooltip-text="Duplicar PMDA (mesmos dados, novo protocolo)"
           @click="$emit('copiar', plano.id)"
+        />
+        <ActionButton
+          action="delete" module="pmda" resource="planos"
+          :allowed="canDelete" :show-label="false" size="sm"
+          :disabled="!plano.pode_excluir"
+          :tooltip-text="plano.pode_excluir ? 'Excluir PMDA' : 'Exclusão permitida apenas quando o PMDA está Atendido'"
+          @click="$emit('excluir', plano)"
         />
       </div>
     </div>
@@ -45,9 +64,11 @@ defineProps({
   planos: { type: Array, default: () => [] },
   canEdit: { type: Boolean, default: false },
   canCopiar: { type: Boolean, default: false },
+  canDelete: { type: Boolean, default: false },
+  canView: { type: Boolean, default: false },
 });
 
-defineEmits(['edit', 'copiar']);
+defineEmits(['edit', 'copiar', 'excluir', 'imprimir', 'historico']);
 
 function formatDate(iso) {
   if (!iso) return '—';

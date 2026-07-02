@@ -29,9 +29,18 @@ const props = defineProps({
   compdec_ficha: { type: Object, default: () => ({}) },
   compdec_anexos: { type: Array, default: () => [] },
   compdec_equipe: { type: Array, default: () => [] },
+  iss_fallback: { type: Object, default: null },
 });
 
-const dados = computed(() => props.plano?.data ?? props.plano);
+// O PmdaPlanoResource e serializado FLAT (sem envelope "data") e possui um campo
+// proprio "data" (string ISO da data do plano). So desembrulha quando "data" for um
+// objeto (envelope real); caso contrario usa o proprio plano. Sem isso, dados virava
+// a string da data e protocolo/status sumiam ("a gerar").
+const dados = computed(() => {
+  const p = props.plano;
+  if (!p) return null;
+  return p.data && typeof p.data === 'object' ? p.data : p;
+});
 // "criado" = o plano ja foi persistido (1o POST feito); habilita as abas-filhas.
 // Usa o escalar plano_id (sempre presente apos o store) como fonte confiavel.
 const planoId = computed(() => props.plano_id ?? dados.value?.id ?? null);
@@ -72,22 +81,22 @@ const tabsComBadge = computed(() =>
 const form = useForm({
   municipio_id: props.municipio?.id ?? dados.value?.municipio_id,
   motivo: dados.value?.motivo ?? '',
-  // ISS / Prefeitura
-  cobra_iss: dados.value?.cobra_iss ?? false,
-  num_lei_iss: dados.value?.num_lei_iss ?? '',
-  aliquota_iss: dados.value?.aliquota_iss ?? '',
-  resp_cob_iss: dados.value?.resp_cob_iss ?? '',
-  nome_prefeito: dados.value?.nome_prefeito ?? '',
-  tel_prefeitura: dados.value?.tel_prefeitura ?? '',
-  email_prefeitura: dados.value?.email_prefeitura ?? '',
-  tel_prefeito: dados.value?.tel_prefeito ?? '',
-  cel_prefeito: dados.value?.cel_prefeito ?? '',
-  cep: dados.value?.cep ?? '',
-  endereco: dados.value?.endereco ?? '',
-  bairro: dados.value?.bairro ?? '',
-  populacao: dados.value?.populacao ?? '',
-  pop_rural: dados.value?.pop_rural ?? '',
-  area: dados.value?.area ?? '',
+  // ISS / Prefeitura (fallback: ultimo PMDA do municipio quando criando novo)
+  cobra_iss: dados.value?.cobra_iss ?? props.iss_fallback?.cobra_iss ?? false,
+  num_lei_iss: dados.value?.num_lei_iss ?? props.iss_fallback?.num_lei_iss ?? '',
+  aliquota_iss: dados.value?.aliquota_iss ?? props.iss_fallback?.aliquota_iss ?? '',
+  resp_cob_iss: dados.value?.resp_cob_iss ?? props.iss_fallback?.resp_cob_iss ?? '',
+  nome_prefeito: dados.value?.nome_prefeito ?? props.iss_fallback?.nome_prefeito ?? '',
+  tel_prefeitura: dados.value?.tel_prefeitura ?? props.iss_fallback?.tel_prefeitura ?? '',
+  email_prefeitura: dados.value?.email_prefeitura ?? props.iss_fallback?.email_prefeitura ?? '',
+  tel_prefeito: dados.value?.tel_prefeito ?? props.iss_fallback?.tel_prefeito ?? '',
+  cel_prefeito: dados.value?.cel_prefeito ?? props.iss_fallback?.cel_prefeito ?? '',
+  cep: dados.value?.cep ?? props.iss_fallback?.cep ?? '',
+  endereco: dados.value?.endereco ?? props.iss_fallback?.endereco ?? '',
+  bairro: dados.value?.bairro ?? props.iss_fallback?.bairro ?? '',
+  populacao: dados.value?.populacao ?? props.iss_fallback?.populacao ?? '',
+  pop_rural: dados.value?.pop_rural ?? props.iss_fallback?.pop_rural ?? '',
+  area: dados.value?.area ?? props.iss_fallback?.area ?? '',
   // COMPDEC
   compdec_coordenador: dados.value?.compdec_coordenador ?? '',
   compdec_email: dados.value?.compdec_email ?? '',

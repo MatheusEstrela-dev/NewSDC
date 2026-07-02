@@ -13,15 +13,15 @@
         <div class="flex w-full flex-wrap items-center justify-end gap-2">
           <ViewModeToggle v-model="viewMode" />
           <button
-            v-if="can('pmda.comunidades.aprovar')"
+            v-if="can('pmda.analise.view') || can('pmda.comunidades.aprovar')"
             type="button"
             class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95"
             style="background-color: #00AAFF;"
-            title="Solicitações de comunidades enviadas pelos municípios (análise CEDEC)"
-            @click="router.visit(route('pmda.solicitacoes.index'))"
+            title="Central de Análises CEDEC: PMDA em análise e solicitações de comunidade"
+            @click="router.visit(route('pmda.analises.index'))"
           >
             <InboxArrowDownIcon class="h-4 w-4" />
-            Solicitações PMDA
+            Análises CEDEC
           </button>
           <ActionButton
             v-if="can('pmda.planos.export')"
@@ -44,7 +44,7 @@
       </template>
     </PageHeader>
 
-    <PmdaStatisticsCards :statistics="statistics" />
+    <PmdaStatisticsCards :statistics="statistics" @filter="filtrarPorStatus" />
 
     <PmdaFiltersSection
       class="mb-6"
@@ -85,6 +85,20 @@
               <td class="px-4 py-4">
                 <div class="flex items-center justify-end gap-1">
                   <ActionButton
+                    action="history"
+                    :allowed="can('pmda.planos.view')" :show-label="false" size="sm"
+                    tooltip-text="Situação geral / histórico"
+                    :loading="historicoCarregandoId === plano.id"
+                    @click="abrirHistorico(plano.id)"
+                  />
+                  <ActionButton
+                    action="print"
+                    :allowed="can('pmda.planos.view')" :show-label="false" size="sm"
+                    tooltip-text="Imprimir ficha COMPDEC"
+                    :loading="fichaCarregandoId === plano.id"
+                    @click="imprimir(plano.id)"
+                  />
+                  <ActionButton
                     action="edit" module="pmda" resource="planos"
                     :allowed="can('pmda.planos.edit')" :show-label="false" size="sm"
                     tooltip-text="Editar PMDA"
@@ -94,8 +108,15 @@
                     v-if="plano.pode_copiar"
                     action="duplicate" module="pmda" resource="planos"
                     :allowed="can('pmda.planos.copiar')" :show-label="false" size="sm"
-                    tooltip-text="Criar cópia"
+                    tooltip-text="Duplicar PMDA (mesmos dados, novo protocolo)"
                     @click="copiar(plano.id)"
+                  />
+                  <ActionButton
+                    action="delete" module="pmda" resource="planos"
+                    :allowed="can('pmda.planos.delete')" :show-label="false" size="sm"
+                    :disabled="!plano.pode_excluir"
+                    :tooltip-text="plano.pode_excluir ? 'Excluir PMDA' : 'Exclusão permitida apenas quando o PMDA está Atendido'"
+                    @click="confirmarExclusao(plano)"
                   />
                 </div>
               </td>
@@ -121,8 +142,13 @@
       :planos="planos.data"
       :can-edit="can('pmda.planos.edit')"
       :can-copiar="can('pmda.planos.copiar')"
+      :can-delete="can('pmda.planos.delete')"
+      :can-view="can('pmda.planos.view')"
       @edit="(id) => router.visit(route('pmda.planos.edit', id))"
       @copiar="copiar"
+      @imprimir="imprimir"
+      @historico="abrirHistorico"
+      @excluir="confirmarExclusao"
     />
 
     <!-- Grade -->
@@ -131,8 +157,13 @@
       :planos="planos.data"
       :can-edit="can('pmda.planos.edit')"
       :can-copiar="can('pmda.planos.copiar')"
+      :can-delete="can('pmda.planos.delete')"
+      :can-view="can('pmda.planos.view')"
       @edit="(id) => router.visit(route('pmda.planos.edit', id))"
       @copiar="copiar"
+      @imprimir="imprimir"
+      @historico="abrirHistorico"
+      @excluir="confirmarExclusao"
     />
 
     <!-- Paginacao compartilhada -->
@@ -148,6 +179,32 @@
     />
 
     <PmdaCreateModal :show="showCriar" :municipios="municipios" @close="showCriar = false" />
+
+    <PrintPmdaFichaModal
+      :show="printModalOpen"
+      :loading="fichaCarregandoId !== null"
+      :dados="fichaDados"
+      @close="fecharImpressao"
+    />
+
+    <PmdaHistoricoModal
+      :open="historicoModalOpen"
+      :dados="historicoDados"
+      @close="historicoModalOpen = false"
+    />
+
+    <ConfirmDialog
+      :is-open="deleteDialog.open"
+      variant="danger"
+      title="Excluir PMDA"
+      :message="deleteDialog.message"
+      description="Esta ação remove o PMDA e seus dados vinculados (comunidades, pontos e anexos do plano). Não pode ser desfeita."
+      confirm-text="Excluir"
+      cancel-text="Cancelar"
+      :loading="deleteDialog.loading"
+      @confirm="confirmDelete"
+      @cancel="closeDeleteDialog"
+    />
   </div>
 </template>
 
@@ -170,13 +227,99 @@ import PmdaStatisticsCards from '@/Components/Organisms/Pmda/PmdaStatisticsCards
 import PmdaFiltersSection from '@/Components/Organisms/Pmda/PmdaFiltersSection.vue';
 import PmdaCreateModal from '@/Components/Organisms/Pmda/PmdaCreateModal.vue';
 import PmdaPlanosCards from '@/Components/Organisms/Pmda/PmdaPlanosCards.vue';
+import PrintPmdaFichaModal from '@/Components/Organisms/Pmda/Print/PrintPmdaFichaModal.vue';
+import PmdaHistoricoModal from '@/Components/Organisms/Pmda/PmdaHistoricoModal.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import { useToast } from '@/Composables/useToast.js';
 
 defineOptions({ layout: AuthenticatedLayout });
 
 const { can } = usePermissions();
+const { show: toast } = useToast();
 
 const viewMode = ref('table');
 const showCriar = ref(false);
+
+// Impressao da ficha COMPDEC (fetch sob demanda + modelo BasePrintModal).
+const printModalOpen = ref(false);
+const fichaCarregandoId = ref(null);
+const fichaDados = ref(null);
+
+async function imprimir(id) {
+  fichaCarregandoId.value = id;
+  printModalOpen.value = true;
+  try {
+    const ax = window.axios || (await import('axios')).default;
+    const { data } = await ax.get(route('pmda.planos.ficha', id));
+    fichaDados.value = data;
+  } catch (e) {
+    toast('Não foi possível carregar a ficha para impressão.', 'error');
+    printModalOpen.value = false;
+  } finally {
+    fichaCarregandoId.value = null;
+  }
+}
+
+function fecharImpressao() {
+  printModalOpen.value = false;
+  fichaDados.value = null;
+}
+
+// Historico / situacao geral (estilo PAE).
+const historicoModalOpen = ref(false);
+const historicoCarregandoId = ref(null);
+const historicoDados = ref(null);
+
+async function abrirHistorico(id) {
+  historicoCarregandoId.value = id;
+  try {
+    const ax = window.axios || (await import('axios')).default;
+    const { data } = await ax.get(route('pmda.planos.historico', id));
+    historicoDados.value = data;
+    historicoModalOpen.value = true;
+  } catch (e) {
+    toast('Não foi possível carregar o histórico do PMDA.', 'error');
+  } finally {
+    historicoCarregandoId.value = null;
+  }
+}
+
+// Exclusao com confirmacao.
+const deleteDialog = ref({ open: false, loading: false, plano: null, message: '' });
+
+function confirmarExclusao(plano) {
+  deleteDialog.value = {
+    open: true,
+    loading: false,
+    plano,
+    message: `Tem certeza que deseja excluir o PMDA ${plano.protocolo ?? ''} (${plano.municipio ?? '—'})?`,
+  };
+}
+
+function closeDeleteDialog() {
+  if (deleteDialog.value.loading) return;
+  deleteDialog.value.open = false;
+  deleteDialog.value.plano = null;
+}
+
+function confirmDelete() {
+  const plano = deleteDialog.value.plano;
+  if (!plano) return;
+
+  deleteDialog.value.loading = true;
+  router.delete(route('pmda.planos.destroy', plano.id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      toast('PMDA excluído com sucesso.', 'success');
+      deleteDialog.value.loading = false;
+      closeDeleteDialog();
+    },
+    onError: () => {
+      toast('Não foi possível excluir o PMDA. Verifique permissões e vínculos.', 'error');
+      deleteDialog.value.loading = false;
+    },
+  });
+}
 
 const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('pmda.planos.export');
 
@@ -218,6 +361,18 @@ function aplicar(f) {
   }, { preserveState: true, replace: true });
 }
 
+// Cards de estatistica como filtros rapidos: '' = Total (limpa o filtro de status).
+function filtrarPorStatus(status) {
+  filtros.status = status || '';
+  router.get(route('pmda.planos.index'), {
+    buscar: filtros.buscar || undefined,
+    status: status || undefined,
+    municipio_id: filtros.municipio_id || undefined,
+    data_inicio: filtros.data_inicio || undefined,
+    data_fim: filtros.data_fim || undefined,
+  }, { preserveState: true, replace: true });
+}
+
 function limpar() {
   router.get(route('pmda.planos.index'), {}, { preserveState: true, replace: true });
 }
@@ -230,7 +385,10 @@ function irParaPagina(page) {
 }
 
 function copiar(id) {
-  router.post(route('pmda.planos.copiar', id));
+  router.post(route('pmda.planos.copiar', id), {}, {
+    preserveScroll: true,
+    onError: () => toast('Não foi possível duplicar este PMDA.', 'error'),
+  });
 }
 
 function formatDate(iso) {
