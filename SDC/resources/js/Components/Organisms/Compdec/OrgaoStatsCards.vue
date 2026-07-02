@@ -5,6 +5,8 @@
       :value="statistics.total || 0"
       variant="info"
       :icon="BuildingOfficeIcon"
+      clickable
+      @click="$emit('filter', {})"
     />
 
     <StatCard
@@ -12,6 +14,8 @@
       :value="statistics.por_tipo?.compdec || 0"
       variant="info"
       :icon="BuildingIcon"
+      clickable
+      @click="$emit('filter', { tipo: 'compdec' })"
     />
 
     <StatCard
@@ -19,6 +23,8 @@
       :value="statistics.por_tipo?.redec || 0"
       variant="warning"
       :icon="BuildingOfficeIcon"
+      clickable
+      @click="$emit('filter', { tipo: 'redec' })"
     />
 
     <StatCard
@@ -26,6 +32,8 @@
       :value="statistics.ativos || 0"
       variant="success"
       :icon="CheckCircleIcon"
+      clickable
+      @click="$emit('filter', { status: 'ativo' })"
     />
   </div>
 </template>
@@ -50,4 +58,7 @@ defineProps({
     }),
   },
 });
+
+// Cards como atalho de filtro rapido: emitem o par {tipo} ou {status}; Total emite {} (limpa esses filtros).
+defineEmits(['filter']);
 </script>

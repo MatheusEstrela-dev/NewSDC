@@ -213,8 +213,10 @@ const handlePageChange = (page) => {
   emit('page-change', page);
 };
 
+// Card de estatistica -> filtro rapido por vigencia. Preserva os demais filtros
+// e substitui apenas vigencia_status. 'all' (ou vazio) limpa o filtro de vigencia.
 const handleStatFilter = (type) => {
-  localFilters.value.vigencia_status = type === 'all' ? '' : type;
+  localFilters.value.vigencia_status = (type === 'all' || !type) ? '' : type;
   handleApplyFilters(localFilters.value);
 };
 

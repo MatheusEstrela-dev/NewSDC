@@ -1,20 +1,10 @@
 <template>
   <div class="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-    <button type="button" class="text-left" @click="$emit('filter', 'total')">
-      <StatCard title="Total" :value="statistics.total" variant="info" :icon="ArchiveBoxIcon" />
-    </button>
-    <button type="button" class="text-left" @click="$emit('filter', 'disponivel')">
-      <StatCard title="Disponiveis" :value="statistics.disponiveis" variant="success" :icon="CheckCircleIcon" />
-    </button>
-    <button type="button" class="text-left" @click="$emit('filter', 'emprestado')">
-      <StatCard title="Emprestados" :value="statistics.emprestados" variant="info" :icon="ArrowPathRoundedSquareIcon" />
-    </button>
-    <button type="button" class="text-left" @click="$emit('filter', 'manutencao')">
-      <StatCard title="Manutencao" :value="statistics.manutencao" variant="warning" :icon="WrenchScrewdriverIcon" />
-    </button>
-    <button type="button" class="text-left" @click="$emit('filter', 'baixado')">
-      <StatCard title="Baixados" :value="statistics.baixados" variant="danger" :icon="ArchiveBoxXMarkIcon" />
-    </button>
+    <StatCard title="Total" :value="statistics.total" variant="info" :icon="ArchiveBoxIcon" clickable @click="$emit('filter', '')" />
+    <StatCard title="Disponiveis" :value="statistics.disponiveis" variant="success" :icon="CheckCircleIcon" clickable @click="$emit('filter', 'disponivel')" />
+    <StatCard title="Emprestados" :value="statistics.emprestados" variant="info" :icon="ArrowPathRoundedSquareIcon" clickable @click="$emit('filter', 'emprestado')" />
+    <StatCard title="Manutencao" :value="statistics.manutencao" variant="warning" :icon="WrenchScrewdriverIcon" clickable @click="$emit('filter', 'manutencao')" />
+    <StatCard title="Baixados" :value="statistics.baixados" variant="danger" :icon="ArchiveBoxXMarkIcon" clickable @click="$emit('filter', 'baixado')" />
   </div>
 </template>
 
@@ -39,5 +29,6 @@ defineProps({
   },
 });
 
+// Cada card e um atalho de filtro rapido por situacao; '' = Total (limpa o filtro).
 defineEmits(['filter']);
 </script>

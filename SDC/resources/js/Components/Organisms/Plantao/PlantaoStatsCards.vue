@@ -13,6 +13,9 @@ const props = defineProps({
   },
 });
 
+// Cards clicaveis sao atalhos de filtro rapido (emitem o status StatusPlantao).
+// "Total Turnos" limpa o filtro. "Finalizados Hoje" (metrica com recorte de data) e
+// "Equipe Online" (metrica pura) nao mapeiam para um filtro de listagem: ficam como metrica.
 const emit = defineEmits(['filter']);
 
 const stats = computed(() => [
@@ -22,6 +25,7 @@ const stats = computed(() => [
     value: props.statistics.total || 0,
     variant: 'info',
     icon: ClockIcon,
+    filter: '',
   },
   {
     id: 'ativos',
@@ -29,6 +33,7 @@ const stats = computed(() => [
     value: props.statistics.ativos || 0,
     variant: 'success',
     icon: BoltIcon,
+    filter: 'ATIVO',
   },
   {
     id: 'finalizados_hoje',
@@ -36,6 +41,7 @@ const stats = computed(() => [
     value: props.statistics.finalizados_hoje || 0,
     variant: 'warning',
     icon: CheckCircleIcon,
+    filter: null,
   },
   {
     id: 'equipe_online',
@@ -43,24 +49,22 @@ const stats = computed(() => [
     value: props.statistics.equipe_online || 0,
     variant: 'info',
     icon: UsersIcon,
+    filter: null,
   },
 ]);
 </script>
 
 <template>
   <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-    <div
+    <StatCard
       v-for="stat in stats"
       :key="stat.id"
-      @click="emit('filter', stat.id)"
-      class="cursor-pointer"
-    >
-      <StatCard
-        :title="stat.title"
-        :value="stat.value"
-        :variant="stat.variant"
-        :icon="stat.icon"
-      />
-    </div>
+      :title="stat.title"
+      :value="stat.value"
+      :variant="stat.variant"
+      :icon="stat.icon"
+      :clickable="stat.filter !== null"
+      @click="stat.filter !== null && emit('filter', stat.filter)"
+    />
   </div>
 </template>

@@ -63,14 +63,10 @@ const viewMode = ref('table');
 const showAbrirModal = ref(false);
 const { isMobile } = useMobile();
 
-const handleStatFilter = (statId) => {
-  const statusMap = {
-    total: null,
-    ativos: 'ATIVO',
-    finalizados_hoje: 'FINALIZADO',
-    equipe_online: null,
-  };
-  emit('filter', { status: statusMap[statId] });
+// Card de estatistica como filtro rapido: recebe o status ('' = Total, limpa o status)
+// e preserva os demais filtros ativos (periodo, search).
+const handleStatFilter = (status) => {
+  emit('filter', { ...props.filters, status: status || undefined });
 };
 
 // Export Setup

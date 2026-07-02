@@ -23,7 +23,7 @@
     </PageHeader>
 
     <!-- Stats Cards (Organism reusavel) -->
-    <OrgaoStatsCards :statistics="statistics" />
+    <OrgaoStatsCards :statistics="statistics" @filter="filtrarPorCard" />
 
     <!-- Filtros -->
     <OrgaosFiltersSection
@@ -199,6 +199,17 @@ function applyFilters() {
 
 function handleFilterChange(newFilters) {
   localFilters.value = { ...newFilters };
+  applyFilters();
+}
+
+// Cards como atalho de filtro rapido: {tipo}/{status} definem o par correspondente e limpam o outro; {} (Total) limpa ambos. Preserva search/municipio.
+function filtrarPorCard(payload) {
+  const sel = payload || {};
+  localFilters.value = {
+    ...localFilters.value,
+    tipo: sel.tipo ?? '',
+    status: sel.status ?? '',
+  };
   applyFilters();
 }
 
