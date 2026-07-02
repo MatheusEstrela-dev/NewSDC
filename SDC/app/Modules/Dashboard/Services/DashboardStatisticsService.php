@@ -13,6 +13,7 @@ use App\Modules\Decretacoes\Services\ProcessoStatsService;
 use App\Modules\Demandas\Models\Task;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeProtocolo;
+use App\Support\Concurrency\Concurrency;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
@@ -60,42 +61,67 @@ class DashboardStatisticsService
 
     private function computeStats(): DashboardStatsDTO
     {
+        // As 4 particoes de queries sao independentes entre si e rodam em
+        // paralelo nos task workers (sequencial no fallback, mesmo resultado).
+        // A montagem do DTO permanece no worker HTTP. Sem cache interno nas
+        // particoes: o getStats() ja cacheia o DTO inteiro.
+        $partes = Concurrency::tasks([
+            'countsTrends' => static fn () => app(self::class)->computeCountsAndTrends(),
+            'bar6'         => static fn () => app(self::class)->buildBarData(6),
+            'bar12'        => static fn () => app(self::class)->buildBarData(12),
+            'sparklines'   => static fn () => app(self::class)->buildSparklines(),
+        ]);
+
+        $c = $partes['countsTrends'];
+
+        $moduleDistribution = $this->buildDistribution(
+            $c['ratAbertas'],
+            $c['paeEmAnalise'],
+            $c['decretosAprovados'],
+            $c['demandasConcluidas'],
+            $c['ahTotal'],
+        );
+
+        return new DashboardStatsDTO(
+            ratAbertas:         $c['ratAbertas'],
+            paeEmAnalise:       $c['paeEmAnalise'],
+            decretosAprovados:  $c['decretosAprovados'],
+            demandasConcluidas: $c['demandasConcluidas'],
+            ratTrend:           $c['ratTrend'],
+            paeTrend:           $c['paeTrend'],
+            decretoTrend:       $c['decretoTrend'],
+            demandaTrend:       $c['demandaTrend'],
+            moduleDistribution: $moduleDistribution,
+            barData6M:          $partes['bar6'],
+            barData12M:         $partes['bar12'],
+            sparklines:         $partes['sparklines'],
+        );
+    }
+
+    /**
+     * Particao de counts e trends (13 queries). Publico e auto-contido: e
+     * resolvido via app() dentro de uma task do Concurrency::tasks(), que
+     * pode executar em outro processo; retorna apenas escalares.
+     *
+     * @return array<string, int|float>
+     */
+    public function computeCountsAndTrends(): array
+    {
         $processoStats = $this->tableExists(Processo::class)
             ? $this->processoStats->getStatistics()
             : ['aprovados' => 0];
 
-        $ratAbertas         = $this->safeCount(RatOcorrencia::class);
-        $paeEmAnalise       = $this->safeCountWhere(PaeProtocolo::class, 'status', PaeProtocoloStatus::ANALISE->value);
-        $decretosAprovados  = $processoStats['aprovados'];
-        $demandasConcluidas = $this->safeCountWhere(Task::class, 'status', 'concluida');
-
-        $ratTrend     = $this->calcTrend(RatOcorrencia::class);
-        $paeTrend     = $this->calcTrendWithWhere(PaeProtocolo::class, 'status', PaeProtocoloStatus::ANALISE->value);
-        $decretoTrend = $this->calcTrendWithLike(Processo::class, 'reconhecimento', 'Reconhecido%');
-        $demandaTrend = $this->calcTrendWithWhere(Task::class, 'status', 'concluida');
-
-        // Sem cache interno aqui: o getStats() ja cacheia o DTO inteiro.
-        $barData6M  = $this->buildBarData(6);
-        $barData12M = $this->buildBarData(12);
-        $sparklines = $this->buildSparklines();
-
-        $ahTotal            = $this->ahStats->getTotal();
-        $moduleDistribution = $this->buildDistribution($ratAbertas, $paeEmAnalise, $decretosAprovados, $demandasConcluidas, $ahTotal);
-
-        return new DashboardStatsDTO(
-            ratAbertas:         $ratAbertas,
-            paeEmAnalise:       $paeEmAnalise,
-            decretosAprovados:  $decretosAprovados,
-            demandasConcluidas: $demandasConcluidas,
-            ratTrend:           $ratTrend,
-            paeTrend:           $paeTrend,
-            decretoTrend:       $decretoTrend,
-            demandaTrend:       $demandaTrend,
-            moduleDistribution: $moduleDistribution,
-            barData6M:          $barData6M,
-            barData12M:         $barData12M,
-            sparklines:         $sparklines,
-        );
+        return [
+            'ratAbertas'         => $this->safeCount(RatOcorrencia::class),
+            'paeEmAnalise'       => $this->safeCountWhere(PaeProtocolo::class, 'status', PaeProtocoloStatus::ANALISE->value),
+            'decretosAprovados'  => $processoStats['aprovados'],
+            'demandasConcluidas' => $this->safeCountWhere(Task::class, 'status', 'concluida'),
+            'ratTrend'           => $this->calcTrend(RatOcorrencia::class),
+            'paeTrend'           => $this->calcTrendWithWhere(PaeProtocolo::class, 'status', PaeProtocoloStatus::ANALISE->value),
+            'decretoTrend'       => $this->calcTrendWithLike(Processo::class, 'reconhecimento', 'Reconhecido%'),
+            'demandaTrend'       => $this->calcTrendWithWhere(Task::class, 'status', 'concluida'),
+            'ahTotal'            => $this->ahStats->getTotal(),
+        ];
     }
 
     private function calcTrend(string $modelClass): float

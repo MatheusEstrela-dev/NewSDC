@@ -89,7 +89,7 @@ class PmdaPlanoService extends BaseService
         $plano->delete();
     }
 
-    public function listar(array $filtros = [], int $perPage = 15): LengthAwarePaginator
+    public function listar(array $filtros = [], int $perPage = 15, ?int $page = null): LengthAwarePaginator
     {
         $query = PmdaPlano::query()->with('municipio')->latest('data');
         $query = $this->applyFilters($query, $filtros, ['municipio_id', 'status']);
@@ -108,7 +108,24 @@ class PmdaPlanoService extends BaseService
             $query->whereDate('data', '<=', $filtros['data_fim']);
         }
 
-        return $this->paginate($query, $perPage);
+        return $this->paginate($query, $perPage, $page);
+    }
+
+    /**
+     * Contagens dos cards do indice de planos. Publico e auto-contido de
+     * proposito: e resolvido via app() dentro de uma task do
+     * Concurrency::tasks(), que pode executar em outro processo.
+     *
+     * @return array<string, int>
+     */
+    public function statisticsIndex(): array
+    {
+        return [
+            'total'     => PmdaPlano::count(),
+            'emEdicao'  => PmdaPlano::where('status', PmdaStatus::RASCUNHO->value)->count(),
+            'emAnalise' => PmdaPlano::where('status', PmdaStatus::EM_ANALISE->value)->count(),
+            'aprovados' => PmdaPlano::where('status', PmdaStatus::APROVADO->value)->count(),
+        ];
     }
 
     /** Linhas para exportacao CSV (respeita filtros). */
@@ -193,7 +210,7 @@ class PmdaPlanoService extends BaseService
     }
 
     /** Fila de analise CEDEC: planos EM_ANALISE (mais antigos primeiro). */
-    public function pendentesAnalise(array $filtros = [], int $perPage = 15): LengthAwarePaginator
+    public function pendentesAnalise(array $filtros = [], int $perPage = 15, ?int $page = null): LengthAwarePaginator
     {
         $query = PmdaPlano::query()
             ->with('municipio')
@@ -201,7 +218,7 @@ class PmdaPlanoService extends BaseService
             ->oldest('dt_analise');
         $query = $this->applyFilters($query, $filtros, ['municipio_id']);
 
-        return $this->paginate($query, $perPage);
+        return $this->paginate($query, $perPage, $page);
     }
 
     /** Aprova o PMDA (EM_ANALISE -> APROVADO). */
@@ -448,14 +465,14 @@ class ComunidadeSolicitacaoService
     }
 
     /** Fila de pendencias para a CEDEC (com filtro opcional por municipio). */
-    public function pendentes(array $filtros = [], int $perPage = 15): LengthAwarePaginator
+    public function pendentes(array $filtros = [], int $perPage = 15, ?int $page = null): LengthAwarePaginator
     {
         return ComunidadeSolicitacao::query()
             ->with('municipio')
             ->where('status', SolicitacaoComunidadeStatus::PENDENTE->value)
             ->when($filtros['municipio_id'] ?? null, fn ($q, $m) => $q->where('municipio_id', $m))
             ->oldest()
-            ->paginate($perPage);
+            ->paginate($perPage, ['*'], 'page', $page);
     }
 
     /**

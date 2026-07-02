@@ -95,6 +95,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Concurrency Tasks
+    |--------------------------------------------------------------------------
+    |
+    | Timeout global (ms) do Concurrency::tasks() ao despachar closures para
+    | os task workers (Octane::concurrently). Estourado o prazo, o helper
+    | loga warning e reexecuta as closures sequencialmente no worker HTTP.
+    |
+    */
+
+    'tasks' => [
+        'wait_ms' => (int) env('OCTANE_TASK_WAIT_MS', 5000),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Octane Listeners
     |--------------------------------------------------------------------------
     |

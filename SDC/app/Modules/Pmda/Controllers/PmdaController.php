@@ -41,6 +41,7 @@ use App\Modules\Pmda\Services\PlanoPontoService;
 use App\Modules\Pmda\Services\PmdaCopiaService;
 use App\Modules\Pmda\Services\PmdaPlanoService;
 use App\Modules\Pmda\Services\RepresentanteService;
+use App\Support\Concurrency\Concurrency;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -123,14 +124,25 @@ class PmdaAnaliseController extends Controller
     public function index(Request $request): Response
     {
         $filtros = $request->only(['municipio_id']);
+        $page = max(1, (int) $request->query('page', '1'));
+        $path = $request->url();
 
-        return Inertia::render('Pmda/Analises/Index', [
-            'analises'     => PmdaPlanoListResource::collection($this->planos->pendentesAnalise($filtros)),
-            'solicitacoes' => ComunidadeSolicitacaoResource::collection($this->solicitacoes->pendentes($filtros)),
-            'filtros'      => $filtros,
-            'municipios'   => \App\Models\Municipio::query()
+        // Os 3 blocos sao independentes e rodam em paralelo nos task workers
+        // (sequencial no fallback). Pagina e path sao capturados aqui porque o
+        // task worker nao tem a request; withPath() reaplica o path ao voltar.
+        $partes = Concurrency::tasks([
+            'analises'     => static fn () => app(PmdaPlanoService::class)->pendentesAnalise($filtros, 15, $page),
+            'solicitacoes' => static fn () => app(ComunidadeSolicitacaoService::class)->pendentes($filtros, 15, $page),
+            'municipios'   => static fn () => \App\Models\Municipio::query()
                 ->orderBy('nome')->get(['id', 'nome', 'uf'])
                 ->map(fn ($m) => ['id' => $m->id, 'nome' => $m->nome, 'uf' => $m->uf]),
+        ]);
+
+        return Inertia::render('Pmda/Analises/Index', [
+            'analises'     => PmdaPlanoListResource::collection($partes['analises']->withPath($path)),
+            'solicitacoes' => ComunidadeSolicitacaoResource::collection($partes['solicitacoes']->withPath($path)),
+            'filtros'      => $filtros,
+            'municipios'   => $partes['municipios'],
         ]);
     }
 
@@ -219,21 +231,27 @@ class PmdaPlanoController extends Controller
     public function index(Request $request): Response
     {
         $filtros = $request->only(['buscar', 'status', 'municipio_id', 'data_inicio', 'data_fim']);
+        $page = max(1, (int) $request->query('page', '1'));
+        $path = $request->url();
 
-        return Inertia::render('Pmda/Index', [
-            'planos'  => PmdaPlanoListResource::collection($this->service->listar($filtros)),
-            'filtros'      => $filtros,
-            'statistics'   => [
-                'total'     => \App\Modules\Pmda\Models\PmdaPlano::count(),
-                'emEdicao'  => \App\Modules\Pmda\Models\PmdaPlano::where('status', \App\Modules\Pmda\Enums\PmdaStatus::RASCUNHO->value)->count(),
-                'emAnalise' => \App\Modules\Pmda\Models\PmdaPlano::where('status', \App\Modules\Pmda\Enums\PmdaStatus::EM_ANALISE->value)->count(),
-                'aprovados' => \App\Modules\Pmda\Models\PmdaPlano::where('status', \App\Modules\Pmda\Enums\PmdaStatus::APROVADO->value)->count(),
-            ],
-            'statusOpcoes' => collect(\App\Modules\Pmda\Enums\PmdaStatus::cases())
-                ->map(fn ($s) => ['value' => $s->value, 'label' => $s->getLabel()])->values(),
-            'municipios' => \App\Models\Municipio::query()
+        // Listagem, statistics e municipios sao independentes: paralelos nos
+        // task workers, sequenciais no fallback. statusOpcoes fica fora (enum
+        // em memoria, sem query).
+        $partes = Concurrency::tasks([
+            'planos'     => static fn () => app(PmdaPlanoService::class)->listar($filtros, 15, $page),
+            'statistics' => static fn () => app(PmdaPlanoService::class)->statisticsIndex(),
+            'municipios' => static fn () => \App\Models\Municipio::query()
                 ->orderBy('nome')->get(['id', 'nome', 'uf'])
                 ->map(fn ($m) => ['id' => $m->id, 'nome' => $m->nome, 'uf' => $m->uf]),
+        ]);
+
+        return Inertia::render('Pmda/Index', [
+            'planos'       => PmdaPlanoListResource::collection($partes['planos']->withPath($path)),
+            'filtros'      => $filtros,
+            'statistics'   => $partes['statistics'],
+            'statusOpcoes' => collect(\App\Modules\Pmda\Enums\PmdaStatus::cases())
+                ->map(fn ($s) => ['value' => $s->value, 'label' => $s->getLabel()])->values(),
+            'municipios'   => $partes['municipios'],
         ]);
     }
 
