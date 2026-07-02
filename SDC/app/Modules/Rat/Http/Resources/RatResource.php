@@ -360,7 +360,6 @@ class RatResource extends JsonResource
             // ── Anexos (rat_anexos table via relationship) ──
             'anexos' => $anexos,
 
-<<<<<<< Updated upstream
             // ── RATs relacionados (número do BOS, não UUID) ──
             'ocorrencia_origem' => $this->ocorrenciaOrigem ? [
                 'id'         => $this->ocorrenciaOrigem->id,
@@ -371,8 +370,6 @@ class RatResource extends JsonResource
                 'numero_bos' => $f->numero_bos,
             ])->values()->all(),
 
-=======
->>>>>>> Stashed changes
             // ── Permissões de ação ──
             'pode_relacionar' => $this->status === 1 || ($this->prazo_edicao && $this->prazo_edicao->isPast()),
 
