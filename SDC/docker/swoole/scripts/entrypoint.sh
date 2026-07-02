@@ -142,12 +142,15 @@ chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 # Queue worker em background (mesmo padrao do entrypoint de producao).
 # Container unico no App Service: worker roda junto do Octane. O subshell herda
 # o "set -e"; o "set +e" abaixo garante que um crash do queue:work nao mate o
-# loop de restart.
+# loop de restart. A lista de filas cobre TODAS as filas da aplicacao
+# (RequestPriority: critical/high/default/low + webhooks inbound +
+# high-throughput legada) em ordem de prioridade — fila fora da lista vira
+# job orfao que nunca e consumido.
 echo "Iniciando queue worker em background..."
 (
     set +e
     while true; do
-        php artisan queue:work --queue=high-throughput,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
+        php artisan queue:work --queue=critical,high,high-throughput,webhooks,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
         echo "[queue:work] worker saiu (codigo $?); reiniciando em 2s..."
         sleep 2
     done

@@ -147,13 +147,15 @@ chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 # IMPORTANTE: o subshell herda o "set -e" do topo do script; sem o "set +e"
 # abaixo, qualquer saida != 0 do queue:work (crash, blip de Redis, job fatal)
 # encerraria o subshell e o loop de restart nunca rodaria -> worker morto ate
-# o proximo restart do container. As filas seguem a mesma prioridade do
-# supervisor (high-throughput,default,low) para nao deixar jobs orfaos.
+# o proximo restart do container. A lista de filas cobre TODAS as filas que a
+# aplicacao usa (RequestPriority: critical/high/default/low + webhooks inbound
+# + high-throughput legada), em ordem de prioridade — fila fora da lista vira
+# job orfao que nunca e consumido.
 echo "Iniciando queue worker em background..."
 (
     set +e
     while true; do
-        php artisan queue:work --queue=high-throughput,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
+        php artisan queue:work --queue=critical,high,high-throughput,webhooks,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
         echo "[queue:work] worker saiu (codigo $?); reiniciando em 2s..."
         sleep 2
     done
