@@ -7,9 +7,11 @@ namespace App\Modules\Decretacoes\Services;
 use App\Modules\Decretacoes\Filters\ProcessoFilter;
 use App\Modules\Decretacoes\Models\DecretoMunicipio;
 use App\Modules\Decretacoes\Models\Processo;
+use App\Support\Concurrency\Concurrency;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use InvalidArgumentException;
 
 /**
  * Service responsible for Processo statistics and dashboard metrics.
@@ -45,47 +47,27 @@ class ProcessoStatsService
      */
     public function getDashboardStatistics(array $filters = []): array
     {
+        // Cada familia de card (4 counts) vira uma task independente: paralelas
+        // nos task workers do Swoole, sequenciais no fallback (mesmo resultado).
         $calculaEstatisticas = function () use ($filters) {
-            $baseQuery = Processo::query();
-
-            // Aplica os filtros na query base, se houver
-            if (!empty($filters)) {
-                $request = new Request($filters);
-                $filter = new ProcessoFilter($request);
-                $baseQuery = $filter->apply($baseQuery);
-            }
-
-            return [
-            // Total de Eventos
-            'totalEventos'    => $this->getTotalEventos($baseQuery),
-            'totalEventosEcp' => $this->getTotalEventos($baseQuery, 'ECP'),
-            'totalEventosSe'  => $this->getTotalEventos($baseQuery, 'SE'),
-            'totalEventosN1'  => $this->getTotalEventos($baseQuery, 'N1'),
-
-            // Registros (reconhecimento = 'Registro')
-            'registros'    => $this->getRegistros($baseQuery),
-            'registrosEcp' => $this->getRegistros($baseQuery, 'ECP'),
-            'registrosSe'  => $this->getRegistros($baseQuery, 'SE'),
-            'registrosN1'  => $this->getRegistros($baseQuery, 'N1'),
-
-            // Decretacoes (reconhecimento != 'Registro')
-            'decretacoes'    => $this->getDecretacoes($baseQuery),
-            'decretacoesEcp' => $this->getDecretacoes($baseQuery, 'ECP'),
-            'decretacoesSe'  => $this->getDecretacoes($baseQuery, 'SE'),
-            'decretacoesN1'  => $this->getDecretacoes($baseQuery, 'N1'),
-
-            // Municipios Atingidos (distinct municipio_id)
-            'municipiosAtingidos'    => $this->getMunicipiosAtingidos($baseQuery),
-            'municipiosAtingidosEcp' => $this->getMunicipiosAtingidos($baseQuery, 'ECP'),
-            'municipiosAtingidosSe'  => $this->getMunicipiosAtingidos($baseQuery, 'SE'),
-            'municipiosAtingidosN1'  => $this->getMunicipiosAtingidos($baseQuery, 'N1'),
-
-            // Decretacoes Vigentes
-            'decretacoesVigentes'    => $this->getDecretacoesVigentes($baseQuery),
-            'decretacoesVigentesEcp' => $this->getDecretacoesVigentes($baseQuery, 'ECP'),
-            'decretacoesVigentesSe'  => $this->getDecretacoesVigentes($baseQuery, 'SE'),
-            'decretacoesVigentesN1'  => $this->getDecretacoesVigentes($baseQuery, 'N1'),
+            $familias = [
+                'totalEventos',
+                'registros',
+                'decretacoes',
+                'municipiosAtingidos',
+                'decretacoesVigentes',
             ];
+
+            $resultados = Concurrency::tasks(array_combine(
+                $familias,
+                array_map(
+                    static fn (string $familia) => static fn () => app(ProcessoStatsService::class)
+                        ->computeFamilia($familia, $filters),
+                    $familias,
+                ),
+            ));
+
+            return array_merge(...array_values($resultados));
         };
 
         // Verifica se existem filtros "ativos" (ignorando campos vazios/nulos)
@@ -109,6 +91,53 @@ class ProcessoStatsService
 
         // Se houver filtros, recalcula on the fly sem tocar no cache
         return $calculaEstatisticas();
+    }
+
+    /**
+     * Calcula uma familia de estatisticas (total + ECP/SE/N1) a partir dos
+     * filtros crus. Publico e auto-contido de proposito: e o metodo que as
+     * tasks do Concurrency::tasks() resolvem em outro processo, entao recebe
+     * apenas escalares/arrays e reconstroi a query localmente.
+     *
+     * @param array $filters Mesmos filtros crus aceitos por getDashboardStatistics
+     * @return array<string, int>
+     */
+    public function computeFamilia(string $familia, array $filters = []): array
+    {
+        $metodo = match ($familia) {
+            'totalEventos'        => 'getTotalEventos',
+            'registros'           => 'getRegistros',
+            'decretacoes'         => 'getDecretacoes',
+            'municipiosAtingidos' => 'getMunicipiosAtingidos',
+            'decretacoesVigentes' => 'getDecretacoesVigentes',
+            default => throw new InvalidArgumentException("Familia de estatistica desconhecida: {$familia}"),
+        };
+
+        $baseQuery = $this->buildBaseQuery($filters);
+
+        return [
+            $familia          => $this->{$metodo}($baseQuery),
+            $familia . 'Ecp'  => $this->{$metodo}($baseQuery, 'ECP'),
+            $familia . 'Se'   => $this->{$metodo}($baseQuery, 'SE'),
+            $familia . 'N1'   => $this->{$metodo}($baseQuery, 'N1'),
+        ];
+    }
+
+    /**
+     * Query base de Processo com os filtros da interface aplicados (padrao
+     * ProcessoFilter sobre um Request reconstruido dos filtros crus).
+     */
+    private function buildBaseQuery(array $filters): Builder
+    {
+        $baseQuery = Processo::query();
+
+        if (!empty($filters)) {
+            $request = new Request($filters);
+            $filter = new ProcessoFilter($request);
+            $baseQuery = $filter->apply($baseQuery);
+        }
+
+        return $baseQuery;
     }
 
     /**
