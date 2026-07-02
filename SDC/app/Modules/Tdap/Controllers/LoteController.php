@@ -78,7 +78,7 @@ class LoteController extends Controller
         return Inertia::render('Tdap/Lotes/Create', [
             'ata_id'      => $request->integer('ata_id') ?: null,
             'atas'        => Ata::ativo()->orderByDesc('dt_inicio')->get(['id', 'numero', 'dt_inicio', 'dt_final']),
-            'municipios'  => Municipio::orderBy('nome')->get(['id', 'nome', 'uf']),
+            'municipios'  => Municipio::catalogo(),
             'prestadores' => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
         ]);
     }
@@ -108,7 +108,7 @@ class LoteController extends Controller
         return Inertia::render('Tdap/Lotes/Edit', [
             'lote'        => LoteResource::make($lote->load(['ata', 'municipio', 'prestador'])),
             'atas'        => Ata::ativo()->orderByDesc('dt_inicio')->get(['id', 'numero', 'dt_inicio', 'dt_final']),
-            'municipios'  => Municipio::orderBy('nome')->get(['id', 'nome', 'uf']),
+            'municipios'  => Municipio::catalogo(),
             'prestadores' => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
         ]);
     }

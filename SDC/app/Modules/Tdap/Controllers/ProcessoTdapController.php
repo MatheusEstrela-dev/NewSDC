@@ -106,7 +106,7 @@ class ProcessoTdapController extends Controller
     public function create(): Response
     {
         return Inertia::render('Tdap/Processos/Create', [
-            'municipios' => Municipio::orderBy('nome')->get(['id', 'nome', 'uf']),
+            'municipios' => Municipio::catalogo(),
         ]);
     }
 

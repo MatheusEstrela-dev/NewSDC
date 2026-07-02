@@ -133,9 +133,7 @@ class PmdaAnaliseController extends Controller
         $partes = Concurrency::tasks([
             'analises'     => static fn () => app(PmdaPlanoService::class)->pendentesAnalise($filtros, 15, $page),
             'solicitacoes' => static fn () => app(ComunidadeSolicitacaoService::class)->pendentes($filtros, 15, $page),
-            'municipios'   => static fn () => \App\Models\Municipio::query()
-                ->orderBy('nome')->get(['id', 'nome', 'uf'])
-                ->map(fn ($m) => ['id' => $m->id, 'nome' => $m->nome, 'uf' => $m->uf]),
+            'municipios'   => static fn () => \App\Models\Municipio::catalogo(),
         ]);
 
         return Inertia::render('Pmda/Analises/Index', [
@@ -240,9 +238,7 @@ class PmdaPlanoController extends Controller
         $partes = Concurrency::tasks([
             'planos'     => static fn () => app(PmdaPlanoService::class)->listar($filtros, 15, $page),
             'statistics' => static fn () => app(PmdaPlanoService::class)->statisticsIndex(),
-            'municipios' => static fn () => \App\Models\Municipio::query()
-                ->orderBy('nome')->get(['id', 'nome', 'uf'])
-                ->map(fn ($m) => ['id' => $m->id, 'nome' => $m->nome, 'uf' => $m->uf]),
+            'municipios' => static fn () => \App\Models\Municipio::catalogo(),
         ]);
 
         return Inertia::render('Pmda/Index', [
