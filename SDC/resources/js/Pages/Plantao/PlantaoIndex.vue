@@ -39,6 +39,7 @@ const handleFilter = (filters) => {
   router.visit(route('plantao.index'), {
     data: filters,
     preserveState: true,
+    replace: true,
   });
 };
 

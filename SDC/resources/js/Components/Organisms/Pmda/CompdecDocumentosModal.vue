@@ -219,14 +219,9 @@ function remover(anexo) {
 
       <div class="flex-1 space-y-5 overflow-y-auto bg-slate-50 p-6 dark:bg-slate-900/60">
         <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-800/70">
-          <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 class="text-sm font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">Leis e Decretos</h3>
-              <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Marque apenas quando o municipio realmente não possuir o documento.</p>
-            </div>
-            <Button variant="primary" size="sm" :loading="ausenciaForm.processing" :disabled="ausenciaForm.processing" @click="salvarDeclaracoes">
-              Salvar Declarações
-            </Button>
+          <div class="mb-4">
+            <h3 class="text-sm font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">Leis e Decretos</h3>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Marque apenas quando o municipio realmente não possuir o documento.</p>
           </div>
 
           <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
@@ -337,8 +332,9 @@ function remover(anexo) {
         </section>
       </div>
 
-      <footer class="flex justify-end border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-700/60 dark:bg-slate-900">
-        <Button variant="secondary" size="sm" type="button" @click="fechar">Fechar</Button>
+      <footer class="flex items-center justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-700/60 dark:bg-slate-900">
+        <Button variant="danger" size="sm" type="button" @click="fechar">Cancelar</Button>
+        <Button variant="primary" size="sm" :loading="ausenciaForm.processing" :disabled="ausenciaForm.processing" @click="salvarDeclaracoes">Salvar Declarações</Button>
       </footer>
     </div>
   </Modal>

@@ -6,6 +6,8 @@
       variant="info"
       :icon="CubeIcon"
       subtitle="Cisternas cadastradas"
+      clickable
+      @click="$emit('filter', '')"
     />
     <StatCard
       title="Ativas"
@@ -13,6 +15,8 @@
       variant="success"
       :icon="CheckCircleIcon"
       subtitle="Em acompanhamento"
+      clickable
+      @click="$emit('filter', 'ativa')"
     />
     <StatCard
       title="Pendentes"
@@ -20,6 +24,8 @@
       variant="warning"
       :icon="ClockIcon"
       subtitle="Aguardando atualizacao"
+      clickable
+      @click="$emit('filter', 'pendente')"
     />
     <StatCard
       title="Municipios"
@@ -44,4 +50,7 @@ defineProps({
     default: () => ({ total: 0, ativas: 0, pendentes: 0, municipios: 0 }),
   },
 });
+
+// Cards com status real sao atalhos de filtro rapido (emitem o status). Municipios e metrica pura.
+defineEmits(['filter']);
 </script>

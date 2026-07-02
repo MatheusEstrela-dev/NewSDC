@@ -39,7 +39,6 @@
     <EstoqueStatsCards
       :statistics="statistics"
       :loading="loading"
-      @filter="handleStatFilter"
     />
 
     <EstoqueFiltersSection
@@ -232,14 +231,6 @@ function handleClearFilters() {
 
 function handleExportCsv(params) {
   triggerExport(params, localFilters.value);
-}
-
-function handleStatFilter(status) {
-  localFilters.value = {
-    ...localFilters.value,
-    status: status === 'total' ? '' : status,
-  };
-  handleApplyFilters(localFilters.value);
 }
 </script>
 

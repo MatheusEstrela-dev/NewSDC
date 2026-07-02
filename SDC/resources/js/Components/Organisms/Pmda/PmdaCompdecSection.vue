@@ -83,11 +83,8 @@ const equipeAtiva = computed(() => (props.equipe ?? []).filter((m) => m.ativo));
       </div>
     </div>
 
-    <div class="mt-6 flex items-center justify-between">
+    <div class="mt-6">
       <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Equipe Técnica / Membros</h3>
-      <button type="button" class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400" @click="showEquipe = true">
-        Gerenciar equipe
-      </button>
     </div>
 
     <!-- Resumo da equipe ativa (gestao completa no modal) -->

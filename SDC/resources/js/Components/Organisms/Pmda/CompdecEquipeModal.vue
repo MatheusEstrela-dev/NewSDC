@@ -211,7 +211,7 @@ function excluir(m) {
       </div>
 
       <footer class="flex shrink-0 items-center justify-end border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-700/50 dark:bg-slate-800">
-        <Button variant="secondary" size="sm" type="button" @click="$emit('close')">Fechar</Button>
+        <Button variant="danger" size="sm" type="button" @click="$emit('close')">Cancelar</Button>
       </footer>
     </div>
   </Modal>

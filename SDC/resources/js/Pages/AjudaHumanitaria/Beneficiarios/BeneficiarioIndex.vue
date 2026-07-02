@@ -107,10 +107,19 @@ const deleteBeneficiario = (id) => {
   }
 };
 
-const filterByStatus = (status) => {
-  router.visit(route('ajuda-humanitaria.beneficiarios.index', { status }), {
+// Filtro rapido via cards de estatistica. Preserva os filtros que nao vem dos
+// cards (busca, municipio, situacao, etc.) e substitui apenas os params dos cards
+// (status, abrigo_id). Objeto vazio = card Total (limpa os filtros dos cards).
+const filterByStatus = (statFilter = {}) => {
+  const { status: _status, abrigo_id: _abrigoId, ...restFilters } = props.filters ?? {};
+
+  router.get(route('ajuda-humanitaria.beneficiarios.index'), {
+    ...restFilters,
+    ...statFilter,
+  }, {
     preserveState: true,
     preserveScroll: true,
+    replace: true,
   });
 };
 

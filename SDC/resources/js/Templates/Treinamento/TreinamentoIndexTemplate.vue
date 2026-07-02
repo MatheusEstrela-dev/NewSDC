@@ -69,16 +69,12 @@ const emit = defineEmits(['create', 'view', 'edit', 'delete', 'filter', 'filter-
 const viewMode = ref('table');
 const localFilters = ref({ ...props.filters });
 
-const handleStatFilter = (statId) => {
-  // Mapear ID do stat para filtro de status
-  const statusMap = {
-    total: null,
-    planejados: 'PLANEJADO',
-    em_andamento: 'EM_ANDAMENTO',
-    concluidos: 'CONCLUIDO',
-  };
-
-  emit('filter', { status: statusMap[statId] });
+// Card de estatistica como filtro rapido: recebe o status ('' = Total, limpa o status)
+// e preserva os demais filtros ativos (search, tipo).
+const handleStatFilter = (status) => {
+  const merged = { ...localFilters.value, status: status || undefined };
+  localFilters.value = merged;
+  emit('filter', merged);
 };
 
 const handleFilterChange = (newFilters) => {

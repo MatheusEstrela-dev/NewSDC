@@ -17,7 +17,9 @@ defineProps({
 const emit = defineEmits(['close']);
 const close = () => emit('close');
 
+const PASSO_A_PASSO_URL = '/docs/pmda/passo-a-passo-compdec-2026.pdf';
 const TERMO_URL = '/docs/pmda/termo-compromisso-2026.pdf';
+const DECLARACAO_URL = '/docs/pmda/declaracao-iss-2026.pdf';
 
 const etapas = [
   'Início (motivo do pedido)',
@@ -103,6 +105,10 @@ const etapas = [
                 <p class="mt-3 text-sm italic text-slate-500 dark:text-slate-400">
                   O preenchimento é salvo a cada etapa — você pode sair e retomar depois.
                 </p>
+                <a :href="PASSO_A_PASSO_URL" target="_blank" download
+                   class="mt-3 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                  Baixar Passo a Passo (PDF)
+                </a>
               </div>
             </div>
 
@@ -122,10 +128,16 @@ const etapas = [
                 <p>
                   <strong>Ofício de Solicitação</strong> — em papel timbrado da Prefeitura, justificando o pedido, também anexado em PDF (máx. 5MB cada).
                 </p>
-                <a :href="TERMO_URL" target="_blank" download
-                   class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-                  Baixar Termo de Compromisso (PDF)
-                </a>
+                <div class="flex flex-wrap gap-2">
+                  <a :href="TERMO_URL" target="_blank" download
+                     class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                    Baixar Termo de Compromisso (PDF)
+                  </a>
+                  <a :href="DECLARACAO_URL" target="_blank" download
+                     class="inline-flex items-center gap-2 rounded-md border border-blue-600 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-900/30">
+                    Baixar Declaração ISS (PDF)
+                  </a>
+                </div>
               </div>
             </div>
 

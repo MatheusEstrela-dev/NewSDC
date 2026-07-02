@@ -49,6 +49,7 @@ const handleFilter = (filters) => {
   router.visit(route('treinamentos.index'), {
     data: filters,
     preserveState: true,
+    replace: true,
   });
 };
 </script>

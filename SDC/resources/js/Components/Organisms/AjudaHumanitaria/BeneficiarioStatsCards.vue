@@ -1,40 +1,40 @@
 <template>
   <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-    <div @click="$emit('filter', 'all')" class="cursor-pointer">
-      <StatCard
-        title="Total"
-        :value="statistics.total || 0"
-        variant="info"
-        :icon="UsersGroupIcon"
-      />
-    </div>
-    <div @click="$emit('filter', 'ativos')" class="cursor-pointer">
-      <StatCard
-        title="Ativos"
-        :value="statistics.ativos || 0"
-        variant="success"
-        :icon="CheckCircleIcon"
-        subtitle="Beneficiários ativos"
-      />
-    </div>
-    <div @click="$emit('filter', 'em_abrigo')" class="cursor-pointer">
-      <StatCard
-        title="Em Abrigo"
-        :value="statistics.em_abrigo || 0"
-        variant="info"
-        :icon="HomeModernIcon"
-        subtitle="Abrigados"
-      />
-    </div>
-    <div @click="$emit('filter', 'fora_abrigo')" class="cursor-pointer">
-      <StatCard
-        title="Fora de Abrigo"
-        :value="statistics.fora_de_abrigo || 0"
-        variant="warning"
-        :icon="UsersIcon"
-        subtitle="Não abrigados"
-      />
-    </div>
+    <StatCard
+      title="Total"
+      :value="statistics.total || 0"
+      variant="info"
+      :icon="UsersGroupIcon"
+      clickable
+      @click="$emit('filter', {})"
+    />
+    <StatCard
+      title="Ativos"
+      :value="statistics.ativos || 0"
+      variant="success"
+      :icon="CheckCircleIcon"
+      subtitle="Beneficiários ativos"
+      clickable
+      @click="$emit('filter', { status: 'ativo' })"
+    />
+    <StatCard
+      title="Em Abrigo"
+      :value="statistics.em_abrigo || 0"
+      variant="info"
+      :icon="HomeModernIcon"
+      subtitle="Abrigados"
+      clickable
+      @click="$emit('filter', { abrigo_id: 'not_null' })"
+    />
+    <StatCard
+      title="Fora de Abrigo"
+      :value="statistics.fora_de_abrigo || 0"
+      variant="warning"
+      :icon="UsersIcon"
+      subtitle="Não abrigados"
+      clickable
+      @click="$emit('filter', { abrigo_id: 'null' })"
+    />
   </div>
 </template>
 

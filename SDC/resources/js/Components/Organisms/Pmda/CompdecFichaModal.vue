@@ -379,7 +379,7 @@ function removerFoto() {
 
       <!-- Rodapé -->
       <footer class="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-700/50 dark:bg-slate-800">
-        <Button variant="secondary" size="sm" type="button" @click="fechar">Cancelar</Button>
+        <Button variant="danger" size="sm" type="button" @click="fechar">Cancelar</Button>
         <Button variant="primary" size="sm" :loading="form.processing" :disabled="form.processing" @click="gravar">Salvar Alterações</Button>
       </footer>
     </div>

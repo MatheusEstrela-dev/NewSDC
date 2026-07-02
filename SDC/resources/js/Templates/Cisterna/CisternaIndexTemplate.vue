@@ -22,7 +22,7 @@
       </template>
     </PageHeader>
 
-    <CisternaStatsCards :statistics="statistics" />
+    <CisternaStatsCards :statistics="statistics" @filter="filtrarPorStatus" />
 
     <CisternaFiltersSection
       :filters="filters"
@@ -112,6 +112,11 @@ function applyFilters(filters) {
     preserveScroll: true,
     replace: true,
   });
+}
+
+// Cards de estatistica como filtro rapido: '' = Total (limpa o status), preservando os demais filtros.
+function filtrarPorStatus(status) {
+  applyFilters({ ...props.filters, status: status || undefined });
 }
 
 function handlePageChange(page) {

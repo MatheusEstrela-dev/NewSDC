@@ -221,6 +221,8 @@ const { isMobile } = useMobile();
 const viewMode = ref('table');
 const localFilters = ref({ ...props.filters });
 
+// Card de estatistica -> filtro rapido. Recebe um objeto com os params reais
+// (ex.: { status: 'ativo' } ou { abrigo_id: 'not_null' }); objeto vazio = Total (limpa).
 const handleStatFilter = (filter) => {
   emit('filter', filter);
 };

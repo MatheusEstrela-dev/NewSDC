@@ -139,7 +139,7 @@ function handleClearFilters() {
 function handleStatFilter(situacao) {
   localFilters.value = {
     ...localFilters.value,
-    situacao: situacao === 'total' ? '' : situacao,
+    situacao: situacao || '',
   };
   handleApplyFilters(localFilters.value);
 }

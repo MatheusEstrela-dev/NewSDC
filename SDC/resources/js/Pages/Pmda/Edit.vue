@@ -26,7 +26,13 @@ const props = defineProps({
   compdec_equipe: { type: Array, default: () => [] },
 });
 
-const dados = computed(() => props.plano?.data ?? props.plano);
+// Resource FLAT com campo proprio "data" (string ISO): so desembrulha quando "data"
+// for objeto (envelope real). Ver Pmda/Create.vue.
+const dados = computed(() => {
+  const p = props.plano;
+  if (!p) return null;
+  return p.data && typeof p.data === 'object' ? p.data : p;
+});
 
 // Edit: edicao de um PMDA existente — todas as etapas liberadas.
 // (A CRIACAO roda inteira no contexto Create/continuar, nunca aqui.)

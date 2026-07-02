@@ -1,7 +1,7 @@
 <template>
   <div class="demandas-container">
     <DemandasPageHeader :can-create="canCreate" :can-export="canExport" @open-modal="showModal = true" @open-export="showExportModal = true" />
-    <DemandasStatisticsCards :statistics="demandasStatistics" />
+    <DemandasStatisticsCards :statistics="demandasStatistics" @filter="handleStatFilter" />
 
     <DemandasList
       :demandas="demandas"
@@ -109,6 +109,12 @@ const {
 
 const handleFilterChange = (newFilters) => {
   setFilters(newFilters);
+};
+
+// Cards de estatistica como filtros rapidos de status.
+// '' (card Total) limpa apenas o filtro de status, preservando os demais.
+const handleStatFilter = (status) => {
+  setFilters({ status });
 };
 
 const handleClearFilters = () => {

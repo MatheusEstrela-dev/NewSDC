@@ -1,6 +1,6 @@
 <template>
   <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
-    <!-- Total de Eventos -->
+    <!-- Total de Eventos (metrica agregada - nao filtravel) -->
     <StatCardWithBreakdown
       title="Total de Eventos"
       :value="statistics.totalEventos"
@@ -9,10 +9,10 @@
       :n1="statistics.totalEventosN1"
       variant="info"
       :icon="BoltIcon"
-      @click="handleFilter('eventos')"
+      :clickable="false"
     />
 
-    <!-- Registros -->
+    <!-- Registros (metrica agregada - nao filtravel) -->
     <StatCardWithBreakdown
       title="Registros"
       :value="statistics.registros"
@@ -21,10 +21,10 @@
       :n1="statistics.registrosN1"
       variant="info"
       :icon="ClipboardDocumentListIcon"
-      @click="handleFilter('registros')"
+      :clickable="false"
     />
 
-    <!-- Decretacoes -->
+    <!-- Decretacoes (metrica agregada - nao filtravel) -->
     <StatCardWithBreakdown
       title="Decretacoes"
       :value="statistics.decretacoes"
@@ -33,10 +33,10 @@
       :n1="statistics.decretacoesN1"
       variant="info"
       :icon="DocumentTextIcon"
-      @click="handleFilter('decretacoes')"
+      :clickable="false"
     />
 
-    <!-- Municipios Atingidos -->
+    <!-- Municipios Atingidos (metrica agregada - nao filtravel) -->
     <StatCardWithBreakdown
       title="Municipios Atingidos"
       :value="statistics.municipiosAtingidos"
@@ -45,10 +45,10 @@
       :n1="statistics.municipiosAtingidosN1"
       variant="warning"
       :icon="MapIcon"
-      @click="handleFilter('municipios')"
+      :clickable="false"
     />
 
-    <!-- Decretacoes Vigentes -->
+    <!-- Decretacoes Vigentes - atalho de filtro rapido (vigencia_status=vigente) -->
     <StatCardWithBreakdown
       title="Decretacoes Vigentes"
       :value="statistics.decretacoesVigentes"
@@ -57,7 +57,7 @@
       :n1="statistics.decretacoesVigentesN1"
       variant="success"
       :icon="CheckCircleIcon"
-      @click="handleFilter('vigentes')"
+      @click="handleFilter('vigente')"
     />
   </div>
 </template>
@@ -100,7 +100,9 @@ const props = defineProps({
 
 const emit = defineEmits(['filter']);
 
-function handleFilter(type) {
-  emit('filter', type);
+// Emite o valor real de vigencia_status ('vigente'). As demais metricas
+// (eventos, registros, decretacoes, municipios) sao agregados nao filtraveis.
+function handleFilter(vigenciaStatus) {
+  emit('filter', vigenciaStatus);
 }
 </script>

@@ -1,20 +1,10 @@
 <template>
   <div class="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-    <button type="button" class="text-left" @click="$emit('filter', 'total')">
-      <StatCard title="Produtos" :value="statistics.produtos" variant="info" :icon="ArchiveBoxIcon" />
-    </button>
-    <button type="button" class="text-left" @click="$emit('filter', 'normal')">
-      <StatCard title="Saldo total" :value="statistics.saldo_total" variant="success" :icon="CircleStackIcon" />
-    </button>
-    <button type="button" class="text-left" @click="$emit('filter', 'normal')">
-      <StatCard title="Kits montaveis" :value="statistics.kits_montaveis" variant="info" :icon="SquaresPlusIcon" />
-    </button>
-    <button type="button" class="text-left" @click="$emit('filter', 'atencao')">
-      <StatCard title="Lotes vencendo" :value="statistics.lotes_vencendo" variant="warning" :icon="ClockIcon" />
-    </button>
-    <button type="button" class="text-left" @click="$emit('filter', 'critico')">
-      <StatCard title="Requisicoes" :value="statistics.requisicoes" variant="danger" :icon="ClipboardDocumentCheckIcon" />
-    </button>
+    <StatCard title="Produtos" :value="statistics.produtos" variant="info" :icon="ArchiveBoxIcon" />
+    <StatCard title="Saldo total" :value="statistics.saldo_total" variant="success" :icon="CircleStackIcon" />
+    <StatCard title="Kits montaveis" :value="statistics.kits_montaveis" variant="info" :icon="SquaresPlusIcon" />
+    <StatCard title="Lotes vencendo" :value="statistics.lotes_vencendo" variant="warning" :icon="ClockIcon" />
+    <StatCard title="Requisicoes" :value="statistics.requisicoes" variant="danger" :icon="ClipboardDocumentCheckIcon" />
   </div>
 </template>
 
@@ -28,6 +18,7 @@ import {
   SquaresPlusIcon,
 } from '@heroicons/vue/24/outline';
 
+// Metricas puras (somatorios/contagens) sem correspondencia com o filtro de status; nao sao clicaveis.
 defineProps({
   statistics: {
     type: Object,
@@ -38,6 +29,4 @@ defineProps({
     default: false,
   },
 });
-
-defineEmits(['filter']);
 </script>

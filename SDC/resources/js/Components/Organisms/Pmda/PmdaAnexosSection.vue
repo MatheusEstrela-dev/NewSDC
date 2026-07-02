@@ -5,24 +5,31 @@ import PmdaWizardPanel from '@/Components/Molecules/Pmda/PmdaWizardPanel.vue';
 import PaperClipIcon from '@/Components/Icons/PaperClipIcon.vue';
 import DocumentIcon from '@/Components/Icons/DocumentIcon.vue';
 import CheckIcon from '@/Components/Icons/CheckIcon.vue';
+import { useToast } from '@/Composables/useToast.js';
 
 const props = defineProps({
   plano: { type: Object, required: true },
 });
 
 const emit = defineEmits(['prev', 'revisar']);
+const { show: toast } = useToast();
 
 const uploading = ref('');
+const progresso = ref(0);
 const enviando = ref(false);
 
 function upload(colecao, event) {
   const arquivo = event.target.files?.[0];
   if (!arquivo) return;
   uploading.value = colecao;
+  progresso.value = 0;
   router.post(route('pmda.planos.anexos.store', props.plano.id), { colecao, arquivo }, {
     forceFormData: true,
     preserveScroll: true,
-    onFinish: () => { uploading.value = ''; event.target.value = ''; },
+    onProgress: (e) => { if (e?.percentage != null) progresso.value = Math.round(e.percentage); },
+    onSuccess: () => { toast('Documento enviado com sucesso.', 'success'); },
+    onError: () => { toast('Falha no envio do documento. Tente novamente.', 'error'); },
+    onFinish: () => { uploading.value = ''; progresso.value = 0; event.target.value = ''; },
   });
 }
 
@@ -73,10 +80,15 @@ const docs = [
             </span>
           </div>
         </div>
-        <label class="cursor-pointer rounded-md border border-slate-300 px-3 py-1.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
-          {{ uploading === d.colecao ? 'Enviando...' : 'Escolher arquivo' }}
-          <input type="file" accept="application/pdf" class="hidden" @change="(e) => upload(d.colecao, e)" />
-        </label>
+        <div class="flex flex-col items-stretch gap-2 sm:w-56">
+          <label class="cursor-pointer rounded-md border border-slate-300 px-3 py-1.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
+            {{ uploading === d.colecao ? `Enviando... ${progresso}%` : 'Escolher arquivo' }}
+            <input type="file" accept="application/pdf" class="hidden" :disabled="uploading === d.colecao" @change="(e) => upload(d.colecao, e)" />
+          </label>
+          <div v-if="uploading === d.colecao" class="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+            <div class="h-full rounded-full bg-blue-600 transition-all duration-150" :style="{ width: progresso + '%' }"></div>
+          </div>
+        </div>
       </div>
     </div>
 
