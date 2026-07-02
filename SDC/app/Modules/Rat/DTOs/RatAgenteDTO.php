@@ -10,7 +10,7 @@ namespace App\Modules\Rat\DTOs;
 readonly class RatAgenteDTO
 {
     public function __construct(
-        public ?int    $id = null,
+        public ?string $id = null,
         public ?string $nomeCompleto = null,
         public ?string $matricula = null,
         public ?string $masp = null,

@@ -12,7 +12,7 @@ use App\Modules\Rat\DTOs\RatAgenteDTO;
 readonly class RatRecursoDTO
 {
     public function __construct(
-        public ?int    $id = null,
+        public ?string $id = null,
         public ?int    $seq = null,
         public ?string $recursoTipo = null,
         public ?bool   $recursoProblemas = null,

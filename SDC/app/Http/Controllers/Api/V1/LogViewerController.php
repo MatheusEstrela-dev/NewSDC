@@ -8,6 +8,7 @@ use App\Services\Logging\LogFileReaderService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 
 /**
@@ -107,7 +108,7 @@ class LogViewerController extends Controller
             level: $validated['level'] ?? null,
             search: $validated['search'] ?? null,
             limit: $validated['limit'] ?? 1000,
-            file: $request->query('file')
+            file: is_string($request->query('file')) ? $request->query('file') : null,
         );
 
         return response()->json([
@@ -176,7 +177,7 @@ class LogViewerController extends Controller
             startDate: $startDate,
             endDate: $endDate,
             type: $validated['type'] ?? null,
-            file: $request->query('file')
+            file: is_string($request->query('file')) ? $request->query('file') : null,
         );
 
         return response()->json([
@@ -348,7 +349,7 @@ class LogViewerController extends Controller
         ActivityLogger::logEvent('system', 'logs_cleaned', [
             'days_kept' => $days,
             'files_deleted' => $deleted,
-        ], auth()->id(), 'info');
+        ], Auth::id() !== null ? (string) Auth::id() : null, 'info');
 
         return response()->json([
             'message' => 'Logs antigos removidos com sucesso',

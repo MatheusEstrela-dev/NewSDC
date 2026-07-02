@@ -38,13 +38,13 @@
         </span>
       </div>
 
-      <div class="flex items-center justify-center gap-3 flex-wrap">
+      <div class="flex items-center justify-end gap-3 flex-wrap">
         <button
           type="button"
           :disabled="uploading"
           @click="$emit('save')"
           class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold
-                 bg-slate-600 hover:bg-slate-500 active:bg-slate-700
+                 bg-blue-600 hover:bg-blue-700 active:bg-blue-800
                  text-white shadow-sm transition-colors duration-150
                  disabled:opacity-60 disabled:cursor-not-allowed min-w-[160px] justify-center"
         >
@@ -55,8 +55,9 @@
           Salvar
         </button>
 
-        <!-- Finalizar RAT -->
+        <!-- Finalizar RAT: oculto se já finalizado -->
         <button
+          v-if="!isAlreadyFinalizado"
           type="button"
           :disabled="uploading"
           @click="handleFinalizeClick"
@@ -94,9 +95,10 @@ const acceptedTypes = [
 ].join(',');
 
 const props = defineProps({
-  ratId:    { type: String, default: null },
-  anexos:   { type: Array,  default: () => [] },
-  viewOnly: { type: Boolean, default: false },
+  ratId:       { type: String,  default: null },
+  anexos:      { type: Array,   default: () => [] },
+  viewOnly:    { type: Boolean, default: false },
+  ratStatus:   { type: String,  default: null },
 });
 
 const emit = defineEmits(['add', 'remove', 'update', 'save', 'finalize', 'update:pending-files']);
@@ -107,7 +109,8 @@ const uploading   = ref(false);
 const uploadError = ref(null);
 const pendingFiles = ref([]);
 
-const hasAttachments = computed(() => (localAnexos.value.anexos?.length ?? 0) > 0);
+const hasAttachments   = computed(() => (localAnexos.value.anexos?.length ?? 0) > 0);
+const isAlreadyFinalizado = computed(() => props.ratStatus === 'finalizado');;
 
 watch(pendingFiles, (files) => {
   emit('update:pending-files', [...files]);

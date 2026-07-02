@@ -1,6 +1,6 @@
 <template>
   <div v-if="!viewOnly" class="rat-actions-footer">
-    <div class="flex items-center justify-center gap-3 flex-wrap">
+    <div class="flex items-center justify-end gap-3 flex-wrap">
       <!-- Botão Salvar -->
       <Button
         variant="default"

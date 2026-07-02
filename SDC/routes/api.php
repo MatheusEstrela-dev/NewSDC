@@ -270,15 +270,13 @@ Route::prefix('v1/logs')->name('api.v1.logs.')->middleware([
 
             switch ($type) {
                 case 'sql':
-                    \DB::select('SELECT * FROM tabela_inexistente_xyz');
+                    \Illuminate\Support\Facades\DB::select('SELECT * FROM tabela_inexistente_xyz');
                     break;
                 case 'division':
                     $x = 1 / 0;
                     break;
                 case 'null':
-                    $obj = null;
-                    $obj->method();
-                    break;
+                    throw new \Error('Simulated null dereference: ' . now()->toIso8601String());
                 case 'custom':
                     throw new \Exception('Erro de teste customizado: ' . now()->toIso8601String());
                 default:
@@ -387,8 +385,9 @@ Route::prefix('v1/rat')
         'api-rate-limiter:pro',
     ])
     ->group(function () {
-        Route::get('protocolos',      [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'index'])->name('protocolos.index');
-        Route::get('protocolos/{id}', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'show'])->name('protocolos.show');
+        Route::get('protocolos',               [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'index'])->name('protocolos.index');
+        Route::get('protocolos/export/power-bi', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'exportPowerBI'])->name('protocolos.export.powerbi');
+        Route::get('protocolos/{id}',          [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'show'])->name('protocolos.show');
     });
 
 // Rota de escrita — limite restrito (default: 300 creditos/min)

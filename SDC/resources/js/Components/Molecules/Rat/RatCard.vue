@@ -33,9 +33,18 @@
 
     <!-- Footer Actions -->
     <div class="rat-card-footer">
+<<<<<<< Updated upstream
       <ActionButton
         module="rat"
         resource="protocolos"
+=======
+      <TableActions
+        :show-print="true"
+        :show-edit="canEdit"
+        :show-attachments="true"
+        :show-delete="canDelete"
+        attachments-label="Relacionar"
+>>>>>>> Stashed changes
         size="md"
         :actions="[
           { action: 'view',        handler: () => $emit('view', rat.id) },
