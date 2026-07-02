@@ -129,8 +129,9 @@ class WebhookController extends Controller
             $source = $request->header('X-Webhook-Source', 'unknown');
 
             // 2. Envia para a fila (Isso leva ~2ms)
-            // Não processa na hora - é Fire & Forget
-            $this->webhookService->receive($validated, $source, $traceId);
+            // Não processa na hora - é Fire & Forget. O header Idempotency-Key
+            // (documentado no Swagger) tem prioridade como chave de deduplicacao.
+            $this->webhookService->receive($validated, $source, $traceId, $request->header('Idempotency-Key'));
 
             // 3. Retorna 202 (Aceito) - NÃO retorna 200 (OK/Feito)
             // Contexto: O cliente recebe a resposta em ~50ms,

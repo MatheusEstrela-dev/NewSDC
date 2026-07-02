@@ -35,8 +35,18 @@ class ProcessInboundWebhook implements ShouldQueue
      */
     public array $backoff = [5, 30, 300, 3600];
 
+    /**
+     * Duas formas de despacho:
+     *  - legado: dispatch($event) com o WebhookEvent ja persistido;
+     *  - atual: dispatch(null, $inbound) com o payload cru — a idempotencia e
+     *    o upsert em webhook_events rodam AQUI (worker de fila), tirando as
+     *    queries do hot path HTTP do receive().
+     *
+     * @param array{payload: array, source: string, external_event_id: string, event_type: string, trace_id: string}|null $inbound
+     */
     public function __construct(
-        public WebhookEvent $event
+        public ?WebhookEvent $event = null,
+        public ?array $inbound = null
     ) {}
 
     /**
@@ -47,6 +57,14 @@ class ProcessInboundWebhook implements ShouldQueue
      */
     public function handle(): void
     {
+        if ($this->event === null) {
+            $this->event = $this->resolveEvent();
+
+            if ($this->event === null) {
+                return; // Duplicata: evento ja concluido ou em processamento ativo.
+            }
+        }
+
         // Marca como em processamento
         $this->event->markAsProcessing();
 
@@ -85,11 +103,62 @@ class ProcessInboundWebhook implements ShouldQueue
     }
 
     /**
+     * Resolve (idempotente) o WebhookEvent a partir do payload cru despachado
+     * pelo receive(). Retorna null quando a entrega e duplicata: evento ja
+     * COMPLETED, ou PROCESSING com tentativa recente (outro worker ativo).
+     * PROCESSING antigo (> timeout) e tentativa que crashou — retoma.
+     */
+    protected function resolveEvent(): ?WebhookEvent
+    {
+        $existing = WebhookEvent::where('external_event_id', $this->inbound['external_event_id'])
+            ->where('provider', $this->inbound['source'])
+            ->first();
+
+        if ($existing !== null) {
+            $processandoAtivo = $existing->status === WebhookEvent::STATUS_PROCESSING
+                && $existing->last_attempt_at?->gt(now()->subSeconds($this->timeout));
+
+            if ($existing->status === WebhookEvent::STATUS_COMPLETED || $processandoAtivo) {
+                Log::channel('webhooks')->info('Webhook already processed (idempotency)', [
+                    'external_event_id' => $this->inbound['external_event_id'],
+                    'provider' => $this->inbound['source'],
+                    'status' => $existing->status,
+                    'trace_id' => $this->inbound['trace_id'],
+                ]);
+
+                return null;
+            }
+        }
+
+        return WebhookEvent::updateOrCreate(
+            [
+                'external_event_id' => $this->inbound['external_event_id'],
+                'provider' => $this->inbound['source'],
+            ],
+            [
+                'event_type' => $this->inbound['event_type'],
+                'payload' => $this->inbound['payload'],
+                'status' => WebhookEvent::STATUS_PENDING,
+            ]
+        );
+    }
+
+    /**
      * Handler de falha permanente
      * Move para Dead Letter Queue apos todas as tentativas
      */
     public function failed(Throwable $exception): void
     {
+        if ($this->event === null) {
+            Log::channel('webhooks')->error('Inbound webhook failed before event resolution', [
+                'external_event_id' => $this->inbound['external_event_id'] ?? null,
+                'provider' => $this->inbound['source'] ?? null,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return;
+        }
+
         $this->event->markAsFailed($exception->getMessage());
 
         $isDeadLetter = $this->event->status === WebhookEvent::STATUS_DEAD_LETTER;
