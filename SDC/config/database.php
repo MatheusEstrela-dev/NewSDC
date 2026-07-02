@@ -150,7 +150,10 @@ return [
             //   SWOOLE_PG_POOL_SIZE (ex.: 8) para nao esgotar o Postgres.
             'options' => [
                 PDO::ATTR_EMULATE_PREPARES => false,
-                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', true),
+                // Default false: PDO persistente sob Octane/Swoole reusa a MESMA
+                // conexao entre requests do worker e vaza estado/transacao.
+                // Ligar apenas via env em runtime nao-residente (ex.: FPM legado).
+                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', false),
             ],
         ],
 
@@ -199,7 +202,8 @@ return [
             'application_name' => env('APP_NAME', 'sdc-laravel') . '-ai',
             'options' => [
                 PDO::ATTR_EMULATE_PREPARES => false,
-                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', true),
+                // Mesmo racional da conexao pgsql: persistente e inseguro sob Octane.
+                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', false),
             ],
         ],
 
