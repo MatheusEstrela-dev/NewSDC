@@ -30,14 +30,15 @@ class SetTenant
     /**
      * Memoizacao em processo (por worker Octane) do tenant resolvido, na frente
      * do cache Redis. Evita um GET no Redis a cada navegacao do mesmo tenant
-     * dentro do worker. TTL curto (< TTL do Redis) mantem a tolerancia a stale
-     * compativel com o Cache::remember de 300s ja existente.
+     * dentro do worker. TTL igual ao Cache::remember (300s): a tolerancia a
+     * stale do sistema continua sendo uma so, e rotas stateless (API/health)
+     * deixam de tocar Postgres/Redis a cada request dentro da janela.
      *
      * @var array<int, array{tenant: ?Tenant, exp: float}>
      */
     private static array $tenantMemo = [];
 
-    private const TENANT_MEMO_TTL = 30;
+    private const TENANT_MEMO_TTL = 300;
 
     public function handle(Request $request, Closure $next): Response
     {
