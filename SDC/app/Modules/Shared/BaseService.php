@@ -9,9 +9,15 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 abstract class BaseService
 {
-    protected function paginate(Builder $query, int $perPage = 15): LengthAwarePaginator
+    /**
+     * Pagina a query. $page explicito permite paginar fora do ciclo de request
+     * (ex.: closures do Concurrency::tasks() em task workers, onde o resolver
+     * padrao do Paginator nao enxerga a request); null preserva o comportamento
+     * atual (resolve da request corrente).
+     */
+    protected function paginate(Builder $query, int $perPage = 15, ?int $page = null): LengthAwarePaginator
     {
-        return $query->paginate($perPage);
+        return $query->paginate($perPage, ['*'], 'page', $page);
     }
 
     protected function applyFilters(Builder $query, array $filters, array $filterableFields): Builder
