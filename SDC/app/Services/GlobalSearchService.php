@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Support\Concurrency\Concurrency;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use PDO;
 
 class GlobalSearchService
@@ -48,106 +49,142 @@ class GlobalSearchService
         ]);
     }
 
+    /**
+     * Isola falha por fonte: uma fonte quebrada (tabela ausente, schema
+     * divergente, timeout) vira lista vazia + warning, nunca 500 na busca
+     * inteira. As closures aqui sao criadas em runtime dentro do worker
+     * (nunca serializadas), entao o aninhamento e seguro.
+     */
+    private static function fonteSegura(string $fonte, callable $fn): array
+    {
+        try {
+            return $fn();
+        } catch (\Throwable $e) {
+            Log::warning('GlobalSearch: fonte indisponivel', [
+                'fonte' => $fonte,
+                'erro' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
     public function searchPae(string $query): array
     {
-        $like = '%' . $query . '%';
+        return self::fonteSegura('pae', static function () use ($query) {
+            $like = '%' . $query . '%';
 
-        $rows = DB::select(self::paeSql(), [
-            'q1' => $query, 'q2' => $query, 'q3' => $query, 'q4' => $query,
-            'like1' => $like, 'like2' => $like, 'like3' => $like, 'like4' => $like,
-            'lim' => self::LIMIT,
-        ]);
+            $rows = DB::select(self::paeSql(), [
+                'q1' => $query, 'q2' => $query, 'q3' => $query, 'q4' => $query,
+                'like1' => $like, 'like2' => $like, 'like3' => $like, 'like4' => $like,
+                'lim' => self::LIMIT,
+            ]);
 
-        return self::mapPaeRows($rows);
+            return self::mapPaeRows($rows);
+        });
     }
 
     public function searchDecretacoes(string $query): array
     {
-        $like = '%' . $query . '%';
+        return self::fonteSegura('decretacoes', static function () use ($query) {
+            $like = '%' . $query . '%';
 
-        $rows = DB::select(self::decretacoesSql(), [
-            'q1' => $query, 'q2' => $query,
-            'like1' => $like, 'like2' => $like,
-            'lim' => self::LIMIT,
-        ]);
+            $rows = DB::select(self::decretacoesSql(), [
+                'q1' => $query, 'q2' => $query,
+                'like1' => $like, 'like2' => $like,
+                'lim' => self::LIMIT,
+            ]);
 
-        return self::mapDecretacoesRows($rows);
+            return self::mapDecretacoesRows($rows);
+        });
     }
 
     public function searchRat(string $query): array
     {
-        $like = '%' . $query . '%';
+        return self::fonteSegura('rat', static function () use ($query) {
+            $like = '%' . $query . '%';
 
-        $rows = DB::select(self::ratSql(), [
-            'q' => $query, 'like' => $like, 'lim' => self::LIMIT,
-        ]);
+            $rows = DB::select(self::ratSql(), [
+                'q' => $query, 'like' => $like, 'lim' => self::LIMIT,
+            ]);
 
-        return self::mapRatRows($rows);
+            return self::mapRatRows($rows);
+        });
     }
 
     public function searchDemandas(string $query): array
     {
-        $like = '%' . $query . '%';
+        return self::fonteSegura('demandas', static function () use ($query) {
+            $like = '%' . $query . '%';
 
-        $rows = DB::select(self::demandasSql(), [
-            'q1' => $query, 'q2' => $query,
-            'like1' => $like, 'like2' => $like,
-            'lim' => self::LIMIT,
-        ]);
+            $rows = DB::select(self::demandasSql(), [
+                'q1' => $query, 'q2' => $query,
+                'like1' => $like, 'like2' => $like,
+                'lim' => self::LIMIT,
+            ]);
 
-        return self::mapDemandasRows($rows);
+            return self::mapDemandasRows($rows);
+        });
     }
 
     private static function searchPaeWithPdo(PDO $pdo, string $query): array
     {
-        $like = '%' . $query . '%';
+        return self::fonteSegura('pae', static function () use ($pdo, $query) {
+            $like = '%' . $query . '%';
 
-        $rows = self::pdoSelect($pdo, self::paeSql(), [
-            'q1' => $query, 'q2' => $query, 'q3' => $query, 'q4' => $query,
-            'like1' => $like, 'like2' => $like, 'like3' => $like, 'like4' => $like,
-            'lim' => self::LIMIT,
-        ], ['lim' => PDO::PARAM_INT]);
+            $rows = self::pdoSelect($pdo, self::paeSql(), [
+                'q1' => $query, 'q2' => $query, 'q3' => $query, 'q4' => $query,
+                'like1' => $like, 'like2' => $like, 'like3' => $like, 'like4' => $like,
+                'lim' => self::LIMIT,
+            ], ['lim' => PDO::PARAM_INT]);
 
-        return self::mapPaeRows($rows);
+            return self::mapPaeRows($rows);
+        });
     }
 
     private static function searchDecretacoesWithPdo(PDO $pdo, string $query): array
     {
-        $like = '%' . $query . '%';
+        return self::fonteSegura('decretacoes', static function () use ($pdo, $query) {
+            $like = '%' . $query . '%';
 
-        $rows = self::pdoSelect($pdo, self::decretacoesSql(), [
-            'q1' => $query, 'q2' => $query,
-            'like1' => $like, 'like2' => $like,
-            'lim' => self::LIMIT,
-        ], ['lim' => PDO::PARAM_INT]);
+            $rows = self::pdoSelect($pdo, self::decretacoesSql(), [
+                'q1' => $query, 'q2' => $query,
+                'like1' => $like, 'like2' => $like,
+                'lim' => self::LIMIT,
+            ], ['lim' => PDO::PARAM_INT]);
 
-        return self::mapDecretacoesRows($rows);
+            return self::mapDecretacoesRows($rows);
+        });
     }
 
     private static function searchRatWithPdo(PDO $pdo, string $query): array
     {
-        $like = '%' . $query . '%';
+        return self::fonteSegura('rat', static function () use ($pdo, $query) {
+            $like = '%' . $query . '%';
 
-        $rows = self::pdoSelect($pdo, self::ratSql(), [
-            'q' => $query,
-            'like' => $like,
-            'lim' => self::LIMIT,
-        ], ['lim' => PDO::PARAM_INT]);
+            $rows = self::pdoSelect($pdo, self::ratSql(), [
+                'q' => $query,
+                'like' => $like,
+                'lim' => self::LIMIT,
+            ], ['lim' => PDO::PARAM_INT]);
 
-        return self::mapRatRows($rows);
+            return self::mapRatRows($rows);
+        });
     }
 
     private static function searchDemandasWithPdo(PDO $pdo, string $query): array
     {
-        $like = '%' . $query . '%';
+        return self::fonteSegura('demandas', static function () use ($pdo, $query) {
+            $like = '%' . $query . '%';
 
-        $rows = self::pdoSelect($pdo, self::demandasSql(), [
-            'q1' => $query, 'q2' => $query,
-            'like1' => $like, 'like2' => $like,
-            'lim' => self::LIMIT,
-        ], ['lim' => PDO::PARAM_INT]);
+            $rows = self::pdoSelect($pdo, self::demandasSql(), [
+                'q1' => $query, 'q2' => $query,
+                'like1' => $like, 'like2' => $like,
+                'lim' => self::LIMIT,
+            ], ['lim' => PDO::PARAM_INT]);
 
-        return self::mapDemandasRows($rows);
+            return self::mapDemandasRows($rows);
+        });
     }
 
     private static function paeSql(): string
@@ -200,14 +237,18 @@ class GlobalSearchService
 
     private static function ratSql(): string
     {
+        // Tabela real do modulo RAT e rat_ocorrencias (o schema legado 'rats'
+        // nao existe neste banco); o identificador pesquisavel e numero_bos,
+        // aliasado como protocolo para manter o contrato do mapRatRows.
         return "
             SELECT
                 id,
-                protocolo,
+                numero_bos AS protocolo,
                 status,
-                similarity(COALESCE(protocolo, ''), :q) AS score
-            FROM rats
-            WHERE protocolo ILIKE :like
+                similarity(COALESCE(numero_bos, ''), :q) AS score
+            FROM rat_ocorrencias
+            WHERE deleted_at IS NULL
+              AND numero_bos ILIKE :like
             ORDER BY score DESC
             LIMIT :lim
         ";
