@@ -1,7 +1,11 @@
-import { ref, computed } from 'vue';
+import { ref, shallowRef, computed } from 'vue';
 
 export function useLocationData() {
-  const municipios = ref([]);
+  // shallowRef: a lista chega a 853 municipios (MG) e e read-only apos o load.
+  // ref() profundo criaria um Proxy reativo por objeto POR INSTANCIA do
+  // composable; shallowRef observa apenas a troca do array (que e como
+  // loadMunicipios atualiza), mantendo os itens crus.
+  const municipios = shallowRef([]);
   const isLoadingMunicipios = ref(false);
 
   // Lista de países (pode ser expandida)
