@@ -32,6 +32,7 @@ use App\Modules\Rat\Services\RatHistoricoService;
 use App\Modules\Rat\Services\RatOcorrenciaService;
 use App\Modules\Rat\Services\RatRelatoService;
 use App\Modules\Rat\Services\RatWriteService;
+use App\Support\Concurrency\Concurrency;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\JsonResponse;
@@ -44,6 +45,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
+use PDO;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RatUnifiedController extends BaseController
@@ -78,13 +80,8 @@ class RatUnifiedController extends BaseController
             ->orderByDesc('created_at')
             ->paginate(15);
 
-        // Estatísticas cacheadas por 5 minutos — não precisam ser em tempo real.
-        $statistics = Cache::remember('rat:statistics', 300, fn () => [
-            'total'    => RatOcorrencia::count(),
-            'hoje'     => RatOcorrencia::whereDate('created_at', today())->count(),
-            'esteMes'  => RatOcorrencia::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
-            'esteAno'  => RatOcorrencia::whereYear('created_at', now()->year)->count(),
-        ]);
+        // Estatisticas cacheadas por 5 minutos; os 4 counts sao independentes.
+        $statistics = Cache::remember('rat:statistics', 300, static fn () => self::ratStatistics());
 
         return Inertia::render('RatIndex', [
             // RatListResource: ~10 campos × 15 registros (antes: 200+ campos × 15)
@@ -92,6 +89,70 @@ class RatUnifiedController extends BaseController
             'statistics' => $statistics,
             'filters'    => [],
         ]);
+    }
+
+    /**
+     * @return array{total:int, hoje:int, esteMes:int, esteAno:int}
+     */
+    private static function ratStatistics(): array
+    {
+        $now = now();
+
+        $startOfToday = $now->copy()->startOfDay()->toDateTimeString();
+        $startOfTomorrow = $now->copy()->addDay()->startOfDay()->toDateTimeString();
+        $startOfMonth = $now->copy()->startOfMonth()->toDateTimeString();
+        $startOfNextMonth = $now->copy()->addMonthNoOverflow()->startOfMonth()->toDateTimeString();
+        $startOfYear = $now->copy()->startOfYear()->toDateTimeString();
+        $startOfNextYear = $now->copy()->addYear()->startOfYear()->toDateTimeString();
+
+        if (Concurrency::databaseParallelAvailable()) {
+            return Concurrency::parallel([
+                'total' => static fn (PDO $pdo): int => self::ratCount($pdo),
+                'hoje' => static fn (PDO $pdo): int => self::ratCount($pdo, 'created_at >= :inicio AND created_at < :fim', [
+                    'inicio' => $startOfToday,
+                    'fim' => $startOfTomorrow,
+                ]),
+                'esteMes' => static fn (PDO $pdo): int => self::ratCount($pdo, 'created_at >= :inicio AND created_at < :fim', [
+                    'inicio' => $startOfMonth,
+                    'fim' => $startOfNextMonth,
+                ]),
+                'esteAno' => static fn (PDO $pdo): int => self::ratCount($pdo, 'created_at >= :inicio AND created_at < :fim', [
+                    'inicio' => $startOfYear,
+                    'fim' => $startOfNextYear,
+                ]),
+            ]);
+        }
+
+        return Concurrency::tasks([
+            'total' => static fn (): int => RatOcorrencia::count(),
+            'hoje' => static fn (): int => RatOcorrencia::whereDate('created_at', today())->count(),
+            'esteMes' => static fn (): int => RatOcorrencia::whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+            'esteAno' => static fn (): int => RatOcorrencia::whereYear('created_at', now()->year)->count(),
+        ]);
+    }
+
+    /**
+     * @param array<string, string> $bindings
+     */
+    private static function ratCount(PDO $pdo, ?string $where = null, array $bindings = []): int
+    {
+        $sql = 'SELECT COUNT(*) FROM rat_ocorrencias WHERE deleted_at IS NULL';
+
+        if ($where !== null) {
+            $sql .= ' AND '.$where;
+        }
+
+        $stmt = $pdo->prepare($sql);
+
+        foreach ($bindings as $name => $value) {
+            $stmt->bindValue(':'.$name, $value);
+        }
+
+        $stmt->execute();
+
+        return (int) $stmt->fetchColumn();
     }
 
     public function create(): Response
@@ -688,12 +749,7 @@ class RatUnifiedController extends BaseController
     {
         return response()->json([
             'success' => true,
-            'data'    => [
-                'total'    => RatOcorrencia::count(),
-                'hoje'     => RatOcorrencia::whereDate('created_at', today())->count(),
-                'esteMes'  => RatOcorrencia::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
-                'esteAno'  => RatOcorrencia::whereYear('created_at', now()->year)->count(),
-            ],
+            'data'    => self::ratStatistics(),
         ]);
     }
 

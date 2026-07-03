@@ -183,6 +183,18 @@ final class Concurrency
     }
 
     /**
+     * Paralelismo de I/O no proprio HTTP worker disponivel?
+     *
+     * Use para hot paths de leitura: quando hooks Swoole + pool PDO estao
+     * ativos, Concurrency::parallel() usa coroutines e uma conexao por closure.
+     * Fora disso, prefira Concurrency::tasks() ou fallback sequencial.
+     */
+    public static function databaseParallelAvailable(): bool
+    {
+        return self::usaCoroutinesComHooks() && self::usaPool();
+    }
+
+    /**
      * Estrategia 1 disponivel? Exige o server Swoole DESTE processo (bound de
      * Swoole\Http\Server evita o SwooleHttpTaskDispatcher de loopback em
      * CLI/queue), task workers configurados e nenhuma transacao aberta (o
