@@ -210,19 +210,25 @@ services:
       redis:
         condition: service_healthy
 
+    # Regenera o autoloader ANTES de subir o worker. A imagem baka um classmap
+    # --classmap-authoritative no build (Dockerfile), que NAO inclui modulos
+    # adicionados depois (ex.: app/Modules/Pmda) -- esses chegam so via bind-mount
+    # em runtime. Sob classmap-authoritative o PSR-4 fallback fica off, entao o
+    # worker boota com classmap stale e quebra ("Class ... not found"). O app
+    # passa pelo /start.sh; o queue sobrescreve o CMD e pularia essa etapa.
+    # dump-autoload --optimize (sem -a) reconstroi o classmap e reativa o PSR-4
+    # fallback, fazendo o worker enxergar os modulos montados.
     # Prioridade: critical > high > default > webhooks > low.
     # --max-time=3600: restart de hora em hora para evitar memory leak.
     # --tries=2: jobs com $tries proprio (export, webhook) sobrescrevem.
     command:
-      - php
-      - artisan
-      - queue:work
-      - redis
-      - --queue=critical,high,default,webhooks,low
-      - --tries=2
-      - --timeout=60
-      - --max-time=3600
-      - --sleep=3
+      - sh
+      - -c
+      - >
+        composer dump-autoload --optimize --no-interaction &&
+        exec php artisan queue:work redis
+        --queue=critical,high,default,webhooks,low
+        --tries=2 --timeout=60 --max-time=3600 --sleep=3
 
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]
