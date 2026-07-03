@@ -88,6 +88,20 @@ e memória do browser.
 - Verificado end-to-end em dev: POST duplo com mesmo `Idempotency-Key` → 202 em 18ms
   (quente), uma única linha `completed` com `attempts=1` no `webhook_events`.
 
+### 🔧 Quarta leva — Dev estável, auditoria e browser (João e Maria)
+
+- **`APP_KEY` como env do container** (app e queue no compose dev, valor no `docker/.env`
+  gitignorado, `:?` falha o boot com mensagem clara se ausente): elimina o
+  `MissingAppKeyException` intermitente quando o recycle de workers relia o `.env` via
+  bind-mount do Windows sob carga. Inclui o fix do queue worker regenerando o autoload
+  antes de subir (classmap stale dos módulos montados).
+- **Sampling opcional do `LogSystemActivity`** (`ACTIVITY_LOG_SAMPLE_PERCENT`, default
+  100 = comportamento atual): erros (≥400) e mutações (não-GET) são SEMPRE logados —
+  apenas leituras bem-sucedidas respeitam o percentual, preservando o sinal de auditoria.
+- **Frontend B1**: `shallowRef` no catálogo de municípios do `useLocationData` (853 itens
+  read-only deixam de virar um Proxy reativo por objeto por instância do composable).
+  Os consumidores via props Inertia já estavam shallow (sem mudança).
+
 ### ✅ Verificação
 
 - Fallback sequencial provado em CLI (tinker); task workers confirmados no caminho HTTP.
