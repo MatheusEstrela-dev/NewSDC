@@ -31,6 +31,12 @@ services:
       APP_NAME: "SDC Dev"
       APP_ENV: local
       APP_DEBUG: "true"
+      # APP_KEY como env do container em vez de depender so do .env montado:
+      # sob carga, o recycle de workers (max_request) relia o .env via
+      # bind-mount do Windows e falhava transitoriamente -> MissingAppKeyException
+      # e crash do worker. Valor vem do docker/.env (gitignorado); o ":?" falha
+      # o boot com mensagem clara se a chave nao estiver la.
+      APP_KEY: ${APP_KEY:?APP_KEY ausente em SDC/docker/.env - copie do SDC/.env}
       # HTTP puro para permitir consumo por Power BI sem cert self-signed.
       # Porta de acesso padronizada em 8000 (externo=interno): sob port-forward
       # com portas diferentes, o Swoole ve a request na porta interna e gera URLs
@@ -147,6 +153,8 @@ services:
     environment:
       WORKDIR: /var/www
       APP_NAME: "SDC Dev Queue"
+      # Mesmo racional do servico app: APP_KEY via env, nao via .env montado.
+      APP_KEY: ${APP_KEY:?APP_KEY ausente em SDC/docker/.env - copie do SDC/.env}
       APP_ENV: local
       APP_DEBUG: "true"
       # Mesma origem HTTP do app, para links gerados em jobs/emails baterem.
