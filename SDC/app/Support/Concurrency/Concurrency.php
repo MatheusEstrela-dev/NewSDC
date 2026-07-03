@@ -168,6 +168,21 @@ final class Concurrency
     }
 
     /**
+     * Task workers reais do Swoole disponiveis neste processo?
+     *
+     * Exposto para hot paths CPU-bound (ex.: hash de senha) decidirem entre
+     * offload para task worker e fallback sincrono sem cair na estrategia de
+     * coroutines do Concurrency::tasks().
+     */
+    public static function taskWorkersAvailable(): bool
+    {
+        return config('octane.server') === 'swoole'
+            && app()->bound(\Swoole\Http\Server::class)
+            && (int) config('octane.swoole.options.task_worker_num', 0) > 0
+            && DB::connection()->transactionLevel() === 0;
+    }
+
+    /**
      * Estrategia 1 disponivel? Exige o server Swoole DESTE processo (bound de
      * Swoole\Http\Server evita o SwooleHttpTaskDispatcher de loopback em
      * CLI/queue), task workers configurados e nenhuma transacao aberta (o
@@ -175,10 +190,7 @@ final class Concurrency
      */
     private static function usaTaskWorkers(): bool
     {
-        return config('octane.server') === 'swoole'
-            && app()->bound(\Swoole\Http\Server::class)
-            && (int) config('octane.swoole.options.task_worker_num', 0) > 0
-            && DB::connection()->transactionLevel() === 0;
+        return self::taskWorkersAvailable();
     }
 
     /**

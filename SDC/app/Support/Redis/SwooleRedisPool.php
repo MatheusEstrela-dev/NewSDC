@@ -79,6 +79,21 @@ final class SwooleRedisPool
         return $this->channel->length();
     }
 
+    public function capacity(): int
+    {
+        return $this->size;
+    }
+
+    public function created(): int
+    {
+        return $this->created;
+    }
+
+    public function timeout(): float
+    {
+        return $this->timeout;
+    }
+
     /**
      * Pre-cria as conexoes ate o teto (chamar no WorkerStarting). Move o custo
      * de handshake TLS do burst do request para o boot do worker, evitando
