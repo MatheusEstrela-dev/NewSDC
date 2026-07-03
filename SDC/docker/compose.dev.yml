@@ -31,6 +31,12 @@ services:
       APP_NAME: "SDC Dev"
       APP_ENV: local
       APP_DEBUG: "true"
+      # APP_KEY como env do container em vez de depender so do .env montado:
+      # sob carga, o recycle de workers (max_request) relia o .env via
+      # bind-mount do Windows e falhava transitoriamente -> MissingAppKeyException
+      # e crash do worker. Valor vem do docker/.env (gitignorado); o ":?" falha
+      # o boot com mensagem clara se a chave nao estiver la.
+      APP_KEY: ${APP_KEY:?APP_KEY ausente em SDC/docker/.env - copie do SDC/.env}
       # HTTP puro para permitir consumo por Power BI sem cert self-signed.
       # Porta de acesso padronizada em 8000 (externo=interno): sob port-forward
       # com portas diferentes, o Swoole ve a request na porta interna e gera URLs
@@ -147,6 +153,8 @@ services:
     environment:
       WORKDIR: /var/www
       APP_NAME: "SDC Dev Queue"
+      # Mesmo racional do servico app: APP_KEY via env, nao via .env montado.
+      APP_KEY: ${APP_KEY:?APP_KEY ausente em SDC/docker/.env - copie do SDC/.env}
       APP_ENV: local
       APP_DEBUG: "true"
       # Mesma origem HTTP do app, para links gerados em jobs/emails baterem.
@@ -210,19 +218,25 @@ services:
       redis:
         condition: service_healthy
 
+    # Regenera o autoloader ANTES de subir o worker. A imagem baka um classmap
+    # --classmap-authoritative no build (Dockerfile), que NAO inclui modulos
+    # adicionados depois (ex.: app/Modules/Pmda) -- esses chegam so via bind-mount
+    # em runtime. Sob classmap-authoritative o PSR-4 fallback fica off, entao o
+    # worker boota com classmap stale e quebra ("Class ... not found"). O app
+    # passa pelo /start.sh; o queue sobrescreve o CMD e pularia essa etapa.
+    # dump-autoload --optimize (sem -a) reconstroi o classmap e reativa o PSR-4
+    # fallback, fazendo o worker enxergar os modulos montados.
     # Prioridade: critical > high > default > webhooks > low.
     # --max-time=3600: restart de hora em hora para evitar memory leak.
     # --tries=2: jobs com $tries proprio (export, webhook) sobrescrevem.
     command:
-      - php
-      - artisan
-      - queue:work
-      - redis
-      - --queue=critical,high,default,webhooks,low
-      - --tries=2
-      - --timeout=60
-      - --max-time=3600
-      - --sleep=3
+      - sh
+      - -c
+      - >
+        composer dump-autoload --optimize --no-interaction &&
+        exec php artisan queue:work redis
+        --queue=critical,high,default,webhooks,low
+        --tries=2 --timeout=60 --max-time=3600 --sleep=3
 
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]

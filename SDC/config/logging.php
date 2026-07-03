@@ -37,6 +37,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Activity Log Sampling
+    |--------------------------------------------------------------------------
+    |
+    | Percentual de leituras (GET < 400) que o LogSystemActivity despacha para
+    | a fila de auditoria. 100 = loga tudo (padrao, sem mudanca de
+    | comportamento). Erros (>=400) e mutacoes (POST/PUT/PATCH/DELETE) SEMPRE
+    | sao logados, independente do percentual — o sinal de auditoria (quem
+    | alterou o que, o que falhou) nunca e amostrado.
+    |
+    */
+
+    'activity_sample_percent' => (int) env('ACTIVITY_LOG_SAMPLE_PERCENT', 100),
+
+    /*
+    |--------------------------------------------------------------------------
     | Deprecations Log Channel
     |--------------------------------------------------------------------------
     |
