@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Support\Concurrency\Concurrency;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use PDO;
 
 class GlobalSearchService
 {
-    private const LIMIT     = 7;
+    private const LIMIT = 7;
     private const CACHE_TTL = 60;
 
     public function search(string $query): array
@@ -24,24 +26,133 @@ class GlobalSearchService
 
         // Usa o store padrao (CACHE_DRIVER). Sem tags para compatibilidade com
         // drivers file/database; a invalidacao se da pelo TTL curto.
-        return Cache::remember($key, self::CACHE_TTL, fn () => $this->runSearch($normalized));
+        return Cache::remember($key, self::CACHE_TTL, static fn () => self::runSearch($normalized));
     }
 
-    private function runSearch(string $query): array
+    private static function runSearch(string $query): array
     {
-        return [
-            'pae'         => $this->searchPae($query),
-            'decretacoes' => $this->searchDecretacoes($query),
-            'rat'         => $this->searchRat($query),
-            'demandas'    => $this->searchDemandas($query),
-        ];
+        if (Concurrency::databaseParallelAvailable()) {
+            return Concurrency::parallel([
+                'pae' => static fn (PDO $pdo) => self::searchPaeWithPdo($pdo, $query),
+                'decretacoes' => static fn (PDO $pdo) => self::searchDecretacoesWithPdo($pdo, $query),
+                'rat' => static fn (PDO $pdo) => self::searchRatWithPdo($pdo, $query),
+                'demandas' => static fn (PDO $pdo) => self::searchDemandasWithPdo($pdo, $query),
+            ]);
+        }
+
+        return Concurrency::tasks([
+            'pae' => static fn () => app(self::class)->searchPae($query),
+            'decretacoes' => static fn () => app(self::class)->searchDecretacoes($query),
+            'rat' => static fn () => app(self::class)->searchRat($query),
+            'demandas' => static fn () => app(self::class)->searchDemandas($query),
+        ]);
     }
 
-    private function searchPae(string $query): array
+    public function searchPae(string $query): array
     {
         $like = '%' . $query . '%';
 
-        $rows = DB::select("
+        $rows = DB::select(self::paeSql(), [
+            'q1' => $query, 'q2' => $query, 'q3' => $query, 'q4' => $query,
+            'like1' => $like, 'like2' => $like, 'like3' => $like, 'like4' => $like,
+            'lim' => self::LIMIT,
+        ]);
+
+        return self::mapPaeRows($rows);
+    }
+
+    public function searchDecretacoes(string $query): array
+    {
+        $like = '%' . $query . '%';
+
+        $rows = DB::select(self::decretacoesSql(), [
+            'q1' => $query, 'q2' => $query,
+            'like1' => $like, 'like2' => $like,
+            'lim' => self::LIMIT,
+        ]);
+
+        return self::mapDecretacoesRows($rows);
+    }
+
+    public function searchRat(string $query): array
+    {
+        $like = '%' . $query . '%';
+
+        $rows = DB::select(self::ratSql(), [
+            'q' => $query, 'like' => $like, 'lim' => self::LIMIT,
+        ]);
+
+        return self::mapRatRows($rows);
+    }
+
+    public function searchDemandas(string $query): array
+    {
+        $like = '%' . $query . '%';
+
+        $rows = DB::select(self::demandasSql(), [
+            'q1' => $query, 'q2' => $query,
+            'like1' => $like, 'like2' => $like,
+            'lim' => self::LIMIT,
+        ]);
+
+        return self::mapDemandasRows($rows);
+    }
+
+    private static function searchPaeWithPdo(PDO $pdo, string $query): array
+    {
+        $like = '%' . $query . '%';
+
+        $rows = self::pdoSelect($pdo, self::paeSql(), [
+            'q1' => $query, 'q2' => $query, 'q3' => $query, 'q4' => $query,
+            'like1' => $like, 'like2' => $like, 'like3' => $like, 'like4' => $like,
+            'lim' => self::LIMIT,
+        ], ['lim' => PDO::PARAM_INT]);
+
+        return self::mapPaeRows($rows);
+    }
+
+    private static function searchDecretacoesWithPdo(PDO $pdo, string $query): array
+    {
+        $like = '%' . $query . '%';
+
+        $rows = self::pdoSelect($pdo, self::decretacoesSql(), [
+            'q1' => $query, 'q2' => $query,
+            'like1' => $like, 'like2' => $like,
+            'lim' => self::LIMIT,
+        ], ['lim' => PDO::PARAM_INT]);
+
+        return self::mapDecretacoesRows($rows);
+    }
+
+    private static function searchRatWithPdo(PDO $pdo, string $query): array
+    {
+        $like = '%' . $query . '%';
+
+        $rows = self::pdoSelect($pdo, self::ratSql(), [
+            'q' => $query,
+            'like' => $like,
+            'lim' => self::LIMIT,
+        ], ['lim' => PDO::PARAM_INT]);
+
+        return self::mapRatRows($rows);
+    }
+
+    private static function searchDemandasWithPdo(PDO $pdo, string $query): array
+    {
+        $like = '%' . $query . '%';
+
+        $rows = self::pdoSelect($pdo, self::demandasSql(), [
+            'q1' => $query, 'q2' => $query,
+            'like1' => $like, 'like2' => $like,
+            'lim' => self::LIMIT,
+        ], ['lim' => PDO::PARAM_INT]);
+
+        return self::mapDemandasRows($rows);
+    }
+
+    private static function paeSql(): string
+    {
+        return "
             SELECT
                 id,
                 num_protocolo,
@@ -62,27 +173,12 @@ class GlobalSearchService
                 OR empnto_search ILIKE :like4
             ORDER BY score DESC
             LIMIT :lim
-        ", [
-            'q1' => $query, 'q2' => $query, 'q3' => $query, 'q4' => $query,
-            'like1' => $like, 'like2' => $like, 'like3' => $like, 'like4' => $like,
-            'lim'   => self::LIMIT,
-        ]);
-
-        return array_map(fn ($p) => [
-            'id'       => $p->id,
-            'title'    => $p->num_protocolo,
-            'subtitle' => $p->sei_numero ? 'SEI: ' . $p->sei_numero : ($p->sigibar ?? 'PAE'),
-            'url'      => route('pae.protocolos.index') . '?search=' . urlencode($p->num_protocolo),
-            'icon'     => 'document',
-            'tag'      => 'PAE',
-        ], $rows);
+        ";
     }
 
-    private function searchDecretacoes(string $query): array
+    private static function decretacoesSql(): string
     {
-        $like = '%' . $query . '%';
-
-        $rows = DB::select("
+        return "
             SELECT
                 id,
                 n_protocolo_fide,
@@ -99,27 +195,12 @@ class GlobalSearchService
               )
             ORDER BY score DESC
             LIMIT :lim
-        ", [
-            'q1' => $query, 'q2' => $query,
-            'like1' => $like, 'like2' => $like,
-            'lim'   => self::LIMIT,
-        ]);
-
-        return array_map(fn ($p) => [
-            'id'       => $p->id,
-            'title'    => $p->n_protocolo_fide ?? '—',
-            'subtitle' => $p->tipo_desastre_nome ?? 'Decretacao',
-            'url'      => route('decretacoes.show', $p->id),
-            'icon'     => 'scale',
-            'tag'      => 'DECRETO',
-        ], $rows);
+        ";
     }
 
-    private function searchRat(string $query): array
+    private static function ratSql(): string
     {
-        $like = '%' . $query . '%';
-
-        $rows = DB::select("
+        return "
             SELECT
                 id,
                 protocolo,
@@ -129,25 +210,12 @@ class GlobalSearchService
             WHERE protocolo ILIKE :like
             ORDER BY score DESC
             LIMIT :lim
-        ", [
-            'q' => $query, 'like' => $like, 'lim' => self::LIMIT,
-        ]);
-
-        return array_map(fn ($r) => [
-            'id'       => $r->id,
-            'title'    => $r->protocolo,
-            'subtitle' => ucfirst($r->status ?? 'RAT'),
-            'url'      => route('rat.show', $r->id),
-            'icon'     => 'document',
-            'tag'      => 'RAT',
-        ], $rows);
+        ";
     }
 
-    private function searchDemandas(string $query): array
+    private static function demandasSql(): string
     {
-        $like = '%' . $query . '%';
-
-        $rows = DB::select("
+        return "
             SELECT
                 id,
                 protocolo,
@@ -162,20 +230,73 @@ class GlobalSearchService
               AND (titulo ILIKE :like1 OR protocolo ILIKE :like2)
             ORDER BY score DESC
             LIMIT :lim
-        ", [
-            'q1' => $query, 'q2' => $query,
-            'like1' => $like, 'like2' => $like,
-            'lim'   => self::LIMIT,
-        ]);
+        ";
+    }
 
-        return array_map(fn ($t) => [
-            'id'       => $t->id,
-            'title'    => $t->titulo,
-            'subtitle' => ($t->protocolo ?? '') . ' · ' . ($t->status ?? ''),
-            'url'      => route('demandas.show', $t->id),
-            'icon'     => 'checkbadge',
-            'tag'      => 'DEMANDA',
+    private static function mapPaeRows(array $rows): array
+    {
+        return array_map(static fn ($p) => [
+            'id' => $p->id,
+            'title' => $p->num_protocolo,
+            'subtitle' => $p->sei_numero ? 'SEI: ' . $p->sei_numero : ($p->sigibar ?? 'PAE'),
+            'url' => route('pae.protocolos.index') . '?search=' . urlencode($p->num_protocolo),
+            'icon' => 'document',
+            'tag' => 'PAE',
         ], $rows);
+    }
+
+    private static function mapDecretacoesRows(array $rows): array
+    {
+        return array_map(static fn ($p) => [
+            'id' => $p->id,
+            'title' => $p->n_protocolo_fide ?? '—',
+            'subtitle' => $p->tipo_desastre_nome ?? 'Decretacao',
+            'url' => route('decretacoes.show', $p->id),
+            'icon' => 'scale',
+            'tag' => 'DECRETO',
+        ], $rows);
+    }
+
+    private static function mapRatRows(array $rows): array
+    {
+        return array_map(static fn ($r) => [
+            'id' => $r->id,
+            'title' => $r->protocolo,
+            'subtitle' => ucfirst($r->status ?? 'RAT'),
+            'url' => route('rat.show', $r->id),
+            'icon' => 'document',
+            'tag' => 'RAT',
+        ], $rows);
+    }
+
+    private static function mapDemandasRows(array $rows): array
+    {
+        return array_map(static fn ($t) => [
+            'id' => $t->id,
+            'title' => $t->titulo,
+            'subtitle' => ($t->protocolo ?? '') . ' · ' . ($t->status ?? ''),
+            'url' => route('demandas.show', $t->id),
+            'icon' => 'checkbadge',
+            'tag' => 'DEMANDA',
+        ], $rows);
+    }
+
+    /**
+     * @param array<string, mixed> $bindings
+     * @param array<string, int> $types
+     * @return array<int, object>
+     */
+    private static function pdoSelect(PDO $pdo, string $sql, array $bindings, array $types = []): array
+    {
+        $stmt = $pdo->prepare($sql);
+
+        foreach ($bindings as $name => $value) {
+            $stmt->bindValue(':'.$name, $value, $types[$name] ?? PDO::PARAM_STR);
+        }
+
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_OBJ);
     }
 
     private function normalize(string $query): string

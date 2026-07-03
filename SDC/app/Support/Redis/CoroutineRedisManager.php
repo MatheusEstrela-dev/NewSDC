@@ -33,6 +33,24 @@ final class CoroutineRedisManager extends RedisManager
         $this->pools[$name] = $pool;
     }
 
+    public function poolDiagnostics(): array
+    {
+        $diagnostics = [];
+
+        foreach ($this->pools as $name => $pool) {
+            $diagnostics[$name] = [
+                'capacity' => $pool->capacity(),
+                'created' => $pool->created(),
+                'available' => $pool->available(),
+                'timeout_seconds' => $pool->timeout(),
+            ];
+        }
+
+        ksort($diagnostics);
+
+        return $diagnostics;
+    }
+
     public function connection($name = null)
     {
         $name = $name ?: 'default';

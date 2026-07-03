@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use App\Support\Security\PasswordVerifier;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
@@ -76,8 +77,9 @@ class LoginRequest extends FormRequest
         }
 
         // Verificacao direta do hash (sem segunda consulta por email que o
-        // Auth::attempt fazia). Hash::check usa o driver atual (argon2id).
-        if (!Hash::check($password, $user->password)) {
+        // Auth::attempt fazia). Sob Swoole, PasswordVerifier envia o Hash::check
+        // para task workers; nos demais ambientes cai no Hash::check sincrono.
+        if (!app(PasswordVerifier::class)->verify($password, $user->password)) {
             RateLimiter::hit($this->throttleKey());
             // Dispara o evento Failed que o Auth::attempt disparava, para manter
             // a auditoria de login_failed (EventServiceProvider). Sem isso a

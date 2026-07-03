@@ -98,8 +98,9 @@ class OctaneServiceProvider extends ServiceProvider
 
         try {
             $size = (int) env('SWOOLE_PG_POOL_SIZE', 16);
+            $timeout = (float) env('SWOOLE_PG_POOL_TIMEOUT', 3.0);
 
-            $this->app->singleton('swoole.pgsql.pool', fn () => SwoolePdoPool::fromConnection('pgsql', $size));
+            $this->app->singleton('swoole.pgsql.pool', fn () => SwoolePdoPool::fromConnection('pgsql', $size, $timeout));
             if ($this->hooksEnabled()) {
                 $this->app->make('swoole.pgsql.pool')->warm();
             }

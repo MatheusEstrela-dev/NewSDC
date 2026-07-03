@@ -42,6 +42,7 @@ final class SwoolePdoPool
         private readonly ?string $password,
         private readonly array $options,
         private readonly int $size,
+        private readonly float $timeout,
     ) {
         $this->channel = new Channel($size);
     }
@@ -49,7 +50,7 @@ final class SwoolePdoPool
     /**
      * Constroi o pool a partir de uma conexao pgsql definida em config/database.
      */
-    public static function fromConnection(string $connection = 'pgsql', int $size = 16): self
+    public static function fromConnection(string $connection = 'pgsql', int $size = 16, float $timeout = 3.0): self
     {
         $config = config("database.connections.{$connection}");
 
@@ -84,7 +85,23 @@ final class SwoolePdoPool
             $config['password'] ?? null,
             $options,
             max(1, $size),
+            max(0.001, $timeout),
         );
+    }
+
+    public function capacity(): int
+    {
+        return $this->size;
+    }
+
+    public function created(): int
+    {
+        return $this->created;
+    }
+
+    public function timeout(): float
+    {
+        return $this->timeout;
     }
 
     public function available(): int
@@ -163,7 +180,12 @@ final class SwoolePdoPool
             }
         }
 
-        return $this->channel->pop();
+        $pdo = $this->channel->pop($this->timeout);
+        if ($pdo === false) {
+            throw new RuntimeException('SwoolePdoPool esgotado (timeout no acquire).');
+        }
+
+        return $pdo;
     }
 
     public function release(PDO $pdo): void
