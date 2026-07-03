@@ -102,6 +102,34 @@ e memória do browser.
   read-only deixam de virar um Proxy reativo por objeto por instância do composable).
   Os consumidores via props Inertia já estavam shallow (sem mudança).
 
+### 🐳 Quinta leva — Swoole máximo na VM on-premise 8c/16GB (Gato de Botas)
+
+- **`compose.onprem.yml` + `postgres/onprem.conf`**: orçamento explícito da VM (app 3.5cpu/4.5G
+  com 12 workers + 4 task, queue 1cpu/1.5G, reverb 0.5cpu/512M, Postgres 2cpu/4G com
+  shared_buffers=1GB, Redis 0.5cpu/1.25G volatile-lru, Caddy) — o compose de prod anterior
+  mirava um R760 (DB 24G) e estourava a VM; `OCTANE_MAX_REQUESTS=1000` espaça a reciclagem.
+- **`START_EMBEDDED_QUEUE`** no entrypoint Swoole (default `true` preserva o Azure):
+  elimina o queue worker duplicado quando há container queue dedicado; o guardrail de
+  conexões PG conta coerentemente nos dois modos.
+- **Memo por worker no `Municipio::catalogo()`** (padrão do SetTenant): 16,5ms (Redis) →
+  0,002ms (RAM do processo) por request dentro da janela de 300s.
+- **Item 7 do plano (métricas)**: stats do runtime Swoole (workers ociosos, conexões, fila
+  de tasks, coroutines, uptime) em `App\Support\Metrics\SwooleRuntimeMetrics`, expostas no
+  `/api/metrics` (scrape; token opcional `METRICS_TOKEN` via `X-Metrics-Token`) e no
+  `/api/health/metrics` (sanctum + permissão). Correção do artigo: `/octane/metrics` e
+  `--metrics` não existem no Octane.
+- **Item 6 do plano (tempo real)**: `laravel/reverb ^1.10` instalado (fase A) — conexão
+  `reverb` no broadcasting, `config/reverb.php`, serviço no compose on-premise (porta 8080);
+  a `GeneralNotification` já emitia no canal `broadcast` (canal `App.Models.User.{id}`
+  autorizado) e passa a ter transporte real. Correção do artigo: `'websocket' => true` não
+  existe no Octane — o caminho de prod é Reverb. Fase B (Echo no frontend substituindo o
+  polling do `useNotifications`) é follow-up (npm travado na máquina).
+- **Canário hooks ON (registro definitivo, 03/07)**: com `OCTANE_HOOK_FLAGS_ENABLED=true` o
+  server quebra imediatamente — `Swoole\Coroutine\Scheduler::start(): Unable to use async-io
+  in task processes` (hooks tornam o I/O dos task workers assíncrono e `task_enable_coroutine`
+  precisa ficar `false` no Octane 2.13.1 + Swoole 6.2.1) — além do race de container já
+  documentado. Decisão hooks OFF reafirmada; upgrade do Octane fica como follow-up.
+
 ### ✅ Verificação
 
 - Fallback sequencial provado em CLI (tinker); task workers confirmados no caminho HTTP.

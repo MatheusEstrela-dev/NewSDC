@@ -184,6 +184,7 @@ class HealthCheckController extends Controller
      */
     public function metrics(): \Illuminate\Http\Response
     {
+        // Protecao pela rota: auth:sanctum + permissao system.logs.view.
         $metrics = $this->getPrometheusMetrics();
 
         return response($metrics, 200)
@@ -719,6 +720,12 @@ class HealthCheckController extends Controller
         $metrics[] = "# HELP sdc_memory_usage_bytes Uso de memória em bytes";
         $metrics[] = "# TYPE sdc_memory_usage_bytes gauge";
         $metrics[] = "sdc_memory_usage_bytes " . memory_get_usage(true);
+
+        // Metricas do runtime Swoole (workers, conexoes, fila de tasks).
+        // Vazio fora do server Swoole (RoadRunner/CLI).
+        foreach (\App\Support\Metrics\SwooleRuntimeMetrics::linhas() as $linha) {
+            $metrics[] = $linha;
+        }
 
         // Métricas de queue
         try {

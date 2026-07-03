@@ -146,15 +146,24 @@ chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 # (RequestPriority: critical/high/default/low + webhooks inbound +
 # high-throughput legada) em ordem de prioridade — fila fora da lista vira
 # job orfao que nunca e consumido.
-echo "Iniciando queue worker em background..."
-(
-    set +e
-    while true; do
-        php artisan queue:work --queue=critical,high,high-throughput,webhooks,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
-        echo "[queue:work] worker saiu (codigo $?); reiniciando em 2s..."
-        sleep 2
-    done
-) &
+#
+# START_EMBEDDED_QUEUE (default true): no Azure (container unico) o worker
+# PRECISA rodar aqui. Em topologias com container queue dedicado (compose
+# on-premise/dev), setar false para nao duplicar consumidores nem gastar
+# CPU/RAM/conexao PG com um segundo worker no container do app.
+if [ "${START_EMBEDDED_QUEUE:-true}" = "true" ]; then
+    echo "Iniciando queue worker em background..."
+    (
+        set +e
+        while true; do
+            php artisan queue:work --queue=critical,high,high-throughput,webhooks,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
+            echo "[queue:work] worker saiu (codigo $?); reiniciando em 2s..."
+            sleep 2
+        done
+    ) &
+else
+    echo "Queue worker embutido desativado (START_EMBEDDED_QUEUE=false); usando container queue dedicado."
+fi
 
 # Oversubscribe de workers: ~83% do tempo de um request e I/O (DB/Redis), entao
 # rodar mais workers que vCores preenche a CPU enquanto uns esperam I/O. Default
@@ -199,7 +208,13 @@ echo "vCores=$(nproc 2>/dev/null || echo '?'); workers=${WORKERS}; task-workers=
 # Descubra o real: psql -c 'SHOW max_connections;'  (dev = 100)
 #   az postgres flexible-server parameter show -g <rg> -s <srv> -n max_connections
 TASK_WORKERS="${OCTANE_TASK_WORKERS:-4}"
-QUEUE_WORKERS="${QUEUE_WORKERS:-1}"
+# Com o queue embutido desligado, este container nao mantem conexao de worker
+# de fila; o container queue dedicado entra em EXTERNAL_DB_CONSUMERS.
+if [ "${START_EMBEDDED_QUEUE:-true}" = "true" ]; then
+    QUEUE_WORKERS="${QUEUE_WORKERS:-1}"
+else
+    QUEUE_WORKERS="${QUEUE_WORKERS:-0}"
+fi
 APP_INSTANCES="${APP_INSTANCES:-1}"
 EXTERNAL_DB_CONSUMERS="${EXTERNAL_DB_CONSUMERS:-0}"
 PG_ADMIN_RESERVE="${PG_ADMIN_RESERVE:-5}"
