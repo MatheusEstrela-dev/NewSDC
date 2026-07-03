@@ -182,8 +182,23 @@ class HealthCheckController extends Controller
      *     )
      * )
      */
-    public function metrics(): \Illuminate\Http\Response
+    public function metrics(\Illuminate\Http\Request $request): \Illuminate\Http\Response
     {
+        // Metricas expoem detalhes do runtime (workers, filas, conexoes):
+        // exige X-Metrics-Token fora de local/testing; sem token configurado,
+        // fail-closed (503) para nao abrir observabilidade anonima em prod.
+        $expected = (string) (config('app.metrics_token') ?? '');
+
+        if ($expected === '') {
+            if (! app()->environment(['local', 'testing'])) {
+                return response("metrics token nao configurado\n", 503)
+                    ->header('Content-Type', 'text/plain');
+            }
+        } elseif (! hash_equals($expected, (string) $request->header('X-Metrics-Token', ''))) {
+            return response("unauthorized\n", 401)
+                ->header('Content-Type', 'text/plain');
+        }
+
         $metrics = $this->getPrometheusMetrics();
 
         return response($metrics, 200)
@@ -719,6 +734,47 @@ class HealthCheckController extends Controller
         $metrics[] = "# HELP sdc_memory_usage_bytes Uso de memória em bytes";
         $metrics[] = "# TYPE sdc_memory_usage_bytes gauge";
         $metrics[] = "sdc_memory_usage_bytes " . memory_get_usage(true);
+
+        // Metricas do runtime Swoole (workers, conexoes, fila de tasks).
+        // So existem quando o processo E o server Swoole (bound); em
+        // RoadRunner/CLI o bloco simplesmente nao aparece.
+        if (app()->bound(\Swoole\Http\Server::class)) {
+            try {
+                $stats = app(\Swoole\Http\Server::class)->stats();
+
+                $gauges = [
+                    'sdc_swoole_connections' => ['connection_num', 'Conexoes TCP abertas no server'],
+                    'sdc_swoole_workers_total' => ['worker_num', 'Workers HTTP configurados'],
+                    'sdc_swoole_workers_idle' => ['idle_worker_num', 'Workers HTTP ociosos'],
+                    'sdc_swoole_task_workers_total' => ['task_worker_num', 'Task workers configurados'],
+                    'sdc_swoole_task_workers_idle' => ['task_idle_worker_num', 'Task workers ociosos'],
+                    'sdc_swoole_tasking_num' => ['tasking_num', 'Tasks aguardando/executando'],
+                    'sdc_swoole_coroutines' => ['coroutine_num', 'Coroutines ativas'],
+                ];
+
+                foreach ($gauges as $nome => [$chave, $help]) {
+                    if (isset($stats[$chave])) {
+                        $metrics[] = "# HELP {$nome} {$help}";
+                        $metrics[] = "# TYPE {$nome} gauge";
+                        $metrics[] = "{$nome} " . (int) $stats[$chave];
+                    }
+                }
+
+                if (isset($stats['request_count'])) {
+                    $metrics[] = "# HELP sdc_swoole_requests_total Requests atendidas desde o boot do server";
+                    $metrics[] = "# TYPE sdc_swoole_requests_total counter";
+                    $metrics[] = "sdc_swoole_requests_total " . (int) $stats['request_count'];
+                }
+
+                if (isset($stats['start_time'])) {
+                    $metrics[] = "# HELP sdc_swoole_uptime_seconds Uptime do server Swoole";
+                    $metrics[] = "# TYPE sdc_swoole_uptime_seconds gauge";
+                    $metrics[] = "sdc_swoole_uptime_seconds " . (time() - (int) $stats['start_time']);
+                }
+            } catch (\Exception $e) {
+                // Silencioso: metricas Swoole sao best-effort
+            }
+        }
 
         // Métricas de queue
         try {

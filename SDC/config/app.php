@@ -20,6 +20,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Metrics Token
+    |--------------------------------------------------------------------------
+    |
+    | Token exigido no header X-Metrics-Token do GET /api/health/metrics.
+    | Fora de local/testing o endpoint fica fail-closed (503) se o token nao
+    | estiver configurado — as metricas expoem detalhes do runtime.
+    |
+    */
+
+    'metrics_token' => env('METRICS_TOKEN'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
