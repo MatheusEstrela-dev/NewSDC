@@ -61,6 +61,7 @@ class OctaneServiceProvider extends ServiceProvider
             if ($this->hooksEnabled()) {
                 $this->forgetRedisBackedSingletons();
             }
+            $this->tuneWorkerRuntime();
             $this->warmCaches();
             $this->bootSwoolePdoPool();
             $this->bootSwooleRedisPools();
@@ -82,6 +83,44 @@ class OctaneServiceProvider extends ServiceProvider
         return isset($_SERVER['LARAVEL_OCTANE'])
             || env('OCTANE_SERVER') !== null
             || (method_exists($this->app, 'runningInOctane') && $this->app->runningInOctane());
+    }
+
+    /**
+     * Tuning de runtime por worker (uma vez, no boot do worker):
+     *
+     * 1. GC manual: desliga o ciclo automatico do GC — em worker residente ele
+     *    dispara no MEIO de requests (pausas de 15-50ms imprevisiveis). A
+     *    coleta continua acontecendo no boundary entre requests pelo listener
+     *    CollectGarbage do Octane (config octane.garbage, hoje 50MB), que chama
+     *    gc_collect_cycles() manualmente — funciona mesmo com gc_disable().
+     *
+     * 2. CPU affinity: fixa o worker N no core N%vCores — sem isso o SO migra
+     *    workers entre cores e invalida cache L1/L2 a cada troca. So faz
+     *    sentido (e so existe) sob Swoole/Linux; falha e silenciosa por ser
+     *    otimizacao.
+     */
+    protected function tuneWorkerRuntime(): void
+    {
+        gc_disable();
+
+        // Swoole 6 removeu a funcao global swoole_set_cpu_affinity; o caminho
+        // atual e Swoole\Process::setAffinity (mesmo sched_setaffinity).
+        if (! function_exists('swoole_cpu_num')
+            || ! class_exists(\Swoole\Process::class)
+            || ! method_exists(\Swoole\Process::class, 'setAffinity')) {
+            return;
+        }
+
+        try {
+            if ($this->app->bound(\Swoole\Http\Server::class)) {
+                $workerId = (int) ($this->app->make(\Swoole\Http\Server::class)->worker_id ?? -1);
+                if ($workerId >= 0) {
+                    \Swoole\Process::setAffinity([$workerId % max(1, swoole_cpu_num())]);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Affinity e otimizacao opcional; nunca derruba o worker.
+        }
     }
 
     /**
