@@ -130,6 +130,17 @@ e memória do browser.
   precisa ficar `false` no Octane 2.13.1 + Swoole 6.2.1) — além do race de container já
   documentado. Decisão hooks OFF reafirmada; upgrade do Octane fica como follow-up.
 
+### ⚡ Sexta leva — Runtime do worker (Pequeno Polegar)
+
+- **GC manual**: `gc_disable()` no boot do worker — o ciclo automático do GC disparava no
+  meio de requests (pausas imprevisíveis); a coleta continua no boundary entre requests
+  via listener `CollectGarbage` do Octane (`octane.garbage` = 50MB), que funciona mesmo
+  com o GC automático desligado.
+- **CPU affinity**: worker N fixado no core N%vCores via `Swoole\Process::setAffinity`
+  (o Swoole 6 removeu a função global `swoole_set_cpu_affinity`) — elimina migração de
+  workers entre cores e invalidação de cache L1/L2. Verificado em dev: 8 workers pinados
+  em cores distintos (`Cpus_allowed_list` 0–7).
+
 ### ✅ Verificação
 
 - Fallback sequencial provado em CLI (tinker); task workers confirmados no caminho HTTP.
