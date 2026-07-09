@@ -279,12 +279,18 @@ setup:
 # ==================== PROD VM (Ubuntu 10.160.131.30 - stack newsdc-dev) ====================
 # Stack homologada na VM: compose.dev.yml (bridge/projeto newsdc-dev).
 # Build passa pelo proxy Prodemge; runtime nao precisa de proxy (rede interna).
+# O proxy do daemon (systemd) so cobre o docker pull; o RUN apk/composer do
+# build roda isolado e exige os --build-arg abaixo (hostname validado na VM).
+
+vm_proxy := "http://proxy.prodemge.gov.br:8080"
+vm_no_proxy := "localhost,127.0.0.1,10.160.131.30,*.prodemge.gov.br"
+vm_build_args := "--build-arg HTTP_PROXY=" + vm_proxy + " --build-arg HTTPS_PROXY=" + vm_proxy + " --build-arg NO_PROXY=" + vm_no_proxy
 
 # Setup completo na VM: build (se nao houver imagem) + sobe stack + APP_KEY + migrations + caches
 prod-setup:
     @if [ -z "$(docker images -q newsdc-swoole-dev:latest)" ]; then \
         echo "Imagem nao encontrada - buildando via proxy Prodemge..."; \
-        HTTP_PROXY={{proxy_url}} HTTPS_PROXY={{proxy_url}} docker compose -f {{dev_compose}} build app; \
+        just prod-build; \
     fi
     docker compose -f {{dev_compose}} up -d
     @echo "Aguardando containers subirem..."
@@ -309,7 +315,7 @@ prod-restart:
 
 # Rebuild forcado da imagem via proxy Prodemge (apos mudanca no Dockerfile)
 prod-build:
-    HTTP_PROXY={{proxy_url}} HTTPS_PROXY={{proxy_url}} docker compose -f {{dev_compose}} build app
+    docker compose -f {{dev_compose}} build {{vm_build_args}} app
 
 # Status dos containers + saude do endpoint
 prod-status:
