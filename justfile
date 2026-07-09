@@ -284,7 +284,12 @@ setup:
 
 vm_proxy := "http://proxy.prodemge.gov.br:8080"
 vm_no_proxy := "localhost,127.0.0.1,10.160.131.30,*.prodemge.gov.br"
-vm_build_args := "--build-arg HTTP_PROXY=" + vm_proxy + " --build-arg HTTPS_PROXY=" + vm_proxy + " --build-arg NO_PROXY=" + vm_no_proxy
+
+# Maiusculas e minusculas: apk/curl leem HTTPS_PROXY; pecl/PEAR e wget leem http_proxy.
+# Ambas sao build-args predefinidos do Docker e viram env nos RUN do build.
+vm_proxy_upper := "--build-arg HTTP_PROXY=" + vm_proxy + " --build-arg HTTPS_PROXY=" + vm_proxy + " --build-arg NO_PROXY=" + vm_no_proxy
+vm_proxy_lower := "--build-arg http_proxy=" + vm_proxy + " --build-arg https_proxy=" + vm_proxy + " --build-arg no_proxy=" + vm_no_proxy
+vm_build_args := vm_proxy_upper + " " + vm_proxy_lower
 
 # Setup completo na VM: build (se nao houver imagem) + sobe stack + APP_KEY + migrations + caches
 prod-setup:
