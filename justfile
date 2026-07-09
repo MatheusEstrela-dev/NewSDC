@@ -300,7 +300,7 @@ prod-setup:
     docker compose -f {{dev_compose}} up -d
     @echo "Aguardando containers subirem..."
     sleep 10
-    @grep -q "^APP_KEY=base64" SDC/.env || docker exec {{dev_app}} php artisan key:generate --force
+    @grep -qs "^APP_KEY=base64" SDC/docker/.env || echo "AVISO: APP_KEY nao encontrada em SDC/docker/.env - e de la que o compose injeta a chave (app e queue compartilham); key:generate no container nao resolve"
     -docker exec {{dev_app}} php artisan storage:link
     docker exec {{dev_app}} php artisan migrate --force
     docker exec {{dev_app}} php artisan optimize:clear
