@@ -98,7 +98,7 @@ import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import StatusBadge from '@/Components/Molecules/Decretacoes/StatusBadge.vue';
 import MunicipioDesastreSection from '@/Components/Organisms/Decretacoes/MunicipioDesastreSection.vue';
-import { formatOnLoad } from '@/composables/ui/useDesastreMask';
+import { formatOnLoad } from '@/Composables/ui/useDesastreMask';
 
 const props = defineProps({
   processo: {

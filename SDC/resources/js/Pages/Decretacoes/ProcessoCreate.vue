@@ -23,7 +23,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ProcessoCreateTemplate from '@/Templates/Decretacoes/ProcessoCreateTemplate.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { useToast } from '@/composables/useToast';
+import { useToast } from '@/Composables/useToast';
 
 defineOptions({ layout: AuthenticatedLayout });
 

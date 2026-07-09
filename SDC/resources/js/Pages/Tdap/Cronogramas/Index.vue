@@ -208,7 +208,7 @@ import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import CronogramaHistoricoModal from '@/Components/Organisms/Tdap/CronogramaHistoricoModal.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
-import { useExport } from '@/composables/data/useExport';
+import { useExport } from '@/Composables/data/useExport';
 import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
 import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
 import FilterField from '@/Components/Molecules/Filter/FilterField.vue';

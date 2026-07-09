@@ -4,7 +4,7 @@ import Shepherd from 'shepherd.js';
 import { usePage } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import { useTourConfetti } from './useTourConfetti';
-import { useTheme } from '@/composables/ui';
+import { useTheme } from '@/Composables/ui';
 import { svgIcon } from './tourIcons';
 
 /**

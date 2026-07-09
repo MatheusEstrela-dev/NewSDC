@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
-import { useToast } from '@/composables/useToast';
+import { useToast } from '@/Composables/useToast';
 import Modal from '@/Components/Modal.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import SelectInput from '@/Components/Atoms/Input/SelectInput.vue';

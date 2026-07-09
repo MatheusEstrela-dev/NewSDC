@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import Modal from '@/Components/Modal.vue';
-import { useTabs } from '@/composables/core/useTabs';
+import { useTabs } from '@/Composables/core/useTabs';
 import {
   InformationCircleIcon,
   DocumentTextIcon,

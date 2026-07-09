@@ -114,7 +114,7 @@ import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vu
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import DatePicker from '@/Components/Form/DatePicker.vue';
-import { useExport } from '@/composables/data/useExport';
+import { useExport } from '@/Composables/data/useExport';
 import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });

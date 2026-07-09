@@ -180,7 +180,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import draggable from '@/lib/vuedraggable-src/vuedraggable.js';
 import { Head, usePage } from '@inertiajs/vue3';
 import { defineAsyncComponent, markRaw, nextTick, onMounted, ref } from 'vue';
-import { useWelcomeTour } from '@/composables/auth/useWelcomeTour';
+import { useWelcomeTour } from '@/Composables/auth/useWelcomeTour';
 
 defineOptions({ layout: AuthenticatedLayout });
 

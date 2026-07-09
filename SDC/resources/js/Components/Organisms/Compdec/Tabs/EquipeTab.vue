@@ -49,7 +49,7 @@ import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import EquipeTable from '@/Components/Organisms/Compdec/EquipeTable.vue';
 import EquipeFormModal from '@/Components/Organisms/Compdec/Modals/EquipeFormModal.vue';
-import { useToast } from '@/composables/useToast';
+import { useToast } from '@/Composables/useToast';
 
 const props = defineProps({
   orgao: {

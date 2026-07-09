@@ -90,7 +90,7 @@ import { router, usePage } from '@inertiajs/vue3';
 import Button from './Button.vue';
 import ButtonIcon from './ButtonIcon.vue';
 import Dropdown from '@/Components/Dropdown.vue';
-import { usePermissions } from '@/composables/auth';
+import { usePermissions } from '@/Composables/auth';
 
 import PlusIcon from '../../Icons/PlusIcon.vue';
 import EyeIcon from '../../Icons/EyeIcon.vue';

@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
-import { useToast } from '@/composables/useToast';
+import { useToast } from '@/Composables/useToast';
 
 const OBJETIVO_DEFAULT = 'Analisar os requisitos necessários para a aprovação da Segunda Seção do Plano de Ação de Emergência, relativos à competência do órgão Estadual de Proteção e Defesa Civil, expressa no Decreto Estadual n. 48.078, de 05 de novembro de 2020 e notificar o empreendedor sobre as inconsistências observadas para devida correção.';
 

@@ -156,7 +156,7 @@
 </template>
 
 <script setup>
-import { useLogin } from '@/composables/auth';
+import { useLogin } from '@/Composables/auth';
 import { Head, Link } from '@inertiajs/vue3';
 // Importar CSS do login diretamente para garantir que seja aplicado
 import '../../../css/pages/auth/login.css';

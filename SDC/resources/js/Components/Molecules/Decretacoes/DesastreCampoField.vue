@@ -68,7 +68,7 @@ import RadioInput from '@/Components/Atoms/Input/RadioInput.vue';
 import SelectInput from '@/Components/Atoms/Input/SelectInput.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import CurrencyInput from '@/Components/Atoms/Input/CurrencyInput.vue';
-import { formatNumber } from '@/composables/ui/useDesastreMask';
+import { formatNumber } from '@/Composables/ui/useDesastreMask';
 
 const SELECT_OPTIONS_MAP = {
   'Populacao do municipio atingida': ['0 a 5%', '5 a 10%', '10 a 20%', 'Mais de 20%'],

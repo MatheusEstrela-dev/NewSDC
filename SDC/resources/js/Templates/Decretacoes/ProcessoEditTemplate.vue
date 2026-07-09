@@ -125,9 +125,9 @@ import StatusBadge from '@/Components/Molecules/Decretacoes/StatusBadge.vue';
 import ProcessoForm from '@/Components/Organisms/Decretacoes/ProcessoForm.vue';
 import MunicipioDesastreSection from '@/Components/Organisms/Decretacoes/MunicipioDesastreSection.vue';
 import DecretacaoTabs from '@/Components/Organisms/Decretacoes/DecretacaoTabs.vue';
-import { useDecretacaoTabs } from '@/composables/decretacoes/useDecretacaoTabs';
-import { formatOnLoad } from '@/composables/ui/useDesastreMask';
-import { useToast } from '@/composables/useToast';
+import { useDecretacaoTabs } from '@/Composables/decretacoes/useDecretacaoTabs';
+import { formatOnLoad } from '@/Composables/ui/useDesastreMask';
+import { useToast } from '@/Composables/useToast';
 
 const props = defineProps({
   processo: { type: Object, required: true },

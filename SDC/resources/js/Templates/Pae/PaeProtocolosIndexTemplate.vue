@@ -193,7 +193,7 @@
 import { ArchiveBoxIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
-import { useToast } from '@/composables/useToast';
+import { useToast } from '@/Composables/useToast';
 
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';

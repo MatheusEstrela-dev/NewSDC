@@ -127,7 +127,7 @@ import EstadoProcessoBadge from '@/Components/Organisms/Tdap/EstadoProcessoBadge
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
-import { useExport } from '@/composables/data/useExport';
+import { useExport } from '@/Composables/data/useExport';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';

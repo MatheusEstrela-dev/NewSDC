@@ -33,7 +33,7 @@
  * </PermissionButton>
  */
 import { computed } from 'vue';
-import { usePermissions } from '@/composables/auth';
+import { usePermissions } from '@/Composables/auth';
 import Button from './Button.vue';
 
 const props = defineProps({
