@@ -5,6 +5,10 @@
 docker_app := "newsdc_app"
 docker_db := "newsdc_db"
 
+# Compose v2 (plugin `docker compose`); o binario legado docker-compose nao existe na VM
+compose_file := "SDC/docker/docker-compose.yml"
+compose := "docker compose -f " + compose_file
+
 # Lista todos os comandos disponíveis
 default:
     @just --list
@@ -13,15 +17,15 @@ default:
 
 # Inicia os containers Docker
 up:
-    cd SDC && docker-compose up -d
+    {{compose}} up -d
 
 # Para os containers Docker
 down:
-    cd SDC && docker-compose down
+    {{compose}} down
 
 # Reinicia os containers Docker
 restart:
-    cd SDC && docker-compose restart
+    {{compose}} restart
 
 # Mostra os logs dos containers
 logs container="app":
@@ -253,7 +257,7 @@ jump-android:
 
 # Reinicia a aplicação completamente
 fresh: down
-    cd SDC && docker-compose up -d
+    {{compose}} up -d
     sleep 5
     just migrate
     just clear
@@ -261,7 +265,7 @@ fresh: down
 
 # Setup completo do projeto
 setup:
-    cd SDC && docker-compose up -d
+    {{compose}} up -d
     sleep 10
     just migrate
     just tdap-migrate
@@ -271,6 +275,60 @@ setup:
     cd SDC && npm install
     just build
     @echo "✅ Setup completo finalizado!"
+
+# ==================== PROD VM (Ubuntu 10.160.131.30 - stack newsdc-dev) ====================
+# Stack homologada na VM: compose.dev.yml (bridge/projeto newsdc-dev).
+# Build passa pelo proxy Prodemge; runtime nao precisa de proxy (rede interna).
+
+# Setup completo na VM: build (se nao houver imagem) + sobe stack + APP_KEY + migrations + caches
+prod-setup:
+    @if [ -z "$(docker images -q newsdc-swoole-dev:latest)" ]; then \
+        echo "Imagem nao encontrada - buildando via proxy Prodemge..."; \
+        HTTP_PROXY={{proxy_url}} HTTPS_PROXY={{proxy_url}} docker compose -f {{dev_compose}} build app; \
+    fi
+    docker compose -f {{dev_compose}} up -d
+    @echo "Aguardando containers subirem..."
+    sleep 10
+    @grep -q "^APP_KEY=base64" SDC/.env || docker exec {{dev_app}} php artisan key:generate --force
+    -docker exec {{dev_app}} php artisan storage:link
+    docker exec {{dev_app}} php artisan migrate --force
+    docker exec {{dev_app}} php artisan optimize:clear
+    @echo "Setup PROD finalizado. App: http://10.160.131.30:8000"
+
+# Sobe a stack da VM (sem build)
+prod-up:
+    docker compose -f {{dev_compose}} up -d
+
+# Para a stack da VM (mantem volumes pgdata/redisdata)
+prod-down:
+    docker compose -f {{dev_compose}} down
+
+# Reinicia a stack da VM
+prod-restart:
+    docker compose -f {{dev_compose}} restart
+
+# Rebuild forcado da imagem via proxy Prodemge (apos mudanca no Dockerfile)
+prod-build:
+    HTTP_PROXY={{proxy_url}} HTTPS_PROXY={{proxy_url}} docker compose -f {{dev_compose}} build app
+
+# Status dos containers + saude do endpoint
+prod-status:
+    @docker compose -f {{dev_compose}} ps
+    @curl -s -o /dev/null -w "Health: HTTP %{http_code}\n" http://localhost:8000/health || echo "App nao respondeu na 8000"
+
+# Logs da stack na VM. Uso: just prod-logs db
+prod-logs svc="app":
+    docker compose -f {{dev_compose}} logs -f --tail=200 {{svc}}
+
+# Migrations na VM
+prod-migrate:
+    docker exec {{dev_app}} php artisan migrate --force
+
+# Backup do banco (pg_dump) em /opt/sdc/backups ou ./backups
+prod-backup:
+    @mkdir -p backups
+    docker compose -f {{dev_compose}} exec -T db pg_dump -U sdc -d sdc > backups/sdc_$(date +%F_%H%M).sql
+    @echo "Dump gerado em backups/"
 
 # ==================== PROXY CORPORATIVO (Prodemge) ====================
 
