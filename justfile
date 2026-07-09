@@ -292,12 +292,13 @@ vm_proxy_upper := "--build-arg HTTP_PROXY=" + vm_proxy + " --build-arg HTTPS_PRO
 vm_proxy_lower := "--build-arg http_proxy=" + vm_proxy + " --build-arg https_proxy=" + vm_proxy + " --build-arg no_proxy=" + vm_no_proxy
 vm_build_args := vm_proxy_upper + " " + vm_proxy_lower
 
-# Setup completo na VM: build (se nao houver imagem) + sobe stack + APP_KEY + migrations + caches
+# Setup completo na VM: build (se nao houver imagem) + sobe stack + assets + migrations + caches
 prod-setup:
     @if [ -z "$(docker images -q newsdc-swoole-dev:latest)" ]; then \
         echo "Imagem nao encontrada - buildando via proxy Prodemge..."; \
         just prod-build; \
     fi
+    just prod-assets
     docker compose -f {{dev_compose}} up -d
     @echo "Aguardando containers subirem..."
     sleep 10
@@ -306,6 +307,13 @@ prod-setup:
     docker exec {{dev_app}} php artisan migrate --force
     docker exec {{dev_app}} php artisan optimize:clear
     @echo "Setup PROD finalizado. App: http://10.160.131.50:8000"
+
+# Extrai os assets do Vite (public/build) da IMAGEM para o host. Necessario
+# porque o bind-mount de ../public cobre os assets compilados na imagem
+# (ViteManifestNotFoundException sem isso). Rode apos cada prod-build.
+prod-assets:
+    docker run --rm newsdc-swoole-dev:latest tar -cC /var/www/public build | tar -xC SDC/public
+    @test -f SDC/public/build/manifest.json && echo "Assets extraidos: SDC/public/build (manifest OK)"
 
 # Sobe a stack da VM (sem build)
 prod-up:
