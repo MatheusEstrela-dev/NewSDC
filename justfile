@@ -276,14 +276,15 @@ setup:
     just build
     @echo "✅ Setup completo finalizado!"
 
-# ==================== PROD VM (Ubuntu 10.160.131.30 - stack newsdc-dev) ====================
+# ==================== PROD VM (Ubuntu 10.160.131.50 - stack newsdc-dev) ====================
+# Topologia: 10.160.131.30 = host Windows Hyper-V (Cindec2); 10.160.131.50 = VM Ubuntu.
 # Stack homologada na VM: compose.dev.yml (bridge/projeto newsdc-dev).
 # Build passa pelo proxy Prodemge; runtime nao precisa de proxy (rede interna).
 # O proxy do daemon (systemd) so cobre o docker pull; o RUN apk/composer do
 # build roda isolado e exige os --build-arg abaixo (hostname validado na VM).
 
 vm_proxy := "http://proxy.prodemge.gov.br:8080"
-vm_no_proxy := "localhost,127.0.0.1,10.160.131.30,*.prodemge.gov.br"
+vm_no_proxy := "localhost,127.0.0.1,10.160.131.30,10.160.131.50,*.prodemge.gov.br"
 
 # Maiusculas e minusculas: apk/curl leem HTTPS_PROXY; pecl/PEAR e wget leem http_proxy.
 # Ambas sao build-args predefinidos do Docker e viram env nos RUN do build.
@@ -304,7 +305,7 @@ prod-setup:
     -docker exec {{dev_app}} php artisan storage:link
     docker exec {{dev_app}} php artisan migrate --force
     docker exec {{dev_app}} php artisan optimize:clear
-    @echo "Setup PROD finalizado. App: http://10.160.131.30:8000"
+    @echo "Setup PROD finalizado. App: http://10.160.131.50:8000"
 
 # Sobe a stack da VM (sem build)
 prod-up:
