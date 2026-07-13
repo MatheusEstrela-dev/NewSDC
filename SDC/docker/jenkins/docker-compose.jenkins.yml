@@ -388,41 +388,10 @@ services:
     logging: *default-logging
 
   # ==========================================================================
-  # PROMETHEUS EXPORTER (metricas do Jenkins)
+  # METRICAS: sem exporter dedicado — o plugin "prometheus" do Jenkins ja
+  # expoe as metricas em http://10.160.131.50:8080/prometheus (scrape direto).
+  # A imagem prom/jenkins-exporter nao existe no Docker Hub.
   # ==========================================================================
-  prometheus-exporter:
-    image: prom/jenkins-exporter:latest
-    container_name: sdc_jenkins_exporter
-    hostname: jenkins-exporter
-    restart: unless-stopped
-
-    environment:
-      - JENKINS_URL=http://jenkins:8080
-      - JENKINS_USER=${JENKINS_PROMETHEUS_USER:-admin}
-      - JENKINS_PASSWORD=${JENKINS_PROMETHEUS_PASSWORD:-}
-
-    ports:
-      - "9118:9118"
-
-    networks:
-      - jenkins_internal
-
-    depends_on:
-      - jenkins
-
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 128M
-
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9118/metrics"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-    logging: *default-logging
 
 # ==========================================================================
 # NETWORKS
