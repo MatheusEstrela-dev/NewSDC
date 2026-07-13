@@ -7,6 +7,21 @@ jenkins:
 
   numExecutors: 2
 
+  # /tmp e /var/jenkins_home/tmp sao tmpfs pequenos (compose: 512M/1G) para
+  # nao estourar o limite de memoria do container (4G, com Xmx3g). O default
+  # do TemporarySpaceMonitor (1GiB livre) marca o node built-in offline
+  # sempre, mesmo com host de sobra (69G livres) - so o tmpfs e pequeno.
+  nodeMonitors:
+    - diskSpace:
+        freeSpaceThreshold: "1GiB"
+        freeSpaceWarningThreshold: "2GiB"
+    - tmpSpace:
+        freeSpaceThreshold: "100MiB"
+        freeSpaceWarningThreshold: "200MiB"
+    - "swapSpace"
+    - "clock"
+    - "architecture"
+
   securityRealm:
     local:
       allowsSignup: false
