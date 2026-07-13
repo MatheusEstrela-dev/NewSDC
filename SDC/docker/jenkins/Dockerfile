@@ -41,12 +41,11 @@ RUN apt-get update && apt-get install -y \
     jq \
     && rm -rf /var/lib/apt/lists/*
 
-# SSH known_hosts em /usr/share/jenkins/ref: o entrypoint copia para o
-# jenkins_home no primeiro boot (bind mount esconderia /var/jenkins_home).
+# Sem ssh-keyscan: SSH (porta 22) nao atravessa o proxy Prodemge e o build
+# morre. O checkout do pipeline e 100% HTTPS + token (credencial github-token).
+# Se um dia usar git via SSH, gere o known_hosts em runtime, nao no build.
 RUN mkdir -p /usr/share/jenkins/ref/.ssh && \
-    ssh-keyscan github.com >> /usr/share/jenkins/ref/.ssh/known_hosts && \
-    chmod 700 /usr/share/jenkins/ref/.ssh && \
-    chmod 644 /usr/share/jenkins/ref/.ssh/known_hosts
+    chmod 700 /usr/share/jenkins/ref/.ssh
 
 # Docker CLI + compose plugin (Docker-outside-of-Docker: sem daemon)
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
