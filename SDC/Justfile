@@ -28,6 +28,7 @@ RESET  := '\033[0m'
 # VariÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡veis
 compose := "docker compose -f docker/docker-compose.yml"
 compose_prod := "docker compose -f docker/docker-compose.prod.yml"
+compose_jenkins := "docker compose -f docker/jenkins/docker-compose.jenkins.yml --env-file docker/jenkins/.env"
 app := compose + " exec app"
 db := compose + " exec db"
 
@@ -321,6 +322,39 @@ prod-logs:
 # ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­ Scale workers (uso: just prod-scale 5)
 @prod-scale n="3":
     {{compose_prod}} up -d --scale queue={{n}}
+
+# ============================================================================
+# JENKINS CI/CD ON-PREMISE (docker/jenkins - VM 10.160.131.50)
+# ============================================================================
+
+# Build + sobe a infra de CI (Jenkins + socket-proxy + registry + backups)
+@jenkins-build:
+    {{compose_jenkins}} build
+    {{compose_jenkins}} up -d
+
+# Sobe a infra de CI sem rebuild
+@jenkins-up:
+    {{compose_jenkins}} up -d
+
+# Logs do Jenkins master
+jenkins-logs:
+    {{compose_jenkins}} logs -f jenkins
+
+# Para a infra de CI (volumes jenkins_home/registry preservados)
+@jenkins-down:
+    {{compose_jenkins}} down
+
+# Setup completo de producao on-premise (uma vez por VM):
+# valida o Swarm, prepara docker/jenkins/.env e builda a infra de CI.
+# Proximos passos manuais: rodar o job SDC/deploy-onprem (publica a 1a imagem)
+# e docker stack deploy -c docker/jenkins/stack.onprem.yml --with-registry-auth sdc
+@prod-setup:
+    printf "{{BOLD}}{{CYAN}}-> PROD SETUP on-premise{{RESET}}\n"
+    docker info | grep -qi "swarm: active" || { printf "{{RED}}Swarm inativo. Rode: docker swarm init --advertise-addr 10.160.131.50{{RESET}}\n"; exit 1; }
+    test -f docker/jenkins/.env || { cp docker/jenkins/.env.example docker/jenkins/.env; printf "{{YELLOW}}docker/jenkins/.env criado - preencha os segredos e rode prod-setup de novo{{RESET}}\n"; exit 1; }
+    mkdir -p docker/jenkins/jenkins_home docker/jenkins/jenkins_backups
+    just jenkins-build
+    printf "{{GREEN}}Infra de CI no ar: Jenkins http://10.160.131.50:8080 | registry 127.0.0.1:5000{{RESET}}\n"
 
 # ============================================================================
 # ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  MONITORAMENTO
