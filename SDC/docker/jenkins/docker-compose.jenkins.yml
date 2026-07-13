@@ -32,6 +32,29 @@ x-logging: &default-logging
 
 services:
   # ==========================================================================
+  # JENKINS INIT (one-shot)
+  # Named volumes novos nao herdam o dono da imagem quando ha mounts
+  # aninhados (.bun, tmp) disputando o mesmo path na 1a criacao - sobram
+  # root:root e o jenkins (uid 1000, container read-only) nunca sobe
+  # ("missing rw permissions on JENKINS_HOME"). Corrige antes do jenkins subir.
+  # ==========================================================================
+  jenkins-init:
+    image: busybox:1
+    container_name: sdc_jenkins_init
+    entrypoint: ["sh", "-c", "chown -R 1000:1000 /var/jenkins_home /var/jenkins_home_bun"]
+
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - jenkins_cache_bun:/var/jenkins_home_bun
+
+    networks:
+      - jenkins_internal
+
+    restart: "no"
+
+    logging: *default-logging
+
+  # ==========================================================================
   # JENKINS MASTER
   # ==========================================================================
   jenkins:
@@ -117,6 +140,8 @@ services:
     depends_on:
       docker-proxy:
         condition: service_healthy
+      jenkins-init:
+        condition: service_completed_successfully
 
     deploy:
       resources:
