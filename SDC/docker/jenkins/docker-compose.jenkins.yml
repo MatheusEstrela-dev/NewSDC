@@ -121,10 +121,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4'
           memory: 4G
         reservations:
-          cpus: '2'
           memory: 2G
 
     healthcheck:
@@ -182,7 +180,6 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
           memory: 128M
 
     healthcheck:
@@ -221,7 +218,6 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
           memory: 512M
 
     healthcheck:
@@ -264,10 +260,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
           memory: 2G
         reservations:
-          cpus: '1'
           memory: 512M
 
     logging: *default-logging
@@ -318,7 +312,6 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
           memory: 1G
 
     healthcheck:
@@ -376,7 +369,6 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
           memory: 512M
 
     healthcheck:
