@@ -38,6 +38,17 @@ rm -f bootstrap/cache/config.php \
       bootstrap/cache/routes-v7.php \
       bootstrap/cache/services.php
 
+# Autoloader: onde o codigo entra por bind mount + git pull (stack dev na VM),
+# o classmap authoritative congelado na imagem nao conhece classe nova e o
+# request morre com BindingResolutionException (incidente PasswordVerifier,
+# 13/07). Com a flag ligada, todo boot regenera o classmap contra o codigo
+# montado. Producao (imagem imutavel) mantem false: o dump do build basta.
+if [ "${AUTOLOAD_REFRESH_ON_BOOT:-false}" = "true" ]; then
+    echo "AUTOLOAD_REFRESH_ON_BOOT=true; regenerando autoloader (classmap authoritative)..."
+    composer dump-autoload --optimize --classmap-authoritative --no-interaction \
+        || echo "Aviso: falha ao regenerar autoloader; seguindo com o classmap da imagem"
+fi
+
 echo "Regenerando .env a partir de variaveis de ambiente..."
 # IMPORTANTE: aspar TODOS os valores (phpdotenv trata # como comentario em valores nao-aspeados)
 cat > .env <<EOF

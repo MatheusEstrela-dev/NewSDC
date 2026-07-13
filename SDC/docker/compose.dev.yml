@@ -31,6 +31,9 @@ services:
       APP_NAME: "SDC Dev"
       APP_ENV: local
       APP_DEBUG: "true"
+      # Codigo entra por bind mount + git pull: regenerar o classmap no boot
+      # evita 500 de classe nova ausente do autoloader da imagem (13/07).
+      AUTOLOAD_REFRESH_ON_BOOT: "true"
       # APP_KEY como env do container em vez de depender so do .env montado:
       # sob carga, o recycle de workers (max_request) relia o .env via
       # bind-mount do Windows e falhava transitoriamente -> MissingAppKeyException
@@ -157,6 +160,8 @@ services:
       APP_KEY: ${APP_KEY:?APP_KEY ausente em SDC/docker/.env - copie do SDC/.env}
       APP_ENV: local
       APP_DEBUG: "true"
+      # Mesmo racional do app: classmap regenerado no boot (bind mount + pull).
+      AUTOLOAD_REFRESH_ON_BOOT: "true"
       # Mesma origem HTTP do app, para links gerados em jobs/emails baterem.
       APP_URL: http://localhost:8000
 
