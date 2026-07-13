@@ -7,8 +7,10 @@
 # - Registry privado local publicado APENAS no loopback da VM (127.0.0.1:5000)
 # - Backup multi-tier com verificacao
 #
-# Uso:  cd docker/jenkins && cp .env.example .env  (preencher segredos)
-#       docker compose -f docker-compose.jenkins.yml --env-file .env up -d --build
+# Uso (recomendado, da raiz do SDC):  just prod-setup
+#   O env global e o .env.prod na raiz do SDC (app + CI juntos; chaves de CI
+#   listadas em ./jenkins/.env.example). Direto, sem just:
+#   docker compose -f docker/jenkins/docker-compose.jenkins.yml --env-file .env.prod up -d --build
 # ============================================================================
 
 x-common-variables: &common-env

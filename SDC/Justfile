@@ -28,7 +28,8 @@ RESET  := '\033[0m'
 # VariÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡veis
 compose := "docker compose -f docker/docker-compose.yml"
 compose_prod := "docker compose -f docker/docker-compose.prod.yml"
-compose_jenkins := "docker compose -f docker/jenkins/docker-compose.jenkins.yml --env-file docker/jenkins/.env"
+# .env.prod na raiz do SDC e o env GLOBAL (app + CI); nunca commitado
+compose_jenkins := "docker compose -f docker/jenkins/docker-compose.jenkins.yml --env-file .env.prod"
 app := compose + " exec app"
 db := compose + " exec db"
 
@@ -345,13 +346,16 @@ jenkins-logs:
     {{compose_jenkins}} down
 
 # Setup completo de producao on-premise (uma vez por VM):
-# valida o Swarm, prepara docker/jenkins/.env e builda a infra de CI.
+# valida o Swarm, exige o .env.prod global (raiz do SDC) e builda a infra de CI.
+# As chaves de CI que o .env.prod precisa ter estao em docker/jenkins/.env.example.
 # Proximos passos manuais: rodar o job SDC/deploy-onprem (publica a 1a imagem)
 # e docker stack deploy -c docker/jenkins/stack.onprem.yml --with-registry-auth sdc
 @prod-setup:
     printf "{{BOLD}}{{CYAN}}-> PROD SETUP on-premise{{RESET}}\n"
     docker info | grep -qi "swarm: active" || { printf "{{RED}}Swarm inativo. Rode: docker swarm init --advertise-addr 10.160.131.50{{RESET}}\n"; exit 1; }
-    test -f docker/jenkins/.env || { cp docker/jenkins/.env.example docker/jenkins/.env; printf "{{YELLOW}}docker/jenkins/.env criado - preencha os segredos e rode prod-setup de novo{{RESET}}\n"; exit 1; }
+    test -f .env.prod || { printf "{{RED}}.env.prod nao encontrado na raiz do SDC. Crie a partir do seu .env do app + chaves de CI de docker/jenkins/.env.example{{RESET}}\n"; exit 1; }
+    grep -q "^GITHUB_TOKEN=." .env.prod || printf "{{YELLOW}}Aviso: GITHUB_TOKEN vazio no .env.prod - o checkout do pipeline vai falhar{{RESET}}\n"
+    grep -q "^JENKINS_ADMIN_PASSWORD=." .env.prod || printf "{{YELLOW}}Aviso: JENKINS_ADMIN_PASSWORD vazio no .env.prod{{RESET}}\n"
     mkdir -p docker/jenkins/jenkins_home docker/jenkins/jenkins_backups
     just jenkins-build
     printf "{{GREEN}}Infra de CI no ar: Jenkins http://10.160.131.50:8080 | registry 127.0.0.1:5000{{RESET}}\n"
