@@ -1,0 +1,409 @@
+// ============================================================================
+// SDC - Pipeline CI/CD ON-PREMISE (VM 10.160.131.50, Docker Swarm single-node)
+// ----------------------------------------------------------------------------
+// Zero downtime exige os 3 juntos (ver docker/jenkins/stack.onprem.yml):
+//   1. update-order start-first   2. healthcheck no container   3. >= 2 replicas
+//
+// Etapas:
+//   1. Checkout e Versionamento (tag imutavel commit+build, guarda PREV_IMAGE)
+//   2. Pre-flight (docker, swarm ativo, disco, registry local)
+//   3. Build de imagens (app + queue em paralelo, proxy Prodemge nos 2 cases)
+//   4. Qualidade (PHPStan bloqueante; testes opcionais via RUN_TESTS)
+//   5. Scan Trivy (informativo)
+//   6. Push para o registry privado local (127.0.0.1:5000)
+//   7. Migrations (container efemero, ANTES do deploy, backward-compatible)
+//   8. Deploy rolling update (app start-first; reverb e queue stop-first)
+//   9. Health check pos-deploy com retry
+//   post: rollback automatico para a imagem anterior + notificacao
+//
+// Pre-requisitos na VM (uma vez, manual):
+//   docker swarm init --advertise-addr 10.160.131.50
+//   set -a; . /opt/sdc/.env.onprem; set +a
+//   docker stack deploy -c SDC/docker/jenkins/stack.onprem.yml --with-registry-auth sdc
+// ============================================================================
+
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(name: 'RUN_TESTS', defaultValue: false,
+            description: 'Executa php artisan test em container efemero (exige suite verde sem depender do banco de producao)')
+        booleanParam(name: 'SKIP_MIGRATIONS', defaultValue: false,
+            description: 'Pula o stage de migrations (use apenas em redeploy da mesma versao de schema)')
+    }
+
+    environment {
+        REGISTRY        = '127.0.0.1:5000'
+        STACK_NAME      = 'sdc'
+        APP_IMAGE       = "${REGISTRY}/sdc-app"
+        QUEUE_IMAGE     = "${REGISTRY}/sdc-queue"
+        APP_SERVICE     = "${STACK_NAME}_app"
+        QUEUE_SERVICE   = "${STACK_NAME}_queue"
+        REVERB_SERVICE  = "${STACK_NAME}_reverb"
+        // Arquivo de ambiente de producao na VM, montado read-only no container
+        // do Jenkins (ver docker-compose.jenkins.yml)
+        ENV_FILE        = '/opt/sdc/.env.onprem'
+        // Health check via edge (Caddy) publicado no host da VM
+        HEALTH_URL      = "${env.APP_HEALTH_URL ?: 'https://10.160.131.50/health'}"
+        DOCKER_BUILDKIT = '1'
+    }
+
+    options {
+        timeout(time: 40, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '10'))
+        timestamps()
+        ansiColor('xterm')
+        disableConcurrentBuilds()
+    }
+
+    triggers {
+        // Webhook do GitHub nao alcanca a VM atras do proxy Prodemge: polling.
+        pollSCM('H/5 * * * *')
+    }
+
+    stages {
+
+        // =====================================================================
+        // 1. CHECKOUT E VERSIONAMENTO
+        // Tag imutavel (commit + build) e captura da imagem atual em producao
+        // para rollback confiavel — docker service rollback so volta 1 spec.
+        // =====================================================================
+        stage('Checkout e Versionamento') {
+            steps {
+                checkout scm
+                script {
+                    def gitCommit = env.GIT_COMMIT ?: sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+                    env.IMAGE_TAG      = "${gitCommit.take(7)}-b${env.BUILD_NUMBER}"
+                    env.GIT_COMMIT_MSG = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+                    env.GIT_AUTHOR     = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
+
+                    env.PREV_APP_IMAGE = sh(
+                        script: "docker service inspect ${APP_SERVICE} --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}' 2>/dev/null | cut -d@ -f1 || true",
+                        returnStdout: true
+                    ).trim()
+                    env.PREV_QUEUE_IMAGE = sh(
+                        script: "docker service inspect ${QUEUE_SERVICE} --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}' 2>/dev/null | cut -d@ -f1 || true",
+                        returnStdout: true
+                    ).trim()
+
+                    echo "[INFO] Commit: ${env.GIT_COMMIT_MSG} (${env.GIT_AUTHOR})"
+                    echo "[INFO] Nova tag: ${env.IMAGE_TAG}"
+                    echo "[INFO] Em producao (app): ${env.PREV_APP_IMAGE ?: 'nenhuma (primeiro deploy)'}"
+                }
+                sh '''
+                    LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+                    if [ -n "$LAST_TAG" ]; then
+                        git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%an)" > CHANGELOG_BUILD.md
+                    else
+                        git log -20 --pretty=format:"- %s (%an)" > CHANGELOG_BUILD.md
+                    fi
+                '''
+                archiveArtifacts artifacts: 'CHANGELOG_BUILD.md', allowEmptyArchive: true
+            }
+        }
+
+        // =====================================================================
+        // 2. PRE-FLIGHT (FAIL FAST)
+        // =====================================================================
+        stage('Pre-flight') {
+            options { timeout(time: 4, unit: 'MINUTES') }
+            steps {
+                sh 'docker version'
+                sh '''
+                    docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active \
+                        || { echo "[ERROR] Swarm inativo. Rode: docker swarm init"; exit 1; }
+                '''
+                sh '''
+                    docker run --rm --network host curlimages/curl:latest \
+                        -sf http://127.0.0.1:5000/v2/ >/dev/null \
+                        || { echo "[ERROR] Registry local 127.0.0.1:5000 fora do ar"; exit 1; }
+                '''
+                script {
+                    def freeGb = sh(
+                        script: "df -BG ${WORKSPACE} | tail -1 | awk '{print \$4}' | sed 's/G//'",
+                        returnStdout: true
+                    ).trim()
+                    if (freeGb.isInteger() && freeGb.toInteger() < 5) {
+                        error("[ERROR] Espaco insuficiente: ${freeGb}GB. Minimo: 5GB")
+                    }
+                    echo "[INFO] Espaco disponivel: ${freeGb}GB"
+                }
+            }
+        }
+
+        // =====================================================================
+        // 3. BUILD DE IMAGENS (paralelo)
+        // Proxy Prodemge nos DOIS cases: apk le maiuscula, pecl/wget minuscula.
+        // =====================================================================
+        stage('Build Imagens') {
+            options { timeout(time: 20, unit: 'MINUTES') }
+            parallel {
+                stage('App (Octane/Swoole)') {
+                    steps {
+                        dir('SDC') {
+                            sh '''
+                                docker build \
+                                    --build-arg HTTP_PROXY --build-arg HTTPS_PROXY --build-arg NO_PROXY \
+                                    --build-arg http_proxy --build-arg https_proxy --build-arg no_proxy \
+                                    --label org.opencontainers.image.revision=${GIT_COMMIT} \
+                                    --label org.opencontainers.image.version=${IMAGE_TAG} \
+                                    -t ${APP_IMAGE}:${IMAGE_TAG} \
+                                    -f docker/swoole/Dockerfile \
+                                    .
+                            '''
+                        }
+                    }
+                }
+                stage('Queue (workers + scheduler)') {
+                    steps {
+                        dir('SDC') {
+                            sh '''
+                                docker build \
+                                    --build-arg HTTP_PROXY --build-arg HTTPS_PROXY --build-arg NO_PROXY \
+                                    --build-arg http_proxy --build-arg https_proxy --build-arg no_proxy \
+                                    --label org.opencontainers.image.revision=${GIT_COMMIT} \
+                                    --label org.opencontainers.image.version=${IMAGE_TAG} \
+                                    -t ${QUEUE_IMAGE}:${IMAGE_TAG} \
+                                    -f docker/Dockerfile.queue \
+                                    .
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        // =====================================================================
+        // 4. QUALIDADE
+        // A imagem de producao e --no-dev: as ferramentas entram num container
+        // efemero com cache de composer persistido em volume.
+        // =====================================================================
+        stage('Qualidade') {
+            options { timeout(time: 15, unit: 'MINUTES') }
+            parallel {
+                stage('PHPStan') {
+                    steps {
+                        sh '''
+                            docker run --rm \
+                                -e HTTP_PROXY -e HTTPS_PROXY -e NO_PROXY \
+                                -e http_proxy -e https_proxy -e no_proxy \
+                                -e COMPOSER_CACHE_DIR=/tmp/composer-cache \
+                                -v sdc_ci_composer_cache:/tmp/composer-cache \
+                                ${APP_IMAGE}:${IMAGE_TAG} \
+                                sh -lc "composer install --no-interaction --prefer-dist --ignore-platform-reqs --no-scripts \
+                                        && vendor/bin/phpstan analyse --memory-limit=1G --no-progress"
+                        '''
+                    }
+                }
+                stage('Testes') {
+                    when { expression { params.RUN_TESTS } }
+                    steps {
+                        sh '''
+                            docker run --rm \
+                                -e HTTP_PROXY -e HTTPS_PROXY -e NO_PROXY \
+                                -e http_proxy -e https_proxy -e no_proxy \
+                                -e COMPOSER_CACHE_DIR=/tmp/composer-cache \
+                                -e APP_ENV=testing \
+                                -v sdc_ci_composer_cache:/tmp/composer-cache \
+                                ${APP_IMAGE}:${IMAGE_TAG} \
+                                sh -lc "composer install --no-interaction --prefer-dist --ignore-platform-reqs --no-scripts \
+                                        && php artisan test"
+                        '''
+                    }
+                }
+            }
+        }
+
+        // =====================================================================
+        // 5. SCAN DE SEGURANCA (informativo)
+        // exit-code 0: nao bloqueia. Troque para --exit-code 1 quando o time
+        // estiver pronto para travar build com CVE HIGH/CRITICAL.
+        // =====================================================================
+        stage('Scan Trivy') {
+            options { timeout(time: 10, unit: 'MINUTES') }
+            steps {
+                sh '''
+                    docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        -v sdc_ci_trivy_cache:/root/.cache \
+                        -e HTTP_PROXY -e HTTPS_PROXY -e NO_PROXY \
+                        -e http_proxy -e https_proxy -e no_proxy \
+                        aquasec/trivy:latest image \
+                        --exit-code 0 --severity HIGH,CRITICAL --no-progress \
+                        ${APP_IMAGE}:${IMAGE_TAG} || true
+                '''
+            }
+        }
+
+        // =====================================================================
+        // 6. PUSH PARA O REGISTRY PRIVADO
+        // Somente tag imutavel — deploy por :latest inviabiliza rollback.
+        // =====================================================================
+        stage('Push Registry') {
+            options { timeout(time: 10, unit: 'MINUTES') }
+            steps {
+                sh 'docker push ${APP_IMAGE}:${IMAGE_TAG}'
+                sh 'docker push ${QUEUE_IMAGE}:${IMAGE_TAG}'
+            }
+        }
+
+        // =====================================================================
+        // 7. MIGRATIONS (container efemero, ANTES de trocar trafego)
+        // Durante o start-first codigo velho e novo convivem: toda migration
+        // precisa ser backward-compatible (nada de drop/rename/NOT NULL direto;
+        // dividir em 2 deploys). A rede overlay do stack e attachable.
+        // =====================================================================
+        stage('Migrations') {
+            when { expression { !params.SKIP_MIGRATIONS } }
+            options { timeout(time: 10, unit: 'MINUTES') }
+            steps {
+                sh '''
+                    docker run --rm \
+                        --network ${STACK_NAME}_sdc_internal \
+                        --env-file ${ENV_FILE} \
+                        -e APP_ENV=production \
+                        -e DB_CONNECTION=pgsql -e DB_HOST=db -e DB_PORT=5432 \
+                        -e REDIS_HOST=redis -e REDIS_PORT=6379 \
+                        ${APP_IMAGE}:${IMAGE_TAG} \
+                        php artisan migrate --force
+                '''
+            }
+        }
+
+        // =====================================================================
+        // 8. DEPLOY ZERO DOWNTIME (rolling update)
+        // app: start-first (serve HTTP). reverb/queue: stop-first — nao servem
+        // HTTP; clientes WS reconectam e a fila retoma jobs (redis).
+        // =====================================================================
+        stage('Deploy Rolling Update') {
+            options { timeout(time: 15, unit: 'MINUTES') }
+            steps {
+                script { env.DEPLOY_STARTED = 'true' }
+                sh '''
+                    set -e
+                    docker service update \
+                        --image ${APP_IMAGE}:${IMAGE_TAG} \
+                        --update-order start-first \
+                        --update-parallelism 1 \
+                        --update-delay 10s \
+                        --update-monitor 30s \
+                        --update-failure-action rollback \
+                        --rollback-order start-first \
+                        --with-registry-auth \
+                        --detach=false \
+                        ${APP_SERVICE}
+                '''
+                sh '''
+                    docker service update \
+                        --image ${APP_IMAGE}:${IMAGE_TAG} \
+                        --update-order stop-first \
+                        --with-registry-auth \
+                        --detach=false \
+                        ${REVERB_SERVICE}
+                '''
+                sh '''
+                    docker service update \
+                        --image ${QUEUE_IMAGE}:${IMAGE_TAG} \
+                        --update-order stop-first \
+                        --with-registry-auth \
+                        --detach=false \
+                        ${QUEUE_SERVICE}
+                '''
+            }
+        }
+
+        // =====================================================================
+        // 9. HEALTH CHECK POS-DEPLOY
+        // O endpoint /health valida DB e Redis, nao so "app respondeu".
+        // =====================================================================
+        stage('Health Check') {
+            options { timeout(time: 5, unit: 'MINUTES') }
+            steps {
+                sh '''
+                    for i in $(seq 1 20); do
+                        STATUS=$(curl -sk -o /dev/null -w "%{http_code}" -m 10 ${HEALTH_URL} || echo 000)
+                        if [ "$STATUS" = "200" ]; then
+                            echo "[INFO] Aplicacao saudavel na tentativa $i"
+                            exit 0
+                        fi
+                        echo "[INFO] Tentativa $i/20: status $STATUS. Aguardando 6s..."
+                        sleep 6
+                    done
+                    echo "[ERROR] Health check falhou. post{failure} fara o rollback."
+                    exit 1
+                '''
+            }
+        }
+    }
+
+    // =========================================================================
+    // POST: rollback automatico + notificacao + higiene
+    // =========================================================================
+    post {
+        failure {
+            script {
+                if (env.DEPLOY_STARTED == 'true' && env.PREV_APP_IMAGE) {
+                    echo "[WARN] Revertendo para ${env.PREV_APP_IMAGE}"
+                    sh """
+                        docker service update --image ${env.PREV_APP_IMAGE} \
+                            --update-order start-first --with-registry-auth --detach=false \
+                            ${APP_SERVICE} || true
+                        docker service update --image ${env.PREV_APP_IMAGE} \
+                            --update-order stop-first --with-registry-auth --detach=false \
+                            ${REVERB_SERVICE} || true
+                    """
+                    if (env.PREV_QUEUE_IMAGE) {
+                        sh """
+                            docker service update --image ${env.PREV_QUEUE_IMAGE} \
+                                --update-order stop-first --with-registry-auth --detach=false \
+                                ${QUEUE_SERVICE} || true
+                        """
+                    }
+                    notify('ROLLBACK', "Rollback executado para ${env.PREV_APP_IMAGE} | Build #${env.BUILD_NUMBER} | ${env.GIT_AUTHOR ?: ''}")
+                } else {
+                    notify('FAILURE', "Falha no build #${env.BUILD_NUMBER} antes do deploy | Branch: ${env.GIT_BRANCH} | ${env.GIT_AUTHOR ?: ''}")
+                }
+            }
+        }
+        success {
+            script {
+                notify('SUCCESS', "Deploy #${env.BUILD_NUMBER} em producao | ${APP_IMAGE}:${env.IMAGE_TAG} | ${env.GIT_COMMIT_MSG ?: ''}")
+            }
+            // Higiene: so imagens dangling/antigas; NAO remove a tag anterior
+            // (alvo de rollback) porque prune com filtro until preserva 72h.
+            sh 'docker image prune -f --filter "until=72h" || true'
+        }
+        always {
+            cleanWs(deleteDirs: true, notFailBuild: true)
+        }
+    }
+}
+
+// ============================================================================
+// FUNCOES INTERNAS
+// ============================================================================
+
+def notify(String status, String message) {
+    def slackWebhook = env.SLACK_WEBHOOK_URL ?: ''
+    def teamsWebhook = env.TEAMS_WEBHOOK_URL ?: ''
+
+    if (slackWebhook) {
+        def color = (status == 'SUCCESS') ? 'good' : (status in ['FAILURE', 'ROLLBACK']) ? 'danger' : 'warning'
+        sh(script: """
+            curl -sf -X POST '${slackWebhook}' \\
+                -H 'Content-Type: application/json' \\
+                -d '{"attachments":[{"color":"${color}","title":"[${status}] Jenkins SDC on-prem - Build #${env.BUILD_NUMBER}","text":"${message}"}]}' \\
+            || true
+        """, returnStatus: true)
+    }
+
+    if (teamsWebhook) {
+        def teamsColor = (status == 'SUCCESS') ? '00C853' : (status in ['FAILURE', 'ROLLBACK']) ? 'FF0000' : 'FF6F00'
+        sh(script: """
+            curl -sf -X POST '${teamsWebhook}' \\
+                -H 'Content-Type: application/json' \\
+                -d '{"@type":"MessageCard","@context":"http://schema.org/extensions","themeColor":"${teamsColor}","summary":"[${status}] Jenkins SDC on-prem","title":"[${status}] Jenkins SDC on-prem - Build #${env.BUILD_NUMBER}","text":"${message}"}' \\
+            || true
+        """, returnStatus: true)
+    }
+}

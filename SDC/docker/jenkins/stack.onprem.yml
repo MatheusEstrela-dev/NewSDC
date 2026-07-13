@@ -1,0 +1,408 @@
+# ============================================================================
+# SDC - Docker SWARM stack ON-PREMISE (VM 8 vCores / 16 GB - tudo na mesma VM)
+# Octane/Swoole + PostgreSQL/PostGIS + Redis + Queue + Reverb + Caddy
+# ----------------------------------------------------------------------------
+# Zero downtime = healthcheck + update start-first + replicas >= 2 (app).
+# Derivado de compose.onprem.yml; diferencas do Swarm:
+#   - build:/depends_on:/restart:/container_name: sao ignorados pelo stack
+#   - imagens vem SEMPRE do registry local (o pipeline publica em 127.0.0.1:5000)
+#   - deploy.update_config/rollback_config controlam o rolling update
+#
+# ORCAMENTO DA VM (app agora em 2 replicas; total igual ao compose original):
+#   app    2x (1.75 cpu / 2.25G) = 3.5 / 4.5G  (6 workers HTTP + 2 task cada)
+#   queue  1.0 cpu / 1.5G   reverb 0.5 / 512M  db 2.0 / 4G
+#   redis  0.5 / 1.25G      caddy 0.5 / 256M
+#   transiente de update (start-first, parallelism 1): +1 app (~2.25G) — cabe.
+#
+# Guardrail PG: (6 + 2)*2 instancias + 5 externas + 5 reserva = 26 <= 100.
+#
+# Uso (docker stack deploy NAO le .env; exporta antes):
+#   docker swarm init --advertise-addr 10.160.131.50        # uma vez
+#   set -a; . /opt/sdc/.env.onprem; set +a
+#   export VERSION=<tag-do-pipeline>                         # ex: ab12cd3-b42
+#   docker stack deploy -c stack.onprem.yml --with-registry-auth sdc
+#
+# Depois do deploy inicial o Jenkins NAO roda stack deploy de novo: o rolling
+# update e feito por `docker service update --image` (ver SDC/Jenkinsfile.onprem).
+# ============================================================================
+
+version: "3.9"
+
+services:
+  # ==========================================================================
+  # APP - Laravel Octane sobre Swoole. 2 replicas de 6+2 workers (mesmo total
+  # do compose de 1 instancia); menos que isso o start-first abre janela.
+  # ==========================================================================
+  app:
+    image: ${REGISTRY:-127.0.0.1:5000}/sdc-app:${VERSION:-latest}
+    hostname: app
+
+    environment:
+      APP_NAME: ${APP_NAME:-SDC - Sistema de Defesa Civil}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL}
+
+      OCTANE_SERVER: swoole
+      OCTANE_HTTPS: "true"
+      OCTANE_WORKERS: "6"
+      OCTANE_TASK_WORKERS: "2"
+      OCTANE_MAX_REQUESTS: "1000"
+      PORT: "8000"
+
+      START_EMBEDDED_QUEUE: "false"
+
+      # Guardrail de conexoes PG: (6 + 2)*2 + 5 + 5 = 26 <= 100.
+      PG_MAX_CONNECTIONS: "100"
+      APP_INSTANCES: "2"
+      EXTERNAL_DB_CONSUMERS: "5"
+
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: ${DB_DATABASE:-sdc}
+      DB_USERNAME: ${DB_USERNAME:-sdc}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SSLMODE: disable
+      DB_PERSISTENT: "false"
+
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_CLIENT: phpredis
+      REDIS_SCHEME: tcp
+      REDIS_PREFIX: ${REDIS_PREFIX:-sdc_onprem_}
+      CACHE_PREFIX: ${CACHE_PREFIX:-sdc_onprem_cache_}
+
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: cookie
+      QUEUE_CONNECTION: redis
+
+      BROADCAST_CONNECTION: reverb
+      REVERB_APP_ID: ${REVERB_APP_ID}
+      REVERB_APP_KEY: ${REVERB_APP_KEY}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET}
+      REVERB_HOST: reverb
+      REVERB_PORT: "8080"
+      REVERB_SCHEME: http
+
+      METRICS_TOKEN: ${METRICS_TOKEN}
+
+      LOG_CHANNEL: stack
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+    volumes:
+      - app_storage:/var/www/storage/app
+
+    networks:
+      - sdc_internal
+      - sdc_edge
+
+    healthcheck:
+      # Sem healthcheck o Swarm marca a task como running assim que o PID 1
+      # sobe e o start-first derruba o container velho cedo demais.
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 120s   # boot do Octane/Swoole antes de contar falhas
+
+    deploy:
+      replicas: 2
+      update_config:
+        order: start-first
+        parallelism: 1
+        delay: 10s
+        monitor: 30s
+        failure_action: rollback
+      rollback_config:
+        order: start-first
+        parallelism: 1
+        delay: 5s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          cpus: "1.75"
+          memory: 2.25G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ==========================================================================
+  # QUEUE - Workers + Scheduler (Supervisor: numprocs=4 + laravel-scheduler)
+  # stop-first: nao serve HTTP; jobs idempotentes retomam do Redis.
+  # ==========================================================================
+  queue:
+    image: ${REGISTRY:-127.0.0.1:5000}/sdc-queue:${VERSION:-latest}
+    hostname: queue
+
+    environment:
+      APP_ENV: production
+      APP_KEY: ${APP_KEY}
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: ${DB_DATABASE:-sdc}
+      DB_USERNAME: ${DB_USERNAME:-sdc}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_CLIENT: phpredis
+      REDIS_PREFIX: ${REDIS_PREFIX:-sdc_onprem_}
+      CACHE_PREFIX: ${CACHE_PREFIX:-sdc_onprem_cache_}
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+
+      BROADCAST_CONNECTION: reverb
+      REVERB_APP_ID: ${REVERB_APP_ID}
+      REVERB_APP_KEY: ${REVERB_APP_KEY}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET}
+      REVERB_HOST: reverb
+      REVERB_PORT: "8080"
+      REVERB_SCHEME: http
+
+    volumes:
+      - app_storage:/var/www/storage/app
+
+    networks:
+      - sdc_internal
+
+    healthcheck:
+      test: ["CMD", "supervisorctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    deploy:
+      replicas: 1
+      update_config:
+        order: stop-first
+        parallelism: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1.5G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  # ==========================================================================
+  # REVERB - WebSocket (notificacoes em tempo real). stop-first: clientes WS
+  # reconectam sozinhos; start-first com porta host publicada colidiria.
+  # ==========================================================================
+  reverb:
+    image: ${REGISTRY:-127.0.0.1:5000}/sdc-app:${VERSION:-latest}
+    hostname: reverb
+
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL}
+      BROADCAST_CONNECTION: reverb
+      REVERB_APP_ID: ${REVERB_APP_ID}
+      REVERB_APP_KEY: ${REVERB_APP_KEY}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET}
+      REVERB_SERVER_HOST: 0.0.0.0
+      REVERB_SERVER_PORT: "8080"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_CLIENT: phpredis
+      REDIS_PREFIX: ${REDIS_PREFIX:-sdc_onprem_}
+      CACHE_DRIVER: redis
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: ${DB_DATABASE:-sdc}
+      DB_USERNAME: ${DB_USERNAME:-sdc}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SSLMODE: disable
+
+    # 8082 no host: a 8080 da VM ja e do Jenkins (docker-compose.jenkins.yml).
+    # Clientes WS do navegador devem apontar para :8082 (VITE_REVERB_PORT) ou,
+    # melhor, proxyar /app + /apps pelo Caddy e servir wss:443 sem porta extra.
+    ports:
+      - target: 8080
+        published: 8082
+        mode: host
+
+    networks:
+      - sdc_internal
+      - sdc_edge
+
+    deploy:
+      replicas: 1
+      update_config:
+        order: stop-first
+        parallelism: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # ==========================================================================
+  # DB - PostgreSQL 18 + PostGIS 3.6. NAO escalar banco stateful no Swarm.
+  # ==========================================================================
+  db:
+    image: postgis/postgis:18-3.6-alpine
+    hostname: db
+
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-sdc}
+      POSTGRES_USER: ${DB_USERNAME:-sdc}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: America/Sao_Paulo
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - /opt/sdc/postgres/onprem.conf:/etc/postgresql/postgresql.conf:ro
+
+    networks:
+      - sdc_internal
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-sdc} -d ${DB_DATABASE:-sdc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+
+  # ==========================================================================
+  # REDIS - Cache / Queue. volatile-lru: fila e estruturas sem TTL nunca saem.
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    hostname: redis
+
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 1gb
+      --maxmemory-policy volatile-lru
+      --requirepass ${REDIS_PASSWORD}
+
+    volumes:
+      - redis_data:/data
+
+    networks:
+      - sdc_internal
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 1.25G
+
+  # ==========================================================================
+  # EDGE - Caddy (TLS + proxy reverso). mode: host preserva o IP real do
+  # cliente (o ingress do Swarm mascara a origem).
+  # ==========================================================================
+  caddy:
+    image: caddy:2-alpine
+    hostname: caddy
+
+    ports:
+      - target: 80
+        published: 80
+        mode: host
+      - target: 443
+        published: 443
+        mode: host
+
+    volumes:
+      - /opt/sdc/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+    networks:
+      - sdc_edge
+
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+networks:
+  sdc_internal:
+    driver: overlay
+    attachable: true   # container efemero de migration entra nesta rede
+  sdc_edge:
+    driver: overlay
+
+volumes:
+  db_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_storage:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local

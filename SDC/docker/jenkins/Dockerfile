@@ -1,20 +1,34 @@
-# ===== DOCKERFILE JENKINS PRODUCTION-READY =====
-# Resolve TODOS os problemas mencionados no jenkins02.md
+# ===== JENKINS ON-PREMISE (VM 10.160.131.50, atras do proxy Prodemge) =====
+# Docker-outside-of-Docker: so o CLI; o daemon e acessado via socket-proxy
+# (DOCKER_HOST=tcp://docker-proxy:2375, ver docker-compose.jenkins.yml).
+# Configuracao 100% via JCasC (casc.yaml) — sem init.groovy.d.
+#
+# Build atras do proxy (os DOIS cases, apt le maiuscula e wget minuscula):
+#   docker build \
+#     --build-arg HTTP_PROXY=http://proxy.prodemge.gov.br:8080 \
+#     --build-arg HTTPS_PROXY=http://proxy.prodemge.gov.br:8080 \
+#     --build-arg http_proxy=http://proxy.prodemge.gov.br:8080 \
+#     --build-arg https_proxy=http://proxy.prodemge.gov.br:8080 \
+#     --build-arg NO_PROXY="localhost,127.0.0.1,10.0.0.0/8,.prodemge.gov.br" \
+#     --build-arg DOCKER_GID=$(getent group docker | cut -d: -f3) \
+#     -t sdc-jenkins:onprem .
 
 FROM jenkins/jenkins:lts-jdk17
 
-# Informações de build
 LABEL maintainer="SDC DevOps Team"
-LABEL description="Jenkins Master com Docker, SSH e ferramentas de CI/CD"
-LABEL version="1.0.0"
+LABEL description="Jenkins Master on-premise com Docker CLI para CI/CD do SDC"
+LABEL version="2.0.0"
 
-# ===== RESOLVER PROBLEMA 1: UID/GID (Permission Denied) =====
-# Por padrão, jenkins roda com UID 1000
-# Vamos criar um grupo docker com GID correto para acessar docker.sock
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ARG http_proxy
+ARG https_proxy
+ARG no_proxy
 
 USER root
 
-# Instalar dependências do sistema
+# Dependencias do sistema (sem Azure CLI: deploy e 100% on-premise)
 RUN apt-get update && apt-get install -y \
     apt-transport-https \
     ca-certificates \
@@ -23,101 +37,67 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     git \
     openssh-client \
-    vim \
-    wget \
     unzip \
     jq \
-    pigz \
-    python3 \
-    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# ===== RESOLVER PROBLEMA 3: SSH e Git (Chaves e Hosts) =====
-# Configurar SSH para aceitar hosts conhecidos automaticamente
-RUN mkdir -p /var/jenkins_home/.ssh && \
-    ssh-keyscan github.com >> /var/jenkins_home/.ssh/known_hosts && \
-    ssh-keyscan gitlab.com >> /var/jenkins_home/.ssh/known_hosts && \
-    ssh-keyscan bitbucket.org >> /var/jenkins_home/.ssh/known_hosts && \
-    chmod 700 /var/jenkins_home/.ssh && \
-    chmod 644 /var/jenkins_home/.ssh/known_hosts
+# SSH known_hosts em /usr/share/jenkins/ref: o entrypoint copia para o
+# jenkins_home no primeiro boot (bind mount esconderia /var/jenkins_home).
+RUN mkdir -p /usr/share/jenkins/ref/.ssh && \
+    ssh-keyscan github.com >> /usr/share/jenkins/ref/.ssh/known_hosts && \
+    chmod 700 /usr/share/jenkins/ref/.ssh && \
+    chmod 644 /usr/share/jenkins/ref/.ssh/known_hosts
 
-# ===== INSTALAR DOCKER CLI (Docker-outside-of-Docker) =====
-# IMPORTANTE: Não instalamos Docker daemon, apenas o cliente
+# Docker CLI + compose plugin (Docker-outside-of-Docker: sem daemon)
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
     apt-get update && \
     apt-get install -y docker-ce-cli docker-compose-plugin && \
     rm -rf /var/lib/apt/lists/*
 
-# ===== INSTALAR DOCKER COMPOSE STANDALONE =====
-RUN curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && \
-    chmod +x /usr/local/bin/docker-compose && \
-    docker-compose --version
-
-# ===== AZURE CLI =====
-RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash \
-    && az --version
-
-# ===== RESOLVER PROBLEMA 2B: Acesso ao Docker Socket =====
-# Criar grupo docker com GID dinâmico (será configurado via ARG)
+# Grupo docker alinhado ao GID do host — necessario apenas se o socket for
+# montado direto; com o socket-proxy (padrao) e inofensivo.
 ARG DOCKER_GID=999
 RUN groupadd -g ${DOCKER_GID} docker || groupmod -g ${DOCKER_GID} docker
 RUN usermod -aG docker jenkins
 
-# ===== INSTALAR FERRAMENTAS ADICIONAIS PARA BUILDS =====
-
-# ===== PLUGINS JENKINS ESSENCIAIS =====
-# Instalar plugins via jenkins-plugin-cli (mais rápido e confiável)
-RUN jenkins-plugin-cli --plugins \
+# Plugins essenciais (lista enxuta; Pipeline/Git/Credentials ja cobrem o
+# Jenkinsfile.onprem — docker-workflow/kubernetes/blueocean ficam de fora).
+# jenkins-plugin-cli e Java e ignora http_proxy: traduzir para -Dhttp.proxy*.
+RUN if [ -n "$HTTPS_PROXY" ]; then \
+        PROXY_HOST=$(echo "$HTTPS_PROXY" | sed -E 's#^https?://##; s#:[0-9]+/?$##'); \
+        PROXY_PORT=$(echo "$HTTPS_PROXY" | sed -E 's#^.*:([0-9]+)/?$#\1#'); \
+        export JAVA_TOOL_OPTIONS="-Dhttp.proxyHost=$PROXY_HOST -Dhttp.proxyPort=$PROXY_PORT -Dhttps.proxyHost=$PROXY_HOST -Dhttps.proxyPort=$PROXY_PORT"; \
+    fi; \
+    jenkins-plugin-cli --plugins \
     git \
     workflow-aggregator \
-    docker-workflow \
-    docker-plugin \
-    kubernetes \
     configuration-as-code \
     job-dsl \
-    pipeline-stage-view \
-    blueocean \
     credentials-binding \
-    ssh-agent \
     github \
-    gitlab-plugin \
-    slack \
-    office-365-connector \
+    pipeline-stage-view \
+    junit \
     email-ext \
+    slack \
     prometheus \
-    cloudbees-disk-usage-simple \
     timestamper \
     ws-cleanup \
     build-timeout \
     ansicolor
 
-# ===== SCRIPTS DE INICIALIZAÇÃO =====
-COPY --chown=jenkins:jenkins init.groovy.d/ /usr/share/jenkins/ref/init.groovy.d/
-COPY --chown=jenkins:jenkins casc.yaml /var/jenkins_home/casc.yaml
+# JCasC fora de /var/jenkins_home: bind mount do jenkins_home esconderia o
+# arquivo copiado na imagem.
+COPY --chown=jenkins:jenkins casc.yaml /opt/jenkins/casc.yaml
+ENV CASC_JENKINS_CONFIG=/opt/jenkins/casc.yaml
 
-# ===== HEALTHCHECK SCRIPT =====
-COPY healthcheck.sh /usr/local/bin/healthcheck.sh
-RUN chmod +x /usr/local/bin/healthcheck.sh
-
-# ===== AJUSTAR PERMISSÕES =====
-RUN chown -R jenkins:jenkins /var/jenkins_home
-
-# ===== RESOLVER PROBLEMA 2A: Java Heap vs Docker Limit =====
-# As variáveis JAVA_OPTS serão configuradas no docker-compose.yml
-# mas garantimos valores padrão seguros aqui
 ENV JAVA_OPTS="-Xms512m -Xmx2g -Djava.awt.headless=true -Djenkins.install.runSetupWizard=false"
 
-# ===== EXPOR PORTAS =====
 EXPOSE 8080 50000
 
-# Voltar para usuário jenkins (SEGURANÇA)
 USER jenkins
 
-# Healthcheck
-HEALTHCHECK --interval=60s --timeout=10s --retries=5 --start-period=120s \
-  CMD /usr/local/bin/healthcheck.sh
+HEALTHCHECK --interval=60s --timeout=10s --retries=5 --start-period=180s \
+  CMD curl -sf http://localhost:8080/login >/dev/null || exit 1
 
 WORKDIR /var/jenkins_home
-
-# O entrypoint padrão do jenkins/jenkins:lts já está configurado

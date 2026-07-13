@@ -1,11 +1,11 @@
-# ===== JENKINS CONFIGURATION AS CODE (JCasC) =====
-# Este arquivo configura o Jenkins automaticamente na inicialização
-# Resolve problema de configuração manual e garante reprodutibilidade
+# ===== JENKINS CONFIGURATION AS CODE (JCasC) - ON-PREMISE =====
+# Fonte unica de configuracao do Jenkins (sem init.groovy.d).
+# Segredos vem do .env do compose — nunca hardcoded aqui.
 
 jenkins:
-  systemMessage: "Jenkins CI/CD Server - SDC Project - Configured automatically via JCasC"
+  systemMessage: "Jenkins CI/CD on-premise - SDC (VM 10.160.131.50) - configurado via JCasC"
 
-  numExecutors: 2  # Número de executores no master (manter baixo, usar agentes)
+  numExecutors: 2
 
   securityRealm:
     local:
@@ -26,7 +26,21 @@ jenkins:
     standard:
       excludeClientIPFromCrumb: false
 
-  # Configuração de Agentes
+  # Saida para internet SO via proxy Prodemge (autentica por IP).
+  # noProxyHost: um host por linha; manter registry local e faixa interna fora
+  # do proxy, senao push/pull e chamadas internas tentam sair e falham.
+  proxy:
+    name: "${JENKINS_PROXY_HOST:-proxy.prodemge.gov.br}"
+    port: ${JENKINS_PROXY_PORT:-8080}
+    noProxyHost: |-
+      localhost
+      127.0.0.1
+      docker-proxy
+      registry
+      10.*
+      *.prodemge.gov.br
+      *.mg.gov.br
+
   nodes:
     - permanent:
         name: "docker-agent"
@@ -38,7 +52,6 @@ jenkins:
               failIfWorkDirIsMissing: false
               internalDir: "remoting"
 
-  # Configurações globais
   globalNodeProperties:
     - envVars:
         env:
@@ -48,32 +61,30 @@ jenkins:
             value: "1"
           - key: "COMPOSE_DOCKER_CLI_BUILD"
             value: "1"
-          - key: "AZURE_TENANT_ID"
-            value: "${AZURE_TENANT_ID:-}"
-          - key: "ACR_NAME"
-            value: "${ACR_NAME:-apidover}"
+          # Consumidos pelo SDC/Jenkinsfile.onprem
+          - key: "APP_HEALTH_URL"
+            value: "${APP_HEALTH_URL:-https://10.160.131.50/health}"
+          - key: "SLACK_WEBHOOK_URL"
+            value: "${SLACK_WEBHOOK_URL:-}"
+          - key: "TEAMS_WEBHOOK_URL"
+            value: "${TEAMS_WEBHOOK_URL:-}"
 
-# ===== UNCLASSIFIED SETTINGS =====
 unclassified:
   location:
-    url: "${JENKINS_URL:-http://localhost:8080}"
-    adminAddress: "${JENKINS_ADMIN_EMAIL:-admin@example.com}"
+    url: "${JENKINS_URL:-http://10.160.131.50:8080}"
+    adminAddress: "${JENKINS_ADMIN_EMAIL:-admin@sdc.local}"
 
-  # Configuração de timezone
   timestamper:
     systemTimeFormat: "yyyy-MM-dd HH:mm:ss"
 
-  # Workspace cleanup
   globalDefaultFlowDurabilityLevel:
     durabilityHint: PERFORMANCE_OPTIMIZED
 
-
-# ===== CREDENTIALS =====
 credentials:
   system:
     domainCredentials:
       - credentials:
-          # Git SSH Key (será populado via variável de ambiente)
+          # Git via SSH (opcional; o job padrao usa HTTPS + token)
           - basicSSHUserPrivateKey:
               scope: GLOBAL
               id: "git-ssh-key"
@@ -83,39 +94,7 @@ credentials:
                 directEntry:
                   privateKey: "${GIT_SSH_PRIVATE_KEY:-}"
 
-          # Docker Registry
-          - usernamePassword:
-              scope: GLOBAL
-              id: "docker-registry-credentials"
-              username: "${DOCKER_USERNAME:-}"
-              password: "${DOCKER_PASSWORD:-}"
-              description: "Docker Registry Credentials"
-
-          # Database credentials
-          - usernamePassword:
-              scope: GLOBAL
-              id: "db-credentials"
-              username: "${DB_USERNAME:-}"
-              password: "${DB_PASSWORD:-}"
-              description: "Database Credentials"
-
-          # Azure Container Registry credentials
-          - usernamePassword:
-              scope: GLOBAL
-              id: "azure-acr-credentials"
-              username: "${AZURE_ACR_USERNAME:-}"
-              password: "${AZURE_ACR_PASSWORD:-}"
-              description: "Azure Container Registry Credentials (Service Principal)"
-
-          # Azure Service Principal (para Azure CLI)
-          - usernamePassword:
-              scope: GLOBAL
-              id: "azure-service-principal"
-              username: "${AZURE_CLIENT_ID:-}"
-              password: "${AZURE_CLIENT_SECRET:-}"
-              description: "Azure Service Principal for Azure CLI"
-
-          # GitHub Personal Access Token
+          # GitHub PAT para checkout HTTPS (o polling passa pelo proxy)
           - usernamePassword:
               scope: GLOBAL
               id: "github-token"
@@ -123,48 +102,42 @@ credentials:
               password: "${GITHUB_TOKEN:-}"
               description: "GitHub Personal Access Token for HTTPS authentication"
 
-# ===== TOOL CONFIGURATION =====
+          # Registry privado local. Hoje 127.0.0.1:5000 sem auth (loopback);
+          # preencher quando o registry ganhar TLS + htpasswd (multi-node).
+          - usernamePassword:
+              scope: GLOBAL
+              id: "registry-creds"
+              username: "${REGISTRY_USERNAME:-}"
+              password: "${REGISTRY_PASSWORD:-}"
+              description: "Registry privado on-premise"
+
 tool:
   git:
     installations:
       - name: "Default"
         home: "git"
 
-  # Docker tool
-  dockerTool:
-    installations:
-      - name: "docker"
-        properties:
-          - installSource:
-              installers:
-                - fromDocker:
-                    version: "latest"
-
-# ===== SECURITY =====
 security:
-  # Desabilitar scripts inseguros
   scriptApproval:
     approvedSignatures:
       - "method groovy.json.JsonSlurper parse java.io.Reader"
       - "method groovy.json.JsonSlurper parseText java.lang.String"
       - "new groovy.json.JsonSlurper"
 
-  # Configurações de API Token
   apiToken:
     creationOfLegacyTokenEnabled: false
     tokenGenerationOnCreationEnabled: false
     usageStatisticsEnabled: true
 
-# ===== JOBS CONFIGURATION =====
 jobs:
   - script: >
       folder('SDC') {
         displayName('SDC Application')
-        description('CI/CD Pipeline for SDC Application')
+        description('CI/CD on-premise do SDC (Swarm + registry local, zero downtime)')
       }
 
   - script: >
-      pipelineJob('SDC/build-and-deploy') {
+      pipelineJob('SDC/deploy-onprem') {
         definition {
           cpsScm {
             scm {
@@ -173,13 +146,13 @@ jobs:
                   url('${GIT_REPO_URL:-https://github.com/MatheusEstrela-dev/NewSDC.git}')
                   credentials('github-token')
                 }
-                branches('*/main', '*/develop')
+                branches('${GIT_DEPLOY_BRANCH:-*/main}')
               }
             }
-            scriptPath('SDC/Jenkinsfile')
+            scriptPath('SDC/Jenkinsfile.onprem')
           }
         }
         triggers {
-          githubPush()
+          scm('H/5 * * * *')
         }
       }
