@@ -289,6 +289,16 @@ services:
       - db_data:/var/lib/postgresql/data
       - /opt/sdc/postgres/onprem.conf:/etc/postgresql/postgresql.conf:ro
 
+    # So loopback do node - nunca a rede. Acesso externo (ex: DBeaver) e via
+    # tunel SSH (ssh -L 5432:localhost:5432 <user>@10.160.131.50), nunca com
+    # a porta publicada direto na interface da VM.
+    ports:
+      - target: 5432
+        published: "5432"
+        protocol: tcp
+        mode: host
+        host_ip: 127.0.0.1
+
     networks:
       - sdc_internal
 
