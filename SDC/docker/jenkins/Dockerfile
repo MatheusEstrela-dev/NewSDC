@@ -41,11 +41,9 @@ RUN apt-get update && apt-get install -y \
     jq \
     && rm -rf /var/lib/apt/lists/*
 
-# Sem ssh-keyscan: SSH (porta 22) nao atravessa o proxy Prodemge e o build
-# morre. O checkout do pipeline e 100% HTTPS + token (credencial github-token).
-# Se um dia usar git via SSH, gere o known_hosts em runtime, nao no build.
-RUN mkdir -p /usr/share/jenkins/ref/.ssh && \
-    chmod 700 /usr/share/jenkins/ref/.ssh
+# Sem ssh-keyscan nem ref/.ssh: SSH (porta 22) nao atravessa o proxy Prodemge
+# e o checkout e 100% HTTPS + token. Diretorio root em ref/ quebra o find do
+# entrypoint (roda como jenkins) — nao criar nada em ref/ como root.
 
 # Docker CLI + compose plugin (Docker-outside-of-Docker: sem daemon)
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \

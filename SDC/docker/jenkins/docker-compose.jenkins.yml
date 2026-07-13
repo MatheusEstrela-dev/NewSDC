@@ -418,13 +418,11 @@ networks:
 # ==========================================================================
 # VOLUMES
 # ==========================================================================
+# Volumes nomeados puros: o Docker copia dono/permissoes da imagem na criacao
+# (bind mount relativo em driver_opts era ignorado e gerava dono root).
 volumes:
   jenkins_home:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./jenkins_home
     labels:
       - "com.sdc.volume=jenkins_home"
       - "com.sdc.backup=required"
@@ -440,10 +438,6 @@ volumes:
 
   jenkins_backups:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./jenkins_backups
     labels:
       - "com.sdc.volume=backups"
       - "com.sdc.backup=critical"
