@@ -66,7 +66,7 @@ import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
-import { useActivityFeed } from '@/composables/useActivityFeed';
+import { useActivityFeed } from '@/Composables/useActivityFeed';
 
 const { items, isLoading } = useActivityFeed();
 

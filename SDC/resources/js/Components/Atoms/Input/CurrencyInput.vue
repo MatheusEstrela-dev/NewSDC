@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { formatCurrency } from '@/composables/ui/useDesastreMask';
+import { formatCurrency } from '@/Composables/ui/useDesastreMask';
 
 const props = defineProps({
   modelValue: {

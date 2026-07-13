@@ -167,7 +167,7 @@ import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TdapStatusBadge from '@/Components/Atoms/Tdap/TdapStatusBadge.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
-import { useExport } from '@/composables/data/useExport';
+import { useExport } from '@/Composables/data/useExport';
 import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';

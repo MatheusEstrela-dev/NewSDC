@@ -14,7 +14,7 @@
 <script setup>
 import { computed } from 'vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
-import { formatCurrency, formatNumber } from '@/composables/ui/useDesastreMask';
+import { formatCurrency, formatNumber } from '@/Composables/ui/useDesastreMask';
 
 const props = defineProps({
   desastre: {

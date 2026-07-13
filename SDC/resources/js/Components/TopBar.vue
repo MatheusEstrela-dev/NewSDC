@@ -224,8 +224,8 @@
 </template>
 
 <script setup>
-import { useNotifications } from '@/composables/useNotifications';
-import { useTheme } from '@/composables/ui';
+import { useNotifications } from '@/Composables/useNotifications';
+import { useTheme } from '@/Composables/ui';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, inject, onMounted, onUnmounted, ref, Transition, watch } from 'vue';
 import HamburgerButton from './Atoms/Button/HamburgerButton.vue';

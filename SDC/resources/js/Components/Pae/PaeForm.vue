@@ -73,7 +73,7 @@
 
 <script setup>
 import { ref, h, reactive, computed } from 'vue';
-import { usePaeFormulario } from '@/composables/pae/usePaeFormulario';
+import { usePaeFormulario } from '@/Composables/pae/usePaeFormulario';
 import { usePage } from '@inertiajs/vue3';
 import PaeFormTabs from './PaeFormTabs.vue';
 import PaeFormInfoGerais from './PaeFormInfoGerais.vue';

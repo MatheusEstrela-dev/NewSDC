@@ -93,7 +93,7 @@ import XMarkIcon from '@/Components/Icons/XMarkIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
 import InputError from '@/Components/InputError.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
-import { useToast } from '@/composables/useToast';
+import { useToast } from '@/Composables/useToast';
 
 const props = defineProps({
   show: {

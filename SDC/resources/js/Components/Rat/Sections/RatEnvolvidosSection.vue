@@ -175,7 +175,7 @@
 
 <script setup>
 import { ref, watch } from 'vue';
-import { useCep } from '@/composables/location';
+import { useCep } from '@/Composables/location';
 import FormField from '../../Form/FormField.vue';
 import FormSelect from '../../Form/FormSelect.vue';
 import DatePicker from '../../Form/DatePicker.vue';

@@ -309,7 +309,7 @@
 <script setup>
 import { ref, reactive, watch } from 'vue';
 import { useToast } from '@/Composables/useToast';
-import { useCep } from '@/composables/location';
+import { useCep } from '@/Composables/location';
 import FormField from '@/Components/Form/FormField.vue';
 import FormSelect from '@/Components/Form/FormSelect.vue';
 import DatePicker from '@/Components/Form/DatePicker.vue';

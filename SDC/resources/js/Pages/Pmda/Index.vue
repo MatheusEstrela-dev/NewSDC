@@ -218,7 +218,7 @@ import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
-import { useExport } from '@/composables/data/useExport';
+import { useExport } from '@/Composables/data/useExport';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import { InboxArrowDownIcon } from '@heroicons/vue/24/outline';
 import { moduleIcon } from '@/Support/moduleIcons';

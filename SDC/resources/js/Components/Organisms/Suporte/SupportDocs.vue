@@ -22,7 +22,7 @@ import {
 } from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
-import { useWelcomeTour } from '@/composables/auth/useWelcomeTour';
+import { useWelcomeTour } from '@/Composables/auth/useWelcomeTour';
 
 const emit = defineEmits(['open-tickets', 'close']);
 

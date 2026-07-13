@@ -163,7 +163,7 @@ import TdapStatusBadge from '@/Components/Atoms/Tdap/TdapStatusBadge.vue';
 import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
 import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
-import { useExport } from '@/composables/data/useExport';
+import { useExport } from '@/Composables/data/useExport';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import TdapPrestadoresFiltersSection from '@/Components/Organisms/Tdap/TdapPrestadoresFiltersSection.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';

@@ -201,7 +201,7 @@ import DocumentIcon from '@/Components/Icons/DocumentIcon.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import PencilIcon from '@/Components/Icons/PencilIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
-import { useToast } from '@/composables/useToast';
+import { useToast } from '@/Composables/useToast';
 
 defineOptions({ layout: AuthenticatedLayout });
 

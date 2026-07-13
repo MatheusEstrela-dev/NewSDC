@@ -72,6 +72,10 @@ RUN docker-php-ext-configure gd \
 # Build MANUAL (configure+make) do swoole em vez de pecl --configureoptions: o
 # pecl se mostrou instavel ao passar enable-swoole-pgsql; o manual e deterministico.
 ARG SWOOLE_VERSION=6.2.1
+# O pecl/PEAR ignora as variaveis de ambiente de proxy; em rede corporativa
+# (build com --build-arg http_proxy=...) o proxy precisa ir para a config do
+# PEAR. Sem proxy no build, o if e um no-op e nada muda.
+RUN if [ -n "$http_proxy" ]; then pear config-set http_proxy "$http_proxy"; fi
 RUN pecl install igbinary \
     && docker-php-ext-enable igbinary \
     && pecl install redis \
@@ -158,9 +162,6 @@ RUN composer dump-autoload --optimize --classmap-authoritative
 # .dockerignored, entao nao existe no contexto de build.)
 RUN APP_ENV=production APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
     php artisan route:verify-signatures
-
-# Symlink para case-sensitivity (Linux)
-RUN cd resources/js && ln -sf composables Composables
 
 # Compilar assets com Bun
 RUN bun install --frozen-lockfile \

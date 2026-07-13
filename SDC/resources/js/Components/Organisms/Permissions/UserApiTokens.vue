@@ -154,7 +154,7 @@ import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import ClipboardIcon from '@/Components/Icons/ClipboardIcon.vue';
 import TrashIcon from '@/Components/Icons/TrashIcon.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
-import { useToast } from '@/composables/useToast';
+import { useToast } from '@/Composables/useToast';
 
 const PlusIconRaw     = markRaw(PlusIcon);
 const ClipboardIconRaw = markRaw(ClipboardIcon);

@@ -71,7 +71,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useNotifications } from '@/composables/useNotifications';
+import { useNotifications } from '@/Composables/useNotifications';
 import { router } from '@inertiajs/vue3';
 
 // Icons

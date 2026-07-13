@@ -141,7 +141,7 @@ import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
-import { useToast } from '@/composables/useToast';
+import { useToast } from '@/Composables/useToast';
 
 defineOptions({ layout: AuthenticatedLayout });
 

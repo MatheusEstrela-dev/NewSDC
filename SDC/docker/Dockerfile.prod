@@ -113,9 +113,6 @@ RUN composer dump-autoload --optimize --classmap-authoritative
 RUN APP_ENV=production APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
     php artisan route:verify-signatures
 
-# Criar symlink para resolver case-sensitivity (Linux e case-sensitive)
-RUN cd resources/js && ln -sf composables Composables
-
 # Instalar dependencias e compilar assets com Bun
 RUN bun install --frozen-lockfile && \
     bun run build && \
