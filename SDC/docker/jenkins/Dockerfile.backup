@@ -7,7 +7,20 @@ FROM alpine:latest
 
 LABEL maintainer="SDC DevOps <devops@sdc.gov.br>"
 LABEL description="Jenkins Backup Service - Multi-tier with verification"
-LABEL version="1.0.0"
+LABEL version="1.1.0"
+
+# Proxy Prodemge no build (apk le as env; passar os DOIS cases via compose).
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ARG http_proxy
+ARG https_proxy
+ARG no_proxy
+
+# Repos em http: o TLS direto ao dl-cdn e barrado na rede corporativa
+# ("TLS: unspecified error"); a integridade continua garantida pela
+# assinatura dos pacotes apk.
+RUN sed -i 's#https://#http://#g' /etc/apk/repositories
 
 # Instalar dependências
 RUN apk add --no-cache \

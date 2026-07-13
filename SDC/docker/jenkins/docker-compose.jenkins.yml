@@ -279,6 +279,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backup
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-http://proxy.prodemge.gov.br:8080}
+        HTTPS_PROXY: ${HTTPS_PROXY:-http://proxy.prodemge.gov.br:8080}
+        NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,.prodemge.gov.br,.mg.gov.br}
+        http_proxy: ${HTTP_PROXY:-http://proxy.prodemge.gov.br:8080}
+        https_proxy: ${HTTPS_PROXY:-http://proxy.prodemge.gov.br:8080}
+        no_proxy: ${NO_PROXY:-localhost,127.0.0.1,.prodemge.gov.br,.mg.gov.br}
     container_name: sdc_jenkins_backup_local
     hostname: backup-local
     restart: unless-stopped
@@ -330,6 +337,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backup
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-http://proxy.prodemge.gov.br:8080}
+        HTTPS_PROXY: ${HTTPS_PROXY:-http://proxy.prodemge.gov.br:8080}
+        NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,.prodemge.gov.br,.mg.gov.br}
+        http_proxy: ${HTTP_PROXY:-http://proxy.prodemge.gov.br:8080}
+        https_proxy: ${HTTPS_PROXY:-http://proxy.prodemge.gov.br:8080}
+        no_proxy: ${NO_PROXY:-localhost,127.0.0.1,.prodemge.gov.br,.mg.gov.br}
     container_name: sdc_jenkins_backup_remote
     hostname: backup-remote
     restart: unless-stopped
