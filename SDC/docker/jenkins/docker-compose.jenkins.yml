@@ -307,6 +307,9 @@ services:
     depends_on:
       - jenkins
 
+    # init: tini como PID 1; sem ele o dcron falha com "setpgid: Operation
+    # not permitted" em loop de restart
+    init: true
     command: crond -f -l 2
 
     deploy:
@@ -364,6 +367,9 @@ services:
     networks:
       - jenkins_egress
 
+    # init: tini como PID 1; sem ele o dcron falha com "setpgid: Operation
+    # not permitted" em loop de restart
+    init: true
     command: crond -f -l 2
 
     deploy:
