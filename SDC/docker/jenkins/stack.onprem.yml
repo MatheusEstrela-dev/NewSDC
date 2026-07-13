@@ -89,6 +89,18 @@ services:
 
       METRICS_TOKEN: ${METRICS_TOKEN}
 
+      # SMTP Prodemge (interno, direto - NAO passa pelo proxy HTTP). Sem
+      # estas vars o Laravel cai no default do config/mail.php
+      # (smtp.mailgun.org, sem credencial) e todo envio falha por timeout.
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-smtpprdm.prodemge.gov.br}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-sdc@defesacivil.mg.gov.br}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC - Sistema de Defesa Civil}
+
       LOG_CHANNEL: stack
       LOG_LEVEL: ${LOG_LEVEL:-info}
 
@@ -173,6 +185,17 @@ services:
       REVERB_HOST: reverb
       REVERB_PORT: "8080"
       REVERB_SCHEME: http
+
+      # SMTP Prodemge: o queue e quem de fato dispara os emails (jobs de
+      # Mail enfileirados rodam aqui, nao no app)
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-smtpprdm.prodemge.gov.br}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-sdc@defesacivil.mg.gov.br}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC - Sistema de Defesa Civil}
 
     volumes:
       - app_storage:/var/www/storage/app
