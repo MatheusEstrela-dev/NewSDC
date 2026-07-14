@@ -3,7 +3,11 @@
     class="sidebar"
     :class="{
       'is-collapsed': isCollapsed,
-      'is-mobile-open': isSidebarOpen && (isMobile || isTablet)
+      /* Sem gate JS de breakpoint aqui: o proprio CSS ja restringe o efeito
+         de .is-mobile-open as media queries < 1024px. Condicionar por
+         isMobile/isTablet reintroduz o risco de divergencia JS x CSS na
+         fronteira do breakpoint (scrollbar classica, zoom). */
+      'is-mobile-open': isSidebarOpen
     }"
   >
     <!-- Header -->
