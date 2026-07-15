@@ -12,6 +12,9 @@ replace.ps1
 .env.test
 .env.keys
 .env.onprem
+.env.prod
+.env.bak
+.env.jenkins
 tests/e2e/.env.keys
 .phpunit.result.cache
 Homestead.json
