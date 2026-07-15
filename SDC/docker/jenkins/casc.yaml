@@ -164,7 +164,7 @@ jobs:
                 branches('${GIT_DEPLOY_BRANCH:-*/main}')
               }
             }
-            scriptPath('SDC/Jenkinsfile.onprem')
+            scriptPath('SDC/docker/jenkins/Jenkinsfile.onprem')
           }
         }
         triggers {
