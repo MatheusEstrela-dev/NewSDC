@@ -1,9 +1,9 @@
 #!/bin/sh
 # ============================================================================
-# SDC - Entrypoint de Producao Swoole para Azure App Service
-# Octane sobre Swoole. Clonado de docker/scripts/entrypoint.prod.sh; as unicas
-# diferencas sao OCTANE_SERVER=swoole, DB_PERSISTENT=false (obrigatorio sob
-# SWOOLE_HOOK_ALL) e o exec final com --server=swoole.
+# SDC - Entrypoint de Producao (Octane sobre Swoole)
+# Unico entrypoint de producao do projeto (o legado FrankenPHP/App Service
+# foi removido). OCTANE_SERVER=swoole e DB_PERSISTENT=false sao obrigatorios
+# sob SWOOLE_HOOK_ALL.
 # ============================================================================
 
 set -e

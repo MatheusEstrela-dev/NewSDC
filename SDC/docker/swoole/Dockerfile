@@ -1,7 +1,7 @@
 # ============================================================================
 # SDC - DOCKERFILE SWOOLE (Producao)
 # Octane sobre Swoole: coroutines + I/O assincrono + task workers.
-# Baseado em docker/Dockerfile.prod (estrutura de build) com tuning
+# Imagem UNICA de producao do app (o legado FrankenPHP foi removido); tuning
 # opcache/JIT para workers persistentes.
 # ============================================================================
 
