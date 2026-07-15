@@ -1,4 +1,0 @@
-﻿--- RELAT├ôRIO DE VERIFICA├ç├âO DEFINITIVO RAT ---
-[Dados Gerais] Preparando... OK Ô£à
-[Recursos] Salvando (Nomes com Prefixos)... 
-ÔØî ERRO NA VERIFICA├ç├âO: SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: rat_relato_recursos.seq (Connection: sqlite, Database: c:\Users\x16073201\NewSDC\SDC\database\database.sqlite, SQL: insert into "rat_relato_recursos" ("recurso_tipo", "recurso_descricao", "viatura_placa", "created_by", "updated_at", "created_at") values (veiculo, Unidade de Resgate Final, PLACA-FIX, 1, 2026-04-09 13:48:16, 2026-04-09 13:48:16))
