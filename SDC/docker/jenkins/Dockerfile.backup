@@ -50,7 +50,7 @@ COPY scripts/backup-*.sh /scripts/
 RUN chmod +x /scripts/*.sh
 
 # Configurar cron
-COPY crontab /etc/crontabs/root
+COPY scripts/crontab /etc/crontabs/root
 
 # Healthcheck
 HEALTHCHECK --interval=1h --timeout=10s --retries=2 \
