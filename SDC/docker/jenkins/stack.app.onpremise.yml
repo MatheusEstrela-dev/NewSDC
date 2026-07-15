@@ -1,37 +1,35 @@
 # ============================================================================
-# SDC - Docker SWARM stack ON-PREMISE (VM 8 vCores / 16 GB - tudo na mesma VM)
-# Octane/Swoole + PostgreSQL/PostGIS + Redis + Queue + Reverb + Caddy
+# SDC - Stack Swarm de APLICACAO on-premise (VM 8 vCores / 32 GB)
+# Octane/Swoole + Queue + Reverb + Caddy - ciclo de vida do PIPELINE
 # ----------------------------------------------------------------------------
-# Zero downtime = healthcheck + update start-first + replicas >= 2 (app).
-# Derivado de compose.onprem.yml; diferencas do Swarm:
-#   - build:/depends_on:/restart:/container_name: sao ignorados pelo stack
-#   - imagens vem SEMPRE do registry local (o pipeline publica em 127.0.0.1:5000)
-#   - deploy.update_config/rollback_config controlam o rolling update
+# O banco NAO mora aqui: PostgreSQL e Redis estao em stack.data.onpremise.yml
+# (stack sdc-data, isolada - o pipeline nunca a toca). Esta stack pode ser
+# removida/reaplicada a vontade sem risco para os dados.
 #
-# ORCAMENTO DA VM (app agora em 2 replicas; total igual ao compose original):
-#   app    2x (1.75 cpu / 2.25G) = 3.5 / 4.5G  (6 workers HTTP + 2 task cada)
-#   queue  1.0 cpu / 1.5G   reverb 0.5 / 512M  db 2.0 / 4G
-#   redis  0.5 / 1.25G      caddy 0.5 / 256M
-#   transiente de update (start-first, parallelism 1): +1 app (~2.25G) — cabe.
+# Zero downtime = healthcheck + update start-first + replicas >= 2 (app).
+#
+# ORCAMENTO (app em 2 replicas):
+#   app 2x (1.75 cpu / 2.25G) + queue 1/1.5G + reverb 0.5/512M + caddy 0.5/256M
+#   transiente de update (start-first, parallelism 1): +1 app (~2.25G)
 #
 # Guardrail PG: (6 + 2)*2 instancias + 5 externas + 5 reserva = 26 <= 100.
 #
 # Uso (docker stack deploy NAO le .env; exporta antes):
-#   docker swarm init --advertise-addr 10.160.131.50        # uma vez
+#   # pre-requisitos: rede sdc_internal criada + stack sdc-data no ar
 #   set -a; . /opt/sdc/.env.onprem; set +a
-#   export VERSION=<tag-do-pipeline>                         # ex: ab12cd3-b42
-#   docker stack deploy -c stack.onprem.yml --with-registry-auth sdc
+#   export VERSION=<tag-do-pipeline>          # ex: ab12cd3-b42
+#   docker stack deploy -c stack.app.onpremise.yml --with-registry-auth sdc
 #
-# Depois do deploy inicial o Jenkins NAO roda stack deploy de novo: o rolling
-# update e feito por `docker service update --image` (ver SDC/Jenkinsfile.onprem).
+# Depois do deploy inicial o Jenkins NAO roda stack deploy: o rolling update e
+# feito por docker service update --image (ver SDC/Jenkinsfile.onprem).
 # ============================================================================
 
 version: "3.9"
 
 services:
   # ==========================================================================
-  # APP - Laravel Octane sobre Swoole. 2 replicas de 6+2 workers (mesmo total
-  # do compose de 1 instancia); menos que isso o start-first abre janela.
+  # APP - Laravel Octane sobre Swoole. 2 replicas de 6+2 workers; menos que
+  # isso o start-first abre janela de indisponibilidade.
   # ==========================================================================
   app:
     image: ${REGISTRY:-127.0.0.1:5000}/sdc-app:${VERSION:-latest}
@@ -58,6 +56,8 @@ services:
       APP_INSTANCES: "2"
       EXTERNAL_DB_CONSUMERS: "5"
 
+      # Banco e Redis moram na stack sdc-data; resolucao via rede overlay
+      # compartilhada (hostnames db/redis).
       DB_CONNECTION: pgsql
       DB_HOST: db
       DB_PORT: "5432"
@@ -88,18 +88,6 @@ services:
       REVERB_SCHEME: http
 
       METRICS_TOKEN: ${METRICS_TOKEN}
-
-      # SMTP Prodemge (interno, direto - NAO passa pelo proxy HTTP). Sem
-      # estas vars o Laravel cai no default do config/mail.php
-      # (smtp.mailgun.org, sem credencial) e todo envio falha por timeout.
-      MAIL_MAILER: ${MAIL_MAILER:-smtp}
-      MAIL_HOST: ${MAIL_HOST:-smtpprdm.prodemge.gov.br}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-sdc@defesacivil.mg.gov.br}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC - Sistema de Defesa Civil}
 
       LOG_CHANNEL: stack
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -186,17 +174,6 @@ services:
       REVERB_PORT: "8080"
       REVERB_SCHEME: http
 
-      # SMTP Prodemge: o queue e quem de fato dispara os emails (jobs de
-      # Mail enfileirados rodam aqui, nao no app)
-      MAIL_MAILER: ${MAIL_MAILER:-smtp}
-      MAIL_HOST: ${MAIL_HOST:-smtpprdm.prodemge.gov.br}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-sdc@defesacivil.mg.gov.br}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC - Sistema de Defesa Civil}
-
     volumes:
       - app_storage:/var/www/storage/app
 
@@ -261,7 +238,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_SSLMODE: disable
 
-    # 8082 no host: a 8080 da VM ja e do Jenkins (docker-compose.jenkins.yml).
+    # 8082 no host: a 8080 da VM e do Jenkins (docker-compose.jenkins.yml).
     # Clientes WS do navegador devem apontar para :8082 (VITE_REVERB_PORT) ou,
     # melhor, proxyar /app + /apps pelo Caddy e servir wss:443 sem porta extra.
     ports:
@@ -291,98 +268,6 @@ services:
       options:
         max-size: "20m"
         max-file: "3"
-
-  # ==========================================================================
-  # DB - PostgreSQL 18 + PostGIS 3.6. NAO escalar banco stateful no Swarm.
-  # ==========================================================================
-  db:
-    image: postgis/postgis:18-3.6-alpine
-    hostname: db
-
-    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
-
-    environment:
-      POSTGRES_DB: ${DB_DATABASE:-sdc}
-      POSTGRES_USER: ${DB_USERNAME:-sdc}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      TZ: America/Sao_Paulo
-      PGDATA: /var/lib/postgresql/data/pgdata
-
-    volumes:
-      - db_data:/var/lib/postgresql/data
-      - /opt/sdc/postgres/onprem.conf:/etc/postgresql/postgresql.conf:ro
-
-    # So loopback do node - nunca a rede. Acesso externo (ex: DBeaver) e via
-    # tunel SSH (ssh -L 5432:localhost:5432 <user>@10.160.131.50), nunca com
-    # a porta publicada direto na interface da VM.
-    ports:
-      - target: 5432
-        published: "5432"
-        protocol: tcp
-        mode: host
-        host_ip: 127.0.0.1
-
-    networks:
-      - sdc_internal
-
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-sdc} -d ${DB_DATABASE:-sdc}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-    deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      restart_policy:
-        condition: on-failure
-        delay: 10s
-      resources:
-        limits:
-          cpus: "2"
-          memory: 4G
-        reservations:
-          cpus: "0.5"
-          memory: 1G
-
-  # ==========================================================================
-  # REDIS - Cache / Queue. volatile-lru: fila e estruturas sem TTL nunca saem.
-  # ==========================================================================
-  redis:
-    image: redis:7-alpine
-    hostname: redis
-
-    command: >
-      redis-server
-      --appendonly yes
-      --maxmemory 1gb
-      --maxmemory-policy volatile-lru
-      --requirepass ${REDIS_PASSWORD}
-
-    volumes:
-      - redis_data:/data
-
-    networks:
-      - sdc_internal
-
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 1.25G
 
   # ==========================================================================
   # EDGE - Caddy (TLS + proxy reverso). mode: host preserva o IP real do
@@ -422,17 +307,14 @@ services:
           memory: 256M
 
 networks:
+  # Overlay COMPARTILHADA com a stack sdc-data e com o container efemero de
+  # migrations (docker network create --driver overlay --attachable sdc_internal).
   sdc_internal:
-    driver: overlay
-    attachable: true   # container efemero de migration entra nesta rede
+    external: true
   sdc_edge:
     driver: overlay
 
 volumes:
-  db_data:
-    driver: local
-  redis_data:
-    driver: local
   app_storage:
     driver: local
   caddy_data:

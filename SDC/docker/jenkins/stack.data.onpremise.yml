@@ -1,0 +1,117 @@
+# ============================================================================
+# SDC - Stack Swarm de DADOS on-premise (PostgreSQL + Redis) - VM 10.160.131.50
+# ----------------------------------------------------------------------------
+# ISOLADA DE PROPOSITO: o pipeline (Jenkins) NUNCA aplica este arquivo.
+# Ciclo de vida proprio, raro e deliberado (upgrade de Postgres = operacao
+# planejada com backup Barman + janela). Um stack rm/deploy errado na stack de
+# app (stack.app.onpremise.yml) nao alcanca o banco.
+#
+# Protecao dos dados em camadas:
+#   - volumes nomeados (db_data/redis_data) sobrevivem a recriacao
+#   - Barman no host: backup fisico + PITR via streaming (topico 19 do Notion)
+#   - DDL transacional do Postgres: migration que falha = ROLLBACK automatico
+#
+# Uso (deploy inicial ou mudanca deliberada):
+#   # uma vez por VM: rede overlay compartilhada entre as stacks
+#   docker network create --driver overlay --attachable sdc_internal
+#   set -a; . /opt/sdc/.env.onprem; set +a
+#   docker stack deploy -c stack.data.onpremise.yml sdc-data
+# ============================================================================
+
+version: "3.9"
+
+services:
+  # ==========================================================================
+  # DB - PostgreSQL 18 + PostGIS 3.6. NAO escalar banco stateful no Swarm.
+  # ==========================================================================
+  db:
+    image: postgis/postgis:18-3.6-alpine
+    hostname: db
+
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-sdc}
+      POSTGRES_USER: ${DB_USERNAME:-sdc}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: America/Sao_Paulo
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - /opt/sdc/postgres/onprem.conf:/etc/postgresql/postgresql.conf:ro
+
+    networks:
+      - sdc_internal
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-sdc} -d ${DB_DATABASE:-sdc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+
+  # ==========================================================================
+  # REDIS - Cache / Queue. volatile-lru: fila e estruturas sem TTL nunca saem.
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    hostname: redis
+
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 1gb
+      --maxmemory-policy volatile-lru
+      --requirepass ${REDIS_PASSWORD}
+
+    volumes:
+      - redis_data:/data
+
+    networks:
+      - sdc_internal
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 1.25G
+
+networks:
+  # Overlay COMPARTILHADA com a stack de app e com o container efemero de
+  # migrations. Criada fora das stacks (docker network create) para nenhuma
+  # das duas ser dona do ciclo de vida dela.
+  sdc_internal:
+    external: true
+
+volumes:
+  db_data:
+    driver: local
+  redis_data:
+    driver: local

@@ -1,7 +1,7 @@
 // ============================================================================
 // SDC - Pipeline CI/CD ON-PREMISE (VM 10.160.131.50, Docker Swarm single-node)
 // ----------------------------------------------------------------------------
-// Zero downtime exige os 3 juntos (ver docker/jenkins/stack.onprem.yml):
+// Zero downtime exige os 3 juntos (ver docker/jenkins/stack.app.onpremise.yml):
 //   1. update-order start-first   2. healthcheck no container   3. >= 2 replicas
 //
 // Etapas:
@@ -16,10 +16,14 @@
 //   9. Health check pos-deploy com retry
 //   post: rollback automatico para a imagem anterior + notificacao
 //
-// Pre-requisitos na VM (uma vez, manual):
+// Pre-requisitos na VM (uma vez, manual). O banco mora em stack SEPARADA
+// (sdc-data) que este pipeline NUNCA aplica — isolamento deliberado:
 //   docker swarm init --advertise-addr 10.160.131.50
+//   docker network create --driver overlay --attachable sdc_internal
 //   set -a; . /opt/sdc/.env.onprem; set +a
-//   docker stack deploy -c SDC/docker/jenkins/stack.onprem.yml --with-registry-auth sdc
+//   docker stack deploy -c SDC/docker/jenkins/stack.data.onpremise.yml sdc-data
+//   export VERSION=<tag>
+//   docker stack deploy -c SDC/docker/jenkins/stack.app.onpremise.yml --with-registry-auth sdc
 // ============================================================================
 
 pipeline {
@@ -251,7 +255,11 @@ pipeline {
         // 7. MIGRATIONS (container efemero, ANTES de trocar trafego)
         // Durante o start-first codigo velho e novo convivem: toda migration
         // precisa ser backward-compatible (nada de drop/rename/NOT NULL direto;
-        // dividir em 2 deploys). A rede overlay do stack e attachable.
+        // dividir em 2 deploys). Rede overlay externa compartilhada com a
+        // stack sdc-data — o banco vive fora do alcance deste pipeline.
+        // PGOPTIONS (libpq/PDO): lock_timeout falha a migration de proposito
+        // em 5s se a tabela estiver presa por trafego real; o PG faz ROLLBACK
+        // transacional do DDL e a versao atual segue no ar intocada.
         // =====================================================================
         stage('Migrations') {
             when { expression { !params.SKIP_MIGRATIONS } }
@@ -259,11 +267,12 @@ pipeline {
             steps {
                 sh '''
                     docker run --rm \
-                        --network ${STACK_NAME}_sdc_internal \
+                        --network sdc_internal \
                         --env-file ${ENV_FILE} \
                         -e APP_ENV=production \
                         -e DB_CONNECTION=pgsql -e DB_HOST=db -e DB_PORT=5432 \
                         -e REDIS_HOST=redis -e REDIS_PORT=6379 \
+                        -e PGOPTIONS="-c lock_timeout=5s -c statement_timeout=300s" \
                         ${APP_IMAGE}:${IMAGE_TAG} \
                         php artisan migrate --force
                 '''

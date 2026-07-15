@@ -352,8 +352,8 @@ jenkins-logs:
 # Setup completo de producao on-premise (uma vez por VM):
 # valida o Swarm, exige o .env.prod global (raiz do SDC) e builda a infra de CI.
 # As chaves de CI que o .env.prod precisa ter estao em docker/jenkins/.env.example.
-# Proximos passos manuais: rodar o job SDC/deploy-onprem (publica a 1a imagem)
-# e docker stack deploy -c docker/jenkins/stack.onprem.yml --with-registry-auth sdc
+# Proximos passos: rodar o job SDC/deploy-onprem (publica a 1a imagem),
+# just prod-stack-data e just prod-stack-app.
 @prod-setup:
     printf "{{BOLD}}{{CYAN}}-> PROD SETUP on-premise{{RESET}}\n"
     docker info | grep -qi "swarm: active" || { printf "{{RED}}Swarm inativo. Rode: docker swarm init --advertise-addr 10.160.131.50{{RESET}}\n"; exit 1; }
@@ -362,6 +362,23 @@ jenkins-logs:
     grep -q "^JENKINS_ADMIN_PASSWORD=." .env.prod || printf "{{YELLOW}}Aviso: JENKINS_ADMIN_PASSWORD vazio no .env.prod{{RESET}}\n"
     just jenkins-build
     printf "{{GREEN}}Infra de CI no ar: Jenkins http://10.160.131.50:8080 | registry 127.0.0.1:5000{{RESET}}\n"
+
+# Stack de DADOS (PostgreSQL + Redis) - isolada; o pipeline NUNCA a toca.
+# Aplicar apenas em setup inicial ou mudanca deliberada (com backup Barman).
+@prod-stack-data:
+    docker network inspect sdc_internal >/dev/null 2>&1 || docker network create --driver overlay --attachable sdc_internal
+    test -f /opt/sdc/.env.onprem || { printf "{{RED}}/opt/sdc/.env.onprem nao encontrado{{RESET}}\n"; exit 1; }
+    sh -c 'set -a; . /opt/sdc/.env.onprem; set +a; docker stack deploy -c docker/jenkins/stack.data.onpremise.yml sdc-data'
+    docker stack services sdc-data
+
+# Stack de APLICACAO (app/queue/reverb/caddy) - deploy inicial ou topologia.
+# Rolling update do dia a dia e do Jenkins (service update), nao daqui.
+# Uso: just prod-stack-app ab12cd3-b42
+@prod-stack-app version:
+    docker network inspect sdc_internal >/dev/null 2>&1 || { printf "{{RED}}Rede sdc_internal ausente. Rode just prod-stack-data primeiro{{RESET}}\n"; exit 1; }
+    test -f /opt/sdc/.env.onprem || { printf "{{RED}}/opt/sdc/.env.onprem nao encontrado{{RESET}}\n"; exit 1; }
+    sh -c 'set -a; . /opt/sdc/.env.onprem; set +a; export VERSION={{version}}; docker stack deploy -c docker/jenkins/stack.app.onpremise.yml --with-registry-auth sdc'
+    docker stack services sdc
 
 # ============================================================================
 # ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  MONITORAMENTO
