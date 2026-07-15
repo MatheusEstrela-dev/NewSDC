@@ -1,10 +1,13 @@
 # ============================================================================
-# SDC - JUSTFILE COMPLETO (Docker + DB + Módulos)
+# SDC - JUSTFILE ORQUESTRADOR
 # Cross-Platform: Windows / Linux / macOS
 # ============================================================================
 # Uso: just <comando> ou just --list
-# ============================================================================
-# Espelho funcional do Makefile — mesmos comandos, mesmas portas.
+# ----------------------------------------------------------------------------
+# TRES AMBIENTES, TRES ALVOS:
+#   dev        -> docker/compose.dev.yml   (containers newsdc_dev_*)  [PADRAO]
+#   producao   -> Swarm via docker/jenkins/stack.*.onpremise.yml (VM)
+#   monitor    -> docker/docker-compose.yml (stack local LEGADA; so monitoring)
 # ============================================================================
 
 set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
@@ -26,15 +29,15 @@ BOLD   := '\033[1m'
 RESET  := '\033[0m'
 
 # Variáveis
-compose := "docker compose -f docker/docker-compose.yml"
+# Stack de DESENVOLVIMENTO (a unica que sobe localmente e na VM dev)
+compose := "docker compose -f docker/compose.dev.yml"
 # .env.prod na raiz do SDC e o env GLOBAL (app + CI); nunca commitado
 compose_jenkins := "docker compose -f docker/jenkins/docker-compose.jenkins.yml --env-file .env.prod"
-# stack dev ativo (newsdc_dev_*): db-backup/db-restore usam este, nao o
-# {{compose}} generico acima (docker-compose.yml aponta pra containers
-# newsdc_* sem "_dev_", que hoje nao estao no ar)
-compose_dev := "docker compose -f docker/compose.dev.yml"
+# Stack local LEGADA (mysql/nginx/node/db_ai): usada APENAS pelas receitas
+# monitor-* ate o monitoramento migrar. NAO usar para app/db.
+compose_legacy := "docker compose -f docker/docker-compose.yml"
 app := compose + " exec app"
-db := compose_dev + " exec db"
+db := compose + " exec db"
 
 # Receita padrão
 @default: help
@@ -50,238 +53,108 @@ db := compose_dev + " exec db"
     printf "{{BOLD}}{{CYAN}}║     SDC - Sistema de Defesa Civil - Justfile Orquestrador          ║{{RESET}}\n"
     printf "{{BOLD}}{{CYAN}}╚════════════════════════════════════════════════════════════════════╝{{RESET}}\n"
     echo ""
-    printf "{{BOLD}}📦 BUILD & SETUP:{{RESET}}\n"
-    printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "build-all" "Build completo de toda stack"
-    printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "build-dev" "Build apenas desenvolvimento"
-    printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "build-clean" "Build limpo (sem cache)"
-    printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "bridge" "Cria a rede bridge sdc_network"
-    echo ""
-    printf "{{BOLD}}🚀 AMBIENTE COMPLETO (ONE-COMMAND):{{RESET}}\n"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "start" "Bridge + build all + sobe toda stack (sem Ollama)"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "up-all" "Sobe TODA stack"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "down-all" "Para TODA stack"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "restart-all" "Reinicia TODA stack"
-    echo ""
-    printf "{{BOLD}}🔧 DESENVOLVIMENTO:{{RESET}}\n"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev" "Ambiente de desenvolvimento"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev-full" "Dev + ferramentas (phpmyadmin, redis-commander)"
+    printf "{{BOLD}}🔧 DESENVOLVIMENTO (docker/compose.dev.yml - newsdc_dev_*):{{RESET}}\n"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev" "Sobe a stack dev completa (app+db+redis+queue+mailhog)"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev-minimal" "Apenas app + db + redis"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev-build" "Rebuild desenvolvimento"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev-logs" "Logs (follow)"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev-build" "Rebuild imagens + recria stack dev"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev-logs" "Logs da stack dev (follow)"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev-ps" "Status dos containers dev"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev-down" "Para a stack dev (volumes preservados)"
     echo ""
     printf "{{BOLD}}PRODUCAO ON-PREMISE (VM 10.160.131.50):{{RESET}}\n"
     printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-setup" "Infra de CI: Jenkins + registry (le .env.prod)"
     printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-stack-data" "Stack sdc-data: Postgres + Redis (isolada)"
     printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-stack-app T" "Stack sdc: app/queue/reverb/caddy (tag T)"
+    printf "  {{BLUE}}%-18s{{RESET}} %s\n" "jenkins-build" "Build + sobe infra de CI"
     printf "  {{BLUE}}%-18s{{RESET}} %s\n" "jenkins-logs" "Logs do Jenkins master"
     echo ""
-    printf "{{BOLD}}📊 MONITORAMENTO:{{RESET}}\n"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "monitor" "Sobe monitoramento"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "monitor-down" "Para monitoramento"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "monitor-logs" "Logs do monitoramento"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "monitor-restart" "Reinicia monitoramento"
-    echo ""
-    printf "{{BOLD}}🐚 ACESSO & DEBUG:{{RESET}}\n"
-    printf "  {{WHITE}}%-18s{{RESET}} %s\n" "shell" "Shell app (www-data)"
-    printf "  {{WHITE}}%-18s{{RESET}} %s\n" "shell-root" "Shell app (root)"
-    printf "  {{WHITE}}%-18s{{RESET}} %s\n" "shell-db" "MySQL CLI"
-    printf "  {{WHITE}}%-18s{{RESET}} %s\n" "shell-redis" "Redis CLI"
-    printf "  {{WHITE}}%-18s{{RESET}} %s\n" "shell-queue" "Shell queue worker"
-    printf "  {{WHITE}}%-18s{{RESET}} %s\n" "shell-node" "Shell node container"
-    echo ""
-    printf "{{BOLD}}🗑️ LIMPEZA:{{RESET}}\n"
-    printf "  {{RED}}%-18s{{RESET}} %s\n" "clean" "Para containers (preserva volumes)"
-    printf "  {{RED}}%-18s{{RESET}} %s\n" "clean-volumes" "Remove containers E volumes (APAGA DADOS!)"
-    printf "  {{RED}}%-18s{{RESET}} %s\n" "clean-images" "Remove containers, volumes E imagens"
-    printf "  {{RED}}%-18s{{RESET}} %s\n" "clean-system" "Limpeza completa do Docker system"
-    printf "  {{RED}}%-18s{{RESET}} %s\n" "nuke" "DESTRUIÇÃO TOTAL"
-    echo ""
-    printf "{{BOLD}}💾 BANCO DE DADOS:{{RESET}}\n"
+    printf "{{BOLD}}💾 BANCO DE DADOS (Postgres dev - localhost:5433):{{RESET}}\n"
     printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-migrate" "Executar migrations"
     printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-rollback" "Rollback migrations"
-    printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-fresh" "Fresh + seed"
+    printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-fresh" "Fresh + seed (APAGA DADOS!)"
     printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-seed" "Executar seeds"
-    printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-backup" "Backup do banco"
-    printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-restore FILE" "Restore backup"
+    printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-backup" "pg_dump para storage/backups/"
+    printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-restore FILE" "Restore de um dump .sql"
     echo ""
-    printf "{{BOLD}}🎨 FRONTEND:{{RESET}}\n"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-install" "Install npm"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-update" "Update npm"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-dev" "Vite dev server"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-build" "Build produção"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-build-vite" "Build produção usando npx vite build"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "vite-build" "Build Vite rapido no container Bun"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-clean" "Limpar node_modules e cache"
+    printf "{{BOLD}}⚙️ ARTISAN & TESTES (dentro do container app):{{RESET}}\n"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "artisan CMD" "Executar artisan (ex: just artisan route:list)"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "cache-clear" "Limpa caches Laravel"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "cache-optimize" "Reconstroi caches (config/route/view/event)"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test" "PHPUnit"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-filter F" "PHPUnit filtrado"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-e2e" "Playwright E2E (dotenvx vault)"
     echo ""
-    printf "{{BOLD}}⚙️ ARTISAN:{{RESET}}\n"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "cache-clear" "Limpa caches"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "cache-optimize" "Otimiza caches"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "artisan CMD" "Executar artisan"
+    printf "{{BOLD}}🎨 FRONTEND (no HOST - bun/npm + Vite):{{RESET}}\n"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-install" "npm install no host"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-dev" "Vite dev server (libera porta antes)"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-build" "Build de producao (regenera ziggy antes)"
     echo ""
-    printf "{{BOLD}}🧪 TESTES:{{RESET}}\n"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test" "Executar testes unitarios"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-coverage" "Testes com coverage"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-filter F" "Testes filtrados"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-e2e" "E2E Playwright (dotenvx vault)"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-e2e-crud" "E2E apenas CRUD Decretacoes"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-e2e-ui" "E2E modo UI interativo"
+    printf "{{BOLD}}🐚 ACESSO & DEBUG:{{RESET}}\n"
+    printf "  {{WHITE}}%-18s{{RESET}} %s\n" "shell" "Shell no container app"
+    printf "  {{WHITE}}%-18s{{RESET}} %s\n" "shell-root" "Shell no app como root"
+    printf "  {{WHITE}}%-18s{{RESET}} %s\n" "shell-db" "psql no Postgres dev"
+    printf "  {{WHITE}}%-18s{{RESET}} %s\n" "shell-redis" "redis-cli no Redis dev"
+    printf "  {{WHITE}}%-18s{{RESET}} %s\n" "shell-queue" "Shell no container queue"
     echo ""
     printf "{{BOLD}}📋 STATUS & INFO:{{RESET}}\n"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "status" "Status dos containers"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "urls" "URLs disponíveis"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "logs" "Logs de todos"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "status" "Status dos containers (ps + docker ps)"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "urls" "URLs e portas do ambiente dev"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "logs" "Logs de todos (follow)"
     printf "  {{CYAN}}%-18s{{RESET}} %s\n" "logs-app" "Logs apenas app"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "logs-nginx" "Logs apenas nginx"
     printf "  {{CYAN}}%-18s{{RESET}} %s\n" "logs-db" "Logs apenas database"
     printf "  {{CYAN}}%-18s{{RESET}} %s\n" "logs-queue" "Logs queue worker"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "health" "Healthcheck"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "info" "Informações do ambiente"
-    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "version" "Versão das ferramentas"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "health" "Healthcheck dos servicos dev"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "info" "Informacoes do ambiente"
     echo ""
-    printf "{{BOLD}}📱 MOBILE:{{RESET}}\n"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "mobile-dev" "Inicia NativePHP Jump Server (QR Code)"
+    printf "{{BOLD}}📊 MONITORAMENTO (stack local LEGADA):{{RESET}}\n"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "monitor" "Sobe Prometheus/Grafana locais"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "monitor-down" "Para monitoramento"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "monitor-logs" "Logs do monitoramento"
+    echo ""
+    printf "{{BOLD}}🗑️ LIMPEZA:{{RESET}}\n"
+    printf "  {{RED}}%-18s{{RESET}} %s\n" "clean" "Remove containers dev (preserva volumes)"
+    printf "  {{RED}}%-18s{{RESET}} %s\n" "clean-volumes" "Remove containers E volumes dev (APAGA DADOS!)"
+    printf "  {{RED}}%-18s{{RESET}} %s\n" "clean-system" "docker system prune GLOBAL (PERIGO: host inteiro)"
     echo ""
     printf "{{BOLD}}🔄 WORKFLOWS:{{RESET}}\n"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "setup" "Setup inicial completo"
-    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "reset" "Reset completo"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "setup" "Build + up + migrate + optimize (primeira vez)"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "reset" "Zera a stack dev e recria com seed (APAGA DADOS!)"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "mobile-dev" "NativePHP Jump Server (QR Code)"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "menu" "Menu interativo"
     echo ""
-    printf "{{BOLD}}Exemplos de uso:{{RESET}}\n"
-    printf "  {{GREEN}}just start{{RESET}}                 # Bridge + build-all + up-all (sem Ollama)\n"
-    printf "  {{GREEN}}just bridge{{RESET}}                # Só inicia a rede bridge\n"
-    printf "  {{GREEN}}just build-all{{RESET}}             # Build completo de toda stack\n"
-    printf "  {{GREEN}}just up-all{{RESET}}                # Sobe ambiente completo (dev + monitoring)\n"
-    printf "  {{GREEN}}just dev-full{{RESET}}              # Desenvolvimento com todas ferramentas\n"
-    printf "  {{CYAN}}just status{{RESET}}                # Status de todos containers\n"
-    printf "  {{CYAN}}just menu{{RESET}}                  # Menu interativo\n"
+    printf "{{BOLD}}Exemplos:{{RESET}}\n"
+    printf "  {{GREEN}}just dev{{RESET}}                   # sobe o ambiente de trabalho\n"
+    printf "  {{GREEN}}just artisan route:list{{RESET}}    # artisan dentro do container\n"
+    printf "  {{GREEN}}just prod-stack-app ab12cd3-b42{{RESET}}  # deploy inicial na VM\n"
     echo ""
 
 # ============================================================================
-# 🌐 NETWORK & BRIDGE
+# 🔧 DESENVOLVIMENTO (docker/compose.dev.yml - newsdc_dev_*)
 # ============================================================================
 
-# 📦 Cria a rede bridge sdc_network (para os ~15 containers, sem Ollama)
-@bridge:
-    printf "{{YELLOW}}→ Iniciando bridge (sdc_network)...{{RESET}}\n"
-    docker network inspect sdc_network > /dev/null 2>&1 || \
-        (printf "{{YELLOW}}→ Criando network bridge...{{RESET}}\n" && \
-         docker network create --driver bridge --subnet 172.26.0.0/16 sdc_network)
-    printf "{{GREEN}}✓ Bridge sdc_network OK{{RESET}}\n"
-
-# 🌐 Alias: inicializa network (chama bridge)
-@network-init: bridge
-
-# 🌐 Inspeciona network
-@network-inspect:
-    docker network inspect sdc_network
-
-# 🌐 Remove network
-@network-clean:
-    docker network rm sdc_network 2>/dev/null || true
-
-# ============================================================================
-# 🚀 COMANDOS ONE-COMMAND (BUILD & UP COMPLETO)
-# ============================================================================
-
-# 🚀 Build completo de TODA a stack (dev + monitoring + tools)
-@build-all:
-    printf "{{BOLD}}{{CYAN}}════════════════════════════════════════════════════════════{{RESET}}\n"
-    printf "{{BOLD}}{{CYAN}}  BUILD COMPLETO DE TODA A STACK{{RESET}}\n"
-    printf "{{BOLD}}{{CYAN}}════════════════════════════════════════════════════════════{{RESET}}\n"
-    echo ""
-    printf "{{YELLOW}}→ Construindo imagens de desenvolvimento...{{RESET}}\n"
-    {{compose}} build --parallel
-    printf "{{GREEN}}✓ Build de desenvolvimento concluído{{RESET}}\n"
-    echo ""
-    printf "{{BOLD}}{{GREEN}}✓ BUILD COMPLETO FINALIZADO COM SUCESSO!{{RESET}}\n"
-
-# 📦 Build apenas desenvolvimento
-@build-dev:
-    printf "{{YELLOW}}→ Build de desenvolvimento...{{RESET}}\n"
-    {{compose}} build --parallel
-    printf "{{GREEN}}✓ Build concluído{{RESET}}\n"
-
-
-# 📦 Build limpo (sem cache)
-@build-clean:
-    printf "{{YELLOW}}→ Build limpo (sem cache)...{{RESET}}\n"
-    {{compose}} build --no-cache --parallel
-    printf "{{GREEN}}✓ Build limpo concluído{{RESET}}\n"
-
-# 🚀 Sobe TODA stack (app + db + redis + monitoring + tools)
-@up-all: network-init
-    printf "{{BOLD}}{{CYAN}}════════════════════════════════════════════════════════════{{RESET}}\n"
-    printf "{{BOLD}}{{CYAN}}  SUBINDO STACK COMPLETA{{RESET}}\n"
-    printf "{{BOLD}}{{CYAN}}════════════════════════════════════════════════════════════{{RESET}}\n"
-    echo ""
-    printf "{{YELLOW}}→ Iniciando todos os serviços...{{RESET}}\n"
-    {{compose}} --profile tools --profile ollama up -d
-    echo ""
-    printf "{{GREEN}}✓ Stack completa iniciada!{{RESET}}\n"
-    echo ""
-    just urls
-
-# 🚀 Para TODA stack
-@down-all:
-    printf "{{YELLOW}}→ Parando todos os serviços...{{RESET}}\n"
-    {{compose}} --profile tools --profile ollama down
-    printf "{{GREEN}}✓ Todos os serviços parados{{RESET}}\n"
-
-# 🚀 Reinicia TODA stack
-@restart-all:
-    printf "{{YELLOW}}→ Reiniciando stack completa...{{RESET}}\n"
-    just down-all
-    just up-all
-
-# 🚀 Bridge + build all + sobe toda stack (COM Ollama)
-@start: bridge
-    just build-all
-    just up-all
-    echo ""
-    printf "{{BOLD}}{{GREEN}}✓ Stack iniciada (bridge + build + up). Ollama incluído.{{RESET}}\n"
-    just urls
-
-# ============================================================================
-# 🔧 DESENVOLVIMENTO
-# ============================================================================
-
-# 🔧 Ambiente de desenvolvimento padrão
-@dev: network-init
+# 🔧 Sobe a stack dev completa (app + db + redis + queue + mailhog)
+@dev:
     printf "{{YELLOW}}→ Iniciando ambiente de desenvolvimento...{{RESET}}\n"
-    {{compose}} up -d app nginx db redis mailhog queue node
+    {{compose}} up -d
     printf "{{GREEN}}✓ Ambiente de desenvolvimento iniciado!{{RESET}}\n"
-    echo ""
-    printf "{{CYAN}}Serviços disponíveis:{{RESET}}\n"
-    printf "  App (Laravel):     {{GREEN}}http://localhost:18001{{RESET}}\n"
-    printf "  Nginx:             {{GREEN}}http://localhost:18082{{RESET}}\n"
-    printf "  Vite (HMR):        {{GREEN}}http://localhost:15175{{RESET}}\n"
-    printf "  Mailhog:           {{GREEN}}http://localhost:18026{{RESET}}\n"
-    printf "  MySQL:             {{GREEN}}localhost:13307{{RESET}}\n"
-    printf "  Redis:             {{GREEN}}localhost:16380{{RESET}}\n"
-
-# 🔧 Desenvolvimento + ferramentas (phpmyadmin, redis-commander)
-@dev-full: network-init
-    printf "{{YELLOW}}→ Iniciando ambiente completo...{{RESET}}\n"
-    {{compose}} --profile tools up -d
-    printf "{{GREEN}}✓ Ambiente completo iniciado!{{RESET}}\n"
     echo ""
     just urls
 
 # 🔧 Desenvolvimento mínimo (apenas app + db + redis)
-@dev-minimal: network-init
+@dev-minimal:
     printf "{{YELLOW}}→ Iniciando ambiente mínimo...{{RESET}}\n"
     {{compose}} up -d app db redis
     printf "{{GREEN}}✓ Ambiente mínimo iniciado!{{RESET}}\n"
 
-# 🔧 Rebuild desenvolvimento
+# 🔧 Rebuild das imagens + recria a stack dev
 @dev-build:
-    printf "{{YELLOW}}→ Rebuild e reinicio do ambiente...{{RESET}}\n"
+    printf "{{YELLOW}}→ Rebuild e reinício do ambiente...{{RESET}}\n"
     {{compose}} down
     {{compose}} build
     {{compose}} up -d
     printf "{{GREEN}}✓ Rebuild concluído{{RESET}}\n"
 
-# 🔧 Logs desenvolvimento (follow)
+# 🔧 Logs da stack dev (follow)
 dev-logs:
     {{compose}} logs -f
 
@@ -289,6 +162,10 @@ dev-logs:
 @dev-ps:
     {{compose}} ps
 
+# 🔧 Para a stack dev (volumes preservados)
+@dev-down:
+    {{compose}} down
+    printf "{{GREEN}}✓ Stack dev parada{{RESET}}\n"
 
 # ============================================================================
 # JENKINS CI/CD ON-PREMISE (docker/jenkins - VM 10.160.131.50)
@@ -343,109 +220,7 @@ jenkins-logs:
     docker stack services sdc
 
 # ============================================================================
-# 📊 MONITORAMENTO
-# ============================================================================
-
-# 📊 Sobe stack de monitoramento completa
-@monitor: network-init
-    printf "{{YELLOW}}→ Iniciando stack de monitoramento...{{RESET}}\n"
-    {{compose}} up -d prometheus grafana alertmanager node-exporter cadvisor mysql-exporter redis-exporter nginx-exporter blackbox-exporter
-    printf "{{GREEN}}✓ Stack de monitoramento iniciada!{{RESET}}\n"
-    echo ""
-    printf "{{CYAN}}Dashboards disponíveis:{{RESET}}\n"
-    printf "  Grafana:           {{GREEN}}http://localhost:13000{{RESET}} (admin/admin@123)\n"
-    printf "  Prometheus:        {{GREEN}}http://localhost:19090{{RESET}}\n"
-    printf "  Alertmanager:      {{GREEN}}http://localhost:19093{{RESET}}\n"
-    printf "  cAdvisor:          {{GREEN}}http://localhost:8085{{RESET}}\n"
-    echo ""
-    printf "  Node Exporter:     {{CYAN}}http://localhost:19100/metrics{{RESET}}\n"
-    printf "  MySQL Exporter:    {{CYAN}}http://localhost:19104/metrics{{RESET}}\n"
-    printf "  Redis Exporter:    {{CYAN}}http://localhost:19121/metrics{{RESET}}\n"
-    printf "  Nginx Exporter:    {{CYAN}}http://localhost:19113/metrics{{RESET}}\n"
-
-# 📊 Para monitoramento
-@monitor-down:
-    printf "{{YELLOW}}→ Parando stack de monitoramento...{{RESET}}\n"
-    {{compose}} stop prometheus grafana alertmanager node-exporter cadvisor mysql-exporter redis-exporter nginx-exporter blackbox-exporter
-    printf "{{GREEN}}✓ Monitoramento parado{{RESET}}\n"
-
-# 📊 Logs do monitoramento
-monitor-logs:
-    {{compose}} logs -f prometheus grafana alertmanager
-
-# 📊 Reinicia monitoramento
-@monitor-restart:
-    just monitor-down
-    just monitor
-
-# ============================================================================
-# 🐚 ACESSO & DEBUG
-# ============================================================================
-
-# 🐚 Shell app (www-data)
-shell:
-    {{compose}} exec app bash
-
-# 🐚 Shell app (root)
-shell-root:
-    {{compose}} exec -u root app bash
-
-# 🐚 MySQL CLI
-shell-db:
-    {{compose}} exec db mysql -u root -proot sdc
-
-# 🐚 Redis CLI
-shell-redis:
-    {{compose}} exec redis redis-cli
-
-# 🐚 Shell queue worker
-shell-queue:
-    {{compose}} exec queue bash
-
-# 🐚 Shell node container
-shell-node:
-    {{compose}} exec node sh
-
-# ============================================================================
-# 🗑️ LIMPEZA & MANUTENÇÃO
-# ============================================================================
-
-# 🗑️ Para e remove containers (preserva volumes)
-@clean:
-    printf "{{YELLOW}}→ Limpando containers...{{RESET}}\n"
-    {{compose}} down
-    printf "{{GREEN}}✓ Containers removidos{{RESET}}\n"
-
-# 🗑️ Remove containers E volumes (⚠️ APAGA DADOS!)
-@clean-volumes:
-    printf "{{RED}}{{BOLD}}⚠️  ATENÇÃO: Isso vai APAGAR todos os dados do banco!{{RESET}}\n"
-    printf "{{YELLOW}}Pressione Ctrl+C para cancelar...{{RESET}}\n"
-    sleep 3
-    {{compose}} down -v
-    printf "{{GREEN}}✓ Containers e volumes removidos{{RESET}}\n"
-
-# 🗑️ Remove containers, volumes E imagens
-@clean-images:
-    printf "{{RED}}{{BOLD}}⚠️  ATENÇÃO: Isso vai remover TUDO!{{RESET}}\n"
-    printf "{{YELLOW}}Pressione Ctrl+C para cancelar...{{RESET}}\n"
-    sleep 5
-    {{compose}} down -v --rmi all
-    printf "{{GREEN}}✓ Tudo removido{{RESET}}\n"
-
-# 🗑️ Limpeza completa do Docker system
-@clean-system:
-    printf "{{YELLOW}}→ Limpando sistema Docker...{{RESET}}\n"
-    docker system prune -af --volumes
-    printf "{{GREEN}}✓ Sistema limpo{{RESET}}\n"
-
-# 🗑️ DESTRUIÇÃO TOTAL (⚠️ USA COM CUIDADO!)
-@nuke:
-    just clean-images
-    just clean-system
-    printf "{{RED}}{{BOLD}}💣 NUKE EXECUTADO!{{RESET}}\n"
-
-# ============================================================================
-# 💾 BANCO DE DADOS
+# 💾 BANCO DE DADOS (Postgres da stack dev)
 # ============================================================================
 
 # 💾 Executar migrations
@@ -456,9 +231,9 @@ shell-node:
 @db-rollback:
     {{app}} php artisan migrate:rollback --force
 
-# 💾 Fresh migrations + seed
+# 💾 Fresh migrations + seed (APAGA DADOS!)
 @db-fresh:
-    printf "{{RED}}⚠️  Isso vai APAGAR todos os dados!{{RESET}}\n"
+    printf "{{RED}}⚠️  Isso vai APAGAR todos os dados do banco dev!{{RESET}}\n"
     printf "{{YELLOW}}Pressione Ctrl+C para cancelar...{{RESET}}\n"
     sleep 3
     {{app}} php artisan migrate:fresh --seed --force
@@ -467,7 +242,7 @@ shell-node:
 @db-seed:
     {{app}} php artisan db:seed --force
 
-# 💾 Backup do banco
+# 💾 Backup do banco (pg_dump -> storage/backups/)
 @db-backup:
     printf "{{YELLOW}}→ Criando backup...{{RESET}}\n"
     mkdir -p storage/backups
@@ -477,43 +252,11 @@ shell-node:
 # 💾 Restore backup (uso: just db-restore arquivo.sql)
 @db-restore file:
     printf "{{YELLOW}}→ Restaurando backup: {{file}}{{RESET}}\n"
-    {{compose_dev}} exec -T db psql -U sdc -d sdc < {{file}}
+    {{compose}} exec -T db psql -U sdc -d sdc < {{file}}
     printf "{{GREEN}}✓ Backup restaurado{{RESET}}\n"
 
 # ============================================================================
-# 🎨 FRONTEND (Node.js + Vite)
-# ============================================================================
-
-# 🎨 Install dependências npm
-@npm-install:
-    {{compose}} exec node npm install --legacy-peer-deps
-
-# 🎨 Update dependências npm
-@npm-update:
-    {{compose}} exec node npm update
-
-# 🎨 Vite dev server
-npm-dev:
-    {{compose}} exec node npm run dev
-
-# 🎨 Build produção
-@npm-build:
-    {{compose}} exec node npm run build
-
-# 🎨 Build produção usando npx vite build
-# Build Vite rapido no container Bun usado pelo ambiente local
-@vite-build:
-    docker exec newsdc_bun bunx vite build
-
-@npm-build-vite:
-    {{compose}} exec node npx vite build
-
-# 🎨 Limpar node_modules e cache
-@npm-clean:
-    {{compose}} exec node sh -c "rm -rf node_modules/.vite && npm cache clean --force"
-
-# ============================================================================
-# ⚙️ LARAVEL ARTISAN
+# ⚙️ LARAVEL ARTISAN (dentro do container app)
 # ============================================================================
 
 # ⚙️ Limpa todos os caches
@@ -525,7 +268,7 @@ npm-dev:
     {{app}} php artisan view:clear
     printf "{{GREEN}}✓ Caches limpos{{RESET}}\n"
 
-# ⚙️ Otimiza caches (produção)
+# ⚙️ Reconstroi caches (config/route/view/event)
 @cache-optimize:
     printf "{{YELLOW}}→ Otimizando caches...{{RESET}}\n"
     {{app}} php artisan config:cache
@@ -537,85 +280,6 @@ npm-dev:
 # ⚙️ Executar artisan (uso: just artisan migrate)
 @artisan +cmd:
     {{app}} php artisan {{cmd}}
-
-# ============================================================================
-# 📱 MOBILE DEV (NativePHP)
-# ============================================================================
-
-# 📱 Inicia NativePHP Jump Server (QR Code para conectar celular)
-@mobile-dev:
-    ./scripts/start-mobile.sh
-
-# ============================================================================
-# 📋 STATUS & INFO
-# ============================================================================
-
-# 📋 Status completo de todos containers
-@status:
-    printf "{{BOLD}}{{CYAN}}════════════════════════════════════════════════════════════{{RESET}}\n"
-    printf "{{BOLD}}{{CYAN}}  STATUS COMPLETO DA STACK{{RESET}}\n"
-    printf "{{BOLD}}{{CYAN}}════════════════════════════════════════════════════════════{{RESET}}\n"
-    echo ""
-    {{compose}} ps
-    echo ""
-    printf "{{BOLD}}{{CYAN}}Containers ativos:{{RESET}}\n"
-    docker ps --filter "name=newsdc" --format "table {{{{.Names}}\t{{{{.Status}}\t{{{{.Ports}}"
-
-# 📋 Alias para status
-ps: status
-
-# 📋 Mostra todas URLs disponíveis
-@urls:
-    printf "{{BOLD}}{{CYAN}}════════════════════════════════════════════════════════════{{RESET}}\n"
-    printf "{{BOLD}}{{CYAN}}  URLS E PORTAS DISPONÍVEIS{{RESET}}\n"
-    printf "{{BOLD}}{{CYAN}}════════════════════════════════════════════════════════════{{RESET}}\n"
-    echo ""
-    printf "{{BOLD}}🚀 APLICAÇÃO:{{RESET}}\n"
-    printf "  App (Laravel):     {{GREEN}}http://localhost:18001{{RESET}}\n"
-    printf "  Nginx:             {{GREEN}}http://localhost:18082{{RESET}}\n"
-    printf "  Vite (HMR):        {{GREEN}}http://localhost:15175{{RESET}}\n"
-    echo ""
-    printf "{{BOLD}}💾 BANCO DE DADOS:{{RESET}}\n"
-    printf "  MySQL:             {{GREEN}}localhost:13307{{RESET}} (user: sdc, pass: secret)\n"
-    printf "  Redis:             {{GREEN}}localhost:16380{{RESET}}\n"
-    printf "  phpMyAdmin:        {{GREEN}}http://localhost:8086{{RESET}}\n"
-    printf "  Redis Commander:   {{GREEN}}http://localhost:8087{{RESET}}\n"
-    echo ""
-    printf "{{BOLD}}📧 FERRAMENTAS:{{RESET}}\n"
-    printf "  Mailhog:           {{GREEN}}http://localhost:18026{{RESET}}\n"
-    echo ""
-    printf "{{BOLD}}📊 MONITORAMENTO:{{RESET}}\n"
-    printf "  Grafana:           {{GREEN}}http://localhost:13000{{RESET}} (admin/admin@123)\n"
-    printf "  Prometheus:        {{GREEN}}http://localhost:19090{{RESET}}\n"
-    printf "  Alertmanager:      {{GREEN}}http://localhost:19093{{RESET}}\n"
-    printf "  cAdvisor:          {{GREEN}}http://localhost:8085{{RESET}}\n"
-    echo ""
-    printf "{{BOLD}}📈 EXPORTERS:{{RESET}}\n"
-    printf "  Node Exporter:     {{CYAN}}http://localhost:19100/metrics{{RESET}}\n"
-    printf "  MySQL Exporter:    {{CYAN}}http://localhost:19104/metrics{{RESET}}\n"
-    printf "  Redis Exporter:    {{CYAN}}http://localhost:19121/metrics{{RESET}}\n"
-    printf "  Nginx Exporter:    {{CYAN}}http://localhost:19113/metrics{{RESET}}\n"
-    printf "  Blackbox Exporter: {{CYAN}}http://localhost:19115/metrics{{RESET}}\n"
-
-# 📋 Logs de todos containers (follow)
-logs:
-    {{compose}} logs -f
-
-# 📋 Logs apenas app
-logs-app:
-    {{compose}} logs -f app
-
-# 📋 Logs apenas nginx
-logs-nginx:
-    {{compose}} logs -f nginx
-
-# 📋 Logs apenas database
-logs-db:
-    {{compose}} logs -f db
-
-# 📋 Logs queue worker
-logs-queue:
-    {{compose}} logs -f queue
 
 # ============================================================================
 # 🧪 TESTES
@@ -636,104 +300,209 @@ logs-queue:
 # 🧪 E2E - Testes Playwright (dotenvx injeta vault em runtime)
 @test-e2e:
     printf "{{YELLOW}}-> Executando testes E2E (Playwright + dotenvx vault)...{{RESET}}\n"
-    printf "{{CYAN}}   dotenvx decripta .env + .env.test e injeta no processo{{RESET}}\n"
     npx dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test
     printf "{{GREEN}}✓ Testes E2E concluidos{{RESET}}\n"
 
 # 🧪 E2E - Apenas CRUD de Decretacoes
 @test-e2e-crud:
-    printf "{{YELLOW}}-> Executando testes CRUD Decretacoes...{{RESET}}\n"
     npx dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test tests/e2e/decretacoes-crud.spec.js
-    printf "{{GREEN}}✓ Testes CRUD concluidos{{RESET}}\n"
 
 # 🧪 E2E - Modo UI interativo do Playwright
 @test-e2e-ui:
-    printf "{{YELLOW}}-> Abrindo Playwright UI...{{RESET}}\n"
     npx dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test --ui
 
 # ============================================================================
-# 🔄 WORKFLOWS COMPLETOS
+# 🎨 FRONTEND (no HOST: o dev stack nao tem container node; Vite roda local)
 # ============================================================================
 
-# 🔄 Setup inicial completo
-@setup:
-    just build-all
-    just up-all
-    just db-migrate
-    just cache-optimize
-    echo ""
-    printf "{{BOLD}}{{GREEN}}════════════════════════════════════════════════════════════{{RESET}}\n"
-    printf "{{BOLD}}{{GREEN}}  ✓ SETUP COMPLETO FINALIZADO!{{RESET}}\n"
-    printf "{{BOLD}}{{GREEN}}════════════════════════════════════════════════════════════{{RESET}}\n"
-    echo ""
-    just urls
+# 🎨 Install dependências npm (host)
+@npm-install:
+    npm install --legacy-peer-deps
 
-# 🔄 Reset completo (⚠️ APAGA DADOS!)
-@reset:
-    just clean-volumes
-    just build-all
-    just up-all
-    just db-migrate
-    just db-seed
-    echo ""
-    printf "{{BOLD}}{{GREEN}}✓ RESET COMPLETO FINALIZADO!{{RESET}}\n"
-    echo ""
-    just urls
+# 🎨 Vite dev server (host; libera a porta antes via scripts/ensure-vite-port-free)
+npm-dev:
+    npm run dev
 
+# 🎨 Build de produção dos assets (host; prebuild regenera ziggy)
+@npm-build:
+    npm run build
+
+# 🎨 Limpar cache do Vite e node_modules parciais
+@npm-clean:
+    rm -rf node_modules/.vite
+    npm cache clean --force
 
 # ============================================================================
-# 🏥 HEALTHCHECK
+# 🐚 ACESSO & DEBUG (stack dev)
 # ============================================================================
 
-# 🏥 Healthcheck de todos serviços
+# 🐚 Shell no container app
+shell:
+    {{compose}} exec app sh
+
+# 🐚 Shell no app como root
+shell-root:
+    {{compose}} exec -u root app sh
+
+# 🐚 psql no Postgres dev
+shell-db:
+    {{compose}} exec db psql -U sdc -d sdc
+
+# 🐚 redis-cli no Redis dev
+shell-redis:
+    {{compose}} exec redis redis-cli
+
+# 🐚 Shell no container queue
+shell-queue:
+    {{compose}} exec queue sh
+
+# ============================================================================
+# 📊 MONITORAMENTO (stack local LEGADA - docker/docker-compose.yml)
+# Unica secao que ainda usa o compose legado; migrar junto com a Fase 2.
+# ============================================================================
+
+# 📊 Sobe Prometheus/Grafana locais (rede sdc_network legada)
+@monitor:
+    docker network inspect sdc_network > /dev/null 2>&1 || docker network create --driver bridge --subnet 172.26.0.0/16 sdc_network
+    {{compose_legacy}} up -d prometheus grafana alertmanager node-exporter cadvisor redis-exporter blackbox-exporter
+    printf "{{GREEN}}✓ Monitoramento local no ar{{RESET}}\n"
+    printf "  Grafana:      {{GREEN}}http://localhost:13000{{RESET}}\n"
+    printf "  Prometheus:   {{GREEN}}http://localhost:19090{{RESET}}\n"
+    printf "  Alertmanager: {{GREEN}}http://localhost:19093{{RESET}}\n"
+
+# 📊 Para monitoramento
+@monitor-down:
+    {{compose_legacy}} stop prometheus grafana alertmanager node-exporter cadvisor redis-exporter blackbox-exporter
+    printf "{{GREEN}}✓ Monitoramento parado{{RESET}}\n"
+
+# 📊 Logs do monitoramento
+monitor-logs:
+    {{compose_legacy}} logs -f prometheus grafana alertmanager
+
+# ============================================================================
+# 🗑️ LIMPEZA & MANUTENÇÃO
+# ============================================================================
+
+# 🗑️ Para e remove containers dev (preserva volumes)
+@clean:
+    printf "{{YELLOW}}→ Limpando containers dev...{{RESET}}\n"
+    {{compose}} down
+    printf "{{GREEN}}✓ Containers removidos{{RESET}}\n"
+
+# 🗑️ Remove containers E volumes dev (⚠️ APAGA DADOS!)
+@clean-volumes:
+    printf "{{RED}}{{BOLD}}⚠️  ATENÇÃO: Isso vai APAGAR os dados do banco dev!{{RESET}}\n"
+    printf "{{YELLOW}}Pressione Ctrl+C para cancelar...{{RESET}}\n"
+    sleep 3
+    {{compose}} down -v
+    printf "{{GREEN}}✓ Containers e volumes removidos{{RESET}}\n"
+
+# 🗑️ docker system prune GLOBAL do host
+# PERIGO: atinge TODO o Docker da maquina - na VM isso inclui Jenkins,
+# registry e stacks de PRODUCAO. NUNCA rodar na VM 10.160.131.50.
+@clean-system:
+    printf "{{RED}}{{BOLD}}⚠️  PERIGO: prune GLOBAL do Docker (host inteiro, nao so o SDC)!{{RESET}}\n"
+    printf "{{RED}}   Na VM de producao isso destroi Jenkins/registry/stacks.{{RESET}}\n"
+    printf "{{YELLOW}}Pressione Ctrl+C para cancelar...{{RESET}}\n"
+    sleep 5
+    docker system prune -af --volumes
+    printf "{{GREEN}}✓ Sistema limpo{{RESET}}\n"
+
+# ============================================================================
+# 📋 STATUS & INFO
+# ============================================================================
+
+# 📋 Status completo dos containers
+@status:
+    printf "{{BOLD}}{{CYAN}}  STATUS DA STACK DEV{{RESET}}\n"
+    {{compose}} ps
+    echo ""
+    printf "{{BOLD}}{{CYAN}}Containers ativos (newsdc*/sdc_*):{{RESET}}\n"
+    docker ps --filter "name=newsdc" --filter "name=sdc_" --format "table {{{{.Names}}\t{{{{.Status}}\t{{{{.Ports}}"
+
+# 📋 Alias para status
+ps: status
+
+# 📋 URLs e portas do ambiente dev
+@urls:
+    printf "{{BOLD}}{{CYAN}}  URLS E PORTAS (stack dev){{RESET}}\n"
+    echo ""
+    printf "{{BOLD}}🚀 APLICAÇÃO:{{RESET}}\n"
+    printf "  App (Octane):      {{GREEN}}http://localhost:8000{{RESET}}\n"
+    printf "  Health:            {{GREEN}}http://localhost:8000/health{{RESET}}\n"
+    printf "  Vite (HMR, host):  {{GREEN}}http://localhost:5173{{RESET}}\n"
+    echo ""
+    printf "{{BOLD}}💾 DADOS:{{RESET}}\n"
+    printf "  PostgreSQL:        {{GREEN}}localhost:5433{{RESET}} (user: sdc / db: sdc)\n"
+    printf "  Redis:             {{GREEN}}localhost:6380{{RESET}}\n"
+    echo ""
+    printf "{{BOLD}}📧 FERRAMENTAS:{{RESET}}\n"
+    printf "  Mailhog UI:        {{GREEN}}http://localhost:8025{{RESET}} (SMTP: 1025)\n"
+
+# 📋 Logs de todos containers (follow)
+logs:
+    {{compose}} logs -f
+
+# 📋 Logs apenas app
+logs-app:
+    {{compose}} logs -f app
+
+# 📋 Logs apenas database
+logs-db:
+    {{compose}} logs -f db
+
+# 📋 Logs queue worker
+logs-queue:
+    {{compose}} logs -f queue
+
+# 🏥 Healthcheck dos serviços dev
 @health:
     printf "{{BOLD}}{{CYAN}}Verificando saúde dos serviços...{{RESET}}\n"
-    echo ""
-    printf "{{YELLOW}}App:         {{RESET}}"
-    curl -sf http://localhost:18001 > /dev/null && printf "{{GREEN}}✓ OK{{RESET}}\n" || printf "{{RED}}✗ FALHOU{{RESET}}\n"
-    printf "{{YELLOW}}Nginx:       {{RESET}}"
-    curl -sf http://localhost:18082 > /dev/null && printf "{{GREEN}}✓ OK{{RESET}}\n" || printf "{{RED}}✗ FALHOU{{RESET}}\n"
-    printf "{{YELLOW}}Vite:        {{RESET}}"
-    curl -sf http://localhost:15175 > /dev/null && printf "{{GREEN}}✓ OK{{RESET}}\n" || printf "{{RED}}✗ FALHOU{{RESET}}\n"
-    printf "{{YELLOW}}Grafana:     {{RESET}}"
-    curl -sf http://localhost:13000/api/health > /dev/null && printf "{{GREEN}}✓ OK{{RESET}}\n" || printf "{{RED}}✗ FALHOU{{RESET}}\n"
-    printf "{{YELLOW}}Prometheus:  {{RESET}}"
-    curl -sf http://localhost:19090/-/healthy > /dev/null && printf "{{GREEN}}✓ OK{{RESET}}\n" || printf "{{RED}}✗ FALHOU{{RESET}}\n"
-
-# ============================================================================
-# 📝 INFO
-# ============================================================================
+    printf "{{YELLOW}}App /health: {{RESET}}"
+    curl -sf http://localhost:8000/health > /dev/null && printf "{{GREEN}}✓ OK{{RESET}}\n" || printf "{{RED}}✗ FALHOU{{RESET}}\n"
+    printf "{{YELLOW}}Mailhog:     {{RESET}}"
+    curl -sf http://localhost:8025 > /dev/null && printf "{{GREEN}}✓ OK{{RESET}}\n" || printf "{{RED}}✗ FALHOU{{RESET}}\n"
+    printf "{{YELLOW}}Postgres:    {{RESET}}"
+    {{compose}} exec db pg_isready -U sdc -d sdc > /dev/null 2>&1 && printf "{{GREEN}}✓ OK{{RESET}}\n" || printf "{{RED}}✗ FALHOU{{RESET}}\n"
+    printf "{{YELLOW}}Redis:       {{RESET}}"
+    {{compose}} exec redis redis-cli ping > /dev/null 2>&1 && printf "{{GREEN}}✓ OK{{RESET}}\n" || printf "{{RED}}✗ FALHOU{{RESET}}\n"
 
 # 📝 Informações do ambiente
 @info:
-    printf "{{BOLD}}{{CYAN}}════════════════════════════════════════════════════════════{{RESET}}\n"
-    printf "{{BOLD}}{{CYAN}}  INFORMAÇÕES DO AMBIENTE{{RESET}}\n"
-    printf "{{BOLD}}{{CYAN}}════════════════════════════════════════════════════════════{{RESET}}\n"
-    echo ""
-    printf "{{BOLD}}Host:{{RESET}}\n"
-    printf "  UID:               {{GREEN}}`id -u`{{RESET}}\n"
-    printf "  GID:               {{GREEN}}`id -g`{{RESET}}\n"
-    printf "  Docker Buildkit:   {{GREEN}}$DOCKER_BUILDKIT{{RESET}}\n"
-    echo ""
     printf "{{BOLD}}Docker:{{RESET}}\n"
     docker version -f "  Versão:            {{{{.Server.Version}}"
-    echo ""
     printf "{{BOLD}}Docker Compose:{{RESET}}\n"
     docker compose version --short | xargs -I {} echo "  Versão:            {}"
-    echo ""
     printf "{{BOLD}}Just:{{RESET}}\n"
     just --version | xargs -I {} echo "  Versão:            {}"
     echo ""
     printf "{{BOLD}}Uso de recursos:{{RESET}}\n"
     docker system df
-    echo ""
 
-# 📝 Versão das ferramentas
-@version:
-    printf "{{BOLD}}Versões instaladas:{{RESET}}\n"
-    echo "Docker:          `docker --version`"
-    echo "Docker Compose:  `docker compose version`"
-    echo "Just:            `just --version`"
+# ============================================================================
+# 🔄 WORKFLOWS COMPLETOS
+# ============================================================================
+
+# 🔄 Setup inicial completo da stack dev
+@setup:
+    {{compose}} build
+    just dev
+    just db-migrate
+    just cache-optimize
+    printf "{{BOLD}}{{GREEN}}  ✓ SETUP COMPLETO FINALIZADO!{{RESET}}\n"
+
+# 🔄 Reset completo da stack dev (⚠️ APAGA DADOS!)
+@reset:
+    just clean-volumes
+    {{compose}} build
+    just dev
+    just db-migrate
+    just db-seed
+    printf "{{BOLD}}{{GREEN}}✓ RESET COMPLETO FINALIZADO!{{RESET}}\n"
+
+# 📱 Inicia NativePHP Jump Server (QR Code para conectar celular)
+@mobile-dev:
+    ./scripts/start-mobile.sh
 
 # ============================================================================
 # 🔧 MENU INTERATIVO
@@ -741,32 +510,28 @@ logs-queue:
 
 @menu:
     #!/usr/bin/env bash
-    printf "{{BOLD}}{{CYAN}}════════════════════════════════════════════════════════════{{RESET}}\n"
     printf "{{BOLD}}{{CYAN}}  SDC - MENU INTERATIVO{{RESET}}\n"
-    printf "{{BOLD}}{{CYAN}}════════════════════════════════════════════════════════════{{RESET}}\n"
     echo ""
     printf "  {{GREEN}}1){{RESET}} Desenvolvimento (dev)\n"
-    printf "  {{GREEN}}2){{RESET}} Desenvolvimento Completo (dev-full)\n"
-    printf "  {{GREEN}}3){{RESET}} Build Completo (build-all)\n"
-    printf "  {{CYAN}}4){{RESET}} Status (status)\n"
-    printf "  {{CYAN}}5){{RESET}} URLs disponíveis (urls)\n"
-    printf "  {{WHITE}}6){{RESET}} Shell App (shell)\n"
-    printf "  {{CYAN}}7){{RESET}} Logs (logs)\n"
-    printf "  {{YELLOW}}8){{RESET}} Healthcheck (health)\n"
-    printf "  {{RED}}9){{RESET}} Parar tudo (down-all)\n"
+    printf "  {{GREEN}}2){{RESET}} Rebuild dev (dev-build)\n"
+    printf "  {{CYAN}}3){{RESET}} Status (status)\n"
+    printf "  {{CYAN}}4){{RESET}} URLs (urls)\n"
+    printf "  {{WHITE}}5){{RESET}} Shell App (shell)\n"
+    printf "  {{CYAN}}6){{RESET}} Logs (logs)\n"
+    printf "  {{YELLOW}}7){{RESET}} Healthcheck (health)\n"
+    printf "  {{RED}}8){{RESET}} Parar stack dev (dev-down)\n"
     printf "  {{BLUE}}0){{RESET}} Ajuda (help)\n"
     echo ""
     read -p "Escolha uma opção: " choice
     case "$choice" in
         1) just dev ;;
-        2) just dev-full ;;
-        3) just build-all ;;
-        4) just status ;;
-        5) just urls ;;
-        6) just shell ;;
-        7) just logs ;;
-        8) just health ;;
-        9) just down-all ;;
+        2) just dev-build ;;
+        3) just status ;;
+        4) just urls ;;
+        5) just shell ;;
+        6) just logs ;;
+        7) just health ;;
+        8) just dev-down ;;
         0) just help ;;
         *) printf "{{RED}}Opção inválida{{RESET}}\n" ;;
     esac
@@ -774,4 +539,3 @@ logs-queue:
 # ============================================================================
 # FIM
 # ============================================================================
- 
