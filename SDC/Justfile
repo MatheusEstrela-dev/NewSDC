@@ -10,7 +10,8 @@
 #   monitor    -> docker/docker-compose.yml (stack local LEGADA; so monitoring)
 # ============================================================================
 
-set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+# Windows: caminho explicito do Git Bash (o "bash" do PATH e o do WSL)
+set windows-shell := ["C:/Program Files/Git/bin/bash.exe", "-uc"]
 set shell := ["bash", "-uc"]
 
 export DOCKER_BUILDKIT := "1"
@@ -61,12 +62,18 @@ db := compose + " exec db"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev-ps" "Status dos containers dev"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev-down" "Para a stack dev (volumes preservados)"
     echo ""
-    printf "{{BOLD}}PRODUCAO ON-PREMISE (VM 10.160.131.50):{{RESET}}\n"
+    printf "{{BOLD}}PRODUCAO ON-PREMISE (VM 10.160.131.50 - Docker Swarm):{{RESET}}\n"
     printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-setup" "Infra de CI: Jenkins + registry (le .env.prod)"
     printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-stack-data" "Stack sdc-data: Postgres + Redis (isolada)"
     printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-stack-app T" "Stack sdc: app/queue/reverb/caddy (tag T)"
+    printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-status" "Status das stacks sdc e sdc-data no Swarm"
+    printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-logs SVC" "Logs de um service (app|queue|reverb|caddy)"
+    printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-update T" "Rolling update app+queue+reverb para tag T"
+    printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-rollback SVC" "Rollback de um service para a versao anterior"
     printf "  {{BLUE}}%-18s{{RESET}} %s\n" "jenkins-build" "Build + sobe infra de CI"
+    printf "  {{BLUE}}%-18s{{RESET}} %s\n" "jenkins-up" "Sobe infra de CI sem rebuild"
     printf "  {{BLUE}}%-18s{{RESET}} %s\n" "jenkins-logs" "Logs do Jenkins master"
+    printf "  {{BLUE}}%-18s{{RESET}} %s\n" "jenkins-down" "Para infra de CI (volumes preservados)"
     echo ""
     printf "{{BOLD}}💾 BANCO DE DADOS (Postgres dev - localhost:5433):{{RESET}}\n"
     printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-migrate" "Executar migrations"
@@ -84,13 +91,17 @@ db := compose + " exec db"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "routes" "Lista rotas registradas"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "tinker" "REPL interativo do Laravel"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test" "PHPUnit"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-coverage" "PHPUnit com coverage"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-filter F" "PHPUnit filtrado"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-e2e" "Playwright E2E (dotenvx vault)"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-e2e-crud" "E2E apenas CRUD Decretacoes"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-e2e-ui" "E2E modo UI interativo"
     echo ""
     printf "{{BOLD}}🎨 FRONTEND (no HOST - bun/npm + Vite):{{RESET}}\n"
     printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-install" "npm install no host"
     printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-dev" "Vite dev server (libera porta antes)"
     printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-build" "Build de producao (regenera ziggy antes)"
+    printf "  {{CYAN}}%-18s{{RESET}} %s\n" "npm-clean" "Limpa cache do Vite"
     echo ""
     printf "{{BOLD}}🐚 ACESSO & DEBUG:{{RESET}}\n"
     printf "  {{WHITE}}%-18s{{RESET}} %s\n" "shell" "Shell no container app"
@@ -129,6 +140,7 @@ db := compose + " exec db"
     printf "  {{GREEN}}just dev{{RESET}}                   # sobe o ambiente de trabalho\n"
     printf "  {{GREEN}}just artisan route:list{{RESET}}    # artisan dentro do container\n"
     printf "  {{GREEN}}just prod-stack-app ab12cd3-b42{{RESET}}  # deploy inicial na VM\n"
+    printf "  {{GREEN}}just prod-update ab12cd3-b43{{RESET}}     # rolling update na VM\n"
     echo ""
 
 # ============================================================================
@@ -171,8 +183,18 @@ dev-logs:
     printf "{{GREEN}}✓ Stack dev parada{{RESET}}\n"
 
 # ============================================================================
-# JENKINS CI/CD ON-PREMISE (docker/jenkins - VM 10.160.131.50)
+# PRODUCAO ON-PREMISE (VM 10.160.131.50 - Docker Swarm)
+# ----------------------------------------------------------------------------
+# Todas as receitas prod-* rodam NA VM. A guarda _guard-prod bloqueia a
+# execucao acidental no host de desenvolvimento (sem Swarm/.env.onprem).
+# Deploy do dia a dia e do Jenkins (job SDC/deploy-onprem); estas receitas
+# cobrem setup inicial, topologia e operacao manual (status/logs/rollback).
 # ============================================================================
+
+# Guarda: so prossegue se o Swarm esta ativo E /opt/sdc/.env.onprem existe
+@_guard-prod:
+    docker info 2>/dev/null | grep -qi "swarm: active" || { printf "{{RED}}Swarm inativo - esta receita roda apenas na VM de producao (10.160.131.50){{RESET}}\n"; exit 1; }
+    test -f /opt/sdc/.env.onprem || { printf "{{RED}}/opt/sdc/.env.onprem nao encontrado - esta receita roda apenas na VM de producao{{RESET}}\n"; exit 1; }
 
 # Build + sobe a infra de CI (Jenkins + socket-proxy + registry + backups)
 @jenkins-build:
@@ -191,36 +213,68 @@ jenkins-logs:
 @jenkins-down:
     {{compose_jenkins}} down
 
-# Setup completo de producao on-premise (uma vez por VM):
-# valida o Swarm, exige o .env.prod global (raiz do SDC) e builda a infra de CI.
+# Valida o Swarm, exige o .env.prod global (raiz do SDC) e builda a infra de CI.
 # As chaves de CI que o .env.prod precisa ter estao em docker/jenkins/.env.example.
 # Proximos passos: rodar o job SDC/deploy-onprem (publica a 1a imagem),
-# just prod-stack-data e just prod-stack-app.
+# depois just prod-stack-data e just prod-stack-app.
+# Setup completo de producao on-premise (uma vez por VM)
 @prod-setup:
     printf "{{BOLD}}{{CYAN}}-> PROD SETUP on-premise{{RESET}}\n"
     docker info | grep -qi "swarm: active" || { printf "{{RED}}Swarm inativo. Rode: docker swarm init --advertise-addr 10.160.131.50{{RESET}}\n"; exit 1; }
     test -f .env.prod || { printf "{{RED}}.env.prod nao encontrado na raiz do SDC. Crie a partir do seu .env do app + chaves de CI de docker/jenkins/.env.example{{RESET}}\n"; exit 1; }
     grep -q "^GITHUB_TOKEN=." .env.prod || printf "{{YELLOW}}Aviso: GITHUB_TOKEN vazio no .env.prod - o checkout do pipeline vai falhar{{RESET}}\n"
     grep -q "^JENKINS_ADMIN_PASSWORD=." .env.prod || printf "{{YELLOW}}Aviso: JENKINS_ADMIN_PASSWORD vazio no .env.prod{{RESET}}\n"
+    grep -q "^REGISTRY=." .env.prod || printf "{{YELLOW}}Aviso: REGISTRY nao definido no .env.prod - assumindo 127.0.0.1:5000{{RESET}}\n"
     just jenkins-build
     printf "{{GREEN}}Infra de CI no ar: Jenkins http://10.160.131.50:8080 | registry 127.0.0.1:5000{{RESET}}\n"
 
-# Stack de DADOS (PostgreSQL + Redis) - isolada; o pipeline NUNCA a toca.
 # Aplicar apenas em setup inicial ou mudanca deliberada (com backup Barman).
-@prod-stack-data:
+# O pipeline NUNCA toca esta stack.
+# Stack de DADOS sdc-data: PostgreSQL + Redis (isolada)
+@prod-stack-data: _guard-prod
     docker network inspect sdc_internal >/dev/null 2>&1 || docker network create --driver overlay --attachable sdc_internal
-    test -f /opt/sdc/.env.onprem || { printf "{{RED}}/opt/sdc/.env.onprem nao encontrado{{RESET}}\n"; exit 1; }
     sh -c 'set -a; . /opt/sdc/.env.onprem; set +a; docker stack deploy -c docker/jenkins/stack.data.onpremise.yml sdc-data'
     docker stack services sdc-data
 
-# Stack de APLICACAO (app/queue/reverb/caddy) - deploy inicial ou topologia.
-# Rolling update do dia a dia e do Jenkins (service update), nao daqui.
-# Uso: just prod-stack-app ab12cd3-b42
-@prod-stack-app version:
+# Deploy inicial ou mudanca de topologia; rolling update do dia a dia
+# e via just prod-update (ou o Jenkins). Ex: just prod-stack-app ab12cd3-b42
+# Stack de APLICACAO sdc: app/queue/reverb/caddy (uso: just prod-stack-app TAG)
+@prod-stack-app version: _guard-prod
     docker network inspect sdc_internal >/dev/null 2>&1 || { printf "{{RED}}Rede sdc_internal ausente. Rode just prod-stack-data primeiro{{RESET}}\n"; exit 1; }
-    test -f /opt/sdc/.env.onprem || { printf "{{RED}}/opt/sdc/.env.onprem nao encontrado{{RESET}}\n"; exit 1; }
     sh -c 'set -a; . /opt/sdc/.env.onprem; set +a; export VERSION={{version}}; docker stack deploy -c docker/jenkins/stack.app.onpremise.yml --with-registry-auth sdc'
     docker stack services sdc
+
+# Status das stacks de producao (services + tasks recentes com erro)
+@prod-status: _guard-prod
+    printf "{{BOLD}}{{CYAN}}-> Stack sdc-data{{RESET}}\n"
+    docker stack services sdc-data
+    echo ""
+    printf "{{BOLD}}{{CYAN}}-> Stack sdc{{RESET}}\n"
+    docker stack services sdc
+    echo ""
+    printf "{{BOLD}}{{CYAN}}-> Tasks da stack sdc (estado atual){{RESET}}\n"
+    docker stack ps sdc --no-trunc --filter "desired-state=running"
+
+# Logs de um service da stack sdc (uso: just prod-logs app|queue|reverb|caddy)
+prod-logs svc="app": _guard-prod
+    docker service logs -f --tail 100 sdc_{{svc}}
+
+# Espelha o que o Jenkins faz. Ex: just prod-update ab12cd3-b42
+# Rolling update de app+queue+reverb para uma tag do pipeline
+@prod-update version: _guard-prod
+    printf "{{BOLD}}{{CYAN}}-> Rolling update para a tag {{version}}{{RESET}}\n"
+    sh -c 'set -a; . /opt/sdc/.env.onprem; set +a; REG=${REGISTRY:-127.0.0.1:5000}; \
+        docker service update --with-registry-auth --image $REG/sdc-app:{{version}} sdc_app && \
+        docker service update --with-registry-auth --image $REG/sdc-queue:{{version}} sdc_queue && \
+        docker service update --with-registry-auth --image $REG/sdc-app:{{version}} sdc_reverb'
+    printf "{{GREEN}}Rolling update concluido para {{version}}{{RESET}}\n"
+    docker stack services sdc
+
+# Rollback de um service para a versao anterior (uso: just prod-rollback app)
+@prod-rollback svc: _guard-prod
+    printf "{{YELLOW}}-> Rollback do service sdc_{{svc}}...{{RESET}}\n"
+    docker service rollback sdc_{{svc}}
+    docker service ps sdc_{{svc}} --filter "desired-state=running"
 
 # ============================================================================
 # 💾 BANCO DE DADOS (Postgres da stack dev)
@@ -379,7 +433,7 @@ shell-queue:
 # 📊 Sobe Prometheus/Grafana locais (rede sdc_network legada)
 @monitor:
     docker network inspect sdc_network > /dev/null 2>&1 || docker network create --driver bridge --subnet 172.26.0.0/16 sdc_network
-    {{compose_legacy}} up -d prometheus grafana alertmanager node-exporter cadvisor redis-exporter blackbox-exporter
+    {{compose_legacy}} up -d prometheus grafana alertmanager node-exporter cadvisor pg-exporter redis-exporter blackbox-exporter
     printf "{{GREEN}}✓ Monitoramento local no ar{{RESET}}\n"
     printf "  Grafana:      {{GREEN}}http://localhost:13000{{RESET}}\n"
     printf "  Prometheus:   {{GREEN}}http://localhost:19090{{RESET}}\n"
@@ -387,7 +441,7 @@ shell-queue:
 
 # 📊 Para monitoramento
 @monitor-down:
-    {{compose_legacy}} stop prometheus grafana alertmanager node-exporter cadvisor redis-exporter blackbox-exporter
+    {{compose_legacy}} stop prometheus grafana alertmanager node-exporter cadvisor pg-exporter redis-exporter blackbox-exporter
     printf "{{GREEN}}✓ Monitoramento parado{{RESET}}\n"
 
 # 📊 Logs do monitoramento
@@ -412,12 +466,13 @@ monitor-logs:
     {{compose}} down -v
     printf "{{GREEN}}✓ Containers e volumes removidos{{RESET}}\n"
 
-# 🗑️ docker system prune GLOBAL do host
 # PERIGO: atinge TODO o Docker da maquina - na VM isso inclui Jenkins,
-# registry e stacks de PRODUCAO. NUNCA rodar na VM 10.160.131.50.
+# registry e stacks de PRODUCAO. Aborta se o Swarm estiver ativo
+# (indicio de que se esta na VM 10.160.131.50).
+# 🗑️ docker system prune GLOBAL do host (aborta na VM de producao)
 @clean-system:
+    if docker info 2>/dev/null | grep -qi "swarm: active"; then printf "{{RED}}{{BOLD}}ABORTADO: Swarm ativo - isso parece ser a VM de PRODUCAO. Nao rode clean-system aqui.{{RESET}}\n"; exit 1; fi
     printf "{{RED}}{{BOLD}}⚠️  PERIGO: prune GLOBAL do Docker (host inteiro, nao so o SDC)!{{RESET}}\n"
-    printf "{{RED}}   Na VM de producao isso destroi Jenkins/registry/stacks.{{RESET}}\n"
     printf "{{YELLOW}}Pressione Ctrl+C para cancelar...{{RESET}}\n"
     sleep 5
     docker system prune -af --volumes
