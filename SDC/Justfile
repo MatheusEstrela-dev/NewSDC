@@ -41,6 +41,7 @@ app := compose + " exec app"
 db := compose + " exec db"
 
 # Receita padrão
+[group('00 📚 AJUDA')]
 @default: help
 
 # ============================================================================
@@ -48,6 +49,7 @@ db := compose + " exec db"
 # ============================================================================
 
 # 📚 Mostra ajuda categorizada
+[group('00 📚 AJUDA')]
 @help:
     echo ""
     printf "{{BOLD}}{{CYAN}}╔════════════════════════════════════════════════════════════════════╗{{RESET}}\n"
@@ -62,7 +64,7 @@ db := compose + " exec db"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev-ps" "Status dos containers dev"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "dev-down" "Para a stack dev (volumes preservados)"
     echo ""
-    printf "{{BOLD}}PRODUCAO ON-PREMISE (VM 10.160.131.50 - Docker Swarm):{{RESET}}\n"
+    printf "{{BOLD}}🐳 PRODUCAO ON-PREMISE (VM 10.160.131.50 - Docker Swarm):{{RESET}}\n"
     printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-setup" "Infra de CI: Jenkins + registry (le .env.prod)"
     printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-stack-data" "Stack sdc-data: Postgres + Redis (isolada)"
     printf "  {{BLUE}}%-18s{{RESET}} %s\n" "prod-stack-app T" "Stack sdc: app/queue/reverb/caddy (tag T)"
@@ -148,6 +150,7 @@ db := compose + " exec db"
 # ============================================================================
 
 # 🔧 Sobe a stack dev completa (app + db + redis + queue + mailhog)
+[group('01 🔧 DESENVOLVIMENTO')]
 @dev:
     printf "{{YELLOW}}→ Iniciando ambiente de desenvolvimento...{{RESET}}\n"
     {{compose}} up -d
@@ -156,12 +159,14 @@ db := compose + " exec db"
     just urls
 
 # 🔧 Desenvolvimento mínimo (apenas app + db + redis)
+[group('01 🔧 DESENVOLVIMENTO')]
 @dev-minimal:
     printf "{{YELLOW}}→ Iniciando ambiente mínimo...{{RESET}}\n"
     {{compose}} up -d app db redis
     printf "{{GREEN}}✓ Ambiente mínimo iniciado!{{RESET}}\n"
 
 # 🔧 Rebuild das imagens + recria a stack dev
+[group('01 🔧 DESENVOLVIMENTO')]
 @dev-build:
     printf "{{YELLOW}}→ Rebuild e reinício do ambiente...{{RESET}}\n"
     {{compose}} down
@@ -170,20 +175,23 @@ db := compose + " exec db"
     printf "{{GREEN}}✓ Rebuild concluído{{RESET}}\n"
 
 # 🔧 Logs da stack dev (follow)
+[group('01 🔧 DESENVOLVIMENTO')]
 dev-logs:
     {{compose}} logs -f
 
 # 🔧 Status dos containers dev
+[group('01 🔧 DESENVOLVIMENTO')]
 @dev-ps:
     {{compose}} ps
 
 # 🔧 Para a stack dev (volumes preservados)
+[group('01 🔧 DESENVOLVIMENTO')]
 @dev-down:
     {{compose}} down
     printf "{{GREEN}}✓ Stack dev parada{{RESET}}\n"
 
 # ============================================================================
-# PRODUCAO ON-PREMISE (VM 10.160.131.50 - Docker Swarm)
+# 🐳 PRODUCAO ON-PREMISE (VM 10.160.131.50 - Docker Swarm)
 # ----------------------------------------------------------------------------
 # Todas as receitas prod-* rodam NA VM. A guarda _guard-prod bloqueia a
 # execucao acidental no host de desenvolvimento (sem Swarm/.env.onprem).
@@ -197,19 +205,23 @@ dev-logs:
     test -f /opt/sdc/.env.onprem || { printf "{{RED}}/opt/sdc/.env.onprem nao encontrado - esta receita roda apenas na VM de producao{{RESET}}\n"; exit 1; }
 
 # Build + sobe a infra de CI (Jenkins + socket-proxy + registry + backups)
+[group('03 🏗️ CI JENKINS')]
 @jenkins-build:
     {{compose_jenkins}} build
     {{compose_jenkins}} up -d
 
 # Sobe a infra de CI sem rebuild
+[group('03 🏗️ CI JENKINS')]
 @jenkins-up:
     {{compose_jenkins}} up -d
 
 # Logs do Jenkins master
+[group('03 🏗️ CI JENKINS')]
 jenkins-logs:
     {{compose_jenkins}} logs -f jenkins
 
 # Para a infra de CI (volumes jenkins_home/registry preservados)
+[group('03 🏗️ CI JENKINS')]
 @jenkins-down:
     {{compose_jenkins}} down
 
@@ -218,6 +230,7 @@ jenkins-logs:
 # Proximos passos: rodar o job SDC/deploy-onprem (publica a 1a imagem),
 # depois just prod-stack-data e just prod-stack-app.
 # Setup completo de producao on-premise (uma vez por VM)
+[group('02 🐳 PRODUCAO SWARM (VM)')]
 @prod-setup:
     printf "{{BOLD}}{{CYAN}}-> PROD SETUP on-premise{{RESET}}\n"
     docker info | grep -qi "swarm: active" || { printf "{{RED}}Swarm inativo. Rode: docker swarm init --advertise-addr 10.160.131.50{{RESET}}\n"; exit 1; }
@@ -231,6 +244,7 @@ jenkins-logs:
 # Aplicar apenas em setup inicial ou mudanca deliberada (com backup Barman).
 # O pipeline NUNCA toca esta stack.
 # Stack de DADOS sdc-data: PostgreSQL + Redis (isolada)
+[group('02 🐳 PRODUCAO SWARM (VM)')]
 @prod-stack-data: _guard-prod
     docker network inspect sdc_internal >/dev/null 2>&1 || docker network create --driver overlay --attachable sdc_internal
     sh -c 'set -a; . /opt/sdc/.env.onprem; set +a; docker stack deploy -c docker/jenkins/stack.data.onpremise.yml sdc-data'
@@ -239,12 +253,14 @@ jenkins-logs:
 # Deploy inicial ou mudanca de topologia; rolling update do dia a dia
 # e via just prod-update (ou o Jenkins). Ex: just prod-stack-app ab12cd3-b42
 # Stack de APLICACAO sdc: app/queue/reverb/caddy (uso: just prod-stack-app TAG)
+[group('02 🐳 PRODUCAO SWARM (VM)')]
 @prod-stack-app version: _guard-prod
     docker network inspect sdc_internal >/dev/null 2>&1 || { printf "{{RED}}Rede sdc_internal ausente. Rode just prod-stack-data primeiro{{RESET}}\n"; exit 1; }
     sh -c 'set -a; . /opt/sdc/.env.onprem; set +a; export VERSION={{version}}; docker stack deploy -c docker/jenkins/stack.app.onpremise.yml --with-registry-auth sdc'
     docker stack services sdc
 
 # Status das stacks de producao (services + tasks recentes com erro)
+[group('02 🐳 PRODUCAO SWARM (VM)')]
 @prod-status: _guard-prod
     printf "{{BOLD}}{{CYAN}}-> Stack sdc-data{{RESET}}\n"
     docker stack services sdc-data
@@ -256,11 +272,13 @@ jenkins-logs:
     docker stack ps sdc --no-trunc --filter "desired-state=running"
 
 # Logs de um service da stack sdc (uso: just prod-logs app|queue|reverb|caddy)
+[group('02 🐳 PRODUCAO SWARM (VM)')]
 prod-logs svc="app": _guard-prod
     docker service logs -f --tail 100 sdc_{{svc}}
 
 # Espelha o que o Jenkins faz. Ex: just prod-update ab12cd3-b42
 # Rolling update de app+queue+reverb para uma tag do pipeline
+[group('02 🐳 PRODUCAO SWARM (VM)')]
 @prod-update version: _guard-prod
     printf "{{BOLD}}{{CYAN}}-> Rolling update para a tag {{version}}{{RESET}}\n"
     sh -c 'set -a; . /opt/sdc/.env.onprem; set +a; REG=${REGISTRY:-127.0.0.1:5000}; \
@@ -271,6 +289,7 @@ prod-logs svc="app": _guard-prod
     docker stack services sdc
 
 # Rollback de um service para a versao anterior (uso: just prod-rollback app)
+[group('02 🐳 PRODUCAO SWARM (VM)')]
 @prod-rollback svc: _guard-prod
     printf "{{YELLOW}}-> Rollback do service sdc_{{svc}}...{{RESET}}\n"
     docker service rollback sdc_{{svc}}
@@ -281,14 +300,17 @@ prod-logs svc="app": _guard-prod
 # ============================================================================
 
 # 💾 Executar migrations
+[group('04 💾 BANCO DE DADOS')]
 @db-migrate:
     {{app}} php artisan migrate --force
 
 # 💾 Rollback migrations
+[group('04 💾 BANCO DE DADOS')]
 @db-rollback:
     {{app}} php artisan migrate:rollback --force
 
 # 💾 Fresh migrations + seed (APAGA DADOS!)
+[group('04 💾 BANCO DE DADOS')]
 @db-fresh:
     printf "{{RED}}⚠️  Isso vai APAGAR todos os dados do banco dev!{{RESET}}\n"
     printf "{{YELLOW}}Pressione Ctrl+C para cancelar...{{RESET}}\n"
@@ -296,10 +318,12 @@ prod-logs svc="app": _guard-prod
     {{app}} php artisan migrate:fresh --seed --force
 
 # 💾 Executar seeds
+[group('04 💾 BANCO DE DADOS')]
 @db-seed:
     {{app}} php artisan db:seed --force
 
 # 💾 Backup do banco (pg_dump -> storage/backups/)
+[group('04 💾 BANCO DE DADOS')]
 @db-backup:
     printf "{{YELLOW}}→ Criando backup...{{RESET}}\n"
     mkdir -p storage/backups
@@ -307,12 +331,14 @@ prod-logs svc="app": _guard-prod
     printf "{{GREEN}}✓ Backup criado em storage/backups/{{RESET}}\n"
 
 # 💾 Restore backup (uso: just db-restore arquivo.sql)
+[group('04 💾 BANCO DE DADOS')]
 @db-restore file:
     printf "{{YELLOW}}→ Restaurando backup: {{file}}{{RESET}}\n"
     {{compose}} exec -T db psql -U sdc -d sdc < {{file}}
     printf "{{GREEN}}✓ Backup restaurado{{RESET}}\n"
 
 # 💾 Lista tabelas por prefixo de modulo (uso: just tables tdap | rat | ajuda)
+[group('04 💾 BANCO DE DADOS')]
 @tables pattern:
     {{compose}} exec db psql -U sdc -d sdc -c "\dt {{pattern}}*"
 
@@ -321,6 +347,7 @@ prod-logs svc="app": _guard-prod
 # ============================================================================
 
 # ⚙️ Limpa todos os caches
+[group('05 ⚙️ ARTISAN')]
 @cache-clear:
     printf "{{YELLOW}}→ Limpando caches...{{RESET}}\n"
     {{app}} php artisan cache:clear
@@ -330,6 +357,7 @@ prod-logs svc="app": _guard-prod
     printf "{{GREEN}}✓ Caches limpos{{RESET}}\n"
 
 # ⚙️ Reconstroi caches (config/route/view/event)
+[group('05 ⚙️ ARTISAN')]
 @cache-optimize:
     printf "{{YELLOW}}→ Otimizando caches...{{RESET}}\n"
     {{app}} php artisan config:cache
@@ -339,14 +367,17 @@ prod-logs svc="app": _guard-prod
     printf "{{GREEN}}✓ Caches otimizados{{RESET}}\n"
 
 # ⚙️ Executar artisan (uso: just artisan migrate)
+[group('05 ⚙️ ARTISAN')]
 @artisan +cmd:
     {{app}} php artisan {{cmd}}
 
 # ⚙️ Lista as rotas registradas
+[group('05 ⚙️ ARTISAN')]
 routes:
     {{app}} php artisan route:list
 
 # ⚙️ Abre o tinker (REPL interativo do Laravel)
+[group('05 ⚙️ ARTISAN')]
 tinker:
     {{compose}} exec app php artisan tinker
 
@@ -355,28 +386,34 @@ tinker:
 # ============================================================================
 
 # 🧪 Executar testes unitarios (PHPUnit)
+[group('06 🧪 TESTES')]
 @test:
     {{app}} php artisan test
 
 # 🧪 Testes com coverage
+[group('06 🧪 TESTES')]
 @test-coverage:
     {{app}} php artisan test --coverage
 
 # 🧪 Testes filtrados (uso: just test-filter NomeDoTeste)
+[group('06 🧪 TESTES')]
 @test-filter filter:
     {{app}} php artisan test --filter={{filter}}
 
 # 🧪 E2E - Testes Playwright (dotenvx injeta vault em runtime)
+[group('06 🧪 TESTES')]
 @test-e2e:
     printf "{{YELLOW}}-> Executando testes E2E (Playwright + dotenvx vault)...{{RESET}}\n"
     npx dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test
     printf "{{GREEN}}✓ Testes E2E concluidos{{RESET}}\n"
 
 # 🧪 E2E - Apenas CRUD de Decretacoes
+[group('06 🧪 TESTES')]
 @test-e2e-crud:
     npx dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test tests/e2e/decretacoes-crud.spec.js
 
 # 🧪 E2E - Modo UI interativo do Playwright
+[group('06 🧪 TESTES')]
 @test-e2e-ui:
     npx dotenvx run -f .env -f tests/e2e/.env.test -- npx playwright test --ui
 
@@ -385,18 +422,22 @@ tinker:
 # ============================================================================
 
 # 🎨 Install dependências npm (host)
+[group('07 🎨 FRONTEND')]
 @npm-install:
     npm install --legacy-peer-deps
 
 # 🎨 Vite dev server (host; libera a porta antes via scripts/ensure-vite-port-free)
+[group('07 🎨 FRONTEND')]
 npm-dev:
     npm run dev
 
 # 🎨 Build de produção dos assets (host; prebuild regenera ziggy)
+[group('07 🎨 FRONTEND')]
 @npm-build:
     npm run build
 
 # 🎨 Limpar cache do Vite e node_modules parciais
+[group('07 🎨 FRONTEND')]
 @npm-clean:
     rm -rf node_modules/.vite
     npm cache clean --force
@@ -406,22 +447,27 @@ npm-dev:
 # ============================================================================
 
 # 🐚 Shell no container app
+[group('08 🐚 SHELL & DEBUG')]
 shell:
     {{compose}} exec app sh
 
 # 🐚 Shell no app como root
+[group('08 🐚 SHELL & DEBUG')]
 shell-root:
     {{compose}} exec -u root app sh
 
 # 🐚 psql no Postgres dev
+[group('08 🐚 SHELL & DEBUG')]
 shell-db:
     {{compose}} exec db psql -U sdc -d sdc
 
 # 🐚 redis-cli no Redis dev
+[group('08 🐚 SHELL & DEBUG')]
 shell-redis:
     {{compose}} exec redis redis-cli
 
 # 🐚 Shell no container queue
+[group('08 🐚 SHELL & DEBUG')]
 shell-queue:
     {{compose}} exec queue sh
 
@@ -431,6 +477,7 @@ shell-queue:
 # ============================================================================
 
 # 📊 Sobe Prometheus/Grafana locais (rede sdc_network legada)
+[group('09 📊 MONITORAMENTO')]
 @monitor:
     docker network inspect sdc_network > /dev/null 2>&1 || docker network create --driver bridge --subnet 172.26.0.0/16 sdc_network
     {{compose_legacy}} up -d prometheus grafana alertmanager node-exporter cadvisor pg-exporter redis-exporter blackbox-exporter
@@ -440,11 +487,13 @@ shell-queue:
     printf "  Alertmanager: {{GREEN}}http://localhost:19093{{RESET}}\n"
 
 # 📊 Para monitoramento
+[group('09 📊 MONITORAMENTO')]
 @monitor-down:
     {{compose_legacy}} stop prometheus grafana alertmanager node-exporter cadvisor pg-exporter redis-exporter blackbox-exporter
     printf "{{GREEN}}✓ Monitoramento parado{{RESET}}\n"
 
 # 📊 Logs do monitoramento
+[group('09 📊 MONITORAMENTO')]
 monitor-logs:
     {{compose_legacy}} logs -f prometheus grafana alertmanager
 
@@ -453,12 +502,14 @@ monitor-logs:
 # ============================================================================
 
 # 🗑️ Para e remove containers dev (preserva volumes)
+[group('10 🗑️ LIMPEZA')]
 @clean:
     printf "{{YELLOW}}→ Limpando containers dev...{{RESET}}\n"
     {{compose}} down
     printf "{{GREEN}}✓ Containers removidos{{RESET}}\n"
 
 # 🗑️ Remove containers E volumes dev (⚠️ APAGA DADOS!)
+[group('10 🗑️ LIMPEZA')]
 @clean-volumes:
     printf "{{RED}}{{BOLD}}⚠️  ATENÇÃO: Isso vai APAGAR os dados do banco dev!{{RESET}}\n"
     printf "{{YELLOW}}Pressione Ctrl+C para cancelar...{{RESET}}\n"
@@ -470,6 +521,7 @@ monitor-logs:
 # registry e stacks de PRODUCAO. Aborta se o Swarm estiver ativo
 # (indicio de que se esta na VM 10.160.131.50).
 # 🗑️ docker system prune GLOBAL do host (aborta na VM de producao)
+[group('10 🗑️ LIMPEZA')]
 @clean-system:
     if docker info 2>/dev/null | grep -qi "swarm: active"; then printf "{{RED}}{{BOLD}}ABORTADO: Swarm ativo - isso parece ser a VM de PRODUCAO. Nao rode clean-system aqui.{{RESET}}\n"; exit 1; fi
     printf "{{RED}}{{BOLD}}⚠️  PERIGO: prune GLOBAL do Docker (host inteiro, nao so o SDC)!{{RESET}}\n"
@@ -483,6 +535,7 @@ monitor-logs:
 # ============================================================================
 
 # 📋 Status completo dos containers
+[group('11 📋 STATUS & INFO')]
 @status:
     printf "{{BOLD}}{{CYAN}}  STATUS DA STACK DEV{{RESET}}\n"
     {{compose}} ps
@@ -491,9 +544,11 @@ monitor-logs:
     docker ps --filter "name=newsdc" --filter "name=sdc_" --format "table {{{{.Names}}\t{{{{.Status}}\t{{{{.Ports}}"
 
 # 📋 Alias para status
+[group('11 📋 STATUS & INFO')]
 ps: status
 
 # 📋 URLs e portas do ambiente dev
+[group('11 📋 STATUS & INFO')]
 @urls:
     printf "{{BOLD}}{{CYAN}}  URLS E PORTAS (stack dev){{RESET}}\n"
     echo ""
@@ -510,22 +565,27 @@ ps: status
     printf "  Mailhog UI:        {{GREEN}}http://localhost:8025{{RESET}} (SMTP: 1025)\n"
 
 # 📋 Logs de todos containers (follow)
+[group('11 📋 STATUS & INFO')]
 logs:
     {{compose}} logs -f
 
 # 📋 Logs apenas app
+[group('11 📋 STATUS & INFO')]
 logs-app:
     {{compose}} logs -f app
 
 # 📋 Logs apenas database
+[group('11 📋 STATUS & INFO')]
 logs-db:
     {{compose}} logs -f db
 
 # 📋 Logs queue worker
+[group('11 📋 STATUS & INFO')]
 logs-queue:
     {{compose}} logs -f queue
 
 # 🏥 Healthcheck dos serviços dev
+[group('11 📋 STATUS & INFO')]
 @health:
     printf "{{BOLD}}{{CYAN}}Verificando saúde dos serviços...{{RESET}}\n"
     printf "{{YELLOW}}App /health: {{RESET}}"
@@ -538,6 +598,7 @@ logs-queue:
     {{compose}} exec redis redis-cli ping > /dev/null 2>&1 && printf "{{GREEN}}✓ OK{{RESET}}\n" || printf "{{RED}}✗ FALHOU{{RESET}}\n"
 
 # 📝 Informações do ambiente
+[group('11 📋 STATUS & INFO')]
 @info:
     printf "{{BOLD}}Docker:{{RESET}}\n"
     docker version -f "  Versão:            {{{{.Server.Version}}"
@@ -554,6 +615,7 @@ logs-queue:
 # ============================================================================
 
 # 🔄 Setup inicial completo da stack dev
+[group('12 🔄 WORKFLOWS')]
 @setup:
     {{compose}} build
     just dev
@@ -562,6 +624,7 @@ logs-queue:
     printf "{{BOLD}}{{GREEN}}  ✓ SETUP COMPLETO FINALIZADO!{{RESET}}\n"
 
 # 🔄 Reset completo da stack dev (⚠️ APAGA DADOS!)
+[group('12 🔄 WORKFLOWS')]
 @reset:
     just clean-volumes
     {{compose}} build
@@ -571,6 +634,7 @@ logs-queue:
     printf "{{BOLD}}{{GREEN}}✓ RESET COMPLETO FINALIZADO!{{RESET}}\n"
 
 # 📱 Inicia NativePHP Jump Server (QR Code para conectar celular)
+[group('12 🔄 WORKFLOWS')]
 @mobile-dev:
     ./scripts/start-mobile.sh
 
@@ -578,6 +642,7 @@ logs-queue:
 # 🔧 MENU INTERATIVO
 # ============================================================================
 
+[group('00 📚 AJUDA')]
 @menu:
     #!/usr/bin/env bash
     printf "{{BOLD}}{{CYAN}}  SDC - MENU INTERATIVO{{RESET}}\n"
