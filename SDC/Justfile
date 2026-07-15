@@ -75,11 +75,14 @@ db := compose + " exec db"
     printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-seed" "Executar seeds"
     printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-backup" "pg_dump para storage/backups/"
     printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "db-restore FILE" "Restore de um dump .sql"
+    printf "  {{YELLOW}}%-18s{{RESET}} %s\n" "tables PADRAO" "Tabelas por modulo (ex: just tables tdap)"
     echo ""
     printf "{{BOLD}}⚙️ ARTISAN & TESTES (dentro do container app):{{RESET}}\n"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "artisan CMD" "Executar artisan (ex: just artisan route:list)"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "cache-clear" "Limpa caches Laravel"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "cache-optimize" "Reconstroi caches (config/route/view/event)"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "routes" "Lista rotas registradas"
+    printf "  {{GREEN}}%-18s{{RESET}} %s\n" "tinker" "REPL interativo do Laravel"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test" "PHPUnit"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-filter F" "PHPUnit filtrado"
     printf "  {{GREEN}}%-18s{{RESET}} %s\n" "test-e2e" "Playwright E2E (dotenvx vault)"
@@ -255,6 +258,10 @@ jenkins-logs:
     {{compose}} exec -T db psql -U sdc -d sdc < {{file}}
     printf "{{GREEN}}✓ Backup restaurado{{RESET}}\n"
 
+# 💾 Lista tabelas por prefixo de modulo (uso: just tables tdap | rat | ajuda)
+@tables pattern:
+    {{compose}} exec db psql -U sdc -d sdc -c "\dt {{pattern}}*"
+
 # ============================================================================
 # ⚙️ LARAVEL ARTISAN (dentro do container app)
 # ============================================================================
@@ -280,6 +287,14 @@ jenkins-logs:
 # ⚙️ Executar artisan (uso: just artisan migrate)
 @artisan +cmd:
     {{app}} php artisan {{cmd}}
+
+# ⚙️ Lista as rotas registradas
+routes:
+    {{app}} php artisan route:list
+
+# ⚙️ Abre o tinker (REPL interativo do Laravel)
+tinker:
+    {{compose}} exec app php artisan tinker
 
 # ============================================================================
 # 🧪 TESTES
