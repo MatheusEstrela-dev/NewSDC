@@ -4,6 +4,10 @@ FROM php:8.4-cli-alpine
 ARG UID=1000
 ARG GID=1000
 
+# O pecl/PEAR ignora as variaveis de ambiente de proxy; atras do proxy
+# corporativo o pecl install redis falha com "No releases available" sem isso.
+RUN if [ -n "$http_proxy" ]; then pear config-set http_proxy "$http_proxy" && pecl config-set http_proxy "$http_proxy"; fi
+
 # Instalar dependencias do sistema e extensoes PHP usadas pelos jobs Laravel.
 RUN apk add --no-cache \
     bash \

@@ -74,8 +74,9 @@ RUN docker-php-ext-configure gd \
 ARG SWOOLE_VERSION=6.2.1
 # O pecl/PEAR ignora as variaveis de ambiente de proxy; em rede corporativa
 # (build com --build-arg http_proxy=...) o proxy precisa ir para a config do
-# PEAR. Sem proxy no build, o if e um no-op e nada muda.
-RUN if [ -n "$http_proxy" ]; then pear config-set http_proxy "$http_proxy"; fi
+# PEAR *e* do pecl (configs separadas - so o pear config-set nao basta e o
+# pecl falha com "No releases available"). Sem proxy no build, no-op.
+RUN if [ -n "$http_proxy" ]; then pear config-set http_proxy "$http_proxy" && pecl config-set http_proxy "$http_proxy"; fi
 RUN pecl install igbinary \
     && docker-php-ext-enable igbinary \
     && pecl install redis \
