@@ -407,11 +407,13 @@ def notify(String status, String message) {
     }
 
     if (teamsWebhook) {
-        def teamsColor = (status == 'SUCCESS') ? '00C853' : (status in ['FAILURE', 'ROLLBACK']) ? 'FF0000' : 'FF6F00'
+        // Webhook via Power Automate (Workflows): exige Adaptive Card; o
+        // MessageCard legado e aceito (202) mas o fluxo descarta sem postar.
+        def teamsColor = (status == 'SUCCESS') ? 'Good' : (status in ['FAILURE', 'ROLLBACK']) ? 'Attention' : 'Warning'
         sh(script: """
             curl -sf -X POST '${teamsWebhook}' \\
                 -H 'Content-Type: application/json' \\
-                -d '{"@type":"MessageCard","@context":"http://schema.org/extensions","themeColor":"${teamsColor}","summary":"[${status}] Jenkins SDC on-prem","title":"[${status}] Jenkins SDC on-prem - Build #${env.BUILD_NUMBER}","text":"${message}"}' \\
+                -d '{"type":"message","attachments":[{"contentType":"application/vnd.microsoft.card.adaptive","content":{"type":"AdaptiveCard","version":"1.4","msteams":{"width":"Full"},"body":[{"type":"TextBlock","size":"Large","weight":"Bolder","color":"${teamsColor}","wrap":true,"text":"[${status}] Jenkins SDC on-prem - Build #${env.BUILD_NUMBER}"},{"type":"TextBlock","wrap":true,"text":"${message}"}]}}]}' \\
             || true
         """, returnStatus: true)
     }

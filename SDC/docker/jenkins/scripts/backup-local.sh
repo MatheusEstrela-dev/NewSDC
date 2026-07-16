@@ -112,9 +112,10 @@ EOF
     # Teams notification (alertas criticos)
     local TEAMS_WEBHOOK="${TEAMS_WEBHOOK_URL:-}"
     if [ -n "$TEAMS_WEBHOOK" ]; then
+        # Power Automate (Workflows) exige Adaptive Card; MessageCard legado e descartado
         curl -sf -X POST "$TEAMS_WEBHOOK" \
             -H 'Content-Type: application/json' \
-            -d "{\"@type\":\"MessageCard\",\"@context\":\"http://schema.org/extensions\",\"themeColor\":\"FF0000\",\"summary\":\"Backup Jenkins FALHOU\",\"title\":\"Backup Jenkins FALHOU\",\"text\":\"$error_msg\"}" \
+            -d "{\"type\":\"message\",\"attachments\":[{\"contentType\":\"application/vnd.microsoft.card.adaptive\",\"content\":{\"type\":\"AdaptiveCard\",\"version\":\"1.4\",\"body\":[{\"type\":\"TextBlock\",\"size\":\"Large\",\"weight\":\"Bolder\",\"color\":\"Attention\",\"wrap\":true,\"text\":\"Backup Jenkins FALHOU\"},{\"type\":\"TextBlock\",\"wrap\":true,\"text\":\"$error_msg\"}]}}]}" \
             &>/dev/null || true
     fi
 }
