@@ -20,7 +20,9 @@ class CronogramaComprovanteService
 
     public function store(Cronograma $cronograma, UploadedFile $file, ?string $descricao = null): CronogramaComprovante
     {
-        $path = $file->store("tdap/cronograma/{$cronograma->id}/comprovantes", $this->disk);
+        // Regra propria do TDAP: comprovante pertence a um cronograma, nao a
+        // um protocolo. O prefixo do modulo ja e o root do disk 'tdap'.
+        $path = $file->store("cronogramas/{$cronograma->id}/comprovantes", $this->disk);
 
         return CronogramaComprovante::create([
             'cronograma_id' => $cronograma->id,

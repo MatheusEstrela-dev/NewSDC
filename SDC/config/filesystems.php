@@ -1,13 +1,21 @@
 <?php
 
+// Raiz do bind mount de anexos (VM on-prem): o host monta o disco dedicado
+// (ex.: /mnt/newsdc_storage) em /data/anexos no container. Quando presente,
+// cada disk de modulo aponta para ANEXOS_ROOT/{MODULO} — 1 mount fisico,
+// separacao por modulo em subpasta logica (PAE/, RAT/, ...), criada pelo
+// proprio Flysystem no primeiro put. Modulo novo = so um disk novo aqui.
+$anexosRoot = env('ANEXOS_ROOT');
+
 // DRY: monta a config de um disco de dominio escolhendo o driver pelo ambiente.
-// Producao (App Service, FS efemero) define AZURE_STORAGE_CONNECTION_STRING ->
-// Azure Blob; dev sem a conexao -> disco local. Evita perda de anexos no restart.
+// Precedencia: Azure Blob (AZURE_STORAGE_CONNECTION_STRING, App Service com FS
+// efemero) > bind mount (ANEXOS_ROOT, VM on-prem) > storage/app local (dev puro).
 // Retorna arrays puros (sem closures) para nao quebrar config:cache.
+// $modulo: subpasta do modulo dentro de ANEXOS_ROOT (PAE, RAT, ...).
 // $localUrl: quando informado, o disco local expoe URL publica (symlink storage:link).
 // No Azure o url() do adapter resolve sozinho (SAS assinado mesmo em container privado),
 // entao a config 'url' nao precisa ser propagada para o driver azure.
-$azureOrLocal = static function (string $container, string $localRoot, string $visibility = 'private', ?string $localUrl = null) {
+$azureOrLocal = static function (string $container, string $modulo, string $localRoot, string $visibility = 'private', ?string $localUrl = null) use ($anexosRoot) {
     $connectionString = env('AZURE_STORAGE_CONNECTION_STRING');
 
     if (! empty($connectionString)) {
@@ -23,10 +31,17 @@ $azureOrLocal = static function (string $container, string $localRoot, string $v
 
     return array_filter([
         'driver' => 'local',
-        'root' => storage_path($localRoot),
+        'root' => $anexosRoot ? $anexosRoot . '/' . $modulo : storage_path($localRoot),
         'url' => $localUrl,
         'visibility' => $visibility,
         'throw' => true,
+        // No bind mount o app (root) e a queue (www-data em prod) escrevem na
+        // mesma arvore: arquivos legiveis pelo grupo e diretorios com setgid
+        // herdando o grupo www-data da raiz de cada modulo.
+        'permissions' => $anexosRoot ? [
+            'file' => ['public' => 0664, 'private' => 0664],
+            'dir' => ['public' => 02775, 'private' => 02775],
+        ] : null,
     ], static fn ($value) => $value !== null);
 };
 
@@ -94,22 +109,30 @@ return [
 
         // Disk privado do modulo COMPDEC (fotos coordenador/prefeito, anexos legais, planos de contingencia)
         // Usado pelo Spatie Media Library via collection_name (foto_coordenador, foto_prefeito, anexo_arquivo, plano_arquivo)
-        'compdec' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_COMPDEC', 'sdc-compdec'), 'app/compdec'),
+        'compdec' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_COMPDEC', 'sdc-compdec'), 'COMPDEC', 'app/compdec'),
 
         // Anexos do modulo PAE (documentos por protocolo/formulario).
-        'pae' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_PAE', 'sdc-pae'), 'app/pae'),
+        'pae' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_PAE', 'sdc-pae'), 'PAE', 'app/pae'),
 
-        // Anexos do modulo RAT. Servidos via URL publica: em dev usa o symlink
-        // storage/app/public; em producao o url() retorna SAS assinado do blob.
-        'rat' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_RAT', 'sdc-rat'), 'app/public', 'public', env('APP_URL') . '/storage'),
+        // Anexos do modulo RAT. Servidos via URL publica: no bind mount usa o
+        // symlink public/anexos-rat -> ANEXOS_ROOT/RAT (ver 'links' abaixo);
+        // em dev puro usa o symlink storage/app/public; em producao Azure o
+        // url() retorna SAS assinado do blob.
+        'rat' => $azureOrLocal(
+            env('AZURE_STORAGE_CONTAINER_RAT', 'sdc-rat'),
+            'RAT',
+            'app/public',
+            'public',
+            env('APP_URL') . ($anexosRoot ? '/anexos-rat' : '/storage'),
+        ),
 
         // Artefatos gerados por jobs assincronos (exports CSV/XLSX/PDF).
         // Servido via App\Http\Controllers\Api\V1\TraceController::download.
         // Arquivos sao temporarios; podem ser limpos por job de retencao.
-        'exports' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_EXPORTS', 'sdc-exports'), 'app/exports'),
+        'exports' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_EXPORTS', 'sdc-exports'), 'EXPORTS', 'app/exports'),
 
         // Anexos do modulo TDAP (comprovantes de prorrogacao de cronograma).
-        'tdap' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_TDAP', 'sdc-tdap'), 'app/tdap'),
+        'tdap' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_TDAP', 'sdc-tdap'), 'TDAP', 'app/tdap'),
 
     ],
 
@@ -124,8 +147,14 @@ return [
     |
     */
 
-    'links' => [
+    'links' => array_filter([
         public_path('storage') => storage_path('app/public'),
-    ],
+        // RAT e o unico modulo com anexo servido por URL publica direta: no
+        // bind mount o binario sai de public/ e vai pro disco dedicado, entao
+        // o symlink expoe ANEXOS_ROOT/RAT em /anexos-rat (criado por
+        // `artisan storage:link`). Os demais modulos sao privados e servidos
+        // por rota autenticada — NAO ganham symlink.
+        public_path('anexos-rat') => $anexosRoot ? $anexosRoot . '/RAT' : null,
+    ]),
 
 ];

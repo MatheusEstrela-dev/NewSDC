@@ -8,6 +8,22 @@
 
 set -e
 
+# Anexos no bind mount (ANEXOS_ROOT): app e queue podem rodar com usuarios
+# diferentes (root/www-data). umask 002 mantem diretorios/arquivos novos
+# graveis pelo grupo (a raiz de cada modulo tem setgid www-data no host).
+umask 002
+
+# Guarda contra mount ausente: o fstab usa nofail, entao se o disco de anexos
+# nao montar no boot o host sobe com /mnt/newsdc_storage VAZIO e o Docker
+# bind-monta o diretorio vazio — o app gravaria no disco errado sem erro.
+# O marcador .sdc_storage_mounted existe so dentro do filesystem do disco.
+if [ -n "${ANEXOS_ROOT:-}" ] && [ ! -e "${ANEXOS_ROOT}/.sdc_storage_mounted" ]; then
+    echo "ERRO: ANEXOS_ROOT=${ANEXOS_ROOT} sem o marcador .sdc_storage_mounted."
+    echo "      O disco de anexos provavelmente nao esta montado no host (fstab nofail)."
+    echo "      Verifique: mount | grep newsdc_storage"
+    exit 1
+fi
+
 cd /var/www
 
 if [ ! -f composer.json ]; then

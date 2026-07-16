@@ -21,6 +21,12 @@ services:
     build:
       context: ..                            # raiz SDC/
       dockerfile: docker/swoole/Dockerfile
+      # Proxy corporativo no build (pecl/apk/composer). O compose NAO repassa
+      # o proxy do shell sozinho; com default vazio vira no-op fora da rede.
+      args:
+        http_proxy: ${http_proxy:-}
+        https_proxy: ${https_proxy:-}
+        no_proxy: ${no_proxy:-}
     image: newsdc-swoole-dev:latest
     container_name: newsdc_dev_app
     hostname: app
@@ -54,6 +60,11 @@ services:
       OCTANE_TASK_WORKERS: 4
       OCTANE_MAX_REQUESTS: 500
       DB_PERSISTENT: "false"
+
+      # Raiz dos anexos por modulo (bind mount do disco dedicado; ver volumes).
+      # filesystems.php reponta os disks pae/rat/compdec/tdap/exports para
+      # ANEXOS_ROOT/{MODULO} quando esta env existe.
+      ANEXOS_ROOT: /data/anexos
 
       # Em HTTP o cookie Secure nao e enviado pelo browser; sem isso o login web
       # quebra. config/session.php tem default true, entao sobrescrevemos aqui.
@@ -127,6 +138,11 @@ services:
       # Storage e logs visiveis no host
       - ../storage/app:/var/www/storage/app
       - ../storage/logs:/var/www/storage/logs
+      # Anexos por modulo (PAE/RAT/COMPDEC/TDAP/EXPORTS): bind mount UNICO do
+      # disco dedicado (1.2T, ext4). A separacao por modulo e subpasta logica
+      # via config/filesystems.php (ANEXOS_ROOT) — modulo novo = subpasta
+      # nova criada pelo Laravel, sem mexer aqui.
+      - /mnt/newsdc_storage:/data/anexos
 
     depends_on:
       db:
@@ -148,6 +164,11 @@ services:
     build:
       context: ..
       dockerfile: docker/swoole/Dockerfile
+      # Mesmo racional do app: proxy corporativo no build via env do shell.
+      args:
+        http_proxy: ${http_proxy:-}
+        https_proxy: ${https_proxy:-}
+        no_proxy: ${no_proxy:-}
     image: newsdc-swoole-dev:latest
     container_name: newsdc_dev_queue
     hostname: queue
@@ -164,6 +185,9 @@ services:
       AUTOLOAD_REFRESH_ON_BOOT: "true"
       # Mesma origem HTTP do app, para links gerados em jobs/emails baterem.
       APP_URL: http://localhost:8000
+
+      # Mesma raiz de anexos do app (jobs de export gravam no disk 'exports').
+      ANEXOS_ROOT: /data/anexos
 
       # Banco (compartilhado com app)
       DB_CONNECTION: pgsql
@@ -216,6 +240,8 @@ services:
       # Storage e logs visiveis no host
       - ../storage/app:/var/www/storage/app
       - ../storage/logs:/var/www/storage/logs
+      # Mesmo bind mount de anexos do app (ver comentario no servico app).
+      - /mnt/newsdc_storage:/data/anexos
 
     depends_on:
       db:
@@ -238,6 +264,7 @@ services:
       - sh
       - -c
       - >
+        umask 002 &&
         composer dump-autoload --optimize --no-interaction &&
         exec php artisan queue:work redis
         --queue=critical,high,default,webhooks,low

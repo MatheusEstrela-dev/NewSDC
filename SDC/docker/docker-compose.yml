@@ -16,6 +16,11 @@ services:
     build:
       context: ..
       dockerfile: docker/swoole/Dockerfile
+      # Proxy corporativo no build (pecl/apk/composer); no-op fora da rede.
+      args:
+        http_proxy: ${http_proxy:-}
+        https_proxy: ${https_proxy:-}
+        no_proxy: ${no_proxy:-}
     image: newsdc-swoole-app:latest
     container_name: newsdc_app
     hostname: app
@@ -31,6 +36,9 @@ services:
       - ../storage/logs:/var/www/storage/logs
       # Assets frontend (Vite build) montados para refletir builds locais
       - ../public/build:/var/www/public/build:ro
+      # Anexos por modulo: bind mount UNICO do disco dedicado; separacao por
+      # modulo e subpasta logica via filesystems.php (ANEXOS_ROOT).
+      - ${ANEXOS_HOST_PATH:-/mnt/newsdc_storage}:/data/anexos
 
     secrets:
       - db_password
@@ -83,6 +91,9 @@ services:
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
+
+      # Raiz dos anexos por modulo (bind mount; ver volumes)
+      ANEXOS_ROOT: /data/anexos
 
       # Mail (Mailhog)
       MAIL_MAILER: smtp
@@ -315,6 +326,9 @@ services:
       args:
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
+        http_proxy: ${http_proxy:-}
+        https_proxy: ${https_proxy:-}
+        no_proxy: ${no_proxy:-}
     container_name: newsdc_queue
     hostname: queue
     restart: unless-stopped
@@ -329,6 +343,8 @@ services:
       - ../:/var/www:cached
       - newsdc_vendor:/var/www/vendor
       - ./logs/queue:/var/www/storage/logs
+      # Mesmo bind mount de anexos do app (jobs de export gravam no disk 'exports')
+      - ${ANEXOS_HOST_PATH:-/mnt/newsdc_storage}:/data/anexos
 
     networks:
       - sdc_network
@@ -351,6 +367,7 @@ services:
       REDIS_PORT: 6379
       CACHE_DRIVER: redis
       QUEUE_CONNECTION: redis
+      ANEXOS_ROOT: /data/anexos
 
     healthcheck:
       test: [ "CMD", "supervisorctl", "status" ]

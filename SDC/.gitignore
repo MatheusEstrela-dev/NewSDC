@@ -4,6 +4,7 @@ replace.ps1
 /public/build
 /public/hot
 /public/storage
+/public/anexos-rat
 /storage/*.key
 /vendor
 .env

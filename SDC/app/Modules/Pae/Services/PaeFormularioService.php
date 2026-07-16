@@ -16,6 +16,7 @@ use App\Modules\Pae\Models\PaeFormConclusaoItem;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Models\PaeTimeline;
 use App\Modules\Shared\BaseService;
+use App\Support\Storage\AnexoPath;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -262,22 +263,12 @@ class PaeFormularioService extends BaseService
         $form->loadMissing('protocolo');
 
         if ($form->protocolo) {
-            $numero = $this->sanitizePathSegment(
+            return AnexoPath::protocolo(
                 $form->protocolo->num_protocolo ?: 'protocolo-' . $form->protocolo->id
             );
-
-            return 'protocolos/' . $numero . '/documentos/anexos';
         }
 
         return 'formularios/' . $form->id . '/documentos/anexos';
-    }
-
-    private function sanitizePathSegment(string $value): string
-    {
-        $segment = preg_replace('/[^\pL\pN._-]+/u', '-', trim($value));
-        $segment = trim((string) $segment, '-');
-
-        return $segment !== '' ? $segment : 'sem-numero';
     }
 
     private function syncApontamentos(PaeForm $form, array $itens): void

@@ -5,19 +5,24 @@ declare(strict_types=1);
 namespace App\Modules\Rat\Services;
 
 use App\Modules\Rat\Models\RatAnexo;
+use App\Support\Storage\AnexoPath;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class RatAttachmentService
 {
-    // Disco dedicado: local (symlink public) em dev, Azure Blob (sdc-rat) em
-    // producao, onde o FS do App Service e efemero. Mantem o prefixo "rat/{id}".
+    // Disco dedicado: bind mount (ANEXOS_ROOT/RAT) na VM, local (symlink
+    // public) em dev puro, Azure Blob (sdc-rat) no App Service (FS efemero).
+    // Nomenclatura canonica por protocolo (numero_bos), igual ao PAE.
     private string $disk = 'rat';
 
     public function store(object $rat, UploadedFile $file, string $tipo = 'documento'): RatAnexo
     {
-        $path = $file->store("rat/{$rat->id}/anexos", $this->disk);
+        $path = $file->store(
+            AnexoPath::protocolo($rat->numero_bos ?: 'rat-' . $rat->id),
+            $this->disk,
+        );
 
         return RatAnexo::create([
             'rat_id'        => $rat->id,
