@@ -49,7 +49,11 @@ pipeline {
         ENV_FILE        = '/opt/sdc/.env.onprem'
         // Health check via edge (Caddy) publicado no host da VM
         HEALTH_URL      = "${env.APP_HEALTH_URL ?: 'https://10.160.131.50/health'}"
-        DOCKER_BUILDKIT = '1'
+        // Builder LEGADO de proposito: o BuildKit precisa de upgrade h2c
+        // (/grpc) ou de exec no buildkitd, e nenhum dos dois atravessa o
+        // socket-proxy HAProxy. O builder classico usa apenas POST /build
+        // e a imagem ja nasce no daemon para o docker push do stage seguinte.
+        DOCKER_BUILDKIT = '0'
     }
 
     options {
@@ -412,12 +416,56 @@ def notify(String status, String message) {
         // O fluxo precisa postar attachments[0].content como Cartao Adaptavel
         // (nao interpolar o corpo em texto), senao o JSON aparece cru no canal.
         def teamsColor = (status == 'SUCCESS') ? 'Good' : (status in ['FAILURE', 'ROLLBACK']) ? 'Attention' : 'Warning'
-        def statusEmoji = (status == 'SUCCESS') ? '✅' : (status == 'ROLLBACK') ? '↩️' : (status == 'FAILURE') ? '❌' : '⚠️'
+        def statusTitle = (status == 'SUCCESS') ? '✅ Deploy Concluído'
+                        : (status == 'FAILURE') ? '❌ Falha na Execução'
+                        : (status == 'ROLLBACK') ? '↩️ Rollback Executado'
+                        : "⚠️ ${status}"
+        def statusFact = ((status == 'SUCCESS') ? 'SUCESSO' : (status == 'FAILURE') ? 'FALHA' : status) + " (Build #${env.BUILD_NUMBER})"
+        def shortCommit = (env.GIT_COMMIT ?: '-').take(7)
+        def safeMsg = message.replace('"', "'").replaceAll('[\\r\\n]+', ' ')
         sh(script: """
-            curl -sf -X POST '${teamsWebhook}' \\
-                -H 'Content-Type: application/json' \\
-                -d '{"type":"message","attachments":[{"contentType":"application/vnd.microsoft.card.adaptive","content":{"type":"AdaptiveCard","version":"1.4","msteams":{"width":"Full"},"body":[{"type":"TextBlock","size":"Large","weight":"Bolder","color":"${teamsColor}","wrap":true,"text":"${statusEmoji} SDC Deploy on-prem - ${status}"},{"type":"FactSet","facts":[{"title":"Build","value":"#${env.BUILD_NUMBER}"},{"title":"Branch","value":"${env.GIT_BRANCH ?: '-'}"},{"title":"Autor","value":"${env.GIT_AUTHOR ?: '-'}"},{"title":"Tag","value":"${env.IMAGE_TAG ?: '-'}"}]},{"type":"TextBlock","wrap":true,"isSubtle":true,"spacing":"Small","text":"${message}"}],"actions":[{"type":"Action.OpenUrl","title":"Abrir build no Jenkins","url":"${env.BUILD_URL}"}]}}]}' \\
-            || true
+            DATA=\$(date +'%d/%m/%Y às %H:%M')
+            cat > .teams-notify.json <<EOF
+{
+  "type": "message",
+  "attachments": [{
+    "contentType": "application/vnd.microsoft.card.adaptive",
+    "content": {
+      "type": "AdaptiveCard",
+      "\\\$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+      "version": "1.4",
+      "msteams": { "width": "Full" },
+      "body": [
+        {
+          "type": "Container",
+          "style": "emphasis",
+          "items": [
+            { "type": "TextBlock", "text": "🚀 Notificação de Deploy - NewSDC", "weight": "Bolder", "size": "Medium", "color": "Accent" },
+            { "type": "TextBlock", "text": "${statusTitle}", "weight": "Bolder", "size": "Large", "color": "${teamsColor}", "spacing": "None" }
+          ]
+        },
+        {
+          "type": "FactSet",
+          "spacing": "Medium",
+          "facts": [
+            { "title": "👤 Autor:", "value": "${env.GIT_AUTHOR ?: '-'}" },
+            { "title": "📌 Status:", "value": "${statusFact}" },
+            { "title": "🌿 Commit:", "value": "${env.GIT_BRANCH ?: '-'} (${shortCommit})" },
+            { "title": "📅 Data e Hora:", "value": "\$DATA" }
+          ]
+        },
+        { "type": "TextBlock", "text": "${safeMsg}", "wrap": true, "isSubtle": true, "spacing": "Medium" }
+      ],
+      "actions": [
+        { "type": "Action.OpenUrl", "title": "🔍 Abrir Logs no Jenkins", "url": "${env.BUILD_URL}console" },
+        { "type": "Action.OpenUrl", "title": "💻 Revisar Commit", "url": "https://github.com/MatheusEstrela-dev/NewSDC/commit/${env.GIT_COMMIT ?: ''}" }
+      ]
+    }
+  }]
+}
+EOF
+            curl -sf -X POST '${teamsWebhook}' -H 'Content-Type: application/json' -d @.teams-notify.json || true
+            rm -f .teams-notify.json
         """, returnStatus: true)
     }
 }
