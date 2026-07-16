@@ -150,6 +150,15 @@ pipeline {
                     steps {
                         dir('SDC') {
                             sh '''
+                                # O EnvVars do Jenkins e case-insensitive: de cada par
+                                # http_proxy/HTTP_PROXY so UMA variante sobrevive no env
+                                # do sh. Normaliza os dois cases antes do build.
+                                export HTTP_PROXY="${HTTP_PROXY:-$http_proxy}"
+                                export http_proxy="${http_proxy:-$HTTP_PROXY}"
+                                export HTTPS_PROXY="${HTTPS_PROXY:-$https_proxy}"
+                                export https_proxy="${https_proxy:-$HTTPS_PROXY}"
+                                export NO_PROXY="${NO_PROXY:-$no_proxy}"
+                                export no_proxy="${no_proxy:-$NO_PROXY}"
                                 docker build \
                                     --build-arg HTTP_PROXY --build-arg HTTPS_PROXY --build-arg NO_PROXY \
                                     --build-arg http_proxy --build-arg https_proxy --build-arg no_proxy \
@@ -166,6 +175,13 @@ pipeline {
                     steps {
                         dir('SDC') {
                             sh '''
+                                # Normaliza os dois cases de proxy (ver stage App)
+                                export HTTP_PROXY="${HTTP_PROXY:-$http_proxy}"
+                                export http_proxy="${http_proxy:-$HTTP_PROXY}"
+                                export HTTPS_PROXY="${HTTPS_PROXY:-$https_proxy}"
+                                export https_proxy="${https_proxy:-$HTTPS_PROXY}"
+                                export NO_PROXY="${NO_PROXY:-$no_proxy}"
+                                export no_proxy="${no_proxy:-$NO_PROXY}"
                                 docker build \
                                     --build-arg HTTP_PROXY --build-arg HTTPS_PROXY --build-arg NO_PROXY \
                                     --build-arg http_proxy --build-arg https_proxy --build-arg no_proxy \
@@ -192,6 +208,13 @@ pipeline {
                 stage('PHPStan') {
                     steps {
                         sh '''
+                            # Normaliza os dois cases de proxy (ver stage App)
+                            export HTTP_PROXY="${HTTP_PROXY:-$http_proxy}"
+                            export http_proxy="${http_proxy:-$HTTP_PROXY}"
+                            export HTTPS_PROXY="${HTTPS_PROXY:-$https_proxy}"
+                            export https_proxy="${https_proxy:-$HTTPS_PROXY}"
+                            export NO_PROXY="${NO_PROXY:-$no_proxy}"
+                            export no_proxy="${no_proxy:-$NO_PROXY}"
                             docker run --rm \
                                 -e HTTP_PROXY -e HTTPS_PROXY -e NO_PROXY \
                                 -e http_proxy -e https_proxy -e no_proxy \
@@ -207,6 +230,13 @@ pipeline {
                     when { expression { params.RUN_TESTS } }
                     steps {
                         sh '''
+                            # Normaliza os dois cases de proxy (ver stage App)
+                            export HTTP_PROXY="${HTTP_PROXY:-$http_proxy}"
+                            export http_proxy="${http_proxy:-$HTTP_PROXY}"
+                            export HTTPS_PROXY="${HTTPS_PROXY:-$https_proxy}"
+                            export https_proxy="${https_proxy:-$HTTPS_PROXY}"
+                            export NO_PROXY="${NO_PROXY:-$no_proxy}"
+                            export no_proxy="${no_proxy:-$NO_PROXY}"
                             docker run --rm \
                                 -e HTTP_PROXY -e HTTPS_PROXY -e NO_PROXY \
                                 -e http_proxy -e https_proxy -e no_proxy \
