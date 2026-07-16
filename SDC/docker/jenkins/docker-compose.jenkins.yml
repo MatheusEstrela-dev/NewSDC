@@ -16,13 +16,17 @@
 x-common-variables: &common-env
   TZ: America/Sao_Paulo
 
+# Os hosts internos (docker-proxy, registry, jenkins, IP da VM) sao anexados
+# SEMPRE, fora da interpolacao: o NO_PROXY do shell do host (/etc/environment)
+# tem precedencia sobre o --env-file e nao os contem - sem isso o docker CLI
+# manda a API interna (tcp://docker-proxy:2375) para o Squid da Prodemge.
 x-proxy-env: &proxy-env
   HTTP_PROXY: ${HTTP_PROXY:-http://proxy.prodemge.gov.br:8080}
   HTTPS_PROXY: ${HTTPS_PROXY:-http://proxy.prodemge.gov.br:8080}
-  NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,docker-proxy,registry,jenkins,10.160.131.50,10.0.0.0/8,.prodemge.gov.br,.mg.gov.br}
+  NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,.prodemge.gov.br,.mg.gov.br},docker-proxy,registry,jenkins,10.160.131.50,10.0.0.0/8
   http_proxy: ${HTTP_PROXY:-http://proxy.prodemge.gov.br:8080}
   https_proxy: ${HTTPS_PROXY:-http://proxy.prodemge.gov.br:8080}
-  no_proxy: ${NO_PROXY:-localhost,127.0.0.1,docker-proxy,registry,jenkins,10.160.131.50,10.0.0.0/8,.prodemge.gov.br,.mg.gov.br}
+  no_proxy: ${NO_PROXY:-localhost,127.0.0.1,.prodemge.gov.br,.mg.gov.br},docker-proxy,registry,jenkins,10.160.131.50,10.0.0.0/8
 
 x-logging: &default-logging
   driver: "json-file"

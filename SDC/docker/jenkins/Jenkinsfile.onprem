@@ -409,11 +409,14 @@ def notify(String status, String message) {
     if (teamsWebhook) {
         // Webhook via Power Automate (Workflows): exige Adaptive Card; o
         // MessageCard legado e aceito (202) mas o fluxo descarta sem postar.
+        // O fluxo precisa postar attachments[0].content como Cartao Adaptavel
+        // (nao interpolar o corpo em texto), senao o JSON aparece cru no canal.
         def teamsColor = (status == 'SUCCESS') ? 'Good' : (status in ['FAILURE', 'ROLLBACK']) ? 'Attention' : 'Warning'
+        def statusEmoji = (status == 'SUCCESS') ? '✅' : (status == 'ROLLBACK') ? '↩️' : (status == 'FAILURE') ? '❌' : '⚠️'
         sh(script: """
             curl -sf -X POST '${teamsWebhook}' \\
                 -H 'Content-Type: application/json' \\
-                -d '{"type":"message","attachments":[{"contentType":"application/vnd.microsoft.card.adaptive","content":{"type":"AdaptiveCard","version":"1.4","msteams":{"width":"Full"},"body":[{"type":"TextBlock","size":"Large","weight":"Bolder","color":"${teamsColor}","wrap":true,"text":"[${status}] Jenkins SDC on-prem - Build #${env.BUILD_NUMBER}"},{"type":"TextBlock","wrap":true,"text":"${message}"}]}}]}' \\
+                -d '{"type":"message","attachments":[{"contentType":"application/vnd.microsoft.card.adaptive","content":{"type":"AdaptiveCard","version":"1.4","msteams":{"width":"Full"},"body":[{"type":"TextBlock","size":"Large","weight":"Bolder","color":"${teamsColor}","wrap":true,"text":"${statusEmoji} SDC Deploy on-prem - ${status}"},{"type":"FactSet","facts":[{"title":"Build","value":"#${env.BUILD_NUMBER}"},{"title":"Branch","value":"${env.GIT_BRANCH ?: '-'}"},{"title":"Autor","value":"${env.GIT_AUTHOR ?: '-'}"},{"title":"Tag","value":"${env.IMAGE_TAG ?: '-'}"}]},{"type":"TextBlock","wrap":true,"isSubtle":true,"spacing":"Small","text":"${message}"}],"actions":[{"type":"Action.OpenUrl","title":"Abrir build no Jenkins","url":"${env.BUILD_URL}"}]}}]}' \\
             || true
         """, returnStatus: true)
     }
