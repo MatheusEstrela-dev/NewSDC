@@ -6,7 +6,10 @@ ARG GID=1000
 
 # O pecl/PEAR ignora as variaveis de ambiente de proxy; atras do proxy
 # corporativo o pecl install redis falha com "No releases available" sem isso.
-RUN if [ -n "$http_proxy" ]; then pear config-set http_proxy "$http_proxy" && pecl config-set http_proxy "$http_proxy"; fi
+# O "|| true" no pecl: config-set no canal pecl.php.net retorna erro espurio
+# ("failed, channel pecl.php.net") mesmo com o proxy valendo — o pecl le a
+# config do pear, que e a que importa.
+RUN if [ -n "$http_proxy" ]; then pear config-set http_proxy "$http_proxy" && { pecl config-set http_proxy "$http_proxy" || true; }; fi
 
 # Instalar dependencias do sistema e extensoes PHP usadas pelos jobs Laravel.
 RUN apk add --no-cache \

@@ -76,7 +76,10 @@ ARG SWOOLE_VERSION=6.2.1
 # (build com --build-arg http_proxy=...) o proxy precisa ir para a config do
 # PEAR *e* do pecl (configs separadas - so o pear config-set nao basta e o
 # pecl falha com "No releases available"). Sem proxy no build, no-op.
-RUN if [ -n "$http_proxy" ]; then pear config-set http_proxy "$http_proxy" && pecl config-set http_proxy "$http_proxy"; fi
+# O "|| true" no pecl: config-set no canal pecl.php.net retorna erro espurio
+# ("failed, channel pecl.php.net") mesmo com o proxy valendo — o pecl le a
+# config do pear, que e a que importa.
+RUN if [ -n "$http_proxy" ]; then pear config-set http_proxy "$http_proxy" && { pecl config-set http_proxy "$http_proxy" || true; }; fi
 RUN pecl install igbinary \
     && docker-php-ext-enable igbinary \
     && pecl install redis \
