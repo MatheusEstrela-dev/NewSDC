@@ -43,21 +43,27 @@ class PlanConController extends Controller
         ]);
     }
 
-    public function municipiosComPlano(): Response
+    public function municipiosComPlano(Request $request): Response
     {
-        $municipios = $this->planoService->getMunicipiosComPlano();
+        $filters = $request->only(['search']);
+        $resultado = $this->planoService->listMunicipiosComPlano(15, $filters);
 
         return Inertia::render('PlanCon/MunicipiosComPlano', [
-            'municipios' => $municipios,
+            'municipios' => $resultado['data'],
+            'pagination' => $resultado['pagination'],
+            'filters' => $filters,
         ]);
     }
 
-    public function municipiosSemPlano(): Response
+    public function municipiosSemPlano(Request $request): Response
     {
-        $municipios = $this->planoService->getMunicipiosSemPlano();
+        $filters = $request->only(['search']);
+        $resultado = $this->planoService->listMunicipiosSemPlano(15, $filters);
 
         return Inertia::render('PlanCon/MunicipiosSemPlano', [
-            'municipios' => $municipios,
+            'municipios' => $resultado['data'],
+            'pagination' => $resultado['pagination'],
+            'filters' => $filters,
         ]);
     }
 

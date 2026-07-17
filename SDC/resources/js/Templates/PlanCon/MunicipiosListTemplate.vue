@@ -139,7 +139,7 @@
         <button
           :disabled="currentPage === 1"
           class="p-2 rounded-lg border border-slate-600 text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          @click="currentPage--"
+          @click="goToPage(currentPage - 1)"
         >
           <ChevronLeftIcon class="w-5 h-5" />
         </button>
@@ -149,7 +149,7 @@
         <button
           :disabled="currentPage === totalPages"
           class="p-2 rounded-lg border border-slate-600 text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          @click="currentPage++"
+          @click="goToPage(currentPage + 1)"
         >
           <ChevronRightIcon class="w-5 h-5" />
         </button>
@@ -160,6 +160,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import {
@@ -203,13 +204,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  pagination: { type: Object, default: null },
+  filters: { type: Object, default: () => ({}) },
 });
 
-defineEmits(['export', 'view']);
+const emit = defineEmits(['export', 'view', 'filter']);
 
-const searchQuery = ref('');
-const currentPage = ref(1);
-const itemsPerPage = 15;
+const searchQuery = ref(props.filters?.search ?? '');
+const currentPage = computed(() => props.pagination?.current_page ?? 1);
+const totalPages = computed(() => props.pagination?.last_page ?? 1);
+let searchTimer;
 
 const filteredMunicipios = computed(() => {
   if (!searchQuery.value) {
@@ -222,16 +226,13 @@ const filteredMunicipios = computed(() => {
   );
 });
 
-const totalPages = computed(() => Math.ceil(filteredMunicipios.value.length / itemsPerPage));
+const paginatedMunicipios = computed(() => filteredMunicipios.value);
 
-const paginatedMunicipios = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  const end = start + itemsPerPage;
-  return filteredMunicipios.value.slice(start, end);
-});
+const goToPage = (page) => emit('filter', { ...props.filters, search: searchQuery.value || undefined, page });
 
 const handleSearch = () => {
-  currentPage.value = 1;
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => emit('filter', { search: searchQuery.value || undefined, page: 1 }), 300);
 };
 
 const getSituacaoClass = (situacao) => {

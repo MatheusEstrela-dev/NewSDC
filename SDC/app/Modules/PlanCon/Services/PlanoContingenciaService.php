@@ -82,9 +82,9 @@ class PlanoContingenciaService extends BaseService
         );
     }
 
-    public function listMunicipiosComPlano(int $perPage = 15): array
+    public function listMunicipiosComPlano(int $perPage = 15, array $filters = []): array
     {
-        $paginator = $this->getMunicipiosComPlano($perPage);
+        $paginator = $this->getMunicipiosComPlano($perPage, $filters);
 
         $dtos = collect($paginator->items())->map(function ($item) {
             return MunicipioDTO::fromArray([
@@ -101,16 +101,16 @@ class PlanoContingenciaService extends BaseService
             'data' => $dtos,
             'pagination' => [
                 'total' => $paginator->total(),
-                'perPage' => $paginator->perPage(),
-                'currentPage' => $paginator->currentPage(),
-                'lastPage' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
             ],
         ];
     }
 
-    public function listMunicipiosSemPlano(int $perPage = 15): array
+    public function listMunicipiosSemPlano(int $perPage = 15, array $filters = []): array
     {
-        $paginator = $this->getMunicipiosSemPlano($perPage);
+        $paginator = $this->getMunicipiosSemPlano($perPage, $filters);
 
         $dtos = collect($paginator->items())->map(function ($item) {
             return MunicipioDTO::fromArray([
@@ -127,9 +127,9 @@ class PlanoContingenciaService extends BaseService
             'data' => $dtos,
             'pagination' => [
                 'total' => $paginator->total(),
-                'perPage' => $paginator->perPage(),
-                'currentPage' => $paginator->currentPage(),
-                'lastPage' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
             ],
         ];
     }
@@ -297,7 +297,7 @@ class PlanoContingenciaService extends BaseService
         }
     }
 
-    public function getMunicipiosComPlano(int $perPage = 15): LengthAwarePaginator
+    public function getMunicipiosComPlano(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         if (!$this->tableExists()) {
             return $this->emptyPaginator($perPage);
@@ -321,7 +321,7 @@ class PlanoContingenciaService extends BaseService
         }
     }
 
-    public function getMunicipiosSemPlano(int $perPage = 15): LengthAwarePaginator
+    public function getMunicipiosSemPlano(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         if (!$this->tableExists()) {
             return $this->emptyPaginator($perPage);
