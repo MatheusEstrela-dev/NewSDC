@@ -24,6 +24,10 @@ use Throwable;
 
 class PaeFormularioService extends BaseService
 {
+    public function __construct(
+        private readonly PaeProtocoloService $protocoloService
+    ) {}
+
     public function findById(int $id): ?PaeForm
     {
         return PaeForm::with(['apontamentos', 'conclusao', 'anexos'])->find($id);
@@ -164,7 +168,7 @@ class PaeFormularioService extends BaseService
         }
 
         $protocolo = PaeProtocolo::create([
-            'num_protocolo'  => $this->gerarNumProtocolo(),
+            'num_protocolo'  => $this->protocoloService->gerarNumProtocolo(),
             'status'         => PaeProtocoloStatus::NOVO->value,
             'user_id'        => $user->id,
             'created_by'     => $user->id,
@@ -186,14 +190,6 @@ class PaeFormularioService extends BaseService
             'status'           => 'FINALIZADO',
             'updated_by'       => $user->id,
         ]);
-    }
-
-    private function gerarNumProtocolo(): string
-    {
-        $ano = now()->format('Y');
-        $ultimo = PaeProtocolo::whereYear('created_at', $ano)->count();
-        $seq = str_pad((string) ($ultimo + 1), 3, '0', STR_PAD_LEFT);
-        return now()->format('d.m.Y') . '.' . $seq;
     }
 
     public function formatForView(PaeForm $form): array
