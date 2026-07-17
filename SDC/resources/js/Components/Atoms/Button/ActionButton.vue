@@ -119,6 +119,7 @@ const ActionIcons = {
   print: markRaw(PrinterIcon),
   export: markRaw(DownloadIcon),
   duplicate: markRaw(DocumentDuplicateIcon),
+  relate: markRaw(DocumentDuplicateIcon),
   finalize: markRaw(CheckIcon),
   check: markRaw(CheckIcon),
   pdf: markRaw(DocumentTextIcon),
@@ -140,6 +141,7 @@ const ActionLabels = {
   print: 'Imprimir',
   export: 'Exportar',
   duplicate: 'Duplicar',
+  relate: 'Relacionar',
   finalize: 'Finalizar',
   check: 'Validar',
   pdf: 'PDF',
@@ -161,6 +163,7 @@ const ActionVariants = {
   print: 'info',
   export: 'secondary',
   duplicate: 'secondary',
+  relate: 'secondary',
   finalize: 'success',
   check: 'success',
   pdf: 'danger',
@@ -182,6 +185,7 @@ const ActionIconVariants = {
   print: 'info',
   export: 'secondary',
   duplicate: 'secondary',
+  relate: 'secondary',
   finalize: 'success',
   check: 'success',
   pdf: 'vibrant-danger',
@@ -206,6 +210,7 @@ const ActionMenuIconClasses = {
   print: 'text-cyan-500',
   export: 'text-cyan-500',
   duplicate: 'text-slate-400',
+  relate: 'text-indigo-400',
   finalize: 'text-emerald-500',
   check: 'text-emerald-400',
   pdf: 'text-[#ff4d00]',
@@ -223,6 +228,7 @@ const ACTION_ALIAS = {
   check: 'validar',
   archive: 'arquivar',
   assign: 'atribuir',
+  relate: 'create',
 };
 
 const UI_ONLY_ACTIONS = ['options', 'warning', 'notifications'];
@@ -235,7 +241,7 @@ const props = defineProps({
     default: null,
     validator: (value) => value === null || [
       'create', 'view', 'edit', 'delete', 'print',
-      'export', 'duplicate', 'finalize', 'attachments',
+      'export', 'duplicate', 'relate', 'finalize', 'attachments',
       'history', 'archive', 'upload', 'warning',
       'options', 'assign', 'notifications', 'check', 'pdf'
     ].includes(value),

@@ -35,6 +35,9 @@ return new class extends Migration
                 // Relacionamento com Empreendimentos
                 $table->foreignId('pae_empnto_id')->nullable()->constrained('pae_empntos')->onDelete('set null');
 
+                // Protocolo de origem (versionamento: 001 -> 002 -> ...)
+                $table->foreignId('protocolo_origem_id')->nullable()->constrained('pae_protocolos')->onDelete('set null');
+
                 $table->boolean('arquivado')->default(false);
                 $table->string('sei_numero', 100)->nullable();
                 

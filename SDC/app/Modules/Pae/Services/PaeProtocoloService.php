@@ -62,23 +62,36 @@ class PaeProtocoloService extends BaseService
 
     public function gerarNumProtocolo(): string
     {
-        $ano = now()->format('Y');
-        $protocolos = PaeProtocolo::whereYear('created_at', $ano)
-            ->pluck('num_protocolo');
-            
-        $maxSeq = 0;
-        foreach ($protocolos as $num) {
-            $parts = explode('.', $num);
-            if (count($parts) === 4) {
-                $seq = (int) $parts[3];
-                if ($seq > $maxSeq) {
-                    $maxSeq = $seq;
-                }
-            }
+        return DB::transaction(function () {
+            $this->travarSequencialProtocolo();
+
+            $hoje = now()->format('d.m.Y');
+
+            return sprintf('%s-%04d-001', $hoje, $this->proximoSequencialDoDia($hoje));
+        });
+    }
+
+    private function travarSequencialProtocolo(): void
+    {
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("SELECT pg_advisory_xact_lock(hashtext('pae_protocolo_seq'))");
         }
-        
-        $seqStr = str_pad((string) ($maxSeq + 1), 3, '0', STR_PAD_LEFT);
-        return now()->format('d.m.Y') . '.' . $seqStr;
+    }
+
+    private function proximoSequencialDoDia(string $hoje): int
+    {
+        $max = 0;
+
+        PaeProtocolo::withTrashed()
+            ->where('num_protocolo', 'like', $hoje . '-%')
+            ->pluck('num_protocolo')
+            ->each(function (string $num) use (&$max) {
+                if (preg_match('/^\d{2}\.\d{2}\.\d{4}-(\d{4})-\d{3}$/', $num, $m)) {
+                    $max = max($max, (int) $m[1]);
+                }
+            });
+
+        return $max + 1;
     }
 
     public function create(array $data, User $user): PaeProtocolo
@@ -207,6 +220,68 @@ class PaeProtocoloService extends BaseService
         $this->registrarTimeline($protocolo, 'atribuicao', $descricao, $user);
 
         return $protocolo->fresh();
+    }
+
+    public function relacionar(PaeProtocolo $base, User $user): PaeProtocolo
+    {
+        return DB::transaction(function () use ($base, $user) {
+            $this->travarSequencialProtocolo();
+
+            $prefixo = $this->prefixoVersionavel($base->num_protocolo);
+
+            $novo = PaeProtocolo::create([
+                'num_protocolo'       => sprintf('%s-%03d', $prefixo, $this->proximaVersao($prefixo)),
+                'status'              => PaeProtocoloStatus::NOVO->value,
+                'user_id'             => $user->id,
+                'created_by'          => $user->id,
+                'dt_entrada'          => now()->toDateString(),
+                'pae_empnto_id'       => $base->pae_empnto_id,
+                'empnto_search'       => $base->empnto_search,
+                'protocolo_origem_id' => $base->id,
+            ]);
+
+            $this->registrarTimeline(
+                $base,
+                'relacionamento',
+                "Versao {$novo->num_protocolo} criada a partir deste protocolo.",
+                $user
+            );
+            $this->registrarTimeline(
+                $novo,
+                'criacao',
+                "Protocolo criado como versao relacionada de {$base->num_protocolo}.",
+                $user
+            );
+
+            return $novo;
+        });
+    }
+
+    private function prefixoVersionavel(string $numProtocolo): string
+    {
+        if (preg_match('/^(\d{2}\.\d{2}\.\d{4}-\d{4})-\d{3}$/', $numProtocolo, $m)) {
+            return $m[1];
+        }
+
+        throw ValidationException::withMessages([
+            'protocolo' => 'Somente protocolos no formato dd.mm.aaaa-XXXX-VVV podem ser relacionados.',
+        ]);
+    }
+
+    private function proximaVersao(string $prefixo): int
+    {
+        $max = 0;
+
+        PaeProtocolo::withTrashed()
+            ->where('num_protocolo', 'like', $prefixo . '-%')
+            ->pluck('num_protocolo')
+            ->each(function (string $num) use (&$max) {
+                if (preg_match('/-(\d{3})$/', $num, $m)) {
+                    $max = max($max, (int) $m[1]);
+                }
+            });
+
+        return $max + 1;
     }
 
     public function delete(PaeProtocolo $paeProtocolo): void

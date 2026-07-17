@@ -28,6 +28,7 @@ class PaeProtocolo extends Model
         'created_by',
         'updated_by',
         'pae_empnto_id',
+        'protocolo_origem_id',
         'arquivado',
         'sei_numero',
         'dt_entrada',
@@ -64,6 +65,16 @@ class PaeProtocolo extends Model
     public function usuario(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function origem(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'protocolo_origem_id');
+    }
+
+    public function versoes(): HasMany
+    {
+        return $this->hasMany(self::class, 'protocolo_origem_id');
     }
 
     public function tramitacoes(): HasMany
