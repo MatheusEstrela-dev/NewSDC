@@ -402,7 +402,6 @@ async function confirmDelete() {
     const ax = window.axios || (await import('axios')).default;
     await ax.delete(route('rat.destroy', id), {
       headers: {
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
         'Accept': 'application/json',
       },
     });

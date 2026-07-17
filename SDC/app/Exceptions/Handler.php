@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -443,6 +444,13 @@ class Handler extends ExceptionHandler
             return 422;
         }
 
+        // CSRF expirado NAO e erro de servidor: o parent converte para 419 em
+        // prepareException, mas este caminho de API recebe a exception crua —
+        // sem este case, token velho vira um 500 enganoso (incidente POST /rat).
+        if ($e instanceof TokenMismatchException) {
+            return 419;
+        }
+
         if ($e instanceof CircuitBreakerOpenException) {
             return 503;
         }
@@ -469,6 +477,10 @@ class Handler extends ExceptionHandler
 
         if ($e instanceof AuthorizationException) {
             return 'Forbidden';
+        }
+
+        if ($e instanceof TokenMismatchException) {
+            return 'Sessão expirada. Recarregue a página e tente novamente.';
         }
 
         if ($e instanceof CircuitBreakerOpenException) {

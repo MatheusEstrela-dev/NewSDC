@@ -171,8 +171,10 @@ async function salvarComAnexos(formData, successMessage = 'RAT salvo com sucesso
   };
 
   const ax = window.axios || (await import('axios')).default;
-  const csrf = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
-  const headers = { Accept: 'application/json', 'X-CSRF-TOKEN': csrf };
+  // CSRF: NAO enviar X-CSRF-TOKEN manual da <meta> — em SPA a meta fica stale
+  // apos o login regenerar a sessao (419 no primeiro save) e tem precedencia
+  // sobre o X-XSRF-TOKEN fresco que o axios ja manda sozinho via cookie.
+  const headers = { Accept: 'application/json' };
 
   try {
     let currentId = ratData.id;
@@ -200,7 +202,7 @@ async function salvarComAnexos(formData, successMessage = 'RAT salvo com sucesso
         await ax.post(
           route('rat.ocorrencias.attachments.store', { ocorrencia: currentId }),
           form,
-          { headers: { 'Content-Type': 'multipart/form-data', 'X-CSRF-TOKEN': csrf } },
+          { headers: { 'Content-Type': 'multipart/form-data' } },
         );
       }
       pendingAttachmentFiles.value = [];
@@ -219,12 +221,11 @@ async function handleFinalizar() {
     return;
   }
   const ax = window.axios || (await import('axios')).default;
-  const csrf = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
   try {
     await ax.patch(
       route('rat.finalize', ratData.id),
       {},
-      { headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf } },
+      { headers: { Accept: 'application/json' } },
     );
     toast('RAT finalizado com sucesso!', 'success');
     router.visit(route('rat.index'));
