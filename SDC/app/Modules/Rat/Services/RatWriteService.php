@@ -150,13 +150,12 @@ class RatWriteService
         $ocorrencia = RatOcorrencia::findOrFail($id);
         abort_if($ocorrencia->status === 1, 422, 'RAT já está finalizado.');
 
-        // Só é possível finalizar após o prazo de edição de 48h
-        if ($ocorrencia->prazo_edicao && $ocorrencia->prazo_edicao->isFuture()) {
-            $horas = (int) now()->diffInHours($ocorrencia->prazo_edicao, false) * -1;
-            $restantes = $ocorrencia->prazo_edicao->diffForHumans(now(), true);
-            abort(422, "O RAT ainda está dentro do prazo de edição. Finalização liberada em {$restantes}.");
-        }
-
+        // Finalizar manualmente e permitido a qualquer momento: e o autor
+        // abrindo mao do restante da janela de edicao de 48h. O prazo_edicao
+        // existe para BLOQUEAR edicao apos vencer (update()) e para o
+        // fechamento automatico (rat:close-expired) — nao para impedir o
+        // fechamento manual antecipado (com o bloqueio, ninguem finalizava:
+        // antes das 48h a regra proibia e depois o cron ja tinha fechado).
         $ocorrencia->update([
             'status'     => 1,
             'updated_by' => Auth::id(),

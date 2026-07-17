@@ -240,8 +240,8 @@ async function saveAndAdvance(tabPayload, nextTab) {
   }
 
   const axios   = window.axios || (await import('axios')).default;
-  const csrf    = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
-  const headers = { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' };
+  // CSRF via cookie X-XSRF-TOKEN automatico do axios (a <meta> fica stale em SPA).
+  const headers = { Accept: 'application/json' };
 
   loading.value = true;
   try {
@@ -274,11 +274,10 @@ async function handleFinalize() {
     return;
   }
   const axios  = window.axios || (await import('axios')).default;
-  const csrf   = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
   loading.value = true;
   try {
     await axios.patch(route('rat.finalize', ratId), {}, {
-      headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' },
+      headers: { Accept: 'application/json' },
     });
     toast('RAT finalizado com sucesso.', 'success', { noIcon: true });
     router.visit(route('rat.index'));
