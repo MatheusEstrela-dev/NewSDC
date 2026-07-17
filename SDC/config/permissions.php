@@ -349,6 +349,14 @@ return [
                 'desvincular' => 'compdec.usuarios.desvincular',
             ],
         ],
+        'PLANCON' => [
+            'Planos' => [
+                'view'     => 'plancon.view',
+                'upload'   => 'plancon.upload',
+                'download' => 'plancon.download',
+                'delete'   => 'plancon.delete',
+            ],
+        ],
         'CISTERNAS' => [
             'Cisternas' => [
                 'view'   => 'cisternas.view',
@@ -439,6 +447,7 @@ return [
             'inventario.*',
             'estoque.*',
             'pmda.*',
+            'plancon.*',
         ],
         'manager' => [
             // PAE - CRUD completo exceto delete
@@ -538,6 +547,10 @@ return [
             'cisternas.create',
             'cisternas.edit',
             'cisternas.export',
+            // PlanCon - upload e download de planos, sem delete
+            'plancon.view',
+            'plancon.upload',
+            'plancon.download',
             // COMPDEC - sem delete e sem aprovar
             'compdec.orgaos.view',
             'compdec.orgaos.create',

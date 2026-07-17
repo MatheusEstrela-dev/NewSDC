@@ -23,7 +23,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { usePermissions } from '@/Composables/usePermissions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PlanConIndexTemplate from '@/Templates/PlanCon/PlanConIndexTemplate.vue';
@@ -75,7 +75,13 @@ const handleExport = () => {
   window.location.href = route('plancon.export');
 };
 
-const handleUpload = (file) => {
-  showUploadModal.value = false;
+const handleUpload = ({ formData }) => {
+  router.post(route('plancon.planos.store'), formData, {
+    forceFormData: true,
+    preserveScroll: true,
+    onFinish: () => {
+      showUploadModal.value = false;
+    },
+  });
 };
 </script>
