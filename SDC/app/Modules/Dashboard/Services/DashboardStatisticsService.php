@@ -13,6 +13,7 @@ use App\Modules\Decretacoes\Services\ProcessoStatsService;
 use App\Modules\Demandas\Models\Task;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeProtocolo;
+use App\Modules\PlanCon\Services\PlanoContingenciaService;
 use App\Support\Concurrency\Concurrency;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
@@ -39,6 +40,7 @@ class DashboardStatisticsService
     public function __construct(
         private readonly ProcessoStatsService             $processoStats,
         private readonly AjudaHumanitariaStatsService    $ahStats,
+        private readonly PlanoContingenciaService        $planConStats,
     ) {}
 
     public function getStats(): DashboardStatsDTO
@@ -95,6 +97,7 @@ class DashboardStatisticsService
             barData6M:          $partes['bar6'],
             barData12M:         $partes['bar12'],
             sparklines:         $partes['sparklines'],
+            planConStats:       $this->planConStats->getStatistics(),
         );
     }
 
@@ -342,6 +345,7 @@ class DashboardStatisticsService
             barData6M:          $this->emptyMonthlyData(6),
             barData12M:         $this->emptyMonthlyData(12),
             sparklines:         [],
+            planConStats:       $this->planConStats->getStatistics(),
         );
     }
 

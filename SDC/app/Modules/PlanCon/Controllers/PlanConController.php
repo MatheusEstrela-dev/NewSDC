@@ -10,6 +10,7 @@ use App\Modules\PlanCon\Requests\UploadPlanoRequest;
 use App\Modules\PlanCon\Services\PlanoContingenciaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -29,7 +30,7 @@ class PlanConController extends Controller
 
         return Inertia::render('PlanCon/PlanConIndex', [
             'planos' => $planos,
-            'statistics' => $statistics,
+            'stats' => $statistics,
             'filters' => $filters,
         ]);
     }
@@ -69,16 +70,35 @@ class PlanConController extends Controller
 
     public function store(UploadPlanoRequest $request): RedirectResponse
     {
+        $user = $request->user();
+        $user->loadMissing('orgaoPrincipal');
+
+        $orgao = $user->orgaoPrincipal
+            ?? $user->orgaos()->wherePivot('is_principal', true)->first()
+            ?? ($user->orgaos()->count() === 1 ? $user->orgaos()->first() : null);
+
+        if (! $orgao?->municipio_id) {
+            return redirect()
+                ->route('plancon.index')
+                ->with('error', 'Seu usuario nao possui um municipio vinculado ao orgao principal. Contate o administrador.');
+        }
+
         $resultado = $this->planoService->uploadPlanos(
             $request->file('files', []),
-            $request->integer('municipio_id') ?: null
+            (int) $orgao->municipio_id
         );
+
+        Cache::forget('dashboard.stats.full');
 
         $mensagem = sprintf(
             '%d plano(s) criado(s), %d atualizado(s).',
             $resultado['criados'],
             $resultado['atualizados']
         );
+
+        if ($resultado['erros']) {
+            $mensagem .= ' ' . implode(' ', array_values($resultado['erros']));
+        }
 
         return redirect()
             ->route('plancon.index')

@@ -19,6 +19,7 @@ class DashboardStatsDTO
         public readonly array $barData6M,
         public readonly array $barData12M,
         public readonly array $sparklines,
+        public readonly array $planConStats,
     ) {}
 
     public function toArray(): array
@@ -36,6 +37,7 @@ class DashboardStatsDTO
             'barData6M'          => $this->barData6M,
             'barData12M'         => $this->barData12M,
             'sparklines'         => $this->sparklines,
+            'planConStats'       => $this->planConStats,
         ];
     }
 }

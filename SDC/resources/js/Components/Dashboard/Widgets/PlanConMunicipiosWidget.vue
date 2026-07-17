@@ -84,12 +84,13 @@ import { ref, computed } from 'vue';
 
 const hoveredIndex = ref(null);
 
-const stats = {
-  totalMunicipios: 853,
-  municipiosComPlano: 729,
-  municipiosSemPlano: 124,
-  percentualComPlano: 85.5,
-};
+const props = defineProps({
+  stats: {
+    type: Object,
+    default: () => ({ totalMunicipios: 0, municipiosComPlano: 0, municipiosSemPlano: 0, percentualComPlano: 0 }),
+  },
+});
+const stats = props.stats;
 
 const segments = computed(() => {
   const radius = 40;

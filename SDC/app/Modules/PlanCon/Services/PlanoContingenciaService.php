@@ -22,7 +22,6 @@ use Throwable;
 
 class PlanoContingenciaService extends BaseService
 {
-    private const TOTAL_MUNICIPIOS_MG = 853;
 
     private const DISK = 'plancon';
 
@@ -242,6 +241,10 @@ class PlanoContingenciaService extends BaseService
 
     private function resolveMunicipio(string $nomeArquivo, ?int $municipioId): ?Municipio
     {
+        if ($municipioId) {
+            return Municipio::find($municipioId);
+        }
+
         if (preg_match('/^(\d{7})/', $nomeArquivo, $matches)) {
             $porIbge = Municipio::where('codigo_ibge', $matches[1])->first();
 
@@ -250,15 +253,15 @@ class PlanoContingenciaService extends BaseService
             }
         }
 
-        return $municipioId ? Municipio::find($municipioId) : null;
+        return null;
     }
 
     private function calculateStatistics(): array
     {
-        $totalMunicipios = self::TOTAL_MUNICIPIOS_MG;
+        $totalMunicipios = Municipio::query()->where('uf', 'MG')->count();
 
         if (!$this->tableExists()) {
-            return $this->getMockStatistics();
+            return $this->emptyStatistics($totalMunicipios);
         }
 
         try {
@@ -293,7 +296,9 @@ class PlanoContingenciaService extends BaseService
                 'percentualRegulares' => $percentualRegulares,
             ];
         } catch (\Exception $e) {
-            return $this->getMockStatistics();
+            report($e);
+
+            return $this->emptyStatistics($totalMunicipios);
         }
     }
 
@@ -358,17 +363,17 @@ class PlanoContingenciaService extends BaseService
         return new Paginator([], 0, $perPage, 1);
     }
 
-    private function getMockStatistics(): array
+    private function emptyStatistics(int $totalMunicipios): array
     {
         return [
-            'totalMunicipios' => self::TOTAL_MUNICIPIOS_MG,
-            'municipiosComPlano' => 729,
-            'municipiosSemPlano' => 124,
-            'percentualComPlano' => 85.5,
-            'totalPlanos' => 729,
-            'planosRegulares' => 714,
-            'planosIrregulares' => 15,
-            'percentualRegulares' => 97.9,
+            'totalMunicipios' => $totalMunicipios,
+            'municipiosComPlano' => 0,
+            'municipiosSemPlano' => $totalMunicipios,
+            'percentualComPlano' => 0.0,
+            'totalPlanos' => 0,
+            'planosRegulares' => 0,
+            'planosIrregulares' => 0,
+            'percentualRegulares' => 0.0,
         ];
     }
 }

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch } from 'vue';
 import { XMarkIcon, CloudArrowUpIcon, DocumentIcon, PhotoIcon, TrashIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -146,33 +146,17 @@ const openFileDialog = () => {
           class="relative w-full max-w-xl overflow-hidden rounded-[2rem] shadow-2xl"
           style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08);"
         >
-          <div class="h-1.5 flex w-full">
-            <div class="h-full flex-1 bg-slate-900"></div>
-            <div class="h-full flex-1 bg-blue-800"></div>
-            <div class="h-full flex-1 bg-blue-600"></div>
-            <div class="h-full flex-1 bg-cyan-400"></div>
-            <div class="h-full flex-1 bg-blue-600"></div>
-            <div class="h-full flex-1 bg-blue-800"></div>
-            <div class="h-full flex-1 bg-slate-900"></div>
-          </div>
-
           <div class="p-8">
-            <header class="mb-8 flex justify-between items-start">
-              <div>
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee] animate-pulse"></span>
-                  <span class="text-cyan-400 text-[10px] font-black uppercase tracking-[0.3em]">Sincronizacao Ativa</span>
-                </div>
-                <h1 class="text-2xl font-bold text-white tracking-tight">Central de Upload</h1>
-                <p class="text-slate-400 text-sm mt-1">{{ moduleName }}</p>
-              </div>
+            <div class="mb-4 flex justify-end">
               <button
                 @click="close"
                 class="p-2.5 bg-white/5 rounded-xl border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                aria-label="Fechar"
               >
                 <XMarkIcon class="w-5 h-5" />
               </button>
-            </header>
+            </div>
+
 
             <div
               @dragover.prevent="isDragging = true"
@@ -295,7 +279,7 @@ const openFileDialog = () => {
                 :disabled="files.length === 0 || isUploading"
                 class="flex-1 py-4 rounded-xl font-black text-xs tracking-[0.15em] uppercase flex items-center justify-center gap-2 transition-all"
                 :class="files.length > 0 && !isUploading
-                  ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_25px_rgba(6,182,212,0.4)] hover:shadow-[0_0_40px_rgba(6,182,212,0.6)] hover:-translate-y-0.5 active:translate-y-0'
+                  ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:-translate-y-0.5 active:translate-y-0'
                   : 'bg-slate-800 text-slate-500 cursor-not-allowed'"
               >
                 <svg v-if="isUploading" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">

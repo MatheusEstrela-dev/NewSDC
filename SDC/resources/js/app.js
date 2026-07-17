@@ -8,6 +8,33 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { startLoading, stopLoading } from '@/Composables/usePageLoading';
+const recoverFromStaleBuild = async () => {
+    const recoveryKey = 'sdc-build-recovery';
+    if (sessionStorage.getItem(recoveryKey)) return;
+
+    sessionStorage.setItem(recoveryKey, '1');
+    try {
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(registration => registration.unregister()));
+        }
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(key => caches.delete(key)));
+        }
+    } catch (_) {}
+
+    window.location.reload();
+};
+
+// Vite emits this event when an old page references a chunk removed by a new build.
+window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault();
+    recoverFromStaleBuild();
+});
+
+// Clear the loop guard after the current build has loaded successfully.
+window.addEventListener('load', () => sessionStorage.removeItem('sdc-build-recovery'), { once: true });
 
 const isSamePagePath = (url) => {
     if (!url || typeof window === 'undefined') return false;

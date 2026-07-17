@@ -84,12 +84,13 @@ import { ref, computed } from 'vue';
 
 const hoveredIndex = ref(null);
 
-const stats = {
-  totalPlanos: 729,
-  planosRegulares: 714,
-  planosIrregulares: 15,
-  percentualRegulares: 97.9,
-};
+const props = defineProps({
+  stats: {
+    type: Object,
+    default: () => ({ totalPlanos: 0, planosRegulares: 0, planosIrregulares: 0, percentualRegulares: 0 }),
+  },
+});
+const stats = props.stats;
 
 const segments = computed(() => {
   const radius = 40;

@@ -232,6 +232,7 @@ const props = defineProps({
     barData6M:          { type: Array,  default: () => [] },
     barData12M:         { type: Array,  default: () => [] },
     sparklines:         { type: Array,  default: () => [] },
+    planConStats:       { type: Object, default: () => ({ totalMunicipios: 0, municipiosComPlano: 0, municipiosSemPlano: 0, percentualComPlano: 0, totalPlanos: 0, planosRegulares: 0, planosIrregulares: 0, percentualRegulares: 0 }) },
 });
 
 const currentYear = ref(new Date().getFullYear());
@@ -366,12 +367,14 @@ const widgetItems = ref([
     {
         id: 'plancon-municipios',
         component: markRaw(PlanConMunicipiosWidget),
-        colSpan: 'col-span-1 lg:col-span-6'
+        colSpan: 'col-span-1 lg:col-span-6',
+        props: { stats: props.planConStats }
     },
     {
         id: 'plancon-situacao',
         component: markRaw(PlanConSituacaoWidget),
-        colSpan: 'col-span-1 lg:col-span-6'
+        colSpan: 'col-span-1 lg:col-span-6',
+        props: { stats: props.planConStats }
     },
 ]);
 

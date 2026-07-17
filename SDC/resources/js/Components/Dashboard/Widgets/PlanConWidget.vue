@@ -98,16 +98,22 @@ import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { ChevronRightIcon } from '@heroicons/vue/24/outline';
 
-const stats = {
-  totalMunicipios: 853,
-  municipiosComPlano: 729,
-  municipiosSemPlano: 124,
-  percentualComPlano: 85.5,
-  totalPlanos: 729,
-  planosRegulares: 714,
-  planosIrregulares: 15,
-  percentualRegulares: 97.9,
-};
+const props = defineProps({
+  stats: {
+    type: Object,
+    default: () => ({
+      totalMunicipios: 0,
+      municipiosComPlano: 0,
+      municipiosSemPlano: 0,
+      percentualComPlano: 0,
+      totalPlanos: 0,
+      planosRegulares: 0,
+      planosIrregulares: 0,
+      percentualRegulares: 0,
+    }),
+  },
+});
+const stats = props.stats;
 
 const municipiosSegments = computed(() => {
   const radius = 40;

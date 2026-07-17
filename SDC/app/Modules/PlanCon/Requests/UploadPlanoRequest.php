@@ -21,7 +21,6 @@ class UploadPlanoRequest extends FormRequest
         return [
             'files' => ['required', 'array', 'min:1'],
             'files.*' => ['required', 'file', 'mimes:pdf', 'max:51200'],
-            'municipio_id' => ['nullable', 'integer', 'exists:municipios,id'],
         ];
     }
 
@@ -35,7 +34,6 @@ class UploadPlanoRequest extends FormRequest
             'files.*.file' => 'O plano precisa ser um arquivo valido.',
             'files.*.mimes' => 'O plano de contingencia deve ser um PDF.',
             'files.*.max' => 'Cada arquivo deve ter no maximo 50 MB.',
-            'municipio_id.exists' => 'Municipio nao encontrado.',
         ];
     }
 }
