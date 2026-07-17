@@ -4,19 +4,27 @@ declare(strict_types=1);
 
 namespace App\Modules\PlanCon\Services;
 
+use App\Models\Municipio;
 use App\Modules\PlanCon\DTOs\MunicipioDTO;
 use App\Modules\PlanCon\DTOs\PlanConStatsDTO;
 use App\Modules\PlanCon\Enums\SituacaoPlano;
 use App\Modules\PlanCon\Models\PlanoContingencia;
 use App\Modules\Shared\BaseService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class PlanoContingenciaService extends BaseService
 {
     private const TOTAL_MUNICIPIOS_MG = 853;
+
+    private const DISK = 'plancon';
 
     public function find(int $id): ?PlanoContingencia
     {
@@ -144,6 +152,107 @@ class PlanoContingenciaService extends BaseService
         return PlanoContingencia::destroy($id) > 0;
     }
 
+    /**
+     * Upload em massa de planos (PDF). O municipio de cada arquivo e resolvido
+     * pelo prefixo de codigo IBGE no nome (ex.: 3106200_plano.pdf) ou, como
+     * fallback, pelo municipio_id informado no request.
+     *
+     * @param UploadedFile[] $arquivos
+     * @return array{criados: int, atualizados: int, erros: array<string, string>}
+     */
+    public function uploadPlanos(array $arquivos, ?int $municipioId = null): array
+    {
+        $resultado = ['criados' => 0, 'atualizados' => 0, 'erros' => []];
+
+        foreach ($arquivos as $arquivo) {
+            $nomeOriginal = $arquivo->getClientOriginalName();
+            $municipio = $this->resolveMunicipio($nomeOriginal, $municipioId);
+
+            if (! $municipio) {
+                $resultado['erros'][$nomeOriginal] = 'Municipio nao identificado: prefixe o arquivo com o codigo IBGE ou informe o municipio.';
+
+                continue;
+            }
+
+            try {
+                $atualizado = $this->storePlano($municipio, $arquivo);
+                $resultado[$atualizado ? 'atualizados' : 'criados']++;
+            } catch (Throwable $e) {
+                $resultado['erros'][$nomeOriginal] = 'Falha ao gravar o arquivo.';
+                report($e);
+            }
+        }
+
+        return $resultado;
+    }
+
+    public function downloadPlano(PlanoContingencia $plano): StreamedResponse
+    {
+        abort_unless(
+            $plano->arquivo_url && Storage::disk(self::DISK)->exists($plano->arquivo_url),
+            404
+        );
+
+        return Storage::disk(self::DISK)->download($plano->arquivo_url, $plano->nome);
+    }
+
+    /**
+     * Grava o PDF no disk e cria/atualiza o plano do municipio.
+     * Retorna true quando um plano existente foi substituido.
+     */
+    private function storePlano(Municipio $municipio, UploadedFile $arquivo): bool
+    {
+        $nomeArquivo = (string) Str::uuid() . '.pdf';
+        $path = null;
+
+        try {
+            $path = $arquivo->storeAs((string) $municipio->id, $nomeArquivo, self::DISK);
+
+            $plano = PlanoContingencia::where('municipio_id', $municipio->id)->first();
+            $pathAnterior = $plano?->arquivo_url;
+
+            if ($plano) {
+                $plano->update([
+                    'nome' => $arquivo->getClientOriginalName(),
+                    'arquivo_url' => $path,
+                    'situacao' => SituacaoPlano::REGULAR,
+                ]);
+            } else {
+                PlanoContingencia::create([
+                    'municipio_id' => $municipio->id,
+                    'nome' => $arquivo->getClientOriginalName(),
+                    'arquivo_url' => $path,
+                    'situacao' => SituacaoPlano::REGULAR,
+                ]);
+            }
+
+            if ($pathAnterior && $pathAnterior !== $path) {
+                Storage::disk(self::DISK)->delete($pathAnterior);
+            }
+
+            return $plano !== null;
+        } catch (Throwable $e) {
+            if ($path) {
+                Storage::disk(self::DISK)->delete($path);
+            }
+
+            throw $e;
+        }
+    }
+
+    private function resolveMunicipio(string $nomeArquivo, ?int $municipioId): ?Municipio
+    {
+        if (preg_match('/^(\d{7})/', $nomeArquivo, $matches)) {
+            $porIbge = Municipio::where('codigo_ibge', $matches[1])->first();
+
+            if ($porIbge) {
+                return $porIbge;
+            }
+        }
+
+        return $municipioId ? Municipio::find($municipioId) : null;
+    }
+
     private function calculateStatistics(): array
     {
         $totalMunicipios = self::TOTAL_MUNICIPIOS_MG;
@@ -188,7 +297,7 @@ class PlanoContingenciaService extends BaseService
         }
     }
 
-    private function getMunicipiosComPlano(int $perPage = 15): LengthAwarePaginator
+    public function getMunicipiosComPlano(int $perPage = 15): LengthAwarePaginator
     {
         if (!$this->tableExists()) {
             return $this->emptyPaginator($perPage);
@@ -212,7 +321,7 @@ class PlanoContingenciaService extends BaseService
         }
     }
 
-    private function getMunicipiosSemPlano(int $perPage = 15): LengthAwarePaginator
+    public function getMunicipiosSemPlano(int $perPage = 15): LengthAwarePaginator
     {
         if (!$this->tableExists()) {
             return $this->emptyPaginator($perPage);
