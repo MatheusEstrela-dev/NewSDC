@@ -19,6 +19,7 @@ use App\Modules\Shared\BaseService;
 use App\Support\Storage\AnexoPath;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
@@ -58,17 +59,23 @@ class PaeFormularioService extends BaseService
 
     public function updateObjetivoContexto(PaeForm $form, PaeFormObjetivoDTO $dto): void
     {
+        $this->assertAbasLiberadas($form);
+
         $form->update($dto->toArray());
     }
 
     public function updateApontamentos(PaeForm $form, array $itens, User $user): void
     {
+        $this->assertAbasLiberadas($form);
+
         $this->syncApontamentos($form, $itens);
         $form->update(['updated_by' => $user->id]);
     }
 
     public function updateConclusao(PaeForm $form, array $itens, User $user): void
     {
+        $this->assertAbasLiberadas($form);
+
         $this->syncConclusao($form, $itens);
         $form->update(['updated_by' => $user->id]);
     }
@@ -155,6 +162,8 @@ class PaeFormularioService extends BaseService
 
     public function finalizar(PaeForm $form, User $user): void
     {
+        $this->assertAbasLiberadas($form);
+
         if ($form->pae_protocolo_id) {
             $form->update([
                 'status'     => 'FINALIZADO',
@@ -236,6 +245,21 @@ class PaeFormularioService extends BaseService
     private function ensureAnexoBelongsToForm(PaeForm $form, PaeFormAnexo $anexo): void
     {
         abort_unless((int) $anexo->pae_form_id === (int) $form->id, 404);
+    }
+
+    public function assertAbasLiberadas(PaeForm $form): void
+    {
+        if (! $form->pae_protocolo_id) {
+            return; // fluxo avulso de criacao de formulario segue liberado
+        }
+
+        $form->loadMissing('protocolo');
+
+        if (! $form->protocolo?->analista_atual_id) {
+            throw ValidationException::withMessages([
+                'protocolo' => 'Delegue o protocolo a um analista antes de editar esta secao.',
+            ]);
+        }
     }
 
     private function formatAnexos($anexos): array

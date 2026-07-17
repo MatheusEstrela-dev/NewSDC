@@ -95,4 +95,27 @@ class PaeProtocolo extends Model
     {
         return $query->where('status', $status->value);
     }
+
+    public function getAnaliseStatusAttribute(): ?string
+    {
+        $concluida = in_array($this->status, [
+            PaeProtocoloStatus::APROVADO,
+            PaeProtocoloStatus::REPROVADO,
+            PaeProtocoloStatus::CCPAE,
+            PaeProtocoloStatus::ATIVO_3_ANOS,
+            PaeProtocoloStatus::REVOGADO,
+        ], true);
+
+        if ($concluida) {
+            return 'concluida';
+        }
+
+        $emAndamento = $this->analista_atual_id
+            && in_array($this->status, [
+                PaeProtocoloStatus::NOTIFICACAO,
+                PaeProtocoloStatus::ANALISE,
+            ], true);
+
+        return $emAndamento ? 'em_andamento' : null;
+    }
 }
