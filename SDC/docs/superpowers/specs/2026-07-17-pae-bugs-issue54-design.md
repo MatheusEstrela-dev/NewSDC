@@ -45,9 +45,9 @@
   - retorna `dd.mm.aaaa-XXXX-001`.
 - Novo método `relacionar(PaeProtocolo $base, User $user): PaeProtocolo`:
   - deriva prefixo `dd.mm.aaaa-XXXX` do protocolo base e incrementa o maior sufixo existente (`002`, `003`, ...);
-  - novo protocolo nasce com status `NOVO`, herda `pae_empnto_id`/`empnto_search`, referencia o pai via `protocolo_pai_id`;
+  - novo protocolo nasce com status `NOVO`, herda `pae_empnto_id`/`empnto_search`, referencia o pai via `protocolo_origem_id`;
   - timeline nos dois protocolos (pai: "versão NNN criada"; filho: "criado a partir de <num do pai>").
-- **Schema:** coluna `protocolo_pai_id` (nullable, FK para `pae_protocolos.id`) e `unique` em `num_protocolo` (se ainda não houver), **consolidados na migration principal** `2026_02_12_130000_create_pae_protocolos_table.php` (regra 9 do usuário).
+- **Schema:** coluna `protocolo_origem_id` (nullable, FK para `pae_protocolos.id`) e `unique` em `num_protocolo` (se ainda não houver), **consolidados na migration principal** `2026_02_12_130000_create_pae_protocolos_table.php` (regra 9 do usuário).
 - **Rota web:** `POST /pae/protocolo/{paeProtocolo}/relacionar` (`can:pae.protocolos.create`) → redirect Inertia para o novo protocolo.
 
 ### 3.2 Frontend — abertura, abas condicionais, read-only, anexos
@@ -110,7 +110,7 @@
 ## 4. Testes (`tests/Feature/Pae/`)
 
 - Numeração: formato novo, sequencial diário reiniciando por dia, coexistência com formato antigo.
-- Relacionar: sufixo incrementa, herança de empreendimento, `protocolo_pai_id`, timelines nos dois protocolos.
+- Relacionar: sufixo incrementa, herança de empreendimento, `protocolo_origem_id`, timelines nos dois protocolos.
 - Gating de abas: updates de Objetivo/Apontamentos/Conclusão/finalizar bloqueados sem analista (backend).
 - Notificações: emissão manual, `processarVencimentos()` com viagem no tempo (30/60/90 dias), suspensão após 3ª vencida, devolutiva fecha ciclo, `Mail::fake()`.
 - API V1: contratos JSON dos novos endpoints.

@@ -28,14 +28,14 @@
 
 Antes da Task 1: `git checkout pae-protocolo-anexos && git pull && git checkout -b feat/pae-54-protocolo`
 
-### Task 1: Schema — coluna `protocolo_pai_id` + relações no model
+### Task 1: Schema — coluna `protocolo_origem_id` + relações no model
 
 **Files:**
 - Modify: `database/migrations/2026_02_12_130000_create_pae_protocolos_table.php:36`
 - Modify: `app/Modules/Pae/Models/PaeProtocolo.php`
 
 **Interfaces:**
-- Produces: coluna `pae_protocolos.protocolo_pai_id` (nullable FK self), `PaeProtocolo::pai(): BelongsTo`, `PaeProtocolo::versoes(): HasMany`, fillable `protocolo_pai_id`.
+- Produces: coluna `pae_protocolos.protocolo_origem_id` (nullable FK self), `PaeProtocolo::origem(): BelongsTo`, `PaeProtocolo::versoes(): HasMany`, fillable `protocolo_origem_id`.
 
 - [ ] **Step 1: Adicionar coluna na migration principal**
 
@@ -43,38 +43,38 @@ Em `database/migrations/2026_02_12_130000_create_pae_protocolos_table.php`, logo
 
 ```php
                 // Protocolo pai (versionamento: 001 -> 002 -> ...)
-                $table->foreignId('protocolo_pai_id')->nullable()->constrained('pae_protocolos')->onDelete('set null');
+                $table->foreignId('protocolo_origem_id')->nullable()->constrained('pae_protocolos')->onDelete('set null');
 ```
 
 - [ ] **Step 2: Atualizar o model**
 
 Em `app/Modules/Pae/Models/PaeProtocolo.php`:
-1. Adicionar `'protocolo_pai_id',` ao `$fillable` (após `'pae_empnto_id',`).
+1. Adicionar `'protocolo_origem_id',` ao `$fillable` (após `'pae_empnto_id',`).
 2. Adicionar as relações após o método `usuario()`:
 
 ```php
-    public function pai(): BelongsTo
+    public function origem(): BelongsTo
     {
-        return $this->belongsTo(self::class, 'protocolo_pai_id');
+        return $this->belongsTo(self::class, 'protocolo_origem_id');
     }
 
     public function versoes(): HasMany
     {
-        return $this->hasMany(self::class, 'protocolo_pai_id');
+        return $this->hasMany(self::class, 'protocolo_origem_id');
     }
 ```
 
 - [ ] **Step 3: Aplicar o schema no banco dev**
 
 Run: `php artisan migrate:fresh --seed` (banco de dev). Se inviável, aplicar manualmente:
-`php artisan tinker --execute="Schema::table('pae_protocolos', function ($t) { $t->foreignId('protocolo_pai_id')->nullable()->constrained('pae_protocolos')->onDelete('set null'); });"`
-Expected: coluna existe (`php artisan tinker --execute="var_dump(Schema::hasColumn('pae_protocolos','protocolo_pai_id'));"` imprime `bool(true)`).
+`php artisan tinker --execute="Schema::table('pae_protocolos', function ($t) { $t->foreignId('protocolo_origem_id')->nullable()->constrained('pae_protocolos')->onDelete('set null'); });"`
+Expected: coluna existe (`php artisan tinker --execute="var_dump(Schema::hasColumn('pae_protocolos','protocolo_origem_id'));"` imprime `bool(true)`).
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add database/migrations/2026_02_12_130000_create_pae_protocolos_table.php app/Modules/Pae/Models/PaeProtocolo.php
-git commit -m "🗃️ db(pae): coluna protocolo_pai_id e relacoes de versionamento no protocolo"
+git commit -m "🗃️ db(pae): coluna protocolo_origem_id e relacoes de versionamento no protocolo"
 ```
 
 ### Task 2: Numeração `dd.mm.aaaa-XXXX-001` (TDD)
@@ -238,7 +238,7 @@ git commit -m "✨ feat(pae): numeracao de protocolo dd.mm.aaaa-XXXX-001 com loc
 - Modify: `resources/js/Templates/Pae/PaeProtocolosIndexTemplate.vue`
 
 **Interfaces:**
-- Consumes: `gerarNumProtocolo()` privates da Task 2 (`travarSequencialProtocolo()`), coluna `protocolo_pai_id` (Task 1).
+- Consumes: `gerarNumProtocolo()` privates da Task 2 (`travarSequencialProtocolo()`), coluna `protocolo_origem_id` (Task 1).
 - Produces: `PaeProtocoloService::relacionar(PaeProtocolo $base, User $user): PaeProtocolo`; rota `POST /pae/protocolo/{paeProtocolo}/relacionar` name `pae.protocolo.relacionar`; ação `relate` no ActionButton.
 
 - [ ] **Step 1: Escrever testes que falham**
@@ -289,7 +289,7 @@ class PaeProtocoloRelacionarTest extends TestCase
             now()->format('d.m.Y') . '-0001-002',
             $novo->num_protocolo
         );
-        $this->assertSame($base->id, $novo->protocolo_pai_id);
+        $this->assertSame($base->id, $novo->protocolo_origem_id);
         $this->assertSame($base->pae_empnto_id, $novo->pae_empnto_id);
         $this->assertSame('novo', $novo->status->value);
         $this->assertDatabaseHas('pae_timeline', [
@@ -327,7 +327,7 @@ class PaeProtocoloRelacionarTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseHas('pae_protocolos', [
-            'protocolo_pai_id' => $base->id,
+            'protocolo_origem_id' => $base->id,
         ]);
     }
 }
@@ -358,7 +358,7 @@ Adicionar em `PaeProtocoloService` (após `atribuir()`):
                 'dt_entrada'       => now()->toDateString(),
                 'pae_empnto_id'    => $base->pae_empnto_id,
                 'empnto_search'    => $base->empnto_search,
-                'protocolo_pai_id' => $base->id,
+                'protocolo_origem_id' => $base->id,
             ]);
 
             $this->registrarTimeline(
