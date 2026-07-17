@@ -12,6 +12,8 @@
                 :empreendimento="empreendimento"
                 :municipios="props.municipios"
                 :formulario="props.formulario"
+                :protocolo="props.protocolo"
+                :read-only="props.readOnly"
             />
         </div>
     </div>
@@ -43,6 +45,10 @@ const props = defineProps({
     protocolo: {
         type: Object,
         default: null,
+    },
+    readOnly: {
+        type: Boolean,
+        default: false,
     },
 });
 

@@ -41,6 +41,7 @@
     <div v-else-if="activeSubTab === 4">
       <PaeFormAnexos
         :items="rat.anexos"
+        :historico="props.formulario?.anexos_historico ?? []"
         :formulario-id="formularioId"
         :protocolo-id="protocoloId"
         :saving="rat.saving"
@@ -72,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref, h, reactive, computed } from 'vue';
+import { ref, h, reactive, computed, watch } from 'vue';
 import { usePaeFormulario } from '@/Composables/pae/usePaeFormulario';
 import { usePage } from '@inertiajs/vue3';
 import PaeFormTabs from './PaeFormTabs.vue';
@@ -122,7 +123,7 @@ const localFormularioId = ref(props.formulario?.id ?? null);
 
 const rat = reactive(usePaeFormulario(props.empreendimento, props.formulario));
 
-const tabConfig = [
+const todasAsAbas = [
   {
     id: 1,
     label: 'Informações Gerais',
@@ -149,6 +150,24 @@ const tabConfig = [
     icon: svgIcon('M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'),
   },
 ];
+
+const abasLiberadas = computed(() => {
+  // Sem protocolo vinculado (fluxo avulso) todas as abas ficam liberadas.
+  if (!props.protocolo?.id) return true;
+  return !!props.protocolo?.analista_atual_id;
+});
+
+const tabConfig = computed(() =>
+  abasLiberadas.value
+    ? todasAsAbas
+    : todasAsAbas.filter((tab) => [1, 4].includes(tab.id))
+);
+
+watch(tabConfig, (tabs) => {
+  if (!tabs.some((tab) => tab.id === activeSubTab.value)) {
+    activeSubTab.value = 1;
+  }
+}, { immediate: true });
 
 const formularioId = computed(
   () => localFormularioId.value

@@ -21,6 +21,7 @@
               v-model="item.text"
               rows="3"
               :placeholder="`Digite o apontamento técnico ${index + 1}...`"
+              :disabled="readOnly"
               :class="[
                 'w-full bg-transparent border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500',
                 item.text ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-500' : 'border-slate-300 dark:border-slate-600'
@@ -40,12 +41,14 @@
                   v-model="child.text"
                   rows="2"
                   :placeholder="`Sub-item ${index + 1}.${childIndex + 1}...`"
+                  :disabled="readOnly"
                   :class="[
                     'flex-1 bg-transparent border rounded-lg p-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500',
                     child.text ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-500' : 'border-slate-300 dark:border-slate-600'
                   ]"
                 />
                 <button
+                  v-if="!readOnly"
                   type="button"
                   @click="$emit('remove-sub', index, childIndex)"
                   class="flex-shrink-0 mt-2 text-red-500/50 hover:text-red-500 transition-colors"
@@ -57,6 +60,7 @@
             </div>
 
             <button
+              v-if="!readOnly"
               type="button"
               @click="$emit('add-sub', index)"
               class="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors"
@@ -67,6 +71,7 @@
           </div>
 
           <button
+            v-if="!readOnly"
             type="button"
             @click="$emit('remove-item', index)"
             :disabled="items.length === 1"
@@ -79,6 +84,7 @@
       </div>
 
       <button
+        v-if="!readOnly"
         type="button"
         @click="$emit('add-item')"
         class="w-full py-4 flex items-center justify-center gap-2 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500/50 dark:hover:border-blue-500/50 rounded-xl text-slate-500 dark:text-slate-400 hover:text-blue-400 font-medium text-sm transition-colors"
@@ -88,7 +94,7 @@
       </button>
     </div>
 
-    <div class="flex justify-end pt-2">
+    <div v-if="!readOnly" class="flex justify-end pt-2">
       <button
         type="button"
         :disabled="saving"
@@ -109,6 +115,10 @@ defineProps({
     required: true,
   },
   saving: {
+    type: Boolean,
+    default: false,
+  },
+  readOnly: {
     type: Boolean,
     default: false,
   },

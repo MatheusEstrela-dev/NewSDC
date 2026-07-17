@@ -5,60 +5,70 @@
         label="Barragem"
         v-model="local.barragem"
         placeholder="Nome da Barragem"
+        :disabled="readOnly"
       />
       <FormSelect
         label="Município"
         v-model="local.municipio_id"
         :options="municipioOptions"
         placeholder="Selecione um município"
+        :disabled="readOnly"
       />
       <FormField
         label="Coordenador do PAE"
         v-model="local.coordenador_pae"
         placeholder="Nome do coordenador (empreendedor)"
+        :disabled="readOnly"
       />
       <FormField
         label="Email"
         type="email"
         v-model="local.email"
         placeholder="email@empreendedor.com"
+        :disabled="readOnly"
       />
       <FormField
         label="Coordenador Municipal de Defesa Civil"
         v-model="local.coordenador_mun_def_civ"
         placeholder="Nome do Coordenador Municipal"
+        :disabled="readOnly"
       />
       <FormField
         label="Coordenador Municipal (Compdec)"
         v-model="local.coordenador_mun_compdec"
         placeholder="Nome do Coordenador Municipal Compdec"
+        :disabled="readOnly"
       />
       <FormField
         label="Empreendedor Responsável"
         v-model="local.empreendedor_res"
         placeholder="Nome do Empreendedor"
+        :disabled="readOnly"
       />
       <FormSelect
         label="Método Construtivo"
         v-model="local.metodo_construtivo"
         :options="metodosConstrutivos"
         placeholder="Selecione um método"
+        :disabled="readOnly"
       />
       <FormField
         label="Número de ZAS"
         v-model="local.numero_zas"
         type="number"
         placeholder="Número de ZAS"
+        :disabled="readOnly"
       />
       <FormSelect
         label="Nível de Emergência"
         v-model="local.nivel_emergencia"
         :options="niveisEmergencia"
         placeholder="Selecione um nível"
+        :disabled="readOnly"
       />
     </div>
 
-    <div class="flex justify-end mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+    <div v-if="!readOnly" class="flex justify-end mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
       <button
         type="button"
         :disabled="saving"
@@ -88,6 +98,10 @@ const props = defineProps({
     default: () => ({}),
   },
   saving: {
+    type: Boolean,
+    default: false,
+  },
+  readOnly: {
     type: Boolean,
     default: false,
   },

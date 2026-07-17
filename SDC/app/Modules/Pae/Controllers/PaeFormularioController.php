@@ -32,7 +32,7 @@ class PaeFormularioController extends Controller
         $protocolo  = null;
 
         if ($request->filled('formulario_id')) {
-            $form = PaeForm::with(['apontamentos', 'conclusao', 'anexos'])
+            $form = PaeForm::with(['apontamentos', 'conclusao'])
                 ->findOrFail($request->integer('formulario_id'));
 
             if ($form->pae_protocolo_id) {
@@ -41,7 +41,7 @@ class PaeFormularioController extends Controller
 
             $formulario = $this->service->formatForView($form);
         } elseif ($request->filled('protocolo_id')) {
-            $form = PaeForm::with(['apontamentos', 'conclusao', 'anexos'])
+            $form = PaeForm::with(['apontamentos', 'conclusao'])
                 ->where('pae_protocolo_id', $request->integer('protocolo_id'))
                 ->first();
 
@@ -63,11 +63,7 @@ class PaeFormularioController extends Controller
         if ($protocoloId) {
             $prot = PaeProtocolo::find($protocoloId);
             if ($prot) {
-                $protocolo = [
-                    'id'            => $prot->id,
-                    'num_protocolo' => $prot->num_protocolo,
-                    'status'        => $prot->status?->value,
-                ];
+                $protocolo = $this->protocoloProps($prot);
             }
         }
 
@@ -75,12 +71,13 @@ class PaeFormularioController extends Controller
             'municipios' => Municipio::catalogo()->pluck('nome', 'id'),
             'formulario' => $formulario,
             'protocolo'  => $protocolo,
+            'readOnly'   => $request->boolean('readonly'),
         ]);
     }
 
-    public function edit(PaeProtocolo $paeProtocolo): Response|RedirectResponse
+    public function edit(Request $request, PaeProtocolo $paeProtocolo): Response|RedirectResponse
     {
-        $form = PaeForm::with(['apontamentos', 'conclusao', 'anexos'])
+        $form = PaeForm::with(['apontamentos', 'conclusao'])
             ->where('pae_protocolo_id', $paeProtocolo->id)
             ->first();
 
@@ -90,14 +87,11 @@ class PaeFormularioController extends Controller
                 ->with('info', 'Formulário não encontrado para este protocolo. Iniciando novo formulário.');
         }
 
-        return Inertia::render('PaeEdit', [
-            'protocolo'  => [
-                'id'            => $paeProtocolo->id,
-                'num_protocolo' => $paeProtocolo->num_protocolo,
-                'status'        => $paeProtocolo->status?->value ?? $paeProtocolo->status,
-            ],
+        return Inertia::render('Pae', [
+            'protocolo'  => $this->protocoloProps($paeProtocolo),
             'municipios' => Municipio::catalogo()->pluck('nome', 'id'),
             'formulario' => $this->service->formatForView($form),
+            'readOnly'   => $request->boolean('readonly'),
         ]);
     }
 
@@ -207,6 +201,21 @@ class PaeFormularioController extends Controller
         $this->service->finalizar($paeForm, $request->user());
 
         return back()->with('success', 'Relatório finalizado.');
+    }
+
+    private function protocoloProps(PaeProtocolo $prot): array
+    {
+        $prot->loadMissing('analistaAtual:id,name');
+
+        return [
+            'id'                => $prot->id,
+            'num_protocolo'     => $prot->num_protocolo,
+            'status'            => $prot->status?->value,
+            'analista_atual_id' => $prot->analista_atual_id,
+            'analista_nome'     => $prot->analistaAtual?->name,
+            'arquivado'         => (bool) $prot->arquivado,
+            'analise_status'    => $prot->analise_status,
+        ];
     }
 
     private function validateInfoGerais(Request $request): array

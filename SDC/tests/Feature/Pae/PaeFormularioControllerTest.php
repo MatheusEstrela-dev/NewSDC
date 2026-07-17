@@ -399,4 +399,43 @@ class PaeFormularioControllerTest extends TestCase
             ->where('protocolo', null)
         );
     }
+
+    public function test_formatforview_inclui_historico_de_anexos_com_removidos(): void
+    {
+        Storage::fake('pae');
+
+        $form = PaeForm::create(['status' => 'RASCUNHO']);
+        $uploader = User::factory()->create(['name' => 'Uploader Teste']);
+
+        $ativo = $form->anexos()->create([
+            'nome_original' => 'ativo.pdf',
+            'nome_arquivo'  => 'a.pdf',
+            'mime_type'     => 'application/pdf',
+            'tamanho_bytes' => 100,
+            'path'          => 'x/a.pdf',
+            'disk'          => 'pae',
+            'uploaded_by'   => $uploader->id,
+        ]);
+        $removido = $form->anexos()->create([
+            'nome_original' => 'removido.pdf',
+            'nome_arquivo'  => 'r.pdf',
+            'mime_type'     => 'application/pdf',
+            'tamanho_bytes' => 100,
+            'path'          => 'x/r.pdf',
+            'disk'          => 'pae',
+            'uploaded_by'   => $uploader->id,
+        ]);
+        $removido->delete();
+
+        $dados = app(\App\Modules\Pae\Services\PaeFormularioService::class)
+            ->formatForView($form->fresh());
+
+        $this->assertCount(1, $dados['anexos']);
+        $this->assertCount(2, $dados['anexos_historico']);
+
+        $historico = collect($dados['anexos_historico']);
+        $this->assertTrue($historico->firstWhere('id', $removido->id)['removido']);
+        $this->assertFalse($historico->firstWhere('id', $ativo->id)['removido']);
+        $this->assertSame('Uploader Teste', $historico->firstWhere('id', $ativo->id)['enviado_por']);
+    }
 }
