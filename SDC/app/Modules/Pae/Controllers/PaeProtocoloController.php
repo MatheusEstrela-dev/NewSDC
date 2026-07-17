@@ -198,6 +198,14 @@ class PaeProtocoloController extends Controller
         return redirect()->back()->with('success', "Analista {$analista->name} atribuído com sucesso.");
     }
 
+    public function relacionar(Request $request, PaeProtocolo $paeProtocolo): \Illuminate\Http\RedirectResponse
+    {
+        $novo = $this->service->relacionar($paeProtocolo, $request->user());
+
+        return redirect()->route('pae.index', ['protocolo_id' => $novo->id])
+            ->with('success', "Protocolo {$novo->num_protocolo} criado como versao relacionada.");
+    }
+
     public function destroy(PaeProtocolo $paeProtocolo): \Illuminate\Http\RedirectResponse
     {
         $this->service->delete($paeProtocolo);

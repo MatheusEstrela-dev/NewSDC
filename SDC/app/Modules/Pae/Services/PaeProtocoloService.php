@@ -222,6 +222,68 @@ class PaeProtocoloService extends BaseService
         return $protocolo->fresh();
     }
 
+    public function relacionar(PaeProtocolo $base, User $user): PaeProtocolo
+    {
+        return DB::transaction(function () use ($base, $user) {
+            $this->travarSequencialProtocolo();
+
+            $prefixo = $this->prefixoVersionavel($base->num_protocolo);
+
+            $novo = PaeProtocolo::create([
+                'num_protocolo'       => sprintf('%s-%03d', $prefixo, $this->proximaVersao($prefixo)),
+                'status'              => PaeProtocoloStatus::NOVO->value,
+                'user_id'             => $user->id,
+                'created_by'          => $user->id,
+                'dt_entrada'          => now()->toDateString(),
+                'pae_empnto_id'       => $base->pae_empnto_id,
+                'empnto_search'       => $base->empnto_search,
+                'protocolo_origem_id' => $base->id,
+            ]);
+
+            $this->registrarTimeline(
+                $base,
+                'relacionamento',
+                "Versao {$novo->num_protocolo} criada a partir deste protocolo.",
+                $user
+            );
+            $this->registrarTimeline(
+                $novo,
+                'criacao',
+                "Protocolo criado como versao relacionada de {$base->num_protocolo}.",
+                $user
+            );
+
+            return $novo;
+        });
+    }
+
+    private function prefixoVersionavel(string $numProtocolo): string
+    {
+        if (preg_match('/^(\d{2}\.\d{2}\.\d{4}-\d{4})-\d{3}$/', $numProtocolo, $m)) {
+            return $m[1];
+        }
+
+        throw ValidationException::withMessages([
+            'protocolo' => 'Somente protocolos no formato dd.mm.aaaa-XXXX-VVV podem ser relacionados.',
+        ]);
+    }
+
+    private function proximaVersao(string $prefixo): int
+    {
+        $max = 0;
+
+        PaeProtocolo::withTrashed()
+            ->where('num_protocolo', 'like', $prefixo . '-%')
+            ->pluck('num_protocolo')
+            ->each(function (string $num) use (&$max) {
+                if (preg_match('/-(\d{3})$/', $num, $m)) {
+                    $max = max($max, (int) $m[1]);
+                }
+            });
+
+        return $max + 1;
+    }
+
     public function delete(PaeProtocolo $paeProtocolo): void
     {
         $paeProtocolo->delete();

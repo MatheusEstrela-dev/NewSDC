@@ -83,6 +83,7 @@
       :can-atribuir="canAtribuirComputed"
       :can-check="canCheck"
       :can-pdf="canPdf"
+      :can-create="canCreate"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -93,6 +94,7 @@
       @delete="handleDelete"
       @options="handleOptions"
       @assign="handleAssign"
+      @relate="handleRelate"
     />
 
     <!-- Desktop: Tabela (somente quando selecionada e nao mobile) -->
@@ -105,6 +107,7 @@
       :can-atribuir="canAtribuirComputed"
       :can-check="canCheck"
       :can-pdf="canPdf"
+      :can-create="canCreate"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -115,6 +118,7 @@
       @delete="handleDelete"
       @options="handleOptions"
       @assign="handleAssign"
+      @relate="handleRelate"
     />
 
     <!-- Pagination -->
@@ -498,6 +502,11 @@ function handleView(id) {
 
 function handleEdit(id) {
   router.visit(route('pae.index', { protocolo_id: id }));
+}
+
+function handleRelate(id) {
+  if (!confirm('Criar nova versao relacionada deste protocolo?')) return;
+  router.post(route('pae.protocolo.relacionar', id));
 }
 
 // Modal de Confirmacao de Exclusao / Arquivamento

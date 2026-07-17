@@ -79,6 +79,10 @@ Route::prefix('pae')->name('pae.')->group(function () {
         ->name('protocolos.status')
         ->middleware('can:pae.protocolos.edit');
 
+    Route::post('/protocolo/{paeProtocolo}/relacionar', [PaeProtocoloController::class, 'relacionar'])
+        ->name('protocolo.relacionar')
+        ->middleware('can:pae.protocolos.create');
+
     Route::put('/protocolo/{paeProtocolo}/assign', [PaeProtocoloController::class, 'assign'])
         ->name('protocolo.assign')
         ->middleware('can:pae.protocolos.atribuir');
