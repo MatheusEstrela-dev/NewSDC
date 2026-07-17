@@ -8,7 +8,7 @@
         Salve as Informacoes Gerais ou abra um protocolo antes de adicionar anexos.
       </div>
 
-      <form class="space-y-4" @submit.prevent="handleSubmit">
+      <form v-if="!readOnly" class="space-y-4" @submit.prevent="handleSubmit">
         <div
           class="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-5"
           :class="canUpload ? 'hover:border-blue-500/50' : 'opacity-60'"
@@ -129,6 +129,7 @@
                 Baixar
               </button>
               <button
+                v-if="!readOnly"
                 type="button"
                 :disabled="saving"
                 class="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-500 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
@@ -176,6 +177,10 @@ const props = defineProps({
   errorMessage: {
     type: String,
     default: '',
+  },
+  readOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 
