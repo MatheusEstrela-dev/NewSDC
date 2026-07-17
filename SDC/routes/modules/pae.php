@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Pae\Controllers\PaeFormularioController;
+use App\Modules\Pae\Controllers\PaeNotificacaoController;
 use App\Modules\Pae\Controllers\PaeProtocoloController;
 
 Route::prefix('pae')->name('pae.')->group(function () {
@@ -82,6 +83,14 @@ Route::prefix('pae')->name('pae.')->group(function () {
     Route::put('/protocolo/{paeProtocolo}/assign', [PaeProtocoloController::class, 'assign'])
         ->name('protocolo.assign')
         ->middleware('can:pae.protocolos.atribuir');
+
+    Route::post('/protocolo/{paeProtocolo}/notificacoes', [PaeNotificacaoController::class, 'store'])
+        ->name('protocolo.notificacoes.store')
+        ->middleware('can:pae.protocolos.edit');
+
+    Route::post('/notificacoes/{paeNotificacao}/devolutiva', [PaeNotificacaoController::class, 'devolutiva'])
+        ->name('notificacoes.devolutiva')
+        ->middleware('can:pae.protocolos.edit');
 
     Route::delete('/protocolos/{paeProtocolo}', [PaeProtocoloController::class, 'destroy'])
         ->name('protocolos.destroy')
