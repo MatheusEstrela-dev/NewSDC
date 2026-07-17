@@ -5,19 +5,21 @@
       title="Municipios sem Plano"
       description="Lista de municipios que ainda nao possuem Plano de Contingencia cadastrado"
       :icon="ExclamationCircleIcon"
-      :municipios="effectiveMunicipios"
-      :total-municipios="stats.municipiosSemPlano"
+      :municipios="municipios"
+      :total-municipios="pagination?.total ?? municipios.length"
+      :pagination="pagination"
+      :filters="filters"
       :show-situacao="false"
       :show-data-atualizacao="false"
       :can-export="can('plancon.export')"
       @export="handleExport"
+      @filter="handleFilter"
       @view="handleView"
     />
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { usePermissions } from '@/Composables/usePermissions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -37,31 +39,14 @@ const props = defineProps({
     type: Object,
     default: null,
   },
-  stats: {
+  filters: {
     type: Object,
-    default: () => ({
-      municipiosSemPlano: 124,
-    }),
+    default: () => ({}),
   },
 });
 
-const effectiveMunicipios = computed(() => {
-  if (props.municipios && props.municipios.length > 0) {
-    return props.municipios;
-  }
-  return generateMockMunicipios(124);
-});
-
-const generateMockMunicipios = (count) => {
-  const nomes = ['Alto Jequitiba', 'Bandeira do Sul', 'Caiana', 'Divino das Laranjeiras', 'Estrela do Sul', 'Ferros', 'Goiana', 'Heliodora', 'Ipaba', 'Jacinto'];
-  return Array.from({ length: Math.min(count, 100) }, (_, i) => ({
-    id: i + 1000,
-    nome: `${nomes[i % nomes.length]} ${Math.floor(i / nomes.length) || ''}`.trim(),
-    codigoIbge: `31${String(i + 1000).padStart(5, '0')}`,
-    temPlano: false,
-    situacaoPlano: null,
-    dataUltimaAtualizacao: null,
-  }));
+const handleFilter = (filters) => {
+  router.get(route('plancon.municipios.sem'), filters, { preserveState: true, preserveScroll: true, replace: true });
 };
 
 const handleExport = () => {
@@ -69,6 +54,6 @@ const handleExport = () => {
 };
 
 const handleView = (municipio) => {
-  router.visit(route('plancon.municipios.sem', { id: municipio.id }));
+  router.visit(route('plancon.index', { municipio_id: municipio.id }));
 };
 </script>
