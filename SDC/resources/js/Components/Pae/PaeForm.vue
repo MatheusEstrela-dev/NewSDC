@@ -41,6 +41,7 @@
     <div v-else-if="activeSubTab === 4">
       <PaeFormAnexos
         :items="rat.anexos"
+        :historico="props.formulario?.anexos_historico ?? []"
         :formulario-id="formularioId"
         :protocolo-id="protocoloId"
         :saving="rat.saving"

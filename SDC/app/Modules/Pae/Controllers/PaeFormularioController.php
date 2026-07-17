@@ -32,7 +32,7 @@ class PaeFormularioController extends Controller
         $protocolo  = null;
 
         if ($request->filled('formulario_id')) {
-            $form = PaeForm::with(['apontamentos', 'conclusao', 'anexos'])
+            $form = PaeForm::with(['apontamentos', 'conclusao'])
                 ->findOrFail($request->integer('formulario_id'));
 
             if ($form->pae_protocolo_id) {
@@ -41,7 +41,7 @@ class PaeFormularioController extends Controller
 
             $formulario = $this->service->formatForView($form);
         } elseif ($request->filled('protocolo_id')) {
-            $form = PaeForm::with(['apontamentos', 'conclusao', 'anexos'])
+            $form = PaeForm::with(['apontamentos', 'conclusao'])
                 ->where('pae_protocolo_id', $request->integer('protocolo_id'))
                 ->first();
 
@@ -77,7 +77,7 @@ class PaeFormularioController extends Controller
 
     public function edit(Request $request, PaeProtocolo $paeProtocolo): Response|RedirectResponse
     {
-        $form = PaeForm::with(['apontamentos', 'conclusao', 'anexos'])
+        $form = PaeForm::with(['apontamentos', 'conclusao'])
             ->where('pae_protocolo_id', $paeProtocolo->id)
             ->first();
 

@@ -141,6 +141,34 @@
           </div>
         </div>
       </div>
+
+      <div v-if="historico.length" class="border-t border-slate-200 pt-5 dark:border-slate-700">
+        <h4 class="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
+          Historico de arquivos anexados
+        </h4>
+        <ul class="space-y-2">
+          <li
+            v-for="item in historico"
+            :key="`hist-${item.id}`"
+            class="flex flex-col gap-1 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs dark:border-slate-700 dark:bg-slate-900/40 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div class="min-w-0">
+              <span class="font-medium text-slate-800 dark:text-slate-200">{{ item.nome_original }}</span>
+              <span class="ml-2 text-slate-500 dark:text-slate-400">{{ item.tamanho_formatado }}</span>
+            </div>
+            <div class="flex items-center gap-3 text-slate-500 dark:text-slate-400">
+              <span v-if="item.enviado_por">por {{ item.enviado_por }}</span>
+              <span>{{ item.created_at }}</span>
+              <span
+                v-if="item.removido"
+                class="rounded-full bg-red-500/10 px-2 py-0.5 font-semibold text-red-500 dark:text-red-400"
+              >
+                Removido {{ item.deleted_at ? `em ${item.deleted_at}` : '' }}
+              </span>
+            </div>
+          </li>
+        </ul>
+      </div>
     </div>
   </PaeCard>
 </template>
@@ -151,6 +179,10 @@ import PaeCard from './PaeCard.vue';
 
 const props = defineProps({
   items: {
+    type: Array,
+    default: () => [],
+  },
+  historico: {
     type: Array,
     default: () => [],
   },

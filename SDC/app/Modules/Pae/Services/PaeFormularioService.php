@@ -215,9 +215,12 @@ class PaeFormularioService extends BaseService
             ? $form->conclusao
             : $form->conclusao()->get();
 
-        $anexos = $form->relationLoaded('anexos')
-            ? $form->anexos
-            : $form->anexos()->get();
+        $anexos = $form->anexos()
+            ->withTrashed()
+            ->with('uploader:id,name')
+            ->get();
+
+        $ativos = $anexos->whereNull('deleted_at');
 
         return [
             'id'                      => $form->id,
@@ -236,7 +239,8 @@ class PaeFormularioService extends BaseService
             'objetivo'                => $form->objetivo,
             'contextualizacao'        => $form->contexto,
             'apontamentos'            => $this->buildTree($apontamentos),
-            'anexos'                  => $this->formatAnexos($anexos),
+            'anexos'                  => $this->formatAnexos($ativos),
+            'anexos_historico'        => $this->formatHistoricoAnexos($anexos),
             'conclusao'               => $this->buildTree($conclusao),
             'status'                  => $form->status,
         ];
@@ -278,6 +282,24 @@ class PaeFormularioService extends BaseService
                 'disk' => $anexo->disk,
                 'local_armazenamento' => dirname($anexo->path),
                 'created_at' => $anexo->created_at?->format('Y-m-d H:i:s'),
+            ])
+            ->all();
+    }
+
+    private function formatHistoricoAnexos($anexos): array
+    {
+        return $anexos
+            ->sortByDesc('created_at')
+            ->values()
+            ->map(fn (PaeFormAnexo $anexo) => [
+                'id'                => $anexo->id,
+                'nome_original'     => $anexo->nome_original,
+                'tamanho_formatado' => $anexo->tamanho_formatado,
+                'descricao'         => $anexo->descricao,
+                'enviado_por'       => $anexo->uploader?->name,
+                'created_at'        => $anexo->created_at?->format('d/m/Y H:i'),
+                'removido'          => $anexo->trashed(),
+                'deleted_at'        => $anexo->deleted_at?->format('d/m/Y H:i'),
             ])
             ->all();
     }
