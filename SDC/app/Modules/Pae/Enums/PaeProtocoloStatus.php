@@ -90,6 +90,7 @@ enum PaeProtocoloStatus: string
             ],
             self::NOTIFICACAO => [
                 self::ANALISE,
+                self::SUSPENSO,
             ],
             self::ESPERAR_TRATATIVA => [
                 self::DILACAO,

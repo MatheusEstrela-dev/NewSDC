@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Pae\Services;
 
+use App\Mail\PaeNotificacaoMail;
 use App\Models\User;
 use App\Modules\Pae\Enums\PaeProtocoloStatus;
 use App\Modules\Pae\Models\PaeAnalise;
@@ -11,6 +12,7 @@ use App\Modules\Pae\Models\PaeNotificacao;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Models\PaeTimeline;
 use App\Modules\Shared\BaseService;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class PaeNotificacaoService extends BaseService
@@ -43,7 +45,11 @@ class PaeNotificacaoService extends BaseService
             ]);
         }
 
-        if ($analise->notificacoes()->whereNull('dt_devolutiva')->exists()) {
+        // A emissao automatica (processarVencimentos) so acontece exatamente
+        // porque o ultimo ciclo esta vencido sem devolutiva; nesse caso o
+        // ciclo em aberto e a PROPRIA razao da renovacao, entao o bloqueio
+        // abaixo se aplica somente a emissao manual.
+        if (! $automatica && $analise->notificacoes()->whereNull('dt_devolutiva')->exists()) {
             throw ValidationException::withMessages([
                 'notificacao' => 'Existe uma notificacao com prazo em aberto. Registre a devolutiva antes de emitir outra.',
             ]);
@@ -200,7 +206,7 @@ class PaeNotificacaoService extends BaseService
 
     private function enviarEmail(PaeProtocolo $protocolo, PaeNotificacao $notificacao, int $ciclo, User $user): void
     {
-        // Envio real do e-mail implementado com o Mailable PaeNotificacaoMail (Task 8).
+        $protocolo->loadMissing('empreendimento');
         $empnto = $protocolo->empreendimento;
 
         if (! $empnto?->email_coord) {
@@ -210,7 +216,24 @@ class PaeNotificacaoService extends BaseService
                 'Empreendimento sem e-mail de coordenador cadastrado: notificacao registrada apenas no sistema.',
                 $user
             );
+
+            return;
         }
+
+        $mail = Mail::to($empnto->email_coord);
+
+        if ($empnto->email_coord_sub) {
+            $mail->cc($empnto->email_coord_sub);
+        }
+
+        $mail->queue(new PaeNotificacaoMail(
+            protocoloNumero: $protocolo->num_protocolo,
+            empreendimentoNome: $empnto->nome ?? '',
+            ciclo: $ciclo,
+            numSei: $notificacao->num_sei,
+            dtNotificacao: $notificacao->dt_notificacao->toDateString(),
+            prazoFinal: $notificacao->dt_notificacao->copy()->addDays(self::PRAZO_DIAS)->toDateString(),
+        ));
     }
 
     private function registrarTimeline(PaeProtocolo $protocolo, string $evento, string $descricao, User $user): void

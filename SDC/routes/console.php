@@ -24,3 +24,8 @@ Schedule::command('sdc:check-user-inactivity')
     ->onOneServer()       // Garante execução única em ambientes com múltiplos containers (requer Redis/Memcached)
     ->runInBackground()   // Executa em background para não bloquear outras tarefas agendadas no mesmo horário
     ->emailOutputOnFailure('admin@sdc.gov.br'); // Opcional: Configurar email do admin no .env futuramente
+
+Schedule::command('pae:verificar-notificacoes')
+    ->dailyAt('03:00')
+    ->onOneServer()
+    ->runInBackground();
