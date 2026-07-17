@@ -114,17 +114,11 @@ return [
         // Anexos do modulo PAE (documentos por protocolo/formulario).
         'pae' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_PAE', 'sdc-pae'), 'PAE', 'app/pae'),
 
-        // Anexos do modulo RAT. Servidos via URL publica: no bind mount usa o
-        // symlink public/anexos-rat -> ANEXOS_ROOT/RAT (ver 'links' abaixo);
-        // em dev puro usa o symlink storage/app/public; em producao Azure o
-        // url() retorna SAS assinado do blob.
-        'rat' => $azureOrLocal(
-            env('AZURE_STORAGE_CONTAINER_RAT', 'sdc-rat'),
-            'RAT',
-            'app/public',
-            'public',
-            env('APP_URL') . ($anexosRoot ? '/anexos-rat' : '/storage'),
-        ),
+        // Anexos do modulo RAT (fotos e documentos de ocorrencia). Privados,
+        // como os demais modulos (requisito de arquitetura: dado sensivel de
+        // Defesa Civil nao sai por symlink/URL publica): servidos por rota
+        // autenticada rat.ocorrencias.attachments.show, que streama do disk.
+        'rat' => $azureOrLocal(env('AZURE_STORAGE_CONTAINER_RAT', 'sdc-rat'), 'RAT', 'app/rat'),
 
         // Artefatos gerados por jobs assincronos (exports CSV/XLSX/PDF).
         // Servido via App\Http\Controllers\Api\V1\TraceController::download.
@@ -147,14 +141,10 @@ return [
     |
     */
 
-    'links' => array_filter([
+    // Anexos de modulo sao todos privados e servidos por rota autenticada —
+    // nenhum ganha symlink em public/.
+    'links' => [
         public_path('storage') => storage_path('app/public'),
-        // RAT e o unico modulo com anexo servido por URL publica direta: no
-        // bind mount o binario sai de public/ e vai pro disco dedicado, entao
-        // o symlink expoe ANEXOS_ROOT/RAT em /anexos-rat (criado por
-        // `artisan storage:link`). Os demais modulos sao privados e servidos
-        // por rota autenticada — NAO ganham symlink.
-        public_path('anexos-rat') => $anexosRoot ? $anexosRoot . '/RAT' : null,
-    ]),
+    ],
 
 ];

@@ -260,10 +260,15 @@ services:
     # Prioridade: critical > high > default > webhooks > low.
     # --max-time=3600: restart de hora em hora para evitar memory leak.
     # --tries=2: jobs com $tries proprio (export, webhook) sobrescrevem.
+    # A guarda do marcador replica o /start.sh (este command sobrescreve o CMD
+    # da imagem, entao a checagem de mount do entrypoint nao rodaria aqui).
     command:
       - sh
       - -c
       - >
+        if [ -n "$${ANEXOS_ROOT:-}" ] && [ ! -e "$${ANEXOS_ROOT}/.sdc_storage_mounted" ]; then
+        echo "ERRO: ANEXOS_ROOT sem o marcador .sdc_storage_mounted (disco de anexos nao montado no host?)" && exit 1;
+        fi &&
         umask 002 &&
         composer dump-autoload --optimize --no-interaction &&
         exec php artisan queue:work redis

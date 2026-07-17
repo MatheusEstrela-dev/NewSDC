@@ -17,6 +17,7 @@ use App\Modules\Rat\Http\Requests\RatRecursoRequest;
 use App\Modules\Rat\Http\Requests\RatVistoriaRequest;
 use App\Modules\Rat\Http\Resources\RatListResource;
 use App\Modules\Rat\Http\Resources\RatResource as RatOcorrenciaResource;
+use App\Modules\Rat\Models\RatAnexo;
 use App\Modules\Rat\Models\RatOcorrencia;
 use App\Modules\Rat\Models\RatOcorrenciaHistorico;
 use App\Modules\Rat\Models\RatOcorrenciaRelato;
@@ -42,6 +43,7 @@ use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -652,6 +654,26 @@ class RatUnifiedController extends BaseController
             'descricao'     => $attachment->descricao,
             'created_at'    => $attachment->created_at?->toIso8601String(),
         ], 201);
+    }
+
+    // Anexos sao privados (disk 'rat' sem URL publica): o binario sai sempre
+    // por aqui, atras do middleware auth, qualquer que seja o backend do disk
+    // (bind mount, Azure Blob ou local).
+    public function showAttachment(string $ocorrenciaId, string $attachmentId): StreamedResponse
+    {
+        // Hot path: 1 requisicao por anexo ao renderizar a ocorrencia. O anexo
+        // ja carrega rat_id, entao filtrar por ele autoriza e da 404 sem
+        // carregar o agregado inteiro do RAT (relatos, historicos, creator...).
+        $anexo = RatAnexo::where('rat_id', $ocorrenciaId)->findOrFail($attachmentId);
+
+        abort_unless(Storage::disk($anexo->disk)->exists($anexo->path), 404);
+
+        return Storage::disk($anexo->disk)->response(
+            $anexo->path,
+            $anexo->nome_original,
+            ['Content-Type' => $anexo->mime_type],
+            'inline'
+        );
     }
 
     public function destroyAttachment(string $ocorrenciaId, string $attachmentId): JsonResponse

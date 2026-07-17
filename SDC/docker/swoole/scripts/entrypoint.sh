@@ -41,9 +41,18 @@ mkdir -p storage/framework/cache/data \
          storage/app/public \
          storage/app/compdec \
          storage/app/pae \
+         storage/app/rat \
+         storage/app/tdap \
          storage/app/exports \
          bootstrap/cache
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+
+# Remover symlink legado public/anexos-rat -> ANEXOS_ROOT/RAT: o RAT deixou de
+# ser servido por URL publica (anexos agora sao privados, servidos por rota
+# autenticada). Tirar do config/filesystems.php impede storage:link de RECRIAR,
+# mas NAO apaga um symlink ja criado em deploy anterior — sem este rm, todo
+# anexo RAT continuaria acessivel SEM autenticacao em /anexos-rat na VM.
+rm -f public/anexos-rat 2>/dev/null || true
 
 # Em dev/local, bootstrap/cache pode vir do bind mount do host. Caches antigos
 # quebram o bootstrap antes mesmo de config:clear/package:discover rodarem.

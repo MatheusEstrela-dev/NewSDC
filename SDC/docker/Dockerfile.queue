@@ -73,10 +73,15 @@ COPY --chown=www-data:www-data . /var/www
 COPY docker/supervisor/supervisord.conf /etc/supervisord.conf
 COPY docker/supervisor/laravel-worker.conf /etc/supervisor/conf.d/laravel-worker.conf
 
+# Entrypoint com a guarda de mount de anexos (mesma do app)
+COPY docker/queue/entrypoint.sh /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
+
 # Criar diretorios necessarios
 RUN mkdir -p /var/www/storage/logs /var/log/supervisor \
     && chown -R www-data:www-data /var/www/storage /var/log/supervisor \
     && chmod -R 775 /var/www/storage /var/log/supervisor
 
-# Comando de inicializacao
+# Comando de inicializacao (o entrypoint valida o mount de anexos antes)
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

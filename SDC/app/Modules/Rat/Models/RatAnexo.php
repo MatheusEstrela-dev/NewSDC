@@ -8,14 +8,14 @@ use App\Modules\Rat\Enums\CategoriaAnexo;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 use App\Modules\Rat\Models\RatOcorrencia;
 
 /**
  * Anexo vinculado a um RAT (tabela relacional).
  *
- * Armazena metadados do arquivo em tabela dedicada,
- * enquanto o binario fica no disco configurado (default: public).
+ * Armazena metadados do arquivo em tabela dedicada, enquanto o binario
+ * fica no disk privado 'rat' (bind mount ANEXOS_ROOT/RAT na VM, Azure
+ * Blob no App Service, storage/app/rat em dev puro).
  *
  * @property int         $id
  * @property int         $rat_id          ID da ocorrencia RAT pai
@@ -74,22 +74,15 @@ class RatAnexo extends Model
     // Accessors
     // -------------------------------------------------------------------------
 
-    public function getUrlAttribute(): ?string
+    public function getUrlAttribute(): string
     {
-        $disk = Storage::disk($this->disk);
-
-        // Azure Blob (container privado, prod): URL assinada (SAS) temporaria.
-        // Local/public (dev): nao suporta SAS -> cai pra url publica direta.
-        // Nunca lanca: anexo sem url resolvel retorna null em vez de 500 na listagem.
-        try {
-            return $disk->temporaryUrl($this->path, now()->addMinutes(30));
-        } catch (\Throwable) {
-            try {
-                return $disk->url($this->path);
-            } catch (\Throwable) {
-                return null;
-            }
-        }
+        // Anexo privado (requisito de arquitetura): servido por rota
+        // autenticada que streama do disk (bind mount, Azure ou local),
+        // nunca por symlink/URL publica ou SAS exposto ao cliente.
+        return route('rat.ocorrencias.attachments.show', [
+            'ocorrencia' => $this->rat_id,
+            'id' => $this->id,
+        ]);
     }
 
     public function getTamanhoFormatadoAttribute(): string

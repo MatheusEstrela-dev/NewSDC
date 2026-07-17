@@ -23,8 +23,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class PmdaPlanoService extends BaseService
@@ -771,7 +769,6 @@ class CompdecFichaService
     {
         $orgao = $this->garantirOrgao($plano);
         $disk = (string) config('compdec.disk', 'compdec');
-        File::ensureDirectoryExists(Storage::disk($disk)->path(''));
 
         return $orgao
             ->addMedia($arquivo->getRealPath())

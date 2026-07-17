@@ -14,7 +14,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
@@ -110,8 +109,6 @@ class AnexoService
     private function anexarArquivo(CompdecAnexo $anexo, UploadedFile $arquivo): Media
     {
         $disk = (string) config('compdec.disk', 'compdec');
-
-        File::ensureDirectoryExists(Storage::disk($disk)->path(''));
 
         return $anexo
             ->addMedia($arquivo->getRealPath())
@@ -223,8 +220,6 @@ class AnexoService
         }
 
         $disk = (string) config('compdec.disk', 'compdec');
-
-        File::ensureDirectoryExists(Storage::disk($disk)->path(''));
 
         $anexo
             ->addMedia($path)
