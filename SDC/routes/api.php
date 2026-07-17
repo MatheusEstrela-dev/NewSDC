@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Pae\EmpreendimentoController;
+use App\Http\Controllers\Api\V1\Pae\NotificacaoController;
 use App\Http\Controllers\Api\V1\Rat\HistoricoController as RatHistoricoApiController;
 use App\Http\Controllers\Api\V1\Rat\OcorrenciaController as RatOcorrenciaApiController;
 use App\Http\Controllers\Api\V1\Rat\ProtocoloController;
@@ -132,6 +133,18 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
             ->name('empreendimentos.destroy')
             ->whereNumber('id')
             ->middleware('can:pae.empreendimentos.delete');
+
+        Route::get('protocolos/{paeProtocolo}/notificacoes', [NotificacaoController::class, 'index'])
+            ->name('protocolos.notificacoes.index')
+            ->middleware('can:pae.protocolos.view');
+
+        Route::post('protocolos/{paeProtocolo}/notificacoes', [NotificacaoController::class, 'store'])
+            ->name('protocolos.notificacoes.store')
+            ->middleware('can:pae.protocolos.edit');
+
+        Route::post('notificacoes/{paeNotificacao}/devolutiva', [NotificacaoController::class, 'devolutiva'])
+            ->name('notificacoes.devolutiva')
+            ->middleware('can:pae.protocolos.edit');
     });
 
     // Módulo RAT — Protocolos (stub removido — rotas reais abaixo com auth dual)
