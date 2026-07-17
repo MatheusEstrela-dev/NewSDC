@@ -241,6 +241,7 @@
                  <!-- Tab: Integrações -->
                  <div v-if="currentTab === 'integrations'" class="space-y-8">
                      <div class="space-y-6">
+                         <GovBrSignerCard />
                          <!-- Telegram (funcional - per-user pairing) -->
                          <TelegramCard />
 
@@ -429,6 +430,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { usePage, useForm } from '@inertiajs/vue3';
 import TelegramCard from './integrations/TelegramCard.vue';
+import GovBrSignerCard from './integrations/GovBrSignerCard.vue';
 import {
     UserIcon,
     BellIcon,

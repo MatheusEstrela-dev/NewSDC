@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import XMarkIcon from '@/Components/Icons/XMarkIcon.vue';
 import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
+import GovBrButton from '@/Components/Molecules/GovBr/GovBrButton.vue';
 
 const props = defineProps({
   show: {
@@ -25,6 +26,7 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const printContentRef = ref(null);
+const govBrSignerUrl = 'https://assinador.iti.br/assinatura/index.xhtml';
 
 watch(
   () => props.show,
@@ -109,6 +111,10 @@ function handlePrint() {
   }, 250);
 }
 
+function handleGovBrSign() {
+  window.open(govBrSignerUrl, '_blank', 'noopener,noreferrer');
+}
+
 defineExpose({ printContentRef, handlePrint });
 </script>
 
@@ -160,6 +166,13 @@ defineExpose({ printContentRef, handlePrint });
                 {{ title }}
               </h3>
               <div class="flex items-center gap-3">
+                <GovBrButton
+                  label="Assinar com"
+                  size="sm"
+                  variant="light"
+                  title="Abrir Assinador GOV.br"
+                  @click="handleGovBrSign"
+                />
                 <button
                   type="button"
                   @click="handlePrint"
