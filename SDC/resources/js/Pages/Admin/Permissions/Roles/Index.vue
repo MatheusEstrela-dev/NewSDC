@@ -181,10 +181,10 @@
           </Link>
         </div>
 
-        <div class="px-6 py-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
-          <Pagination :pagination="roles" @page-change="onPageChange" />
-        </div>
       </div>
+
+      <!-- Paginacao: bloco separado abaixo do card, padrao do sistema -->
+      <Pagination :pagination="roles" @page-change="onPageChange" />
     </div>
 
     <ConfirmDialog

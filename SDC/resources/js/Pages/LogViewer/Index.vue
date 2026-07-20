@@ -1,10 +1,12 @@
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, toRef, watch, computed } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import SidebarOnlyLayout from '@/Layouts/SidebarOnlyLayout.vue'
 import LogViewerTopbar from '@/Components/Molecules/LogViewer/LogViewerTopbar.vue'
 import LogViewerTable from '@/Components/Organisms/LogViewer/LogViewerTable.vue'
 import LogViewerDetail from '@/Components/Organisms/LogViewer/LogViewerDetail.vue'
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue'
+import { usePagination } from '@/Composables/data/usePagination'
 
 defineOptions({ layout: SidebarOnlyLayout })
 
@@ -34,6 +36,12 @@ const props = defineProps({
 const loading = ref(false)
 const selectedLog = ref(null)
 const showDetail = ref(false)
+
+const {
+    pagination,
+    paginatedItems: logsPaginados,
+    goToPage,
+} = usePagination(toRef(props, 'initialLogs'))
 
 const urlParams = new URLSearchParams(window.location.search)
 
@@ -148,11 +156,15 @@ const todayCount = computed(() => {
 
         <!-- Tabela -->
         <LogViewerTable
-            :logs="initialLogs"
+            :logs="logsPaginados"
             :loading="loading"
             :filters="filters"
             @select-log="selectLog"
         />
+
+        <div class="px-4 pb-2 bg-[#0d1117]">
+            <Pagination :pagination="pagination" @page-change="goToPage" />
+        </div>
 
         <!-- Modal Detalhe -->
         <LogViewerDetail

@@ -124,15 +124,18 @@ class PmdaAnaliseController extends Controller
     public function index(Request $request): Response
     {
         $filtros = $request->only(['municipio_id']);
-        $page = max(1, (int) $request->query('page', '1'));
+        // Cada painel pagina de forma independente ('page' segue aceito como
+        // fallback do painel de analises por compatibilidade de URLs antigas).
+        $pageAnalises = max(1, (int) $request->query('analises_page', $request->query('page', '1')));
+        $pageSolicitacoes = max(1, (int) $request->query('solicitacoes_page', '1'));
         $path = $request->url();
 
         // Os 3 blocos sao independentes e rodam em paralelo nos task workers
         // (sequencial no fallback). Pagina e path sao capturados aqui porque o
         // task worker nao tem a request; withPath() reaplica o path ao voltar.
         $partes = Concurrency::tasks([
-            'analises'     => static fn () => app(PmdaPlanoService::class)->pendentesAnalise($filtros, 15, $page),
-            'solicitacoes' => static fn () => app(ComunidadeSolicitacaoService::class)->pendentes($filtros, 15, $page),
+            'analises'     => static fn () => app(PmdaPlanoService::class)->pendentesAnalise($filtros, 15, $pageAnalises),
+            'solicitacoes' => static fn () => app(ComunidadeSolicitacaoService::class)->pendentes($filtros, 15, $pageSolicitacoes),
             'municipios'   => static fn () => \App\Models\Municipio::catalogo(),
         ]);
 

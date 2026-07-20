@@ -12,8 +12,8 @@
 
     <!-- Resumo -->
     <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <StatCard title="PMDA em análise" :value="analises.length" :icon="ClipboardDocumentCheckIcon" variant="info" />
-      <StatCard title="Comunidades pendentes" :value="solicitacoes.length" :icon="MapPinIcon" variant="warning" />
+      <StatCard title="PMDA em análise" :value="analisesMeta?.total ?? analises.length" :icon="ClipboardDocumentCheckIcon" variant="info" />
+      <StatCard title="Comunidades pendentes" :value="solicitacoesMeta?.total ?? solicitacoes.length" :icon="MapPinIcon" variant="warning" />
     </div>
 
     <!-- Filtro (retrátil, padrão do módulo) -->
@@ -39,7 +39,7 @@
           <h3 class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
             <ClipboardDocumentCheckIcon class="h-4 w-4 text-indigo-500" />
             Análises de PMDA
-            <span class="font-normal text-slate-400">({{ analises.length }})</span>
+            <span class="font-normal text-slate-400">({{ analisesMeta?.total ?? analises.length }})</span>
           </h3>
         </div>
 
@@ -71,6 +71,10 @@
             </div>
           </li>
         </ul>
+
+        <div class="px-4 pb-4">
+          <Pagination :pagination="analisesMeta" @page-change="irParaPagina('analises_page', $event)" />
+        </div>
       </div>
 
       <!-- PAINEL DIREITO: Solicitações de Comunidade -->
@@ -79,7 +83,7 @@
           <h3 class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
             <MapPinIcon class="h-4 w-4 text-amber-500" />
             Solicitações de Comunidade
-            <span class="font-normal text-slate-400">({{ solicitacoes.length }})</span>
+            <span class="font-normal text-slate-400">({{ solicitacoesMeta?.total ?? solicitacoes.length }})</span>
           </h3>
         </div>
 
@@ -106,6 +110,10 @@
             </div>
           </li>
         </ul>
+
+        <div class="px-4 pb-4">
+          <Pagination :pagination="solicitacoesMeta" @page-change="irParaPagina('solicitacoes_page', $event)" />
+        </div>
       </div>
     </div>
 
@@ -155,6 +163,7 @@ import Modal from '@/Components/Modal.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import PmdaStatusBadge from '@/Components/Atoms/Pmda/PmdaStatusBadge.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
@@ -177,6 +186,8 @@ const props = defineProps({
 
 const analises = computed(() => props.analises?.data ?? []);
 const solicitacoes = computed(() => props.solicitacoes?.data ?? []);
+const analisesMeta = computed(() => props.analises?.meta ?? null);
+const solicitacoesMeta = computed(() => props.solicitacoes?.meta ?? null);
 
 const canAprovar = computed(() => can('pmda.analise.aprovar'));
 const canArquivar = computed(() => can('pmda.analise.arquivar'));
@@ -193,6 +204,18 @@ function aplicar() {
   router.get(route('pmda.analises.index'), {
     municipio_id: filtros.municipio_id || undefined,
   }, { preserveState: true, replace: true });
+}
+
+// Navegacao server-side de um painel preservando filtro e a pagina do outro.
+function irParaPagina(param, page) {
+  const paginaAnalises = param === 'analises_page' ? page : analisesMeta.value?.current_page ?? 1;
+  const paginaSolicitacoes = param === 'solicitacoes_page' ? page : solicitacoesMeta.value?.current_page ?? 1;
+
+  router.get(route('pmda.analises.index'), {
+    municipio_id: filtros.municipio_id || undefined,
+    analises_page: paginaAnalises > 1 ? paginaAnalises : undefined,
+    solicitacoes_page: paginaSolicitacoes > 1 ? paginaSolicitacoes : undefined,
+  }, { preserveState: true, preserveScroll: true, replace: true });
 }
 
 function limpar() {

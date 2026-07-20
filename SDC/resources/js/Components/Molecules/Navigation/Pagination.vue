@@ -1,5 +1,6 @@
 <template>
-  <div class="flex items-center justify-between py-3">
+  <!-- Card padrao do bloco de paginacao (visual de referencia: PMDA/planos) -->
+  <div class="mt-4 flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/50 dark:bg-slate-900/60">
     <Text size="sm" color="muted">
       Mostrando {{ start }} até {{ end }} de {{ total }} resultados
     </Text>
