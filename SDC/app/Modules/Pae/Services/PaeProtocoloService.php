@@ -67,7 +67,7 @@ class PaeProtocoloService extends BaseService
 
             $hoje = now()->format('d.m.Y');
 
-            return sprintf('%s-%04d-001', $hoje, $this->proximoSequencialDoDia($hoje));
+            return sprintf('%s-%04d-001', $hoje, $this->proximoSequencialGlobal());
         });
     }
 
@@ -78,15 +78,20 @@ class PaeProtocoloService extends BaseService
         }
     }
 
-    private function proximoSequencialDoDia(string $hoje): int
+    /**
+     * Sequencial (NNNN) continuo e global: NAO reseta por dia. Retorna o maior
+     * NNNN ja emitido (qualquer data) + 1. Protocolos relacionados reaproveitam
+     * o NNNN do protocolo base (variam so no sufixo -SSS), portanto nao criam
+     * novo NNNN e o max continua correto.
+     */
+    private function proximoSequencialGlobal(): int
     {
         $max = 0;
 
         PaeProtocolo::withTrashed()
-            ->where('num_protocolo', 'like', $hoje . '-%')
             ->pluck('num_protocolo')
-            ->each(function (string $num) use (&$max) {
-                if (preg_match('/^\d{2}\.\d{2}\.\d{4}-(\d{4})-\d{3}$/', $num, $m)) {
+            ->each(function (?string $num) use (&$max) {
+                if ($num !== null && preg_match('/^\d{2}\.\d{2}\.\d{4}-(\d{4})-\d{3}$/', $num, $m)) {
                     $max = max($max, (int) $m[1]);
                 }
             });
