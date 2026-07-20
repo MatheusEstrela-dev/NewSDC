@@ -54,7 +54,7 @@
 
     <EstoqueGrid
         v-if="(activeSection === 'dashboard' || activeSection === 'produtos') && (viewMode === 'grid' || isMobile)"
-      :produtos="produtos"
+      :produtos="produtosPaginados"
       :loading="loading"
       :can-edit="canEdit"
       :can-delete="canDelete"
@@ -66,7 +66,7 @@
 
     <EstoqueTable
       v-else-if="activeSection === 'dashboard' || activeSection === 'produtos'"
-      :produtos="produtos"
+      :produtos="produtosPaginados"
       :loading="loading"
       :can-edit="canEdit"
       :can-delete="canDelete"
@@ -74,6 +74,12 @@
       @edit="emit('edit', $event)"
       @delete="emit('delete', $event)"
       @move="emit('move', $event)"
+    />
+
+    <Pagination
+      v-if="activeSection === 'dashboard' || activeSection === 'produtos'"
+      :pagination="pagination"
+      @page-change="goToPage"
     />
 
     <div v-if="activeSection === 'dashboard'" class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_0.75fr]">
@@ -113,12 +119,14 @@ import EstoqueStatsCards from '@/Components/Organisms/Estoque/EstoqueStatsCards.
 import EstoqueTable from '@/Components/Organisms/Estoque/EstoqueTable.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import { useExport } from '@/Composables/useExport';
 import { useMobile } from '@/Composables/useMobile';
+import { usePagination } from '@/Composables/data/usePagination';
 import { ArchiveBoxIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-import { ref, watch } from 'vue';
+import { ref, toRef, watch } from 'vue';
 
 const props = defineProps({
   produtos: {
@@ -206,6 +214,12 @@ const emit = defineEmits([
 const { isMobile } = useMobile();
 const viewMode = ref('table');
 const localFilters = ref({ ...props.filters });
+
+const {
+  pagination,
+  paginatedItems: produtosPaginados,
+  goToPage,
+} = usePagination(toRef(props, 'produtos'));
 
 const {
   showExportModal,

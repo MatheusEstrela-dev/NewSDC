@@ -91,9 +91,7 @@
 
     </div>
 
-    <div v-if="historicos.meta && historicos.meta.last_page > 1" class="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/50 dark:bg-slate-900/60">
       <Pagination :pagination="historicos.meta" @page-change="irParaPagina" />
-    </div>
 
     <ExportCsvModal
       :show="showExportModal"

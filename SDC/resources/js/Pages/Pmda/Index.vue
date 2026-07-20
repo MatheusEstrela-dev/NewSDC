@@ -166,10 +166,8 @@
       @excluir="confirmarExclusao"
     />
 
-    <!-- Paginacao compartilhada -->
-    <div v-if="pagination && pagination.last_page > 1" class="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/50 dark:bg-slate-900/60">
-      <Pagination :pagination="pagination" @page-change="irParaPagina" />
-    </div>
+    <!-- Paginacao compartilhada (o card padrao vem do proprio componente) -->
+    <Pagination :pagination="pagination" @page-change="irParaPagina" />
 
     <ExportCsvModal
       :show="showExportModal"

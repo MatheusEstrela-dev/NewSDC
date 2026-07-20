@@ -183,16 +183,24 @@ const protocoloId = computed(
     ?? null
 );
 
+// Próxima aba realmente liberada em tabConfig (não a próxima numérica): no
+// fluxo completo 1 -> 2 (Objetivo); no fluxo reduzido 1 -> 4 (Anexos).
+function nextTabId(currentId) {
+  const tabs = tabConfig.value;
+  const idx = tabs.findIndex((tab) => tab.id === currentId);
+  return tabs[idx + 1]?.id ?? currentId;
+}
+
 function handleSaveInfoGerais(data) {
   if (props.readOnly) return;
 
   Object.assign(rat.infoGerais, data);
-  // Após o POST de criação, o Inertia recarrega a página com o novo formulario
-  // no prop. Capturamos o ID e avançamos para a próxima aba automaticamente.
-  rat.saveInfoGerais(formularioId.value, (newId) => {
-    if (newId) {
-      localFormularioId.value = newId;
-      activeSubTab.value = 2;
+  // O callback recebe o ID do formulario (novo no POST, existente no PUT) e so
+  // avanca de aba com ID em maos; a proxima aba segue o fluxo liberado atual.
+  rat.saveInfoGerais(formularioId.value, (savedId) => {
+    if (savedId) {
+      localFormularioId.value = savedId;
+      activeSubTab.value = nextTabId(activeSubTab.value);
     }
   });
 }

@@ -237,12 +237,10 @@
             <p class="text-slate-500 dark:text-slate-400 mt-1">Tente ajustar os filtros de busca.</p>
           </div>
         </div>
-
-        <!-- Pagination -->
-        <div class="px-6 py-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
-          <Pagination :pagination="users" @page-change="onPageChange" />
-        </div>
       </div>
+
+      <!-- Paginacao: bloco separado abaixo do card, padrao do sistema -->
+      <Pagination :pagination="users" @page-change="onPageChange" />
 
       <ConfirmDialog
         :isOpen="showDeleteDialog"

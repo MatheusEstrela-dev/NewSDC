@@ -18,7 +18,19 @@ class PaeProtocoloNumeracaoTest extends TestCase
         return app(PaeProtocoloService::class);
     }
 
-    public function test_gera_numero_no_formato_diario_com_versao(): void
+    /**
+     * Proximo sequencial global atual, sem persistir nada. gerarNumProtocolo()
+     * apenas le o maior NNNN e devolve a string, sem inserir protocolo, entao
+     * pode ser usado para descobrir o baseline independente do estado da base.
+     */
+    private function proximoSequencial(): int
+    {
+        preg_match('/-(\d{4})-\d{3}$/', $this->service()->gerarNumProtocolo(), $m);
+
+        return (int) $m[1];
+    }
+
+    public function test_gera_numero_no_formato_data_sequencial_versao(): void
     {
         $num = $this->service()->gerarNumProtocolo();
 
@@ -29,31 +41,58 @@ class PaeProtocoloNumeracaoTest extends TestCase
         );
     }
 
-    public function test_sequencial_diario_incrementa(): void
+    public function test_sequencial_global_incrementa_a_partir_do_maior(): void
     {
+        $n = $this->proximoSequencial();
         $hoje = now()->format('d.m.Y');
 
-        PaeProtocolo::factory()->create(['num_protocolo' => $hoje . '-0007-001']);
+        PaeProtocolo::factory()->create(['num_protocolo' => sprintf('%s-%04d-001', $hoje, $n)]);
 
-        $this->assertSame($hoje . '-0008-001', $this->service()->gerarNumProtocolo());
+        $this->assertSame(
+            sprintf('%s-%04d-001', $hoje, $n + 1),
+            $this->service()->gerarNumProtocolo()
+        );
+    }
+
+    public function test_sequencial_nao_reseta_entre_datas(): void
+    {
+        // Regressao do bug: o NNNN e global. Um protocolo de ONTEM com sequencial
+        // N faz o numero de HOJE continuar em N+1, nao voltar para 0001.
+        $n = $this->proximoSequencial();
+        $ontem = now()->subDay()->format('d.m.Y');
+
+        PaeProtocolo::factory()->create(['num_protocolo' => sprintf('%s-%04d-001', $ontem, $n)]);
+
+        $hoje = now()->format('d.m.Y');
+        $this->assertSame(
+            sprintf('%s-%04d-001', $hoje, $n + 1),
+            $this->service()->gerarNumProtocolo()
+        );
     }
 
     public function test_ignora_formato_antigo_no_calculo(): void
     {
-        $hoje = now()->format('d.m.Y');
+        $n = $this->proximoSequencial();
 
-        PaeProtocolo::factory()->create(['num_protocolo' => $hoje . '.015']);
+        // Formato legado (sem os segmentos -NNNN-SSS) nao entra no calculo.
+        PaeProtocolo::factory()->create(['num_protocolo' => now()->format('d.m.Y') . '.015']);
 
-        $this->assertSame($hoje . '-0001-001', $this->service()->gerarNumProtocolo());
+        $this->assertSame($n, $this->proximoSequencial());
     }
 
-    public function test_versoes_relacionadas_nao_afetam_sequencial_diario(): void
+    public function test_versoes_relacionadas_nao_consomem_sequencial(): void
     {
+        // Protocolos relacionados reaproveitam o NNNN base (variam so no sufixo
+        // -SSS), portanto nao avancam o sequencial global.
+        $n = $this->proximoSequencial();
         $hoje = now()->format('d.m.Y');
 
-        PaeProtocolo::factory()->create(['num_protocolo' => $hoje . '-0002-001']);
-        PaeProtocolo::factory()->create(['num_protocolo' => $hoje . '-0002-003']);
+        PaeProtocolo::factory()->create(['num_protocolo' => sprintf('%s-%04d-001', $hoje, $n)]);
+        PaeProtocolo::factory()->create(['num_protocolo' => sprintf('%s-%04d-003', $hoje, $n)]);
 
-        $this->assertSame($hoje . '-0003-001', $this->service()->gerarNumProtocolo());
+        $this->assertSame(
+            sprintf('%s-%04d-001', $hoje, $n + 1),
+            $this->service()->gerarNumProtocolo()
+        );
     }
 }
