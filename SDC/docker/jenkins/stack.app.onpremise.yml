@@ -250,6 +250,13 @@ services:
       - sdc_internal
       - sdc_edge
 
+    # A imagem sdc-app tem HEALTHCHECK embutido no Dockerfile checando
+    # :8000/health (servidor Octane) - o reverb roda so a WS na 8080 e nunca
+    # abre a 8000, entao herdar aquele healthcheck marca o container unhealthy
+    # e o restart_policy mata em loop (20/07).
+    healthcheck:
+      disable: true
+
     deploy:
       replicas: 1
       update_config:

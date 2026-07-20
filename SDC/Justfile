@@ -442,6 +442,30 @@ npm-dev:
     rm -rf node_modules/.vite
     npm cache clean --force
 
+# Alternativa as npm-* quando o host nao tem node/npm/bun instalado (ex.: VM
+# de producao). Builda num container oven/bun efemero; Docker CLI + socket
+# montados porque o prebuild (generate-ziggy.mjs) cai no fallback `docker exec
+# newsdc_dev_app php artisan ziggy:generate` quando nao acha PHP local >=8.3.
+# So funciona em host com Docker socket Unix (Linux/macOS) - no Windows use
+# npm-build direto (node local ja resolve o Ziggy sem precisar do fallback).
+# IMPORTANTE: so atualiza o dev (compose.dev.yml monta public/build do host
+# --ro no container); producao usa o que o Jenkins builda dentro da imagem.
+# 🎨 Rebuild de assets via container bun (sem node/npm no host)
+[group('07 🎨 FRONTEND')]
+@dev-rebuild-assets:
+    printf "{{BLUE}}-> Rebuild de assets Vite via container bun{{RESET}}\n"
+    docker run --rm \
+        -e HTTP_PROXY="${HTTP_PROXY:-}" -e HTTPS_PROXY="${HTTPS_PROXY:-}" -e NO_PROXY="${NO_PROXY:-}" \
+        -e http_proxy="${http_proxy:-}" -e https_proxy="${https_proxy:-}" -e no_proxy="${no_proxy:-}" \
+        -v "{{justfile_directory()}}":/app \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v "$(command -v docker)":/usr/bin/docker:ro \
+        -w /app \
+        oven/bun:1 \
+        sh -c "bun install --frozen-lockfile && bun run build"
+    printf "{{GREEN}}✓ Assets atualizados em public/build{{RESET}}\n"
+    printf "{{YELLOW}}Se o Octane tiver cacheado o manifest antigo: docker restart newsdc_dev_app{{RESET}}\n"
+
 # ============================================================================
 # 🐚 ACESSO & DEBUG (stack dev)
 # ============================================================================

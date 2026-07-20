@@ -69,6 +69,16 @@ WORKDIR /var/www
 # Copiar codigo da aplicacao
 COPY --chown=www-data:www-data . /var/www
 
+# Dependencias PHP (faltava nesta imagem: sem isto o worker crasha em loop
+# com "Failed opening required vendor/autoload.php" - 20/07).
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader \
+    --ignore-platform-reqs \
+    --no-scripts || (echo "ERRO ao instalar dependencias" && cat composer.json && exit 1)
+
 # Copiar configuracao do Supervisor
 COPY docker/supervisor/supervisord.conf /etc/supervisord.conf
 COPY docker/supervisor/laravel-worker.conf /etc/supervisor/conf.d/laravel-worker.conf
