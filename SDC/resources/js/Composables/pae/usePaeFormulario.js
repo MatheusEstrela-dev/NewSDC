@@ -81,20 +81,23 @@ export function usePaeFormulario(empreendimento = {}, formulario = null) {
     return first ? String(first) : fallback;
   }
 
-  function saveInfoGerais(id, onCreated) {
+  function saveInfoGerais(id, onSaved) {
     saving.value = true;
     if (!id) {
       router.post('/pae/formulario', infoGerais.value, {
         onSuccess: (page) => {
           toast('Informações gerais salvas com sucesso.');
           const newId = page.props?.formulario?.id ?? null;
-          if (onCreated) onCreated(newId);
+          if (onSaved) onSaved(newId);
         },
         onFinish: () => { saving.value = false; },
       });
     } else {
       router.put(`/pae/formulario/${id}/infogerais`, infoGerais.value, {
-        onSuccess: () => toast('Informações gerais atualizadas.'),
+        onSuccess: () => {
+          toast('Informações gerais atualizadas.');
+          if (onSaved) onSaved(id);
+        },
         onFinish: () => { saving.value = false; },
       });
     }
