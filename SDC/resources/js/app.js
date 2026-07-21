@@ -266,8 +266,13 @@ createInertiaApp({
     },
 });
 
+// Easter egg: digite `egg` no console -> assinatura em dourado.
 Object.defineProperty(window, 'egg', {
     get: function () {
+        console.log(
+            '%c\u2B50 Projetado pela equipe do Matheus Estrela \u2B50',
+            'color:#D4AF37;font-size:15px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,.35)'
+        );
         return '\u2B50';
     }
 });
