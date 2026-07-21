@@ -7,10 +7,12 @@ use App\Models\Municipio;
 use App\Models\User;
 use App\Modules\Compdec\Domain\Entities\Orgao;
 use App\Modules\Compdec\Domain\ValueObjects\TipoOrgao;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,12 +24,35 @@ class PasswordResetLinkController extends Controller
      */
     public function create(): Response
     {
-        $municipios = Municipio::catalogo();
-        
+        // O catalogo de municipios NAO vai mais nos props (eram ~850 linhas
+        // embutidas em toda pagina publica). O front busca sob demanda em
+        // municipios() conforme o usuario digita.
         return Inertia::render('Auth/Reset', [
-            'municipios' => $municipios,
             'status' => session('status'),
         ]);
+    }
+
+    /**
+     * Autocomplete publico de municipios para o fluxo "Por Municipio".
+     * Filtra o catalogo cacheado em memoria (acento-insensivel) e devolve no
+     * maximo 20 itens. Exige >= 2 caracteres para nao varrer a lista inteira.
+     */
+    public function municipios(Request $request): JsonResponse
+    {
+        $termo = trim((string) $request->query('q', ''));
+
+        if (mb_strlen($termo) < 2) {
+            return response()->json([]);
+        }
+
+        $needle = (string) Str::of($termo)->lower()->ascii();
+
+        $resultados = Municipio::catalogo()
+            ->filter(fn (array $m): bool => str_contains((string) Str::of($m['nome'])->lower()->ascii(), $needle))
+            ->take(20)
+            ->values();
+
+        return response()->json($resultados);
     }
 
     /**

@@ -10,6 +10,44 @@ export function useReset() {
   const errors = ref({});
   const successMessage = ref('');
 
+  // Autocomplete de municipio (busca sob demanda no endpoint publico)
+  const municipioBusca = ref('');
+  const municipioResultados = ref([]);
+  const buscandoMunicipios = ref(false);
+  let buscaTimer = null;
+
+  function buscarMunicipios(termo) {
+    municipioBusca.value = termo;
+    // Editar o texto invalida qualquer selecao anterior (evita enviar id velho)
+    municipioId.value = '';
+    clearTimeout(buscaTimer);
+
+    if (termo.trim().length < 2) {
+      municipioResultados.value = [];
+      return;
+    }
+
+    buscaTimer = setTimeout(async () => {
+      buscandoMunicipios.value = true;
+      try {
+        const resp = await fetch(`/forgot-password/municipios?q=${encodeURIComponent(termo)}`, {
+          headers: { Accept: 'application/json' },
+        });
+        municipioResultados.value = resp.ok ? await resp.json() : [];
+      } catch {
+        municipioResultados.value = [];
+      } finally {
+        buscandoMunicipios.value = false;
+      }
+    }, 300);
+  }
+
+  function selecionarMunicipio(municipio) {
+    municipioId.value = municipio.id;
+    municipioBusca.value = `${municipio.nome} / ${municipio.uf}`;
+    municipioResultados.value = [];
+  }
+
   const cpfFormatted = computed(() => {
     return applyCpfMask(cpf.value);
   });
@@ -32,6 +70,9 @@ export function useReset() {
     recoveryMethod.value = method;
     errors.value = {};
     successMessage.value = '';
+    municipioBusca.value = '';
+    municipioResultados.value = [];
+    municipioId.value = '';
   }
 
   function submitReset() {
@@ -61,6 +102,8 @@ export function useReset() {
         successMessage.value = 'Link de redefinição enviado! Verifique o e-mail cadastrado.';
         cpf.value = '';
         municipioId.value = '';
+        municipioBusca.value = '';
+        municipioResultados.value = [];
       },
       onError: (pageErrors) => {
         errors.value = pageErrors;
@@ -72,6 +115,8 @@ export function useReset() {
   function resetForm() {
     cpf.value = '';
     municipioId.value = '';
+    municipioBusca.value = '';
+    municipioResultados.value = [];
     errors.value = {};
     successMessage.value = '';
   }
@@ -80,12 +125,17 @@ export function useReset() {
     recoveryMethod,
     cpf,
     municipioId,
+    municipioBusca,
+    municipioResultados,
+    buscandoMunicipios,
     loading,
     errors,
     successMessage,
     cpfFormatted,
     isValid,
     updateCpf,
+    buscarMunicipios,
+    selecionarMunicipio,
     setRecoveryMethod,
     submitReset,
     resetForm,

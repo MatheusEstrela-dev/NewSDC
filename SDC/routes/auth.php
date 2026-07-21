@@ -33,6 +33,12 @@ Route::middleware('guest')->group(function () {
                 ->middleware('throttle:6,1')
                 ->name('password.email');
 
+    // Autocomplete publico de municipios (fluxo "Por Municipio" do reset).
+    // Substitui o antigo catalogo inteiro embutido nos props da pagina.
+    Route::get('forgot-password/municipios', [PasswordResetLinkController::class, 'municipios'])
+                ->middleware('throttle:30,1')
+                ->name('password.municipios');
+
     Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
                 ->name('password.reset');
 

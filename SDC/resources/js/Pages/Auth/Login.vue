@@ -5,13 +5,13 @@
     <div class="login-card">
       <header class="card-header">
         <picture>
-          <source srcset="/imgs/logo-defesa-civil.webp" type="image/webp" />
+          <source srcset="/imgs/logo-defesa-civil-login.webp" type="image/webp" />
           <img
-            src="/imgs/logo-defesa-civil.png"
+            src="/imgs/logo-defesa-civil-login.png"
             alt="Logo Defesa Civil"
             class="main-logo"
-            width="200"
-            height="60"
+            width="240"
+            height="72"
             style="aspect-ratio: 10/3;"
           />
         </picture>

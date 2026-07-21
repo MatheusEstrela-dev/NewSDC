@@ -5,9 +5,9 @@
     <div class="reset-card">
       <header class="card-header">
         <picture>
-          <source srcset="/imgs/logo-defesa-civil.webp" type="image/webp" />
+          <source srcset="/imgs/logo-defesa-civil-login.webp" type="image/webp" />
           <img
-            src="/imgs/logo-defesa-civil.png"
+            src="/imgs/logo-defesa-civil-login.png"
             alt="Logo Defesa Civil"
             class="main-logo"
           />
@@ -90,24 +90,18 @@
           </span>
         </div>
 
-        <div v-else class="input-group">
-          <select
-            id="municipioId"
-            v-model="municipioId"
+        <div v-else class="input-group municipio-autocomplete">
+          <input
+            type="text"
+            id="municipioBusca"
+            :value="municipioBusca"
+            @input="buscarMunicipios($event.target.value)"
             class="input-field"
-            required
+            placeholder=" "
+            autocomplete="off"
             :class="{ 'border-red-500': errors.municipio_id }"
-          >
-            <option value="" disabled>Selecione seu município</option>
-            <option
-              v-for="municipio in municipios"
-              :key="municipio.id"
-              :value="municipio.id"
-            >
-              {{ municipio.nome }}
-            </option>
-          </select>
-          <label for="municipioId" class="input-label">Município</label>
+          />
+          <label for="municipioBusca" class="input-label">Município</label>
           <span class="input-icon">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -124,6 +118,18 @@
               <circle cx="12" cy="10" r="3"></circle>
             </svg>
           </span>
+
+          <ul v-if="municipioResultados.length" class="municipio-results">
+            <li
+              v-for="municipio in municipioResultados"
+              :key="municipio.id"
+              class="municipio-result"
+              @mousedown.prevent="selecionarMunicipio(municipio)"
+            >
+              {{ municipio.nome }} <span class="municipio-uf">/ {{ municipio.uf }}</span>
+            </li>
+          </ul>
+          <p v-else-if="buscandoMunicipios" class="municipio-hint">Buscando...</p>
         </div>
 
         <div v-if="errors[recoveryMethod === 'cpf' ? 'cpf' : 'municipio_id']" class="error-message">
@@ -176,24 +182,73 @@ import { useReset } from '../../Composables/useReset';
 import '../../../css/pages/auth/reset.css';
 
 defineProps({
-  municipios: {
-    type: Array,
-    default: () => []
-  },
   status: String
 });
 
 const {
   recoveryMethod,
   cpf,
-  municipioId,
+  municipioBusca,
+  municipioResultados,
+  buscandoMunicipios,
   loading,
   errors,
   successMessage,
   cpfFormatted,
   isValid,
   updateCpf,
+  buscarMunicipios,
+  selecionarMunicipio,
   setRecoveryMethod,
   submitReset,
 } = useReset();
 </script>
+
+<style scoped>
+.municipio-autocomplete {
+  position: relative;
+}
+
+.municipio-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem;
+  list-style: none;
+  max-height: 15rem;
+  overflow-y: auto;
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.municipio-result {
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.375rem;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.municipio-result:hover {
+  background: rgba(234, 140, 10, 0.15);
+}
+
+.municipio-uf {
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.municipio-hint {
+  position: absolute;
+  top: 100%;
+  left: 0.25rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+</style>
