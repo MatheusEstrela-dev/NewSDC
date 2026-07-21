@@ -5,10 +5,24 @@ import { applyCpfMask, isValidCpfFormat, removeCpfMask } from '../../utils/cpfMa
 /**
  * Composable para gerenciar o estado e lógica do formulário de login
  */
+// Chave do "lembrar CPF" no navegador. Guardamos APENAS o CPF (identificador
+// de login), NUNCA a senha. Padrao "remember username".
+const REMEMBER_CPF_KEY = 'sdc_remember_cpf';
+
+function lerCpfLembrado() {
+  if (typeof window === 'undefined') return '';
+  try {
+    return window.localStorage.getItem(REMEMBER_CPF_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
 export function useLogin() {
-  const cpf = ref('');
+  const cpfLembrado = lerCpfLembrado();
+  const cpf = ref(cpfLembrado);
   const password = ref('');
-  const remember = ref(false);
+  const remember = ref(cpfLembrado !== '');
   const showPassword = ref(false);
   const loading = ref(false);
   const errors = ref({});
@@ -59,6 +73,20 @@ export function useLogin() {
 
     loading.value = true;
     errors.value = {};
+
+    // Persiste (ou limpa) o CPF lembrado conforme o checkbox. Só o CPF,
+    // nunca a senha.
+    if (typeof window !== 'undefined') {
+      try {
+        if (remember.value) {
+          window.localStorage.setItem(REMEMBER_CPF_KEY, removeCpfMask(cpf.value));
+        } else {
+          window.localStorage.removeItem(REMEMBER_CPF_KEY);
+        }
+      } catch {
+        // localStorage indisponivel (modo privado etc.): ignora silenciosamente
+      }
+    }
 
     // Autenticação real via backend
     router.post('/login', {
