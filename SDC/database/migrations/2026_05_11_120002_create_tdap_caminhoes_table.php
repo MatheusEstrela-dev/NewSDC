@@ -16,7 +16,7 @@ return new class extends Migration
                 ->constrained('tdap_prestadores')
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-            $table->string('placa', 8)->unique();
+            $table->string('placa', 8)->index();
             $table->string('marca', 50)->nullable();
             $table->string('modelo', 50)->nullable();
             $table->string('cor', 30)->nullable();

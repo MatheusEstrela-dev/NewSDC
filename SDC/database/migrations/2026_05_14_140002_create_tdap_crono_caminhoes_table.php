@@ -35,7 +35,6 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['cronograma_id', 'caminhao_id', 'deleted_at'], 'tdap_crono_cam_unique');
             $table->index(['cronograma_id', 'ordem']);
             $table->index('caminhao_id');
         });

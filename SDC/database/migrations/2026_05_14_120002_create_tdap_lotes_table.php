@@ -30,6 +30,7 @@ return new class extends Migration
 
             $table->string('numero', 20);
             $table->string('nome', 150)->nullable();
+            $table->string('contrato', 50)->nullable();
             $table->decimal('qtd_agua_m3', 12, 2)->comment('Quantidade contratada (m3)');
             $table->decimal('valor_m3', 10, 2)->comment('Valor unitario por m3 (R$)');
             $table->boolean('ativo')->default(true)->index();
@@ -37,7 +38,6 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['ata_id', 'municipio_id', 'deleted_at'], 'tdap_lotes_ata_mun_unique');
             $table->index(['ata_id', 'ativo']);
             $table->index(['prestador_id', 'ativo']);
         });

@@ -16,6 +16,9 @@ return new class extends Migration
             $table->date('dt_inicio');
             $table->date('dt_final');
             $table->text('historico')->nullable();
+            $table->text('planejamento')->nullable();
+            $table->string('sei', 50)->nullable();
+            $table->string('siad', 50)->nullable();
             $table->boolean('ativo')->default(true)->index();
             $table->text('observacoes')->nullable();
             $table->timestamps();

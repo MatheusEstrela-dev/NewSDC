@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('tdap_cronogramas', function (Blueprint $table) {
             $table->id();
-            $table->string('numero', 20)->unique();
+            $table->string('numero', 20)->index();
             $table->string('empenho', 30)->nullable();
 
             $table->foreignId('ata_id')
