@@ -13,6 +13,7 @@ return new class extends Migration
         Schema::create('tdap_prestadores', function (Blueprint $table) {
             $table->id();
             $table->string('cnpj', 18)->unique();
+            $table->string('cpf', 14)->nullable();
             $table->string('nome', 150);
             $table->string('representante', 150)->nullable();
             $table->string('email', 150);

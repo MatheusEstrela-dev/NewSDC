@@ -5,6 +5,7 @@
       title="Vistorias de Veículos"
       description="Inspeções técnicas dos caminhões-tanque (vigência 12 meses)"
       :icon="TruckIcon"
+      :icon-image="moduleIcon('tdap')"
     >
       <template #actions>
         <ActionButton action="export" :allowed="true" variant="success" label="Exportar" @click="openExportModal" />
@@ -171,6 +172,7 @@ import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import ExclamationIcon from '@/Components/Icons/ExclamationIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
 

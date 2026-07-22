@@ -5,6 +5,7 @@
       title="Atas de Registro de Preços"
       description="Contratos-pai que autorizam o fornecimento de água potável"
       :icon="CalendarIcon"
+      :icon-image="moduleIcon('tdap')"
     >
       <template #actions>
         <Button variant="success" size="md" :icon="DownloadIcon" icon-position="left" @click="openExportModal">
@@ -144,6 +145,7 @@ import CheckIcon from '@/Components/Icons/CheckIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
 

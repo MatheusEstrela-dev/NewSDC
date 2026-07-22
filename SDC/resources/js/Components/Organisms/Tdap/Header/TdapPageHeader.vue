@@ -40,11 +40,12 @@
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 
 defineProps({
   title: { type: String, required: true },
   description: { type: String, default: '' },
   icon: { type: Object, default: () => TruckIcon },
-  iconImage: { type: String, default: '' },
+  iconImage: { type: String, default: () => moduleIcon('tdap') },
 });
 </script>

@@ -58,7 +58,7 @@ class TdapDashboardController extends Controller
             })
             ->count();
 
-        $viagensPendentes = (int) CronoViagem::query()->pendente()->count();
+        $viagensPendentes = (int) CronoViagem::query()->pendente()->whereHas('cronoCaminhao')->count();
 
         return [
             'cronogramas_ativos'        => (int) ($cronogramaStats->ativos ?? 0),

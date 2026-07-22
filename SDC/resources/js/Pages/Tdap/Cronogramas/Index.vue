@@ -5,6 +5,7 @@
       title="Cronogramas de Fornecimento"
       description="Ordens operacionais de entrega de água potável"
       :icon="TruckIcon"
+      :icon-image="moduleIcon('tdap')"
     >
       <template #actions>
         <Button variant="success" size="md" :icon="DownloadIcon" icon-position="left" @click="openExportModal">
@@ -220,6 +221,7 @@ import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListI
 import CubeIcon from '@/Components/Icons/CubeIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
 
