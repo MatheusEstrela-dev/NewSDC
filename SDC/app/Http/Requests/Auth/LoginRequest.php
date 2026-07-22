@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use App\Models\UserStatusHistory;
 use App\Support\Security\PasswordVerifier;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
@@ -10,23 +11,29 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Escalonamento de bloqueio por CPF (conta):
+     *   rodada 0: 5 tentativas -> espera 60s
+     *   rodada 1: 3 tentativas -> espera 180s
+     *   rodada 2: 1 tentativa  -> BLOQUEIA a conta no banco (status='blocked')
      */
+    private const STAGE_ATTEMPTS = [5, 3, 1];
+    private const STAGE_WAITS = [60, 180]; // s; apos a ultima rodada -> bloqueio
+    private const COUNTER_TTL_HOURS = 24;
+    /** Hash argon2id descartavel p/ tempo constante quando o CPF nao existe. */
+    private const DUMMY_HASH = '$argon2id$v=19$m=65536,t=2,p=2$V0NSck1LZ1BGcWZ5dWdrTw$UVr0RwwqX5IPvBo3zG1dSAYrKjYHFSHD97OYirBorUI';
+
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, \Illuminate\Contracts\Validation\Rule|array|string>
      */
     public function rules(): array
@@ -38,8 +45,6 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Attempt to authenticate the request's credentials.
-     *
      * @throws \Illuminate\Validation\ValidationException
      */
     public function authenticate(): void
@@ -49,10 +54,6 @@ class LoginRequest extends FormRequest
         $cpf = $this->input('cpf');
         $password = $this->input('password');
 
-        // Busca unica por CPF, cacheada por 30s. Em burst de inicio de plantao
-        // (todos logam juntos) o Postgres recebe 1 query por CPF a cada 30s em
-        // vez de N. Cacheia o model inteiro de proposito: Auth::login precisa do
-        // model completo para o restante do request (Inertia share etc.).
         $user = Cache::remember(
             "user:cpf:{$cpf}",
             30,
@@ -60,38 +61,26 @@ class LoginRequest extends FormRequest
         );
 
         if (!$user) {
-            RateLimiter::hit($this->throttleKey());
-            throw ValidationException::withMessages([
-                'cpf' => trans('auth.failed'),
-            ]);
+            // Tempo constante: mesmo custo de um verify real p/ nao vazar a
+            // existencia do CPF por diferenca de tempo de resposta.
+            app(PasswordVerifier::class)->verify($password, self::DUMMY_HASH);
+            $this->registerFailedAttempt(null);
+            throw ValidationException::withMessages(['cpf' => trans('auth.failed')]);
         }
 
-        // 'pending' eh permitido propositalmente: representa o primeiro acesso com
-        // senha provisoria. O EnsurePasswordChanged middleware obriga a troca em
-        // /first-access antes de qualquer outra rota autenticada.
         if (!$user->active || in_array($user->status, ['inactive', 'suspended', 'blocked'], true)) {
-            RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([
-                'cpf' => 'Seu usuário está desativado. Entre em contato com o suporte ou com o gestor do sistema.',
+                'cpf' => 'Seu usuário está desativado ou bloqueado. Entre em contato com o suporte ou com o gestor do sistema.',
             ]);
         }
 
-        // Verificacao direta do hash (sem segunda consulta por email que o
-        // Auth::attempt fazia). Sob Swoole, PasswordVerifier envia o Hash::check
-        // para task workers; nos demais ambientes cai no Hash::check sincrono.
         if (!app(PasswordVerifier::class)->verify($password, $user->password)) {
-            RateLimiter::hit($this->throttleKey());
-            // Dispara o evento Failed que o Auth::attempt disparava, para manter
-            // a auditoria de login_failed (EventServiceProvider). Sem isso a
-            // verificacao manual do hash silenciaria o log de seguranca.
             event(new Failed('web', $user, ['email' => $user->email]));
-            throw ValidationException::withMessages([
-                'cpf' => trans('auth.failed'),
-            ]);
+            $this->registerFailedAttempt($user); // pode lancar throttle/bloqueio
+            throw ValidationException::withMessages(['cpf' => trans('auth.failed')]);
         }
 
-        // Rehash progressivo: usuarios com hash bcrypt antigo sao migrados para
-        // argon2id no proximo login, sem quebrar quem ainda nao migrou.
+        // Rehash progressivo bcrypt -> argon2id no login.
         if (Hash::needsRehash($user->password)) {
             $user->forceFill(['password' => Hash::make($password)])->save();
             Cache::forget("user:cpf:{$cpf}");
@@ -99,37 +88,122 @@ class LoginRequest extends FormRequest
 
         Auth::login($user, $this->boolean('remember'));
 
-        RateLimiter::clear($this->throttleKey());
+        $this->clearThrottleState();
     }
 
     /**
-     * Ensure the login request is not rate limited.
+     * Bloqueia se houver penalidade (espera) ativa para o CPF.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        $until = Cache::get($this->penaltyKey());
+        if (!$until) {
             return;
         }
-
-        event(new Lockout($this));
-
-        $seconds = RateLimiter::availableIn($this->throttleKey());
-
-        throw ValidationException::withMessages([
-            'cpf' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
-        ]);
+        $remaining = (int) ceil(now()->diffInSeconds($until, false));
+        if ($remaining > 0) {
+            event(new Lockout($this));
+            $this->throwThrottle($remaining);
+        }
+        Cache::forget($this->penaltyKey()); // expirou: libera a proxima rodada
     }
 
     /**
-     * Get the rate limiting throttle key for the request.
+     * Contabiliza a falha e aplica o escalonamento. Ao atingir o limite da
+     * rodada: espera (rodadas 0/1) ou bloqueio da conta no banco (rodada final).
+     *
+     * @throws \Illuminate\Validation\ValidationException
      */
-    public function throttleKey(): string
+    private function registerFailedAttempt(?User $user): void
     {
-        return Str::transliterate(Str::lower($this->string('cpf')).'|'.$this->ip());
+        $stage = (int) Cache::get($this->stageKey(), 0);
+        $attempts = ((int) Cache::get($this->attemptsKey(), 0)) + 1;
+        Cache::put($this->attemptsKey(), $attempts, now()->addHours(self::COUNTER_TTL_HOURS));
+
+        $threshold = self::STAGE_ATTEMPTS[$stage] ?? 1;
+        if ($attempts < $threshold) {
+            return; // ainda dentro da rodada; segue o erro normal de credenciais
+        }
+
+        // Rodadas com espera (0 e 1)
+        if ($stage < count(self::STAGE_WAITS)) {
+            $wait = self::STAGE_WAITS[$stage];
+            Cache::put($this->penaltyKey(), now()->addSeconds($wait), now()->addSeconds($wait));
+            Cache::put($this->stageKey(), $stage + 1, now()->addHours(self::COUNTER_TTL_HOURS));
+            Cache::put($this->attemptsKey(), 0, now()->addHours(self::COUNTER_TTL_HOURS));
+            event(new Lockout($this));
+            Log::warning('security.login.lockout', [
+                'cpf' => $this->maskedCpf(), 'ip' => $this->ip(),
+                'stage' => $stage + 1, 'wait_seconds' => $wait,
+            ]);
+            $this->throwThrottle($wait);
+        }
+
+        // Rodada final: bloqueia a CONTA no banco.
+        $this->clearThrottleState();
+        if ($user) {
+            $anterior = $user->status;
+            $user->forceFill(['status' => 'blocked'])->save();
+            Cache::forget("user:cpf:{$user->cpf}");
+            UserStatusHistory::logStatusChange(
+                $user, $anterior, 'blocked',
+                'Bloqueio automatico por excesso de tentativas de login.'
+            );
+            Log::warning('security.login.account_blocked', [
+                'cpf' => $this->maskedCpf(), 'ip' => $this->ip(), 'user_id' => $user->id,
+            ]);
+            throw ValidationException::withMessages([
+                'cpf' => 'Sua conta foi bloqueada por segurança após múltiplas tentativas. Contate o suporte ou o gestor do sistema.',
+            ]);
+        }
+
+        // CPF inexistente: sem conta para bloquear -> mantem espera longa.
+        $waits = self::STAGE_WAITS;
+        $wait = end($waits) ?: 180;
+        Cache::put($this->penaltyKey(), now()->addSeconds($wait), now()->addSeconds($wait));
+        $this->throwThrottle($wait);
+    }
+
+    private function throwThrottle(int $seconds): void
+    {
+        throw ValidationException::withMessages([
+            'cpf' => trans('auth.throttle', ['seconds' => $seconds, 'minutes' => ceil($seconds / 60)]),
+            'retry_after' => (string) $seconds, // front anima a contagem regressiva
+        ]);
+    }
+
+    private function clearThrottleState(): void
+    {
+        Cache::forget($this->attemptsKey());
+        Cache::forget($this->stageKey());
+        Cache::forget($this->penaltyKey());
+    }
+
+    private function cpfDigits(): string
+    {
+        return preg_replace('/\D/', '', (string) $this->input('cpf'));
+    }
+
+    private function maskedCpf(): string
+    {
+        $cpf = $this->cpfDigits();
+        return strlen($cpf) >= 11 ? substr($cpf, 0, 3) . '******' . substr($cpf, -2) : '***';
+    }
+
+    private function attemptsKey(): string
+    {
+        return 'login:att:' . $this->cpfDigits();
+    }
+
+    private function stageKey(): string
+    {
+        return 'login:stage:' . $this->cpfDigits();
+    }
+
+    private function penaltyKey(): string
+    {
+        return 'login:penalty:' . $this->cpfDigits();
     }
 }

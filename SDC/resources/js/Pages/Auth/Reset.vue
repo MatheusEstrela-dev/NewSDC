@@ -170,7 +170,7 @@
       </div>
 
       <div class="card-footer">
-        &copy; 2025 Governo do Estado de Minas Gerais
+        &copy; {{ new Date().getFullYear() }} Governo do Estado de Minas Gerais
       </div>
     </div>
   </div>

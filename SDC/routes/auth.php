@@ -23,8 +23,11 @@ Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
                 ->name('login');
 
-    Route::post('login', [AuthenticatedSessionController::class, 'store'])
-                ->middleware('throttle:login');
+    // Sem 'throttle:login' aqui de proposito: o rate limit do login web e feito
+    // pelo limiter interno do LoginRequest (ensureIsNotRateLimited, 5 tentativas
+    // por cpf+ip), que lanca ValidationException -> mensagem discreta inline no
+    // formulario, em vez da pagina 429 crua. As APIs mantem 'throttle:login'.
+    Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
                 ->name('password.request');

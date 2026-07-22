@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, onScopeDispose } from 'vue';
 import { applyCpfMask, isValidCpfFormat, removeCpfMask } from '../../utils/cpfMask';
 
 /**
@@ -26,6 +26,34 @@ export function useLogin() {
   const showPassword = ref(false);
   const loading = ref(false);
   const errors = ref({});
+
+  // Contagem regressiva de bloqueio por excesso de tentativas (throttle).
+  // O backend devolve `retry_after` (segundos) no erro; aqui animamos.
+  const throttleRemaining = ref(0);
+  const throttleTotal = ref(0);
+  let throttleTimer = null;
+  const isThrottled = computed(() => throttleRemaining.value > 0);
+
+  function startThrottleCountdown(seconds) {
+    const s = Math.max(0, Math.ceil(Number(seconds) || 0));
+    if (throttleTimer) clearInterval(throttleTimer);
+    throttleTotal.value = s;
+    throttleRemaining.value = s;
+    if (s <= 0) return;
+    throttleTimer = setInterval(() => {
+      throttleRemaining.value -= 1;
+      if (throttleRemaining.value <= 0) {
+        clearInterval(throttleTimer);
+        throttleTimer = null;
+        throttleRemaining.value = 0;
+        errors.value = {}; // libera o formulario ao zerar
+      }
+    }, 1000);
+  }
+
+  onScopeDispose(() => {
+    if (throttleTimer) clearInterval(throttleTimer);
+  });
 
   /**
    * CPF formatado com máscara
@@ -67,7 +95,7 @@ export function useLogin() {
    * Modo frontend: apenas redireciona para o dashboard
    */
   function submitLogin() {
-    if (!isValid.value) {
+    if (!isValid.value || isThrottled.value) {
       return;
     }
 
@@ -100,6 +128,9 @@ export function useLogin() {
       onError: (pageErrors) => {
         errors.value = pageErrors;
         loading.value = false;
+        if (pageErrors && pageErrors.retry_after) {
+          startThrottleCountdown(pageErrors.retry_after);
+        }
       },
     });
   }
@@ -127,6 +158,11 @@ export function useLogin() {
     // Computed
     cpfFormatted,
     isValid,
+
+    // Throttle / countdown
+    throttleRemaining,
+    throttleTotal,
+    isThrottled,
 
     // Methods
     updateCpf,

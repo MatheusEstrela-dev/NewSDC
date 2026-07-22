@@ -113,8 +113,12 @@
             </svg>
           </button>
         </div>
+        <!-- Bloqueio por tentativas: so a mensagem; o count fica no botao -->
+        <div v-if="isThrottled" class="mb-4 mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-center shadow-sm backdrop-blur-sm">
+          <p class="text-sm text-red-400 font-medium">Muitas tentativas. Aguarde para tentar novamente.</p>
+        </div>
         <!-- Error Messages (Discrete & Centered) -->
-        <div v-if="errors.cpf || errors.password" class="mb-4 mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-center shadow-sm backdrop-blur-sm">
+        <div v-else-if="errors.cpf || errors.password" class="mb-4 mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-center shadow-sm backdrop-blur-sm">
           <p v-if="errors.cpf" class="text-sm text-red-400 font-medium">{{ errors.cpf }}</p>
           <p v-if="errors.password" class="text-sm text-red-400 font-medium">{{ errors.password }}</p>
         </div>
@@ -141,15 +145,16 @@
         <button
           type="submit"
           class="btn-login"
-          :disabled="loading || !isValid"
+          :disabled="loading || !isValid || isThrottled"
         >
-          <span v-if="!loading">Acessar Sistema</span>
+          <span v-if="isThrottled">Aguarde {{ throttleRemaining }}s</span>
+          <span v-else-if="!loading">Acessar Sistema</span>
           <span v-else class="btn-loading">Autenticando...</span>
         </button>
       </form>
 
       <div class="card-footer">
-        &copy; 2025 Governo do Estado de Minas Gerais
+        &copy; {{ currentYear }} Governo do Estado de Minas Gerais
       </div>
     </div>
   </div>
@@ -170,10 +175,16 @@ const {
   errors,
   cpfFormatted,
   isValid,
+  throttleRemaining,
+  throttleTotal,
+  isThrottled,
   updateCpf,
   togglePasswordVisibility,
   submitLogin,
 } = useLogin();
+
+// Ano corrente para o rodape (atualiza sozinho a cada virada de ano).
+const currentYear = new Date().getFullYear();
 
 /**
  * Manipula a entrada de dados para garantir que apenas números sejam aceitos

@@ -138,7 +138,7 @@ provide('openSidebar', openSidebar);
             CEDEC - Defesa Civil de Minas Gerais
           </span>
           <span class="text-xs sm:text-sm text-slate-500 dark:text-slate-500 hidden sm:inline">
-            © 2025 Todos os direitos reservados.
+            © {{ new Date().getFullYear() }} Todos os direitos reservados.
           </span>
         </div>
         <div class="flex gap-4 sm:gap-6">
