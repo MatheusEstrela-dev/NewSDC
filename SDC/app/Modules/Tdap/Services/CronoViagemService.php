@@ -46,6 +46,7 @@ class CronoViagemService
                 'cronoCaminhao.caminhao:id,placa,marca,modelo',
             ])
             ->pendente()
+            ->whereHas('cronoCaminhao')
             ->orderBy('data_registro')
             ->paginate($perPage)
             ->withQueryString();

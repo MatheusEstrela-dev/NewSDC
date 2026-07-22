@@ -102,7 +102,12 @@ class CronoCaminhaoService
             $cc = CronoCaminhao::query()
                 ->with(['caminhao:id,capacidade_m3', 'cronograma.lote:id,valor_m3'])
                 ->lockForUpdate()
-                ->findOrFail($cronoCaminhaoId);
+                ->find($cronoCaminhaoId);
+
+            // Sem crono_caminhao correspondente: nada a recalcular.
+            if ($cc === null) {
+                return;
+            }
 
             $viagensValidadas = (int) CronoViagem::query()
                 ->where('crono_caminhao_id', $cronoCaminhaoId)
