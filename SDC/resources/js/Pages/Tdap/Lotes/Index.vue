@@ -5,6 +5,7 @@
       title="Lotes de Fornecimento"
       description="Subdivisões das atas por município e prestador"
       :icon="MapIcon"
+      :icon-image="moduleIcon('tdap')"
     >
       <template #actions>
         <Button variant="success" size="md" :icon="DownloadIcon" icon-position="left" @click="openExportModal">
@@ -151,6 +152,7 @@ import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import CubeIcon from '@/Components/Icons/CubeIcon.vue';
 import DocumentIcon from '@/Components/Icons/DocumentIcon.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
 

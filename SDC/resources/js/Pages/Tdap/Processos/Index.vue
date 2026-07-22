@@ -5,6 +5,7 @@
       title="Processos TDAP"
       description="Workflow de habilitação até liquidação"
       :icon="TruckIcon"
+      :icon-image="moduleIcon('tdap')"
     >
       <template #actions>
         <ActionButton action="export" :allowed="true" variant="success" label="Exportar" @click="openExportModal" />
@@ -137,6 +138,7 @@ import CheckIcon from '@/Components/Icons/CheckIcon.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import { computed } from 'vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
 

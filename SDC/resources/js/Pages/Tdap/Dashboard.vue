@@ -10,41 +10,62 @@
 
     <!-- KPIs -->
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-xs text-slate-500">Cronogramas ativos</p>
-        <p class="text-2xl font-semibold text-emerald-600">{{ kpis.cronogramas_ativos }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-xs text-slate-500">Encerrados</p>
-        <p class="text-2xl font-semibold text-slate-400">{{ kpis.cronogramas_encerrados }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-xs text-slate-500">Rascunhos</p>
-        <p class="text-2xl font-semibold text-amber-600">{{ kpis.cronogramas_rascunhos }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-xs text-slate-500">m³ entregues (mês)</p>
-        <p class="text-2xl font-semibold text-blue-600">{{ Number(kpis.m3_entregues_mes || 0).toLocaleString('pt-BR', {minimumFractionDigits:0,maximumFractionDigits:0}) }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-xs text-slate-500">Prestadores ativos</p>
-        <p class="text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ kpis.prestadores_ativos }}</p>
-      </div>
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40">
-        <p class="text-xs text-slate-500">Viagens p/ validar</p>
-        <Link v-if="kpis.viagens_pendentes_validar > 0" :href="route('tdap.viagens.pendentes')" class="text-2xl font-semibold text-amber-600 hover:text-amber-700">
-          {{ kpis.viagens_pendentes_validar }}
-        </Link>
-        <span v-else class="text-2xl font-semibold text-slate-400">0</span>
-      </div>
+      <StatCard
+        title="Cronogramas ativos"
+        :value="kpis.cronogramas_ativos"
+        :icon="CheckCircleIcon"
+        variant="success"
+        clickable
+        @click="router.visit(route('tdap.cronogramas.index'))"
+      />
+      <StatCard
+        title="Encerrados"
+        :value="kpis.cronogramas_encerrados"
+        :icon="CheckIcon"
+        variant="info"
+      />
+      <StatCard
+        title="Rascunhos"
+        :value="kpis.cronogramas_rascunhos"
+        :icon="DocumentTextIcon"
+        variant="warning"
+      />
+      <StatCard
+        title="m³ entregues (mês)"
+        :value="Number(kpis.m3_entregues_mes || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })"
+        :icon="TruckIcon"
+        variant="info"
+        :format-number="false"
+      />
+      <StatCard
+        title="Prestadores ativos"
+        :value="kpis.prestadores_ativos"
+        :icon="BuildingIcon"
+        variant="success"
+      />
+      <StatCard
+        title="Viagens p/ validar"
+        :value="kpis.viagens_pendentes_validar"
+        :icon="ClockIcon"
+        variant="warning"
+        :clickable="kpis.viagens_pendentes_validar > 0"
+        @click="router.visit(route('tdap.viagens.pendentes'))"
+      />
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <!-- Cronogramas ativos -->
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
+      <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 border-t-4 border-t-emerald-400 dark:border-t-emerald-500/50 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700/40 flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Cronogramas ativos</h3>
-          <Link :href="route('tdap.cronogramas.index')" class="text-xs text-blue-600 hover:text-blue-800">Ver todos →</Link>
+          <div class="flex items-center gap-2">
+            <span class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-300 dark:ring-emerald-500/25">
+              <TruckIcon class="w-4 h-4" />
+            </span>
+            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Cronogramas ativos</h3>
+          </div>
+          <Link :href="route('tdap.cronogramas.index')">
+            <Button variant="success" size="sm">Ver todos</Button>
+          </Link>
         </div>
         <div v-if="cronogramasAtivos.length === 0" class="px-6 py-10 text-center text-slate-400">
           Nenhum cronograma ativo no momento.
@@ -68,10 +89,17 @@
       </div>
 
       <!-- Eventos recentes (Histórico) -->
-      <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
+      <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 border-t-4 border-t-cyan-400 dark:border-t-cyan-500/50 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700/40 flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Eventos recentes</h3>
-          <Link :href="route('tdap.historicos.index')" class="text-xs text-blue-600 hover:text-blue-800">Auditoria completa →</Link>
+          <div class="flex items-center gap-2">
+            <span class="p-1.5 rounded-lg bg-cyan-100 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 ring-1 ring-cyan-300 dark:ring-cyan-500/25">
+              <ClockIcon class="w-4 h-4" />
+            </span>
+            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Eventos recentes</h3>
+          </div>
+          <Link :href="route('tdap.historicos.index')">
+            <Button variant="info" size="sm">Auditoria completa</Button>
+          </Link>
         </div>
         <div v-if="eventosRecentes.length === 0" class="px-6 py-10 text-center text-slate-400">
           Sem eventos registrados ainda.
@@ -97,11 +125,18 @@
 </template>
 
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
+import CheckIcon from '@/Components/Icons/CheckIcon.vue';
+import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
+import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
