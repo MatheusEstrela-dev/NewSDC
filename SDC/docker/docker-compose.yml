@@ -95,6 +95,11 @@ services:
       # Raiz dos anexos por modulo (bind mount; ver volumes)
       ANEXOS_ROOT: /data/anexos
 
+      # Raiz dos anexos do RAT legado (arquivo morto). Reusa o mesmo mount fisico
+      # /data/anexos (host /mnt/newsdc_storage) — os arquivos legados ficam em
+      # rat/legado/numero/{id}/{arquivo}. Override via env se usar disco dedicado.
+      LEGADO_RAT_ANEXOS_ROOT: ${LEGADO_RAT_ANEXOS_ROOT:-/data/anexos/rat/legado/numero}
+
       # Mail (Mailhog)
       MAIL_MAILER: smtp
       MAIL_HOST: mailhog
@@ -368,6 +373,7 @@ services:
       CACHE_DRIVER: redis
       QUEUE_CONNECTION: redis
       ANEXOS_ROOT: /data/anexos
+      LEGADO_RAT_ANEXOS_ROOT: ${LEGADO_RAT_ANEXOS_ROOT:-/data/anexos/rat/legado/numero}
 
     healthcheck:
       test: [ "CMD", "supervisorctl", "status" ]

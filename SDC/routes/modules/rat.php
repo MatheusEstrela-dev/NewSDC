@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Rat\Controllers\LegadoRatController;
 use App\Modules\Rat\Controllers\RatUnifiedController;
 use Illuminate\Support\Facades\Route;
 
@@ -35,6 +36,14 @@ Route::prefix('rat')->name('rat.')->group(function () {
     Route::get('/export/async', [RatUnifiedController::class, 'exportAsync'])->name('export.async')->middleware('can:rat.protocolos.export');
     Route::get('/export-rats',  [RatUnifiedController::class, 'exportRats'])->name('export-rats')->middleware('can:rat.protocolos.export');
     Route::get('/statistics',   [RatUnifiedController::class, 'statistics'])->name('statistics')->middleware('can:rat.bi.view');
+
+    // Arquivo Morto (RAT legado - somente leitura). Rotas literais ANTES das wildcards {id}.
+    Route::prefix('arquivados')->name('arquivados.')->middleware('can:rat.arquivados.view')->group(function () {
+        Route::get('/',                   [LegadoRatController::class, 'index'])->name('index');
+        Route::get('/{id}/print',         [LegadoRatController::class, 'print'])->whereNumber('id')->name('print');
+        Route::get('/{id}/anexo/{arquivo}', [LegadoRatController::class, 'anexo'])->whereNumber('id')->where('arquivo', '[^/]+')->name('anexo');
+        Route::get('/{id}',               [LegadoRatController::class, 'show'])->whereNumber('id')->name('show');
+    });
 
     // Boletim de Ocorrência
     Route::get('/bo',       [RatUnifiedController::class, 'indexBo'])->name('bo.index')->middleware('can:rat.protocolos.view');
