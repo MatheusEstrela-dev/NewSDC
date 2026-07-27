@@ -77,6 +77,13 @@ class RatPermissionsSeeder extends Seeder
         'rat.api.access' => [
             'description' => 'Acesso aos endpoints REST da API mobile do módulo RAT (Sanctum)',
         ],
+
+        // ------------------------------------------------------------------ //
+        // Arquivo Morto (RAT legado - somente leitura)
+        // ------------------------------------------------------------------ //
+        'rat.arquivados.view' => [
+            'description' => 'Visualizar e imprimir o arquivo morto do RAT legado (somente leitura)',
+        ],
     ];
 
     public function run(): void
@@ -131,6 +138,7 @@ class RatPermissionsSeeder extends Seeder
             'rat.relatos.manage',
             'rat.historico.view',
             'rat.api.access',
+            'rat.arquivados.view',
         ]);
 
         // Coordenador RAT — tudo incluindo delete e BI
@@ -162,6 +170,7 @@ class RatPermissionsSeeder extends Seeder
         $leitor->syncPermissions([
             'rat.protocolos.view',
             'rat.historico.view',
+            'rat.arquivados.view',
         ]);
 
         $this->command->info('[RatPermissionsSeeder] ' . count(self::PERMISSIONS) . ' permissões RAT sincronizadas com sucesso.');

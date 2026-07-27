@@ -17,6 +17,7 @@
             :can-delete="can('rat.protocolos.delete')"
             :can-export="can('rat.protocolos.export')"
             :can-finalize="can('rat.protocolos.finalizar')"
+            :can-view-arquivados="can('rat.arquivados.view')"
         />
     </div>
 </template>

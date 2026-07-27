@@ -20,6 +20,13 @@
             <span class="hidden sm:inline">Exportar</span>
           </Button>
 
+          <!-- Botao Arquivados - Arquivo morto do RAT legado (somente leitura) -->
+          <Link v-if="canViewArquivados" :href="route('rat.arquivados.index')">
+            <Button variant="warning" size="md" :icon="ArchiveBoxIcon" icon-position="left">
+              <span class="hidden sm:inline">Arquivados</span>
+            </Button>
+          </Link>
+
           <!-- Botao Criar - Responsivo -->
           <Link v-if="canCreate" :href="route('rat.create')">
             <Button variant="primary" size="md" :icon="PlusIcon" icon-position="left">
@@ -133,7 +140,7 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useModalState } from '@/Composables/useModalState';
 import { MESSAGES } from '@/constants/messages';
-import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { ArchiveBoxIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { Link, router } from '@inertiajs/vue3';
 import { useMobile } from '@/Composables/useMobile';
 import { useToast } from '@/Composables/useToast';
@@ -198,6 +205,10 @@ const props = defineProps({
     default: false,
   },
   canFinalize: {
+    type: Boolean,
+    default: false,
+  },
+  canViewArquivados: {
     type: Boolean,
     default: false,
   },
