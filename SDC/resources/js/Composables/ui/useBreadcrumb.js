@@ -27,6 +27,18 @@ export function useBreadcrumb() {
             { label: 'Visualizar', route: null }
         ],
 
+        'LegadoRatIndex': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'RAT', route: 'rat.index' },
+            { label: 'Arquivo Morto', route: null }
+        ],
+        'LegadoRatShow': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'RAT', route: 'rat.index' },
+            { label: 'Arquivo Morto', route: 'rat.arquivados.index' },
+            { label: 'Visualizar', route: null }
+        ],
+
         'Pae/Pae': [
             { label: 'Início', route: 'dashboard' },
             { label: 'PAE', route: null }
