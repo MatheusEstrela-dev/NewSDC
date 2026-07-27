@@ -66,6 +66,10 @@ services:
       # ANEXOS_ROOT/{MODULO} quando esta env existe.
       ANEXOS_ROOT: /data/anexos
 
+      # Raiz dos anexos do RAT legado (arquivo morto). Path real no bind mount
+      # (case-sensitive): /data/anexos/RAT/Legado/{id}/{arquivo}.
+      LEGADO_RAT_ANEXOS_ROOT: /data/anexos/RAT/Legado
+
       # Em HTTP o cookie Secure nao e enviado pelo browser; sem isso o login web
       # quebra. config/session.php tem default true, entao sobrescrevemos aqui.
       SESSION_SECURE_COOKIE: "false"
@@ -119,6 +123,13 @@ services:
 
     ports:
       - "8000:8000"     # HTTP (Swoole) — externo=interno p/ assets baterem
+
+    # host.docker.internal so e automatico no Docker Desktop; no Linux nativo
+    # precisa deste extra_hosts (host-gateway) para o app alcancar o Vite dev
+    # server rodando no host (porta 8081) e nao remover o public/hot marcado
+    # em AppServiceProvider::viteDevServerIsReachable().
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
     volumes:
       # Codigo da app sobre o build Swoole; vendor fica na imagem.
@@ -174,6 +185,11 @@ services:
     hostname: queue
     restart: unless-stopped
 
+    # Mesmo racional do app: sem isso o boot do worker conclui que o Vite dev
+    # server e inalcancavel e apaga o public/hot compartilhado (bind mount).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     environment:
       WORKDIR: /var/www
       APP_NAME: "SDC Dev Queue"
@@ -188,6 +204,7 @@ services:
 
       # Mesma raiz de anexos do app (jobs de export gravam no disk 'exports').
       ANEXOS_ROOT: /data/anexos
+      LEGADO_RAT_ANEXOS_ROOT: /data/anexos/RAT/Legado
 
       # Banco (compartilhado com app)
       DB_CONNECTION: pgsql

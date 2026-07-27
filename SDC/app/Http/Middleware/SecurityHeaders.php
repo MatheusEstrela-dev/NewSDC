@@ -137,6 +137,11 @@ class SecurityHeaders
                 "http://127.0.0.1:*",
             ]);
 
+            $imgSrc = array_merge($imgSrc, [
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+            ]);
+
             $connectSrc = array_merge($connectSrc, $viteHosts, [
                 'http://host.docker.internal:8000',
                 'http://localhost:18001',

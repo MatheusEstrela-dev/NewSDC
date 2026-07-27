@@ -125,7 +125,7 @@ class LegadoRatService
             return [];
         }
 
-        $imagens = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+        $imagens = ['jpg', 'jpeg', 'jpe', 'jfif', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif'];
 
         return collect($disk->files($dir))
             ->map(function (string $path) use ($id, $imagens): array {
