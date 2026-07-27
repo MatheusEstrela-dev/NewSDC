@@ -39,3 +39,6 @@ frankephp
 
 # Dumps de banco (just db-backup) - dados, nunca versionar
 /storage/backups/
+
+# Dumps de dados legados (grandes, carregados via comando de import)
+/database/data/*.sql
