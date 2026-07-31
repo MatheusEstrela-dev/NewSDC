@@ -103,8 +103,15 @@ const iconContainerClasses = computed(() => {
         </div>
       </div>
 
-      <!-- Slot para ações (botões) -->
-      <div v-if="$slots.actions" class="flex items-center gap-3">
+      <!--
+        Slot para ações (botões).
+
+        flex-wrap e obrigatorio aqui: modulos como PAE, RAT e Ajuda Humanitaria tem
+        4-5 botoes no header e, sem quebra de linha, o ultimo era cortado na faixa
+        entre md e a largura necessaria para todos. O pai ja e flex-col md:flex-row,
+        entao no mobile as acoes descem para baixo do titulo.
+      -->
+      <div v-if="$slots.actions" class="flex flex-wrap items-center gap-2 sm:gap-3 md:justify-end">
         <slot name="actions" />
       </div>
     </div>
