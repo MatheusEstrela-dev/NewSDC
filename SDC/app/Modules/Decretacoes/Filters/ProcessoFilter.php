@@ -46,6 +46,7 @@ class ProcessoFilter
     protected function applyAdvancedFilters(): self
     {
         $this->filterByReconhecimento()
+             ->filterByTipoLancamento()
              ->filterByAnalista()
              ->filterBySituacaoAnormalidade()
              ->filterByDataDecretoRange()
@@ -137,6 +138,28 @@ class ProcessoFilter
         return $this;
     }
 
+    /**
+     * Separa registros de decretacoes pelo mesmo criterio usado nos cards de
+     * estatistica, para que clicar no card e a listagem resultante contem a
+     * mesma historia.
+     */
+    protected function filterByTipoLancamento(): self
+    {
+        if ($this->request->filled('tipo_lancamento')) {
+            switch ($this->request->input('tipo_lancamento')) {
+                case 'registro':
+                    $this->builder->where('reconhecimento', 'Registro');
+                    break;
+
+                case 'decretacao':
+                    $this->builder->where('reconhecimento', '!=', 'Registro');
+                    break;
+            }
+        }
+
+        return $this;
+    }
+
     protected function filterByAnalista(): self
     {
         if ($this->request->filled('analista')) {
@@ -175,9 +198,18 @@ class ProcessoFilter
 
             switch ($vigenciaStatus) {
                 case 'vigente':
+                    // Mesma definicao do card "Decretacoes Vigentes" em
+                    // ProcessoStatsService::applyVigentesConstraints(): dentro
+                    // do prazo e sendo decretacao. As duas precisam mudar
+                    // juntas, senao clicar no card devolve uma listagem que nao
+                    // corresponde ao numero exibido. Registro nao tem vigencia.
                     $this->builder->where(function ($q) {
                         $q->whereNull('data_publicacao_mg')
                           ->orWhereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE");
+                    })
+                    ->where(function ($q) {
+                        $q->where('reconhecimento', '!=', 'Registro')
+                          ->orWhereNull('reconhecimento');
                     });
                     break;
 
