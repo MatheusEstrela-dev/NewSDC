@@ -5,14 +5,45 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\UserNotificationPreference;
+use App\Modules\Notificacoes\Channels\AgrupavelDatabaseChannel;
+use App\Modules\Notificacoes\Contracts\Agrupavel;
+use App\Modules\Notificacoes\DTO\NotificacaoSpec;
+use App\Modules\Notificacoes\Support\TextoSeguro;
 use App\Notifications\Channels\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-class GeneralNotification extends Notification implements ShouldQueue
+/**
+ * Notificacao unica do sistema: alimenta o inbox do sino, o broadcast em tempo
+ * real e os canais externos.
+ *
+ * Os canais normalmente chegam prontos do NotificacaoDispatcher, que resolve as
+ * preferencias de todos os destinatarios em UMA query antes do fan-out. Quando a
+ * classe e usada diretamente (Notification::send), ela cai no caminho legado e
+ * resolve a preferencia do proprio notifiable, custando uma query por destinatario.
+ */
+class GeneralNotification extends Notification implements Agrupavel, ShouldQueue
 {
     use Queueable;
+
+    /**
+     * Canais resolvidos pelo dispatcher. Null indica uso direto (caminho legado).
+     *
+     * @var list<string>|null
+     */
+    private ?array $canaisResolvidos = null;
+
+    private ?string $moduloResolvido = null;
+
+    /**
+     * Estado real da linha depois da escrita, preenchido pelo canal de database.
+     * O broadcast usa isso para o cliente exibir "N novos" sem tocar no banco.
+     */
+    private ?string $notificacaoId = null;
+
+    private int $contadorAgrupado = 1;
 
     public function __construct(
         public string $title,
@@ -20,57 +51,137 @@ class GeneralNotification extends Notification implements ShouldQueue
         public string $type = 'info', // info, success, warning, error, urgent
         public ?string $actionUrl = null,
         public ?string $actionText = null,
-        public ?string $groupKey = null // For grouping similar notifications
+        public ?string $groupKey = null // agrupamento: "modulo:identificador"
     ) {}
 
     /**
-     * Resolve canais dinamicamente conforme preferencias do user para o
-     * modulo derivado do groupKey. database e broadcast sao sempre incluidos
-     * (inbox do app + push websocket); telegram/whatsapp/email entram apenas
-     * se o user habilitou em Configuracoes > Notificacoes.
+     * Constroi a notificacao a partir da spec de dominio, com os canais do
+     * destinatario ja decididos.
+     *
+     * @param  list<string>  $canais
+     */
+    public static function deSpec(NotificacaoSpec $spec, array $canais): self
+    {
+        $notificacao = new self(
+            title: $spec->titulo,
+            message: $spec->mensagem,
+            type: $spec->tipo,
+            actionUrl: $spec->acaoUrl,
+            actionText: $spec->acaoTexto,
+            groupKey: $spec->groupKey,
+        );
+
+        $notificacao->canaisResolvidos = $canais;
+        $notificacao->moduloResolvido = $spec->modulo;
+        $notificacao->queue = $spec->ehUrgente()
+            ? (string) config('notificacoes.entrega.fila_urgente', 'high')
+            : (string) config('notificacoes.entrega.fila', 'default');
+
+        return $notificacao;
+    }
+
+    /**
+     * @return list<string>
      */
     public function via(object $notifiable): array
     {
-        $channels = ['database', 'broadcast'];
-
-        $userId = $this->extractUserId($notifiable);
-        if ($userId === null) {
-            return $channels;
+        if ($this->canaisResolvidos !== null) {
+            return $this->canaisResolvidos;
         }
 
-        $module = $this->moduleFromGroupKey();
-        if ($module === null) {
-            return $channels;
-        }
-
-        $pref = UserNotificationPreference::query()
-            ->where('user_id', $userId)
-            ->where('module', $module)
-            ->first();
-
-        if ($pref === null) {
-            return $channels;
-        }
-
-        if ($pref->canal_telegram ?? false) {
-            $channels[] = TelegramChannel::class;
-        }
-        // canal_whatsapp + canal_email entram quando os channels existirem.
-
-        return $channels;
+        return $this->canaisLegado($notifiable);
     }
 
+    /**
+     * Traduz uma preferencia em lista de canais. Ponto unico usado tanto pelo
+     * caminho legado quanto pelo dispatcher, para nao existirem duas regras.
+     *
+     * canal_sistema desligado significa "nao quero isso no sino", e por isso
+     * remove tambem o broadcast: ele alimenta o mesmo painel.
+     *
+     * @return list<string>
+     */
+    public static function canaisPara(UserNotificationPreference $pref): array
+    {
+        $canais = [];
+
+        if ($pref->canal_sistema) {
+            $canais[] = AgrupavelDatabaseChannel::class;
+            $canais[] = 'broadcast';
+        }
+
+        if ($pref->canal_telegram) {
+            $canais[] = TelegramChannel::class;
+        }
+
+        // canal_email e canal_whatsapp entram quando os respectivos channels existirem.
+
+        return $canais;
+    }
+
+    /**
+     * Payload persistido e enviado ao cliente. Sanitizado aqui, na fronteira, para
+     * que nenhum caminho de entrada consiga gravar marcacao no inbox.
+     *
+     * @return array<string, mixed>
+     */
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => $this->title,
-            'message' => $this->message,
+            'title' => TextoSeguro::titulo($this->title),
+            'message' => TextoSeguro::mensagem($this->message),
             'type' => $this->type,
-            'action_url' => $this->actionUrl,
-            'action_text' => $this->actionText,
+            'action_url' => TextoSeguro::url($this->actionUrl),
+            'action_text' => $this->actionText === null ? null : TextoSeguro::titulo($this->actionText),
             'group_key' => $this->groupKey,
-            'created_at' => now(),
+            'module' => $this->modulo(),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toDatabase(object $notifiable): array
+    {
+        return $this->toArray($notifiable);
+    }
+
+    /**
+     * Payload do websocket: o mesmo do inbox, mais id e contador reais da linha,
+     * para o cliente inserir o card no painel sem requisicao extra.
+     */
+    public function toBroadcast(object $notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage([
+            'id' => $this->notificacaoId,
+            'group_count' => $this->contadorAgrupado,
+            'created_at' => now()->toIso8601String(),
+        ] + $this->toArray($notifiable));
+    }
+
+    /**
+     * Nome do evento no cliente. Sem isso o Echo receberia o nome completo da
+     * classe PHP, que o frontend nao deveria precisar conhecer.
+     */
+    public function broadcastType(): string
+    {
+        return 'notificacao';
+    }
+
+    public function modulo(): string
+    {
+        return $this->moduloResolvido ??= $this->moduloPeloGroupKey();
+    }
+
+    public function chaveDeAgrupamento(): ?string
+    {
+        return $this->groupKey;
+    }
+
+    public function registrarPersistencia(string $notificacaoId, int $contadorAgrupado): void
+    {
+        $this->notificacaoId = $notificacaoId;
+        $this->contadorAgrupado = $contadorAgrupado;
     }
 
     /**
@@ -88,16 +199,20 @@ class GeneralNotification extends Notification implements ShouldQueue
             default => '[INFO]',
         };
 
+        $titulo = TextoSeguro::titulo($this->title);
+        $mensagem = TextoSeguro::mensagem($this->message);
+        $url = TextoSeguro::url($this->actionUrl);
+
         $lines = [
-            "*{$emoji} {$this->escapeMarkdown($this->title)}*",
+            "*{$emoji} {$this->escapeMarkdown($titulo)}*",
             '',
-            $this->escapeMarkdown($this->message),
+            $this->escapeMarkdown($mensagem),
         ];
 
-        if ($this->actionUrl) {
+        if ($url !== null) {
             $label = $this->actionText ?: 'Acessar';
             $lines[] = '';
-            $lines[] = "[{$this->escapeMarkdown($label)}]({$this->actionUrl})";
+            $lines[] = "[{$this->escapeMarkdown($label)}]({$url})";
         }
 
         return [
@@ -106,39 +221,58 @@ class GeneralNotification extends Notification implements ShouldQueue
         ];
     }
 
+    /**
+     * Caminho legado, para chamadas diretas de Notification::send.
+     *
+     * @return list<string>
+     */
+    private function canaisLegado(object $notifiable): array
+    {
+        $userId = $this->extractUserId($notifiable);
+
+        if ($userId === null) {
+            return [AgrupavelDatabaseChannel::class, 'broadcast'];
+        }
+
+        $pref = UserNotificationPreference::query()
+            ->where('user_id', $userId)
+            ->where('module', $this->modulo())
+            ->first() ?? UserNotificationPreference::padrao($userId, $this->modulo());
+
+        return self::canaisPara($pref);
+    }
+
     private function extractUserId(object $notifiable): ?int
     {
         if (property_exists($notifiable, 'id') && is_numeric($notifiable->id ?? null)) {
             return (int) $notifiable->id;
         }
+
         if (method_exists($notifiable, 'getKey')) {
             $key = $notifiable->getKey();
+
             return is_numeric($key) ? (int) $key : null;
         }
+
         return null;
     }
 
     /**
-     * Mapeia groupKey para um modulo conhecido em UserNotificationPreference.
-     * Convencao: groupKey comeca com "rat:", "decretacoes:", "trace:", etc.
+     * Deriva o modulo do prefixo do group_key ("rat:123" -> "rat"). Chave ausente
+     * ou prefixo desconhecido caem em "geral", que existe em
+     * config('notificacoes.modulos') justamente como destino dos avisos avulsos.
      */
-    private function moduleFromGroupKey(): ?string
+    private function moduloPeloGroupKey(): string
     {
         if ($this->groupKey === null || $this->groupKey === '') {
-            return null;
+            return 'geral';
         }
 
-        $prefix = strtolower(strtok($this->groupKey, ':'));
-        $map = [
-            'rat' => 'rat',
-            'pae' => 'pae',
-            'meteorologia' => 'meteorologia',
-            'demandas' => 'demandas',
-            'decretacoes' => 'decretacoes',
-            'trace' => null, // exports/async — usa preferencia geral (sem module)
-        ];
+        $prefixo = strtolower((string) strtok($this->groupKey, ':'));
 
-        return $map[$prefix] ?? null;
+        return array_key_exists($prefixo, (array) config('notificacoes.modulos', []))
+            ? $prefixo
+            : 'geral';
     }
 
     private function escapeMarkdown(string $text): string
