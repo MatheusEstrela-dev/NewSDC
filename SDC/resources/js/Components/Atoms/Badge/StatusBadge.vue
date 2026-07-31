@@ -24,14 +24,24 @@ const props = defineProps({
   },
 });
 
+// Semantica de cor comum aos modulos (Decretacoes, Compdec, PAE):
+//   emerald/success = concluido, ativo
+//   amber/warning   = em andamento, aguardando, em analise
+//   red/danger      = vencido, inativo, negado
+//   slate/default   = neutro, ainda nao iniciado
+//   slate/neutral   = encerrado sem desfecho (arquivado)
+//
+// em_andamento era 'info' (azul), destoando dos demais modulos, onde azul e
+// informativo e nao progresso. Com ele em amber, 'rascunho' saiu de amber para
+// nao virar a mesma cor: rascunho e ausencia de progresso, nao progresso.
 const statusConfig = {
   rascunho: {
     label: 'Rascunho',
-    variant: 'warning',
+    variant: 'default',
   },
   em_andamento: {
     label: 'Em Andamento',
-    variant: 'info',
+    variant: 'warning',
   },
   finalizado: {
     label: 'Finalizado',
@@ -39,7 +49,7 @@ const statusConfig = {
   },
   arquivado: {
     label: 'Arquivado',
-    variant: 'default',
+    variant: 'neutral',
   },
 };
 

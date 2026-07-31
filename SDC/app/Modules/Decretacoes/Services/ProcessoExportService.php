@@ -31,8 +31,11 @@ class ProcessoExportService
         7 => 'outros_afetados',
     ];
 
-    // Tipos de decreto validos
-    private const TIPOS_DECRETO_VALIDOS = ['SE', 'ECP'];
+    // Classes de situacao de anormalidade exportadas em tipo_decreto.
+    // N1 entra na lista porque todo Registro e N1: sem ele o campo saia vazio
+    // e os Registros desapareciam de qualquer visual do Power BI que fatie por
+    // tipo_decreto. Visuais que contam apenas decretacoes devem filtrar SE/ECP.
+    private const TIPOS_DECRETO_VALIDOS = ['SE', 'ECP', 'N1'];
 
     public function __construct(
         private readonly ProcessoQueryService $queryService

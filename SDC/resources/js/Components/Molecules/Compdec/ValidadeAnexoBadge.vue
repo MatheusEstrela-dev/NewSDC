@@ -18,19 +18,19 @@ const props = defineProps({
 const statusConfig = {
   vigente: {
     label: 'Vigente',
-    classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+    classes: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30',
   },
   prox_vencimento: {
     label: 'Prox. Vencimento',
-    classes: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+    classes: 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30',
   },
   vencido: {
     label: 'Vencido',
-    classes: 'bg-red-500/20 text-red-300 border border-red-500/30',
+    classes: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-500/30',
   },
   sem_validade: {
     label: 'Sem Validade',
-    classes: 'bg-slate-500/20 text-slate-300 border border-slate-500/30',
+    classes: 'bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-500/30',
   },
 };
 
@@ -43,8 +43,8 @@ const badgeClasses = computed(() => {
   return [
     'px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold inline-block whitespace-nowrap',
     props.status
-      ? (statusConfig[props.status]?.classes || 'bg-slate-500/20 text-slate-300 border border-slate-500/20')
-      : 'bg-slate-500/20 text-slate-400 border border-slate-500/20',
+      ? (statusConfig[props.status]?.classes || 'bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-500/20')
+      : 'bg-slate-100 dark:bg-slate-500/20 text-slate-400 border border-slate-300 dark:border-slate-500/20',
   ].join(' ');
 });
 </script>

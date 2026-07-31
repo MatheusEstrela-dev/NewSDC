@@ -77,6 +77,10 @@ class DecretacoesController extends Controller
             'tipo_desastre_id',
             'municipio_id',
             'n_protocolo_fide',
+            // Atalho dos cards de estatistica. Sem ele na whitelist o filtro
+            // chegava a aparecer como chip na interface e era descartado aqui,
+            // antes do ProcessoFilter, e a listagem nao mudava.
+            'tipo_lancamento',
         ]);
         $processos = $this->processoService->list($filters, 15);
 
