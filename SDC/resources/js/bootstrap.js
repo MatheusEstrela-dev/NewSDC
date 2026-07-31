@@ -50,23 +50,58 @@ export const initAxios = async () => {
 };
 
 /**
- * Echo exposes an expressive API for subscribing to channels and listening
- * for events that are broadcast by Laravel. Echo and event broadcasting
- * allows your team to easily build robust real-time web applications.
+ * Echo (websocket via Laravel Reverb) para notificacoes em tempo real.
+ *
+ * Carregado por import() dinamico e SOB DEMANDA: quem nunca abre o painel de
+ * notificacoes nunca baixa laravel-echo nem pusher-js. Isso mantem o bundle de
+ * entrada intacto, que e o requisito de nao pesar a UI.
+ *
+ * Retorna a instancia de Echo, ou null quando o websocket nao esta configurado
+ * ou falhou ao conectar. Null e um resultado esperado, nao um erro: o chamador
+ * cai para polling.
  */
+let echoPromise = null;
 
-// import Echo from 'laravel-echo';
+export const initEcho = () => {
+    if (echoPromise) return echoPromise;
 
-// import Pusher from 'pusher-js';
-// window.Pusher = Pusher;
+    const key = import.meta.env.VITE_REVERB_APP_KEY;
 
-// window.Echo = new Echo({
-//     broadcaster: 'pusher',
-//     key: import.meta.env.VITE_PUSHER_APP_KEY,
-//     cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER ?? 'mt1',
-//     wsHost: import.meta.env.VITE_PUSHER_HOST ? import.meta.env.VITE_PUSHER_HOST : `ws-${import.meta.env.VITE_PUSHER_APP_CLUSTER}.pusher.com`,
-//     wsPort: import.meta.env.VITE_PUSHER_PORT ?? 80,
-//     wssPort: import.meta.env.VITE_PUSHER_PORT ?? 443,
-//     forceTLS: (import.meta.env.VITE_PUSHER_SCHEME ?? 'https') === 'https',
-//     enabledTransports: ['ws', 'wss'],
-// });
+    // Sem chave publicada nao ha servidor de websocket para este ambiente.
+    if (!key) return Promise.resolve(null);
+
+    echoPromise = (async () => {
+        try {
+            const [{ default: Echo }, { default: Pusher }] = await Promise.all([
+                import('laravel-echo'),
+                import('pusher-js'),
+            ]);
+
+            window.Pusher = Pusher;
+
+            const scheme = import.meta.env.VITE_REVERB_SCHEME ?? window.location.protocol.replace(':', '');
+            const porta = import.meta.env.VITE_REVERB_PORT ?? (scheme === 'https' ? 443 : 8080);
+
+            window.Echo = new Echo({
+                broadcaster: 'reverb',
+                key,
+                wsHost: import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
+                wsPort: Number(porta),
+                wssPort: Number(porta),
+                forceTLS: scheme === 'https',
+                enabledTransports: ['ws', 'wss'],
+                // O canal e privado: a autorizacao passa pela sessao ja existente.
+                authEndpoint: '/broadcasting/auth',
+            });
+
+            return window.Echo;
+        } catch (_) {
+            // Reverb fora do ar, bloqueado por proxy ou chunk indisponivel:
+            // devolver null para o chamador seguir de polling.
+            echoPromise = null;
+            return null;
+        }
+    })();
+
+    return echoPromise;
+};

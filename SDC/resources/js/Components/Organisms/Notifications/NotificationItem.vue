@@ -1,9 +1,9 @@
 <template>
   <div
-    class="relative border-b border-slate-800/50 last:border-0 transition-colors duration-200"
+    class="relative border-b border-slate-200 dark:border-slate-800/50 last:border-0 transition-colors duration-200"
     :class="{
-      'bg-slate-900': notification.read,
-      'bg-slate-800/30 hover:bg-slate-800/50': !notification.read
+      'bg-white dark:bg-slate-900': notification.read,
+      'bg-blue-50/40 hover:bg-blue-50/70 dark:bg-slate-800/30 dark:hover:bg-slate-800/50': !notification.read
     }"
   >
     <!-- Priority Indicator Strip -->
@@ -28,26 +28,26 @@
       <div class="flex-1 min-w-0">
         <div class="flex items-start justify-between gap-2">
             <div>
-                <h4 
+                <h4
                     class="text-sm font-semibold truncate pr-2"
-                    :class="notification.read ? 'text-slate-400' : 'text-slate-200'"
+                    :class="notification.read ? 'text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-slate-200'"
                 >
-                    <span v-if="notification.isGroup" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-700 text-slate-300 mr-1.5">
-                        {{ notification.count }} novos
+                    <span v-if="ehAgrupada" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 mr-1.5">
+                        {{ notification.group_count }} novos
                     </span>
                     {{ title }}
                 </h4>
-                <p class="text-xs text-slate-400 mt-0.5 leading-relaxed line-clamp-2">
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed line-clamp-2">
                     {{ message }}
                 </p>
             </div>
-            <span class="text-[10px] text-slate-500 flex-shrink-0 whitespace-nowrap">
+            <span class="text-[10px] text-slate-400 dark:text-slate-500 flex-shrink-0 whitespace-nowrap">
                 {{ timeAgo }}
             </span>
         </div>
 
         <!-- Action Buttons -->
-        <div v-if="hasAction || notification.isGroup" class="mt-3 flex items-center gap-2">
+        <div v-if="hasAction || !notification.read" class="mt-3 flex items-center gap-2">
             <button
                 v-if="hasAction"
                 @click.stop="handleAction"
@@ -59,7 +59,7 @@
             <button
                 v-if="!notification.read"
                 @click.stop="emit('mark-read', notification)"
-                class="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 rounded-md transition-colors"
+                class="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700/50 rounded-md transition-colors"
             >
                 Marcar como lida
             </button>
@@ -92,35 +92,31 @@ const props = defineProps({
 const emit = defineEmits(['mark-read']);
 const { formatTimeAgo } = useNotifications();
 
-// Computed Helpers
-const data = computed(() => props.notification.data || {});
+// O payload do inbox e plano e o agrupamento ja vem resolvido do banco:
+// group_count > 1 significa que esta linha representa varios eventos do mesmo
+// assunto, absorvidos dentro da janela de agrupamento.
 const type = computed(() => props.notification.type || 'info');
+const ehAgrupada = computed(() => (props.notification.group_count ?? 1) > 1);
 
-const title = computed(() => {
-    if (props.notification.isGroup) {
-        // Smart Grouping Text
-        return data.value.title || 'Novas atualizações';
-    }
-    return data.value.title;
-});
+const title = computed(() => props.notification.title || 'Novas atualizações');
 
 const message = computed(() => {
-    if (props.notification.isGroup) {
-        return `Você tem ${props.notification.count} notificações agrupadas neste tópico.`;
+    if (ehAgrupada.value) {
+        return `Você tem ${props.notification.group_count} notificações agrupadas neste tópico.`;
     }
-    return data.value.message;
+    return props.notification.message;
 });
 
 const timeAgo = computed(() => formatTimeAgo(props.notification.created_at));
 
-const hasAction = computed(() => !!data.value.action_url);
-const actionText = computed(() => data.value.action_text || 'Visualizar');
+const hasAction = computed(() => !!props.notification.action_url);
+const actionText = computed(() => props.notification.action_text || 'Visualizar');
 
 const handleAction = () => {
-    if (data.value.action_url) {
-        emit('mark-read', props.notification); // Auto mark read on action
-        router.visit(data.value.action_url);
-    }
+    if (!props.notification.action_url) return;
+
+    emit('mark-read', props.notification); // marca lida ao agir
+    router.visit(props.notification.action_url);
 };
 
 // Styles based on Type/Priority
