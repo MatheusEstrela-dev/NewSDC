@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Services;
 
+use App\Modules\Decretacoes\Enums\StatusProcesso;
 use App\Modules\Decretacoes\Filters\ProcessoFilter;
 use App\Modules\Decretacoes\Models\DecretoMunicipio;
 use App\Modules\Decretacoes\Models\Processo;
+use App\Modules\Decretacoes\Support\Vigencia;
 use App\Support\Concurrency\Concurrency;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -80,8 +82,7 @@ class ProcessoStatsService
                 'search', 'data_entrada', 'data_entrada_inicio', 'data_entrada_fim',
                 'processo', 'reconhecimento', 'analista', 'situacao_anormalidade',
                 'data_decreto_inicio', 'data_decreto_fim', 'vigencia_status',
-                'tipo_desastre_id', 'municipio_id', 'n_protocolo_fide',
-                'tipo_lancamento'
+                'tipo_desastre_id', 'municipio_id', 'redec_id', 'n_protocolo_fide'
             ])
             ->filter(fn ($v) => $v !== null && $v !== '')
             ->isNotEmpty();
@@ -212,12 +213,16 @@ class ProcessoStatsService
     }
 
     /**
-     * Registros: conta processos com reconhecimento = 'Registro'.
+     * Registros: conta processos cujo status efetivo e 'Registro'.
+     *
+     * Status efetivo = `reconhecimento` (legado) ou, se vazio, `status` (atual).
+     * Sem isso, processos criados pelo formulario novo - que gravam apenas
+     * `status` - nao entravam em nenhuma das duas metricas.
      */
     private function getRegistros(Builder $baseQuery, ?string $tipoDesastre = null): int
     {
         $query = clone $baseQuery;
-        $query->where('reconhecimento', 'Registro');
+        $query->whereRaw(ProcessoFilter::sqlStatusEfetivo() . ' = ?', [StatusProcesso::REGISTRO->value]);
 
         if ($tipoDesastre) {
             $query->where('tipo_desastre', $tipoDesastre);
@@ -227,15 +232,7 @@ class ProcessoStatsService
     }
 
     /**
-     * Decretacao e todo processo que nao e Registro, inclusive os de
-     * reconhecimento nulo.
-     *
-     * Isolada porque a regra vale em tres leituras (contagem por processo,
-     * municipios atingidos e contagem por municipio) e precisa ser a mesma nas
-     * tres. So `!= 'Registro'` deixava de fora quem tem reconhecimento NULL:
-     * a comparacao avalia NULL, nao TRUE, entao esses processos entravam no
-     * Total de Eventos e em nenhum dos dois cards, quebrando a identidade
-     * Total = Registros + Decretacoes.
+     * Decretacoes: conta processos cujo status efetivo nao e 'Registro'.
      */
     private function applyDecretacaoConstraints(Builder $query): Builder
     {
@@ -250,7 +247,8 @@ class ProcessoStatsService
      */
     private function getDecretacoes(Builder $baseQuery, ?string $tipoDesastre = null): int
     {
-        $query = $this->applyDecretacaoConstraints(clone $baseQuery);
+        $query = clone $baseQuery;
+        $this->whereNaoRegistro($query);
 
         if ($tipoDesastre) {
             $query->where('tipo_desastre', $tipoDesastre);
@@ -264,7 +262,8 @@ class ProcessoStatsService
      */
     private function getMunicipiosAtingidos(Builder $baseQuery, ?string $tipoDesastre = null): int
     {
-        $query = $this->applyDecretacaoConstraints(clone $baseQuery);
+        $query = clone $baseQuery;
+        $this->whereNaoRegistro($query);
 
         if ($tipoDesastre) {
             $query->where('tipo_desastre', $tipoDesastre);
@@ -279,11 +278,24 @@ class ProcessoStatsService
      * Decretacoes Vigentes: conta processos vigentes reconhecidos pelo estado.
      *
      * Vigente = data_publicacao_mg NULL ou data_publicacao_mg + prazo_vigencia >= hoje
+     * (prazo_vigencia ausente = 180 dias, via Support\Vigencia)
      * + reconhecimento LIKE 'Reconhecido pelo Estado%'
      */
     private function getDecretacoesVigentes(Builder $baseQuery, ?string $tipoDesastre = null): int
     {
-        $query = $this->applyVigentesConstraints(clone $baseQuery);
+        $query = clone $baseQuery;
+        $vencimento = Vigencia::sqlVencimento();
+
+        // Vigencia: data_publicacao_mg NULL ou dentro do prazo
+        $query->where(function ($q) use ($vencimento) {
+            $q->whereNull('data_publicacao_mg')
+              ->orWhereRaw("{$vencimento} >= CURRENT_DATE");
+        });
+
+        // Reconhecido pelo estado (status efetivo: legado ou atual)
+        $statusEfetivo = ProcessoFilter::sqlStatusEfetivo();
+        $this->whereNaoRegistro($query);
+        $query->whereRaw("{$statusEfetivo} like ?", ['Reconhecido pelo Estado%']);
 
         if ($tipoDesastre) {
             $query->where('tipo_desastre', $tipoDesastre);
@@ -293,29 +305,17 @@ class ProcessoStatsService
     }
 
     /**
-     * Regra de vigencia isolada para ser reaproveitada pela contagem por
-     * processo e pela contagem por municipio.
+     * Restringe a query aos processos que nao sao meros registros.
      *
-     * Vigente = dentro do PRAZO e sendo decretacao. A vigencia depende do
-     * prazo do decreto, nao do estagio de reconhecimento: um decreto em
-     * analise pelo Estado esta em vigor do mesmo jeito.
-     *
-     * A whitelist anterior ('Reconhecido pelo Estado%' e as variantes
-     * 'somente pela uniao') excluia processos ainda dentro do prazo apenas
-     * por causa do estagio em que estavam. No legado essa mesma correcao
-     * moveu o card de 152 para 167.
-     *
-     * Fica em aberto no legado, e igualmente aqui: 'Nao reconhecido pelo
-     * Estado e Uniao' passa a contar como vigente, o que e discutivel.
+     * Processos sem status algum ficam de fora (nao ha como afirmar que sao
+     * decretacoes), preservando o comportamento anterior do `!=` em SQL.
      */
-    private function applyVigentesConstraints(Builder $query): Builder
+    private function whereNaoRegistro(Builder $query): void
     {
-        $query->where(function ($q) {
-            $q->whereNull('data_publicacao_mg')
-              ->orWhereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE");
-        });
+        $statusEfetivo = ProcessoFilter::sqlStatusEfetivo();
 
-        return $this->applyDecretacaoConstraints($query);
+        $query->whereRaw("{$statusEfetivo} is not null")
+              ->whereRaw("{$statusEfetivo} <> ?", [StatusProcesso::REGISTRO->value]);
     }
 
     /**
@@ -326,10 +326,7 @@ class ProcessoStatsService
     public function getVigentesCount(): int
     {
         return Cache::rememberForever(self::CACHE_PREFIX . 'vigentes', function () {
-            return Processo::where(function ($q) {
-                $q->whereNull('data_publicacao_mg')
-                  ->orWhereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE");
-            })->count();
+            return Processo::vigentes()->count();
         });
     }
 

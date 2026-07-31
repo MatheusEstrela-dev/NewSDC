@@ -37,15 +37,15 @@
 
         <!-- Aba 2: Dados de Desastre (so renderiza apos processo criado) -->
         <div v-else-if="current === 'desastres' && processo?.id">
-          <!-- Aviso de etapa -->
-          <div class="bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800/30 p-4 mb-6 flex items-start gap-3">
-            <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg shrink-0">
-              <ExclamationTriangleIcon class="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          <!-- Aviso de etapa (padrao de icone das secoes do modulo RAT) -->
+          <div class="bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700/50 p-4 mb-6 flex items-start gap-3">
+            <div class="rat-section-icon rat-section-icon-warning">
+              <ExclamationTriangleIcon class="w-5 h-5" />
             </div>
             <div>
               <Heading level="h3" size="sm">Cadastrar Dados do Desastre</Heading>
               <Text size="xs" color="muted" class="mt-0.5">
-                Informe os danos e prejuizos por municipio. Voce pode finalizar o cadastro depois sem preencher tudo agora.
+                Informe os danos e prejuizos por municipio para concluir o cadastro.
               </Text>
             </div>
           </div>
@@ -101,8 +101,8 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700/50">
-              <Button type="button" variant="secondary" @click="$emit('finish')">
-                Concluir mais tarde
+              <Button type="button" variant="secondary" @click="$emit('cancel')">
+                Cancelar
               </Button>
               <Button
                 type="submit"
@@ -145,7 +145,7 @@ const props = defineProps({
   municipiosDesastres: { type: Array,  default: () => [] },
 });
 
-const emit = defineEmits(['submit', 'submit-desastres', 'cancel', 'finish']);
+const emit = defineEmits(['submit', 'submit-desastres', 'cancel']);
 
 // Determina se estamos no modo edicao (processo ja existe no backend)
 const isEditing = computed(() => !!props.processo?.id);

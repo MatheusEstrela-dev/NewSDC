@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Resources;
 
+use App\Modules\Decretacoes\Enums\Redec;
+use App\Modules\Decretacoes\Support\Vigencia;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -42,6 +44,7 @@ class ProcessoResource extends JsonResource
             'protocolo_fide' => $this->safeGet('n_protocolo_fide'),
             'decreto_municipal' => $this->safeGet('decreto_municipal'),
             'redec_id' => $this->safeGetInt('redec_id'),
+            'redec_label' => Redec::labelFor($this->safeGet('redec_id')),
             'municipio_id' => $this->getFirstMunicipioId(), // Primeiro municipio para edicao
 
             // Datas - formatadas para API (ISO) e para exibicao (BR)
@@ -56,12 +59,15 @@ class ProcessoResource extends JsonResource
             'data_publicacao_diario' => $this->formatDate('data_publicacao_diario'),
             'data_publicacao_domg' => $this->formatDate('data_publicacao_domg'),
 
-            // Vigencia - campos calculados
+            // Vigencia - campos calculados (regra em Support\Vigencia; padrao de 180 dias)
             'prazo_vigencia' => $this->safeGetInt('prazo_vigencia'),
+            'prazo_vigencia_efetivo' => Vigencia::prazo($this->safeGet('prazo_vigencia')),
+            'prazo_vigencia_padrao' => Vigencia::usouPrazoPadrao($this->safeGet('prazo_vigencia')),
             'data_vencimento' => $this->getDataVencimento()?->format('Y-m-d'),
             'data_vencimento_formatada' => $this->getDataVencimento()?->format('d/m/Y'),
             'dias_restantes' => $this->getDiasRestantes(),
             'vigente' => $this->isVigente(),
+            'vencido' => $this->isVencido(),
             'proximo_vencer' => $this->isProximoVencer(),
 
             // Desastre - dados basicos
@@ -84,6 +90,8 @@ class ProcessoResource extends JsonResource
             // Outros campos
             'analista' => $this->safeGet('analista'),
             'reconhecimento' => $this->safeGet('reconhecimento'),
+            // Status efetivo: `reconhecimento` (legado) ou `status` (formulario atual)
+            'status_efetivo' => $this->safeGet('reconhecimento') ?? $this->safeGet('status'),
             'observacoes' => $this->safeGet('observacoes'),
             'orgao_responsavel_id' => $this->safeGetInt('orgao_responsavel_id'),
             'n_protocolo_fide' => $this->safeGet('n_protocolo_fide'),
@@ -127,6 +135,7 @@ class ProcessoResource extends JsonResource
             'tipo_decreto' => $this->safeGet('tipo_decreto'),
             'status' => $this->safeGet('status'),
             'reconhecimento' => $this->safeGet('reconhecimento'),
+            'status_efetivo' => $this->safeGet('reconhecimento') ?? $this->safeGet('status'),
             'protocolo_fide' => $this->safeGet('n_protocolo_fide'),
             'n_protocolo_fide' => $this->safeGet('n_protocolo_fide'),
             'data_entrada' => $this->formatDate('data_entrada'),
@@ -134,7 +143,9 @@ class ProcessoResource extends JsonResource
             'data_vencimento' => $this->getDataVencimento()?->format('Y-m-d'),
             'data_vencimento_formatada' => $this->getDataVencimento()?->format('d/m/Y'),
             'dias_restantes' => $this->getDiasRestantes(),
+            'prazo_vigencia_efetivo' => Vigencia::prazo($this->safeGet('prazo_vigencia')),
             'vigente' => $this->isVigente(),
+            'vencido' => $this->isVencido(),
             'proximo_vencer' => $this->isProximoVencer(),
             'tipo_desastre_nome' => $this->safeGet('tipo_desastre_nome') ?? $this->safeGet('tipo_desastre'),
             'tipo_desastre_cobrade' => $this->getTipoDesastreCobrade(),
@@ -215,52 +226,41 @@ class ProcessoResource extends JsonResource
 
     /**
      * Calcula data de vencimento do decreto.
-     * Formula: data_publicacao_mg + prazo_vigencia (dias)
+     * Formula: data_publicacao_mg + prazo_vigencia (180 dias quando ausente).
      *
-     * @return Carbon|null Data de vencimento ou null se dados insuficientes
+     * @return Carbon|null Data de vencimento ou null sem data de publicacao
      */
     protected function getDataVencimento(): ?Carbon
     {
-        $dataPublicacao = $this->safeGet('data_publicacao_mg');
-        $prazo = $this->safeGetInt('prazo_vigencia');
-
-        if (!$dataPublicacao || !$prazo) {
-            return null;
-        }
-
-        try {
-            $date = $dataPublicacao instanceof Carbon ? $dataPublicacao : Carbon::parse($dataPublicacao);
-            return $date->copy()->addDays($prazo);
-        } catch (\Throwable) {
-            return null;
-        }
+        return Vigencia::vencimento($this->safeGet('data_publicacao_mg'), $this->safeGet('prazo_vigencia'));
     }
 
     /**
-     * Calcula dias restantes ate vencimento.
+     * Calcula dias restantes ate o vencimento (assinado).
      *
-     * @return int|null Dias restantes (0 se vencido) ou null se sem data
+     * @return int|null Negativo = vencido, 0 = vence hoje, null = sem publicacao
      */
     protected function getDiasRestantes(): ?int
     {
-        $dataVencimento = $this->getDataVencimento();
-        if (!$dataVencimento) {
-            return null;
-        }
-
-        $hoje = Carbon::today();
-        return $dataVencimento->lt($hoje) ? 0 : (int) $hoje->diffInDays($dataVencimento);
+        return Vigencia::diasRestantes($this->safeGet('data_publicacao_mg'), $this->safeGet('prazo_vigencia'));
     }
 
     /**
-     * Verifica se o decreto esta vigente.
+     * Verifica se o decreto esta vigente (inclui o dia do vencimento).
      *
-     * @return bool True se ainda nao venceu
+     * @return bool True enquanto nao passou do vencimento
      */
     public function isVigente(): bool
     {
-        $diasRestantes = $this->getDiasRestantes();
-        return $diasRestantes !== null && $diasRestantes > 0;
+        return Vigencia::isVigente($this->safeGet('data_publicacao_mg'), $this->safeGet('prazo_vigencia'));
+    }
+
+    /**
+     * Verifica se o decreto ja venceu.
+     */
+    public function isVencido(): bool
+    {
+        return Vigencia::isVencido($this->safeGet('data_publicacao_mg'), $this->safeGet('prazo_vigencia'));
     }
 
     /**
@@ -270,8 +270,7 @@ class ProcessoResource extends JsonResource
      */
     public function isProximoVencer(): bool
     {
-        $diasRestantes = $this->getDiasRestantes();
-        return $diasRestantes !== null && $diasRestantes > 0 && $diasRestantes <= 30;
+        return Vigencia::isProximoVencer($this->safeGet('data_publicacao_mg'), $this->safeGet('prazo_vigencia'));
     }
 
     /**

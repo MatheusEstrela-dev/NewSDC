@@ -5,15 +5,23 @@ declare(strict_types=1);
 namespace App\Modules\Decretacoes\Filters;
 
 use App\Models\Municipio;
+use App\Modules\Decretacoes\Enums\Redec;
+use App\Modules\Decretacoes\Enums\StatusProcesso;
 use App\Modules\Decretacoes\Models\DecretoMunicipio;
 use App\Modules\Decretacoes\Models\Processo;
+use App\Modules\Decretacoes\Support\Vigencia;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ProcessoFilter
 {
+    /** O modulo atende exclusivamente municipios de Minas Gerais. */
+    private const UF_MINAS_GERAIS = 'MG';
+
     protected Request $request;
     protected Builder $builder;
 
@@ -51,6 +59,7 @@ class ProcessoFilter
              ->filterBySituacaoAnormalidade()
              ->filterByDataDecretoRange()
              ->filterByVigenciaStatus()
+             ->filterByRedec()
              ->filterByMunicipio()
              ->filterByProtocoloFide()
              ->filterByTipoDesastre()
@@ -94,8 +103,21 @@ class ProcessoFilter
         return $this;
     }
 
+    /**
+     * Indica exportacao de toda a serie historica (ignora recortes de data).
+     */
+    protected function exportandoSerieCompleta(): bool
+    {
+        return filter_var($this->request->input('all', false), FILTER_VALIDATE_BOOLEAN)
+            || $this->request->input('type') === 'all';
+    }
+
     protected function filterByDataEntrada(): self
     {
+        if ($this->exportandoSerieCompleta()) {
+            return $this;
+        }
+
         if ($this->request->filled('data_entrada')) {
             $this->builder->whereDate('data_entrada', $this->request->input('data_entrada'));
         }
@@ -103,8 +125,20 @@ class ProcessoFilter
         return $this;
     }
 
+    /**
+     * Filtra pelo intervalo de data de entrada.
+     *
+     * EXPORTACAO: quando o modal escolhe "Toda Serie Historica" (`all=1` ou
+     * `type=all`), o recorte de datas e ignorado de proposito - os demais
+     * filtros da tela (REDEC, municipio, vigencia, COBRADE...) continuam
+     * valendo, para o CSV sair "de acordo" com o que esta na listagem.
+     */
     protected function filterByDateRange(): self
     {
+        if ($this->exportandoSerieCompleta()) {
+            return $this;
+        }
+
         $dataInicio = $this->request->input('data_entrada_inicio') ?? $this->request->input('data_inicio');
         $dataFim = $this->request->input('data_entrada_fim') ?? $this->request->input('data_fim');
 
@@ -128,36 +162,37 @@ class ProcessoFilter
         return $this;
     }
 
+    /**
+     * Filtra por status do processo.
+     *
+     * O status vive em duas colunas: `reconhecimento` (legado, preenchido pela
+     * carga antiga) e `status` (gravado pelo formulario atual). Filtrar apenas
+     * `reconhecimento` deixava os processos novos invisiveis para este filtro,
+     * por isso a comparacao usa o status efetivo (o primeiro nao vazio).
+     */
     protected function filterByReconhecimento(): self
     {
         if ($this->request->filled('reconhecimento')) {
-            $reconhecimentos = explode(',', $this->request->input('reconhecimento'));
-            $this->builder->whereIn('reconhecimento', $reconhecimentos);
+            $reconhecimentos = array_values(array_filter(
+                array_map('trim', explode(',', (string) $this->request->input('reconhecimento')))
+            ));
+
+            if (! empty($reconhecimentos)) {
+                $this->builder->whereIn(DB::raw(self::sqlStatusEfetivo()), $reconhecimentos);
+            }
         }
 
         return $this;
     }
 
     /**
-     * Separa registros de decretacoes pelo mesmo criterio usado nos cards de
-     * estatistica, para que clicar no card e a listagem resultante contem a
-     * mesma historia.
+     * Expressao SQL do status efetivo do processo (legado ou atual).
      */
-    protected function filterByTipoLancamento(): self
+    public static function sqlStatusEfetivo(string $tabela = ''): string
     {
-        if ($this->request->filled('tipo_lancamento')) {
-            switch ($this->request->input('tipo_lancamento')) {
-                case 'registro':
-                    $this->builder->where('reconhecimento', 'Registro');
-                    break;
+        $prefixo = $tabela !== '' ? "{$tabela}." : '';
 
-                case 'decretacao':
-                    $this->builder->where('reconhecimento', '!=', 'Registro');
-                    break;
-            }
-        }
-
-        return $this;
+        return "COALESCE(NULLIF(TRIM({$prefixo}reconhecimento), ''), {$prefixo}status)";
     }
 
     protected function filterByAnalista(): self
@@ -191,37 +226,36 @@ class ProcessoFilter
         return $this;
     }
 
+    /**
+     * Filtra por status de vigencia.
+     *
+     * Usa a expressao canonica de Support\Vigencia (com COALESCE de 180 dias),
+     * para que registros sem `prazo_vigencia` informado nao desapareguem dos
+     * recortes de vigente/vencido.
+     */
     protected function filterByVigenciaStatus(): self
     {
         if ($this->request->filled('vigencia_status')) {
             $vigenciaStatus = $this->request->input('vigencia_status');
+            $vencimento = Vigencia::sqlVencimento();
+            $janela = Vigencia::JANELA_PROXIMO_VENCER_DIAS;
 
             switch ($vigenciaStatus) {
                 case 'vigente':
-                    // Mesma definicao do card "Decretacoes Vigentes" em
-                    // ProcessoStatsService::applyVigentesConstraints(): dentro
-                    // do prazo e sendo decretacao. As duas precisam mudar
-                    // juntas, senao clicar no card devolve uma listagem que nao
-                    // corresponde ao numero exibido. Registro nao tem vigencia.
-                    $this->builder->where(function ($q) {
+                    $this->builder->where(function ($q) use ($vencimento) {
                         $q->whereNull('data_publicacao_mg')
-                          ->orWhereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE");
-                    })
-                    ->where(function ($q) {
-                        $q->where('reconhecimento', '!=', 'Registro')
-                          ->orWhereNull('reconhecimento');
+                          ->orWhereRaw("{$vencimento} >= CURRENT_DATE");
                     });
                     break;
 
                 case 'vencido':
                     $this->builder->whereNotNull('data_publicacao_mg')
-                                 ->whereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) < CURRENT_DATE");
+                                 ->whereRaw("{$vencimento} < CURRENT_DATE");
                     break;
 
                 case 'proximo_vencer':
                     $this->builder->whereNotNull('data_publicacao_mg')
-                                 ->whereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE")
-                                 ->whereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) <= (CURRENT_DATE + INTERVAL '30 days')");
+                                 ->whereRaw("({$vencimento} - CURRENT_DATE) BETWEEN 0 AND {$janela}");
                     break;
 
                 case 'sem_data':
@@ -229,6 +263,40 @@ class ProcessoFilter
                     break;
             }
         }
+
+        return $this;
+    }
+
+    /**
+     * Filtra por REDEC do processo.
+     *
+     * Alem do `redec_id` gravado no processo, aceita processos cujos municipios
+     * pertencam a REDEC (correspondencia via cedec_municipio), cobrindo os
+     * registros legados que nao tiveram a REDEC preenchida.
+     */
+    protected function filterByRedec(): self
+    {
+        if (! $this->request->filled('redec_id')) {
+            return $this;
+        }
+
+        $redecId = (int) $this->request->input('redec_id');
+        $table = $this->builder->getModel()->getTable();
+        $municipioIds = self::getMunicipioIdsPorRedec($redecId);
+
+        $this->builder->where(function ($q) use ($redecId, $municipioIds, $table) {
+            $q->where('redec_id', $redecId);
+
+            if (! empty($municipioIds)) {
+                $q->orWhereExists(function ($sub) use ($municipioIds, $table) {
+                    $sub->select(DB::raw(1))
+                        ->from('dec_decreto_municipios as dm')
+                        ->whereColumn('dm.entrada_processos_id', "{$table}.id")
+                        ->whereNull('dm.deleted_at')
+                        ->whereIn('dm.municipio_id', $municipioIds);
+                });
+            }
+        });
 
         return $this;
     }
@@ -308,14 +376,9 @@ class ProcessoFilter
         return [
             'status_options' => \App\Modules\Decretacoes\Enums\StatusProcesso::toSelectOptions(),
             'analistas' => self::getAnalistasOptions(),
-            'reconhecimentos' => Processo::distinct('reconhecimento')
-                ->whereNotNull('reconhecimento')
-                ->where('reconhecimento', '!=', '')
-                ->pluck('reconhecimento')
-                ->sort()
-                ->values(),
+            'reconhecimentos' => self::getStatusProcessoOptions(),
             'municipios' => self::getMunicipiosOptions(),
-            'redecs' => \App\Modules\Decretacoes\Enums\MockRedec::toSelectOptions(),
+            'redecs' => Redec::toSelectOptions(),
             'situacoes_anormalidade' => [
                 ['value' => 'ECP', 'label' => 'ECP - Estado de Calamidade Publica'],
                 ['value' => 'SE', 'label' => 'SE - Situacao de Emergencia'],
@@ -327,28 +390,13 @@ class ProcessoFilter
                 ['value' => 'proximo_vencer', 'label' => 'Proximo ao Vencimento (30 dias)'],
                 ['value' => 'sem_data', 'label' => 'Sem Data de Publicacao'],
             ],
+            // Lista por nome do desastre (select "Tipo de Desastre")
             'tipos_desastre' => $tiposDesastre
-                ->map(function ($item) {
-                    $label = $item['a_definicao']
-                        ?? $item['subtipo']
-                        ?? $item['tipo']
-                        ?? $item['subgrupo']
-                        ?? $item['grupo']
-                        ?? $item['categoria']
-                        ?? 'N/A';
-
-                    return [
-                        'id' => $item['id'],
-                        'cobrade' => $item['cobrade'] ?? null,
-                        'label' => $label,
-                        'grupo' => $item['grupo'] ?? null,
-                        'subgrupo' => $item['subgrupo'] ?? null,
-                        'tipo' => $item['tipo'] ?? null,
-                        'subtipo' => $item['subtipo'] ?? null,
-                    ];
-                })
+                ->map(fn ($item) => self::mapDesastreOption($item))
                 ->sortBy('label', SORT_NATURAL | SORT_FLAG_CASE)
                 ->values(),
+            // Lista numerada pelo codigo COBRADE (select "COBRADE")
+            'cobrades' => self::buildCobradeOptions($tiposDesastre),
             'tipos_desastre_hierarquico' => self::buildCobradeHierarchy($tiposDesastre),
             'cobrade_quick_filters' => self::getCobradeQuickFilters(),
         ];
@@ -357,20 +405,206 @@ class ProcessoFilter
     /**
      * Get municipios from database for select options.
      * Cached for 24 hours (data rarely changes).
+     *
+     * Cada municipio carrega a REDEC a que pertence (`redec_id`/`redec_sigla`),
+     * o que permite as listas suspensas do modulo filtrarem municipio <-> REDEC
+     * sem uma segunda requisicao.
+     *
+     * FONTE DA CORRESPONDENCIA: cedec_municipio.redec_id, ligado a municipios
+     * por LEFT(cedec_municipio."Codmundv", 7) = municipios.codigo_ibge
+     * (populado por `php artisan legado:importar-cedec-municipio`).
      */
     protected static function getMunicipiosOptions(): array
     {
-        return Cache::remember('decretacoes.filter.municipios', 86400, function () {
+        return Cache::remember('decretacoes.filter.municipios.v4', 86400, function () {
+            $redecPorMunicipio = self::getRedecPorMunicipioId();
+
+            // Os 853 municipios de Minas Gerais, sempre completos: a REDEC
+            // apenas anota/ordena a lista, nunca remove opcao (ver ProcessoForm).
+            //
+            // A ordenacao e feita em PHP sobre o nome sem acentos: o Postgres
+            // desta instalacao usa colacao por byte, que joga "Aguas Vermelhas"
+            // e "Varzea da Palma" para fora de ordem numa lista tao longa.
             return Municipio::query()
                 ->select('id', 'nome', 'codigo_ibge')
-                ->orderBy('nome')
+                ->where('uf', self::UF_MINAS_GERAIS)
                 ->get()
-                ->map(fn ($m) => [
-                    'id' => $m->id,
-                    'label' => $m->nome,
-                    'codigo_ibge' => $m->codigo_ibge,
-                ])
+                ->map(function ($m) use ($redecPorMunicipio) {
+                    $redecId = $redecPorMunicipio[(int) $m->id] ?? null;
+                    $redec = $redecId ? Redec::tryFrom($redecId) : null;
+
+                    return [
+                        'id' => $m->id,
+                        'label' => $m->nome,
+                        'codigo_ibge' => $m->codigo_ibge,
+                        'redec_id' => $redecId,
+                        'redec_sigla' => $redec?->sigla(),
+                        'redec_label' => $redec?->label(),
+                    ];
+                })
+                ->sortBy(fn (array $m) => Str::lower(Str::ascii($m['label'])), SORT_NATURAL)
+                ->values()
                 ->toArray();
+        });
+    }
+
+    /**
+     * Correspondencia municipio -> REDEC usada por todas as listas suspensas.
+     *
+     * Combina duas fontes reais, na ordem de confianca:
+     *   1. cedec_municipio.redec_id (cadastro oficial da CEDEC), ligado a
+     *      `municipios` por LEFT("Codmundv", 7) = codigo_ibge. Requer
+     *      `php artisan legado:importar-cedec-municipio`.
+     *   2. Historico do proprio modulo: a REDEC mais frequente entre os
+     *      processos que ja incluiram aquele municipio. Cobre as bases em que o
+     *      dump da CEDEC nao foi importado, sem inventar vinculo nenhum.
+     *
+     * Municipio sem nenhuma das duas fontes fica sem REDEC e as listas
+     * simplesmente nao aplicam o recorte para ele.
+     *
+     * @return array<int, int> municipio_id => redec_id
+     */
+    public static function getRedecPorMunicipioId(): array
+    {
+        return Cache::remember('decretacoes.filter.redec_por_municipio.v1', 86400, function () {
+            $porIbge = self::getRedecPorIbge();
+            $mapa = [];
+
+            if (! empty($porIbge)) {
+                $mapa = Municipio::query()
+                    ->where('uf', self::UF_MINAS_GERAIS)
+                    ->whereIn('codigo_ibge', array_keys($porIbge))
+                    ->pluck('codigo_ibge', 'id')
+                    ->mapWithKeys(fn ($ibge, $id) => [(int) $id => $porIbge[$ibge]])
+                    ->all();
+            }
+
+            // Fallback historico apenas para os municipios ainda sem REDEC.
+            foreach (self::getRedecHistoricoPorMunicipioId() as $municipioId => $redecId) {
+                if (! isset($mapa[$municipioId])) {
+                    $mapa[$municipioId] = $redecId;
+                }
+            }
+
+            return $mapa;
+        });
+    }
+
+    /**
+     * Mapa codigo_ibge => redec_id a partir do cadastro legado cedec_municipio.
+     *
+     * @return array<string, int>
+     */
+    protected static function getRedecPorIbge(): array
+    {
+        try {
+            return DB::table('cedec_municipio')
+                ->whereNotNull('redec_id')
+                ->whereNotNull('Codmundv')
+                ->selectRaw('LEFT("Codmundv", 7) as codigo_ibge, MIN(redec_id) as redec_id')
+                ->groupByRaw('LEFT("Codmundv", 7)')
+                ->pluck('redec_id', 'codigo_ibge')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        } catch (\Throwable) {
+            // cedec_municipio ausente/nao importado: cai no fallback historico.
+            return [];
+        }
+    }
+
+    /**
+     * REDEC predominante de cada municipio segundo o historico de processos.
+     *
+     * Para cada municipio ja vinculado a processos, elege a REDEC com mais
+     * ocorrencias (empate resolvido pelo menor id de REDEC, deterministico).
+     *
+     * @return array<int, int> municipio_id => redec_id
+     */
+    protected static function getRedecHistoricoPorMunicipioId(): array
+    {
+        try {
+            $rows = DB::table('dec_decreto_municipios as dm')
+                ->join('dec_entrada_processos as p', 'p.id', '=', 'dm.entrada_processos_id')
+                ->whereNull('dm.deleted_at')
+                ->whereNull('p.deleted_at')
+                ->whereNotNull('p.redec_id')
+                ->selectRaw('dm.municipio_id, p.redec_id, COUNT(*) as total')
+                ->groupBy('dm.municipio_id', 'p.redec_id')
+                ->orderBy('dm.municipio_id')
+                ->orderByDesc('total')
+                ->orderBy('p.redec_id')
+                ->get();
+
+            $mapa = [];
+            foreach ($rows as $row) {
+                $municipioId = (int) $row->municipio_id;
+
+                // A primeira linha de cada municipio ja e a REDEC predominante.
+                if (! isset($mapa[$municipioId])) {
+                    $mapa[$municipioId] = (int) $row->redec_id;
+                }
+            }
+
+            return $mapa;
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * IDs de municipios (tabela `municipios`) pertencentes a uma REDEC.
+     *
+     * @return array<int, int>
+     */
+    public static function getMunicipioIdsPorRedec(int $redecId): array
+    {
+        return array_keys(array_filter(
+            self::getRedecPorMunicipioId(),
+            fn ($id) => $id === $redecId
+        ));
+    }
+
+    /**
+     * Opcoes do filtro "Status do Processo".
+     *
+     * Lista os status VIGENTES primeiro - os do enum StatusProcesso, que e a
+     * unica lista valida para novos processos - e so depois os valores legados
+     * que ainda existem no banco e nao pertencem ao enum (marcados como
+     * "legado"), para que os registros antigos continuem filtraveis.
+     *
+     * O status considerado e o efetivo (`reconhecimento` legado ou `status`
+     * atual), o mesmo usado por filterByReconhecimento().
+     *
+     * @return array<int, array{value: string, label: string, vigente: bool}>
+     */
+    protected static function getStatusProcessoOptions(): array
+    {
+        return Cache::remember('decretacoes.filter.status_processo.v1', 3600, function () {
+            $vigentes = array_map(
+                fn (StatusProcesso $case) => ['value' => $case->value, 'label' => $case->value, 'vigente' => true],
+                StatusProcesso::cases()
+            );
+
+            $valoresVigentes = array_column($vigentes, 'value');
+
+            try {
+                $legados = Processo::query()
+                    ->selectRaw(self::sqlStatusEfetivo() . ' as status_efetivo')
+                    ->distinct()
+                    ->pluck('status_efetivo')
+                    ->filter(fn ($status) => is_string($status) && trim($status) !== '')
+                    ->map(fn ($status) => trim($status))
+                    ->reject(fn ($status) => in_array($status, $valoresVigentes, true))
+                    ->unique()
+                    ->sort()
+                    ->map(fn ($status) => ['value' => $status, 'label' => $status . ' (legado)', 'vigente' => false])
+                    ->values()
+                    ->all();
+            } catch (\Throwable) {
+                $legados = [];
+            }
+
+            return array_merge($vigentes, $legados);
         });
     }
 
@@ -390,6 +624,96 @@ class ProcessoFilter
                 ->values()
                 ->toArray();
         });
+    }
+
+    /**
+     * Nome do desastre segundo a classificacao (do mais especifico ao mais geral).
+     *
+     * @param array<string, mixed> $item Linha de app/Enums/classificacao_desastres.php
+     */
+    protected static function desastreNome(array $item): string
+    {
+        return $item['a_definicao']
+            ?? $item['subtipo']
+            ?? $item['tipo']
+            ?? $item['subgrupo']
+            ?? $item['grupo']
+            ?? $item['categoria']
+            ?? 'N/A';
+    }
+
+    /**
+     * Opcao de desastre no formato consumido pelos selects.
+     *
+     * `label`         -> nome do desastre
+     * `label_cobrade` -> numerado no padrao nacional ("1.1.1.1.0 - Tremor de terra.")
+     *
+     * @param array<string, mixed> $item
+     * @return array<string, mixed>
+     */
+    protected static function mapDesastreOption(array $item): array
+    {
+        $nome = self::desastreNome($item);
+        $codigo = $item['cobrade'] ?? null;
+
+        return [
+            'id' => $item['id'],
+            'cobrade' => $codigo,
+            'label' => $nome,
+            'label_cobrade' => $codigo ? "{$codigo} - {$nome}" : $nome,
+            'grupo' => $item['grupo'] ?? null,
+            'subgrupo' => $item['subgrupo'] ?? null,
+            'tipo' => $item['tipo'] ?? null,
+            'subtipo' => $item['subtipo'] ?? null,
+        ];
+    }
+
+    /**
+     * Opcoes da lista suspensa de COBRADE, numeradas pelo padrao nacional.
+     *
+     * O rotulo exibido e o proprio codigo COBRADE seguido do nome do desastre
+     * ("1.1.3.1.1 - Queda, tombamento ou rolamento de blocos em encostas.") e a
+     * ordem segue a hierarquia do codigo (grupo > subgrupo > tipo > subtipo),
+     * nao a ordem alfabetica - e assim que a classificacao e publicada.
+     *
+     * @param Collection $tiposDesastre Linhas de classificacao_desastres.php
+     * @return array<int, array<string, mixed>>
+     */
+    protected static function buildCobradeOptions(Collection $tiposDesastre): array
+    {
+        return $tiposDesastre
+            ->map(function ($item) {
+                $opcao = self::mapDesastreOption($item);
+
+                // No select de COBRADE o rotulo ja vem numerado.
+                $opcao['label'] = $opcao['label_cobrade'];
+                $opcao['descricao'] = self::desastreNome($item);
+
+                return $opcao;
+            })
+            ->sortBy(fn (array $opcao) => self::cobradeSortKey($opcao['cobrade']))
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Chave de ordenacao hierarquica de um codigo COBRADE.
+     *
+     * Cada segmento e normalizado com dois digitos para que a comparacao seja
+     * numerica ("1.1.10.0.0" depois de "1.1.9.0.0", e nao antes).
+     */
+    protected static function cobradeSortKey(?string $cobrade): string
+    {
+        if (! $cobrade) {
+            return 'zz';
+        }
+
+        $segmentos = array_map(
+            fn (string $parte) => str_pad(preg_replace('/\D/', '', $parte) ?: '0', 2, '0', STR_PAD_LEFT),
+            explode('.', $cobrade)
+        );
+
+        return implode('.', $segmentos);
     }
 
     /**
@@ -424,10 +748,14 @@ class ProcessoFilter
                 ?? $item['tipo']
                 ?? $subgrupo;
 
+            $codigo = $item['cobrade'] ?? null;
+
             $hierarchy[$grupo]['subgrupos'][$subgrupo]['items'][] = [
                 'id' => $item['id'],
-                'cobrade' => $item['cobrade'] ?? null,
+                'cobrade' => $codigo,
                 'label' => $label,
+                // Rotulo numerado no padrao nacional, para a arvore de filtro
+                'label_cobrade' => $codigo ? "{$codigo} - {$label}" : $label,
                 'tipo' => $item['tipo'] ?? null,
                 'subtipo' => $item['subtipo'] ?? null,
             ];

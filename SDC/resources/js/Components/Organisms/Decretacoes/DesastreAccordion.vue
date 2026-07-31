@@ -24,19 +24,6 @@
         {{ desastre.informacao }}
       </p>
 
-      <!-- Descricao -->
-      <div>
-        <label class="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
-          Descricao do Desastre
-        </label>
-        <textarea
-          v-model="localDesastre.descricao"
-          rows="3"
-          class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700/50 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
-          @input="emitUpdate"
-        />
-      </div>
-
       <!-- Tabela de itens -->
       <div v-if="localDesastre.items && localDesastre.items.length > 0" class="overflow-x-auto">
         <table class="w-full text-sm border-collapse">
@@ -118,6 +105,11 @@ function updateCampo(iIndex, fIndex, valor) {
 }
 
 function emitUpdate() {
-  emit('update:desastre', JSON.parse(JSON.stringify(localDesastre.value)));
+  const payload = JSON.parse(JSON.stringify(localDesastre.value));
+
+  // A descricao de areas/populacao afetada saiu do formulario: nao e enviada.
+  delete payload.descricao;
+
+  emit('update:desastre', payload);
 }
 </script>

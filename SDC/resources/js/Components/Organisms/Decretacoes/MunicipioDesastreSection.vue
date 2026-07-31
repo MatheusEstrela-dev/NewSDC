@@ -7,7 +7,10 @@
       @click="isExpanded = !isExpanded"
     >
       <div class="flex items-center gap-3">
-        <MapPinIcon class="w-5 h-5 text-primary-500 shrink-0" />
+        <!-- Icone em caixa colorida - mesmo padrao das secoes do modulo RAT -->
+        <div class="rat-section-icon rat-section-icon-default">
+          <MapPinIcon class="w-5 h-5" />
+        </div>
         <span class="font-semibold text-slate-800 dark:text-slate-200">
           {{ municipio.nome || municipio.p_nome || `Municipio ${municipio.id}` }}
         </span>

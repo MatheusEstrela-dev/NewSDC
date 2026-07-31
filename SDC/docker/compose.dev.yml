@@ -9,7 +9,7 @@
 #
 # App:     http://localhost:8000
 # Mailhog: http://localhost:8025
-# Postgres host:5433  Redis host:6380
+# Postgres host:5434  Redis host:6380
 #
 # Vite roda no HOST em http://localhost:8081 (just dev-vite), nao neste compose.
 # ============================================================================
@@ -153,7 +153,7 @@ services:
       # disco dedicado (1.2T, ext4). A separacao por modulo e subpasta logica
       # via config/filesystems.php (ANEXOS_ROOT) — modulo novo = subpasta
       # nova criada pelo Laravel, sem mexer aqui.
-      - /mnt/newsdc_storage:/data/anexos
+      - ${ANEXOS_HOST_PATH:-../storage/anexos}:/data/anexos
 
     depends_on:
       db:
@@ -172,14 +172,6 @@ services:
   # exports async, notifications). Sem ele, Mail::queue/dispatch ficam parados
   # no Redis indefinidamente. Compartilha a imagem do app e bind-mounts.
   queue:
-    build:
-      context: ..
-      dockerfile: docker/swoole/Dockerfile
-      # Mesmo racional do app: proxy corporativo no build via env do shell.
-      args:
-        http_proxy: ${http_proxy:-}
-        https_proxy: ${https_proxy:-}
-        no_proxy: ${no_proxy:-}
     image: newsdc-swoole-dev:latest
     container_name: newsdc_dev_queue
     hostname: queue
@@ -258,9 +250,11 @@ services:
       - ../storage/app:/var/www/storage/app
       - ../storage/logs:/var/www/storage/logs
       # Mesmo bind mount de anexos do app (ver comentario no servico app).
-      - /mnt/newsdc_storage:/data/anexos
+      - ${ANEXOS_HOST_PATH:-../storage/anexos}:/data/anexos
 
     depends_on:
+      app:
+        condition: service_started
       db:
         condition: service_healthy
       redis:
@@ -309,7 +303,7 @@ services:
       POSTGRES_PASSWORD: secret
       POSTGRES_DB: sdc
     ports:
-      - "5433:5432"       # 5433 no host (evita colisao com legacy 5432)
+      - "5434:5432"       # 5434 no host (5433 costuma estar ocupado pela stack legada db_ai)
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:

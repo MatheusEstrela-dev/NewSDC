@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Decretacoes\Services;
 
 use App\Modules\Decretacoes\Constants\DesastreConstants;
+use App\Modules\Decretacoes\Enums\Redec;
 use App\Modules\Decretacoes\Models\Processo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -183,10 +184,13 @@ class ProcessoExportBIService
             'data_criacao'          => $entrada->created_at,
             'deletado'              => $entrada->trashed(),
             'data_delecao'          => $entrada->deleted_at,
+            'redec_id'              => $entrada->redec_id,
+            'redec'                 => Redec::labelFor($entrada->redec_id),
             'protocolo'             => $entrada->n_protocolo_fide,
             'cobrade'               => $entrada->tipo_desastre_cobrade,
             'tipo_desastre'         => $entrada->tipo_desastre_nome,
-            'status'                => $entrada->reconhecimento,
+            // Status efetivo: `reconhecimento` (legado) ou `status` (formulario atual)
+            'status'                => $entrada->reconhecimento ?: $entrada->status,
             'data_fato'             => $entrada->data_ocorrencia_desastre,
             'data_decreto_municipal'=> $entrada->data_decreto_municipal,
             'data_publicacao_mg'    => $entrada->data_publicacao_mg,

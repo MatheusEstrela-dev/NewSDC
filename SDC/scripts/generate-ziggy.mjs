@@ -1,4 +1,7 @@
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // O memory_limit de 512M do container nao basta para bootar a aplicacao aqui e
 // o comando morria com "Allowed memory size exhausted" no symfony/finder,
@@ -10,6 +13,7 @@ const phpArgs = ['-d', process.env.ZIGGY_MEMORY_LIMIT || 'memory_limit=2G'];
 const artisanArgs = ['artisan', 'ziggy:generate', 'resources/js/ziggy.js'];
 const minimumPhpVersion = '8.3.0';
 const dockerContainer = process.env.ZIGGY_DOCKER_CONTAINER || 'newsdc_dev_app';
+const vendorAutoload = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'vendor', 'autoload.php');
 
 function run(command, args, options = {}) {
     return spawnSync(command, args, {
@@ -24,8 +28,8 @@ const phpVersionCheck = spawnSync(
     { stdio: 'ignore' },
 );
 
-if (phpVersionCheck.status === 0) {
-    const result = run('php', [...phpArgs, ...artisanArgs]);
+if (phpVersionCheck.status === 0 && existsSync(vendorAutoload)) {
+    const result = run('php', artisanArgs);
     process.exit(result.status ?? 1);
 }
 

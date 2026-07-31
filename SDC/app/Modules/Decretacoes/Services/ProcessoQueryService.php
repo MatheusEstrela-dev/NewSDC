@@ -47,7 +47,7 @@ class ProcessoQueryService
         'search', 'data_entrada', 'data_entrada_inicio', 'data_entrada_fim',
         'processo', 'reconhecimento', 'analista', 'situacao_anormalidade',
         'data_decreto_inicio', 'data_decreto_fim', 'vigencia_status',
-        'tipo_desastre_id', 'municipio_id', 'n_protocolo_fide'
+        'tipo_desastre_id', 'municipio_id', 'redec_id', 'n_protocolo_fide'
     ];
 
     /**
@@ -67,6 +67,7 @@ class ProcessoQueryService
         'vigencia_status'       => 'Vigencia',
         'tipo_desastre_id'      => 'Tipo Desastre',
         'municipio_id'          => 'Municipio',
+        'redec_id'              => 'REDEC',
         'n_protocolo_fide'      => 'Protocolo FIDE'
     ];
 
@@ -163,6 +164,10 @@ class ProcessoQueryService
             // Adiciona valor de exibicao para tipo de desastre
             if ($param === 'tipo_desastre_id') {
                 $entry['display_value'] = $this->getDesastreDisplayValue($cobrade, (int) $value);
+            }
+
+            if ($param === 'redec_id') {
+                $entry['display_value'] = \App\Modules\Decretacoes\Enums\Redec::labelFor($value);
             }
 
             $activeFilters[] = $entry;
@@ -1194,9 +1199,8 @@ class ProcessoQueryService
      */
     public function getVigentes(): Collection
     {
-        $processos = Processo::whereNotNull('data_publicacao_mg')
-            ->whereNotNull('prazo_vigencia')
-            ->get();
+        // Sem filtro por prazo_vigencia: quando ausente, vale o padrao de 180 dias.
+        $processos = Processo::whereNotNull('data_publicacao_mg')->get();
 
         return $processos->filter(function (Processo $processo) {
             $resource = new ProcessoResource($processo);
@@ -1227,9 +1231,8 @@ class ProcessoQueryService
      */
     public function getProximosVencer(): Collection
     {
-        $processos = Processo::whereNotNull('data_publicacao_mg')
-            ->whereNotNull('prazo_vigencia')
-            ->get();
+        // Sem filtro por prazo_vigencia: quando ausente, vale o padrao de 180 dias.
+        $processos = Processo::whereNotNull('data_publicacao_mg')->get();
 
         return $processos->filter(function (Processo $processo) {
             $resource = new ProcessoResource($processo);

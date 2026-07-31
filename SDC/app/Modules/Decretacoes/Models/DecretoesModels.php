@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Models;
 
+use App\Modules\Decretacoes\Support\Vigencia;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -78,7 +79,9 @@ class Processo extends Model
     protected $appends = [
         'data_vencimento',
         'dias_restantes',
+        'prazo_vigencia_efetivo',
         'vigente',
+        'vencido',
         'proximo_vencer',
         'situacao_anormalidade',
         'tipo_desastre_nome',
@@ -160,43 +163,40 @@ class Processo extends Model
         return $this->belongsTo(\App\Modules\Compdec\Domain\Entities\Orgao::class, 'orgao_responsavel_id');
     }
 
-    public function getDataVencimentoAttribute(): ?Carbon
+    /**
+     * Prazo de vigencia efetivamente usado no calculo (180 dias por padrao).
+     */
+    public function getPrazoVigenciaEfetivoAttribute(): int
     {
-        if (!$this->data_publicacao_mg || !$this->prazo_vigencia) {
-            return null;
-        }
-
-        return $this->data_publicacao_mg->addDays($this->prazo_vigencia);
+        return Vigencia::prazo($this->attributes['prazo_vigencia'] ?? null);
     }
 
+    public function getDataVencimentoAttribute(): ?Carbon
+    {
+        return Vigencia::vencimento($this->data_publicacao_mg, $this->attributes['prazo_vigencia'] ?? null);
+    }
+
+    /**
+     * Dias restantes assinados: negativo = vencido, 0 = vence hoje, null = sem publicacao.
+     */
     public function getDiasRestantesAttribute(): ?int
     {
-        if (!$this->data_vencimento) {
-            return null;
-        }
-
-        $hoje = Carbon::today();
-        $diff = $hoje->diffInDays($this->data_vencimento, false);
-
-        return $diff < 0 ? 0 : (int) $diff;
+        return Vigencia::diasRestantes($this->data_publicacao_mg, $this->attributes['prazo_vigencia'] ?? null);
     }
 
     public function getVigenteAttribute(): bool
     {
-        if (!$this->data_vencimento) {
-            return true;
-        }
+        return Vigencia::isVigente($this->data_publicacao_mg, $this->attributes['prazo_vigencia'] ?? null);
+    }
 
-        return $this->data_vencimento->isFuture();
+    public function getVencidoAttribute(): bool
+    {
+        return Vigencia::isVencido($this->data_publicacao_mg, $this->attributes['prazo_vigencia'] ?? null);
     }
 
     public function getProximoVencerAttribute(): bool
     {
-        if (!$this->dias_restantes) {
-            return false;
-        }
-
-        return $this->dias_restantes > 0 && $this->dias_restantes <= 15;
+        return Vigencia::isProximoVencer($this->data_publicacao_mg, $this->attributes['prazo_vigencia'] ?? null);
     }
 
     public function getSituacaoAnormalidadeAttribute(): ?string
@@ -257,22 +257,26 @@ class Processo extends Model
 
     public function scopeVigentes($query)
     {
-        return $query->where(function ($q) {
+        $vencimento = Vigencia::sqlVencimento();
+
+        return $query->where(function ($q) use ($vencimento) {
             $q->whereNull('data_publicacao_mg')
-              ->orWhereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE");
+              ->orWhereRaw("{$vencimento} >= CURRENT_DATE");
         });
     }
 
     public function scopeVencidos($query)
     {
         return $query->whereNotNull('data_publicacao_mg')
-                     ->whereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) < CURRENT_DATE");
+                     ->whereRaw(Vigencia::sqlVencimento() . ' < CURRENT_DATE');
     }
 
     public function scopeProximosVencer($query)
     {
+        $janela = Vigencia::JANELA_PROXIMO_VENCER_DIAS;
+
         return $query->whereNotNull('data_publicacao_mg')
-                     ->whereRaw("((data_publicacao_mg + (prazo_vigencia || ' days')::interval)::date - CURRENT_DATE) BETWEEN 1 AND 15");
+                     ->whereRaw('(' . Vigencia::sqlVencimento() . " - CURRENT_DATE) BETWEEN 0 AND {$janela}");
     }
 
     public function podeSerEditado(): bool

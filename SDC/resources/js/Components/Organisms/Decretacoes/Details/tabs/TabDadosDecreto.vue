@@ -1,7 +1,13 @@
 <script setup>
 import { computed } from 'vue';
-import PrazoBadge from '@/Components/Molecules/Decretacoes/PrazoBadge.vue';
 import { CalendarDaysIcon, ClockIcon, DocumentCheckIcon } from '@heroicons/vue/24/outline';
+import {
+  PRAZO_PADRAO_DIAS,
+  formatarData,
+  prazoEfetivo,
+  rotuloDiasRestantes,
+  situacaoVigencia,
+} from '@/Composables/decretacoes/useVigencia';
 
 const props = defineProps({
   processo: {
@@ -11,46 +17,65 @@ const props = defineProps({
 });
 
 function formatDate(date) {
-  if (!date) return 'N/A';
-  return new Date(date).toLocaleDateString('pt-BR');
+  return formatarData(date) || 'N/A';
 }
 
 const vigencia = computed(() => props.processo?.vigencia || {});
 
+/** Dias restantes assinados; null quando o decreto nao tem vigencia calculada. */
 const diasRestantes = computed(() => {
-  return props.processo?.dias_restantes ?? vigencia.value?.dias_restantes ?? 0;
+  const valor = props.processo?.dias_restantes ?? vigencia.value?.dias_restantes ?? null;
+  return valor === null || valor === undefined ? null : Number(valor);
 });
 
-const prazoVigencia = computed(() => {
-  return props.processo?.prazo_vigencia ?? vigencia.value?.prazo_dias ?? 180;
-});
+/** Prazo usado no calculo: informado, ou o padrao de 180 dias. */
+const prazoVigencia = computed(() => prazoEfetivo(
+  props.processo?.prazo_vigencia_efetivo
+    ?? props.processo?.prazo_vigencia
+    ?? vigencia.value?.prazo_dias
+    ?? PRAZO_PADRAO_DIAS,
+));
 
 const dataVencimento = computed(() => {
   return props.processo?.data_vencimento ?? vigencia.value?.data_vencimento;
 });
 
+const diasRestantesTexto = computed(() => (
+  diasRestantes.value === null ? '—' : String(diasRestantes.value)
+));
+
+const situacao = computed(() => situacaoVigencia(diasRestantes.value));
+
+const situacaoLabel = computed(() => rotuloDiasRestantes(diasRestantes.value));
+
 const progressPercent = computed(() => {
-  const total = prazoVigencia.value || 180;
-  const restantes = diasRestantes.value || 0;
-  const decorridos = total - restantes;
+  if (diasRestantes.value === null) return 0;
+
+  const total = prazoVigencia.value;
+  // Vencido: barra cheia. Vigente: proporcao do prazo ja decorrido.
+  const decorridos = total - Math.max(0, diasRestantes.value);
+
   return Math.min(100, Math.max(0, (decorridos / total) * 100));
 });
 
-const diasClass = computed(() => {
-  const dias = diasRestantes.value;
-  if (dias <= 0) return 'text-red-400';
-  if (dias <= 15) return 'text-amber-400';
-  if (dias <= 30) return 'text-yellow-400';
-  return 'text-emerald-400';
-});
+const TEXT_CLASSES = {
+  sem_vigencia: 'text-slate-400',
+  vencido: 'text-red-400',
+  critico: 'text-amber-400',
+  alerta: 'text-yellow-400',
+  vigente: 'text-emerald-400',
+};
 
-const progressClass = computed(() => {
-  const dias = diasRestantes.value;
-  if (dias <= 0) return 'bg-red-500';
-  if (dias <= 15) return 'bg-amber-500';
-  if (dias <= 30) return 'bg-yellow-500';
-  return 'bg-emerald-500';
-});
+const PROGRESS_CLASSES = {
+  sem_vigencia: 'bg-slate-500',
+  vencido: 'bg-red-500',
+  critico: 'bg-amber-500',
+  alerta: 'bg-yellow-500',
+  vigente: 'bg-emerald-500',
+};
+
+const diasClass = computed(() => TEXT_CLASSES[situacao.value]);
+const progressClass = computed(() => PROGRESS_CLASSES[situacao.value]);
 </script>
 
 <template>
@@ -60,8 +85,9 @@ const progressClass = computed(() => {
       <!-- Contador de Dias -->
       <div class="flex-shrink-0 p-6 bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm text-center md:w-48">
         <CalendarDaysIcon class="w-16 h-16 mx-auto text-cyan-500 dark:text-cyan-400 mb-3" />
-        <p class="text-5xl font-bold" :class="diasClass">{{ diasRestantes }}</p>
+        <p class="text-5xl font-bold" :class="diasClass">{{ diasRestantesTexto }}</p>
         <p class="text-slate-500 dark:text-slate-400 mt-1">Dias restantes</p>
+        <p class="text-xs mt-1" :class="diasClass">{{ situacaoLabel }}</p>
       </div>
 
       <!-- Informacoes de Vigencia -->
@@ -73,7 +99,10 @@ const progressClass = computed(() => {
         <div class="space-y-3">
           <div class="flex justify-between">
             <span class="text-slate-500 dark:text-slate-400">Prazo de Vigencia:</span>
-            <span class="text-slate-800 dark:text-white font-medium">{{ prazoVigencia }} dias</span>
+            <span class="text-slate-800 dark:text-white font-medium">
+              {{ prazoVigencia }} dias
+              <span v-if="processo?.prazo_vigencia_padrao" class="text-xs text-slate-500">(padrao)</span>
+            </span>
           </div>
           <div class="flex justify-between">
             <span class="text-slate-500 dark:text-slate-400">Data de Vencimento:</span>

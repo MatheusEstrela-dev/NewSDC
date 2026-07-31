@@ -34,7 +34,8 @@ class DesastreDataRequest extends FormRequest
             'municipios.*.categorias.*.id' => 'required|integer',
             'municipios.*.categorias.*.desastres' => 'nullable|array',
             'municipios.*.categorias.*.desastres.*.id' => 'required|integer',
-            'municipios.*.categorias.*.desastres.*.descricao' => 'nullable|string',
+            // `descricao` (areas/populacao afetada) foi removida do formulario
+            // de Dados de Desastre e nao e mais aceita nem persistida.
             'municipios.*.categorias.*.desastres.*.items' => 'nullable|array',
             'municipios.*.categorias.*.desastres.*.items.*.id' => 'required|integer',
             'municipios.*.categorias.*.desastres.*.items.*.campos' => 'nullable|array',

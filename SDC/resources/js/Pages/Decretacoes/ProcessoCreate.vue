@@ -14,7 +14,6 @@
           @submit="handleSubmit"
           @submit-desastres="handleSubmitDesastres"
           @cancel="handleCancel"
-          @finish="handleFinish"
         />
     </div>
 </template>
@@ -53,7 +52,6 @@ const form = useForm({
   situacao_anormalidade:            props.processo?.situacao_anormalidade ?? '',
   data_entrada:                     props.processo?.data_entrada ?? '',
   data_ocorrencia:                  props.processo?.data_ocorrencia ?? '',
-  data_vencimento_decreto:          props.processo?.data_vencimento ?? '',
   status:                           props.processo?.status ?? 'pendente',
   analista_id:                      props.processo?.analista ?? '',
   n_protocolo_fide:                 props.processo?.n_protocolo_fide ?? '',
@@ -104,10 +102,6 @@ function handleSubmitDesastres(payloadMunicipios) {
       onSuccess: () => toast('Dados de desastre salvos com sucesso.'),
     },
   );
-}
-
-function handleFinish() {
-  router.visit(route('decretacoes.index'));
 }
 
 function handleCancel() {

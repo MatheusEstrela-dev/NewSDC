@@ -76,6 +76,7 @@ class DecretacoesController extends Controller
             'vigencia_status',
             'tipo_desastre_id',
             'municipio_id',
+            'redec_id',
             'n_protocolo_fide',
             // Atalho dos cards de estatistica. Sem ele na whitelist o filtro
             // chegava a aparecer como chip na interface e era descartado aqui,
@@ -340,7 +341,8 @@ class DecretacoesController extends Controller
 
         return Inertia::render('Decretacoes/ProcessoCreate', [
             'tiposDesastre'        => $filterOptions['tipos_desastre'] ?? [],
-            'cobrades'             => $filterOptions['tipos_desastre'] ?? [],
+            // Lista numerada pelo codigo COBRADE (padrao nacional)
+            'cobrades'             => $filterOptions['cobrades'] ?? [],
             'municipios'           => $filterOptions['municipios'] ?? [],
             'redecs'               => $filterOptions['redecs'] ?? [],
             'statusOptions'        => $filterOptions['status_options'] ?? [],
@@ -371,7 +373,8 @@ class DecretacoesController extends Controller
         return Inertia::render('Decretacoes/ProcessoEdit', [
             'processo'      => ProcessoResource::make($processo)->resolve(),
             'tiposDesastre' => $filterOptions['tipos_desastre'] ?? [],
-            'cobrades'      => $filterOptions['tipos_desastre'] ?? [],
+            // Lista numerada pelo codigo COBRADE (padrao nacional)
+            'cobrades'      => $filterOptions['cobrades'] ?? [],
             'municipios'    => $filterOptions['municipios'] ?? [],
             'redecs'        => $filterOptions['redecs'] ?? [],
             'statusOptions' => $filterOptions['status_options'] ?? [],

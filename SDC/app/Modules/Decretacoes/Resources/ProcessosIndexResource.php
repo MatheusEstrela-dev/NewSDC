@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Resources;
 
+use App\Modules\Decretacoes\Enums\StatusProcesso;
+use App\Modules\Decretacoes\Filters\ProcessoFilter;
 use App\Modules\Decretacoes\Models\DecretoMunicipio;
 use App\Modules\Decretacoes\Models\Processo;
+use App\Modules\Decretacoes\Support\Vigencia;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +17,24 @@ class ProcessosIndexResource extends ResourceCollection
 {
     protected $r;
     protected array $cobradeMap = [];
+
+    /**
+     * Status efetivo do processo: `reconhecimento` (legado) ou `status` (atual).
+     * Processos criados pelo formulario novo gravam somente `status`.
+     */
+    private function statusEfetivo(string $tabela = ''): string
+    {
+        return ProcessoFilter::sqlStatusEfetivo($tabela);
+    }
+
+    /** Condicao SQL "e uma decretacao" (status efetivo preenchido e != Registro). */
+    private function sqlNaoRegistro(string $tabela = ''): string
+    {
+        $status = $this->statusEfetivo($tabela);
+        $registro = StatusProcesso::REGISTRO->value;
+
+        return "({$status} is not null AND {$status} <> '{$registro}')";
+    }
 
     public function __construct($items)
     {
@@ -90,19 +111,24 @@ class ProcessosIndexResource extends ResourceCollection
         return Cache::remember($cacheKey, 300, function () use ($processosIds) {
             $baseQuery = Processo::whereIn('id', $processosIds);
 
+            $status = $this->statusEfetivo();
+            $registro = StatusProcesso::REGISTRO->value;
+            $eRegistro = "{$status} = '{$registro}'";
+            $eDecretacao = $this->sqlNaoRegistro();
+
             $mainStats = (clone $baseQuery)->selectRaw("
                 COUNT(*) as total,
-                SUM(CASE WHEN reconhecimento = 'Registro' THEN 1 ELSE 0 END) as registros,
-                SUM(CASE WHEN reconhecimento != 'Registro' THEN 1 ELSE 0 END) as decretos,
+                SUM(CASE WHEN {$eRegistro} THEN 1 ELSE 0 END) as registros,
+                SUM(CASE WHEN {$eDecretacao} THEN 1 ELSE 0 END) as decretos,
                 SUM(CASE WHEN tipo_desastre = 'ECP' THEN 1 ELSE 0 END) as total_ecp,
                 SUM(CASE WHEN tipo_desastre = 'SE' THEN 1 ELSE 0 END) as total_se,
                 SUM(CASE WHEN tipo_desastre = 'N1' THEN 1 ELSE 0 END) as total_n1,
-                SUM(CASE WHEN reconhecimento = 'Registro' AND tipo_desastre = 'ECP' THEN 1 ELSE 0 END) as registros_ecp,
-                SUM(CASE WHEN reconhecimento = 'Registro' AND tipo_desastre = 'SE' THEN 1 ELSE 0 END) as registros_se,
-                SUM(CASE WHEN reconhecimento = 'Registro' AND tipo_desastre = 'N1' THEN 1 ELSE 0 END) as registros_n1,
-                SUM(CASE WHEN reconhecimento != 'Registro' AND tipo_desastre = 'ECP' THEN 1 ELSE 0 END) as decretos_ecp,
-                SUM(CASE WHEN reconhecimento != 'Registro' AND tipo_desastre = 'SE' THEN 1 ELSE 0 END) as decretos_se,
-                SUM(CASE WHEN reconhecimento != 'Registro' AND tipo_desastre = 'N1' THEN 1 ELSE 0 END) as decretos_n1
+                SUM(CASE WHEN {$eRegistro} AND tipo_desastre = 'ECP' THEN 1 ELSE 0 END) as registros_ecp,
+                SUM(CASE WHEN {$eRegistro} AND tipo_desastre = 'SE' THEN 1 ELSE 0 END) as registros_se,
+                SUM(CASE WHEN {$eRegistro} AND tipo_desastre = 'N1' THEN 1 ELSE 0 END) as registros_n1,
+                SUM(CASE WHEN {$eDecretacao} AND tipo_desastre = 'ECP' THEN 1 ELSE 0 END) as decretos_ecp,
+                SUM(CASE WHEN {$eDecretacao} AND tipo_desastre = 'SE' THEN 1 ELSE 0 END) as decretos_se,
+                SUM(CASE WHEN {$eDecretacao} AND tipo_desastre = 'N1' THEN 1 ELSE 0 END) as decretos_n1
             ")->first();
 
             $municipiosStats = DecretoMunicipio::whereIn('entrada_processos_id', $processosIds)
@@ -117,7 +143,7 @@ class ProcessosIndexResource extends ResourceCollection
 
             $vigentesStats = $this->vigentesQuery()
                 ->whereIn('id', $processosIds)
-                ->where('reconhecimento', 'LIKE', 'Reconhecido pelo Estado%')
+                ->whereRaw($this->statusEfetivo() . ' LIKE ?', ['Reconhecido pelo Estado%'])
                 ->selectRaw("
                     COUNT(*) as total,
                     SUM(CASE WHEN tipo_desastre = 'ECP' THEN 1 ELSE 0 END) as ecp,
@@ -155,7 +181,7 @@ class ProcessosIndexResource extends ResourceCollection
     {
         return Cache::remember('decretacoes.decreto_items', 300, function () {
             return Processo::groupBy('processo')
-                ->where('reconhecimento', '!=', 'Registro')
+                ->whereRaw($this->sqlNaoRegistro())
                 ->selectRaw("
                     CASE
                         WHEN processo = 'INDIVIDUAL' THEN 'F_MUNICIPAL'
@@ -173,7 +199,7 @@ class ProcessosIndexResource extends ResourceCollection
         return Cache::remember('decretacoes.municipios_items', 300, function () {
             return DecretoMunicipio::with('municipio')
                 ->whereHas('processo', function ($cb) {
-                    $cb->where('reconhecimento', '!=', 'Registro');
+                    $cb->whereRaw($this->sqlNaoRegistro());
                 })
                 ->selectRaw('municipio_id, COUNT(*) AS total')
                 ->groupBy('municipio_id')
@@ -187,7 +213,7 @@ class ProcessosIndexResource extends ResourceCollection
     {
         return Cache::remember('decretacoes.vigentes_items', 300, function () {
             return $this->vigentesQuery()
-                ->where('reconhecimento', 'LIKE', 'Reconhecido pelo Estado%')
+                ->whereRaw($this->statusEfetivo() . ' LIKE ?', ['Reconhecido pelo Estado%'])
                 ->selectRaw('processo, COUNT(*) AS total')
                 ->groupBy('processo')
                 ->pluck('total', 'processo')
@@ -201,10 +227,12 @@ class ProcessosIndexResource extends ResourceCollection
             $entrada = new Processo();
         }
 
-        return $entrada->where(function ($q) {
+        $vencimento = Vigencia::sqlVencimento();
+
+        return $entrada->where(function ($q) use ($vencimento) {
             $q->whereNull('data_publicacao_mg')
-                ->orWhereRaw("(data_publicacao_mg + (prazo_vigencia || ' days')::interval) >= CURRENT_DATE");
-        })->where('reconhecimento', '!=', 'Registro');
+                ->orWhereRaw("{$vencimento} >= CURRENT_DATE");
+        })->whereRaw($this->sqlNaoRegistro());
     }
 
     private function buildCobradeMap(): void
@@ -226,7 +254,7 @@ class ProcessosIndexResource extends ResourceCollection
         return Cache::remember($cacheKey, 300, function () use ($municipiosPer, $processoTipo) {
             if ($municipiosPer) {
                 $entradas = DecretoMunicipio::whereHas('processo', function ($cb) {
-                    $cb->where('reconhecimento', '!=', 'Registro');
+                    $cb->whereRaw($this->sqlNaoRegistro());
                 })
                     ->select('tipo_desastre_id', 'tipo_desastre', 'p_nome')
                     ->distinct('dec_entrada_processos.tipo_desastre_id')
@@ -235,7 +263,7 @@ class ProcessosIndexResource extends ResourceCollection
                     ->get();
             } else {
                 $query = Processo::select('tipo_desastre_id', 'tipo_desastre')
-                    ->where('reconhecimento', '!=', 'Registro')
+                    ->whereRaw($this->sqlNaoRegistro())
                     ->whereNotNull('tipo_desastre_id');
 
                 if ($processoTipo) {
