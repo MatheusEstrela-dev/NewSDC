@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Demandas;
 
+use App\Modules\Demandas\Models\Task;
+use App\Modules\Demandas\Observers\TaskNotificacaoObserver;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -19,5 +21,9 @@ class DemandasServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Rotas carregadas via routes/web.php -> routes/modules/demandas.php
+
+        // Avisos de atribuicao e mudanca de status. O observer so despacha job,
+        // entao nao entra no custo da requisicao que salvou a demanda.
+        Task::observe(TaskNotificacaoObserver::class);
     }
 }

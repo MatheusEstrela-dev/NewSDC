@@ -11,6 +11,8 @@ use App\Modules\Pae\Models\PaeAnalise;
 use App\Modules\Pae\Models\PaeNotificacao;
 use App\Modules\Pae\Models\PaeProtocolo;
 use App\Modules\Pae\Models\PaeTimeline;
+use App\Modules\Notificacoes\DTO\NotificacaoSpec;
+use App\Modules\Notificacoes\Jobs\EntregarNotificacaoJob;
 use App\Modules\Shared\BaseService;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
@@ -72,8 +74,51 @@ class PaeNotificacaoService extends BaseService
         );
 
         $this->enviarEmail($protocolo, $notificacao, $ciclo, $user);
+        $this->avisarAnalistaNoInbox($protocolo, $ciclo, $automatica);
 
         return $notificacao;
+    }
+
+    /**
+     * Espelha no inbox do sistema o aviso que ja vai por e-mail.
+     *
+     * Importa principalmente na emissao automatica (pae:verificar-notificacoes, que
+     * roda no schedule): ali nao ha ninguem na tela, e o analista precisa encontrar
+     * o fato ao entrar no sistema, sem depender de ter visto o e-mail.
+     *
+     * Despacha job e retorna: o request que emitiu a notificacao nao espera entrega.
+     */
+    private function avisarAnalistaNoInbox(PaeProtocolo $protocolo, int $ciclo, bool $automatica): void
+    {
+        $analista = $protocolo->analista_atual_id ?? $protocolo->user_id;
+
+        if ($analista === null) {
+            return;
+        }
+
+        $urgente = $ciclo >= self::MAX_CICLOS;
+
+        EntregarNotificacaoJob::dispatch(
+            new NotificacaoSpec(
+                modulo: 'pae',
+                titulo: $urgente ? 'PAE no ultimo ciclo de notificacao' : 'Notificacao PAE emitida',
+                mensagem: sprintf(
+                    'Protocolo %s: ciclo %d de %d emitido%s. Prazo de %d dias para devolutiva.',
+                    (string) $protocolo->num_protocolo,
+                    $ciclo,
+                    self::MAX_CICLOS,
+                    $automatica ? ' automaticamente' : '',
+                    self::PRAZO_DIAS,
+                ),
+                tipo: $urgente ? 'urgent' : 'warning',
+                // O modulo pae tem janela 0 em config/notificacoes.php: cada ciclo e
+                // um prazo proprio e nao deve ser absorvido por outro card.
+                groupKey: null,
+                acaoUrl: "/pae/protocolo/{$protocolo->getKey()}",
+                acaoTexto: 'Ver protocolo',
+            ),
+            [(int) $analista],
+        );
     }
 
     public function registrarDevolutiva(PaeNotificacao $notificacao, User $user, string $dtDevolutiva): PaeNotificacao
