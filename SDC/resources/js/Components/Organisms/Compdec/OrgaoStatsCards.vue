@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+  <StatCardsGrid>
     <StatCard
       title="Total de Orgaos"
       :value="statistics.total || 0"
@@ -35,10 +35,11 @@
       clickable
       @click="$emit('filter', { status: 'ativo' })"
     />
-  </div>
+  </StatCardsGrid>
 </template>
 
 <script setup>
+import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
 import BuildingOfficeIcon from '@/Components/Icons/BuildingOfficeIcon.vue';

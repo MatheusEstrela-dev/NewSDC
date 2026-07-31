@@ -9,7 +9,8 @@
     />
 
     <!-- Stat cards = filtros rapidos (padrao do projeto) -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <!-- 3 cards: mesmo grid do resto do sistema, com 2 colunas no mobile em vez de 1. -->
+    <StatCardsGrid :colunas="3">
       <StatCard
         title="Total de RATs"
         :value="statistics.total"
@@ -32,7 +33,7 @@
         clickable
         @click="filtrarAnoAtual"
       />
-    </div>
+    </StatCardsGrid>
 
     <!-- Filtros (FilterSection padrao) -->
     <FilterSection title="Filtros de Pesquisa" :columns="4" class="mb-6">
@@ -134,6 +135,7 @@ import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
 import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { ArchiveBoxIcon, CalendarIcon, DocumentTextIcon, MapPinIcon } from '@heroicons/vue/24/outline';

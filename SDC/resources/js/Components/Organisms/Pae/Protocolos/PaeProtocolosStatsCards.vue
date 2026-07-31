@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+  <StatCardsGrid>
     <StatCard
       title="Total de PAE"
       :value="stats.total"
@@ -32,10 +32,11 @@
       clickable
       @click="$emit('ccpae')"
     />
-  </div>
+  </StatCardsGrid>
 </template>
 
 <script setup>
+import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';

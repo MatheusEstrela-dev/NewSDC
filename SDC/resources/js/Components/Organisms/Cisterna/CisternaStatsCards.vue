@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+  <StatCardsGrid>
     <StatCard
       title="Total"
       :value="statistics.total ?? 0"
@@ -34,10 +34,11 @@
       :icon="MapIcon"
       subtitle="Com cisternas vinculadas"
     />
-  </div>
+  </StatCardsGrid>
 </template>
 
 <script setup>
+import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';

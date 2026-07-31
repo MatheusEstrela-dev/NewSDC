@@ -1,15 +1,16 @@
 <template>
-  <div class="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+  <StatCardsGrid>
     <StatCard title="Produtos" :value="statistics.produtos" variant="info" :icon="ArchiveBoxIcon" />
     <StatCard title="Saldo total" :value="statistics.saldo_total" variant="success" :icon="CircleStackIcon" />
     <StatCard title="Kits montaveis" :value="statistics.kits_montaveis" variant="info" :icon="SquaresPlusIcon" />
     <StatCard title="Lotes vencendo" :value="statistics.lotes_vencendo" variant="warning" :icon="ClockIcon" />
     <StatCard title="Requisicoes" :value="statistics.requisicoes" variant="danger" :icon="ClipboardDocumentCheckIcon" />
-  </div>
+  </StatCardsGrid>
 </template>
 
 <script setup>
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import {
   ArchiveBoxIcon,
   CircleStackIcon,

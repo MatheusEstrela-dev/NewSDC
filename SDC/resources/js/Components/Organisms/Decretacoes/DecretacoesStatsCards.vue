@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
+  <StatCardsGrid>
     <!-- Total de Eventos - atalho de filtro rapido: limpa os filtros.
          Sem rateio ECP/SE/N1: o card mistura Registros (sempre N1) com
          Decretacoes, e o rateio nao respondia nada. No lugar dele, a
@@ -70,12 +70,13 @@
       :icon="CheckCircleIcon"
       @click="handleFilter({ vigencia_status: 'vigente' })"
     />
-  </div>
+  </StatCardsGrid>
 </template>
 
 <script setup>
 import { computed } from 'vue';
 import StatCardWithBreakdown from '@/Components/Molecules/Statistics/StatCardWithBreakdown.vue';
+import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import BoltIcon from '@/Components/Icons/BoltIcon.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';

@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+  <StatCardsGrid>
     <StatCard
       title="Cronogramas Ativos"
       :value="kpis.cronogramas_ativos"
@@ -30,11 +30,12 @@
       variant="warning"
       :icon="ClockIcon"
     />
-  </div>
+  </StatCardsGrid>
 </template>
 
 <script setup>
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';

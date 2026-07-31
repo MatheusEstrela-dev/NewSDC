@@ -1,4 +1,5 @@
 <script setup>
+import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import { computed } from 'vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
@@ -54,7 +55,7 @@ const stats = computed(() => [
 </script>
 
 <template>
-  <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+  <StatCardsGrid>
     <StatCard
       v-for="stat in stats"
       :key="stat.id"
@@ -65,6 +66,6 @@ const stats = computed(() => [
       clickable
       @click="emit('filter', stat.status)"
     />
-  </div>
+  </StatCardsGrid>
 </template>
 

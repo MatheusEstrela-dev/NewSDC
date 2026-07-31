@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+  <StatCardsGrid>
     <div @click="$emit('filter', 'all')" class="cursor-pointer">
       <StatCard
         title="Total de Processos"
@@ -35,10 +35,11 @@
         subtitle="≤ 15 dias restantes"
       />
     </div>
-  </div>
+  </StatCardsGrid>
 </template>
 
 <script setup>
+import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
