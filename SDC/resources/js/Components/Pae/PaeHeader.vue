@@ -53,20 +53,20 @@ const STATUS_LABELS = {
 };
 
 const STATUS_CLASSES = {
-    novo:               'bg-slate-500/10 text-slate-400 border-slate-500/20',
-    entrada_processo:   'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    criacao_sdc:        'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    gerenciamento:      'bg-blue-500/10 text-blue-300 border-blue-500/20',
-    notificacao:        'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    analise:            'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-    aprovado:           'bg-green-500/10 text-green-400 border-green-500/20',
-    reprovado:          'bg-red-500/10 text-red-400 border-red-500/20',
-    ccpae:              'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    ativo_3_anos:       'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    suspenso:           'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-    revogado:           'bg-red-700/10 text-red-400 border-red-700/20',
-    esperar_tratativa:  'bg-orange-500/10 text-orange-400 border-orange-500/20',
-    dilacao:            'bg-orange-500/10 text-orange-400 border-orange-500/20',
+    novo:               'bg-slate-100 dark:bg-slate-500/10 text-slate-400 border-slate-300 dark:border-slate-500/20',
+    entrada_processo:   'bg-blue-100 dark:bg-blue-500/10 text-blue-400 border-blue-300 dark:border-blue-500/20',
+    criacao_sdc:        'bg-blue-100 dark:bg-blue-500/10 text-blue-400 border-blue-300 dark:border-blue-500/20',
+    gerenciamento:      'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-500/20',
+    notificacao:        'bg-amber-100 dark:bg-amber-500/10 text-amber-400 border-amber-300 dark:border-amber-500/20',
+    analise:            'bg-indigo-100 dark:bg-indigo-500/10 text-indigo-400 border-indigo-300 dark:border-indigo-500/20',
+    aprovado:           'bg-green-100 dark:bg-green-500/10 text-green-400 border-green-300 dark:border-green-500/20',
+    reprovado:          'bg-red-100 dark:bg-red-500/10 text-red-400 border-red-300 dark:border-red-500/20',
+    ccpae:              'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-400 border-emerald-300 dark:border-emerald-500/20',
+    ativo_3_anos:       'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-400 border-emerald-300 dark:border-emerald-500/20',
+    suspenso:           'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-400 border-yellow-300 dark:border-yellow-500/20',
+    revogado:           'bg-red-100 dark:bg-red-700/10 text-red-400 border-red-300 dark:border-red-700/20',
+    esperar_tratativa:  'bg-orange-100 dark:bg-orange-500/10 text-orange-400 border-orange-300 dark:border-orange-500/20',
+    dilacao:            'bg-orange-100 dark:bg-orange-500/10 text-orange-400 border-orange-300 dark:border-orange-500/20',
 };
 
 const props = defineProps({
@@ -85,16 +85,16 @@ const statusLabel = computed(() =>
 );
 
 const statusClass = computed(() =>
-    props.protocolo?.status ? (STATUS_CLASSES[props.protocolo.status] ?? 'bg-slate-500/10 text-slate-400 border-slate-500/20') : ''
+    props.protocolo?.status ? (STATUS_CLASSES[props.protocolo.status] ?? 'bg-slate-100 dark:bg-slate-500/10 text-slate-400 border-slate-300 dark:border-slate-500/20') : ''
 );
 
 function getNivelEmergenciaClass(nivel) {
     const classes = {
-        1: 'bg-red-500/10 text-red-400 border-red-500/20',
-        2: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-        3: 'bg-green-500/10 text-green-400 border-green-500/20',
+        1: 'bg-red-100 dark:bg-red-500/10 text-red-400 border-red-300 dark:border-red-500/20',
+        2: 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-400 border-yellow-300 dark:border-yellow-500/20',
+        3: 'bg-green-100 dark:bg-green-500/10 text-green-400 border-green-300 dark:border-green-500/20',
     };
-    return classes[nivel] || 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+    return classes[nivel] || 'bg-slate-100 dark:bg-slate-500/10 text-slate-400 border-slate-300 dark:border-slate-500/20';
 }
 </script>
 

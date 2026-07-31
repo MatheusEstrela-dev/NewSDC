@@ -74,9 +74,9 @@ const STATUS_ORDER = [
 ];
 
 const TERMINAL_CONFIGS = {
-  reprovado: { label: 'Reprovado', classes: 'bg-red-500/20 text-red-300 border-red-500/30' },
-  suspenso: { label: 'Suspenso', classes: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
-  revogado: { label: 'Revogado', classes: 'bg-red-700/20 text-red-400 border-red-700/30' },
+  reprovado: { label: 'Reprovado', classes: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border-red-300 dark:border-red-500/30' },
+  suspenso: { label: 'Suspenso', classes: 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-500/30' },
+  revogado: { label: 'Revogado', classes: 'bg-red-100 dark:bg-red-700/20 text-red-400 border-red-300 dark:border-red-700/30' },
 };
 
 const currentIndex = computed(() => STATUS_ORDER.indexOf(props.situacao));
@@ -96,12 +96,12 @@ function isCurrent(stepStatus) {
 
 function stepCircleClass(stepStatus) {
   if (isCurrent(stepStatus)) {
-    return 'bg-blue-500 border-blue-400 text-white shadow-lg shadow-blue-500/30';
+    return 'bg-blue-500 border-blue-300 dark:border-blue-400 text-white shadow-lg shadow-blue-500/30';
   }
   if (isDone(stepStatus)) {
-    return 'bg-green-500/20 border-green-400 text-green-300';
+    return 'bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-400 text-green-700 dark:text-green-300';
   }
-  return 'bg-slate-700/40 border-slate-600 text-slate-500';
+  return 'bg-slate-100 dark:bg-slate-700/40 border-slate-300 dark:border-slate-600 text-slate-500';
 }
 
 function stepLabelClass(stepStatus) {
@@ -111,7 +111,7 @@ function stepLabelClass(stepStatus) {
 }
 
 function connectorClass(stepStatus) {
-  if (isDone(stepStatus)) return 'bg-green-500/40';
-  return 'bg-slate-700/40';
+  if (isDone(stepStatus)) return 'bg-green-100 dark:bg-green-500/40';
+  return 'bg-slate-100 dark:bg-slate-700/40';
 }
 </script>
