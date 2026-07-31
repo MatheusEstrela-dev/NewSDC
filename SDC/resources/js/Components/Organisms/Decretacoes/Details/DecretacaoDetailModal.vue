@@ -97,10 +97,10 @@ function handleClose() {
           <span v-if="processo.data_entrada_formatada" class="text-sm text-slate-500 dark:text-slate-400">
             Entrada: {{ processo.data_entrada_formatada }}
           </span>
-          <span v-if="processo.vigente" class="px-2 py-1 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300 rounded text-xs font-medium">
+          <span v-if="processo.dias_restantes !== null && processo.vigente" class="px-2 py-1 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300 rounded text-xs font-medium">
             Vigente
           </span>
-          <span v-else-if="processo.dias_restantes === 0" class="px-2 py-1 bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 rounded text-xs font-medium">
+          <span v-else-if="processo.dias_restantes !== null" class="px-2 py-1 bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 rounded text-xs font-medium">
             Vencido
           </span>
         </div>

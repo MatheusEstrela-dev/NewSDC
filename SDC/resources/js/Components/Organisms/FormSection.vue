@@ -8,15 +8,18 @@
       ]"
       @click="collapsible && toggleCollapse()"
     >
-      <div v-if="icon" class="form-section-icon text-blue-500 dark:text-blue-400">
+      <!-- Icone em caixa colorida - mesmo padrao das secoes do modulo RAT -->
+      <div v-if="icon" :class="['rat-section-icon', iconVariantClass]">
         <component :is="icon" class="w-5 h-5" />
       </div>
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200">
-        {{ title }}
-      </h3>
-      <span v-if="subtitle" class="text-sm text-slate-500">
-        {{ subtitle }}
-      </span>
+      <div class="min-w-0">
+        <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200">
+          {{ title }}
+        </h3>
+        <p v-if="subtitle" class="text-xs text-slate-500 mt-0.5">
+          {{ subtitle }}
+        </p>
+      </div>
       <div v-if="collapsible" class="ml-auto">
         <svg
           :class="['w-5 h-5 text-slate-500 dark:text-slate-400 transition-transform', collapsed && 'rotate-180']"
@@ -50,6 +53,12 @@ const props = defineProps({
     type: [Object, Function],
     default: null,
   },
+  // Variantes de cor do icone - identicas as classes .rat-section-icon-* do RAT
+  iconVariant: {
+    type: String,
+    default: 'default',
+    validator: (value) => ['default', 'success', 'warning', 'danger', 'purple'].includes(value),
+  },
   collapsible: {
     type: Boolean,
     default: false,
@@ -65,6 +74,8 @@ const props = defineProps({
 });
 
 const collapsed = ref(props.defaultCollapsed);
+
+const iconVariantClass = computed(() => `rat-section-icon-${props.iconVariant}`);
 
 function toggleCollapse() {
   collapsed.value = !collapsed.value;

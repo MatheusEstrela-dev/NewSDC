@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\DTO;
 
+use App\Modules\Decretacoes\Support\Vigencia;
 use Illuminate\Http\Request;
 
 /**
@@ -66,7 +67,9 @@ class ProcessoRequestDTO
             'decreto_municipal'        => $request->input('n_decreto_municipal') ?: null,
             'data_decreto_municipal'   => $request->input('data_decreto_municipal') ?: null,
             'data_publicacao_mg'       => $request->input('data_publicacao_decreto_municipal') ?: null,
-            'prazo_vigencia'           => $request->input('prazo_vigencia_decreto') ?: null,
+            // Prazo em branco grava o padrao legal de 180 dias (SE/ECP), para que
+            // vencimento/dias restantes fiquem calculaveis tambem em SQL.
+            'prazo_vigencia'           => Vigencia::prazo($request->input('prazo_vigencia_decreto')),
             // Reconhecimento Estadual
             'n_decreto_estadual'       => $request->input('n_decreto_estadual') ?: null,
             'data_decreto_estadual'    => $request->input('data_decreto_estadual') ?: null,

@@ -8,8 +8,14 @@
 <script setup>
 import { computed } from 'vue';
 import ClockIcon from '../../Icons/ClockIcon.vue';
+import {
+  formatarData,
+  rotuloDiasRestantes,
+  situacaoVigencia,
+} from '@/Composables/decretacoes/useVigencia';
 
 const props = defineProps({
+  // Dias restantes assinados: negativo = vencido, 0 = vence hoje, null = sem vigencia
   diasRestantes: {
     type: Number,
     default: null,
@@ -20,38 +26,31 @@ const props = defineProps({
   },
 });
 
-const label = computed(() => {
-  if (props.diasRestantes === null) return '—';
-  if (props.diasRestantes === 0) return 'Vencido';
-  if (props.diasRestantes === 1) return '1 dia';
-  if (props.diasRestantes <= 30) return `${props.diasRestantes} dias`;
-  return `${Math.floor(props.diasRestantes / 30)} meses`;
-});
+const label = computed(() => rotuloDiasRestantes(props.diasRestantes));
+
+const BASE_CLASSES = 'px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold inline-block whitespace-nowrap';
+
+const VARIANT_CLASSES = {
+  sem_vigencia: 'bg-slate-500/20 text-slate-300 border border-slate-500/20',
+  vencido: 'bg-red-500/20 text-red-300 border border-red-500/20',
+  critico: 'bg-orange-500/20 text-orange-300 border border-orange-500/20',
+  alerta: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/20',
+  vigente: 'bg-green-500/20 text-green-300 border border-green-500/20',
+};
 
 const badgeClasses = computed(() => {
-  const baseClasses = 'px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold inline-block whitespace-nowrap';
-
-  if (props.diasRestantes === null) {
-    return `${baseClasses} bg-slate-500/20 text-slate-300 border border-slate-500/20`;
-  }
-
-  if (props.diasRestantes === 0) {
-    return `${baseClasses} bg-red-500/20 text-red-300 border border-red-500/20`;
-  }
-
-  if (props.diasRestantes <= 15) {
-    return `${baseClasses} bg-orange-500/20 text-orange-300 border border-orange-500/20`;
-  }
-
-  if (props.diasRestantes <= 30) {
-    return `${baseClasses} bg-yellow-500/20 text-yellow-300 border border-yellow-500/20`;
-  }
-
-  return `${baseClasses} bg-green-500/20 text-green-300 border border-green-500/20`;
+  const variante = situacaoVigencia(props.diasRestantes);
+  return `${BASE_CLASSES} ${VARIANT_CLASSES[variante]}`;
 });
 
 const tooltipText = computed(() => {
   if (!props.dataVencimento) return '';
-  return `Vence em: ${new Date(props.dataVencimento).toLocaleDateString('pt-BR')}`;
+
+  const data = formatarData(props.dataVencimento);
+  if (!data) return '';
+
+  return props.diasRestantes !== null && props.diasRestantes < 0
+    ? `Venceu em: ${data}`
+    : `Vence em: ${data}`;
 });
 </script>

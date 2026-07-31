@@ -131,7 +131,7 @@ import { moduleIcon } from '@/Support/moduleIcons';
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 // Detecção mobile
 const { isMobile } = useMobile();
@@ -200,7 +200,15 @@ const emit = defineEmits(['filter-change', 'clear-filters', 'page-change', 'view
 const localFilters = ref({ ...props.filters });
 const viewMode = ref('table');
 
+// Os filtros aplicados voltam do servidor via props. Sem este sync o
+// localFilters ficava congelado no primeiro render (Inertia reaproveita o
+// componente da pagina) e a exportacao usava filtros desatualizados.
+watch(() => props.filters, (novos) => {
+  localFilters.value = { ...(novos || {}) };
+}, { deep: true });
+
 const handleApplyFilters = (filters) => {
+  localFilters.value = { ...filters };
   emit('filter-change', filters);
 };
 
@@ -230,8 +238,21 @@ const {
   handleExport: triggerExport
 } = useExport('decretacoes.export');
 
+// Exporta exatamente o recorte da tela (REDEC, municipio, status, vigencia,
+// COBRADE...). Em "Toda Serie Historica" os recortes de data sao descartados,
+// para nao herdar o periodo que estava filtrado na listagem.
 function handleExportCsv(params) {
-  triggerExport(params, localFilters.value);
+  const filtros = { ...localFilters.value };
+
+  if (params?.all || params?.type === 'all') {
+    delete filtros.data_entrada;
+    delete filtros.data_inicio;
+    delete filtros.data_fim;
+    delete filtros.data_entrada_inicio;
+    delete filtros.data_entrada_fim;
+  }
+
+  triggerExport(params, filtros);
 }
 
 // =========================

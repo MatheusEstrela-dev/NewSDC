@@ -1,7 +1,13 @@
 <template>
   <form @submit.prevent="handleSubmit" class="processo-form">
     <!-- Secao 1: Identificacao do Processo -->
-    <FormSection title="Identificacao do Processo" :cols="3">
+    <FormSection
+      title="Identificacao do Processo"
+      subtitle="Tipificacao do desastre, localizacao e situacao de anormalidade"
+      :icon="ClipboardDocumentListIcon"
+      icon-variant="default"
+      :cols="3"
+    >
       <FormSelect
         v-model="form.tipo_desastre_id"
         label="Tipo de Desastre"
@@ -15,9 +21,10 @@
         v-model="form.cobrade_id"
         label="COBRADE"
         :options="cobrades"
-        placeholder="Selecione o COBRADE..."
+        placeholder="Selecione o codigo COBRADE..."
         required
         :error="form.errors.cobrade_id"
+        :hint="cobradeHint"
       />
 
       <FormSelect
@@ -30,21 +37,23 @@
       />
 
       <FormSelect
-        v-model="form.municipio_id"
-        label="Municipio"
-        :options="municipios"
-        placeholder="Selecione o municipio..."
-        required
-        :error="form.errors.municipio_id"
-      />
-
-      <FormSelect
         v-model="form.redec_id"
         label="REDEC"
         :options="redecs"
         placeholder="Selecione a REDEC..."
         required
         :error="form.errors.redec_id"
+        :hint="redecHint"
+      />
+
+      <FormSelect
+        v-model="form.municipio_id"
+        label="Municipio"
+        :options="municipiosFiltrados"
+        :placeholder="municipioPlaceholder"
+        required
+        :error="form.errors.municipio_id"
+        :hint="municipioHint"
       />
 
       <RadioGroup
@@ -58,39 +67,14 @@
       />
     </FormSection>
 
-    <!-- Secao 2: Datas e Prazos -->
-    <FormSection title="Datas e Prazos" :cols="4">
-      <FormDateField
-        v-model="form.data_entrada"
-        label="Data de Entrada do Processo"
-        required
-        :error="form.errors.data_entrada"
-      />
-
-      <FormDateField
-        v-model="form.data_ocorrencia"
-        label="Data de Ocorrencia do Desastre"
-        required
-        :error="form.errors.data_ocorrencia"
-      />
-
-      <FormDateField
-        v-model="form.data_vencimento_decreto"
-        label="Data Vencimento do Decreto"
-        required
-        :error="form.errors.data_vencimento_decreto"
-      />
-
-      <FormField
-        :model-value="diasRestantes"
-        label="Dias Restantes da Vigencia"
-        readonly
-        :hint="diasRestantesHint"
-      />
-    </FormSection>
-
-    <!-- Secao 3: Status e Responsavel -->
-    <FormSection title="Status e Responsavel" :cols="3">
+    <!-- Secao 2: Status e Responsavel -->
+    <FormSection
+      title="Status e Responsavel"
+      subtitle="Tramitacao do processo e protocolo FIDE"
+      :icon="UserCircleIcon"
+      icon-variant="purple"
+      :cols="3"
+    >
       <FormSelect
         v-model="form.status"
         label="Status do Processo"
@@ -119,19 +103,48 @@
       />
     </FormSection>
 
-    <!-- Aviso: campos desabilitados quando status Registro -->
-    <div v-if="isRegistro" class="bg-teal-800/50 border border-teal-600 rounded-lg p-4 flex items-start gap-3">
-      <svg class="w-5 h-5 text-teal-400 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-      </svg>
-      <p class="text-teal-200 text-sm">
-        Os campos abaixo nao precisam ser preenchidos para processos com status
-        <strong>Registro</strong>. Serao habilitados quando o status for alterado.
-      </p>
+    <!-- Aviso: campos de decreto desabilitados quando status Registro -->
+    <div
+      v-if="isRegistro"
+      class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-4 mb-4 flex items-start gap-3"
+    >
+      <div class="rat-section-icon rat-section-icon-warning">
+        <InformationCircleIcon class="w-5 h-5" />
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+          Processo em Registro
+        </h3>
+        <p class="text-xs text-slate-500 mt-0.5">
+          Os campos de decreto e reconhecimento nao precisam ser preenchidos enquanto o status for
+          <strong>Registro</strong>. As datas de entrada e de ocorrencia continuam obrigatorias.
+        </p>
+      </div>
     </div>
 
-    <!-- Secao 4: Decreto Municipal -->
-    <FormSection title="Decreto Municipal" :cols="4" collapsible>
+    <!-- Secao 3: Decreto Municipal, Datas e Prazos (blocos unificados) -->
+    <FormSection
+      title="Decreto Municipal, Datas e Prazos"
+      subtitle="A vigencia e calculada a partir da data de publicacao + prazo em dias"
+      :icon="CalendarDaysIcon"
+      icon-variant="warning"
+      :cols="4"
+    >
+      <FormDateField
+        v-model="form.data_entrada"
+        label="Data de Entrada do Processo"
+        required
+        :error="form.errors.data_entrada"
+      />
+
+      <FormDateField
+        v-model="form.data_ocorrencia"
+        label="Data de Ocorrencia do Desastre"
+        required
+        :error="form.errors.data_ocorrencia"
+        :hint="dataOcorrenciaHint"
+      />
+
       <FormField
         v-model="form.n_decreto_municipal"
         label="N. Decreto Municipal"
@@ -149,23 +162,46 @@
 
       <FormDateField
         v-model="form.data_publicacao_decreto_municipal"
-        label="Data Publicacao do Decreto"
+        label="Data de Publicacao do Decreto"
         :disabled="isRegistro"
         :error="form.errors.data_publicacao_decreto_municipal"
+        :hint="dataPublicacaoHint"
       />
 
       <FormField
         v-model="form.prazo_vigencia_decreto"
-        label="Prazo Vigencia (dias)"
+        label="Prazo de Vigencia (dias)"
         type="number"
-        placeholder="Ex: 180"
+        :placeholder="`Padrao: ${PRAZO_PADRAO_DIAS}`"
         :disabled="isRegistro"
         :error="form.errors.prazo_vigencia_decreto"
+        :hint="prazoVigenciaHint"
+      />
+
+      <FormField
+        :model-value="dataVencimentoFormatada"
+        label="Data de Vencimento (calculada)"
+        readonly
+        :hint="dataVencimentoHint"
+      />
+
+      <FormField
+        :model-value="diasRestantesTexto"
+        label="Dias Restantes da Vigencia"
+        readonly
+        :hint="diasRestantesHint"
       />
     </FormSection>
 
-    <!-- Secao 5: Reconhecimento Estadual -->
-    <FormSection title="Reconhecimento Estadual" :cols="4" collapsible>
+    <!-- Secao 4: Reconhecimento Estadual -->
+    <FormSection
+      title="Reconhecimento Estadual"
+      subtitle="Decreto estadual e publicacao no Diario Oficial de MG"
+      :icon="BuildingLibraryIcon"
+      icon-variant="success"
+      :cols="4"
+      collapsible
+    >
       <FormField
         v-model="form.n_decreto_estadual"
         label="N. Decreto Estadual"
@@ -197,8 +233,15 @@
       />
     </FormSection>
 
-    <!-- Secao 6: Reconhecimento Federal -->
-    <FormSection title="Reconhecimento Federal" :cols="4" collapsible>
+    <!-- Secao 5: Reconhecimento Federal -->
+    <FormSection
+      title="Reconhecimento Federal"
+      subtitle="Portaria federal e publicacao no Diario Oficial da Uniao"
+      :icon="ShieldCheckIcon"
+      icon-variant="success"
+      :cols="4"
+      collapsible
+    >
       <FormField
         v-model="form.n_portaria_federal"
         label="N. Portaria Federal"
@@ -230,8 +273,14 @@
       />
     </FormSection>
 
-    <!-- Secao 7: Informacoes Adicionais -->
-    <FormSection title="Informacoes Adicionais" :cols="1">
+    <!-- Secao 6: Informacoes Adicionais -->
+    <FormSection
+      title="Informacoes Adicionais"
+      subtitle="Processo SEI e observacoes do analista"
+      :icon="InformationCircleIcon"
+      icon-variant="default"
+      :cols="1"
+    >
       <FormField
         v-model="form.n_processo_sei"
         label="N. Processo SEI"
@@ -273,6 +322,14 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
+import {
+  BuildingLibraryIcon,
+  CalendarDaysIcon,
+  ClipboardDocumentListIcon,
+  InformationCircleIcon,
+  ShieldCheckIcon,
+  UserCircleIcon,
+} from '@heroicons/vue/24/outline';
 import FormSection from '@/Components/Organisms/FormSection.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
@@ -280,6 +337,15 @@ import FormDateField from '@/Components/Molecules/Form/FormDateField.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
 import RadioGroup from '@/Components/Molecules/Form/RadioGroup.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import {
+  PRAZO_PADRAO_DIAS,
+  calcularDiasRestantes,
+  calcularVencimento,
+  formatarData,
+  parseDataLocal,
+  rotuloDiasRestantes,
+  usouPrazoPadrao,
+} from '@/Composables/decretacoes/useVigencia';
 
 const props = defineProps({
   form: {
@@ -348,22 +414,197 @@ watch(() => props.form.status, (newVal) => {
   }
 });
 
-const diasRestantes = computed(() => {
-  if (!props.form.data_vencimento_decreto) return '--';
-  const hoje = new Date();
-  const vencimento = new Date(props.form.data_vencimento_decreto);
-  const diff = Math.ceil((vencimento - hoje) / (1000 * 60 * 60 * 24));
-  return diff.toString();
+// =============================================================================
+// COBRADE (padrao nacional) x Tipo de Desastre
+// Os dois selects listam a mesma classificacao: "Tipo de Desastre" ordenado
+// pelo nome e "COBRADE" numerado/ordenado pelo codigo (1.1.1.1.0, 1.1.1.2.0...).
+// Manter os dois em sincronia evita enviar par contraditorio - no backend o
+// cobrade_id e quem prevalece (ProcessoRequestDTO).
+// =============================================================================
+
+const cobradeSelecionado = computed(
+  () => props.cobrades.find(c => String(c.id) === String(props.form.cobrade_id)) || null
+);
+
+const cobradeHint = computed(() => {
+  const codigo = cobradeSelecionado.value?.cobrade;
+
+  return codigo
+    ? `Codigo COBRADE ${codigo} (classificacao nacional)`
+    : 'Numerado pelo padrao nacional: grupo.subgrupo.tipo.subtipo';
 });
 
+watch(() => props.form.cobrade_id, (valor) => {
+  if (valor && String(props.form.tipo_desastre_id) !== String(valor)) {
+    props.form.tipo_desastre_id = valor;
+  }
+});
+
+watch(() => props.form.tipo_desastre_id, (valor) => {
+  if (valor && String(props.form.cobrade_id) !== String(valor)) {
+    props.form.cobrade_id = valor;
+  }
+});
+
+// =============================================================================
+// Correspondencia municipio <-> REDEC nas listas suspensas
+// Cada municipio vindo do backend carrega `redec_id`/`redec_sigla`
+// (ProcessoFilter::getMunicipiosOptions, a partir de cedec_municipio).
+// =============================================================================
+
+const temMapeamentoRedec = computed(
+  () => props.municipios.some(m => m.redec_id)
+);
+
+// TODOS os municipios de MG ficam sempre selecionaveis. A REDEC escolhida nao
+// remove opcao nenhuma: apenas traz os municipios correspondentes para o topo
+// da lista e anota a REDEC de cada um no rotulo.
+const municipiosFiltrados = computed(() => {
+  const redecId = props.form.redec_id;
+
+  const comRotulo = props.municipios.map(m => (
+    m.redec_sigla ? { ...m, label: `${m.label} - ${m.redec_sigla}` } : m
+  ));
+
+  if (!redecId || !temMapeamentoRedec.value) {
+    return comRotulo;
+  }
+
+  const daRedec = [];
+  const demais = [];
+
+  for (const municipio of comRotulo) {
+    (String(municipio.redec_id) === String(redecId) ? daRedec : demais).push(municipio);
+  }
+
+  return [...daRedec, ...demais];
+});
+
+const municipiosDaRedecCount = computed(() => {
+  const redecId = props.form.redec_id;
+  if (!redecId) return 0;
+
+  return props.municipios.filter(m => String(m.redec_id) === String(redecId)).length;
+});
+
+const municipioSelecionado = computed(
+  () => props.municipios.find(m => String(m.id) === String(props.form.municipio_id)) || null
+);
+
+const redecDoMunicipio = computed(() => municipioSelecionado.value?.redec_id ?? null);
+
+const municipioPlaceholder = computed(() => 'Selecione o municipio...');
+
+const municipioHint = computed(() => {
+  const total = props.municipios.length;
+
+  if (!props.form.redec_id || !temMapeamentoRedec.value || municipiosDaRedecCount.value === 0) {
+    return total ? `${total} municipios de MG` : '';
+  }
+
+  const sigla = props.redecs.find(r => String(r.id) === String(props.form.redec_id))?.sigla
+    ?? 'REDEC selecionada';
+
+  return `${municipiosDaRedecCount.value} municipio(s) da ${sigla} no topo - os ${total} de MG seguem disponiveis`;
+});
+
+const redecHint = computed(() => {
+  const redecMunicipio = redecDoMunicipio.value;
+  if (!redecMunicipio) return '';
+
+  const nome = municipioSelecionado.value?.label ?? 'municipio selecionado';
+
+  if (String(redecMunicipio) === String(props.form.redec_id)) {
+    return `Correspondente a ${nome}`;
+  }
+
+  const sigla = props.redecs.find(r => String(r.id) === String(redecMunicipio))?.sigla;
+
+  return sigla ? `Atencao: ${nome} corresponde a ${sigla}` : '';
+});
+
+// Municipio escolhido define a REDEC (fonte da verdade da correspondencia).
+watch(redecDoMunicipio, (redecId) => {
+  if (redecId && String(props.form.redec_id) !== String(redecId)) {
+    props.form.redec_id = redecId;
+  }
+});
+
+// Trocar a REDEC nao mexe no municipio escolhido: todos os municipios de MG
+// permanecem validos e a divergencia fica visivel no aviso abaixo do campo.
+
+// =============================================================================
+// Vigencia: data de vencimento e dias restantes derivados (nao ha campo manual
+// de vencimento - a unica fonte e data de publicacao + prazo).
+// =============================================================================
+
+const prazoAssumido = computed(() => usouPrazoPadrao(props.form.prazo_vigencia_decreto));
+
+const dataVencimento = computed(() => calcularVencimento(
+  props.form.data_publicacao_decreto_municipal,
+  props.form.prazo_vigencia_decreto,
+));
+
+const dataVencimentoFormatada = computed(() => (
+  dataVencimento.value ? formatarData(dataVencimento.value) : '--'
+));
+
+const dataVencimentoHint = computed(() => {
+  if (!props.form.data_publicacao_decreto_municipal) {
+    return 'Informe a data de publicacao do decreto';
+  }
+  return prazoAssumido.value
+    ? `Publicacao + ${PRAZO_PADRAO_DIAS} dias (prazo padrao)`
+    : `Publicacao + ${props.form.prazo_vigencia_decreto} dias`;
+});
+
+const diasRestantes = computed(() => calcularDiasRestantes(
+  props.form.data_publicacao_decreto_municipal,
+  props.form.prazo_vigencia_decreto,
+));
+
+const diasRestantesTexto = computed(() => (
+  diasRestantes.value === null ? '--' : String(diasRestantes.value)
+));
+
 const diasRestantesHint = computed(() => {
-  const dias = parseInt(diasRestantes.value);
-  if (isNaN(dias)) return '';
-  if (dias < 0) return 'Prazo vencido';
-  if (dias <= 15) return 'Prazo proximo ao vencimento';
+  if (diasRestantes.value === null) return 'Sem vigencia calculada';
+  return rotuloDiasRestantes(diasRestantes.value);
+});
+
+const prazoVigenciaHint = computed(() => (
+  prazoAssumido.value
+    ? `Em branco assume ${PRAZO_PADRAO_DIAS} dias (padrao de SE/ECP)`
+    : ''
+));
+
+// Ao informar a publicacao, deixa explicito o prazo padrao de 180 dias.
+watch(() => props.form.data_publicacao_decreto_municipal, (valor) => {
+  if (valor && usouPrazoPadrao(props.form.prazo_vigencia_decreto)) {
+    props.form.prazo_vigencia_decreto = PRAZO_PADRAO_DIAS;
+  }
+});
+
+// Coerencia entre as datas do bloco (avisos, nao bloqueiam o envio).
+const dataOcorrenciaHint = computed(() => {
+  const ocorrencia = parseDataLocal(props.form.data_ocorrencia);
+  const entrada = parseDataLocal(props.form.data_entrada);
+
+  if (ocorrencia && entrada && ocorrencia > entrada) {
+    return 'Ocorrencia posterior a entrada do processo';
+  }
   return '';
 });
 
+const dataPublicacaoHint = computed(() => {
+  const publicacao = parseDataLocal(props.form.data_publicacao_decreto_municipal);
+  const decreto = parseDataLocal(props.form.data_decreto_municipal);
+
+  if (publicacao && decreto && publicacao < decreto) {
+    return 'Publicacao anterior a data do decreto';
+  }
+  return '';
+});
 
 const PREFIXO = 'MG-F-';
 const protocoloFideTouched = ref(false);

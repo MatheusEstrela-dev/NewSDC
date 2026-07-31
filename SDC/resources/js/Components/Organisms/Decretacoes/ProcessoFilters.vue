@@ -83,14 +83,19 @@
             placeholder="Todos os Processos"
             @update:model-value="updateFilter('processo', $event)"
           />
-          <FilterField
-            label="Status do Processo"
-            type="select"
-            :model-value="localFilters.reconhecimento || ''"
-            :options="reconhecimentoOptions"
-            placeholder="Selecione um status"
-            @update:model-value="updateFilter('reconhecimento', $event)"
-          />
+          <div>
+            <FilterField
+              label="Status do Processo"
+              type="select"
+              :model-value="localFilters.reconhecimento || ''"
+              :options="reconhecimentoOptions"
+              placeholder="Selecione um status"
+              @update:model-value="updateFilter('reconhecimento', $event)"
+            />
+            <p v-if="statusVigentesCount" class="mt-1 text-xs text-slate-500">
+              {{ statusVigentesCount }} status vigentes; os demais aparecem como (legado)
+            </p>
+          </div>
         </div>
 
         <!-- Secao Filtros Avancados -->
@@ -139,12 +144,20 @@
                 @update:model-value="updateFilter('vigencia_status', $event)"
               />
               <FilterField
-                label="Municipio"
+                label="REDEC"
+                type="select"
+                :model-value="localFilters.redec_id || ''"
+                :options="redecOptions"
+                placeholder="Todas as REDECs"
+                @update:model-value="updateRedec($event)"
+              />
+              <FilterField
+                :label="municipioLabel"
                 type="select"
                 :model-value="localFilters.municipio_id || ''"
                 :options="municipioOptions"
                 placeholder="Todos os Municipios"
-                @update:model-value="updateFilter('municipio_id', $event)"
+                @update:model-value="updateMunicipio($event)"
               />
               <FilterField
                 label="Data Decreto (Inicio)"
@@ -291,18 +304,84 @@ const analistaOptions = computed(() => {
   return [{ value: '', label: 'Todos os Analistas' }, ...options];
 });
 
+// Status do processo: o backend entrega primeiro os status VIGENTES (enum
+// StatusProcesso) e depois os legados ainda presentes no banco, marcados
+// com "(legado)". Aceita tambem o formato antigo (lista de strings).
 const reconhecimentoOptions = computed(() => {
   const options = props.filterOptions.reconhecimentos || [];
+
   return [
     { value: '', label: 'Todos os Status' },
-    ...options.map(r => ({ value: r, label: r })),
+    ...options.map(r => (
+      typeof r === 'string'
+        ? { value: r, label: r }
+        : { value: r.value, label: r.label, vigente: r.vigente }
+    )),
   ];
 });
 
-const municipioOptions = computed(() => {
-  const options = props.filterOptions.municipios || [];
-  return [{ value: '', label: 'Todos os Municipios' }, ...options];
+const statusVigentesCount = computed(
+  () => reconhecimentoOptions.value.filter(o => o.vigente).length
+);
+
+const redecOptions = computed(() => {
+  const options = props.filterOptions.redecs || [];
+  return [{ value: '', label: 'Todas as REDECs' }, ...options];
 });
+
+// Correspondencia municipio <-> REDEC: cada municipio traz `redec_id`
+// (ProcessoFilter::getMunicipiosOptions). Com uma REDEC escolhida, a lista de
+// municipios mostra apenas os dela; escolher um municipio preenche a REDEC.
+const municipiosDaRedec = computed(() => {
+  const municipios = props.filterOptions.municipios || [];
+  const redecId = localFilters.value.redec_id;
+
+  if (!redecId) {
+    // Sem REDEC escolhida, cada municipio mostra a sua (ex: "Betim - 1ª REDEC").
+    return municipios.map(m => (
+      m.redec_sigla ? { ...m, label: `${m.label} - ${m.redec_sigla}` } : m
+    ));
+  }
+
+  const filtrados = municipios.filter(m => String(m.redec_id) === String(redecId));
+  return filtrados.length > 0 ? filtrados : municipios;
+});
+
+const municipioOptions = computed(() => (
+  [{ value: '', label: 'Todos os Municipios' }, ...municipiosDaRedec.value]
+));
+
+const municipioLabel = computed(() => {
+  const redecId = localFilters.value.redec_id;
+  if (!redecId) return 'Municipio';
+
+  const sigla = redecOptions.value.find(o => String(o.id ?? o.value) === String(redecId))?.sigla;
+  return sigla ? `Municipio (${sigla})` : 'Municipio';
+});
+
+function updateRedec(value) {
+  const municipios = props.filterOptions.municipios || [];
+  const atual = municipios.find(m => String(m.id) === String(localFilters.value.municipio_id));
+
+  // Municipio selecionado que nao pertence a nova REDEC e descartado.
+  const municipioId = value && atual?.redec_id && String(atual.redec_id) !== String(value)
+    ? ''
+    : localFilters.value.municipio_id || '';
+
+  localFilters.value = { ...localFilters.value, redec_id: value, municipio_id: municipioId };
+}
+
+function updateMunicipio(value) {
+  const municipios = props.filterOptions.municipios || [];
+  const municipio = municipios.find(m => String(m.id) === String(value));
+
+  localFilters.value = {
+    ...localFilters.value,
+    municipio_id: value,
+    // Municipio define a REDEC quando ha correspondencia cadastrada.
+    redec_id: municipio?.redec_id ?? localFilters.value.redec_id ?? '',
+  };
+}
 
 const cobradeQuickFilters = computed(() => props.filterOptions.cobrade_quick_filters || []);
 const cobradeHierarchy = computed(() => props.filterOptions.tipos_desastre_hierarquico || []);
@@ -320,6 +399,7 @@ const filterLabels = {
   data_inicio: 'Entrada Inicio',
   data_fim: 'Entrada Fim',
   municipio_id: 'Municipio',
+  redec_id: 'REDEC',
   n_protocolo_fide: 'FIDE',
   tipo_desastre_id: 'COBRADE',
 };
@@ -336,7 +416,10 @@ const activeFiltersList = computed(() => {
     } else if (key === 'situacao_anormalidade') {
       displayValue = situacaoAnormalidadeOptions.value.find(o => o.value === value)?.label || value;
     } else if (key === 'municipio_id') {
-      displayValue = municipioOptions.value.find(o => String(o.value) === String(value))?.label || value;
+      const municipios = props.filterOptions.municipios || [];
+      displayValue = municipios.find(m => String(m.id) === String(value))?.label || value;
+    } else if (key === 'redec_id') {
+      displayValue = redecOptions.value.find(o => String(o.id ?? o.value) === String(value))?.label || value;
     } else if (key === 'tipo_desastre_id') {
       const ids = String(value).split(',').map(Number).filter(Boolean);
       displayValue = `${ids.length} tipo(s)`;

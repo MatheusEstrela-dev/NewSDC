@@ -160,7 +160,6 @@ const form = useForm({
   situacao_anormalidade: props.processo.situacao_anormalidade ?? props.processo.reconhecimento ?? '',
   data_entrada: props.processo.data_entrada ?? '',
   data_ocorrencia: props.processo.data_ocorrencia ?? props.processo.data_ocorrencia_desastre ?? '',
-  data_vencimento_decreto: props.processo.data_vencimento ?? '',
   status: props.processo.status ?? '',
   analista_id: props.processo.analista ?? '',
   n_protocolo_fide: props.processo.n_protocolo_fide ?? props.processo.protocolo_fide ?? '',

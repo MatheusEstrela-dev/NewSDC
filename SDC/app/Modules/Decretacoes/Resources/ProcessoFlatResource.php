@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Resources;
 
+use App\Modules\Decretacoes\Enums\Redec;
+use App\Modules\Decretacoes\Support\Vigencia;
 use Illuminate\Http\Request;
 
 /**
@@ -45,14 +47,19 @@ class ProcessoFlatResource extends ProcessoResource
             'data_criacao'                => $this->created_at?->toIso8601String(),
             'deletado'                    => $this->deleted_at !== null,
             'data_delecao'                => $this->deleted_at?->toIso8601String(),
+            'redec_id'                    => $this->safeGetInt('redec_id'),
+            'redec'                       => Redec::labelFor($this->safeGet('redec_id')),
             'protocolo'                   => $this->safeGet('n_protocolo_fide'),
             'cobrade'                     => $this->getTipoDesastreCobrade(),
             'tipo_desastre'               => $this->safeGet('tipo_desastre'),
-            'status'                      => $this->safeGet('reconhecimento'),
+            // Status efetivo: `reconhecimento` (legado) ou `status` (formulario atual)
+            'status'                      => $this->safeGet('reconhecimento') ?? $this->safeGet('status'),
             'data_fato'                   => $this->formatDate('data_ocorrencia_desastre'),
             'data_decreto_municipal'      => $this->formatDate('data_decreto_municipal'),
             'data_publicacao_mg'          => $this->formatDate('data_publicacao_mg'),
             'prazo_vigencia_dias'         => $this->safeGetInt('prazo_vigencia'),
+            // Prazo usado no calculo de vencimento (180 quando nao informado)
+            'prazo_vigencia_efetivo_dias' => Vigencia::prazo($this->safeGet('prazo_vigencia')),
             'data_vencimento'             => $this->getDataVencimento()?->format('Y-m-d'),
             'dias_restantes'              => $this->getDiasRestantes(),
             'tipo_decreto'                => $this->safeGet('tipo_decreto'),

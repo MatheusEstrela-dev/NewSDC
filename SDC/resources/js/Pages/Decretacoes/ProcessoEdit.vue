@@ -72,7 +72,6 @@ const form = useForm({
   situacao_anormalidade: processoData?.situacao_anormalidade || processoData?.tipo_desastre || '',
   data_entrada: formatDate(processoData?.data_entrada),
   data_ocorrencia: formatDate(processoData?.data_ocorrencia_desastre || processoData?.data_ocorrencia),
-  data_vencimento_decreto: formatDate(processoData?.data_vencimento),
   status: processoData?.status || 'pendente',
   analista_id: processoData?.analista || '',
   n_protocolo_fide: processoData?.n_protocolo_fide || processoData?.protocolo_fide || '',

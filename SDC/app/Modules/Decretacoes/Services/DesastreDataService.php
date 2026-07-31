@@ -103,14 +103,14 @@ class DesastreDataService
      */
     private function processDesastre(MunicipioData $municipioData, DesastreData $desastreData, Processo $processo): void
     {
+        // A descricao livre de areas/populacao afetada saiu do formulario de
+        // Dados de Desastre: nao e mais gravada. O valor legado permanece na
+        // coluna (nao sobrescrevemos com null) para nao perder historico.
         $entradaCategoria = EntradaCategoriaDesastre::updateOrCreate(
             [
                 'municipio_id'        => $municipioData->id,
                 'categoria_id'        => $desastreData->id,
                 'entrada_processo_id' => $processo->id,
-            ],
-            [
-                'descricao' => $desastreData->descricao,
             ]
         );
 
