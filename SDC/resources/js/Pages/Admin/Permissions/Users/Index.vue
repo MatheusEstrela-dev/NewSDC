@@ -124,30 +124,13 @@
           <p class="text-slate-500 dark:text-slate-400 mt-1">Tente ajustar os filtros de busca.</p>
         </div>
 
-        <!-- Mobile Pagination -->
-        <div v-if="users.data.length > 0" class="flex flex-col items-center gap-3 py-4">
-          <div class="text-sm text-slate-600 dark:text-slate-400">
-            {{ users.from }}-{{ users.to }} de {{ users.total }}
-          </div>
-          <div class="flex gap-1 flex-wrap justify-center" v-if="users.links">
-            <template v-for="(link, key) in users.links" :key="key">
-              <Link
-                v-if="link.url"
-                :href="link.url"
-                class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
-                :class="link.active
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'"
-                v-html="link.label"
-              />
-              <span
-                v-else
-                class="px-3 py-1.5 text-sm font-medium text-slate-400 dark:text-slate-600 cursor-not-allowed"
-                v-html="link.label"
-              ></span>
-            </template>
-          </div>
-        </div>
+        <!--
+          Sem paginacao propria aqui. Este bloco vive em v-if="isMobile || isTablet",
+          mas o <Pagination> do sistema fica FORA dos ramos de breakpoint e ja atende
+          os tres tamanhos: manter as duas fazia aparecer paginacao duplicada em
+          mobile e tablet. A versao removida ainda imprimia link.label do paginator do
+          Laravel, que sem lang/pt_BR/pagination.php sai como "pagination.previous".
+        -->
       </div>
 
       <!-- Desktop Table View -->

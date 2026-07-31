@@ -1,11 +1,16 @@
 <template>
-  <!-- Card padrao do bloco de paginacao (visual de referencia: PMDA/planos) -->
-  <div class="mt-4 flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/50 dark:bg-slate-900/60">
-    <Text size="sm" color="muted">
+  <!--
+    Card padrao do bloco de paginacao (visual de referencia: PMDA/planos).
+
+    Empilha no mobile: em telas estreitas o texto "Mostrando X ate Y" e a fileira de
+    numeros competiam pela mesma linha e o bloco estourava a largura do card.
+  -->
+  <div class="mt-4 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700/50 dark:bg-slate-900/60">
+    <Text size="sm" color="muted" class="text-center sm:text-left">
       Mostrando {{ start }} até {{ end }} de {{ total }} resultados
     </Text>
-    
-    <div class="flex items-center gap-2">
+
+    <div class="flex flex-wrap items-center justify-center gap-2">
       <Button
         variant="secondary"
         size="sm"
@@ -14,8 +19,9 @@
       >
         Anterior
       </Button>
-      
-      <div class="flex items-center gap-1">
+
+      <!-- Os numeros quebram linha em vez de empurrar os botoes fora do card. -->
+      <div class="flex flex-wrap items-center justify-center gap-1">
         <button
           v-for="page in visiblePages"
           :key="page"
@@ -25,7 +31,7 @@
           {{ page }}
         </button>
       </div>
-      
+
       <Button
         variant="secondary"
         size="sm"

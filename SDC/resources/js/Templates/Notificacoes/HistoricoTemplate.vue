@@ -68,31 +68,25 @@
             </div>
         </div>
 
-        <!-- Paginação -->
-        <nav v-if="(notificacoes.meta?.last_page ?? 1) > 1" class="mt-6 flex flex-wrap gap-1">
-            <component
-                :is="link.url ? Link : 'span'"
-                v-for="(link, indice) in notificacoes.meta.links"
-                :key="indice"
-                :href="link.url"
-                preserve-scroll
-                class="px-3 py-1.5 text-sm rounded-lg border transition-colors"
-                :class="link.active
-                    ? 'bg-blue-600 border-blue-600 text-white'
-                    : link.url
-                        ? 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-default'"
-                v-html="link.label"
-            />
-        </nav>
+        <!--
+            Paginacao no padrao do sistema. A versao anterior montava os botoes a partir
+            de notificacoes.meta.links, imprimindo o rotulo cru do paginator do Laravel:
+            sem lang/pt_BR/pagination.php aquilo saia como "pagination.previous" na tela.
+        -->
+        <Pagination
+            v-if="notificacoes.meta"
+            :pagination="notificacoes.meta"
+            @page-change="irParaPagina"
+        />
     </div>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import { BellAlertIcon, BellIcon, CheckIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import NotificacaoFiltros from '@/Components/Molecules/Notificacoes/NotificacaoFiltros.vue';
 import NotificacaoHistoricoItem from '@/Components/Molecules/Notificacoes/NotificacaoHistoricoItem.vue';
@@ -143,6 +137,18 @@ watch(
     },
     { deep: true }
 );
+
+/**
+ * Navega mantendo os filtros ativos: trocar de pagina nao pode descartar o que o
+ * usuario filtrou.
+ */
+const irParaPagina = (pagina) => {
+    router.get('/notificacoes', { ...filtrosLocais.value, page: pagina }, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ['notificacoes', 'filtros'],
+    });
+};
 
 const marcandoTodas = ref(false);
 
