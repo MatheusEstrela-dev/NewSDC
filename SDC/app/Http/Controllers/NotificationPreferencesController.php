@@ -10,14 +10,20 @@ use Illuminate\Http\Request;
 
 /**
  * Gerencia preferencias de notificacao por modulo e canal do user.
- * Schema: 1 row por (user, module) com booleans por canal:
- * sistema (inbox), email, push, telegram, whatsapp.
  *
- * Default em UserNotificationPreference::forUser cria todas as MODULES
- * com sistema=true e demais canais=false (opt-in para canais externos).
+ * Schema: 1 row por (user, module) com booleans por canal: sistema (inbox),
+ * email, push, telegram, whatsapp. Default em UserNotificationPreference::forUser
+ * cria todos os modulos de config('notificacoes.modulos') com sistema=true e
+ * canais externos em false (opt-in explicito).
+ *
+ * A resposta tambem carrega o rotulo e a descricao de cada modulo, vindos do
+ * config. Antes, o frontend mantinha essa lista hardcoded em SettingsModal.vue e
+ * ela divergia da lista aceita pelo backend.
  */
 class NotificationPreferencesController extends Controller
 {
+    private const MODOS = ['auto', 'realtime', 'polling'];
+
     /**
      * Lista preferencias do user (auto-cria defaults se vazio).
      */
@@ -28,17 +34,9 @@ class NotificationPreferencesController extends Controller
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
-        $prefs = UserNotificationPreference::forUser($user->id);
-
         return response()->json([
-            'modules' => $prefs->map(fn (UserNotificationPreference $p) => [
-                'module' => $p->module,
-                'canal_sistema' => $p->canal_sistema,
-                'canal_email' => $p->canal_email,
-                'canal_push' => $p->canal_push,
-                'canal_telegram' => $p->canal_telegram,
-                'canal_whatsapp' => $p->canal_whatsapp,
-            ])->values(),
+            'modules' => $this->modulos($user->id),
+            'update_mode' => $user->notification_update_mode ?? 'auto',
         ]);
     }
 
@@ -48,7 +46,8 @@ class NotificationPreferencesController extends Controller
      *   "modules": [
      *     {"module": "rat", "canal_sistema": true, "canal_telegram": true, ...},
      *     ...
-     *   ]
+     *   ],
+     *   "update_mode": "auto"
      * }
      */
     public function update(Request $request): JsonResponse
@@ -60,12 +59,13 @@ class NotificationPreferencesController extends Controller
 
         $validated = $request->validate([
             'modules' => ['required', 'array'],
-            'modules.*.module' => ['required', 'string', 'in:'.implode(',', UserNotificationPreference::MODULES)],
+            'modules.*.module' => ['required', 'string', 'in:'.implode(',', UserNotificationPreference::modules())],
             'modules.*.canal_sistema' => ['sometimes', 'boolean'],
             'modules.*.canal_email' => ['sometimes', 'boolean'],
             'modules.*.canal_push' => ['sometimes', 'boolean'],
             'modules.*.canal_telegram' => ['sometimes', 'boolean'],
             'modules.*.canal_whatsapp' => ['sometimes', 'boolean'],
+            'update_mode' => ['sometimes', 'string', 'in:'.implode(',', self::MODOS)],
         ]);
 
         foreach ($validated['modules'] as $row) {
@@ -78,18 +78,41 @@ class NotificationPreferencesController extends Controller
             );
         }
 
+        // Como o cliente recebe as notificacoes (websocket ou polling). O campo ja
+        // era enviado pelo SettingsModal, mas antes nao havia coluna para gravar.
+        if (array_key_exists('update_mode', $validated)) {
+            $user->forceFill(['notification_update_mode' => $validated['update_mode']])->save();
+        }
+
         return response()->json([
             'message' => 'Preferencias atualizadas.',
-            'modules' => UserNotificationPreference::forUser($user->id)->map(
-                fn (UserNotificationPreference $p) => [
-                    'module' => $p->module,
-                    'canal_sistema' => $p->canal_sistema,
-                    'canal_email' => $p->canal_email,
-                    'canal_push' => $p->canal_push,
-                    'canal_telegram' => $p->canal_telegram,
-                    'canal_whatsapp' => $p->canal_whatsapp,
-                ]
-            )->values(),
+            'modules' => $this->modulos($user->id),
+            'update_mode' => $user->notification_update_mode ?? 'auto',
         ]);
+    }
+
+    /**
+     * Preferencias do usuario enriquecidas com os metadados do modulo.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function modulos(int $userId): array
+    {
+        $catalogo = (array) config('notificacoes.modulos', []);
+
+        return UserNotificationPreference::forUser($userId)
+            ->map(fn (UserNotificationPreference $p): array => [
+                'module' => $p->module,
+                'label' => $catalogo[$p->module]['label'] ?? $p->module,
+                'descricao' => $catalogo[$p->module]['descricao'] ?? '',
+                'icone' => $catalogo[$p->module]['icone'] ?? 'BellIcon',
+                'canal_sistema' => $p->canal_sistema,
+                'canal_email' => $p->canal_email,
+                'canal_push' => $p->canal_push,
+                'canal_telegram' => $p->canal_telegram,
+                'canal_whatsapp' => $p->canal_whatsapp,
+            ])
+            ->values()
+            ->all();
     }
 }
