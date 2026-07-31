@@ -29,3 +29,7 @@ Schedule::command('pae:verificar-notificacoes')
     ->dailyAt('03:00')
     ->onOneServer()
     ->runInBackground();
+
+// A retencao do inbox de notificacoes NAO fica aqui: ela arquiva em vez de
+// apagar, e esta agendada em app/Console/Kernel.php como notificacoes:arquivar,
+// ao lado do webhooks:archive que segue a mesma tratativa.
