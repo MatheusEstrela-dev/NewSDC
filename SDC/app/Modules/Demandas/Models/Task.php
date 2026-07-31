@@ -219,7 +219,11 @@ class Task extends Model
      */
     protected function validarTransicaoStatus(): void
     {
-        $statusOriginal = $this->getOriginal('status');
+        // getRawOriginal, e nao getOriginal: com o cast de enum declarado, o
+        // getOriginal devolve a propria instancia de TaskStatus, e TaskStatus::from
+        // exige string. Isso fazia QUALQUER update de status lancar TypeError, de
+        // modo que a state machine abaixo nunca chegava a validar transicao alguma.
+        $statusOriginal = $this->getRawOriginal('status');
 
         if (! $statusOriginal) {
             return; // Criação inicial
