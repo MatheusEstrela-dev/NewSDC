@@ -11,7 +11,7 @@ const props = defineProps({
   variant: {
     type: String,
     default: 'default',
-    validator: (value) => ['info', 'success', 'warning', 'danger', 'default'].includes(value),
+    validator: (value) => ['info', 'success', 'warning', 'danger', 'default', 'neutral'].includes(value),
   },
   size: {
     type: String,
@@ -30,6 +30,9 @@ const variantClasses = {
   warning: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400',
   danger: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400',
   default: 'bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400',
+  // Cinza mais forte que o default, para estados encerrados sem desfecho
+  // (arquivado) nao se confundirem com estados apenas neutros (rascunho).
+  neutral: 'bg-slate-200 dark:bg-slate-600/30 text-slate-800 dark:text-slate-300',
 };
 
 const sizeClasses = {

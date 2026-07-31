@@ -19,8 +19,8 @@ const props = defineProps({
 });
 
 const map = {
-  proximo: { label: 'Próximo', classes: 'bg-amber-500/20 text-amber-300 border border-amber-500/20' },
-  vencido: { label: 'Vencido', classes: 'bg-red-500/20 text-red-300 border border-red-500/20' },
+  proximo: { label: 'Próximo', classes: 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/20' },
+  vencido: { label: 'Vencido', classes: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-500/20' },
 };
 
 const prazoLabel = computed(() => map[props.prazo]?.label || '');

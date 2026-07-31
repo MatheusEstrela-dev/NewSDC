@@ -35,12 +35,17 @@
               <TipoProcessoBadge :tipo="processo.processo" />
             </td>
 
-            <!-- Desastre -->
+            <!-- Desastre. O COBRADE abre a classificacao completa no hover,
+                 usando tipo_desastre_completo que ja vem no ProcessoResource. -->
             <td class="px-4 py-3 hidden sm:table-cell">
               <div class="text-slate-700 dark:text-slate-300 font-medium text-xs sm:text-sm max-w-[150px] truncate">{{ processo.tipo_desastre_nome || '—' }}</div>
-              <div v-if="processo.tipo_desastre_cobrade" class="text-xs text-slate-500">
+              <CobradeHoverCard
+                v-if="processo.tipo_desastre_cobrade"
+                :desastre="processo.tipo_desastre_completo"
+                trigger-class="text-xs text-slate-500 underline"
+              >
                 COBRADE: {{ processo.tipo_desastre_cobrade }}
-              </div>
+              </CobradeHoverCard>
             </td>
 
             <!-- Analista -->
@@ -117,6 +122,7 @@
 import { ref } from 'vue';
 import axios from 'axios';
 import DocumentIcon from '../../Icons/DocumentTextIcon.vue';
+import CobradeHoverCard from '../../Molecules/Decretacoes/CobradeHoverCard.vue';
 import PrazoBadge from '../../Molecules/Decretacoes/PrazoBadge.vue';
 import StatusBadge from '../../Molecules/Decretacoes/StatusBadge.vue';
 import TipoProcessoBadge from '../../Molecules/Decretacoes/TipoProcessoBadge.vue';
