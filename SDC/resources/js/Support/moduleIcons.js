@@ -16,12 +16,15 @@ import helpDesk from '../../images/modulos/help-desk.svg?url';
 import bookshelf from '../../images/modulos/bookshelf.svg?url';
 import clock from '../../images/modulos/clock.svg?url';
 import mountains from '../../images/modulos/mountains.svg?url';
+// Arte raster (PNG); as demais sao SVG, mas o PageHeader aceita os dois.
+import notification from '../../images/modulos/notification.png?url';
 
 // Catalogo bruto (todas as artes disponiveis).
 export const ICONS = {
   apartment, box, chart, cistern, drop, file, house, hydrant,
   'office-building': officeBuilding, shield, 'tank-truck': tankTruck,
   'heart-attack': heartAttack, 'help-desk': helpDesk, bookshelf, clock, mountains,
+  notification,
 };
 
 // Mapa modulo -> icone (confirmado pelo usuario).
@@ -41,6 +44,7 @@ export const MODULE_ICONS = {
   treinamento: bookshelf,
   plantao: clock,
   pae: mountains,
+  notificacoes: notification,
 };
 
 /** Retorna a URL do icone do modulo (ou null se nao mapeado). */

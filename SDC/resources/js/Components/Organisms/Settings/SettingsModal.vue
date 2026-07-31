@@ -138,12 +138,12 @@
                     <div class="p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
                         <h4 class="font-bold text-slate-900 dark:text-white mb-1">Modo de Atualizacao</h4>
                         <p class="text-xs text-slate-500 mb-4">Como o bloco "Ultimas Movimentacoes" do dashboard se atualiza.</p>
-                        <div class="flex gap-6">
+                        <div class="flex flex-wrap gap-6">
                             <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" v-model="updateMode" value="polling" class="text-blue-600 focus:ring-blue-500">
+                                <input type="radio" v-model="updateMode" value="auto" class="text-blue-600 focus:ring-blue-500">
                                 <div>
-                                    <span class="text-sm font-medium text-slate-900 dark:text-white">Polling (60s)</span>
-                                    <p class="text-xs text-slate-500">Consulta automatica a cada 60 segundos</p>
+                                    <span class="text-sm font-medium text-slate-900 dark:text-white">Automatico</span>
+                                    <p class="text-xs text-slate-500">Usa WebSocket e cai para consulta se ele nao estiver disponivel</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2 cursor-pointer">
@@ -151,6 +151,13 @@
                                 <div>
                                     <span class="text-sm font-medium text-slate-900 dark:text-white">Tempo Real</span>
                                     <p class="text-xs text-slate-500">Atualizacoes instantaneas via WebSocket</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" v-model="updateMode" value="polling" class="text-blue-600 focus:ring-blue-500">
+                                <div>
+                                    <span class="text-sm font-medium text-slate-900 dark:text-white">Consulta periodica</span>
+                                    <p class="text-xs text-slate-500">Sem WebSocket, consulta a cada 30 segundos</p>
                                 </div>
                             </label>
                         </div>
@@ -469,18 +476,24 @@ const updateMode = ref('polling');
 
 async function loadPreferences() {
     try {
-        const res = await window.axios.get('/api/v1/notification-preferences');
-        updateMode.value = res.data.update_mode ?? 'polling';
+        // Rota web (sessao). A de API depende de o dominio estar em sanctum.stateful,
+        // o que nao vale para localhost:8000 e fazia esta tela falhar em silencio.
+        const res = await window.axios.get('/notificacoes/preferencias');
+        updateMode.value = res.data.update_mode ?? 'auto';
 
-        const serverModules = res.data.modules ?? [];
-        serverModules.forEach(serverMod => {
-            const local = notificationModules.value.find(m => m.id === serverMod.module);
-            if (local) {
-                local.channels.bell  = serverMod.canal_sistema;
-                local.channels.email = serverMod.canal_email;
-                local.channels.push  = serverMod.canal_push;
-            }
-        });
+        // A lista de modulos vem do backend (config/notificacoes.php), com rotulo e
+        // descricao. Antes era hardcoded aqui e divergia do que o servidor aceitava.
+        notificationModules.value = (res.data.modules ?? []).map(serverMod => ({
+            id: serverMod.module,
+            name: serverMod.label,
+            description: serverMod.descricao,
+            icon: serverMod.icone,
+            channels: {
+                bell: serverMod.canal_sistema,
+                email: serverMod.canal_email,
+                push: serverMod.canal_push,
+            },
+        }));
     } catch (e) {
         // silencioso - mantém defaults
     }
@@ -523,13 +536,9 @@ const passwordMismatch = computed(() =>
     && passwordForm.password !== passwordForm.password_confirmation
 );
 
-const notificationModules = ref([
-    { id: 'rat',          name: 'Relatorios (RAT)',  description: 'Alertas sobre novos relatorios, vistorias e aprovacoes.',  icon: 'DocumentTextIcon', channels: { bell: true,  email: true,  push: false } },
-    { id: 'pae',          name: 'Planos (PAE)',       description: 'Vencimentos de prazos e atualizacoes de status.',          icon: 'MapIcon',          channels: { bell: true,  email: false, push: true  } },
-    { id: 'meteorologia', name: 'Meteorologia',       description: 'Alertas criticos de chuva e mudancas climaticas (INMET).', icon: 'CloudIcon',        channels: { bell: true,  email: true,  push: true  } },
-    { id: 'demandas',     name: 'Demandas/Chamados',  description: 'Atribuicoes de tarefas e novos comentarios.',              icon: 'CheckBadgeIcon',   channels: { bell: true,  email: false, push: false } },
-    { id: 'decretacoes',  name: 'Decretacoes',        description: 'Movimentacoes em decretos e reconhecimentos.',             icon: 'DocumentTextIcon', channels: { bell: true,  email: false, push: false } },
-]);
+// Preenchido por loadPreferences a partir de config/notificacoes.php: fonte unica
+// da lista de modulos, compartilhada com a validacao do backend e com o painel do sino.
+const notificationModules = ref([]);
 
 const regions = [
     { id: 'bh', name: 'RMBH - Metropolitana', count: 34 },
@@ -581,7 +590,7 @@ const updatePassword = () => {
 const save = async () => {
     isSaving.value = true;
     try {
-        await window.axios.put('/api/v1/notification-preferences', {
+        await window.axios.put('/notificacoes/preferencias', {
             modules: notificationModules.value.map(m => ({
                 module:        m.id,
                 canal_sistema: m.channels.bell,

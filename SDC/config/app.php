@@ -172,6 +172,19 @@ return [
         App\Providers\AppServiceProvider::class,
         App\Providers\FilesystemServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
+        // NAO registrar App\Providers\BroadcastServiceProvider ainda.
+        //
+        // Ele e necessario para tempo real (registra /broadcasting/auth e carrega
+        // routes/channels.php), mas o boot dele resolve o broadcaster do driver
+        // ativo. Como o stack de producao ja define BROADCAST_CONNECTION=reverb e
+        // o pacote pusher/pusher-php-server NAO esta no composer.json, registrar
+        // aqui derruba a aplicacao no boot com Class "Pusher\Pusher" not found.
+        //
+        // Para ligar tempo real, as duas coisas precisam entrar JUNTAS:
+        //   1) composer require pusher/pusher-php-server
+        //   2) descomentar a linha abaixo
+        // Enquanto isso o sino opera por polling, que e o fallback do frontend.
+        // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         App\Providers\OctaneServiceProvider::class,

@@ -42,6 +42,15 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
+        // Inbox de notificacoes: segrega o que passou de 90 dias para
+        // notifications_archive. Mesma tratativa do webhooks:archive -- nada e
+        // apagado, so sai da tabela quente, que e a que o sino e o badge consultam.
+        $schedule->command('notificacoes:arquivar --chunk=500')
+            ->weeklyOn(0, '03:30')
+            ->onOneServer()
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // Async exports: remove artefatos do disk 'exports' com idade > 7 dias.
         // Limpa tambem result_disk/result_path nos traces associados.
         $schedule->command('exports:cleanup --days=7')
@@ -71,6 +80,11 @@ class Kernel extends ConsoleKernel
     protected function commands(): void
     {
         $this->load(__DIR__.'/Commands');
+
+        // Comandos que vivem junto do proprio dominio, e nao em Console/Commands.
+        // Usar load() e nao $this->commands([...]): dentro deste metodo, que ja se
+        // chama commands(), aquela chamada seria recursao infinita.
+        $this->load(base_path('app/Modules/Notificacoes/Console'));
 
         require base_path('routes/console.php');
     }

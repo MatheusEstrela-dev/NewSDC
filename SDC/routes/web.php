@@ -122,6 +122,9 @@ Route::middleware('auth')->group(function () {
     // Permissionamento (Admin)
     require __DIR__ . '/modules/permissions.php';
 
+    // Inbox de notificações (sino da TopBar + histórico)
+    require __DIR__ . '/modules/notificacoes.php';
+
     // ========================================================================
     // MÓDULOS DE NEGÓCIO
     // ========================================================================

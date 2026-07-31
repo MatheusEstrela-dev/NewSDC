@@ -51,6 +51,17 @@ class HandleInertiaRequests extends Middleware
                 'warning' => fn() => $request->session()->get('warning'),
                 'info'    => fn() => $request->session()->get('info'),
             ],
+            // Badge do sino ja correto no primeiro paint, sem piscar zero e sem
+            // um request extra por navegacao. Custo: um GET no Redis, resolvido
+            // pelo ContadorNaoLidas (sem COUNT no banco no caminho quente).
+            'notificacoes' => [
+                'unread_count' => fn() => $user
+                    ? app(\App\Modules\Notificacoes\Services\ContadorNaoLidas::class)->para($user)
+                    : 0,
+                // Como o cliente deve se atualizar: 'auto' tenta websocket e cai
+                // para polling sozinho. Ver useNotifications no frontend.
+                'update_mode' => fn() => $user ? ($user->notification_update_mode ?? 'auto') : 'polling',
+            ],
         ];
     }
 

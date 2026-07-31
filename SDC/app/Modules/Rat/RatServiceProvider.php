@@ -7,6 +7,8 @@ namespace App\Modules\Rat;
 use App\Core\Actions\Services\ActionConfigService;
 use App\Modules\Rat\Config\RatActionsConfig;
 use App\Modules\Rat\Infrastructure\Persistence\EloquentRatRepository;
+use App\Modules\Rat\Models\RatOcorrencia;
+use App\Modules\Rat\Observers\RatOcorrenciaNotificacaoObserver;
 use App\Modules\Rat\Services\RatAnexoService;
 use App\Modules\Rat\Services\RatAttachmentService;
 use App\Modules\Rat\Services\RatExportService;
@@ -34,6 +36,10 @@ class RatServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerModuleActions();
+
+        // Aviso ao autor quando a ocorrencia e finalizada. Apenas despacha job:
+        // fora do custo da requisicao que salvou o RAT.
+        RatOcorrencia::observe(RatOcorrenciaNotificacaoObserver::class);
     }
 
     private function registerModuleActions(): void
