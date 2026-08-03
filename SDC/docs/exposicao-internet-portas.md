@@ -4,6 +4,19 @@
 > a memória de projeto "Network/VLAN segmentation" para o histórico do pedido de
 > firewall à Prodemge.
 
+## TL;DR — já tem proxy reverso?
+
+**Sim.** O Caddy já está rodando como reverse proxy em produção, no Swarm:
+
+- Serviço `sdc_caddy` (stack `sdc`), imagem `caddy:2-alpine`
+- Publicado direto no host: `0.0.0.0:80` e `0.0.0.0:443`
+- Faz proxy para `app:8000` (as 2 réplicas do `sdc_app`)
+- Config em `/opt/sdc/caddy/Caddyfile`, TLS interno self-signed por IP
+  (`10.160.131.50`) porque ainda não tem domínio/firewall público liberado
+
+Não precisa criar outro. O único cuidado é que o **Reverb** (websockets, porta
+8082) hoje está publicado direto no host, fora do Caddy — ver seção 3.
+
 ## 1. Reverse proxy — já existe, não precisa de ngrok
 
 O **Caddy** já roda em produção no Swarm (`sdc_caddy`), publicado direto no host em
