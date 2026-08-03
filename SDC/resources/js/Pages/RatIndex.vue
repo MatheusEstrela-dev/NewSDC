@@ -6,6 +6,8 @@
             :statistics="statistics"
             :rats="ratsData"
             :filters="props.filters"
+            :sort="props.sort"
+            :direction="props.direction"
             :pagination="pagination"
             :municipalities="props.municipalities"
             :cobrade-types="props.cobradeTypes"
@@ -41,6 +43,9 @@ const props = defineProps({
     municipalities:{ type: Array, default: () => [] },
     cobradeTypes:  { type: Array, default: () => [] },
     years:         { type: Array, default: () => [] },
+    // Ordenacao efetiva devolvida pelo controller (ja normalizada pela whitelist).
+    sort:          { type: String, default: 'data_hora' },
+    direction:     { type: String, default: 'desc' },
 });
 
 // Normalize paginated resource collection or plain array

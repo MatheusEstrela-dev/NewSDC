@@ -78,6 +78,9 @@
       :pagination="paginationToUse"
       :can-edit="canEdit && !useMock"
       :can-delete="!useMock"
+      :sort="sort"
+      :direction="direction"
+      @ordenar="handleOrdenar"
       @view="handleView"
       @print="handlePrint"
       @edit="handleEdit"
@@ -152,6 +155,18 @@ import RatStatisticsCards from '../../Components/Organisms/Rat/Statistics/RatSta
 import RatTable from '../../Components/Organisms/Rat/Table/RatTable.vue';
 
 const props = defineProps({
+  /** Coluna ordenada, ja normalizada pela whitelist do controller. */
+  sort: {
+    type: String,
+    default: 'data_hora',
+  },
+
+  /** Direcao atual: 'asc' ou 'desc'. */
+  direction: {
+    type: String,
+    default: 'desc',
+  },
+
   statistics: {
     type: Object,
     required: true,
@@ -338,6 +353,27 @@ function handleFilterChange(newFilters) {
   }
 
   router.get(route('rat.index'), newFilters, { preserveState: true, preserveScroll: true });
+}
+
+/**
+ * Ordenacao das colunas da tabela.
+ *
+ * Vai na URL junto dos filtros porque a ordenacao e feita no banco: a listagem e
+ * paginada, e reordenar no cliente reordenaria apenas a pagina visivel.
+ *
+ * No modo mock nao ha ida ao servidor, entao o clique e ignorado em vez de
+ * exibir uma ordem que nao corresponde aos dados.
+ */
+function handleOrdenar({ sort, direction }) {
+  if (props.useMock) {
+    return;
+  }
+
+  router.get(
+    route('rat.index'),
+    { ...(props.filters || {}), sort, direction },
+    { preserveState: true, preserveScroll: true },
+  );
 }
 
 function handleFilterReset() {
