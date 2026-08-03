@@ -195,6 +195,34 @@ class ProcessoFilter
         return "COALESCE(NULLIF(TRIM({$prefixo}reconhecimento), ''), {$prefixo}status)";
     }
 
+    /**
+     * Separa registros de decretacoes pelo mesmo criterio usado nos cards de
+     * estatistica, para que clicar no card e a listagem resultante contem a
+     * mesma historia.
+     *
+     * Usa o status efetivo, e nao a coluna reconhecimento crua, pelo mesmo
+     * motivo de filterByReconhecimento: processos legados guardam o estagio em
+     * `status`.
+     */
+    protected function filterByTipoLancamento(): self
+    {
+        if ($this->request->filled('tipo_lancamento')) {
+            $status = DB::raw(self::sqlStatusEfetivo());
+
+            switch ($this->request->input('tipo_lancamento')) {
+                case 'registro':
+                    $this->builder->where($status, 'Registro');
+                    break;
+
+                case 'decretacao':
+                    $this->builder->where($status, '!=', 'Registro');
+                    break;
+            }
+        }
+
+        return $this;
+    }
+
     protected function filterByAnalista(): self
     {
         if ($this->request->filled('analista')) {
@@ -246,6 +274,16 @@ class ProcessoFilter
                         $q->whereNull('data_publicacao_mg')
                           ->orWhereRaw("{$vencimento} >= CURRENT_DATE");
                     });
+
+                    // Registro nao tem vigencia. Sem esta restricao o filtro
+                    // devolvia 421 contra os 163 do card "Decretacoes
+                    // Vigentes": clicar no card abria uma listagem que nao
+                    // correspondia ao numero exibido. Mesma definicao de
+                    // ProcessoStatsService::applyVigentesConstraints().
+                    $statusEfetivo = self::sqlStatusEfetivo();
+                    $this->builder
+                        ->whereRaw("{$statusEfetivo} is not null")
+                        ->whereRaw("{$statusEfetivo} <> ?", [StatusProcesso::REGISTRO->value]);
                     break;
 
                 case 'vencido':

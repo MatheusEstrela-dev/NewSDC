@@ -1,5 +1,7 @@
 <template>
-  <StatCardsGrid>
+  <!-- Cinco cards: em xl+ cabem na mesma fileira; abaixo disso o grid cai para
+       4 colunas e o quinto quebra, conforme o padrao do StatCardsGrid. -->
+  <StatCardsGrid :colunas="5">
     <!-- Total de Eventos - atalho de filtro rapido: limpa os filtros.
          Sem rateio ECP/SE/N1: o card mistura Registros (sempre N1) com
          Decretacoes, e o rateio nao respondia nada. No lugar dele, a

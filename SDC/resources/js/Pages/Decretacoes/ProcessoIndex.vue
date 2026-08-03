@@ -25,7 +25,7 @@ import { usePermissions } from '@/Composables/usePermissions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ProcessoIndexTemplate from '@/Templates/Decretacoes/ProcessoIndexTemplate.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -51,6 +51,19 @@ const props = defineProps({
 });
 
 const loading = ref(false);
+
+// `filterOptions` e Inertia::lazy() no controller: so chega quando alguem pede
+// num reload parcial. Ninguem pedia, entao as listas de COBRADE, municipio,
+// analista e REDEC ficavam permanentemente vazias ("Nenhum tipo de desastre
+// encontrado"). Busca depois da primeira pintura para nao atrasar a listagem;
+// no backend as opcoes sao cacheadas por 24h, entao a ida e barata.
+onMounted(() => {
+  router.reload({
+    only: ['filterOptions'],
+    preserveState: true,
+    preserveScroll: true,
+  });
+});
 
 const handleFilterChange = (filters) => {
   loading.value = true;

@@ -7,15 +7,20 @@
   >
     <table class="w-full text-sm text-left">
         <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+          <!-- Colunas ordenaveis pelo backend (whitelist em
+               ProcessoQueryService::ORDENACAO_PERMITIDA). Datas comecam em
+               decrescente; texto, em A-Z. Reconhecimento nao entra: o valor
+               efetivo vem de um COALESCE de duas colunas, entao ordenar por ele
+               exigiria expor a expressao na whitelist. -->
           <tr>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap">Data</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap">Tipo</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap hidden sm:table-cell">Desastre</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap hidden md:table-cell">Analista</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap">Reconhecimento</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap">Nº Protocolo S2ID</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap hidden lg:table-cell">Vigência</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right whitespace-nowrap w-36 min-w-36">Ações</th>
+            <SortableHeader coluna="data_entrada" direcao-inicial="desc" v-bind="ordenacao" @ordenar="emitirOrdenacao">Data</SortableHeader>
+            <SortableHeader coluna="processo" v-bind="ordenacao" @ordenar="emitirOrdenacao">Tipo</SortableHeader>
+            <SortableHeader coluna="tipo_desastre" classe="hidden sm:table-cell" v-bind="ordenacao" @ordenar="emitirOrdenacao">Desastre</SortableHeader>
+            <SortableHeader coluna="analista" classe="hidden md:table-cell" v-bind="ordenacao" @ordenar="emitirOrdenacao">Analista</SortableHeader>
+            <SortableHeader>Reconhecimento</SortableHeader>
+            <SortableHeader coluna="n_protocolo_fide" v-bind="ordenacao" @ordenar="emitirOrdenacao">Nº Protocolo S2ID</SortableHeader>
+            <SortableHeader coluna="data_publicacao_mg" direcao-inicial="desc" classe="hidden lg:table-cell" v-bind="ordenacao" @ordenar="emitirOrdenacao">Vigência</SortableHeader>
+            <SortableHeader classe="text-right w-36 min-w-36">Ações</SortableHeader>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
@@ -119,7 +124,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import axios from 'axios';
 import DocumentIcon from '../../Icons/DocumentTextIcon.vue';
 import CobradeHoverCard from '../../Molecules/Decretacoes/CobradeHoverCard.vue';
@@ -130,6 +135,7 @@ import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import Pagination from '../../Molecules/Navigation/Pagination.vue';
 import ListContainer from '@/Components/Organisms/ListContainer.vue';
+import SortableHeader from '@/Components/Molecules/Table/SortableHeader.vue';
 import DecretacaoDetailModal from './Details/DecretacaoDetailModal.vue';
 import EditChoiceModal from './EditChoiceModal.vue';
 
@@ -158,9 +164,32 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+
+  /** Coluna ordenada no momento, vinda da URL. */
+  ordenadoPor: {
+    type: String,
+    default: 'data_entrada',
+  },
+
+  /** Direcao atual da ordenacao: 'asc' ou 'desc'. */
+  direcao: {
+    type: String,
+    default: 'desc',
+  },
 });
 
-const emit = defineEmits(['view', 'print', 'edit', 'generate-report', 'warning', 'options', 'delete']);
+const emit = defineEmits(['view', 'print', 'edit', 'generate-report', 'warning', 'options', 'delete', 'ordenar']);
+
+// Repassa o par coluna/direcao para todos os cabecalhos de uma vez, em vez de
+// declarar as duas props em cada um.
+const ordenacao = computed(() => ({
+  ordenadoPor: props.ordenadoPor,
+  direcao: props.direcao,
+}));
+
+function emitirOrdenacao(payload) {
+  emit('ordenar', payload);
+}
 
 const showDetailModal = ref(false);
 const selectedProcesso = ref(null);
