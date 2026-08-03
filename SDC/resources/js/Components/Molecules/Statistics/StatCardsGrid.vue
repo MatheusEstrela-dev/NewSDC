@@ -15,20 +15,27 @@
  *
  * Referencia visual: o modulo PAE (grid-cols-2 / md:2 / lg:4).
  *
- * Maximo de 4 colunas por decisao de produto: com 5 cards, o quinto quebra para a
- * segunda linha em vez de comprimir a fileira inteira.
+ * Ate 4 colunas em lg: com 5 cards nessa largura, comprimir a fileira inteira corta
+ * o conteudo em notebook, entao o quinto quebra para a segunda linha.
+ *
+ * A opcao 5 existe para modulos com exatamente 5 cards (Decretacoes) e aplica a
+ * quinta coluna somente em xl+: acima de 1280px cabe a fileira inteira sem
+ * comprimir, e abaixo disso o comportamento continua sendo o de 4 colunas. Assim
+ * a fileira unica volta no desktop sem reintroduzir os cards cortados em telas
+ * menores, que foi o motivo do limite original.
  */
 import { computed } from 'vue';
 
 const props = defineProps({
   /**
-   * Colunas no desktop (lg+). Aceita 2, 3 ou 4.
+   * Colunas no desktop. Aceita 2, 3, 4 ou 5.
    * Mobile e sempre 2 colunas, que e o que caber sem truncar o valor do card.
+   * O valor 5 vale a partir de xl (ver nota no topo); 2 a 4 valem a partir de lg.
    */
   colunas: {
     type: Number,
     default: 4,
-    validator: (v) => [2, 3, 4].includes(v),
+    validator: (v) => [2, 3, 4, 5].includes(v),
   },
 
   /**
@@ -49,6 +56,9 @@ const COLUNAS_DESKTOP = {
   2: 'lg:grid-cols-2',
   3: 'lg:grid-cols-3',
   4: 'lg:grid-cols-4',
+  // 4 em lg, 5 so em xl: preserva o limite de 4 onde ele foi criado (notebook)
+  // e devolve a fileira unica onde ha largura para ela.
+  5: 'lg:grid-cols-4 xl:grid-cols-5',
 };
 
 const classes = computed(() => [

@@ -28,8 +28,10 @@ const phpVersionCheck = spawnSync(
     { stdio: 'ignore' },
 );
 
+// As duas condicoes se somam: so roda no host quando o PHP e recente o
+// bastante E existe vendor/ instalado ali; caso contrario delega ao container.
 if (phpVersionCheck.status === 0 && existsSync(vendorAutoload)) {
-    const result = run('php', artisanArgs);
+    const result = run('php', [...phpArgs, ...artisanArgs]);
     process.exit(result.status ?? 1);
 }
 

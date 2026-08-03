@@ -82,7 +82,8 @@ class ProcessoStatsService
                 'search', 'data_entrada', 'data_entrada_inicio', 'data_entrada_fim',
                 'processo', 'reconhecimento', 'analista', 'situacao_anormalidade',
                 'data_decreto_inicio', 'data_decreto_fim', 'vigencia_status',
-                'tipo_desastre_id', 'municipio_id', 'redec_id', 'n_protocolo_fide'
+                'tipo_desastre_id', 'municipio_id', 'redec_id', 'n_protocolo_fide',
+                'tipo_lancamento'
             ])
             ->filter(fn ($v) => $v !== null && $v !== '')
             ->isNotEmpty();
@@ -156,7 +157,7 @@ class ProcessoStatsService
 
         match ($familia) {
             'registros'           => $query->where('reconhecimento', 'Registro'),
-            'decretacoes'         => $this->applyDecretacaoConstraints($query),
+            'decretacoes'         => $this->whereNaoRegistro($query),
             'decretacoesVigentes' => $this->applyVigentesConstraints($query),
             default               => $query,
         };
@@ -232,14 +233,30 @@ class ProcessoStatsService
     }
 
     /**
-     * Decretacoes: conta processos cujo status efetivo nao e 'Registro'.
+     * Regra de vigencia, isolada para o card e a leitura em grao municipio
+     * usarem exatamente a mesma definicao.
+     *
+     * Vigente = dentro do PRAZO e sendo decretacao. A vigencia depende do prazo
+     * do decreto, nao do estagio de reconhecimento: um decreto em analise pelo
+     * Estado esta em vigor do mesmo jeito. A whitelist anterior
+     * (LIKE 'Reconhecido pelo Estado%') excluia processos ainda dentro do prazo
+     * so pelo estagio em que estavam.
+     *
+     * O vencimento vem de Support\Vigencia, que aplica o padrao de 180 dias
+     * quando prazo_vigencia esta ausente.
      */
-    private function applyDecretacaoConstraints(Builder $query): Builder
+    private function applyVigentesConstraints(Builder $query): Builder
     {
-        return $query->where(function ($q) {
-            $q->where('reconhecimento', '!=', 'Registro')
-              ->orWhereNull('reconhecimento');
+        $vencimento = Vigencia::sqlVencimento();
+
+        $query->where(function ($q) use ($vencimento) {
+            $q->whereNull('data_publicacao_mg')
+              ->orWhereRaw("{$vencimento} >= CURRENT_DATE");
         });
+
+        $this->whereNaoRegistro($query);
+
+        return $query;
     }
 
     /**
@@ -283,19 +300,7 @@ class ProcessoStatsService
      */
     private function getDecretacoesVigentes(Builder $baseQuery, ?string $tipoDesastre = null): int
     {
-        $query = clone $baseQuery;
-        $vencimento = Vigencia::sqlVencimento();
-
-        // Vigencia: data_publicacao_mg NULL ou dentro do prazo
-        $query->where(function ($q) use ($vencimento) {
-            $q->whereNull('data_publicacao_mg')
-              ->orWhereRaw("{$vencimento} >= CURRENT_DATE");
-        });
-
-        // Reconhecido pelo estado (status efetivo: legado ou atual)
-        $statusEfetivo = ProcessoFilter::sqlStatusEfetivo();
-        $this->whereNaoRegistro($query);
-        $query->whereRaw("{$statusEfetivo} like ?", ['Reconhecido pelo Estado%']);
+        $query = $this->applyVigentesConstraints(clone $baseQuery);
 
         if ($tipoDesastre) {
             $query->where('tipo_desastre', $tipoDesastre);

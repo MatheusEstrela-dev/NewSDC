@@ -99,9 +99,61 @@ class ProcessoQueryService
             $query = $filter->apply($query);
         }
 
-        $query->orderBy('data_entrada', 'desc');
+        $this->aplicarOrdenacao($query, $filters);
 
         return $query->paginate($perPage);
+    }
+
+    /**
+     * Colunas que a interface pode ordenar, mapeadas para a expressao real.
+     *
+     * Whitelist e obrigatoria: `sort` vem da URL e iria direto para o ORDER BY.
+     * A chave e o nome publico usado pelo front; o valor e a coluna/expressao.
+     */
+    private const ORDENACAO_PERMITIDA = [
+        'data_entrada'           => 'data_entrada',
+        'processo'               => 'processo',
+        'analista'               => 'analista',
+        'n_protocolo_fide'       => 'n_protocolo_fide',
+        'tipo_desastre'          => 'tipo_desastre',
+        'data_decreto_municipal' => 'data_decreto_municipal',
+        'data_publicacao_mg'     => 'data_publicacao_mg',
+    ];
+
+    private const ORDENACAO_PADRAO = 'data_entrada';
+
+    /**
+     * Aplica a ordenacao pedida pela interface, caindo no padrao quando o
+     * parametro esta ausente ou fora da whitelist.
+     *
+     * A ordenacao e no banco, e nao no cliente: a listagem e paginada em 15, e
+     * ordenar no front reordenaria apenas a pagina visivel.
+     *
+     * O desempate por `id` mantem a paginacao estavel. Sem ele, linhas com o
+     * mesmo valor na coluna ordenada podem trocar de pagina entre requests, e o
+     * usuario ve o mesmo processo duas vezes (ou nenhuma).
+     */
+    private function aplicarOrdenacao(Builder $query, array $filters): void
+    {
+        $coluna = self::ORDENACAO_PERMITIDA[$filters['sort'] ?? ''] ?? null;
+        $direcao = strtolower((string) ($filters['direction'] ?? '')) === 'asc' ? 'asc' : 'desc';
+
+        if ($coluna === null) {
+            $coluna = self::ORDENACAO_PERMITIDA[self::ORDENACAO_PADRAO];
+            $direcao = 'desc';
+        }
+
+        // Datas nulas por ultimo em ambos os sentidos: um processo sem data de
+        // decreto nao deveria encabecar a lista ao ordenar por essa coluna.
+        $query->orderByRaw("{$coluna} IS NULL")
+              ->orderBy($coluna, $direcao)
+              ->orderBy('id', 'desc');
+    }
+
+    /** Colunas ordenaveis expostas para a interface montar os cabecalhos. */
+    public static function colunasOrdenaveis(): array
+    {
+        return array_keys(self::ORDENACAO_PERMITIDA);
     }
 
     /**

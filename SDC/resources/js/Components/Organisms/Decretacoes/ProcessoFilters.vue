@@ -283,26 +283,25 @@ const selectedCobradeIds = computed({
   },
 });
 
+// A opcao vazia NAO entra nestas listas: o SelectInput ja renderiza
+// `<option v-if="placeholder" value="">` a partir da prop placeholder de cada
+// FilterField. Injetar aqui tambem produzia duas opcoes com o mesmo rotulo e o
+// mesmo valor vazio — visivel no dropdown de Municipio como "Todos os
+// Municipios" repetido.
 const processoOptions = [
-  { value: '', label: 'Todos os Processos' },
   { value: 'MUNICIPAL', label: 'Municipal' },
   { value: 'ESTADUAL', label: 'Estadual' },
 ];
 
-const vigenciaOptions = computed(() => {
-  const options = props.filterOptions.vigencia_status_options || [];
-  return [{ value: '', label: 'Todos' }, ...options.map(o => ({ value: o.value, label: o.label }))];
-});
+const vigenciaOptions = computed(() => (
+  (props.filterOptions.vigencia_status_options || []).map(o => ({ value: o.value, label: o.label }))
+));
 
-const situacaoAnormalidadeOptions = computed(() => {
-  const options = props.filterOptions.situacoes_anormalidade || [];
-  return [{ value: '', label: 'Todas as Situacoes' }, ...options.map(o => ({ value: o.value, label: o.label }))];
-});
+const situacaoAnormalidadeOptions = computed(() => (
+  (props.filterOptions.situacoes_anormalidade || []).map(o => ({ value: o.value, label: o.label }))
+));
 
-const analistaOptions = computed(() => {
-  const options = props.filterOptions.analistas || [];
-  return [{ value: '', label: 'Todos os Analistas' }, ...options];
-});
+const analistaOptions = computed(() => props.filterOptions.analistas || []);
 
 // Status do processo: o backend entrega primeiro os status VIGENTES (enum
 // StatusProcesso) e depois os legados ainda presentes no banco, marcados
@@ -310,24 +309,18 @@ const analistaOptions = computed(() => {
 const reconhecimentoOptions = computed(() => {
   const options = props.filterOptions.reconhecimentos || [];
 
-  return [
-    { value: '', label: 'Todos os Status' },
-    ...options.map(r => (
-      typeof r === 'string'
-        ? { value: r, label: r }
-        : { value: r.value, label: r.label, vigente: r.vigente }
-    )),
-  ];
+  return options.map(r => (
+    typeof r === 'string'
+      ? { value: r, label: r }
+      : { value: r.value, label: r.label, vigente: r.vigente }
+  ));
 });
 
 const statusVigentesCount = computed(
   () => reconhecimentoOptions.value.filter(o => o.vigente).length
 );
 
-const redecOptions = computed(() => {
-  const options = props.filterOptions.redecs || [];
-  return [{ value: '', label: 'Todas as REDECs' }, ...options];
-});
+const redecOptions = computed(() => props.filterOptions.redecs || []);
 
 // Correspondencia municipio <-> REDEC: cada municipio traz `redec_id`
 // (ProcessoFilter::getMunicipiosOptions). Com uma REDEC escolhida, a lista de
@@ -347,8 +340,13 @@ const municipiosDaRedec = computed(() => {
   return filtrados.length > 0 ? filtrados : municipios;
 });
 
+// Ordem alfabetica garantida aqui, e nao so no backend: a lista pode ser
+// filtrada por REDEC antes de chegar ao select, e localeCompare com sensitivity
+// 'base' ignora acento e caixa (Aguas Vermelhas junto de Águas, nao no fim).
 const municipioOptions = computed(() => (
-  [{ value: '', label: 'Todos os Municipios' }, ...municipiosDaRedec.value]
+  [...municipiosDaRedec.value].sort((a, b) => (
+    String(a.label ?? '').localeCompare(String(b.label ?? ''), 'pt-BR', { sensitivity: 'base' })
+  ))
 ));
 
 const municipioLabel = computed(() => {
@@ -394,6 +392,9 @@ const filterLabels = {
   analista: 'Analista',
   situacao_anormalidade: 'Situacao',
   vigencia_status: 'Vigencia',
+  // Atalho vindo dos stat cards (Registros / Decretacoes). Sem o rotulo o chip
+  // saia com o nome cru do parametro.
+  tipo_lancamento: 'Lancamento',
   data_decreto_inicio: 'Decreto Inicio',
   data_decreto_fim: 'Decreto Fim',
   data_inicio: 'Entrada Inicio',

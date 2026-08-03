@@ -76,10 +76,13 @@
       :total="pagination?.total"
       :can-edit="canEdit"
       :can-delete="canDelete"
+      :ordenado-por="localFilters.sort || 'data_entrada'"
+      :direcao="localFilters.direction || 'desc'"
       @view="(id) => $emit('view', id)"
       @print="handlePrint"
       @edit="(id) => $emit('edit', id)"
       @delete="handleDelete"
+      @ordenar="handleOrdenar"
     />
 
     <!-- Pagination -->
@@ -223,8 +226,43 @@ const handlePageChange = (page) => {
 
 // Card de estatistica -> filtro rapido por vigencia. Preserva os demais filtros
 // e substitui apenas vigencia_status. 'all' (ou vazio) limpa o filtro de vigencia.
-const handleStatFilter = (type) => {
-  localFilters.value.vigencia_status = (type === 'all' || !type) ? '' : type;
+/**
+ * Atalho de filtro dos stat cards.
+ *
+ * Recebe um PATCH (objeto), nao uma string: os cards emitem {} para limpar,
+ * { tipo_lancamento: 'registro'|'decretacao' } ou { vigencia_status: 'vigente' }.
+ * Tratar o payload como string atribuia o objeto inteiro a vigencia_status e a
+ * URL saia como `vigencia_status[tipo_lancamento]=registro`, sem filtrar nada.
+ *
+ * Os dois parametros sao reescritos a cada clique (e nao mesclados), para que um
+ * card nao herde o recorte do card clicado antes dele.
+ */
+/**
+ * Ordenacao das colunas da tabela.
+ *
+ * Vai junto com os demais filtros na mesma requisicao, porque a ordenacao e
+ * feita no banco: a listagem e paginada em 15, e reordenar no cliente
+ * reordenaria apenas a pagina visivel.
+ *
+ * Volta para a primeira pagina: manter a pagina atual apos trocar a ordem
+ * mostraria uma fatia arbitraria do meio do novo conjunto.
+ */
+const handleOrdenar = ({ sort, direction }) => {
+  localFilters.value = {
+    ...localFilters.value,
+    sort,
+    direction,
+    page: 1,
+  };
+  handleApplyFilters(localFilters.value);
+};
+
+const handleStatFilter = (patch = {}) => {
+  localFilters.value = {
+    ...localFilters.value,
+    vigencia_status: patch.vigencia_status ?? '',
+    tipo_lancamento: patch.tipo_lancamento ?? '',
+  };
   handleApplyFilters(localFilters.value);
 };
 
