@@ -14,8 +14,9 @@
 - Config em `/opt/sdc/caddy/Caddyfile`, TLS interno self-signed por IP
   (`10.160.131.50`) porque ainda não tem domínio/firewall público liberado
 
-Não precisa criar outro. O único cuidado é que o **Reverb** (websockets, porta
-8082) hoje está publicado direto no host, fora do Caddy — ver seção 3.
+Não precisa criar outro. O **Reverb** (websockets) já foi colocado atrás do
+Caddy — rota `/app/*` proxyando pra `reverb:8080` via rede overlay `sdc_edge` —
+e a porta `8082` não é mais publicada no host. Ver seção 3.
 
 ## 1. Reverse proxy — já existe, não precisa de ngrok
 
@@ -57,7 +58,7 @@ nenhum dos dois é o que está de fato servindo produção hoje.
 | Porta | Serviço | Exposição atual no host | Deveria ir pra internet? |
 |---|---|---|---|
 | 80 / 443 | Caddy → `app:8000` | `0.0.0.0` | ✅ Sim — é a porta de entrada |
-| 8082 | Reverb (websockets) | `0.0.0.0:8082->8080`, direto, **sem passar pelo Caddy** | ⚠️ Deveria ir atrás do Caddy (rota dedicada), não publicado direto |
+| — | Reverb (websockets) | sem porta publicada; atrás do Caddy via rota `/app/*` → `reverb:8080` | ✅ Já resolvido — não expõe porta própria |
 | 8080 / 50000 | Jenkins | `0.0.0.0` | ❌ Não — só LAN/VPN |
 | 22 | SSH | `0.0.0.0` | ❌ Não — só LAN/VPN (hoje usado pro túnel do DB) |
 | 5432 (db) / 6379 (redis) | Postgres/Redis (`sdc-data`) | sem porta publicada (só overlay) | ❌ Correto assim, não expor |
@@ -69,10 +70,11 @@ nenhum dos dois é o que está de fato servindo produção hoje.
 
 Não é o reverse proxy — ele já está pronto. O que falta é o **inbound**:
 
-1. **NAT/firewall de entrada da Prodemge** liberando 80/443 (e a rota do Reverb, se
-   ficar separada) do IP público até `10.160.131.50`. Pedido rascunhado em 2026-07-13,
-   ainda sem confirmação de aprovação — mesmo bloqueio que trava Jenkins e SSH
-   (ver memória `project_newsdc_network_ports`).
+1. **NAT/firewall de entrada da Prodemge** liberando 80/443 do IP público até
+   `10.160.131.50` (o Reverb já vai pela mesma porta 443, via Caddy — não precisa
+   de regra própria). Pedido rascunhado em 2026-07-13, ainda sem confirmação de
+   aprovação — mesmo bloqueio que trava Jenkins e SSH (ver memória
+   `project_newsdc_network_ports`).
 2. Confirmado nesta sessão: o egress da VM só existe via proxy HTTP da Prodemge
    (`proxy.prodemge.gov.br:8080`, configurado em `HTTP_PROXY`/`HTTPS_PROXY` do host
    e do daemon docker) — conexão TCP direta pra internet é bloqueada. Isso é só
@@ -81,12 +83,31 @@ Não é o reverse proxy — ele já está pronto. O que falta é o **inbound**:
 3. Quando o firewall liberar, trocar o `Caddyfile` de produção para usar
    `{$APP_DOMAIN}` (Let's Encrypt automático) em vez de `tls internal`.
 
-### Recomendação para o Reverb
+### Reverb atrás do Caddy — feito (2026-08-03)
 
-Hoje publicado direto no host (`0.0.0.0:8082->8080`), bypassando o Caddy. Ideal é
-rotear via Caddy (`reverse_proxy /app/* reverb:8080` com upgrade de websocket) e
-remover a porta publicada do serviço no stack file — assim só 80/443 ficam
-expostos no host.
+Estava publicado direto no host (`0.0.0.0:8082->8080`), bypassando o Caddy.
+Aplicado e verificado em produção:
+
+- `Caddyfile` (`/opt/sdc/caddy/Caddyfile` e o template `docker/caddy/Caddyfile`):
+  matcher `@reverb path /app/*` + `reverse_proxy @reverb reverb:8080`, antes do
+  `reverse_proxy app:8000` — Reverb não usa prefixo de path
+  (`REVERB_SERVER_PATH` vazio), então o handshake do cliente
+  (laravel-echo/pusher-js) cai em `/app/{key}`.
+- `docker/jenkins/stack.app.onpremise.yml`: removida a publicação
+  `target: 8080 / published: 8082 / mode: host` do serviço `reverb`.
+- `sdc_caddy` recriado via `docker service update --force` (necessário porque o
+  Caddyfile é bind mount de **arquivo único**: editar via replace atômico troca
+  o inode no host, e o container fica com o inode antigo até a task ser
+  recriada — reload sozinho não basta).
+- `sdc_reverb` atualizado via `docker service update --publish-rm` — confirmado
+  sem porta publicada (`Endpoint.Ports` retorna `null`) e nada escutando em
+  `8082` no host.
+- Validado: requisição em `/app/{key}` via Caddy chega no Reverb (resposta sem
+  header `Server: swoole-http-server`, que é o que o `app:8000` devolve).
+
+`VITE_REVERB_PORT` deve continuar **unset** — o client (`resources/js/bootstrap.js`)
+já cai no default `443` quando o scheme é `https`, então não precisa apontar
+pra porta nenhuma.
 
 ## 4. Redes docker (bridge/overlay) — isolamento entre apps em paralelo
 
@@ -112,7 +133,8 @@ db/redis/queue) — padrão correto de multi-tier, já implementado assim.
 - **Sobreposição de subnet**: nenhuma entre as redes ativas (`172.17-172.25.x`
   nos bridges, `10.0.0-2.0/24` nos overlays).
 - **Porta publicada no host**: dev usa `8000/8081/6380/5433/1025/8025`, prod usa
-  `80/443/8082/8080/50000/22` — sem colisão entre os stacks paralelos.
+  `80/443/8080/50000/22` (Reverb não publica porta própria desde que foi
+  colocado atrás do Caddy) — sem colisão entre os stacks paralelos.
 
 ### Gap não urgente
 
