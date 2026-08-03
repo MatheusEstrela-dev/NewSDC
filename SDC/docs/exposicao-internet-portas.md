@@ -109,6 +109,34 @@ Aplicado e verificado em produção:
 já cai no default `443` quando o scheme é `https`, então não precisa apontar
 pra porta nenhuma.
 
+#### Teste end-to-end do handshake WebSocket (2026-08-03)
+
+Sem a extensão Claude in Chrome conectada nesta sessão pra abrir um navegador de
+fato, o handshake do `laravel-echo`/`pusher-js` foi reproduzido manualmente —
+mesmo path, mesmos query params — direto na porta pública `443`:
+
+```
+GET /app/{REVERB_APP_KEY}?protocol=7&client=js&version=8.4.0&flash=false
+→ HTTP/1.1 101 Switching Protocols
+  Server: Caddy
+  X-Powered-By: Laravel Reverb
+  Upgrade: websocket
+
+→ {"event":"pusher:connection_established","data":"{\"socket_id\":\"982867908.869157757\",...}"}
+```
+
+Confirma o caminho inteiro: navegador → `443` (TLS) → Caddy → rota `/app/*` →
+Reverb → upgrade WS → `pusher:connection_established`. É a mesma resposta que
+`window.Echo` receberia num navegador real.
+
+**Para confirmar visualmente num navegador:**
+1. Abrir `https://10.160.131.50` (aceitar o certificado self-signed)
+2. DevTools → aba **Network** → filtro **WS**
+3. Disparar algo que chame `initEcho()` (ex.: painel de notificações — em
+   `resources/js/bootstrap.js` o Echo/Pusher só carrega sob demanda)
+4. Deve aparecer conexão para `/app/...` com status `101`; no console,
+   `window.Echo.connector.pusher.connection.state` deve virar `"connected"`
+
 ## 4. Redes docker (bridge/overlay) — isolamento entre apps em paralelo
 
 O `docker0` padrão (`172.17.0.0/16`) **não é usado** por nenhum serviço — nem
