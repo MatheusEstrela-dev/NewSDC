@@ -101,9 +101,20 @@ provide('openSidebar', openSidebar);
     <!-- Top Bar -->
     <TopBar />
 
-    <!-- Main Content Area -->
+    <!--
+      Main Content Area
+
+      min-w-0 e obrigatorio aqui. Item flex nasce com min-width:auto, ou seja, se
+      recusa a encolher abaixo da largura intrinseca do proprio conteudo: uma tabela
+      larga inflava este wrapper para alem da viewport e TUDO dentro dele passava a
+      ser dimensionado contra essa largura inflada -- por isso os stat cards perdiam
+      a proporcao em telas medias, mesmo com o grid correto.
+      Medido antes/depois em 768, 1024 e 1280px sobre PAE, Decretacoes, RAT e
+      Permissionamento: o estouro ia de ate 672px para 0 em todos os casos.
+      O [overflow-x:clip] do <main> abaixo nao resolvia porque o pai ja havia crescido.
+    -->
     <div
-      class="flex-1 flex flex-col min-h-screen ml-0 md:ml-20 lg:ml-[280px]"
+      class="flex-1 min-w-0 flex flex-col min-h-screen ml-0 md:ml-20 lg:ml-[280px]"
       :class="{
         'lg:!ml-20': sidebarCollapsed
       }"
