@@ -69,18 +69,51 @@ class RatUnifiedController extends BaseController
     // WEB — Inertia
     // =========================================================================
 
+    /**
+     * Colunas que a listagem pode ordenar, mapeadas para a coluna real.
+     *
+     * Whitelist obrigatoria: `sort` vem da URL e iria direto para o ORDER BY.
+     * Municipio e "Criado por" ficam de fora porque vivem em relacao (relato de
+     * dados gerais e users), e ordenar por elas exigiria join.
+     */
+    private const ORDENACAO_PERMITIDA = [
+        // A chave e o nome usado pela interface; o valor e a coluna real. Os dois
+        // divergem porque a tabela exibe rotulos ("Numero RAT", "Ano") que nao
+        // correspondem ao nome no banco.
+        'numero_rat' => 'numero_bos',
+        'data_hora'  => 'created_at',
+        'ano'        => 'sequencial_ano',
+        'status'     => 'status',
+    ];
+
     public function index(Request $request): Response
     {
         // Eager load apenas dados_gerais (conteudo_type específico) para evitar N+1.
         // Carrega creator + relatos de dados gerais em 3 queries totais em vez de 15+.
-        $rats = RatOcorrencia::with([
+        $query = RatOcorrencia::with([
             'creator',
             'relatosMorph' => fn ($q) => $q
                 ->where('conteudo_type', \App\Modules\Rat\Models\Relatos\RatRelatoDadosGerais::class)
                 ->with('conteudo'),
-        ])
-            ->orderByDesc('created_at')
-            ->paginate(15);
+        ]);
+
+        // Ordenacao no banco, e nao no cliente: a listagem e paginada, e
+        // reordenar no front reordenaria apenas a pagina visivel.
+        $coluna = self::ORDENACAO_PERMITIDA[$request->input('sort')] ?? 'created_at';
+        $direcao = strtolower((string) $request->input('direction')) === 'asc' ? 'asc' : 'desc';
+
+        // Nulos por ultimo nos dois sentidos: o Postgres os coloca primeiro no
+        // DESC, e um RAT sem numero encabecava a lista ao ordenar por numero.
+        //
+        // Desempate por id mantem a paginacao estavel: sem ele, linhas com o
+        // mesmo valor na coluna ordenada trocam de pagina entre requests e o
+        // mesmo RAT aparece duas vezes (ou nenhuma).
+        $rats = $query
+            ->orderByRaw("{$coluna} IS NULL")
+            ->orderBy($coluna, $direcao)
+            ->orderByDesc('id')
+            ->paginate(15)
+            ->withQueryString();
 
         // Estatisticas cacheadas por 5 minutos; os 4 counts sao independentes.
         $statistics = Cache::remember('rat:statistics', 300, static fn () => self::ratStatistics());
@@ -90,6 +123,11 @@ class RatUnifiedController extends BaseController
             'rats'       => RatListResource::collection($rats),
             'statistics' => $statistics,
             'filters'    => [],
+            // Devolve a ordenacao efetiva (ja normalizada pela whitelist), e nao
+            // o que veio na URL: assim o cabecalho destaca a coluna certa mesmo
+            // quando o parametro chegou invalido e caiu no padrao.
+            'sort'       => array_search($coluna, self::ORDENACAO_PERMITIDA, true) ?: 'data_hora',
+            'direction'  => $direcao,
         ]);
     }
 
