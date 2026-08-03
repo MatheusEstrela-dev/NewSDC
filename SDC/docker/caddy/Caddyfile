@@ -7,6 +7,12 @@
 {$APP_DOMAIN} {
 	encode zstd gzip
 
+	# Reverb (websocket) atras do Caddy, sem porta extra publicada no host.
+	# Reverb nao usa prefixo de path (REVERB_SERVER_PATH vazio), entao o
+	# handshake do cliente (laravel-echo/pusher-js) cai em /app/{key}.
+	@reverb path /app/*
+	reverse_proxy @reverb reverb:8080
+
 	# Octane escuta na 8000 dentro da rede sdc_edge.
 	reverse_proxy app:8000 {
 		health_uri /health
