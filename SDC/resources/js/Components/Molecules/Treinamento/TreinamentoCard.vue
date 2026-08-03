@@ -32,6 +32,20 @@ const formatDate = (dateValue) => {
   return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 };
 
+/**
+ * Cor do status na semantica do Badge.
+ *
+ * Antes o template passava :color="treinamento.status_color" -- prop que o Badge nao
+ * tem, com um campo que o backend do Treinamento nem produz. O badge caia no default
+ * e saia sempre cinza, independente do status.
+ */
+const statusVariant = computed(() => ({
+  PLANEJADO: 'info',
+  EM_ANDAMENTO: 'warning',
+  CONCLUIDO: 'success',
+  CANCELADO: 'danger',
+}[props.treinamento.status] ?? 'default'));
+
 const vagasText = computed(() => {
   if (props.treinamento.numero_vagas === null) {
     return 'Vagas ilimitadas';
@@ -49,7 +63,7 @@ const vagasText = computed(() => {
           {{ treinamento.titulo }}
         </Heading>
       </div>
-      <Badge :color="treinamento.status_color" class="ml-2">
+      <Badge :variant="statusVariant" class="ml-2">
         {{ treinamento.status?.replace('_', ' ') || 'Planejado' }}
       </Badge>
     </div>

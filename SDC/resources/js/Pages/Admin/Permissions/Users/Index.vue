@@ -166,31 +166,23 @@
                 </td>
                 <td class="px-4 lg:px-6 py-4">
                   <div class="flex flex-wrap gap-1">
-                    <span
-                      v-for="role in user.roles.slice(0, 2)"
-                      :key="role.id"
-                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-                    >
+                    <!-- Cargo e categoria, nao estado: cor explicita em vez de variant. -->
+                    <Badge v-for="role in user.roles.slice(0, 2)" :key="role.id" cor="blue" size="sm">
                       {{ role.name }}
-                    </span>
-                    <span v-if="user.roles.length > 2" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                    </Badge>
+                    <Badge v-if="user.roles.length > 2" cor="slate" size="sm">
                       +{{ user.roles.length - 2 }}
-                    </span>
+                    </Badge>
                     <span v-if="user.roles.length === 0" class="text-xs text-slate-400 italic">Nenhum</span>
                   </div>
                 </td>
                 <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-center hidden md:table-cell">
-                  <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300">
-                    {{ user.permissions_count ?? 0 }}
-                  </span>
+                  <Badge cor="purple" size="sm">{{ user.permissions_count ?? 0 }}</Badge>
                 </td>
                 <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
-                  <span
-                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                    :class="statusClass(effectiveStatus(user))"
-                  >
+                  <Badge :variant="statusVariant(effectiveStatus(user))" size="sm">
                     {{ statusLabel(effectiveStatus(user)) }}
-                  </span>
+                  </Badge>
                 </td>
                 <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400 hidden lg:table-cell">
                   {{ formatDate(user.created_at) }}
@@ -251,6 +243,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 defineOptions({ layout: AuthenticatedLayout });
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import TableMobileCard from '@/Components/Molecules/Table/TableMobileCard.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import { useMobile } from '@/Composables/useMobile';
@@ -330,16 +323,23 @@ const statusLabel = (status) => {
   return labels[status] || status || 'Desconhecido';
 };
 
-const statusClass = (status) => {
-  const classes = {
-    active: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
-    inactive: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 ring-1 ring-red-200 dark:ring-red-800',
-    suspended: 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300',
-    pending: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300',
-    blocked: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300',
-  };
-  return classes[status] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
-};
+/**
+ * Status do usuario na semantica do Badge.
+ *
+ * Antes esta funcao devolvia classes Tailwind a mao, e elas divergiam do padrao em
+ * tres pontos: sem borda, fundo -50 em vez de -100 e dark com -900/20 em vez de
+ * -500/20. Com a semantica, a aparencia vem do Badge e nao ha o que divergir.
+ *
+ * suspended e blocked caem em danger junto com inactive: sao todos impedimento de
+ * acesso, e distingui-los por cor sugeria uma gradacao que o sistema nao trata.
+ */
+const statusVariant = (status) => ({
+  active: 'success',
+  pending: 'warning',
+  suspended: 'danger',
+  inactive: 'danger',
+  blocked: 'danger',
+}[status] ?? 'default');
 
 const showDeleteDialog = ref(false);
 const userToDelete = ref(null);

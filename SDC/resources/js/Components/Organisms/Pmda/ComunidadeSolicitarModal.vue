@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import Modal from '@/Components/Modal.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
+import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 
 const props = defineProps({
@@ -103,9 +104,7 @@ function gravar() {
               <tr v-for="s in historicoOrdenado" :key="s.id" class="text-slate-700 dark:text-slate-300">
                 <td class="px-4 py-2.5 font-medium">{{ s.nome }}</td>
                 <td class="px-4 py-2.5">
-                  <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold" :class="s.status_color">
-                    {{ s.status_label }}
-                  </span>
+                  <Badge :cor="s.status_cor">{{ s.status_label }}</Badge>
                   <span v-if="s.motivo_rejeicao" class="ml-2 text-xs text-red-500">({{ s.motivo_rejeicao }})</span>
                 </td>
                 <td class="px-4 py-2.5 text-slate-500">{{ fmtData(s.created_at) }}</td>

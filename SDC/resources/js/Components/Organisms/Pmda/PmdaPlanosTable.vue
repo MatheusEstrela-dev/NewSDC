@@ -15,7 +15,7 @@
           <td class="px-4 py-3 font-mono text-gray-800">{{ plano.protocolo ?? '—' }}</td>
           <td class="px-4 py-3 text-gray-700">{{ plano.municipio ?? '—' }}</td>
           <td class="px-4 py-3">
-            <PmdaStatusBadge :label="plano.status_label" :color-class="plano.status_color" />
+            <PmdaStatusBadge :label="plano.status_label" :cor="plano.status_cor" />
           </td>
           <td class="px-4 py-3 text-gray-500">{{ formatDate(plano.data) }}</td>
           <td class="px-4 py-3">

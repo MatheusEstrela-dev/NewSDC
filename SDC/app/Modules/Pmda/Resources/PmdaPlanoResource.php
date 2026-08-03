@@ -18,6 +18,9 @@ class PmdaPlanoResource extends JsonResource
             'municipio'         => $this->whenLoaded('municipio', fn () => $this->municipio->nome ?? null),
             'status'            => $this->status->value,
             'status_label'      => $this->status->getLabel(),
+            // Nome de cor da paleta do Badge; o componente aplica a receita de pill.
+            'status_cor'        => $this->status->getCor(),
+            // @deprecated Classe Tailwind crua. Sai quando nenhum consumidor usar.
             'status_color'      => $this->status->getColorClass(),
             'pode_copiar'       => $this->status->permiteCopia(),
             'data'              => $this->data?->toIso8601String(),

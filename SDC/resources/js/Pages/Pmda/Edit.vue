@@ -104,7 +104,7 @@ function voltar() {
       variant="gradient"
     >
       <template #actions>
-        <PmdaStatusBadge :label="dados.status_label" :color-class="dados.status_color" />
+        <PmdaStatusBadge :label="dados.status_label" :cor="dados.status_cor" />
       </template>
     </PageHeader>
 

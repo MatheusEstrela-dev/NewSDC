@@ -21,6 +21,9 @@ class ComunidadeSolicitacaoResource extends JsonResource
             'longitude'       => $this->longitude,
             'status'          => $this->status->value,
             'status_label'    => $this->status->getLabel(),
+            // Nome de cor da paleta do Badge; o componente aplica a receita de pill.
+            'status_cor'      => $this->status->getCor(),
+            // @deprecated Classe Tailwind crua. Sai quando nenhum consumidor usar.
             'status_color'    => $this->status->getColorClass(),
             'comunidade_id'   => $this->comunidade_id,
             'motivo_rejeicao' => $this->motivo_rejeicao,

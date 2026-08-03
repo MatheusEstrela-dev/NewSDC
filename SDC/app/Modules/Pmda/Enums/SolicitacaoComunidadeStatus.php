@@ -24,6 +24,22 @@ enum SolicitacaoComunidadeStatus: string
         return $this->getLabel();
     }
 
+    /**
+     * Cor do status na paleta do Badge. Nome de cor, nao classe Tailwind: a receita
+     * de pill vive no componente, nao no dominio. Ver PmdaStatus::getCor().
+     */
+    public function getCor(): string
+    {
+        return match ($this) {
+            self::PENDENTE  => 'amber',
+            self::APROVADA  => 'green',
+            self::REJEITADA => 'red',
+        };
+    }
+
+    /**
+     * @deprecated Use getCor().
+     */
     public function getColorClass(): string
     {
         return match ($this) {
