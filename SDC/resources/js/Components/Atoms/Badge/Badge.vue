@@ -94,7 +94,7 @@ const props = defineProps({
   size: {
     type: String,
     default: 'md',
-    validator: (v) => ['sm', 'md', 'lg'].includes(v),
+    validator: (v) => ['sm', 'md', 'lg', 'pill'].includes(v),
   },
 
   rounded: {
@@ -116,6 +116,12 @@ const TAMANHOS = {
   sm: 'px-2 py-0.5 text-xs',
   md: 'px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs',
   lg: 'px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm',
+
+  // Dimensao que os 10 badges de modulo (Compdec, Decretacoes, PAE) ja usavam
+  // quando escreviam a receita a mao. Existe para a consolidacao deles nao alterar
+  // espacamento nem peso de fonte -- refatorar nao deveria mexer na aparencia.
+  // O font-semibold vem junto de proposito: e parte do mesmo conjunto herdado.
+  pill: 'px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs !font-semibold',
 };
 
 const badgeClasses = computed(() => {

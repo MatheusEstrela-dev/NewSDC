@@ -1,11 +1,27 @@
 <template>
-  <span v-if="prazoLabel" :class="pillClasses">
+  <!-- rounded (e nao rounded-full) e size sm: esta pill e menor que as de status,
+       porque aparece encostada na data dentro da celula. -->
+  <Badge
+    v-if="prazoLabel"
+    :variant="variant"
+    size="sm"
+    :rounded="false"
+    :class="props.class"
+  >
     {{ prazoLabel }}
-  </span>
+  </Badge>
 </template>
 
 <script setup>
+/**
+ * Aviso de prazo do protocolo PAE: proximo do vencimento ou vencido.
+ *
+ * Estado puro, entao usa a semantica do Badge. A receita de pill vinha escrita a mao
+ * aqui. O texto era text-[11px] e passa a 12px (text-xs do size sm): a diferenca de
+ * um pixel nao justifica um token de tamanho exclusivo para um componente.
+ */
 import { computed } from 'vue';
+import Badge from '../../../Atoms/Badge/Badge.vue';
 
 const props = defineProps({
   prazo: {
@@ -19,18 +35,10 @@ const props = defineProps({
 });
 
 const map = {
-  proximo: { label: 'Próximo', classes: 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/20' },
-  vencido: { label: 'Vencido', classes: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-500/20' },
+  proximo: { label: 'Próximo', variant: 'warning' },
+  vencido: { label: 'Vencido', variant: 'danger' },
 };
 
 const prazoLabel = computed(() => map[props.prazo]?.label || '');
-const pillClasses = computed(() => {
-  return [
-    'inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold',
-    map[props.prazo]?.classes || '',
-    props.class,
-  ].join(' ');
-});
+const variant = computed(() => map[props.prazo]?.variant ?? 'default');
 </script>
-
-
