@@ -6,11 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Jobs\RecordUserLogin;
 use App\Models\AuditLog;
+use App\Models\User;
+use App\Modules\Treinamento\Services\CidadaoAuthService;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -29,9 +32,21 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * Handle an incoming authentication request.
+     *
+     * Tela de login unica para servidor (guard "web") e cidadao do Portal de
+     * Treinamentos (guard "cidadao"): o CPF decide o caminho. So desviamos
+     * para o cidadao quando o CPF NAO pertence a nenhum servidor - assim a
+     * logica de seguranca do login interno (bloqueio progressivo, hash
+     * constante, auditoria) continua 100% intacta para quem e servidor.
      */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(LoginRequest $request, CidadaoAuthService $cidadaoAuth): RedirectResponse
     {
+        $cpf = preg_replace('/\D/', '', (string) $request->input('cpf'));
+
+        if (!User::where('cpf', $cpf)->exists()) {
+            return $this->storeCidadao($request, $cidadaoAuth, $cpf);
+        }
+
         $request->authenticate();
 
         $request->session()->regenerate();
@@ -55,6 +70,39 @@ class AuthenticatedSessionController extends Controller
         }
 
         return redirect()->intended(RouteServiceProvider::HOME);
+    }
+
+    /**
+     * Ramo do login unificado para CPFs que nao pertencem a nenhum servidor -
+     * tenta autenticar no guard "cidadao" (Portal de Treinamentos). Usa o
+     * mesmo campo de erro ('cpf') que o login interno, entao a tela mostra a
+     * mensagem no mesmo lugar independente do caminho seguido.
+     */
+    private function storeCidadao(LoginRequest $request, CidadaoAuthService $cidadaoAuth, string $cpf): RedirectResponse
+    {
+        if ($cidadaoAuth->tooManyAttempts($cpf, $request->ip())) {
+            $seconds = $cidadaoAuth->availableIn($cpf, $request->ip());
+            throw ValidationException::withMessages([
+                'cpf' => "Muitas tentativas. Tente novamente em {$seconds} segundos.",
+            ]);
+        }
+
+        $autenticado = $cidadaoAuth->attempt(
+            $cpf,
+            (string) $request->input('password'),
+            $request->boolean('remember'),
+            $request->ip()
+        );
+
+        if (!$autenticado) {
+            throw ValidationException::withMessages([
+                'cpf' => 'CPF ou senha invalidos.',
+            ]);
+        }
+
+        $request->session()->regenerate();
+
+        return redirect()->intended(route('portal.treinamento.catalogo'));
     }
 
     /**

@@ -1,13 +1,22 @@
 <template>
   <FilterSection title="Filtros de Pesquisa" :columns="4" class="mb-6">
     <FilterField
-      label="Título"
+      label="Busca"
       type="text"
-      :model-value="filters.titulo || ''"
-      placeholder="Título do treinamento"
-      @update:model-value="updateFilter('titulo', $event)"
+      :model-value="filters.search || ''"
+      placeholder="Título ou descrição"
+      @update:model-value="updateFilter('search', $event)"
     />
-    
+
+    <FilterField
+      label="Categoria"
+      type="select"
+      :model-value="filters.categoria || ''"
+      :options="categoriaOptions"
+      placeholder="Todas"
+      @update:model-value="updateFilter('categoria', $event)"
+    />
+
     <FilterField
       label="Tipo"
       type="select"
@@ -16,7 +25,7 @@
       placeholder="Todos"
       @update:model-value="updateFilter('tipo', $event)"
     />
-    
+
     <FilterField
       label="Status"
       type="select"
@@ -25,23 +34,7 @@
       placeholder="Todos"
       @update:model-value="updateFilter('status', $event)"
     />
-    
-    <FilterField
-      label="Instrutor"
-      type="text"
-      :model-value="filters.instrutor || ''"
-      placeholder="Nome do instrutor"
-      @update:model-value="updateFilter('instrutor', $event)"
-    />
-    
-    <FormDateRange
-      class="md:col-span-2"
-      start-label="Data Início"
-      end-label="Data Fim"
-      :model-value="{ start: filters.data_inicio || '', end: filters.data_fim || '' }"
-      @update:model-value="handleDateRangeChange"
-    />
-    
+
     <div class="md:col-span-2 lg:col-span-4 flex justify-end items-end pt-1">
       <FilterActions @search="handleSearch" @clear="handleClear" />
     </div>
@@ -52,42 +45,38 @@
 import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
 import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
 import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
-import FormDateRange from '@/Components/Molecules/Form/FormDateRange.vue';
+import { computed } from 'vue';
 
 const props = defineProps({
   filters: {
     type: Object,
     default: () => ({}),
   },
+  filterOptions: {
+    type: Object,
+    default: () => ({ tipos: [], status: [], categorias: [] }),
+  },
 });
 
 const emit = defineEmits(['filter-change', 'filter-reset']);
 
-const tipoOptions = [
+const tipoOptions = computed(() => [
   { value: '', label: 'Todos' },
-  { value: 'PRESENCIAL', label: 'Presencial' },
-  { value: 'EAD', label: 'EAD' },
-  { value: 'HIBRIDO', label: 'Híbrido' },
-];
+  ...(props.filterOptions.tipos || []).map((t) => ({ value: t.value, label: t.label })),
+]);
 
-const statusOptions = [
+const statusOptions = computed(() => [
   { value: '', label: 'Todos' },
-  { value: 'PLANEJADO', label: 'Planejado' },
-  { value: 'EM_ANDAMENTO', label: 'Em Andamento' },
-  { value: 'CONCLUIDO', label: 'Concluído' },
-  { value: 'CANCELADO', label: 'Cancelado' },
-];
+  ...(props.filterOptions.status || []).map((s) => ({ value: s.value, label: s.label })),
+]);
+
+const categoriaOptions = computed(() => [
+  { value: '', label: 'Todas' },
+  ...(props.filterOptions.categorias || []).map((c) => ({ value: c.value, label: c.label })),
+]);
 
 function updateFilter(key, value) {
   emit('filter-change', { ...props.filters, [key]: value });
-}
-
-function handleDateRangeChange(value) {
-  emit('filter-change', {
-    ...props.filters,
-    data_inicio: value.start,
-    data_fim: value.end,
-  });
 }
 
 function handleSearch() {

@@ -21,7 +21,7 @@ class TreinamentosMockSeeder extends Seeder
             [
                 'titulo' => 'Capacitação em Proteção e Defesa Civil 2026',
                 'descricao' => 'Curso de nivelamento para novos agentes de Defesa Civil.',
-                'tipo' => TipoTreinamento::EAD->value,
+                'tipo' => TipoTreinamento::ONLINE->value,
                 'status' => StatusTreinamento::EM_ANDAMENTO->value,
                 'instrutor' => 'Ten. Cel. Almeida',
                 'local' => 'Plataforma EAD CEDEC',
@@ -37,7 +37,7 @@ class TreinamentosMockSeeder extends Seeder
             [
                 'titulo' => 'Workshop: Operação Chuvas 2025/2026',
                 'descricao' => 'Treinamento sobre protocolos de resposta rápida para a Defesa Civil Estadual.',
-                'tipo' => TipoTreinamento::HIBRIDO->value,
+                'tipo' => TipoTreinamento::PRESENCIAL->value,
                 'status' => StatusTreinamento::CONCLUIDO->value,
                 'instrutor' => 'Cap. Souza',
                 'local' => 'Auditório CEDEC-MG',
@@ -45,7 +45,7 @@ class TreinamentosMockSeeder extends Seeder
             [
                 'titulo' => 'Treinamento SDC Nível 2',
                 'descricao' => 'Treinamento avançado no uso do Sistema Integrado de Defesa Civil.',
-                'tipo' => TipoTreinamento::EAD->value,
+                'tipo' => TipoTreinamento::ONLINE->value,
                 'status' => StatusTreinamento::PLANEJADO->value,
                 'instrutor' => 'Sgt. Lima',
                 'local' => 'Online',
@@ -53,7 +53,7 @@ class TreinamentosMockSeeder extends Seeder
             [
                 'titulo' => 'Exercício Simulado de Mesa',
                 'descricao' => 'Exercício para tomada de decisão em cenários de desastre químico.',
-                'tipo' => TipoTreinamento::HIBRIDO->value,
+                'tipo' => TipoTreinamento::ONLINE->value,
                 'status' => StatusTreinamento::CANCELADO->value,
                 'instrutor' => 'Ten. Marques',
                 'local' => 'Online via Teams',

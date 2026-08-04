@@ -50,7 +50,7 @@ const vagasText = computed(() => {
         </Heading>
       </div>
       <Badge :color="treinamento.status_color" class="ml-2">
-        {{ treinamento.status?.replace('_', ' ') || 'Planejado' }}
+        {{ treinamento.status_label || treinamento.status }}
       </Badge>
     </div>
 
@@ -62,8 +62,11 @@ const vagasText = computed(() => {
     <!-- Informações principais -->
     <div class="space-y-2 mb-4">
       <div class="flex items-center gap-2 flex-wrap">
-        <Badge :color="'blue'">
-          {{ treinamento.tipo }}
+        <Badge :color="treinamento.tipo_color || 'blue'">
+          {{ treinamento.tipo_label || treinamento.tipo }}
+        </Badge>
+        <Badge v-if="treinamento.categoria_label" color="gray">
+          {{ treinamento.categoria_label }}
         </Badge>
         <Text size="sm" color="muted">
           {{ treinamento.carga_horaria || 0 }}h

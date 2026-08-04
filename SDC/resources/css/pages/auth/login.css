@@ -36,7 +36,9 @@
   width: 150%;
   height: 150%;
   background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDIiLz4KPC9zdmc+');
-  opacity: 0.3;
+  opacity:
+
+  0.3;
   pointer-events: none;
 }
 
@@ -46,8 +48,8 @@
   position: relative;
   z-index: 10;
   background-color: var(--login-card-bg);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   padding: 3rem 2.5rem;
   border-radius: var(--login-radius-lg);
   box-shadow:
@@ -195,6 +197,7 @@
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   color: var(--login-text-muted);
 }

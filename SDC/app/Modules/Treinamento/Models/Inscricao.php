@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Models;
 
 use App\Models\User;
+use App\Modules\Treinamento\Enums\StatusFrequencia;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Inscricao extends Model
@@ -18,8 +21,10 @@ class Inscricao extends Model
 
     protected $fillable = [
         'treinamento_id',
-        'user_id',
+        'inscrito_type',
+        'inscrito_id',
         'status',
+        'qr_code_token',
         'data_inscricao',
         'data_aprovacao',
         'aprovado_por_id',
@@ -39,14 +44,23 @@ class Inscricao extends Model
         return $this->belongsTo(Treinamento::class);
     }
 
-    public function user(): BelongsTo
+    /**
+     * O inscrito pode ser um servidor interno (App\Models\User, guard "web")
+     * ou um cidadao externo (Cidadao, guard "cidadao").
+     */
+    public function inscrito(): MorphTo
     {
-        return $this->belongsTo(User::class);
+        return $this->morphTo();
     }
 
     public function aprovador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'aprovado_por_id');
+    }
+
+    public function certificado(): HasOne
+    {
+        return $this->hasOne(Certificado::class);
     }
 
     // Business Logic
@@ -59,9 +73,8 @@ class Inscricao extends Model
             return 0;
         }
 
-        $presencas = Frequencia::where('user_id', $this->user_id)
-            ->whereIn('modulo_id', $this->treinamento->modulos()->pluck('id'))
-            ->whereIn('status', ['PRESENTE', 'JUSTIFICADA'])
+        $presencas = Frequencia::where('inscricao_id', $this->id)
+            ->whereIn('status', [StatusFrequencia::PRESENTE->value, StatusFrequencia::JUSTIFICADA->value])
             ->count();
 
         return ($presencas / $totalModulos) * 100;

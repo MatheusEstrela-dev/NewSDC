@@ -154,6 +154,11 @@
       </form>
 
       <div class="card-footer">
+        Não é servidor da Defesa Civil?
+        <Link :href="route('portal.treinamento.registrar')" class="text-amber-400 hover:underline">
+          Cadastre-se para participar de cursos e eventos
+        </Link>
+        <br>
         &copy; {{ currentYear }} Governo do Estado de Minas Gerais
       </div>
     </div>

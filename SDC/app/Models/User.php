@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Treinamento\Models\Inscricao as TreinamentoInscricao;
 use App\Traits\HasHierarchy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -11,6 +12,7 @@ use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class User extends Authenticatable
 {
@@ -279,5 +281,13 @@ class User extends Authenticatable
             ->whereNull('used_at')
             ->whereNull('cancelled_at')
             ->latestOfMany();
+    }
+
+    /**
+     * Inscricoes do servidor no modulo Treinamento (cursos/eventos internos).
+     */
+    public function inscricoesTreinamento(): MorphMany
+    {
+        return $this->morphMany(TreinamentoInscricao::class, 'inscrito');
     }
 }
