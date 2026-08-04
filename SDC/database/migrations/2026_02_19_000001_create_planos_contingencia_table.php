@@ -18,6 +18,16 @@ return new class extends Migration
             $table->date('data_validade')->nullable();
             $table->string('arquivo_url')->nullable();
             $table->text('observacoes')->nullable();
+
+            // Dono do registro, para a trilha de acoes do sino (Rastreavel). A tabela nao
+            // tinha nenhuma coluna que identificasse usuario: so municipio_id, que e
+            // escopo territorial e nao responsabilidade sobre o plano.
+            $table->foreignId('created_by')->nullable()
+                ->constrained('users')
+                ->cascadeOnUpdate()
+                ->nullOnDelete()
+                ->comment('Usuario que cadastrou; recebe a trilha de acoes do registro');
+
             $table->timestamps();
 
             $table->index('municipio_id');
