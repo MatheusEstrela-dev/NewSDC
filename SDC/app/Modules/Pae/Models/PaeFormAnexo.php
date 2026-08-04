@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace App\Modules\Pae\Models;
 
 use App\Models\User;
+use App\Modules\Notificacoes\Enums\AcaoTrilha;
+use App\Modules\Notificacoes\Support\TrilhaNoProtocoloPai;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PaeFormAnexo extends Model
 {
+    use TrilhaNoProtocoloPai;
+
     use SoftDeletes;
 
     protected $table = 'pae_form_anexos';
@@ -54,5 +58,38 @@ class PaeFormAnexo extends Model
         }
 
         return $bytes . ' bytes';
+    }
+
+    // ─── Trilha de acoes no protocolo pai ───────────────────────────────────
+
+    public function protocoloDaTrilhaClasse(): string
+    {
+        return PaeProtocolo::class;
+    }
+
+    /**
+     * Dois niveis: o anexo pende da ficha, e a ficha do protocolo. Resolver o protocolo
+     * custa UM select por chave primaria, e so acontece no upload de um anexo -- acao
+     * humana e isolada, nunca em lote.
+     */
+    public function protocoloDaTrilhaChave(): int|string|null
+    {
+        if ($this->pae_form_id === null) {
+            return null;
+        }
+
+        return PaeForm::query()
+            ->whereKey($this->pae_form_id)
+            ->value('pae_protocolo_id');
+    }
+
+    public function acaoNaTrilhaDoProtocolo(): AcaoTrilha
+    {
+        return AcaoTrilha::Relacionado;
+    }
+
+    public function rotuloNaTrilhaDoProtocolo(): ?string
+    {
+        return 'um novo anexo';
     }
 }

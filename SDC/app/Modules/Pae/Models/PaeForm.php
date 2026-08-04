@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Pae\Models;
 
+use App\Modules\Notificacoes\Enums\AcaoTrilha;
+use App\Modules\Notificacoes\Support\TrilhaNoProtocoloPai;
 use Database\Factories\PaeFormFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,7 +16,7 @@ use Illuminate\Support\Str;
 
 class PaeForm extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, TrilhaNoProtocoloPai;
 
     protected $table = 'pae_forms';
 
@@ -71,5 +73,27 @@ class PaeForm extends Model
     protected static function newFactory(): PaeFormFactory
     {
         return PaeFormFactory::new();
+    }
+
+    // ─── Trilha de acoes no protocolo pai ───────────────────────────────────
+
+    public function protocoloDaTrilhaClasse(): string
+    {
+        return PaeProtocolo::class;
+    }
+
+    public function protocoloDaTrilhaChave(): int|string|null
+    {
+        return $this->pae_protocolo_id;
+    }
+
+    /**
+     * Editado: a ficha E o conteudo do protocolo PAE. Como o protocolo tem janela de
+     * agrupamento zero em config/notificacoes.php, cada salvamento da ficha gera seu
+     * proprio card -- coerente com um modulo onde cada protocolo tem prazo proprio.
+     */
+    public function acaoNaTrilhaDoProtocolo(): AcaoTrilha
+    {
+        return AcaoTrilha::Editado;
     }
 }

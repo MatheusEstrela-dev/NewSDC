@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Models;
 
 use App\Models\User;
+use App\Modules\Notificacoes\Contracts\Rastreavel;
+use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use App\Modules\Treinamento\Enums\StatusTreinamento;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use Illuminate\Database\Eloquent\Model;
@@ -12,9 +14,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Treinamento extends Model
+class Treinamento extends Model implements Rastreavel
 {
-    use SoftDeletes;
+    use SoftDeletes, TrilhaDeAcoes;
 
     protected $table = 'treinamentos';
 
@@ -124,5 +126,53 @@ class Treinamento extends Model
     public function scopeConcluidos($query)
     {
         return $query->where('status', StatusTreinamento::CONCLUIDO->value);
+    }
+
+    // ─── Trilha de acoes (notificacao ao dono) ──────────────────────────────
+
+    public function moduloNotificacao(): string
+    {
+        return 'treinamento';
+    }
+
+    public function rotuloProtocolo(): string
+    {
+        $titulo = trim((string) $this->titulo);
+
+        return $titulo === ''
+            ? 'Treinamento #'.$this->getKey()
+            : 'Treinamento "'.$titulo.'"';
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function donosNotificacao(): array
+    {
+        return $this->created_by === null ? [] : [(int) $this->created_by];
+    }
+
+    public function urlNotificacao(): ?string
+    {
+        return '/treinamentos/'.$this->getKey();
+    }
+
+    public function campoSituacao(): ?string
+    {
+        return 'status';
+    }
+
+    public function rotuloSituacao(): ?string
+    {
+        return $this->status instanceof StatusTreinamento ? $this->status->getLabel() : null;
+    }
+
+    public function tipoSituacaoNotificacao(): ?string
+    {
+        return match ($this->status) {
+            StatusTreinamento::CONCLUIDO => 'success',
+            StatusTreinamento::CANCELADO => 'warning',
+            default => 'info',
+        };
     }
 }

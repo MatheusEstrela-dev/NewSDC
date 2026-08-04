@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models;
 
+use App\Modules\Notificacoes\Contracts\Rastreavel;
+use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use App\Modules\Rat\Models\RatAnexo;
 use App\Modules\Rat\Models\RatOcorrenciaHistorico;
 use App\Modules\Rat\Models\RatOcorrenciaRelato;
@@ -13,9 +15,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class RatOcorrencia extends Model
+class RatOcorrencia extends Model implements Rastreavel
 {
-    use SoftDeletes, HasUuids;
+    use SoftDeletes, HasUuids, TrilhaDeAcoes;
 
     public $incrementing = false;
     protected $keyType = 'string';
@@ -114,6 +116,89 @@ class RatOcorrencia extends Model
     public function getProtocoloAttribute(): string
     {
         return $this->numero_bos ?? '';
+    }
+
+    // ─── Trilha de acoes (notificacao ao dono) ──────────────────────────────
+
+    public function moduloNotificacao(): string
+    {
+        return 'rat';
+    }
+
+    /**
+     * Como o RAT se apresenta ao dono no sino.
+     *
+     * O fallback e a data de abertura, NUNCA a chave. A notificacao chegava como
+     * "A ocorrencia #019eef2b-ee60-7108-8ecd-ba91d21fe9ea foi finalizada" quando
+     * numero_bos estava vazio (import de legado), e o usuario lia aquilo como erro do
+     * sistema.
+     */
+    public function rotuloProtocolo(): string
+    {
+        $numero = trim((string) $this->numero_bos);
+
+        if ($numero !== '') {
+            return 'RAT '.$numero;
+        }
+
+        return $this->created_at === null
+            ? 'RAT sem numero'
+            : 'RAT de '.$this->created_at->format('d/m/Y');
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function donosNotificacao(): array
+    {
+        // created_by e string(191) no schema, nao FK inteira: o import de legado pode ter
+        // gravado ali algo que nao e id de usuario. Sem id resolvivel nao existe dono, e
+        // o protocolo simplesmente nao gera trilha.
+        return is_numeric($this->created_by) ? [(int) $this->created_by] : [];
+    }
+
+    public function urlNotificacao(): ?string
+    {
+        return '/rat/'.$this->getKey();
+    }
+
+    public function campoSituacao(): ?string
+    {
+        return 'status';
+    }
+
+    public function rotuloSituacao(): ?string
+    {
+        return $this->status_label;
+    }
+
+    /**
+     * A consequencia importa mais que o rotulo: finalizar encerra a janela de edicao.
+     */
+    public function detalheSituacao(): ?string
+    {
+        return $this->isFinalizada() ? 'e nao aceita mais edicao' : null;
+    }
+
+    public function tipoSituacaoNotificacao(): ?string
+    {
+        return $this->isFinalizada() ? 'success' : 'info';
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function camposIgnoradosNaTrilha(): array
+    {
+        return array_merge($this->camposBaseIgnoradosNaTrilha(), [
+            // historico e anexos sao espelhos denormalizados alimentados pelo proprio
+            // salvamento; sequencial_ano e prazo_edicao sao controle interno. Nenhum
+            // deles e uma alteracao que o dono precise saber.
+            'historico',
+            'anexos',
+            'sequencial_ano',
+            'prazo_edicao',
+        ]);
     }
 
     // ─── Helpers internos para acessar relatosMorph respeitando eager-load ──

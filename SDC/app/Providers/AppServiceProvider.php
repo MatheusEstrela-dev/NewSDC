@@ -28,6 +28,14 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\Auth\HierarchyService::class
         );
 
+        // scoped(), nao singleton(): o RegistroDeAcao guarda quais protocolos ja
+        // notificou NESTA requisicao, para um unico salvamento que toca varias tabelas
+        // nao render varios cards iguais no sino. Sob Octane o container sobrevive
+        // entre requisicoes, e um singleton faria essa lista crescer para sempre --
+        // a partir da segunda requisicao o servico passaria a engolir notificacoes
+        // legitimas, sem erro nenhum no log. scoped() e resetado a cada requisicao.
+        $this->app->scoped(\App\Modules\Notificacoes\Services\RegistroDeAcao::class);
+
         $this->app->singleton(ConnectionSemaphore::class, function ($app) {
             $cfg = $app['config']->get('resilience.db');
 

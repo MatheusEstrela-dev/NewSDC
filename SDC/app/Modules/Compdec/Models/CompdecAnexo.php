@@ -6,6 +6,8 @@ namespace App\Modules\Compdec\Models;
 
 use App\Modules\Compdec\Enums\StatusValidade;
 use App\Modules\Compdec\Enums\TipoAnexo;
+use App\Modules\Notificacoes\Enums\AcaoTrilha;
+use App\Modules\Notificacoes\Support\TrilhaNoProtocoloPai;
 use Database\Factories\CompdecAnexoFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -33,6 +35,7 @@ class CompdecAnexo extends Model implements HasMedia
     use HasFactory;
     use InteractsWithMedia;
     use SoftDeletes;
+    use TrilhaNoProtocoloPai;
 
     public const MEDIA_ARQUIVO = 'anexo_arquivo';
 
@@ -129,5 +132,27 @@ class CompdecAnexo extends Model implements HasMedia
     protected static function newFactory(): CompdecAnexoFactory
     {
         return CompdecAnexoFactory::new();
+    }
+
+    // ─── Trilha de acoes no protocolo pai ───────────────────────────────────
+
+    public function protocoloDaTrilhaClasse(): string
+    {
+        return Orgao::class;
+    }
+
+    public function protocoloDaTrilhaChave(): int|string|null
+    {
+        return $this->orgao_id;
+    }
+
+    public function acaoNaTrilhaDoProtocolo(): AcaoTrilha
+    {
+        return AcaoTrilha::Relacionado;
+    }
+
+    public function rotuloNaTrilhaDoProtocolo(): ?string
+    {
+        return 'um novo anexo';
     }
 }

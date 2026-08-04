@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Decretacoes\Models;
 
 use App\Modules\Decretacoes\Support\Vigencia;
+use App\Modules\Notificacoes\Contracts\Rastreavel;
+use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -18,9 +20,9 @@ use Carbon\Carbon;
 /**
  * Main Processo model for the Decretacoes module.
  */
-class Processo extends Model
+class Processo extends Model implements Rastreavel
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, TrilhaDeAcoes;
 
     protected $table = 'dec_entrada_processos';
 
@@ -297,6 +299,68 @@ class Processo extends Model
             'entrada_processo_id'  => $this->id,
             'entrada_processo_data' => $this->toArray(),
             'action'               => $action,
+        ]);
+    }
+
+    // ─── Trilha de acoes (notificacao ao dono) ──────────────────────────────
+
+    public function moduloNotificacao(): string
+    {
+        return 'decretacoes';
+    }
+
+    public function rotuloProtocolo(): string
+    {
+        foreach ([$this->processo, $this->n_protocolo_fide] as $identificador) {
+            $valor = trim((string) $identificador);
+
+            if ($valor !== '') {
+                return 'Processo '.$valor;
+            }
+        }
+
+        return 'Processo de '.($this->created_at?->format('d/m/Y') ?? 'data nao informada');
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function donosNotificacao(): array
+    {
+        return $this->created_by === null ? [] : [(int) $this->created_by];
+    }
+
+    public function urlNotificacao(): ?string
+    {
+        return '/decretacoes/'.$this->getKey();
+    }
+
+    public function campoSituacao(): ?string
+    {
+        return 'status';
+    }
+
+    /**
+     * O status do processo e texto livre no banco, ja no formato que a tela mostra
+     * ("Enviado para Publicacao", "Nao reconhecido pelo Estado").
+     */
+    public function rotuloSituacao(): ?string
+    {
+        $status = trim((string) $this->status);
+
+        return $status === '' ? null : $status;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function camposIgnoradosNaTrilha(): array
+    {
+        return array_merge($this->camposBaseIgnoradosNaTrilha(), [
+            // Geometria da area afetada e payload tecnico, nao leitura para o dono.
+            'area_afetada_geom',
+            // Espelho denormalizado do tipo de desastre.
+            'tipo_desastre_nome',
         ]);
     }
 }

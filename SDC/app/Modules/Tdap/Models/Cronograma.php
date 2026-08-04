@@ -6,6 +6,8 @@ namespace App\Modules\Tdap\Models;
 
 use App\Models\Municipio;
 use App\Models\User;
+use App\Modules\Notificacoes\Enums\AcaoTrilha;
+use App\Modules\Notificacoes\Support\TrilhaNoProtocoloPai;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -46,6 +48,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Cronograma extends Model
 {
     use SoftDeletes;
+    use TrilhaNoProtocoloPai;
 
     protected $table = 'tdap_cronogramas';
 
@@ -234,5 +237,30 @@ class Cronograma extends Model
               ->orWhereRaw('UPPER(empenho) LIKE ?', [$like])
               ->orWhereRaw('UPPER(nota_empenho) LIKE ?', [$like]);
         });
+    }
+
+    // ─── Trilha de acoes no protocolo pai ───────────────────────────────────
+
+    public function protocoloDaTrilhaClasse(): string
+    {
+        return ProcessoTdap::class;
+    }
+
+    /**
+     * Cronograma solto (ainda sem processo) nao tem a quem reportar.
+     */
+    public function protocoloDaTrilhaChave(): int|string|null
+    {
+        return $this->processo_tdap_id;
+    }
+
+    /**
+     * Editado, e nao Relacionado: mudanca de data no cronograma e o que o dono do
+     * processo mais precisa acompanhar, e Relacionado so dispara na criacao -- as
+     * remarcacoes posteriores passariam em silencio.
+     */
+    public function acaoNaTrilhaDoProtocolo(): AcaoTrilha
+    {
+        return AcaoTrilha::Editado;
     }
 }
