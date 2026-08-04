@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Core\Outbox;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Str;
 
 /**
  * @property string             $id
@@ -24,6 +24,11 @@ use Illuminate\Support\Str;
  */
 class OutboxEvent extends Model
 {
+    // Emite UUIDv7: a PK fica monotonica e o insert cai sempre na ultima
+    // pagina do B-tree, o que importa nesta tabela por ser a de maior taxa
+    // de escrita do sistema (um registro por evento de dominio).
+    use HasUuids;
+
     protected $table = 'outbox_events';
 
     public $incrementing = false;
@@ -58,9 +63,6 @@ class OutboxEvent extends Model
         parent::boot();
 
         static::creating(function (self $model): void {
-            if (! $model->id) {
-                $model->id = (string) Str::uuid();
-            }
             if (! $model->occurred_at) {
                 $model->occurred_at = now();
             }

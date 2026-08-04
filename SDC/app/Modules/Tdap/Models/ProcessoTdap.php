@@ -10,10 +10,10 @@ use App\Models\User;
 use App\Modules\Tdap\Enums\EstadoProcesso;
 use App\Modules\Tdap\Enums\SwimlaneProcesso;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Str;
 
 /**
  * Agregado raiz do Workflow TDAP-Agua.
@@ -38,6 +38,8 @@ class ProcessoTdap extends Model
 {
     use SoftDeletes;
     use RecordsDomainEvents;
+    // Emite UUIDv7: PK monotonica, insert na ultima pagina do B-tree.
+    use HasUuids;
 
     protected $table = 'tdap_processos';
     public $incrementing = false;
@@ -74,9 +76,6 @@ class ProcessoTdap extends Model
         parent::boot();
 
         static::creating(function (self $model): void {
-            if (! $model->id) {
-                $model->id = (string) Str::uuid();
-            }
             if (! $model->aberto_em) {
                 $model->aberto_em = now();
             }

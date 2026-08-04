@@ -108,7 +108,7 @@ class AgrupavelDatabaseChannel
                 // O id vem da propria notificacao (o Laravel gera antes de chamar
                 // os canais). Usar um uuid novo aqui faria a linha do banco ter id
                 // diferente do que os outros canais reportam para o mesmo evento.
-                (string) ($notification->id ?? Str::uuid()),
+                (string) ($notification->id ?? Str::uuid7()),
                 $this->tipo($notification),
                 $notifiable->getMorphClass(),
                 $notifiable->getKey(),
@@ -177,7 +177,7 @@ class AgrupavelDatabaseChannel
         ?int $bucket
     ): Notificacao {
         return Notificacao::create([
-            'id' => $notification->id ?? (string) Str::uuid(),
+            'id' => $notification->id ?? (string) Str::uuid7(),
             'type' => $this->tipo($notification),
             'notifiable_type' => $notifiable->getMorphClass(),
             'notifiable_id' => $notifiable->getKey(),
