@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\NotificationPreferencesController;
-use App\Modules\Notificacoes\Http\Controllers\NotificacaoInboxController;
+use App\Modules\Notificacoes\Controllers\NotificacaoInboxController;
 use Illuminate\Support\Facades\Route;
 
 /*
