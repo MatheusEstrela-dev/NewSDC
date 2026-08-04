@@ -18,6 +18,12 @@
             <span class="hidden sm:inline">Exportar</span>
           </Button>
 
+          <!-- Botão Exportar por REDEC -->
+          <Button v-if="canExport" variant="secondary" size="md" :icon="MapIcon" icon-position="left" @click="showExportRedecModal = true">
+            <span class="hidden sm:inline">Exportar por REDEC</span>
+            <span class="sm:hidden">REDEC</span>
+          </Button>
+
           <!-- Botão Criar - Responsivo -->
           <Button
             v-if="canCreate"
@@ -40,6 +46,15 @@
       module-name="Decretações"
       @close="showExportModal = false"
       @export="handleExportCsv"
+    />
+
+    <!-- Modal de Exportação por REDEC -->
+    <ExportRedecModal
+      :show="showExportRedecModal"
+      :redecs="filterOptions.redecs || []"
+      :redec-selecionada="localFilters.redec_id || ''"
+      @close="showExportRedecModal = false"
+      @export="handleExportRedec"
     />
 
     <!-- Statistics Cards -->
@@ -129,10 +144,11 @@ import ProcessoFilters from '@/Components/Organisms/Decretacoes/ProcessoFilters.
 import ProcessoGrid from '@/Components/Organisms/Decretacoes/ProcessoGrid.vue';
 import ProcessoTable from '@/Components/Organisms/Decretacoes/ProcessoTable.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import ExportRedecModal from '@/Components/Organisms/Decretacoes/ExportRedecModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useMobile } from '@/Composables/useMobile';
-import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { ArrowDownTrayIcon, MapIcon } from '@heroicons/vue/24/outline';
 import { router } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
 
@@ -277,9 +293,40 @@ const {
 } = useExport('decretacoes.export');
 
 // Exporta exatamente o recorte da tela (REDEC, municipio, status, vigencia,
-// COBRADE...). Em "Toda Serie Historica" os recortes de data sao descartados,
-// para nao herdar o periodo que estava filtrado na listagem.
+// COBRADE...).
 function handleExportCsv(params) {
+  triggerExport(params, filtrosParaExportacao(params));
+}
+
+// =========================
+// Exportação por REDEC
+// =========================
+const showExportRedecModal = ref(false);
+const { handleExport: triggerExportRedec } = useExport('decretacoes.export.redec');
+
+/**
+ * Exporta as decretações por REDEC.
+ *
+ * A REDEC escolhida no modal substitui a que estiver nos filtros da tela (e
+ * `null` significa "todas", então o `redec_id` da listagem precisa sair do
+ * recorte — senão o CSV viria filtrado sem o usuário ter pedido).
+ */
+function handleExportRedec(params) {
+  const { redec_id: redecId, ...escopo } = params ?? {};
+  const filtros = filtrosParaExportacao(params);
+
+  delete filtros.redec_id;
+
+  triggerExportRedec(redecId ? { ...escopo, redec_id: redecId } : escopo, filtros);
+}
+
+/**
+ * Filtros da tela prontos para a exportação.
+ *
+ * Em "Toda Série Histórica" os recortes de data são descartados, para não
+ * herdar o período que estava filtrado na listagem.
+ */
+function filtrosParaExportacao(params) {
   const filtros = { ...localFilters.value };
 
   if (params?.all || params?.type === 'all') {
@@ -290,7 +337,10 @@ function handleExportCsv(params) {
     delete filtros.data_entrada_fim;
   }
 
-  triggerExport(params, filtros);
+  // A paginação da listagem não tem sentido no CSV.
+  delete filtros.page;
+
+  return filtros;
 }
 
 // =========================

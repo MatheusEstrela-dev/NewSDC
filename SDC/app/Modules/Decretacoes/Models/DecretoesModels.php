@@ -114,6 +114,14 @@ class Processo extends Model implements Rastreavel
             $model->logChange('updated');
         });
 
+        // A correspondencia municipio -> REDEC usada pelo filtro e pelas listas
+        // suspensas e derivada, em parte, do proprio historico de processos. Sem
+        // invalidar aqui o filtro de REDEC continuava respondendo com o retrato
+        // de ate 24h atras (TTL do cache) apos criar ou editar um processo.
+        static::saved(function () {
+            self::esquecerCacheDeFiltros();
+        });
+
         static::deleting(function ($model) {
             $model->desastres()->each(function ($desastre) {
                 $desastre->entradas()->delete();
@@ -124,6 +132,7 @@ class Processo extends Model implements Rastreavel
 
         static::deleted(function ($model) {
             $model->logChange('deleted');
+            self::esquecerCacheDeFiltros();
             // Invalida cache de estatisticas quando um processo e removido
             try {
                 app(\App\Modules\Decretacoes\Services\ProcessoStatsService::class)->clearCache();
@@ -131,6 +140,22 @@ class Processo extends Model implements Rastreavel
                 \Illuminate\Support\Facades\Log::error('Erro ao limpar cache de estatisticas: ' . $e->getMessage());
             }
         });
+    }
+
+    /**
+     * Descarta os mapas cacheados de opcoes de filtro (municipio <-> REDEC,
+     * analistas, status), que sao derivados do historico de processos.
+     *
+     * Falha silenciosa de proposito: nao ha por que abortar a gravacao de um
+     * processo porque o cache nao pode ser limpo.
+     */
+    private static function esquecerCacheDeFiltros(): void
+    {
+        try {
+            \App\Modules\Decretacoes\Filters\ProcessoFilter::clearCache();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Erro ao limpar cache de filtros de decretacoes: ' . $e->getMessage());
+        }
     }
 
     public function municipios(): HasManyThrough
@@ -379,6 +404,26 @@ class DecretoMunicipio extends Model
         'municipio_id',
         'n_protocolo_fide',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Sao estes vinculos que alimentam a correspondencia municipio -> REDEC
+        // usada pelo filtro; sem invalidar, um municipio recem-vinculado so
+        // entrava no recorte da REDEC quando o cache de 24h expirava.
+        static::saved(fn () => self::esquecerCacheDeFiltros());
+        static::deleted(fn () => self::esquecerCacheDeFiltros());
+    }
+
+    private static function esquecerCacheDeFiltros(): void
+    {
+        try {
+            \App\Modules\Decretacoes\Filters\ProcessoFilter::clearCache();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Erro ao limpar cache de filtros de decretacoes: ' . $e->getMessage());
+        }
+    }
 
     public function municipio(): BelongsTo
     {

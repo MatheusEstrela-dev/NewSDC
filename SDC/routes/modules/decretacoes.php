@@ -13,6 +13,11 @@ Route::prefix('decretacoes')->name('decretacoes.')->group(function () {
         ->name('export')
         ->middleware('can:decretacoes.processos.export');
 
+    // Declarada antes de /{id} para nao ser capturada como id do processo.
+    Route::get('/export/redec', [DecretacoesController::class, 'exportRedec'])
+        ->name('export.redec')
+        ->middleware('can:decretacoes.processos.export');
+
     Route::get('/create', [DecretacoesController::class, 'create'])
         ->name('create')
         ->middleware('can:decretacoes.processos.create');

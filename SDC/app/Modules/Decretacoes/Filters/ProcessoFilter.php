@@ -22,6 +22,17 @@ class ProcessoFilter
     /** O modulo atende exclusivamente municipios de Minas Gerais. */
     private const UF_MINAS_GERAIS = 'MG';
 
+    /**
+     * Codigo IBGE embutido no protocolo FIDE de um vinculo processo <-> municipio.
+     *
+     * O protocolo legado tem o formato `MG-F-{ibge7}-...`, logo o terceiro
+     * segmento e o codigo IBGE. Quando o protocolo nao segue esse formato (ou e
+     * nulo) a expressao resulta em texto de tamanho diferente de 7, o que e o
+     * sinal usado para cair na leitura por `municipio_id`. Mesma regra de
+     * DecretacoesController::loadMunicipiosBatch().
+     */
+    private const SQL_IBGE_DO_VINCULO = "split_part(COALESCE(dm.n_protocolo_fide, ''), '-', 3)";
+
     protected Request $request;
     protected Builder $builder;
 
@@ -309,8 +320,8 @@ class ProcessoFilter
      * Filtra por REDEC do processo.
      *
      * Alem do `redec_id` gravado no processo, aceita processos cujos municipios
-     * pertencam a REDEC (correspondencia via cedec_municipio), cobrindo os
-     * registros legados que nao tiveram a REDEC preenchida.
+     * pertencam a REDEC, cobrindo os registros legados que nao tiveram a REDEC
+     * preenchida.
      */
     protected function filterByRedec(): self
     {
@@ -319,21 +330,15 @@ class ProcessoFilter
         }
 
         $redecId = (int) $this->request->input('redec_id');
-        $table = $this->builder->getModel()->getTable();
-        $municipioIds = self::getMunicipioIdsPorRedec($redecId);
 
-        $this->builder->where(function ($q) use ($redecId, $municipioIds, $table) {
+        $this->builder->where(function ($q) use ($redecId) {
             $q->where('redec_id', $redecId);
 
-            if (! empty($municipioIds)) {
-                $q->orWhereExists(function ($sub) use ($municipioIds, $table) {
-                    $sub->select(DB::raw(1))
-                        ->from('dec_decreto_municipios as dm')
-                        ->whereColumn('dm.entrada_processos_id', "{$table}.id")
-                        ->whereNull('dm.deleted_at')
-                        ->whereIn('dm.municipio_id', $municipioIds);
-                });
-            }
+            $this->orWhereVinculadoAosMunicipios(
+                $q,
+                self::getMunicipioIdsPorRedec($redecId),
+                self::getCodigosIbgePorRedec($redecId)
+            );
         });
 
         return $this;
@@ -341,19 +346,77 @@ class ProcessoFilter
 
     protected function filterByMunicipio(): self
     {
-        if ($this->request->filled('municipio_id')) {
-            $municipioId = $this->request->input('municipio_id');
-            $table = $this->builder->getModel()->getTable();
-
-            $this->builder->whereExists(function ($sub) use ($municipioId, $table) {
-                $sub->select(DB::raw(1))
-                    ->from('dec_decreto_municipios as dm')
-                    ->whereColumn('dm.entrada_processos_id', "{$table}.id")
-                    ->where('dm.municipio_id', $municipioId);
-            });
+        if (! $this->request->filled('municipio_id')) {
+            return $this;
         }
 
+        $municipioId = (int) $this->request->input('municipio_id');
+        $codigoIbge = self::getCodigoIbgePorMunicipioId($municipioId);
+
+        $this->builder->where(function ($q) use ($municipioId, $codigoIbge) {
+            $this->orWhereVinculadoAosMunicipios(
+                $q,
+                [$municipioId],
+                $codigoIbge !== null ? [$codigoIbge] : []
+            );
+        });
+
         return $this;
+    }
+
+    /**
+     * Adiciona (em OR) a existencia de um vinculo em `dec_decreto_municipios`
+     * que resolva para um dos municipios informados.
+     *
+     * ATENCAO AOS DOIS ESPACOS DE ID: `dec_decreto_municipios.municipio_id` NAO
+     * aponta sempre para `municipios.id`. As linhas legadas guardam o id do
+     * cadastro da CEDEC e a unica ponte confiavel e o codigo IBGE embutido no
+     * `n_protocolo_fide` (`MG-F-{ibge7}-...`); as linhas gravadas pelo
+     * formulario atual guardam `municipios.id` e nao levam IBGE no protocolo.
+     *
+     * Comparar `municipios.id` direto contra a coluna crua - como era feito
+     * antes - errava nas duas direcoes: perdia os processos legados da REDEC
+     * escolhida e trazia processos de outras REDECs quando um id da CEDEC
+     * coincidia numericamente com um `municipios.id` da REDEC filtrada.
+     *
+     * A resolucao abaixo e a mesma de
+     * DecretacoesController::loadMunicipiosBatch(): o protocolo manda quando
+     * traz um IBGE de 7 digitos, senao vale `municipio_id`.
+     *
+     * @param Builder|\Illuminate\Database\Query\Builder $query Grupo where onde o OR e adicionado
+     * @param array<int, int> $municipioIds Ids da tabela `municipios`
+     * @param array<int, string> $codigosIbge Codigos IBGE correspondentes
+     */
+    protected function orWhereVinculadoAosMunicipios($query, array $municipioIds, array $codigosIbge): void
+    {
+        if (empty($municipioIds) && empty($codigosIbge)) {
+            return;
+        }
+
+        $table = $this->builder->getModel()->getTable();
+        $ibge = self::SQL_IBGE_DO_VINCULO;
+
+        $query->orWhereExists(function ($sub) use ($table, $municipioIds, $codigosIbge, $ibge) {
+            $sub->select(DB::raw(1))
+                ->from('dec_decreto_municipios as dm')
+                ->whereColumn('dm.entrada_processos_id', "{$table}.id")
+                ->whereNull('dm.deleted_at')
+                ->where(function ($w) use ($municipioIds, $codigosIbge, $ibge) {
+                    // Linhas legadas: o IBGE do protocolo identifica o municipio.
+                    if (! empty($codigosIbge)) {
+                        $w->orWhereIn(DB::raw($ibge), $codigosIbge);
+                    }
+
+                    // Linhas do formulario atual: sem IBGE no protocolo,
+                    // `municipio_id` aponta para `municipios.id`.
+                    if (! empty($municipioIds)) {
+                        $w->orWhere(function ($x) use ($municipioIds, $ibge) {
+                            $x->whereRaw("length({$ibge}) <> 7")
+                              ->whereIn('dm.municipio_id', $municipioIds);
+                        });
+                    }
+                });
+        });
     }
 
     protected function filterByProtocoloFide(): self
@@ -533,7 +596,7 @@ class ProcessoFilter
      *
      * @return array<string, int>
      */
-    protected static function getRedecPorIbge(): array
+    public static function getRedecPorIbge(): array
     {
         try {
             return DB::table('cedec_municipio')
@@ -596,10 +659,83 @@ class ProcessoFilter
      */
     public static function getMunicipioIdsPorRedec(int $redecId): array
     {
-        return array_keys(array_filter(
+        return array_values(array_keys(array_filter(
             self::getRedecPorMunicipioId(),
             fn ($id) => $id === $redecId
-        ));
+        )));
+    }
+
+    /**
+     * Codigos IBGE dos municipios de uma REDEC.
+     *
+     * Necessario porque os vinculos legados de `dec_decreto_municipios` so podem
+     * ser resolvidos pelo IBGE do protocolo FIDE (ver
+     * orWhereVinculadoAosMunicipios).
+     *
+     * Combina as duas fontes de REDEC: o cadastro da CEDEC (que ja e indexado
+     * por IBGE) e os municipios cuja REDEC veio do historico do modulo, cujo
+     * IBGE e buscado em `municipios`.
+     *
+     * @return array<int, string>
+     */
+    public static function getCodigosIbgePorRedec(int $redecId): array
+    {
+        return Cache::remember("decretacoes.filter.ibge_por_redec.v1.{$redecId}", 86400, function () use ($redecId) {
+            $doCadastroCedec = array_keys(array_filter(
+                self::getRedecPorIbge(),
+                fn ($id) => $id === $redecId
+            ));
+
+            $municipioIds = self::getMunicipioIdsPorRedec($redecId);
+
+            $doHistorico = ! empty($municipioIds)
+                ? Municipio::query()
+                    ->whereIn('id', $municipioIds)
+                    ->whereNotNull('codigo_ibge')
+                    ->pluck('codigo_ibge')
+                    ->all()
+                : [];
+
+            return array_values(array_unique(array_map(
+                'strval',
+                array_merge($doCadastroCedec, $doHistorico)
+            )));
+        });
+    }
+
+    /**
+     * Codigo IBGE de um municipio (null quando desconhecido).
+     */
+    public static function getCodigoIbgePorMunicipioId(int $municipioId): ?string
+    {
+        $codigo = Cache::remember(
+            "decretacoes.filter.ibge_por_municipio.v1.{$municipioId}",
+            86400,
+            fn () => (string) (Municipio::query()->whereKey($municipioId)->value('codigo_ibge') ?? '')
+        );
+
+        return $codigo !== '' ? $codigo : null;
+    }
+
+    /**
+     * Invalida os mapas de correspondencia municipio <-> REDEC.
+     *
+     * Parte desses mapas e derivada dos proprios processos
+     * (getRedecHistoricoPorMunicipioId), entao um TTL de 24h deixava o filtro de
+     * REDEC olhando para um retrato antigo: criar ou editar um processo nao se
+     * refletia no recorte nem na lista suspensa de municipios ate o cache
+     * expirar. Chamado pelos hooks de Processo e DecretoMunicipio.
+     */
+    public static function clearCache(): void
+    {
+        Cache::forget('decretacoes.filter.municipios.v4');
+        Cache::forget('decretacoes.filter.redec_por_municipio.v1');
+        Cache::forget('decretacoes.filter.analistas');
+        Cache::forget('decretacoes.filter.status_processo.v1');
+
+        foreach (Redec::cases() as $redec) {
+            Cache::forget("decretacoes.filter.ibge_por_redec.v1.{$redec->value}");
+        }
     }
 
     /**
