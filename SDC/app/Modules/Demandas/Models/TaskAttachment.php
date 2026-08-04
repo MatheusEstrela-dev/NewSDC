@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Demandas\Domain\Entities;
+namespace App\Modules\Demandas\Models;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
