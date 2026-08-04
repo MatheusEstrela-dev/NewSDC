@@ -75,11 +75,12 @@ import { useNotifications } from '@/Composables/useNotifications';
 import { router } from '@inertiajs/vue3';
 
 // Icons
-import { 
-    ExclamationTriangleIcon, 
-    CheckCircleIcon, 
-    InformationCircleIcon, 
-    BellAlertIcon 
+import {
+    ExclamationTriangleIcon,
+    CheckCircleIcon,
+    InformationCircleIcon,
+    BellAlertIcon,
+    XCircleIcon
 } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -120,9 +121,18 @@ const handleAction = () => {
 };
 
 // Styles based on Type/Priority
+//
+// Os cinco tipos de NotificacaoSpec::TIPOS precisam estar TODOS aqui. O tipo 'error'
+// faltava e caia no default azul, enquanto o card do historico
+// (NotificacaoHistoricoItem) ja o pintava de vermelho: a mesma notificacao aparecia
+// com duas cores diferentes dependendo da tela. 'warning' tambem faltava no botao.
+//
+// error e urgent compartilham o vermelho; o que os separa e o glow, reservado para
+// urgent, e o icone.
 const priorityColor = computed(() => {
     switch (type.value) {
         case 'urgent': return 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'; // Pulsing effect simulated via shadow
+        case 'error': return 'bg-red-500';
         case 'success': return 'bg-green-500';
         case 'warning': return 'bg-amber-500';
         default: return 'bg-blue-500';
@@ -132,6 +142,7 @@ const priorityColor = computed(() => {
 const iconComponent = computed(() => {
     switch (type.value) {
         case 'urgent': return BellAlertIcon;
+        case 'error': return XCircleIcon;
         case 'success': return CheckCircleIcon;
         case 'warning': return ExclamationTriangleIcon;
         default: return InformationCircleIcon;
@@ -140,7 +151,8 @@ const iconComponent = computed(() => {
 
 const iconStyles = computed(() => {
     switch (type.value) {
-        case 'urgent': return 'bg-red-500/10 text-red-500 ring-red-500/20';
+        case 'urgent':
+        case 'error': return 'bg-red-500/10 text-red-500 ring-red-500/20';
         case 'success': return 'bg-green-500/10 text-green-500 ring-green-500/20';
         case 'warning': return 'bg-amber-500/10 text-amber-500 ring-amber-500/20';
         default: return 'bg-blue-500/10 text-blue-500 ring-blue-500/20';
@@ -149,8 +161,10 @@ const iconStyles = computed(() => {
 
 const actionButtonStyles = computed(() => {
     switch (type.value) {
-        case 'urgent': return 'bg-red-600 text-white hover:bg-red-500 shadow-sm';
+        case 'urgent':
+        case 'error': return 'bg-red-600 text-white hover:bg-red-500 shadow-sm';
         case 'success': return 'bg-green-600 text-white hover:bg-green-500 shadow-sm';
+        case 'warning': return 'bg-amber-600 text-white hover:bg-amber-500 shadow-sm';
         default: return 'bg-blue-600 text-white hover:bg-blue-500 shadow-sm';
     }
 });

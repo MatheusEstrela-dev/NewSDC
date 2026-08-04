@@ -11,7 +11,7 @@ return new class extends Migration
     /**
      * Integracoes pessoais por usuario (Telegram, WhatsApp, N8N webhook).
      * Cada user pode vincular sua propria conta para receber notificacoes
-     * personalizadas via TelegramChannel (App\Notifications\Channels).
+     * personalizadas via TelegramChannel (App\Modules\Notificacoes\Channels).
      */
     public function up(): void
     {

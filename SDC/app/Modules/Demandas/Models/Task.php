@@ -10,6 +10,8 @@ use App\Modules\Demandas\Enums\Prioridade;
 use App\Modules\Demandas\Enums\TaskStatus;
 use App\Modules\Demandas\Enums\TipoTask;
 use App\Modules\Demandas\Enums\Urgencia;
+use App\Modules\Notificacoes\Contracts\Rastreavel;
+use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -47,9 +49,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property \Illuminate\Support\Carbon $updated_at
  * @property \Illuminate\Support\Carbon|null $deleted_at
  */
-class Task extends Model
+class Task extends Model implements Rastreavel
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, TrilhaDeAcoes;
 
     protected $table = 'tasks';
 
@@ -388,5 +390,69 @@ class Task extends Model
     public function scopeSolicitadasPor($query, User $user)
     {
         return $query->where('solicitante_id', $user->id);
+    }
+
+    // ─── Trilha de acoes (notificacao ao dono) ──────────────────────────────
+
+    public function moduloNotificacao(): string
+    {
+        return 'demandas';
+    }
+
+    public function rotuloProtocolo(): string
+    {
+        $protocolo = trim((string) $this->protocolo);
+
+        return $protocolo === ''
+            ? 'Demanda '.$this->titulo
+            : 'Demanda '.$protocolo;
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function donosNotificacao(): array
+    {
+        return array_values(array_filter([
+            $this->solicitante_id === null ? null : (int) $this->solicitante_id,
+            $this->atribuido_para_id === null ? null : (int) $this->atribuido_para_id,
+        ], fn (?int $id): bool => $id !== null));
+    }
+
+    public function urlNotificacao(): ?string
+    {
+        return '/demandas/'.$this->getKey();
+    }
+
+    /**
+     * Null de proposito: a virada de status da demanda ja e avisada pelo
+     * TaskNotificacaoObserver, que manda para solicitante e responsavel com o rotulo do
+     * enum. Declarar 'status' aqui geraria DOIS cards para a mesma mudanca. A trilha
+     * cobre o que o observer nao cobria: edicao, vinculo e exclusao.
+     */
+    public function campoSituacao(): ?string
+    {
+        return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function camposIgnoradosNaTrilha(): array
+    {
+        return array_merge($this->camposBaseIgnoradosNaTrilha(), [
+            // Metricas de SLA sao calculadas pelo sistema, nao editadas por alguem.
+            'primeira_resposta_em',
+            'resolvido_em',
+            'sla_primeira_resposta_violado',
+            'sla_resolucao_violado',
+            'tempo_em_aberta',
+            'tempo_em_progresso',
+            'tempo_total_resolucao',
+            // Atribuicao tem aviso proprio, dirigido a quem recebeu a demanda.
+            'atribuido_para_id',
+            // Status tem aviso proprio (ver campoSituacao).
+            'status',
+        ]);
     }
 }

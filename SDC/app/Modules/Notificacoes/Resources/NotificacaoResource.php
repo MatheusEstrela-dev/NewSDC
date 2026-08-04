@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Notificacoes\Http\Resources;
+namespace App\Modules\Notificacoes\Resources;
 
 use App\Modules\Notificacoes\Models\Notificacao;
 use Illuminate\Http\Request;

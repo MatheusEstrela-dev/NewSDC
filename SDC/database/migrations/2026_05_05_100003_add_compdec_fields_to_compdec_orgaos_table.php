@@ -70,6 +70,17 @@ return new class extends Migration
             if (! Schema::hasColumn('compdec_orgaos', 'email_secundario')) {
                 $table->string('email_secundario', 255)->nullable()->after('email');
             }
+            // Dono do registro, para a trilha de acoes do sino (Rastreavel). Os campos
+            // responsavel_* sao texto livre (nome, CPF, telefone do coordenador) e nao
+            // apontam para usuario do sistema, entao nao servem para notificar.
+            if (! Schema::hasColumn('compdec_orgaos', 'created_by')) {
+                $table->foreignId('created_by')->nullable()
+                    ->constrained('users')
+                    ->cascadeOnUpdate()
+                    ->nullOnDelete()
+                    ->comment('Usuario que cadastrou; recebe a trilha de acoes do registro');
+            }
+
             if (! Schema::hasColumn('compdec_orgaos', 'email_terciario')) {
                 $table->string('email_terciario', 255)->nullable()->after('email_secundario');
             }
@@ -107,6 +118,13 @@ return new class extends Migration
         DB::statement('DROP INDEX IF EXISTS idx_compdec_orgaos_nome_trgm');
         DB::statement('DROP INDEX IF EXISTS idx_compdec_orgaos_tem_plano');
         DB::statement('DROP INDEX IF EXISTS idx_compdec_orgaos_qtd_efetivo');
+
+        // created_by tem FK: a constraint sai antes da coluna, senao o dropColumn falha.
+        Schema::table('compdec_orgaos', function (Blueprint $table) {
+            if (Schema::hasColumn('compdec_orgaos', 'created_by')) {
+                $table->dropConstrainedForeignId('created_by');
+            }
+        });
 
         Schema::table('compdec_orgaos', function (Blueprint $table) {
             $columns = [

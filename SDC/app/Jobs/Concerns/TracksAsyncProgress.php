@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs\Concerns;
 
 use App\Models\RequestTrace;
-use App\Notifications\GeneralNotification;
+use App\Modules\Notificacoes\GeneralNotification;
 use Illuminate\Support\Facades\Notification;
 use Throwable;
 

@@ -22,15 +22,21 @@ return [
     | tela de preferencias; janela e o tempo de agrupamento em minutos, que cai
     | no valor de agrupamento.janela_padrao_minutos quando omitido.
     |
+    | nome_curto e como o protocolo aparece no TEXTO da notificacao ("RAT
+    | atualizado", "Abrir RAT"). Fica aqui, e nao no model, para o vocabulario que
+    | chega ao usuario final ter um lugar so -- mesmo motivo de label e icone.
+    |
     */
     'modulos' => [
         'rat' => [
             'label' => 'Relatorios (RAT)',
+            'nome_curto' => 'RAT',
             'descricao' => 'Alertas sobre novos relatorios, vistorias e aprovacoes.',
             'icone' => 'DocumentTextIcon',
         ],
         'pae' => [
             'label' => 'Planos (PAE)',
+            'nome_curto' => 'Protocolo PAE',
             'descricao' => 'Vencimentos de prazos e atualizacoes de status.',
             'icone' => 'MapIcon',
             // Prazo vencendo nao deve ser agrupado: cada protocolo importa.
@@ -38,6 +44,7 @@ return [
         ],
         'meteorologia' => [
             'label' => 'Meteorologia',
+            'nome_curto' => 'Alerta',
             'descricao' => 'Alertas criticos de chuva e mudancas climaticas (INMET).',
             'icone' => 'CloudIcon',
             // Alerta climatico repete muito em sequencia; janela mais larga.
@@ -45,71 +52,85 @@ return [
         ],
         'demandas' => [
             'label' => 'Demandas/Chamados',
+            'nome_curto' => 'Demanda',
             'descricao' => 'Atribuicoes de tarefas e novos comentarios.',
             'icone' => 'CheckBadgeIcon',
         ],
         'decretacoes' => [
             'label' => 'Decretacoes',
+            'nome_curto' => 'Processo',
             'descricao' => 'Movimentacoes em decretos e reconhecimentos.',
             'icone' => 'DocumentTextIcon',
         ],
         'tdap' => [
             'label' => 'TDAP',
+            'nome_curto' => 'Processo TDAP',
             'descricao' => 'Recebimentos, saidas de estoque e cronogramas.',
             'icone' => 'TruckIcon',
         ],
         'plancon' => [
             'label' => 'PlanCon',
+            'nome_curto' => 'Plano de contingencia',
             'descricao' => 'Planos de contingencia e prazos de revisao.',
             'icone' => 'ClipboardDocumentListIcon',
         ],
         'pmda' => [
             'label' => 'PMDA',
+            'nome_curto' => 'Plano PMDA',
             'descricao' => 'Planos municipais, COMPDEC e solicitacoes de comunidades.',
             'icone' => 'BuildingLibraryIcon',
         ],
         'compdec' => [
             'label' => 'COMPDEC',
+            'nome_curto' => 'Orgao',
             'descricao' => 'Cadastro, vigencia e composicao das coordenadorias.',
             'icone' => 'UserGroupIcon',
         ],
         'estoque' => [
             'label' => 'Estoque',
+            'nome_curto' => 'Item de estoque',
             'descricao' => 'Movimentacoes, saldo minimo e vencimento de itens.',
             'icone' => 'ArchiveBoxIcon',
         ],
         'inventario' => [
             'label' => 'Inventario',
+            'nome_curto' => 'Item de inventario',
             'descricao' => 'Patrimonio, conferencias e baixas.',
             'icone' => 'ArchiveBoxIcon',
         ],
         'ajuda-humanitaria' => [
             'label' => 'Ajuda Humanitaria',
+            'nome_curto' => 'Auxilio',
             'descricao' => 'Pedidos, doacoes e distribuicoes.',
             'icone' => 'HeartIcon',
         ],
         'plantao' => [
             'label' => 'Plantao',
+            'nome_curto' => 'Plantao',
             'descricao' => 'Escalas, trocas e acionamentos.',
             'icone' => 'ClockIcon',
         ],
         'treinamento' => [
             'label' => 'Treinamento',
+            'nome_curto' => 'Treinamento',
             'descricao' => 'Inscricoes, turmas e certificados.',
             'icone' => 'AcademicCapIcon',
         ],
         'suporte' => [
             'label' => 'Suporte',
+            'nome_curto' => 'Ticket',
             'descricao' => 'Respostas e andamento dos seus tickets.',
             'icone' => 'LifebuoyIcon',
         ],
         'cisterna' => [
             'label' => 'Cisternas',
+            'nome_curto' => 'Cisterna',
             'descricao' => 'Solicitacoes, vistorias e entregas.',
             'icone' => 'BeakerIcon',
         ],
         'geral' => [
             'label' => 'Geral',
+            'nome_curto' => 'Aviso',
             'descricao' => 'Exportacoes, processamentos em segundo plano e avisos do sistema.',
             'icone' => 'BellIcon',
             // Conclusao de export e evento unico do proprio usuario: nao agrupa.

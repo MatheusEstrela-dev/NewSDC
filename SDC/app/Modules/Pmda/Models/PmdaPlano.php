@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Pmda\Models;
 
 use App\Models\Municipio;
+use App\Modules\Notificacoes\Contracts\Rastreavel;
+use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use App\Modules\Pmda\Enums\PmdaStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,10 +16,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
-class PmdaPlano extends Model implements HasMedia
+class PmdaPlano extends Model implements HasMedia, Rastreavel
 {
     use InteractsWithMedia;
     use SoftDeletes;
+    use TrilhaDeAcoes;
 
     /** Colecoes de anexos (Etapa 7). */
     public const MEDIA_TERMO = 'termo';
@@ -85,5 +88,63 @@ class PmdaPlano extends Model implements HasMedia
                 ->singleFile()
                 ->acceptsMimeTypes(['application/pdf']);
         }
+    }
+
+    // ─── Trilha de acoes (notificacao ao dono) ──────────────────────────────
+
+    public function moduloNotificacao(): string
+    {
+        return 'pmda';
+    }
+
+    public function rotuloProtocolo(): string
+    {
+        $protocolo = trim((string) $this->protocolo);
+
+        return $protocolo === ''
+            ? 'Plano PMDA de '.($this->created_at?->format('d/m/Y') ?? 'data nao informada')
+            : 'Plano PMDA '.$protocolo;
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function donosNotificacao(): array
+    {
+        return $this->created_by === null ? [] : [(int) $this->created_by];
+    }
+
+    /**
+     * O modulo nao tem rota de exibicao do plano, apenas index, edit e continuar. O card
+     * aponta para a lista de propósito: /pmda/planos/{id}/edit exige a permissao
+     * pmda.planos.edit, que o dono do plano pode nao ter -- e um botao que devolve 403 e
+     * pior do que um que abre a lista.
+     */
+    public function urlNotificacao(): ?string
+    {
+        return '/pmda/planos';
+    }
+
+    public function campoSituacao(): ?string
+    {
+        return 'status';
+    }
+
+    public function rotuloSituacao(): ?string
+    {
+        return $this->status instanceof PmdaStatus
+            ? $this->status->getLabel()
+            : (($this->status === null || $this->status === '') ? null : (string) $this->status);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function camposIgnoradosNaTrilha(): array
+    {
+        return array_merge($this->camposBaseIgnoradosNaTrilha(), [
+            // Espelho de busca/contagem alimentado pelo proprio salvamento.
+            'acoes',
+        ]);
     }
 }

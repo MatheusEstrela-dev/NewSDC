@@ -1,4 +1,5 @@
 <script setup>
+import { router } from '@inertiajs/vue3';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -35,9 +36,28 @@ const closeOnEscape = (e) => {
     }
 };
 
-onMounted(() => document.addEventListener('keydown', closeOnEscape));
+// Qualquer navegacao fecha o menu.
+//
+// O overlay que fecha no clique fora fica em z-40, e o sidebar passa por cima dele:
+// o clique num item do menu lateral navegava e o painel de notificacoes continuava
+// aberto sobre a tela nova. Vale igual para o botao de acao do card, que faz
+// router.visit por conta propria.
+//
+// 'start' e nao 'navigate': fecha no instante do clique, nao depois do carregamento.
+// O polling do sino usa fetch, nao o router do Inertia, entao nao dispara isto e o
+// painel nao se fecha sozinho enquanto o usuario le.
+let pararDeOuvirNavegacao = null;
+
+onMounted(() => {
+    document.addEventListener('keydown', closeOnEscape);
+    pararDeOuvirNavegacao = router.on('start', () => {
+        open.value = false;
+    });
+});
+
 onUnmounted(() => {
     document.removeEventListener('keydown', closeOnEscape);
+    pararDeOuvirNavegacao?.();
     removeReposition();
 });
 

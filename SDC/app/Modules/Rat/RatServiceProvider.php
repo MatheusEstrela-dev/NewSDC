@@ -7,8 +7,6 @@ namespace App\Modules\Rat;
 use App\Core\Actions\Services\ActionConfigService;
 use App\Modules\Rat\Config\RatActionsConfig;
 use App\Modules\Rat\Infrastructure\Persistence\EloquentRatRepository;
-use App\Modules\Rat\Models\RatOcorrencia;
-use App\Modules\Rat\Observers\RatOcorrenciaNotificacaoObserver;
 use App\Modules\Rat\Services\RatAnexoService;
 use App\Modules\Rat\Services\RatAttachmentService;
 use App\Modules\Rat\Services\RatExportService;
@@ -37,9 +35,10 @@ class RatServiceProvider extends ServiceProvider
     {
         $this->registerModuleActions();
 
-        // Aviso ao autor quando a ocorrencia e finalizada. Apenas despacha job:
-        // fora do custo da requisicao que salvou o RAT.
-        RatOcorrencia::observe(RatOcorrenciaNotificacaoObserver::class);
+        // A trilha de acoes do RAT (edicao, situacao, anexo, exclusao) nao e registrada
+        // aqui: vem dos traits TrilhaDeAcoes em RatOcorrencia e TrilhaNoProtocoloPai em
+        // RatRelato/RatAnexo. O antigo RatOcorrenciaNotificacaoObserver cobria somente
+        // a virada para Finalizado, e com o numero interno no texto.
     }
 
     private function registerModuleActions(): void

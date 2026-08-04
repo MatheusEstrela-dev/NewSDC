@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Notifications;
+namespace App\Modules\Notificacoes;
 
 use App\Models\UserNotificationPreference;
 use App\Modules\Notificacoes\Channels\AgrupavelDatabaseChannel;
 use App\Modules\Notificacoes\Contracts\Agrupavel;
 use App\Modules\Notificacoes\DTO\NotificacaoSpec;
 use App\Modules\Notificacoes\Support\TextoSeguro;
-use App\Notifications\Channels\TelegramChannel;
+use App\Modules\Notificacoes\Channels\TelegramChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;

@@ -6,6 +6,8 @@ namespace App\Modules\AjudaHumanitaria\Models;
 
 use App\Modules\AjudaHumanitaria\Enums\TipoAuxilio;
 use App\Modules\AjudaHumanitaria\Enums\StatusAuxilio;
+use App\Modules\Notificacoes\Contracts\Rastreavel;
+use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,9 +19,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  *
  * Aggregate Root para auxilios entregues a beneficiarios
  */
-class Auxilio extends Model
+class Auxilio extends Model implements Rastreavel
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, TrilhaDeAcoes;
 
     protected $table = 'auxilios';
 
@@ -168,5 +170,64 @@ class Auxilio extends Model
     public function getTotalItens(): int
     {
         return $this->itens()->sum('quantidade');
+    }
+
+    // ─── Trilha de acoes (notificacao ao dono) ──────────────────────────────
+
+    public function moduloNotificacao(): string
+    {
+        return 'ajuda-humanitaria';
+    }
+
+    /**
+     * Sem coluna de protocolo: o auxilio se identifica pela data de distribuicao, que e
+     * o que o operador reconhece na tela.
+     */
+    public function rotuloProtocolo(): string
+    {
+        $data = $this->data_distribuicao?->format('d/m/Y')
+            ?? $this->created_at?->format('d/m/Y');
+
+        return $data === null ? 'Auxilio #'.$this->getKey() : 'Auxilio de '.$data;
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function donosNotificacao(): array
+    {
+        return $this->created_by === null ? [] : [(int) $this->created_by];
+    }
+
+    /**
+     * O modulo so expoe rotas de beneficiarios; nao existe tela de um auxilio. Null tira
+     * o botao do card em vez de gerar um link que cai em 404.
+     */
+    public function urlNotificacao(): ?string
+    {
+        return null;
+    }
+
+    /**
+     * Null forcado, e nao escolha de desenho: o cast de status aponta para
+     * App\Modules\AjudaHumanitaria\Enums\StatusAuxilio, que NAO existe no projeto (nem
+     * TipoAuxilio). Ler $this->status estoura. Enquanto os dois enums nao forem criados,
+     * a trilha cobre edicao, vinculo e exclusao, que nao tocam nessas colunas.
+     */
+    public function campoSituacao(): ?string
+    {
+        return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function camposIgnoradosNaTrilha(): array
+    {
+        return array_merge($this->camposBaseIgnoradosNaTrilha(), [
+            // Ver campoSituacao(): colunas com cast para enum inexistente.
+            'status',
+            'tipo_auxilio',
+        ]);
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Rat\Models;
 
+use App\Modules\Notificacoes\Enums\AcaoTrilha;
+use App\Modules\Notificacoes\Support\TrilhaNoProtocoloPai;
 use App\Modules\Rat\Enums\CategoriaAnexo;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -31,7 +33,7 @@ use App\Modules\Rat\Models\RatOcorrencia;
  */
 class RatAnexo extends Model
 {
-    use HasUuids;
+    use HasUuids, TrilhaNoProtocoloPai;
 
     public $incrementing = false;
     protected $keyType = 'string';
@@ -68,6 +70,34 @@ class RatAnexo extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class, 'uploaded_by');
+    }
+
+    // -------------------------------------------------------------------------
+    // Trilha de acoes
+    // -------------------------------------------------------------------------
+
+    public function protocoloDaTrilhaClasse(): string
+    {
+        return RatOcorrencia::class;
+    }
+
+    public function protocoloDaTrilhaChave(): int|string|null
+    {
+        return $this->rat_id;
+    }
+
+    /**
+     * Relacionado, e nao Editado: o anexo e conteudo de terceiro pendurado no RAT, e o
+     * dono ganha mais em ver "Anexo no RAT" do que "RAT atualizado".
+     */
+    public function acaoNaTrilhaDoProtocolo(): AcaoTrilha
+    {
+        return AcaoTrilha::Relacionado;
+    }
+
+    public function rotuloNaTrilhaDoProtocolo(): ?string
+    {
+        return 'um novo anexo';
     }
 
     // -------------------------------------------------------------------------

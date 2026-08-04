@@ -7,6 +7,9 @@ namespace App\Modules\Compdec\Models;
 use App\Models\User;
 use App\Modules\Compdec\Enums\StatusOrgao;
 use App\Modules\Compdec\Enums\TipoOrgao;
+use App\Modules\Notificacoes\Contracts\Rastreavel;
+use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,11 +26,12 @@ use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Orgao extends Model implements HasMedia
+class Orgao extends Model implements HasMedia, Rastreavel
 {
     use HasFactory;
     use InteractsWithMedia;
     use SoftDeletes;
+    use TrilhaDeAcoes;
 
     public const MEDIA_FOTO_COORDENADOR = 'foto_coordenador';
 
@@ -79,6 +83,7 @@ class Orgao extends Model implements HasMedia
         'metadata',
         // Rastreabilidade
         'legacy_id',
+        'created_by',
     ];
 
     protected $casts = [
@@ -268,5 +273,85 @@ class Orgao extends Model implements HasMedia
     protected static function newFactory(): OrgaoFactory
     {
         return OrgaoFactory::new();
+    }
+
+    /**
+     * Mesmo padrao de Decretacoes\Processo: o dono e quem cadastrou. Nao sobrescreve
+     * valor que ja veio (import do legado, seeder).
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (self $orgao): void {
+            if ($orgao->created_by === null && Auth::id() !== null) {
+                $orgao->created_by = Auth::id();
+            }
+        });
+    }
+
+    public function criador(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    // ─── Trilha de acoes (notificacao ao dono) ──────────────────────────────
+
+    public function moduloNotificacao(): string
+    {
+        return 'compdec';
+    }
+
+    public function rotuloProtocolo(): string
+    {
+        $nome = trim((string) $this->nome);
+
+        return $nome === '' ? 'Orgao #'.$this->getKey() : 'Orgao '.$nome;
+    }
+
+    /**
+     * Os campos responsavel_* sao texto livre (nome, CPF, telefone do coordenador) e nao
+     * apontam para usuario do sistema: nao servem para notificar. O dono e quem cadastrou.
+     *
+     * @return list<int>
+     */
+    public function donosNotificacao(): array
+    {
+        return $this->created_by === null ? [] : [(int) $this->created_by];
+    }
+
+    public function urlNotificacao(): ?string
+    {
+        return '/compdec/orgaos/'.$this->getKey();
+    }
+
+    public function campoSituacao(): ?string
+    {
+        return 'status';
+    }
+
+    public function rotuloSituacao(): ?string
+    {
+        return $this->status instanceof StatusOrgao ? $this->status->label() : null;
+    }
+
+    public function tipoSituacaoNotificacao(): ?string
+    {
+        return match ($this->status) {
+            StatusOrgao::ATIVO => 'success',
+            StatusOrgao::INATIVO, StatusOrgao::SUSPENSO => 'warning',
+            default => 'info',
+        };
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function camposIgnoradosNaTrilha(): array
+    {
+        return array_merge($this->camposBaseIgnoradosNaTrilha(), [
+            // Cache mantido por observer quando um plano e ativado/deletado, nao edicao.
+            'tem_plano_contingencia',
+            // Chave de idempotencia do import, nao dado do cadastro.
+            'legacy_id',
+        ]);
     }
 }

@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Models\UserNotificationPreference;
 use App\Modules\Notificacoes\DTO\NotificacaoSpec;
 use App\Modules\Notificacoes\Support\JanelaAgrupamento;
-use App\Notifications\GeneralNotification;
+use App\Modules\Notificacoes\GeneralNotification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;

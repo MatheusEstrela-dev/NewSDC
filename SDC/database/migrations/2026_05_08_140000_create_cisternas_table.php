@@ -54,6 +54,15 @@ return new class extends Migration
             $table->unsignedBigInteger('legacy_id')->nullable()
                 ->comment('ID original do legado para idempotencia ETL');
 
+            // Dono do registro, para a trilha de acoes do sino (Rastreavel).
+            // responsavel_nome/telefone acima sao texto livre do beneficiario: nao
+            // identificam usuario do sistema e nao servem para notificar ninguem.
+            $table->foreignId('created_by')->nullable()
+                ->constrained('users')
+                ->cascadeOnUpdate()
+                ->nullOnDelete()
+                ->comment('Usuario que cadastrou; recebe a trilha de acoes do registro');
+
             $table->timestamps();
             $table->softDeletes();
 

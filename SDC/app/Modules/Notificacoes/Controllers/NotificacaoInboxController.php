@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Notificacoes\Http\Controllers;
+namespace App\Modules\Notificacoes\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Notificacoes\Http\Resources\NotificacaoResource;
+use App\Modules\Notificacoes\Resources\NotificacaoResource;
 use App\Modules\Notificacoes\Models\Notificacao;
 use App\Modules\Notificacoes\Services\ContadorNaoLidas;
 use Illuminate\Database\Eloquent\Builder;

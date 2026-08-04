@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Models;
 
 use App\Models\User;
+use App\Modules\Notificacoes\Enums\AcaoTrilha;
+use App\Modules\Notificacoes\Support\TrilhaNoProtocoloPai;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Inscricao extends Model
 {
     use SoftDeletes;
+    use TrilhaNoProtocoloPai;
 
     protected $table = 'inscricoes';
 
@@ -88,5 +91,27 @@ class Inscricao extends Model
     public function scopePorTreinamento($query, int $treinamentoId)
     {
         return $query->where('treinamento_id', $treinamentoId);
+    }
+
+    // ─── Trilha de acoes no protocolo pai ───────────────────────────────────
+
+    public function protocoloDaTrilhaClasse(): string
+    {
+        return Treinamento::class;
+    }
+
+    public function protocoloDaTrilhaChave(): int|string|null
+    {
+        return $this->treinamento_id;
+    }
+
+    public function acaoNaTrilhaDoProtocolo(): AcaoTrilha
+    {
+        return AcaoTrilha::Relacionado;
+    }
+
+    public function rotuloNaTrilhaDoProtocolo(): ?string
+    {
+        return 'uma inscricao';
     }
 }

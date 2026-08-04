@@ -7,6 +7,8 @@ namespace App\Modules\Tdap\Models;
 use App\Core\Outbox\RecordsDomainEvents;
 use App\Models\Municipio;
 use App\Models\User;
+use App\Modules\Notificacoes\Contracts\Rastreavel;
+use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use App\Modules\Tdap\Enums\EstadoProcesso;
 use App\Modules\Tdap\Enums\SwimlaneProcesso;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,9 +36,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property ?\Carbon\Carbon        $encerrado_em
  * @property ?int                   $aberto_por
  */
-class ProcessoTdap extends Model
+class ProcessoTdap extends Model implements Rastreavel
 {
     use SoftDeletes;
+    use TrilhaDeAcoes;
     use RecordsDomainEvents;
     // Emite UUIDv7: PK monotonica, insert na ultima pagina do B-tree.
     use HasUuids;
@@ -119,5 +122,67 @@ class ProcessoTdap extends Model
     public function scopeNaSwimlane(Builder $query, SwimlaneProcesso $swimlane): Builder
     {
         return $query->where('swimlane_atual', $swimlane->value);
+    }
+
+    // ─── Trilha de acoes (notificacao ao dono) ──────────────────────────────
+
+    public function moduloNotificacao(): string
+    {
+        return 'tdap';
+    }
+
+    public function rotuloProtocolo(): string
+    {
+        $numero = trim((string) $this->numero);
+
+        return $numero === ''
+            ? 'Processo TDAP de '.($this->created_at?->format('d/m/Y') ?? 'data nao informada')
+            : 'Processo TDAP '.$numero;
+    }
+
+    /**
+     * aberto_por ja e FK para users: quem abriu o processo e quem o acompanha. Nao foi
+     * preciso criar coluna de dono neste modulo.
+     *
+     * @return list<int>
+     */
+    public function donosNotificacao(): array
+    {
+        return $this->aberto_por === null ? [] : [(int) $this->aberto_por];
+    }
+
+    public function urlNotificacao(): ?string
+    {
+        return '/tdap/processos/'.$this->getKey();
+    }
+
+    public function campoSituacao(): ?string
+    {
+        return 'estado';
+    }
+
+    public function rotuloSituacao(): ?string
+    {
+        return $this->estado instanceof EstadoProcesso ? $this->estado->label() : null;
+    }
+
+    public function tipoSituacaoNotificacao(): ?string
+    {
+        return match ($this->estado) {
+            EstadoProcesso::Pago, EstadoProcesso::Encerrado => 'success',
+            default => 'info',
+        };
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function camposIgnoradosNaTrilha(): array
+    {
+        return array_merge($this->camposBaseIgnoradosNaTrilha(), [
+            // Swimlane e projecao do estado para o kanban; contexto e payload interno.
+            'swimlane_atual',
+            'contexto',
+        ]);
     }
 }
