@@ -293,7 +293,7 @@ class Processo extends Model
     protected function logChange(string $action): void
     {
         ProcessoLog::create([
-            'uuid'                 => (string) Str::uuid(),
+            'uuid'                 => (string) Str::uuid7(),
             'entrada_processo_id'  => $this->id,
             'entrada_processo_data' => $this->toArray(),
             'action'               => $action,
