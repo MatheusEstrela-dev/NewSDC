@@ -361,10 +361,15 @@ function updateRedec(value) {
   const municipios = props.filterOptions.municipios || [];
   const atual = municipios.find(m => String(m.id) === String(localFilters.value.municipio_id));
 
-  // Municipio selecionado que nao pertence a nova REDEC e descartado.
-  const municipioId = value && atual?.redec_id && String(atual.redec_id) !== String(value)
-    ? ''
-    : localFilters.value.municipio_id || '';
+  // Escolher uma REDEC mantem o municipio apenas quando ele COMPROVADAMENTE
+  // pertence a ela. Antes o municipio era descartado so quando tinha uma REDEC
+  // diferente cadastrada; municipio sem REDEC conhecida (a maioria, enquanto o
+  // dump da CEDEC nao e importado) sobrevivia a troca e o filtro virava
+  // "REDEC X E municipio de outra regiao", que nao devolve nenhuma linha - dava
+  // a impressao de que o filtro por REDEC nao funcionava.
+  const municipioId = !value || (atual && String(atual.redec_id ?? '') === String(value))
+    ? localFilters.value.municipio_id || ''
+    : '';
 
   localFilters.value = { ...localFilters.value, redec_id: value, municipio_id: municipioId };
 }

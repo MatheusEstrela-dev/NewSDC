@@ -10,6 +10,7 @@ use App\Modules\Decretacoes\Requests\StoreProcessoRequest;
 use App\Modules\Decretacoes\Requests\UpdateProcessoRequest;
 use App\Modules\Decretacoes\Services\DesastreDataService;
 use App\Modules\Decretacoes\Services\EntradaProcessoService;
+use App\Modules\Decretacoes\Services\ProcessoExportRedecService;
 use App\Modules\Decretacoes\DTO\DesastreSubmissionDTO;
 use App\Modules\Decretacoes\DTO\ProcessoRequestDTO;
 use Illuminate\Http\JsonResponse;
@@ -401,8 +402,12 @@ class DecretacoesController extends Controller
 
         // Mantem o usuario no fluxo de CRIACAO (/create), nao mistura com /edit.
         // O parametro ?id= avisa o create() a hidratar a Aba 2 do wizard.
-        return redirect()->route('decretacoes.create', ['id' => $processo->id])
-            ->with('success', 'Processo cadastrado com sucesso! Agora preencha os dados do desastre.');
+        //
+        // SEM flash de sucesso: o flash e pintado pelo FlashNotification, que
+        // fica no canto inferior. A pagina de criacao ja avisa pelo toast do
+        // canto superior (ProcessoCreate.handleSubmit), e as duas mensagens
+        // apareciam juntas dizendo a mesma coisa.
+        return redirect()->route('decretacoes.create', ['id' => $processo->id]);
     }
 
     /**
@@ -559,19 +564,85 @@ class DecretacoesController extends Controller
     {
         $data = $this->processoService->getNormalizedDataForPowerBI($request);
 
-        $filename = 'decretacoes_' . now()->format('Y-m-d_H-i-s') . '.csv';
+        return $this->streamCsv($data, 'decretacoes_' . now()->format('Y-m-d_H-i-s') . '.csv');
+    }
 
-        return response()->streamDownload(function () use ($data) {
+    /**
+     * Exporta as decretacoes agrupadas por REDEC.
+     *
+     * FLUXO: Request -> ProcessoExportRedecService -> CSV
+     *
+     * DESTINO: botao "Exportar por REDEC" da listagem
+     *
+     * Respeita os filtros da tela. Sem `redec_id` no request, sai a serie
+     * completa ordenada por REDEC; com `redec_id`, apenas aquela REDEC (o
+     * recorte e feito pelo mesmo ProcessoFilter da listagem, entao o CSV e o que
+     * a tela mostraria).
+     *
+     * @param Request $request Filtros da listagem + redec_id opcional
+     */
+    public function exportRedec(Request $request, ProcessoExportRedecService $exportRedecService): StreamedResponse
+    {
+        $linhas = $exportRedecService->getLinhasPorRedec($request);
+
+        $sufixo = $request->filled('redec_id')
+            ? 'redec_' . (int) $request->input('redec_id')
+            : 'todas_redecs';
+
+        return $this->streamCsv(
+            $linhas,
+            "decretacoes_{$sufixo}_" . now()->format('Y-m-d_H-i-s') . '.csv',
+            $this->cabecalhoExportRedec()
+        );
+    }
+
+    /**
+     * Cabecalho fixo do CSV por REDEC.
+     *
+     * Fixo (e nao derivado da primeira linha) para que a planilha tenha sempre as
+     * mesmas colunas, inclusive quando o recorte nao devolve nenhuma linha.
+     *
+     * @return array<int, string>
+     */
+    private function cabecalhoExportRedec(): array
+    {
+        return [
+            'redec_id', 'redec', 'redec_regiao', 'uf', 'municipio', 'codigo_ibge',
+            'processo_id', 'protocolo', 'protocolo_municipio', 'tipo_processo',
+            'data_entrada', 'data_ocorrencia', 'cobrade', 'tipo_desastre',
+            'situacao_anormalidade', 'status', 'decreto_municipal',
+            'data_decreto_municipal', 'data_publicacao_mg', 'prazo_vigencia_dias',
+            'data_vencimento', 'dias_restantes', 'situacao_vigencia', 'analista',
+        ];
+    }
+
+    /**
+     * Envia um array de linhas como CSV (separador `;`, BOM UTF-8 para o Excel).
+     *
+     * @param array<int, array<string, mixed>> $linhas
+     * @param array<int, string>|null $cabecalho Colunas; sem ele usa as chaves da primeira linha
+     */
+    private function streamCsv(array $linhas, string $filename, ?array $cabecalho = null): StreamedResponse
+    {
+        return response()->streamDownload(function () use ($linhas, $cabecalho) {
             $handle = fopen('php://output', 'w');
 
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
-            if (!empty($data)) {
-                fputcsv($handle, array_keys($data[0]), ';');
+            $colunas = $cabecalho ?? (!empty($linhas) ? array_keys($linhas[0]) : []);
+
+            if (!empty($colunas)) {
+                fputcsv($handle, $colunas, ';');
             }
 
-            foreach ($data as $row) {
-                fputcsv($handle, array_values($row), ';');
+            foreach ($linhas as $linha) {
+                // Ordena os valores pelo cabecalho: garante que cada coluna
+                // receba o seu valor mesmo se uma linha vier com outra ordem.
+                $valores = $cabecalho === null
+                    ? array_values($linha)
+                    : array_map(fn (string $coluna) => $linha[$coluna] ?? null, $cabecalho);
+
+                fputcsv($handle, $valores, ';');
             }
 
             fclose($handle);
