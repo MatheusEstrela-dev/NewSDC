@@ -27,7 +27,7 @@ const emit = defineEmits(['reemitir']);
       <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
         <tr v-for="certificado in certificados" :key="certificado.id" class="text-slate-700 dark:text-slate-300">
           <td class="px-4 py-2.5 font-medium">{{ certificado.inscrito_nome || '—' }}</td>
-          <td class="px-4 py-2.5"><Badge :color="certificado.status_color">{{ certificado.status_label }}</Badge></td>
+          <td class="px-4 py-2.5"><Badge :cor="certificado.status_color">{{ certificado.status_label }}</Badge></td>
           <td class="px-4 py-2.5">{{ certificado.emitido_em ? new Date(certificado.emitido_em).toLocaleDateString('pt-BR') : '—' }}</td>
           <td class="px-4 py-2.5">
             <div class="flex items-center justify-end gap-3">

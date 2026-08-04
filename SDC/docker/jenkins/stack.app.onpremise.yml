@@ -204,8 +204,8 @@ services:
           memory: 256M
 
   # ==========================================================================
-  # REVERB - WebSocket (notificacoes em tempo real). stop-first: clientes WS
-  # reconectam sozinhos; start-first com porta host publicada colidiria.
+  # REVERB - WebSocket (notificacoes em tempo real), atras do Caddy (sem porta
+  # publicada no host). stop-first: clientes WS reconectam sozinhos.
   # ==========================================================================
   reverb:
     image: ${REGISTRY:-127.0.0.1:5000}/sdc-app:${VERSION:-latest}
@@ -238,14 +238,10 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_SSLMODE: disable
 
-    # 8082 no host: a 8080 da VM e do Jenkins (docker-compose.jenkins.yml).
-    # Clientes WS do navegador devem apontar para :8082 (VITE_REVERB_PORT) ou,
-    # melhor, proxyar /app + /apps pelo Caddy e servir wss:443 sem porta extra.
-    ports:
-      - target: 8080
-        published: 8082
-        mode: host
-
+    # Sem porta publicada no host: o Reverb so e alcancado via rede overlay
+    # sdc_edge, pelo Caddy (rota /app/* no Caddyfile), que serve wss:443
+    # sem porta extra. VITE_REVERB_PORT deve ficar unset (bootstrap.js cai
+    # no default 443 quando o scheme e https).
     networks:
       - sdc_internal
       - sdc_edge

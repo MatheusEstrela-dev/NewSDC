@@ -18,11 +18,36 @@
 
     <div v-else-if="!isMobile" class="overflow-x-auto">
       <table class="w-full">
+        <!-- Municipio e "Criado por" nao sao ordenaveis: vivem em relacao
+             (relato de dados gerais e users), e ordenar por elas exigiria join
+             no backend. Ficam sem seta para nao prometer o que nao faz. -->
         <TableHeaderRow>
-          <TableHeader class="w-48 whitespace-nowrap">Número RAT</TableHeader>
-          <TableHeader class="w-44 whitespace-nowrap">Data/Hora</TableHeader>
-          <TableHeader align="center" class="w-24 whitespace-nowrap">Ano</TableHeader>
-          <TableHeader align="center" class="w-36 whitespace-nowrap">Status</TableHeader>
+          <TableHeader
+            class="w-48 whitespace-nowrap"
+            sortable
+            :sort-direction="direcaoDe('numero_rat')"
+            @sort="(dir) => ordenar('numero_rat', dir)"
+          >Número RAT</TableHeader>
+          <TableHeader
+            class="w-44 whitespace-nowrap"
+            sortable
+            :sort-direction="direcaoDe('data_hora')"
+            @sort="(dir) => ordenar('data_hora', dir)"
+          >Data/Hora</TableHeader>
+          <TableHeader
+            align="center"
+            class="w-24 whitespace-nowrap"
+            sortable
+            :sort-direction="direcaoDe('ano')"
+            @sort="(dir) => ordenar('ano', dir)"
+          >Ano</TableHeader>
+          <TableHeader
+            align="center"
+            class="w-36 whitespace-nowrap"
+            sortable
+            :sort-direction="direcaoDe('status')"
+            @sort="(dir) => ordenar('status', dir)"
+          >Status</TableHeader>
           <TableHeader class="w-auto whitespace-nowrap">Município</TableHeader>
           <TableHeader class="w-44 whitespace-nowrap">Criado por</TableHeader>
           <TableHeader align="right" class="w-44 whitespace-nowrap text-right">Ações</TableHeader>
@@ -97,9 +122,33 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+
+  /** Coluna ordenada no momento, normalizada pelo backend. */
+  sort: {
+    type: String,
+    default: 'data_hora',
+  },
+
+  /** Direcao atual: 'asc' ou 'desc'. */
+  direction: {
+    type: String,
+    default: 'desc',
+  },
 });
 
-const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'delete']);
+const emit = defineEmits(['view', 'print', 'edit', 'attachments', 'delete', 'ordenar']);
+
+/**
+ * Direcao a exibir num cabecalho: null quando a coluna nao e a ativa, para o
+ * TableHeader deixar as duas setas apagadas em vez de acender a errada.
+ */
+function direcaoDe(coluna) {
+  return props.sort === coluna ? props.direction : null;
+}
+
+function ordenar(coluna, direcao) {
+  emit('ordenar', { sort: coluna, direction: direcao });
+}
 
 function handleView(id) {
   emit('view', id);

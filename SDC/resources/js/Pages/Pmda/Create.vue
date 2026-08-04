@@ -154,7 +154,7 @@ function voltar() {
           <span class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
             Município: <span class="ml-1">{{ municipioLabel }}</span>
           </span>
-          <PmdaStatusBadge v-if="criado" :label="dados.status_label" :color-class="dados.status_color" />
+          <PmdaStatusBadge v-if="criado" :label="dados.status_label" :cor="dados.status_cor" />
         </div>
       </template>
     </PageHeader>

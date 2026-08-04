@@ -82,6 +82,10 @@ class DecretacoesController extends Controller
             // chegava a aparecer como chip na interface e era descartado aqui,
             // antes do ProcessoFilter, e a listagem nao mudava.
             'tipo_lancamento',
+            // Ordenacao das colunas. O valor e validado contra a whitelist de
+            // ProcessoQueryService antes de chegar ao ORDER BY.
+            'sort',
+            'direction',
         ]);
         $processos = $this->processoService->list($filters, 15);
 

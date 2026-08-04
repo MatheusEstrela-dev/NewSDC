@@ -36,12 +36,12 @@ const emit = defineEmits(['aprovar', 'reprovar', 'marcar-presenca']);
             <div class="text-xs text-slate-400">{{ inscricao.inscrito_email }}</div>
           </td>
           <td class="px-4 py-2.5">
-            <Badge :color="inscricao.inscrito_tipo === 'servidor' ? 'blue' : 'purple'">
+            <Badge :cor="inscricao.inscrito_tipo === 'servidor' ? 'blue' : 'purple'">
               {{ inscricao.inscrito_tipo === 'servidor' ? 'Servidor' : 'Cidadão' }}
             </Badge>
           </td>
           <td class="px-4 py-2.5">
-            <Badge :color="inscricao.status_color">{{ inscricao.status_label }}</Badge>
+            <Badge :cor="inscricao.status_color">{{ inscricao.status_label }}</Badge>
           </td>
           <td class="px-4 py-2.5">{{ inscricao.percentual_frequencia?.toFixed(0) ?? 0 }}%</td>
           <td class="px-4 py-2.5">

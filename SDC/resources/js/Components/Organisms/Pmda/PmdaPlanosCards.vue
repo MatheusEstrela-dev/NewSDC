@@ -7,7 +7,7 @@
     >
       <div class="flex items-start justify-between gap-2">
         <span class="font-mono text-sm text-slate-700 dark:text-slate-300">{{ plano.protocolo ?? '—' }}</span>
-        <PmdaStatusBadge :label="plano.status_label" :color-class="plano.status_color" />
+        <PmdaStatusBadge :label="plano.status_label" :cor="plano.status_cor" />
       </div>
       <p class="mt-2 font-semibold text-slate-900 dark:text-slate-100">{{ plano.municipio ?? '—' }}</p>
       <p class="text-xs text-slate-500 dark:text-slate-400">Criação: {{ formatDate(plano.data) }}</p>

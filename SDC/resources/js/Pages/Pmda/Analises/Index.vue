@@ -56,7 +56,7 @@
                   Enviado em {{ fmtDataHora(p.dt_analise) }}<span v-if="p.resp_homolog"> · {{ p.resp_homolog }}</span>
                 </p>
               </div>
-              <PmdaStatusBadge :label="p.status_label" :color-class="p.status_color" />
+              <PmdaStatusBadge :label="p.status_label" :cor="p.status_cor" />
             </div>
             <div class="mt-3 flex flex-wrap items-center justify-end gap-2">
               <Button v-if="canAprovar" variant="success" size="sm" :disabled="processandoPlano === p.id" @click="confirmarAprovacao(p)">

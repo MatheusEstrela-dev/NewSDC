@@ -80,7 +80,7 @@
             <tr v-for="plano in planos.data" :key="plano.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/60">
               <td class="whitespace-nowrap px-4 py-4 font-mono text-slate-700 dark:text-slate-300">{{ plano.protocolo ?? '—' }}</td>
               <td class="px-4 py-4 text-slate-700 dark:text-slate-300">{{ plano.municipio ?? '—' }}</td>
-              <td class="px-4 py-4"><PmdaStatusBadge :label="plano.status_label" :color-class="plano.status_color" /></td>
+              <td class="px-4 py-4"><PmdaStatusBadge :label="plano.status_label" :cor="plano.status_cor" /></td>
               <td class="whitespace-nowrap px-4 py-4 text-slate-500">{{ formatDate(plano.data) }}</td>
               <td class="px-4 py-4">
                 <div class="flex items-center justify-end gap-1">

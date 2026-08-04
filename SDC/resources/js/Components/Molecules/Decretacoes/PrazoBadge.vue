@@ -1,12 +1,33 @@
 <template>
-  <span v-if="diasRestantes !== null" :class="badgeClasses" :title="tooltipText">
-    <ClockIcon class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline-block mr-0.5 sm:mr-1" />
+  <Badge
+    v-if="diasRestantes !== null"
+    :cor="cor"
+    size="pill"
+    class="whitespace-nowrap"
+    :title="tooltipText"
+  >
+    <ClockIcon class="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
     {{ label }}
-  </span>
+  </Badge>
 </template>
 
 <script setup>
+/**
+ * Prazo de vigencia do processo, em dias restantes.
+ *
+ * Cor explicita e nao variant semantico: o modulo distingue 'critico' (laranja) de
+ * 'vencido' (vermelho), e usa green em vez do emerald da semantica. Mapear tudo em
+ * success/warning/danger apagaria essa gradacao, que aqui carrega informacao.
+ *
+ * A receita de pill vem do Badge; antes estava escrita a mao neste arquivo.
+ *
+ * Nota sobre 'alerta': o mapa antigo usava amber no light e yellow no dark. O amber
+ * no light foi escolha deliberada de contraste (o yellow-700 rende pouco sobre
+ * branco); o yellow no dark era so o resto do par original. Unificado em amber, que
+ * preserva a intencao e elimina a divergencia entre os dois temas.
+ */
 import { computed } from 'vue';
+import Badge from '../../Atoms/Badge/Badge.vue';
 import ClockIcon from '../../Icons/ClockIcon.vue';
 import {
   formatarData,
@@ -26,22 +47,17 @@ const props = defineProps({
   },
 });
 
-const label = computed(() => rotuloDiasRestantes(props.diasRestantes));
-
-const BASE_CLASSES = 'px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold inline-block whitespace-nowrap';
-
-const VARIANT_CLASSES = {
-  sem_vigencia: 'bg-slate-500/20 text-slate-300 border border-slate-500/20',
-  vencido: 'bg-red-500/20 text-red-300 border border-red-500/20',
-  critico: 'bg-orange-500/20 text-orange-300 border border-orange-500/20',
-  alerta: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/20',
-  vigente: 'bg-green-500/20 text-green-300 border border-green-500/20',
+const CORES = {
+  sem_vigencia: 'slate',
+  vencido: 'red',
+  critico: 'orange',
+  alerta: 'amber',
+  vigente: 'green',
 };
 
-const badgeClasses = computed(() => {
-  const variante = situacaoVigencia(props.diasRestantes);
-  return `${BASE_CLASSES} ${VARIANT_CLASSES[variante]}`;
-});
+const label = computed(() => rotuloDiasRestantes(props.diasRestantes));
+
+const cor = computed(() => CORES[situacaoVigencia(props.diasRestantes)] ?? 'slate');
 
 const tooltipText = computed(() => {
   if (!props.dataVencimento) return '';

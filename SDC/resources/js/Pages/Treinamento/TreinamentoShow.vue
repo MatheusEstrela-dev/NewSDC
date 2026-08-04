@@ -89,16 +89,16 @@ function copiarLinkPublico() {
             <Heading :level="1" class="text-2xl font-bold text-slate-800 dark:text-slate-100">
               {{ treinamento.titulo }}
             </Heading>
-            <Badge :color="treinamento.status_color" class="text-sm shrink-0">
+            <Badge :cor="treinamento.status_color" class="text-sm shrink-0">
               {{ treinamento.status_label }}
             </Badge>
           </div>
 
           <div class="flex items-center gap-3 flex-wrap">
-            <Badge :color="treinamento.tipo_color">
+            <Badge :cor="treinamento.tipo_color">
               {{ treinamento.tipo_label }}
             </Badge>
-            <Badge color="gray">
+            <Badge cor="slate">
               {{ treinamento.categoria_label }}
             </Badge>
             <Text size="sm" color="muted">
@@ -223,7 +223,7 @@ function copiarLinkPublico() {
         <div class="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
           <div v-if="minhaInscricao" class="flex items-center gap-3 flex-wrap">
             <Text size="sm">Sua inscrição:</Text>
-            <Badge :color="minhaInscricao.status === 'APROVADA' ? 'green' : minhaInscricao.status === 'REPROVADA' ? 'red' : 'yellow'">
+            <Badge :cor="minhaInscricao.status === 'APROVADA' ? 'green' : minhaInscricao.status === 'REPROVADA' ? 'red' : 'yellow'">
               {{ minhaInscricao.status_label }}
             </Badge>
             <Button
