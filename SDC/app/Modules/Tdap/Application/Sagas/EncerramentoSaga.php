@@ -45,7 +45,7 @@ class EncerramentoSaga extends IdempotentListener
 
         if (! $saga) {
             DB::table('tdap_sagas')->insert([
-                'id'              => (string) Str::uuid(),
+                'id'              => (string) Str::uuid7(),
                 'saga_class'      => static::class,
                 'correlation_id'  => $processoId,
                 'estado_saga'     => 'iniciada',

@@ -37,9 +37,13 @@ abstract readonly class DomainEvent
      */
     abstract public function payload(): array;
 
+    /**
+     * UUIDv7: o id do evento vira chave em outbox_events e processed_events,
+     * e a ordenacao temporal embutida mantem os inserts sequenciais.
+     */
     public static function newId(): string
     {
-        return (string) Str::uuid();
+        return (string) Str::uuid7();
     }
 
     /**
