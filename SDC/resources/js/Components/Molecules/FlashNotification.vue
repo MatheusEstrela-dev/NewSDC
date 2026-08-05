@@ -81,8 +81,10 @@ const typeConfig = {
   },
 };
 
+// Ancorada no topo-direita (top-20 = 5rem: mesma folga do header usada pelo
+// ToastContainer), nao mais no rodape.
 const containerClass = computed(() => [
-  'fixed bottom-6 right-6 z-[9999] max-w-sm w-full rounded-xl shadow-2xl px-4 py-3 overflow-hidden',
+  'fixed top-20 right-6 z-[9999] max-w-sm w-full rounded-xl shadow-2xl px-4 py-3 overflow-hidden',
   typeConfig[type.value]?.container ?? typeConfig.success.container,
 ]);
 
@@ -145,9 +147,10 @@ onUnmounted(clearAll);
 .flash-slide-leave-active {
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
+/* Entra/sai por cima, acompanhando a ancoragem no topo da tela. */
 .flash-slide-enter-from,
 .flash-slide-leave-to {
   opacity: 0;
-  transform: translateY(1rem) scale(0.96);
+  transform: translateY(-1rem) scale(0.96);
 }
 </style>
