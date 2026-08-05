@@ -105,8 +105,8 @@ import RatTabs from '@/Components/Rat/RatTabs.vue';
 import { useRat } from '@/Composables/useRat';
 import { useToast } from '@/Composables/useToast';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, router, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, ref } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -174,15 +174,9 @@ const localNumeroBos = ref(props.rat?.numero_bos ?? null);
 // RATs existentes ou view-only têm todas as abas acessíveis.
 const maxUnlockedTab = ref(props.isCreate && !props.viewOnly ? 1 : 6);
 
-// Exibe flash message vinda do redirect (ex: após criar novo RAT)
-onMounted(() => {
-  const page = usePage();
-  const flash = page.props?.flash;
-  if (flash?.success) toast(flash.success, 'success', { noIcon: true });
-  else if (flash?.info)    toast(flash.info,    'info',    { noIcon: true });
-  else if (flash?.warning) toast(flash.warning, 'warning', { noIcon: true });
-  else if (flash?.error)   toast(flash.error,   'error',   { noIcon: true });
-});
+// Flash message vinda do redirect (ex: apos criar novo RAT) e exibida pelo
+// FlashNotification global do AuthenticatedLayout, agora tambem no topo da
+// tela. Reexibir aqui geraria duas notificacoes sobrepostas no mesmo canto.
 
 // Só a aba que está sendo exibida no momento fica ativa.
 // Abas anteriores (já preenchidas) e posteriores (ainda não alcançadas) ficam bloqueadas.

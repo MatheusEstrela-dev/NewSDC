@@ -402,11 +402,16 @@ class DecretacoesController extends Controller
 
         // Mantem o usuario no fluxo de CRIACAO (/create), nao mistura com /edit.
         // O parametro ?id= avisa o create() a hidratar a Aba 2 do wizard.
+<<<<<<< Updated upstream
         //
         // SEM flash de sucesso: o flash e pintado pelo FlashNotification, que
         // fica no canto inferior. A pagina de criacao ja avisa pelo toast do
         // canto superior (ProcessoCreate.handleSubmit), e as duas mensagens
         // apareciam juntas dizendo a mesma coisa.
+=======
+        // Sem flash de sucesso: o feedback e exibido pelo toast da propria pagina
+        // (evita notificacao duplicada no create/edit).
+>>>>>>> Stashed changes
         return redirect()->route('decretacoes.create', ['id' => $processo->id]);
     }
 
@@ -424,7 +429,8 @@ class DecretacoesController extends Controller
         $dto = ProcessoRequestDTO::fromRequest($request);
         $this->processoService->updateProcesso($dto, $id);
 
-        return redirect()->back()->with('success', 'Processo atualizado com sucesso!');
+        // Sem flash de sucesso: o toast da pagina ja informa a atualizacao.
+        return redirect()->back();
     }
 
     /**
@@ -497,7 +503,8 @@ class DecretacoesController extends Controller
             return redirect()->back()->with('error', $result['message']);
         }
 
-        return redirect()->back()->with('success', $result['message']);
+        // Sem flash de sucesso: o toast da pagina ja informa o salvamento.
+        return redirect()->back();
     }
 
     // =========================================================================
