@@ -35,6 +35,16 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+// Portal de Treinamentos (cidadaos externos, guard "cidadao") - fica FORA do
+// grupo Route::middleware('auth') abaixo, que usa o guard "web" (servidores
+// internos). Continua dentro do grupo de middleware "web" global (sessao/CSRF).
+require __DIR__ . '/modules/treinamento-portal.php';
+
+// RF02 - imagem de divulgacao: publica de proposito (pensada pra ser
+// compartilhada/postada), so exige que o treinamento esteja publicado.
+Route::get('/treinamentos/{treinamento}/divulgacao.png', \App\Modules\Treinamento\Controllers\TreinamentoDivulgacaoImagemController::class)
+    ->name('treinamentos.divulgacao');
+
 Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');

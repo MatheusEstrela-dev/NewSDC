@@ -15,8 +15,9 @@ class Frequencia extends Model
 
     protected $fillable = [
         'modulo_id',
-        'user_id',
+        'inscricao_id',
         'status',
+        'origem',
         'data_aula',
         'observacoes',
         'registrado_por_id',
@@ -34,9 +35,12 @@ class Frequencia extends Model
         return $this->belongsTo(Modulo::class);
     }
 
-    public function user(): BelongsTo
+    /**
+     * Acesso ao inscrito (User ou Cidadao) via $frequencia->inscricao->inscrito.
+     */
+    public function inscricao(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Inscricao::class);
     }
 
     public function registradoPor(): BelongsTo

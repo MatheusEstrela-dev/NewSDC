@@ -40,8 +40,8 @@
   position: relative;
   z-index: 10;
   background-color: var(--reset-card-bg);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   padding: 3rem 2.5rem;
   border-radius: var(--reset-radius-lg);
   box-shadow:

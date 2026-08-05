@@ -7,39 +7,32 @@ namespace App\Modules\Treinamento\Enums;
 enum TipoTreinamento: string
 {
     case PRESENCIAL = 'PRESENCIAL';
-    case EAD = 'EAD';
-    case HIBRIDO = 'HIBRIDO';
+    case ONLINE = 'ONLINE';
 
     public function getLabel(): string
     {
         return match ($this) {
             self::PRESENCIAL => 'Presencial',
-            self::EAD => 'EAD (Ensino a Distancia)',
-            self::HIBRIDO => 'Hibrido',
+            self::ONLINE => 'Online',
         };
     }
 
     public function getBadgeColor(): string
     {
-        return match ($this) {
-            self::PRESENCIAL => 'blue',
-            self::EAD => 'purple',
-            self::HIBRIDO => 'indigo',
-        };
+        return 'blue';
     }
 
     public function getIcon(): string
     {
         return match ($this) {
             self::PRESENCIAL => 'users',
-            self::EAD => 'computer-desktop',
-            self::HIBRIDO => 'globe-alt',
+            self::ONLINE => 'computer-desktop',
         };
     }
 
     public function requerLocal(): bool
     {
-        return $this === self::PRESENCIAL || $this === self::HIBRIDO;
+        return $this === self::PRESENCIAL;
     }
 
     public static function toSelectArray(): array

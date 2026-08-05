@@ -282,6 +282,21 @@ return [
                 'delete' => 'treinamento.cursos.delete',
                 'export' => 'treinamento.cursos.export',
             ],
+            'Inscricoes' => [
+                'view' => 'treinamento.inscricoes.view',
+                'aprovar' => 'treinamento.inscricoes.aprovar',
+                'reprovar' => 'treinamento.inscricoes.reprovar',
+                'manage' => 'treinamento.inscricoes.manage',
+            ],
+            'Presencas' => [
+                'view' => 'treinamento.presencas.view',
+                'registrar' => 'treinamento.presencas.registrar',
+            ],
+            'Certificados' => [
+                'view' => 'treinamento.certificados.view',
+                'reemitir' => 'treinamento.certificados.reemitir',
+                'download' => 'treinamento.certificados.download',
+            ],
         ],
         'PLANTAO' => [
             'Turnos' => [
@@ -529,6 +544,15 @@ return [
             'treinamento.cursos.create',
             'treinamento.cursos.edit',
             'treinamento.cursos.export',
+            'treinamento.inscricoes.view',
+            'treinamento.inscricoes.aprovar',
+            'treinamento.inscricoes.reprovar',
+            'treinamento.inscricoes.manage',
+            'treinamento.presencas.view',
+            'treinamento.presencas.registrar',
+            'treinamento.certificados.view',
+            'treinamento.certificados.reemitir',
+            'treinamento.certificados.download',
             // Plantao - gestao completa
             'plantao.turnos.view',
             'plantao.turnos.create',
@@ -668,6 +692,8 @@ return [
             'tdap.processos.create',
             // Treinamento - view
             'treinamento.cursos.view',
+            'treinamento.inscricoes.view',
+            'treinamento.certificados.view',
             // Plantao - view, create, edit
             'plantao.turnos.view',
             'plantao.turnos.create',
@@ -754,8 +780,11 @@ return [
             'tdap.viagens.view',
             'tdap.viagens.create',
             'tdap.vistorias.view',
-            // Treinamento - view
+            // Treinamento - view + registro de presenca (operador executa a chamada no dia do evento)
             'treinamento.cursos.view',
+            'treinamento.inscricoes.view',
+            'treinamento.presencas.view',
+            'treinamento.presencas.registrar',
             // Plantao - view, create
             'plantao.turnos.view',
             'plantao.turnos.create',
@@ -809,6 +838,7 @@ return [
             'tdap.historico.view',
             'tdap.processos.view',
             'treinamento.cursos.view',
+            'treinamento.inscricoes.view',
             'plantao.turnos.view',
             'bi.dashboards.view',
             'cisternas.view',

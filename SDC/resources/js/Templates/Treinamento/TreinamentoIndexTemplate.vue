@@ -1,7 +1,6 @@
 <script setup>
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
-import BookOpenIcon from '@/Components/Icons/BookOpenIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
@@ -45,6 +44,10 @@ const props = defineProps({
   filters: {
     type: Object,
     default: () => ({}),
+  },
+  filterOptions: {
+    type: Object,
+    default: () => ({ tipos: [], status: [], categorias: [] }),
   },
   canCreate: {
     type: Boolean,
@@ -108,7 +111,6 @@ function handleExportCsv(params) {
     <PageHeader
       title="Treinamentos"
       description="Gestão de treinamentos e cursos"
-      :icon="BookOpenIcon"
       :icon-image="moduleIcon('treinamento')"
       variant="gradient"
     >
@@ -152,6 +154,7 @@ function handleExportCsv(params) {
     <!-- Filters -->
     <TreinamentoFiltersSection
       :filters="localFilters"
+      :filter-options="filterOptions"
       @filter-change="handleFilterChange"
       @filter-reset="handleFilterReset"
     />
@@ -188,17 +191,12 @@ function handleExportCsv(params) {
             </td>
             <td class="px-4 py-3">
               <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                {{ treinamento.tipo }}
+                {{ treinamento.tipo_label || treinamento.tipo }}
               </span>
             </td>
             <td class="px-4 py-3">
-              <span :class="[
-                'inline-flex px-2 py-1 text-xs font-medium rounded-full',
-                treinamento.status === 'CONCLUIDO' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                treinamento.status === 'EM_ANDAMENTO' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
-              ]">
-                {{ treinamento.status?.replace('_', ' ') || 'Planejado' }}
+              <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
+                {{ treinamento.status_label || treinamento.status }}
               </span>
             </td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ treinamento.instrutor || '—' }}</td>
@@ -233,7 +231,7 @@ function handleExportCsv(params) {
     <div v-if="pagination" class="mt-6">
       <Pagination
         :pagination="pagination"
-        @page-change="(page) => emit('filter', { page })"
+        @page-change="(page) => emit('filter', { ...localFilters, page })"
       />
     </div>
   </div>

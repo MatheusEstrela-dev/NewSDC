@@ -1,12 +1,16 @@
 <script setup>
+import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 import TreinamentoIndexTemplate from '@/Templates/Treinamento/TreinamentoIndexTemplate.vue';
+import TreinamentoFormModal from '@/Components/Organisms/Treinamento/TreinamentoFormModal.vue';
 import { usePermissions } from '@/Composables/usePermissions';
+import { useToast } from '@/Composables/useToast';
 
 const { can } = usePermissions();
+const { show: toast } = useToast();
 
 const props = defineProps({
   treinamentos: {
@@ -27,8 +31,25 @@ const props = defineProps({
   },
 });
 
+const pagination = computed(() => {
+  const m = props.treinamentos?.meta;
+  if (!m) return null;
+  return {
+    current_page: m.current_page ?? 1,
+    last_page: m.last_page ?? 1,
+    per_page: m.per_page ?? 15,
+    total: m.total ?? 0,
+    from: m.from ?? null,
+    to: m.to ?? null,
+  };
+});
+
+const showFormModal = ref(false);
+const editingTreinamento = ref(null);
+
 const handleCreate = () => {
-  // TODO: Implementar modal ou página de criação
+  editingTreinamento.value = null;
+  showFormModal.value = true;
 };
 
 const handleView = (id) => {
@@ -36,13 +57,19 @@ const handleView = (id) => {
 };
 
 const handleEdit = (id) => {
-  // TODO: Implementar edição
+  const treinamento = (props.treinamentos.data || []).find((t) => t.id === id);
+  editingTreinamento.value = treinamento || { id };
+  showFormModal.value = true;
 };
 
 const handleDelete = (id) => {
-  if (confirm('Tem certeza que deseja excluir este treinamento?')) {
-    // TODO: Implementar exclusão
-  }
+  if (!confirm('Tem certeza que deseja excluir este treinamento?')) return;
+
+  router.delete(route('treinamentos.destroy', id), {
+    preserveScroll: true,
+    onSuccess: () => toast('Treinamento removido.', 'success'),
+    onError: () => toast('Nao foi possivel remover o treinamento.', 'error'),
+  });
 };
 
 const handleFilter = (filters) => {
@@ -52,6 +79,10 @@ const handleFilter = (filters) => {
     replace: true,
   });
 };
+
+const handleSaved = () => {
+  router.reload({ only: ['treinamentos', 'statistics'] });
+};
 </script>
 
 <template>
@@ -59,8 +90,9 @@ const handleFilter = (filters) => {
     <TreinamentoIndexTemplate
       :treinamentos="treinamentos.data"
       :statistics="statistics"
-      :pagination="treinamentos.pagination"
+      :pagination="pagination"
       :filters="filters"
+      :filter-options="filterOptions"
       :can-create="can('treinamento.cursos.create')"
       :can-edit="can('treinamento.cursos.edit')"
       :can-delete="can('treinamento.cursos.delete')"
@@ -70,6 +102,14 @@ const handleFilter = (filters) => {
       @edit="handleEdit"
       @delete="handleDelete"
       @filter="handleFilter"
+    />
+
+    <TreinamentoFormModal
+      :show="showFormModal"
+      :treinamento="editingTreinamento"
+      :filter-options="filterOptions"
+      @close="showFormModal = false"
+      @saved="handleSaved"
     />
 
 </template>

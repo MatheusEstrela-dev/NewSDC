@@ -40,6 +40,14 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Guard isolado do Portal de Treinamentos: cidadaos externos (sem conta
+        // de servidor no SDC) autenticam aqui, nunca no guard "web". Nao tem
+        // roles/permissions do Spatie nem acesso a nenhuma outra rota do sistema.
+        'cidadao' => [
+            'driver' => 'session',
+            'provider' => 'cidadaos',
+        ],
     ],
 
     /*
@@ -63,6 +71,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
+        ],
+
+        'cidadaos' => [
+            'driver' => 'eloquent',
+            'model' => App\Modules\Treinamento\Models\Cidadao::class,
         ],
 
         // 'users' => [
@@ -94,6 +107,13 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => 'password_reset_tokens',
+            'expire' => 15,
+            'throttle' => 60,
+        ],
+
+        'cidadaos' => [
+            'provider' => 'cidadaos',
+            'table' => 'cidadao_password_reset_tokens',
             'expire' => 15,
             'throttle' => 60,
         ],

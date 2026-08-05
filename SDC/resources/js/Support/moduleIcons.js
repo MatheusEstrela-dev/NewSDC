@@ -14,6 +14,7 @@ import tankTruck from '../../images/modulos/tank-truck.svg?url';
 import heartAttack from '../../images/modulos/heart-attack.svg?url';
 import helpDesk from '../../images/modulos/help-desk.svg?url';
 import bookshelf from '../../images/modulos/bookshelf.svg?url';
+import certificate from '../../images/modulos/certificate.svg?url';
 import clock from '../../images/modulos/clock.svg?url';
 import mountains from '../../images/modulos/mountains.svg?url';
 // Arte raster (PNG); as demais sao SVG, mas o PageHeader aceita os dois.
@@ -23,7 +24,7 @@ import notification from '../../images/modulos/notification.png?url';
 export const ICONS = {
   apartment, box, chart, cistern, drop, file, house, hydrant,
   'office-building': officeBuilding, shield, 'tank-truck': tankTruck,
-  'heart-attack': heartAttack, 'help-desk': helpDesk, bookshelf, clock, mountains,
+  'heart-attack': heartAttack, 'help-desk': helpDesk, bookshelf, certificate, clock, mountains,
   notification,
 };
 
@@ -41,7 +42,7 @@ export const MODULE_ICONS = {
   'plano-contingencia': shield,
   'ajuda-humanitaria': heartAttack,
   demandas: helpDesk,
-  treinamento: bookshelf,
+  treinamento: certificate,
   plantao: clock,
   pae: mountains,
   notificacoes: notification,
