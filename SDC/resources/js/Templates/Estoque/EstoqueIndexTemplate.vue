@@ -8,7 +8,7 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
           <ViewModeToggle v-model="viewMode" />
           <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" icon-position="left" @click="showExportModal = true">
             <span class="hidden sm:inline">Exportar</span>

@@ -42,14 +42,14 @@ const getStatusClasses = (status) => {
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Plantonista</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Período</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-center">Status</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-36 min-w-36">Ações</th>
+            <th class="table-actions-head px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-36 min-w-36">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
           <tr
             v-for="item in plantoes"
             :key="item.id"
-            class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+            class="table-row-solid transition-colors"
           >
             <td class="px-4 py-3 font-medium text-slate-900 dark:text-slate-200">{{ item.data }}</td>
             <td class="px-4 py-3">
@@ -66,7 +66,7 @@ const getStatusClasses = (status) => {
                 {{ item.status }}
               </span>
             </td>
-            <td class="px-4 py-3 text-right w-36 min-w-36">
+            <td class="table-actions-cell px-4 py-3 text-right w-36 min-w-36">
               <div class="flex justify-end">
                 <ActionButton
                   module="plantao"
