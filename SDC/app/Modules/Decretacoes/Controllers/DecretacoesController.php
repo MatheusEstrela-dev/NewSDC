@@ -424,7 +424,8 @@ class DecretacoesController extends Controller
         $dto = ProcessoRequestDTO::fromRequest($request);
         $this->processoService->updateProcesso($dto, $id);
 
-        return redirect()->back()->with('success', 'Processo atualizado com sucesso!');
+        // Sem flash de sucesso: o toast da pagina ja informa a atualizacao.
+        return redirect()->back();
     }
 
     /**
@@ -497,7 +498,8 @@ class DecretacoesController extends Controller
             return redirect()->back()->with('error', $result['message']);
         }
 
-        return redirect()->back()->with('success', $result['message']);
+        // Sem flash de sucesso: o toast da pagina ja informa o salvamento.
+        return redirect()->back();
     }
 
     // =========================================================================
