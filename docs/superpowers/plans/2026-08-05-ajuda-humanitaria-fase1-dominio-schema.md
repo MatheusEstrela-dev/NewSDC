@@ -16,10 +16,56 @@
 - Proibido acento em nome de classe, metodo, propriedade, arquivo, coluna de banco e chave de array. Acento e permitido apenas em valor de string destinado a exibicao
 - Nada sob `Domain/` pode importar `Illuminate\*`, `App\Models\*`, nem qualquer Model Eloquent. A unica dependencia externa permitida em `Domain/` e `Carbon\CarbonImmutable`
 - Fase aditiva: nenhum arquivo existente pode ser removido. As unicas modificacoes permitidas em arquivos existentes sao as descritas nas Tasks 9 e 10
-- Banco de testes e o mesmo de desenvolvimento; testes com banco usam `RefreshDatabase`
-- Runner de teste canonico, executado a partir de `SDC/`:
-  `& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=<Filtro>`
-  O container `newsdc_dev_app` nao tem PHPUnit instalado e o PHP do PATH e 8.1, incompativel com o projeto. Nao usar `php artisan test`
+- **Runner de teste.** Nenhum comando documentado no repositorio funciona neste
+  ambiente. Foram verificados um por um:
+
+  | Tentativa | Resultado |
+  | --- | --- |
+  | `php artisan test` | PHP do PATH e 8.1, incompativel com Laravel 12 |
+  | `docker exec newsdc_dev_app ... phpunit` | container sem PHPUnit, instalado sem dev-deps |
+  | `docker exec newsdc_frankenphp_local ...` | container nao existe mais; nome desatualizado na documentacao |
+  | PHP 8.3 do Laragon, direto | `PDOException: could not find driver`, pdo_pgsql nao habilitado |
+  | com pdo_pgsql habilitado por `-d` | timeout: config cacheado aponta para `host=db, port=5432`, nomes internos do container |
+  | com `APP_CONFIG_CACHE` inexistente | passa a respeitar `.env.testing`, que e sqlite `:memory:` |
+  | sqlite `:memory:` com `RefreshDatabase` | migrations do projeto nao rodam em SQLite; `2025_12_26_add_orgao_fk_to_users_table` consulta `INFORMATION_SCHEMA` do MySQL em SQL cru |
+  | Postgres em `127.0.0.1:5434` com credenciais do `.env` | funciona |
+
+  O comando canonico, a partir de `SDC/`, e:
+
+  ```powershell
+  $php = "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe"
+  $ext = "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\ext"
+  $dot = @{}
+  Get-Content .env | Where-Object { $_ -match '^\s*DB_(USERNAME|PASSWORD|DATABASE)\s*=' } | ForEach-Object {
+      $par = $_ -split '=', 2
+      $dot[$par[0].Trim()] = $par[1].Trim().Trim('"')
+  }
+  $env:APP_CONFIG_CACHE = "$env:TEMP\sem-cache-newsdc.php"
+  $env:DB_CONNECTION = "pgsql"
+  $env:DB_HOST = "127.0.0.1"
+  $env:DB_PORT = "5434"
+  $env:DB_DATABASE = $dot['DB_DATABASE']
+  $env:DB_USERNAME = $dot['DB_USERNAME']
+  $env:DB_PASSWORD = $dot['DB_PASSWORD']
+  & $php -d "extension_dir=$ext" -d "extension=php_pgsql.dll" -d "extension=php_pdo_pgsql.dll" `
+      vendor/bin/phpunit <argumentos>
+  ```
+
+  `APP_CONFIG_CACHE` aponta para arquivo inexistente de proposito: faz o Laravel
+  ler configuracao fresca sem apagar `bootstrap/cache/config.php`, que e
+  compartilhado com o container em execucao. Nao rodar `artisan config:clear`,
+  que derrubaria o cache do ambiente de desenvolvimento do usuario.
+
+  Nos passos seguintes, `TESTAR` designa esse bloco. Salve-o em um `.ps1` fora
+  do repositorio e invoque com os argumentos indicados.
+
+- **Trait de banco nos testes.** Usar `Illuminate\Foundation\Testing\DatabaseTransactions`,
+  nunca `RefreshDatabase`. As migrations do projeto nao rodam em SQLite e
+  `RefreshDatabase` sobre o Postgres de desenvolvimento apagaria o banco do
+  usuario. `DatabaseTransactions` e a convencao real do projeto: nenhum teste
+  existente usa `RefreshDatabase`.
+- Como os testes de banco rodam sobre o Postgres de desenvolvimento, a migration
+  da Task 8 precisa estar aplicada nele antes dos testes das Tasks 8, 9 e 10
 - Commits seguem gitmoji: `<emoji> tipo(escopo): descricao em pt-BR`. Escopo desta fase: `ajuda-humanitaria`
 - Nunca incluir trailer `Co-Authored-By` em commit
 
@@ -219,7 +265,7 @@ final class VocabularioEnumsTest extends TestCase
 
 Rodar a partir de `SDC/`:
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=VocabularioEnumsTest
+TESTAR --filter=VocabularioEnumsTest
 ```
 Esperado: FAIL com `Class "App\Modules\AjudaHumanitaria\Enums\TipoItemPedido" not found`.
 
@@ -475,7 +521,7 @@ enum StatusPrestacaoConta: string
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=VocabularioEnumsTest
+TESTAR --filter=VocabularioEnumsTest
 ```
 Esperado: PASS, 12 testes.
 
@@ -665,7 +711,7 @@ final class StatusPedidoAhTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=StatusPedidoAhTest
+TESTAR --filter=StatusPedidoAhTest
 ```
 Esperado: FAIL com `Class "App\Modules\AjudaHumanitaria\Enums\FasePedidoAh" not found`.
 
@@ -917,7 +963,7 @@ enum StatusPedidoAh: int
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=StatusPedidoAhTest
+TESTAR --filter=StatusPedidoAhTest
 ```
 Esperado: PASS, 18 testes.
 
@@ -1042,7 +1088,7 @@ final class ContratosTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=ContratosTest
+TESTAR --filter=ContratosTest
 ```
 Esperado: FAIL com `Class "App\Modules\AjudaHumanitaria\Domain\Contracts\ResultadoGuarda" not found`.
 
@@ -1146,7 +1192,7 @@ interface GuardaTransicao
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=ContratosTest
+TESTAR --filter=ContratosTest
 ```
 Esperado: PASS, 5 testes.
 
@@ -1330,7 +1376,7 @@ final class GuardasTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=GuardasTest
+TESTAR --filter=GuardasTest
 ```
 Esperado: FAIL com `Class "App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItemNoPedido" not found`.
 
@@ -1527,7 +1573,7 @@ final class FinalizacaoSomenteViaHomologacao implements GuardaTransicao
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=GuardasTest
+TESTAR --filter=GuardasTest
 ```
 Esperado: PASS, 13 testes.
 
@@ -1736,7 +1782,7 @@ final class PedidoAhWorkflowTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=PedidoAhWorkflowTest
+TESTAR --filter=PedidoAhWorkflowTest
 ```
 Esperado: FAIL com `Class "App\Modules\AjudaHumanitaria\Domain\PedidoAhWorkflow" not found`.
 
@@ -1837,7 +1883,7 @@ final class PedidoAhWorkflow
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=PedidoAhWorkflowTest
+TESTAR --filter=PedidoAhWorkflowTest
 ```
 Esperado: PASS, 11 testes.
 
@@ -1976,7 +2022,7 @@ final class SpecificationsTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=SpecificationsTest
+TESTAR --filter=SpecificationsTest
 ```
 Esperado: FAIL com `Class "App\Modules\AjudaHumanitaria\Domain\Specifications\MunicipioPodeAbrirPedido" not found`.
 
@@ -2094,14 +2140,14 @@ final class SaldoEntregaBeneficiarios
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=SpecificationsTest
+TESTAR --filter=SpecificationsTest
 ```
 Esperado: PASS, 10 testes.
 
 - [ ] **Step 5: Rodar a suite de dominio inteira**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit tests/Unit/AjudaHumanitaria
+TESTAR tests/Unit/AjudaHumanitaria
 ```
 Esperado: PASS. Confirma que o teste de arquitetura da Task 3 continua verde com os novos arquivos sob `Domain/`.
 
@@ -2222,7 +2268,7 @@ final class RepositoryContractsTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=RepositoryContractsTest
+TESTAR --filter=RepositoryContractsTest
 ```
 Esperado: FAIL com `Interface "App\Modules\AjudaHumanitaria\Domain\Repositories\MaterialAhRepositoryInterface" not found`.
 
@@ -2370,7 +2416,7 @@ interface SaldoMaterialRepositoryInterface
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=RepositoryContractsTest
+TESTAR --filter=RepositoryContractsTest
 ```
 Esperado: PASS, 5 testes.
 
@@ -2406,14 +2452,30 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AjudaHumanitaria;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class SchemaMahTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
+
+    /**
+     * Um municipio qualquer que ja exista no banco. Evita inserir registro em
+     * tabela de referencia compartilhada.
+     */
+    private function municipioExistente(): int
+    {
+        $id = DB::table('municipios')->value('id');
+
+        if ($id === null) {
+            $this->markTestSkipped('Banco de desenvolvimento sem municipios cadastrados.');
+        }
+
+        return (int) $id;
+    }
 
     /**
      * @return array<string, array{0: string, 1: array<int, string>}>
@@ -2494,45 +2556,38 @@ final class SchemaMahTest extends TestCase
 
     public function test_numero_e_unico_por_ano(): void
     {
-        \Illuminate\Support\Facades\DB::table('municipios')->insert([
-            'id' => 9001, 'codigo_ibge' => '3106200', 'nome' => 'Teste MAH', 'uf' => 'MG',
-            'created_at' => now(), 'updated_at' => now(),
-        ]);
-
         $base = [
-            'numero' => 1, 'ano' => 2026, 'municipio_id' => 9001, 'pop_atendida' => 100,
-            'esforcos_realizados' => 'x', 'status' => 0,
+            'numero' => 999_001, 'ano' => 2099, 'municipio_id' => $this->municipioExistente(),
+            'pop_atendida' => 100, 'esforcos_realizados' => 'x', 'status' => 0,
             'data_entrada_sistema' => now(), 'created_at' => now(), 'updated_at' => now(),
         ];
 
-        \Illuminate\Support\Facades\DB::table('pedidos_ah')->insert($base);
+        DB::table('pedidos_ah')->insert($base);
 
         $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
-        \Illuminate\Support\Facades\DB::table('pedidos_ah')->insert($base);
+        DB::table('pedidos_ah')->insert($base);
     }
 
     public function test_mesmo_numero_em_ano_diferente_e_aceito(): void
     {
-        \Illuminate\Support\Facades\DB::table('municipios')->insert([
-            'id' => 9002, 'codigo_ibge' => '3106201', 'nome' => 'Teste MAH 2', 'uf' => 'MG',
-            'created_at' => now(), 'updated_at' => now(),
-        ]);
-
         $base = [
-            'numero' => 1, 'municipio_id' => 9002, 'pop_atendida' => 100,
-            'esforcos_realizados' => 'x', 'status' => 0,
+            'numero' => 999_002, 'municipio_id' => $this->municipioExistente(),
+            'pop_atendida' => 100, 'esforcos_realizados' => 'x', 'status' => 0,
             'data_entrada_sistema' => now(), 'created_at' => now(), 'updated_at' => now(),
         ];
 
-        \Illuminate\Support\Facades\DB::table('pedidos_ah')->insert($base + ['ano' => 2025]);
-        \Illuminate\Support\Facades\DB::table('pedidos_ah')->insert($base + ['ano' => 2026]);
+        DB::table('pedidos_ah')->insert($base + ['ano' => 2098]);
+        DB::table('pedidos_ah')->insert($base + ['ano' => 2099]);
 
-        $this->assertSame(2, \Illuminate\Support\Facades\DB::table('pedidos_ah')->count());
+        $this->assertSame(
+            2,
+            DB::table('pedidos_ah')->where('numero', 999_002)->count(),
+        );
     }
 
     public function test_parametros_ah_nasce_com_a_linha_padrao(): void
     {
-        $linha = \Illuminate\Support\Facades\DB::table('parametros_ah')->first();
+        $linha = DB::table('parametros_ah')->first();
 
         $this->assertNotNull($linha, 'A migration deve semear a linha unica de parametros.');
         $this->assertSame(30, (int) $linha->prazo_prestacao_contas_dias);
@@ -2543,7 +2598,7 @@ final class SchemaMahTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=SchemaMahTest
+TESTAR --filter=SchemaMahTest
 ```
 Esperado: FAIL com `Tabela materiais_ah nao existe`.
 
@@ -2757,22 +2812,33 @@ return new class extends Migration
 };
 ```
 
-- [ ] **Step 4: Rodar o teste e confirmar que passa**
+- [ ] **Step 4: Confirmar que a migration sobe e desce**
+
+Como os testes usam `DatabaseTransactions` sobre o Postgres de desenvolvimento,
+a migration precisa ser aplicada antes de o teste poder passar. Aplique, reverta
+e aplique de novo, para provar os dois sentidos:
+
+```powershell
+# mesmas variaveis de ambiente do bloco TESTAR, trocando phpunit por artisan
+& $php artisan migrate --force
+& $php artisan migrate:rollback --step=1
+& $php artisan migrate --force
+```
+Esperado: as dez tabelas sao criadas, removidas e recriadas sem erro de
+dependencia de chave estrangeira. O rollback exercita a ordem inversa do
+`down()`.
+
+Nao rodar `migrate:fresh` nem `migrate:refresh`: apagariam o banco de
+desenvolvimento do usuario.
+
+- [ ] **Step 5: Rodar o teste e confirmar que passa**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=SchemaMahTest
+TESTAR --filter=SchemaMahTest
 ```
 Esperado: PASS, 14 testes.
 
 Se `test_numero_e_unico_por_ano` falhar por nome de excecao, confirme a classe que o driver PostgreSQL lanca e ajuste o `expectException` para ela.
-
-- [ ] **Step 5: Confirmar que a migration reverte**
-
-```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" artisan migrate --step
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" artisan migrate:rollback --step=1
-```
-Esperado: as dez tabelas sao criadas e removidas sem erro de dependencia de chave estrangeira.
 
 - [ ] **Step 6: Commit**
 
@@ -2831,28 +2897,30 @@ use App\Modules\AjudaHumanitaria\Models\PedidoAhParecer;
 use App\Modules\AjudaHumanitaria\Models\PrestacaoConta;
 use App\Modules\AjudaHumanitaria\Models\PrestacaoContaEntrega;
 use App\Modules\AjudaHumanitaria\Models\PrestacaoContaItem;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 final class ModelsMahTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
-    private int $municipioId = 9101;
+    private int $municipioId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        DB::table('municipios')->insert([
-            'id' => $this->municipioId, 'codigo_ibge' => '3106300',
-            'nome' => 'Municipio Teste', 'uf' => 'MG',
-            'created_at' => now(), 'updated_at' => now(),
-        ]);
+        $id = DB::table('municipios')->value('id');
+
+        if ($id === null) {
+            $this->markTestSkipped('Banco de desenvolvimento sem municipios cadastrados.');
+        }
+
+        $this->municipioId = (int) $id;
     }
 
-    private function criarPedido(int $numero = 1, int $ano = 2026): PedidoAh
+    private function criarPedido(int $numero = 999_101, int $ano = 2099): PedidoAh
     {
         return PedidoAh::create([
             'numero' => $numero,
@@ -2999,7 +3067,7 @@ final class ModelsMahTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=ModelsMahTest
+TESTAR --filter=ModelsMahTest
 ```
 Esperado: FAIL com `Class "App\Modules\AjudaHumanitaria\Models\PedidoAh" not found`.
 
@@ -3537,7 +3605,7 @@ class ParametroAh extends Model
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=ModelsMahTest
+TESTAR --filter=ModelsMahTest
 ```
 Esperado: PASS, 9 testes.
 
@@ -3625,7 +3693,7 @@ final class ProviderMahTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=ProviderMahTest
+TESTAR --filter=ProviderMahTest
 ```
 Esperado: FAIL em `test_workflow_e_singleton` e em `test_provider_nao_referencia_classe_inexistente`.
 
@@ -3699,23 +3767,28 @@ class AjudaHumanitariaServiceProvider extends ServiceProvider
 - [ ] **Step 4: Rodar o teste e confirmar que passa**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit --filter=ProviderMahTest
+TESTAR --filter=ProviderMahTest
 ```
 Esperado: PASS, 4 testes.
 
 - [ ] **Step 5: Rodar a suite completa do modulo**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit tests/Unit/AjudaHumanitaria tests/Feature/AjudaHumanitaria
+TESTAR tests/Unit/AjudaHumanitaria tests/Feature/AjudaHumanitaria
 ```
 Esperado: PASS em tudo.
 
 - [ ] **Step 6: Confirmar que nada existente regrediu**
 
 ```
-& "C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64\php.exe" vendor/bin/phpunit
+TESTAR
 ```
-Esperado: mesmo resultado da execucao feita antes de comecar a Task 1. Se houver falha, compare com a linha de base antes de investigar: o repositorio ja tinha uma falha conhecida ligada ao municipio de codigo 3106200.
+Linha de base medida antes da Task 1, com o runner corrigido: **86 testes, 266
+assercoes, 1 erro e 4 falhas**, concentradas em
+`tests/Feature/PlanCon/PlanConUploadTest.php`. Todas pre-existentes.
+
+Esperado apos a fase: o mesmo 1 erro e 4 falhas, mais os testes novos passando.
+Qualquer falha diferente dessas cinco e regressao introduzida pela fase.
 
 - [ ] **Step 7: Commit**
 
@@ -3730,10 +3803,10 @@ git commit -m "$(printf '%s\n' '🐛 fix(ajuda-humanitaria): provider apontava p
 
 Ao concluir as dez tasks:
 
-1. `vendor/bin/phpunit tests/Unit/AjudaHumanitaria` passa sem banco
-2. `vendor/bin/phpunit tests/Feature/AjudaHumanitaria` passa
+1. `TESTAR tests/Unit/AjudaHumanitaria` passa sem banco
+2. `TESTAR tests/Feature/AjudaHumanitaria` passa
 3. O teste de arquitetura da Task 3 confirma que nada sob `Domain/` importa `Illuminate` nem `App\Models`
-4. `artisan migrate` e `artisan migrate:rollback` funcionam nas dez tabelas
+4. `artisan migrate` e `artisan migrate:rollback --step=1` funcionam nas dez tabelas, sem uso de `migrate:fresh` nem `migrate:refresh`
 5. Nenhum arquivo do mock foi removido; a pagina de Beneficiario continua funcionando
 6. Regras cobertas nesta fase: RN-01 parcial (numeracao unica garantida por constraint; o calculo do proximo numero e fase 2), RN-03, RN-06, RN-08, RN-09, RN-10, RN-11, RN-12, RN-13, RN-16, RN-18, RN-19, RN-21
 7. Regras que ficam para a fase 2: RN-02, RN-04, RN-05, RN-07, RN-14, RN-15, RN-17, RN-20, RN-22, RN-23, RN-24, RN-25
