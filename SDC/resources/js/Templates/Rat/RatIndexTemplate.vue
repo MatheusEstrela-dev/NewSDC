@@ -11,7 +11,10 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <!-- flex-wrap: sem isso os botoes formam um unico flex item que o
+             container do PageHeader nao consegue quebrar, e o card corta o
+             ultimo botao nas larguras intermediarias. -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
           <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
           <ViewModeToggle v-model="viewMode" />
 

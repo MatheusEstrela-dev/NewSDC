@@ -13,6 +13,7 @@
 /* Mobile Utilities */
 @import './utilities/mobile.css';
 @import './utilities/touch-feedback.css';
+@import './utilities/table-sticky.css';
 
 @tailwind base;
 @tailwind components;

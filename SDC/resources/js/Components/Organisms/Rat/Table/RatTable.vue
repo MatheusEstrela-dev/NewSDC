@@ -50,7 +50,7 @@
           >Status</TableHeader>
           <TableHeader class="w-auto whitespace-nowrap">Município</TableHeader>
           <TableHeader class="w-44 whitespace-nowrap">Criado por</TableHeader>
-          <TableHeader align="right" class="w-44 whitespace-nowrap text-right">Ações</TableHeader>
+          <TableHeader align="right" class="table-actions-head w-44 whitespace-nowrap text-right">Ações</TableHeader>
         </TableHeaderRow>
         <tbody>
           <RatTableRow

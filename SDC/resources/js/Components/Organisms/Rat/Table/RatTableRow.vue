@@ -1,5 +1,9 @@
 <template>
-  <TableDataRow>
+  <!-- hover=false + table-row-solid: a coluna de Acoes e fixa e herda o fundo
+       da linha, e o hover padrao do atomo usa alpha (dark:bg-slate-700/30), o
+       que deixaria o conteudo rolado aparecer por baixo dela. A utility cobre
+       os dois estados com cor opaca. -->
+  <TableDataRow :hover="false" class="table-row-solid">
     <TableCell class="w-48 whitespace-nowrap">
       <Link
         :href="route('rat.show', rat.id)"
@@ -25,7 +29,7 @@
     <TableCell class="w-44 whitespace-nowrap">
       {{ rat.criado_por || 'Sistema' }}
     </TableCell>
-    <TableCell align="right" class="w-44 whitespace-nowrap">
+    <TableCell align="right" class="table-actions-cell w-44 whitespace-nowrap">
       <div class="flex justify-end">
         <ActionButton
           module="rat"

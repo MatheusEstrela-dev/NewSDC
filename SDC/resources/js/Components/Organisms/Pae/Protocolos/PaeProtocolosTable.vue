@@ -12,11 +12,14 @@
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Analista</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Datas</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Situação</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-44 min-w-44">Ações</th>
+            <th class="table-actions-head px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-44 min-w-44">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="protocolo in protocolos" :key="protocolo.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+          <!-- table-row-solid da fundo opaco a linha: a coluna de Acoes e fixa
+               (table-actions-cell) e herda esse fundo, senao o conteudo rolado
+               apareceria por baixo dela. -->
+          <tr v-for="protocolo in protocolos" :key="protocolo.id" class="table-row-solid transition-colors">
             <!-- Protocolo -->
             <td class="px-4 py-3">
               <div class="font-medium text-slate-900 dark:text-white">#{{ protocolo.protocoloNumero }}</div>
@@ -50,7 +53,7 @@
             </td>
 
             <!-- Acoes -->
-            <td class="px-4 py-3 w-44 min-w-44">
+            <td class="table-actions-cell px-4 py-3 w-44 min-w-44">
               <div class="flex items-center justify-end">
                 <ActionButton
                   module="pae"

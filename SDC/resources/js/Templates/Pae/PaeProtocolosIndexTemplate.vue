@@ -9,7 +9,11 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <!-- flex-wrap aqui tambem: o PageHeader ja envolve o slot num container
+             com wrap, mas se os botoes vierem num unico flex item sem wrap o
+             container externo nao tem onde quebrar e o card (overflow-hidden)
+             corta o ultimo botao entre md e ~1300px. -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
           <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
           <ViewModeToggle v-model="viewMode" />
 
