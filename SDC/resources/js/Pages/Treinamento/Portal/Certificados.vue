@@ -45,7 +45,7 @@ function irParaPagina(page) {
           </Text>
         </div>
         <div class="flex items-center gap-3">
-          <Badge :cor="certificado.status_color">{{ certificado.status_label }}</Badge>
+          <Badge :color="certificado.status_color">{{ certificado.status_label }}</Badge>
           <a
             v-if="certificado.disponivel"
             :href="route('portal.treinamento.certificados.imprimir', certificado.id)"

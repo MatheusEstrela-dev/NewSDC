@@ -64,7 +64,7 @@ function confirmarPresenca() {
     <CardBase class="p-6">
       <div class="flex items-start justify-between mb-3 gap-3">
         <Heading :level="1" class="text-2xl font-bold text-slate-800 dark:text-slate-100">{{ treinamento.titulo }}</Heading>
-        <Badge :cor="treinamento.tipo_color" class="shrink-0">{{ treinamento.tipo_label }}</Badge>
+        <Badge :color="treinamento.tipo_color" class="shrink-0">{{ treinamento.tipo_label }}</Badge>
       </div>
 
       <Text v-if="treinamento.descricao" size="base" class="text-slate-700 dark:text-slate-300 mb-6">
@@ -104,7 +104,7 @@ function confirmarPresenca() {
         <div v-if="minhaInscricao" class="space-y-4">
           <div class="flex items-center gap-3">
             <Text size="sm">Sua inscrição:</Text>
-            <Badge :cor="minhaInscricao.status === 'APROVADA' ? 'green' : minhaInscricao.status === 'REPROVADA' ? 'red' : 'yellow'">
+            <Badge :color="minhaInscricao.status === 'APROVADA' ? 'green' : minhaInscricao.status === 'REPROVADA' ? 'red' : 'yellow'">
               {{ minhaInscricao.status_label }}
             </Badge>
           </div>
