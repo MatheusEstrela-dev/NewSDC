@@ -2,9 +2,14 @@
 
 use App\Modules\AjudaHumanitaria\Controllers\BeneficiarioController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhController;
+use App\Modules\AjudaHumanitaria\Controllers\PedidoAhDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function () {
+
+    Route::get('/', [PedidoAhDashboardController::class, 'index'])
+        ->name('dashboard')
+        ->middleware('can:humanitaria.pedidos.view');
 
     // Pedido de Material de Ajuda Humanitaria (MAH).
     Route::prefix('pedidos')->name('pedidos.')->group(function () {

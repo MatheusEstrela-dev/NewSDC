@@ -420,6 +420,16 @@
 
       <div class="nav-section">
         <NavItem
+          v-if="_routes.hasHumanitariaDashboard"
+          :href="route('ajuda-humanitaria.dashboard')"
+          :active="isRouteActive('ajuda-humanitaria.dashboard')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Dashboard
+        </NavItem>
+        <NavItem
           :href="route('ajuda-humanitaria.pedidos.index')"
           :active="isRouteActive('ajuda-humanitaria.pedidos.*')"
           icon="dot"
@@ -606,6 +616,7 @@ const _routes = {
   hasPlantao: route().has('plantao.index'),
   hasDecretacoes: route().has('decretacoes.index'),
   hasHumanitaria: route().has('ajuda-humanitaria.pedidos.index'),
+  hasHumanitariaDashboard: route().has('ajuda-humanitaria.dashboard'),
   hasHumanitariaBeneficiarios: route().has('ajuda-humanitaria.beneficiarios.index'),
   hasCompdec: route().has('compdec.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
