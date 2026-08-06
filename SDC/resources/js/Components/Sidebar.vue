@@ -141,7 +141,7 @@
         <!-- Ajuda Humanitaria -->
         <NavItem
           v-if="canSeeAjudaHumanitaria && _routes.hasHumanitaria"
-          :href="route('ajuda-humanitaria.beneficiarios.index')"
+          :href="route('ajuda-humanitaria.pedidos.index')"
           :active="isRouteActive('ajuda-humanitaria.*')"
           icon="heart"
           :collapsed="isCollapsed"
@@ -551,7 +551,7 @@ const _routes = {
   hasPmda: route().has('pmda.planos.index'),
   hasPlantao: route().has('plantao.index'),
   hasDecretacoes: route().has('decretacoes.index'),
-  hasHumanitaria: route().has('ajuda-humanitaria.beneficiarios.index'),
+  hasHumanitaria: route().has('ajuda-humanitaria.pedidos.index'),
   hasCompdec: route().has('compdec.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
   hasTdapPrestadores: route().has('tdap.prestadores.index'),

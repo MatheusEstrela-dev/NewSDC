@@ -11,6 +11,20 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
         Route::get('/', [PedidoAhController::class, 'index'])
             ->name('index')
             ->middleware('can:humanitaria.pedidos.view');
+
+        // Declarada antes de /{id} para nao ser capturada como id do pedido.
+        Route::get('/create', [PedidoAhController::class, 'create'])
+            ->name('create')
+            ->middleware('can:humanitaria.pedidos.create');
+
+        Route::post('/', [PedidoAhController::class, 'store'])
+            ->name('store')
+            ->middleware('can:humanitaria.pedidos.create');
+
+        Route::get('/{id}', [PedidoAhController::class, 'show'])
+            ->name('show')
+            ->middleware('can:humanitaria.pedidos.view')
+            ->whereNumber('id');
     });
 
     Route::prefix('beneficiarios')->name('beneficiarios.')->group(function () {

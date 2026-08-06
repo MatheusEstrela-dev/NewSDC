@@ -5,10 +5,21 @@ declare(strict_types=1);
 namespace App\Modules\AjudaHumanitaria\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Municipio;
+use App\Models\User;
+use App\Modules\AjudaHumanitaria\DTOs\PedidoAhDTO;
 use App\Modules\AjudaHumanitaria\Enums\StatusPedidoAh;
+use App\Modules\AjudaHumanitaria\Enums\TipoDecreto;
+use App\Modules\AjudaHumanitaria\Requests\StorePedidoAhRequest;
 use App\Modules\AjudaHumanitaria\Resources\PedidoAhIndexResource;
+use App\Modules\AjudaHumanitaria\Resources\PedidoAhResource;
 use App\Modules\AjudaHumanitaria\Services\PedidoAhService;
+use App\Modules\AjudaHumanitaria\Support\MunicipioDoUsuario;
+use App\Modules\Compdec\Enums\FuncaoEquipe;
+use App\Modules\Compdec\Models\CompdecEquipe;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -41,6 +52,122 @@ class PedidoAhController extends Controller
             'canDelete'     => $request->user()?->can('humanitaria.pedidos.delete') ?? false,
             'canExport'     => $request->user()?->can('humanitaria.pedidos.export') ?? false,
         ]);
+    }
+
+    public function create(Request $request): Response
+    {
+        $municipioId = MunicipioDoUsuario::resolver($request->user());
+
+        return Inertia::render('AjudaHumanitaria/Pedidos/Create', [
+            'municipios'     => $this->municipios($municipioId),
+            'cobrades'       => $this->cobrades(),
+            'tiposDecreto'   => TipoDecreto::options(),
+            'municipioFixo'  => $municipioId,
+            'coordenador'    => $this->coordenadorDoMunicipio($request->user()),
+        ]);
+    }
+
+    public function store(StorePedidoAhRequest $request): RedirectResponse
+    {
+        [$pedido, $erro] = $this->pedidos->abrir(
+            PedidoAhDTO::fromRequest($request->validated()),
+            $request->user()?->id,
+        );
+
+        if ($erro !== null) {
+            return back()->withInput()->with('error', $erro);
+        }
+
+        return redirect()
+            ->route('ajuda-humanitaria.pedidos.show', $pedido->id)
+            ->with('success', "Pedido {$pedido->identificador} aberto com sucesso.");
+    }
+
+    public function show(Request $request, int $id): Response
+    {
+        $pedido = $this->pedidos->obter($id);
+
+        $this->authorize('view', $pedido);
+
+        $pedido->load(['municipio', 'itensPedido', 'itensLiberados']);
+
+        return Inertia::render('AjudaHumanitaria/Pedidos/Show', [
+            'pedido'    => new PedidoAhResource($pedido),
+            'canEdit'   => $request->user()?->can('update', $pedido) ?? false,
+            'canDelete' => $request->user()?->can('delete', $pedido) ?? false,
+        ]);
+    }
+
+    /**
+     * Municipios oferecidos no formulario. Quem tem lotacao municipal so ve o
+     * proprio, o que espelha a RN-24 ja na origem em vez de so barrar depois.
+     *
+     * @return array<int, array{value: int, label: string}>
+     */
+    private function municipios(?int $municipioFixo): array
+    {
+        return Municipio::query()
+            ->when($municipioFixo !== null, fn ($q) => $q->whereKey($municipioFixo))
+            ->orderBy('nome')
+            ->get(['id', 'nome', 'uf'])
+            ->map(static fn (Municipio $m): array => [
+                'value' => (int) $m->id,
+                'label' => $m->uf ? "{$m->nome} - {$m->uf}" : (string) $m->nome,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{value: int, label: string}>
+     */
+    private function cobrades(): array
+    {
+        return DB::table('dec_cobrade')
+            ->orderBy('descricao')
+            ->get(['id', 'codigo', 'descricao'])
+            ->map(static fn (object $c): array => [
+                'value' => (int) $c->id,
+                'label' => trim(($c->codigo ? "{$c->codigo} - " : '') . (string) $c->descricao),
+            ])
+            ->all();
+    }
+
+    /**
+     * RN-05: os dados do coordenador vem da equipe COMPDEC do orgao do usuario.
+     *
+     * @return array<string, ?string>
+     */
+    private function coordenadorDoMunicipio(?User $user): array
+    {
+        $vazio = ['nome' => null, 'telefone' => null, 'celular' => null, 'email' => null];
+
+        if ($user === null) {
+            return $vazio;
+        }
+
+        $orgao = MunicipioDoUsuario::orgaoDe($user);
+
+        if ($orgao === null) {
+            return $vazio;
+        }
+
+        $membro = CompdecEquipe::query()
+            ->where('orgao_id', $orgao->id)
+            ->where('funcao', FuncaoEquipe::COORDENADOR->value)
+            ->where('ativo', true)
+            ->orderBy('ordem')
+            ->first();
+
+        if ($membro === null) {
+            return $vazio;
+        }
+
+        return [
+            'nome'     => $membro->nome,
+            'telefone' => $membro->telefone,
+            'celular'  => $membro->celular,
+            'email'    => $membro->email,
+        ];
     }
 
     /**
