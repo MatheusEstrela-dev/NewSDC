@@ -20,14 +20,17 @@
             <SortableHeader>Reconhecimento</SortableHeader>
             <SortableHeader coluna="n_protocolo_fide" v-bind="ordenacao" @ordenar="emitirOrdenacao">Nº Protocolo S2ID</SortableHeader>
             <SortableHeader coluna="data_publicacao_mg" direcao-inicial="desc" classe="hidden lg:table-cell" v-bind="ordenacao" @ordenar="emitirOrdenacao">Vigência</SortableHeader>
-            <SortableHeader classe="text-right w-36 min-w-36">Ações</SortableHeader>
+            <SortableHeader classe="table-actions-head text-right w-36 min-w-36">Ações</SortableHeader>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+          <!-- table-row-solid: fundo opaco para a coluna de Acoes fixa herdar.
+               Substitui o hover com alpha, que deixaria o conteudo rolado
+               aparecer por baixo dela. -->
           <tr
             v-for="processo in processos"
             :key="processo.id"
-            class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group"
+            class="table-row-solid transition-colors group"
           >
             <!-- Protocolo -->
             <td class="px-4 py-3">
@@ -78,7 +81,7 @@
             </td>
 
             <!-- Acoes -->
-            <td class="px-4 py-3 w-36 min-w-36">
+            <td class="table-actions-cell px-4 py-3 w-36 min-w-36">
               <div class="flex items-center justify-end">
                 <ActionButton
                   module="decretacoes"

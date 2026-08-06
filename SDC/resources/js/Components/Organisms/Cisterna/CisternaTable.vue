@@ -14,14 +14,14 @@
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap hidden sm:table-cell">Tipo</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap">Status</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap hidden lg:table-cell">Capacidade</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right whitespace-nowrap w-32 min-w-32">Ações</th>
+            <th class="table-actions-head px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right whitespace-nowrap w-32 min-w-32">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
           <tr
             v-for="cisterna in cisternas"
             :key="cisterna.id"
-            class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group"
+            class="table-row-solid transition-colors group"
           >
             <td class="px-4 py-3">
               <div class="font-medium text-slate-800 dark:text-slate-200 text-xs sm:text-sm whitespace-nowrap">
@@ -59,7 +59,7 @@
               {{ capacidadeLabel(cisterna.capacidade_litros) }}
             </td>
 
-            <td class="px-4 py-3 w-32 min-w-32" @click.stop>
+            <td class="table-actions-cell px-4 py-3 w-32 min-w-32" @click.stop>
               <div class="flex items-center justify-end">
                 <ActionButton
                   module="cisternas"

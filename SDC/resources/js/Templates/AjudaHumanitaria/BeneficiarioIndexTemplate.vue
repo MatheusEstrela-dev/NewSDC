@@ -9,7 +9,7 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
           <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
           <ViewModeToggle v-model="viewMode" />
 
@@ -92,11 +92,11 @@
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Status</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Contato</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Município</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-40 min-w-40">Ações</th>
+            <th class="table-actions-head px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-40 min-w-40">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="beneficiario in beneficiarios" :key="beneficiario.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+          <tr v-for="beneficiario in beneficiarios" :key="beneficiario.id" class="table-row-solid transition-colors">
             <td class="px-4 py-3">
               <div class="text-sm font-medium text-slate-900 dark:text-white">{{ beneficiario.nome }}</div>
             </td>
@@ -113,7 +113,7 @@
             </td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ beneficiario.telefone || '—' }}</td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ beneficiario.municipio?.nome || beneficiario.municipio || '—' }}</td>
-            <td class="px-4 py-3 text-right w-40 min-w-40">
+            <td class="table-actions-cell px-4 py-3 text-right w-40 min-w-40">
               <div class="flex justify-end">
                 <ActionButton
                   module="humanitaria"

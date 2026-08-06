@@ -14,6 +14,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Guards que podem ser autores de uma acao
+    |--------------------------------------------------------------------------
+    |
+    | Consultados em ordem por RegistroDeAcao::autor() quando o guard padrao nao
+    | tem ninguem logado. Existe porque nem toda acao sobre um protocolo parte de
+    | usuario interno: no Portal de Treinamentos quem se inscreve e um cidadao,
+    | em guard proprio. Sao autores, nunca destinatarios -- o card continua indo
+    | so para os donos internos declarados em Rastreavel::donosNotificacao().
+    |
+    */
+    'guards_autores' => ['cidadao'],
+
+    /*
+    |--------------------------------------------------------------------------
     | Modulos notificaveis
     |--------------------------------------------------------------------------
     |

@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Treinamento\Services;
 
+use App\Modules\Notificacoes\Enums\AcaoTrilha;
+use App\Modules\Notificacoes\Services\RegistroDeAcao;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Enums\StatusTreinamento;
 use App\Modules\Treinamento\Models\Certificado;
 use App\Modules\Treinamento\Models\Inscricao;
+use App\Modules\Treinamento\Models\Treinamento;
 
 class CertificadoService
 {
@@ -44,6 +47,19 @@ class CertificadoService
     public function reemitir(Certificado $certificado): Certificado
     {
         $certificado->marcarComoGerado();
+
+        // So a reemissao entra na trilha. A emissao automatica (emitirSeElegivel)
+        // roda dentro do EmitirCertificadosTreinamentoJob, na fila, sem usuario
+        // autenticado: RegistroDeAcao::autor() volta null e a chamada seria letra
+        // morta. Alem disso ela ja e consequencia direta da conclusao do
+        // treinamento, que abre o proprio card de situacao.
+        app(RegistroDeAcao::class)->registrarNoProtocolo(
+            Treinamento::class,
+            $certificado->treinamento_id,
+            AcaoTrilha::Relacionado,
+            'certificado reemitido',
+        );
+
         return $certificado;
     }
 }

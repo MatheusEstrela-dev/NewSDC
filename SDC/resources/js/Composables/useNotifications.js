@@ -23,6 +23,7 @@ const isLoading = ref(false);
 const modoAtivo = ref(null);
 
 let pollingHandle = null;
+let visibilidadeHandler = null;
 let echoChannel = null;
 let etag = null;
 let assinantes = 0;
@@ -178,10 +179,31 @@ export function useNotifications() {
 
     const iniciarPolling = (intervalo = INTERVALO_POLLING_MS) => {
         if (pollingHandle) return;
-        pollingHandle = setInterval(fetchNotifications, intervalo);
+
+        // Aba em segundo plano nao consulta: ninguem esta olhando o sininho e
+        // cada consulta custa o ciclo inteiro de request no servidor. O
+        // intervalo continua correndo (e barato) e volta a consultar sozinho
+        // quando a aba reaparece.
+        pollingHandle = setInterval(() => {
+            if (document.hidden) return;
+            fetchNotifications();
+        }, intervalo);
+
+        // Ao voltar para a aba, consulta na hora em vez de esperar o proximo
+        // tick: sem isso o painel podia ficar ate um intervalo inteiro parado
+        // justamente no momento em que o usuario olha para ele.
+        visibilidadeHandler = () => {
+            if (!document.hidden) fetchNotifications();
+        };
+        document.addEventListener('visibilitychange', visibilidadeHandler);
     };
 
     const pararPolling = () => {
+        if (visibilidadeHandler) {
+            document.removeEventListener('visibilitychange', visibilidadeHandler);
+            visibilidadeHandler = null;
+        }
+
         if (!pollingHandle) return;
         clearInterval(pollingHandle);
         pollingHandle = null;

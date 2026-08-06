@@ -20,14 +20,14 @@
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Validade</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Endereço</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Status</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-32">Ações</th>
+            <th class="table-actions-head px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-32">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
           <tr
             v-for="produto in produtos"
             :key="produto.id"
-            class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+            class="table-row-solid transition-colors"
           >
             <td class="px-4 py-3">
               <div class="font-semibold text-slate-900 dark:text-slate-100">{{ produto.nome }}</div>
@@ -52,7 +52,7 @@
             <td class="whitespace-nowrap px-4 py-3">
               <EstoqueStatusBadge :status="produto.status" />
             </td>
-            <td class="px-4 py-3">
+            <td class="table-actions-cell px-4 py-3">
               <div class="flex items-center justify-end gap-1">
                 <ActionButton
                   module="estoque"

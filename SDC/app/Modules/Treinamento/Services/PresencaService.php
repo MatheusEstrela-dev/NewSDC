@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Services;
 
 use App\Models\User;
+use App\Modules\Notificacoes\Enums\AcaoTrilha;
+use App\Modules\Notificacoes\Services\RegistroDeAcao;
 use App\Modules\Treinamento\Enums\StatusFrequencia;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
 use App\Modules\Treinamento\Models\Frequencia;
 use App\Modules\Treinamento\Models\Inscricao;
 use App\Modules\Treinamento\Models\Modulo;
+use App\Modules\Treinamento\Models\Treinamento;
 
 class PresencaService
 {
@@ -156,6 +159,17 @@ class PresencaService
         );
 
         $this->certificadoService->emitirSeElegivel($inscricao);
+
+        // Ponto unico da trilha para presenca: qr, manual, offline e lote passam
+        // todos por aqui. Fica depois do updateOrCreate porque reenviar o mesmo
+        // check-in e idempotente e nao deve render card novo -- e a janela de
+        // agrupamento do modulo cobre a chamada de uma turma inteira.
+        app(RegistroDeAcao::class)->registrarNoProtocolo(
+            Treinamento::class,
+            $inscricao->treinamento_id,
+            AcaoTrilha::Relacionado,
+            'presenca registrada',
+        );
 
         return $frequencia;
     }

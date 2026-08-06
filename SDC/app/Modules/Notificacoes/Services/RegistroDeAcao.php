@@ -114,10 +114,25 @@ class RegistroDeAcao
 
     /**
      * Nome de quem executou a acao, ou null quando nao ha usuario autenticado.
+     *
+     * Os guards extras vem de config('notificacoes.guards_autores') porque nem toda
+     * acao sobre um protocolo parte de usuario interno: no Portal de Treinamentos
+     * quem se inscreve e um cidadao, autenticado em guard proprio. Olhando so o
+     * guard padrao, auth()->user() voltava null e registrar() saia sem fazer nada --
+     * o dono do treinamento nunca sabia das inscricoes, que e justamente o aviso
+     * mais util do modulo.
      */
     private function autor(): ?string
     {
         $usuario = auth()->user();
+
+        foreach (config('notificacoes.guards_autores', []) as $guard) {
+            if ($usuario !== null) {
+                break;
+            }
+
+            $usuario = auth($guard)->user();
+        }
 
         if ($usuario === null) {
             return null;

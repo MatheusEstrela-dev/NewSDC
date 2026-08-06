@@ -19,14 +19,14 @@
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Responsável</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Situação</th>
             <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs">Última movimentação</th>
-            <th class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-28">Ações</th>
+            <th class="table-actions-head px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-xs text-right w-28">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
           <tr
             v-for="equipamento in equipamentos"
             :key="equipamento.id"
-            class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+            class="table-row-solid transition-colors"
           >
             <td class="px-4 py-3">
               <div class="font-semibold text-slate-900 dark:text-slate-100">{{ equipamento.nome }}</div>
@@ -47,7 +47,7 @@
             <td class="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">
               {{ formatDate(equipamento.ultima_movimentacao) }}
             </td>
-            <td class="px-4 py-3">
+            <td class="table-actions-cell px-4 py-3">
               <div class="flex items-center justify-end gap-1">
                 <ActionButton
                   module="inventario"

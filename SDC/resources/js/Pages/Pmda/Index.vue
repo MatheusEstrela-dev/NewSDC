@@ -73,16 +73,16 @@
               <th class="px-4 py-3 text-left">Município</th>
               <th class="px-4 py-3 text-left">Situação</th>
               <th class="px-4 py-3 text-left">Criação</th>
-              <th class="w-28 px-4 py-3 text-right">Ações</th>
+              <th class="table-actions-head w-28 px-4 py-3 text-right">Ações</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
-            <tr v-for="plano in planos.data" :key="plano.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/60">
+            <tr v-for="plano in planos.data" :key="plano.id" class="table-row-solid transition">
               <td class="whitespace-nowrap px-4 py-4 font-mono text-slate-700 dark:text-slate-300">{{ plano.protocolo ?? '—' }}</td>
               <td class="px-4 py-4 text-slate-700 dark:text-slate-300">{{ plano.municipio ?? '—' }}</td>
               <td class="px-4 py-4"><PmdaStatusBadge :label="plano.status_label" :cor="plano.status_cor" /></td>
               <td class="whitespace-nowrap px-4 py-4 text-slate-500">{{ formatDate(plano.data) }}</td>
-              <td class="px-4 py-4">
+              <td class="table-actions-cell px-4 py-4">
                 <div class="flex items-center justify-end gap-1">
                   <ActionButton
                     action="history"
