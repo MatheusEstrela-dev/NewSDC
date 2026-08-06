@@ -818,7 +818,32 @@ const canSeeDebug = computed(() => {
   return isDev || _isSuper.value;
 });
 
-const activeSubmenu = ref(null);
+/**
+ * Prefixo de rota que pertence a cada submenu.
+ *
+ * Serve para reabrir o submenu certo depois de navegar: a Sidebar remonta a
+ * cada visita do Inertia, e sem isso o menu voltaria para a raiz assim que o
+ * usuario clicasse em qualquer item de dentro da pasta.
+ */
+const submenuPorRota = {
+  'tdap.': 'tdap',
+  'estoque.': 'estoque',
+  'ajuda-humanitaria.': 'ajuda-humanitaria',
+};
+
+function submenuDaRotaAtual() {
+  const atual = route().current();
+
+  if (!atual) {
+    return null;
+  }
+
+  const par = Object.entries(submenuPorRota).find(([prefixo]) => atual.startsWith(prefixo));
+
+  return par ? par[1] : null;
+}
+
+const activeSubmenu = ref(submenuDaRotaAtual());
 
 const submenuTitles = {
   tdap: 'TDAP',
