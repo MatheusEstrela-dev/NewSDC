@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * Raiz do agregado do pedido de material de ajuda humanitaria.
@@ -21,9 +23,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * App\Modules\AjudaHumanitaria\Domain. Aqui ficam apenas relacoes, casts e
  * leitura derivada de apresentacao.
  */
-class PedidoAh extends Model
+class PedidoAh extends Model implements HasMedia
 {
+    use InteractsWithMedia;
     use SoftDeletes;
+
+    public const MEDIA_ANEXOS = 'anexos_pedido';
 
     protected $table = 'pedidos_ah';
 
@@ -114,5 +119,21 @@ class PedidoAh extends Model
     public function getIdentificadorAttribute(): string
     {
         return "{$this->numero}/{$this->ano}";
+    }
+
+    /**
+     * RN-22: anexos do pedido, somente PDF.
+     *
+     * Nao e singleFile, ao contrario das demais collections do projeto: o
+     * legado grava varios documentos por pedido, em pedido/{id}.
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection(self::MEDIA_ANEXOS)
+            ->useDisk((string) config('ajuda-humanitaria.disk', 'local'))
+            ->acceptsFile(fn ($file): bool => $file->mimeType === 'application/pdf' || (
+                $file->mimeType === 'application/x-empty'
+                && mb_strtolower(pathinfo($file->name, PATHINFO_EXTENSION)) === 'pdf'
+            ));
     }
 }
