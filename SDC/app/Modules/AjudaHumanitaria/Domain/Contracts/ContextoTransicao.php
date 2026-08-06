@@ -24,7 +24,6 @@ final readonly class ContextoTransicao
         public bool $temItemPedido = false,
         public bool $temParecerFavoravel = false,
         public bool $temItemLiberado = false,
-        public bool $agendamentoAprovado = false,
         public bool $viaHomologacao = false,
     ) {}
 

@@ -68,6 +68,26 @@ nomenclatura, labels de status, gate por municipio e validacoes de formulario.
 | Lista de material regredida para 4 itens fixos em codigo, duplicados em `create` e `edit` | `sdc` `AjudaPedidoController.php:179` e `:313` | RN-07: catalogo configuravel |
 | `analise_drd` desativado por comentario, restando como vestigio | `h_pedido_an_tec/cadastro.php:71` | Nao entra como estado; REDEC permanece como perfil de consulta regional |
 
+### 2.4 Regras que o legado declara mas nao aplica
+
+Consulta ao banco `gestaocedec_local` mostra que tres regras existem no codigo e
+sao violadas nos dados. O modulo novo passa a aplica-las de fato, o que e uma
+mudanca de comportamento a comunicar a area.
+
+| Regra | Violacoes no legado | Efeito no modulo novo |
+| --- | --- | --- |
+| RN-01, numero unico por ano | 2 pares `numero`+`ano` duplicados | Constraint `unique` rejeita |
+| RN-03, um pedido em edicao por municipio | 3 municipios com mais de um | Guarda bloqueia a abertura |
+| RN-18, entrega nao excede o material | 2 prestacoes com entrega acima | Guarda bloqueia o lancamento |
+
+Como a base nova comeca vazia, nenhum dado historico e invalidado por isso. Caso
+a migracao de historico venha a ser feita, esses registros precisarao de
+tratamento.
+
+Confirmacao positiva no mesmo levantamento: dos 892 pedidos que chegaram a
+Atendido ou Finalizado, **todos** tem itens tipo `L` e **todos** tem prestacao de
+contas aberta, o que confirma a RN-15 na pratica.
+
 ## 3. Decisoes de escopo
 
 | Tema | Decisao |
@@ -152,45 +172,69 @@ Saidas: 7 Cancelado, 8 Reprovado
 | RN-14 | Toda transicao grava log com status anterior, novo, observacao, usuario e timestamp | GC `:1794` (`logTramita`) |
 | RN-15 | Entrada em Atendido copia os itens tipo `L` para a prestacao de contas | GC `:1610` (`iniciaPrestContas`), `:1635` (`lancaMaterialPrest`) |
 
-#### 4.4.1 Matriz de transicoes (ambiguidade do legado resolvida)
+#### 4.4.1 Matriz de transicoes (derivada do log real)
 
-As duas fontes do legado se contradizem. `AjudaPedidoController::edit`
-(SDC `:329-382`) monta a lista de destinos por status e permite, do status 0,
-saltar direto para "Aguardando Retirada de Material" (5) ou "Reprovado" (8), sem
-passar por analise. `AjudaPedidoTramitController::getTramitList`
-(SDC `:16`) monta outra lista, em que qualquer status entre 2 e 6 pode ir para
-qualquer um de 1 a 7, inclusive retroceder de Atendido para Analise DLOG.
+As duas fontes de codigo do legado se contradizem. `AjudaPedidoController::edit`
+(SDC `:329-382`) monta uma lista de destinos por status;
+`AjudaPedidoTramitController::getTramitList` (SDC `:16`) monta outra, diferente.
+Nenhuma das duas descreve o processo: sao artefatos de interface escritos em
+momentos distintos.
 
-Nenhuma das duas descreve um processo administrativo coerente: sao artefatos de
-listas de interface montadas em momentos diferentes. A matriz abaixo preserva a
-intencao do fluxo e as regras RN-11 e RN-19, e e a definicao normativa deste
-modulo.
+A resposta nao esta no codigo e sim no dado. A tabela `aju_h_pedido_tramit_log`
+do banco `gestaocedec_local` registra **1.969 transicoes reais**. A matriz abaixo
+foi extraida delas.
 
-| De | Para | Condicao | Papel |
-| --- | --- | --- | --- |
-| 0 Edicao Compdec | 1 Analise DLOG | pedido tem ao menos um item tipo `P` | COMPDEC |
-| 0 Edicao Compdec | 7 Cancelado | - | COMPDEC, CEDEC |
-| 1 Analise DLOG | 2 Analise Diretor DLOG | ao menos um parecer favoravel (RN-11) | Analista DLOG |
-| 1 Analise DLOG | 0 Edicao Compdec | devolve para correcao | Analista DLOG |
-| 1 Analise DLOG | 8 Reprovado | - | Analista DLOG |
-| 1 Analise DLOG | 7 Cancelado | - | CEDEC |
-| 2 Analise Diretor DLOG | 3 Aprovado | itens tipo `L` definidos | Diretor DLOG |
-| 2 Analise Diretor DLOG | 1 Analise DLOG | devolve para reanalise | Diretor DLOG |
-| 2 Analise Diretor DLOG | 8 Reprovado | - | Diretor DLOG |
-| 2 Analise Diretor DLOG | 7 Cancelado | - | CEDEC |
-| 3 Aprovado | 4 Aguard. Disponibilidade | - | CEDEC |
-| 3 Aprovado | 7 Cancelado | - | CEDEC |
-| 4 Aguard. Disponibilidade | 5 Aguard. Retirada | - | CEDEC |
-| 4 Aguard. Disponibilidade | 7 Cancelado | - | CEDEC |
-| 5 Aguard. Retirada | 6 Atendido | agendamento aprovado (RN-21) | CEDEC |
-| 5 Aguard. Retirada | 7 Cancelado | - | CEDEC |
-| 6 Atendido | 9 Finalizado | somente via homologacao da prestacao (RN-19) | CEDEC |
-| 6 Atendido | 7 Cancelado | - | CEDEC |
-| 7, 8, 9 | - | estados terminais | - |
+Transicoes observadas, por frequencia:
 
-Duas travas que o legado nao tinha e que esta matriz introduz: nao se envia
-pedido vazio para analise, e nao se aprova sem os itens liberados definidos.
-Ambas evitam estados invalidos que hoje sao alcancaveis.
+| De | Para | Ocorrencias |
+| --- | --- | ---: |
+| 2 Analise Diretor | 5 Aguard. Retirada | 650 |
+| 5 Aguard. Retirada | 6 Atendido | 417 |
+| 1 Analise DLOG | 0 Edicao Compdec | 280 |
+| 2 Analise Diretor | 6 Atendido | 208 |
+| 2 Analise Diretor | 1 Analise DLOG | 132 |
+| 2 Analise Diretor | 3 Aprovado | 54 |
+| 5 Aguard. Retirada | 1 Analise DLOG | 39 |
+| 2 Analise Diretor | 7 Cancelado | 32 |
+| 6 Atendido | 1 Analise DLOG | 27 |
+| 2 Analise Diretor | 4 Aguard. Disponib. | 20 |
+| 5 Aguard. Retirada | 7 Cancelado | 20 |
+| demais (3 e 4 para frente e para tras, 6 para 5, 6 para 7) | | 40 |
+
+O achado central: **o processo nao e linear**. Da analise do Diretor o pedido e
+despachado direto para a etapa que precisa, e `2 para 5` sozinho responde por um
+terco de todas as transicoes. Qualquer etapa pos-analise pode voltar para
+reanalise. Uma matriz linear `2-3-4-5-6` bloquearia 1.016 das 1.969 transicoes
+registradas, ou 52% do que a area faz.
+
+Matriz normativa deste modulo:
+
+| De | Para | Condicao |
+| --- | --- | --- |
+| 0 Edicao Compdec | 1 Analise DLOG | ao menos um item tipo `P` |
+| 0 Edicao Compdec | 7 Cancelado | - |
+| 1 Analise DLOG | 2 Analise Diretor | ao menos um parecer favoravel (RN-11) |
+| 1 Analise DLOG | 0, 8, 7 | - |
+| 2 Analise Diretor | 3, 4, 5, 6 | despacho direto; para 6, exige itens `L` |
+| 2 Analise Diretor | 1, 8, 7 | - |
+| 3 Aprovado | 4, 5, 6, 1, 2, 7 | para 6, exige itens `L` |
+| 4 Aguard. Disponib. | 5, 6, 1, 2, 7 | para 6, exige itens `L` |
+| 5 Aguard. Retirada | 6, 4, 1, 2, 7 | para 6, exige itens `L` |
+| 6 Atendido | 9 Finalizado | somente via homologacao (RN-19) |
+| 6 Atendido | 5, 4, 1, 2, 7 | reabertura, observada 33 vezes |
+| 7, 8, 9 | - | terminais |
+
+Duas exclusoes deliberadas em relacao ao log:
+
+- **Auto-transicoes** (`2 para 2`, `4 para 4`, `5 para 5`, `6 para 6`), 31
+  ocorrencias, ficam de fora: sao re-salvamento de parecer na mesma etapa, nao
+  mudanca de estado.
+- **`0 para 1` nao aparece no log** porque `envia_pedido` grava o status sem
+  chamar `logTramita`. A transicao existe no processo; e o registro dela que
+  falta. No modulo novo ela passa a ser logada como qualquer outra.
+
+Uma unica trava e acrescentada ao que o legado permitia: nao se envia pedido
+vazio para analise. Nenhuma transicao registrada e bloqueada por ela.
 
 Cores por status, para o badge, conforme `getCorStatus` (GC `:1290`):
 
@@ -219,7 +263,20 @@ e escuro, e nao aplicados como hexadecimal cru.
 | RN-18 | A soma das quantidades entregues aos beneficiarios nao pode exceder a quantidade de material daquele item da prestacao; o saldo e material menos entregue | GC `H_pedido_benefajuda_hModel.php:498` (`verificaRestanteBenef`), `H_pedido_prestajuda_hModel.php` (`percBenef`, `QtdMaterialPrest`) |
 | RN-19 | Homologacao da prestacao leva o processo a status 9 / finalizado | GC `h_pedido_prestController.php:170` (`homologa`) |
 | RN-20 | REDEC nao acessa prestacao de contas | GC `h_pedido_prest/index.php:27` |
-| RN-21 | Agendamento de retirada: slot de horario, status (pendente, aprovado, recusado), motivo da recusa, usuario e data de aprovacao. Aprovar dispara e-mail ao municipio | GC `:443` (`update_status_agenda`), `:478`, `:2008` (`gravarAgendamento`), `:2089` (`buscar_horarios`) |
+| RN-21 | Agendamento de retirada: slot de horario, status (pendente, aprovado, recusado), motivo da recusa, usuario e data de aprovacao. Aprovar dispara e-mail ao municipio. **Ver ressalva abaixo** | GC `:443` (`update_status_agenda`), `:478`, `:2008` (`gravarAgendamento`), `:2089` (`buscar_horarios`) |
+
+**Ressalva sobre a RN-21.** O codigo do gestaocedec escreve em
+`aju_h_agendamento`, mas **essa tabela nao existe no banco**: nao ha nenhuma
+tabela com "agend" no nome em `gestaocedec_local`. Os 417 pedidos que
+transitaram de Aguardando Retirada para Atendido o fizeram sem qualquer
+agendamento. A regra e, portanto, **codigo sem lastro em producao** — feature
+inacabada, ou implantada em outro ambiente.
+
+Consequencia de projeto: a tabela `pedido_ah_agendamentos` e o enum
+`StatusAgendamento` permanecem no schema, por serem aditivos e inofensivos, mas
+**nenhuma guarda de transicao depende deles**. Uma guarda exigindo agendamento
+aprovado para atingir Atendido tornaria o modulo inoperante. Antes de ativar a
+funcionalidade, confirmar com a area se o agendamento e um processo real.
 
 ### 4.6 Anexos, autorizacao e saldo
 

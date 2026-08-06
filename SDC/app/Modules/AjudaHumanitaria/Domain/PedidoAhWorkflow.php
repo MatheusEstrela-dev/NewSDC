@@ -7,7 +7,6 @@ namespace App\Modules\AjudaHumanitaria\Domain;
 use App\Modules\AjudaHumanitaria\Domain\Contracts\ContextoTransicao;
 use App\Modules\AjudaHumanitaria\Domain\Contracts\GuardaTransicao;
 use App\Modules\AjudaHumanitaria\Domain\Contracts\ResultadoGuarda;
-use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeAgendamentoAprovado;
 use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItemNoPedido;
 use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItensLiberados;
 use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeParecerFavoravel;
@@ -46,7 +45,6 @@ final class PedidoAhWorkflow
             new ExigeItemNoPedido(),
             new ExigeParecerFavoravel(),
             new ExigeItensLiberados(),
-            new ExigeAgendamentoAprovado(),
             new FinalizacaoSomenteViaHomologacao(),
         ]);
     }

@@ -10,16 +10,23 @@ use App\Modules\AjudaHumanitaria\Domain\Contracts\ResultadoGuarda;
 use App\Modules\AjudaHumanitaria\Enums\StatusPedidoAh;
 
 /**
- * Nao se aprova pedido sem definir o que sera liberado.
+ * Nao se marca um pedido como atendido sem definir o que foi liberado.
  *
- * Trava ausente no legado. Sem itens liberados, a prestacao de contas nasceria
- * vazia na entrada em Atendido (RN-15).
+ * A guarda protege a RN-15: a entrada em Atendido abre a prestacao de contas
+ * copiando os itens tipo Liberado. Sem eles a prestacao nasceria vazia e o
+ * ciclo nao teria como fechar.
+ *
+ * Posicionada na entrada de Atendido, e nao na aprovacao, por evidencia do
+ * legado: dos 892 pedidos que chegaram a Atendido ou Finalizado, nenhum estava
+ * sem itens liberados, enquanto 10 pedidos parados em Aguardando Retirada
+ * estavam. Guardar a aprovacao bloquearia casos reais; guardar o atendimento
+ * nao bloqueia nenhum.
  */
 final class ExigeItensLiberados implements GuardaTransicao
 {
     public function verificar(ContextoTransicao $contexto): ResultadoGuarda
     {
-        if (! $contexto->ehTransicao(StatusPedidoAh::AnaliseDiretorDlog, StatusPedidoAh::Aprovado)) {
+        if ($contexto->statusAlvo !== StatusPedidoAh::Atendido) {
             return ResultadoGuarda::permitir();
         }
 
@@ -28,7 +35,7 @@ final class ExigeItensLiberados implements GuardaTransicao
         }
 
         return ResultadoGuarda::bloquear(
-            'Defina as quantidades liberadas antes de aprovar o pedido.'
+            'Defina as quantidades liberadas antes de marcar o pedido como atendido.'
         );
     }
 }

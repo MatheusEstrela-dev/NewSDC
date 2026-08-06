@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\AjudaHumanitaria;
 
-use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeAgendamentoAprovado;
 use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItemNoPedido;
 use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItensLiberados;
 use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeParecerFavoravel;
@@ -31,7 +30,6 @@ class AjudaHumanitariaServiceProvider extends ServiceProvider
         ExigeItemNoPedido::class,
         ExigeParecerFavoravel::class,
         ExigeItensLiberados::class,
-        ExigeAgendamentoAprovado::class,
         FinalizacaoSomenteViaHomologacao::class,
     ];
 

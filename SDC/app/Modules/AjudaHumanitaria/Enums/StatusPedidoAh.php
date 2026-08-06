@@ -122,6 +122,19 @@ enum StatusPedidoAh: int
     }
 
     /**
+     * Matriz de transicoes, derivada das 1.969 transicoes reais registradas em
+     * aju_h_pedido_tramit_log no legado.
+     *
+     * O processo nao e linear: da analise do Diretor o pedido e despachado
+     * direto para a etapa que precisa, sendo 2 para 5 a transicao mais comum de
+     * todas (650 ocorrencias). Qualquer etapa pos-analise pode voltar para
+     * reanalise em 1 ou 2, e o cancelamento parte de qualquer ponto nao
+     * terminal.
+     *
+     * Auto-transicoes (2 para 2, 4 para 4, 5 para 5, 6 para 6), presentes 31
+     * vezes no log, ficam de fora: sao re-salvamento de parecer na mesma etapa,
+     * nao mudanca de estado.
+     *
      * @return array<int, self>
      */
     public function transicoesPermitidas(): array
@@ -137,26 +150,45 @@ enum StatusPedidoAh: int
                 self::Reprovado,
                 self::Cancelado,
             ],
+            // Despacho direto do Diretor para qualquer etapa de atendimento.
             self::AnaliseDiretorDlog => [
                 self::Aprovado,
+                self::AguardandoDisponibilidade,
+                self::AguardandoRetirada,
+                self::Atendido,
                 self::AnaliseDlog,
                 self::Reprovado,
                 self::Cancelado,
             ],
             self::Aprovado => [
                 self::AguardandoDisponibilidade,
+                self::AguardandoRetirada,
+                self::Atendido,
+                self::AnaliseDlog,
+                self::AnaliseDiretorDlog,
                 self::Cancelado,
             ],
             self::AguardandoDisponibilidade => [
                 self::AguardandoRetirada,
+                self::Atendido,
+                self::AnaliseDlog,
+                self::AnaliseDiretorDlog,
                 self::Cancelado,
             ],
             self::AguardandoRetirada => [
                 self::Atendido,
+                self::AguardandoDisponibilidade,
+                self::AnaliseDlog,
+                self::AnaliseDiretorDlog,
                 self::Cancelado,
             ],
+            // Reabertura de pedido atendido acontece no legado (27 vezes para 1).
             self::Atendido => [
                 self::Finalizado,
+                self::AguardandoRetirada,
+                self::AguardandoDisponibilidade,
+                self::AnaliseDlog,
+                self::AnaliseDiretorDlog,
                 self::Cancelado,
             ],
             self::Cancelado, self::Reprovado, self::Finalizado => [],
