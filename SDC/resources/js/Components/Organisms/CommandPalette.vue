@@ -269,7 +269,7 @@ const navigationIndex = computed(() => [
 
     // Módulos de Gestão
     { id: 'nav_dec', title: 'Decretações', subtitle: 'Gestão de Decretos (SEAD)', url: safeRoute('decretacoes.index'), icon: 'scale', category: 'navigation', keywords: ['decreto', 'legal', 'calamidade'] },
-    { id: 'nav_hum', title: 'Ajuda Humanitária', subtitle: 'Beneficiários e Entregas', url: safeRoute('ajuda-humanitaria.beneficiarios.index'), icon: 'heart', category: 'navigation', keywords: ['donativo', 'cesta', 'social'] },
+    { id: 'nav_hum', title: 'Ajuda Humanitária', subtitle: 'Pedidos de material ao CEDEC', url: safeRoute('ajuda-humanitaria.pedidos.index'), icon: 'heart', category: 'navigation', keywords: ['donativo', 'cesta', 'social'] },
     { id: 'nav_org', title: 'Órgãos', subtitle: 'Cadastro de COMPDEC e Parceiros', url: safeRoute('compdec.index'), icon: 'building', category: 'navigation', keywords: ['municipio', 'prefeitura', 'contato'] },
 
     // TDAP - Transporte e Distribuicao de Agua Potavel
@@ -297,7 +297,7 @@ const quickActions = computed(() => [
   // Modulos principais
   { id: 'qa_dec',  title: 'Decretações',    subtitle: 'Gestão de Decretos (SEAD)',     url: safeRoute('decretacoes.index'), icon: 'scale',       type: 'navigation' },
   { id: 'qa_pae',  title: 'PAE',            subtitle: 'Plano de Ação de Emergência',   url: safeRoute('pae.index', safeRoute('pae.protocolos.index')), icon: 'document', type: 'navigation' },
-  { id: 'qa_hum',  title: 'Ajuda Humanitária', subtitle: 'Beneficiários e Entregas',  url: safeRoute('ajuda-humanitaria.beneficiarios.index'), icon: 'heart', type: 'navigation' },
+  { id: 'qa_hum',  title: 'Ajuda Humanitária', subtitle: 'Pedidos de material ao CEDEC',  url: safeRoute('ajuda-humanitaria.pedidos.index'), icon: 'heart', type: 'navigation' },
   { id: 'qa_org',  title: 'Órgãos',         subtitle: 'COMPDEC e Parceiros',          url: safeRoute('compdec.index'),    icon: 'building',    type: 'navigation' },
   // Conta
   { id: 'qa_prof', title: 'Meu Perfil',     subtitle: 'Configurações da conta',       url: '/profile?open_profile=true',  icon: 'user',        type: 'action' },

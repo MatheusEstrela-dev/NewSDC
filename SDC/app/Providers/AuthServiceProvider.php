@@ -28,6 +28,7 @@ class AuthServiceProvider extends ServiceProvider
         \App\Modules\Treinamento\Models\Treinamento::class => \App\Policies\TreinamentoPolicy::class,
         \App\Modules\Treinamento\Models\Inscricao::class => \App\Policies\InscricaoPolicy::class,
         \App\Modules\Treinamento\Models\Certificado::class => \App\Policies\CertificadoPolicy::class,
+        \App\Modules\AjudaHumanitaria\Models\PedidoAh::class => \App\Policies\PedidoAhPolicy::class,
     ];
 
     /**
