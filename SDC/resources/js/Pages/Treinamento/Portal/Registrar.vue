@@ -46,8 +46,18 @@
         </div>
 
         <div class="input-group">
-          <input type="text" id="telefone" v-model="form.telefone" class="input-field" placeholder=" " :class="{ 'border-red-500': form.errors.telefone }" />
-          <label for="telefone" class="input-label">Telefone (opcional)</label>
+          <input
+            type="text"
+            inputmode="numeric"
+            id="telefone"
+            :value="telefoneFormatted"
+            @input="handleTelefoneInput"
+            maxlength="15"
+            class="input-field"
+            placeholder=" "
+            :class="{ 'border-red-500': form.errors.telefone }"
+          />
+          <label for="telefone" class="input-label">Telefone com DDD (opcional)</label>
         </div>
 
         <div class="input-group">
@@ -86,6 +96,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { applyCpfMask } from '@/utils/cpfMask';
+import { applyPhoneMask } from '@/utils/phoneMask';
 import '../../../../css/pages/auth/login.css';
 
 const form = useForm({
@@ -99,13 +110,21 @@ const form = useForm({
 });
 
 const cpfFormatted = ref('');
+const telefoneFormatted = ref('');
 const hasErrors = computed(() => Object.keys(form.errors).length > 0);
 
 const handleCpfInput = (evt) => {
-  const numbersOnly = evt.target.value.replace(/\D/g, '');
+  const numbersOnly = evt.target.value.replace(/\D/g, '').slice(0, 11);
   form.cpf = numbersOnly;
   cpfFormatted.value = applyCpfMask(numbersOnly);
   evt.target.value = cpfFormatted.value;
+};
+
+const handleTelefoneInput = (evt) => {
+  const numbersOnly = evt.target.value.replace(/\D/g, '').slice(0, 11);
+  form.telefone = numbersOnly;
+  telefoneFormatted.value = applyPhoneMask(numbersOnly);
+  evt.target.value = telefoneFormatted.value;
 };
 
 const submit = () => {
