@@ -144,6 +144,9 @@ function cancelar() {
 </template>
 
 <style scoped>
+.treinamento-create-container {
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
+}
 .field-label { @apply mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300; }
 .field-error { @apply mt-1 text-xs text-red-500; }
 .req { @apply text-red-500; }

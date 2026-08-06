@@ -4,7 +4,9 @@ import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import { usePermissions } from '@/Composables/usePermissions';
 import { useToast } from '@/Composables/useToast';
 import { router, Link } from '@inertiajs/vue3';
@@ -67,7 +69,14 @@ function copiarLinkPublico() {
 
 <template>
 
-    <div class="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div class="treinamento-show-container">
+      <PageHeader
+        :title="treinamento.titulo"
+        :description="`${treinamento.tipo_label} · ${treinamento.categoria_label}`"
+        :icon-image="moduleIcon('treinamento')"
+        variant="gradient"
+      />
+
       <CardBase class="p-6">
         <!-- Header -->
         <div class="mb-6">
@@ -238,3 +247,9 @@ function copiarLinkPublico() {
     </div>
 
 </template>
+
+<style scoped>
+.treinamento-show-container {
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
+}
+</style>

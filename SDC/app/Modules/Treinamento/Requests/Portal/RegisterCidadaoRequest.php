@@ -23,6 +23,7 @@ class RegisterCidadaoRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:cidadaos,email'],
             'cpf' => [
+                'bail',
                 'required',
                 'string',
                 'size:11',
@@ -33,7 +34,7 @@ class RegisterCidadaoRequest extends FormRequest
                 // entrar por essa conta, sem nenhum erro visivel no cadastro.
                 Rule::unique('users', 'cpf'),
             ],
-            'telefone' => ['nullable', 'string', 'max:20'],
+            'telefone' => ['bail', 'nullable', 'string', 'regex:/^\d{11}$/'],
             'password' => ['required', 'confirmed', new StrongPassword()],
             'aceite_lgpd' => ['accepted'],
         ];
@@ -42,7 +43,9 @@ class RegisterCidadaoRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'cpf.unique' => 'Este CPF ja possui cadastro no sistema. Se voce e servidor, entre com seu login de servidor; caso contrario, use a opcao "Entrar" com a senha do seu cadastro.',
+            'cpf.size' => 'O CPF deve conter 11 numeros.',
+            'cpf.unique' => 'Ja existe um usuario cadastrado com este CPF. Se voce e servidor, entre com seu login de servidor; caso contrario, use a opcao "Entrar" com a senha do seu cadastro.',
+            'telefone.regex' => 'O telefone deve conter 11 numeros, com DDD (ex: 31912345678).',
             'aceite_lgpd.accepted' => 'E preciso aceitar os termos de uso e a politica de privacidade (LGPD) para se cadastrar.',
         ];
     }
@@ -51,6 +54,11 @@ class RegisterCidadaoRequest extends FormRequest
     {
         $this->merge([
             'cpf' => preg_replace('/\D/', '', (string) $this->input('cpf')),
+            // String vazia nao e null: sem isso, "nullable" nao pula o regex
+            // abaixo e o campo opcional passaria a bloquear o cadastro.
+            'telefone' => $this->filled('telefone')
+                ? preg_replace('/\D/', '', (string) $this->input('telefone'))
+                : null,
         ]);
     }
 }

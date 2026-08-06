@@ -8,6 +8,7 @@ use App\Modules\Treinamento\Controllers\Portal\InscricaoController;
 use App\Modules\Treinamento\Controllers\Portal\MinhasInscricoesController;
 use App\Modules\Treinamento\Controllers\Portal\PresencaAutoconfirmacaoController;
 use App\Modules\Treinamento\Controllers\Portal\RegisterController;
+use App\Modules\Treinamento\Http\Middleware\DisableDebugbarOnPortal;
 use App\Modules\Treinamento\Http\Middleware\ShareCidadaoInertiaData;
 use Illuminate\Support\Facades\Route;
 
@@ -20,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 | global (sessao/CSRF), que ja cobre o arquivo routes/web.php inteiro.
 */
 
-Route::prefix('portal-treinamento')->name('portal.treinamento.')->group(function () {
+Route::prefix('portal-treinamento')->name('portal.treinamento.')->middleware(DisableDebugbarOnPortal::class)->group(function () {
 
     // Login e unificado em /login (App\Http\Controllers\Auth\AuthenticatedSessionController
     // decide o guard pelo CPF) - o portal so tem cadastro e as telas pos-login.
