@@ -77,29 +77,42 @@
 
 Referencia unica para as Tasks 2, 4 e 5. Origem: secao 4.4.1 da spec.
 
+> **CORRIGIDA APOS A EXECUCAO DA FASE.** A matriz original deste plano foi
+> derivada por leitura do codigo legado e bloqueava 1.016 das 1.969 transicoes
+> reais registradas em `aju_h_pedido_tramit_log`. A versao abaixo vem do log.
+> Quem executar este plano do zero deve usar esta tabela; o codigo ja commitado
+> ja a reflete.
+
 | De | Para | Condicao |
 | --- | --- | --- |
 | 0 EdicaoCompdec | 1 AnaliseDlog | tem ao menos um item tipo Pedido |
 | 0 EdicaoCompdec | 7 Cancelado | nenhuma |
 | 1 AnaliseDlog | 2 AnaliseDiretorDlog | tem ao menos um parecer favoravel |
-| 1 AnaliseDlog | 0 EdicaoCompdec | nenhuma |
-| 1 AnaliseDlog | 8 Reprovado | nenhuma |
-| 1 AnaliseDlog | 7 Cancelado | nenhuma |
-| 2 AnaliseDiretorDlog | 3 Aprovado | tem ao menos um item tipo Liberado |
-| 2 AnaliseDiretorDlog | 1 AnaliseDlog | nenhuma |
-| 2 AnaliseDiretorDlog | 8 Reprovado | nenhuma |
-| 2 AnaliseDiretorDlog | 7 Cancelado | nenhuma |
-| 3 Aprovado | 4 AguardandoDisponibilidade | nenhuma |
-| 3 Aprovado | 7 Cancelado | nenhuma |
-| 4 AguardandoDisponibilidade | 5 AguardandoRetirada | nenhuma |
-| 4 AguardandoDisponibilidade | 7 Cancelado | nenhuma |
-| 5 AguardandoRetirada | 6 Atendido | agendamento de retirada aprovado |
-| 5 AguardandoRetirada | 7 Cancelado | nenhuma |
+| 1 AnaliseDlog | 0, 8, 7 | nenhuma |
+| 2 AnaliseDiretorDlog | 3, 4, 5 | nenhuma (despacho direto do diretor) |
+| 2 AnaliseDiretorDlog | 6 Atendido | tem ao menos um item tipo Liberado |
+| 2 AnaliseDiretorDlog | 1, 8, 7 | nenhuma |
+| 3 Aprovado | 4, 5, 1, 2, 7 | nenhuma |
+| 3 Aprovado | 6 Atendido | tem ao menos um item tipo Liberado |
+| 4 AguardandoDisponibilidade | 5, 1, 2, 7 | nenhuma |
+| 4 AguardandoDisponibilidade | 6 Atendido | tem ao menos um item tipo Liberado |
+| 5 AguardandoRetirada | 4, 1, 2, 7 | nenhuma |
+| 5 AguardandoRetirada | 6 Atendido | tem ao menos um item tipo Liberado |
 | 6 Atendido | 9 Finalizado | acionado via homologacao da prestacao |
-| 6 Atendido | 7 Cancelado | nenhuma |
+| 6 Atendido | 5, 4, 1, 2, 7 | nenhuma (reabertura) |
 | 7 Cancelado | - | terminal |
 | 8 Reprovado | - | terminal |
 | 9 Finalizado | - | terminal |
+
+Sao **quatro** guardas, nao cinco. A guarda de agendamento aprovado foi removida:
+a tabela `aju_h_agendamento` nao existe no banco legado e os 417 pedidos que
+transitaram para Atendido o fizeram sem agendamento algum. Exigi-lo tornaria o
+modulo inoperante.
+
+A guarda de itens liberados observa o **destino** `6 Atendido`, vindo de qualquer
+origem, e nao o par `2 para 3`. Justificativa no dado: dos 892 pedidos que
+alcancaram Atendido ou Finalizado nenhum esta sem itens liberados, enquanto 10
+pedidos parados em Aguardando Retirada estao.
 
 ## Estrutura de arquivos
 
