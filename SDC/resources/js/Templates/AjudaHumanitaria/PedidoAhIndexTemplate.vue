@@ -24,70 +24,22 @@
       </template>
     </PageHeader>
 
-    <!-- Cartoes por fase do processo -->
-    <div class="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-6">
-      <button
-        v-for="cartao in cartoes"
-        :key="cartao.chave"
-        type="button"
-        class="rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-400 hover:shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:hover:border-blue-500"
-        @click="$emit('filtrar-fase', cartao.chave)"
-      >
-        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ cartao.rotulo }}</p>
-        <p class="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
-          {{ estatisticas?.[cartao.chave] ?? 0 }}
-        </p>
-      </button>
-    </div>
+    <PedidoAhStatsCards
+      class="mt-6"
+      :estatisticas="estatisticas"
+      @filtrar="(f) => $emit('filtrar', f)"
+    />
 
-    <!-- Filtros -->
-    <div class="mt-6 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <label class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Buscar</label>
-          <input
-            v-model="filtrosLocais.search"
-            type="text"
-            placeholder="Número, decreto ou município"
-            class="w-full rounded-lg border-slate-300 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-            @keyup.enter="aplicar"
-          />
-        </div>
+    <PedidoAhFiltersSection
+      class="mt-6"
+      :filtros="filtrosLocais"
+      :opcoes-status="opcoesStatus"
+      @filtro-alterado="aoAlterarFiltro"
+      @aplicar="aplicar"
+      @limpar="limpar"
+    />
 
-        <div>
-          <label class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Status</label>
-          <select
-            v-model="filtrosLocais.status"
-            class="w-full rounded-lg border-slate-300 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-            @change="aplicar"
-          >
-            <option value="">Todos</option>
-            <option v-for="opcao in opcoesStatus" :key="opcao.value" :value="opcao.value">
-              {{ opcao.label }}
-            </option>
-          </select>
-        </div>
-
-        <div>
-          <label class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Ano</label>
-          <input
-            v-model="filtrosLocais.ano"
-            type="number"
-            placeholder="Ex.: 2026"
-            class="w-full rounded-lg border-slate-300 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-            @keyup.enter="aplicar"
-          />
-        </div>
-
-        <div class="flex items-end gap-2">
-          <Button variant="primary" size="md" class="flex-1" @click="aplicar">Filtrar</Button>
-          <Button variant="secondary" size="md" class="flex-1" @click="limpar">Limpar</Button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Listagem -->
-    <ListContainer class="mt-6" title="Lista de Pedidos" :count="linhas.length">
+    <ListContainer title="Lista de Pedidos" :icon="DocumentTextIcon" :count="linhas.length">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
           <thead>
@@ -116,7 +68,7 @@
                   :cor="linha.status_cor"
                 />
               </td>
-              <td class="px-4 py-3">{{ linha.pop_atendida?.toLocaleString('pt-BR') ?? '—' }}</td>
+              <td class="px-4 py-3">{{ formatarNumero(linha.pop_atendida) }}</td>
               <td class="px-4 py-3">{{ linha.numero_decreto ?? '—' }}</td>
               <td class="px-4 py-3">{{ formatarData(linha.data_entrada_sistema) }}</td>
               <td class="table-actions-cell w-40 min-w-40 px-4 py-3 text-right">
@@ -143,7 +95,10 @@
     </ListContainer>
 
     <div v-if="paginacao" class="mt-6">
-      <Pagination :pagination="paginacao" @page-change="(page) => emit('filtrar', { ...filtrosLocais, page })" />
+      <Pagination
+        :pagination="paginacao"
+        @page-change="(page) => emit('filtrar', { ...filtrosLocais, page })"
+      />
     </div>
   </div>
 </template>
@@ -153,12 +108,15 @@ import { computed, reactive } from 'vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import PedidoAhStatusBadge from '@/Components/Atoms/AjudaHumanitaria/PedidoAhStatusBadge.vue';
+import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import HeartIcon from '@/Components/Icons/HeartIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import PedidoAhFiltersSection from '@/Components/Organisms/AjudaHumanitaria/PedidoAhFiltersSection.vue';
+import PedidoAhStatsCards from '@/Components/Organisms/AjudaHumanitaria/PedidoAhStatsCards.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 const props = defineProps({
@@ -169,28 +127,23 @@ const props = defineProps({
   canCreate: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['create', 'view', 'filtrar', 'filtrar-fase']);
+const emit = defineEmits(['create', 'view', 'filtrar']);
 
 const linhas = computed(() => props.pedidos?.data ?? []);
 
-// O Pagination do projeto espera o objeto de paginacao cru do Laravel, nao os
-// links. A collection do Inertia expoe isso em meta.
+// O Pagination do projeto espera o objeto de paginacao cru do Laravel, que a
+// collection do Inertia expoe em meta.
 const paginacao = computed(() => props.pedidos?.meta ?? null);
-
-const cartoes = [
-  { chave: 'total', rotulo: 'Total' },
-  { chave: 'em_edicao', rotulo: 'Em edição' },
-  { chave: 'em_analise', rotulo: 'Em análise' },
-  { chave: 'em_atendimento', rotulo: 'Em atendimento' },
-  { chave: 'atendidos', rotulo: 'Atendidos' },
-  { chave: 'finalizados', rotulo: 'Finalizados' },
-];
 
 const filtrosLocais = reactive({
   search: props.filtros?.search ?? '',
   status: props.filtros?.status ?? '',
   ano: props.filtros?.ano ?? '',
 });
+
+function aoAlterarFiltro({ campo, valor }) {
+  filtrosLocais[campo] = valor;
+}
 
 function aplicar() {
   emit('filtrar', { ...filtrosLocais });
@@ -201,6 +154,10 @@ function limpar() {
   filtrosLocais.status = '';
   filtrosLocais.ano = '';
   emit('filtrar', {});
+}
+
+function formatarNumero(valor) {
+  return typeof valor === 'number' ? valor.toLocaleString('pt-BR') : '—';
 }
 
 function formatarData(valor) {
