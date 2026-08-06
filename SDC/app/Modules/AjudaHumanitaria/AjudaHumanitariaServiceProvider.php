@@ -4,51 +4,57 @@ declare(strict_types=1);
 
 namespace App\Modules\AjudaHumanitaria;
 
-use App\Modules\AjudaHumanitaria\Domain\Repositories\BeneficiarioRepositoryInterface;
-use App\Modules\AjudaHumanitaria\Infrastructure\Persistence\EloquentBeneficiarioRepository;
+use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeAgendamentoAprovado;
+use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItemNoPedido;
+use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItensLiberados;
+use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeParecerFavoravel;
+use App\Modules\AjudaHumanitaria\Domain\Guards\FinalizacaoSomenteViaHomologacao;
+use App\Modules\AjudaHumanitaria\Domain\PedidoAhWorkflow;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Service Provider: Módulo Ajuda Humanitária
+ * Service Provider do modulo Ajuda Humanitaria.
  *
- * Registra todas as dependências do módulo de gestão de ajuda humanitária
+ * As guardas de transicao sao declaradas aqui, em um unico lugar. Para
+ * acrescentar uma regra de transicao, implemente GuardaTransicao e inclua a
+ * classe em GUARDAS_TRANSICAO: nenhum service precisa mudar.
+ *
+ * Os binds de repositorio entram na fase 2, junto com as implementacoes sob
+ * Infrastructure/Persistence.
  */
 class AjudaHumanitariaServiceProvider extends ServiceProvider
 {
     /**
-     * Register services
+     * @var array<int, class-string<\App\Modules\AjudaHumanitaria\Domain\Contracts\GuardaTransicao>>
      */
+    private const GUARDAS_TRANSICAO = [
+        ExigeItemNoPedido::class,
+        ExigeParecerFavoravel::class,
+        ExigeItensLiberados::class,
+        ExigeAgendamentoAprovado::class,
+        FinalizacaoSomenteViaHomologacao::class,
+    ];
+
     public function register(): void
     {
-        // Bind Repository Interfaces to Eloquent Implementations
-        $this->app->bind(
-            BeneficiarioRepositoryInterface::class,
-            EloquentBeneficiarioRepository::class
-        );
+        $this->app->singleton(PedidoAhWorkflow::class, function ($app): PedidoAhWorkflow {
+            $guardas = array_map(
+                static fn (string $guarda) => $app->make($guarda),
+                self::GUARDAS_TRANSICAO,
+            );
 
-        // TODO: Registrar demais repositories quando forem criados
-        // $this->app->bind(AbrigoRepositoryInterface::class, EloquentAbrigoRepository::class);
-        // $this->app->bind(DoacaoRepositoryInterface::class, EloquentDoacaoRepository::class);
-        // $this->app->bind(AuxilioRepositoryInterface::class, EloquentAuxilioRepository::class);
-        // $this->app->bind(EstoqueRepositoryInterface::class, EloquentEstoqueRepository::class);
-
-        // TODO: Registrar Use Cases quando forem criados
-        // $this->app->singleton(CreateBeneficiarioUseCase::class);
-        // $this->app->singleton(ListBeneficiariosUseCase::class);
-        // etc...
+            return new PedidoAhWorkflow($guardas);
+        });
     }
 
     /**
-     * Bootstrap services
-     *
-     * NOTA: As rotas do módulo são carregadas via routes/web.php dentro do
-     * middleware group 'auth' (que inclui 'web'). NÃO usar loadRoutesFrom()
-     * aqui, pois isso registra rotas SEM os middlewares web/auth, causando
-     * 403 para todos os usuários (sessão e autenticação ausentes).
-     * Padrão: mesmo que RatServiceProvider.
+     * As rotas do modulo sao carregadas por routes/web.php dentro do grupo de
+     * middleware auth, que inclui web. Nao usar loadRoutesFrom aqui: isso
+     * registraria rotas sem sessao e sem autenticacao, resultando em 403 para
+     * todos os usuarios. Mesmo padrao do RatServiceProvider.
      */
     public function boot(): void
     {
-        // Rotas carregadas via routes/web.php -> routes/modules/ajuda-humanitaria.php
+        //
     }
 }
