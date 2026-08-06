@@ -49,6 +49,21 @@ export function useBreadcrumb() {
             { label: 'Novo PAE', route: null }
         ],
 
+        'Treinamento/TreinamentoIndex': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Treinamentos', route: null }
+        ],
+        'Treinamento/TreinamentoCreate': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Treinamentos', route: 'treinamentos.index' },
+            { label: 'Novo Curso', route: null }
+        ],
+        'Treinamento/TreinamentoShow': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Treinamentos', route: 'treinamentos.index' },
+            { label: 'Visualizar', route: null }
+        ],
+
         // Admin / Permissions
         'Admin/Permissions/Users/Index': [
             { label: 'Início', route: 'dashboard' },
