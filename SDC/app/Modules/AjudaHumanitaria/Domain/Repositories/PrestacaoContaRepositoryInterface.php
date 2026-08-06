@@ -29,5 +29,5 @@ interface PrestacaoContaRepositoryInterface
     public function quantidadeJaEntregue(int $prestacaoContaItemId): int;
 
     /** RN-19: marca a prestacao como homologada. */
-    public function homologar(int $prestacaoContaId, int $usuarioId): void;
+    public function homologar(int $prestacaoContaId, ?int $usuarioId): void;
 }

@@ -73,7 +73,7 @@ final class EloquentPrestacaoContaRepository implements PrestacaoContaRepository
     }
 
     /** RN-19. */
-    public function homologar(int $prestacaoContaId, int $usuarioId): void
+    public function homologar(int $prestacaoContaId, ?int $usuarioId): void
     {
         PrestacaoConta::query()
             ->whereKey($prestacaoContaId)
