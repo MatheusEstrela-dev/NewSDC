@@ -25,49 +25,40 @@
       </p>
 
       <!-- Tabela de itens -->
-      <div v-if="localDesastre.items && localDesastre.items.length > 0" class="overflow-x-auto">
-        <table class="w-full text-sm border-collapse">
-          <thead>
-            <tr class="bg-slate-100 dark:bg-slate-800/50">
-              <th class="px-3 py-2 text-left text-sm font-semibold text-slate-500 dark:text-slate-400 w-1/3 border-b border-slate-200 dark:border-slate-700/50">
-                Item
-              </th>
-              <th class="px-3 py-2 text-left text-sm font-semibold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700/50">
-                Campos
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(item, iIndex) in localDesastre.items"
-              :key="item.id"
-              class="border-b border-slate-100 dark:border-slate-700/30 last:border-0"
-            >
-              <td class="px-3 py-3 align-top">
-                <p class="font-medium text-slate-700 dark:text-slate-300 text-sm">{{ item.titulo }}</p>
-                <p v-if="item.observacao" class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                  {{ item.observacao }}
-                </p>
-              </td>
-              <td class="px-3 py-3">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <DesastreCampoField
-                    v-for="(campo, fIndex) in item.campos"
-                    :key="campo.id"
-                    :campo="campo"
-                    :item-id="item.id"
-                    :municipio-id="municipioId"
-                    @update:valor="updateCampo(iIndex, fIndex, $event)"
-                  />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <DesastreItemsTable
+        :items="localDesastre.items"
+        :municipio-id="municipioId"
+        @update:campo="updateCampo"
+      />
 
-      <div v-else class="text-center py-4">
-        <p class="text-xs text-slate-400 dark:text-slate-500 italic">Nenhum dado registrado para este item.</p>
+      <!-- Subsecoes (ex.: Danos Ambientais dentro de Danos Materiais) -->
+      <div
+        v-for="(subsecao, sIndex) in localSubsecoes"
+        :key="subsecao.id"
+        class="pt-4 border-t border-slate-200 dark:border-slate-700/50 space-y-3"
+      >
+        <div class="flex items-center gap-2">
+          <div class="w-1 h-4 bg-emerald-500 rounded-full"></div>
+          <h5 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {{ subsecao.titulo }}
+          </h5>
+          <span
+            v-if="marcadosNaSubsecao(subsecao) > 0"
+            class="px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
+          >
+            {{ marcadosNaSubsecao(subsecao) }} marcado(s)
+          </span>
+        </div>
+
+        <p v-if="subsecao.informacao" class="text-sm text-slate-500 dark:text-slate-400 italic">
+          {{ subsecao.informacao }}
+        </p>
+
+        <DesastreItemsTable
+          :items="subsecao.items"
+          :municipio-id="municipioId"
+          @update:campo="(evento) => updateCampoSubsecao(sIndex, evento)"
+        />
       </div>
     </div>
   </div>
@@ -77,7 +68,8 @@
 import { ref, watch } from 'vue';
 import { ChevronDownIcon } from '@heroicons/vue/24/outline';
 import DesastreTotalBadge from '@/Components/Molecules/Decretacoes/DesastreTotalBadge.vue';
-import DesastreCampoField from '@/Components/Molecules/Decretacoes/DesastreCampoField.vue';
+import DesastreItemsTable from '@/Components/Molecules/Decretacoes/DesastreItemsTable.vue';
+import { MARCADO, aplicaValorDoCampo } from '@/Composables/decretacoes/useDesastreRadio';
 
 const props = defineProps({
   desastre: {
@@ -88,28 +80,69 @@ const props = defineProps({
     type: Number,
     required: true,
   },
+  // Blocos de danos exibidos dentro deste accordion em vez de accordion irmao.
+  // Continuam sendo nos independentes da arvore: o pai grava cada atualizacao
+  // na posicao original de `categoria.desastres`, entao o payload enviado ao
+  // backend nao muda.
+  subsecoes: {
+    type: Array,
+    default: () => [],
+  },
 });
 
-const emit = defineEmits(['update:desastre']);
+const emit = defineEmits(['update:desastre', 'update:subsecao']);
 
 const isExpanded = ref(false);
-const localDesastre = ref(JSON.parse(JSON.stringify(props.desastre)));
+const localDesastre = ref(clonar(props.desastre));
+const localSubsecoes = ref(clonar(props.subsecoes));
 
 watch(() => props.desastre, (val) => {
-  localDesastre.value = JSON.parse(JSON.stringify(val));
+  localDesastre.value = clonar(val);
 }, { deep: true });
 
-function updateCampo(iIndex, fIndex, valor) {
-  localDesastre.value.items[iIndex].campos[fIndex].valor = valor;
-  emitUpdate();
+watch(() => props.subsecoes, (val) => {
+  localSubsecoes.value = clonar(val);
+}, { deep: true });
+
+function clonar(valor) {
+  return JSON.parse(JSON.stringify(valor ?? null));
 }
 
-function emitUpdate() {
-  const payload = JSON.parse(JSON.stringify(localDesastre.value));
+function updateCampo({ iIndex, fIndex, valor }) {
+  aplicaValorDoCampo(localDesastre.value.items, iIndex, fIndex, valor);
+  emit('update:desastre', semDescricao(localDesastre.value));
+}
+
+function updateCampoSubsecao(sIndex, { iIndex, fIndex, valor }) {
+  const subsecao = localSubsecoes.value[sIndex];
+
+  if (!subsecao) {
+    return;
+  }
+
+  aplicaValorDoCampo(subsecao.items, iIndex, fIndex, valor);
+  emit('update:subsecao', { index: sIndex, desastre: semDescricao(subsecao) });
+}
+
+/** Quantos itens da subsecao estao com a resposta marcada. */
+function marcadosNaSubsecao(subsecao) {
+  return (subsecao.items ?? []).filter((item) =>
+    (item.campos ?? []).some((campo) => campo.tipo === 'radio'
+      && String(campo.valor ?? '') === MARCADO
+      && ehRespostaPositiva(campo.titulo)),
+  ).length;
+}
+
+function ehRespostaPositiva(titulo) {
+  return String(titulo ?? '').trim().toLowerCase() === 'sim';
+}
+
+function semDescricao(desastre) {
+  const payload = clonar(desastre);
 
   // A descricao de areas/populacao afetada saiu do formulario: nao e enviada.
   delete payload.descricao;
 
-  emit('update:desastre', payload);
+  return payload;
 }
 </script>

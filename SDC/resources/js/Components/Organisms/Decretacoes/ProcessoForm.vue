@@ -8,22 +8,16 @@
       icon-variant="default"
       :cols="3"
     >
+      <!-- Identificacao unica pelo padrao nacional COBRADE: as opcoes ja vem
+           numeradas ("1.3.2.1.4 - Chuvas intensas") e ordenadas pela hierarquia
+           do codigo, nao por ordem alfabetica. -->
       <FormSelect
         v-model="form.tipo_desastre_id"
-        label="Tipo de Desastre"
-        :options="tiposDesastre"
-        placeholder="Selecione o tipo..."
-        required
-        :error="form.errors.tipo_desastre_id"
-      />
-
-      <FormSelect
-        v-model="form.cobrade_id"
-        label="COBRADE"
+        label="Tipo de Desastre (COBRADE)"
         :options="cobrades"
-        placeholder="Selecione o codigo COBRADE..."
+        placeholder="Selecione o codigo ou o tipo..."
         required
-        :error="form.errors.cobrade_id"
+        :error="form.errors.tipo_desastre_id || form.errors.cobrade_id"
         :hint="cobradeHint"
       />
 
@@ -352,10 +346,16 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  // Mesma classificacao de `cobrades`, mas com o rotulo sem o codigo e em ordem
+  // alfabetica. O select unificado usa `cobrades`; a prop continua declarada
+  // porque os templates de criacao/edicao a repassam e outras telas do modulo
+  // (filtros, hierarquia) consomem a mesma lista.
   tiposDesastre: {
     type: Array,
     default: () => [],
   },
+  // Opcoes numeradas pelo padrao nacional ("1.3.2.1.4 - Chuvas intensas"),
+  // ordenadas pela hierarquia do codigo (ProcessoFilter::buildCobradeOptions).
   cobrades: {
     type: Array,
     default: () => [],
@@ -415,25 +415,44 @@ watch(() => props.form.status, (newVal) => {
 });
 
 // =============================================================================
-// COBRADE (padrao nacional) x Tipo de Desastre
-// Os dois selects listam a mesma classificacao: "Tipo de Desastre" ordenado
-// pelo nome e "COBRADE" numerado/ordenado pelo codigo (1.1.1.1.0, 1.1.1.2.0...).
-// Manter os dois em sincronia evita enviar par contraditorio - no backend o
-// cobrade_id e quem prevalece (ProcessoRequestDTO).
+// Tipo de Desastre pelo padrao nacional COBRADE
+//
+// Antes existiam DOIS selects para a mesma classificacao ("Tipo de Desastre",
+// ordenado pelo nome, e "COBRADE", numerado pelo codigo), mantidos em sincronia
+// por watchers - o usuario escolhia a mesma coisa duas vezes. Agora e um unico
+// campo, com as opcoes numeradas pelo padrao nacional.
+//
+// `cobrade_id` continua indo no payload com o mesmo valor de `tipo_desastre_id`:
+// no backend ele tem precedencia (ProcessoRequestDTO) e a API publica o expoe,
+// entao remover mudaria contrato.
 // =============================================================================
 
 const cobradeSelecionado = computed(
-  () => props.cobrades.find(c => String(c.id) === String(props.form.cobrade_id)) || null
+  () => props.cobrades.find(c => String(c.id) === String(props.form.tipo_desastre_id)) || null
 );
 
+// O codigo ja aparece no rotulo da opcao; a dica mostra a hierarquia oficial,
+// que e o que o select nao consegue exibir.
 const cobradeHint = computed(() => {
-  const codigo = cobradeSelecionado.value?.cobrade;
+  const item = cobradeSelecionado.value;
 
-  return codigo
-    ? `Codigo COBRADE ${codigo} (classificacao nacional)`
-    : 'Numerado pelo padrao nacional: grupo.subgrupo.tipo.subtipo';
+  if (!item) {
+    return 'Numerado pelo padrao nacional: grupo.subgrupo.tipo.subtipo';
+  }
+
+  const hierarquia = [item.grupo, item.subgrupo, item.tipo, item.subtipo]
+    .filter(Boolean)
+    .join(' > ');
+
+  return hierarquia
+    ? `COBRADE ${item.cobrade} - ${hierarquia}`
+    : `COBRADE ${item.cobrade} (classificacao nacional)`;
 });
 
+// Espelho mantido nos dois sentidos: o select alimenta `tipo_desastre_id`, e o
+// backend pode hidratar o form so com `cobrade_id` (ProcessoResource expoe os
+// dois). Sem o sentido inverso, abrir um processo existente deixaria o campo
+// vazio quando apenas `cobrade_id` viesse preenchido.
 watch(() => props.form.cobrade_id, (valor) => {
   if (valor && String(props.form.tipo_desastre_id) !== String(valor)) {
     props.form.tipo_desastre_id = valor;

@@ -171,8 +171,8 @@ function handleExportCsv(params) {
     />
 
     <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
-    <div v-else-if="viewMode === 'table' && !isMobile" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <table class="w-full">
+    <div v-else-if="viewMode === 'table' && !isMobile" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
+      <table class="w-full min-w-[720px]">
         <thead class="bg-slate-50 dark:bg-slate-700/50">
           <tr>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Título</th>

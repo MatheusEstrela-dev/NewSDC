@@ -48,8 +48,7 @@ const showFormModal = ref(false);
 const editingTreinamento = ref(null);
 
 const handleCreate = () => {
-  editingTreinamento.value = null;
-  showFormModal.value = true;
+  router.visit(route('treinamentos.create'));
 };
 
 const handleView = (id) => {

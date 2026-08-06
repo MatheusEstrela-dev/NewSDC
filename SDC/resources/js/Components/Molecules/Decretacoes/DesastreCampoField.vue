@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div>
     <label
       v-if="campo.tipo !== 'radio'"
@@ -10,8 +10,8 @@
     <!-- Radio -->
     <RadioInput
       v-if="campo.tipo === 'radio'"
-      :model-value="campo.valor"
-      :value="campo.id"
+      :model-value="valorRadio"
+      :value="MARCADO"
       :name="`radio-item-${itemId}-${municipioId}`"
       :label="campo.titulo"
       @update:model-value="emit('update:valor', $event)"
@@ -20,7 +20,7 @@
     <!-- Select -->
     <SelectInput
       v-else-if="campo.tipo === 'select'"
-      :model-value="campo.valor"
+      :model-value="campo.valor ?? ''"
       :options="selectOptions"
       size="sm"
       @update:model-value="emit('update:valor', $event)"
@@ -69,10 +69,14 @@ import SelectInput from '@/Components/Atoms/Input/SelectInput.vue';
 import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import CurrencyInput from '@/Components/Atoms/Input/CurrencyInput.vue';
 import { formatNumber } from '@/Composables/ui/useDesastreMask';
+import { MARCADO, NAO_MARCADO } from '@/Composables/decretacoes/useDesastreRadio';
 
+// Chaves normalizadas (minusculas, sem acento): os titulos cadastrados no banco
+// vem acentuados ("População do município atingida"), e comparar com a string
+// crua deixava o select sem nenhuma opcao.
 const SELECT_OPTIONS_MAP = {
-  'Populacao do municipio atingida': ['0 a 5%', '5 a 10%', '10 a 20%', 'Mais de 20%'],
-  'Area atingida': ['Ate 40%', 'Mais de 40%'],
+  'populacao do municipio atingida': ['0 a 5%', '5 a 10%', '10 a 20%', 'Mais de 20%'],
+  'area atingida': ['Ate 40%', 'Mais de 40%'],
 };
 
 const props = defineProps({
@@ -92,7 +96,36 @@ const props = defineProps({
 
 const emit = defineEmits(['update:valor']);
 
-const selectOptions = computed(() => SELECT_OPTIONS_MAP[props.campo.titulo] ?? []);
+function normaliza(texto) {
+  return String(texto ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+const selectOptions = computed(() => {
+  const base = SELECT_OPTIONS_MAP[normaliza(props.campo.titulo)] ?? [];
+  const atual = props.campo.valor;
+
+  if (atual === null || atual === undefined || atual === '') {
+    return base;
+  }
+
+  // A base legada guarda o rotulo completo ("DE 0% A 5% DA POPULACAO AFETADA")
+  // e valores fora da lista. Sem manter o valor atual como opcao, o select
+  // abriria vazio e o proximo salvamento apagaria o dado historico.
+  return base.includes(String(atual)) ? base : [String(atual), ...base];
+});
+
+// Convencao gravada no banco: '1' no campo marcado e '0' no irmao (nao o id do
+// campo). Comparar como string faz o radio aparecer marcado ao reabrir o
+// processo, ja que `valor` volta do banco como texto.
+const valorRadio = computed(() => {
+  const valor = props.campo.valor;
+
+  return valor === null || valor === undefined ? NAO_MARCADO : String(valor);
+});
 
 function handleNumberInput(value) {
   emit('update:valor', formatNumber(value));

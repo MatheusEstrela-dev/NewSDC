@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,7 +19,11 @@ class CheckUserActive
     {
         $user = $request->user();
 
-        if (!$user) {
+        // Checa pelo model, nao pelo guard: este middleware tambem roda no
+        // grupo "api" sob auth:sanctum (guard != "web") e precisa continuar
+        // validando ali. Guards que autenticam outros models (ex: "cidadao")
+        // nao tem a coluna "active" e devem ser ignorados aqui.
+        if (!$user instanceof User) {
             return $next($request);
         }
 

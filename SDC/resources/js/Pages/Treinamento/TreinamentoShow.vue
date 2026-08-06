@@ -34,10 +34,6 @@ const formatDate = (dateValue) => {
   return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 };
 
-const goBack = () => {
-  router.visit(route('treinamentos.index'));
-};
-
 function postAction(url, data = {}, successMessage = 'Feito.') {
   router.post(route(url, props.treinamento.id), data, {
     preserveScroll: true,
@@ -72,16 +68,6 @@ function copiarLinkPublico() {
 <template>
 
     <div class="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-      <button
-        @click="goBack"
-        class="mb-4 flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        Voltar
-      </button>
-
       <CardBase class="p-6">
         <!-- Header -->
         <div class="mb-6">

@@ -25,6 +25,9 @@ class AuthServiceProvider extends ServiceProvider
         \App\Modules\Compdec\Models\CompdecAnexo::class => \App\Policies\CompdecAnexoPolicy::class,
         \App\Modules\Compdec\Models\CompdecPlanoContingencia::class => \App\Policies\CompdecPlanoContingenciaPolicy::class,
         \App\Modules\Cisterna\Models\Cisterna::class => \App\Policies\CisternaPolicy::class,
+        \App\Modules\Treinamento\Models\Treinamento::class => \App\Policies\TreinamentoPolicy::class,
+        \App\Modules\Treinamento\Models\Inscricao::class => \App\Policies\InscricaoPolicy::class,
+        \App\Modules\Treinamento\Models\Certificado::class => \App\Policies\CertificadoPolicy::class,
     ];
 
     /**
@@ -32,9 +35,12 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Super Admin tem todas as permissoes (bypass via role apenas)
+        // Super Admin tem todas as permissoes (bypass via role apenas).
+        // Checa instanceof: guards como "cidadao" (Portal de Treinamentos)
+        // autenticam models sem hasRole() (Spatie), e este hook roda para
+        // qualquer Gate/Policy check, independente do guard autenticado.
         Gate::before(function ($user, $ability) {
-            if ($user->hasRole('super-admin')) {
+            if ($user instanceof \App\Models\User && $user->hasRole('super-admin')) {
                 return true;
             }
         });

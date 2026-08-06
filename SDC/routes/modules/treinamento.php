@@ -13,6 +13,7 @@ use App\Modules\Treinamento\Controllers\CertificadoImprimirController;
 use App\Modules\Treinamento\Controllers\InscricaoAutoconfirmarController;
 use App\Modules\Treinamento\Controllers\InscricaoSelfStoreController;
 use App\Modules\Treinamento\Controllers\TreinamentoBloquearPresencaController;
+use App\Modules\Treinamento\Controllers\TreinamentoCreateController;
 use App\Modules\Treinamento\Controllers\TreinamentoDeleteController;
 use App\Modules\Treinamento\Controllers\TreinamentoExportController;
 use App\Modules\Treinamento\Controllers\TreinamentoIndexController;
@@ -40,6 +41,10 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
     Route::get('/export', TreinamentoExportController::class)
         ->name('export')
         ->middleware('can:treinamento.cursos.export');
+    // Antes do /{id} de proposito: senao o wildcard casaria com "create" primeiro.
+    Route::get('/create', TreinamentoCreateController::class)
+        ->name('create')
+        ->middleware('can:treinamento.cursos.create');
     Route::get('/{id}', TreinamentoShowController::class)
         ->name('show')
         ->middleware('can:treinamento.cursos.view');

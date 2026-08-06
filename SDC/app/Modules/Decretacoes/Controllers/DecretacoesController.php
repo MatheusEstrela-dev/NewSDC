@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Decretacoes\Requests\DesastreDataRequest;
 use App\Modules\Decretacoes\Requests\StoreProcessoRequest;
 use App\Modules\Decretacoes\Requests\UpdateProcessoRequest;
+use App\Modules\Decretacoes\Services\DanosAmbientaisService;
 use App\Modules\Decretacoes\Services\DesastreDataService;
 use App\Modules\Decretacoes\Services\EntradaProcessoService;
 use App\Modules\Decretacoes\Services\ProcessoExportRedecService;
@@ -608,14 +609,19 @@ class DecretacoesController extends Controller
      */
     private function cabecalhoExportRedec(): array
     {
-        return [
-            'redec_id', 'redec', 'redec_regiao', 'uf', 'municipio', 'codigo_ibge',
-            'processo_id', 'protocolo', 'protocolo_municipio', 'tipo_processo',
-            'data_entrada', 'data_ocorrencia', 'cobrade', 'tipo_desastre',
-            'situacao_anormalidade', 'status', 'decreto_municipal',
-            'data_decreto_municipal', 'data_publicacao_mg', 'prazo_vigencia_dias',
-            'data_vencimento', 'dias_restantes', 'situacao_vigencia', 'analista',
-        ];
+        return array_merge(
+            [
+                'redec_id', 'redec', 'redec_regiao', 'uf', 'municipio', 'codigo_ibge',
+                'processo_id', 'protocolo', 'protocolo_municipio', 'tipo_processo',
+                'data_entrada', 'data_ocorrencia', 'cobrade', 'tipo_desastre',
+                'situacao_anormalidade', 'status', 'decreto_municipal',
+                'data_decreto_municipal', 'data_publicacao_mg', 'prazo_vigencia_dias',
+                'data_vencimento', 'dias_restantes', 'situacao_vigencia', 'analista',
+            ],
+            // Danos ambientais no fim, na ordem definida pelo service (uma coluna
+            // de resposta e uma de intensidade por item, mais o contador).
+            (new DanosAmbientaisService())->colunasExportNomes()
+        );
     }
 
     /**

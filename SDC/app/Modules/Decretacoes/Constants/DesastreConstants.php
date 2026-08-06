@@ -9,6 +9,7 @@ final class DesastreConstants
     public const CATEGORIA_DANOS_HUMANOS_ID = 1;
 
     public const CAT_DANOS_MATERIAIS    = 'DANOS MATERIAIS';
+    public const CAT_DANOS_AMBIENTAIS   = 'DANOS AMBIENTAIS';
     public const CAT_PREJUIZOS_PUBLICOS = 'PREJUÍZOS ECONÔMICOS PÚBLICOS';
     public const CAT_PREJUIZOS_PRIVADOS = 'PREJUÍZOS ECONÔMICOS PRIVADOS';
 

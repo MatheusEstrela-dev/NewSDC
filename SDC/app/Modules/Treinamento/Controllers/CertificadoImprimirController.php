@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Modules\Treinamento\Models\Certificado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 /**
@@ -30,12 +30,9 @@ class CertificadoImprimirController extends Controller
 
         abort_unless($principal !== null, 403);
 
-        $ehDono = $certificado->inscricao->inscrito_type === $principal::class
-            && $certificado->inscricao->inscrito_id === $principal->id;
-
-        $podeVerQualquer = $principal instanceof User && $principal->can('treinamento.certificados.download');
-
-        abort_unless($ehDono || $podeVerQualquer, 403);
+        // Logica de autorizacao (dono da inscricao OU permissao de staff)
+        // centralizada em CertificadoPolicy::view.
+        abort_unless(Gate::forUser($principal)->allows('view', $certificado), 403);
 
         abort_unless($certificado->status->value === 'GERADO', 404, 'Certificado ainda nao disponivel.');
 

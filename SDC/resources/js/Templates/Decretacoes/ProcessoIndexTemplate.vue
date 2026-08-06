@@ -18,12 +18,6 @@
             <span class="hidden sm:inline">Exportar</span>
           </Button>
 
-          <!-- Botão Exportar por REDEC -->
-          <Button v-if="canExport" variant="secondary" size="md" :icon="MapIcon" icon-position="left" @click="showExportRedecModal = true">
-            <span class="hidden sm:inline">Exportar por REDEC</span>
-            <span class="sm:hidden">REDEC</span>
-          </Button>
-
           <!-- Botão Criar - Responsivo -->
           <Button
             v-if="canCreate"
@@ -40,21 +34,15 @@
       </template>
     </PageHeader>
 
-    <!-- Modal de Exportação CSV -->
+    <!-- Modal de Exportação CSV (inclui o escopo "Por REDEC") -->
     <ExportCsvModal
       :show="showExportModal"
       module-name="Decretações"
-      @close="showExportModal = false"
-      @export="handleExportCsv"
-    />
-
-    <!-- Modal de Exportação por REDEC -->
-    <ExportRedecModal
-      :show="showExportRedecModal"
+      allow-redec
       :redecs="filterOptions.redecs || []"
       :redec-selecionada="localFilters.redec_id || ''"
-      @close="showExportRedecModal = false"
-      @export="handleExportRedec"
+      @close="showExportModal = false"
+      @export="handleExportCsv"
     />
 
     <!-- Statistics Cards -->
@@ -144,11 +132,10 @@ import ProcessoFilters from '@/Components/Organisms/Decretacoes/ProcessoFilters.
 import ProcessoGrid from '@/Components/Organisms/Decretacoes/ProcessoGrid.vue';
 import ProcessoTable from '@/Components/Organisms/Decretacoes/ProcessoTable.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
-import ExportRedecModal from '@/Components/Organisms/Decretacoes/ExportRedecModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useMobile } from '@/Composables/useMobile';
-import { ArrowDownTrayIcon, MapIcon } from '@heroicons/vue/24/outline';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { router } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
 
@@ -292,16 +279,25 @@ const {
   handleExport: triggerExport
 } = useExport('decretacoes.export');
 
-// Exporta exatamente o recorte da tela (REDEC, municipio, status, vigencia,
-// COBRADE...).
+/**
+ * Exporta exatamente o recorte da tela (REDEC, municipio, status, vigencia,
+ * COBRADE...).
+ *
+ * O escopo "Por REDEC" do modal vai para outro endpoint (planilha agrupada por
+ * REDEC, uma linha por municipio), por isso o desvio aqui.
+ */
 function handleExportCsv(params) {
+  if (params?.type === 'redec') {
+    handleExportRedec(params);
+    return;
+  }
+
   triggerExport(params, filtrosParaExportacao(params));
 }
 
 // =========================
-// Exportação por REDEC
+// Exportação por REDEC (escopo "Por REDEC" do modal de exportação)
 // =========================
-const showExportRedecModal = ref(false);
 const { handleExport: triggerExportRedec } = useExport('decretacoes.export.redec');
 
 /**
