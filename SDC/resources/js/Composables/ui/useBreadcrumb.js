@@ -173,7 +173,21 @@ export function useBreadcrumb() {
         return items;
     });
 
+    // Navega para o item anterior do proprio breadcrumb (deterministico) em vez
+    // de depender do histórico do browser: window.history.back() as vezes exige
+    // dois cliques (por exemplo apos um resize/re-render trocar a pilha de
+    // historico), porque a pagina anterior real nem sempre e a entrada anterior
+    // do historico.
     const handleBack = () => {
+        const items = breadcrumbItems.value;
+
+        for (let i = items.length - 2; i >= 0; i--) {
+            if (items[i]?.route) {
+                router.visit(route(items[i].route));
+                return;
+            }
+        }
+
         window.history.back();
     };
 
