@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\AjudaHumanitaria;
 
+use App\Modules\AjudaHumanitaria\Console\ExtrairLegadoAjuCommand;
+use App\Modules\AjudaHumanitaria\Console\RefinarLegadoAjuCommand;
 use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItemNoPedido;
 use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItensLiberados;
 use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeParecerFavoravel;
@@ -61,6 +63,19 @@ class AjudaHumanitariaServiceProvider extends ServiceProvider
         SaldoMaterialRepositoryInterface::class  => LegadoSaldoMaterialRepository::class,
     ];
 
+    /**
+     * Comandos de console do modulo.
+     *
+     * A carga do legado vive aqui em vez de em routes/console.php porque e
+     * trabalho de migracao do proprio modulo, e sai junto com ele no corte.
+     *
+     * @var array<int, class-string<\Illuminate\Console\Command>>
+     */
+    private const COMANDOS = [
+        ExtrairLegadoAjuCommand::class,
+        RefinarLegadoAjuCommand::class,
+    ];
+
     public function register(): void
     {
         foreach (self::REPOSITORIOS as $contrato => $implementacao) {
@@ -85,6 +100,8 @@ class AjudaHumanitariaServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        if ($this->app->runningInConsole()) {
+            $this->commands(self::COMANDOS);
+        }
     }
 }

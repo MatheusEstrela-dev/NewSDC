@@ -13,13 +13,17 @@
 | Task | Estado | Evidencia |
 | --- | --- | --- |
 | 1. Extensoes e landing zone | **APLICADA** em 06/08/2026 | migration `2026_08_06_110000_create_ajuda_h_legado_raw_table`; `btree_gist`, `citext` e `postgis` presentes; indice GIN `ajuda_h_legado_raw_doc_idx` criado |
-| 2. Comando de extracao | pendente | |
+| 2. Comando de extracao | **EXECUTADA** em 06/08/2026 | `legado:aju:extrair` carregou 13.598 linhas em 15 tabelas a partir do snapshot de producao; `aju_cfornecedor` pulada por ausencia na base. Contagem conferida 1:1 com a origem em todas as tabelas |
 | 3. Schema do nucleo | **APLICADA** em 06/08/2026 | migration `2026_08_06_110100_create_ajuda_h_estoque_tables`; 13 tabelas `ajuda_h_*`; os 4 CHECK verificados por teste transacional (saldo negativo, quantidade zero e transferencia para o mesmo deposito recusados; `valor_total` calculado em 31.50; `geography` gravada) |
 | 4. Servico de movimentacao | pendente | |
-| 5. Refino da landing zone | pendente | |
+| 5. Refino da landing zone | **EXECUTADA** em 06/08/2026 | `legado:aju:refinar` produziu 187 materiais, 24 depositos e 118 saldos. Agregados identicos a origem (soma 46.204, min 1, max 4.896) e **MD5 das tuplas (material, deposito, saldo) igual dos dois lados**: `07067c0945e624e6fa24a2d8e9c22051`. Reexecucao completa nao alterou nenhuma contagem |
 | 6. Troca da leitura de saldo | pendente | |
 
 **Banco alvo.** O schema foi aplicado no Postgres `sdc` em `localhost:5434` (container `newsdc_dev_db`, postgis 18-3.6), que e onde vivem `municipios`, `materiais_ah` e `users`. A porta 5433 do `compose.dev.yml` pertence ao `db_ai` (Citus + pgvector, base `sdc_ai`), destinado a carga analitica e vetorial, e nao ao OLTP deste modulo.
+
+**Fonte da carga.** `SDC/database/data/aju_humanitaria.sql`, dump HeidiSQL da producao (200.198.29.227, MySQL 8.0.31, base `dbsdc`), de 06/08/2026. Carregado em um schema MySQL isolado, `aju_prod_snapshot`, e nao no `dbsdc` local: o dump traz `USE dbsdc` e `INSERT` sem truncate, entao aplica-lo direto somaria linhas a base local existente. Conexao `legacy` apontada para esse snapshot via `DB_LEGACY_*`; do container, o host se alcanca por `host.docker.internal`.
+
+**Divergencia de chave entre as bases.** O `MapaTabelasLegado` implementado difere do desenho original desta Task 2: em vez de uma coluna de chave por tabela, declara uma **lista de candidatas em ordem de preferencia**, e o extrator escolhe a primeira presente na origem. Foi o que permitiu o mesmo mapa atender o `dbsdc` (`aju_deposito.id`) e o `gestaocedec_local` (`aju_deposito.id_deposito`) sem bifurcar codigo. `resolverChave()` retorna `null` quando nenhuma candidata existe, e o comando aborta nomeando a tabela em vez de gravar `pk_legado` vazio.
 
 **Nomenclatura.** Prefixo de modulo `ajuda_h_`, seguindo a convencao do NewSDC (`pae_`, `dec_`, `tdap_`, `rat_`, `pmda_`, `compdec_`). As tabelas anteriores do modulo usam sufixo `_ah` (`materiais_ah`, `pedidos_ah`): convivem por ora, e uma eventual uniformizacao e trabalho a parte, porque renomear alcanca Models, Resources e consultas ja escritas.
 
