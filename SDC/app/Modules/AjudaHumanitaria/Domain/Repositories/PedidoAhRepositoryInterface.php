@@ -10,7 +10,9 @@ use App\Modules\AjudaHumanitaria\Enums\TipoItemPedido;
 /**
  * Persistencia do pedido e dos fatos que alimentam o ContextoTransicao.
  *
- * Implementacao Eloquent na fase 2, sob Infrastructure/Persistence.
+ * Nao ha metodo de agendamento: a guarda que o consumiria foi removida ao se
+ * verificar que aju_h_agendamento nao existe no banco legado e que os 417
+ * pedidos que atingiram Atendido o fizeram sem agendamento algum.
  */
 interface PedidoAhRepositoryInterface
 {
@@ -26,9 +28,6 @@ interface PedidoAhRepositoryInterface
     /** RN-11: existe ao menos um parecer favoravel. */
     public function temParecerFavoravel(int $pedidoId): bool;
 
-    /** RN-21: existe agendamento de retirada aprovado. */
-    public function temAgendamentoAprovado(int $pedidoId): bool;
-
     public function atualizarStatus(int $pedidoId, StatusPedidoAh $novo): void;
 
     /** RN-14: grava o log da transicao. */
@@ -37,6 +36,6 @@ interface PedidoAhRepositoryInterface
         StatusPedidoAh $anterior,
         StatusPedidoAh $novo,
         ?string $observacao,
-        int $usuarioId,
+        ?int $usuarioId,
     ): void;
 }
