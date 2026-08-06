@@ -1,9 +1,17 @@
 <?php
 
 use App\Modules\AjudaHumanitaria\Controllers\BeneficiarioController;
+use App\Modules\AjudaHumanitaria\Controllers\PedidoAhController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function () {
+
+    // Pedido de Material de Ajuda Humanitaria (MAH).
+    Route::prefix('pedidos')->name('pedidos.')->group(function () {
+        Route::get('/', [PedidoAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.pedidos.view');
+    });
 
     Route::prefix('beneficiarios')->name('beneficiarios.')->group(function () {
         Route::get('/export', [BeneficiarioController::class, 'export'])
