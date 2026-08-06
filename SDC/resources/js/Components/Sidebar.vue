@@ -138,16 +138,28 @@
           Decretacoes
         </NavItem>
 
-        <!-- Ajuda Humanitaria -->
-        <NavItem
+        <!-- Ajuda Humanitaria - drill-down (abre submenu como nova seccao) -->
+        <button
           v-if="canSeeAjudaHumanitaria && _routes.hasHumanitaria"
-          :href="route('ajuda-humanitaria.pedidos.index')"
-          :active="isRouteActive('ajuda-humanitaria.*')"
-          icon="heart"
-          :collapsed="isCollapsed"
+          @click="openSubmenu('ajuda-humanitaria')"
+          class="nav-group-toggle nav-drilldown"
+          :class="{ 'is-active-route': isRouteActive('ajuda-humanitaria.*') }"
+          :title="isCollapsed ? 'Ajuda Humanitaria' : ''"
         >
-          Ajuda Humanitaria
-        </NavItem>
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+          <span v-show="!isCollapsed">Ajuda Humanitaria</span>
+          <svg
+            v-show="!isCollapsed"
+            class="nav-arrow nav-arrow-drill"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
 
         <!-- COMPDEC / Orgaos -->
         <NavItem
@@ -387,6 +399,48 @@
         </NavItem>
       </div>
     </nav>
+    <!-- SUBMENU VIEW: Ajuda Humanitaria -->
+    <nav
+      v-if="canSeeAjudaHumanitaria && _routes.hasHumanitaria"
+      class="sidebar-nav sidebar-view sidebar-view-submenu"
+      :class="{ 'is-active': activeSubmenu === 'ajuda-humanitaria' }"
+      :inert="activeSubmenu !== 'ajuda-humanitaria'"
+    >
+      <button
+        type="button"
+        class="submenu-back"
+        @click="closeSubmenu"
+        v-show="!isCollapsed"
+      >
+        <svg class="submenu-back-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span class="submenu-back-title">{{ submenuTitle || 'Ajuda Humanitaria' }}</span>
+      </button>
+
+      <div class="nav-section">
+        <NavItem
+          :href="route('ajuda-humanitaria.pedidos.index')"
+          :active="isRouteActive('ajuda-humanitaria.pedidos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Pedidos
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasHumanitariaBeneficiarios"
+          :href="route('ajuda-humanitaria.beneficiarios.index')"
+          :active="isRouteActive('ajuda-humanitaria.beneficiarios.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Beneficiários
+        </NavItem>
+      </div>
+    </nav>
+
     <!-- SUBMENU VIEW: TDAP -->
     <nav
       v-if="canSeeTdap"
@@ -552,6 +606,7 @@ const _routes = {
   hasPlantao: route().has('plantao.index'),
   hasDecretacoes: route().has('decretacoes.index'),
   hasHumanitaria: route().has('ajuda-humanitaria.pedidos.index'),
+  hasHumanitariaBeneficiarios: route().has('ajuda-humanitaria.beneficiarios.index'),
   hasCompdec: route().has('compdec.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
   hasTdapPrestadores: route().has('tdap.prestadores.index'),
@@ -768,6 +823,7 @@ const activeSubmenu = ref(null);
 const submenuTitles = {
   tdap: 'TDAP',
   estoque: 'Estoque',
+  'ajuda-humanitaria': 'Ajuda Humanitaria',
 };
 
 const submenuTitle = computed(() => submenuTitles[activeSubmenu.value] ?? '');

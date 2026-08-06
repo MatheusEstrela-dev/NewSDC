@@ -64,10 +64,10 @@ function filtrarPorFase(chave) {
 }
 
 function criar() {
-  // Formulario de criacao entra na proxima etapa.
+  router.get(route('ajuda-humanitaria.pedidos.create'));
 }
 
-function visualizar() {
-  // Tela de detalhe entra na proxima etapa.
+function visualizar(id) {
+  router.get(route('ajuda-humanitaria.pedidos.show', id));
 }
 </script>
