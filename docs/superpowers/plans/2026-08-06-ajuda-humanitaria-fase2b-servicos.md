@@ -81,9 +81,14 @@ $env:DB_PASSWORD = $dot['DB_PASSWORD']
 ## Ordem de execucao
 
 - **Onda 1**, paralelizavel: Task 1 (DTOs), Task 2 (NumeracaoPedidoService)
-- **Onda 2**, paralelizavel apos a onda 1: Tasks 3, 4, 5, 6, 7
+- **Onda 2**, paralelizavel apos a onda 1: Tasks 3, 4, 5, 6
+- **Onda 3**, apos a Task 6: Task 7
 
-Nenhum servico da onda 2 depende de outro servico: `TramitacaoService` fala com repositorios, nao com `PrestacaoContasService`.
+`TramitacaoService` fala com repositorios, nao com outros servicos, por isso
+convive com 3, 4 e 5 na mesma onda. A Task 7 fica sozinha na onda seguinte
+porque `PrestacaoContasService` injeta `TramitacaoService`: a homologacao da
+prestacao e a finalizacao do processo sao o mesmo ato (RN-19), e essa e a unica
+dependencia entre servicos desta fase.
 
 ---
 
