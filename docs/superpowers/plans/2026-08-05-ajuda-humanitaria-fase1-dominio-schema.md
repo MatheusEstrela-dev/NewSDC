@@ -68,6 +68,10 @@
   da Task 8 precisa estar aplicada nele antes dos testes das Tasks 8, 9 e 10
 - Commits seguem gitmoji: `<emoji> tipo(escopo): descricao em pt-BR`. Escopo desta fase: `ajuda-humanitaria`
 - Nunca incluir trailer `Co-Authored-By` em commit
+- **Arquivos de teste nao entram em commit.** Regra permanente do usuario. Os
+  testes sao escritos, executados e permanecem no disco sem versionamento; os
+  comandos `git add` das tasks abaixo cobrem apenas codigo de producao, mesmo
+  quando o texto do passo citar o arquivo de teste
 
 ## Matriz normativa de transicoes
 
