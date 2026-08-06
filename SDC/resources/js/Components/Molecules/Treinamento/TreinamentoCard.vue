@@ -32,20 +32,6 @@ const formatDate = (dateValue) => {
   return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 };
 
-/**
- * Cor do status na semantica do Badge.
- *
- * Antes o template passava :color="treinamento.status_color" -- prop que o Badge nao
- * tem, com um campo que o backend do Treinamento nem produz. O badge caia no default
- * e saia sempre cinza, independente do status.
- */
-const statusVariant = computed(() => ({
-  PLANEJADO: 'info',
-  EM_ANDAMENTO: 'warning',
-  CONCLUIDO: 'success',
-  CANCELADO: 'danger',
-}[props.treinamento.status] ?? 'default'));
-
 const vagasText = computed(() => {
   if (props.treinamento.numero_vagas === null) {
     return 'Vagas ilimitadas';
@@ -63,7 +49,7 @@ const vagasText = computed(() => {
           {{ treinamento.titulo }}
         </Heading>
       </div>
-      <Badge :variant="statusVariant" class="ml-2">
+      <Badge :color="treinamento.status_color" class="ml-2">
         {{ treinamento.status_label || treinamento.status }}
       </Badge>
     </div>
@@ -76,10 +62,10 @@ const vagasText = computed(() => {
     <!-- Informações principais -->
     <div class="space-y-2 mb-4">
       <div class="flex items-center gap-2 flex-wrap">
-        <Badge :cor="treinamento.tipo_color || 'blue'">
+        <Badge :color="treinamento.tipo_color || 'blue'">
           {{ treinamento.tipo_label || treinamento.tipo }}
         </Badge>
-        <Badge v-if="treinamento.categoria_label" cor="slate">
+        <Badge v-if="treinamento.categoria_label" color="gray">
           {{ treinamento.categoria_label }}
         </Badge>
         <Text size="sm" color="muted">

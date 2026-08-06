@@ -53,7 +53,7 @@ const formatDate = (dateValue) => {
               <span v-if="inscricao.treinamento_local"> · {{ inscricao.treinamento_local }}</span>
             </Text>
           </div>
-          <Badge :cor="inscricao.status_color">{{ inscricao.status_label }}</Badge>
+          <Badge :color="inscricao.status_color">{{ inscricao.status_label }}</Badge>
         </div>
 
         <div class="mt-3 flex items-center gap-4">

@@ -192,6 +192,11 @@ class Treinamento extends Model implements Rastreavel
         return $query->where('status', StatusTreinamento::CONCLUIDO->value);
     }
 
+    public function scopePublicado($query)
+    {
+        return $query->whereNotNull('link_publico_slug')->whereNotNull('publicado_em');
+    }
+
     // ─── Trilha de acoes (notificacao ao dono) ──────────────────────────────
 
     public function moduloNotificacao(): string
@@ -238,10 +243,5 @@ class Treinamento extends Model implements Rastreavel
             StatusTreinamento::CANCELADO => 'warning',
             default => 'info',
         };
-    }
-
-    public function scopePublicado($query)
-    {
-        return $query->whereNotNull('link_publico_slug')->whereNotNull('publicado_em');
     }
 }

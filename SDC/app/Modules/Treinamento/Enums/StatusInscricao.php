@@ -27,7 +27,7 @@ enum StatusInscricao: string
             self::PENDENTE => 'yellow',
             self::APROVADA => 'green',
             self::REPROVADA => 'red',
-            self::CANCELADA => 'slate',
+            self::CANCELADA => 'gray',
         };
     }
 

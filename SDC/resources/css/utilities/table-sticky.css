@@ -1,0 +1,76 @@
+/**
+ * Coluna de Ações fixa em tabelas com scroll horizontal
+ *
+ * Nas faixas entre 768px e ~1300px as tabelas de RAT e PAE somam mais largura
+ * que a área útil (viewport menos a sidebar), então a última coluna sai da tela
+ * e as ações só apareciam depois de rolar na horizontal. Fixando a coluna no
+ * canto direito o restante continua rolando e as ações ficam sempre visíveis.
+ *
+ * Requisitos de uso:
+ *  - o wrapper da tabela precisa ter overflow-x-auto (ListContainer já tem);
+ *  - a <tr> precisa de fundo opaco próprio, senão o conteúdo rolado aparece
+ *    por baixo da coluna fixa. Use .table-row-solid na linha.
+ */
+
+.table-actions-head,
+.table-actions-cell {
+  position: sticky;
+  right: 0;
+}
+
+/* O header fica acima das células para não ser coberto no scroll vertical. */
+.table-actions-head {
+  z-index: 20;
+  background-color: rgb(248 250 252); /* slate-50, igual ao <thead> */
+}
+
+.table-actions-cell {
+  z-index: 10;
+  /* Herda o fundo da <tr>, o que preserva o estado de hover sem duplicar
+     as cores aqui. Depende de .table-row-solid na linha. */
+  background-color: inherit;
+}
+
+/* Sombra sutil marcando que existe conteúdo rolando por baixo. */
+.table-actions-head::before,
+.table-actions-cell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1rem;
+  transform: translateX(-100%);
+  pointer-events: none;
+  background: linear-gradient(to right, rgb(15 23 42 / 0), rgb(15 23 42 / 0.06));
+}
+
+.table-row-solid {
+  background-color: rgb(255 255 255);
+}
+
+.table-row-solid:hover {
+  background-color: rgb(248 250 252); /* slate-50 */
+}
+
+/* No dark os valores precisam ser OPACOS: as classes originais usam alpha
+   (slate-800/60, slate-900/50, slate-700/30) e, numa coluna fixa, qualquer
+   transparência deixa o conteúdo rolado aparecer por baixo. Os valores abaixo
+   são o resultado achatado de cada camada sobre o fundo do card. */
+
+.dark .table-actions-head {
+  background-color: rgb(20 29 47); /* slate-900/50 sobre o card */
+}
+
+.dark .table-actions-head::before,
+.dark .table-actions-cell::before {
+  background: linear-gradient(to right, rgb(0 0 0 / 0), rgb(0 0 0 / 0.25));
+}
+
+.dark .table-row-solid {
+  background-color: rgb(24 34 52); /* slate-800/60 sobre slate-900 */
+}
+
+.dark .table-row-solid:hover {
+  background-color: rgb(32 43 62); /* slate-700/30 sobre o card */
+}
