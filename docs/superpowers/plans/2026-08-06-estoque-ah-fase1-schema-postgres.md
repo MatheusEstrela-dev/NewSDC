@@ -16,7 +16,28 @@
 | 2. Comando de extracao | **EXECUTADA** em 06/08/2026 | `legado:aju:extrair` carregou 13.598 linhas em 15 tabelas a partir do snapshot de producao; `aju_cfornecedor` pulada por ausencia na base. Contagem conferida 1:1 com a origem em todas as tabelas |
 | 3. Schema do nucleo | **APLICADA** em 06/08/2026 | migration `2026_08_06_110100_create_ajuda_h_estoque_tables`; 13 tabelas `ajuda_h_*`; os 4 CHECK verificados por teste transacional (saldo negativo, quantidade zero e transferencia para o mesmo deposito recusados; `valor_total` calculado em 31.50; `geography` gravada) |
 | 4. Servico de movimentacao | pendente | |
-| 5. Refino da landing zone | **EXECUTADA** em 06/08/2026 | `legado:aju:refinar` produziu 187 materiais, 24 depositos e 118 saldos. Agregados identicos a origem (soma 46.204, min 1, max 4.896) e **MD5 das tuplas (material, deposito, saldo) igual dos dois lados**: `07067c0945e624e6fa24a2d8e9c22051`. Reexecucao completa nao alterou nenhuma contagem |
+| 5. Refino da landing zone | **EXECUTADA** em 06/08/2026, sete etapas | 187 materiais, 24 depositos, 10 fornecedores, 36 fontes, 118 saldos, 752 entradas com 752 itens, 69 transferencias com 205 itens. Agregados de saldo identicos a origem (soma 46.204, min 1, max 4.896) e **MD5 das tuplas (material, deposito, saldo) igual dos dois lados**: `07067c0945e624e6fa24a2d8e9c22051`. Reexecucao completa nao alterou nenhuma contagem |
+
+### Regra do ledger na carga
+
+Somente a etapa `saldos` escreve em `ajuda_h_estoque_movimentos`, e escreve um unico movimento `ABERTURA` por par material/deposito, com o saldo que o legado tem hoje. As etapas `entradas` e `transferencias` carregam o historico como registro, **sem lancar movimento**: a abertura ja embute o efeito acumulado delas.
+
+Lancar as duas coisas dobraria o saldo e quebraria a invariante `saldo = soma dos movimentos`. A verificacao de que a regra se sustenta: depois de carregar as 752 entradas e as 69 transferencias, o ledger continuou com 118 linhas, todas de tipo `ABERTURA`, soma 46.204 e o mesmo MD5 de antes.
+
+### Dado sujo encontrado na carga de producao
+
+Quatro casos, todos tratados sem afrouxar constraint:
+
+| Caso | Ocorrencias | Tratamento |
+| --- | --- | --- |
+| `aju_produto` sem `id_dep_destino` | 1 (id 1038, correcao manual de saldo de -5 cestas) | Recuperada pelo nome textual em `depDestino` (`TEOFILO OTONI`), que casa com o deposito 12. Nenhuma linha perdida |
+| `aju_transferencia` com origem igual ao destino | 1 (id 37, deposito 1 para deposito 1) | Fica de fora. O CHECK `ajuda_h_transf_depositos_distintos_ck` esta certo; o dado e que nao. Os 2 itens dela caem junto, o que explica 205 de 207 |
+| `cpfcnpj` de preenchimento em `aju_fornecedores` | 3 (`00.000.000-0000-00` repetido em dois fornecedores, e `00.000.0` truncado) | Vira `NULL` por regra estrutural: menos de 11 digitos ou nenhum digito diferente de zero. Documento invalido nao e identidade, e o Postgres aceita varios `NULL` sob `UNIQUE` |
+| `aju_produto.origem` fora de `aju_fonte` | 215 de 752 | `origem` e texto livre que mistura fonte de recurso (CAMPANHA DOACAO, LBV) com tipo de movimento (`Transferencia entre Depositos` em tres grafias, `Correcao Manual de Saldo`). So o que casa com `aju_fonte` vira `fonte_recurso_id` (537); o resto fica em `ajuda_h_entradas.payload_legado`, em vez de virar cadastro inventado |
+
+### Tabelas que seguem vazias, e por que
+
+`ajuda_h_liberacoes`, `ajuda_h_liberacao_itens` e `ajuda_h_liberacao_recibos` ainda nao tem etapa de refino. O dado esta na area de pouso (`aju_liberacao` 3.582, `aju_pagamento` 3.364), mas **`aju_item` esta vazia na producao**: as 3.582 liberacoes nao tem um unico item registrado nessa tabela. Carregar as liberacoes agora produziria 3.582 registros orfaos de item. Antes de modelar essa etapa e preciso descobrir com quem opera o modulo se o item da liberacao vive em outro lugar ou se a tabela foi abandonada.
 | 6. Troca da leitura de saldo | pendente | |
 
 **Banco alvo.** O schema foi aplicado no Postgres `sdc` em `localhost:5434` (container `newsdc_dev_db`, postgis 18-3.6), que e onde vivem `municipios`, `materiais_ah` e `users`. A porta 5433 do `compose.dev.yml` pertence ao `db_ai` (Citus + pgvector, base `sdc_ai`), destinado a carga analitica e vetorial, e nao ao OLTP deste modulo.

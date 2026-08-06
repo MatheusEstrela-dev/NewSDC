@@ -125,6 +125,14 @@ return new class extends Migration
             $table->timestampTz('recebido_em');
             $table->boolean('cancelado')->default(false);
             $table->foreignId('registrado_por')->nullable()->constrained('users')->nullOnDelete();
+            $table->text('observacao')->nullable()
+                ->comment('aju_produto.obs, que carrega justificativa de correcao de saldo');
+            // aju_produto.origem e texto livre que mistura fonte de recurso
+            // (CAMPANHA DOACAO, LBV) com tipo de movimento (Transferencia entre
+            // Depositos, Correcao Manual de Saldo), em tres grafias diferentes.
+            // So a parte que casa com aju_fonte vira fonte_recurso_id; o resto
+            // fica aqui em vez de virar cadastro inventado.
+            $table->jsonb('payload_legado')->nullable();
             $table->string('codigo_legado', 30)->nullable()->unique()
                 ->comment('aju_produto.id_produto (apesar do nome, e registro de entrada)');
             $table->timestamps();

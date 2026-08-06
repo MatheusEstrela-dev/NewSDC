@@ -17,17 +17,31 @@ use Illuminate\Support\Facades\DB;
  * Todas as etapas sao idempotentes por codigo_legado, entao a carga pode rodar
  * em ciclos ate o corte, convergindo para o mesmo estado.
  *
- * aju_deposito nao tem o mesmo nome de chave nas duas bases (id no dbsdc,
- * id_deposito no gestaocedec_local). O coalesce absorve as duas sem exigir
- * dois caminhos de codigo.
+ * REGRA CENTRAL DO LEDGER. Somente a etapa "saldos" escreve em
+ * ajuda_h_estoque_movimentos, e escreve um unico movimento de ABERTURA por par
+ * material/deposito, com o saldo que o legado tem hoje. As etapas "entradas" e
+ * "transferencias" carregam o historico como registro, sem lancar movimento:
+ * a abertura ja embute o efeito acumulado delas. Lancar as duas coisas dobraria
+ * o saldo e quebraria a invariante saldo = soma dos movimentos.
  */
 final class RefinarLegadoAjuCommand extends Command
 {
-    protected $signature = 'legado:aju:refinar {--etapa=* : materiais, depositos, saldos}';
+    protected $signature = 'legado:aju:refinar {--etapa=* : materiais, depositos, fornecedores, fontes, saldos, entradas, transferencias}';
 
     protected $description = 'Refina ajuda_h_legado_raw para as tabelas destino do estoque';
 
-    private const ETAPAS = ['materiais', 'depositos', 'saldos'];
+    /**
+     * Ordem de dependencia: cadastros primeiro, depois o que os referencia.
+     */
+    private const ETAPAS = [
+        'materiais',
+        'depositos',
+        'fornecedores',
+        'fontes',
+        'saldos',
+        'entradas',
+        'transferencias',
+    ];
 
     public function handle(): int
     {
@@ -35,19 +49,23 @@ final class RefinarLegadoAjuCommand extends Command
         $etapas  = $pedidas === [] ? self::ETAPAS : array_values(array_intersect(self::ETAPAS, $pedidas));
 
         if ($etapas === []) {
-            $this->error('Nenhuma etapa valida. Use materiais, depositos ou saldos.');
+            $this->error('Nenhuma etapa valida. Use: '.implode(', ', self::ETAPAS));
 
             return self::FAILURE;
         }
 
         foreach ($etapas as $etapa) {
             $afetadas = match ($etapa) {
-                'materiais' => $this->refinarMateriais(),
-                'depositos' => $this->refinarDepositos(),
-                'saldos'    => $this->refinarSaldos(),
+                'materiais'       => $this->refinarMateriais(),
+                'depositos'       => $this->refinarDepositos(),
+                'fornecedores'    => $this->refinarFornecedores(),
+                'fontes'          => $this->refinarFontes(),
+                'saldos'          => $this->refinarSaldos(),
+                'entradas'        => $this->refinarEntradas(),
+                'transferencias'  => $this->refinarTransferencias(),
             };
 
-            $this->line(sprintf('%-12s %6d linhas', $etapa, $afetadas));
+            $this->line(sprintf('%-16s %6d linhas', $etapa, $afetadas));
         }
 
         return self::SUCCESS;
@@ -101,12 +119,67 @@ final class RefinarLegadoAjuCommand extends Command
         );
     }
 
+    /**
+     * O legado guarda CNPJ de preenchimento (00.000.000-0000-00, repetido em
+     * dois fornecedores) e valor truncado (00.000.0). Documento invalido nao e
+     * identidade: vira NULL, que e o que "desconhecido" significa, e o Postgres
+     * aceita varios NULL sob UNIQUE. Preferivel a afrouxar a constraint.
+     *
+     * A regra e estrutural, nao um julgamento caso a caso: cai fora o que nao
+     * tem digito algum diferente de zero ou tem menos digitos que um CPF.
+     * O texto original permanece em ajuda_h_legado_raw.
+     */
+    private function refinarFornecedores(): int
+    {
+        return DB::affectingStatement(
+            "INSERT INTO ajuda_h_fornecedores
+                 (nome, cpf_cnpj, endereco, telefone, codigo_legado, created_at, updated_at)
+             SELECT
+                 coalesce(nullif(trim(doc->>'nome'), ''), 'SEM NOME'),
+                 CASE
+                     WHEN length(regexp_replace(coalesce(doc->>'cpfcnpj', ''), '\\D', '', 'g')) >= 11
+                      AND regexp_replace(coalesce(doc->>'cpfcnpj', ''), '\\D', '', 'g') ~ '[1-9]'
+                     THEN trim(doc->>'cpfcnpj')
+                 END,
+                 nullif(trim(doc->>'endereco'), ''),
+                 nullif(trim(doc->>'tel'), ''),
+                 doc->>'id',
+                 now(), now()
+             FROM ajuda_h_legado_raw
+             WHERE tabela IN ('aju_fornecedores', 'aju_cfornecedor')
+               AND doc->>'id' IS NOT NULL
+             ON CONFLICT (codigo_legado) DO UPDATE
+                 SET nome       = EXCLUDED.nome,
+                     cpf_cnpj   = EXCLUDED.cpf_cnpj,
+                     endereco   = EXCLUDED.endereco,
+                     telefone   = EXCLUDED.telefone,
+                     updated_at = now()"
+        );
+    }
+
+    private function refinarFontes(): int
+    {
+        return DB::affectingStatement(
+            "INSERT INTO ajuda_h_fontes_recurso (nome, codigo_legado, created_at, updated_at)
+             SELECT
+                 coalesce(nullif(trim(doc->>'nome'), ''), 'SEM NOME'),
+                 doc->>'id',
+                 now(), now()
+             FROM ajuda_h_legado_raw
+             WHERE tabela = 'aju_fonte'
+               AND doc->>'id' IS NOT NULL
+             ON CONFLICT (codigo_legado) DO UPDATE
+                 SET nome       = EXCLUDED.nome,
+                     updated_at = now()"
+        );
+    }
+
     private function refinarSaldos(): int
     {
-        // O saldo do legado entra como um unico movimento de ABERTURA por par
+        // Unico ponto que escreve no ledger. Um movimento de ABERTURA por par
         // material/deposito, com o documento de origem preso em payload_legado.
-        // Reexecutar nao duplica: o par (origem_tipo, origem_id) identifica a
-        // linha da area de pouso que gerou o movimento.
+        // Reexecutar nao duplica: (origem_tipo, origem_id) identifica a linha da
+        // area de pouso que gerou o movimento.
         DB::affectingStatement(
             "INSERT INTO ajuda_h_estoque_movimentos
                  (material_ah_id, deposito_id, quantidade, tipo,
@@ -135,5 +208,143 @@ final class RefinarLegadoAjuCommand extends Command
                  SET saldo         = EXCLUDED.saldo,
                      atualizado_em = now()'
         );
+    }
+
+    /**
+     * aju_produto e registro de entrada, apesar do nome. Cada linha vira uma
+     * entrada com um item.
+     *
+     * Nao lanca movimento no ledger: ver a regra central no cabecalho da classe.
+     */
+    private function refinarEntradas(): int
+    {
+        $entradas = DB::affectingStatement(
+            "INSERT INTO ajuda_h_entradas
+                 (deposito_id, fonte_recurso_id, nota_fiscal, recebido_em, cancelado,
+                  observacao, payload_legado, codigo_legado, created_at, updated_at)
+             SELECT
+                 d.id,
+                 f.id,
+                 nullif(nullif(trim(r.doc->>'nota_fiscal'), ''), '-'),
+                 (r.doc->>'dtEntradaSaida')::timestamptz,
+                 coalesce((r.doc->>'cancelado')::int, 0) = 1,
+                 nullif(trim(r.doc->>'obs'), ''),
+                 jsonb_build_object(
+                     'origem',         r.doc->>'origem',
+                     'depDestino',     r.doc->>'depDestino',
+                     'tipo',           r.doc->>'tipo',
+                     'id_usuario',     r.doc->>'id_usuario',
+                     'id_entrada',     r.doc->>'id_entrada',
+                     'id_dep_origem',  r.doc->>'id_dep_origem'
+                 ),
+                 r.doc->>'id_produto',
+                 now(), now()
+             FROM ajuda_h_legado_raw r
+             -- id_dep_destino e a via normal; o nome textual em depDestino
+             -- recupera a unica linha do legado que veio sem o id.
+             JOIN ajuda_h_depositos d
+               ON d.codigo_legado = r.doc->>'id_dep_destino'
+               OR (r.doc->>'id_dep_destino' IS NULL
+                   AND upper(unaccent(trim(d.nome))) = upper(unaccent(trim(r.doc->>'depDestino'))))
+             LEFT JOIN ajuda_h_fontes_recurso f
+               ON upper(unaccent(trim(f.nome))) = upper(unaccent(trim(r.doc->>'origem')))
+             WHERE r.tabela = 'aju_produto'
+               AND r.doc->>'id_produto' IS NOT NULL
+             ON CONFLICT (codigo_legado) DO UPDATE
+                 SET deposito_id      = EXCLUDED.deposito_id,
+                     fonte_recurso_id = EXCLUDED.fonte_recurso_id,
+                     nota_fiscal      = EXCLUDED.nota_fiscal,
+                     recebido_em      = EXCLUDED.recebido_em,
+                     cancelado        = EXCLUDED.cancelado,
+                     observacao       = EXCLUDED.observacao,
+                     payload_legado   = EXCLUDED.payload_legado,
+                     updated_at       = now()"
+        );
+
+        // O item nao tem chave propria no legado: a entrada e o item sao a mesma
+        // linha de aju_produto. A entrada ja e unica por codigo_legado, entao o
+        // NOT EXISTS sobre entrada_id basta para nao duplicar.
+        DB::affectingStatement(
+            "INSERT INTO ajuda_h_entrada_itens (entrada_id, material_ah_id, qtd, data_validade)
+             SELECT
+                 e.id,
+                 m.id,
+                 (r.doc->>'quantidade')::numeric,
+                 CASE WHEN r.doc->>'validade' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                      THEN (r.doc->>'validade')::date END
+             FROM ajuda_h_legado_raw r
+             JOIN ajuda_h_entradas e ON e.codigo_legado = r.doc->>'id_produto'
+             JOIN materiais_ah     m ON m.codigo_legado = r.doc->>'codProd'
+             WHERE r.tabela = 'aju_produto'
+               AND (r.doc->>'quantidade') ~ '^-?[0-9]+(\\.[0-9]+)?$'
+               AND NOT EXISTS (
+                   SELECT 1 FROM ajuda_h_entrada_itens i WHERE i.entrada_id = e.id
+               )"
+        );
+
+        return $entradas;
+    }
+
+    /**
+     * Nao lanca movimento no ledger: ver a regra central no cabecalho da classe.
+     */
+    private function refinarTransferencias(): int
+    {
+        // O legado tem transferencia com origem igual ao destino, que o CHECK
+        // ajuda_h_transf_depositos_distintos_ck recusa com razao. Ficam de fora
+        // e sao reportadas pelo comando de conferencia, em vez de relaxar a
+        // invariante para acomodar dado sujo.
+        $transferencias = DB::affectingStatement(
+            "INSERT INTO ajuda_h_transferencias
+                 (deposito_origem_id, deposito_destino_id, motorista, veiculo, placa,
+                  saiu_em, chegou_em, status, responsavel, observacao, codigo_legado,
+                  created_at, updated_at)
+             SELECT
+                 o.id, dst.id,
+                 nullif(nullif(trim(r.doc->>'motorista'), ''), '-'),
+                 nullif(nullif(trim(r.doc->>'veiculo'), ''), '-'),
+                 nullif(nullif(trim(r.doc->>'placa'), ''), '-'),
+                 CASE WHEN r.doc->>'dt_saida' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                      THEN (r.doc->>'dt_saida')::timestamptz END,
+                 CASE WHEN r.doc->>'dt_chegada' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                      THEN (r.doc->>'dt_chegada')::timestamptz END,
+                 coalesce((r.doc->>'situacao')::int, 0),
+                 nullif(nullif(trim(r.doc->>'responsavel'), ''), '-'),
+                 nullif(trim(r.doc->>'obs'), ''),
+                 r.doc->>'id_transferencia',
+                 now(), now()
+             FROM ajuda_h_legado_raw r
+             JOIN ajuda_h_depositos o   ON o.codigo_legado   = r.doc->>'id_dep_origem'
+             JOIN ajuda_h_depositos dst ON dst.codigo_legado = r.doc->>'id_dep_destino'
+             WHERE r.tabela = 'aju_transferencia'
+               AND r.doc->>'id_transferencia' IS NOT NULL
+               AND r.doc->>'id_dep_origem' <> r.doc->>'id_dep_destino'
+             ON CONFLICT (codigo_legado) DO UPDATE
+                 SET deposito_origem_id  = EXCLUDED.deposito_origem_id,
+                     deposito_destino_id = EXCLUDED.deposito_destino_id,
+                     status              = EXCLUDED.status,
+                     saiu_em             = EXCLUDED.saiu_em,
+                     chegou_em           = EXCLUDED.chegou_em,
+                     updated_at          = now()"
+        );
+
+        DB::affectingStatement(
+            "INSERT INTO ajuda_h_transferencia_itens (transferencia_id, material_ah_id, qtd, status)
+             SELECT
+                 t.id, m.id,
+                 (r.doc->>'quantidade')::numeric,
+                 coalesce((r.doc->>'situacao')::int, 0)
+             FROM ajuda_h_legado_raw r
+             JOIN ajuda_h_transferencias t ON t.codigo_legado = r.doc->>'id_transferencia'
+             JOIN materiais_ah           m ON m.codigo_legado = r.doc->>'id_produto'
+             WHERE r.tabela = 'aju_item_transf'
+               AND (r.doc->>'quantidade') ~ '^-?[0-9]+(\\.[0-9]+)?$'
+               AND NOT EXISTS (
+                   SELECT 1 FROM ajuda_h_transferencia_itens i
+                   WHERE i.transferencia_id = t.id AND i.material_ah_id = m.id
+               )"
+        );
+
+        return $transferencias;
     }
 }
