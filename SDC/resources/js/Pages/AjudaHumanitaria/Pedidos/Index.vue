@@ -18,6 +18,9 @@
 
 <script setup>
 import { Head, router } from '@inertiajs/vue3';
+// ZiggyVue registra route() apenas em globalProperties, o que so alcanca o
+// template. Em <script setup> a funcao precisa ser importada.
+import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PedidoAhIndexTemplate from '@/Templates/AjudaHumanitaria/PedidoAhIndexTemplate.vue';
 
