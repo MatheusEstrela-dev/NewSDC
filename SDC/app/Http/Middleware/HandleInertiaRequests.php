@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
@@ -31,6 +32,14 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+
+        // Checa pelo model, nao pelo guard: em rotas do Portal do Cidadao
+        // (guard "cidadao") o principal resolvido nao e um App\Models\User e
+        // nao tem roles/permissions/relacoes esperadas abaixo. Esses dados
+        // ja sao compartilhados separadamente via auth.cidadao.
+        if (!$user instanceof User) {
+            $user = null;
+        }
 
         return [
             ...parent::share($request),

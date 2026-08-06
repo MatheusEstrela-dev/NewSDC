@@ -7,6 +7,7 @@ namespace App\Modules\Treinamento\Requests\Portal;
 use App\Rules\CpfValido;
 use App\Rules\StrongPassword;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 
 class RegisterCidadaoRequest extends FormRequest
@@ -21,7 +22,17 @@ class RegisterCidadaoRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:cidadaos,email'],
-            'cpf' => ['required', 'string', 'size:11', new CpfValido(), 'unique:cidadaos,cpf'],
+            'cpf' => [
+                'required',
+                'string',
+                'size:11',
+                new CpfValido(),
+                'unique:cidadaos,cpf',
+                // O login unificado resolve primeiro por "users": um cidadao
+                // cadastrado com CPF de servidor ja existente nunca conseguiria
+                // entrar por essa conta, sem nenhum erro visivel no cadastro.
+                Rule::unique('users', 'cpf'),
+            ],
             'telefone' => ['nullable', 'string', 'max:20'],
             'password' => ['required', 'confirmed', new StrongPassword()],
             'aceite_lgpd' => ['accepted'],
@@ -31,6 +42,7 @@ class RegisterCidadaoRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'cpf.unique' => 'Este CPF ja possui cadastro no sistema. Se voce e servidor, entre com seu login de servidor; caso contrario, use a opcao "Entrar" com a senha do seu cadastro.',
             'aceite_lgpd.accepted' => 'E preciso aceitar os termos de uso e a politica de privacidade (LGPD) para se cadastrar.',
         ];
     }
