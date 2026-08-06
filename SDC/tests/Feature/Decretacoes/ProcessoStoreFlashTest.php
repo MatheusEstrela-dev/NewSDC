@@ -13,15 +13,18 @@ use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 /**
- * Aviso apos criar uma decretacao.
+ * Aviso apos criar/atualizar uma decretacao.
  *
- * A pagina de criacao ja mostra o toast do canto superior
- * (ProcessoCreate.handleSubmit). O flash de sessao alimenta o
- * FlashNotification, que aparece no canto INFERIOR - as duas mensagens diziam a
- * mesma coisa ao mesmo tempo, entao `store()` deixou de mandar flash.
+ * As telas de criacao e edicao mostram o proprio toast
+ * (ProcessoCreate.handleSubmit e ProcessoEditTemplate), e o flash de sessao
+ * alimenta o FlashNotification global - as duas mensagens diziam a mesma coisa
+ * ao mesmo tempo. Por isso `store()`, `update()` e `storeDesastres()` deixaram
+ * de mandar flash de SUCESSO; o de ERRO continua, pois nao tem equivalente na
+ * tela.
  *
- * A atualizacao (`update`) continua com flash: aquela tela nao tem toast proprio
- * para todos os caminhos, e remover deixaria a acao sem nenhum retorno visivel.
+ * Nota: o FlashNotification foi movido para o canto SUPERIOR (mesma ancora do
+ * ToastContainer). Fosse mantido o flash de sucesso, as duas notificacoes
+ * apareceriam sobrepostas no mesmo canto.
  */
 class ProcessoStoreFlashTest extends TestCase
 {
@@ -76,14 +79,17 @@ class ProcessoStoreFlashTest extends TestCase
         $resposta->assertSessionHasNoErrors();
     }
 
-    public function test_atualizacao_continua_avisando_por_flash(): void
+    public function test_atualizacao_nao_manda_flash_de_sucesso(): void
     {
         $analista = $this->actingAsAnalista();
         $analista->post(route('decretacoes.store'), $this->payload());
 
         $processo = Processo::query()->latest('id')->first();
 
+        // Quem avisa e o toast da propria tela ("Identificacao atualizada." no
+        // wizard, "Processo atualizado com sucesso." na edicao).
         $analista->put(route('decretacoes.update', $processo->id), $this->payload())
-            ->assertSessionHas('success');
+            ->assertSessionMissing('success')
+            ->assertSessionHasNoErrors();
     }
 }

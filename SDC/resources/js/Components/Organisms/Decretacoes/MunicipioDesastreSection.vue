@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700/50 overflow-hidden">
     <!-- Header do Municipio -->
     <button
@@ -53,11 +53,14 @@
         <!-- Desastres -->
         <div class="space-y-2 pl-3">
           <DesastreAccordion
-            v-for="(desastre, dIndex) in categoria.desastres"
-            :key="desastre.id"
-            :desastre="desastre"
+            v-for="entrada in blocosVisiveis(categoria)"
+            :key="entrada.desastre.id"
+            :desastre="entrada.desastre"
+            :subsecoes="entrada.subsecoes.map((s) => s.desastre)"
             :municipio-id="municipio.id"
-            @update:desastre="updateDesastre(categoria.id, dIndex, $event)"
+            @update:desastre="updateDesastre(categoria.id, entrada.dIndex, $event)"
+            @update:subsecao="({ index, desastre }) =>
+              updateDesastre(categoria.id, entrada.subsecoes[index].dIndex, desastre)"
           />
         </div>
       </div>
@@ -84,12 +87,70 @@ const props = defineProps({
 
 const emit = defineEmits(['update:municipio']);
 
+/**
+ * Blocos de danos que aparecem dentro de outro bloco, em vez de accordion
+ * irmao. No FIDE, Danos Humanos, Materiais e Ambientais pertencem ao mesmo
+ * grupo (6) e vinham como tres accordions no mesmo nivel; Danos Ambientais
+ * complementa a leitura dos danos materiais, entao entra como subsecao dele.
+ *
+ * Chaves e valores normalizados (minusculas, sem acento) porque os titulos vem
+ * do cadastro do banco, acentuados e em caixa alta.
+ */
+const SUBSECOES_POR_BLOCO = {
+  'danos materiais': ['danos ambientais'],
+};
+
+function normaliza(texto) {
+  return String(texto ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
 const isExpanded = ref(props.mIndex === 0);
 const localMunicipio = ref(JSON.parse(JSON.stringify(props.municipio)));
 
 watch(() => props.municipio, (val) => {
   localMunicipio.value = JSON.parse(JSON.stringify(val));
 }, { deep: true });
+
+/**
+ * Monta a lista de accordions da categoria, movendo os blocos configurados em
+ * SUBSECOES_POR_BLOCO para dentro do bloco pai.
+ *
+ * `dIndex` e sempre o indice ORIGINAL em `categoria.desastres` — e por ele que
+ * as atualizacoes voltam para a arvore, mantendo o payload de gravacao
+ * exatamente como o backend espera.
+ */
+function blocosVisiveis(categoria) {
+  const desastres = categoria.desastres ?? [];
+  const porTitulo = new Map();
+
+  desastres.forEach((desastre, dIndex) => {
+    porTitulo.set(normaliza(desastre.titulo), { desastre, dIndex });
+  });
+
+  const aninhados = new Set();
+
+  desastres.forEach((desastre) => {
+    (SUBSECOES_POR_BLOCO[normaliza(desastre.titulo)] ?? []).forEach((filho) => {
+      if (porTitulo.has(filho)) {
+        aninhados.add(filho);
+      }
+    });
+  });
+
+  return desastres
+    .map((desastre, dIndex) => ({ desastre, dIndex }))
+    .filter((entrada) => !aninhados.has(normaliza(entrada.desastre.titulo)))
+    .map((entrada) => ({
+      ...entrada,
+      subsecoes: (SUBSECOES_POR_BLOCO[normaliza(entrada.desastre.titulo)] ?? [])
+        .map((filho) => porTitulo.get(filho))
+        .filter(Boolean),
+    }));
+}
 
 function updateDesastre(categoriaId, dIndex, updatedDesastre) {
   const cat = localMunicipio.value.categorias.find((c) => c.id === categoriaId);

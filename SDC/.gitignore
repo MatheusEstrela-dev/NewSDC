@@ -36,6 +36,8 @@ rr
 /nativephp
 bootstrap/ssr/
 frankephp
+tests
+
 
 # Dumps de banco (just db-backup) - dados, nunca versionar
 /storage/backups/

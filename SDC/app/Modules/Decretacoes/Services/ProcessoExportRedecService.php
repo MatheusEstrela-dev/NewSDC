@@ -36,7 +36,8 @@ class ProcessoExportRedecService
     private const SQL_IBGE_DO_VINCULO = "split_part(COALESCE(dm.n_protocolo_fide, ''), '-', 3)";
 
     public function __construct(
-        private readonly ProcessoQueryService $queryService
+        private readonly ProcessoQueryService $queryService,
+        private readonly DanosAmbientaisService $danosAmbientais = new DanosAmbientaisService()
     ) {
     }
 
@@ -60,21 +61,27 @@ class ProcessoExportRedecService
 
         $municipiosPorProcesso = $this->resolveMunicipios($processos->pluck('id')->all());
         $redecPorMunicipioId   = ProcessoFilter::getRedecPorMunicipioId();
+        $ambientaisPorProcesso = $this->danosAmbientais->porProcessoMunicipio($processos->pluck('id'));
 
         $linhas = [];
 
         foreach ($processos as $processo) {
             $municipios = $municipiosPorProcesso[(int) $processo->id] ?? [];
+            $ambientais = $ambientaisPorProcesso[(int) $processo->id] ?? [];
 
             // Processo sem municipio vinculado ainda precisa aparecer: sai com a
             // REDEC do proprio processo e as colunas de municipio vazias.
             if (empty($municipios)) {
-                $linhas[] = $this->montaLinha($processo, null, $redecPorMunicipioId);
+                $linhas[] = $this->montaLinha($processo, null, $redecPorMunicipioId, []);
                 continue;
             }
 
             foreach ($municipios as $municipio) {
-                $linhas[] = $this->montaLinha($processo, $municipio, $redecPorMunicipioId);
+                // Danos ambientais sao gravados por `dec_entrada_desastres.municipio_id`,
+                // que e o mesmo id do vinculo (dec_decreto_municipios.municipio_id) -
+                // nao o id resolvido em `municipios`.
+                $doMunicipio = $ambientais[(int) $municipio['vinculo_municipio_id']] ?? [];
+                $linhas[] = $this->montaLinha($processo, $municipio, $redecPorMunicipioId, $doMunicipio);
             }
         }
 
@@ -131,6 +138,9 @@ class ProcessoExportRedecService
 
             $resultado[$processoId][$chave] = [
                 'id'                  => $row->municipio_real_id !== null ? (int) $row->municipio_real_id : null,
+                // Id do vinculo (dec_decreto_municipios.municipio_id): e a chave
+                // usada em dec_entrada_desastres.municipio_id.
+                'vinculo_municipio_id' => (int) $row->municipio_id,
                 'nome'                => $row->municipio_nome,
                 'codigo_ibge'         => $row->codigo_ibge,
                 'uf'                  => $row->uf ?? 'MG',
@@ -179,10 +189,15 @@ class ProcessoExportRedecService
     /**
      * @param array<string, mixed>|null $municipio
      * @param array<int, int> $redecPorMunicipioId
+     * @param array<string, mixed> $danosAmbientais Estrutura do DanosAmbientaisService
      * @return array<string, mixed>
      */
-    private function montaLinha(Processo $processo, ?array $municipio, array $redecPorMunicipioId): array
-    {
+    private function montaLinha(
+        Processo $processo,
+        ?array $municipio,
+        array $redecPorMunicipioId,
+        array $danosAmbientais = []
+    ): array {
         $redecId = $this->resolveRedecId($processo, $municipio, $redecPorMunicipioId);
         $redec   = $redecId !== null ? Redec::tryFrom($redecId) : null;
 
@@ -214,7 +229,9 @@ class ProcessoExportRedecService
             'dias_restantes'         => Vigencia::diasRestantes($publicacao, $prazo),
             'situacao_vigencia'      => $this->situacaoVigencia($publicacao, $prazo),
             'analista'               => $processo->analista,
-        ];
+            // Danos ambientais entram no fim, para nao deslocar as colunas que
+            // as planilhas das REDECs ja consomem por posicao.
+        ] + $this->danosAmbientais->colunasExport($danosAmbientais);
     }
 
     /**

@@ -40,6 +40,11 @@ use Illuminate\Support\Str;
  */
 class ProcessoQueryService
 {
+    public function __construct(
+        private readonly DanosAmbientaisService $danosAmbientais = new DanosAmbientaisService()
+    ) {
+    }
+
     /**
      * Parametros de filtro aceitos.
      */
@@ -838,6 +843,9 @@ class ProcessoQueryService
             )
             ->get();
 
+        // Query batch: danos ambientais (radio/select, fora da soma numerica)
+        $ambientaisBatch = $this->danosAmbientais->porProcessoMunicipio($processoIds);
+
         // Agrupa por processo
         $totalsByProcesso = $allTotals->groupBy('entrada_processo_id');
         $dhByProcesso = $danosHumanosBatch->groupBy('entrada_processo_id');
@@ -869,8 +877,10 @@ class ProcessoQueryService
                 return $result;
             });
 
-            $geral = $this->aggregateTotaisGeralFromGrouped($groupedByMunicipio, $danosHumanosByMunicipio);
-            $porMunicipio = $this->aggregateTotaisPorMunicipioFromGrouped($groupedByMunicipio, $danosHumanosByMunicipio, $processoTotals);
+            $ambientaisByMunicipio = $ambientaisBatch[$id] ?? [];
+
+            $geral = $this->aggregateTotaisGeralFromGrouped($groupedByMunicipio, $danosHumanosByMunicipio, $ambientaisByMunicipio);
+            $porMunicipio = $this->aggregateTotaisPorMunicipioFromGrouped($groupedByMunicipio, $danosHumanosByMunicipio, $processoTotals, $ambientaisByMunicipio);
 
             $processo->totais = [
                 'geral' => $geral,
@@ -1022,11 +1032,14 @@ class ProcessoQueryService
         // Danos humanos separado (categoria ID = 1)
         $danosHumanosByMunicipio = $this->calculateDanosHumanosForProcesso($processoIds);
 
+        // Danos ambientais separado: campos radio/select, sem valor somavel
+        $ambientaisByMunicipio = $this->danosAmbientais->porProcessoMunicipio($processoIds)[$processoId] ?? [];
+
         // Agrega totais gerais
-        $geral = $this->aggregateTotaisGeralFromGrouped($groupedByMunicipio, $danosHumanosByMunicipio);
+        $geral = $this->aggregateTotaisGeralFromGrouped($groupedByMunicipio, $danosHumanosByMunicipio, $ambientaisByMunicipio);
 
         // Agrega por municipio
-        $porMunicipio = $this->aggregateTotaisPorMunicipioFromGrouped($groupedByMunicipio, $danosHumanosByMunicipio, $allTotals);
+        $porMunicipio = $this->aggregateTotaisPorMunicipioFromGrouped($groupedByMunicipio, $danosHumanosByMunicipio, $allTotals, $ambientaisByMunicipio);
 
         return [
             'geral' => $geral,
@@ -1092,9 +1105,10 @@ class ProcessoQueryService
      *
      * @param \Illuminate\Support\Collection $groupedByMunicipio Dados agrupados por municipio->categoria->campo
      * @param \Illuminate\Support\Collection $danosHumanos Danos humanos por municipio
+     * @param array $danosAmbientais Danos ambientais por municipio (DanosAmbientaisService)
      * @return array Totais agregados
      */
-    private function aggregateTotaisGeralFromGrouped($groupedByMunicipio, $danosHumanos): array
+    private function aggregateTotaisGeralFromGrouped($groupedByMunicipio, $danosHumanos, array $danosAmbientais = []): array
     {
         // Soma danos humanos de todos os municipios
         $totaisDanosHumanos = [
@@ -1147,6 +1161,9 @@ class ProcessoQueryService
         return [
             'danos_humanos' => $totaisDanosHumanos,
             'danos_materiais' => $danosMateriais,
+            // Danos ambientais nao somam valor: o resumo conta quantos itens
+            // foram marcados como "Sim" e em quantos municipios.
+            'danos_ambientais' => $this->danosAmbientais->resumoGeral($danosAmbientais),
             'prejuizos_publicos' => $prejuizosPublicos,
             'prejuizos_privados' => $prejuizosPrivados,
         ];
@@ -1158,9 +1175,10 @@ class ProcessoQueryService
      * @param \Illuminate\Support\Collection $groupedByMunicipio Dados agrupados
      * @param \Illuminate\Support\Collection $danosHumanos Danos humanos por municipio
      * @param \Illuminate\Support\Collection $allTotals Query original para nomes
+     * @param array $danosAmbientais Danos ambientais por municipio (DanosAmbientaisService)
      * @return array Totais por municipio
      */
-    private function aggregateTotaisPorMunicipioFromGrouped($groupedByMunicipio, $danosHumanos, $allTotals): array
+    private function aggregateTotaisPorMunicipioFromGrouped($groupedByMunicipio, $danosHumanos, $allTotals, array $danosAmbientais = []): array
     {
         // Mapa de nomes de municipios
         $municipioNomes = [];
@@ -1170,8 +1188,13 @@ class ProcessoQueryService
 
         $municipios = [];
 
-        // Processa cada municipio
-        $allMunicipioIds = $groupedByMunicipio->keys()->merge($danosHumanos->keys())->unique();
+        // Processa cada municipio. Municipio que so tem dano ambiental (radio,
+        // sem valor somavel) nao aparece nas duas primeiras fontes: por isso a
+        // lista de ids inclui tambem as chaves dos ambientais.
+        $allMunicipioIds = $groupedByMunicipio->keys()
+            ->merge($danosHumanos->keys())
+            ->merge(array_keys($danosAmbientais))
+            ->unique();
 
         foreach ($allMunicipioIds as $munId) {
             $municipioData = $groupedByMunicipio[$munId] ?? collect();
@@ -1201,6 +1224,7 @@ class ProcessoQueryService
                 'totais' => [
                     'danos_humanos' => $danosHumanosTotal,
                     'danos_materiais' => $danosMateriais,
+                    'danos_ambientais' => $danosAmbientais[$munId] ?? DanosAmbientaisService::vazio(),
                     'prejuizos_publicos' => $prejuizosPublicos,
                     'prejuizos_privados' => $prejuizosPrivados,
                 ],

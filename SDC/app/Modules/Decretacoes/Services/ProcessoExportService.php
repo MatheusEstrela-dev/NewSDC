@@ -38,7 +38,8 @@ class ProcessoExportService
     private const TIPOS_DECRETO_VALIDOS = ['SE', 'ECP', 'N1'];
 
     public function __construct(
-        private readonly ProcessoQueryService $queryService
+        private readonly ProcessoQueryService $queryService,
+        private readonly DanosAmbientaisService $danosAmbientais = new DanosAmbientaisService()
     ) {
     }
 
@@ -66,6 +67,7 @@ class ProcessoExportService
 
         $desastreTotalsBatch = $this->calculateDesastreTotalsBatch($allIds);
         $danosHumanosBatch   = $this->calculateDanosHumanosBatch($allIds);
+        $ambientaisBatch     = $this->danosAmbientais->porProcessoMunicipio($allIds);
 
         $normalizedData = [];
 
@@ -73,14 +75,15 @@ class ProcessoExportService
             $pid = $entrada->id;
 
             if ($entrada->municipios->isEmpty()) {
-                $normalizedData[] = $this->buildExportRow($entrada, null, [], []);
+                $normalizedData[] = $this->buildExportRow($entrada, null, [], [], []);
                 continue;
             }
 
             foreach ($entrada->municipios as $municipio) {
                 $municipioTotals  = $desastreTotalsBatch[$pid][$municipio->id] ?? [];
                 $danosHumanos     = $danosHumanosBatch[$pid][$municipio->id] ?? [];
-                $normalizedData[] = $this->buildExportRow($entrada, $municipio, $municipioTotals, $danosHumanos);
+                $danosAmbientais  = $ambientaisBatch[$pid][$municipio->id] ?? [];
+                $normalizedData[] = $this->buildExportRow($entrada, $municipio, $municipioTotals, $danosHumanos, $danosAmbientais);
             }
         }
 
@@ -178,12 +181,20 @@ class ProcessoExportService
     /**
      * Build a row for Power BI export.
      */
-    private function buildExportRow(Processo $entrada, ?object $municipio, array $municipioTotals, array $danosHumanos): array
-    {
+    private function buildExportRow(
+        Processo $entrada,
+        ?object $municipio,
+        array $municipioTotals,
+        array $danosHumanos,
+        array $danosAmbientais = []
+    ): array {
         $row = $this->buildBaseExportRow($entrada, $municipio);
         $row = array_merge($row, $this->buildDanosHumanosRow($danosHumanos));
         $row['danos_humanos_quantidade'] = $this->sumDanosHumanos($row);
         $row = array_merge($row, $this->buildDanosMateriaisRow($municipioTotals));
+        // Colunas novas no fim: acrescentar no meio deslocaria as colunas ja
+        // mapeadas nos relatorios do Power BI.
+        $row = array_merge($row, $this->danosAmbientais->colunasExport($danosAmbientais));
 
         return $row;
     }

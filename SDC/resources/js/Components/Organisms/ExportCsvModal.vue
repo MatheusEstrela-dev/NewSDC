@@ -6,7 +6,8 @@ import {
   ArrowDownTrayIcon,
   CalendarDaysIcon,
   ClockIcon,
-  TableCellsIcon
+  TableCellsIcon,
+  MapIcon
 } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -18,30 +19,66 @@ const props = defineProps({
   exportEndpoint: {
     type: String,
     default: ''
+  },
+  // Habilita a opcao "Por REDEC" como um terceiro escopo. Desligada por padrao:
+  // os outros modulos que consomem este modal seguem com Periodo / Serie
+  // Historica apenas, e o payload emitido para eles nao muda.
+  allowRedec: {
+    type: Boolean,
+    default: false
+  },
+  // Opcoes vindas de ProcessoFilter::getFilterOptions() -> Redec::toSelectOptions()
+  redecs: {
+    type: Array,
+    default: () => []
+  },
+  // REDEC ja filtrada na listagem, usada como valor inicial da opcao Por REDEC.
+  redecSelecionada: {
+    type: [String, Number],
+    default: ''
   }
 });
 
 const emit = defineEmits(['close', 'export']);
 
 // Estado do modal
-const exportType = ref('period'); // 'period' ou 'all'
+const exportType = ref('period'); // 'period', 'all' ou 'redec'
 const dataInicio = ref('');
 const dataFim = ref('');
+const redecId = ref('');
 const isExporting = ref(false);
 
-// Reset ao abrir
+// Reset ao abrir. Reaproveita a REDEC filtrada na tela: o caso comum e "estou
+// vendo a 3a REDEC, quero o CSV dela".
 watch(() => props.show, (newVal) => {
   if (newVal) {
     exportType.value = 'period';
     dataInicio.value = '';
     dataFim.value = '';
+    redecId.value = props.redecSelecionada ? String(props.redecSelecionada) : '';
     isExporting.value = false;
   }
+});
+
+const redecOptions = computed(() => props.redecs || []);
+
+const redecLabel = computed(() => {
+  if (!redecId.value) return 'Todas as REDECs';
+  const opcao = redecOptions.value.find(o => String(o.id ?? o.value) === String(redecId.value));
+  return opcao?.label ?? `REDEC ${redecId.value}`;
+});
+
+// Datas sao opcionais em "Por REDEC" (vazio = serie completa), mas so valem
+// preenchidas em par - uma ponta sozinha geraria um recorte aberto.
+const periodoRedecCompleto = computed(() => {
+  if (!dataInicio.value && !dataFim.value) return true;
+  return !!dataInicio.value && !!dataFim.value;
 });
 
 // Validação
 const canExport = computed(() => {
   if (exportType.value === 'all') return true;
+  if (exportType.value === 'redec') return periodoRedecCompleto.value;
   return dataInicio.value && dataFim.value;
 });
 
@@ -55,14 +92,24 @@ const handleExport = async () => {
   if (!canExport.value) return;
   
   isExporting.value = true;
-  
+
+  // Em "Por REDEC" o periodo e opcional: sem datas o escopo e a serie completa
+  // (all=true), que e o mesmo sinal usado pelo consumidor para descartar as
+  // datas que estiverem filtradas na listagem.
+  const comPeriodo = exportType.value === 'period'
+    || (exportType.value === 'redec' && !!dataInicio.value && !!dataFim.value);
+
   const params = {
     type: exportType.value,
-    data_inicio: exportType.value === 'period' ? dataInicio.value : null,
-    data_fim: exportType.value === 'period' ? dataFim.value : null,
-    all: exportType.value === 'all'
+    data_inicio: comPeriodo ? dataInicio.value : null,
+    data_fim: comPeriodo ? dataFim.value : null,
+    all: exportType.value === 'all' || (exportType.value === 'redec' && !comPeriodo)
   };
-  
+
+  if (exportType.value === 'redec') {
+    params.redec_id = redecId.value || null;
+  }
+
   emit('export', params);
   
   // Simular delay e fechar
@@ -167,7 +214,66 @@ const handleExport = async () => {
                 </p>
               </div>
             </label>
+
+            <!-- Por REDEC (somente onde o modulo habilita) -->
+            <label
+              v-if="allowRedec"
+              class="flex items-start gap-3 p-4 rounded-xl cursor-pointer border transition-all"
+              :class="exportType === 'redec'
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
+                : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300'"
+            >
+              <input
+                type="radio"
+                value="redec"
+                v-model="exportType"
+                class="mt-1 w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+              />
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <MapIcon class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span class="font-medium text-slate-800 dark:text-slate-200">Por REDEC</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Planilha agrupada por REDEC, uma linha por município
+                </p>
+              </div>
+            </label>
           </div>
+
+          <!-- Seletor de REDEC (apenas no escopo Por REDEC) -->
+          <Transition
+            enter-active-class="transition ease-out duration-200"
+            enter-from-class="opacity-0 -translate-y-2"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition ease-in duration-150"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 -translate-y-2"
+          >
+            <div v-if="allowRedec && exportType === 'redec'" class="space-y-1.5">
+              <label for="export-redec" class="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                REDEC
+              </label>
+              <select
+                id="export-redec"
+                v-model="redecId"
+                class="atom-input atom-select atom-input-md atom-input-normal w-full"
+              >
+                <option value="">Todas as REDECs</option>
+                <option
+                  v-for="opcao in redecOptions"
+                  :key="opcao.id ?? opcao.value"
+                  :value="String(opcao.id ?? opcao.value)"
+                >
+                  {{ opcao.label }}
+                </option>
+              </select>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Será exportado: <span class="font-medium text-slate-700 dark:text-slate-300">{{ redecLabel }}</span>.
+                Datas abaixo são opcionais — em branco sai a série completa.
+              </p>
+            </div>
+          </Transition>
 
           <!-- Campos de Data (apenas se período) -->
           <Transition
@@ -178,16 +284,16 @@ const handleExport = async () => {
             leave-from-class="opacity-100 translate-y-0"
             leave-to-class="opacity-0 -translate-y-2"
           >
-            <div v-if="exportType === 'period'" class="grid grid-cols-2 gap-4">
+            <div v-if="exportType === 'period' || exportType === 'redec'" class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                  Data Inicial
+                  Data Inicial<span v-if="exportType === 'redec'" class="font-normal text-slate-400"> (opcional)</span>
                 </label>
                 <DatePicker v-model="dataInicio" class="w-full" />
               </div>
               <div>
                 <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                  Data Final
+                  Data Final<span v-if="exportType === 'redec'" class="font-normal text-slate-400"> (opcional)</span>
                 </label>
                 <DatePicker v-model="dataFim" class="w-full" />
               </div>

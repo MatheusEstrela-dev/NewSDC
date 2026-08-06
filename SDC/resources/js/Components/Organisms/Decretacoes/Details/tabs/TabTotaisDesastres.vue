@@ -90,6 +90,49 @@ function setViewMode(mode) {
   }
 }
 
+// Rotulos dos itens de danos ambientais (chaves vindas do DanosAmbientaisService).
+const ROTULOS_AMBIENTAIS = {
+  agua: 'Poluicao ou contaminacao da agua',
+  ar: 'Poluicao ou contaminacao do ar',
+  solo: 'Poluicao ou contaminacao do solo',
+  hidrico: 'Diminuicao ou exaurimento hidrico',
+  incendio: "Incendios em parques, APA's ou APP's",
+};
+
+const danosAmbientais = computed(() => totaisSelecionados.value?.danos_ambientais ?? null);
+
+/**
+ * Itens de danos ambientais prontos para a lista.
+ *
+ * O backend entrega duas formas: no bloco geral cada item e a CONTAGEM de
+ * municipios que marcaram o dano; por municipio e a resposta (Sim/Nao) com a
+ * intensidade. A distincao aqui e pelo tipo do valor.
+ */
+const ambientaisItens = computed(() => {
+  const itens = danosAmbientais.value?.itens;
+
+  if (!itens) return [];
+
+  return Object.entries(itens).map(([chave, valor]) => {
+    const rotulo = ROTULOS_AMBIENTAIS[chave] ?? chave;
+
+    if (typeof valor === 'number') {
+      return { chave, rotulo, contagem: valor, resposta: null, faixa: null };
+    }
+
+    return {
+      chave,
+      rotulo,
+      contagem: null,
+      resposta: valor?.resposta ?? null,
+      faixa: valor?.faixa ?? null,
+    };
+  });
+});
+
+const ambientaisMarcados = computed(() => danosAmbientais.value?.marcados ?? 0);
+const ambientaisMunicipios = computed(() => danosAmbientais.value?.municipios_afetados ?? null);
+
 const dhDetails = computed(() => {
   const dh = totaisSelecionados.value?.danos_humanos || {};
   return {
@@ -174,6 +217,59 @@ const dhDetails = computed(() => {
             <span class="text-slate-500 dark:text-slate-400 text-sm">Valor (R$):</span>
             <span class="px-3 py-1 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 rounded-lg font-semibold">
               {{ formatCurrency(totalDanosMateriais.valor) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Danos Ambientais (parte dos danos materiais no FIDE) -->
+      <div
+        v-if="ambientaisItens.length > 0"
+        class="p-5 bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm md:col-span-2"
+      >
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-2 bg-teal-100 dark:bg-teal-500/20 rounded-lg">
+            <GlobeAmericasIcon class="w-5 h-5 text-teal-500 dark:text-teal-400" />
+          </div>
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wide">Danos Ambientais</span>
+          <span class="px-3 py-1 bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-300 rounded-lg font-semibold text-sm">
+            {{ formatNumber(ambientaisMarcados) }} marcado(s)
+          </span>
+          <span v-if="ambientaisMunicipios !== null" class="text-xs text-slate-400 dark:text-slate-500">
+            em {{ formatNumber(ambientaisMunicipios) }} municipio(s)
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div
+            v-for="item in ambientaisItens"
+            :key="item.chave"
+            class="flex items-start justify-between gap-3 py-2 border-b border-slate-100 dark:border-slate-700/30 last:border-0"
+          >
+            <span class="text-sm text-slate-500 dark:text-slate-400">{{ item.rotulo }}</span>
+
+            <!-- Bloco geral: quantos municipios marcaram o dano -->
+            <span
+              v-if="item.contagem !== null"
+              class="px-3 py-1 rounded-lg font-semibold text-sm shrink-0"
+              :class="item.contagem > 0
+                ? 'bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-300'
+                : 'bg-slate-100 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500'"
+            >
+              {{ formatNumber(item.contagem) }}
+            </span>
+
+            <!-- Por municipio: resposta e intensidade -->
+            <span v-else class="flex flex-col items-end gap-1 shrink-0">
+              <span
+                class="px-3 py-1 rounded-lg font-semibold text-sm"
+                :class="item.resposta === 'Sim'
+                  ? 'bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-300'
+                  : 'bg-slate-100 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500'"
+              >
+                {{ item.resposta ?? 'Nao informado' }}
+              </span>
+              <span v-if="item.faixa" class="text-xs text-slate-400 dark:text-slate-500">{{ item.faixa }}</span>
             </span>
           </div>
         </div>
