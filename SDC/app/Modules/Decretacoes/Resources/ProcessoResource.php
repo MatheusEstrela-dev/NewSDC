@@ -275,12 +275,21 @@ class ProcessoResource extends JsonResource
 
     /**
      * Obtem codigo COBRADE do tipo de desastre.
-     * Busca no enum de classificacao de desastres.
+     *
+     * Prefere a coluna `cobrade` gravada no processo (padrao nacional
+     * persistido); cai no enum de classificacao quando a linha ainda nao tem o
+     * codigo preenchido.
      *
      * @return string|null Codigo COBRADE ou null
      */
     protected function getTipoDesastreCobrade(): ?string
     {
+        $gravado = trim((string) ($this->safeGet('cobrade') ?? ''));
+
+        if ($gravado !== '') {
+            return $gravado;
+        }
+
         $tipoDesastreId = $this->safeGetInt('tipo_desastre_id');
         if (!$tipoDesastreId) {
             return null;

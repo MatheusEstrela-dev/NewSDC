@@ -34,6 +34,11 @@ class Processo extends Model implements Rastreavel
         'n_protocolo_fide',
         'decreto_municipal',
         'tipo_desastre_id',
+        // Codigo COBRADE (padrao nacional), derivado de tipo_desastre_id pelo
+        // hook `saving`. Fillable para permitir carga direta (seed, correcao de
+        // dados); com tipo_desastre_id conhecido o hook tem a palavra final, de
+        // modo que a coluna nunca contradiz o tipo escolhido.
+        'cobrade',
         'tipo_desastre',
         'tipo_desastre_nome',
         'tipo_decreto',
@@ -104,6 +109,13 @@ class Processo extends Model implements Rastreavel
                     throw new \RuntimeException('Usuario nao autenticado para criar processo de decretacao.');
                 }
             }
+        });
+
+        // Mantem o codigo COBRADE gravado junto do processo. Fica no `saving`
+        // (e nao no controller/DTO) para valer em TODO caminho de escrita:
+        // formulario, API, recebimento do BI e scripts.
+        static::saving(function ($model) {
+            $model->sincronizaCobrade();
         });
 
         static::created(function ($model) {
@@ -248,21 +260,79 @@ class Processo extends Model implements Rastreavel
         return $this->attributes['tipo_desastre'] ?? 'N/A';
     }
 
+    /**
+     * Codigo COBRADE do processo.
+     *
+     * Prefere a coluna gravada: e o dado que o banco, o Power BI e as
+     * integracoes veem. O array PHP fica como fallback para as linhas que ainda
+     * nao foram preenchidas (backfill nao rodado, por exemplo).
+     */
     public function getTipoDesastreCobradeAttribute(): ?string
     {
-        if (!$this->tipo_desastre_id) {
+        $gravado = trim((string) ($this->attributes['cobrade'] ?? ''));
+
+        if ($gravado !== '') {
+            return $gravado;
+        }
+
+        return self::codigoCobradePorId($this->tipo_desastre_id);
+    }
+
+    /**
+     * Alinha a coluna `cobrade` ao `tipo_desastre_id` antes de gravar.
+     *
+     * Sem tipo de desastre o codigo e limpado, para nao sobrar classificacao de
+     * um tipo que foi removido do processo.
+     */
+    private function sincronizaCobrade(): void
+    {
+        if (! $this->tipo_desastre_id) {
+            $this->attributes['cobrade'] = null;
+
+            return;
+        }
+
+        $codigo = self::codigoCobradePorId($this->tipo_desastre_id);
+
+        // Codigo desconhecido (id fora do enum): preserva o que estiver gravado
+        // em vez de apagar a classificacao.
+        if ($codigo !== null) {
+            $this->attributes['cobrade'] = $codigo;
+        }
+    }
+
+    /**
+     * Codigo COBRADE a partir do id posicional do enum.
+     *
+     * O mapa e montado uma vez por request: o accessor e chamado por linha em
+     * listagens e exportacoes, e o `include` a cada chamada aparecia no perfil.
+     *
+     * @var array<int, string>|null
+     */
+    private static ?array $mapaCobradePorId = null;
+
+    private static function codigoCobradePorId(mixed $tipoDesastreId): ?string
+    {
+        $id = (int) $tipoDesastreId;
+
+        if ($id <= 0) {
             return null;
         }
 
-        $cobrade = include app_path('Enums/classificacao_desastres.php');
+        if (self::$mapaCobradePorId === null) {
+            self::$mapaCobradePorId = [];
 
-        foreach ($cobrade as $item) {
-            if ($item['id'] == $this->tipo_desastre_id) {
-                return $item['cobrade'];
+            foreach ((array) include app_path('Enums/classificacao_desastres.php') as $item) {
+                $itemId = (int) ($item['id'] ?? 0);
+                $codigo = trim((string) ($item['cobrade'] ?? ''));
+
+                if ($itemId > 0 && $codigo !== '') {
+                    self::$mapaCobradePorId[$itemId] = $codigo;
+                }
             }
         }
 
-        return null;
+        return self::$mapaCobradePorId[$id] ?? null;
     }
 
     public function getDesastreAttribute()
