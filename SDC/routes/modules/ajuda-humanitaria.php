@@ -2,10 +2,12 @@
 
 use App\Modules\AjudaHumanitaria\Controllers\AnexoPedidoController;
 use App\Modules\AjudaHumanitaria\Controllers\BeneficiarioController;
+use App\Modules\AjudaHumanitaria\Controllers\EstoqueAhController;
 use App\Modules\AjudaHumanitaria\Controllers\ItemPedidoController;
 use App\Modules\AjudaHumanitaria\Controllers\ParecerController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhDashboardController;
+use App\Modules\AjudaHumanitaria\Controllers\PrestacaoContaController;
 use App\Modules\AjudaHumanitaria\Controllers\TramitacaoController;
 use Illuminate\Support\Facades\Route;
 
@@ -77,6 +79,37 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
             ->name('anexos.destroy')
             ->middleware('can:humanitaria.pedidos.anexos')
             ->whereNumber(['id', 'media']);
+
+        // Prestacao de contas. A prestacao em si nasce como efeito da entrada
+        // do pedido em Atendido, nao por rota.
+        Route::post('/{id}/entregas', [PrestacaoContaController::class, 'storeEntrega'])
+            ->name('entregas.store')
+            ->middleware('can:humanitaria.prestacao.lancar')
+            ->whereNumber('id');
+
+        Route::delete('/{id}/entregas/{entrega}', [PrestacaoContaController::class, 'destroyEntrega'])
+            ->name('entregas.destroy')
+            ->middleware('can:humanitaria.prestacao.lancar')
+            ->whereNumber(['id', 'entrega']);
+
+        Route::post('/{id}/homologar', [PrestacaoContaController::class, 'homologar'])
+            ->name('homologar')
+            ->middleware('can:humanitaria.prestacao.homologar')
+            ->whereNumber('id');
+    });
+
+    // Consulta do estoque (RN-25). Somente leitura: a escrita no ledger e
+    // feita por RegistrarMovimentoEstoque, a partir das operacoes do modulo.
+    Route::prefix('estoque')->name('estoque.')->group(function () {
+        // Declarada antes de / para nao ser capturada por uma futura rota
+        // com parametro.
+        Route::get('/export', [EstoqueAhController::class, 'export'])
+            ->name('export')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/', [EstoqueAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.saldo.view');
     });
 
     Route::prefix('beneficiarios')->name('beneficiarios.')->group(function () {

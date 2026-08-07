@@ -448,6 +448,16 @@
         >
           Beneficiários
         </NavItem>
+        <NavItem
+          v-if="_routes.hasHumanitariaEstoque"
+          :href="route('ajuda-humanitaria.estoque.index')"
+          :active="isRouteActive('ajuda-humanitaria.estoque.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Estoque
+        </NavItem>
       </div>
     </nav>
 
@@ -618,6 +628,7 @@ const _routes = {
   hasHumanitaria: route().has('ajuda-humanitaria.pedidos.index'),
   hasHumanitariaDashboard: route().has('ajuda-humanitaria.dashboard'),
   hasHumanitariaBeneficiarios: route().has('ajuda-humanitaria.beneficiarios.index'),
+  hasHumanitariaEstoque: route().has('ajuda-humanitaria.estoque.index'),
   hasCompdec: route().has('compdec.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
   hasTdapPrestadores: route().has('tdap.prestadores.index'),
@@ -654,6 +665,13 @@ const _activeRoutes = computed(() => {
     'plantao.*': route().current('plantao.*'),
     'decretacoes.*': route().current('decretacoes.*'),
     'ajuda-humanitaria.*': route().current('ajuda-humanitaria.*'),
+    // isRouteActive so acende o item quando o padrao e chave deste mapa. Sem as
+    // linhas abaixo, nenhum item do submenu de Ajuda Humanitaria destacava a
+    // pagina em que o usuario esta.
+    'ajuda-humanitaria.dashboard': route().current('ajuda-humanitaria.dashboard'),
+    'ajuda-humanitaria.pedidos.*': route().current('ajuda-humanitaria.pedidos.*'),
+    'ajuda-humanitaria.beneficiarios.*': route().current('ajuda-humanitaria.beneficiarios.*'),
+    'ajuda-humanitaria.estoque.*': route().current('ajuda-humanitaria.estoque.*'),
     'compdec.*': route().current('compdec.*'),
     'tdap.*': route().current('tdap.*'),
     'tdap.dashboard': route().current('tdap.dashboard'),
