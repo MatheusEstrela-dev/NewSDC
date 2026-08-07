@@ -18,7 +18,7 @@ use App\Modules\AjudaHumanitaria\Domain\Repositories\SaldoMaterialRepositoryInte
 use App\Modules\AjudaHumanitaria\Infrastructure\Persistence\EloquentMaterialAhRepository;
 use App\Modules\AjudaHumanitaria\Infrastructure\Persistence\EloquentPedidoAhRepository;
 use App\Modules\AjudaHumanitaria\Infrastructure\Persistence\EloquentPrestacaoContaRepository;
-use App\Modules\AjudaHumanitaria\Infrastructure\Persistence\LegadoSaldoMaterialRepository;
+use App\Modules\AjudaHumanitaria\Infrastructure\Persistence\PostgresSaldoMaterialRepository;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -49,10 +49,11 @@ class AjudaHumanitariaServiceProvider extends ServiceProvider
     /**
      * Contratos de dominio e suas implementacoes concretas.
      *
-     * A troca de qualquer implementacao acontece aqui, em uma linha. O caso mais
-     * concreto e o saldo de material: hoje vem por leitura da base legada do
-     * gestaocedec; quando o estoque virar nativo do NewSDC, basta apontar
-     * SaldoMaterialRepositoryInterface para a nova classe, sem tocar no dominio.
+     * A troca de qualquer implementacao acontece aqui, em uma linha. O saldo de
+     * material ja fez esse caminho: vinha por leitura da base legada do
+     * gestaocedec e passou a sair do estoque nativo em Postgres, sem que nada
+     * no dominio mudasse. LegadoSaldoMaterialRepository segue no repositorio
+     * como rota de volta ate o corte definitivo do legado.
      *
      * @var array<class-string, class-string>
      */
@@ -60,7 +61,7 @@ class AjudaHumanitariaServiceProvider extends ServiceProvider
         PedidoAhRepositoryInterface::class       => EloquentPedidoAhRepository::class,
         PrestacaoContaRepositoryInterface::class => EloquentPrestacaoContaRepository::class,
         MaterialAhRepositoryInterface::class     => EloquentMaterialAhRepository::class,
-        SaldoMaterialRepositoryInterface::class  => LegadoSaldoMaterialRepository::class,
+        SaldoMaterialRepositoryInterface::class  => PostgresSaldoMaterialRepository::class,
     ];
 
     /**

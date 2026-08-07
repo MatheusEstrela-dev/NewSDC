@@ -15,7 +15,7 @@
 | 1. Extensoes e landing zone | **APLICADA** em 06/08/2026 | migration `2026_08_06_110000_create_ajuda_h_legado_raw_table`; `btree_gist`, `citext` e `postgis` presentes; indice GIN `ajuda_h_legado_raw_doc_idx` criado |
 | 2. Comando de extracao | **EXECUTADA** em 06/08/2026 | `legado:aju:extrair` carregou 13.598 linhas em 15 tabelas a partir do snapshot de producao; `aju_cfornecedor` pulada por ausencia na base. Contagem conferida 1:1 com a origem em todas as tabelas |
 | 3. Schema do nucleo | **APLICADA** em 06/08/2026 | migration `2026_08_06_110100_create_ajuda_h_estoque_tables`; 13 tabelas `ajuda_h_*`; os 4 CHECK verificados por teste transacional (saldo negativo, quantidade zero e transferencia para o mesmo deposito recusados; `valor_total` calculado em 31.50; `geography` gravada) |
-| 4. Servico de movimentacao | pendente | |
+| 4. Servico de movimentacao | **EXECUTADA** em 07/08/2026 | `MovimentoEstoque`, `SaldoInsuficiente` e `RegistrarMovimentoEstoque`. Verificado contra o banco real: entrada projeta saldo, saldo e a soma dos movimentos, saida acima do saldo lanca `SaldoInsuficiente` sem deixar movimento orfao, DTO recusa quantidade zero e origem pela metade |
 | 5. Refino da landing zone | **EXECUTADA** em 06/08/2026, sete etapas | 187 materiais, 24 depositos, 10 fornecedores, 36 fontes, 118 saldos, 752 entradas com 752 itens, 69 transferencias com 205 itens. Agregados de saldo identicos a origem (soma 46.204, min 1, max 4.896) e **MD5 das tuplas (material, deposito, saldo) igual dos dois lados**: `07067c0945e624e6fa24a2d8e9c22051`. Reexecucao completa nao alterou nenhuma contagem |
 
 ### Regra do ledger na carga
@@ -38,7 +38,15 @@ Quatro casos, todos tratados sem afrouxar constraint:
 ### Tabelas que seguem vazias, e por que
 
 `ajuda_h_liberacoes`, `ajuda_h_liberacao_itens` e `ajuda_h_liberacao_recibos` ainda nao tem etapa de refino. O dado esta na area de pouso (`aju_liberacao` 3.582, `aju_pagamento` 3.364), mas **`aju_item` esta vazia na producao**: as 3.582 liberacoes nao tem um unico item registrado nessa tabela. Carregar as liberacoes agora produziria 3.582 registros orfaos de item. Antes de modelar essa etapa e preciso descobrir com quem opera o modulo se o item da liberacao vive em outro lugar ou se a tabela foi abandonada.
-| 6. Troca da leitura de saldo | pendente | |
+| 6. Troca da leitura de saldo | **EXECUTADA** em 07/08/2026 | `PostgresSaldoMaterialRepository` no lugar do `LegadoSaldoMaterialRepository` no bind. Container resolve a classe nova e devolve os 118 pares reais; filtro por `codigo_legado` conferido; app sobe e as rotas do modulo resolvem. 14 verificacoes, zero falhas |
+
+### Bug encontrado na Task 4: ON CONFLICT nao substitui o CHECK
+
+O desenho original projetava o saldo com `INSERT ... ON CONFLICT DO UPDATE SET saldo = saldo + EXCLUDED.saldo`. Parece correto e passa no caso feliz, mas **recusa toda saida legitima**: `ON CONFLICT` resolve apenas violacao de unicidade, e o `CHECK (saldo >= 0)` e avaliado antes, sobre a linha candidata do `VALUES`. Uma saida de `-30` sobre saldo 100 morre ali, sem nunca chegar ao `UPDATE`.
+
+So apareceu porque a verificacao exercitou movimento negativo; o teste de entrada sozinho teria passado e escondido o defeito ate producao.
+
+A correcao sao duas instrucoes na mesma transacao: garantir a linha com saldo zero (`ON CONFLICT DO NOTHING`, que cobre criacao concorrente e sempre passa no CHECK) e depois `UPDATE ... SET saldo = saldo + ?`, cuja restricao e avaliada sobre o saldo final. O `UPDATE` toma lock da linha, entao transacoes concorrentes sobre o mesmo par material/deposito serializam.
 
 **Banco alvo.** O schema foi aplicado no Postgres `sdc` em `localhost:5434` (container `newsdc_dev_db`, postgis 18-3.6), que e onde vivem `municipios`, `materiais_ah` e `users`. A porta 5433 do `compose.dev.yml` pertence ao `db_ai` (Citus + pgvector, base `sdc_ai`), destinado a carga analitica e vetorial, e nao ao OLTP deste modulo.
 
