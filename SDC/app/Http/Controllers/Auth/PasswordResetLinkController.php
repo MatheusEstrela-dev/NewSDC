@@ -7,6 +7,7 @@ use App\Models\Municipio;
 use App\Models\User;
 use App\Modules\Compdec\Domain\Entities\Orgao;
 use App\Modules\Compdec\Domain\ValueObjects\TipoOrgao;
+use App\Modules\Treinamento\Models\Cidadao;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -79,35 +80,44 @@ class PasswordResetLinkController extends Controller
             'id_municipio' => 'required_if:reset_type,municipio',
         ]);
 
-        $emails = [];
+        // [email => broker] - broker decide qual tabela/provider valida o token
+        // (password_reset_tokens/users vs cidadao_password_reset_tokens/cidadaos).
+        $resets = [];
 
         if ($request->reset_type === 'cpf') {
             $cpf = preg_replace('/[^0-9]/', '', $request->cpf);
             $user = User::where('cpf', $cpf)->first();
-            
+
             if ($user && $user->email) {
-                $emails[] = $user->email;
+                $resets[$user->email] = 'users';
+            } else {
+                // CPF pode ser de um cidadao do Portal de Treinamentos, nao de um
+                // servidor - guard separado, mesmo fluxo de "esqueci a senha".
+                $cidadao = Cidadao::where('cpf', $cpf)->first();
+                if ($cidadao && $cidadao->email) {
+                    $resets[$cidadao->email] = 'cidadaos';
+                }
             }
         } elseif ($request->reset_type === 'municipio') {
             $orgao = Orgao::where('municipio_id', $request->id_municipio)
                 ->where('tipo', TipoOrgao::COMPDEC)
                 ->first();
-            
+
             if ($orgao) {
                 // Tenta enviar para coordenadores
                 $coordinators = $orgao->coordenadores;
-                
+
                 if ($coordinators->count() > 0) {
                     foreach ($coordinators as $coord) {
                         if ($coord->email) {
-                            $emails[] = $coord->email;
+                            $resets[$coord->email] = 'users';
                         }
                     }
                 } else {
                     // Se não houver coordenador, envia para todos os usuários do órgão
                     foreach ($orgao->usuarios as $user) {
                         if ($user->email) {
-                            $emails[] = $user->email;
+                            $resets[$user->email] = 'users';
                         }
                     }
                 }
@@ -116,14 +126,12 @@ class PasswordResetLinkController extends Controller
 
         $genericSuccessMessage = 'Se os dados informados estiverem corretos, um link de redefinicao sera enviado para o e-mail cadastrado. Verifique sua caixa de entrada e spam.';
 
-        if (empty($emails)) {
+        if (empty($resets)) {
             return back()->with('success', $genericSuccessMessage);
         }
 
-        $emails = array_unique(array_filter($emails));
-
-        foreach ($emails as $email) {
-            Password::sendResetLink(['email' => $email]);
+        foreach ($resets as $email => $broker) {
+            Password::broker($broker)->sendResetLink(['email' => $email]);
         }
 
         return back()->with('success', $genericSuccessMessage);

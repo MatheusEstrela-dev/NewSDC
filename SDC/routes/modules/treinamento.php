@@ -15,6 +15,7 @@ use App\Modules\Treinamento\Controllers\InscricaoSelfStoreController;
 use App\Modules\Treinamento\Controllers\TreinamentoBloquearPresencaController;
 use App\Modules\Treinamento\Controllers\TreinamentoCreateController;
 use App\Modules\Treinamento\Controllers\TreinamentoDeleteController;
+use App\Modules\Treinamento\Controllers\TreinamentoEditController;
 use App\Modules\Treinamento\Controllers\TreinamentoExportController;
 use App\Modules\Treinamento\Controllers\TreinamentoIndexController;
 use App\Modules\Treinamento\Controllers\TreinamentoLiberarPresencaController;
@@ -45,6 +46,10 @@ Route::prefix('treinamentos')->name('treinamentos.')->group(function () {
     Route::get('/create', TreinamentoCreateController::class)
         ->name('create')
         ->middleware('can:treinamento.cursos.create');
+    // Tambem antes do /{id}, pelo mesmo motivo do /create.
+    Route::get('/{id}/edit', TreinamentoEditController::class)
+        ->name('edit')
+        ->middleware('can:treinamento.cursos.edit');
     Route::get('/{id}', TreinamentoShowController::class)
         ->name('show')
         ->middleware('can:treinamento.cursos.view');

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\User;
+use App\Modules\Treinamento\Models\Cidadao;
 use App\Providers\RouteServiceProvider;
 use App\Services\Auth\OnboardingService;
 use Illuminate\Auth\Events\PasswordReset;
@@ -90,6 +92,14 @@ class NewPasswordController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        // O link e generico (guard "web" ou "cidadao"); o e-mail do contexto
+        // decide qual broker/tabela valida o token (password_reset_tokens vs
+        // cidadao_password_reset_tokens - ver config/auth.php).
+        if (!User::where('email', $context['email'])->exists()
+            && Cidadao::where('email', $context['email'])->exists()) {
+            return $this->resetCidadaoPassword($request, $context);
+        }
+
         $resetUser = null;
         $completedFirstAccess = false;
 
@@ -139,6 +149,40 @@ class NewPasswordController extends Controller
                 );
             }
 
+            return redirect()->route('login')->with('success', __($status));
+        }
+
+        throw ValidationException::withMessages([
+            'email' => [trans($status)],
+        ]);
+    }
+
+    /**
+     * Reset de senha do cidadao (Portal de Treinamentos, guard "cidadao").
+     * Sem onboarding/primeiro-acesso: isso e exclusivo do fluxo de servidor.
+     */
+    private function resetCidadaoPassword(Request $request, array $context): RedirectResponse
+    {
+        $status = Password::broker('cidadaos')->reset(
+            [
+                'token'                 => $context['token'],
+                'email'                 => $context['email'],
+                'password'              => $request->password,
+                'password_confirmation' => $request->password_confirmation,
+            ],
+            function ($cidadao) use ($request) {
+                $cidadao->forceFill([
+                    'password'       => Hash::make($request->password),
+                    'remember_token' => Str::random(60),
+                ])->save();
+
+                event(new PasswordReset($cidadao));
+            }
+        );
+
+        $request->session()->forget(self::SESSION_KEY);
+
+        if ($status === Password::PASSWORD_RESET) {
             return redirect()->route('login')->with('success', __($status));
         }
 
