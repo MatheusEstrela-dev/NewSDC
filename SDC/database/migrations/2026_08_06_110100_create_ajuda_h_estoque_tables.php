@@ -46,6 +46,11 @@ return new class extends Migration
             $table->string('codigo_legado', 30)->nullable()->unique()
                 ->comment('aju_fornecedores.id (dbsdc) ou aju_cfornecedor.id_fornecedor (gestaocedec)');
             $table->timestamps();
+
+            // O Postgres nao indexa a coluna filha de uma FK automaticamente.
+            // Sem este indice, apagar ou renumerar um municipio varre a tabela
+            // inteira para validar a restricao.
+            $table->index('municipio_id', 'ajuda_h_fornecedores_municipio_idx');
         });
 
         Schema::create('ajuda_h_depositos', function (Blueprint $table): void {
@@ -65,6 +70,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('ativo', 'ajuda_h_depositos_ativo_idx');
+            $table->index('municipio_id', 'ajuda_h_depositos_municipio_idx');
         });
 
         Schema::create('ajuda_h_estoque_movimentos', function (Blueprint $table): void {
