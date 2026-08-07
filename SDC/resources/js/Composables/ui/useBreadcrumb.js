@@ -56,7 +56,12 @@ export function useBreadcrumb() {
         'Treinamento/TreinamentoCreate': [
             { label: 'Início', route: 'dashboard' },
             { label: 'Treinamentos', route: 'treinamentos.index' },
-            { label: 'Novo Curso', route: null }
+            { label: 'Novo Treinamento', route: null }
+        ],
+        'Treinamento/TreinamentoEdit': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Treinamentos', route: 'treinamentos.index' },
+            { label: 'Edição', route: null }
         ],
         'Treinamento/TreinamentoShow': [
             { label: 'Início', route: 'dashboard' },
