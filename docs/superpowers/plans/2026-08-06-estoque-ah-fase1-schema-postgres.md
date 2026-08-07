@@ -47,6 +47,28 @@ Duas decisoes desta etapa merecem registro.
 
 **Solicitante fica NULL, de proposito.** `aju_liberacao.id_usuario` vai de 26 a 180, e todo valor coincide numericamente com algum `users.id` — o que parece um mapeamento pronto e nao e. `users.id` 73 no NewSDC e `BERIZAL665`, conta de municipio, nao o oficial da CEDEC que autorizou a liberacao. Aproveitar a coincidencia atribuiria entrega de ajuda humanitaria a pessoa errada. O id original fica em `payload_legado` ate existir um De-Para real.
 
+### Governanca por cargo, e dois defeitos achados no caminho
+
+A atribuicao de responsabilidade passou a ser **pessoa mais cargo exercido no momento da acao**. `ajuda_h_liberacoes` e `ajuda_h_estoque_movimentos` ganharam `cargo_id` apontando para `roles`, ao lado do `solicitante_id` e do `registrado_por` que ja existiam. O motivo do retrato: cargo muda com o tempo, e sem ele um relatorio de 2027 atribuiria uma liberacao de 2020 ao papel que a pessoa ocupa hoje. Nas 3.582 linhas vindas do legado os dois campos ficam nulos, porque nem a pessoa e recuperavel.
+
+Os cargos CEDEC nao foram inventados: saem do proprio fluxo. `StatusPedidoAh` define `AnaliseDlog` e `AnaliseDiretorDlog`, `EtapaParecer` define `analise_dlog` e `analise_coord`, e `pedidos_ah` ja carrega `analista_id` e `diretor_id`. O legado dizia o mesmo por outro caminho, com as colunas `analista_drd`, `analista_dlog` e `analista_coord` em `aju_h_permissao`.
+
+| Cargo | Slug | Nivel | Permissoes |
+| --- | --- | --- | --- |
+| Diretor DLOG | `diretor-dlog` | 2 | 22 (todas) |
+| Analista DLOG | `analista-dlog` | 3 | 15 |
+| Leitor Ajuda Humanitaria | `leitor-ajuda-humanitaria` | 5 | 4 |
+
+Segregacao de funcoes conferida em teste: o analista instrui (parecer, tramitar, lancar prestacao) e nao decide. `prestacao.homologar`, `pedidos.liberar_itens` e `parametros.manage` sao privativos do diretor. Nenhuma permissao nova foi criada; as 22 `humanitaria.*` ja existiam.
+
+**Defeito 1: a trilha de auditoria estava morta.** `config/permission.php` tinha `events_enabled => false` enquanto `PermissionEventSubscriber` estava registrado no `EventServiceProvider` e pronto para gravar em `permission_audit_log`. O Spatie nunca disparava os eventos, entao a trilha existia no codigo e nunca recebia uma linha. Verificado empiricamente: `assignRole` seguido de `removeRole` nao produzia registro algum. Corrigido para `true`.
+
+**Defeito 2: a trilha nao dizia qual cargo.** Com os eventos ligados, o registro saia como `{"role_id": null, "role_name": null}`. Os extratores liam `$event->role` e `$event->roles`, propriedades que nao existem em versao alguma do Spatie: a role chega em `$event->rolesOrIds`, e o proprio docblock avisa que ali pode vir id, nome, objeto ou `Collection`. Saber que alguem recebeu "um cargo" sem saber se foi Diretor ou Leitor nao serve para governanca. Reescrito com um resolvedor que trata as quatro formas.
+
+Depois das duas correcoes, `assignRole` grava `role.assigned` com autor, alvo e `{"role_id": 11, "role_name": "Analista DLOG"}`, e `removeRole` grava `role.removed` com o estado anterior.
+
+**Limite que permanece.** `logAudit` descarta em silencio quando nao ha usuario autenticado (`if (! $userId) return;`). Cargo concedido por seeder, comando de console ou job de fila nao deixa rastro. Aceitavel enquanto a concessao acontece so pela interface, mas e uma porta aberta que vale fechar quando houver automacao concedendo acesso.
+
 ### Auditoria de integridade em 07/08/2026
 
 Oito verificacoes sobre o conjunto carregado, todas em zero: constraints nao validadas, saldos negativos, divergencia entre saldo e soma dos movimentos, itens de entrada orfaos, itens de transferencia orfaos, recibos orfaos, transferencia com origem igual ao destino, e CPF/CNPJ duplicado em fornecedores. 23 chaves estrangeiras declaradas e validas.

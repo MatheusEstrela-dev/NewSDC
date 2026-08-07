@@ -27,8 +27,18 @@ return [
     // Octane: manter falso por padrão; pode ser ativado se necessário
     'register_octane_reset_listener' => false,
 
-    // Se você quiser auditar attach/detach, ative e crie listeners
-    'events_enabled' => false,
+    // Auditoria de attach/detach de cargo e permissao.
+    //
+    // Estava falso enquanto o listener ja existia: App\Listeners\PermissionEventSubscriber
+    // esta registrado no EventServiceProvider e grava role_assigned, role_removed,
+    // permission_assigned e permission_revoked em permission_audit_log, mas o Spatie
+    // nunca disparava os eventos. O resultado era uma trilha que parecia existir e
+    // nunca recebia uma linha: verificado empiricamente com assignRole seguido de
+    // removeRole, sem nenhum registro gravado.
+    //
+    // Com governanca por cargo, quem ganhou e quem perdeu acesso precisa ficar
+    // registrado. O custo e um INSERT por mudanca de cargo, operacao rara.
+    'events_enabled' => true,
 
     // Teams desabilitado (não usamos ACL por time no NewSDC atualmente)
     'teams' => false,

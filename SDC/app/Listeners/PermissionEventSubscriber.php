@@ -4,9 +4,11 @@ namespace App\Listeners;
 
 use App\Models\PermissionAuditLog;
 use Illuminate\Events\Dispatcher;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Contracts\Permission;
 use Spatie\Permission\Contracts\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Subscriber para eventos do Spatie Permission.
@@ -167,16 +169,7 @@ class PermissionEventSubscriber
      */
     protected function getRoleId($event): ?int
     {
-        if (isset($event->role)) {
-            return $event->role instanceof Role ? $event->role->id : null;
-        }
-
-        if (isset($event->roles) && is_array($event->roles)) {
-            $firstRole = reset($event->roles);
-            return $firstRole instanceof Role ? $firstRole->id : null;
-        }
-
-        return null;
+        return $this->resolverRole($event)['id'];
     }
 
     /**
@@ -184,16 +177,7 @@ class PermissionEventSubscriber
      */
     protected function getRoleName($event): ?string
     {
-        if (isset($event->role)) {
-            return $event->role instanceof Role ? $event->role->name : null;
-        }
-
-        if (isset($event->roles) && is_array($event->roles)) {
-            $firstRole = reset($event->roles);
-            return $firstRole instanceof Role ? $firstRole->name : null;
-        }
-
-        return null;
+        return $this->resolverRole($event)['name'];
     }
 
     /**
@@ -201,16 +185,7 @@ class PermissionEventSubscriber
      */
     protected function getPermissionId($event): ?int
     {
-        if (isset($event->permission)) {
-            return $event->permission instanceof Permission ? $event->permission->id : null;
-        }
-
-        if (isset($event->permissions) && is_array($event->permissions)) {
-            $firstPermission = reset($event->permissions);
-            return $firstPermission instanceof Permission ? $firstPermission->id : null;
-        }
-
-        return null;
+        return $this->resolverPermissao($event)['id'];
     }
 
     /**
@@ -218,20 +193,100 @@ class PermissionEventSubscriber
      */
     protected function getPermissionName($event): ?string
     {
-        if (isset($event->permission)) {
-            return $event->permission instanceof Permission ? $event->permission->name : null;
+        return $this->resolverPermissao($event)['name'];
+    }
+
+    /**
+     * Descobre qual role o evento carrega.
+     *
+     * O Spatie entrega a role em $event->rolesOrIds, e o proprio docblock dele
+     * avisa que ali pode vir id, nome, objeto Role ou Collection, conforme o
+     * caminho que disparou o evento. Ler $event->role ou $event->roles, que nao
+     * existem em nenhuma versao, resultava em role_id e role_name sempre nulos:
+     * a trilha registrava que alguem recebeu "um cargo", sem dizer qual.
+     *
+     * @return array{id: int|null, name: string|null}
+     */
+    protected function resolverRole($event): array
+    {
+        $bruto = $this->primeiroDoEvento($event, ['rolesOrIds', 'role', 'roles']);
+
+        if ($bruto instanceof Role) {
+            return ['id' => $bruto->id, 'name' => $bruto->name];
         }
 
-        if (isset($event->permissions) && is_array($event->permissions)) {
-            $firstPermission = reset($event->permissions);
-            return $firstPermission instanceof Permission ? $firstPermission->name : null;
+        if ($bruto === null) {
+            return ['id' => null, 'name' => null];
+        }
+
+        $modelo = app(PermissionRegistrar::class)->getRoleClass();
+
+        $encontrada = is_numeric($bruto)
+            ? $modelo::find($bruto)
+            : $modelo::where('name', $bruto)->orWhere('slug', $bruto)->first();
+
+        return ['id' => $encontrada?->id, 'name' => $encontrada?->name];
+    }
+
+    /**
+     * Mesma logica para permissao, que chega em $event->permissionsOrIds.
+     *
+     * @return array{id: int|null, name: string|null}
+     */
+    protected function resolverPermissao($event): array
+    {
+        $bruto = $this->primeiroDoEvento($event, ['permissionsOrIds', 'permission', 'permissions']);
+
+        if ($bruto instanceof Permission) {
+            return ['id' => $bruto->id, 'name' => $bruto->name];
+        }
+
+        if ($bruto === null) {
+            return ['id' => null, 'name' => null];
+        }
+
+        $modelo = app(PermissionRegistrar::class)->getPermissionClass();
+
+        $encontrada = is_numeric($bruto)
+            ? $modelo::find($bruto)
+            : $modelo::where('name', $bruto)->first();
+
+        return ['id' => $encontrada?->id, 'name' => $encontrada?->name];
+    }
+
+    /**
+     * Le a primeira das propriedades informadas que exista no evento e devolve
+     * seu primeiro elemento, achatando array e Collection.
+     */
+    protected function primeiroDoEvento($event, array $propriedades): mixed
+    {
+        foreach ($propriedades as $propriedade) {
+            if (! isset($event->{$propriedade})) {
+                continue;
+            }
+
+            $valor = $event->{$propriedade};
+
+            if ($valor instanceof Collection) {
+                $valor = $valor->all();
+            }
+
+            if (is_array($valor)) {
+                $valor = reset($valor);
+            }
+
+            if ($valor !== false && $valor !== null) {
+                return $valor;
+            }
         }
 
         return null;
     }
 
     /**
-     * Registra os listeners nos eventos do Spatie Permission.
+     * Eventos do Spatie que alimentam a trilha.
+     *
+     * So sao disparados com permission.events_enabled = true.
      */
     public function subscribe(Dispatcher $events): array
     {

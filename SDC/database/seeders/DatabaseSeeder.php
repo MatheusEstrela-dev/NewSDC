@@ -17,6 +17,11 @@ class DatabaseSeeder extends Seeder
         // 1b. Permissões específicas do módulo RAT (roles + 9 permissões)
         $this->call(RatPermissionsSeeder::class);
 
+        // 1c. Cargos CEDEC do módulo Ajuda Humanitária (Analista DLOG, Diretor
+        //     DLOG e Leitor). Não cria permissão: agrupa as humanitaria.* que o
+        //     RolesAndPermissionsSeeder já criou.
+        $this->call(AjudaHumanitariaRolesSeeder::class);
+
         // 2. Órgãos (hierarquia CEDEC > REDEC > COMPDEC)
         $this->call(OrgaosSeeder::class);
 

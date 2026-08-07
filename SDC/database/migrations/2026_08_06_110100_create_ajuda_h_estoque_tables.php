@@ -85,6 +85,10 @@ return new class extends Migration
             $table->unsignedBigInteger('origem_id')->nullable();
             $table->timestampTz('ocorrido_em');
             $table->foreignId('registrado_por')->nullable()->constrained('users')->nullOnDelete();
+            // Mesmo retrato de cargo das liberacoes. O ledger e a tabela mais
+            // sensivel a auditoria do modulo: quem lancou importa tanto quanto
+            // em que papel lancou.
+            $table->foreignId('cargo_id')->nullable()->constrained('roles')->nullOnDelete();
             $table->jsonb('payload_legado')->nullable();
             $table->timestampTz('created_at')->useCurrent();
 
@@ -200,6 +204,12 @@ return new class extends Migration
             $table->foreignId('municipio_id')->constrained('municipios')->restrictOnDelete();
             $table->foreignId('deposito_id')->constrained('ajuda_h_depositos')->restrictOnDelete();
             $table->foreignId('solicitante_id')->nullable()->constrained('users')->nullOnDelete();
+            // Cargo exercido no momento da liberacao, nao o cargo atual da
+            // pessoa. Cargo muda com o tempo: sem este retrato, um relatorio de
+            // 2027 atribuiria uma liberacao de 2020 ao papel que o solicitante
+            // ocupa hoje. Nulo nas 3.582 linhas vindas do legado, onde nem o
+            // solicitante e recuperavel.
+            $table->foreignId('cargo_id')->nullable()->constrained('roles')->nullOnDelete();
             $table->text('beneficiario')->nullable();
             $table->date('data_libera');
             $table->date('data_limite')->nullable();
