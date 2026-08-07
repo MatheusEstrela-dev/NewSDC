@@ -77,9 +77,9 @@ function copiarLinkPublico() {
         variant="gradient"
       />
 
-      <CardBase class="p-6">
+      <div class="space-y-6">
         <!-- Header -->
-        <div class="mb-6">
+        <CardBase class="p-6">
           <div class="flex items-start justify-between mb-3 gap-3">
             <Heading :level="1" class="text-2xl font-bold text-slate-800 dark:text-slate-100">
               {{ treinamento.titulo }}
@@ -120,10 +120,10 @@ function copiarLinkPublico() {
               Baixar imagem de divulgação
             </a>
           </div>
-        </div>
+        </CardBase>
 
         <!-- Ações de fluxo (admin) -->
-        <div class="mb-6 flex flex-wrap gap-2 border-y border-slate-200 dark:border-slate-700 py-4">
+        <CardBase class="p-6 flex flex-wrap gap-2">
           <Button v-if="can('treinamento.cursos.edit') && !treinamento.esta_publicado" variant="secondary" size="sm" @click="publicar">
             Publicar no Portal
           </Button>
@@ -148,56 +148,59 @@ function copiarLinkPublico() {
           <Link v-if="can('treinamento.certificados.view')" :href="route('treinamentos.certificados.index', treinamento.id)">
             <Button variant="secondary" size="sm">Ver Certificados</Button>
           </Link>
-        </div>
+        </CardBase>
 
         <!-- Descrição -->
-        <div v-if="treinamento.descricao" class="mb-6">
+        <CardBase v-if="treinamento.descricao" class="p-6">
           <Heading :level="3" class="text-lg font-semibold mb-2">
             Descrição
           </Heading>
           <Text size="base" class="text-slate-700 dark:text-slate-300">
             {{ treinamento.descricao }}
           </Text>
-        </div>
+        </CardBase>
 
         <!-- Informações Detalhadas -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div v-if="treinamento.instrutor">
-            <Text size="sm" color="muted" class="mb-1">Instrutor</Text>
-            <Text size="base" class="font-medium">{{ treinamento.instrutor }}</Text>
-          </div>
+        <CardBase class="p-6">
+          <Heading :level="3" class="text-lg font-semibold mb-4">Informações</Heading>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div v-if="treinamento.instrutor">
+              <Text size="sm" color="muted" class="mb-1">Instrutor</Text>
+              <Text size="base" class="font-medium">{{ treinamento.instrutor }}</Text>
+            </div>
 
-          <div v-if="treinamento.local">
-            <Text size="sm" color="muted" class="mb-1">Local</Text>
-            <Text size="base" class="font-medium">{{ treinamento.local }}</Text>
-          </div>
+            <div v-if="treinamento.local">
+              <Text size="sm" color="muted" class="mb-1">Local</Text>
+              <Text size="base" class="font-medium">{{ treinamento.local }}</Text>
+            </div>
 
-          <div v-if="treinamento.data_inicio">
-            <Text size="sm" color="muted" class="mb-1">Data de Início</Text>
-            <Text size="base" class="font-medium">{{ formatDate(treinamento.data_inicio) }}</Text>
-          </div>
+            <div v-if="treinamento.data_inicio">
+              <Text size="sm" color="muted" class="mb-1">Data de Início</Text>
+              <Text size="base" class="font-medium">{{ formatDate(treinamento.data_inicio) }}</Text>
+            </div>
 
-          <div v-if="treinamento.data_fim">
-            <Text size="sm" color="muted" class="mb-1">Data de Término</Text>
-            <Text size="base" class="font-medium">{{ formatDate(treinamento.data_fim) }}</Text>
-          </div>
+            <div v-if="treinamento.data_fim">
+              <Text size="sm" color="muted" class="mb-1">Data de Término</Text>
+              <Text size="base" class="font-medium">{{ formatDate(treinamento.data_fim) }}</Text>
+            </div>
 
-          <div>
-            <Text size="sm" color="muted" class="mb-1">Vagas</Text>
-            <Text size="base" class="font-medium">
-              <span v-if="treinamento.numero_vagas">{{ treinamento.vagas_disponiveis }} de {{ treinamento.numero_vagas }} disponíveis</span>
-              <span v-else>Ilimitadas</span>
-            </Text>
-          </div>
+            <div>
+              <Text size="sm" color="muted" class="mb-1">Vagas</Text>
+              <Text size="base" class="font-medium">
+                <span v-if="treinamento.numero_vagas">{{ treinamento.vagas_disponiveis }} de {{ treinamento.numero_vagas }} disponíveis</span>
+                <span v-else>Ilimitadas</span>
+              </Text>
+            </div>
 
-          <div>
-            <Text size="sm" color="muted" class="mb-1">Frequência Mínima</Text>
-            <Text size="base" class="font-medium">{{ treinamento.percentual_frequencia_minimo }}%</Text>
+            <div>
+              <Text size="sm" color="muted" class="mb-1">Frequência Mínima</Text>
+              <Text size="base" class="font-medium">{{ treinamento.percentual_frequencia_minimo }}%</Text>
+            </div>
           </div>
-        </div>
+        </CardBase>
 
         <!-- Módulos -->
-        <div v-if="treinamento.modulos?.length" class="border-t border-slate-200 dark:border-slate-700 pt-6 mb-6">
+        <CardBase v-if="treinamento.modulos?.length" class="p-6">
           <Heading :level="3" class="text-lg font-semibold mb-3">Módulos</Heading>
           <ul class="space-y-2">
             <li
@@ -212,10 +215,10 @@ function copiarLinkPublico() {
               <Text size="xs" color="muted">{{ formatDate(modulo.data_prevista) || '—' }}</Text>
             </li>
           </ul>
-        </div>
+        </CardBase>
 
         <!-- Minha inscrição / Ações do participante -->
-        <div class="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+        <CardBase class="p-6">
           <div v-if="minhaInscricao" class="flex items-center gap-3 flex-wrap">
             <Text size="sm">Sua inscrição:</Text>
             <Badge :color="minhaInscricao.status === 'APROVADA' ? 'green' : minhaInscricao.status === 'REPROVADA' ? 'red' : 'yellow'">
@@ -242,8 +245,8 @@ function copiarLinkPublico() {
             Inscrever-se
           </Button>
           <Text v-else size="sm" color="muted">Este treinamento não está recebendo inscrições no momento.</Text>
-        </div>
-      </CardBase>
+        </CardBase>
+      </div>
     </div>
 
 </template>

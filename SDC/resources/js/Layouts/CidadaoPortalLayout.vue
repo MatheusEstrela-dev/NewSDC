@@ -24,7 +24,7 @@ function sair() {
     <FlashNotification />
 
     <header class="bg-[#06315c] text-white shadow-md">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
           <Link :href="route('portal.treinamento.catalogo')" class="flex items-center gap-3">
             <img src="/imgs/logo-defesa-civil.png" alt="Defesa Civil MG" class="h-9 w-auto" />
@@ -65,7 +65,7 @@ function sair() {
       </div>
     </header>
 
-    <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="px-4 sm:px-6 lg:px-8 py-8">
       <slot />
     </main>
 

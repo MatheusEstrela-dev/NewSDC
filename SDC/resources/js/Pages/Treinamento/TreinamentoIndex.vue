@@ -1,11 +1,10 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 import TreinamentoIndexTemplate from '@/Templates/Treinamento/TreinamentoIndexTemplate.vue';
-import TreinamentoFormModal from '@/Components/Organisms/Treinamento/TreinamentoFormModal.vue';
 import { usePermissions } from '@/Composables/usePermissions';
 import { useToast } from '@/Composables/useToast';
 
@@ -44,9 +43,6 @@ const pagination = computed(() => {
   };
 });
 
-const showFormModal = ref(false);
-const editingTreinamento = ref(null);
-
 const handleCreate = () => {
   router.visit(route('treinamentos.create'));
 };
@@ -56,9 +52,7 @@ const handleView = (id) => {
 };
 
 const handleEdit = (id) => {
-  const treinamento = (props.treinamentos.data || []).find((t) => t.id === id);
-  editingTreinamento.value = treinamento || { id };
-  showFormModal.value = true;
+  router.visit(route('treinamentos.edit', id));
 };
 
 const handleDelete = (id) => {
@@ -77,10 +71,6 @@ const handleFilter = (filters) => {
     preserveState: true,
     replace: true,
   });
-};
-
-const handleSaved = () => {
-  router.reload({ only: ['treinamentos', 'statistics'] });
 };
 </script>
 
@@ -101,14 +91,6 @@ const handleSaved = () => {
       @edit="handleEdit"
       @delete="handleDelete"
       @filter="handleFilter"
-    />
-
-    <TreinamentoFormModal
-      :show="showFormModal"
-      :treinamento="editingTreinamento"
-      :filter-options="filterOptions"
-      @close="showFormModal = false"
-      @saved="handleSaved"
     />
 
 </template>
