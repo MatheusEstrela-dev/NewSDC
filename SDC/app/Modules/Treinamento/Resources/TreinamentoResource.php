@@ -37,6 +37,7 @@ class TreinamentoResource extends JsonResource
             'link_publico_slug' => $this->link_publico_slug,
             'esta_publicado' => $this->estaPublicado(),
             'presenca_liberada' => (bool) $this->presenca_liberada,
+            'presenca_autoconfirmavel' => (bool) $this->presenca_autoconfirmavel,
             'finalizado_em' => $this->finalizado_em?->toIso8601String(),
             'pode_receber_inscricao' => $this->podeReceberInscricao(),
             'pode_registrar_frequencia' => $this->status->podeRegistrarFrequencia(),
