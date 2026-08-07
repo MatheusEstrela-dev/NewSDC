@@ -1,9 +1,53 @@
 <?php
 
 use App\Modules\AjudaHumanitaria\Controllers\BeneficiarioController;
+use App\Modules\AjudaHumanitaria\Controllers\ItemPedidoController;
+use App\Modules\AjudaHumanitaria\Controllers\PedidoAhController;
+use App\Modules\AjudaHumanitaria\Controllers\PedidoAhDashboardController;
+use App\Modules\AjudaHumanitaria\Controllers\TramitacaoController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function () {
+
+    Route::get('/', [PedidoAhDashboardController::class, 'index'])
+        ->name('dashboard')
+        ->middleware('can:humanitaria.pedidos.view');
+
+    // Pedido de Material de Ajuda Humanitaria (MAH).
+    Route::prefix('pedidos')->name('pedidos.')->group(function () {
+        Route::get('/', [PedidoAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.pedidos.view');
+
+        // Declarada antes de /{id} para nao ser capturada como id do pedido.
+        Route::get('/create', [PedidoAhController::class, 'create'])
+            ->name('create')
+            ->middleware('can:humanitaria.pedidos.create');
+
+        Route::post('/', [PedidoAhController::class, 'store'])
+            ->name('store')
+            ->middleware('can:humanitaria.pedidos.create');
+
+        Route::get('/{id}', [PedidoAhController::class, 'show'])
+            ->name('show')
+            ->middleware('can:humanitaria.pedidos.view')
+            ->whereNumber('id');
+
+        // Materiais do pedido. A permissao exigida varia com o tipo do item e
+        // e resolvida no StoreItemPedidoRequest, por isso a rota nao fixa uma.
+        Route::post('/{id}/itens', [ItemPedidoController::class, 'store'])
+            ->name('itens.store')
+            ->whereNumber('id');
+
+        Route::delete('/{id}/itens/{item}', [ItemPedidoController::class, 'destroy'])
+            ->name('itens.destroy')
+            ->whereNumber(['id', 'item']);
+
+        Route::post('/{id}/tramitar', [TramitacaoController::class, 'store'])
+            ->name('tramitar')
+            ->middleware('can:humanitaria.pedidos.tramitar')
+            ->whereNumber('id');
+    });
 
     Route::prefix('beneficiarios')->name('beneficiarios.')->group(function () {
         Route::get('/export', [BeneficiarioController::class, 'export'])

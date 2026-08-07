@@ -13,11 +13,11 @@
           <th class="hidden px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 sm:table-cell">Código IBGE</th>
           <th v-if="showSituacao" class="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Situação</th>
           <th v-if="showDataAtualizacao" class="hidden px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 md:table-cell">Atualização</th>
-          <th class="w-20 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Ações</th>
+          <th class="table-actions-head w-20 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Ações</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-        <tr v-for="municipio in municipios" :key="municipio.id" class="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/30">
+        <tr v-for="municipio in municipios" :key="municipio.id" class="table-row-solid transition-colors">
           <td class="px-4 py-3">
             <p class="font-medium text-slate-800 dark:text-slate-100">{{ municipio.nome }}</p>
             <p class="mt-0.5 text-xs text-slate-500 sm:hidden">IBGE {{ municipio.codigoIbge || '—' }}</p>
@@ -25,7 +25,7 @@
           <td class="hidden px-4 py-3 font-mono text-sm text-slate-600 dark:text-slate-300 sm:table-cell">{{ municipio.codigoIbge || '—' }}</td>
           <td v-if="showSituacao" class="px-4 py-3"><PlanConStatusBadge :situacao="municipio.situacaoPlano" /></td>
           <td v-if="showDataAtualizacao" class="hidden px-4 py-3 text-slate-600 dark:text-slate-300 md:table-cell">{{ formatDate(municipio.dataUltimaAtualizacao) }}</td>
-          <td class="px-4 py-3" @click.stop>
+          <td class="table-actions-cell px-4 py-3" @click.stop>
             <div class="flex justify-end">
               <ActionButton module="plancon" resource="municipios" size="sm" :actions="[{ action: 'view', handler: () => emit('view', municipio) }]" />
             </div>

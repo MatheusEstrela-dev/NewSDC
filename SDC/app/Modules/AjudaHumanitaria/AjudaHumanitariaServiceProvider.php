@@ -4,51 +4,104 @@ declare(strict_types=1);
 
 namespace App\Modules\AjudaHumanitaria;
 
-use App\Modules\AjudaHumanitaria\Domain\Repositories\BeneficiarioRepositoryInterface;
-use App\Modules\AjudaHumanitaria\Infrastructure\Persistence\EloquentBeneficiarioRepository;
+use App\Modules\AjudaHumanitaria\Console\ExtrairLegadoAjuCommand;
+use App\Modules\AjudaHumanitaria\Console\RefinarLegadoAjuCommand;
+use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItemNoPedido;
+use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItensLiberados;
+use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeParecerFavoravel;
+use App\Modules\AjudaHumanitaria\Domain\Guards\FinalizacaoSomenteViaHomologacao;
+use App\Modules\AjudaHumanitaria\Domain\PedidoAhWorkflow;
+use App\Modules\AjudaHumanitaria\Domain\Repositories\MaterialAhRepositoryInterface;
+use App\Modules\AjudaHumanitaria\Domain\Repositories\PedidoAhRepositoryInterface;
+use App\Modules\AjudaHumanitaria\Domain\Repositories\PrestacaoContaRepositoryInterface;
+use App\Modules\AjudaHumanitaria\Domain\Repositories\SaldoMaterialRepositoryInterface;
+use App\Modules\AjudaHumanitaria\Infrastructure\Persistence\EloquentMaterialAhRepository;
+use App\Modules\AjudaHumanitaria\Infrastructure\Persistence\EloquentPedidoAhRepository;
+use App\Modules\AjudaHumanitaria\Infrastructure\Persistence\EloquentPrestacaoContaRepository;
+use App\Modules\AjudaHumanitaria\Infrastructure\Persistence\LegadoSaldoMaterialRepository;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Service Provider: Módulo Ajuda Humanitária
+ * Service Provider do modulo Ajuda Humanitaria.
  *
- * Registra todas as dependências do módulo de gestão de ajuda humanitária
+ * Concentra as duas listas que governam o modulo: as guardas de transicao e os
+ * contratos de persistencia. Ambas sao pontos de extensao declarativos, e nao
+ * exigem alteracao em service algum.
  */
 class AjudaHumanitariaServiceProvider extends ServiceProvider
 {
     /**
-     * Register services
+     * Guardas consultadas pelo workflow a cada transicao de status.
+     *
+     * Para acrescentar uma regra de transicao, implemente GuardaTransicao e
+     * inclua a classe aqui. A ordem e irrelevante: uma guarda que nao se aplica
+     * ao par de status do contexto permite em vez de bloquear.
+     *
+     * @var array<int, class-string<\App\Modules\AjudaHumanitaria\Domain\Contracts\GuardaTransicao>>
      */
+    private const GUARDAS_TRANSICAO = [
+        ExigeItemNoPedido::class,
+        ExigeParecerFavoravel::class,
+        ExigeItensLiberados::class,
+        FinalizacaoSomenteViaHomologacao::class,
+    ];
+
+    /**
+     * Contratos de dominio e suas implementacoes concretas.
+     *
+     * A troca de qualquer implementacao acontece aqui, em uma linha. O caso mais
+     * concreto e o saldo de material: hoje vem por leitura da base legada do
+     * gestaocedec; quando o estoque virar nativo do NewSDC, basta apontar
+     * SaldoMaterialRepositoryInterface para a nova classe, sem tocar no dominio.
+     *
+     * @var array<class-string, class-string>
+     */
+    private const REPOSITORIOS = [
+        PedidoAhRepositoryInterface::class       => EloquentPedidoAhRepository::class,
+        PrestacaoContaRepositoryInterface::class => EloquentPrestacaoContaRepository::class,
+        MaterialAhRepositoryInterface::class     => EloquentMaterialAhRepository::class,
+        SaldoMaterialRepositoryInterface::class  => LegadoSaldoMaterialRepository::class,
+    ];
+
+    /**
+     * Comandos de console do modulo.
+     *
+     * A carga do legado vive aqui em vez de em routes/console.php porque e
+     * trabalho de migracao do proprio modulo, e sai junto com ele no corte.
+     *
+     * @var array<int, class-string<\Illuminate\Console\Command>>
+     */
+    private const COMANDOS = [
+        ExtrairLegadoAjuCommand::class,
+        RefinarLegadoAjuCommand::class,
+    ];
+
     public function register(): void
     {
-        // Bind Repository Interfaces to Eloquent Implementations
-        $this->app->bind(
-            BeneficiarioRepositoryInterface::class,
-            EloquentBeneficiarioRepository::class
-        );
+        foreach (self::REPOSITORIOS as $contrato => $implementacao) {
+            $this->app->bind($contrato, $implementacao);
+        }
 
-        // TODO: Registrar demais repositories quando forem criados
-        // $this->app->bind(AbrigoRepositoryInterface::class, EloquentAbrigoRepository::class);
-        // $this->app->bind(DoacaoRepositoryInterface::class, EloquentDoacaoRepository::class);
-        // $this->app->bind(AuxilioRepositoryInterface::class, EloquentAuxilioRepository::class);
-        // $this->app->bind(EstoqueRepositoryInterface::class, EloquentEstoqueRepository::class);
+        $this->app->singleton(PedidoAhWorkflow::class, function ($app): PedidoAhWorkflow {
+            $guardas = array_map(
+                static fn (string $guarda) => $app->make($guarda),
+                self::GUARDAS_TRANSICAO,
+            );
 
-        // TODO: Registrar Use Cases quando forem criados
-        // $this->app->singleton(CreateBeneficiarioUseCase::class);
-        // $this->app->singleton(ListBeneficiariosUseCase::class);
-        // etc...
+            return new PedidoAhWorkflow($guardas);
+        });
     }
 
     /**
-     * Bootstrap services
-     *
-     * NOTA: As rotas do módulo são carregadas via routes/web.php dentro do
-     * middleware group 'auth' (que inclui 'web'). NÃO usar loadRoutesFrom()
-     * aqui, pois isso registra rotas SEM os middlewares web/auth, causando
-     * 403 para todos os usuários (sessão e autenticação ausentes).
-     * Padrão: mesmo que RatServiceProvider.
+     * As rotas do modulo sao carregadas por routes/web.php dentro do grupo de
+     * middleware auth, que inclui web. Nao usar loadRoutesFrom aqui: isso
+     * registraria rotas sem sessao e sem autenticacao, resultando em 403 para
+     * todos os usuarios. Mesmo padrao do RatServiceProvider.
      */
     public function boot(): void
     {
-        // Rotas carregadas via routes/web.php -> routes/modules/ajuda-humanitaria.php
+        if ($this->app->runningInConsole()) {
+            $this->commands(self::COMANDOS);
+        }
     }
 }

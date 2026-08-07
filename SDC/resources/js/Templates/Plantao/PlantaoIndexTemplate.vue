@@ -96,7 +96,7 @@ const handleBuscarNoticias = () => {
       icon-class="text-blue-600 dark:text-blue-400"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
           <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
           <ViewModeToggle v-model="viewMode" />
 

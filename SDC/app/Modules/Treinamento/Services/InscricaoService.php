@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Treinamento\Services;
 
 use App\Models\User;
+use App\Modules\Notificacoes\Enums\AcaoTrilha;
+use App\Modules\Notificacoes\Services\RegistroDeAcao;
 use App\Modules\Shared\BaseService;
 use App\Modules\Treinamento\Enums\StatusInscricao;
 use App\Modules\Treinamento\Enums\TipoTreinamento;
@@ -68,6 +70,17 @@ class InscricaoService extends BaseService
 
             Mail::to($inscrito->email)->queue(new InscricaoConfirmadaMail($inscricao));
         }
+
+        // Avisa o dono do treinamento pela trilha do protocolo. Relacionado e a
+        // acao certa: um terceiro acrescentou conteudo, nada mudou de situacao.
+        // O agrupamento do modulo cuida do volume -- um curso com 200 inscritos
+        // vira um card com contador, nao 200 cards.
+        app(RegistroDeAcao::class)->registrarNoProtocolo(
+            Treinamento::class,
+            $treinamento->id,
+            AcaoTrilha::Relacionado,
+            'nova inscricao',
+        );
 
         return $inscricao;
     }

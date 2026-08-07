@@ -7,7 +7,7 @@
       variant="gradient"
     >
       <template #actions>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
           <ViewModeToggle v-model="viewMode" />
           <ActionButton
             module="inventario"

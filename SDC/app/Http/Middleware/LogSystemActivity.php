@@ -82,10 +82,21 @@ class LogSystemActivity
             'api/health/*',
             'metrics',
             'api/metrics',
-            '/_debugbar/*',
-            '/log-viewer*',
-            '/logs*', // Não logar o próprio visualizador de logs
-            '/_ignition/*',
+
+            // Polling do sininho: o cliente bate a cada 30s por usuario e a
+            // resposta costuma ser 304. Auditar isso gera uma ESCRITA por poll
+            // sem sinal nenhum ("usuario abriu o inbox" nao e evento), pelo
+            // mesmo motivo de health/metrics. As mutacoes (POST /lidas etc.)
+            // continuam logadas: sao acoes de clique.
+            'notificacoes/inbox',
+
+            // Sem barra inicial, como diz o comentario acima: com ela estes
+            // padroes nunca casavam e o debugbar/log-viewer vinha sendo
+            // auditado ao contrario da intencao.
+            '_debugbar/*',
+            'log-viewer*',
+            'logs*', // Não logar o próprio visualizador de logs
+            '_ignition/*',
             '*.js',
             '*.css',
             '*.png',
