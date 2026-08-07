@@ -10,10 +10,14 @@ use App\Models\User;
 use App\Modules\AjudaHumanitaria\DTOs\PedidoAhDTO;
 use App\Modules\AjudaHumanitaria\Enums\StatusPedidoAh;
 use App\Modules\AjudaHumanitaria\Enums\TipoDecreto;
+use App\Modules\AjudaHumanitaria\Models\PedidoAh;
+use App\Modules\AjudaHumanitaria\Models\PedidoAhTramite;
 use App\Modules\AjudaHumanitaria\Requests\StorePedidoAhRequest;
 use App\Modules\AjudaHumanitaria\Resources\PedidoAhIndexResource;
 use App\Modules\AjudaHumanitaria\Resources\PedidoAhResource;
+use App\Modules\AjudaHumanitaria\Services\ItemPedidoService;
 use App\Modules\AjudaHumanitaria\Services\PedidoAhService;
+use App\Modules\AjudaHumanitaria\Services\TramitacaoService;
 use App\Modules\AjudaHumanitaria\Support\MunicipioDoUsuario;
 use App\Modules\Compdec\Enums\FuncaoEquipe;
 use App\Modules\Compdec\Models\CompdecEquipe;
@@ -33,6 +37,8 @@ class PedidoAhController extends Controller
 {
     public function __construct(
         private readonly PedidoAhService $pedidos,
+        private readonly ItemPedidoService $itens,
+        private readonly TramitacaoService $tramitacao,
     ) {}
 
     public function index(Request $request): Response
@@ -89,13 +95,55 @@ class PedidoAhController extends Controller
 
         $this->authorize('view', $pedido);
 
-        $pedido->load(['municipio', 'itensPedido', 'itensLiberados']);
+        $pedido->load([
+            'municipio',
+            'itensPedido',
+            'itensLiberados',
+            'tramites.autor:id,name',
+        ]);
+
+        $usuario = $request->user();
 
         return Inertia::render('AjudaHumanitaria/Pedidos/Show', [
             'pedido'    => new PedidoAhResource($pedido),
-            'canEdit'   => $request->user()?->can('update', $pedido) ?? false,
-            'canDelete' => $request->user()?->can('delete', $pedido) ?? false,
+            'tramites'  => $this->tramites($pedido),
+            'materiais' => $this->itens->materiaisDisponiveis(),
+
+            // Destinos que existem no grafo. A validade final continua sendo do
+            // workflow, no momento da transicao: aqui e so a lista de opcoes.
+            'destinos' => array_map(
+                static fn (StatusPedidoAh $s): array => [
+                    'value' => $s->value,
+                    'label' => $s->label(),
+                ],
+                $this->tramitacao->destinosPossiveis($pedido->id),
+            ),
+
+            'canEdit'          => $usuario?->can('update', $pedido) ?? false,
+            'canDelete'        => $usuario?->can('delete', $pedido) ?? false,
+            'canTramitar'      => $usuario?->can('tramitar', $pedido) ?? false,
+            'canLiberarItens'  => $usuario?->can('liberarItens', $pedido) ?? false,
         ]);
+    }
+
+    /**
+     * RN-14: trilha de tramitacao do pedido.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function tramites(PedidoAh $pedido): array
+    {
+        return $pedido->tramites
+            ->map(static fn (PedidoAhTramite $t): array => [
+                'id'         => $t->id,
+                'de'         => $t->status_anterior?->label(),
+                'para'       => $t->status_novo?->label(),
+                'para_cor'   => $t->status_novo?->cor(),
+                'observacao' => $t->observacao,
+                'autor'      => $t->autor?->name,
+                'quando'     => $t->created_at?->toIso8601String(),
+            ])
+            ->all();
     }
 
     /**
@@ -177,7 +225,7 @@ class PedidoAhController extends Controller
      */
     private function estatisticas(): array
     {
-        $porStatus = \App\Modules\AjudaHumanitaria\Models\PedidoAh::query()
+        $porStatus = PedidoAh::query()
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status')

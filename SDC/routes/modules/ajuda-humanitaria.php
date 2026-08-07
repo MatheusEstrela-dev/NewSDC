@@ -1,8 +1,10 @@
 <?php
 
 use App\Modules\AjudaHumanitaria\Controllers\BeneficiarioController;
+use App\Modules\AjudaHumanitaria\Controllers\ItemPedidoController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhDashboardController;
+use App\Modules\AjudaHumanitaria\Controllers\TramitacaoController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function () {
@@ -29,6 +31,21 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
         Route::get('/{id}', [PedidoAhController::class, 'show'])
             ->name('show')
             ->middleware('can:humanitaria.pedidos.view')
+            ->whereNumber('id');
+
+        // Materiais do pedido. A permissao exigida varia com o tipo do item e
+        // e resolvida no StoreItemPedidoRequest, por isso a rota nao fixa uma.
+        Route::post('/{id}/itens', [ItemPedidoController::class, 'store'])
+            ->name('itens.store')
+            ->whereNumber('id');
+
+        Route::delete('/{id}/itens/{item}', [ItemPedidoController::class, 'destroy'])
+            ->name('itens.destroy')
+            ->whereNumber(['id', 'item']);
+
+        Route::post('/{id}/tramitar', [TramitacaoController::class, 'store'])
+            ->name('tramitar')
+            ->middleware('can:humanitaria.pedidos.tramitar')
             ->whereNumber('id');
     });
 
