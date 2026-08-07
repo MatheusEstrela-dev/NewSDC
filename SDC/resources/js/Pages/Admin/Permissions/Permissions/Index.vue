@@ -4,12 +4,13 @@
     <div>
 
 
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6 md:mb-8">
-        <div>
-          <h1 class="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-100">Gerenciamento de Permissões</h1>
-          <p class="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">Visualize todas as permissões disponíveis no sistema</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Gerenciamento de Permissões"
+        description="Visualize todas as permissões disponíveis no sistema"
+        :icon-image="moduleIcon('permissionamento')"
+        variant="gradient"
+        class="mb-6 md:mb-8"
+      />
 
       <div class="border-b border-slate-200 dark:border-slate-700 mb-6 md:mb-8 overflow-x-auto scrollbar-hide">
         <div class="flex space-x-1 min-w-max">
@@ -43,25 +44,29 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <StatsCard
-          label="Total de Permissões"
-          :value="stats.total"
-          :icon="PermissionsIcon"
-          variant="primary"
-        />
-        <StatsCard
-          label="Módulos"
-          :value="stats.modules"
-          :icon="ModulesIcon"
-          variant="success"
-        />
-        <StatsCard
-          label="Permissões Ativas"
-          :value="stats.active"
-          :icon="ActiveIcon"
-          variant="default"
-        />
+      <div class="mb-8">
+        <StatCardsGrid>
+          <StatCard
+            title="Total de Permissões"
+            :value="stats.total"
+            :icon="PermissionsIcon"
+            variant="info"
+          />
+          <StatCard
+            title="Módulos"
+            :value="stats.modules"
+            :icon="ModulesIcon"
+            variant="success"
+            subtitle="Áreas do sistema"
+          />
+          <StatCard
+            title="Permissões Ativas"
+            :value="stats.active"
+            :icon="ActiveIcon"
+            variant="warning"
+            subtitle="Em uso pelos cargos"
+          />
+        </StatCardsGrid>
       </div>
 
       <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
@@ -195,7 +200,10 @@ import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
-import StatsCard from '@/Components/Admin/StatsCard.vue';
+import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import PermissionBadge from '@/Components/Admin/PermissionBadge.vue';
 import { useMobile } from '@/Composables/useMobile';
 

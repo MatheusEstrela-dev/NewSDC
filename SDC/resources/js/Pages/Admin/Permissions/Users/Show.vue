@@ -5,20 +5,24 @@
       
 
 
-      <div class="mb-6 sm:mb-8">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-          <div>
-            <h1 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100">Detalhes do Usuário</h1>
-            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">Visualize informações detalhadas e permissões</p>
+      <PageHeader
+        title="Detalhes do Usuário"
+        description="Visualize informações detalhadas e permissões"
+        :icon-image="moduleIcon('permissionamento')"
+        variant="gradient"
+        class="mb-6 md:mb-8"
+      >
+        <template #actions>
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+    <Link :href="route('admin.permissions.users.edit', user.id)" class="inline-flex items-center justify-center gap-2 w-full md:w-auto px-4 py-2.5 md:py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+    Editar Usuário
+    </Link>
           </div>
-          <Link :href="route('admin.permissions.users.edit', user.id)" class="inline-flex items-center justify-center gap-2 w-full md:w-auto px-4 py-2.5 md:py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Editar Usuário
-          </Link>
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
       <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
         <!-- Main Content -->
@@ -222,23 +226,23 @@
 
         <!-- Sidebar (horizontal on mobile, vertical on xl) -->
         <div class="xl:col-span-1 grid grid-cols-3 xl:grid-cols-1 gap-3 sm:gap-6">
-          <StatsCard
-            label="Total de Cargos"
+          <StatCard
+            title="Total de Cargos"
             :value="user.roles?.length || 0"
             :icon="RolesIcon"
-            variant="primary"
+            variant="info"
           />
-          <StatsCard
-            label="Permissões Diretas"
+          <StatCard
+            title="Permissões Diretas"
             :value="directPermissionsCount"
             :icon="PermissionsIcon"
             variant="success"
           />
-          <StatsCard
-            label="Total de Permissões"
+          <StatCard
+            title="Total de Permissões"
             :value="allPermissionsCount"
             :icon="ShieldIcon"
-            variant="default"
+            variant="info"
           />
         </div>
       </div>
@@ -250,11 +254,13 @@
 import { computed, h } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 import PermissionBadge from '@/Components/Admin/PermissionBadge.vue';
-import StatsCard from '@/Components/Admin/StatsCard.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import UserApiTokens from '@/Components/Organisms/Permissions/UserApiTokens.vue';
 
 const props = defineProps({

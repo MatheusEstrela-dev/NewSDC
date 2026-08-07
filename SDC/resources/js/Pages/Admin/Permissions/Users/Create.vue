@@ -2,17 +2,13 @@
 
     <Head title="Criar Usuário" />
     <div>
-      <!-- Page Header -->
-      <div class="mb-8">
-
-
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Criar Novo Usuário</h1>
-            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Preencha os dados abaixo para cadastrar um novo usuário no sistema</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Criar Novo Usuário"
+        description="Preencha os dados abaixo para cadastrar um novo usuário no sistema"
+        :icon-image="moduleIcon('permissionamento')"
+        variant="gradient"
+        class="mb-6 md:mb-8"
+      />
 
       <form @submit.prevent="submit" class="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
         <!-- Main Content -->
@@ -57,13 +53,21 @@
               <!-- CPF -->
               <div class="space-y-1.5">
                 <label for="cpf" class="text-sm font-semibold text-slate-700 dark:text-slate-300">CPF</label>
+                <!-- A diretiva v-mask nao existe neste projeto: nao ha pacote
+                     de mascara instalado nem registro em app.js, entao ela era
+                     ignorada em silencio e o campo aceitava digito sem forma.
+                     Passa a usar applyCpfMask, o mesmo caminho do portal do
+                     cidadao e da tela de login. -->
                 <input
-                  v-model="form.cpf"
                   id="cpf"
                   type="text"
-                  v-mask="'###.###.###-##'"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  maxlength="14"
+                  :value="cpfFormatted"
                   class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-slate-100 transition-all outline-none"
                   placeholder="000.000.000-00"
+                  @input="handleCpfInput"
                 />
                 <div v-if="form.errors.cpf" class="text-xs text-red-500 mt-1">{{ form.errors.cpf }}</div>
               </div>
@@ -176,6 +180,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
+import { ref } from 'vue';
+import { applyCpfMask } from '@/utils/cpfMask';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -193,6 +201,24 @@ const form = useForm({
   roles: [],
   orgao_principal_id: null,
 });
+
+/**
+ * form.cpf guarda so os digitos; o campo exibe a versao mascarada.
+ *
+ * Separar os dois evita o problema classico de mascara com v-model, em que o
+ * ponto e o traco entram no valor enviado e a validacao do backend recusa.
+ */
+const cpfFormatted = ref('');
+
+const handleCpfInput = (evento) => {
+  const digitos = evento.target.value.replace(/\D/g, '').slice(0, 11);
+
+  form.cpf = digitos;
+  cpfFormatted.value = applyCpfMask(digitos);
+  // Reescreve o campo: sem isto o cursor aceitaria caractere invalido antes do
+  // Vue reconciliar o :value.
+  evento.target.value = cpfFormatted.value;
+};
 
 const toggleRole = (roleId) => {
   const index = form.roles.indexOf(roleId);
@@ -213,7 +239,7 @@ const submit = () => {
 };
 
 // Scroll Sticky Logic
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted } from 'vue';
 
 const sidebarContainer = ref(null);
 const sidebarContent = ref(null);

@@ -2,16 +2,13 @@
 
     <Head title="Detalhes da Permissão" />
     <div>
-      <!-- Page Header -->
-      <div class="mb-8">
-
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Detalhes da Permissão</h1>
-            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Visualize informações e cargos associados a esta permissão</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Detalhes da Permissão"
+        description="Visualize informações e cargos associados a esta permissão"
+        :icon-image="moduleIcon('permissionamento')"
+        variant="gradient"
+        class="mb-6 md:mb-8"
+      />
 
       <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
         <!-- Main Content -->
@@ -104,8 +101,8 @@
 
         <!-- Sidebar -->
         <div class="xl:col-span-1 space-y-6">
-           <StatsCard
-            label="Total de Cargos"
+           <StatCard
+            title="Total de Cargos"
             :value="permission.roles?.length || 0"
             :icon="RolesIcon"
             variant="warning"
@@ -120,10 +117,12 @@
 import { h } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
-import StatsCard from '@/Components/Admin/StatsCard.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 
 const props = defineProps({
   permission: {

@@ -4,12 +4,13 @@
     <div>
 
 
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-          <div>
-            <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Editar Usuário</h1>
-            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Atualize informações, cargos e permissões</p>
-          </div>
-      </div>
+      <PageHeader
+        title="Editar Usuário"
+        description="Atualize informações, cargos e permissões"
+        :icon-image="moduleIcon('permissionamento')"
+        variant="gradient"
+        class="mb-6 md:mb-8"
+      />
 
       <form @submit.prevent="submitForm" class="grid grid-cols-1 xl:grid-cols-4 gap-4 sm:gap-6 items-start pb-20 xl:pb-0">
         <!-- Main Content -->
@@ -517,6 +518,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { route } from 'ziggy-js';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
 

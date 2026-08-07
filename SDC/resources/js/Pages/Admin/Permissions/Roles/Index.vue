@@ -4,20 +4,27 @@
     <div>
       
 
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6 md:mb-8">
-        <div>
-          <h1 class="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-100">Gerenciamento de Cargos</h1>
-          <p class="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">Gerencie cargos e suas permissões do sistema</p>
-        </div>
-        <div v-if="canCreate" class="w-full md:w-auto flex justify-center">
-          <Link :href="route('admin.permissions.roles.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Novo Cargo
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title="Gerenciamento de Cargos"
+        description="Gerencie cargos e suas permissões do sistema"
+        :icon-image="moduleIcon('permissionamento')"
+        variant="gradient"
+        class="mb-6 md:mb-8"
+      >
+        <template #actions>
+          <div v-if="canCreate" class="flex flex-wrap items-center gap-2 sm:gap-3">
+            <Link
+              :href="route('admin.permissions.roles.create')"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Novo Cargo
+            </Link>
+          </div>
+        </template>
+      </PageHeader>
 
       <div class="border-b border-slate-200 dark:border-slate-700 mb-6 md:mb-8 overflow-x-auto scrollbar-hide">
         <div class="flex space-x-1 min-w-max">
@@ -51,25 +58,29 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <StatsCard
-          label="Total de Cargos"
-          :value="stats.total"
-          :icon="RolesIcon"
-          variant="primary"
-        />
-        <StatsCard
-          label="Cargos Ativos"
-          :value="stats.active"
-          :icon="ActiveIcon"
-          variant="success"
-        />
-        <StatsCard
-          label="Usuários com Cargos"
-          :value="stats.users_with_roles"
-          :icon="UsersIcon"
-          variant="default"
-        />
+      <div class="mb-8">
+        <StatCardsGrid>
+          <StatCard
+            title="Total de Cargos"
+            :value="stats.total"
+            :icon="RolesIcon"
+            variant="info"
+          />
+          <StatCard
+            title="Cargos Ativos"
+            :value="stats.active"
+            :icon="ActiveIcon"
+            variant="success"
+            subtitle="Disponíveis para atribuição"
+          />
+          <StatCard
+            title="Usuários com Cargos"
+            :value="stats.users_with_roles"
+            :icon="UsersIcon"
+            variant="warning"
+            subtitle="Contas com cargo atribuído"
+          />
+        </StatCardsGrid>
       </div>
 
       <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
@@ -204,7 +215,13 @@
 
 <script setup>
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
-import StatsCard from '@/Components/Admin/StatsCard.vue';
+// Cartoes e cabecalho do design system, os mesmos de RAT, PAE e Ajuda
+// Humanitaria. Components/Admin/StatsCard era um padrao visual paralelo, so
+// deste modulo, e por isso o permissionamento destoava do resto do sistema.
+import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import { usePermissions } from '@/Composables/usePermissions';

@@ -2,17 +2,13 @@
 
     <Head title="Editar Cargo" />
     <div>
-      <!-- Page Header -->
-      <div class="mb-8">
-
-
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Editar Cargo</h1>
-            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Atualize nome, descrição e permissões do cargo</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Editar Cargo"
+        description="Atualize nome, descrição e permissões do cargo"
+        :icon-image="moduleIcon('permissionamento')"
+        variant="gradient"
+        class="mb-6 md:mb-8"
+      />
 
       <form @submit.prevent="submitForm" class="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
         <!-- Main Content -->
@@ -229,6 +225,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { route } from 'ziggy-js';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
 
