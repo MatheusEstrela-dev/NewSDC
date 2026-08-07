@@ -1,13 +1,13 @@
 <script setup>
 import { computed } from 'vue';
 import { router } from '@inertiajs/vue3';
-import CidadaoPortalLayout from '@/Layouts/CidadaoPortalLayout.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TreinamentoGrid from '@/Components/Organisms/Treinamento/TreinamentoGrid.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 
-defineOptions({ layout: CidadaoPortalLayout });
+defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   treinamentos: { type: Object, required: true },

@@ -69,6 +69,26 @@ export function useBreadcrumb() {
             { label: 'Visualizar', route: null }
         ],
 
+        // Portal de Treinamentos (guard "cidadao") - mesmo shell do SDC, "Início"
+        // aponta pro catalogo (nao existe dashboard interno pra ela).
+        'Treinamento/Portal/Catalogo': [
+            { label: 'Início', route: 'portal.treinamento.catalogo' },
+            { label: 'Cursos e Eventos', route: null }
+        ],
+        'Treinamento/Portal/Detalhe': [
+            { label: 'Início', route: 'portal.treinamento.catalogo' },
+            { label: 'Cursos e Eventos', route: 'portal.treinamento.catalogo' },
+            { label: 'Detalhes', route: null }
+        ],
+        'Treinamento/Portal/MinhasInscricoes': [
+            { label: 'Início', route: 'portal.treinamento.catalogo' },
+            { label: 'Minhas Inscrições', route: null }
+        ],
+        'Treinamento/Portal/Certificados': [
+            { label: 'Início', route: 'portal.treinamento.catalogo' },
+            { label: 'Certificados', route: null }
+        ],
+
         // Admin / Permissions
         'Admin/Permissions/Users/Index': [
             { label: 'Início', route: 'dashboard' },

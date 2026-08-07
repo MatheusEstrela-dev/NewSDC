@@ -65,7 +65,46 @@
       ></div>
 
       <div class="sidebar-views" :class="{ 'show-submenu': activeSubmenu !== null }">
+      <!--
+        Cidadao (guard "cidadao", Portal de Treinamentos): usa o mesmo shell do
+        SDC (Sidebar/TopBar), mas so pode ver o que e dele - nao tem
+        roles/permissions do Spatie (auth.user e null pra ela), entao os
+        canSeeX abaixo (todos baseados em hasPermission) nao se aplicam. Ramo
+        totalmente separado do menu interno, pra nao arriscar side effect nos
+        canSeeX de todo mundo tentando "adaptar" o menu de staff pra ela.
+      -->
+      <nav v-if="isCidadao" class="sidebar-nav sidebar-view sidebar-view-main">
+        <div class="nav-section" data-tour="sidebar-principal">
+          <div v-show="!isCollapsed" class="nav-section-title">TREINAMENTOS</div>
+          <NavItem
+            :href="route('portal.treinamento.catalogo')"
+            :active="isRouteActive('portal.treinamento.catalogo') || isRouteActive('portal.treinamento.eventos.*')"
+            icon="academic"
+            :collapsed="isCollapsed"
+          >
+            Catálogo
+          </NavItem>
+          <NavItem
+            :href="route('portal.treinamento.inscricoes.index')"
+            :active="isRouteActive('portal.treinamento.inscricoes.*')"
+            icon="checkbadge"
+            :collapsed="isCollapsed"
+          >
+            Minhas Inscrições
+          </NavItem>
+          <NavItem
+            :href="route('portal.treinamento.certificados.index')"
+            :active="isRouteActive('portal.treinamento.certificados.*')"
+            icon="document-check"
+            :collapsed="isCollapsed"
+          >
+            Certificados
+          </NavItem>
+        </div>
+      </nav>
+
       <nav
+        v-else
         ref="sidebarNav"
         class="sidebar-nav sidebar-view sidebar-view-main"
         :inert="activeSubmenu !== null"
@@ -605,6 +644,10 @@ const closeSidebar = inject('closeSidebar', () => {});
 
 const page = usePage();
 
+// Cidadao do Portal de Treinamentos (guard "cidadao") logado no mesmo shell -
+// ver ramo dedicado no template acima, antes do <!-- PRINCIPAL -->.
+const isCidadao = computed(() => !!page.props?.auth?.cidadao);
+
 // ============================================================================
 // Verificação de rotas existentes — estáticas, calculadas 1x (rotas não mudam)
 // ============================================================================
@@ -679,6 +722,10 @@ const _activeRoutes = computed(() => {
     'inmet.*': route().current('inmet.*'),
     'admin.permissions.*': route().current('admin.permissions.*'),
     'log-viewer.*': route().current('log-viewer.*'),
+    'portal.treinamento.catalogo': route().current('portal.treinamento.catalogo'),
+    'portal.treinamento.eventos.*': route().current('portal.treinamento.eventos.*'),
+    'portal.treinamento.inscricoes.*': route().current('portal.treinamento.inscricoes.*'),
+    'portal.treinamento.certificados.*': route().current('portal.treinamento.certificados.*'),
   };
 });
 

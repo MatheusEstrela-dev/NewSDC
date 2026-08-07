@@ -21,7 +21,7 @@
       <div class="hidden lg:block w-10 flex-shrink-0"></div>
 
       <!-- Search Bar Trigger (Pro Mode) - visivel em tablet e desktop -->
-      <div class="hidden md:flex flex-1 max-w-2xl mx-auto z-[60] items-center gap-3" data-tour="search">
+      <div v-if="!isCidadao" class="hidden md:flex flex-1 max-w-2xl mx-auto z-[60] items-center gap-3" data-tour="search">
         <button
           @click="openCommandPalette"
           class="relative flex items-center w-full group outline-none"
@@ -61,9 +61,11 @@
           </div>
         </button>
       </div>
+      <div v-else class="flex-1"></div>
 
       <!-- Mobile Only: Search Icon Button (< 768px) -->
       <button
+        v-if="!isCidadao"
         class="flex md:hidden items-center justify-center w-10 h-10 rounded-lg transition-colors
                text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
         title="Buscar"
@@ -77,8 +79,8 @@
 
       <!-- Right Section - User Info & Actions -->
       <div class="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0 relative z-40" data-tour="topbar-actions">
-        <!-- Notifications Dropdown -->
-        <Dropdown align="right" width="96" contentClasses="p-0 overflow-hidden" :mobileFullWidth="true">
+        <!-- Notifications Dropdown - staff-only (usa fila de notificacoes do guard web) -->
+        <Dropdown v-if="!isCidadao" align="right" width="96" contentClasses="p-0 overflow-hidden" :mobileFullWidth="true">
           <template #trigger>
             <button
               class="relative flex items-center justify-center w-10 h-10 rounded-lg transition-colors
@@ -124,8 +126,9 @@
           </svg>
         </button>
 
-        <!-- Settings Button -->
+        <!-- Settings Button - staff-only (preferencias do guard web) -->
         <button
+          v-if="!isCidadao"
           id="settings-btn"
           @click.stop="openSettings"
           class="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg transition-colors
@@ -187,6 +190,7 @@
             </div>
             <div class="h-px bg-slate-200 dark:bg-slate-700 my-2"></div>
             <button
+              v-if="!isCidadao"
               @click="showProfileModal = true; showUserMenu = false"
               class="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors
                      text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white"
@@ -216,11 +220,13 @@
     </div>
   </header>
 
-  <!-- Modais fora do Header (Fragment) -->
-  <UserProfileModal :show="showProfileModal" @close="showProfileModal = false" />
-  <CommandPalette :is-open="isCommandPaletteOpen" @close="isCommandPaletteOpen = false" />
-  <SettingsModal :is-open="isSettingsOpen" @close="isSettingsOpen = false" />
-  <AiAssistantModal :show="showAiAssistant" @close="showAiAssistant = false" />
+  <!-- Modais fora do Header (Fragment) - todos staff-only (guard web) -->
+  <template v-if="!isCidadao">
+    <UserProfileModal :show="showProfileModal" @close="showProfileModal = false" />
+    <CommandPalette :is-open="isCommandPaletteOpen" @close="isCommandPaletteOpen = false" />
+    <SettingsModal :is-open="isSettingsOpen" @close="isSettingsOpen = false" />
+    <AiAssistantModal :show="showAiAssistant" @close="showAiAssistant = false" />
+  </template>
 </template>
 
 <script setup>
@@ -252,7 +258,9 @@ function handleLogout() {
     isLoggingOut.value = true;
     showUserMenu.value = false;
 
-    router.post(route('logout'), {}, {
+    const logoutRoute = page.props.auth?.cidadao ? route('portal.treinamento.logout') : route('logout');
+
+    router.post(logoutRoute, {}, {
         preserveScroll: false,
         preserveState: false,
         onFinish: () => {
@@ -325,8 +333,9 @@ const { isDarkMode, toggleTheme } = useTheme();
 const { unreadCount, hasUnread } = useNotifications();
 
 
-const userName = computed(() => page.props.auth?.user?.name || 'Usuário');
-const userEmail = computed(() => page.props.auth?.user?.email || '');
+const isCidadao = computed(() => !!page.props.auth?.cidadao);
+const userName = computed(() => page.props.auth?.user?.name || page.props.auth?.cidadao?.name || 'Usuário');
+const userEmail = computed(() => page.props.auth?.user?.email || page.props.auth?.cidadao?.email || '');
 const userInitials = computed(() => {
   const name = userName.value;
   return name
