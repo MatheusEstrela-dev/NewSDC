@@ -4,6 +4,7 @@ use App\Modules\AjudaHumanitaria\Controllers\AnexoPedidoController;
 use App\Modules\AjudaHumanitaria\Controllers\BeneficiarioController;
 use App\Modules\AjudaHumanitaria\Controllers\EstoqueAhController;
 use App\Modules\AjudaHumanitaria\Controllers\ItemPedidoController;
+use App\Modules\AjudaHumanitaria\Controllers\LiberacaoAhController;
 use App\Modules\AjudaHumanitaria\Controllers\ParecerController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhDashboardController;
@@ -110,6 +111,30 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
         Route::get('/', [EstoqueAhController::class, 'index'])
             ->name('index')
             ->middleware('can:humanitaria.saldo.view');
+    });
+
+    // Liberacoes de material. Consulta do historico migrado do gestaocedec:
+    // nao ha criacao pelo sistema novo, porque liberacao sem lancamento no
+    // ledger seria registro sem lastro no estoque.
+    //
+    // A permissao e humanitaria.saldo.view, a mesma da consulta de estoque.
+    // Liberacao e a saida do saldo, e o catalogo em config/permissions.php ja
+    // agrupa saldo com a consulta de estoque. Um slug proprio exigiria decidir
+    // quem o recebe; enquanto isso nao for definido, criar um deixaria a tela
+    // visivel apenas para super-admin.
+    Route::prefix('liberacoes')->name('liberacoes.')->group(function () {
+        Route::get('/export', [LiberacaoAhController::class, 'export'])
+            ->name('export')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/', [LiberacaoAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/{id}', [LiberacaoAhController::class, 'show'])
+            ->name('show')
+            ->middleware('can:humanitaria.saldo.view')
+            ->whereNumber('id');
     });
 
     Route::prefix('beneficiarios')->name('beneficiarios.')->group(function () {

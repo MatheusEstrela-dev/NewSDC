@@ -44,4 +44,9 @@ class DepositoAh extends Model
     {
         return $this->hasMany(SaldoEstoqueAh::class, 'deposito_id');
     }
+
+    public function liberacoes(): HasMany
+    {
+        return $this->hasMany(LiberacaoAh::class, 'deposito_id');
+    }
 }
