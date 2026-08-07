@@ -45,7 +45,7 @@ function cancelar() {
 <template>
   <div class="treinamento-create-container">
     <PageHeader
-      title="Novo Curso"
+      title="Novo Treinamento"
       description="Cadastro de treinamentos e cursos da Diretoria de Educação"
       :icon-image="moduleIcon('treinamento')"
       variant="gradient"

@@ -171,7 +171,8 @@ function handleExportCsv(params) {
     />
 
     <!-- Desktop: Tabela (somente quando selecionada e não mobile) -->
-    <div v-else-if="viewMode === 'table' && !isMobile" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
+    <div v-else-if="viewMode === 'table' && !isMobile" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="relative overflow-x-auto">
       <table class="w-full min-w-[720px]">
         <thead class="bg-slate-50 dark:bg-slate-700/50">
           <tr>
@@ -225,10 +226,19 @@ function handleExportCsv(params) {
           </tr>
         </tbody>
       </table>
+      </div>
+
+      <!-- Pagination - dentro do mesmo card da tabela, nao flutuando separada -->
+      <div v-if="pagination" class="border-t border-slate-200 dark:border-slate-700 px-4 py-3">
+        <Pagination
+          :pagination="pagination"
+          @page-change="(page) => emit('filter', { ...localFilters, page })"
+        />
+      </div>
     </div>
 
-    <!-- Pagination -->
-    <div v-if="pagination" class="mt-6">
+    <!-- Pagination (modo grade) -->
+    <div v-if="pagination && (viewMode === 'grid' || isMobile)" class="mt-6">
       <Pagination
         :pagination="pagination"
         @page-change="(page) => emit('filter', { ...localFilters, page })"

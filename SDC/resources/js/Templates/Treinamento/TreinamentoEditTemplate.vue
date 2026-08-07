@@ -49,7 +49,7 @@ function cancelar() {
 <template>
   <div class="treinamento-edit-container">
     <PageHeader
-      title="Editar Curso"
+      title="Editar Treinamento"
       :description="treinamento.titulo"
       :icon-image="moduleIcon('treinamento')"
       variant="gradient"
