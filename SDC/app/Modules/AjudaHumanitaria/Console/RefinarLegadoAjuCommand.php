@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class RefinarLegadoAjuCommand extends Command
 {
-    protected $signature = 'legado:aju:refinar {--etapa=* : materiais, depositos, fornecedores, fontes, saldos, entradas, transferencias}';
+    protected $signature = 'legado:aju:refinar {--etapa=* : materiais, depositos, fornecedores, fontes, saldos, entradas, transferencias, liberacoes}';
 
     protected $description = 'Refina ajuda_h_legado_raw para as tabelas destino do estoque';
 
@@ -41,6 +41,7 @@ final class RefinarLegadoAjuCommand extends Command
         'saldos',
         'entradas',
         'transferencias',
+        'liberacoes',
     ];
 
     public function handle(): int
@@ -63,6 +64,7 @@ final class RefinarLegadoAjuCommand extends Command
                 'saldos'          => $this->refinarSaldos(),
                 'entradas'        => $this->refinarEntradas(),
                 'transferencias'  => $this->refinarTransferencias(),
+                'liberacoes'      => $this->refinarLiberacoes(),
             };
 
             $this->line(sprintf('%-16s %6d linhas', $etapa, $afetadas));
@@ -346,5 +348,120 @@ final class RefinarLegadoAjuCommand extends Command
         );
 
         return $transferencias;
+    }
+
+    /**
+     * Liberacoes e seus recibos de pagamento.
+     *
+     * Duas decisoes que valem registro.
+     *
+     * MUNICIPIO. aju_liberacao.id_municipio nao aponta para aju_municipio, e sim
+     * para cedec_municipio, o espelho do cadastro antigo que o NewSDC ja carrega
+     * (confere em 3.582 de 3.582). A ponte ate public.municipios e o codigo IBGE
+     * em cedec_municipio.Codmundv, mesmo caminho ja usado pelo arquivo morto do
+     * RAT. Casar por nome resolveria so 3.560: 22 liberacoes ficariam de fora
+     * por divergencia de grafia.
+     *
+     * SOLICITANTE. Fica NULL de proposito. aju_liberacao.id_usuario vai de 26 a
+     * 180 e todo valor coincide numericamente com algum users.id, o que parece
+     * um mapeamento pronto e nao e: users.id 73 no NewSDC e BERIZAL665, uma
+     * conta de municipio, nao o oficial da CEDEC que autorizou a liberacao.
+     * Aproveitar a coincidencia atribuiria entrega de ajuda humanitaria a pessoa
+     * errada. O id original fica em payload_legado ate existir um De-Para real.
+     *
+     * Nao lanca movimento no ledger: ver a regra central no cabecalho da classe.
+     */
+    private function refinarLiberacoes(): int
+    {
+        $liberacoes = DB::affectingStatement(
+            "INSERT INTO ajuda_h_liberacoes
+                 (municipio_id, deposito_id, beneficiario, data_libera, data_limite,
+                  status, observacao, cancelado_em, motivo_cancelamento,
+                  payload_legado, codigo_legado, created_at, updated_at)
+             SELECT
+                 mun.id,
+                 dep.id,
+                 nullif(trim(r.doc->>'beneficiario'), ''),
+                 (r.doc->>'dataLibera')::date,
+                 CASE WHEN r.doc->>'dtLimite' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                      THEN (r.doc->>'dtLimite')::date END,
+                 coalesce((r.doc->>'situacao')::int, 0),
+                 nullif(trim(r.doc->>'observacao'), ''),
+                 CASE WHEN r.doc->>'dt_cancela' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                      THEN (r.doc->>'dt_cancela')::timestamptz END,
+                 nullif(trim(r.doc->>'m_cancela'), ''),
+                 jsonb_build_object(
+                     'id_usuario',         r.doc->>'id_usuario',
+                     'id_user_pgto',       r.doc->>'id_user_pgto',
+                     'responsavel',        r.doc->>'responsavel',
+                     'evento',             r.doc->>'evento',
+                     'entrega',            r.doc->>'entrega',
+                     'hora_libera',        r.doc->>'hora_libera',
+                     'dt_recibo',          r.doc->>'dt_recibo',
+                     'resp_receb',         r.doc->>'resp_receb',
+                     'resp_receb_ci',      r.doc->>'resp_receb_ci',
+                     'resp_receb_cpf',     r.doc->>'resp_receb_cpf',
+                     'resp_receb_veiculo', r.doc->>'resp_receb_veiculo',
+                     'resp_receb_placa',   r.doc->>'resp_receb_placa'
+                 ),
+                 r.doc->>'id_liberacao',
+                 now(), now()
+             FROM ajuda_h_legado_raw r
+             JOIN cedec_municipio  c   ON c.id::text = r.doc->>'id_municipio'
+             JOIN municipios       mun ON mun.codigo_ibge::text = c.\"Codmundv\"::text
+             JOIN ajuda_h_depositos dep ON dep.codigo_legado = r.doc->>'depDestino'
+             WHERE r.tabela = 'aju_liberacao'
+               AND r.doc->>'id_liberacao' IS NOT NULL
+               AND (r.doc->>'dataLibera') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+             ON CONFLICT (codigo_legado) DO UPDATE
+                 SET municipio_id        = EXCLUDED.municipio_id,
+                     deposito_id         = EXCLUDED.deposito_id,
+                     beneficiario        = EXCLUDED.beneficiario,
+                     status              = EXCLUDED.status,
+                     observacao          = EXCLUDED.observacao,
+                     cancelado_em        = EXCLUDED.cancelado_em,
+                     motivo_cancelamento = EXCLUDED.motivo_cancelamento,
+                     payload_legado      = EXCLUDED.payload_legado,
+                     updated_at          = now()"
+        );
+
+        // O legado tem um pagamento cuja liberacao nao existe. O JOIN o deixa de
+        // fora, que e o comportamento correto: recibo sem liberacao nao tem
+        // significado.
+        DB::affectingStatement(
+            "INSERT INTO ajuda_h_liberacao_recibos
+                 (liberacao_id, pago_em, n_documento, n_recibo, responsavel_recebimento,
+                  cpf_responsavel, placa_veiculo, status, motivo, created_at, updated_at)
+             SELECT
+                 l.id,
+                 CASE WHEN r.doc->>'dtPagto' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                      THEN (r.doc->>'dtPagto')::date END,
+                 nullif(nullif(trim(r.doc->>'nDocumento'), ''), '-'),
+                 CASE WHEN (r.doc->>'n_recibo') ~ '^[0-9]+$'
+                      THEN (r.doc->>'n_recibo')::int END,
+                 nullif(nullif(trim(r.doc->>'responsavel'), ''), '-'),
+                 -- cpf_resp vem com lixo de mascara vazia ('..-'): so entra o
+                 -- que tem digito.
+                 CASE WHEN regexp_replace(coalesce(r.doc->>'cpf_resp',''), '\\D', '', 'g') <> ''
+                      THEN trim(r.doc->>'cpf_resp') END,
+                 nullif(nullif(trim(r.doc->>'placa'), ''), '-'),
+                 CASE WHEN (r.doc->>'situacao') ~ '^[0-9]+$'
+                      THEN (r.doc->>'situacao')::int ELSE 0 END,
+                 nullif(trim(r.doc->>'motivo'), ''),
+                 now(), now()
+             FROM ajuda_h_legado_raw r
+             JOIN ajuda_h_liberacoes l ON l.codigo_legado = r.doc->>'id_liberacao'
+             WHERE r.tabela = 'aju_pagamento'
+               AND NOT EXISTS (
+                   SELECT 1 FROM ajuda_h_liberacao_recibos rec
+                   WHERE rec.liberacao_id = l.id
+                     AND rec.n_documento IS NOT DISTINCT FROM nullif(nullif(trim(r.doc->>'nDocumento'), ''), '-')
+                     AND rec.pago_em IS NOT DISTINCT FROM
+                         (CASE WHEN r.doc->>'dtPagto' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                               THEN (r.doc->>'dtPagto')::date END)
+               )"
+        );
+
+        return $liberacoes;
     }
 }

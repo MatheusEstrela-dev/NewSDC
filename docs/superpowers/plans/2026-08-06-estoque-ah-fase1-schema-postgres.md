@@ -35,9 +35,21 @@ Quatro casos, todos tratados sem afrouxar constraint:
 | `cpfcnpj` de preenchimento em `aju_fornecedores` | 3 (`00.000.000-0000-00` repetido em dois fornecedores, e `00.000.0` truncado) | Vira `NULL` por regra estrutural: menos de 11 digitos ou nenhum digito diferente de zero. Documento invalido nao e identidade, e o Postgres aceita varios `NULL` sob `UNIQUE` |
 | `aju_produto.origem` fora de `aju_fonte` | 215 de 752 | `origem` e texto livre que mistura fonte de recurso (CAMPANHA DOACAO, LBV) com tipo de movimento (`Transferencia entre Depositos` em tres grafias, `Correcao Manual de Saldo`). So o que casa com `aju_fonte` vira `fonte_recurso_id` (537); o resto fica em `ajuda_h_entradas.payload_legado`, em vez de virar cadastro inventado |
 
-### Tabelas que seguem vazias, e por que
+### Liberacoes: carregadas em 07/08/2026
 
-`ajuda_h_liberacoes`, `ajuda_h_liberacao_itens` e `ajuda_h_liberacao_recibos` ainda nao tem etapa de refino. O dado esta na area de pouso (`aju_liberacao` 3.582, `aju_pagamento` 3.364), mas **`aju_item` esta vazia na producao**: as 3.582 liberacoes nao tem um unico item registrado nessa tabela. Carregar as liberacoes agora produziria 3.582 registros orfaos de item. Antes de modelar essa etapa e preciso descobrir com quem opera o modulo se o item da liberacao vive em outro lugar ou se a tabela foi abandonada.
+3.582 liberacoes e 3.363 recibos, contra 3.582 e 3.364 na origem. O recibo a menos aponta para uma liberacao que nao existe no legado, e o JOIN o deixa de fora: recibo sem liberacao nao tem significado.
+
+**`ajuda_h_liberacao_itens` continua vazia, e nao ha o que fazer a respeito.** A origem, `aju_item`, tem zero linhas na producao: as 3.582 liberacoes nao registram item nessa tabela. Nao e lacuna do refino, e ausencia no legado. Se o item da liberacao existe em algum lugar, e em estrutura que este dump nao cobre.
+
+Duas decisoes desta etapa merecem registro.
+
+**Municipio.** `aju_liberacao.id_municipio` nao aponta para `aju_municipio`, e sim para `cedec_municipio`, o espelho do cadastro antigo que o NewSDC ja carrega. Confere em 3.582 de 3.582, contra 670 se fosse `municipios.id` e 670 se fosse `aju_municipio`. A ponte ate `public.municipios` e o codigo IBGE em `cedec_municipio.Codmundv`, mesmo caminho do arquivo morto do RAT. Casar por nome resolveria 3.560: as 22 restantes divergem so na grafia (`SEM PEIXE` contra `Sem-Peixe`, `SAO THOME` contra `São Tomé`), e o codigo IBGE as recupera.
+
+**Solicitante fica NULL, de proposito.** `aju_liberacao.id_usuario` vai de 26 a 180, e todo valor coincide numericamente com algum `users.id` — o que parece um mapeamento pronto e nao e. `users.id` 73 no NewSDC e `BERIZAL665`, conta de municipio, nao o oficial da CEDEC que autorizou a liberacao. Aproveitar a coincidencia atribuiria entrega de ajuda humanitaria a pessoa errada. O id original fica em `payload_legado` ate existir um De-Para real.
+
+### Auditoria de integridade em 07/08/2026
+
+Oito verificacoes sobre o conjunto carregado, todas em zero: constraints nao validadas, saldos negativos, divergencia entre saldo e soma dos movimentos, itens de entrada orfaos, itens de transferencia orfaos, recibos orfaos, transferencia com origem igual ao destino, e CPF/CNPJ duplicado em fornecedores. 23 chaves estrangeiras declaradas e validas.
 | 6. Troca da leitura de saldo | **EXECUTADA** em 07/08/2026 | `PostgresSaldoMaterialRepository` no lugar do `LegadoSaldoMaterialRepository` no bind. Container resolve a classe nova e devolve os 118 pares reais; filtro por `codigo_legado` conferido. 14 verificacoes proprias sem falha, e a suite do modulo fecha em **243 testes, 636 assercoes, zero falhas** |
 
 ### Duas armadilhas que so a verificacao contra o banco real revelou
