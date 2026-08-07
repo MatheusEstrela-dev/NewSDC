@@ -9,13 +9,18 @@ use App\Models\Municipio;
 use App\Models\User;
 use App\Modules\AjudaHumanitaria\DTOs\PedidoAhDTO;
 use App\Modules\AjudaHumanitaria\Enums\StatusPedidoAh;
+use App\Modules\AjudaHumanitaria\Enums\EtapaParecer;
+use App\Modules\AjudaHumanitaria\Enums\SituacaoParecer;
 use App\Modules\AjudaHumanitaria\Enums\TipoDecreto;
 use App\Modules\AjudaHumanitaria\Models\PedidoAh;
+use App\Modules\AjudaHumanitaria\Models\PedidoAhParecer;
 use App\Modules\AjudaHumanitaria\Models\PedidoAhTramite;
 use App\Modules\AjudaHumanitaria\Requests\StorePedidoAhRequest;
 use App\Modules\AjudaHumanitaria\Resources\PedidoAhIndexResource;
 use App\Modules\AjudaHumanitaria\Resources\PedidoAhResource;
+use App\Modules\AjudaHumanitaria\Services\AnexoPedidoService;
 use App\Modules\AjudaHumanitaria\Services\ItemPedidoService;
+use App\Modules\AjudaHumanitaria\Services\ParecerService;
 use App\Modules\AjudaHumanitaria\Services\PedidoAhService;
 use App\Modules\AjudaHumanitaria\Services\TramitacaoService;
 use App\Modules\AjudaHumanitaria\Support\MunicipioDoUsuario;
@@ -39,6 +44,8 @@ class PedidoAhController extends Controller
         private readonly PedidoAhService $pedidos,
         private readonly ItemPedidoService $itens,
         private readonly TramitacaoService $tramitacao,
+        private readonly ParecerService $pareceres,
+        private readonly AnexoPedidoService $anexos,
     ) {}
 
     public function index(Request $request): Response
@@ -107,7 +114,11 @@ class PedidoAhController extends Controller
         return Inertia::render('AjudaHumanitaria/Pedidos/Show', [
             'pedido'    => new PedidoAhResource($pedido),
             'tramites'  => $this->tramites($pedido),
+            'pareceres' => $this->pareceresDoPedido($pedido->id),
+            'anexos'    => $this->anexos->listar($pedido->id),
             'materiais' => $this->itens->materiaisDisponiveis(),
+            'situacoesParecer' => SituacaoParecer::options(),
+            'etapasParecer'    => EtapaParecer::options(),
 
             // Destinos que existem no grafo. A validade final continua sendo do
             // workflow, no momento da transicao: aqui e so a lista de opcoes.
@@ -123,7 +134,30 @@ class PedidoAhController extends Controller
             'canDelete'        => $usuario?->can('delete', $pedido) ?? false,
             'canTramitar'      => $usuario?->can('tramitar', $pedido) ?? false,
             'canLiberarItens'  => $usuario?->can('liberarItens', $pedido) ?? false,
+            'canParecer'       => $usuario?->can('parecer', $pedido) ?? false,
+            'canAnexos'        => $usuario?->can('anexos', $pedido) ?? false,
         ]);
+    }
+
+    /**
+     * RN-10: pareceres emitidos, do mais recente para o mais antigo.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function pareceresDoPedido(int $pedidoId): array
+    {
+        return $this->pareceres->doPedido($pedidoId)
+            ->map(static fn (PedidoAhParecer $p): array => [
+                'id'             => $p->id,
+                'data_parecer'   => $p->data_parecer?->toDateString(),
+                'parecer'        => $p->parecer,
+                'situacao'       => $p->situacao?->value,
+                'situacao_label' => $p->situacao?->label(),
+                'favoravel'      => $p->situacao?->ehFavoravel() ?? false,
+                'etapa_label'    => $p->etapa?->label(),
+                'autor'          => $p->autor?->name,
+            ])
+            ->all();
     }
 
     /**

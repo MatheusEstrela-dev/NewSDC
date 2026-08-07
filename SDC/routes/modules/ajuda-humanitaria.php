@@ -1,7 +1,9 @@
 <?php
 
+use App\Modules\AjudaHumanitaria\Controllers\AnexoPedidoController;
 use App\Modules\AjudaHumanitaria\Controllers\BeneficiarioController;
 use App\Modules\AjudaHumanitaria\Controllers\ItemPedidoController;
+use App\Modules\AjudaHumanitaria\Controllers\ParecerController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhDashboardController;
 use App\Modules\AjudaHumanitaria\Controllers\TramitacaoController;
@@ -47,6 +49,34 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
             ->name('tramitar')
             ->middleware('can:humanitaria.pedidos.tramitar')
             ->whereNumber('id');
+
+        // Pareceres tecnicos.
+        Route::post('/{id}/pareceres', [ParecerController::class, 'store'])
+            ->name('pareceres.store')
+            ->middleware('can:humanitaria.pedidos.parecer')
+            ->whereNumber('id');
+
+        Route::delete('/{id}/pareceres/{parecer}', [ParecerController::class, 'destroy'])
+            ->name('pareceres.destroy')
+            ->middleware('can:humanitaria.pedidos.parecer')
+            ->whereNumber(['id', 'parecer']);
+
+        // Anexos. O download exige apenas leitura; anexar e remover exigem a
+        // permissao propria de anexos.
+        Route::post('/{id}/anexos', [AnexoPedidoController::class, 'store'])
+            ->name('anexos.store')
+            ->middleware('can:humanitaria.pedidos.anexos')
+            ->whereNumber('id');
+
+        Route::get('/{id}/anexos/{media}', [AnexoPedidoController::class, 'download'])
+            ->name('anexos.download')
+            ->middleware('can:humanitaria.pedidos.view')
+            ->whereNumber(['id', 'media']);
+
+        Route::delete('/{id}/anexos/{media}', [AnexoPedidoController::class, 'destroy'])
+            ->name('anexos.destroy')
+            ->middleware('can:humanitaria.pedidos.anexos')
+            ->whereNumber(['id', 'media']);
     });
 
     Route::prefix('beneficiarios')->name('beneficiarios.')->group(function () {

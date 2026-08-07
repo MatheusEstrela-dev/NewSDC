@@ -18,8 +18,9 @@
       </template>
     </PageHeader>
 
-    <!-- Abas espelhando o legado: Dados, Materiais e Tramitacao.
-         Documentos, Pareceres e Prestacao entram nas proximas etapas. -->
+    <!-- Abas espelhando o legado: Dados, Materiais, Documentos e
+         Despachos/Analises, mais Tramitacao. Prestacao de contas entra na
+         proxima etapa. -->
     <div class="mt-6 border-b border-slate-200 dark:border-slate-700">
       <nav class="-mb-px flex gap-1 overflow-x-auto" aria-label="Abas do pedido">
         <button
@@ -107,6 +108,29 @@
         />
       </FormSection>
 
+      <!-- Documentos -->
+      <FormSection v-show="abaAtiva === 'documentos'" title="Documentos" :icon="DocumentTextIcon">
+        <PedidoAhAnexosTab
+          :anexos="anexos"
+          :pedido-id="dados.id"
+          :can-anexos="canAnexos"
+          @anexar="anexar"
+          @remover-anexo="removerAnexo"
+        />
+      </FormSection>
+
+      <!-- Pareceres -->
+      <FormSection v-show="abaAtiva === 'pareceres'" title="Pareceres" :icon="ClipboardIcon">
+        <PedidoAhPareceresTab
+          :pareceres="pareceres"
+          :situacoes="situacoesParecer"
+          :etapas="etapasParecer"
+          :can-parecer="canParecer"
+          @emitir-parecer="emitirParecer"
+          @remover-parecer="removerParecer"
+        />
+      </FormSection>
+
       <!-- Tramitação -->
       <FormSection v-show="abaAtiva === 'tramitacao'" title="Tramitação" :icon="ArrowsRightLeftIcon">
         <PedidoAhTramitacaoTab
@@ -129,6 +153,8 @@ import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PedidoAhStatusBadge from '@/Components/Atoms/AjudaHumanitaria/PedidoAhStatusBadge.vue';
 import PedidoAhItensTab from '@/Components/Organisms/AjudaHumanitaria/PedidoAhItensTab.vue';
+import PedidoAhAnexosTab from '@/Components/Organisms/AjudaHumanitaria/PedidoAhAnexosTab.vue';
+import PedidoAhPareceresTab from '@/Components/Organisms/AjudaHumanitaria/PedidoAhPareceresTab.vue';
 import PedidoAhTramitacaoTab from '@/Components/Organisms/AjudaHumanitaria/PedidoAhTramitacaoTab.vue';
 import FormSection from '@/Components/Organisms/FormSection.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
@@ -144,12 +170,18 @@ import { moduleIcon } from '@/Support/moduleIcons';
 const props = defineProps({
   pedido: { type: Object, required: true },
   tramites: { type: Array, default: () => [] },
+  pareceres: { type: Array, default: () => [] },
+  anexos: { type: Array, default: () => [] },
+  situacoesParecer: { type: Array, default: () => [] },
+  etapasParecer: { type: Array, default: () => [] },
   materiais: { type: Array, default: () => [] },
   destinos: { type: Array, default: () => [] },
   canEdit: { type: Boolean, default: false },
   canDelete: { type: Boolean, default: false },
   canTramitar: { type: Boolean, default: false },
   canLiberarItens: { type: Boolean, default: false },
+  canParecer: { type: Boolean, default: false },
+  canAnexos: { type: Boolean, default: false },
 });
 
 // O Resource do Laravel embrulha em data quando devolvido isoladamente.
@@ -164,6 +196,8 @@ const abas = computed(() => [
     rotulo: 'Materiais',
     contador: (dados.value.itens_solicitados?.length ?? 0) + (dados.value.itens_liberados?.length ?? 0),
   },
+  { chave: 'documentos', rotulo: 'Documentos', contador: props.anexos.length },
+  { chave: 'pareceres', rotulo: 'Pareceres', contador: props.pareceres.length },
   { chave: 'tramitacao', rotulo: 'Tramitação', contador: props.tramites.length },
 ]);
 
@@ -182,6 +216,32 @@ function removerItem(itemId) {
 
 function tramitar(payload) {
   router.post(route('ajuda-humanitaria.pedidos.tramitar', dados.value.id), payload, opcoesPadrao);
+}
+
+function emitirParecer(payload) {
+  router.post(route('ajuda-humanitaria.pedidos.pareceres.store', dados.value.id), payload, opcoesPadrao);
+}
+
+function removerParecer(parecerId) {
+  router.delete(
+    route('ajuda-humanitaria.pedidos.pareceres.destroy', [dados.value.id, parecerId]),
+    opcoesPadrao,
+  );
+}
+
+function anexar(arquivo) {
+  router.post(
+    route('ajuda-humanitaria.pedidos.anexos.store', dados.value.id),
+    { arquivo },
+    { ...opcoesPadrao, forceFormData: true },
+  );
+}
+
+function removerAnexo(mediaId) {
+  router.delete(
+    route('ajuda-humanitaria.pedidos.anexos.destroy', [dados.value.id, mediaId]),
+    opcoesPadrao,
+  );
 }
 
 function formatarNumero(valor) {
