@@ -38,7 +38,23 @@ Quatro casos, todos tratados sem afrouxar constraint:
 ### Tabelas que seguem vazias, e por que
 
 `ajuda_h_liberacoes`, `ajuda_h_liberacao_itens` e `ajuda_h_liberacao_recibos` ainda nao tem etapa de refino. O dado esta na area de pouso (`aju_liberacao` 3.582, `aju_pagamento` 3.364), mas **`aju_item` esta vazia na producao**: as 3.582 liberacoes nao tem um unico item registrado nessa tabela. Carregar as liberacoes agora produziria 3.582 registros orfaos de item. Antes de modelar essa etapa e preciso descobrir com quem opera o modulo se o item da liberacao vive em outro lugar ou se a tabela foi abandonada.
-| 6. Troca da leitura de saldo | **EXECUTADA** em 07/08/2026 | `PostgresSaldoMaterialRepository` no lugar do `LegadoSaldoMaterialRepository` no bind. Container resolve a classe nova e devolve os 118 pares reais; filtro por `codigo_legado` conferido; app sobe e as rotas do modulo resolvem. 14 verificacoes, zero falhas |
+| 6. Troca da leitura de saldo | **EXECUTADA** em 07/08/2026 | `PostgresSaldoMaterialRepository` no lugar do `LegadoSaldoMaterialRepository` no bind. Container resolve a classe nova e devolve os 118 pares reais; filtro por `codigo_legado` conferido. 14 verificacoes proprias sem falha, e a suite do modulo fecha em **243 testes, 636 assercoes, zero falhas** |
+
+### Duas armadilhas que so a verificacao contra o banco real revelou
+
+**`ON CONFLICT DO UPDATE` nao serve para somar delta sob um CHECK.** A primeira versao de `RegistrarMovimentoEstoque` projetava o saldo com `INSERT ... VALUES (m, d, delta) ON CONFLICT DO UPDATE SET saldo = saldo + EXCLUDED.saldo`. Funcionou na entrada de 100 e falhou na saida de -30 sobre saldo 100. Motivo: `ON CONFLICT` resolve apenas violacao de **unicidade**; o CHECK `saldo >= 0` e avaliado antes, sobre a linha candidata do `VALUES`, que era `-30`. A saida legitima morria ali sem nunca chegar ao `UPDATE`. A forma correta e garantir a linha zerada (`VALUES (m, d, 0) ON CONFLICT DO NOTHING`) e somar o delta em um `UPDATE` separado, cujo CHECK avalia o saldo final.
+
+**Teste que resolve o contrato pelo container testa o bind, nao a classe.** `LegadoSaldoMaterialRepositoryTest` fazia `app(SaldoMaterialRepositoryInterface::class)` no `setUp`. Depois da troca do bind ele passou a exercitar a implementacao Postgres, e os dois casos de degradacao (`disponivel()` falso, lista vazia) quebraram sem que houvesse defeito algum na classe sob teste. Passou a instanciar `LegadoSaldoMaterialRepository` diretamente.
+
+### Efeito colateral de carregar producao no banco de desenvolvimento
+
+Tres testes do modulo assumiam tabelas vazias e quebraram quando os 187 materiais entraram no banco compartilhado. Nenhum era defeito de codigo, e todos foram corrigidos para nao depender do tamanho das tabelas:
+
+- `ModelsMahTest::test_material_filtra_disponiveis_para_pedido` contava linhas no banco inteiro; passou a conferir se o scope inclui e exclui os registros que o proprio teste cria
+- `EloquentPrestacaoContaRepositoryTest` fixava `codigo_legado = '161'`, que agora colide com o catalogo legado sob a nova `UNIQUE`; passou a usar `TESTE-161`
+- `ProviderMahTest` travava o bind antigo; foi atualizado para a implementacao nova
+
+Fica a licao para as proximas fases: com dado real no banco de desenvolvimento, asserção de contagem global e chave fixa numerica sao fontes de falha intermitente.
 
 ### Bug encontrado na Task 4: ON CONFLICT nao substitui o CHECK
 
