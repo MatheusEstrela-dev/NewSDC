@@ -26,7 +26,10 @@ Route::prefix('portal-treinamento')->name('portal.treinamento.')->middleware(Dis
     // Login e unificado em /login (App\Http\Controllers\Auth\AuthenticatedSessionController
     // decide o guard pelo CPF) - o portal so tem cadastro e as telas pos-login.
     Route::get('/registrar', [RegisterController::class, 'create'])->name('registrar');
-    Route::post('/registrar', [RegisterController::class, 'store']);
+    // Mesmo limiter nativo do cadastro interno (RouteServiceProvider::boot,
+    // limiter "register") - o cadastro do cidadao nao tinha nenhum throttle.
+    Route::post('/registrar', [RegisterController::class, 'store'])
+        ->middleware('throttle:register');
 
     Route::middleware(['auth:cidadao', ShareCidadaoInertiaData::class])->group(function () {
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
