@@ -458,6 +458,16 @@
         >
           Estoque
         </NavItem>
+        <NavItem
+          v-if="_routes.hasHumanitariaLiberacoes"
+          :href="route('ajuda-humanitaria.liberacoes.index')"
+          :active="isRouteActive('ajuda-humanitaria.liberacoes.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Liberações
+        </NavItem>
       </div>
     </nav>
 
@@ -629,6 +639,7 @@ const _routes = {
   hasHumanitariaDashboard: route().has('ajuda-humanitaria.dashboard'),
   hasHumanitariaBeneficiarios: route().has('ajuda-humanitaria.beneficiarios.index'),
   hasHumanitariaEstoque: route().has('ajuda-humanitaria.estoque.index'),
+  hasHumanitariaLiberacoes: route().has('ajuda-humanitaria.liberacoes.index'),
   hasCompdec: route().has('compdec.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
   hasTdapPrestadores: route().has('tdap.prestadores.index'),
@@ -672,6 +683,7 @@ const _activeRoutes = computed(() => {
     'ajuda-humanitaria.pedidos.*': route().current('ajuda-humanitaria.pedidos.*'),
     'ajuda-humanitaria.beneficiarios.*': route().current('ajuda-humanitaria.beneficiarios.*'),
     'ajuda-humanitaria.estoque.*': route().current('ajuda-humanitaria.estoque.*'),
+    'ajuda-humanitaria.liberacoes.*': route().current('ajuda-humanitaria.liberacoes.*'),
     'compdec.*': route().current('compdec.*'),
     'tdap.*': route().current('tdap.*'),
     'tdap.dashboard': route().current('tdap.dashboard'),
