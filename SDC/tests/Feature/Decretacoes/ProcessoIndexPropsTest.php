@@ -67,13 +67,15 @@ class ProcessoIndexPropsTest extends TestCase
         $redecs = ProcessoFilter::getFilterOptions()['redecs'];
 
         $this->assertIsArray($redecs);
-        $this->assertCount(14, $redecs, 'Minas Gerais tem 14 REDECs.');
+        $this->assertCount(19, $redecs, 'Minas Gerais tem 19 REDECs.');
 
         // O select le `id` (SelectInput usa option.value ?? option.id) e `label`;
-        // `sigla` rotula o campo de municipio quando ha REDEC escolhida.
-        $this->assertSame(['id', 'label', 'sigla'], array_keys($redecs[0]));
+        // `sigla` rotula o campo de municipio quando ha REDEC escolhida. `sede`
+        // e `rpm` entraram com as 19 regioes e nao sao lidos pelo select, mas
+        // ficam fixados aqui para que uma remocao nao passe despercebida.
+        $this->assertSame(['id', 'label', 'sigla', 'sede', 'rpm'], array_keys($redecs[0]));
         $this->assertSame(1, $redecs[0]['id']);
         $this->assertSame('1ª REDEC', $redecs[0]['sigla']);
-        $this->assertSame('1ª REDEC - Metropolitana de Belo Horizonte', $redecs[0]['label']);
+        $this->assertSame('1ª REDEC - Belo Horizonte', $redecs[0]['label']);
     }
 }
