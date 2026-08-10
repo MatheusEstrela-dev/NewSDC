@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Medalhao;
+
+use App\Modules\Medalhao\Registry\IngestorRegistry;
+use Illuminate\Support\ServiceProvider;
+
+class MedalhaoServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->singleton(IngestorRegistry::class);
+    }
+
+    public function boot(): void
+    {
+        // As fontes sao registradas pelos providers de cada modulo de dominio
+        // (ex.: SismosServiceProvider), mantendo o kernel agnostico de dominio.
+    }
+}
