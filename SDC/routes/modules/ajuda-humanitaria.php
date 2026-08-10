@@ -177,6 +177,13 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
             ->name('show')
             ->middleware('can:humanitaria.saldo.view')
             ->whereNumber('id');
+
+        // Cancelamento estorna o saldo por lancamento compensatorio, entao
+        // pesa o mesmo que registrar.
+        Route::post('/{id}/cancelar', [EntradaAhController::class, 'cancelar'])
+            ->name('cancelar')
+            ->middleware('can:humanitaria.estoque.movimentar')
+            ->whereNumber('id');
     });
 
     // Catalogo de material (RN-07). Unica tela do estoque que escreve, porque

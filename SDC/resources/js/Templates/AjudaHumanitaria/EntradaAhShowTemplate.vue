@@ -8,9 +8,25 @@
       variant="gradient"
     >
       <template #actions>
-        <Badge v-if="entrada.cancelado" variant="danger" size="md">Cancelada</Badge>
-        <Badge v-else-if="temCorrecao" variant="warning" size="md">Correção de saldo</Badge>
-        <Badge v-else variant="success" size="md">Ativa</Badge>
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <Badge v-if="entrada.cancelado" variant="danger" size="md">Cancelada</Badge>
+          <Badge v-else-if="temCorrecao" variant="warning" size="md">Correção de saldo</Badge>
+          <Badge v-else variant="success" size="md">Ativa</Badge>
+
+          <!-- So aparece quando o cancelamento e possivel de fato: entrada
+               migrada nao tem lancamento proprio para estornar, e o controller
+               ja resolveu isso em podeCancelar. -->
+          <Button
+            v-if="podeCancelar"
+            variant="danger"
+            size="md"
+            :icon="XMarkIcon"
+            icon-position="left"
+            @click="$emit('cancelar')"
+          >
+            <span class="hidden sm:inline">Cancelar entrada</span>
+          </Button>
+        </div>
       </template>
     </PageHeader>
 
@@ -79,8 +95,10 @@
 <script setup>
 import { computed, h } from 'vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
+import Button from '@/Components/Atoms/Button/Button.vue';
 import ArchiveBoxIcon from '@/Components/Icons/ArchiveBoxIcon.vue';
 import UploadIcon from '@/Components/Icons/UploadIcon.vue';
+import XMarkIcon from '@/Components/Icons/XMarkIcon.vue';
 import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
@@ -88,7 +106,10 @@ import { moduleIcon } from '@/Support/moduleIcons';
 
 const props = defineProps({
   entrada: { type: Object, required: true },
+  podeCancelar: { type: Boolean, default: false },
 });
+
+defineEmits(['cancelar']);
 
 const numero = new Intl.NumberFormat('pt-BR');
 const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });

@@ -5,18 +5,21 @@ declare(strict_types=1);
 namespace App\Modules\AjudaHumanitaria\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\AjudaHumanitaria\Domain\Estoque\SaldoInsuficiente;
 use App\Modules\AjudaHumanitaria\Models\DepositoAh;
 use App\Modules\AjudaHumanitaria\Models\EntradaAh;
 use App\Modules\AjudaHumanitaria\Models\FonteRecursoAh;
 use App\Modules\AjudaHumanitaria\Models\FornecedorAh;
 use App\Modules\AjudaHumanitaria\Models\MaterialAh;
 use App\Modules\AjudaHumanitaria\Requests\StoreEntradaAhRequest;
+use App\Modules\AjudaHumanitaria\Services\CancelarEntradaMaterial;
 use App\Modules\AjudaHumanitaria\Services\RegistrarEntradaMaterial;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -90,7 +93,7 @@ class EntradaAhController extends Controller
             ->with('success', 'Entrada registrada e saldo atualizado.');
     }
 
-    public function show(int $id): Response
+    public function show(Request $request, int $id, CancelarEntradaMaterial $cancelamento): Response
     {
         $entrada = EntradaAh::query()
             ->with([
@@ -120,7 +123,36 @@ class EntradaAhController extends Controller
                     'data_validade'  => $item->data_validade?->toDateString(),
                 ])->all(),
             ]),
+            // A tela precisa distinguir "nao pode cancelar" de "nao tem
+            // permissao": a primeira e regra de dominio e vale explicar.
+            'podeCancelar' => $request->user()?->can('humanitaria.estoque.movimentar')
+                && $cancelamento->podeCancelar($entrada),
         ]);
+    }
+
+    /**
+     * Cancela a entrada com lancamento compensatorio no ledger.
+     */
+    public function cancelar(Request $request, int $id, CancelarEntradaMaterial $servico): RedirectResponse
+    {
+        $entrada = EntradaAh::findOrFail($id);
+        $motivo  = trim((string) $request->string('motivo')) ?: null;
+
+        try {
+            $servico->cancelar($entrada, $request->user()?->id, $motivo);
+        } catch (SaldoInsuficiente) {
+            // Mensagem de dominio, e nao a do dominio de estoque: aqui o que
+            // aconteceu e que o material recebido ja nao esta mais la.
+            return back()->with(
+                'error',
+                'O material desta entrada já saiu do depósito, e o cancelamento deixaria o saldo negativo. '
+                .'Registre a correção pelo movimento correspondente.',
+            );
+        } catch (RuntimeException $erro) {
+            return back()->with('error', $erro->getMessage());
+        }
+
+        return back()->with('success', 'Entrada cancelada e saldo estornado.');
     }
 
     public function export(Request $request): StreamedResponse
