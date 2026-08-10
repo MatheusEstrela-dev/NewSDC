@@ -269,6 +269,10 @@ services:
     # dump-autoload --optimize (sem -a) reconstroi o classmap e reativa o PSR-4
     # fallback, fazendo o worker enxergar os modulos montados.
     # Prioridade: critical > high > default > webhooks > low.
+    # A fila "medalhao" (ETL do pipeline de dados) roda em processo separado, em
+    # background, com timeout maior — nao entra na lista acima para nao segurar o
+    # worker de requisicao. Em producao a separacao e feita pelo supervisor
+    # (docker/supervisor/medalhao-worker.conf); aqui, pelo loop de restart.
     # --max-time=3600: restart de hora em hora para evitar memory leak.
     # --tries=2: jobs com $tries proprio (export, webhook) sobrescrevem.
     # A guarda do marcador replica o /start.sh (este command sobrescreve o CMD
@@ -282,6 +286,10 @@ services:
         fi &&
         umask 002 &&
         composer dump-autoload --optimize --no-interaction &&
+        ( while true; do
+        php artisan queue:work redis --queue=medalhao --tries=3 --timeout=300 --max-time=3600 --sleep=5;
+        echo "[medalhao-worker] saiu (codigo $$?); reiniciando em 2s..."; sleep 2;
+        done & ) &&
         exec php artisan queue:work redis
         --queue=critical,high,default,webhooks,low
         --tries=2 --timeout=60 --max-time=3600 --sleep=3

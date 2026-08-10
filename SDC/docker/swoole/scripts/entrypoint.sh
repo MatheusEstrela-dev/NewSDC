@@ -197,6 +197,19 @@ if [ "${START_EMBEDDED_QUEUE:-true}" = "true" ]; then
             sleep 2
         done
     ) &
+    # Worker do pipeline medalhao: processo SEPARADO, com timeout maior. A fila
+    # "medalhao" nao entra na lista acima de proposito — uma coleta de ETL que
+    # leve minutos seguraria o worker de requisicao e atrasaria notificacao e
+    # webhook, e o --timeout=90 de la e curto demais para ingestao.
+    echo "Iniciando medalhao worker em background..."
+    (
+        set +e
+        while true; do
+            php artisan queue:work --queue=medalhao --tries=3 --timeout=300 --sleep=5 --max-time=3600 2>&1
+            echo "[medalhao-worker] worker saiu (codigo $?); reiniciando em 2s..."
+            sleep 2
+        done
+    ) &
 else
     echo "Queue worker embutido desativado (START_EMBEDDED_QUEUE=false); usando container queue dedicado."
 fi

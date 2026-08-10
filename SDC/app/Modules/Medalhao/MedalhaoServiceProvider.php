@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Medalhao;
 
+use App\Modules\Medalhao\Console\IngerirCommand;
 use App\Modules\Medalhao\Registry\IngestorRegistry;
 use Illuminate\Support\ServiceProvider;
 
@@ -18,5 +19,11 @@ class MedalhaoServiceProvider extends ServiceProvider
     {
         // As fontes sao registradas pelos providers de cada modulo de dominio
         // (ex.: SismosServiceProvider), mantendo o kernel agnostico de dominio.
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                IngerirCommand::class,
+            ]);
+        }
     }
 }

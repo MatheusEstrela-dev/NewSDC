@@ -33,3 +33,11 @@ Schedule::command('pae:verificar-notificacoes')
 // A retencao do inbox de notificacoes NAO fica aqui: ela arquiva em vez de
 // apagar, e esta agendada em app/Console/Kernel.php como notificacoes:arquivar,
 // ao lado do webhooks:archive que segue a mesma tratativa.
+
+// Pipeline medalhao. Os jobs vao para a fila "medalhao", consumida por processo
+// proprio (docker/supervisor/medalhao-worker.conf) — o ETL nao disputa worker
+// com notificacao e webhook.
+Schedule::command('medalhao:ingerir sismos')
+    ->everyFifteenMinutes()
+    ->onOneServer()
+    ->runInBackground();
