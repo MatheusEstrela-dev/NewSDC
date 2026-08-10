@@ -106,6 +106,17 @@ export function useBreadcrumb() {
             { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
             { label: 'Estoque', route: null }
         ],
+        'AjudaHumanitaria/Entradas/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Entradas', route: null }
+        ],
+        'AjudaHumanitaria/Entradas/Show': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Entradas', route: 'ajuda-humanitaria.entradas.index' },
+            { label: 'Visualizar', route: null }
+        ],
         'AjudaHumanitaria/Liberacoes/Index': [
             { label: 'Início', route: 'dashboard' },
             { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },

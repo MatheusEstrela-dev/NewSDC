@@ -50,6 +50,11 @@ class DepositoAh extends Model
         return $this->hasMany(LiberacaoAh::class, 'deposito_id');
     }
 
+    public function entradas(): HasMany
+    {
+        return $this->hasMany(EntradaAh::class, 'deposito_id');
+    }
+
     public function transferenciasDeSaida(): HasMany
     {
         return $this->hasMany(TransferenciaAh::class, 'deposito_origem_id');

@@ -2,6 +2,7 @@
 
 use App\Modules\AjudaHumanitaria\Controllers\AnexoPedidoController;
 use App\Modules\AjudaHumanitaria\Controllers\BeneficiarioController;
+use App\Modules\AjudaHumanitaria\Controllers\EntradaAhController;
 use App\Modules\AjudaHumanitaria\Controllers\EstoqueAhController;
 use App\Modules\AjudaHumanitaria\Controllers\ItemPedidoController;
 use App\Modules\AjudaHumanitaria\Controllers\LiberacaoAhController;
@@ -150,6 +151,22 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
             ->middleware('can:humanitaria.saldo.view');
 
         Route::get('/{id}', [TransferenciaAhController::class, 'show'])
+            ->name('show')
+            ->middleware('can:humanitaria.saldo.view')
+            ->whereNumber('id');
+    });
+
+    // Entradas de material nos depositos.
+    Route::prefix('entradas')->name('entradas.')->group(function () {
+        Route::get('/export', [EntradaAhController::class, 'export'])
+            ->name('export')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/', [EntradaAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/{id}', [EntradaAhController::class, 'show'])
             ->name('show')
             ->middleware('can:humanitaria.saldo.view')
             ->whereNumber('id');

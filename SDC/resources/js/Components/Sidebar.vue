@@ -459,6 +459,16 @@
           Estoque
         </NavItem>
         <NavItem
+          v-if="_routes.hasHumanitariaEntradas"
+          :href="route('ajuda-humanitaria.entradas.index')"
+          :active="isRouteActive('ajuda-humanitaria.entradas.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Entradas
+        </NavItem>
+        <NavItem
           v-if="_routes.hasHumanitariaLiberacoes"
           :href="route('ajuda-humanitaria.liberacoes.index')"
           :active="isRouteActive('ajuda-humanitaria.liberacoes.*')"
@@ -649,6 +659,7 @@ const _routes = {
   hasHumanitariaDashboard: route().has('ajuda-humanitaria.dashboard'),
   hasHumanitariaBeneficiarios: route().has('ajuda-humanitaria.beneficiarios.index'),
   hasHumanitariaEstoque: route().has('ajuda-humanitaria.estoque.index'),
+  hasHumanitariaEntradas: route().has('ajuda-humanitaria.entradas.index'),
   hasHumanitariaLiberacoes: route().has('ajuda-humanitaria.liberacoes.index'),
   hasHumanitariaTransferencias: route().has('ajuda-humanitaria.transferencias.index'),
   hasCompdec: route().has('compdec.index'),
@@ -694,6 +705,7 @@ const _activeRoutes = computed(() => {
     'ajuda-humanitaria.pedidos.*': route().current('ajuda-humanitaria.pedidos.*'),
     'ajuda-humanitaria.beneficiarios.*': route().current('ajuda-humanitaria.beneficiarios.*'),
     'ajuda-humanitaria.estoque.*': route().current('ajuda-humanitaria.estoque.*'),
+    'ajuda-humanitaria.entradas.*': route().current('ajuda-humanitaria.entradas.*'),
     'ajuda-humanitaria.liberacoes.*': route().current('ajuda-humanitaria.liberacoes.*'),
     'ajuda-humanitaria.transferencias.*': route().current('ajuda-humanitaria.transferencias.*'),
     'compdec.*': route().current('compdec.*'),
