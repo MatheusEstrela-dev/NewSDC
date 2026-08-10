@@ -33,6 +33,7 @@ const form = useForm({
   data_fim: props.treinamento.data_fim ?? '',
   hora_inicio: props.treinamento.hora_inicio ?? '',
   percentual_frequencia_minimo: props.treinamento.percentual_frequencia_minimo ?? 75,
+  presenca_autoconfirmavel: props.treinamento.presenca_autoconfirmavel ?? false,
 });
 
 function salvar() {
@@ -49,7 +50,7 @@ function cancelar() {
 <template>
   <div class="treinamento-edit-container">
     <PageHeader
-      title="Editar Curso"
+      title="Editar Treinamento"
       :description="treinamento.titulo"
       :icon-image="moduleIcon('treinamento')"
       variant="gradient"
@@ -135,6 +136,16 @@ function cancelar() {
             <TextInput v-model="form.percentual_frequencia_minimo" type="number" />
           </div>
         </div>
+
+        <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+          <input type="checkbox" v-model="form.presenca_autoconfirmavel" class="mt-0.5 rounded border-slate-300 dark:border-slate-600" />
+          <span>
+            Permitir que o próprio inscrito confirme a presença dele
+            <span class="block text-xs text-slate-500 dark:text-slate-400">
+              Sem isso, treinamentos presenciais só têm presença confirmada pelo staff (QR Code ou manual). Cursos online sempre permitem autoconfirmação.
+            </span>
+          </span>
+        </label>
       </div>
 
       <footer class="mt-6 flex items-center justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700/50">

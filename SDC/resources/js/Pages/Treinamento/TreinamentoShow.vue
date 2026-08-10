@@ -196,7 +196,7 @@ function copiarLinkPublico() {
                 {{ minhaInscricao.status_label }}
               </Badge>
               <Button
-                v-if="minhaInscricao.status === 'APROVADA' && treinamento.tipo === 'ONLINE' && treinamento.presenca_liberada"
+                v-if="minhaInscricao.status === 'APROVADA' && (treinamento.tipo === 'ONLINE' || treinamento.presenca_autoconfirmavel) && treinamento.presenca_liberada"
                 variant="success"
                 size="sm"
                 @click="confirmarPresenca"

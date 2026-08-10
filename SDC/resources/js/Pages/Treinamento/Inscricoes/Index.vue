@@ -1,15 +1,17 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { router, Link } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import axios from 'axios';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import InscricoesTable from '@/Components/Organisms/Treinamento/InscricoesTable.vue';
 import QrScanner from '@/Components/Molecules/Treinamento/QrScanner.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import { usePermissions } from '@/Composables/usePermissions';
 import { useToast } from '@/Composables/useToast';
 import { useOfflinePresenca } from '@/Composables/treinamento/useOfflinePresenca';
@@ -157,18 +159,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-    <Link :href="route('treinamentos.show', treinamento.id)" class="mb-4 inline-flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-      </svg>
-      Voltar para {{ treinamento.titulo }}
-    </Link>
-
-    <CardBase class="p-6 mb-6">
-      <Heading :level="1" class="text-xl font-bold mb-1">Inscritos e Presença</Heading>
-      <Text size="sm" color="muted">{{ treinamento.titulo }}</Text>
-    </CardBase>
+  <div class="treinamento-inscricoes-container">
+    <PageHeader
+      title="Inscritos e Presença"
+      :description="treinamento.titulo"
+      :icon-image="moduleIcon('treinamento')"
+      variant="gradient"
+    />
 
     <CardBase v-if="chamadaHabilitada" class="p-6 mb-6">
       <div class="flex items-center justify-between mb-3">
@@ -216,3 +213,9 @@ onUnmounted(() => {
     </CardBase>
   </div>
 </template>
+
+<style scoped>
+.treinamento-inscricoes-container {
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
+}
+</style>

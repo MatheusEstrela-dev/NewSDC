@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Requests;
 
+use App\Modules\Decretacoes\Enums\Redec;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreProcessoRequest extends FormRequest
 {
@@ -26,7 +28,9 @@ class StoreProcessoRequest extends FormRequest
             'status'                            => 'nullable|string|max:255',
             'analista_id'                       => 'nullable|string|max:255',
             'n_protocolo_fide'                  => 'nullable|string|max:50',
-            'redec_id'                          => 'nullable|integer|min:1|max:14',
+            // Lista derivada do enum: um `max:` fixo travou o cadastro nas 14
+            // primeiras REDECs e rejeitava as regionais 15 a 19.
+            'redec_id'                          => ['nullable', 'integer', Rule::in(Redec::ids())],
             'n_decreto_municipal'               => 'nullable|string|max:255',
             'data_decreto_municipal'            => 'nullable|date',
             'data_publicacao_decreto_municipal' => 'nullable|date',

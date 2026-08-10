@@ -90,17 +90,23 @@ class PresencaService
     }
 
     /**
-     * Autoconfirmacao (sem QR) para treinamentos ONLINE - o proprio inscrito
-     * confirma a presenca dele mesmo, direto na tela (RF03: QR e so pra
-     * presencial). Marca a aula com data_prevista = hoje, ou a primeira aula
-     * cadastrada se nenhuma bater com a data de hoje.
+     * Autoconfirmacao (sem QR) - o proprio inscrito confirma a presenca dele
+     * mesmo, direto na tela. Sempre permitida para treinamentos ONLINE (nao ha
+     * check-in fisico possivel); para PRESENCIAL so quando o curso foi
+     * marcado como `presenca_autoconfirmavel` (alguns cursos confiam no
+     * proprio inscrito, outros exigem check-in do staff via QR/manual - ver
+     * TreinamentoLiberarPresencaController). Marca a aula com data_prevista =
+     * hoje, ou a primeira aula cadastrada se nenhuma bater com a data de hoje.
      */
     public function autoconfirmar(Inscricao $inscricao): Frequencia
     {
         $inscricao->loadMissing('treinamento.modulos');
 
-        if ($inscricao->treinamento->tipo !== TipoTreinamento::ONLINE) {
-            throw new \DomainException('Autoconfirmacao de presenca e exclusiva para treinamentos online.');
+        $treinamento = $inscricao->treinamento;
+        $podeAutoconfirmar = $treinamento->tipo === TipoTreinamento::ONLINE || $treinamento->presenca_autoconfirmavel;
+
+        if (!$podeAutoconfirmar) {
+            throw new \DomainException('Este treinamento exige confirmacao de presenca pelo staff (QR Code ou manual).');
         }
 
         $modulo = $inscricao->treinamento->modulos

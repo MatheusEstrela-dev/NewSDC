@@ -5,13 +5,23 @@ declare(strict_types=1);
 namespace App\Modules\Decretacoes\Enums;
 
 /**
- * As 14 Regioes de Defesa Civil (REDEC) de Minas Gerais.
+ * As 19 Regioes de Defesa Civil (REDEC) de Minas Gerais.
  *
  * Os valores sao os mesmos ids do legado (`cedec_municipio.redec_id` e
  * `rat_redec.id`), o que permite fazer a correspondencia municipio -> REDEC
  * direto pelo dump legado, sem tabela de apoio adicional.
  *
- * Substitui o antigo MockRedec (que listava apenas 5 regioes ficticias).
+ * FONTE: relacao de regionais publicada pela propria CEDEC em
+ * sistema.defesacivil.mg.gov.br (acao usuarioRegionaisSite). Cada REDEC
+ * corresponde a uma Regiao da Policia Militar (RPM) e leva o nome da cidade
+ * sede - por isso `regiao()` devolve a sede, e nao a antiga divisao por
+ * mesorregiao.
+ *
+ * ATENCAO: a lista anterior tinha apenas 14 casos e usava nomes de mesorregiao
+ * ("Campo das Vertentes", "Triangulo Norte"...) que nao batiam com a divisao
+ * vigente. As REDECs 15 a 19 simplesmente nao existiam para o sistema: nao
+ * apareciam nas listas suspensas, nao podiam ser filtradas nem exportadas, e
+ * `labelFor()` devolvia null para os processos gravados com elas.
  */
 enum Redec: int
 {
@@ -29,6 +39,11 @@ enum Redec: int
     case REDEC_12 = 12;
     case REDEC_13 = 13;
     case REDEC_14 = 14;
+    case REDEC_15 = 15;
+    case REDEC_16 = 16;
+    case REDEC_17 = 17;
+    case REDEC_18 = 18;
+    case REDEC_19 = 19;
 
     /** Sigla curta (ex: "3ª REDEC"). */
     public function sigla(): string
@@ -36,28 +51,45 @@ enum Redec: int
         return $this->value . 'ª REDEC';
     }
 
-    /** Regiao administrativa atendida. */
-    public function regiao(): string
+    /** Cidade sede da regional (mesma sede da RPM correspondente). */
+    public function sede(): string
     {
         return match ($this) {
-            self::REDEC_1  => 'Metropolitana de Belo Horizonte',
-            self::REDEC_2  => 'Vale do Paraopeba',
-            self::REDEC_3  => 'Campo das Vertentes',
-            self::REDEC_4  => 'Zona da Mata',
-            self::REDEC_5  => 'Triangulo Norte',
-            self::REDEC_6  => 'Triangulo Sul',
-            self::REDEC_7  => 'Norte de Minas',
-            self::REDEC_8  => 'Vale do Rio Doce',
-            self::REDEC_9  => 'Mucuri',
-            self::REDEC_10 => 'Oeste de Minas',
-            self::REDEC_11 => 'Sul de Minas',
-            self::REDEC_12 => 'Circuito das Aguas',
-            self::REDEC_13 => 'Serrana do Sul',
-            self::REDEC_14 => 'Jequitinhonha',
+            self::REDEC_1  => 'Belo Horizonte',
+            self::REDEC_2  => 'Contagem',
+            self::REDEC_3  => 'Santa Luzia',
+            self::REDEC_4  => 'Juiz de Fora',
+            self::REDEC_5  => 'Uberaba',
+            self::REDEC_6  => 'Lavras',
+            self::REDEC_7  => 'Divinópolis',
+            self::REDEC_8  => 'Governador Valadares',
+            self::REDEC_9  => 'Uberlândia',
+            self::REDEC_10 => 'Patos de Minas',
+            self::REDEC_11 => 'Montes Claros',
+            self::REDEC_12 => 'Ipatinga',
+            self::REDEC_13 => 'Barbacena',
+            self::REDEC_14 => 'Curvelo',
+            self::REDEC_15 => 'Teófilo Otoni',
+            self::REDEC_16 => 'Unaí',
+            self::REDEC_17 => 'Pouso Alegre',
+            self::REDEC_18 => 'Poços de Caldas',
+            self::REDEC_19 => 'Sete Lagoas',
         };
     }
 
-    /** Rotulo exibido nas listas suspensas (ex: "3ª REDEC - Campo das Vertentes"). */
+    /** Regiao atendida (identificada pela cidade sede). */
+    public function regiao(): string
+    {
+        return $this->sede();
+    }
+
+    /** Regiao da Policia Militar correspondente (ex: "9ª RPM"). */
+    public function rpm(): string
+    {
+        return $this->value . 'ª RPM';
+    }
+
+    /** Rotulo exibido nas listas suspensas (ex: "3ª REDEC - Santa Luzia"). */
     public function label(): string
     {
         return $this->sigla() . ' - ' . $this->regiao();
@@ -66,7 +98,7 @@ enum Redec: int
     /**
      * Opcoes para <select> (contrato id/label usado pelos FormSelect).
      *
-     * @return array<int, array{id: int, label: string, sigla: string}>
+     * @return array<int, array{id: int, label: string, sigla: string, sede: string, rpm: string}>
      */
     public static function toSelectOptions(): array
     {
@@ -75,9 +107,21 @@ enum Redec: int
                 'id'    => $case->value,
                 'label' => $case->label(),
                 'sigla' => $case->sigla(),
+                'sede'  => $case->sede(),
+                'rpm'   => $case->rpm(),
             ],
             self::cases()
         );
+    }
+
+    /**
+     * Ids validos, para as regras de validacao acompanharem o enum.
+     *
+     * @return array<int, int>
+     */
+    public static function ids(): array
+    {
+        return array_column(self::cases(), 'value');
     }
 
     /** Rotulo a partir de um id cru (null quando desconhecido). */

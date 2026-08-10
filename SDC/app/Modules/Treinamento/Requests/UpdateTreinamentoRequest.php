@@ -28,6 +28,7 @@ class UpdateTreinamentoRequest extends FormRequest
             'hora_inicio' => ['nullable', 'date_format:H:i'],
             'numero_vagas' => ['nullable', 'integer', 'min:1'],
             'percentual_frequencia_minimo' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'presenca_autoconfirmavel' => ['nullable', 'boolean'],
         ];
     }
 }

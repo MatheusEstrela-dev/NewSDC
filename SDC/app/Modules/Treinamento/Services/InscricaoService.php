@@ -62,14 +62,10 @@ class InscricaoService extends BaseService
             'data_inscricao' => now(),
         ]);
 
-        // RF03: QR Code por e-mail so faz sentido para presencial - online
-        // confirma presenca direto na tela (ver PresencaService::autoconfirmar()).
-        if ($treinamento->tipo === TipoTreinamento::PRESENCIAL && $inscrito->email) {
-            $inscricao->setRelation('treinamento', $treinamento);
-            $inscricao->setRelation('inscrito', $inscrito);
-
-            Mail::to($inscrito->email)->queue(new InscricaoConfirmadaMail($inscricao));
-        }
+        // O QR Code (o "ingresso") so sai por e-mail quando a inscricao e
+        // aprovada (ver aprovar() abaixo) - antes disso a inscricao ainda pode
+        // ser reprovada, e mandar o ingresso de uma inscricao pendente confunde
+        // o cidadao (ingresso na mao antes de ter vaga confirmada).
 
         // Avisa o dono do treinamento pela trilha do protocolo. Relacionado e a
         // acao certa: um terceiro acrescentou conteudo, nada mudou de situacao.
@@ -97,6 +93,13 @@ class InscricaoService extends BaseService
             'aprovado_por_id' => $aprovador->id,
             'observacoes' => $observacoes,
         ]);
+
+        // RF03: QR Code por e-mail so faz sentido para presencial - online
+        // confirma presenca direto na tela (ver PresencaService::autoconfirmar()).
+        $inscricao->loadMissing(['treinamento', 'inscrito']);
+        if ($inscricao->treinamento->tipo === TipoTreinamento::PRESENCIAL && $inscricao->inscrito?->email) {
+            Mail::to($inscricao->inscrito->email)->queue(new InscricaoConfirmadaMail($inscricao));
+        }
     }
 
     public function reprovar(Inscricao $inscricao, User $aprovador, string $observacoes): void

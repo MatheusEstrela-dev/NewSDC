@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
-import CidadaoPortalLayout from '@/Layouts/CidadaoPortalLayout.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
@@ -9,7 +9,7 @@ import Text from '@/Components/Atoms/Typography/Text.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import { useToast } from '@/Composables/useToast';
 
-defineOptions({ layout: CidadaoPortalLayout });
+defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   treinamento: { type: Object, required: true },
@@ -115,7 +115,7 @@ function confirmarPresenca() {
           </div>
 
           <Button
-            v-if="minhaInscricao.status === 'APROVADA' && treinamento.tipo === 'ONLINE' && treinamento.presenca_liberada"
+            v-if="minhaInscricao.status === 'APROVADA' && (treinamento.tipo === 'ONLINE' || treinamento.presenca_autoconfirmavel) && treinamento.presenca_liberada"
             variant="success"
             @click="confirmarPresenca"
           >

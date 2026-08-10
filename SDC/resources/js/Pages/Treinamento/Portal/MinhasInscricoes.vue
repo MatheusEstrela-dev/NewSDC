@@ -1,14 +1,14 @@
 <script setup>
 import { computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import CidadaoPortalLayout from '@/Layouts/CidadaoPortalLayout.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
 import Heading from '@/Components/Atoms/Typography/Heading.vue';
 import Text from '@/Components/Atoms/Typography/Text.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 
-defineOptions({ layout: CidadaoPortalLayout });
+defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   inscricoes: { type: Object, required: true },

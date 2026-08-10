@@ -42,6 +42,7 @@ class Treinamento extends Model implements Rastreavel
         'presenca_liberada',
         'presenca_liberada_em',
         'presenca_liberada_por',
+        'presenca_autoconfirmavel',
         'finalizado_em',
     ];
 
@@ -53,6 +54,7 @@ class Treinamento extends Model implements Rastreavel
         'data_fim' => 'date',
         'percentual_frequencia_minimo' => 'decimal:2',
         'presenca_liberada' => 'boolean',
+        'presenca_autoconfirmavel' => 'boolean',
         'publicado_em' => 'datetime',
         'presenca_liberada_em' => 'datetime',
         'finalizado_em' => 'datetime',
