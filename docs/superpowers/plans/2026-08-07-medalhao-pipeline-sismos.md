@@ -21,6 +21,12 @@
 - Nenhum job novo entra nas filas `critical,high,high-throughput,webhooks,default,low`. Tudo do pipeline vai para a fila `medalhao`.
 - Commits seguem gitmoji: `<emoji> tipo(escopo): descricao em pt-BR`. Escopo `medalhao` ou `sismos`.
 - **Nao incluir trailer `Co-Authored-By`** nos commits.
+- **Arquivos de teste NAO entram nos commits.** `SDC/.gitignore` linha 39 ignora
+  `tests`, e a regra de ouro 10 do projeto diz o mesmo. Os 20 testes hoje
+  rastreados sao anteriores a essa regra. Os testes deste plano existem no
+  worktree como motor do TDD e devem passar, mas os comandos `git add` de cada
+  task incluem apenas codigo de producao. Onde um passo de commit listar arquivo
+  sob `tests/`, ignore essa parte do comando.
 - Migrations novas seguem o padrao `2026_08_07_NNNNNN_descricao.php`.
 - Testes que dependem de schema nomeado, PostGIS ou matview sao pgsql-only e devem pular fora do Postgres com `markTestSkipped`.
 
