@@ -182,6 +182,10 @@ return [
                 'materiais' => 'humanitaria.materiais.manage',
                 'parametros' => 'humanitaria.parametros.manage',
                 'saldo' => 'humanitaria.saldo.view',
+                // Escrita no ledger: entrada, transferencia e liberacao de
+                // material. Separado de saldo.view de proposito, porque ler o
+                // estoque e mexer nele sao atos diferentes para a auditoria.
+                'movimentar' => 'humanitaria.estoque.movimentar',
             ],
         ],
         'TDAP' => [
@@ -546,6 +550,7 @@ return [
             'humanitaria.materiais.manage',
             'humanitaria.parametros.manage',
             'humanitaria.saldo.view',
+            'humanitaria.estoque.movimentar',
             // TDAP - gestao completa (sem delete)
             'tdap.dashboard.view',
             'tdap.prestadores.view',

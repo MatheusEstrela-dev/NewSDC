@@ -167,6 +167,12 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
             ->name('index')
             ->middleware('can:humanitaria.saldo.view');
 
+        // Escrita: lanca no ledger e atualiza o saldo, por isso exige
+        // movimentar, e nao a permissao de consulta.
+        Route::post('/', [EntradaAhController::class, 'store'])
+            ->name('store')
+            ->middleware('can:humanitaria.estoque.movimentar');
+
         Route::get('/{id}', [EntradaAhController::class, 'show'])
             ->name('show')
             ->middleware('can:humanitaria.saldo.view')

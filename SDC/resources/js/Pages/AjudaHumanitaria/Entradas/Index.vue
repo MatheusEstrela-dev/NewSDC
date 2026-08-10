@@ -9,22 +9,33 @@
       :fontes="fontes"
       :filtros="filtros"
       :ordenacao="ordenacao"
+      :formulario="formulario"
       @filtrar="filtrar"
+      @nova="mostrarFormulario = true"
       @ordenar="ordenar"
       @pagina="irParaPagina"
       @ver="ver"
       @exportar="exportar"
     />
+
+    <EntradaAhFormModal
+      v-if="formulario"
+      :show="mostrarFormulario"
+      :opcoes="formulario"
+      @close="mostrarFormulario = false"
+    />
   </AuthenticatedLayout>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 // ZiggyVue registra route() apenas em globalProperties, o que so alcanca o
 // template. Em <script setup> a funcao precisa ser importada.
 import { route } from 'ziggy-js';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import EntradaAhIndexTemplate from '@/Templates/AjudaHumanitaria/EntradaAhIndexTemplate.vue';
+import EntradaAhFormModal from '@/Components/Organisms/AjudaHumanitaria/EntradaAhFormModal.vue';
 
 const props = defineProps({
   entradas: { type: Object, default: () => ({ data: [], meta: null }) },
@@ -33,7 +44,10 @@ const props = defineProps({
   fontes: { type: Array, default: () => [] },
   filtros: { type: Object, default: () => ({}) },
   ordenacao: { type: Object, default: () => ({}) },
+  formulario: { type: Object, default: null },
 });
+
+const mostrarFormulario = ref(false);
 
 const rotaIndex = 'ajuda-humanitaria.entradas.index';
 

@@ -57,6 +57,9 @@ class AjudaHumanitariaRolesSeeder extends Seeder
         'humanitaria.beneficiarios.edit',
         'humanitaria.beneficiarios.export',
         'humanitaria.beneficiarios.print',
+        // Registrar entrada de material e operacao de deposito, nao decisao
+        // sobre o pedido: fica com quem toca o dia a dia. O Diretor herda.
+        'humanitaria.estoque.movimentar',
     ];
 
     /**

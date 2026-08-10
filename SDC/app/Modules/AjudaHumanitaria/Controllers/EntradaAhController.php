@@ -8,18 +8,24 @@ use App\Http\Controllers\Controller;
 use App\Modules\AjudaHumanitaria\Models\DepositoAh;
 use App\Modules\AjudaHumanitaria\Models\EntradaAh;
 use App\Modules\AjudaHumanitaria\Models\FonteRecursoAh;
+use App\Modules\AjudaHumanitaria\Models\FornecedorAh;
+use App\Modules\AjudaHumanitaria\Models\MaterialAh;
+use App\Modules\AjudaHumanitaria\Requests\StoreEntradaAhRequest;
+use App\Modules\AjudaHumanitaria\Services\RegistrarEntradaMaterial;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Consulta das entradas de material nos depositos.
+ * Entradas de material nos depositos.
  *
- * Somente leitura, como as demais telas do estoque migrado: registrar entrada
- * pelo sistema novo tem de lancar no ledger, e isso passa por
- * RegistrarMovimentoEstoque.
+ * Consulta do historico migrado, mais o primeiro caminho de escrita do estoque
+ * pelo sistema novo. Registrar entrada nao e gravar linha: tem de lancar no
+ * ledger junto, e por isso a operacao vive em RegistrarEntradaMaterial, nao
+ * aqui.
  */
 class EntradaAhController extends Controller
 {
@@ -64,7 +70,24 @@ class EntradaAhController extends Controller
             'fontes'       => $this->fontesUsadas(),
             'filtros'      => $filtros,
             'ordenacao'    => ['sort' => $filtros['sort'] ?? 'recebido', 'direction' => $filtros['direction']],
+            // Listas do formulario de nova entrada. Vao nulas para quem so
+            // consulta: sao quatro consultas que nao servem a essa tela.
+            'formulario'   => $request->user()?->can('humanitaria.estoque.movimentar')
+                ? $this->opcoesDoFormulario()
+                : null,
         ]);
+    }
+
+    /**
+     * Registra o recebimento e lanca no ledger, em transacao unica.
+     */
+    public function store(StoreEntradaAhRequest $request, RegistrarEntradaMaterial $servico): RedirectResponse
+    {
+        $entrada = $servico->registrar($request->validated(), $request->user()?->id);
+
+        return redirect()
+            ->route('ajuda-humanitaria.entradas.show', $entrada->id)
+            ->with('success', 'Entrada registrada e saldo atualizado.');
     }
 
     public function show(int $id): Response
@@ -260,6 +283,56 @@ class EntradaAhController extends Controller
                 'sigla' => $d->abreviacao,
             ])
             ->all();
+    }
+
+    /**
+     * Tudo que o formulario de nova entrada precisa escolher.
+     *
+     * Diferente das listas de filtro, aqui entram os cadastros inteiros: um
+     * deposito recem-criado ainda nao tem entrada, e filtrar por uso deixaria
+     * o usuario sem conseguir lancar nele.
+     *
+     * @return array<string, mixed>
+     */
+    private function opcoesDoFormulario(): array
+    {
+        return [
+            'depositos' => DepositoAh::query()
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'abreviacao'])
+                ->map(static fn (DepositoAh $d): array => [
+                    'id'    => $d->id,
+                    'nome'  => $d->nome,
+                    'sigla' => $d->abreviacao,
+                ])
+                ->all(),
+
+            // Somente o que esta disponivel para pedido: material fora da lista
+            // saiu de circulacao, e receber nele reabriria o item pela porta
+            // dos fundos.
+            'materiais' => MaterialAh::query()
+                ->disponiveisParaPedido()
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'unidade_medida'])
+                ->map(static fn (MaterialAh $m): array => [
+                    'id'      => $m->id,
+                    'nome'    => $m->nome,
+                    'unidade' => $m->unidade_medida,
+                ])
+                ->all(),
+
+            'fontes' => FonteRecursoAh::query()
+                ->orderBy('nome')
+                ->get(['id', 'nome'])
+                ->map(static fn (FonteRecursoAh $f): array => ['id' => $f->id, 'nome' => $f->nome])
+                ->all(),
+
+            'fornecedores' => FornecedorAh::query()
+                ->orderBy('nome')
+                ->get(['id', 'nome'])
+                ->map(static fn (FornecedorAh $f): array => ['id' => $f->id, 'nome' => $f->nome])
+                ->all(),
+        ];
     }
 
     /**

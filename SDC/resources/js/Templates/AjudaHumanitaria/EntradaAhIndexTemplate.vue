@@ -2,13 +2,26 @@
   <div class="space-y-4 sm:space-y-6">
     <PageHeader
       title="Entradas de Material"
-      description="Recebimentos nos depósitos, migrados do sistema anterior."
+      description="Recebimentos nos depósitos: histórico migrado e lançamentos novos."
       :icon="UploadIcon"
       :icon-image="moduleIcon('ajuda-humanitaria')"
       variant="gradient"
     >
       <template #actions>
         <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <!-- So aparece para quem pode movimentar estoque: o controller manda
+               as listas do formulario nulas para os demais. -->
+          <Button
+            v-if="podeMovimentar"
+            variant="primary"
+            size="md"
+            :icon="PlusIcon"
+            icon-position="left"
+            @click="$emit('nova')"
+          >
+            <span class="hidden sm:inline">Nova entrada</span>
+          </Button>
+
           <Button variant="success" size="md" :icon="DownloadIcon" icon-position="left" @click="mostrarModalExport = true">
             <span class="hidden sm:inline">Exportar</span>
           </Button>
@@ -115,6 +128,7 @@ import Button from '@/Components/Atoms/Button/Button.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import UploadIcon from '@/Components/Icons/UploadIcon.vue';
 import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
+import PlusIcon from '@/Components/Icons/PlusIcon.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
@@ -132,9 +146,13 @@ const props = defineProps({
   fontes: { type: Array, default: () => [] },
   filtros: { type: Object, default: () => ({}) },
   ordenacao: { type: Object, default: () => ({ sort: 'recebido', direction: 'desc' }) },
+  /** Listas do formulario de nova entrada; nulo para quem so consulta. */
+  formulario: { type: Object, default: null },
 });
 
-const emit = defineEmits(['filtrar', 'pagina', 'ver', 'exportar', 'ordenar']);
+const emit = defineEmits(['filtrar', 'pagina', 'ver', 'exportar', 'ordenar', 'nova']);
+
+const podeMovimentar = computed(() => props.formulario !== null);
 
 // O backend fala sort/direction; o SortableHeader fala ordenadoPor/direcao.
 const ordenacaoUi = computed(() => ({
