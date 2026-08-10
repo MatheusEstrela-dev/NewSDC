@@ -7,11 +7,10 @@
       :icon-image="moduleIcon('ajuda-humanitaria')"
       variant="gradient"
     >
+      <!-- Sem botao de voltar: a barra de breadcrumb ja traz um, e repetir a
+           mesma acao no cabecalho so disputa atencao com a situacao. -->
       <template #actions>
-        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-          <Badge :variant="liberacao.status_cor" size="md">{{ liberacao.status_label }}</Badge>
-          <Button variant="secondary" size="md" @click="$emit('voltar')">Voltar</Button>
-        </div>
+        <Badge :variant="liberacao.status_cor" size="md">{{ liberacao.status_label }}</Badge>
       </template>
     </PageHeader>
 
@@ -124,7 +123,6 @@
 <script setup>
 import { computed, h } from 'vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
 import ArchiveBoxIcon from '@/Components/Icons/ArchiveBoxIcon.vue';
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
@@ -137,8 +135,6 @@ import { moduleIcon } from '@/Support/moduleIcons';
 const props = defineProps({
   liberacao: { type: Object, required: true },
 });
-
-defineEmits(['voltar']);
 
 const numero = new Intl.NumberFormat('pt-BR');
 

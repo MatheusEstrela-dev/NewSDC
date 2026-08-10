@@ -64,6 +64,71 @@ export function useBreadcrumb() {
             { label: 'Visualizar', route: null }
         ],
 
+        // Ajuda Humanitaria. Mapeado explicitamente porque o construtor
+        // automatico deixa route: null em todo item intermediario, e o botao
+        // Voltar percorre o breadcrumb procurando o primeiro item com rota:
+        // sem estas entradas ele pulava a listagem e caia no Inicio. De quebra,
+        // os rotulos ganham acento, que o humanize() da URL nao devolve.
+        'AjudaHumanitaria/Dashboard': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: null }
+        ],
+        'AjudaHumanitaria/Pedidos/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Pedidos', route: null }
+        ],
+        'AjudaHumanitaria/Pedidos/Create': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Pedidos', route: 'ajuda-humanitaria.pedidos.index' },
+            { label: 'Novo', route: null }
+        ],
+        'AjudaHumanitaria/Pedidos/Show': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Pedidos', route: 'ajuda-humanitaria.pedidos.index' },
+            { label: 'Visualizar', route: null }
+        ],
+        'AjudaHumanitaria/Beneficiarios/BeneficiarioIndex': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Beneficiários', route: null }
+        ],
+        'AjudaHumanitaria/Beneficiarios/BeneficiarioShow': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Beneficiários', route: 'ajuda-humanitaria.beneficiarios.index' },
+            { label: 'Visualizar', route: null }
+        ],
+        'AjudaHumanitaria/Estoque/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Estoque', route: null }
+        ],
+        'AjudaHumanitaria/Liberacoes/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Liberações', route: null }
+        ],
+        'AjudaHumanitaria/Liberacoes/Show': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Liberações', route: 'ajuda-humanitaria.liberacoes.index' },
+            { label: 'Visualizar', route: null }
+        ],
+        'AjudaHumanitaria/Transferencias/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Transferências', route: null }
+        ],
+        'AjudaHumanitaria/Transferencias/Show': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Transferências', route: 'ajuda-humanitaria.transferencias.index' },
+            { label: 'Visualizar', route: null }
+        ],
+
         // Admin / Permissions
         'Admin/Permissions/Users/Index': [
             { label: 'Início', route: 'dashboard' },

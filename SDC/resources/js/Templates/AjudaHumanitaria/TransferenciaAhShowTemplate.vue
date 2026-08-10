@@ -7,11 +7,10 @@
       :icon-image="moduleIcon('ajuda-humanitaria')"
       variant="gradient"
     >
+      <!-- Sem botao de voltar: a barra de breadcrumb ja traz um, e repetir a
+           mesma acao no cabecalho so disputa atencao com a situacao. -->
       <template #actions>
-        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-          <Badge :variant="transferencia.status_cor" size="md">{{ transferencia.status_label }}</Badge>
-          <Button variant="secondary" size="md" @click="$emit('voltar')">Voltar</Button>
-        </div>
+        <Badge :variant="transferencia.status_cor" size="md">{{ transferencia.status_label }}</Badge>
       </template>
     </PageHeader>
 
@@ -92,7 +91,6 @@
 <script setup>
 import { h } from 'vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
-import Button from '@/Components/Atoms/Button/Button.vue';
 import ArchiveBoxIcon from '@/Components/Icons/ArchiveBoxIcon.vue';
 import ArrowsRightLeftIcon from '@/Components/Icons/ArrowsRightLeftIcon.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
@@ -104,8 +102,6 @@ import { moduleIcon } from '@/Support/moduleIcons';
 defineProps({
   transferencia: { type: Object, required: true },
 });
-
-defineEmits(['voltar']);
 
 const numero = new Intl.NumberFormat('pt-BR');
 
