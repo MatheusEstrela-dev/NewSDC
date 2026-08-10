@@ -6,6 +6,7 @@ use App\Modules\AjudaHumanitaria\Controllers\EntradaAhController;
 use App\Modules\AjudaHumanitaria\Controllers\EstoqueAhController;
 use App\Modules\AjudaHumanitaria\Controllers\ItemPedidoController;
 use App\Modules\AjudaHumanitaria\Controllers\LiberacaoAhController;
+use App\Modules\AjudaHumanitaria\Controllers\MaterialAhController;
 use App\Modules\AjudaHumanitaria\Controllers\ParecerController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhDashboardController;
@@ -169,6 +170,37 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
         Route::get('/{id}', [EntradaAhController::class, 'show'])
             ->name('show')
             ->middleware('can:humanitaria.saldo.view')
+            ->whereNumber('id');
+    });
+
+    // Catalogo de material (RN-07). Unica tela do estoque que escreve, porque
+    // cadastro de material nao movimenta saldo e nao passa pelo ledger.
+    //
+    // Toda a rota usa humanitaria.materiais.manage: o catalogo em
+    // config/permissions.php tem um slug so para o recurso, e criar um
+    // .view separado deixaria a tela invisivel ate alguem decidir quem o
+    // recebe.
+    Route::prefix('materiais')->name('materiais.')->group(function () {
+        Route::get('/export', [MaterialAhController::class, 'export'])
+            ->name('export')
+            ->middleware('can:humanitaria.materiais.manage');
+
+        Route::get('/', [MaterialAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.materiais.manage');
+
+        Route::post('/', [MaterialAhController::class, 'store'])
+            ->name('store')
+            ->middleware('can:humanitaria.materiais.manage');
+
+        Route::put('/{id}', [MaterialAhController::class, 'update'])
+            ->name('update')
+            ->middleware('can:humanitaria.materiais.manage')
+            ->whereNumber('id');
+
+        Route::delete('/{id}', [MaterialAhController::class, 'destroy'])
+            ->name('destroy')
+            ->middleware('can:humanitaria.materiais.manage')
             ->whereNumber('id');
     });
 

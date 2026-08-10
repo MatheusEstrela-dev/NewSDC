@@ -106,6 +106,11 @@ export function useBreadcrumb() {
             { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
             { label: 'Estoque', route: null }
         ],
+        'AjudaHumanitaria/Materiais/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Materiais', route: null }
+        ],
         'AjudaHumanitaria/Entradas/Index': [
             { label: 'Início', route: 'dashboard' },
             { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },

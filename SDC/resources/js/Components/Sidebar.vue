@@ -459,6 +459,16 @@
           Estoque
         </NavItem>
         <NavItem
+          v-if="_routes.hasHumanitariaMateriais && canManageMateriaisAh"
+          :href="route('ajuda-humanitaria.materiais.index')"
+          :active="isRouteActive('ajuda-humanitaria.materiais.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Materiais
+        </NavItem>
+        <NavItem
           v-if="_routes.hasHumanitariaEntradas"
           :href="route('ajuda-humanitaria.entradas.index')"
           :active="isRouteActive('ajuda-humanitaria.entradas.*')"
@@ -659,6 +669,7 @@ const _routes = {
   hasHumanitariaDashboard: route().has('ajuda-humanitaria.dashboard'),
   hasHumanitariaBeneficiarios: route().has('ajuda-humanitaria.beneficiarios.index'),
   hasHumanitariaEstoque: route().has('ajuda-humanitaria.estoque.index'),
+  hasHumanitariaMateriais: route().has('ajuda-humanitaria.materiais.index'),
   hasHumanitariaEntradas: route().has('ajuda-humanitaria.entradas.index'),
   hasHumanitariaLiberacoes: route().has('ajuda-humanitaria.liberacoes.index'),
   hasHumanitariaTransferencias: route().has('ajuda-humanitaria.transferencias.index'),
@@ -799,6 +810,12 @@ const canSeeDecretacoes = computed(() => {
 
 const canSeeAjudaHumanitaria = computed(() => {
   return hasPermission(['humanitaria.beneficiarios.view']);
+});
+
+// O catalogo tem um slug so, de escrita: quem nao gerencia material nao tem o
+// que fazer na tela, e sem esta checagem o item levaria a um 403.
+const canManageMateriaisAh = computed(() => {
+  return hasPermission(['humanitaria.materiais.manage']);
 });
 
 const canSeeOrgaos = computed(() => {
