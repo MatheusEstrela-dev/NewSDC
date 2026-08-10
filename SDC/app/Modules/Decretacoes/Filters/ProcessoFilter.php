@@ -517,7 +517,10 @@ class ProcessoFilter
      */
     protected static function getMunicipiosOptions(): array
     {
-        return Cache::remember('decretacoes.filter.municipios.v4', 86400, function () {
+        // v5: a v4 foi gravada quando o enum Redec so conhecia 14 regionais, e
+        // por isso guardou `redec_sigla`/`redec_label` nulos para todo municipio
+        // das REDECs 15 a 19 - por 24h, mesmo depois do enum corrigido.
+        return Cache::remember('decretacoes.filter.municipios.v5', 86400, function () {
             $redecPorMunicipio = self::getRedecPorMunicipioId();
 
             // Os 853 municipios de Minas Gerais, sempre completos: a REDEC
@@ -728,7 +731,7 @@ class ProcessoFilter
      */
     public static function clearCache(): void
     {
-        Cache::forget('decretacoes.filter.municipios.v4');
+        Cache::forget('decretacoes.filter.municipios.v5');
         Cache::forget('decretacoes.filter.redec_por_municipio.v1');
         Cache::forget('decretacoes.filter.analistas');
         Cache::forget('decretacoes.filter.status_processo.v1');
