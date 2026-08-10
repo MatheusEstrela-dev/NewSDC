@@ -64,10 +64,12 @@
         <table class="w-full text-sm text-left">
           <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
             <tr class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              <th scope="col" class="px-4 py-3 font-medium">Depósito</th>
-              <th scope="col" class="px-4 py-3 font-medium">Material</th>
-              <th scope="col" class="px-4 py-3 font-medium text-right">Saldo</th>
-              <th scope="col" class="px-4 py-3 font-medium">Unidade</th>
+              <SortableHeader coluna="deposito" v-bind="ordenacaoUi" @ordenar="ordenar">Depósito</SortableHeader>
+              <SortableHeader coluna="material" v-bind="ordenacaoUi" @ordenar="ordenar">Material</SortableHeader>
+              <SortableHeader coluna="saldo" direcao-inicial="desc" classe="text-right" v-bind="ordenacaoUi" @ordenar="ordenar">
+                Saldo
+              </SortableHeader>
+              <SortableHeader coluna="unidade" v-bind="ordenacaoUi" @ordenar="ordenar">Unidade</SortableHeader>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
@@ -102,7 +104,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import ArchiveBoxIcon from '@/Components/Icons/ArchiveBoxIcon.vue';
 import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
@@ -111,20 +113,32 @@ import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import SortableHeader from '@/Components/Molecules/Table/SortableHeader.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import EstoqueAhFiltersSection from '@/Components/Organisms/AjudaHumanitaria/EstoqueAhFiltersSection.vue';
 import EstoqueAhGrid from '@/Components/Organisms/AjudaHumanitaria/EstoqueAhGrid.vue';
 import EstoqueAhStatsCards from '@/Components/Organisms/AjudaHumanitaria/EstoqueAhStatsCards.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 
-defineProps({
+const props = defineProps({
   saldos: { type: Object, default: () => ({ data: [], meta: null }) },
   estatisticas: { type: Object, default: () => ({}) },
   depositos: { type: Array, default: () => [] },
   filtros: { type: Object, default: () => ({}) },
+  ordenacao: { type: Object, default: () => ({ sort: 'deposito', direction: 'asc' }) },
 });
 
-const emit = defineEmits(['filtrar', 'pagina', 'exportar']);
+const emit = defineEmits(['filtrar', 'pagina', 'exportar', 'ordenar']);
+
+// O backend fala sort/direction; o SortableHeader fala ordenadoPor/direcao.
+const ordenacaoUi = computed(() => ({
+  ordenadoPor: props.ordenacao?.sort ?? '',
+  direcao: props.ordenacao?.direction ?? 'asc',
+}));
+
+function ordenar(payload) {
+  emit('ordenar', payload);
+}
 
 // Tabela como padrao: saldo se compara melhor em coluna alinhada do que em
 // cartao. A grade existe para leitura rapida em tela pequena.

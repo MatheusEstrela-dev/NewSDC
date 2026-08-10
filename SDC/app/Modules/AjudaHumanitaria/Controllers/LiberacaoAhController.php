@@ -25,6 +25,20 @@ class LiberacaoAhController extends Controller
 {
     private const POR_PAGINA = 25;
 
+    /**
+     * Colunas que a listagem pode ordenar, mapeadas para a coluna real.
+     *
+     * Whitelist obrigatoria: sort vem da URL e iria direto para o ORDER BY.
+     * Municipio e deposito ficam de fora porque vivem em relacao, e ordenar por
+     * eles exigiria join na consulta que tambem serve o CSV.
+     */
+    private const ORDENACAO_PERMITIDA = [
+        'codigo'       => 'codigo_legado',
+        'beneficiario' => 'beneficiario',
+        'data_libera'  => 'data_libera',
+        'situacao'     => 'status',
+    ];
+
     public function index(Request $request): Response
     {
         $filtros = $this->filtrosDaRequisicao($request);
@@ -48,6 +62,7 @@ class LiberacaoAhController extends Controller
             'depositos'    => $this->depositosComLiberacao(),
             'opcoesStatus' => StatusLiberacao::options(),
             'filtros'      => $filtros,
+            'ordenacao'    => ['sort' => $filtros['sort'] ?? 'data_libera', 'direction' => $filtros['direction']],
         ]);
     }
 
@@ -150,6 +165,10 @@ class LiberacaoAhController extends Controller
             'status'      => $status,
             'data_inicio' => $this->dataValida($request->string('data_inicio')->toString()),
             'data_fim'    => $this->dataValida($request->string('data_fim')->toString()),
+            'sort'        => array_key_exists($request->string('sort')->toString(), self::ORDENACAO_PERMITIDA)
+                ? $request->string('sort')->toString()
+                : null,
+            'direction'   => strtolower((string) $request->input('direction')) === 'asc' ? 'asc' : 'desc',
         ];
     }
 
@@ -180,7 +199,12 @@ class LiberacaoAhController extends Controller
             }))
             ->when($filtros['data_inicio'], fn ($q, $d) => $q->whereDate('data_libera', '>=', $d))
             ->when($filtros['data_fim'], fn ($q, $d) => $q->whereDate('data_libera', '<=', $d))
-            ->orderByDesc('data_libera')
+            // Desempate por id para que a paginacao seja estavel: sem ele,
+            // linhas com a mesma data podem trocar de pagina entre requisicoes.
+            ->orderBy(
+                self::ORDENACAO_PERMITIDA[$filtros['sort'] ?? ''] ?? 'data_libera',
+                $filtros['direction'],
+            )
             ->orderByDesc('id');
     }
 

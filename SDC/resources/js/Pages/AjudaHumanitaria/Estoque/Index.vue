@@ -7,7 +7,9 @@
       :estatisticas="estatisticas"
       :depositos="depositos"
       :filtros="filtros"
+      :ordenacao="ordenacao"
       @filtrar="filtrar"
+      @ordenar="ordenar"
       @pagina="irParaPagina"
       @exportar="exportar"
     />
@@ -27,6 +29,7 @@ const props = defineProps({
   estatisticas: { type: Object, default: () => ({}) },
   depositos: { type: Array, default: () => [] },
   filtros: { type: Object, default: () => ({}) },
+  ordenacao: { type: Object, default: () => ({}) },
 });
 
 const rotaIndex = 'ajuda-humanitaria.estoque.index';
@@ -43,6 +46,15 @@ function filtrar(filtros) {
   // Trocar de filtro volta para a primeira pagina: manter a pagina anterior
   // costuma cair fora do novo conjunto e exibir lista vazia sem motivo.
   navegar(filtros);
+}
+
+/**
+ * Ordenacao vai na URL junto dos filtros: a listagem e paginada no banco, e
+ * reordenar no cliente reordenaria apenas a pagina visivel. Volta para a
+ * primeira pagina, porque a linha que estava na pagina 12 muda de lugar.
+ */
+function ordenar({ sort, direction }) {
+  navegar({ ...props.filtros, sort, direction });
 }
 
 function irParaPagina(pagina) {

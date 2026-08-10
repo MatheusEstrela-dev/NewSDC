@@ -50,14 +50,16 @@
         <table class="w-full text-sm text-left">
           <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
             <tr class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              <th scope="col" class="px-4 py-3 font-medium">Código</th>
-              <th scope="col" class="px-4 py-3 font-medium">Depósito</th>
-              <th scope="col" class="px-4 py-3 font-medium">Recebido</th>
-              <th scope="col" class="px-4 py-3 font-medium">Nota fiscal</th>
-              <th scope="col" class="px-4 py-3 font-medium">Fonte</th>
-              <th scope="col" class="px-4 py-3 font-medium text-right">Quantidade</th>
-              <th scope="col" class="px-4 py-3 font-medium">Situação</th>
-              <th scope="col" class="px-4 py-3 font-medium text-right">Ações</th>
+              <SortableHeader coluna="codigo" v-bind="ordenacaoUi" @ordenar="ordenar">Código</SortableHeader>
+              <SortableHeader>Depósito</SortableHeader>
+              <SortableHeader coluna="recebido" direcao-inicial="desc" v-bind="ordenacaoUi" @ordenar="ordenar">Recebido</SortableHeader>
+              <SortableHeader coluna="nota_fiscal" v-bind="ordenacaoUi" @ordenar="ordenar">Nota fiscal</SortableHeader>
+              <SortableHeader>Fonte</SortableHeader>
+              <!-- Quantidade e soma dos itens, calculada por withSum: ordenar
+                   por ela pediria subconsulta na consulta que serve o CSV. -->
+              <SortableHeader classe="text-right">Quantidade</SortableHeader>
+              <SortableHeader>Situação</SortableHeader>
+              <SortableHeader classe="text-right">Ações</SortableHeader>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
@@ -107,7 +109,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
@@ -117,20 +119,32 @@ import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import SortableHeader from '@/Components/Molecules/Table/SortableHeader.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import EntradaAhFiltersSection from '@/Components/Organisms/AjudaHumanitaria/EntradaAhFiltersSection.vue';
 import EntradaAhStatsCards from '@/Components/Organisms/AjudaHumanitaria/EntradaAhStatsCards.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 
-defineProps({
+const props = defineProps({
   entradas: { type: Object, default: () => ({ data: [], meta: null }) },
   estatisticas: { type: Object, default: () => ({}) },
   depositos: { type: Array, default: () => [] },
   fontes: { type: Array, default: () => [] },
   filtros: { type: Object, default: () => ({}) },
+  ordenacao: { type: Object, default: () => ({ sort: 'recebido', direction: 'desc' }) },
 });
 
-const emit = defineEmits(['filtrar', 'pagina', 'ver', 'exportar']);
+const emit = defineEmits(['filtrar', 'pagina', 'ver', 'exportar', 'ordenar']);
+
+// O backend fala sort/direction; o SortableHeader fala ordenadoPor/direcao.
+const ordenacaoUi = computed(() => ({
+  ordenadoPor: props.ordenacao?.sort ?? '',
+  direcao: props.ordenacao?.direction ?? 'desc',
+}));
+
+function ordenar(payload) {
+  emit('ordenar', payload);
+}
 
 const numero = new Intl.NumberFormat('pt-BR');
 const mostrarModalExport = ref(false);

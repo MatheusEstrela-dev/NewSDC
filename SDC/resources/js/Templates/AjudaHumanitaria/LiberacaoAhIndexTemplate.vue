@@ -58,14 +58,18 @@
         <table class="w-full text-sm text-left">
           <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
             <tr class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              <th scope="col" class="px-4 py-3 font-medium">Código</th>
-              <th scope="col" class="px-4 py-3 font-medium">Município</th>
-              <th scope="col" class="px-4 py-3 font-medium">Depósito</th>
-              <th scope="col" class="px-4 py-3 font-medium">Beneficiário</th>
-              <th scope="col" class="px-4 py-3 font-medium">Liberação</th>
-              <th scope="col" class="px-4 py-3 font-medium">Situação</th>
-              <th scope="col" class="px-4 py-3 font-medium text-center">Recibos</th>
-              <th scope="col" class="px-4 py-3 font-medium text-right">Ações</th>
+              <SortableHeader coluna="codigo" v-bind="ordenacaoUi" @ordenar="ordenar">Código</SortableHeader>
+              <!-- Municipio e deposito vivem em outra tabela: ordenar por eles
+                   exigiria join na consulta que tambem serve o CSV. -->
+              <SortableHeader>Município</SortableHeader>
+              <SortableHeader>Depósito</SortableHeader>
+              <SortableHeader coluna="beneficiario" v-bind="ordenacaoUi" @ordenar="ordenar">Beneficiário</SortableHeader>
+              <SortableHeader coluna="data_libera" direcao-inicial="desc" v-bind="ordenacaoUi" @ordenar="ordenar">
+                Liberação
+              </SortableHeader>
+              <SortableHeader coluna="situacao" v-bind="ordenacaoUi" @ordenar="ordenar">Situação</SortableHeader>
+              <SortableHeader classe="text-center">Recibos</SortableHeader>
+              <SortableHeader classe="text-right">Ações</SortableHeader>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
@@ -121,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
@@ -131,22 +135,34 @@ import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import ListContainer from '@/Components/Organisms/ListContainer.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import SortableHeader from '@/Components/Molecules/Table/SortableHeader.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import LiberacaoAhFiltersSection from '@/Components/Organisms/AjudaHumanitaria/LiberacaoAhFiltersSection.vue';
 import LiberacaoAhStatsCards from '@/Components/Organisms/AjudaHumanitaria/LiberacaoAhStatsCards.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 
-defineProps({
+const props = defineProps({
   liberacoes: { type: Object, default: () => ({ data: [], meta: null }) },
   estatisticas: { type: Object, default: () => ({}) },
   depositos: { type: Array, default: () => [] },
   opcoesStatus: { type: Array, default: () => [] },
   filtros: { type: Object, default: () => ({}) },
+  ordenacao: { type: Object, default: () => ({ sort: 'data_libera', direction: 'desc' }) },
 });
 
-const emit = defineEmits(['filtrar', 'pagina', 'ver', 'exportar']);
+const emit = defineEmits(['filtrar', 'pagina', 'ver', 'exportar', 'ordenar']);
 
 const mostrarModalExport = ref(false);
+
+// O backend fala sort/direction; o SortableHeader fala ordenadoPor/direcao.
+const ordenacaoUi = computed(() => ({
+  ordenadoPor: props.ordenacao?.sort ?? '',
+  direcao: props.ordenacao?.direction ?? 'desc',
+}));
+
+function ordenar(payload) {
+  emit('ordenar', payload);
+}
 
 function formatarData(iso) {
   if (!iso) return '—';

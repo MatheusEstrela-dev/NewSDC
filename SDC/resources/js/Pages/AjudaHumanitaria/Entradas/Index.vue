@@ -8,7 +8,9 @@
       :depositos="depositos"
       :fontes="fontes"
       :filtros="filtros"
+      :ordenacao="ordenacao"
       @filtrar="filtrar"
+      @ordenar="ordenar"
       @pagina="irParaPagina"
       @ver="ver"
       @exportar="exportar"
@@ -30,6 +32,7 @@ const props = defineProps({
   depositos: { type: Array, default: () => [] },
   fontes: { type: Array, default: () => [] },
   filtros: { type: Object, default: () => ({}) },
+  ordenacao: { type: Object, default: () => ({}) },
 });
 
 const rotaIndex = 'ajuda-humanitaria.entradas.index';
@@ -46,6 +49,15 @@ function navegar(parametros) {
 
 function filtrar(filtros) {
   navegar(filtros);
+}
+
+/**
+ * Ordenacao vai na URL junto dos filtros: a listagem e paginada no banco, e
+ * reordenar no cliente reordenaria apenas a pagina visivel. Volta para a
+ * primeira pagina, porque a linha que estava na pagina 12 muda de lugar.
+ */
+function ordenar({ sort, direction }) {
+  navegar({ ...props.filtros, sort, direction });
 }
 
 function irParaPagina(pagina) {

@@ -25,6 +25,18 @@ class EntradaAhController extends Controller
 {
     private const POR_PAGINA = 25;
 
+    /**
+     * Colunas ordenaveis, mapeadas para a coluna real.
+     *
+     * Quantidade fica de fora: e soma dos itens, calculada por withSum, e
+     * ordenar por ela exigiria subconsulta na mesma query que serve o CSV.
+     */
+    private const ORDENACAO_PERMITIDA = [
+        'codigo'      => 'codigo_legado',
+        'recebido'    => 'recebido_em',
+        'nota_fiscal' => 'nota_fiscal',
+    ];
+
     /** Recortes que os cartoes oferecem como filtro rapido. */
     private const SITUACOES = ['ativa', 'cancelada', 'correcao'];
 
@@ -51,6 +63,7 @@ class EntradaAhController extends Controller
             'depositos'    => $this->depositosComEntrada(),
             'fontes'       => $this->fontesUsadas(),
             'filtros'      => $filtros,
+            'ordenacao'    => ['sort' => $filtros['sort'] ?? 'recebido', 'direction' => $filtros['direction']],
         ]);
     }
 
@@ -133,6 +146,10 @@ class EntradaAhController extends Controller
             'situacao'    => in_array($situacao, self::SITUACOES, true) ? $situacao : null,
             'data_inicio' => $this->dataValida($request->string('data_inicio')->toString()),
             'data_fim'    => $this->dataValida($request->string('data_fim')->toString()),
+            'sort'        => array_key_exists($request->string('sort')->toString(), self::ORDENACAO_PERMITIDA)
+                ? $request->string('sort')->toString()
+                : null,
+            'direction'   => strtolower((string) $request->input('direction')) === 'asc' ? 'asc' : 'desc',
         ];
     }
 
@@ -163,7 +180,11 @@ class EntradaAhController extends Controller
             ->when($filtros['situacao'], fn ($q, $situacao) => $this->aplicarSituacao($q, $situacao))
             ->when($filtros['data_inicio'], fn ($q, $d) => $q->whereDate('recebido_em', '>=', $d))
             ->when($filtros['data_fim'], fn ($q, $d) => $q->whereDate('recebido_em', '<=', $d))
-            ->orderByDesc('recebido_em')
+            // Desempate por id para que a paginacao seja estavel.
+            ->orderBy(
+                self::ORDENACAO_PERMITIDA[$filtros['sort'] ?? ''] ?? 'recebido_em',
+                $filtros['direction'],
+            )
             ->orderByDesc('id');
     }
 

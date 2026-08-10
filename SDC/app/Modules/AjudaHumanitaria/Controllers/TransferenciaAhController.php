@@ -26,6 +26,20 @@ class TransferenciaAhController extends Controller
 {
     private const POR_PAGINA = 25;
 
+    /**
+     * Colunas ordenaveis, mapeadas para a coluna real.
+     *
+     * Whitelist obrigatoria: sort vem da URL e iria direto para o ORDER BY.
+     * Origem e destino ficam de fora porque vivem em relacao com depositos.
+     */
+    private const ORDENACAO_PERMITIDA = [
+        'codigo'    => 'codigo_legado',
+        'saida'     => 'saiu_em',
+        'chegada'   => 'chegou_em',
+        'motorista' => 'motorista',
+        'situacao'  => 'status',
+    ];
+
     public function index(Request $request): Response
     {
         $filtros = $this->filtrosDaRequisicao($request);
@@ -49,6 +63,7 @@ class TransferenciaAhController extends Controller
             'depositos'    => $this->depositosEnvolvidos(),
             'opcoesStatus' => StatusTransferencia::options(),
             'filtros'      => $filtros,
+            'ordenacao'    => ['sort' => $filtros['sort'] ?? 'saida', 'direction' => $filtros['direction']],
         ]);
     }
 
@@ -127,6 +142,10 @@ class TransferenciaAhController extends Controller
             'status'      => $status,
             'data_inicio' => $this->dataValida($request->string('data_inicio')->toString()),
             'data_fim'    => $this->dataValida($request->string('data_fim')->toString()),
+            'sort'        => array_key_exists($request->string('sort')->toString(), self::ORDENACAO_PERMITIDA)
+                ? $request->string('sort')->toString()
+                : null,
+            'direction'   => strtolower((string) $request->input('direction')) === 'asc' ? 'asc' : 'desc',
         ];
     }
 
@@ -160,7 +179,11 @@ class TransferenciaAhController extends Controller
             }))
             ->when($filtros['data_inicio'], fn ($q, $d) => $q->whereDate('saiu_em', '>=', $d))
             ->when($filtros['data_fim'], fn ($q, $d) => $q->whereDate('saiu_em', '<=', $d))
-            ->orderByDesc('saiu_em')
+            // Desempate por id para que a paginacao seja estavel.
+            ->orderBy(
+                self::ORDENACAO_PERMITIDA[$filtros['sort'] ?? ''] ?? 'saiu_em',
+                $filtros['direction'],
+            )
             ->orderByDesc('id');
     }
 

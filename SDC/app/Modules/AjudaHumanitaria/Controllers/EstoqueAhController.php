@@ -40,6 +40,18 @@ class EstoqueAhController extends Controller
 
     private const NIVEL_BAIXO = 200;
 
+    /**
+     * Colunas ordenaveis, mapeadas para a coluna real da consulta.
+     *
+     * Whitelist obrigatoria: sort vem da URL e iria direto para o ORDER BY.
+     */
+    private const ORDENACAO_PERMITIDA = [
+        'deposito' => 'd.nome',
+        'material' => 'm.nome',
+        'saldo'    => 'ajuda_h_estoque_saldos.saldo',
+        'unidade'  => 'm.unidade_medida',
+    ];
+
     public function index(Request $request): Response
     {
         $filtros = $this->filtrosDaRequisicao($request);
@@ -69,6 +81,7 @@ class EstoqueAhController extends Controller
             'estatisticas' => $this->estatisticas($filtros),
             'depositos'    => $this->depositosComSaldo(),
             'filtros'      => $filtros,
+            'ordenacao'    => ['sort' => $filtros['sort'] ?? 'deposito', 'direction' => $filtros['direction']],
         ]);
     }
 
@@ -120,6 +133,13 @@ class EstoqueAhController extends Controller
             // ainda nao tem tela.
             'data_inicio' => $this->dataValida($request->string('data_inicio')->toString()),
             'data_fim'    => $this->dataValida($request->string('data_fim')->toString()),
+            'sort'        => array_key_exists($request->string('sort')->toString(), self::ORDENACAO_PERMITIDA)
+                ? $request->string('sort')->toString()
+                : null,
+            // Aqui o padrao e crescente, e nao decrescente como nas listagens
+            // cronologicas: sem ordenacao escolhida a tela abre por deposito em
+            // ordem alfabetica.
+            'direction'   => strtolower((string) $request->input('direction')) === 'desc' ? 'desc' : 'asc',
         ];
     }
 
@@ -146,8 +166,16 @@ class EstoqueAhController extends Controller
             ->when($filtros['nivel'], fn ($q, $nivel) => $this->aplicarNivel($q, $nivel))
             ->when($filtros['data_inicio'], fn ($q, $data) => $q->whereDate('ajuda_h_estoque_saldos.atualizado_em', '>=', $data))
             ->when($filtros['data_fim'], fn ($q, $data) => $q->whereDate('ajuda_h_estoque_saldos.atualizado_em', '<=', $data))
-            ->orderBy('d.nome')
+            ->orderBy(
+                self::ORDENACAO_PERMITIDA[$filtros['sort'] ?? ''] ?? 'd.nome',
+                $filtros['direction'] ?? 'asc',
+            )
+            // Desempate fixo: dentro do mesmo deposito o saldo maior vem antes,
+            // e o par (material, deposito) fecha a ordem para que a paginacao
+            // nao repita nem pule linha.
             ->orderByDesc('ajuda_h_estoque_saldos.saldo')
+            ->orderBy('ajuda_h_estoque_saldos.material_ah_id')
+            ->orderBy('ajuda_h_estoque_saldos.deposito_id')
             ->select([
                 'ajuda_h_estoque_saldos.material_ah_id',
                 'ajuda_h_estoque_saldos.deposito_id',
