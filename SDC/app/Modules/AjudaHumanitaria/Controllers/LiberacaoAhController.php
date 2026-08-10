@@ -63,8 +63,12 @@ class LiberacaoAhController extends Controller
             ])
             ->findOrFail($id);
 
+        // array_merge, e nao o operador +: com + a chave existente vence, e
+        // 'recibos' continuaria sendo a contagem que paraLinha() devolve para a
+        // listagem, em vez da lista que o detalhe precisa. O sintoma era mudo:
+        // a tela exibia "Nenhum recibo" mesmo quando havia um.
         return Inertia::render('AjudaHumanitaria/Liberacoes/Show', [
-            'liberacao' => $this->paraLinha($liberacao) + [
+            'liberacao' => array_merge($this->paraLinha($liberacao), [
                 'observacao'          => $liberacao->observacao,
                 'motivo_cancelamento' => $liberacao->motivo_cancelamento,
                 'cancelado_em'        => $liberacao->cancelado_em?->toIso8601String(),
@@ -86,7 +90,7 @@ class LiberacaoAhController extends Controller
                     'placa'       => $r->placa_veiculo,
                     'motivo'      => $r->motivo,
                 ])->all(),
-            ],
+            ]),
         ]);
     }
 

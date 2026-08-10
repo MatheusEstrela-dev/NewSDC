@@ -10,6 +10,7 @@ use App\Modules\AjudaHumanitaria\Controllers\PedidoAhController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhDashboardController;
 use App\Modules\AjudaHumanitaria\Controllers\PrestacaoContaController;
 use App\Modules\AjudaHumanitaria\Controllers\TramitacaoController;
+use App\Modules\AjudaHumanitaria\Controllers\TransferenciaAhController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function () {
@@ -132,6 +133,23 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
             ->middleware('can:humanitaria.saldo.view');
 
         Route::get('/{id}', [LiberacaoAhController::class, 'show'])
+            ->name('show')
+            ->middleware('can:humanitaria.saldo.view')
+            ->whereNumber('id');
+    });
+
+    // Transferencias entre depositos. Consulta do historico migrado; a escrita,
+    // quando existir, passa pelo ledger com um par TRANSF_SAIDA e TRANSF_ENTRADA.
+    Route::prefix('transferencias')->name('transferencias.')->group(function () {
+        Route::get('/export', [TransferenciaAhController::class, 'export'])
+            ->name('export')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/', [TransferenciaAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/{id}', [TransferenciaAhController::class, 'show'])
             ->name('show')
             ->middleware('can:humanitaria.saldo.view')
             ->whereNumber('id');
