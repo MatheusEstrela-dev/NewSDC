@@ -15,6 +15,7 @@
         "doctrine/dbal": "^4",
         "doctrine/orm": "^3",
         "endroid/qr-code": "^5.1",
+        "flow-php/parquet": "^0.43.0",
         "google-gemini-php/client": "*",
         "guzzlehttp/guzzle": "^7.9",
         "inertiajs/inertia-laravel": "^1.3",

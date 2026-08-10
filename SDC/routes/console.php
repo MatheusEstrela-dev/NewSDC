@@ -41,3 +41,10 @@ Schedule::command('medalhao:ingerir sismos')
     ->everyFifteenMinutes()
     ->onOneServer()
     ->runInBackground();
+
+// Arquiva o Bronze vencido em Parquet e poda o Postgres. A poda so ocorre apos a
+// escrita ser verificada — ver RolloverParquetJob.
+Schedule::command('medalhao:rollup')
+    ->dailyAt('04:00')
+    ->onOneServer()
+    ->runInBackground();
