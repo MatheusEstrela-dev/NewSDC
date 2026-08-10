@@ -7,6 +7,7 @@ namespace App\Modules\AjudaHumanitaria\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\AjudaHumanitaria\DTOs\ParecerDTO;
 use App\Modules\AjudaHumanitaria\Models\PedidoAh;
+use App\Modules\AjudaHumanitaria\Services\AjudaHumanitariaNotificacaoService;
 use App\Modules\AjudaHumanitaria\Models\PedidoAhParecer;
 use App\Modules\AjudaHumanitaria\Requests\StoreParecerRequest;
 use App\Modules\AjudaHumanitaria\Services\ParecerService;
@@ -24,6 +25,7 @@ class ParecerController extends Controller
 {
     public function __construct(
         private readonly ParecerService $pareceres,
+        private readonly AjudaHumanitariaNotificacaoService $notificacoes,
     ) {}
 
     public function store(StoreParecerRequest $request, int $pedidoId): RedirectResponse
@@ -41,6 +43,8 @@ class ParecerController extends Controller
         if ($erro !== null) {
             return back()->with('error', $erro);
         }
+
+        $this->notificacoes->parecerEmitido($pedido, $parecer->situacao, $request->user()?->id);
 
         return back()->with(
             'success',
