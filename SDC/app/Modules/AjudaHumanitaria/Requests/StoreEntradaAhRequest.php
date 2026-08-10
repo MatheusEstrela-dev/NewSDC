@@ -72,24 +72,15 @@ class StoreEntradaAhRequest extends FormRequest
      */
     public function messages(): array
     {
+        // Somente o que o texto padrao de lang/pt_BR/validation.php nao diz
+        // bem neste formulario. "O campo itens é obrigatório" nao ajuda quem
+        // esta olhando uma lista de materiais.
         return [
             'itens.required'              => 'Informe ao menos um material recebido.',
             'itens.min'                   => 'Informe ao menos um material recebido.',
             'itens.*.qtd.gt'              => 'A quantidade recebida deve ser maior que zero.',
             'recebido_em.before_or_equal' => 'A data de recebimento não pode ser futura.',
-
-            // O projeto nao tem lang/pt_BR/validation.php, entao regra sem
-            // mensagem propria chega ao usuario como a chave crua
-            // ("validation.exists"). Ate existir o arquivo, as do formulario
-            // ficam escritas aqui.
-            'deposito_id.exists'                => 'Depósito não encontrado.',
-            'fonte_recurso_id.exists'           => 'Fonte de recurso não encontrada.',
-            'fornecedor_id.exists'              => 'Fornecedor não encontrado.',
-            'itens.*.material_ah_id.exists'     => 'Material não encontrado no catálogo.',
-            'deposito_id.required'              => 'Escolha o depósito que recebeu o material.',
-            'recebido_em.required'              => 'Informe a data de recebimento.',
-            'itens.*.material_ah_id.required'   => 'Escolha o material do item.',
-            'itens.*.qtd.required'              => 'Informe a quantidade do item.',
+            'deposito_id.required'        => 'Escolha o depósito que recebeu o material.',
         ];
     }
 

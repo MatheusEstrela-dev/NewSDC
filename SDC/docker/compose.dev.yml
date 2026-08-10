@@ -140,6 +140,10 @@ services:
       - ../database:/var/www/database
       - ../routes:/var/www/routes
       - ../resources:/var/www/resources
+      # Sem este bind, lang/ so existia dentro da imagem: arquivo de
+      # traducao criado ou editado no host nao chegava ao container
+      # ate um rebuild, e as mensagens saiam como a chave crua.
+      - ../lang:/var/www/lang
       - ../public:/var/www/public
       - ../tests:/var/www/tests
       - ../composer.json:/var/www/composer.json:ro
@@ -240,6 +244,10 @@ services:
       - ../database:/var/www/database
       - ../routes:/var/www/routes
       - ../resources:/var/www/resources
+      # Sem este bind, lang/ so existia dentro da imagem: arquivo de
+      # traducao criado ou editado no host nao chegava ao container
+      # ate um rebuild, e as mensagens saiam como a chave crua.
+      - ../lang:/var/www/lang
       - ../public:/var/www/public
       - ../tests:/var/www/tests
       - ../composer.json:/var/www/composer.json:ro
