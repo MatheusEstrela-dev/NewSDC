@@ -78,11 +78,23 @@
       <aside class="space-y-4">
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
           <p class="text-sm text-slate-500">Status</p>
-          <div class="mt-2 flex flex-wrap gap-2">
-            <span v-if="a.vigente" class="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium">Vigente</span>
+          <!--
+            Situacao unica vinda do backend (AtaResource.situacao). Antes eram
+            tres v-if independentes, que exibiam "Ativa" numa ata ja vencida e
+            nunca exibiam "Vencida".
+          -->
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <span
+              class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium"
+              :class="classesSituacao"
+            >
+              {{ a.situacao_label ?? (a.ativo ? 'Ativa' : 'Inativa') }}
+            </span>
             <span v-if="a.ativo" class="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium">Ativa</span>
-            <span v-if="!a.ativo" class="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium">Inativa</span>
           </div>
+          <p v-if="a.dias_restantes !== null && a.dias_restantes !== undefined" class="mt-3 text-sm" :class="a.dias_restantes < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'">
+            {{ textoVigencia }}
+          </p>
         </div>
       </aside>
     </div>
@@ -109,6 +121,26 @@ const props = defineProps({
 });
 
 const a = computed(() => props.ata.data ?? props.ata).value;
+
+// Mapa token -> classes Tailwind (escrito por extenso: classe montada em string
+// dinamica seria removida pelo purge do build). Espelha SituacaoAta::cor().
+const classesBadge = {
+  success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  danger:  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  info:    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  neutral: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+};
+
+const classesSituacao = classesBadge[a.situacao_cor] ?? classesBadge.neutral;
+
+// dias_restantes e assinado: negativo = ja venceu, 0 = vence hoje.
+const textoVigencia = (() => {
+  const dias = a.dias_restantes;
+  if (dias === null || dias === undefined) return '';
+  if (dias < 0) return `Vigência encerrada há ${Math.abs(dias)} dia(s).`;
+  if (dias === 0) return 'A vigência termina hoje.';
+  return `Faltam ${dias} dia(s) para o fim da vigência.`;
+})();
 
 function excluir() {
   if (!confirm(`Excluir a ata ${a.numero}?`)) return;
