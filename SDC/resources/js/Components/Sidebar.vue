@@ -498,6 +498,16 @@
           Estoque
         </NavItem>
         <NavItem
+          v-if="_routes.hasHumanitariaMovimentos"
+          :href="route('ajuda-humanitaria.movimentos.index')"
+          :active="isRouteActive('ajuda-humanitaria.movimentos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Movimentações
+        </NavItem>
+        <NavItem
           v-if="_routes.hasHumanitariaMateriais && canManageMateriaisAh"
           :href="route('ajuda-humanitaria.materiais.index')"
           :active="isRouteActive('ajuda-humanitaria.materiais.*')"
@@ -712,6 +722,7 @@ const _routes = {
   hasHumanitariaDashboard: route().has('ajuda-humanitaria.dashboard'),
   hasHumanitariaBeneficiarios: route().has('ajuda-humanitaria.beneficiarios.index'),
   hasHumanitariaEstoque: route().has('ajuda-humanitaria.estoque.index'),
+  hasHumanitariaMovimentos: route().has('ajuda-humanitaria.movimentos.index'),
   hasHumanitariaMateriais: route().has('ajuda-humanitaria.materiais.index'),
   hasHumanitariaEntradas: route().has('ajuda-humanitaria.entradas.index'),
   hasHumanitariaLiberacoes: route().has('ajuda-humanitaria.liberacoes.index'),

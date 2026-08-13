@@ -7,6 +7,7 @@ use App\Modules\AjudaHumanitaria\Controllers\EstoqueAhController;
 use App\Modules\AjudaHumanitaria\Controllers\ItemPedidoController;
 use App\Modules\AjudaHumanitaria\Controllers\LiberacaoAhController;
 use App\Modules\AjudaHumanitaria\Controllers\MaterialAhController;
+use App\Modules\AjudaHumanitaria\Controllers\MovimentoEstoqueAhController;
 use App\Modules\AjudaHumanitaria\Controllers\ParecerController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhDashboardController;
@@ -112,6 +113,19 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
             ->middleware('can:humanitaria.saldo.view');
 
         Route::get('/', [EstoqueAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.saldo.view');
+    });
+
+    // Extrato do ledger. Somente leitura, e nao por limitacao: o ledger e
+    // append-only, e corrigir lancamento e lancar o oposto pela operacao que
+    // o originou.
+    Route::prefix('movimentos')->name('movimentos.')->group(function () {
+        Route::get('/export', [MovimentoEstoqueAhController::class, 'export'])
+            ->name('export')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/', [MovimentoEstoqueAhController::class, 'index'])
             ->name('index')
             ->middleware('can:humanitaria.saldo.view');
     });
