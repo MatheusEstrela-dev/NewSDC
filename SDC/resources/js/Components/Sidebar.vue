@@ -770,6 +770,8 @@ const _activeRoutes = computed(() => {
     'ajuda-humanitaria.pedidos.*': route().current('ajuda-humanitaria.pedidos.*'),
     'ajuda-humanitaria.beneficiarios.*': route().current('ajuda-humanitaria.beneficiarios.*'),
     'ajuda-humanitaria.estoque.*': route().current('ajuda-humanitaria.estoque.*'),
+    'ajuda-humanitaria.movimentos.*': route().current('ajuda-humanitaria.movimentos.*'),
+    'ajuda-humanitaria.materiais.*': route().current('ajuda-humanitaria.materiais.*'),
     'ajuda-humanitaria.entradas.*': route().current('ajuda-humanitaria.entradas.*'),
     'ajuda-humanitaria.liberacoes.*': route().current('ajuda-humanitaria.liberacoes.*'),
     'ajuda-humanitaria.transferencias.*': route().current('ajuda-humanitaria.transferencias.*'),
