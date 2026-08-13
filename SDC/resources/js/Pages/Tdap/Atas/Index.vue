@@ -21,11 +21,13 @@
       </template>
     </PageHeader>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="DocumentTextIcon" variant="info" clickable @click="filtrarPorStatus({ ativo: '', vigente: false })" />
-      <StatCard title="Ativas" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" clickable @click="filtrarPorStatus({ ativo: '1', vigente: false })" />
-      <StatCard title="Vigentes" :value="estatisticas.vigentes ?? 0" :icon="ClockIcon" variant="info" clickable @click="filtrarPorStatus({ ativo: '', vigente: true })" />
-      <StatCard title="Encerradas" :value="estatisticas.encerradas ?? 0" :icon="CheckIcon" variant="warning" />
+    <!-- Cards funcionam como filtros rapidos; os tres ultimos filtram por situacao. -->
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <StatCard title="Total" :value="estatisticas.total ?? 0" :icon="DocumentTextIcon" variant="info" clickable @click="limparSituacao()" />
+      <StatCard title="Ativas" :value="estatisticas.ativos ?? 0" :icon="CheckCircleIcon" variant="success" clickable @click="filtrarPorStatus({ ativo: '1' })" />
+      <StatCard title="Vigentes" :value="estatisticas.vigentes ?? 0" :icon="CheckIcon" variant="success" clickable @click="filtrarPorSituacao('vigente')" />
+      <StatCard title="A vencer (30d)" :value="estatisticas.a_vencer ?? 0" :icon="ClockIcon" variant="warning" clickable @click="filtrarPorSituacao('vigente')" />
+      <StatCard title="Vencidas" :value="estatisticas.vencidas ?? estatisticas.encerradas ?? 0" :icon="ClockIcon" variant="danger" clickable @click="filtrarPorSituacao('vencida')" />
     </div>
 
     <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="true">
@@ -42,6 +44,13 @@
         :model-value="filtroAtivo"
         :options="ativoOptions"
         @update:model-value="filtroAtivo = $event"
+      />
+      <FilterField
+        label="Situação (vigência)"
+        type="select"
+        :model-value="filtroSituacao"
+        :options="situacaoSelectOptions"
+        @update:model-value="filtroSituacao = $event"
       />
       <div class="flex items-end pb-2">
         <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
@@ -74,10 +83,25 @@
               {{ formatDate(a.dt_inicio) }} — {{ formatDate(a.dt_final) }}
             </td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ a.lotes_count }}</td>
-            <td class="px-4 py-3 text-sm">
-              <span v-if="a.vigente" class="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">Vigente</span>
-              <span v-else-if="a.ativo" class="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">Ativa</span>
-              <span v-else class="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">Inativa</span>
+            <!--
+              O badge apenas PINTA o que o backend classificou (a.situacao).
+              Antes havia regra de negocio aqui: `v-else-if="a.ativo"` pintava de
+              verde "Ativa" uma ata ja vencida, escondendo o vencimento.
+            -->
+            <td class="px-4 py-3 text-sm whitespace-nowrap">
+              <span
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                :class="classesSituacao(a)"
+              >
+                {{ a.situacao_label ?? (a.vigente ? 'Vigente' : (a.ativo ? 'Ativa' : 'Inativa')) }}
+              </span>
+              <span
+                v-if="a.proxima_vencer"
+                class="ml-2 text-xs font-medium text-amber-600 dark:text-amber-400"
+                :title="`Vigência termina em ${formatDate(a.dt_final)}`"
+              >
+                {{ rotuloAlerta(a) }}
+              </span>
             </td>
             <td class="px-4 py-3">
               <div class="flex items-center justify-end gap-1">
@@ -125,7 +149,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -150,17 +174,19 @@ import { moduleIcon } from '@/Support/moduleIcons';
 defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
-  atas:         { type: Object, default: () => ({ data: [], meta: {} }) },
-  estatisticas: { type: Object, default: () => ({ total: 0, ativos: 0, vigentes: 0, encerradas: 0 }) },
-  filtros:      { type: Object, default: () => ({}) },
-  canCreate:    { type: Boolean, default: false },
-  canEdit:      { type: Boolean, default: false },
-  canDelete:    { type: Boolean, default: false },
+  atas:            { type: Object, default: () => ({ data: [], meta: {} }) },
+  estatisticas:    { type: Object, default: () => ({ total: 0, ativos: 0, vigentes: 0, vencidas: 0, a_vencer: 0, encerradas: 0 }) },
+  filtros:         { type: Object, default: () => ({}) },
+  situacaoOptions: { type: Array, default: () => [] },
+  canCreate:       { type: Boolean, default: false },
+  canEdit:         { type: Boolean, default: false },
+  canDelete:       { type: Boolean, default: false },
 });
 
 const filtroSearch = ref(props.filtros.search ?? '');
 const filtroAtivo  = ref(props.filtros.ativo ?? '');
 const filtroVigente = ref(Boolean(props.filtros.vigente));
+const filtroSituacao = ref(props.filtros.situacao ?? '');
 
 const ativoOptions = [
   { value: '', label: 'Todas' },
@@ -168,41 +194,89 @@ const ativoOptions = [
   { value: '0', label: 'Inativas' },
 ];
 
+// A lista de situacoes vem do enum SituacaoAta (prop situacaoOptions), para nao
+// duplicar no JS. O fallback cobre uma resposta antiga sem a prop.
+const situacaoSelectOptions = computed(() => [
+  { value: '', label: 'Todas' },
+  ...(props.situacaoOptions.length
+    ? props.situacaoOptions
+    : [
+        { value: 'vigente',  label: 'Vigente' },
+        { value: 'vencida',  label: 'Vencida' },
+        { value: 'agendada', label: 'Agendada' },
+        { value: 'inativa',  label: 'Inativa' },
+      ]),
+]);
+
+// Mapa token -> classes Tailwind. Escrito por extenso de proposito: string
+// dinamica (`bg-${cor}-100`) e removida pelo purge do build.
+const classesBadge = {
+  success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  danger:  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  info:    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  neutral: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+};
+
+function classesSituacao(ata) {
+  return classesBadge[ata.situacao_cor] ?? classesBadge.neutral;
+}
+
+// "vence hoje" le melhor que "vence em 0d".
+function rotuloAlerta(ata) {
+  if (ata.dias_restantes === 0) return 'vence hoje';
+  return `vence em ${ata.dias_restantes}d`;
+}
+
+// Monta a query string uma unica vez — usada pela busca, pelos cards e pelo CSV.
+function paramsAtuais() {
+  return {
+    search:   filtroSearch.value || undefined,
+    ativo:    filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
+    vigente:  filtroVigente.value ? 1 : undefined,
+    situacao: filtroSituacao.value || undefined,
+  };
+}
+
 function aplicarFiltros() {
-  router.get(route('tdap.atas.index'), {
-    search:  filtroSearch.value || undefined,
-    ativo:   filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
-    vigente: filtroVigente.value ? 1 : undefined,
-  }, { preserveState: true, replace: true });
+  router.get(route('tdap.atas.index'), paramsAtuais(), { preserveState: true, replace: true });
 }
 
 function limparFiltros() {
   filtroSearch.value = '';
   filtroAtivo.value = '';
   filtroVigente.value = false;
+  filtroSituacao.value = '';
   router.get(route('tdap.atas.index'), {}, { preserveState: false });
 }
 
-// Cards de estatistica como filtros rapidos: Total limpa status/vigencia, preservando a busca textual.
+// Cards de estatistica como filtros rapidos, preservando a busca textual.
 function filtrarPorStatus({ ativo, vigente }) {
   filtroAtivo.value = ativo ?? '';
   filtroVigente.value = Boolean(vigente);
-  router.get(route('tdap.atas.index'), {
-    search:  filtroSearch.value || undefined,
-    ativo:   filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
-    vigente: filtroVigente.value ? 1 : undefined,
-  }, { preserveState: true, replace: true });
+  filtroSituacao.value = '';
+  aplicarFiltros();
+}
+
+// Card de situacao: usa o filtro novo e zera os filtros antigos para nao
+// combinar duas regras de vigencia na mesma consulta.
+function filtrarPorSituacao(situacao) {
+  filtroSituacao.value = situacao;
+  filtroAtivo.value = '';
+  filtroVigente.value = false;
+  aplicarFiltros();
+}
+
+// Card "Total": limpa toda classificacao, mantendo so a busca textual.
+function limparSituacao() {
+  filtrarPorStatus({ ativo: '', vigente: false });
 }
 
 // Exportacao CSV (mesmo padrao dos outros modulos)
 const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.atas.export');
 
 function onExport(params) {
-  handleExport(params, {
-    search:  filtroSearch.value || undefined,
-    ativo:   filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
-    vigente: filtroVigente.value ? 1 : undefined,
-  });
+  // O CSV respeita os mesmos filtros da tela, incluindo o de situacao.
+  handleExport(params, paramsAtuais());
 }
 
 function formatDate(d) {

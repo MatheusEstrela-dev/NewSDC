@@ -6,6 +6,7 @@ namespace App\Modules\Tdap\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Tdap\DTOs\AtaDTO;
+use App\Modules\Tdap\Enums\SituacaoAta;
 use App\Modules\Tdap\Models\Ata;
 use App\Modules\Tdap\Requests\StoreAtaRequest;
 use App\Modules\Tdap\Requests\UpdateAtaRequest;
@@ -27,23 +28,26 @@ class AtaController extends Controller
     public function index(Request $request): Response
     {
         $perPage = (int) $request->integer('per_page', 15);
-        $filtros = $request->only(['ativo', 'vigente', 'search']);
+        // `only()` e allowlist: filtro ausente desta lista e ignorado em silencio.
+        $filtros = $request->only(['ativo', 'vigente', 'situacao', 'search']);
 
         $atas = $this->service->listar($perPage, $filtros);
 
         return Inertia::render('Tdap/Atas/Index', [
-            'atas'         => AtaIndexResource::collection($atas),
-            'estatisticas' => fn () => $this->service->obterEstatisticas(),
-            'filtros'      => $filtros,
-            'canCreate'    => $request->user()?->can('tdap.atas.create') ?? false,
-            'canEdit'      => $request->user()?->can('tdap.atas.edit') ?? false,
-            'canDelete'    => $request->user()?->can('tdap.atas.delete') ?? false,
+            'atas'             => AtaIndexResource::collection($atas),
+            'estatisticas'     => fn () => $this->service->obterEstatisticas(),
+            'filtros'          => $filtros,
+            // Opcoes vindas do enum: a lista de situacoes nao e duplicada no JS.
+            'situacaoOptions'  => SituacaoAta::options(),
+            'canCreate'        => $request->user()?->can('tdap.atas.create') ?? false,
+            'canEdit'          => $request->user()?->can('tdap.atas.edit') ?? false,
+            'canDelete'        => $request->user()?->can('tdap.atas.delete') ?? false,
         ]);
     }
 
     public function export(Request $request): StreamedResponse
     {
-        $filtros = $request->only(['ativo', 'vigente', 'search']);
+        $filtros = $request->only(['ativo', 'vigente', 'situacao', 'search']);
         $data = $this->service->exportar($filtros);
 
         $filename = 'atas_'.now()->format('Y-m-d_H-i-s').'.csv';

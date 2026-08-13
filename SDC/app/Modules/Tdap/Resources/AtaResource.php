@@ -17,19 +17,23 @@ class AtaResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $hoje = now()->startOfDay();
-        $inicio = $this->dt_inicio;
-        $final = $this->dt_final;
-        $vigente = $this->ativo && $inicio && $final && $inicio->lte($hoje) && $final->gte($hoje);
+        // Mesma fonte de verdade da listagem (VigenciaAta, via accessor).
+        $situacao = $this->situacao;
 
         return [
             'id'             => $this->id,
             'numero'         => $this->numero,
-            'dt_inicio'      => $inicio?->toDateString(),
-            'dt_final'       => $final?->toDateString(),
+            'dt_inicio'      => $this->dt_inicio?->toDateString(),
+            'dt_final'       => $this->dt_final?->toDateString(),
             'historico'      => $this->historico,
             'ativo'          => (bool) $this->ativo,
-            'vigente'        => (bool) $vigente,
+            // Mantido por compatibilidade: Show/Edit ja leem `vigente`.
+            'vigente'        => $situacao->isVigente(),
+            'situacao'       => $situacao->value,
+            'situacao_label' => $situacao->label(),
+            'situacao_cor'   => $situacao->cor(),
+            'dias_restantes' => $this->dias_restantes,
+            'proxima_vencer' => $this->proxima_vencer,
             'observacoes'    => $this->observacoes,
             'lotes_count'    => $this->whenCounted('lotes'),
             'lotes'          => $this->whenLoaded('lotes', fn () => $this->lotes->map(fn ($l) => [
