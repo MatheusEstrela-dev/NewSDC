@@ -498,6 +498,16 @@
           Estoque
         </NavItem>
         <NavItem
+          v-if="_routes.hasHumanitariaParametros && canManageParametrosAh"
+          :href="route('ajuda-humanitaria.parametros.index')"
+          :active="isRouteActive('ajuda-humanitaria.parametros.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Parâmetros
+        </NavItem>
+        <NavItem
           v-if="_routes.hasHumanitariaMovimentos"
           :href="route('ajuda-humanitaria.movimentos.index')"
           :active="isRouteActive('ajuda-humanitaria.movimentos.*')"
@@ -722,6 +732,7 @@ const _routes = {
   hasHumanitariaDashboard: route().has('ajuda-humanitaria.dashboard'),
   hasHumanitariaBeneficiarios: route().has('ajuda-humanitaria.beneficiarios.index'),
   hasHumanitariaEstoque: route().has('ajuda-humanitaria.estoque.index'),
+  hasHumanitariaParametros: route().has('ajuda-humanitaria.parametros.index'),
   hasHumanitariaMovimentos: route().has('ajuda-humanitaria.movimentos.index'),
   hasHumanitariaMateriais: route().has('ajuda-humanitaria.materiais.index'),
   hasHumanitariaEntradas: route().has('ajuda-humanitaria.entradas.index'),
@@ -771,6 +782,7 @@ const _activeRoutes = computed(() => {
     'ajuda-humanitaria.beneficiarios.*': route().current('ajuda-humanitaria.beneficiarios.*'),
     'ajuda-humanitaria.estoque.*': route().current('ajuda-humanitaria.estoque.*'),
     'ajuda-humanitaria.movimentos.*': route().current('ajuda-humanitaria.movimentos.*'),
+    'ajuda-humanitaria.parametros.*': route().current('ajuda-humanitaria.parametros.*'),
     'ajuda-humanitaria.materiais.*': route().current('ajuda-humanitaria.materiais.*'),
     'ajuda-humanitaria.entradas.*': route().current('ajuda-humanitaria.entradas.*'),
     'ajuda-humanitaria.liberacoes.*': route().current('ajuda-humanitaria.liberacoes.*'),
@@ -876,6 +888,10 @@ const canSeeAjudaHumanitaria = computed(() => {
 // que fazer na tela, e sem esta checagem o item levaria a um 403.
 const canManageMateriaisAh = computed(() => {
   return hasPermission(['humanitaria.materiais.manage']);
+});
+
+const canManageParametrosAh = computed(() => {
+  return hasPermission(['humanitaria.parametros.manage']);
 });
 
 const canSeeOrgaos = computed(() => {

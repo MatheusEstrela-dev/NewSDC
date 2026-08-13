@@ -8,6 +8,7 @@ use App\Modules\AjudaHumanitaria\Controllers\ItemPedidoController;
 use App\Modules\AjudaHumanitaria\Controllers\LiberacaoAhController;
 use App\Modules\AjudaHumanitaria\Controllers\MaterialAhController;
 use App\Modules\AjudaHumanitaria\Controllers\MovimentoEstoqueAhController;
+use App\Modules\AjudaHumanitaria\Controllers\ParametroAhController;
 use App\Modules\AjudaHumanitaria\Controllers\ParecerController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhDashboardController;
@@ -115,6 +116,17 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
         Route::get('/', [EstoqueAhController::class, 'index'])
             ->name('index')
             ->middleware('can:humanitaria.saldo.view');
+    });
+
+    // Parametros do modulo (RN-16). Linha unica: nao ha criar nem excluir.
+    Route::prefix('parametros')->name('parametros.')->group(function () {
+        Route::get('/', [ParametroAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.parametros.manage');
+
+        Route::put('/', [ParametroAhController::class, 'update'])
+            ->name('update')
+            ->middleware('can:humanitaria.parametros.manage');
     });
 
     // Extrato do ledger. Somente leitura, e nao por limitacao: o ledger e
