@@ -69,8 +69,8 @@
               <SortableHeader coluna="quantidade" direcao-inicial="desc" classe="text-right" v-bind="ordenacaoUi" @ordenar="ordenar">
                 Quantidade
               </SortableHeader>
-              <SortableHeader>Origem</SortableHeader>
-              <SortableHeader>Registrado por</SortableHeader>
+              <SortableHeader classe="px-3">Origem</SortableHeader>
+              <SortableHeader classe="px-3">Registrado por</SortableHeader>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
@@ -80,12 +80,13 @@
               class="hover:bg-slate-50 dark:hover:bg-slate-700/30"
             >
               <td class="px-4 py-3 text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                {{ formatarDataHora(linha.ocorrido_em) }}
+                <div>{{ formatarData(linha.ocorrido_em) }}</div>
+                <div class="text-xs text-slate-400 dark:text-slate-500">{{ formatarHora(linha.ocorrido_em) }}</div>
               </td>
               <td class="px-4 py-3">
                 <Badge :variant="linha.tipo_cor">{{ linha.tipo_label }}</Badge>
               </td>
-              <td class="px-4 py-3 text-slate-900 dark:text-white max-w-xs truncate" :title="linha.material">
+              <td class="px-4 py-3 text-slate-900 dark:text-white max-w-[13rem] truncate" :title="linha.material">
                 {{ linha.material || '—' }}
               </td>
               <td class="px-4 py-3 whitespace-nowrap">
@@ -102,7 +103,7 @@
                 {{ formatarQuantidade(linha.quantidade) }}
                 <span class="font-normal text-slate-500 dark:text-slate-400">{{ linha.unidade }}</span>
               </td>
-              <td class="px-4 py-3 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+              <td class="px-3 py-3 text-slate-600 dark:text-slate-300 max-w-[9rem] truncate" :title="linha.origem">
                 <Link
                   v-if="linha.origem_url"
                   :href="linha.origem_url"
@@ -112,7 +113,10 @@
                 </Link>
                 <span v-else>{{ linha.origem || '—' }}</span>
               </td>
-              <td class="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate">
+              <td
+                class="px-3 py-3 text-slate-600 dark:text-slate-300 max-w-[9rem] truncate"
+                :title="linha.registrado_por"
+              >
                 {{ linha.registrado_por || '—' }}
               </td>
             </tr>
@@ -184,10 +188,16 @@ function formatarQuantidade(valor) {
   return valor > 0 ? '+' + formatado : formatado;
 }
 
-function formatarDataHora(iso) {
+function formatarData(iso) {
   if (!iso) return '—';
 
-  return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  return new Date(iso).toLocaleDateString('pt-BR');
+}
+
+function formatarHora(iso) {
+  if (!iso) return '';
+
+  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function exportar(escopo) {
