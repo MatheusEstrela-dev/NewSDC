@@ -140,6 +140,23 @@
           @tramitar="tramitar"
         />
       </FormSection>
+
+      <!-- Prestação de Contas (RN-20: oculta para o perfil regional) -->
+      <FormSection
+        v-if="canVerPrestacao"
+        v-show="abaAtiva === 'prestacao'"
+        title="Prestação de Contas"
+        :icon="CheckCircleIcon"
+      >
+        <PedidoAhPrestacaoTab
+          :prestacao="prestacao"
+          :can-lancar="canLancarEntrega"
+          :can-homologar="canHomologar"
+          @lancar-entrega="lancarEntrega"
+          @remover-entrega="removerEntrega"
+          @homologar="homologar"
+        />
+      </FormSection>
     </div>
   </AuthenticatedLayout>
 </template>
@@ -155,10 +172,12 @@ import PedidoAhStatusBadge from '@/Components/Atoms/AjudaHumanitaria/PedidoAhSta
 import PedidoAhItensTab from '@/Components/Organisms/AjudaHumanitaria/PedidoAhItensTab.vue';
 import PedidoAhAnexosTab from '@/Components/Organisms/AjudaHumanitaria/PedidoAhAnexosTab.vue';
 import PedidoAhPareceresTab from '@/Components/Organisms/AjudaHumanitaria/PedidoAhPareceresTab.vue';
+import PedidoAhPrestacaoTab from '@/Components/Organisms/AjudaHumanitaria/PedidoAhPrestacaoTab.vue';
 import PedidoAhTramitacaoTab from '@/Components/Organisms/AjudaHumanitaria/PedidoAhTramitacaoTab.vue';
 import FormSection from '@/Components/Organisms/FormSection.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ArrowsRightLeftIcon from '@/Components/Icons/ArrowsRightLeftIcon.vue';
+import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
 import ClipboardIcon from '@/Components/Icons/ClipboardIcon.vue';
 import CubeIcon from '@/Components/Icons/CubeIcon.vue';
@@ -182,6 +201,10 @@ const props = defineProps({
   canLiberarItens: { type: Boolean, default: false },
   canParecer: { type: Boolean, default: false },
   canAnexos: { type: Boolean, default: false },
+  prestacao: { type: Object, default: null },
+  canVerPrestacao: { type: Boolean, default: false },
+  canLancarEntrega: { type: Boolean, default: false },
+  canHomologar: { type: Boolean, default: false },
 });
 
 // O Resource do Laravel embrulha em data quando devolvido isoladamente.
@@ -199,6 +222,13 @@ const abas = computed(() => [
   { chave: 'documentos', rotulo: 'Documentos', contador: props.anexos.length },
   { chave: 'pareceres', rotulo: 'Pareceres', contador: props.pareceres.length },
   { chave: 'tramitacao', rotulo: 'Tramitação', contador: props.tramites.length },
+  ...(props.canVerPrestacao
+    ? [{
+        chave: 'prestacao',
+        rotulo: 'Prestação de Contas',
+        contador: props.prestacao?.itens?.length ?? null,
+      }]
+    : []),
 ]);
 
 const opcoesPadrao = { preserveScroll: true, preserveState: false };
@@ -242,6 +272,21 @@ function removerAnexo(mediaId) {
     route('ajuda-humanitaria.pedidos.anexos.destroy', [dados.value.id, mediaId]),
     opcoesPadrao,
   );
+}
+
+function lancarEntrega(payload) {
+  router.post(route('ajuda-humanitaria.pedidos.entregas.store', dados.value.id), payload, opcoesPadrao);
+}
+
+function removerEntrega(entregaId) {
+  router.delete(
+    route('ajuda-humanitaria.pedidos.entregas.destroy', [dados.value.id, entregaId]),
+    opcoesPadrao,
+  );
+}
+
+function homologar() {
+  router.post(route('ajuda-humanitaria.pedidos.homologar', dados.value.id), {}, opcoesPadrao);
 }
 
 function formatarNumero(valor) {
