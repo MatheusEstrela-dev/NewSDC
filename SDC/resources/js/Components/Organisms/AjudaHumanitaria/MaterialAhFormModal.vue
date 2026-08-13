@@ -1,6 +1,6 @@
 <template>
   <Modal :show="show" max-width="lg" @close="fechar">
-    <div class="p-6">
+    <div class="max-h-[85vh] overflow-y-auto p-6">
       <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
         {{ edicao ? 'Editar material' : 'Novo material' }}
       </h3>

@@ -1,6 +1,6 @@
 <template>
   <Modal :show="show" max-width="3xl" @close="fechar">
-    <div class="p-6">
+    <div class="max-h-[85vh] overflow-y-auto p-6">
       <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Nova entrada de material</h3>
       <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
         O saldo do depósito é atualizado no mesmo instante em que a entrada é gravada.
