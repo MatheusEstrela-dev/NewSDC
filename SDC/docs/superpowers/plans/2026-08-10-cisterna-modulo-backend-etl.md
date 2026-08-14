@@ -14547,6 +14547,132 @@ grep -rn "TipoCisternaBadge\|StatusCisternaBadge\|CisternaFormTemplate\|Cisterna
 
 Anotar cada arquivo. `moduleIcons.js`, `useWelcomeTour.js` e `ziggy.js` apareceram no levantamento do legado e provavelmente citam rotas que a Task 6 renomeou (`cisternas.index` virou `cisternas.beneficiarios.index`).
 
+- [ ] **Step 1b: Migration que retira a tabela orfa `cisternas`**
+
+A migration do dominio **nao** derruba `cisternas`, de proposito: DROP no `up()` e destrutivo e irreversivel em producao. A retirada e aqui, isolada, para poder ser revisada e revertida sozinha.
+
+Antes de escrever, **confirme que ela esta de fato orfa**:
+
+```bash
+docker exec newsdc_dev_db psql -U sdc -d sdc -c "
+SELECT COUNT(*) AS linhas FROM cisternas;
+SELECT tc.table_name, tc.constraint_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = 'cisternas';"
+```
+
+Esperado: `0` linhas e **nenhuma** FK apontando para ela. Se houver qualquer FK ou qualquer linha, **pare e relate** — a tabela nao esta orfa e derruba-la perderia dado.
+
+Depois, `database/migrations/2026_08_14_110000_drop_tabela_cisternas_do_scaffold.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * Retira a tabela `cisternas`, do scaffold anterior do modulo.
+ *
+ * Ela modelava um dominio inventado (codigo, capacidade_litros, tipo
+ * comunitaria|individual|escolar) que nao existe no legado -- o legado e
+ * cadastro de beneficiario mais fiscalizacao de instalacao. O dominio novo,
+ * criado em 2026_08_14_100000, nao a usa, e nenhuma FK aponta para ela.
+ *
+ * Migration SEPARADA de proposito, e nao um DROP dentro da migration do
+ * dominio: derrubar tabela e a unica operacao aqui, o que a torna revisavel e
+ * reversivel sozinha. Se aparecer dado inesperado em producao, e este arquivo
+ * que se segura, sem travar a criacao do dominio.
+ *
+ * A guarda de contagem existe porque `cisternas` NAO deveria ter linha
+ * nenhuma. Se tiver, alguem usou a tabela depois do scaffold, e a migration
+ * precisa falhar em vez de apagar em silencio.
+ */
+return new class extends Migration
+{
+    public function up(): void
+    {
+        if (! Schema::hasTable('cisternas')) {
+            return;
+        }
+
+        $linhas = DB::table('cisternas')->count();
+
+        if ($linhas > 0) {
+            throw new RuntimeException(
+                "A tabela `cisternas` tem {$linhas} linha(s) e deveria estar vazia. "
+                .'Alguem a usou depois do scaffold: conferir o dado antes de derrubar.'
+            );
+        }
+
+        Schema::drop('cisternas');
+    }
+
+    /**
+     * Recria a estrutura do scaffold, sem dado. Existe para o rollback nao
+     * quebrar, nao porque a tabela sirva para algo.
+     */
+    public function down(): void
+    {
+        if (Schema::hasTable('cisternas')) {
+            return;
+        }
+
+        Schema::create('cisternas', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('municipio_id')->constrained('municipios')->cascadeOnDelete();
+            $table->string('codigo', 60)->unique();
+            $table->string('nome', 255);
+            $table->text('endereco')->nullable();
+            $table->decimal('latitude', 10, 7)->nullable();
+            $table->decimal('longitude', 10, 7)->nullable();
+            $table->unsignedInteger('capacidade_litros')->nullable();
+            $table->string('tipo', 20);
+            $table->string('status', 20)->default('pendente');
+            $table->date('data_instalacao')->nullable();
+            $table->string('responsavel_nome', 255)->nullable();
+            $table->string('responsavel_telefone', 20)->nullable();
+            $table->text('observacoes')->nullable();
+            $table->unsignedBigInteger('legacy_id')->nullable();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamps();
+            $table->softDeletes();
+            $table->index(['municipio_id', 'status']);
+            $table->index('legacy_id');
+        });
+    }
+};
+```
+
+Aplicar e conferir:
+
+```bash
+PHP=/c/laragon/bin/php/php-8.3.16-Win32-vs16-x64/php.exe
+DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc DB_PASSWORD=secret \
+CACHE_DRIVER=array SESSION_DRIVER=array QUEUE_CONNECTION=sync \
+  $PHP -d extension_dir=/c/laragon/bin/php/php-8.3.16-Win32-vs16-x64/ext -d extension=pdo_pgsql \
+  artisan migrate --force
+```
+
+E ajustar o `SchemaCisternaTest`: o teste `test_a_tabela_cisternas_do_scaffold_permanece_orfa` passa a esperar o contrario. Trocar por:
+
+```php
+    public function test_a_tabela_do_scaffold_foi_retirada(): void
+    {
+        $this->assertFalse(
+            Schema::hasTable('cisternas'),
+            'A migration 2026_08_14_110000 deve ter retirado a tabela do scaffold.'
+        );
+    }
+```
+
+O teste `test_o_dominio_novo_nao_referencia_a_tabela_do_scaffold` continua valendo e fica.
+
 - [ ] **Step 2: Remover as paginas e componentes**
 
 ```bash
