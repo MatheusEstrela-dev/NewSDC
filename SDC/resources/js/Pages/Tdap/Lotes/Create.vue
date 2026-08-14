@@ -40,6 +40,7 @@ const form = useForm({
   prestador_id: null,
   numero: '',
   nome: '',
+  contrato: '',
   qtd_agua_m3: '',
   valor_m3: '',
   ativo: true,

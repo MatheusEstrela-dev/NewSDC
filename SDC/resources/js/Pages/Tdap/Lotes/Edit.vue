@@ -42,6 +42,7 @@ const form = useForm({
   prestador_id: l.prestador_id,
   numero: l.numero || '',
   nome: l.nome || '',
+  contrato: l.contrato || '',
   qtd_agua_m3: l.qtd_agua_m3 ?? '',
   valor_m3: l.valor_m3 ?? '',
   ativo: l.ativo ?? true,

@@ -68,7 +68,7 @@
           />
           <InputError :message="form.errors.numero" class="mt-2" />
         </div>
-        <div class="md:col-span-2">
+        <div>
           <InputLabel for="nome" value="Nome (opcional)" />
           <TextInput
             id="nome"
@@ -79,6 +79,18 @@
             placeholder="Ex: Lote Norte – Distrito 1"
           />
           <InputError :message="form.errors.nome" class="mt-2" />
+        </div>
+        <div>
+          <InputLabel for="contrato" value="Contrato (opcional)" />
+          <TextInput
+            id="contrato"
+            v-model="form.contrato"
+            type="text"
+            class="mt-1 block w-full"
+            maxlength="50"
+            placeholder="Ex: 123/2026"
+          />
+          <InputError :message="form.errors.contrato" class="mt-2" />
         </div>
       </div>
     </div>

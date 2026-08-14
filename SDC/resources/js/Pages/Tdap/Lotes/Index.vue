@@ -30,11 +30,25 @@
 
     <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="true">
       <FilterField
+        label="Buscar"
+        type="search"
+        placeholder="Número, nome ou contrato"
+        :model-value="filtroBusca"
+        @update:model-value="filtroBusca = $event"
+      />
+      <FilterField
         label="Ata"
         type="select"
         :model-value="filtroAta"
         :options="ataOptions"
         @update:model-value="filtroAta = $event"
+      />
+      <FilterField
+        label="Município"
+        type="select"
+        :model-value="filtroMunicipio"
+        :options="municipioOptions"
+        @update:model-value="filtroMunicipio = $event"
       />
       <FilterField
         label="Prestador"
@@ -74,6 +88,7 @@
             <td class="px-4 py-3 text-sm font-mono">
               <Link :href="route('tdap.lotes.show', l.id)" class="text-blue-600 hover:text-blue-800">{{ l.numero }}</Link>
               <span v-if="l.nome" class="block text-xs text-slate-500">{{ l.nome }}</span>
+              <span v-if="l.contrato" class="block text-xs text-slate-400">Contrato {{ l.contrato }}</span>
             </td>
             <td class="px-4 py-3 text-sm font-mono text-slate-700 dark:text-slate-300">{{ l.ata_numero }}</td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ l.municipio_nome }}<span v-if="l.municipio_uf" class="text-slate-400">/{{ l.municipio_uf }}</span></td>
@@ -107,6 +122,17 @@
                   size="sm"
                   tooltip-text="Editar lote"
                   @click="router.visit(route('tdap.lotes.edit', l.id))"
+                />
+                <ActionButton
+                  v-if="canDelete"
+                  action="delete"
+                  module="tdap"
+                  resource="lotes"
+                  :allowed="canDelete"
+                  :show-label="false"
+                  size="sm"
+                  tooltip-text="Excluir lote"
+                  @click="excluir(l)"
                 />
               </div>
             </td>
@@ -160,6 +186,7 @@ const props = defineProps({
   lotes:        { type: Object, default: () => ({ data: [], meta: {} }) },
   estatisticas: { type: Object, default: () => ({ total: 0, ativos: 0, volume_total_m3: 0, valor_total: 0 }) },
   atas:         { type: Array, default: () => [] },
+  municipios:   { type: Array, default: () => [] },
   prestadores:  { type: Array, default: () => [] },
   filtros:      { type: Object, default: () => ({}) },
   canCreate:    { type: Boolean, default: false },
@@ -167,13 +194,20 @@ const props = defineProps({
   canDelete:    { type: Boolean, default: false },
 });
 
+const filtroBusca     = ref(props.filtros.search ?? '');
 const filtroAta       = ref(props.filtros.ata_id ?? '');
+const filtroMunicipio = ref(props.filtros.municipio_id ?? '');
 const filtroPrestador = ref(props.filtros.prestador_id ?? '');
 const filtroAtivo     = ref(props.filtros.ativo ?? '');
 
 const ataOptions = computed(() => [
   { value: '', label: 'Todas as atas' },
   ...props.atas.map(a => ({ value: a.id, label: a.numero })),
+]);
+// Vem do backend ja restrito aos municipios que possuem lote no recorte atual.
+const municipioOptions = computed(() => [
+  { value: '', label: 'Todos os municípios' },
+  ...props.municipios.map(m => ({ value: m.id, label: m.uf ? `${m.nome} / ${m.uf}` : m.nome })),
 ]);
 const prestadorOptions = computed(() => [
   { value: '', label: 'Todos os prestadores' },
@@ -185,16 +219,26 @@ const ativoOptions = [
   { value: '0', label: 'Inativos' },
 ];
 
-function aplicarFiltros() {
-  router.get(route('tdap.lotes.index'), {
+// Fonte unica dos parametros de filtro: busca, cards, paginacao e export usam
+// este objeto (antes cada um montava o seu e o municipio ficava de fora).
+function queryFiltros() {
+  return {
+    search:       filtroBusca.value || undefined,
     ata_id:       filtroAta.value || undefined,
+    municipio_id: filtroMunicipio.value || undefined,
     prestador_id: filtroPrestador.value || undefined,
     ativo:        filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
-  }, { preserveState: true, replace: true });
+  };
+}
+
+function aplicarFiltros() {
+  router.get(route('tdap.lotes.index'), queryFiltros(), { preserveState: true, replace: true });
 }
 
 function limparFiltros() {
+  filtroBusca.value = '';
   filtroAta.value = '';
+  filtroMunicipio.value = '';
   filtroPrestador.value = '';
   filtroAtivo.value = '';
   router.get(route('tdap.lotes.index'), {}, { preserveState: false });
@@ -203,24 +247,23 @@ function limparFiltros() {
 // Cards de estatistica como filtros rapidos: '' = Total (limpa o filtro de status), preservando ata/prestador.
 function filtrarPorAtivo(ativo) {
   filtroAtivo.value = ativo ?? '';
-  router.get(route('tdap.lotes.index'), {
-    ata_id:       filtroAta.value || undefined,
-    prestador_id: filtroPrestador.value || undefined,
-    ativo:        filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
-  }, { preserveState: true, replace: true });
+  router.get(route('tdap.lotes.index'), queryFiltros(), { preserveState: true, replace: true });
+}
+
+// O backend recusa lote com cronograma vinculado e devolve flash de erro na
+// tela do lote — aqui so confirmamos a intencao.
+function excluir(lote) {
+  if (!confirm(`Excluir o lote ${lote.numero}?`)) return;
+  router.delete(route('tdap.lotes.destroy', lote.id), { preserveScroll: true });
 }
 
 // Exportacao CSV (mesmo padrao dos outros modulos)
 const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.lotes.export');
 
 function onExport(params) {
-  handleExport(params, {
-    ata_id:       filtroAta.value || undefined,
-    prestador_id: filtroPrestador.value || undefined,
-    ativo:        filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
-  });
+  handleExport(params, queryFiltros());
 }
 function irParaPagina(page) {
-  router.get(route('tdap.lotes.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
+  router.get(route('tdap.lotes.index'), { ...queryFiltros(), page }, { preserveState: true, replace: true });
 }
 </script>

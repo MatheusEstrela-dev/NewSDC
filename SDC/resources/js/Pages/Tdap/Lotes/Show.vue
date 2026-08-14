@@ -13,7 +13,14 @@
         <Link v-if="canEdit" :href="route('tdap.lotes.edit', l.id)">
           <PrimaryButton>Editar</PrimaryButton>
         </Link>
-        <DangerButton v-if="canDelete" @click="excluir">Excluir</DangerButton>
+        <!--
+          Lote com cronograma nao pode ser excluido (FK restrict + guard no
+          LoteService). O botao some para nao oferecer uma acao que falharia.
+        -->
+        <DangerButton v-if="canDelete && !temCronograma" @click="excluir">Excluir</DangerButton>
+        <span v-else-if="canDelete" class="text-xs text-slate-500 self-center">
+          {{ l.cronogramas_count }} cronograma(s) vinculado(s): exclusão bloqueada.
+        </span>
       </template>
     </TdapPageHeader>
 
@@ -21,9 +28,10 @@
       <div class="lg:col-span-2 space-y-4">
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
           <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Identificação</h3>
-          <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div><dt class="text-slate-500">Número</dt><dd class="font-mono font-semibold text-slate-900 dark:text-slate-100">{{ l.numero }}</dd></div>
             <div><dt class="text-slate-500">Nome</dt><dd class="text-slate-900 dark:text-slate-100">{{ l.nome || '—' }}</dd></div>
+            <div><dt class="text-slate-500">Contrato</dt><dd class="font-mono text-slate-900 dark:text-slate-100">{{ l.contrato || '—' }}</dd></div>
           </dl>
         </div>
 
@@ -100,6 +108,8 @@ const props = defineProps({
 });
 
 const l = computed(() => props.lote.data ?? props.lote).value;
+
+const temCronograma = (l.cronogramas_count ?? 0) > 0;
 
 function excluir() {
   if (!confirm(`Excluir o lote ${l.numero}?`)) return;
