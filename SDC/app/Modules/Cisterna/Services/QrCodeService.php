@@ -38,7 +38,7 @@ class QrCodeService
     {
         $qrCode = $this->construir($vistoria);
 
-        return (new SvgWriter())->write($qrCode)->getString();
+        return (new SvgWriter)->write($qrCode)->getString();
     }
 
     /**
@@ -48,7 +48,7 @@ class QrCodeService
     {
         $qrCode = $this->construir($vistoria);
 
-        return (new PngWriter())->write($qrCode)->getString();
+        return (new PngWriter)->write($qrCode)->getString();
     }
 
     /**

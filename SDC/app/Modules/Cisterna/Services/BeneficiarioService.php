@@ -132,17 +132,17 @@ class BeneficiarioService
     /**
      * @param  array<int, int>  $ids
      */
-    public function alocarEmOrdemServico(array $ids, int $ordemServicoId): int
+    public function alocarEmOrdemServico(PerfilCisterna $perfil, array $ids, int $ordemServicoId): int
     {
-        return $this->moverParaOrdemServico($ids, $ordemServicoId);
+        return $this->moverParaOrdemServico($perfil, $ids, $ordemServicoId);
     }
 
     /**
      * @param  array<int, int>  $ids
      */
-    public function removerDeOrdemServico(array $ids): int
+    public function removerDeOrdemServico(PerfilCisterna $perfil, array $ids): int
     {
-        return $this->moverParaOrdemServico($ids, null);
+        return $this->moverParaOrdemServico($perfil, $ids, null);
     }
 
     /**
@@ -157,13 +157,13 @@ class BeneficiarioService
      *
      * @param  array<int, int>  $ids
      */
-    private function moverParaOrdemServico(array $ids, ?int $ordemServicoId): int
+    private function moverParaOrdemServico(PerfilCisterna $perfil, array $ids, ?int $ordemServicoId): int
     {
-        return DB::transaction(function () use ($ids, $ordemServicoId): int {
-            $anteriores = CisternaBeneficiario::whereIn('id', $ids)
+        return DB::transaction(function () use ($perfil, $ids, $ordemServicoId): int {
+            $anteriores = $this->consultaEmMassa($perfil, $ids)
                 ->pluck('ordem_servico_id', 'id');
 
-            $afetados = CisternaBeneficiario::whereIn('id', $ids)
+            $afetados = $this->consultaEmMassa($perfil, $ids)
                 ->update(['ordem_servico_id' => $ordemServicoId]);
 
             $agora = now();
@@ -199,10 +199,32 @@ class BeneficiarioService
     /**
      * @param  array<int, int>  $ids
      */
-    public function alterarSituacaoObra(array $ids, SituacaoObra $situacao): int
+    public function alterarSituacaoObra(PerfilCisterna $perfil, array $ids, SituacaoObra $situacao): int
     {
-        return CisternaBeneficiario::whereIn('id', $ids)
+        return $this->consultaEmMassa($perfil, $ids)
             ->update(['situacao_obra' => $situacao->value]);
+    }
+
+    /**
+     * Base das acoes em massa: os ids pedidos, INTERSECTADOS com o escopo do
+     * perfil.
+     *
+     * E aqui que o recorte territorial da acao em massa acontece. A policy
+     * updateEmMassa() so verifica a permissao, porque nao ha instancia unica
+     * para checar; sem este escopo, um usuario COMPDEC conseguiria mover em
+     * lote beneficiarios de outro municipio -- exatamente o que o update() por
+     * instancia impede no caminho individual.
+     *
+     * @param  array<int, int>  $ids
+     * @return Builder<CisternaBeneficiario>
+     */
+    private function consultaEmMassa(PerfilCisterna $perfil, array $ids): Builder
+    {
+        $query = CisternaBeneficiario::whereIn('id', $ids);
+
+        $this->aplicarEscopoDoPerfil($query, $perfil);
+
+        return $query;
     }
 
     /**

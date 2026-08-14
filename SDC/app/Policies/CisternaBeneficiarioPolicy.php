@@ -38,6 +38,21 @@ class CisternaBeneficiarioPolicy extends BasePolicy
         return $this->dentroDoTerritorio($user, $beneficiario);
     }
 
+    /**
+     * Acao em massa. Existe separada de update() porque nao ha instancia unica
+     * para checar: a operacao atinge muitos registros de uma vez.
+     *
+     * Isto verifica APENAS a permissao. O recorte territorial e feito no
+     * BeneficiarioService, que aplica o escopo do perfil ao whereIn dos ids --
+     * sem isso um usuario COMPDEC poderia mover em lote beneficiarios de outro
+     * municipio, que e justamente o que o update() por instancia impede no
+     * caminho individual.
+     */
+    public function updateEmMassa(User $user): bool
+    {
+        return $user->can('cisternas.beneficiarios.edit');
+    }
+
     public function delete(User $user, CisternaBeneficiario $beneficiario): bool
     {
         return $user->can('cisternas.beneficiarios.delete')

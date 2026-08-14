@@ -24,9 +24,9 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * sinc_cisterna_rel_fornecedor, sinc_cisterna_rel_compdec e
  * sinc_cisterna_rel_cedec.
  *
- * @property int            $id
- * @property EtapaVistoria  $etapa
- * @property ?int           $numero_instalacao
+ * @property int $id
+ * @property EtapaVistoria $etapa
+ * @property ?int $numero_instalacao
  */
 class CisternaVistoria extends Model implements HasMedia, Rastreavel
 {

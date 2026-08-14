@@ -29,13 +29,13 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * onde as 54 colunas eram todas varchar(150) — datas, moeda, medidas e
  * booleanos inclusive.
  *
- * @property int             $id
- * @property string          $cpf
- * @property string          $nome
+ * @property int $id
+ * @property string $cpf
+ * @property string $nome
  * @property SituacaoAnalise $situacao_analise
- * @property SituacaoObra    $situacao_obra
- * @property ?int            $ranqueamento_ordem
- * @property ?int            $legacy_id
+ * @property SituacaoObra $situacao_obra
+ * @property ?int $ranqueamento_ordem
+ * @property ?int $legacy_id
  */
 class CisternaBeneficiario extends Model implements HasMedia, Rastreavel
 {
