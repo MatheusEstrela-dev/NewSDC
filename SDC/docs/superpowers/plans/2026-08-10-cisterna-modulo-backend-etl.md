@@ -14046,6 +14046,27 @@ class RefinaNotificacoes implements Refinador
 
 Copia os arquivos do disco `legado_cisterna` para as collections do MediaLibrary. Roda por ultimo, quando todos os registros ja existem.
 
+**Antes de implementar, entenda o que da e o que nao da para migrar.** Verificado nos dados de producao:
+
+| Origem | Situacao real | Migravel? |
+|---|---|---|
+| Fotos de vistoria (`{item}_foto1/2`, `{item}_foto`) | Caminho local, em `relatorios/cisterna/form_*/{cisterna_id}/`. 827 fotos no fornecedor, 249 no COMPDEC | **Sim**, se o storage do legado estiver acessivel |
+| Assinatura do engenheiro | Caminho local, nome aleatorio. 736 no fornecedor, 658 no COMPDEC | **Sim** |
+| **Fotos do imovel** (`img_frontal`, `img_lat_*`, `img_fundo`, `img_local_ins_*`, `img_op1..4`) | **A coluna guarda o ROTULO da foto** ("FRENTE", "FUNDO"), nao o caminho — o legado gravava `$request->obs_frontal` ali. O arquivo esta no **Google Drive**: `img_frontal_lk` tem `https://drive.google.com/open?id=...` em **5.808 das 8.105 linhas (72%)** | **Nao.** Ver abaixo |
+| `anexo_deficiencia` / `anexo_mulher` | Caminho local, mas so **2** e **3** linhas respectivamente | Sim, volume irrelevante |
+
+**As fotos do imovel de 72% dos beneficiarios estao no Google Drive, nao em disco.** O refino nao baixa do Drive: fazer isso exigiria credencial da conta, tratar arquivo compartilhado versus restrito, e lidar com rate limit — decisao de infraestrutura, nao de porte de modulo.
+
+O que o refino faz com elas:
+
+- preserva o **rotulo** da coluna (`img_frontal` = "FRENTE") como observacao, que e informacao real e se perderia
+- preserva a **URL do Drive** em `custom_properties.origem_legado`, para que a foto seja recuperavel depois
+- registra no `cisterna_etl_log` quantas ficaram so como link
+
+Isso e **perda de funcionalidade em relacao ao legado** e precisa entrar na conversa com a area junto com as outras pendencias (notas secao 5.5).
+
+**Segundo ponto: os arquivos nao estao nesta maquina.** O disco `legado_cisterna` aponta para `LEGADO_CISTERNA_ANEXOS_ROOT`, que por padrao cai em `storage/app/public/legado_cisterna` — vazio. Os arquivos vivem no servidor do legado. Sem montar ou copiar esse storage, o refino de midia roda e registra tudo como ausente, sem erro. **O teste desta task usa `Storage::fake('legado_cisterna')`**, entao ele valida a logica sem depender dos arquivos reais; a copia de verdade e um passo operacional separado.
+
 ```php
 <?php
 
@@ -14160,7 +14181,18 @@ class RefinaMidia implements Refinador
         }
 
         $copiadas += $this->copiarComprovantes($beneficiario, $doc, $ausentes);
-        $copiadas += $this->copiarFotosDeVistoria($beneficiario, $ausentes);
+
+        // As vistorias precisam do doc DELAS, nao do beneficiario: os caminhos
+        // das fotos estao nas colunas das tabelas de relatorio.
+        foreach ($beneficiario->vistorias as $vistoria) {
+            $docVistoria = $this->docDaVistoria($vistoria);
+
+            if ($docVistoria === null) {
+                continue;
+            }
+
+            $copiadas += $this->copiarMidiaDaVistoria($vistoria, $docVistoria, $ausentes);
+        }
 
         if ($ausentes !== []) {
             RegistroEtl::erro($this->recurso(), $this->tabelaLegado(), $legacyId,
@@ -14218,59 +14250,75 @@ class RefinaMidia implements Refinador
     }
 
     /**
-     * As fotos de vistoria ficavam em diretorio por formulario e id da
-     * cisterna, com nome {item}_foto1.ext / {item}_foto2.ext.
+     * Le de volta o doc cru da vistoria, para pegar as colunas de caminho.
      *
+     * @return array<string, mixed>|null
+     */
+    private function docDaVistoria(CisternaVistoria $vistoria): ?array
+    {
+        if ($vistoria->legacy_id === null) {
+            return null;
+        }
+
+        $linha = DB::table('cisterna_legado_raw')
+            ->where('legacy_table', $vistoria->etapa->tabelaLegado())
+            ->where('legacy_id', $vistoria->legacy_id)
+            ->value('doc');
+
+        $doc = $linha === null ? null : json_decode((string) $linha, true);
+
+        return is_array($doc) ? $doc : null;
+    }
+
+    /**
+     * Fotos e assinatura das vistorias.
+     *
+     * **Le as COLUNAS do doc, nao varre o diretorio.** Varrer parecia mais
+     * simples, mas quebra na pratica, por tres motivos verificados nos dados
+     * de producao:
+     *
+     *  1. A assinatura tem nome ALEATORIO, nao "assinatura*":
+     *     `relatorios/cisterna/form_fornecedor_fiscalizacao/1694/Qpueq2...`
+     *     Sao 736 assinaturas no fornecedor e 658 no COMPDEC que seriam
+     *     classificadas como "foto nao reconhecida".
+     *  2. Os caminhos gravados tem BARRA DUPLA: o legado concatenava um
+     *     diretorio que ja terminava em "/" com o nome do arquivo.
+     *  3. A extensao vem VAZIA: `cisterna_foto1.` termina em ponto, porque
+     *     getClientOriginalExtension() devolveu string vazia no upload.
+     *
+     * Lendo a coluna, o vinculo item -> arquivo vem do dado e nao de
+     * convencao de nome.
+     *
+     * @param  array<string, mixed>  $doc  Linha crua da tabela de relatorio.
      * @param  array<int, string>  $ausentes
      */
-    private function copiarFotosDeVistoria(CisternaBeneficiario $beneficiario, array &$ausentes): int
-    {
-        $diretorios = [
-            EtapaVistoria::FORNECEDOR->value => 'relatorios/cisterna/form_fornecedor_fiscalizacao',
-            EtapaVistoria::COMPDEC->value => 'relatorios/cisterna/form_compdec_instalacao',
-            EtapaVistoria::CEDEC->value => 'relatorios/cisterna/form_cedec_fiscalizacao',
-        ];
-
+    private function copiarMidiaDaVistoria(
+        CisternaVistoria $vistoria,
+        array $doc,
+        array &$ausentes,
+    ): int {
         $copiadas = 0;
 
-        foreach ($beneficiario->vistorias as $vistoria) {
-            $base = $diretorios[$vistoria->etapa->value] ?? null;
+        // Assinatura: coluna unica em todas as tres etapas.
+        $assinatura = $this->normalizarCaminho($doc['assinatura_eng_foto'] ?? null);
 
-            if ($base === null) {
-                continue;
-            }
+        if ($assinatura !== null && $vistoria->getMedia('assinatura_engenheiro')->isEmpty()) {
+            $copiadas += $this->copiar($vistoria, $assinatura, 'assinatura_engenheiro', [], $ausentes);
+        }
 
-            $pasta = "{$base}/{$beneficiario->legacy_id}";
+        // Fotos por item. O nome da coluna muda por etapa: o fornecedor tem
+        // {item}_foto1 e {item}_foto2; o COMPDEC tem {item}_foto, e o item do
+        // logo se chama cisterna_logo la e cisterna aqui.
+        foreach (ItemInstalacao::cases() as $item) {
+            foreach ($this->colunasDeFoto($vistoria->etapa, $item) as $sequencia => $coluna) {
+                $caminho = $this->normalizarCaminho($doc[$coluna] ?? null);
 
-            if (! Storage::disk('legado_cisterna')->exists($pasta)) {
-                continue;
-            }
-
-            foreach (Storage::disk('legado_cisterna')->files($pasta) as $arquivo) {
-                $nome = pathinfo($arquivo, PATHINFO_FILENAME);
-
-                // Assinatura vai para a collection dedicada.
-                if (str_starts_with($nome, 'assinatura')) {
-                    if ($vistoria->getMedia('assinatura_engenheiro')->isEmpty()) {
-                        $vistoria->addMediaFromDisk($arquivo, 'legado_cisterna')
-                            ->preservingOriginal()
-                            ->withCustomProperties(['origem_legado' => $arquivo])
-                            ->toMediaCollection('assinatura_engenheiro');
-                        $copiadas++;
-                    }
-
-                    continue;
-                }
-
-                [$item, $sequencia] = $this->interpretarNome($nome);
-
-                if ($item === null) {
-                    $ausentes[] = "foto nao reconhecida: {$arquivo}";
+                if ($caminho === null) {
                     continue;
                 }
 
                 $jaTem = $vistoria->getMedia('fotos_vistoria')->contains(
-                    fn ($m): bool => $m->getCustomProperty('item') === $item
+                    fn ($m): bool => $m->getCustomProperty('item') === $item->value
                         && (int) $m->getCustomProperty('sequencia') === $sequencia
                 );
 
@@ -14278,16 +14326,10 @@ class RefinaMidia implements Refinador
                     continue;
                 }
 
-                $vistoria->addMediaFromDisk($arquivo, 'legado_cisterna')
-                    ->preservingOriginal()
-                    ->withCustomProperties([
-                        'item' => $item,
-                        'sequencia' => $sequencia,
-                        'origem_legado' => $arquivo,
-                    ])
-                    ->toMediaCollection('fotos_vistoria');
-
-                $copiadas++;
+                $copiadas += $this->copiar($vistoria, $caminho, 'fotos_vistoria', [
+                    'item' => $item->value,
+                    'sequencia' => $sequencia,
+                ], $ausentes);
             }
         }
 
@@ -14295,22 +14337,69 @@ class RefinaMidia implements Refinador
     }
 
     /**
-     * "calha_foto2" -> ['calha', 2]. "cisterna_foto1" -> ['cisterna_logo', 1],
-     * porque o fornecedor chamava o primeiro item de `cisterna`.
+     * Colunas de foto de um item, por etapa, na ordem da sequencia (1-based).
      *
-     * @return array{0: ?string, 1: int}
+     * @return array<int, string>
      */
-    private function interpretarNome(string $nome): array
+    private function colunasDeFoto(EtapaVistoria $etapa, ItemInstalacao $item): array
     {
-        if (! preg_match('/^(.+?)_foto(\d*)$/', $nome, $partes)) {
-            return [null, 1];
+        // A etapa CEDEC nao guarda foto por item, apenas a assinatura.
+        if ($etapa === EtapaVistoria::CEDEC) {
+            return [];
         }
 
-        $base = $partes[1] === 'cisterna' ? ItemInstalacao::CISTERNA_LOGO->value : $partes[1];
-        $item = ItemInstalacao::tryFrom($base);
+        if ($etapa === EtapaVistoria::COMPDEC) {
+            // cisterna_logo_foto, sucao_foto, bomba_foto, ...
+            return [1 => $item->value.'_foto'];
+        }
 
-        return [$item?->value, $partes[2] === '' ? 1 : (int) $partes[2]];
+        // Fornecedor: o primeiro item se chama `cisterna`, nao `cisterna_logo`.
+        $base = $item === ItemInstalacao::CISTERNA_LOGO ? 'cisterna' : $item->value;
+
+        return [1 => $base.'_foto1', 2 => $base.'_foto2'];
     }
+
+    /**
+     * Colapsa barra dupla e descarta vazio. Caminho terminando em ponto (por
+     * extensao vazia no upload) e preservado como esta: quem sabe se o arquivo
+     * existe e o disco, nao a gente.
+     */
+    private function normalizarCaminho(mixed $valor): ?string
+    {
+        $caminho = trim((string) ($valor ?? ''));
+
+        if ($caminho === '' || $caminho === '0') {
+            return null;
+        }
+
+        return preg_replace('#/{2,}#', '/', $caminho) ?? $caminho;
+    }
+
+    /**
+     * @param  array<string, mixed>  $propriedades
+     * @param  array<int, string>  $ausentes
+     */
+    private function copiar(
+        CisternaVistoria|CisternaBeneficiario $dono,
+        string $caminho,
+        string $collection,
+        array $propriedades,
+        array &$ausentes,
+    ): int {
+        if (! Storage::disk('legado_cisterna')->exists($caminho)) {
+            $ausentes[] = $caminho;
+
+            return 0;
+        }
+
+        $dono->addMediaFromDisk($caminho, 'legado_cisterna')
+            ->preservingOriginal()
+            ->withCustomProperties(array_merge($propriedades, ['origem_legado' => $caminho]))
+            ->toMediaCollection($collection);
+
+        return 1;
+    }
+
 }
 ```
 

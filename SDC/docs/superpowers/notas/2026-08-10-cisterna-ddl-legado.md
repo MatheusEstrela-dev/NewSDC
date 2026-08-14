@@ -133,3 +133,27 @@ Nao sao decisoes, sao constatacoes — a area precisa saber:
 - **67 cadastros com `PR?PRIA`.** `moradia` e `varchar(7)` em utf8mb3, e "PRÓPRIA" nao cabe. O refino mapeia para `propria`.
 - **34 cadastros com o responsavel gravado na coluna do booleano.** `atendPipa` e `varchar(36)` e recebeu `prefeitura`, `respAtPrefeitura`, `respAtExercito`, `defesa civil`, `outros` em vez de sim/nao. O refino le como "atendido = sim" e registra o valor original no log.
 - **`0` como valor de enum.** 162 linhas em `moradia` e 14 em `coberturaTelhado` tem literalmente `'0'`. Viram null.
+
+### 5.6 As fotos do imovel estao no Google Drive — **isto precisa de decisao**
+
+Verificado nos dados: as colunas `img_frontal`, `img_lat_direito`, `img_lat_esquerdo`, `img_fundo`, `img_local_ins_p1/p2` e `img_op1..4` **nao guardam caminho de arquivo**. Guardam o rotulo da foto — literalmente `FRENTE`, `FUNDO`, ou `0`. O legado gravava ali `$request->obs_frontal`, a observacao digitada.
+
+O arquivo em si esta no Google Drive, nas colunas `*_lk`:
+
+```
+img_frontal_lk = https://drive.google.com/open?id=1ERSWmB1hnY44s-Iw...
+```
+
+**5.808 das 8.105 linhas (72%) tem link do Drive.** Apenas 2 registros tem `anexo_deficiencia` e 3 tem `anexo_mulher` em disco local.
+
+Em contraste, as fotos de **vistoria** estao em disco e sao migraveis: 827 no fornecedor, 249 no COMPDEC, mais 736 e 658 assinaturas.
+
+**O que o ETL faz:** preserva o rotulo como observacao e a URL do Drive em `custom_properties.origem_legado`, e conta no log quantas ficaram so como link. **Nao baixa do Drive** — isso exigiria credencial da conta, tratar arquivo restrito versus compartilhado e lidar com rate limit. E decisao de infraestrutura, nao de porte de modulo.
+
+**Perguntas para a area:**
+
+1. As fotos do imovel precisam estar no NewSDC, ou o link para o Drive basta?
+2. Se precisam: alguem tem acesso a conta do Drive para uma extracao em massa? Sao ~5.800 arquivos.
+3. Os arquivos de vistoria (os que **estao** em disco) precisam ser copiados do servidor do legado para ca. Quem faz e quando?
+
+Enquanto isso nao se resolve, o modulo novo funciona sem as fotos do imovel: o cadastro, o fluxo de vistoria e os relatorios nao dependem delas.
