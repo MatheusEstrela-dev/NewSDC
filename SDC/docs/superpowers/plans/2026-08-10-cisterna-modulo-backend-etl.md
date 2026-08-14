@@ -5347,7 +5347,7 @@ class BeneficiarioService
 
                 $registros[] = [
                     'user_id' => Auth::id(),
-                    'event' => 'updated',
+                    'event' => 'update', // CHECK aceita insert|update|delete|login|logout
                     'table_name' => 'cisterna_beneficiarios',
                     'row_id' => $id,
                     'old_values' => json_encode(['ordem_servico_id' => $anterior]),
@@ -7460,7 +7460,7 @@ class CisternaBeneficiarioObserver
 
         AuditLog::create([
             'user_id' => Auth::id(),
-            'event' => 'updated',
+            'event' => 'update', // CHECK aceita insert|update|delete|login|logout
             'table_name' => $beneficiario->getTable(),
             'row_id' => $beneficiario->getKey(),
             'old_values' => ['ordem_servico_id' => $beneficiario->getOriginal('ordem_servico_id')],
