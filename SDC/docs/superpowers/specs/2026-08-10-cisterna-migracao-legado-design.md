@@ -190,7 +190,7 @@ O legado repete essas condicoes em quatro metodos (`index`, `rank`, `aplicarFilt
 | D22 | O refino marca `at_cisterna = 1` nos 55 municipios com beneficiario | O flag esta zerado no Postgres (0 de 854): sem isso todo select de municipio do modulo sobe vazio (secao 4.6.9-E) |
 | D23 | `sinc_cisterna_relatorio_cedec` nao e portada | 2 linhas, sem model, controller ou rota no legado. Estrutura recente e mais rica que a `rel_cedec` em uso — decidir com a area se e o futuro do formulario (secao 4.6.9-A) |
 | D24 | Quantidade do fornecedor: le `qtd_*` e cai para `*_metros` | A tabela tem os dois pares de colunas, de geracoes diferentes do formulario (secao 4.6.9-B) |
-| D25 | Os 26 CPFs colidentes fora dos tombstones: importa o mais completo e marca os concorrentes como `duplicado` | Aplica a mesma convencao que o legado ja usava. Nada se perde, o indice unico parcial aceita, e a area revisa depois filtrando a listagem por Duplicado — em vez de travar a carga |
+| D25 | Os 26 CPFs colidentes fora dos tombstones se dividem por **similaridade de nome**: 22 viram `duplicado`, 4 nao sao importados | Comparando os nomes, 4 dos 26 sao **pessoas diferentes com o mesmo CPF** — erro de digitacao, nao duplicidade. Marcar `ISABEL ALVES SEPO` como duplicata de `DOUGLAS SOARES BARBOSA` apagaria uma beneficiaria real. Detalhe e os 4 casos em `docs/superpowers/notas/2026-08-10-cisterna-ddl-legado.md` secao 5.1 |
 
 ---
 

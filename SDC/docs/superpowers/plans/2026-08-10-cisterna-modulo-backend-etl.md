@@ -22,9 +22,55 @@
 - `Requests/` e `Resources/` na **raiz** do modulo, sem `Http/`. Sem pasta `Exports/`.
 - Export e **CSV streamado** via `StreamedResponse`. `maatwebsite/excel` nao esta instalado e nao sera adicionado.
 - Testes: PHPUnit 11, namespace `Tests\Feature\Cisterna` / `Tests\Unit\Cisterna`, `use DatabaseTransactions;`, estender `Tests\TestCase`.
-- **Antes de rodar testes:** `php artisan config:clear`. Config cacheado com `host=db` envenena as env vars e o Postgres de teste responde na porta 5434 do host.
-- Rodar teste: `php artisan test --filter=NomeDoTeste`.
-- As migrations **nao rodam em sqlite** neste projeto — os testes usam o Postgres real.
+- As migrations **nao rodam em sqlite** neste projeto — os testes usam o Postgres real (Docker `newsdc_dev_db`, exposto em `127.0.0.1:5434`).
+
+### Ambiente — resolvido por `scripts/test-host.sh`, nao improvisar
+
+Rodar teste neste projeto pelo caminho obvio **nao funciona**, e cada armadilha falha de um jeito diferente. Foram cinco, descobertas uma a uma na Onda 1:
+
+1. **`php artisan test` nao existe.** Responde `Command "test" is not defined`, mesmo com `nunomaduro/collision ^8.5` instalado e o `TestCommand.php` presente no vendor.
+2. **O `php` do PATH e 8.1.25 e nao carrega o `vendor/`.** Parse error em `sebastian/version` por causa de `readonly class`. Precisa do 8.3 do Laragon.
+3. **O `php.ini` do 8.3 do Laragon nao habilita `pdo_pgsql`.** Sem isso o PDO responde `could not find driver`.
+4. **`.env.testing` forca `DB_CONNECTION=sqlite` e `:memory:`**, e o `phpunit.xml` forca `APP_ENV=testing`. Como as migrations deste projeto **nao rodam em sqlite**, o banco vem vazio e todo teste morre com `no such table: municipios`. As env vars de banco precisam ir explicitas — o dotenv do Laravel e imutavel, entao variavel de ambiente real vence o arquivo.
+5. **Se `bootstrap/cache/config.php` existir, o item 4 nao resolve** — config cacheado ignora env var.
+
+Os cinco estao encapsulados em **`SDC/scripts/test-host.sh`**, criado na Onda 1. Todo comando de teste deste plano usa ele:
+
+```bash
+scripts/test-host.sh --filter=NomeDoTeste    # um teste
+scripts/test-host.sh --filter=Cisterna       # o modulo inteiro
+scripts/test-host.sh                         # suite completa
+```
+
+Argumentos sao repassados ao phpunit. Se o PHP 8.3 estiver em outro caminho, exportar `SDC_PHP_DIR`.
+
+**Nao contorne o script.** Se ele falhar, o problema e real e precisa ser entendido — improvisar `php vendor/bin/phpunit` faz o teste rodar contra um sqlite vazio e **passar por vacuidade** em alguns casos, o que e pior que falhar.
+
+Para os comandos que **nao** sao teste (`artisan migrate`, `artisan tinker`, `artisan db:seed`), o plano usa `$PHP`. Exportar no inicio da sessao:
+
+```bash
+PHP=/c/laragon/bin/php/php-8.3.16-Win32-vs16-x64/php.exe
+```
+
+E quando o comando tocar o banco, acrescentar as env vars, pelo mesmo motivo do item 4:
+
+```bash
+DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc DB_PASSWORD=secret \
+  $PHP artisan migrate
+```
+
+**`SDC/.gitignore:39` ignora `tests`.** O `git add tests/...` falha silenciosamente; usar `git add -f`.
+
+Isso **nao** viola a regra de ouro 10 (nao subir testes para commit): a regra trata de script de teste descartavel criado durante o trabalho, nao da suite do projeto. O repositorio ja versiona `SDC/tests/Unit/Tdap/SituacaoAtaTest.php`, `SDC/tests/Feature/PlanCon/PlanConUploadTest.php` e outros 21 arquivos — a suite e patrimonio, e este plano e TDD: sem o teste versionado, quem vem depois nao tem como verificar a task. **Se voce discordar dessa leitura, pergunte antes de decidir por conta propria** — na Onda 1 dois agentes decidiram diferente e o resultado ficou inconsistente.
+
+### Git com agentes em paralelo
+
+Aprendido na Onda 1, onde um commit varreu o trabalho de outro agente: **`git commit` leva tudo o que esta no indice**, nao apenas o que voce acabou de adicionar.
+
+- Faca `git add` dos seus arquivos e `git commit` **na mesma sequencia**, sem intervalo entre os dois.
+- Nunca use `git add -A`, `git add .` nem `git commit -a`.
+- Se `git commit` responder `no changes added to commit`, outro agente pode ter commitado seus arquivos junto. Confira com `git log --stat -1` e **relate** em vez de tentar reescrever a historia.
+- Nunca rode `git reset`, `git rebase` nem `git checkout <branch>`: a arvore de trabalho e compartilhada.
 
 ---
 
@@ -340,7 +386,7 @@ class EnumsTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=EnumsTest`
+Run: `scripts/test-host.sh --filter=EnumsTest`
 Expected: FAIL com `Class "App\Modules\Cisterna\Enums\SituacaoAnalise" not found`.
 
 - [ ] **Step 3: Escrever `SituacaoAnalise`**
@@ -774,7 +820,7 @@ enum ResponsavelPipa: string
 
 - [ ] **Step 9: Rodar o teste e confirmar que passa**
 
-Run: `php artisan test --filter=EnumsTest`
+Run: `scripts/test-host.sh --filter=EnumsTest`
 Expected: PASS, 8 testes.
 
 - [ ] **Step 10: Remover os enums do scaffold**
@@ -1003,7 +1049,7 @@ class SchemaCisternaTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=SchemaCisternaTest`
+Run: `scripts/test-host.sh --filter=SchemaCisternaTest`
 Expected: FAIL — `Tabela ausente: cisterna_comunidades`, e `test_a_tabela_cisternas_do_scaffold_nao_existe_mais` tambem falha porque `cisternas` ainda existe.
 
 - [ ] **Step 3: Reescrever a migration — cabecalho e derrubada do scaffold**
@@ -1515,12 +1561,12 @@ Continuar a mesma classe anonima:
 
 - [ ] **Step 8: Rodar a migration**
 
-Run: `php artisan migrate:fresh --seed`
+Run: `$PHP artisan migrate:fresh --seed`
 Expected: termina sem erro. Se reclamar de `cisternas` sendo referenciada por FK, conferir que nada mais no projeto aponta para ela — a Task 5 remove o registro da policy e a Task 17 os assets.
 
 - [ ] **Step 9: Rodar o teste e confirmar que passa**
 
-Run: `php artisan test --filter=SchemaCisternaTest`
+Run: `scripts/test-host.sh --filter=SchemaCisternaTest`
 Expected: PASS, 10 testes.
 
 - [ ] **Step 10: Commit**
@@ -1761,7 +1807,7 @@ class ModelsCisternaTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=ModelsCisternaTest`
+Run: `scripts/test-host.sh --filter=ModelsCisternaTest`
 Expected: FAIL com `Class "App\Modules\Cisterna\Models\CisternaBeneficiario" not found`.
 
 - [ ] **Step 3: Escrever `CisternaBeneficiario`**
@@ -2781,7 +2827,7 @@ git rm app/Modules/Cisterna/Models/Cisterna.php \
 
 - [ ] **Step 8: Rodar o teste e confirmar que passa**
 
-Run: `php artisan config:clear && php artisan test --filter=ModelsCisternaTest`
+Run: `scripts/test-host.sh --filter=ModelsCisternaTest`
 Expected: PASS, 10 testes.
 
 - [ ] **Step 9: Confirmar que nada mais referencia o scaffold**
@@ -2859,10 +2905,8 @@ class MunicipiosHabilitadosTest extends TestCase
             ['nome' => 'Municipio Nao Habilitado', 'uf' => 'MG']
         );
 
-        DB::table('cedec_municipio')->insert([
-            ['nome' => 'Municipio Habilitado', 'Codmundv' => '9999801', 'at_cisterna' => 1],
-            ['nome' => 'Municipio Nao Habilitado', 'Codmundv' => '9999802', 'at_cisterna' => 0],
-        ]);
+        $this->inserirCedec('Municipio Habilitado', '9999801', 1);
+        $this->inserirCedec('Municipio Nao Habilitado', '9999802', 0);
 
         Municipio::esquecerHabilitadosCisterna();
         $ids = Municipio::idsHabilitadosCisterna();
@@ -2876,10 +2920,8 @@ class MunicipiosHabilitadosTest extends TestCase
         Municipio::firstOrCreate(['codigo_ibge' => '9999803'], ['nome' => 'Zebu', 'uf' => 'MG']);
         Municipio::firstOrCreate(['codigo_ibge' => '9999804'], ['nome' => 'Abadia Teste', 'uf' => 'MG']);
 
-        DB::table('cedec_municipio')->insert([
-            ['nome' => 'Zebu', 'Codmundv' => '9999803', 'at_cisterna' => 1],
-            ['nome' => 'Abadia Teste', 'Codmundv' => '9999804', 'at_cisterna' => 1],
-        ]);
+        $this->inserirCedec('Zebu', '9999803', 1);
+        $this->inserirCedec('Abadia Teste', '9999804', 1);
 
         Municipio::esquecerHabilitadosCisterna();
         $lista = Municipio::habilitadosCisterna();
@@ -2898,9 +2940,7 @@ class MunicipiosHabilitadosTest extends TestCase
 
     public function test_municipio_habilitado_sem_correspondencia_ibge_nao_entra(): void
     {
-        DB::table('cedec_municipio')->insert([
-            ['nome' => 'Municipio Orfao', 'Codmundv' => '0000000', 'at_cisterna' => 1],
-        ]);
+        $this->inserirCedec('Municipio Orfao', '0000000', 1);
 
         Municipio::esquecerHabilitadosCisterna();
 
@@ -2920,12 +2960,34 @@ class MunicipiosHabilitadosTest extends TestCase
     {
         $this->assertSame('mysql', config('database.connections.legado_cisterna_mysql.driver'));
     }
+
+    /**
+     * A sequence de cedec_municipio esta dessincronizada no Postgres de dev: as
+     * 854 linhas vieram do import do legado com id explicito, entao um insert
+     * sem id estoura cedec_municipio_pkey com "duplicate key (id)=(3)".
+     *
+     * Derivar o id de max(id) contorna sem depender de setval, que exigiria
+     * permissao de DDL no banco de teste.
+     */
+    private function inserirCedec(string $nome, string $codmundv, int $atCisterna): int
+    {
+        $id = ((int) DB::table('cedec_municipio')->max('id')) + 1;
+
+        DB::table('cedec_municipio')->insert([
+            'id' => $id,
+            'nome' => $nome,
+            'Codmundv' => $codmundv,
+            'at_cisterna' => $atCisterna,
+        ]);
+
+        return $id;
+    }
 }
 ```
 
 - [ ] **Step 2: Rodar o teste para confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=MunicipiosHabilitadosTest`
+Run: `scripts/test-host.sh --filter=MunicipiosHabilitadosTest`
 Expected: FAIL com `Call to undefined method App\Models\Municipio::esquecerHabilitadosCisterna()`.
 
 - [ ] **Step 3: Acrescentar o scope em `Municipio`**
@@ -3065,12 +3127,12 @@ LEGADO_CISTERNA_ANEXOS_ROOT=
 
 - [ ] **Step 7: Rodar o teste e confirmar que passa**
 
-Run: `php artisan config:clear && php artisan test --filter=MunicipiosHabilitadosTest`
+Run: `scripts/test-host.sh --filter=MunicipiosHabilitadosTest`
 Expected: PASS, 5 testes.
 
 - [ ] **Step 8: Conferir contra o numero medido na Task 1**
 
-Run: `php artisan tinker --execute="dump(count(App\Models\Municipio::idsHabilitadosCisterna()));"`
+Run: `$PHP artisan tinker --execute="dump(count(App\Models\Municipio::idsHabilitadosCisterna()));"`
 Expected: o mesmo numero registrado no Step 4 da Task 1. Divergencia significa municipio habilitado sem correspondencia IBGE — a lista dos orfaos esta no Step 5 da Task 1.
 
 - [ ] **Step 9: Commit**
@@ -3280,7 +3342,7 @@ class PermissoesCisternaTest extends TestCase
 
 - [ ] **Step 2: Rodar o teste para confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=PermissoesCisternaTest`
+Run: `scripts/test-host.sh --filter=PermissoesCisternaTest`
 Expected: FAIL — `Subgrupo ausente: Beneficiarios` e `Class "App\Modules\Cisterna\Support\PerfilCisterna" not found`.
 
 - [ ] **Step 3: Expandir o grupo `CISTERNAS` em `config/permissions.php`**
@@ -3887,21 +3949,21 @@ Repetir para `VistoriaController`, `ComunidadeController`, `LoteController`, `Or
 
 - [ ] **Step 9: Rodar o teste e confirmar que passa**
 
-Run: `php artisan config:clear && php artisan test --filter=PermissoesCisternaTest`
+Run: `scripts/test-host.sh --filter=PermissoesCisternaTest`
 Expected: PASS, 9 testes.
 
 - [ ] **Step 10: Semear as permissoes e a role do fornecedor**
 
-Run: `php artisan db:seed --class=RolesAndPermissionsSeeder`
+Run: `$PHP artisan db:seed --class=RolesAndPermissionsSeeder`
 
 Depois conferir:
-Run: `php artisan tinker --execute="dump(Spatie\Permission\Models\Permission::where('name','like','cisternas.%')->count());"`
+Run: `$PHP artisan tinker --execute="dump(Spatie\Permission\Models\Permission::where('name','like','cisternas.%')->count());"`
 Expected: 25.
 
 A role `cisterna_fornecedor` nao esta em `config/permissions.php` (as roles de la sao funcionais e genericas). Criar via tinker e registrar o comando no arquivo de anotacoes da Task 1:
 
 ```bash
-php artisan tinker --execute="
+$PHP artisan tinker --execute="
 \$role = Spatie\Permission\Models\Role::firstOrCreate(['name' => 'cisterna_fornecedor', 'guard_name' => 'web']);
 \$role->givePermissionTo(['cisternas.beneficiarios.view', 'cisternas.vistorias.view', 'cisternas.vistorias.create', 'cisternas.vistorias.edit']);
 dump(\$role->permissions->pluck('name'));"
@@ -3909,7 +3971,7 @@ dump(\$role->permissions->pluck('name'));"
 
 - [ ] **Step 11: Rodar a suite inteira do modulo**
 
-Run: `php artisan test --filter=Cisterna`
+Run: `scripts/test-host.sh --filter=Cisterna`
 Expected: PASS — `EnumsTest`, `SchemaCisternaTest`, `ModelsCisternaTest`, `MunicipiosHabilitadosTest`, `PermissoesCisternaTest`.
 
 - [ ] **Step 12: Commit**
@@ -4018,7 +4080,7 @@ class NormalizaEntradaTest extends TestCase
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `php artisan test --filter=NormalizaEntradaTest`
+Run: `scripts/test-host.sh --filter=NormalizaEntradaTest`
 Expected: FAIL com `Class "App\Modules\Cisterna\Support\NormalizaEntrada" not found`.
 
 - [ ] **Step 3: Escrever `NormalizaEntrada`**
@@ -4114,7 +4176,7 @@ final class NormalizaEntrada
 
 - [ ] **Step 4: Rodar e confirmar que passa**
 
-Run: `php artisan test --filter=NormalizaEntradaTest`
+Run: `scripts/test-host.sh --filter=NormalizaEntradaTest`
 Expected: PASS, 6 testes.
 
 - [ ] **Step 5: Escrever `BeneficiarioDTO`**
@@ -4512,7 +4574,7 @@ class BeneficiarioValidacaoTest extends TestCase
 
 - [ ] **Step 7: Rodar e confirmar que falha**
 
-Run: `php artisan test --filter=BeneficiarioValidacaoTest`
+Run: `scripts/test-host.sh --filter=BeneficiarioValidacaoTest`
 Expected: FAIL com `Class "App\Modules\Cisterna\Requests\StoreBeneficiarioRequest" not found`.
 
 - [ ] **Step 8: Escrever `StoreBeneficiarioRequest`**
@@ -4738,7 +4800,7 @@ class UpdateBeneficiarioRequest extends StoreBeneficiarioRequest
 
 - [ ] **Step 10: Rodar e confirmar que passa**
 
-Run: `php artisan config:clear && php artisan test --filter=BeneficiarioValidacaoTest`
+Run: `scripts/test-host.sh --filter=BeneficiarioValidacaoTest`
 Expected: PASS, 9 testes.
 
 - [ ] **Step 11: Commit**
@@ -5031,7 +5093,7 @@ class BeneficiarioServiceTest extends TestCase
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=BeneficiarioServiceTest`
+Run: `scripts/test-host.sh --filter=BeneficiarioServiceTest`
 Expected: FAIL com `Target class [App\Modules\Cisterna\Services\BeneficiarioService] does not exist.`
 
 - [ ] **Step 3: Escrever `BeneficiarioService`**
@@ -5338,7 +5400,7 @@ class BeneficiarioService
 
 - [ ] **Step 4: Rodar e confirmar que passa**
 
-Run: `php artisan test --filter=BeneficiarioServiceTest`
+Run: `scripts/test-host.sh --filter=BeneficiarioServiceTest`
 Expected: PASS, 11 testes.
 
 - [ ] **Step 5: Commit**
@@ -5468,7 +5530,7 @@ class NumeracaoInstalacaoServiceTest extends TestCase
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `php artisan test --filter=NumeracaoInstalacaoServiceTest`
+Run: `scripts/test-host.sh --filter=NumeracaoInstalacaoServiceTest`
 Expected: FAIL com `Target class [App\Modules\Cisterna\Services\NumeracaoInstalacaoService] does not exist.`
 
 - [ ] **Step 3: Escrever o service**
@@ -5578,7 +5640,7 @@ class NumeracaoInstalacaoService
 
 - [ ] **Step 4: Rodar e confirmar que passa**
 
-Run: `php artisan test --filter=NumeracaoInstalacaoServiceTest`
+Run: `scripts/test-host.sh --filter=NumeracaoInstalacaoServiceTest`
 Expected: PASS, 7 testes.
 
 **Atencao ao rodar isoladamente:** `nextval` nao participa de transacao, entao os numeros consumidos nao voltam com o rollback do `DatabaseTransactions`. Isso e correto e proposital — e o que garante a atomicidade. Nao "consertar" trocando por `MAX() + 1`.
@@ -5899,7 +5961,7 @@ class VistoriaServiceTest extends TestCase
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=VistoriaServiceTest`
+Run: `scripts/test-host.sh --filter=VistoriaServiceTest`
 Expected: FAIL com `Class "App\Modules\Cisterna\DTOs\VistoriaDTO" not found`.
 
 - [ ] **Step 3: Escrever `ItemConferidoDTO`**
@@ -6489,12 +6551,12 @@ class UpdateVistoriaRequest extends StoreVistoriaRequest
 
 - [ ] **Step 10: Rodar e confirmar que passa**
 
-Run: `php artisan config:clear && php artisan test --filter=VistoriaServiceTest`
+Run: `scripts/test-host.sh --filter=VistoriaServiceTest`
 Expected: PASS, 14 testes.
 
 - [ ] **Step 11: Rodar a suite do modulo**
 
-Run: `php artisan test --filter=Cisterna`
+Run: `scripts/test-host.sh --filter=Cisterna`
 Expected: PASS em tudo o que existe ate aqui.
 
 - [ ] **Step 12: Commit**
@@ -6746,7 +6808,7 @@ class ComunidadeLoteOsServiceTest extends TestCase
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=ComunidadeLoteOsServiceTest`
+Run: `scripts/test-host.sh --filter=ComunidadeLoteOsServiceTest`
 Expected: FAIL com `Class "App\Modules\Cisterna\DTOs\ComunidadeDTO" not found`.
 
 - [ ] **Step 3: Escrever os tres DTOs**
@@ -7406,7 +7468,7 @@ class UpdateOrdemServicoRequest extends StoreOrdemServicoRequest
 
 - [ ] **Step 8: Rodar e confirmar que passa**
 
-Run: `php artisan config:clear && php artisan test --filter=ComunidadeLoteOsServiceTest`
+Run: `scripts/test-host.sh --filter=ComunidadeLoteOsServiceTest`
 Expected: PASS, 11 testes.
 
 Se `test_timeline_do_lote_inclui_entrada_e_saida_de_beneficiario` falhar com metodo indefinido, e a interface da trilha (nota do Step 6): ajustar os nomes a `TrilhaDeAcoes` real e rodar de novo.
@@ -7667,7 +7729,7 @@ class NotificacaoFiscalizacaoServiceTest extends TestCase
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=NotificacaoFiscalizacaoServiceTest`
+Run: `scripts/test-host.sh --filter=NotificacaoFiscalizacaoServiceTest`
 Expected: FAIL com `Class "App\Modules\Cisterna\DTOs\NotificacaoDTO" not found`.
 
 - [ ] **Step 3: Escrever `NotificacaoDTO`**
@@ -7981,7 +8043,7 @@ class UpdateNotificacaoRequest extends StoreNotificacaoRequest
 
 - [ ] **Step 6: Rodar e confirmar que passa**
 
-Run: `php artisan config:clear && php artisan test --filter=NotificacaoFiscalizacaoServiceTest`
+Run: `scripts/test-host.sh --filter=NotificacaoFiscalizacaoServiceTest`
 Expected: PASS, 11 testes.
 
 - [ ] **Step 7: Commit**
@@ -8122,7 +8184,7 @@ class QrCodeServiceTest extends TestCase
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=QrCodeServiceTest`
+Run: `scripts/test-host.sh --filter=QrCodeServiceTest`
 Expected: FAIL com `Target class [App\Modules\Cisterna\Services\QrCodeService] does not exist.`
 
 - [ ] **Step 3: Escrever `QrCodeService`**
@@ -8216,7 +8278,7 @@ class QrCodeService
 
 - [ ] **Step 4: Rodar e confirmar que passa**
 
-Run: `php artisan test --filter=QrCodeServiceTest`
+Run: `scripts/test-host.sh --filter=QrCodeServiceTest`
 Expected: PASS, 6 testes.
 
 - [ ] **Step 5: Escrever o teste do export que falha**
@@ -8366,7 +8428,7 @@ class BeneficiarioExportServiceTest extends TestCase
 
 - [ ] **Step 6: Rodar e confirmar que falha**
 
-Run: `php artisan test --filter=BeneficiarioExportServiceTest`
+Run: `scripts/test-host.sh --filter=BeneficiarioExportServiceTest`
 Expected: FAIL com `Target class [App\Modules\Cisterna\Services\BeneficiarioExportService] does not exist.`
 
 - [ ] **Step 7: Escrever `BeneficiarioExportService`**
@@ -8572,7 +8634,7 @@ O export precisa do mesmo escopo por perfil e dos mesmos filtros da listagem, se
 
 - [ ] **Step 9: Rodar e confirmar que passa**
 
-Run: `php artisan config:clear && php artisan test --filter=BeneficiarioExportServiceTest`
+Run: `scripts/test-host.sh --filter=BeneficiarioExportServiceTest`
 Expected: PASS, 5 testes.
 
 - [ ] **Step 10: Escrever as sete Resources**
@@ -9031,7 +9093,7 @@ class NotificacaoResource extends JsonResource
 
 - [ ] **Step 11: Rodar a suite do modulo**
 
-Run: `php artisan config:clear && php artisan test --filter=Cisterna`
+Run: `scripts/test-host.sh --filter=Cisterna`
 Expected: PASS em tudo.
 
 - [ ] **Step 12: Commit**
@@ -9362,7 +9424,7 @@ class BeneficiarioControllerTest extends TestCase
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=BeneficiarioControllerTest`
+Run: `scripts/test-host.sh --filter=BeneficiarioControllerTest`
 Expected: FAIL — os stubs nao tem os metodos, entao a resolucao da rota quebra.
 
 - [ ] **Step 3: Escrever `AcaoEmMassaRequest`**
@@ -10270,14 +10332,14 @@ class QrCodeController extends Controller
 
 - [ ] **Step 8: Rodar e confirmar que passa**
 
-Run: `php artisan config:clear && php artisan test --filter=BeneficiarioControllerTest`
+Run: `scripts/test-host.sh --filter=BeneficiarioControllerTest`
 Expected: PASS, 15 testes.
 
 Os dois testes que renderizam Inertia (`test_index_...` e `test_ficha_publica_...`) verificam apenas componente e props. As paginas Vue nao existem, e `AssertableInertia` nao as exige.
 
 - [ ] **Step 9: Rodar a suite inteira do modulo**
 
-Run: `php artisan test --filter=Cisterna`
+Run: `scripts/test-host.sh --filter=Cisterna`
 Expected: PASS em tudo.
 
 - [ ] **Step 10: Conferir estatica**
@@ -10441,7 +10503,7 @@ class ExtrairLegadoCommandTest extends TestCase
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=ExtrairLegadoCommandTest`
+Run: `scripts/test-host.sh --filter=ExtrairLegadoCommandTest`
 Expected: FAIL — as tabelas nao existem.
 
 - [ ] **Step 3: Escrever a migration das tabelas de ETL**
@@ -10811,7 +10873,7 @@ class ExtrairCisternaLegadoCommand extends Command
 
         $this->newLine();
         $this->info("Extracao concluida: {$totalGeral} linha(s) em cisterna_legado_raw.");
-        $this->line('Proximo passo: php artisan cisterna:refinar-legado --dry-run');
+        $this->line('Proximo passo: $PHP artisan cisterna:refinar-legado --dry-run');
 
         return self::SUCCESS;
     }
@@ -10835,19 +10897,19 @@ Em `app/Modules/Cisterna/CisternaServiceProvider.php`, dentro de `boot()`:
 
 - [ ] **Step 8: Rodar a migration e o teste**
 
-Run: `php artisan migrate && php artisan config:clear && php artisan test --filter=ExtrairLegadoCommandTest`
+Run: `$PHP artisan migrate && scripts/test-host.sh --filter=ExtrairLegadoCommandTest`
 Expected: PASS, 7 testes.
 
 - [ ] **Step 9: Extrair de verdade e fechar os enums pendentes**
 
 Com a conexao do legado configurada:
 
-Run: `php artisan cisterna:extrair-legado`
+Run: `$PHP artisan cisterna:extrair-legado`
 
 Depois, os valores distintos de moradia e cobertura — que a Task 1 nao conseguiu obter sem acesso a producao — saem do proprio `doc`:
 
 ```bash
-php artisan tinker --execute="
+$PHP artisan tinker --execute="
 dump(DB::table('cisterna_legado_raw')
   ->where('legacy_table', 'sinc_cisterna')
   ->selectRaw(\"doc->>'moradia' AS valor, COUNT(*) AS qtd\")
@@ -11093,7 +11155,7 @@ class RefinarComunidadesLotesOsTest extends TestCase
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=RefinarComunidadesLotesOsTest`
+Run: `scripts/test-host.sh --filter=RefinarComunidadesLotesOsTest`
 Expected: FAIL — comando `cisterna:refinar-legado` inexistente.
 
 - [ ] **Step 3: Escrever `PonteMunicipio`**
@@ -11600,7 +11662,7 @@ class RefinarCisternaLegadoCommand extends Command
 
         $this->newLine();
         $this->line('Detalhe dos erros:');
-        $this->line("  php artisan tinker --execute=\"dump(DB::table('cisterna_etl_log')"
+        $this->line("  $PHP artisan tinker --execute=\"dump(DB::table('cisterna_etl_log')"
             ."->where('acao','error')->get(['recurso','legacy_id','motivo']));\"");
 
         return self::SUCCESS;
@@ -11649,7 +11711,7 @@ Acrescentar `RefinarCisternaLegadoCommand::class` ao array `commands()` do `Cist
 
 - [ ] **Step 8: Rodar e confirmar que passa**
 
-Run: `php artisan config:clear && php artisan test --filter=RefinarComunidadesLotesOsTest`
+Run: `scripts/test-host.sh --filter=RefinarComunidadesLotesOsTest`
 Expected: PASS, 8 testes.
 
 - [ ] **Step 9: Commit**
@@ -12007,12 +12069,31 @@ class RefinarBeneficiariosTest extends TestCase
             'extraido_em' => now(),
         ]);
     }
+
+    /**
+     * A sequence de cedec_municipio esta dessincronizada no Postgres de dev: as
+     * 854 linhas vieram do import do legado com id explicito, entao um insert
+     * sem id estoura cedec_municipio_pkey. Derivar de max(id) contorna.
+     */
+    private function inserirCedec(string $nome, string $codmundv, int $atCisterna): int
+    {
+        $id = ((int) DB::table('cedec_municipio')->max('id')) + 1;
+
+        DB::table('cedec_municipio')->insert([
+            'id' => $id,
+            'nome' => $nome,
+            'Codmundv' => $codmundv,
+            'at_cisterna' => $atCisterna,
+        ]);
+
+        return $id;
+    }
 }
 ```
 
 - [ ] **Step 3: Rodar e confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=RefinarBeneficiariosTest`
+Run: `scripts/test-host.sh --filter=RefinarBeneficiariosTest`
 Expected: FAIL — recurso `beneficiarios` nao reconhecido no `--only`.
 
 - [ ] **Step 4: Escrever `RefinaBeneficiarios`**
@@ -12099,13 +12180,30 @@ class RefinaBeneficiarios implements Refinador
                     ->first();
 
                 if ($conflito !== null) {
-                    // Decisao D25: aplica a mesma convencao do legado, que
-                    // marcava a duplicata com aprovado=5 em vez de impedi-la.
-                    // O indice unico parcial aceita, nada se perde, e a area
-                    // revisa depois filtrando a listagem por Duplicado.
+                    // Decisao D25. Os 26 CPFs que colidem entre registros
+                    // ativos tem DUAS naturezas, e tratar as duas igual seria
+                    // errado (notas 5.1):
                     //
-                    // Vence quem tem mais campos preenchidos; o conflito
-                    // existente vence o empate, por ja estar importado.
+                    //  A) 22 casos: mesma pessoa, cadastro em duplicidade.
+                    //     Nome quase identico. Marca como duplicado, que e a
+                    //     convencao que o legado ja usava.
+                    //
+                    //  B) 4 casos: CPF digitado errado, apontando para pessoas
+                    //     DIFERENTES. Ex.: 05924079659 esta em "DOUGLAS SOARES
+                    //     BARBOSA" e em "ISABEL ALVES SEPO". Marcar a segunda
+                    //     como duplicata apagaria uma beneficiaria real da
+                    //     lista ativa.
+                    //
+                    // O separador e a similaridade dos nomes normalizados.
+                    if (! $this->pareceMesmaPessoa($conflito->nome, $atributos['nome'])) {
+                        RegistroEtl::erro($this->recurso(), $this->tabelaLegado(), $legacyId,
+                            "CPF {$cpf} ja usado por #{$conflito->id} (\"{$conflito->nome}\"), mas este "
+                            ."registro e de \"{$atributos['nome']}\": nomes divergentes, provavel erro de "
+                            .'digitacao de CPF. NAO importado — corrigir o CPF na origem e reprocessar.', $doc);
+
+                        return;
+                    }
+
                     $atributos['situacao_analise'] = SituacaoAnalise::DUPLICADO->value;
                     $atributos['situacao_analise_obs'] = "CPF coincide com o registro #{$conflito->id} "
                         ."(legacy_id {$conflito->legacy_id}). Marcado automaticamente na migracao.";
@@ -12267,6 +12365,44 @@ class RefinaBeneficiarios implements Refinador
         }
     }
 
+    /**
+     * Dois nomes designam a mesma pessoa? Usado para separar duplicidade de
+     * cadastro (nome quase igual) de erro de digitacao de CPF (nomes de
+     * pessoas diferentes) — decisao D25.
+     *
+     * Limiar de 80% calibrado sobre os 26 casos reais de producao: separa os
+     * 22 de duplicidade dos 4 de CPF errado. E heuristica, nao verdade — os
+     * casos limitrofes vao para revisao da area (notas 5.1).
+     */
+    private function pareceMesmaPessoa(?string $a, ?string $b): bool
+    {
+        $normalizar = static function (?string $nome): string {
+            $texto = trim((string) ($nome ?? ''));
+            $semAcento = @iconv('UTF-8', 'ASCII//TRANSLIT', $texto);
+            $texto = strtoupper($semAcento === false ? $texto : $semAcento);
+
+            // Sobra so letra e espaco simples: acento, pontuacao e espaco
+            // duplo nao devem contar como diferenca de pessoa.
+            return trim(preg_replace('/\s+/', ' ', preg_replace('/[^A-Z ]/', ' ', $texto) ?? '') ?? '');
+        };
+
+        $primeiro = $normalizar($a);
+        $segundo = $normalizar($b);
+
+        if ($primeiro === '' || $segundo === '') {
+            // Sem nome para comparar, nao afirma que sao a mesma pessoa.
+            return false;
+        }
+
+        if ($primeiro === $segundo) {
+            return true;
+        }
+
+        similar_text($primeiro, $segundo, $percentual);
+
+        return $percentual >= 80.0;
+    }
+
     private function texto(mixed $valor, int $limite): ?string
     {
         $texto = trim((string) ($valor ?? ''));
@@ -12318,7 +12454,7 @@ Com o import correspondente.
 
 - [ ] **Step 6: Rodar e confirmar que passa**
 
-Run: `php artisan config:clear && php artisan test --filter=RefinarBeneficiariosTest`
+Run: `scripts/test-host.sh --filter=RefinarBeneficiariosTest`
 Expected: PASS, 9 testes.
 
 - [ ] **Step 7: Criar os dois enums com os valores medidos**
@@ -12527,7 +12663,7 @@ Ajustar as factories e os payloads dos testes que usavam `'alvenaria'` e `'telha
 
 - [ ] **Step 10: Rodar a suite do modulo inteira**
 
-Run: `php artisan migrate && php artisan config:clear && php artisan test --filter=Cisterna`
+Run: `$PHP artisan migrate && scripts/test-host.sh --filter=Cisterna`
 Expected: PASS em tudo.
 
 - [ ] **Step 11: Commit**
@@ -12906,7 +13042,7 @@ class RefinarVistoriasTest extends TestCase
 
 - [ ] **Step 2: Rodar e confirmar que falha**
 
-Run: `php artisan config:clear && php artisan test --filter=RefinarVistoriasTest`
+Run: `scripts/test-host.sh --filter=RefinarVistoriasTest`
 Expected: FAIL — recurso `vistorias` nao reconhecido no `--only`.
 
 - [ ] **Step 2b: Escrever `DeduplicaVistorias` — obrigatorio antes dos refinadores**
@@ -13092,9 +13228,7 @@ Com os imports `use App\Models\Municipio;` e `use Illuminate\Support\Facades\DB;
 ```php
     public function test_refino_marca_o_municipio_como_habilitado_no_programa(): void
     {
-        DB::table('cedec_municipio')->insert([
-            'nome' => 'Municipio Benef ETL', 'Codmundv' => '9999911', 'at_cisterna' => 0,
-        ]);
+        $this->inserirCedec('Municipio Benef ETL', '9999911', 0);
         Municipio::esquecerHabilitadosCisterna();
 
         $this->semear(120, [
@@ -14190,20 +14324,20 @@ E, ao final de `handle()`, antes do resumo, alinhar a sequence:
 
 - [ ] **Step 10: Rodar e confirmar que passa**
 
-Run: `php artisan config:clear && php artisan test --filter=RefinarVistoriasTest`
+Run: `scripts/test-host.sh --filter=RefinarVistoriasTest`
 Expected: PASS, 11 testes.
 
 - [ ] **Step 11: Rodar o ETL completo em dry-run e depois de verdade**
 
 ```bash
-php artisan cisterna:extrair-legado
-php artisan cisterna:refinar-legado --dry-run
+$PHP artisan cisterna:extrair-legado
+$PHP artisan cisterna:refinar-legado --dry-run
 ```
 
 Conferir o resumo. Se `error` estiver alto, investigar antes de gravar:
 
 ```bash
-php artisan tinker --execute="
+$PHP artisan tinker --execute="
 dump(DB::table('cisterna_etl_log')->where('acao','error')
   ->selectRaw('recurso, motivo, COUNT(*) AS qtd')
   ->groupBy('recurso','motivo')->orderByDesc('qtd')->get());"
@@ -14212,14 +14346,14 @@ dump(DB::table('cisterna_etl_log')->where('acao','error')
 Depois, a carga real:
 
 ```bash
-php artisan cisterna:refinar-legado
-php artisan cisterna:refinar-legado    # segunda passada: idempotencia
+$PHP artisan cisterna:refinar-legado
+$PHP artisan cisterna:refinar-legado    # segunda passada: idempotencia
 ```
 
 A segunda execucao nao pode gerar nenhum `inserted` novo. Conferir:
 
 ```bash
-php artisan tinker --execute="
+$PHP artisan tinker --execute="
 dump(DB::table('cisterna_etl_log')->selectRaw('acao, COUNT(*) AS qtd')->groupBy('acao')->get());"
 ```
 
@@ -14280,7 +14414,7 @@ Em `resources/js/Composables/auth/useWelcomeTour.js`, se houver passo do tour ci
 
 `resources/js/ziggy.js` e gerado: regenerar em vez de editar a mao.
 
-Run: `php artisan ziggy:generate`
+Run: `$PHP artisan ziggy:generate`
 
 - [ ] **Step 4: Confirmar que o build passa**
 
@@ -14293,11 +14427,11 @@ Rodar cada item da secao 11 do spec:
 
 ```bash
 # 1. Schema completo, sem residuo do scaffold
-php artisan migrate:fresh --seed
-php artisan test --filter=SchemaCisternaTest
+$PHP artisan migrate:fresh --seed
+scripts/test-host.sh --filter=SchemaCisternaTest
 
 # 2. Suite do modulo verde
-php artisan config:clear && php artisan test --filter=Cisterna
+scripts/test-host.sh --filter=Cisterna
 
 # 3. Estatica
 vendor/bin/pint --test app/Modules/Cisterna app/Policies
@@ -14311,7 +14445,7 @@ grep -rn "\bcisternas\b" database/migrations   # a tabela `cisternas` nao deve a
 ls app/Modules/Cisterna        # sem Http/, sem Exports/, sem Policies/
 
 # 10. Municipios habilitados
-php artisan tinker --execute="dump(count(App\Models\Municipio::idsHabilitadosCisterna()));"
+$PHP artisan tinker --execute="dump(count(App\Models\Municipio::idsHabilitadosCisterna()));"
 
 # 12. Nenhum RanqueamentoService
 grep -rn "RanqueamentoService" app
