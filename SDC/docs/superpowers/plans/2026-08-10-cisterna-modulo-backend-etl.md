@@ -10431,7 +10431,7 @@ class ExtrairLegadoCommandTest extends TestCase
     public function test_raw_e_unico_por_tabela_e_id_de_origem(): void
     {
         DB::table('cisterna_legado_raw')->insert([
-            'legacy_table' => 'sinc_cisterna',
+            'tabela' => 'sinc_cisterna',
             'legacy_id' => 1,
             'doc' => json_encode(['nome' => 'Primeiro']),
             'extraido_em' => now(),
@@ -10440,7 +10440,7 @@ class ExtrairLegadoCommandTest extends TestCase
         $this->expectException(\Illuminate\Database\QueryException::class);
 
         DB::table('cisterna_legado_raw')->insert([
-            'legacy_table' => 'sinc_cisterna',
+            'tabela' => 'sinc_cisterna',
             'legacy_id' => 1,
             'doc' => json_encode(['nome' => 'Duplicado']),
             'extraido_em' => now(),
@@ -10489,7 +10489,7 @@ class ExtrairLegadoCommandTest extends TestCase
     {
         DB::table('cisterna_etl_log')->insert([
             'recurso' => 'beneficiarios',
-            'legacy_table' => 'sinc_cisterna',
+            'tabela' => 'sinc_cisterna',
             'legacy_id' => 42,
             'new_id' => null,
             'acao' => 'error',
@@ -10498,7 +10498,7 @@ class ExtrairLegadoCommandTest extends TestCase
             'created_at' => now(),
         ]);
 
-        $linha = DB::table('cisterna_etl_log')->where('legacy_id', 42)->first();
+        $linha = DB::table('cisterna_etl_log')->where('pk_legado', '42')->first();
 
         $this->assertSame('error', $linha->acao);
         $this->assertSame('0000000', json_decode($linha->payload_legado, true)['codmundv']);
@@ -10541,7 +10541,7 @@ return new class extends Migration
             Schema::create('cisterna_legado_raw', function (Blueprint $table): void {
                 $table->id();
 
-                $table->string('legacy_table', 40);
+                $table->string('tabela', 40);
                 $table->unsignedBigInteger('legacy_id');
 
                 // A linha inteira, como veio do MySQL. A extracao nao conhece
@@ -10551,7 +10551,7 @@ return new class extends Migration
 
                 $table->timestampTz('extraido_em')->useCurrent();
 
-                $table->unique(['legacy_table', 'legacy_id']);
+                $table->unique(['tabela', 'legacy_id']);
             });
 
             if (DB::getDriverName() === 'pgsql') {
@@ -10576,7 +10576,7 @@ return new class extends Migration
             $table->string('recurso', 40)
                 ->comment('comunidades|lotes|os|beneficiarios|vistorias|itens|notificacoes|midia');
 
-            $table->string('legacy_table', 40);
+            $table->string('tabela', 40);
             $table->unsignedBigInteger('legacy_id');
             $table->unsignedBigInteger('new_id')->nullable();
 
@@ -10748,8 +10748,8 @@ final class RegistroEtl
     ): void {
         DB::table('cisterna_etl_log')->insert([
             'recurso' => $recurso,
-            'legacy_table' => $tabela,
-            'legacy_id' => $legacyId,
+            'tabela' => $tabela,
+            'pk_legado' => (string) $legacyId,
             'new_id' => $newId,
             'acao' => $acao,
             'motivo' => $motivo,
@@ -10829,7 +10829,7 @@ class ExtrairCisternaLegadoCommand extends Command
         }
 
         if ($this->option('truncar')) {
-            DB::table('cisterna_legado_raw')->whereIn('legacy_table', $tabelas)->delete();
+            DB::table('cisterna_legado_raw')->whereIn('tabela', $tabelas)->delete();
             $this->line('cisterna_legado_raw limpa para: '.implode(', ', $tabelas));
         }
 
@@ -10853,17 +10853,17 @@ class ExtrairCisternaLegadoCommand extends Command
                     $agora = now();
 
                     $registros = $linhas->map(fn ($linha): array => [
-                        'legacy_table' => $tabela,
-                        'legacy_id' => (int) $linha->{$pk},
+                        'tabela' => $tabela,
+                        'pk_legado' => (string) $linha->{$pk},
                         'doc' => json_encode((array) $linha, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE),
                         'extraido_em' => $agora,
                     ])->all();
 
                     // Idempotente: reextrair atualiza o doc em vez de estourar
-                    // o unique (legacy_table, legacy_id).
+                    // o unique (tabela, legacy_id).
                     DB::table('cisterna_legado_raw')->upsert(
                         $registros,
-                        ['legacy_table', 'legacy_id'],
+                        ['tabela', 'pk_legado'],
                         ['doc', 'extraido_em'],
                     );
 
@@ -10916,11 +10916,11 @@ Depois, os valores distintos de moradia e cobertura — que a Task 1 nao consegu
 ```bash
 $PHP artisan tinker --execute="
 dump(DB::table('cisterna_legado_raw')
-  ->where('legacy_table', 'sinc_cisterna')
+  ->where('tabela', 'sinc_cisterna')
   ->selectRaw(\"doc->>'moradia' AS valor, COUNT(*) AS qtd\")
   ->groupBy('valor')->orderByDesc('qtd')->get());
 dump(DB::table('cisterna_legado_raw')
-  ->where('legacy_table', 'sinc_cisterna')
+  ->where('tabela', 'sinc_cisterna')
   ->selectRaw(\"doc->>'coberturaTelhado' AS valor, COUNT(*) AS qtd\")
   ->groupBy('valor')->orderByDesc('qtd')->get());"
 ```
@@ -11049,8 +11049,8 @@ class RefinarComunidadesLotesOsTest extends TestCase
         $this->assertNull(CisternaComunidade::where('legacy_id', 9)->first());
 
         $log = DB::table('cisterna_etl_log')
-            ->where('legacy_table', 'sinc_cisterna_com')
-            ->where('legacy_id', 9)
+            ->where('tabela', 'sinc_cisterna_com')
+            ->where('pk_legado', '9')
             ->first();
 
         $this->assertSame('error', $log->acao);
@@ -11069,7 +11069,7 @@ class RefinarComunidadesLotesOsTest extends TestCase
         $this->assertNull(CisternaComunidade::where('legacy_id', 5)->first());
         $this->assertGreaterThan(
             0,
-            DB::table('cisterna_etl_log')->where('legacy_id', 5)->count()
+            DB::table('cisterna_etl_log')->where('pk_legado', '5')->count()
         );
     }
 
@@ -11088,8 +11088,8 @@ class RefinarComunidadesLotesOsTest extends TestCase
         $this->assertSame(
             1,
             DB::table('cisterna_etl_log')
-                ->where('legacy_id', 1)
-                ->where('legacy_table', 'sinc_cisterna_com')
+                ->where('pk_legado', '1')
+                ->where('tabela', 'sinc_cisterna_com')
                 ->where('acao', 'inserted')
                 ->count()
         );
@@ -11128,7 +11128,7 @@ class RefinarComunidadesLotesOsTest extends TestCase
 
         $this->assertNull(CisternaOrdemServico::where('legacy_id', 99)->first());
 
-        $log = DB::table('cisterna_etl_log')->where('legacy_id', 99)->first();
+        $log = DB::table('cisterna_etl_log')->where('pk_legado', '99')->first();
         $this->assertSame('error', $log->acao);
     }
 
@@ -11149,8 +11149,8 @@ class RefinarComunidadesLotesOsTest extends TestCase
     private function semear(string $tabela, int $legacyId, array $doc): void
     {
         DB::table('cisterna_legado_raw')->insert([
-            'legacy_table' => $tabela,
-            'legacy_id' => $legacyId,
+            'tabela' => $tabela,
+            'pk_legado' => (string) $legacyId,
             'doc' => json_encode($doc, JSON_UNESCAPED_UNICODE),
             'extraido_em' => now(),
         ]);
@@ -11262,23 +11262,23 @@ final class LeitorRaw
     /**
      * @param  callable(array<string, mixed> $doc, int $legacyId): void  $callback
      */
-    public function porTabela(string $legacyTable, int $chunk, callable $callback): void
+    public function porTabela(string $tabela, int $chunk, callable $callback): void
     {
         DB::table('cisterna_legado_raw')
-            ->where('legacy_table', $legacyTable)
+            ->where('tabela', $tabela)
             ->orderBy('id')
             ->chunkById($chunk, function ($linhas) use ($callback): void {
                 foreach ($linhas as $linha) {
                     $doc = json_decode((string) $linha->doc, true);
 
-                    $callback(is_array($doc) ? $doc : [], (int) $linha->legacy_id);
+                    $callback(is_array($doc) ? $doc : [], (int) $linha->pk_legado);
                 }
             });
     }
 
-    public function contar(string $legacyTable): int
+    public function contar(string $tabela): int
     {
-        return DB::table('cisterna_legado_raw')->where('legacy_table', $legacyTable)->count();
+        return DB::table('cisterna_legado_raw')->where('tabela', $tabela)->count();
     }
 }
 ```
@@ -11926,7 +11926,7 @@ class RefinarBeneficiariosTest extends TestCase
 
         // O beneficiario entra mesmo assim: perder o cadastro por causa da
         // comunidade seria pior que a FK nula.
-        $log = DB::table('cisterna_etl_log')->where('legacy_id', 102)->get();
+        $log = DB::table('cisterna_etl_log')->where('pk_legado', '102')->get();
         $this->assertTrue($log->contains(fn ($l): bool => str_contains(strtolower((string) $l->motivo ?? ''), 'comunidade')));
     }
 
@@ -11992,7 +11992,7 @@ class RefinarBeneficiariosTest extends TestCase
 
         $this->assertSame(
             'error',
-            DB::table('cisterna_etl_log')->where('legacy_id', 105)->value('acao')
+            DB::table('cisterna_etl_log')->where('pk_legado', '105')->value('acao')
         );
     }
 
@@ -12040,8 +12040,8 @@ class RefinarBeneficiariosTest extends TestCase
         $this->assertSame(
             1,
             DB::table('cisterna_etl_log')
-                ->where('legacy_id', 109)
-                ->where('legacy_table', 'sinc_cisterna')
+                ->where('pk_legado', '109')
+                ->where('tabela', 'sinc_cisterna')
                 ->where('acao', 'inserted')
                 ->count()
         );
@@ -12058,7 +12058,7 @@ class RefinarBeneficiariosTest extends TestCase
         $this->assertNull(CisternaBeneficiario::where('legacy_id', 110)->first());
         $this->assertSame(
             'error',
-            DB::table('cisterna_etl_log')->where('legacy_id', 110)->value('acao')
+            DB::table('cisterna_etl_log')->where('pk_legado', '110')->value('acao')
         );
     }
 
@@ -12068,8 +12068,8 @@ class RefinarBeneficiariosTest extends TestCase
     private function semear(int $legacyId, array $doc): void
     {
         DB::table('cisterna_legado_raw')->insert([
-            'legacy_table' => 'sinc_cisterna',
-            'legacy_id' => $legacyId,
+            'tabela' => 'sinc_cisterna',
+            'pk_legado' => (string) $legacyId,
             'doc' => json_encode($doc, JSON_UNESCAPED_UNICODE),
             'extraido_em' => now(),
         ]);
@@ -12920,8 +12920,8 @@ class RefinarVistoriasTest extends TestCase
         );
         $this->assertSame(
             'error',
-            DB::table('cisterna_etl_log')->where('legacy_id', 31)
-                ->where('legacy_table', 'sinc_cisterna_rel_compdec')->value('acao')
+            DB::table('cisterna_etl_log')->where('pk_legado', '31')
+                ->where('tabela', 'sinc_cisterna_rel_compdec')->value('acao')
         );
     }
 
@@ -12944,8 +12944,8 @@ class RefinarVistoriasTest extends TestCase
         );
         $this->assertSame(
             'skipped',
-            DB::table('cisterna_etl_log')->where('legacy_id', 32)
-                ->where('legacy_table', 'sinc_cisterna_rel_compdec')->value('acao')
+            DB::table('cisterna_etl_log')->where('pk_legado', '32')
+                ->where('tabela', 'sinc_cisterna_rel_compdec')->value('acao')
         );
     }
 
@@ -13000,7 +13000,7 @@ class RefinarVistoriasTest extends TestCase
             1,
             DB::table('cisterna_etl_log')
                 ->whereIn('legacy_id', [50, 51])
-                ->where('legacy_table', 'sinc_cisterna_rel_fornecedor')
+                ->where('tabela', 'sinc_cisterna_rel_fornecedor')
                 ->where('acao', 'error')
                 ->count()
         );
@@ -13070,8 +13070,8 @@ class RefinarVistoriasTest extends TestCase
     private function semear(string $tabela, int $legacyId, array $doc): void
     {
         DB::table('cisterna_legado_raw')->insert([
-            'legacy_table' => $tabela,
-            'legacy_id' => $legacyId,
+            'tabela' => $tabela,
+            'pk_legado' => (string) $legacyId,
             'doc' => json_encode($doc, JSON_UNESCAPED_UNICODE),
             'extraido_em' => now(),
         ]);
@@ -13118,10 +13118,10 @@ final class DeduplicaVistorias
      *
      * @return array<int, int>
      */
-    public function vencedores(string $legacyTable, string $colunaBeneficiario): array
+    public function vencedores(string $tabela, string $colunaBeneficiario): array
     {
         $linhas = DB::table('cisterna_legado_raw')
-            ->where('legacy_table', $legacyTable)
+            ->where('tabela', $tabela)
             ->get(['legacy_id', 'doc']);
 
         $porBeneficiario = [];
@@ -13138,7 +13138,7 @@ final class DeduplicaVistorias
             if ($beneficiario === 0) {
                 // Sem beneficiario: deixa passar para o refinador registrar o erro.
                 $porBeneficiario['orfao_'.$linha->legacy_id] = [
-                    'legacy_id' => (int) $linha->legacy_id,
+                    'legacy_id' => (int) $linha->pk_legado,
                     'peso' => 0,
                 ];
 
@@ -13150,11 +13150,11 @@ final class DeduplicaVistorias
 
             $vence = $atual === null
                 || $peso > $atual['peso']
-                || ($peso === $atual['peso'] && (int) $linha->legacy_id > $atual['legacy_id']);
+                || ($peso === $atual['peso'] && (int) $linha->pk_legado > $atual['legacy_id']);
 
             if ($vence) {
                 $porBeneficiario[$beneficiario] = [
-                    'legacy_id' => (int) $linha->legacy_id,
+                    'legacy_id' => (int) $linha->pk_legado,
                     'peso' => $peso,
                 ];
             }
@@ -13322,8 +13322,8 @@ Com `use App\Models\Municipio;` no teste.
         // A descartada ficou registrada.
         $this->assertSame(
             'skipped',
-            DB::table('cisterna_etl_log')->where('legacy_id', 200)
-                ->where('legacy_table', 'sinc_cisterna_rel_fornecedor')->value('acao')
+            DB::table('cisterna_etl_log')->where('pk_legado', '200')
+                ->where('tabela', 'sinc_cisterna_rel_fornecedor')->value('acao')
         );
     }
 ```
@@ -14261,7 +14261,7 @@ class RefinaMidia implements Refinador
         }
 
         $linha = DB::table('cisterna_legado_raw')
-            ->where('legacy_table', $vistoria->etapa->tabelaLegado())
+            ->where('tabela', $vistoria->etapa->tabelaLegado())
             ->where('legacy_id', $vistoria->legacy_id)
             ->value('doc');
 
