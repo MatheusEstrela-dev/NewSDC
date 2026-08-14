@@ -41,11 +41,15 @@ class LoteResource extends JsonResource
             ]),
             'numero'       => $this->numero,
             'nome'         => $this->nome,
+            'contrato'     => $this->contrato,
             'qtd_agua_m3'  => (float) $this->qtd_agua_m3,
             'valor_m3'     => (float) $this->valor_m3,
             'valor_total'  => (float) $this->valor_total,
             'ativo'        => (bool) $this->ativo,
             'observacoes'  => $this->observacoes,
+            // A tela de detalhe usa para esconder o botao Excluir quando ha
+            // cronograma vinculado (o service recusaria a exclusao).
+            'cronogramas_count' => $this->whenCounted('cronogramas'),
             'created_at'   => $this->created_at?->toIso8601String(),
             'updated_at'   => $this->updated_at?->toIso8601String(),
         ];

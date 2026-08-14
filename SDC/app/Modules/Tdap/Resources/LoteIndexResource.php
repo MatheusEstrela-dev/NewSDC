@@ -21,6 +21,7 @@ class LoteIndexResource extends JsonResource
             'id'             => $this->id,
             'numero'         => $this->numero,
             'nome'           => $this->nome,
+            'contrato'       => $this->contrato,
             'ata_id'         => $this->ata_id,
             'ata_numero'     => $this->whenLoaded('ata', fn () => $this->ata->numero),
             'municipio_id'   => $this->municipio_id,

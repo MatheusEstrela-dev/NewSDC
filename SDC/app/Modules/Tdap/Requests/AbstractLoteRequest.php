@@ -36,6 +36,7 @@ abstract class AbstractLoteRequest extends FormRequest
             'prestador_id' => ['required', 'integer', Rule::exists('tdap_prestadores', 'id')->whereNull('deleted_at')],
             'numero'       => ['required', 'string', 'max:20'],
             'nome'         => ['nullable', 'string', 'max:150'],
+            'contrato'     => ['nullable', 'string', 'max:50'],
             'qtd_agua_m3'  => ['required', 'numeric', 'min:0.01', 'max:9999999.99'],
             'valor_m3'     => ['required', 'numeric', 'min:0.01', 'max:99999.99'],
             'ativo'        => ['nullable', 'boolean'],
@@ -66,6 +67,29 @@ abstract class AbstractLoteRequest extends FormRequest
                     ? 'Ja existe outro lote para esta Ata e Municipio.'
                     : 'Ja existe um lote para esta Ata e Municipio.';
                 $v->errors()->add('municipio_id', $msg);
+            }
+        });
+
+        // O numero identifica o lote DENTRO da ata (L01, L02...). Sem esta
+        // checagem dois lotes da mesma ata podiam nascer com o mesmo numero.
+        $validator->after(function (Validator $v): void {
+            $ataId = (int) $this->input('ata_id');
+            $numero = trim((string) $this->input('numero'));
+            if ($ataId === 0 || $numero === '') {
+                return;
+            }
+
+            $query = Lote::query()
+                ->where('ata_id', $ataId)
+                ->where('numero', mb_strtoupper($numero))
+                ->whereNull('deleted_at');
+
+            if ($id = $this->ignoreId()) {
+                $query->where('id', '!=', $id);
+            }
+
+            if ($query->exists()) {
+                $v->errors()->add('numero', "Ja existe um lote {$numero} nesta Ata.");
             }
         });
     }
