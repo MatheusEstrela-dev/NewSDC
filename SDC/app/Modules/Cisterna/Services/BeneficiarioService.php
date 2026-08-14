@@ -106,6 +106,27 @@ class BeneficiarioService
         return (bool) $beneficiario->delete();
     }
 
+    /**
+     * Consulta com escopo de perfil e filtros aplicados, sem paginacao nem eager
+     * loading — para o export streamar com lazy().
+     *
+     * Reaproveita o mesmo escopo da listagem de proposito: no legado o export
+     * tambem passava pelo aplicarFiltros(), e nada seria pior que a planilha
+     * mostrar mais do que a tela.
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return Builder<CisternaBeneficiario>
+     */
+    public function consultaParaExport(PerfilCisterna $perfil, array $filtros = []): Builder
+    {
+        $query = CisternaBeneficiario::query();
+
+        $this->aplicarEscopoDoPerfil($query, $perfil);
+        $this->aplicarFiltros($query, $filtros);
+
+        return $query;
+    }
+
     /* Acoes em massa — legado: updateEstadoMass, CisternaController.php:1473 */
 
     /**
