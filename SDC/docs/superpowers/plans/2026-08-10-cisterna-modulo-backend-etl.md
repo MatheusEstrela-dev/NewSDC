@@ -68,6 +68,19 @@ DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=s
 
 Consequencia pratica: quem retomar o trabalho noutra maquina nao tera os testes. Isso e aceito de proposito pelo dono do repositorio.
 
+### Caches que envenenam a suite ao remover classe
+
+Descoberto na Onda 3, ao remover os artefatos do scaffold: a suite completa passou a dar **20 falhas** com `include(.../CisternaController.php): Failed to open stream`, mesmo com o arquivo corretamente removido.
+
+Sao dois caches, e os dois precisam cair:
+
+```bash
+rm -f bootstrap/cache/routes-v7.php   # route cache aponta para o controller removido
+composer dump-autoload                # classmap otimizado ainda mapeia a classe
+```
+
+O route cache e ignorado pelo git; apagar o arquivo e o que `route:clear` faz. **Sempre que uma task remover classe** (Tasks 4, 6 e 19), rode os dois antes de concluir que quebrou alguma coisa — senao voce vai cacar um bug que nao existe.
+
 ### Git com agentes em paralelo
 
 Aprendido na Onda 1, onde um commit varreu o trabalho de outro agente: **`git commit` leva tudo o que esta no indice**, nao apenas o que voce acabou de adicionar.
@@ -2420,6 +2433,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Cisterna\Models;
 
+use App\Modules\Notificacoes\Contracts\Rastreavel;
 use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
 use Database\Factories\Cisterna\CisternaOrdemServicoFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -2430,7 +2444,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
-class CisternaOrdemServico extends Model implements HasMedia
+/**
+ * Declara `Rastreavel` porque usa `TrilhaDeAcoes`: o trait chama
+ * `RegistroDeAcao::registrar(Rastreavel&Model $registro, ...)`, um tipo de
+ * intersecao. Model com o trait e sem o contrato estoura TypeError em
+ * QUALQUER update().
+ */
+class CisternaOrdemServico extends Model implements HasMedia, Rastreavel
 {
     use HasFactory;
     use InteractsWithMedia;
@@ -2462,6 +2482,33 @@ class CisternaOrdemServico extends Model implements HasMedia
     protected static function newFactory(): CisternaOrdemServicoFactory
     {
         return CisternaOrdemServicoFactory::new();
+    }
+
+    /* Trilha de acoes */
+
+    public function moduloNotificacao(): string
+    {
+        return 'cisterna';
+    }
+
+    public function rotuloProtocolo(): string
+    {
+        $nome = trim((string) $this->nome);
+
+        return $nome !== '' ? 'Ordem de servico '.$nome : 'Ordem de servico #'.$this->getKey();
+    }
+
+    /**
+     * Vazio de proposito: `cisterna_ordens_servico` nao tem `created_by`, entao
+     * a trilha fica ligada para o historico do lote (Task 11) mas sem
+     * destinatario. Se a area quiser que alguem seja avisado, e preciso antes
+     * decidir de onde vem esse alguem.
+     *
+     * @return list<int>
+     */
+    public function donosNotificacao(): array
+    {
+        return [];
     }
 }
 ```
@@ -12325,6 +12372,19 @@ class RefinaBeneficiarios implements Refinador
 
             // Legado: outrObs. `obs1` em algumas versoes do schema.
             'observacoes' => $this->texto($doc['outrObs'] ?? $doc['obs1'] ?? null, 1000),
+
+            // created_by fica NULO de proposito. O user_id do legado NAO mapeia
+            // para users do NewSDC: os 43 usuarios que cadastraram sao contas
+            // COMPDEC municipais, e o cruzamento por CPF e por email deu ZERO
+            // correspondencia. Usar o id cru seria pior que nulo -- id acima de
+            // 55 quebra a FK, e id de 1 a 55 atribui o cadastro a outra pessoa,
+            // fazendo a trilha do sino avisar quem nao tem nada com aquilo.
+            //
+            // A informacao nao se perde: user_id continua no
+            // cisterna_legado_raw.doc, e legacy_id liga os dois. Quando as
+            // contas COMPDEC existirem no NewSDC, um comando de reconciliacao
+            // preenche created_by sem reimportar. Ver notas secao 5.7.
+            'created_by' => null,
 
             'legacy_id' => $legacyId,
         ];
