@@ -12830,6 +12830,40 @@ class RefinarVistoriasTest extends TestCase
         $this->assertSame(UnidadeItem::UN, $tePvc->unidade);
     }
 
+    public function test_pecas_de_pvc_do_fornecedor_entram_mesmo_sem_coluna_booleana(): void
+    {
+        // A tabela do fornecedor NAO tem te_pvc_opcao, joelho_pvc_opcao,
+        // luva_pvc_opcao nem cap_pvc_opcao: essas quatro pecas so tem coluna
+        // de quantidade. Verificado em producao: 827 das 856 linhas as tem
+        // preenchidas. Sem o fallback por quantidade no MapaItensLegado, a
+        // carga perderia 3.308 registros de item silenciosamente.
+        $this->semear('sinc_cisterna_rel_fornecedor', 13, [
+            'id' => 13, 'cisterna_id' => 500, 'num_instalacao' => '1237',
+            'crea_mg_eng' => 'MG-111',
+            'te_90_pbv_qtd' => '6',
+            'joelho_90_pbv_qtd' => '8',
+            'luva_pvc_qtd' => '2',
+            // cap ficou em zero: conferido deve ser false, nao ausente.
+            'cap_pvc_qtd' => '0',
+        ]);
+
+        $this->artisan('cisterna:refinar-legado', ['--only' => 'vistorias'])->assertExitCode(0);
+
+        $v = CisternaVistoria::where('legacy_id', 13)
+            ->where('etapa', EtapaVistoria::FORNECEDOR->value)->first();
+
+        foreach ([ItemInstalacao::TE_PVC, ItemInstalacao::JOELHO_PVC, ItemInstalacao::LUVA_PVC] as $item) {
+            $linha = $v->itemDe($item);
+            $this->assertNotNull($linha, "Item {$item->value} foi descartado por falta de booleano.");
+            $this->assertTrue($linha->conferido);
+            $this->assertSame(UnidadeItem::UN, $linha->unidade);
+        }
+
+        $cap = $v->itemDe(ItemInstalacao::CAP_PVC);
+        $this->assertNotNull($cap);
+        $this->assertFalse($cap->conferido, 'Quantidade zero deve gravar conferido = false.');
+    }
+
     public function test_conferencia_do_compdec_liga_pela_instalacao_id_do_fornecedor(): void
     {
         $this->semear('sinc_cisterna_rel_fornecedor', 20, [
@@ -13331,6 +13365,15 @@ final class MapaItensLegado
     /**
      * Coluna de quantidade por item, na etapa do fornecedor.
      *
+     * A tabela tem DOIS pares de colunas para calha e tubulacao, de geracoes
+     * diferentes do formulario: calha_metros/qtd_calha e
+     * tubulacao_metros/qtd_tubulacao. Verificado em producao: os `*_metros`
+     * estao SEMPRE nulos nesta tabela (0 de 856) e so os `qtd_*` sao usados
+     * (827 e 828). Por isso o mapa aponta para os `qtd_*`.
+     *
+     * No COMPDEC e o inverso: la `calha_metros` e que esta preenchido (679 de
+     * 858) — ver QTD_COMPDEC.
+     *
      * @var array<string, string>
      */
     private const QTD_FORNECEDOR = [
@@ -13398,6 +13441,19 @@ final class MapaItensLegado
             }
 
             return NormalizaEntrada::booleanoSimNao($doc[$coluna]) ?? false;
+        }
+
+        // Na etapa do fornecedor, as quatro pecas de PVC (te, joelho, luva,
+        // cap) NAO tem coluna booleana: a tabela so tem te_90_pbv_qtd,
+        // joelho_90_pbv_qtd, luva_pvc_qtd e cap_pvc_qtd. Verificado em
+        // producao: 827 das 856 linhas tem essas quantidades preenchidas.
+        //
+        // Sem este fallback o item seria descartado por ausencia de booleano,
+        // e a carga perderia 827 x 4 = 3.308 registros de item.
+        $quantidade = self::quantidade($etapa, $item, $doc);
+
+        if ($quantidade !== null) {
+            return $quantidade > 0;
         }
 
         return null;
