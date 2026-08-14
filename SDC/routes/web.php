@@ -154,13 +154,8 @@ Route::middleware('auth')->group(function () {
     // Modulo: Estoque
     require __DIR__ . '/modules/estoque.php';
 
-    // Modulo: Cisterna — desligado temporariamente. O arquivo de rotas ainda
-    // aponta para o CisternaController do scaffold, removido junto com o model
-    // antigo. A Task 6 do plano reescreve routes/modules/cisterna.php para os
-    // novos agregados e reativa este require.
-    // if (file_exists(__DIR__ . '/modules/cisterna.php')) {
-    //     require __DIR__ . '/modules/cisterna.php';
-    // }
+    // Modulo: Cisterna
+    require __DIR__ . '/modules/cisterna.php';
 
     // Módulo: Compdec (Órgãos e Competências)
     require __DIR__ . '/modules/compdec.php';

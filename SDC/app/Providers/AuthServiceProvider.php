@@ -28,6 +28,12 @@ class AuthServiceProvider extends ServiceProvider
         \App\Modules\Treinamento\Models\Inscricao::class => \App\Policies\InscricaoPolicy::class,
         \App\Modules\Treinamento\Models\Certificado::class => \App\Policies\CertificadoPolicy::class,
         \App\Modules\AjudaHumanitaria\Models\PedidoAh::class => \App\Policies\PedidoAhPolicy::class,
+        \App\Modules\Cisterna\Models\CisternaBeneficiario::class => \App\Policies\CisternaBeneficiarioPolicy::class,
+        \App\Modules\Cisterna\Models\CisternaVistoria::class => \App\Policies\CisternaVistoriaPolicy::class,
+        \App\Modules\Cisterna\Models\CisternaComunidade::class => \App\Policies\CisternaComunidadePolicy::class,
+        \App\Modules\Cisterna\Models\CisternaLote::class => \App\Policies\CisternaLotePolicy::class,
+        \App\Modules\Cisterna\Models\CisternaOrdemServico::class => \App\Policies\CisternaOrdemServicoPolicy::class,
+        \App\Modules\Cisterna\Models\CisternaNotificacao::class => \App\Policies\CisternaNotificacaoPolicy::class,
     ];
 
     /**
