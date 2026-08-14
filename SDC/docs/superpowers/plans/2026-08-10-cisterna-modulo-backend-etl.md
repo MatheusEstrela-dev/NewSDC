@@ -5203,6 +5203,7 @@ use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Support\PerfilCisterna;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -5303,8 +5304,7 @@ class BeneficiarioService
      */
     public function alocarEmOrdemServico(array $ids, int $ordemServicoId): int
     {
-        return CisternaBeneficiario::whereIn('id', $ids)
-            ->update(['ordem_servico_id' => $ordemServicoId]);
+        return $this->moverParaOrdemServico($ids, $ordemServicoId);
     }
 
     /**
@@ -5312,8 +5312,56 @@ class BeneficiarioService
      */
     public function removerDeOrdemServico(array $ids): int
     {
-        return CisternaBeneficiario::whereIn('id', $ids)
-            ->update(['ordem_servico_id' => null]);
+        return $this->moverParaOrdemServico($ids, null);
+    }
+
+    /**
+     * `->update()` no query builder NAO dispara observer, entao o
+     * CisternaBeneficiarioObserver (Task 11) nao veria a movimentacao em massa
+     * -- e alocar em lote e o caminho principal de uso. Sem gravar o log aqui,
+     * a timeline da ordem de servico ficaria cega justamente para o evento
+     * mais comum.
+     *
+     * Le o estado anterior antes de atualizar, porque depois do update ele se
+     * perde. Uma consulta a mais em troca de um historico correto.
+     *
+     * @param  array<int, int>  $ids
+     */
+    private function moverParaOrdemServico(array $ids, ?int $ordemServicoId): int
+    {
+        return DB::transaction(function () use ($ids, $ordemServicoId): int {
+            $anteriores = CisternaBeneficiario::whereIn('id', $ids)
+                ->pluck('ordem_servico_id', 'id');
+
+            $afetados = CisternaBeneficiario::whereIn('id', $ids)
+                ->update(['ordem_servico_id' => $ordemServicoId]);
+
+            $agora = now();
+            $registros = [];
+
+            foreach ($anteriores as $id => $anterior) {
+                // Quem ja estava onde deveria nao gera evento.
+                if ((int) $anterior === (int) $ordemServicoId) {
+                    continue;
+                }
+
+                $registros[] = [
+                    'user_id' => Auth::id(),
+                    'event' => 'updated',
+                    'table_name' => 'cisterna_beneficiarios',
+                    'row_id' => $id,
+                    'old_values' => json_encode(['ordem_servico_id' => $anterior]),
+                    'new_values' => json_encode(['ordem_servico_id' => $ordemServicoId]),
+                    'created_at' => $agora,
+                ];
+            }
+
+            if ($registros !== []) {
+                DB::table('audit_logs')->insert($registros);
+            }
+
+            return $afetados;
+        });
     }
 
     /**
@@ -7220,6 +7268,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Cisterna\Services;
 
+use App\Models\AuditLog;
+use App\Models\User;
 use App\Modules\Cisterna\DTOs\OrdemServicoDTO;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Models\CisternaOrdemServico;
@@ -7269,14 +7319,17 @@ class OrdemServicoService
     }
 
     /**
-     * Historico do lote: quem entrou e quem saiu.
+     * Historico do lote: quem entrou, quem saiu e o que mudou na propria OS.
      *
-     * Mescla a trilha da propria OS com as movimentacoes de beneficiarios
-     * cujo campo alterado foi `ordem_servico_id`, apontando de ou para esta
-     * OS. O legado fazia isso com whereJsonContains sobre
-     * valores_novos->os_id, e precisava testar string E int porque o campo era
-     * gravado das duas formas (CisternaOrdemServicoController.php:44-53).
-     * Aqui a coluna e integer com FK, entao a comparacao e direta.
+     * Le de `audit_logs`, a tabela de auditoria generica do projeto
+     * (`table_name`, `row_id`, `old_values`/`new_values` jsonb). O padrao e o
+     * mesmo do `UserManagementController::buildHistory()`, que monta a timeline
+     * do usuario mesclando audit_logs com outras fontes.
+     *
+     * O legado fazia isso com whereJsonContains sobre valores_novos->os_id, e
+     * precisava testar string E int porque o campo era gravado das duas formas
+     * (CisternaOrdemServicoController.php:44-53). Aqui `ordem_servico_id` e
+     * integer com FK; so precisa do cast, porque o operador ->> devolve texto.
      *
      * @return Collection<int, array{
      *     data: string,
@@ -7289,86 +7342,144 @@ class OrdemServicoService
      */
     public function timeline(CisternaOrdemServico $os): Collection
     {
-        $daOrdem = $os->trilhaDeAcoes()
-            ->with('usuario:id,name')
+        $daOrdem = AuditLog::query()
+            ->where('table_name', 'cisterna_ordens_servico')
+            ->where('row_id', $os->getKey())
             ->orderByDesc('created_at')
             ->get()
-            ->map(fn ($registro): array => [
-                'data' => $registro->created_at->toIso8601String(),
+            ->map(fn (AuditLog $log): array => [
+                'data' => $log->created_at?->toIso8601String() ?? '',
                 'tipo' => 'ordem_servico',
-                'descricao' => $this->descreverAlteracao($registro),
-                'usuario' => $registro->usuario?->name,
+                'descricao' => $this->descreverEventoDaOrdem($log),
+                'usuario' => $log->user_id === null ? null : User::find($log->user_id)?->name,
                 'beneficiario_id' => null,
                 'beneficiario_nome' => null,
             ]);
 
-        $movimentacoes = CisternaBeneficiario::trilhaDoCampoApontandoPara('ordem_servico_id', $os->getKey())
-            ->map(fn (array $mov): array => [
-                'data' => $mov['data'],
-                'tipo' => $mov['entrou'] ? 'beneficiario_entrou' : 'beneficiario_saiu',
-                'descricao' => $mov['entrou']
-                    ? "{$mov['beneficiario_nome']} foi alocado nesta ordem de servico."
-                    : "{$mov['beneficiario_nome']} saiu desta ordem de servico.",
-                'usuario' => $mov['usuario'],
-                'beneficiario_id' => $mov['beneficiario_id'],
-                'beneficiario_nome' => $mov['beneficiario_nome'],
-            ]);
-
-        return $daOrdem->concat($movimentacoes)
+        return $daOrdem->concat($this->movimentacoesDeBeneficiario($os))
             ->sortByDesc('data')
             ->values();
     }
 
-    private function descreverAlteracao(object $registro): string
-    {
-        $campo = $registro->campo ?? null;
-
-        if ($campo === null) {
-            return 'Ordem de servico registrada.';
-        }
-
-        return "Campo \"{$campo}\" alterado de \"{$registro->valor_antigo}\" para \"{$registro->valor_novo}\".";
-    }
-}
-```
-
-**Nota de integracao.** `trilhaDeAcoes()` e `trilhaDoCampoApontandoPara()` sao a interface com o modulo `Notificacoes`. Antes de escrever este service, abrir `app/Modules/Notificacoes/Support/TrilhaDeAcoes.php` e conferir os nomes reais dos metodos e das colunas do registro de trilha (`campo`, `valor_antigo`, `valor_novo`, `usuario`, `created_at`). Se a trait nao expuser um helper equivalente a `trilhaDoCampoApontandoPara`, acrescentar um metodo estatico em `CisternaBeneficiario`:
-
-```php
     /**
-     * Movimentacoes de beneficiarios cujo campo informado passou a apontar
-     * para, ou deixou de apontar para, o valor dado.
+     * Entradas e saidas de beneficiario nesta OS.
      *
-     * @return \Illuminate\Support\Collection<int, array{
-     *     data: string, entrou: bool, usuario: ?string,
-     *     beneficiario_id: int, beneficiario_nome: string
-     * }>
+     * @return Collection<int, array<string, mixed>>
      */
-    public static function trilhaDoCampoApontandoPara(string $campo, int|string $valor): \Illuminate\Support\Collection
+    private function movimentacoesDeBeneficiario(CisternaOrdemServico $os): Collection
     {
-        $registros = static::consultarTrilhaDeAcoes()
-            ->where('campo', $campo)
-            ->where(function ($q) use ($valor): void {
-                $q->where('valor_novo', (string) $valor)
-                    ->orWhere('valor_antigo', (string) $valor);
+        $id = (string) $os->getKey();
+
+        $logs = AuditLog::query()
+            ->where('table_name', 'cisterna_beneficiarios')
+            ->where(function ($q) use ($id): void {
+                // O operador ->> devolve texto, por isso a comparacao com string.
+                $q->whereRaw("new_values->>'ordem_servico_id' = ?", [$id])
+                    ->orWhereRaw("old_values->>'ordem_servico_id' = ?", [$id]);
             })
             ->orderByDesc('created_at')
             ->get();
 
-        $nomes = static::whereIn('id', $registros->pluck('registravel_id')->unique())
+        if ($logs->isEmpty()) {
+            return collect();
+        }
+
+        // Um SELECT para os nomes e um para os autores, em vez de um por linha.
+        $nomes = CisternaBeneficiario::withTrashed()
+            ->whereIn('id', $logs->pluck('row_id')->unique())
             ->pluck('nome', 'id');
 
-        return $registros->map(fn ($r): array => [
-            'data' => $r->created_at->toIso8601String(),
-            'entrou' => (string) $r->valor_novo === (string) $valor,
-            'usuario' => $r->usuario?->name,
-            'beneficiario_id' => (int) $r->registravel_id,
-            'beneficiario_nome' => $nomes[$r->registravel_id] ?? 'Beneficiario #'.$r->registravel_id,
-        ]);
+        $usuarios = User::whereIn('id', $logs->pluck('user_id')->filter()->unique())
+            ->pluck('name', 'id');
+
+        return $logs->map(function (AuditLog $log) use ($id, $nomes, $usuarios): array {
+            $novo = $log->new_values['ordem_servico_id'] ?? null;
+            $entrou = $novo !== null && (string) $novo === $id;
+            $nome = $nomes[$log->row_id] ?? 'Beneficiario #'.$log->row_id;
+
+            return [
+                'data' => $log->created_at?->toIso8601String() ?? '',
+                'tipo' => $entrou ? 'beneficiario_entrou' : 'beneficiario_saiu',
+                'descricao' => $entrou
+                    ? "{$nome} foi alocado nesta ordem de servico."
+                    : "{$nome} saiu desta ordem de servico.",
+                'usuario' => $log->user_id === null ? null : ($usuarios[$log->user_id] ?? null),
+                'beneficiario_id' => (int) $log->row_id,
+                'beneficiario_nome' => $nome,
+            ];
+        });
     }
+
+    private function descreverEventoDaOrdem(AuditLog $log): string
+    {
+        return match ($log->event) {
+            'created' => 'Ordem de servico criada.',
+            'deleted' => 'Ordem de servico excluida.',
+            default => 'Ordem de servico atualizada.',
+        };
+    }
+}
 ```
 
-O nome de `consultarTrilhaDeAcoes()` tambem sai da leitura da trait. Ajustar os dois metodos a API real antes de rodar o teste — esta e a unica parte do plano que depende de uma interface que nao foi lida na fase de levantamento.
+**Nota de integracao — leia antes de escrever.**
+
+O desenho original desta timeline chamava `trilhaDeAcoes()` e `trilhaDoCampoApontandoPara()` no model. **Esses metodos nao existem.** Verificado: `Notificacoes\Support\TrilhaDeAcoes` e um trait de ESCRITA — expoe `reportarAtualizacaoNaTrilha()`, `registrarNaTrilha()` e os metadados do contrato `Rastreavel`, e o `RegistroDeAcao::registrar()` **despacha notificacao**, sem persistir historico consultavel campo a campo.
+
+A base correta e `audit_logs`, a auditoria generica do projeto: `table_name`, `row_id`, `old_values jsonb`, `new_values jsonb`, `user_id`, `created_at`, com o model `App\Models\AuditLog`. O precedente de uso e o `UserManagementController::buildHistory()`.
+
+**Consequencia:** alguem precisa ESCREVER nesses logs, e hoje ninguem escreve para o modulo Cisterna — `audit_logs` tem 55 linhas, todas de autenticacao e gestao de usuario. Sem isso a timeline volta vazia e o teste falha, sem haver bug no service.
+
+Por isso esta task tambem cria um observer, `app/Modules/Cisterna/Observers/CisternaBeneficiarioObserver.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Cisterna\Observers;
+
+use App\Models\AuditLog;
+use App\Modules\Cisterna\Models\CisternaBeneficiario;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Request;
+
+/**
+ * Registra em `audit_logs` a entrada e a saida de beneficiario numa ordem de
+ * servico. E o que alimenta o OrdemServicoService::timeline().
+ *
+ * So grava quando `ordem_servico_id` de fato mudou: alterar nome ou telefone
+ * do beneficiario nao e movimentacao de lote e nao deve poluir o historico.
+ */
+class CisternaBeneficiarioObserver
+{
+    public function updated(CisternaBeneficiario $beneficiario): void
+    {
+        if (! $beneficiario->wasChanged('ordem_servico_id')) {
+            return;
+        }
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'event' => 'updated',
+            'table_name' => $beneficiario->getTable(),
+            'row_id' => $beneficiario->getKey(),
+            'old_values' => ['ordem_servico_id' => $beneficiario->getOriginal('ordem_servico_id')],
+            'new_values' => ['ordem_servico_id' => $beneficiario->ordem_servico_id],
+            'ip_address' => Request::ip(),
+            'user_agent' => substr((string) Request::userAgent(), 0, 500),
+            'created_at' => now(),
+        ]);
+    }
+}
+```
+
+Registrar no `CisternaServiceProvider::boot()`, ao lado do observer de vistoria:
+
+```php
+        CisternaBeneficiario::observe(CisternaBeneficiarioObserver::class);
+```
+
+**Atencao ao `BeneficiarioService`:** as acoes em massa usam `->update()` no query builder, que **nao dispara observer**. Como alocar em lote e o caminho principal de uso, o `alocarEmOrdemServico()` e o `removerDeOrdemServico()` da Task 8 precisam gravar os logs explicitamente. Isso esta anotado la; se voce chegar aqui antes, registre no retorno.
 
 - [ ] **Step 7: Escrever os seis FormRequests**
 
