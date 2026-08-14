@@ -2439,7 +2439,7 @@ class CisternaOrdemServico extends Model implements HasMedia
 
     protected $table = 'cisterna_ordens_servico';
 
-    protected $fillable = ['lote_id', 'nome', 'observacao', 'legacy_id'];
+    protected $fillable = ['lote_id', 'nome', 'observacao', 'documento_url', 'legacy_id'];
 
     protected $casts = ['legacy_id' => 'integer'];
 
@@ -6925,6 +6925,10 @@ final readonly class OrdemServicoDTO
         public int $loteId,
         public string $nome,
         public ?string $observacao = null,
+        // Legado: coluna link_doc, que guarda URL do SEI e nao arquivo. A
+        // collection documento_os do MediaLibrary continua existindo, para o
+        // documento anexado de verdade -- sao coisas diferentes.
+        public ?string $documentoUrl = null,
         public ?int $legacyId = null,
     ) {}
 
@@ -6937,6 +6941,7 @@ final readonly class OrdemServicoDTO
             loteId: (int) $d['lote_id'],
             nome: trim((string) $d['nome']),
             observacao: $d['observacao'] ?? null,
+            documentoUrl: $d['documento_url'] ?? null,
             legacyId: isset($d['legacy_id']) ? (int) $d['legacy_id'] : null,
         );
     }
@@ -6950,6 +6955,7 @@ final readonly class OrdemServicoDTO
             'lote_id' => $this->loteId,
             'nome' => $this->nome,
             'observacao' => $this->observacao,
+            'documento_url' => $this->documentoUrl,
             'legacy_id' => $this->legacyId,
         ];
     }
@@ -7433,7 +7439,10 @@ class StoreOrdemServicoRequest extends FormRequest
             'lote_id' => ['required', 'integer', 'exists:cisterna_lotes,id'],
             'nome' => ['required', 'string', 'max:255'],
             'observacao' => ['nullable', 'string', 'max:1000'],
-            // Legado: coluna link_doc. Agora e a collection documento_os.
+            // URL do processo no SEI. Legado: coluna link_doc, que guardava
+            // endereco e nao arquivo -- ver migration 2026_08_14_100300.
+            'documento_url' => ['nullable', 'url', 'max:500'],
+            // Arquivo anexado, que o legado nao tinha.
             'documento_os' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:10240'],
         ];
     }
@@ -9035,8 +9044,10 @@ class OrdemServicoResource extends JsonResource
                 $this->beneficiarios_count !== null,
                 fn (): int => (int) $this->beneficiarios_count
             ),
-            // Legado: coluna link_doc.
-            'documento' => $this->when(
+            // URL do processo no SEI, vinda do legado.
+            'documento_url' => $this->documento_url,
+            // Arquivo anexado no NewSDC, que o legado nao tinha.
+            'documento_anexo' => $this->when(
                 $this->relationLoaded('media'),
                 fn (): ?string => $this->getFirstMediaUrl('documento_os') ?: null
             ),
@@ -11532,9 +11543,11 @@ class RefinaOrdensServico implements Refinador
         $atributos = [
             'lote_id' => (int) $loteId,
             'nome' => $nome,
-            // Legado: coluna obs. O link_doc vira collection documento_os na
-            // etapa de midia.
+            // Legado: coluna obs.
             'observacao' => $this->textoOuNulo($doc['obs'] ?? null),
+            // link_doc e URL do SEI, nao arquivo: vai para coluna, nao para
+            // MediaLibrary. O placeholder '-' do legado vira null.
+            'documento_url' => $this->urlOuNulo($doc['link_doc'] ?? null),
             'legacy_id' => $legacyId,
         ];
 
@@ -11563,6 +11576,21 @@ class RefinaOrdensServico implements Refinador
         $texto = trim((string) ($valor ?? ''));
 
         return $texto === '' ? null : $texto;
+    }
+
+    /**
+     * 3 das 7 ordens do legado tem URL do SEI; as outras 4 tem o placeholder
+     * '-'. Qualquer coisa que nao pareca URL vira null.
+     */
+    private function urlOuNulo(mixed $valor): ?string
+    {
+        $texto = trim((string) ($valor ?? ''));
+
+        if ($texto === '' || $texto === '-' || ! str_starts_with($texto, 'http')) {
+            return null;
+        }
+
+        return mb_substr($texto, 0, 500);
     }
 }
 ```

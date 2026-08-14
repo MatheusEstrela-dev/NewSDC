@@ -2,7 +2,7 @@
 
 **Data:** 2026-08-14
 **Estado:** 10 tabelas criadas e conferidas no Postgres de dev (`newsdc_dev_db`)
-**Migrations:** `2026_08_14_100000_create_cisterna_dominio_tables`, `_100100_create_cisterna_legado_raw_table`, `_100200_create_cisterna_etl_log_table`
+**Migrations:** `2026_08_14_100000_create_cisterna_dominio_tables`, `_100100_create_cisterna_legado_raw_table`, `_100200_create_cisterna_etl_log_table`, `_100300_add_documento_url_to_cisterna_ordens_servico`
 
 Este documento foi gerado **consultando o banco real**, nao o desenho: as colunas, tipos, FKs e regras de exclusao abaixo saem de `pg_attribute`, `information_schema.table_constraints` e `pg_indexes`. E o que existe, nao o que se pretendia.
 
@@ -152,6 +152,7 @@ erDiagram
         bigint lote_id FK "CASCADE"
         varchar nome "255"
         text observacao
+        varchar documento_url "500. URL do SEI, nao arquivo"
         bigint legacy_id "unique"
         timestamptz created_at
         timestamptz updated_at
