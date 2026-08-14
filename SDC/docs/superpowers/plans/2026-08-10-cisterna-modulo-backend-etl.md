@@ -52,7 +52,7 @@ Para os comandos que **nao** sao teste (`artisan migrate`, `artisan tinker`, `ar
 PHP=/c/laragon/bin/php/php-8.3.16-Win32-vs16-x64/php.exe
 ```
 
-E quando o comando tocar o banco, acrescentar as env vars, pelo mesmo motivo do item 4:
+E quando o comando tocar o banco **ou o cache**, acrescentar as env vars. As de cache nao sao opcionais: o `.env` aponta `CACHE_DRIVER=redis` e o PHP 8.3 do Laragon nao carrega a extensao `redis`, entao `artisan db:seed` trava por minutos e morre com `Class "Redis" not found`. Sao as mesmas variaveis que o `phpunit.xml` ja define:
 
 ```bash
 DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=sdc DB_PASSWORD=secret \
