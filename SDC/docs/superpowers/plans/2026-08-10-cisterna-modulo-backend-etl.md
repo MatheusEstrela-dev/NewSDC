@@ -59,9 +59,14 @@ DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5434 DB_DATABASE=sdc DB_USERNAME=s
   $PHP artisan migrate
 ```
 
-**`SDC/.gitignore:39` ignora `tests`.** O `git add tests/...` falha silenciosamente; usar `git add -f`.
+**Os arquivos de teste NAO entram no commit.** Regra de ouro 10, confirmada pelo dono do repositorio na Onda 1: arquivo de teste criado durante o trabalho fica no working tree, nao no commit. `SDC/.gitignore:39` ja ignora `tests`, entao o comportamento padrao do `git add` ja e o correto.
 
-Isso **nao** viola a regra de ouro 10 (nao subir testes para commit): a regra trata de script de teste descartavel criado durante o trabalho, nao da suite do projeto. O repositorio ja versiona `SDC/tests/Unit/Tdap/SituacaoAtaTest.php`, `SDC/tests/Feature/PlanCon/PlanConUploadTest.php` e outros 21 arquivos — a suite e patrimonio, e este plano e TDD: sem o teste versionado, quem vem depois nao tem como verificar a task. **Se voce discordar dessa leitura, pergunte antes de decidir por conta propria** — na Onda 1 dois agentes decidiram diferente e o resultado ficou inconsistente.
+- **Nunca use `git add -f`** para versionar teste.
+- O teste **precisa existir e passar** — e o que valida a task. Ele so nao e commitado.
+- Ao relatar a task, cole a saida real do `scripts/test-host.sh` e diga explicitamente que o arquivo de teste ficou como WIP.
+- Se `git add tests/...` reclamar de path ignorado, **esta correto**: siga sem o teste.
+
+Consequencia pratica: quem retomar o trabalho noutra maquina nao tera os testes. Isso e aceito de proposito pelo dono do repositorio.
 
 ### Git com agentes em paralelo
 
