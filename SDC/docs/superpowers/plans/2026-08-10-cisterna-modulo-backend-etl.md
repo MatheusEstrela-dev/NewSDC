@@ -1414,7 +1414,10 @@ Continuar a mesma classe anonima:
             $table->softDeletesTz();
 
             $table->unique(['beneficiario_id', 'etapa']);
-            $table->unique('numero_instalacao');
+            // numero_instalacao: o UNIQUE e PARCIAL, criado em
+            // criarIndicesEspecificosDoPostgres(), ignorando deleted_at. Sem
+            // isso ele discorda do NumeracaoInstalacaoService, que consulta
+            // pelo model e ja ignora soft-deleted.
             $table->unique(['etapa', 'legacy_id']);
             $table->index(['etapa', 'concluida_em']);
         });
@@ -1523,6 +1526,16 @@ Continuar a mesma classe anonima:
         DB::statement(
             'CREATE INDEX IF NOT EXISTS cisterna_beneficiarios_cpf_idx '
             .'ON cisterna_beneficiarios (cpf)'
+        );
+
+        // Parcial para concordar com NumeracaoInstalacaoService::numeroEstaLivre(),
+        // que consulta pelo model e ignora soft-deleted. Com indice total, o
+        // service diria "livre" e o INSERT estouraria violacao crua em vez da
+        // ValidationException tratada.
+        DB::statement(
+            'CREATE UNIQUE INDEX IF NOT EXISTS cisterna_vistorias_numero_instalacao_unq '
+            .'ON cisterna_vistorias (numero_instalacao) '
+            .'WHERE numero_instalacao IS NOT NULL AND deleted_at IS NULL'
         );
 
         // Substitui whereNotNull('ranqueamento_ordem') com full scan.
@@ -5708,6 +5721,8 @@ git commit -m "✨ feat(cisterna): alocacao atomica do numero de instalacao via 
 ---
 
 ### Task 10: VistoriaService, Request e Observer — a cadeia das tres etapas
+
+> **Antes de comecar:** o UNIQUE de `numero_instalacao` e **parcial**, ignorando registros com `deleted_at`. Foi assim que ele passou a concordar com o `NumeracaoInstalacaoService::numeroEstaLivre()`, que consulta pelo model e ja ignora soft-deleted (migration `2026_08_14_100400`). Consequencia pratica para esta task: **excluir logicamente uma vistoria libera o numero dela para reuso**. Se a area disser que o numero deve ficar preso ao adesivo fisico mesmo apos exclusao, o certo e voltar o indice para total E trocar o `numeroEstaLivre()` para `withTrashed()` — os dois juntos, nunca so um.
 
 O nucleo da regra de negocio. No legado eram cinco metodos de controller
 (`storeRelatorioFinalFornecedor`, `storeRelatorioFinalCompdec`,

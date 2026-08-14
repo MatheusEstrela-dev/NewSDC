@@ -89,7 +89,7 @@ erDiagram
         bigserial id PK
         bigint beneficiario_id FK "CASCADE. unique com etapa"
         varchar etapa "20 + CHECK"
-        integer numero_instalacao "unique"
+        integer numero_instalacao "unique PARCIAL"
         varchar engenheiro_nome "150"
         varchar engenheiro_crea "30"
         varchar engenheiro_art "50"
@@ -270,6 +270,7 @@ Todas as colunas de caminho de foto e anexo sairam do dominio: os arquivos vao p
 |---|---|---|
 | **Indice unico PARCIAL** | `cisterna_beneficiarios_cpf_unq` em `(cpf) WHERE situacao_analise <> 'duplicado' AND deleted_at IS NULL` | Producao tem 492 CPFs repetidos, 485 marcados como Duplicado — o legado usava o status como tombstone. Unique puro rejeitaria ~511 linhas legitimas; parcial preserva o historico e **impede cadastro novo duplicado** |
 | **Indice parcial** | `cisterna_beneficiarios_ranqueamento_idx ... WHERE ranqueamento_ordem IS NOT NULL` | O legado fazia `whereNotNull` com full scan |
+| **Indice unico parcial** | `cisterna_vistorias_numero_instalacao_unq ... WHERE numero_instalacao IS NOT NULL AND deleted_at IS NULL` | Concorda com o service, que consulta pelo model e ignora soft-deleted. Com indice total o service diria "livre" e o INSERT estouraria violacao crua |
 | **GIN + pg_trgm** | `cisterna_beneficiarios_nome_trgm_idx` | Substitui `like '%termo%'` |
 | **GIN jsonb_path_ops** | `cisterna_legado_raw_doc_idx` | Consulta de contencao no doc cru, menor e mais rapido que o GIN padrao |
 | **CHECK constraint** | 7 constraints: situacao_analise, situacao_obra, etapa, item, unidade, responsavel, acao | Enum textual validado pelo banco, nao so pelo PHP |
