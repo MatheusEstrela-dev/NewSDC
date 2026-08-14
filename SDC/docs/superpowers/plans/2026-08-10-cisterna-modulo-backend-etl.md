@@ -4591,6 +4591,22 @@ class BeneficiarioValidacaoTest extends TestCase
         $this->assertArrayHasKey('data_nascimento_crianca', $validator->errors()->toArray());
     }
 
+    public function test_cpf_de_registro_marcado_como_duplicado_nao_bloqueia(): void
+    {
+        // A direcao que de fato distingue o indice PARCIAL de um unique comum.
+        // Sem este teste, a regra passaria mesmo escrita errada -- foi assim
+        // que o where(col, '<>', valor) silencioso sobreviveu ao plano.
+        // Protege as 485 linhas de tombstone que vem de producao.
+        CisternaBeneficiario::factory()->create([
+            'cpf' => '52998224725',
+            'situacao_analise' => \App\Modules\Cisterna\Enums\SituacaoAnalise::DUPLICADO->value,
+        ]);
+
+        $validator = $this->validar($this->payload());
+
+        $this->assertFalse($validator->fails(), (string) $validator->errors());
+    }
+
     public function test_cpf_duplicado_e_rejeitado_pela_regra_unique(): void
     {
         CisternaBeneficiario::factory()->create(['cpf' => '52998224725']);
@@ -4714,9 +4730,13 @@ class StoreBeneficiarioRequest extends FormRequest
                 'required',
                 'string',
                 'size:11',
+                // whereNot, NAO where(col, '<>', valor): DatabaseRule::where()
+                // aceita apenas DOIS argumentos, entao o operador viraria o
+                // valor e a regra ficaria `situacao_analise = '<>'`, que nao
+                // casa com nada -- o unique nunca rejeitaria CPF nenhum.
                 Rule::unique('cisterna_beneficiarios', 'cpf')
                     ->whereNull('deleted_at')
-                    ->where('situacao_analise', '<>', SituacaoAnalise::DUPLICADO->value),
+                    ->whereNot('situacao_analise', SituacaoAnalise::DUPLICADO->value),
             ],
             'nome' => ['required', 'string', 'max:150'],
             'telefone' => ['nullable', 'string', 'max:15'],
@@ -4843,9 +4863,14 @@ class UpdateBeneficiarioRequest extends StoreBeneficiarioRequest
             'required',
             'string',
             'size:11',
+            // Espelha o indice parcial do banco, igual ao Store. Sem o
+            // whereNot, a edicao ficaria MAIS estrita que o banco: um CPF que
+            // existe apenas como tombstone Duplicado bloquearia a edicao de um
+            // cadastro legitimo.
             Rule::unique('cisterna_beneficiarios', 'cpf')
                 ->ignore($beneficiario?->getKey())
-                ->whereNull('deleted_at'),
+                ->whereNull('deleted_at')
+                ->whereNot('situacao_analise', SituacaoAnalise::DUPLICADO->value),
         ];
 
         // Se marcou 'sim' e ja tem arquivo salvo, o envio e opcional: e uma
