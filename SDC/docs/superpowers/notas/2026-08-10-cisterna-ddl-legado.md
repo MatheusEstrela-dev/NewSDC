@@ -157,3 +157,34 @@ Em contraste, as fotos de **vistoria** estao em disco e sao migraveis: 827 no fo
 3. Os arquivos de vistoria (os que **estao** em disco) precisam ser copiados do servidor do legado para ca. Quem faz e quando?
 
 Enquanto isso nao se resolve, o modulo novo funciona sem as fotos do imovel: o cadastro, o fluxo de vistoria e os relatorios nao dependem delas.
+
+### 5.7 Os 8.105 cadastros importados ficam sem autor — e a trilha do sino fica sem destinatario
+
+`cisterna_beneficiarios.created_by` existe para a trilha de acoes do modulo Notificacoes: `donosNotificacao()` devolve `[created_by]`, e e quem recebe o aviso quando o registro muda. Com `created_by` nulo, a trilha e gravada mas **nao tem para quem tocar**.
+
+Situacao do dado de origem:
+
+| | |
+|---|---|
+| `sinc_cisterna.user_id` preenchido | 2.299 de 8.105 — **5.806 (72%) ja sao nulos no proprio legado** |
+| Usuarios distintos que cadastraram | 43 |
+| Faixa de id no legado | 1 a 729 |
+| Usuarios no legado `sdc` | 977 |
+| Usuarios no NewSDC | **55**, ids 1 a 55 |
+
+**Os ids nao mapeiam, e usa-los seria pior que deixar nulo.** Id acima de 55 quebraria a FK; id de 1 a 55 atribuiria o cadastro a **outra pessoa**, e a trilha avisaria quem nao tem nada com aquilo.
+
+Tentativa de casar por outro criterio, sobre os 43 usuarios:
+
+```
+casam por CPF:   0
+casam por EMAIL: 0
+```
+
+**Zero.** Sao contas institucionais de COMPDEC municipal (`defesacivil@janauba.mg.gov.br`, `comdec@taiobeiras.mg.gov.br`, `GAMELEIRA2733`) que ainda nao existem no NewSDC — os 55 usuarios de la sao outro conjunto.
+
+**Decisao:** o refino grava `created_by = null` em tudo que vem do legado. Nao ha alternativa correta hoje.
+
+**Isso nao perde a informacao.** O `user_id` de origem continua no `cisterna_legado_raw.doc`, e `legacy_id` liga o registro novo a linha crua. Quando as contas COMPDEC forem criadas no NewSDC, um comando de reconciliacao consegue preencher `created_by` sem reimportar nada — nao e preciso coluna nova nem decisao agora.
+
+**O que precisa ser dito a area:** para os 8.105 registros importados, a trilha de acoes nao vai notificar ninguem ate essa reconciliacao acontecer. Registro criado **no NewSDC** funciona normalmente, porque ai o `created_by` e preenchido pelo observer.
