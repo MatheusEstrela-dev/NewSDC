@@ -44,8 +44,11 @@ docker exec "${CID}" sh -c 'cd /var/www && php artisan route:clear && php artisa
 echo "→ reiniciando (Octane segura o codigo em memoria)..."
 docker restart "${CID}" >/dev/null
 
+# 40 x 3s = 120s. O boot deste container nao e curto: ele cacheia blade e
+# rotas, resolve as classes de assinatura, sobe o queue worker e so no fim o
+# Octane -- passa dos 60s com folga numa maquina carregada.
 echo -n "→ aguardando o app responder"
-for _ in $(seq 1 20); do
+for _ in $(seq 1 40); do
     # Sem `|| echo 000`: quando o curl falha ele JA imprime 000, e o echo
     # concatenava outro, virando "000000" -- que passa por qualquer teste de
     # "!= 000" e faz o script declarar pronto um app que ainda esta subindo.
@@ -62,5 +65,5 @@ for _ in $(seq 1 20); do
 done
 
 echo
-echo "AVISO: o app nao respondeu em 60s. Ver: docker logs --tail 40 ${NOME}" >&2
+echo "AVISO: o app nao respondeu em 120s. Ver: docker logs --tail 40 ${NOME}" >&2
 exit 1
