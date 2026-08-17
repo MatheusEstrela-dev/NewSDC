@@ -25,6 +25,11 @@ final class PonteMunicipio
      */
     private array $memo = [];
 
+    /**
+     * @var array<string, array<int, int>>|null
+     */
+    private ?array $indiceNome = null;
+
     public function resolver(?string $codmundv): ?int
     {
         $codigo = $this->normalizar($codmundv);
@@ -49,15 +54,78 @@ final class PonteMunicipio
      */
     public function resolverPorNome(?string $nome): ?int
     {
-        if ($nome === null || trim($nome) === '') {
+        $procurado = self::semAcento($nome);
+
+        if ($procurado === null) {
             return null;
         }
 
-        $ids = DB::table('municipios')
-            ->whereRaw('LOWER(nome) = ?', [mb_strtolower(trim($nome))])
-            ->pluck('id');
+        $encontrados = $this->indicePorNome()[$procurado] ?? [];
 
-        return $ids->count() === 1 ? (int) $ids->first() : null;
+        // Mais de um municipio com o mesmo nome normalizado: nao escolhe no
+        // escuro. O refino registra erro e a area decide.
+        return count($encontrados) === 1 ? $encontrados[0] : null;
+    }
+
+    /**
+     * Nome normalizado -> ids. Uma consulta por instancia (853 linhas).
+     *
+     * A comparacao ignora acento de proposito. O legado grava o nome em caixa
+     * alta e SEM acento (`PINTOPOLIS`), enquanto `municipios.nome` tem a grafia
+     * correta (`Pintopolis` com acento) -- um `LOWER(nome) = ?` falha em todo
+     * municipio acentuado, que e a maioria. Foi assim que a comunidade
+     * ALVORADA de Pintopolis caiu como orfa na primeira carga.
+     *
+     * Normalizado em PHP, e nao com `unaccent` no Postgres, para nao exigir
+     * CREATE EXTENSION no banco.
+     *
+     * Le direto da tabela e nao de `Municipio::catalogo()`: o catalogo tem memo
+     * de processo na frente de um cache de 24h, e uma carga de migracao nao pode
+     * resolver municipio contra catalogo vencido.
+     *
+     * @return array<string, array<int, int>>
+     */
+    private function indicePorNome(): array
+    {
+        if ($this->indiceNome !== null) {
+            return $this->indiceNome;
+        }
+
+        $indice = [];
+
+        foreach (DB::table('municipios')->get(['id', 'nome']) as $municipio) {
+            $chave = self::semAcento($municipio->nome);
+
+            if ($chave === null) {
+                continue;
+            }
+
+            $indice[$chave][] = (int) $municipio->id;
+        }
+
+        return $this->indiceNome = $indice;
+    }
+
+    /**
+     * Minuscula, sem acento e sem espaco duplo. Null quando nao sobra nada.
+     */
+    private static function semAcento(?string $valor): ?string
+    {
+        $texto = trim((string) ($valor ?? ''));
+
+        if ($texto === '') {
+            return null;
+        }
+
+        $convertido = @iconv('UTF-8', 'ASCII//TRANSLIT', $texto);
+        $texto = mb_strtolower($convertido === false ? $texto : $convertido);
+
+        // O TRANSLIT do iconv pode emitir formas como "~a" ou "'e".
+        $texto = preg_replace('/[^a-z0-9 ]/', '', $texto) ?? $texto;
+
+        $texto = trim(preg_replace('/\s+/', ' ', $texto) ?? $texto);
+
+        return $texto === '' ? null : $texto;
     }
 
     private function normalizar(?string $codmundv): ?string
