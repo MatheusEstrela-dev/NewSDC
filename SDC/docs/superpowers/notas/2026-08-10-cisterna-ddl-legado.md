@@ -238,3 +238,49 @@ Medido no Postgres de dev: `cedec_municipio` tem **0 linhas** (a nota 5.4 e o sp
 Consequencia: `Municipio::habilitadosCisterna()` faz `join cedec_municipio ... where at_cisterna = 1`, entao devolve **colecao vazia** — todo select de municipio das telas de cisterna fica em branco, e nenhum cadastro novo pode ser criado pela interface.
 
 Nao e problema de codigo: falta rodar o `ImportCedecMunicipioCommand`, que traz a tabela do legado. Depois disso o passo de marcar `at_cisterna = 1` nos 55 municipios atendidos (Task 18) passa a ter efeito. **Enquanto a tabela estiver vazia, marcar `at_cisterna` marca zero linhas.**
+
+## 6. Verificacao final contra os 13 criterios do spec (Task 19)
+
+| # | Criterio | Situacao |
+|---|---|---|
+| 1 | 8 tabelas do dominio + 2 de ETL, sem residuo do scaffold | **ok** — 10 tabelas `cisterna_*`, `cisternas` retirada |
+| 2 | Suite do modulo verde, sem regressao no baseline | **ok** — 211 testes, 616 asserts |
+| 3 | Pint sem apontamento no modulo | **ok** — 5 arquivos ajustados, 83 limpos |
+| 4 | `--dry-run` reporta por recurso sem escrever | **ok**, com a ressalva abaixo |
+| 5 | Duas execucoes seguidas nao duplicam | **ok** — 2a passada: 11.102 updated, 0 inserted |
+| 6 | Cada uma das 20 correcoes com teste ou verificacao | **ok** — cobertas pelas Tasks 2 a 18 |
+| 7 | Nenhuma referencia a `TipoCisterna`, `StatusCisterna`, `CisternaPolicy`, `CisternaDTO` ou a tabela | **ok** — zero ocorrencias em app, routes, assets e ziggy |
+| 8 | Nenhuma pasta fora do padrao | **ok** — `Requests/` e `Resources/` na raiz, 6 policies em `app/Policies/`, sem `Http/` nem `Exports/` |
+| 9 | Decisao sobre o formato do export registrada | **ok** — CSV streamado (ver 5.5) |
+| 10 | `at_cisterna` populado e o scope devolvendo a lista | **BLOQUEADO** — ver 5.9 |
+| 11 | Escopo verificado com os tres perfis | **ok** — `BeneficiarioServiceTest` cobre CEDEC, COMPDEC e fornecedor |
+| 12 | Nenhum `RanqueamentoService` | **ok** — nao existe; `ranqueamento_ordem` e apenas ordenavel |
+| 13 | Homonimos medidos e o tratamento registrado no log | **ok** — 54 pares `(codmundv, comunidade)` deduplicados na origem; 58 nomes de comunidade convivem em municipios distintos como registros separados, que e a correcao do defeito C18 |
+
+### 6.1 O `--dry-run` nao valida a etapa do COMPDEC
+
+Achado da Task 18. O COMPDEC se liga a vistoria do fornecedor, nao ao beneficiario direto, e em dry-run essa vistoria nao e escrita — entao **680 das 858 linhas acusam "vistoria de fornecedor nao encontrada"** por construcao, nao por defeito.
+
+O dry-run continua util para comunidades, lotes, OS, beneficiarios e a etapa do fornecedor. Para o COMPDEC ele nao serve, e o numero alarmante nao deve ser lido como problema de dado.
+
+### 6.2 Contagem final do dominio migrado
+
+| Tabela | Linhas |
+|---|---|
+| `cisterna_beneficiarios` | 8.096 (7.580 ativos, 516 duplicados) |
+| `cisterna_comunidades` | 840 |
+| `cisterna_atendimentos_pipa` | 2.904 |
+| `cisterna_vistorias` | 2.129 (791 fornecedor, 680 compdec, 658 cedec) |
+| `cisterna_itens_conferidos` | 27.677 |
+| `cisterna_notificacoes` | 7 |
+| `cisterna_ordens_servico` | 7 |
+| `cisterna_lotes` | 3 |
+| `media` (Cisterna) | 0 — nenhum arquivo do legado esta nesta maquina |
+
+**12 erros em 11.396 documentos**, todos dependendo da area: 9 de CPF em beneficiarios (5.8) e 3 comunidades cujo municipio no legado e o literal `"Municipio"` com `codmundv` nulo.
+
+### 6.3 Falhas fora do modulo, pre-existentes
+
+A suite completa tem 1 erro e 5 falhas em `Pae`, `AjudaHumanitaria` e `PlanCon`. Nenhuma toca o Cisterna, e a causa e a mesma nos tres: **os testes leem dado pre-existente do banco em vez de semear o proprio**. `ajuda_h_estoque_saldos` e `planos_contingencia` estao com 0 linhas neste banco, e `EstoqueAhRenderTest` afirma sobre `saldos.data.0` — que nao existe quando a tabela esta vazia.
+
+E a mesma fragilidade que precisou ser corrigida em 7 testes do Cisterna durante as Tasks 17 e 18: com a migracao real no banco, assert de total absoluto passa a medir o conteudo do banco em vez do comportamento sob teste. A correcao la foi medir **delta** e usar faixa de id reservada (99xxxx para identificador, 9xxxxx para numero de instalacao). Os testes desses tres modulos merecem o mesmo tratamento, mas isso e trabalho fora do escopo desta migracao.
