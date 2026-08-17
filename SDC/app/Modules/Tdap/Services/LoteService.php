@@ -44,7 +44,7 @@ class LoteService
         return $this->aplicarFiltros(Lote::query(), $filtros)
             ->with([
                 'ata:id,numero,dt_inicio,dt_final',
-                'municipio:id,nome,uf',
+                'municipios:id,nome,uf',
                 'prestador:id,nome,cnpj',
             ])
             ->orderByDesc('id')
@@ -65,7 +65,11 @@ class LoteService
      */
     public function municipiosDisponiveis(array $filtros = []): Collection
     {
-        $comLote = $this->aplicarFiltros(Lote::query(), array_diff_key($filtros, ['municipio_id' => null]))
+        $lotes = $this->aplicarFiltros(Lote::query(), array_diff_key($filtros, ['municipio_id' => null]))
+            ->select('tdap_lotes.id');
+
+        $comLote = DB::table('tdap_lote_municipios')
+            ->whereIn('lote_id', $lotes)
             ->select('municipio_id');
 
         return Municipio::query()
@@ -86,7 +90,7 @@ class LoteService
         $rows = $this->aplicarFiltros(Lote::query(), $filtros)
             ->with([
                 'ata:id,numero',
-                'municipio:id,nome,uf',
+                'municipios:id,nome,uf',
                 'prestador:id,nome,cnpj',
             ])
             ->orderByDesc('id')
@@ -97,8 +101,11 @@ class LoteService
             'Nome'           => $l->nome,
             'Contrato'       => $l->contrato,
             'Ata'            => $l->ata?->numero,
-            'Municipio'      => $l->municipio?->nome,
-            'UF'             => $l->municipio?->uf,
+            // O lote atende varios municipios: uma coluna com a lista e outra
+            // com a quantidade (o CSV antes trazia um unico municipio).
+            'Municipios'     => $l->municipios->pluck('nome')->implode(', '),
+            'Qtd Municipios' => $l->municipios->count(),
+            'UF'             => $l->municipios->pluck('uf')->unique()->implode(', '),
             'Prestador'      => $l->prestador?->nome,
             'CNPJ'           => $l->prestador?->cnpj,
             'Volume (m3)'    => number_format((float) $l->qtd_agua_m3, 2, ',', '.'),
@@ -114,7 +121,7 @@ class LoteService
             ->withCount('cronogramas')
             ->with([
                 'ata:id,numero,dt_inicio,dt_final',
-                'municipio:id,nome,uf',
+                'municipios:id,nome,uf',
                 'prestador:id,nome,cnpj,email',
             ])
             ->findOrFail($id);
@@ -122,7 +129,12 @@ class LoteService
 
     public function criar(LoteDTO $dto): Lote
     {
-        return DB::transaction(fn () => Lote::create($dto->toArray()));
+        return DB::transaction(function () use ($dto): Lote {
+            $lote = Lote::create($dto->toArray());
+            $lote->municipios()->sync($dto->municipio_ids);
+
+            return $lote;
+        });
     }
 
     public function atualizar(int $id, LoteDTO $dto): Lote
@@ -130,8 +142,9 @@ class LoteService
         return DB::transaction(function () use ($id, $dto): Lote {
             $lote = Lote::findOrFail($id);
             $lote->update($dto->toArray());
+            $lote->municipios()->sync($dto->municipio_ids);
 
-            return $lote->fresh(['ata', 'municipio', 'prestador']);
+            return $lote->fresh(['ata', 'municipios', 'prestador']);
         });
     }
 

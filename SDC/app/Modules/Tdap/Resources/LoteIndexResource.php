@@ -24,9 +24,15 @@ class LoteIndexResource extends JsonResource
             'contrato'       => $this->contrato,
             'ata_id'         => $this->ata_id,
             'ata_numero'     => $this->whenLoaded('ata', fn () => $this->ata->numero),
-            'municipio_id'   => $this->municipio_id,
-            'municipio_nome' => $this->whenLoaded('municipio', fn () => $this->municipio->nome),
-            'municipio_uf'   => $this->whenLoaded('municipio', fn () => $this->municipio->uf),
+            // Lista completa: um lote atende varios municipios. A grade mostra
+            // esta lista na coluna "Municipio" (antes vinha do municipio_id
+            // unico, que na base legada era 0 e nao exibia nada).
+            'municipios'     => $this->whenLoaded(
+                'municipios',
+                fn () => $this->municipios
+                    ->map(fn ($m) => ['id' => $m->id, 'nome' => $m->nome, 'uf' => $m->uf])
+                    ->values(),
+            ),
             'prestador_id'   => $this->prestador_id,
             'prestador_nome' => $this->whenLoaded('prestador', fn () => $this->prestador->nome),
             'prestador_cnpj' => $this->whenLoaded('prestador', fn () => $this->prestador->cnpj),

@@ -64,7 +64,12 @@
                 <td class="px-4 py-3 font-mono">
                   <Link :href="route('tdap.lotes.show', l.id)" class="text-blue-600 hover:text-blue-800">{{ l.numero }}</Link>
                 </td>
-                <td class="px-4 py-3">{{ l.municipio_nome }}<span v-if="l.municipio_uf">/{{ l.municipio_uf }}</span></td>
+                <td class="px-4 py-3">
+                  <span v-if="l.municipios && l.municipios.length">
+                    {{ l.municipios.map(m => m.nome).join(', ') }}
+                  </span>
+                  <span v-else class="text-slate-400">—</span>
+                </td>
                 <td class="px-4 py-3">{{ l.prestador_nome }}</td>
                 <td class="px-4 py-3 text-right font-mono">{{ Number(l.qtd_agua_m3).toFixed(2) }}</td>
                 <td class="px-4 py-3 text-right font-mono">{{ Number(l.valor_m3).toFixed(2) }}</td>

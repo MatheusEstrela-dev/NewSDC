@@ -109,7 +109,7 @@ class LoteController extends Controller
     public function edit(Lote $lote): Response
     {
         return Inertia::render('Tdap/Lotes/Edit', [
-            'lote'        => LoteResource::make($lote->load(['ata', 'municipio', 'prestador'])),
+            'lote'        => LoteResource::make($lote->load(['ata', 'municipios', 'prestador'])),
             'atas'        => Ata::ativo()->orderByDesc('dt_inicio')->get(['id', 'numero', 'dt_inicio', 'dt_final']),
             'municipios'  => Municipio::catalogo(),
             'prestadores' => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
