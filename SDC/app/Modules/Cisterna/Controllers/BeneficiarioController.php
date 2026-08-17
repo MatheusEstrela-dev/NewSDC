@@ -7,9 +7,11 @@ namespace App\Modules\Cisterna\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Municipio;
 use App\Modules\Cisterna\DTOs\BeneficiarioDTO;
+use App\Modules\Cisterna\Enums\CoberturaTelhado;
 use App\Modules\Cisterna\Enums\EtapaVistoria;
 use App\Modules\Cisterna\Enums\SituacaoAnalise;
 use App\Modules\Cisterna\Enums\SituacaoObra;
+use App\Modules\Cisterna\Enums\TipoMoradia;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Requests\AcaoEmMassaRequest;
 use App\Modules\Cisterna\Requests\StoreBeneficiarioRequest;
@@ -212,6 +214,8 @@ class BeneficiarioController extends Controller
     private function opcoes(): array
     {
         return [
+            'tipos_moradia' => TipoMoradia::options(),
+            'coberturas_telhado' => CoberturaTelhado::options(),
             'situacoes_analise' => SituacaoAnalise::options(),
             'situacoes_obra' => SituacaoObra::options(),
             'etapas_vistoria' => EtapaVistoria::options(),

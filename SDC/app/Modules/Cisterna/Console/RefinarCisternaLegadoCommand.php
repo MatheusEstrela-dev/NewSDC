@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Cisterna\Console;
 
 use App\Modules\Cisterna\Domain\Etl\LeitorRaw;
+use App\Modules\Cisterna\Domain\Etl\Refinadores\RefinaBeneficiarios;
 use App\Modules\Cisterna\Domain\Etl\Refinadores\RefinaComunidades;
 use App\Modules\Cisterna\Domain\Etl\Refinadores\Refinador;
 use App\Modules\Cisterna\Domain\Etl\Refinadores\RefinaLotes;
@@ -107,12 +108,13 @@ class RefinarCisternaLegadoCommand extends Command
      */
     private function todosOsRefinadores(): array
     {
-        // A ordem importa: comunidades e lotes antes do que os referencia.
-        // Os demais recursos entram nas Tasks 17 e 18.
+        // A ordem importa: comunidades, lotes e OS antes dos beneficiarios,
+        // que resolvem FK contra os tres. Vistorias e midia entram na Task 18.
         return [
             'comunidades' => app(RefinaComunidades::class),
             'lotes' => app(RefinaLotes::class),
             'os' => app(RefinaOrdensServico::class),
+            'beneficiarios' => app(RefinaBeneficiarios::class),
         ];
     }
 

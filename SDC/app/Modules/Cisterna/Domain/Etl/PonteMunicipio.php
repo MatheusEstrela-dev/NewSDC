@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Cisterna\Domain\Etl;
 
+use App\Modules\Cisterna\Support\NormalizaEntrada;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -54,7 +55,7 @@ final class PonteMunicipio
      */
     public function resolverPorNome(?string $nome): ?int
     {
-        $procurado = self::semAcento($nome);
+        $procurado = NormalizaEntrada::chaveTexto($nome);
 
         if ($procurado === null) {
             return null;
@@ -94,7 +95,7 @@ final class PonteMunicipio
         $indice = [];
 
         foreach (DB::table('municipios')->get(['id', 'nome']) as $municipio) {
-            $chave = self::semAcento($municipio->nome);
+            $chave = NormalizaEntrada::chaveTexto($municipio->nome);
 
             if ($chave === null) {
                 continue;
@@ -104,28 +105,6 @@ final class PonteMunicipio
         }
 
         return $this->indiceNome = $indice;
-    }
-
-    /**
-     * Minuscula, sem acento e sem espaco duplo. Null quando nao sobra nada.
-     */
-    private static function semAcento(?string $valor): ?string
-    {
-        $texto = trim((string) ($valor ?? ''));
-
-        if ($texto === '') {
-            return null;
-        }
-
-        $convertido = @iconv('UTF-8', 'ASCII//TRANSLIT', $texto);
-        $texto = mb_strtolower($convertido === false ? $texto : $convertido);
-
-        // O TRANSLIT do iconv pode emitir formas como "~a" ou "'e".
-        $texto = preg_replace('/[^a-z0-9 ]/', '', $texto) ?? $texto;
-
-        $texto = trim(preg_replace('/\s+/', ' ', $texto) ?? $texto);
-
-        return $texto === '' ? null : $texto;
     }
 
     private function normalizar(?string $codmundv): ?string

@@ -83,4 +83,36 @@ final class NormalizaEntrada
 
         return in_array(strtolower(trim((string) $valor)), ['sim', '1', 'true', 's'], true);
     }
+
+    /**
+     * Chave de comparacao de texto: minuscula, sem acento, sem pontuacao e sem
+     * espaco duplo. Null quando nao sobra nada.
+     *
+     * Existe porque o legado e o dominio grafam o mesmo valor de formas
+     * diferentes -- `Cerâmica` contra `ceramica`, `PINTOPOLIS` contra
+     * `Pintopolis` -- e comparar cru perde o casamento.
+     *
+     * O `//TRANSLIT` do iconv NAO basta sozinho: nesta plataforma ele emite o
+     * diacritico como caractere separado (`Cerâmica` -> `Cer^amica`,
+     * `Pintopolis` -> `Pint'opolis`) e devolve `false` quando encontra o
+     * caractere de substituicao U+FFFD, que os 67 cadastros de `PROPRIA`
+     * truncados carregam. Por isso o filtro de caracteres depois, e o fallback
+     * para o texto original.
+     */
+    public static function chaveTexto(?string $valor): ?string
+    {
+        $texto = trim((string) ($valor ?? ''));
+
+        if ($texto === '') {
+            return null;
+        }
+
+        $convertido = @iconv('UTF-8', 'ASCII//TRANSLIT', $texto);
+        $texto = mb_strtolower($convertido === false ? $texto : $convertido);
+
+        $texto = preg_replace('/[^a-z0-9 ]/u', '', $texto) ?? $texto;
+        $texto = trim(preg_replace('/\s+/', ' ', $texto) ?? $texto);
+
+        return $texto === '' ? null : $texto;
+    }
 }

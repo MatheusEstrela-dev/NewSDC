@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Cisterna\Requests;
 
+use App\Modules\Cisterna\Enums\CoberturaTelhado;
 use App\Modules\Cisterna\Enums\ResponsavelPipa;
 use App\Modules\Cisterna\Enums\SituacaoAnalise;
 use App\Modules\Cisterna\Enums\SituacaoObra;
+use App\Modules\Cisterna\Enums\TipoMoradia;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Support\NormalizaEntrada;
 use Carbon\CarbonImmutable;
@@ -103,14 +105,14 @@ class StoreBeneficiarioRequest extends FormRequest
             'comprovante_chefia_mulher' => ['exclude_if:chefiada_mulher,false', 'required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
             'comprovante_observacao' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
 
-            'tipo_moradia' => ['required', 'string', 'max:30'],
+            'tipo_moradia' => ['required', Rule::in(TipoMoradia::valores())],
             'tipo_moradia_outro' => ['nullable', 'string', 'max:50'],
             'comprimento_telhado' => ['required', 'numeric', 'min:0'],
             'largura_telhado' => ['required', 'numeric', 'min:0'],
             'area_telhado' => ['nullable', 'numeric', 'min:0'],
             'comprimento_testada' => ['required', 'numeric', 'min:0'],
             'num_caidas_telhado' => ['required', 'integer', 'min:1', 'max:99'],
-            'cobertura_telhado' => ['required', 'string', 'max:30'],
+            'cobertura_telhado' => ['required', Rule::in(CoberturaTelhado::valores())],
             'cobertura_outro' => ['nullable', 'string', 'max:150'],
             'possui_fogao_lenha' => ['required', 'boolean'],
             'medida_telhado_area_fogao' => ['nullable', 'numeric', 'min:0'],
