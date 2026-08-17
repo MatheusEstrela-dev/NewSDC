@@ -40,9 +40,9 @@ class AtaResource extends JsonResource
                 'id'             => $l->id,
                 'numero'         => $l->numero,
                 'nome'           => $l->nome,
-                'municipio_id'   => $l->municipio_id,
-                'municipio_nome' => $l->municipio?->nome,
-                'municipio_uf'   => $l->municipio?->uf,
+                'municipios'     => $l->relationLoaded('municipios')
+                    ? $l->municipios->map(fn ($m) => ['id' => $m->id, 'nome' => $m->nome, 'uf' => $m->uf])->values()
+                    : [],
                 'prestador_id'   => $l->prestador_id,
                 'prestador_nome' => $l->prestador?->nome,
                 'qtd_agua_m3'    => (float) $l->qtd_agua_m3,

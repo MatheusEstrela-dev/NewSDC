@@ -3,7 +3,7 @@
   <div class="p-6 space-y-6">
     <TdapPageHeader
       title="Novo Lote"
-      description="Cadastrar lote de fornecimento (ata + município + prestador)"
+      description="Cadastrar lote de fornecimento (ata + municípios + prestador)"
       :icon="MapIcon"
     />
     <LoteForm
@@ -36,7 +36,7 @@ const props = defineProps({
 
 const form = useForm({
   ata_id: props.ata_id,
-  municipio_id: null,
+  municipio_ids: [],
   prestador_id: null,
   numero: '',
   nome: '',
