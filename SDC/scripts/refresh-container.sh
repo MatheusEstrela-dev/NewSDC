@@ -46,8 +46,14 @@ docker restart "${CID}" >/dev/null
 
 echo -n "→ aguardando o app responder"
 for _ in $(seq 1 20); do
-    codigo="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:8000/login 2>/dev/null || echo 000)"
-    if [[ "${codigo}" != "000" ]]; then
+    # Sem `|| echo 000`: quando o curl falha ele JA imprime 000, e o echo
+    # concatenava outro, virando "000000" -- que passa por qualquer teste de
+    # "!= 000" e faz o script declarar pronto um app que ainda esta subindo.
+    codigo="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:8000/login 2>/dev/null)" || codigo=000
+
+    # So um 2xx/3xx conta como no ar. O Octane responde 000 ate os workers
+    # carregarem, e ai o classmap novo ainda nao esta em memoria.
+    if [[ "${codigo}" =~ ^[23][0-9][0-9]$ ]]; then
         echo " OK (HTTP ${codigo})"
         exit 0
     fi
