@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Cisterna;
 
 use App\Modules\Cisterna\Console\ExtrairCisternaLegadoCommand;
+use App\Modules\Cisterna\Console\RefinarCisternaLegadoCommand;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Models\CisternaVistoria;
 use App\Modules\Cisterna\Observers\CisternaBeneficiarioObserver;
@@ -38,6 +39,7 @@ class CisternaServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 ExtrairCisternaLegadoCommand::class,
+                RefinarCisternaLegadoCommand::class,
             ]);
         }
     }

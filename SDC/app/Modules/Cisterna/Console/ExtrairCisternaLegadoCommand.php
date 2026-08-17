@@ -99,7 +99,7 @@ class ExtrairCisternaLegadoCommand extends Command
 
         $this->newLine();
         $this->info("Extracao concluida: {$totalGeral} linha(s) em cisterna_legado_raw.");
-        $this->line('Proximo passo: $PHP artisan cisterna:refinar-legado --dry-run');
+        $this->line('Proximo passo: artisan cisterna:refinar-legado --dry-run');
 
         return self::SUCCESS;
     }

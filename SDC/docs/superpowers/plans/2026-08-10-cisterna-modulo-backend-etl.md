@@ -11090,7 +11090,7 @@ class ExtrairCisternaLegadoCommand extends Command
 
         $this->newLine();
         $this->info("Extracao concluida: {$totalGeral} linha(s) em cisterna_legado_raw.");
-        $this->line('Proximo passo: $PHP artisan cisterna:refinar-legado --dry-run');
+        $this->line('Proximo passo: artisan cisterna:refinar-legado --dry-run');
 
         return self::SUCCESS;
     }
@@ -11205,6 +11205,15 @@ class RefinarComunidadesLotesOsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // A area de pouso pode ja conter a carga real do legado (11.396
+        // documentos). Sem limpar, os testes colidem com dado de verdade no
+        // unique (tabela, pk_legado) em vez de exercitar o refino.
+        //
+        // O DELETE roda dentro da transacao do DatabaseTransactions, entao a
+        // carga real volta no rollback -- nada se perde.
+        DB::table('cisterna_legado_raw')->delete();
+        DB::table('cisterna_etl_log')->delete();
 
         // Codigos IBGE ficticios: o banco de teste ja tem os 853 reais.
         $this->municipioA = Municipio::firstOrCreate(
@@ -12052,6 +12061,15 @@ class RefinarBeneficiariosTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // A area de pouso pode ja conter a carga real do legado (11.396
+        // documentos). Sem limpar, os testes colidem com dado de verdade no
+        // unique (tabela, pk_legado) em vez de exercitar o refino.
+        //
+        // O DELETE roda dentro da transacao do DatabaseTransactions, entao a
+        // carga real volta no rollback -- nada se perde.
+        DB::table('cisterna_legado_raw')->delete();
+        DB::table('cisterna_etl_log')->delete();
 
         $this->municipio = Municipio::firstOrCreate(
             ['codigo_ibge' => '9999911'],
@@ -12983,6 +13001,15 @@ class RefinarVistoriasTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // A area de pouso pode ja conter a carga real do legado (11.396
+        // documentos). Sem limpar, os testes colidem com dado de verdade no
+        // unique (tabela, pk_legado) em vez de exercitar o refino.
+        //
+        // O DELETE roda dentro da transacao do DatabaseTransactions, entao a
+        // carga real volta no rollback -- nada se perde.
+        DB::table('cisterna_legado_raw')->delete();
+        DB::table('cisterna_etl_log')->delete();
 
         $this->beneficiario = CisternaBeneficiario::factory()->create([
             'legacy_id' => 500,
