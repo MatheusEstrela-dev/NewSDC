@@ -48,6 +48,16 @@ class BeneficiarioService
                 'comunidade:id,nome',
                 'ordemServico:id,nome,lote_id',
                 'ordemServico.lote:id,nome',
+                // A listagem desenha a coluna de etapas concluidas e o numero de
+                // instalacao, e as duas saem desta relacao. Sem carregar,
+                // `relationLoaded('vistorias')` e false no resource: a coluna de
+                // etapas volta sempre vazia e a de numero desaparece da payload
+                // -- a tela mostraria "todas pendentes" para as 791 que tem
+                // vistoria de fornecedor concluida, sem erro nenhum aparecer.
+                //
+                // Restrito as colunas usadas: a vistoria tem 24, e a listagem
+                // precisa de 5.
+                'vistorias:id,beneficiario_id,etapa,concluida_em,numero_instalacao',
             ]);
 
         $this->aplicarEscopoDoPerfil($query, $perfil);
