@@ -10641,7 +10641,7 @@ class ExtrairLegadoCommandTest extends TestCase
     {
         DB::table('cisterna_legado_raw')->insert([
             'tabela' => 'sinc_cisterna',
-            'legacy_id' => 1,
+            'pk_legado' => '1',
             'doc' => json_encode(['nome' => 'Primeiro']),
             'extraido_em' => now(),
         ]);
@@ -10650,7 +10650,7 @@ class ExtrairLegadoCommandTest extends TestCase
 
         DB::table('cisterna_legado_raw')->insert([
             'tabela' => 'sinc_cisterna',
-            'legacy_id' => 1,
+            'pk_legado' => '1',
             'doc' => json_encode(['nome' => 'Duplicado']),
             'extraido_em' => now(),
         ]);
@@ -10699,7 +10699,7 @@ class ExtrairLegadoCommandTest extends TestCase
         DB::table('cisterna_etl_log')->insert([
             'recurso' => 'beneficiarios',
             'tabela' => 'sinc_cisterna',
-            'legacy_id' => 42,
+            'pk_legado' => '42',
             'new_id' => null,
             'acao' => 'error',
             'motivo' => 'Municipio sem correspondencia IBGE',

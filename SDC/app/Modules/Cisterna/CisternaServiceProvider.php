@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Cisterna;
 
+use App\Modules\Cisterna\Console\ExtrairCisternaLegadoCommand;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Models\CisternaVistoria;
 use App\Modules\Cisterna\Observers\CisternaBeneficiarioObserver;
@@ -33,5 +34,11 @@ class CisternaServiceProvider extends ServiceProvider
         // Registra entrada e saida de beneficiario em ordem de servico na
         // auditoria generica, que e o que alimenta a timeline do lote.
         CisternaBeneficiario::observe(CisternaBeneficiarioObserver::class);
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                ExtrairCisternaLegadoCommand::class,
+            ]);
+        }
     }
 }
