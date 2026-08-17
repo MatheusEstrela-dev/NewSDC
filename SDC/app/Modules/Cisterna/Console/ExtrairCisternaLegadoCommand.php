@@ -62,6 +62,7 @@ class ExtrairCisternaLegadoCommand extends Command
 
             if (! $legado->getSchemaBuilder()->hasTable($tabela)) {
                 $this->warn("Tabela ausente no legado, ignorada: {$tabela}");
+
                 continue;
             }
 

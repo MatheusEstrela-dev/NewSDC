@@ -165,6 +165,7 @@ class RefinaMidia implements Refinador
 
             if (! Storage::disk('legado_cisterna')->exists($caminho)) {
                 $ausentes[] = "comprovante {$tipo} ({$caminho})";
+
                 continue;
             }
 
@@ -340,5 +341,4 @@ class RefinaMidia implements Refinador
 
         return 1;
     }
-
 }

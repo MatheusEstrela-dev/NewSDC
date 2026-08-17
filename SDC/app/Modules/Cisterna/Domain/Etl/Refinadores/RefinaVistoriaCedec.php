@@ -141,6 +141,7 @@ class RefinaVistoriaCedec implements Refinador
             return null;
         }
     }
+
     /**
      * legacy_ids que sobrevivem a deduplicacao, memoizados: a lista sai de uma
      * varredura da tabela inteira e nao muda no meio da carga.
@@ -156,5 +157,4 @@ class RefinaVistoriaCedec implements Refinador
     {
         return $this->vencedores ??= $this->dedup->vencedores($this->tabelaLegado(), 'cisterna_id');
     }
-
 }

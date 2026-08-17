@@ -8,6 +8,7 @@ use App\Models\Municipio;
 use App\Modules\Cisterna\Domain\Etl\LeitorRaw;
 use App\Modules\Cisterna\Domain\Etl\Refinadores\RefinaBeneficiarios;
 use App\Modules\Cisterna\Domain\Etl\Refinadores\RefinaComunidades;
+use App\Modules\Cisterna\Domain\Etl\Refinadores\Refinador;
 use App\Modules\Cisterna\Domain\Etl\Refinadores\RefinaLotes;
 use App\Modules\Cisterna\Domain\Etl\Refinadores\RefinaMidia;
 use App\Modules\Cisterna\Domain\Etl\Refinadores\RefinaNotificacoes;
@@ -15,7 +16,6 @@ use App\Modules\Cisterna\Domain\Etl\Refinadores\RefinaOrdensServico;
 use App\Modules\Cisterna\Domain\Etl\Refinadores\RefinaVistoriaCedec;
 use App\Modules\Cisterna\Domain\Etl\Refinadores\RefinaVistoriaCompdec;
 use App\Modules\Cisterna\Domain\Etl\Refinadores\RefinaVistoriaFornecedor;
-use App\Modules\Cisterna\Domain\Etl\Refinadores\Refinador;
 use App\Modules\Cisterna\Domain\Etl\RegistroEtl;
 use App\Modules\Cisterna\Services\NumeracaoInstalacaoService;
 use Illuminate\Console\Command;
@@ -77,6 +77,7 @@ class RefinarCisternaLegadoCommand extends Command
             if ($total === 0) {
                 $this->warn("Sem linhas em cisterna_legado_raw para {$refinador->tabelaLegado()}. "
                     .'Rodar cisterna:extrair-legado primeiro.');
+
                 continue;
             }
 
@@ -119,7 +120,7 @@ class RefinarCisternaLegadoCommand extends Command
 
         $this->newLine();
         $this->line('Detalhe dos erros:');
-        $this->line("  artisan cisterna:refinar-legado --dry-run  # sem escrever no dominio");
+        $this->line('  artisan cisterna:refinar-legado --dry-run  # sem escrever no dominio');
         $this->line('  SELECT recurso, motivo, COUNT(*) FROM cisterna_etl_log');
         $this->line("  WHERE acao = 'error' GROUP BY 1, 2 ORDER BY 3 DESC;");
 
