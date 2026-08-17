@@ -10640,8 +10640,11 @@ class ExtrairLegadoCommandTest extends TestCase
     public function test_raw_e_unico_por_tabela_e_id_de_origem(): void
     {
         DB::table('cisterna_legado_raw')->insert([
-            'tabela' => 'sinc_cisterna',
-            'pk_legado' => '1',
+            // Chave ficticia: a tabela pode ja conter a carga real do legado,
+            // e usar ('sinc_cisterna', '1') faz o teste colidir com dado de
+            // verdade em vez de com a propria insercao.
+            'tabela' => 'tabela_ficticia_do_teste',
+            'pk_legado' => '999999',
             'doc' => json_encode(['nome' => 'Primeiro']),
             'extraido_em' => now(),
         ]);
@@ -10649,8 +10652,8 @@ class ExtrairLegadoCommandTest extends TestCase
         $this->expectException(\Illuminate\Database\QueryException::class);
 
         DB::table('cisterna_legado_raw')->insert([
-            'tabela' => 'sinc_cisterna',
-            'pk_legado' => '1',
+            'tabela' => 'tabela_ficticia_do_teste',
+            'pk_legado' => '999999',
             'doc' => json_encode(['nome' => 'Duplicado']),
             'extraido_em' => now(),
         ]);
