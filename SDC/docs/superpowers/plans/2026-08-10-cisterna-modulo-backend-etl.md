@@ -12431,21 +12431,29 @@ declare(strict_types=1);
 
 namespace App\Modules\Cisterna\Domain\Etl\Refinadores;
 
+use App\Modules\Cisterna\Domain\Etl\Coordenada;
 use App\Modules\Cisterna\Domain\Etl\PonteMunicipio;
 use App\Modules\Cisterna\Domain\Etl\RegistroEtl;
+use App\Modules\Cisterna\Enums\CoberturaTelhado;
 use App\Modules\Cisterna\Enums\ResponsavelPipa;
 use App\Modules\Cisterna\Enums\SituacaoAnalise;
 use App\Modules\Cisterna\Enums\SituacaoObra;
+use App\Modules\Cisterna\Enums\TipoMoradia;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Models\CisternaComunidade;
 use App\Modules\Cisterna\Models\CisternaOrdemServico;
 use App\Modules\Cisterna\Support\NormalizaEntrada;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
  * Refino de sinc_cisterna: 54 colunas varchar(150) para tipos reais.
+ *
+ * A tabela mais larga do legado guardava data, moeda, medida e booleano todos
+ * como texto, porque o formulario gravava o valor cru do input. Aqui cada campo
+ * volta ao tipo que sempre foi.
  */
 class RefinaBeneficiarios implements Refinador
 {
@@ -12498,67 +12506,192 @@ class RefinaBeneficiarios implements Refinador
             DB::transaction(function () use ($atributos, $doc, $legacyId, $cpf): void {
                 $existente = CisternaBeneficiario::withTrashed()->where('legacy_id', $legacyId)->first();
 
-                // CPF ja usado por outro registro: o legado nao tinha UNIQUE,
-                // garantia era um count() em PHP antes do insert.
-                $conflito = CisternaBeneficiario::withTrashed()
+                // O legado marcou este cadastro como duplicado, e essa decisao e
+                // de quem analisou -- nao se discute aqui. Duplicado tambem nao
+                // disputa o lugar ativo do CPF: o unique e parcial e os exclui.
+                if ($atributos['situacao_analise'] === SituacaoAnalise::DUPLICADO->value) {
+                    $this->gravarERegistrar($existente, $atributos, $doc, $legacyId);
+
+                    return;
+                }
+
+                // CPF ja usado por outro registro. O legado nao tinha UNIQUE; a
+                // garantia era um count() em PHP antes do insert, que falhava
+                // sob concorrencia -- e 492 CPFs acabaram repetidos em 1.003
+                // linhas. Delas, o proprio legado ja resolveu a maioria
+                // marcando um lado como duplicado; disputam o lugar ativo so as
+                // que ninguem analisou.
+                $concorrentes = CisternaBeneficiario::withTrashed()
                     ->where('cpf', $cpf)
                     ->when($existente !== null, fn ($q) => $q->whereKeyNot($existente->id))
-                    ->first();
+                    ->get()
+                    ->reject(fn (CisternaBeneficiario $i): bool => $i->situacao_analise === SituacaoAnalise::DUPLICADO);
 
-                if ($conflito !== null) {
-                    // Decisao D25. Os 26 CPFs que colidem entre registros
-                    // ativos tem DUAS naturezas, e tratar as duas igual seria
-                    // errado (notas 5.1):
-                    //
-                    //  A) 22 casos: mesma pessoa, cadastro em duplicidade.
-                    //     Nome quase identico. Marca como duplicado, que e a
-                    //     convencao que o legado ja usava.
-                    //
-                    //  B) 4 casos: CPF digitado errado, apontando para pessoas
-                    //     DIFERENTES. Ex.: 05924079659 esta em "DOUGLAS SOARES
-                    //     BARBOSA" e em "ISABEL ALVES SEPO". Marcar a segunda
-                    //     como duplicata apagaria uma beneficiaria real da
-                    //     lista ativa.
-                    //
-                    // O separador e a similaridade dos nomes normalizados.
-                    if (! $this->pareceMesmaPessoa($conflito->nome, $atributos['nome'])) {
-                        RegistroEtl::erro($this->recurso(), $this->tabelaLegado(), $legacyId,
-                            "CPF {$cpf} ja usado por #{$conflito->id} (\"{$conflito->nome}\"), mas este "
-                            ."registro e de \"{$atributos['nome']}\": nomes divergentes, provavel erro de "
-                            .'digitacao de CPF. NAO importado — corrigir o CPF na origem e reprocessar.', $doc);
+                // Entre os concorrentes vence o cadastro mais antigo, o de menor
+                // legacy_id. A pergunta e feita por registro -- "existe alguem
+                // mais antigo disputando este CPF?" -- e por isso a decisao nao
+                // depende da ordem de leitura nem de quantas vezes o refino
+                // rodou. Marcar sempre o registro corrente, como antes, deixava
+                // as duas pontas de cada par como duplicado e escondia 492
+                // beneficiarios reais.
+                $maisAntigo = $concorrentes->where('legacy_id', '<', $legacyId)->sortBy('legacy_id')->first();
 
-                        return;
-                    }
-
-                    $atributos['situacao_analise'] = SituacaoAnalise::DUPLICADO->value;
-                    $atributos['situacao_analise_obs'] = "CPF coincide com o registro #{$conflito->id} "
-                        ."(legacy_id {$conflito->legacy_id}). Marcado automaticamente na migracao.";
-
-                    $criado = CisternaBeneficiario::create($atributos);
-                    $this->sincronizarAtendimentos($criado, $doc);
-
-                    RegistroEtl::ignorado($this->recurso(), $this->tabelaLegado(), $legacyId,
-                        "CPF {$cpf} colide com #{$conflito->id}: importado como Duplicado.", $criado->id);
+                if ($maisAntigo !== null) {
+                    $this->tratarConflitoDeCpf($maisAntigo, $existente, $atributos, $doc, $legacyId, $cpf);
 
                     return;
                 }
 
-                if ($existente !== null) {
-                    $existente->update($atributos);
-                    $this->sincronizarAtendimentos($existente, $doc);
-                    RegistroEtl::atualizado($this->recurso(), $this->tabelaLegado(), $legacyId, $existente->id);
-
+                // Este e o mais antigo. Se um concorrente mais novo esta
+                // ocupando o lugar ativo, ele cede.
+                if (! $this->liberarLugarAtivo($concorrentes, $atributos['nome'], $legacyId, $cpf, $doc)) {
                     return;
                 }
 
-                $criado = CisternaBeneficiario::create($atributos);
-                $this->sincronizarAtendimentos($criado, $doc);
-                RegistroEtl::inserido($this->recurso(), $this->tabelaLegado(), $legacyId, $criado->id);
+                $this->gravarERegistrar($existente, $atributos, $doc, $legacyId);
             });
         } catch (Throwable $e) {
             RegistroEtl::erro($this->recurso(), $this->tabelaLegado(), $legacyId,
                 'Falha ao gravar: '.$e->getMessage(), $doc);
         }
+    }
+
+    /**
+     * Decisao D25. Os CPFs que colidem entre registros ativos tem DUAS
+     * naturezas, e tratar as duas igual seria errado (notas 5.1):
+     *
+     *  A) 22 casos: mesma pessoa, cadastro em duplicidade. Nome quase
+     *     identico. Marca como duplicado, convencao que o legado ja usava.
+     *
+     *  B) 4 casos: CPF digitado errado, apontando para pessoas DIFERENTES.
+     *     Ex.: 05924079659 esta em "DOUGLAS SOARES BARBOSA" e em "ISABEL
+     *     ALVES SEPO". Marcar a segunda como duplicata apagaria uma
+     *     beneficiaria real da lista ativa.
+     *
+     * O separador e a similaridade dos nomes normalizados.
+     *
+     * @param  array<string, mixed>  $atributos
+     * @param  array<string, mixed>  $doc
+     */
+    private function tratarConflitoDeCpf(
+        CisternaBeneficiario $conflito,
+        ?CisternaBeneficiario $existente,
+        array $atributos,
+        array $doc,
+        int $legacyId,
+        string $cpf,
+    ): void {
+        if (! $this->pareceMesmaPessoa($conflito->nome, $atributos['nome'])) {
+            RegistroEtl::erro($this->recurso(), $this->tabelaLegado(), $legacyId,
+                "CPF {$cpf} ja usado por #{$conflito->id} (\"{$conflito->nome}\"), mas este "
+                ."registro e de \"{$atributos['nome']}\": nomes divergentes, provavel erro de "
+                .'digitacao de CPF. NAO importado -- corrigir o CPF na origem e reprocessar.', $doc);
+
+            return;
+        }
+
+        $atributos['situacao_analise'] = SituacaoAnalise::DUPLICADO->value;
+        $atributos['situacao_analise_obs'] = "CPF coincide com o registro #{$conflito->id} "
+            ."(legacy_id {$conflito->legacy_id}). Marcado automaticamente na migracao.";
+
+        $registro = $this->gravar($existente, $atributos, $doc);
+
+        RegistroEtl::ignorado($this->recurso(), $this->tabelaLegado(), $legacyId,
+            "CPF {$cpf} colide com #{$conflito->id}: importado como Duplicado.", $registro->id);
+    }
+
+    /**
+     * Rebaixa a duplicata que esteja ocupando o lugar ativo do CPF, para o
+     * cadastro mais antigo do grupo poder assumi-lo.
+     *
+     * So acontece quando uma carga anterior gravou o grupo em outra ordem: o
+     * unique parcial de CPF admite um unico registro fora de `duplicado`, e sem
+     * isso o mais antigo esbarraria nele.
+     *
+     * Devolve false quando nao pode rebaixar -- nome divergente e outra pessoa,
+     * e esconder um beneficiario real e pior que deixar o conflito visivel para
+     * a area resolver.
+     *
+     * @param  Collection<int, CisternaBeneficiario>  $concorrentes
+     * @param  array<string, mixed>  $doc
+     */
+    private function liberarLugarAtivo(
+        Collection $concorrentes,
+        ?string $nome,
+        int $legacyId,
+        string $cpf,
+        array $doc,
+    ): bool {
+        foreach ($concorrentes as $irmao) {
+            if (! $this->pareceMesmaPessoa($irmao->nome, $nome)) {
+                RegistroEtl::erro($this->recurso(), $this->tabelaLegado(), $legacyId,
+                    "CPF {$cpf} ja usado por #{$irmao->id} (\"{$irmao->nome}\"), mas este "
+                    ."registro e de \"{$nome}\": nomes divergentes, provavel erro de "
+                    .'digitacao de CPF. NAO importado -- corrigir o CPF na origem e reprocessar.', $doc);
+
+                return false;
+            }
+
+            $irmao->update([
+                'situacao_analise' => SituacaoAnalise::DUPLICADO->value,
+                'situacao_analise_obs' => "CPF coincide com o cadastro de legacy_id {$legacyId}, "
+                    .'mais antigo do grupo. Marcado automaticamente na migracao.',
+            ]);
+
+            RegistroEtl::ignorado($this->recurso(), $this->tabelaLegado(), (int) $irmao->legacy_id,
+                "CPF {$cpf}: cadastro mais recente rebaixado para Duplicado em favor do "
+                ."legacy_id {$legacyId}.", $irmao->id);
+        }
+
+        return true;
+    }
+
+    /**
+     * Grava e registra no log, distinguindo insert de update.
+     *
+     * @param  array<string, mixed>  $atributos
+     * @param  array<string, mixed>  $doc
+     */
+    private function gravarERegistrar(
+        ?CisternaBeneficiario $existente,
+        array $atributos,
+        array $doc,
+        int $legacyId,
+    ): void {
+        $registro = $this->gravar($existente, $atributos, $doc);
+
+        $existente === null
+            ? RegistroEtl::inserido($this->recurso(), $this->tabelaLegado(), $legacyId, $registro->id)
+            : RegistroEtl::atualizado($this->recurso(), $this->tabelaLegado(), $legacyId, $registro->id);
+    }
+
+    /**
+     * Unico ponto de gravacao do beneficiario, para os dois caminhos -- normal e
+     * duplicado -- decidirem insert ou update do mesmo jeito.
+     *
+     * Existe porque separar as duas decisoes ja custou: o caminho do duplicado
+     * chamava create() direto, e na segunda passada do refino os 501 registros
+     * marcados como duplicado batiam no unique de legacy_id. Idempotencia nao
+     * pode depender de qual ramo o registro seguiu.
+     *
+     * @param  array<string, mixed>  $atributos
+     * @param  array<string, mixed>  $doc
+     */
+    private function gravar(
+        ?CisternaBeneficiario $existente,
+        array $atributos,
+        array $doc,
+    ): CisternaBeneficiario {
+        if ($existente === null) {
+            $registro = CisternaBeneficiario::create($atributos);
+        } else {
+            $existente->update($atributos);
+            $registro = $existente;
+        }
+
+        $this->sincronizarAtendimentos($registro, $doc);
+
+        return $registro;
     }
 
     /**
@@ -12577,11 +12710,14 @@ class RefinaBeneficiarios implements Refinador
             'municipio_id' => $municipioId,
             'comunidade_id' => $comunidadeId,
             'endereco' => $this->texto($doc['endereco'] ?? null, 150),
-            'latitude' => NormalizaEntrada::decimal($doc['latitude'] ?? null),
-            'longitude' => NormalizaEntrada::decimal($doc['longitude'] ?? null),
+            // Coordenada tem parser proprio: a coluna do legado era texto
+            // livre com 21 formatos, e o valor sem separador decimal
+            // estourava numeric(10,7) derrubando o cadastro inteiro.
+            'latitude' => Coordenada::latitude($doc['latitude'] ?? null),
+            'longitude' => Coordenada::longitude($doc['longitude'] ?? null),
             'ordem_servico_id' => $this->resolverOrdemServico($doc),
 
-            // Os dois eixos, ortogonais.
+            // Os dois eixos, ortogonais: analise do cadastro e andamento da obra.
             'situacao_analise' => SituacaoAnalise::doLegado($doc['aprovado'] ?? null)->value,
             'situacao_analise_obs' => $this->texto($doc['aprovado_obs'] ?? null, 255),
             'situacao_obra' => SituacaoObra::doLegado($doc['estado'] ?? null)->value,
@@ -12597,14 +12733,14 @@ class RefinaBeneficiarios implements Refinador
             'possui_idoso' => NormalizaEntrada::booleanoSimNao($doc['possui_idoso'] ?? null),
             'chefiada_mulher' => NormalizaEntrada::booleanoSimNao($doc['chefiada_mulher'] ?? null),
 
-            'tipo_moradia' => $this->texto($doc['moradia'] ?? null, 30),
+            'tipo_moradia' => TipoMoradia::doLegado($doc['moradia'] ?? null)?->value,
             'tipo_moradia_outro' => $this->texto($doc['outroMoradia'] ?? null, 50),
             'comprimento_telhado' => NormalizaEntrada::decimal($doc['compTelhado'] ?? null),
             'largura_telhado' => NormalizaEntrada::decimal($doc['larguracompTelhado'] ?? null),
             'area_telhado' => NormalizaEntrada::decimal($doc['areaTotalTelhado'] ?? null),
             'comprimento_testada' => NormalizaEntrada::decimal($doc['compTestada'] ?? null),
             'num_caidas_telhado' => $this->inteiro($doc['numCaidaTelhado'] ?? null),
-            'cobertura_telhado' => $this->texto($doc['coberturaTelhado'] ?? null, 30),
+            'cobertura_telhado' => CoberturaTelhado::doLegado($doc['coberturaTelhado'] ?? null)?->value,
             'cobertura_outro' => $this->texto($doc['coberturaOutros'] ?? null, 150),
             'possui_fogao_lenha' => NormalizaEntrada::booleanoSimNao($doc['existeFogaoLenha'] ?? null),
             'medida_telhado_area_fogao' => NormalizaEntrada::decimal($doc['medidaTelhadoAreaFogao'] ?? null),
@@ -12648,7 +12784,7 @@ class RefinaBeneficiarios implements Refinador
         }
 
         // Par (municipio, nome): e o que corrige o defeito C18 do legado, que
-        // casava comunidade so pelo nome.
+        // casava comunidade so pelo nome e misturava municipios.
         $id = CisternaComunidade::where('municipio_id', $municipioId)
             ->where('nome', $nome)
             ->value('id');
@@ -12680,7 +12816,8 @@ class RefinaBeneficiarios implements Refinador
     }
 
     /**
-     * Explode as cinco colunas respAt* em linhas. Substitui, nao acumula.
+     * Explode as cinco colunas respAt* em linhas. Substitui, nao acumula, para
+     * o refino poder rodar de novo sem multiplicar atendimento.
      *
      * @param  array<string, mixed>  $doc
      */
@@ -12706,29 +12843,19 @@ class RefinaBeneficiarios implements Refinador
 
     /**
      * Dois nomes designam a mesma pessoa? Usado para separar duplicidade de
-     * cadastro (nome quase igual) de erro de digitacao de CPF (nomes de
-     * pessoas diferentes) — decisao D25.
+     * cadastro (nome quase igual) de erro de digitacao de CPF (nomes de pessoas
+     * diferentes) -- decisao D25.
      *
-     * Limiar de 80% calibrado sobre os 26 casos reais de producao: separa os
-     * 22 de duplicidade dos 4 de CPF errado. E heuristica, nao verdade — os
-     * casos limitrofes vao para revisao da area (notas 5.1).
+     * Limiar de 80% calibrado sobre os 26 casos reais de producao: separa os 22
+     * de duplicidade dos 4 de CPF errado. E heuristica, nao verdade -- os casos
+     * limitrofes vao para revisao da area (notas 5.1).
      */
     private function pareceMesmaPessoa(?string $a, ?string $b): bool
     {
-        $normalizar = static function (?string $nome): string {
-            $texto = trim((string) ($nome ?? ''));
-            $semAcento = @iconv('UTF-8', 'ASCII//TRANSLIT', $texto);
-            $texto = strtoupper($semAcento === false ? $texto : $semAcento);
+        $primeiro = NormalizaEntrada::chaveTexto($a);
+        $segundo = NormalizaEntrada::chaveTexto($b);
 
-            // Sobra so letra e espaco simples: acento, pontuacao e espaco
-            // duplo nao devem contar como diferenca de pessoa.
-            return trim(preg_replace('/\s+/', ' ', preg_replace('/[^A-Z ]/', ' ', $texto) ?? '') ?? '');
-        };
-
-        $primeiro = $normalizar($a);
-        $segundo = $normalizar($b);
-
-        if ($primeiro === '' || $segundo === '') {
+        if ($primeiro === null || $segundo === null) {
             // Sem nome para comparar, nao afirma que sao a mesma pessoa.
             return false;
         }
@@ -12807,63 +12934,60 @@ declare(strict_types=1);
 
 namespace App\Modules\Cisterna\Enums;
 
+use App\Modules\Cisterna\Support\NormalizaEntrada;
+
 /**
- * Tipo de moradia do beneficiario. Casos derivados do SELECT DISTINCT sobre
- * cisterna_legado_raw.doc->>'moradia' — ver
- * docs/superpowers/notas/2026-08-10-cisterna-ddl-legado.md.
+ * Regime de posse da moradia do beneficiario.
  *
- * doLegado() absorve as variacoes de grafia do texto livre do legado.
+ * O nome do campo no legado era `moradia`, e o do dominio ficou `tipo_moradia`,
+ * mas o que a coluna guarda e POSSE, nao material de construcao. Os casos saem
+ * do SELECT DISTINCT sobre cisterna_legado_raw.doc->>'moradia', 8.105 linhas:
+ *
+ *   PROPRIA     5.182  |  propria  2.515  |  PR<U+FFFD>PRIA  67   -> propria
+ *   Outros         84  |  OUTROS      19  |  outros        5      -> outros
+ *   CEDIDA         41  |  cedida      16                          -> cedida
+ *   ALUGADA        12  |  alugada      2                          -> alugada
+ *   0             162                                             -> null
  */
 enum TipoMoradia: string
 {
-    case ALVENARIA = 'alvenaria';
-    case MADEIRA = 'madeira';
-    case MISTA = 'mista';
-    case OUTRO = 'outro';
+    case PROPRIA = 'propria';
+    case CEDIDA = 'cedida';
+    case ALUGADA = 'alugada';
+    case OUTROS = 'outros';
 
     public function label(): string
     {
         return match ($this) {
-            self::ALVENARIA => 'Alvenaria',
-            self::MADEIRA => 'Madeira',
-            self::MISTA => 'Mista',
-            self::OUTRO => 'Outro',
+            self::PROPRIA => 'Propria',
+            self::CEDIDA => 'Cedida',
+            self::ALUGADA => 'Alugada',
+            self::OUTROS => 'Outros',
         };
     }
 
     /**
-     * Texto livre do legado -> case. Null quando nao reconhece: o refino
-     * registra skipped com o valor original, sem perder o dado (ele continua
-     * no doc jsonb).
+     * Texto livre do legado -> case. Null quando nao reconhece: o refino grava
+     * a coluna nula e o valor original continua no doc jsonb, sem perda.
      */
     public static function doLegado(?string $valor): ?self
     {
-        $normalizado = self::normalizar($valor);
+        $normalizado = NormalizaEntrada::chaveTexto($valor);
 
-        if ($normalizado === null) {
+        if ($normalizado === null || $normalizado === '0') {
             return null;
         }
 
         return match (true) {
-            str_contains($normalizado, 'alvenaria') => self::ALVENARIA,
-            str_contains($normalizado, 'madeira') => self::MADEIRA,
-            str_contains($normalizado, 'mista') || str_contains($normalizado, 'misto') => self::MISTA,
+            // 67 cadastros gravaram "PROPRIA" com o caractere de substituicao
+            // U+FFFD no lugar do O acentuado: o varchar(7) utf8mb3 do legado
+            // nao aguentava "PRÓPRIA". Nao e um regime de posse diferente.
+            (bool) preg_match('/^pr.?pria$/u', $normalizado) => self::PROPRIA,
+            str_contains($normalizado, 'cedida') => self::CEDIDA,
+            str_contains($normalizado, 'alugada') => self::ALUGADA,
+            str_starts_with($normalizado, 'outro') => self::OUTROS,
             default => null,
         };
-    }
-
-    private static function normalizar(?string $valor): ?string
-    {
-        $texto = trim((string) ($valor ?? ''));
-
-        if ($texto === '') {
-            return null;
-        }
-
-        // Remove acento para o match nao depender de grafia.
-        $semAcento = iconv('UTF-8', 'ASCII//TRANSLIT', $texto);
-
-        return mb_strtolower($semAcento === false ? $texto : $semAcento);
     }
 
     /**
@@ -12887,7 +13011,7 @@ enum TipoMoradia: string
 }
 ```
 
-`CoberturaTelhado` segue exatamente a mesma forma, com os oito casos medidos: `pvc`, `ceramica`, `fibrocimento`, `zinco`, `concreto`, `metalica`, `amianto`, `outros`. O `doLegado()` dela e mais simples, porque os valores do legado ja vem quase todos em minuscula e sem acento:
+`CoberturaTelhado` segue a mesma forma, com os oito casos medidos: `pvc`, `ceramica`, `fibrocimento`, `zinco`, `concreto`, `metalica`, `amianto`, `outros`. O `doLegado()` dela e mais simples, porque os valores ja vem do formulario com a grafia dos casos, variando so caixa e acento:
 
 ```php
     public static function doLegado(?string $valor): ?self
@@ -12902,7 +13026,21 @@ enum TipoMoradia: string
     }
 ```
 
-Com `normalizar()` identico ao de `TipoMoradia` (trim, remocao de acento, minuscula). Isso resolve `Concreto` -> `concreto` e `Outros` -> `outros` sem `match`.
+Os dois usam `NormalizaEntrada::chaveTexto()`, e nao um `normalizar()` privado em cada enum. **O `iconv('UTF-8','ASCII//TRANSLIT')` sozinho nao resolve** -- foi medido no host e no container:
+
+| Entrada | iconv //TRANSLIT | Efeito sem tratamento |
+|---|---|---|
+| `Cerâmica` | `Cer^amica` | o diacritico sai como caractere separado; `tryFrom('cer^amica')` falha nas 434 linhas |
+| `Pintópolis` | `Pint'opolis` | idem, quebra o fallback de municipio por nome |
+| `PR<U+FFFD>PRIA` | **`false`** | 67 linhas: precisa cair de volta no texto original |
+
+Por isso `chaveTexto()` filtra os caracteres que sobram depois do TRANSLIT e trata o retorno `false`.
+
+- [ ] **Step 7b: Parser de coordenada (`Domain/Etl/Coordenada.php`)**
+
+Achado nao previsto, encontrado na primeira carga real: `latitude`/`longitude` eram `varchar(150)` de texto livre com **21 formatos distintos**, e 127 linhas gravaram sem separador decimal (`-16393269`). Essas estouravam `numeric(10,7)` com SQLSTATE 22003 e **derrubavam o INSERT inteiro** -- o cadastro do beneficiario era perdido por causa de um campo. Outras 1.039 tinham sufixo de mascara (`-05.033800_`) e eram descartadas em silencio por `is_numeric()`.
+
+O parser cobre: sufixo de mascara e de grau, hemisferio como letra (`15.224144S`), grau-minuto-segundo (`16º41'27"`), ponto de milhar (`-15.601.703`) e separador ausente. Os limites de aceite sao os de **Minas com um grau de folga**, e nao nacionais: com limite nacional, `.162823` passaria como ponto valido no Amapa. Ganho medido: 6.810 -> 7.993 coordenadas aproveitadas.
 
 - [ ] **Step 8: Migration das CHECK constraints**
 
@@ -12977,12 +13115,7 @@ return new class extends Migration
 
 - [ ] **Step 9: Aplicar os enums no refino e nos Requests**
 
-No `RefinaBeneficiarios::mapear()`, trocar as duas linhas de texto livre por:
-
-```php
-            'tipo_moradia' => TipoMoradia::doLegado($doc['moradia'] ?? null)?->value,
-            'cobertura_telhado' => CoberturaTelhado::doLegado($doc['coberturaTelhado'] ?? null)?->value,
-```
+O `mapear()` do Step 4 ja sai com os enums aplicados -- nao ha por que gravar texto livre para trocar depois.
 
 Em `StoreBeneficiarioRequest::rules()`, trocar as duas regras de `string, max:30` por:
 

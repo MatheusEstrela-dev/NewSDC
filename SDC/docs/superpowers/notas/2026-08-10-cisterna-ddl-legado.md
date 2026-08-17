@@ -188,3 +188,53 @@ casam por EMAIL: 0
 **Isso nao perde a informacao.** O `user_id` de origem continua no `cisterna_legado_raw.doc`, e `legacy_id` liga o registro novo a linha crua. Quando as contas COMPDEC forem criadas no NewSDC, um comando de reconciliacao consegue preencher `created_by` sem reimportar nada — nao e preciso coluna nova nem decisao agora.
 
 **O que precisa ser dito a area:** para os 8.105 registros importados, a trilha de acoes nao vai notificar ninguem ate essa reconciliacao acontecer. Registro criado **no NewSDC** funciona normalmente, porque ai o `created_by` e preenchido pelo observer.
+
+### 5.8 Resultado medido da carga dos beneficiarios (Task 17)
+
+Contabilidade fechada: **8.105 linhas na origem, 8.096 no dominio, 9 nao importadas.**
+
+| | Linhas |
+|---|---|
+| Ativos (fora de `duplicado`) | 7.580 |
+| `duplicado` marcado pelo proprio legado (`aprovado=5`) | 494 |
+| `duplicado` decidido pelo refino (CPF colidente, mesma pessoa) | 22 |
+| Nao importadas — dependem da area | 9 |
+
+Confere com 5.1: os 22 sao a categoria A, e 5 dos 9 nao importados sao a categoria B (os 4 previstos mais o caso ambiguo `04720939678`, mantido de fora de proposito).
+
+**As outras 4 nao importadas sao CPF que a mascara do formulario truncou**, e nenhuma e recuperavel — falta digito:
+
+| legacy_id | CPF gravado |
+|---|---|
+| 3718 | `Preencher` |
+| 7813 | `048.793.606-0_` |
+| 8335 | `846.698.456-9_` |
+| 8337 | `0752515600` (10 digitos) |
+| 8862 | `062.796.433-0_` |
+
+**Invariante verificada no banco:** dos 488 grupos de CPF repetido que existem no dominio, **todos os 488 tem exatamente um registro ativo**. Foram necessarias duas correcoes para chegar ai, ambas descobertas na carga real e nao no teste:
+
+1. Marcar sempre o registro corrente como duplicado deixava **as duas pontas** de cada par marcadas na segunda passada, escondendo 492 beneficiarios reais.
+2. A regra "vence o mais antigo" atropelava a decisao humana em **195 grupos** onde o legado ja havia marcado justamente o mais antigo como duplicado (par `Wanderley Pereira Dias`, legacy 6182 descartado / 6266 aprovado). A marcacao do legado passou a ter autoridade sobre a regra.
+
+#### Coordenadas: 7.993 de 8.096, e o que sobrou nao e recuperavel
+
+A coluna era `varchar(150)` de texto livre com 21 formatos. O parser (`Domain/Etl/Coordenada.php`) levou o aproveitamento de **6.810 para 7.993**. As ~100 restantes sao:
+
+- `.`, `.162823`, `.16784201` — truncadas na origem, sem a parte inteira do grau
+- `Preencher`, `-lo.caliza` — texto
+- `-42.9691904`, `-44.472700` no campo de **latitude** e vice-versa — eixos trocados no cadastro
+
+Os dois primeiros grupos sao perda definitiva. **O terceiro grupo a area pode querer corrigir**: e uma troca de eixo, o ponto existe e esta identificavel. O valor original de todos continua em `cisterna_legado_raw.doc`.
+
+#### Enums de moradia e cobertura: zero perda
+
+Das 8.105 linhas, as unicas que ficaram sem valor sao as **176 que gravaram `0`** (162 em `moradia`, 14 em `coberturaTelhado`), que e o placeholder de "nao respondido" do formulario — nao um valor. Todo o resto casou, incluindo as 434 `Cerâmica` acentuadas e as 67 `PROPRIA` corrompidas com U+FFFD.
+
+### 5.9 `cedec_municipio` esta VAZIA neste banco — bloqueia o select de municipio nas telas
+
+Medido no Postgres de dev: `cedec_municipio` tem **0 linhas** (a nota 5.4 e o spec 4.6.9-E previam 854 com `at_cisterna` zerado; a realidade e que a tabela nunca foi populada aqui).
+
+Consequencia: `Municipio::habilitadosCisterna()` faz `join cedec_municipio ... where at_cisterna = 1`, entao devolve **colecao vazia** — todo select de municipio das telas de cisterna fica em branco, e nenhum cadastro novo pode ser criado pela interface.
+
+Nao e problema de codigo: falta rodar o `ImportCedecMunicipioCommand`, que traz a tabela do legado. Depois disso o passo de marcar `at_cisterna = 1` nos 55 municipios atendidos (Task 18) passa a ter efeito. **Enquanto a tabela estiver vazia, marcar `at_cisterna` marca zero linhas.**
