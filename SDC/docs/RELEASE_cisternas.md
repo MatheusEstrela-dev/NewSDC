@@ -1,18 +1,19 @@
 # Release — Modulo Cisterna: migracao do legado
 
 **Branch:** `feat/cisterna-modulo-backend-etl`
-**Periodo:** 14 a 17 de agosto de 2026
-**Escopo:** backend completo e carga do legado. **Frontend nao incluido** (ver secao 7).
+**Periodo:** 14 a 18 de agosto de 2026
+**Escopo:** modulo completo -- dominio, carga do legado e interface.
 
 | | |
 |---|---|
-| Commits | 45, sem merge |
-| Arquivos | 143 alterados |
-| Linhas | +27.326 / -1.937 |
-| Testes | 211 verdes, 616 asserts |
+| Commits | 55, sem merge |
+| Arquivos | 181 alterados |
+| Linhas | +32.130 / -1.937 |
+| Testes | 241 verdes, 1.045 asserts |
 | Registros migrados | 11.396 documentos do legado -> 39.696 linhas de dominio |
+| Paginas de interface | 11 |
 
-Distribuicao dos commits: 15 `feat`, 11 `docs`, 10 `fix`, 5 `config`, 2 `db`, 1 `security`, 1 `remove`.
+Distribuicao dos commits: 18 `feat`, 13 `fix`, 12 `docs`, 5 `config`, 2 `style`, 2 `security`, 2 `db`, 1 `remove`.
 
 ---
 
@@ -127,36 +128,65 @@ Estes nao estavam no plano. Cada um foi medido antes de corrigir.
 
 **12 dos 13 criterios do spec atendidos.** O criterio 10 (`at_cisterna` populado) esta bloqueado pela pendencia 1 — depende de rodar o import, nao de codigo.
 
-- Suite do modulo: **211 testes verdes**
+- Suite do modulo: **241 testes verdes**, 1.045 asserts
 - Pint limpo no diretorio do modulo
 - Zero referencia remanescente a `TipoCisterna`, `StatusCisterna`, `CisternaPolicy`, `CisternaDTO` ou a tabela `cisternas`
 - Estrutura no padrao do projeto: `Requests/` e `Resources/` na raiz do modulo, policies em `app/Policies/`, sem `Http/` nem `Exports/`
-- Build do Vite passa
+- Build do Vite passa, com as 11 paginas no manifest
+- Guardas contra as falhas silenciosas encontradas: teste de contrato de props,
+  teste de ausencia do wrapper `data` em colecao aninhada, e teste de que a ficha
+  publica nao trafega dado pessoal. As tres classes de defeito respondiam 200 no
+  servidor e nao apareciam em log.
 
 ### 6.1 Duas ressalvas honestas
 
 **O `--dry-run` nao valida a etapa do COMPDEC.** Ela se liga a vistoria do fornecedor, que o dry-run nao escreve, entao **680 de 858 linhas acusam erro por construcao**. O numero nao deve ser lido como defeito de dado.
 
+**Nao houve verificacao em navegador.** Os testes cobrem servidor e contrato de
+props; o comportamento visual e de interacao nao foi observado por falta de
+ferramenta de browser na sessao. O fluxo de preencher vistoria pelo cliente nunca
+rodou ponta a ponta -- ele estava inalcancavel ate a correcao do contrato de props.
+
 **A suite completa do projeto tem 1 erro e 5 falhas fora deste modulo** (`Pae`, `AjudaHumanitaria`, `PlanCon`). Sao **pre-existentes** e todas tem a mesma causa: os testes leem dado pre-existente do banco em vez de semear o proprio, e `ajuda_h_estoque_saldos` e `planos_contingencia` estao com 0 linhas. E a mesma fragilidade que obrigou a corrigir 7 testes deste modulo durante a carga.
 
 ---
 
-## 7. O que NAO esta nesta release
+## 7. Interface
 
-**O frontend.** As 11 paginas Inertia que os controllers referenciam **nao existem**:
+As 11 paginas Inertia do modulo, em cinco fases:
 
-```
-Cisterna/Beneficiarios/{Index,Create,Show,Edit}
-Cisterna/Comunidades/Index      Cisterna/Lotes/Index
-Cisterna/Notificacoes/Index     Cisterna/OrdensServico/Index
-Cisterna/Vistorias/{Index,Show} Cisterna/QrCode/Ficha
-```
+| Fase | Entrega |
+|---|---|
+| 1 | `Beneficiarios/Index` -- stat cards como filtro, filtros e tabela |
+| 2 | `Beneficiarios/{Create,Edit,Show}` -- formulario de 45 campos em 8 secoes, galeria e comprovantes |
+| 3 | `Vistorias/{Index,Show}` -- cadeia das tres etapas em timeline e checklist de 13 itens |
+| 4 | `Comunidades`, `Lotes`, `OrdensServico`, `Notificacoes` -- index com formulario em modal |
+| 5 | `QrCode/Ficha` -- consulta publica, sem login |
 
-Consequencia: **`/cisternas/beneficiarios` responde 200 no servidor e quebra no navegador.** As 4 paginas do scaffold foram removidas por modelarem o dominio inventado.
+### 7.1 Decisoes que reduziram o legado
 
-Plano em `docs/superpowers/plans/2026-08-17-cisterna-frontend.md`: 32 views do legado (9.105 linhas) mapeadas para as 11 paginas, em 5 fases.
+O legado tinha **32 views Blade, 9.105 linhas**. Tres decisoes cortaram a maior parte da duplicacao:
 
----
+- **O `menu.blade.php` deixou de existir.** Era pagina separada com 11 contadores linkando para `index?status=N` -- exatamente o padrao de "card e filtro" que o projeto exige em pagina de indice. Os contadores viraram os cards do proprio indice, e o backend ja entregava esses numeros em `indicadores()`.
+- **CRUD de apoio em modal.** Comunidades, lotes, OS e notificacoes tinham `create` e `edit` como paginas inteiras: 11 views para 4 entidades, ja divergentes entre si. Viraram 4 telas com modal.
+- **Um formulario por etapa de vistoria, em modo duplo.** Cada etapa tinha view para preencher e outra para editar; so a da CEDEC somava 1.216 linhas quase identicas.
+
+### 7.2 Identidade visual
+
+O modulo usa a casca compartilhada: `Organisms/PageHeader` com a arte do modulo, `Molecules/Statistics/StatCard` como filtro rapido, `Molecules/Form/*` nos campos, `Molecules/Table/TableActions` na coluna de acoes e `Organisms/ExportCsvModal` na exportacao.
+
+Duas pecas nasceram genericas para nao repetir divergencia existente:
+
+- `Molecules/CollapsibleSection` -- a versao sem acoplamento do `Rat/Sections/RatCollapsibleSection`, que depende de CSS carregado sob demanda e renderiza sem estilo fora do RAT.
+- `Composables/core/useCollapsibleSection` -- namespaced, porque o do RAT fixa a chave de storage e tem caso especial hardcoded.
+
+### 7.3 Defeitos que o code review encontrou
+
+Tres defeitos que respondiam 200 no servidor e nao deixavam rastro em log:
+
+1. **Prop que nunca chegava.** O Vue converte kebab-case para camelCase, mas nao snake_case. Paginas declarando `etapaDisponivel` recebiam `undefined` de `etapa_disponivel`: nenhuma etapa ficava liberada e o botao de preencher vistoria nunca aparecia. Guardado pelo `ContratoDePropsTest`, que compara o que o controller manda com o que o `.vue` declara.
+2. **Campo sobrescrito por metodo do form.** O Inertia define `data()` depois de espalhar os campos, entao o campo `data` do lote virava a funcao e a data nao salvava. Provado em execucao: `typeof form.data === 'function'` e `payload.data === undefined`.
+3. **Acao com slug inexistente.** A acao `check` do `TableActions` consulta `{modulo}.{recurso}.validar`, que nao esta no `config/permissions.php` -- e o `ActionButton` consulta o RBAC mesmo com `allowed=true`. Responder notificacao era inalcancavel.
 
 ## 8. Ferramentas de apoio criadas
 
