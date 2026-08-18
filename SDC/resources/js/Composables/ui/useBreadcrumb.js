@@ -243,11 +243,77 @@ export function useBreadcrumb() {
 
     const currentRoute = computed(() => page.component.value);
 
+    /**
+     * Trilha do modulo Cisterna.
+     *
+     * Fica fora do `breadcrumbMap` porque precisa das PROPS da pagina, e o mapa
+     * e estatico: a trilha da vistoria volta para a lista de vistorias DAQUELE
+     * beneficiario, e isso exige o id. Lida aqui dentro do computed, o valor
+     * acompanha a navegacao.
+     *
+     * Sem estas entradas o fallback assumia: rotulava o modulo como "Cisterna"
+     * no singular (vem do caminho do componente) e marcava `route: null` em
+     * todos os niveis -- ou seja, "Cisterna" e "Beneficiarios" pareciam link e
+     * nao levavam a lugar nenhum.
+     */
+    const trilhaCisterna = (componentName, props) => {
+        if (!componentName.startsWith('Cisterna/')) {
+            return null;
+        }
+
+        const inicio = { label: 'Início', route: 'dashboard' };
+        const lista = { label: 'Cisternas', route: 'cisternas.beneficiarios.index' };
+
+        const beneficiarioId = props?.beneficiario?.id ?? null;
+
+        const doBeneficiario = beneficiarioId === null
+            ? { label: 'Beneficiario', route: null }
+            : {
+                label: props.beneficiario.nome ?? 'Beneficiario',
+                route: 'cisternas.beneficiarios.show',
+                params: beneficiarioId,
+            };
+
+        const trilhas = {
+            // A propria lista: ela e o fim da trilha, entao nao vira link.
+            'Cisterna/Beneficiarios/Index': [inicio, { label: 'Cisternas', route: null }],
+            'Cisterna/Beneficiarios/Create': [inicio, lista, { label: 'Novo cadastro', route: null }],
+            'Cisterna/Beneficiarios/Show': [inicio, lista, { label: 'Visualizar', route: null }],
+            'Cisterna/Beneficiarios/Edit': [inicio, lista, doBeneficiario, { label: 'Edição', route: null }],
+
+            // Vistoria pertence a um beneficiario: a trilha passa por ele.
+            'Cisterna/Vistorias/Index': [inicio, lista, doBeneficiario, { label: 'Vistorias', route: null }],
+            'Cisterna/Vistorias/Show': [
+                inicio,
+                lista,
+                doBeneficiario,
+                beneficiarioId === null
+                    ? { label: 'Vistorias', route: null }
+                    : { label: 'Vistorias', route: 'cisternas.vistorias.index', params: beneficiarioId },
+                { label: 'Relatorio', route: null },
+            ],
+
+            'Cisterna/Comunidades/Index': [inicio, lista, { label: 'Comunidades', route: null }],
+            'Cisterna/Lotes/Index': [inicio, lista, { label: 'Lotes', route: null }],
+            'Cisterna/OrdensServico/Index': [inicio, lista, { label: 'Ordens de servico', route: null }],
+            'Cisterna/Notificacoes/Index': [inicio, lista, { label: 'Notificacoes', route: null }],
+            'Cisterna/QrCode/Ficha': [inicio, lista, { label: 'Ficha do QR Code', route: null }],
+        };
+
+        return trilhas[componentName] ?? null;
+    };
+
     const breadcrumbItems = computed(() => {
         const componentName = page.component?.value || page.component;
 
         if (!componentName) {
             return ['Início'];
+        }
+
+        const doCisterna = trilhaCisterna(componentName, page.props?.value ?? page.props);
+
+        if (doCisterna) {
+            return doCisterna;
         }
 
         if (breadcrumbMap[componentName]) {
