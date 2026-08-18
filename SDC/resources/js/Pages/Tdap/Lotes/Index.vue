@@ -91,7 +91,23 @@
               <span v-if="l.contrato" class="block text-xs text-slate-400">Contrato {{ l.contrato }}</span>
             </td>
             <td class="px-4 py-3 text-sm font-mono text-slate-700 dark:text-slate-300">{{ l.ata_numero }}</td>
-            <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ l.municipio_nome }}<span v-if="l.municipio_uf" class="text-slate-400">/{{ l.municipio_uf }}</span></td>
+            <!--
+              Um lote atende varios municipios: a coluna lista todos, em chips,
+              em vez do municipio_id unico (que na base legada era 0 e deixava
+              a coluna vazia).
+            -->
+            <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 align-top">
+              <div v-if="l.municipios && l.municipios.length" class="flex flex-wrap gap-1 max-w-xs">
+                <span
+                  v-for="m in l.municipios"
+                  :key="m.id"
+                  class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300"
+                >
+                  {{ m.nome }}<span v-if="m.uf" class="text-slate-400">/{{ m.uf }}</span>
+                </span>
+              </div>
+              <span v-else class="text-slate-400">—</span>
+            </td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ l.prestador_nome }}</td>
             <td class="px-4 py-3 text-sm text-right font-mono">{{ Number(l.qtd_agua_m3).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}</td>
             <td class="px-4 py-3 text-sm text-right font-mono">{{ Number(l.valor_total).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}</td>

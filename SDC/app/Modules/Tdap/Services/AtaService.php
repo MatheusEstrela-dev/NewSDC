@@ -74,7 +74,7 @@ class AtaService
     {
         return Ata::query()
             ->withCount('lotes')
-            ->with(['lotes' => fn ($q) => $q->with(['municipio:id,nome,uf', 'prestador:id,nome,cnpj'])])
+            ->with(['lotes' => fn ($q) => $q->with(['municipios:id,nome,uf', 'prestador:id,nome,cnpj'])])
             ->findOrFail($id);
     }
 

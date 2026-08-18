@@ -40,17 +40,27 @@
           <select id="lote_id" v-model="form.lote_id" class="mt-1 block w-full border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" :class="fieldCls(form.lote_id, form.errors.lote_id)" required :disabled="!form.ata_id" @change="onLoteChange">
             <option :value="null">{{ form.ata_id ? 'Selecione o Lote' : 'Selecione a Ata primeiro' }}</option>
             <option v-for="l in lotesDaAta" :key="l.id" :value="l.id">
-              {{ l.numero }} — {{ l.municipio?.nome }}<span v-if="l.municipio?.uf">/{{ l.municipio.uf }}</span> ({{ l.prestador?.nome }})
+              {{ l.numero }} — {{ (l.municipios ?? []).map(m => m.nome).join(', ') }} ({{ l.prestador?.nome }})
             </option>
           </select>
           <InputError :message="form.errors.lote_id" class="mt-2" />
         </div>
+        <!--
+          O lote atende varios municipios: o cronograma e emitido para UM deles,
+          entao aqui e uma escolha restrita a lista do lote (antes era um campo
+          somente-leitura com o municipio unico do lote).
+        -->
         <div>
-          <InputLabel value="Município (auto)" />
-          <div class="mt-1 px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 text-sm text-slate-700 dark:text-slate-300 min-h-[2.5rem]" :class="fieldCls(loteSelecionado?.municipio?.id, form.errors.municipio_id)">
-            <span v-if="loteSelecionado?.municipio">{{ loteSelecionado.municipio.nome }}<span v-if="loteSelecionado.municipio.uf">/{{ loteSelecionado.municipio.uf }}</span></span>
-            <span v-else class="text-slate-400">—</span>
-          </div>
+          <InputLabel for="municipio_id" value="Município *" />
+          <select id="municipio_id" v-model="form.municipio_id" class="mt-1 block w-full border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm" :class="fieldCls(form.municipio_id, form.errors.municipio_id)" required :disabled="!form.lote_id" @change="onMunicipioChange">
+            <option :value="null">{{ form.lote_id ? 'Selecione o Município' : 'Selecione o Lote primeiro' }}</option>
+            <option v-for="m in municipiosDoLote" :key="m.id" :value="m.id">
+              {{ m.nome }}<span v-if="m.uf">/{{ m.uf }}</span>
+            </option>
+          </select>
+          <p v-if="form.lote_id && municipiosDoLote.length === 0" class="mt-1 text-xs text-amber-600">
+            Este lote não tem municípios vinculados. Edite o lote para informá-los.
+          </p>
           <InputError :message="form.errors.municipio_id" class="mt-2" />
         </div>
         <div>
@@ -214,6 +224,8 @@ const lotesDaAta = computed(() => props.lotes.filter(l => Number(l.ata_id) === N
 
 const loteSelecionado = computed(() => props.lotes.find(l => Number(l.id) === Number(props.form.lote_id)) ?? null);
 
+const municipiosDoLote = computed(() => loteSelecionado.value?.municipios ?? []);
+
 const valorUnitario = computed(() => {
   const v = loteSelecionado.value?.valor_m3;
   return (v === undefined || v === null) ? null : Number(v);
@@ -262,13 +274,21 @@ function onAtaChange() {
 function onLoteChange() {
   const l = loteSelecionado.value;
   if (l) {
-    props.form.municipio_id = l.municipio?.id ?? l.municipio_id;
+    const municipios = l.municipios ?? [];
+    // Com um unico municipio no lote nao ha escolha a fazer; com varios, o
+    // usuario seleciona no campo Municipio.
+    props.form.municipio_id = municipios.length === 1 ? municipios[0].id : null;
     props.form.prestador_id = l.prestador?.id ?? l.prestador_id;
   } else {
     props.form.municipio_id = null;
     props.form.prestador_id = null;
   }
   // Ponto depende do municipio; limpa para evitar inconsistencia.
+  props.form.ponto_captacao_id = null;
+}
+
+function onMunicipioChange() {
+  // Ponto de captacao e por municipio.
   props.form.ponto_captacao_id = null;
 }
 

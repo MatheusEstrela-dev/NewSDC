@@ -86,8 +86,11 @@ abstract class AbstractCronogramaRequest extends FormRequest
             if ((int) $lote->ata_id !== (int) $this->input('ata_id')) {
                 $v->errors()->add('lote_id', 'O Lote selecionado nao pertence a Ata escolhida.');
             }
-            if ((int) $lote->municipio_id !== (int) $this->input('municipio_id')) {
-                $v->errors()->add('municipio_id', 'O Municipio nao confere com o Lote escolhido.');
+            // O lote atende varios municipios: basta o escolhido estar entre
+            // eles (antes comparava com o municipio_id unico do lote).
+            $municipioId = (int) $this->input('municipio_id');
+            if ($municipioId > 0 && ! $lote->municipios()->whereKey($municipioId)->exists()) {
+                $v->errors()->add('municipio_id', 'O Municipio nao pertence ao Lote escolhido.');
             }
             if ((int) $lote->prestador_id !== (int) $this->input('prestador_id')) {
                 $v->errors()->add('prestador_id', 'O Prestador nao confere com o Lote escolhido.');

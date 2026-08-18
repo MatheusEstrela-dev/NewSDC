@@ -3,7 +3,7 @@
   <div class="p-6 space-y-6">
     <TdapPageHeader
       :title="`Editar Lote ${l.numero}`"
-      :description="`${l.municipio?.nome ?? ''}${l.municipio?.uf ? '/' + l.municipio.uf : ''}`"
+      :description="(l.municipios ?? []).map(m => m.nome).join(', ')"
       :icon="MapIcon"
     />
     <LoteForm
@@ -38,7 +38,7 @@ const l = props.lote.data;
 
 const form = useForm({
   ata_id: l.ata_id,
-  municipio_id: l.municipio_id,
+  municipio_ids: [...(l.municipio_ids ?? [])],
   prestador_id: l.prestador_id,
   numero: l.numero || '',
   nome: l.nome || '',

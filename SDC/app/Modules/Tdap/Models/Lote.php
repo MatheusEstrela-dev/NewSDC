@@ -8,6 +8,7 @@ use App\Models\Municipio;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -57,9 +58,24 @@ class Lote extends Model
         return $this->belongsTo(Ata::class, 'ata_id');
     }
 
+    /**
+     * Municipio de referencia (coluna legada, anulavel). A lista real de
+     * municipios atendidos pelo lote esta em {@see self::municipios()}.
+     */
     public function municipio(): BelongsTo
     {
         return $this->belongsTo(Municipio::class, 'municipio_id');
+    }
+
+    /**
+     * Municipios atendidos pelo lote. Um lote da ata agrupa varios municipios
+     * ("...destinado aos municipios de A, B e C"); a coluna unica municipio_id
+     * nao dava conta e deixava a grade sem municipio.
+     */
+    public function municipios(): BelongsToMany
+    {
+        return $this->belongsToMany(Municipio::class, 'tdap_lote_municipios', 'lote_id', 'municipio_id')
+            ->orderBy('municipios.nome');
     }
 
     public function prestador(): BelongsTo
@@ -92,9 +108,13 @@ class Lote extends Model
         return $query->where('ata_id', $ataId);
     }
 
+    /** Filtra pelo vinculo N:N — o lote atende varios municipios. */
     public function scopeDoMunicipio(Builder $query, int $municipioId): Builder
     {
-        return $query->where('municipio_id', $municipioId);
+        return $query->whereHas(
+            'municipios',
+            fn (Builder $q) => $q->where('municipios.id', $municipioId),
+        );
     }
 
     public function scopeDoPrestador(Builder $query, int $prestadorId): Builder

@@ -3,7 +3,7 @@
   <div class="p-6 space-y-6">
     <TdapPageHeader
       :title="`Lote ${l.numero}`"
-      :description="l.nome || `${l.municipio?.nome ?? ''}${l.municipio?.uf ? '/' + l.municipio.uf : ''}`"
+      :description="l.nome || (l.municipios ?? []).map(m => m.nome).join(', ')"
       :icon="MapIcon"
     >
       <template #actions>
@@ -46,8 +46,17 @@
               </dd>
             </div>
             <div>
-              <dt class="text-slate-500">Município</dt>
-              <dd class="text-slate-900 dark:text-slate-100">{{ l.municipio?.nome }}<span v-if="l.municipio?.uf">/{{ l.municipio.uf }}</span></dd>
+              <dt class="text-slate-500">Municípios ({{ municipios.length }})</dt>
+              <dd class="mt-1 flex flex-wrap gap-1">
+                <span
+                  v-for="m in municipios"
+                  :key="m.id"
+                  class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300"
+                >
+                  {{ m.nome }}<span v-if="m.uf" class="text-slate-400">/{{ m.uf }}</span>
+                </span>
+                <span v-if="municipios.length === 0" class="text-slate-400">—</span>
+              </dd>
             </div>
             <div>
               <dt class="text-slate-500">Prestador</dt>
@@ -108,6 +117,8 @@ const props = defineProps({
 });
 
 const l = computed(() => props.lote.data ?? props.lote).value;
+
+const municipios = l.municipios ?? [];
 
 const temCronograma = (l.cronogramas_count ?? 0) > 0;
 
