@@ -16,7 +16,7 @@
             variant="success"
             label="Exportar"
             :allowed="true"
-            @click="exportar"
+            @click="openExportModal"
           />
           <ActionButton
             v-if="permissoes.criar"
@@ -53,6 +53,18 @@
       />
 
       <Pagination :pagination="paginacao" @page-change="irParaPagina" />
+
+      <!--
+        Mesmo modal do RAT e do PMDA. O recorte por periodo que ele oferece so
+        vale porque o export do Cisterna passou a ler data_inicio/data_fim: modal
+        com data que o backend ignora e uma tela que mente.
+      -->
+      <ExportCsvModal
+        :show="showExportModal"
+        module-name="Cisternas"
+        @close="closeExportModal"
+        @export="aoExportar"
+      />
     </div>
   </AuthenticatedLayout>
 </template>
@@ -63,6 +75,8 @@ import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
+import { useExport } from '@/Composables/data/useExport';
 import { moduleIcon } from '@/Support/moduleIcons';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import CisternaStatisticsCards from '@/Components/Organisms/Cisterna/CisternaStatisticsCards.vue';
@@ -95,14 +109,16 @@ const paginacao = computed(() => {
   };
 });
 
-/**
- * Download por navegacao direta, e nao router.visit: a resposta e um CSV
- * streamado, e o Inertia esperaria uma pagina.
- */
-function exportar() {
-  const query = new URLSearchParams(paraQuery(props.filtros)).toString();
+const { showExportModal, openExportModal, closeExportModal, handleExport } =
+  useExport('cisternas.beneficiarios.export');
 
-  window.location.href = `${route('cisternas.beneficiarios.export')}?${query}`;
+/**
+ * O escopo do modal (periodo ou serie inteira) soma aos filtros da tela: a
+ * planilha nunca deve mostrar mais do que a listagem, e o escopo territorial do
+ * perfil e reaplicado no servidor.
+ */
+function aoExportar(params) {
+  handleExport(params, paraQuery(props.filtros));
 }
 
 /**

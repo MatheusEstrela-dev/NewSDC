@@ -342,6 +342,15 @@ class BeneficiarioService
                 $q->where('cpf', 'like', $digitos.'%');
             })
             ->when($filtros['search'] ?? null, fn (Builder $q, $termo) => $q->buscarPorNome((string) $termo))
+            // Faixa pela data do cadastro. `whereDate` para a ponta final incluir
+            // o dia inteiro: com comparacao de timestamp, tudo que foi cadastrado
+            // depois de 00:00 do ultimo dia ficaria fora do recorte.
+            ->when($filtros['data_inicio'] ?? null, function (Builder $q, $inicio): void {
+                $q->whereDate('cisterna_beneficiarios.created_at', '>=', $inicio);
+            })
+            ->when($filtros['data_fim'] ?? null, function (Builder $q, $fim): void {
+                $q->whereDate('cisterna_beneficiarios.created_at', '<=', $fim);
+            })
             ->when(($filtros['atendido_por_pipa'] ?? null) !== null, function (Builder $q) use ($filtros): void {
                 $q->where('atendido_por_pipa', (bool) $filtros['atendido_por_pipa']);
             })

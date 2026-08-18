@@ -2,7 +2,7 @@
   <AuthenticatedLayout>
     <Head :title="`Cisternas — ${beneficiario.nome}`" />
 
-    <div class="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+    <div class="space-y-6 p-4 sm:p-6">
       <PageHeader
         :title="beneficiario.nome"
         :description="cpfFormatado"

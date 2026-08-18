@@ -194,6 +194,10 @@ class BeneficiarioController extends Controller
             'municipio_id', 'comunidade_id', 'situacao_analise', 'situacao_obra',
             'ordem_servico_id', 'lote_id', 'cpf', 'search', 'numero_instalacao',
             'etapa_concluida', 'etapa_pendente',
+            // Faixa de cadastro. E o que o modal de exportacao do projeto envia
+            // quando o usuario escolhe "Periodo Especifico": sem ler estas duas
+            // chaves, o modal ofereceria um recorte que o export ignora.
+            'data_inicio', 'data_fim',
         ]);
 
         // Booleanos precisam de tratamento explicito: 'false' em query string
