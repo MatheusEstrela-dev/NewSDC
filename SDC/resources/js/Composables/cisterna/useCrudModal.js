@@ -13,10 +13,15 @@ import { useForm, router } from '@inertiajs/vue3';
  * @param {object} vazio    Campos iniciais de um registro novo.
  * @param {(registro: object) => object} paraFormulario
  *        Achata o registro do resource nos nomes que o Request espera.
- * @param {{ comArquivo?: boolean }} opcoes
+ * @param {{ comArquivo?: boolean, paraPayload?: (dados: object) => object }} opcoes
+ *        `paraPayload` traduz os campos na saida. Existe porque o Inertia RESERVA
+ *        nomes no objeto do form -- `data`, `errors`, `processing`, `reset` e os
+ *        verbos HTTP -- e define `data()` DEPOIS de espalhar os campos, entao um
+ *        campo chamado `data` e sobrescrito pelo metodo e nao preenche nem salva.
+ *        O lote tem um campo de data, e por isso usa nome local diferente.
  */
 export function useCrudModal(recurso, vazio, paraFormulario = null, opcoes = {}) {
-  const { comArquivo = false } = opcoes;
+  const { comArquivo = false, paraPayload = null } = opcoes;
 
   const aberto = ref(false);
   const emEdicao = ref(null);
@@ -58,6 +63,10 @@ export function useCrudModal(recurso, vazio, paraFormulario = null, opcoes = {})
       onSuccess: fechar,
     };
 
+    if (paraPayload) {
+      form.transform(paraPayload);
+    }
+
     // `forceFormData` so quando ha arquivo: forcar sempre transformaria booleano
     // em string '1'/'0' no multipart e quebraria validacao de boolean.
     if (comArquivo) {
@@ -67,8 +76,10 @@ export function useCrudModal(recurso, vazio, paraFormulario = null, opcoes = {})
     if (editando.value) {
       // POST + _method em recurso com arquivo: o PHP nao popula $_FILES em PUT.
       if (comArquivo) {
-        form.transform((dados) => ({ ...dados, _method: 'put' }))
-          .post(route(`${recurso}.update`, emEdicao.value.id), opcoesEnvio);
+        form.transform((dados) => ({
+          ...(paraPayload ? paraPayload(dados) : dados),
+          _method: 'put',
+        })).post(route(`${recurso}.update`, emEdicao.value.id), opcoesEnvio);
 
         return;
       }

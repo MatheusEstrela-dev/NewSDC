@@ -68,16 +68,33 @@
                   <span v-if="(n.documentos ?? []).length === 0" class="text-slate-400">—</span>
                 </td>
                 <td class="whitespace-nowrap px-3 py-2 text-right">
-                  <TableActions
-                    module="cisternas"
-                    resource="notificacoes"
-                    :show-check="!n.respondida"
-                    :show-edit="true"
-                    :show-delete="true"
-                    @check="responder(n)"
-                    @edit="abrirEdicao(n)"
-                    @delete="excluir(n, 'esta notificacao')"
-                  />
+                  <div class="flex items-center justify-end gap-1">
+                    <!--
+                      Botao proprio, e nao a acao `check` do TableActions: aquela
+                      consulta o slug `cisternas.notificacoes.validar`, que NAO
+                      existe no config/permissions.php -- o icone nunca renderizava
+                      e responder ficava inalcancavel. O backend autoriza o
+                      responder com `update`, entao a guarda aqui e a mesma.
+                    -->
+                    <button
+                      v-if="!n.respondida && podeResponder"
+                      type="button"
+                      :class="BOTAO_RESPONDER"
+                      title="Marcar como respondida"
+                      @click="responder(n)"
+                    >
+                      <CheckCircleIcon class="h-4 w-4" />
+                    </button>
+
+                    <TableActions
+                      module="cisternas"
+                      resource="notificacoes"
+                      :show-edit="true"
+                      :show-delete="true"
+                      @edit="abrirEdicao(n)"
+                      @delete="excluir(n, 'esta notificacao')"
+                    />
+                  </div>
                 </td>
               </tr>
 
@@ -147,7 +164,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
-import { BellAlertIcon } from '@heroicons/vue/24/outline';
+import { BellAlertIcon, CheckCircleIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
@@ -159,6 +176,7 @@ import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
 import ArquivoField from '@/Components/Molecules/Cisterna/ArquivoField.vue';
 import CisternaFormModal from '@/Components/Organisms/Cisterna/CisternaFormModal.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
+import { usePermissions } from '@/Composables/auth';
 import { useCrudModal } from '@/Composables/cisterna/useCrudModal';
 
 const props = defineProps({
@@ -172,6 +190,16 @@ const props = defineProps({
 const TH = 'whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400';
 const TD = 'whitespace-nowrap px-3 py-2 text-sm text-slate-700 dark:text-slate-200';
 const ELO = 'mr-2 text-blue-700 hover:underline dark:text-blue-300';
+const { can } = usePermissions();
+
+/**
+ * O backend autoriza o responder com `update`, que na policy e
+ * `cisternas.notificacoes.edit`. Consultado pelo mesmo helper do ActionButton,
+ * para a tela e o servidor concordarem.
+ */
+const podeResponder = computed(() => can('cisternas.notificacoes.edit'));
+
+const BOTAO_RESPONDER = 'rounded p-1.5 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10';
 const PILULA_TIPO = 'rounded px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-500/10 dark:text-slate-300';
 const PILULA_OK = 'rounded px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300';
 const PILULA_ABERTA = 'rounded px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300';

@@ -22,7 +22,6 @@ use App\Modules\Cisterna\Resources\BeneficiarioResource;
 use App\Modules\Cisterna\Services\BeneficiarioExportService;
 use App\Modules\Cisterna\Services\BeneficiarioService;
 use App\Modules\Cisterna\Services\ComunidadeService;
-use App\Modules\Cisterna\Services\VistoriaService;
 use App\Modules\Cisterna\Support\PerfilCisterna;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,7 +33,6 @@ class BeneficiarioController extends Controller
 {
     public function __construct(
         private readonly BeneficiarioService $service,
-        private readonly VistoriaService $vistorias,
         private readonly ComunidadeService $comunidades,
         private readonly BeneficiarioExportService $export,
     ) {}
@@ -107,7 +105,6 @@ class BeneficiarioController extends Controller
 
         return Inertia::render('Cisterna/Beneficiarios/Show', [
             'beneficiario' => BeneficiarioResource::make($completo)->resolve(),
-            'etapa_disponivel' => $this->vistorias->etapaDisponivel($completo)?->value,
             'permissoes' => [
                 'editar' => $request->user()?->can('update', $beneficiario) ?? false,
                 'excluir' => $request->user()?->can('delete', $beneficiario) ?? false,

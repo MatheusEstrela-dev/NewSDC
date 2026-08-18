@@ -21,7 +21,7 @@
           <VistoriaTimeline
             :vistorias="vistorias.data ?? vistorias"
             :opcoes-etapa="OPCOES_ETAPA"
-            :etapa-disponivel="etapaDisponivel"
+            :etapa-disponivel="etapa_disponivel"
             :pode-criar="permissoes.criar"
             @preencher="abrirFormulario"
           />
@@ -30,7 +30,7 @@
             A cadeia terminou: nada a preencher. Dizer isso e melhor que so nao
             mostrar botao, que parece falta de permissao.
           -->
-          <p v-if="etapaDisponivel === null" class="mt-3 text-xs text-slate-500 dark:text-slate-400">
+          <p v-if="etapa_disponivel === null" class="mt-3 text-xs text-slate-500 dark:text-slate-400">
             As tres etapas foram concluidas. Para corrigir um relatorio, abra-o e edite.
           </p>
         </div>
@@ -82,7 +82,13 @@ import { useVistoriaForm } from '@/Composables/cisterna/useVistoriaForm';
 const props = defineProps({
   beneficiario: { type: Object, required: true },
   vistorias: { type: [Object, Array], default: () => [] },
-  etapaDisponivel: { type: String, default: null },
+  /**
+   * snake_case de proposito: e a chave EXATA que o controller manda. O Vue
+   * converte kebab-case para camelCase, mas NAO converte snake_case -- declarar
+   * `etapaDisponivel` deixava a prop sempre undefined, e com isso nenhuma etapa
+   * aparecia como liberada: o botao de preencher nunca surgia.
+   */
+  etapa_disponivel: { type: String, default: null },
   itens: { type: Array, default: () => [] },
   permissoes: { type: Object, default: () => ({}) },
 });
@@ -109,7 +115,7 @@ const municipio = computed(() => {
 });
 
 const ajuda = computed(() => {
-  if (props.etapaDisponivel === null) return 'A cadeia de fiscalizacao esta completa.';
+  if (props.etapa_disponivel === null) return 'A cadeia de fiscalizacao esta completa.';
   if (!props.permissoes.criar) return 'Voce nao tem permissao para registrar vistoria.';
 
   return 'Escolha "Preencher" na etapa liberada ao lado.';

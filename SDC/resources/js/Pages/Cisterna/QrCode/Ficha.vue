@@ -6,7 +6,7 @@
     ter conta nenhuma.
   -->
   <div class="min-h-screen bg-slate-100 px-4 py-8 dark:bg-slate-950">
-    <Head :title="`Cisterna Nº ${numeroInstalacao}`" />
+    <Head :title="`Cisterna Nº ${numero_instalacao}`" />
 
     <div class="mx-auto max-w-md">
       <header class="mb-4 flex items-center gap-3">
@@ -20,7 +20,7 @@
       <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-900">
         <div class="border-b border-slate-200 bg-blue-600 px-5 py-4 text-center dark:border-slate-700/50">
           <p class="text-xs font-medium uppercase tracking-wide text-blue-100">Numero de instalacao</p>
-          <p class="font-mono text-3xl font-bold text-white">{{ numeroInstalacao }}</p>
+          <p class="font-mono text-3xl font-bold text-white">{{ numero_instalacao }}</p>
         </div>
 
         <!--
@@ -51,9 +51,11 @@ import { Head } from '@inertiajs/vue3';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 const props = defineProps({
-  numeroInstalacao: { type: [String, Number], required: true },
+  // snake_case: chave exata do controller. Em camelCase a prop vinha undefined,
+  // e o numero -- que e o conteudo principal da ficha -- renderizava vazio.
+  numero_instalacao: { type: [String, Number], required: true },
   beneficiario: { type: Object, required: true },
-  instaladaEm: { type: String, default: null },
+  instalada_em: { type: String, default: null },
 });
 
 /**
@@ -76,7 +78,7 @@ const itens = computed(() => {
     { rotulo: 'Comunidade', valor: b.comunidade?.nome },
     { rotulo: 'Endereco', valor: b.endereco },
     { rotulo: 'Coordenada', valor: coordenada },
-    { rotulo: 'Instalada em', valor: dataBr(props.instaladaEm) },
+    { rotulo: 'Instalada em', valor: dataBr(props.instalada_em) },
   ].filter((i) => i.valor !== null && i.valor !== undefined && i.valor !== '');
 });
 

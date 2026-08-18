@@ -81,7 +81,7 @@
       >
         <div class="space-y-3">
           <FormField v-model="form.nome" label="Nome do lote" maxlength="255" required :error="form.errors.nome" />
-          <FormDateField v-model="form.data" label="Data" :error="form.errors.data" />
+          <FormDateField v-model="form.data_lote" label="Data" :error="form.errors.data" />
           <FormTextarea v-model="form.observacao" label="Observacao" :rows="3" maxlength="1000" :error="form.errors.observacao" />
         </div>
       </CisternaFormModal>
@@ -117,10 +117,21 @@ const TD_MONO = 'whitespace-nowrap px-3 py-2 font-mono text-sm text-slate-600 da
 
 const lista = computed(() => props.lotes?.data ?? props.lotes ?? []);
 
+/**
+ * O campo local se chama `data_lote`, e nao `data`.
+ *
+ * O Inertia define `data()` como metodo do form DEPOIS de espalhar os campos:
+ * um campo chamado `data` e sobrescrito pelo metodo, o v-model passa a apontar
+ * para uma funcao e a data nao preenche nem salva. `paraPayload` devolve o nome
+ * que o StoreLoteRequest espera.
+ */
 const { aberto, editando, form, abrirNovo, abrirEdicao, fechar, salvar, excluir } = useCrudModal(
   'cisternas.lotes',
-  { nome: '', data: '', observacao: '' },
-  (l) => ({ nome: l.nome, data: l.data ?? '', observacao: l.observacao ?? '' }),
+  { nome: '', data_lote: '', observacao: '' },
+  (l) => ({ nome: l.nome, data_lote: l.data ?? '', observacao: l.observacao ?? '' }),
+  {
+    paraPayload: ({ data_lote: dataLote, ...resto }) => ({ ...resto, data: dataLote }),
+  },
 );
 
 /** O olho leva as ordens DESTE lote: e o caminho natural a partir da lista. */

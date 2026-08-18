@@ -71,11 +71,9 @@
                 module="cisternas"
                 resource="beneficiarios"
                 :show-view="true"
-                :show-check="true"
                 :show-edit="permissoes.editar"
                 :show-delete="permissoes.excluir"
                 @view="ir('cisternas.beneficiarios.show', b.id)"
-                @check="ir('cisternas.vistorias.index', b.id)"
                 @edit="ir('cisternas.beneficiarios.edit', b.id)"
                 @delete="$emit('excluir', b)"
               />

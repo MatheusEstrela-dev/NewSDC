@@ -91,7 +91,6 @@ import DadosBloco from '@/Components/Molecules/Cisterna/DadosBloco.vue';
 
 const props = defineProps({
   beneficiario: { type: Object, required: true },
-  etapaDisponivel: { type: String, default: null },
   permissoes: { type: Object, default: () => ({}) },
 });
 
