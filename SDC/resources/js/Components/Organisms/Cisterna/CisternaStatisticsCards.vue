@@ -11,6 +11,7 @@
           :key="card.chave"
           :title="card.titulo"
           :value="card.valor"
+          :subtitle="card.detalhe"
           :variant="card.variante"
           :icon="card.icone"
           :clickable="card.filtro !== null"
@@ -79,6 +80,21 @@ const grupos = computed(() => {
   const i = props.indicadores ?? {};
   const analise = i.por_analise ?? {};
   const obra = i.por_obra ?? {};
+  const total = Number(i.total ?? 0);
+
+  /**
+   * Peso da fatia sobre o total do escopo. Numero absoluto sozinho nao informa:
+   * 791 validados pelo fornecedor pode ser muito ou pouco, e a area precisa
+   * saber quanto do programa ja andou.
+   */
+  const fatia = (valor) => {
+    if (total <= 0) return '';
+
+    const parte = Number(valor ?? 0);
+    const pct = Math.round((parte / total) * 100);
+
+    return `${parte.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')} — ${pct}%`;
+  };
 
   return [
     {
@@ -88,6 +104,7 @@ const grupos = computed(() => {
       cards: [
         {
           chave: 'total',
+          detalhe: 'Cadastros no seu escopo',
           titulo: 'Beneficiarios',
           valor: i.total ?? 0,
           variante: 'info',
@@ -98,6 +115,7 @@ const grupos = computed(() => {
           // Informativo: nao existe "filtrar por quantidade de municipios". A
           // area usa este numero para conferir a cobertura do programa.
           chave: 'municipios',
+          detalhe: 'Com pelo menos um cadastro',
           titulo: 'Municipios',
           valor: i.municipios ?? 0,
           variante: 'info',
@@ -106,6 +124,7 @@ const grupos = computed(() => {
         },
         {
           chave: 'aprovado',
+          detalhe: fatia(analise.aprovado),
           titulo: 'Aprovados',
           valor: analise.aprovado ?? 0,
           variante: 'success',
@@ -114,6 +133,7 @@ const grupos = computed(() => {
         },
         {
           chave: 'em_edicao',
+          detalhe: fatia(analise.em_edicao),
           titulo: 'Em edicao',
           valor: analise.em_edicao ?? 0,
           variante: 'warning',
@@ -122,6 +142,7 @@ const grupos = computed(() => {
         },
         {
           chave: 'ressalva',
+          detalhe: fatia(analise.ressalva),
           titulo: 'Ressalva',
           valor: analise.ressalva ?? 0,
           variante: 'warning',
@@ -130,6 +151,7 @@ const grupos = computed(() => {
         },
         {
           chave: 'reprovado',
+          detalhe: fatia(analise.reprovado),
           titulo: 'Reprovados',
           valor: analise.reprovado ?? 0,
           variante: 'danger',
@@ -145,6 +167,7 @@ const grupos = computed(() => {
       cards: [
         {
           chave: 'envio_instalacao',
+          detalhe: fatia(obra.envio_instalacao),
           titulo: 'Envio instalacao',
           valor: obra.envio_instalacao ?? 0,
           variante: 'info',
@@ -153,6 +176,7 @@ const grupos = computed(() => {
         },
         {
           chave: 'instalado',
+          detalhe: fatia(obra.instalado),
           titulo: 'Instalados',
           valor: obra.instalado ?? 0,
           variante: 'success',
@@ -161,6 +185,7 @@ const grupos = computed(() => {
         },
         {
           chave: 'vistoria_fornecedor',
+          detalhe: fatia(i.com_vistoria_fornecedor),
           titulo: 'Validado fornecedor',
           valor: i.com_vistoria_fornecedor ?? 0,
           variante: 'info',
@@ -169,6 +194,7 @@ const grupos = computed(() => {
         },
         {
           chave: 'vistoria_compdec',
+          detalhe: fatia(i.com_vistoria_compdec),
           titulo: 'Validado COMPDEC',
           valor: i.com_vistoria_compdec ?? 0,
           variante: 'info',
@@ -177,6 +203,7 @@ const grupos = computed(() => {
         },
         {
           chave: 'vistoria_cedec',
+          detalhe: fatia(i.com_vistoria_cedec),
           titulo: 'Validado CEDEC',
           valor: i.com_vistoria_cedec ?? 0,
           variante: 'success',

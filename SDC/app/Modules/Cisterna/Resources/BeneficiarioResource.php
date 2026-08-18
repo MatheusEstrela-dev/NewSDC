@@ -105,8 +105,20 @@ class BeneficiarioResource extends JsonResource
 
             'observacoes' => $this->observacoes,
 
-            'vistorias' => VistoriaResource::collection($this->whenLoaded('vistorias')),
-            'notificacoes' => NotificacaoResource::collection($this->whenLoaded('notificacoes')),
+            // `->resolve()` nas duas: `Resource::collection()` embrulha o
+            // resultado em `data`, e aninhado isso vira
+            // `beneficiario.vistorias.data`. A tela de detalhe fazia
+            // `.some()` sobre o que esperava ser lista, recebia o objeto do
+            // wrapper e morria com TypeError -- pagina branca, sem erro no
+            // servidor. Chave ausente quando a relacao nao veio carregada.
+            'vistorias' => $this->when(
+                $this->relationLoaded('vistorias'),
+                fn (): array => VistoriaResource::collection($this->vistorias)->resolve(),
+            ),
+            'notificacoes' => $this->when(
+                $this->relationLoaded('notificacoes'),
+                fn (): array => NotificacaoResource::collection($this->notificacoes)->resolve(),
+            ),
 
             'fotos_imovel' => $this->when(
                 $this->relationLoaded('media'),

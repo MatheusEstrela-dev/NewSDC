@@ -67,10 +67,18 @@
             <td :class="TD_MONO">{{ b.ranqueamento_ordem ?? '—' }}</td>
 
             <td class="whitespace-nowrap px-3 py-2 text-right">
-              <div class="flex items-center justify-end gap-1">
-                <Link :href="route('cisternas.beneficiarios.show', b.id)" :class="ACAO" title="Ver cadastro">Ver</Link>
-                <Link :href="route('cisternas.vistorias.index', b.id)" :class="ACAO" title="Vistorias">Vistorias</Link>
-              </div>
+              <TableActions
+                module="cisternas"
+                resource="beneficiarios"
+                :show-view="true"
+                :show-check="true"
+                :show-edit="permissoes.editar"
+                :show-delete="permissoes.excluir"
+                @view="ir('cisternas.beneficiarios.show', b.id)"
+                @check="ir('cisternas.vistorias.index', b.id)"
+                @edit="ir('cisternas.beneficiarios.edit', b.id)"
+                @delete="$emit('excluir', b)"
+              />
             </td>
           </tr>
 
@@ -90,7 +98,8 @@
 
 <script setup>
 import { computed } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
+import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import SituacaoAnaliseBadge from '@/Components/Atoms/Cisterna/SituacaoAnaliseBadge.vue';
 import SituacaoObraBadge from '@/Components/Atoms/Cisterna/SituacaoObraBadge.vue';
 import EtapaVistoriaBadge from '@/Components/Atoms/Cisterna/EtapaVistoriaBadge.vue';
@@ -100,9 +109,10 @@ const props = defineProps({
   beneficiarios: { type: Array, default: () => [] },
   marcados: { type: Array, default: () => [] },
   selecionavel: { type: Boolean, default: false },
+  permissoes: { type: Object, default: () => ({}) },
 });
 
-const emit = defineEmits(['update:marcados']);
+const emit = defineEmits(['update:marcados', 'excluir']);
 
 const ETAPAS = ['fornecedor', 'compdec', 'cedec'];
 
@@ -123,7 +133,6 @@ const TH = 'whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercas
 const TD = 'whitespace-nowrap px-3 py-2 text-sm text-slate-700 dark:text-slate-200';
 const TD_FORTE = 'px-3 py-2 text-sm font-medium text-slate-900 dark:text-slate-100';
 const TD_MONO = 'whitespace-nowrap px-3 py-2 font-mono text-sm text-slate-600 dark:text-slate-300';
-const ACAO = 'rounded px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-500/10';
 
 const idsDaPagina = computed(() => props.beneficiarios.map((b) => b.id));
 
@@ -156,6 +165,10 @@ function alternarTodos() {
   }
 
   emit('update:marcados', [...new Set([...props.marcados, ...idsDaPagina.value])]);
+}
+
+function ir(rota, id) {
+  router.visit(route(rota, id));
 }
 
 function formatarCpf(cpf) {

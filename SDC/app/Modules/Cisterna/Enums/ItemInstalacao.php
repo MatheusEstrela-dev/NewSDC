@@ -78,10 +78,26 @@ enum ItemInstalacao: string
     /**
      * @return array<int, array{value: string, label: string}>
      */
+    /**
+     * @return array<int, array{value: string, label: string, unidade: ?string, unidade_rotulo: ?string, aceita_detalhes: bool}>
+     */
     public static function options(): array
     {
+        // `unidade` e `aceita_detalhes` saem daqui, e nao de uma tabela paralela
+        // no Vue: a tela do checklist precisa saber quais dos 13 itens tem
+        // quantidade (so calha e tubulacao em metro, e as quatro pecas de PVC em
+        // unidade) e qual aceita subquantidade (so fixacao: abracadeira, bucha e
+        // parafuso). Duplicar isso no front faria as duas listas divergirem na
+        // primeira mudanca, e o resultado seria campo de quantidade em item que
+        // nao tem -- ou campo faltando onde tem.
         return array_map(
-            fn (self $c): array => ['value' => $c->value, 'label' => $c->label()],
+            fn (self $c): array => [
+                'value' => $c->value,
+                'label' => $c->label(),
+                'unidade' => $c->unidadePadrao()?->value,
+                'unidade_rotulo' => $c->unidadePadrao()?->label(),
+                'aceita_detalhes' => $c->aceitaDetalhes(),
+            ],
             self::cases(),
         );
     }

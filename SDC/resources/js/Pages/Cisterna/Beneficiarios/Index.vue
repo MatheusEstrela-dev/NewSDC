@@ -50,6 +50,8 @@
         v-model:marcados="marcados"
         :beneficiarios="beneficiarios.data ?? []"
         :selecionavel="perfil.e_cedec || perfil.e_compdec"
+        :permissoes="permissoes"
+        @excluir="confirmarExclusao"
       />
 
       <Pagination :pagination="paginacao" @page-change="irParaPagina" />
@@ -138,6 +140,18 @@ function filtrarPorCard(filtro) {
   };
 
   buscar({ ...preservado, ...filtro });
+}
+
+/**
+ * Exclusao e soft delete no dominio, mas o usuario nao sabe disso: confirmar e o
+ * que evita perder um cadastro por clique errado numa lista de 8.096 linhas.
+ */
+function confirmarExclusao(beneficiario) {
+  if (!window.confirm(`Remover o cadastro de ${beneficiario.nome}?`)) return;
+
+  router.delete(route('cisternas.beneficiarios.destroy', beneficiario.id), {
+    preserveScroll: true,
+  });
 }
 
 function irParaPagina(page) {

@@ -67,6 +67,12 @@ class BeneficiarioController extends Controller
             'permissoes' => [
                 'criar' => $request->user()?->can('create', CisternaBeneficiario::class) ?? false,
                 'exportar' => $request->user()?->can('export', CisternaBeneficiario::class) ?? false,
+                // Flags de coluna de acao. Sao da PERMISSAO, nao da instancia: a
+                // policy tambem checa territorio, e a checagem por linha exigiria
+                // 25 autorizacoes por pagina. Nao afrouxa nada -- a listagem ja
+                // vem com escopo do perfil, e o servidor reavalia na acao.
+                'editar' => $request->user()?->can('cisternas.beneficiarios.edit') ?? false,
+                'excluir' => $request->user()?->can('cisternas.beneficiarios.delete') ?? false,
             ],
         ]);
     }
