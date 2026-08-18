@@ -231,7 +231,19 @@ const props = defineProps({
   filters: {
     type: Object,
     default: () => ({ search: '', module: '' })
-  }
+  },
+  /**
+   * Prefixo de slug -> rotulo do modulo, vindo de config/permissions.php.
+   *
+   * Substitui os dois catalogos hardcoded que esta tela mantinha: eles cobriam 9
+   * modulos e o config tem 17, entao quem ficasse de fora aparecia como o
+   * prefixo em caixa alta com "Modulo do sistema" na descricao. Derivado do
+   * config, modulo novo entra sozinho.
+   */
+  modulos: {
+    type: Object,
+    default: () => ({}),
+  },
 });
 
 const PermissionsIcon = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
@@ -297,32 +309,21 @@ const handleModuleFilter = () => {
 };
 
 const formatModuleName = (module) => {
-  const moduleNames = {
-    users: 'Usuários',
-    roles: 'Cargos',
-    permissions: 'Permissões',
-    pae: 'PAE',
-    rat: 'RAT',
-    bi: 'Business Intelligence',
-    integrations: 'Integrações',
-    webhooks: 'Webhooks',
-    system: 'Sistema'
-  };
-  return moduleNames[module] || module.toUpperCase();
+  return props.modulos?.[module] || module.toUpperCase();
 };
 
+/**
+ * Descricao do modulo. O config nao guarda uma frase por modulo, entao a tela
+ * informa o prefixo de slug e quantas permissoes ele tem -- que e o que orienta
+ * quem administra acesso, mais util que a frase generica "Modulo do sistema"
+ * que os modulos fora do catalogo hardcoded recebiam.
+ */
 const getModuleDescription = (module) => {
-  const moduleDescriptions = {
-    users: 'Gerenciamento de usuários do sistema',
-    roles: 'Controle de cargos e hierarquias',
-    permissions: 'Gestão de permissões e acessos',
-    pae: 'Processos Administrativos Eletrônicos',
-    rat: 'Relatório de Atendimento Técnico',
-    bi: 'Business Intelligence e Analytics',
-    integrations: 'Integrações com sistemas externos',
-    webhooks: 'Webhooks e notificações',
-    system: 'Configurações gerais do sistema'
-  };
-  return moduleDescriptions[module] || 'Módulo do sistema';
+  const total = (props.permissions ?? []).filter(
+    (p) => typeof p.name === 'string' && p.name.startsWith(`${module}.`),
+  ).length;
+
+  return `Prefixo ${module}.* — ${total} permissao(oes)`;
 };
+
 </script>

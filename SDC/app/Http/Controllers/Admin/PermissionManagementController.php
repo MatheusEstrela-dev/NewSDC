@@ -57,6 +57,7 @@ class PermissionManagementController extends Controller
             'permissions' => $permissions,
             'stats' => $stats,
             'filters' => $request->only(['search', 'module']),
+            'modulos' => $this->rotulosDeModulo(),
         ]);
     }
 
@@ -68,4 +69,37 @@ class PermissionManagementController extends Controller
             'permission' => $permission,
         ]);
     }
+    /**
+     * Prefixo de slug -> rotulo do modulo, derivado de config/permissions.php.
+     *
+     * A tela mantinha um catalogo HARDCODED de 9 modulos, enquanto o config tem
+     * 17: modulo fora dessa lista aparecia como o prefixo em caixa alta e
+     * "Modulo do sistema" na descricao -- foi o que aconteceu com CISTERNAS e
+     * DEMANDAS. Derivar do config faz a tela acompanhar quem entra depois, sem
+     * ninguem lembrar de editar o Vue.
+     *
+     * O mapa e por PREFIXO porque um modulo do config pode agrupar varios: o
+     * SISTEMA reune users, roles, permissions e system.
+     *
+     * @return array<string, string>
+     */
+    private function rotulosDeModulo(): array
+    {
+        $rotulos = [];
+
+        foreach ((array) config('permissions.modules', []) as $modulo => $grupos) {
+            $rotulo = str_replace('_', ' ', (string) $modulo);
+
+            foreach ((array) $grupos as $acoes) {
+                foreach ((array) $acoes as $slug) {
+                    $prefixo = explode('.', (string) $slug)[0];
+
+                    $rotulos[$prefixo] ??= $rotulo;
+                }
+            }
+        }
+
+        return $rotulos;
+    }
+
 }
