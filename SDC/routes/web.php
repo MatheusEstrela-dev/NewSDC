@@ -154,9 +154,8 @@ Route::middleware('auth')->group(function () {
     // Modulo: Estoque
     require __DIR__ . '/modules/estoque.php';
 
-    if (file_exists(__DIR__ . '/modules/cisterna.php')) {
-        require __DIR__ . '/modules/cisterna.php';
-    }
+    // Modulo: Cisterna
+    require __DIR__ . '/modules/cisterna.php';
 
     // Módulo: Compdec (Órgãos e Competências)
     require __DIR__ . '/modules/compdec.php';
