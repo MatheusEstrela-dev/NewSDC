@@ -7,6 +7,7 @@ namespace App\Modules\Cisterna\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Cisterna\Models\CisternaVistoria;
 use App\Modules\Cisterna\Resources\BeneficiarioResource;
+use App\Modules\Cisterna\Resources\FichaPublicaResource;
 use App\Modules\Cisterna\Services\QrCodeService;
 use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
@@ -39,7 +40,9 @@ class QrCodeController extends Controller
 
         return Inertia::render('Cisterna/QrCode/Ficha', [
             'numero_instalacao' => $numeroInstalacao,
-            'beneficiario' => BeneficiarioResource::make($vistoria->beneficiario)->resolve(),
+            // Resource MINIMO, e nao o BeneficiarioResource: a rota e publica e o
+            // Inertia embute as props no HTML. Ver FichaPublicaResource.
+            'beneficiario' => FichaPublicaResource::make($vistoria->beneficiario)->resolve(),
             'instalada_em' => $vistoria->data_relatorio?->toDateString(),
         ]);
     }
