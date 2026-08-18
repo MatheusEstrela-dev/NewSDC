@@ -9,6 +9,7 @@ use App\Models\Municipio;
 use App\Modules\Cisterna\DTOs\BeneficiarioDTO;
 use App\Modules\Cisterna\Enums\CoberturaTelhado;
 use App\Modules\Cisterna\Enums\EtapaVistoria;
+use App\Modules\Cisterna\Enums\ResponsavelPipa;
 use App\Modules\Cisterna\Enums\SituacaoAnalise;
 use App\Modules\Cisterna\Enums\SituacaoObra;
 use App\Modules\Cisterna\Enums\TipoMoradia;
@@ -219,6 +220,9 @@ class BeneficiarioController extends Controller
             'situacoes_analise' => SituacaoAnalise::options(),
             'situacoes_obra' => SituacaoObra::options(),
             'etapas_vistoria' => EtapaVistoria::options(),
+            // O formulario precisa dos rotulos, e eles moram no enum:
+            // duplicar em Vue faria a lista divergir na primeira mudanca.
+            'responsaveis_pipa' => ResponsavelPipa::options(),
             // Somente os municipios habilitados no programa: o legado fazia
             // Municipio::where('at_cisterna', 1) em nove pontos.
             'municipios' => Municipio::habilitadosCisterna(),
