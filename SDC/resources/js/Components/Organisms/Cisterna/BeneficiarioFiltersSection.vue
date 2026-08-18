@@ -1,7 +1,14 @@
 <template>
-  <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
-    <div class="mb-3 flex items-center justify-between">
-      <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100">Filtros de pesquisa</h3>
+  <CollapsibleSection
+    namespace="cisterna"
+    section-id="filtros"
+    title="Filtros de pesquisa"
+    :subtitle="resumoAtivos"
+    :icon="FunnelIcon"
+    tom="neutro"
+    :status-text="resumoAtivos"
+  >
+    <div class="mb-3 flex justify-end">
       <button
         type="button"
         class="text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -96,11 +103,13 @@
         </button>
       </div>
     </form>
-  </section>
+  </CollapsibleSection>
 </template>
 
 <script setup>
 import { reactive, computed, watch } from 'vue';
+import { FunnelIcon } from '@heroicons/vue/24/outline';
+import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
 
 /**
  * Organismo de filtros. Nao navega: emite `apply` com o objeto de filtros e a
@@ -133,6 +142,22 @@ const VAZIO = {
 const local = reactive({ ...VAZIO, ...normalizar(props.filtros) });
 
 const semMunicipios = computed(() => (props.municipios?.length ?? 0) === 0);
+
+/**
+ * Quantos filtros estao valendo. Aparece no cabecalho da secao recolhida: sem
+ * isso, a lista filtrada parece incompleta e o usuario nao ve onde mexer.
+ */
+const resumoAtivos = computed(() => {
+  const ativos = Object.entries(local).filter(([, valor]) => {
+    if (Array.isArray(valor)) return valor.length > 0;
+
+    return valor !== '' && valor !== false && valor !== null && valor !== undefined;
+  }).length;
+
+  if (ativos === 0) return 'Nenhum filtro aplicado';
+
+  return ativos === 1 ? '1 filtro aplicado' : `${ativos} filtros aplicados`;
+});
 
 /**
  * O servidor devolve os filtros que aplicou. Ressincronizar e o que mantem o

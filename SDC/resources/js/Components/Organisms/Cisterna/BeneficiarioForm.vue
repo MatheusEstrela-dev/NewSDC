@@ -1,16 +1,33 @@
 <template>
   <form class="space-y-6" @submit.prevent="$emit('submit')">
     <!-- 1. Identificacao -->
-    <FormSection titulo="Identificacao">
+    <CollapsibleSection
+      namespace="cisterna"
+      section-id="identificacao"
+      title="Identificacao"
+      subtitle="CPF, nome e contato do beneficiario"
+      :icon="IdentificationIcon"
+      tom="info"
+    >
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <FormField v-model="form.cpf" label="CPF" maxlength="14" required :error="erros.cpf" hint="Somente digitos ou com mascara" />
       <FormField v-model="form.nome" label="Nome completo" maxlength="150" required :error="erros.nome" />
       <FormField v-model="form.telefone" label="Telefone" maxlength="15" :error="erros.telefone" />
       <FormDateField v-model="form.data_nascimento" label="Data de nascimento" required :error="erros.data_nascimento" hint="Beneficiario maior de 18 anos" />
       <FormField v-model="form.cadastro_unico" label="Cadastro Unico" maxlength="12" :error="erros.cadastro_unico" />
-    </FormSection>
+      </div>
+    </CollapsibleSection>
 
     <!-- 2. Localizacao -->
-    <FormSection titulo="Localizacao">
+    <CollapsibleSection
+      namespace="cisterna"
+      section-id="localizacao"
+      title="Localizacao"
+      subtitle="Municipio, comunidade e coordenada do imovel"
+      :icon="MapPinIcon"
+      tom="info"
+    >
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <FormSelect
         v-model="form.municipio_id"
         label="Municipio"
@@ -37,10 +54,19 @@
           :error="erros"
         />
       </div>
-    </FormSection>
+      </div>
+    </CollapsibleSection>
 
     <!-- 3. Situacao. Dois eixos ORTOGONAIS: analise do cadastro e obra. -->
-    <FormSection titulo="Situacao">
+    <CollapsibleSection
+      namespace="cisterna"
+      section-id="situacao"
+      title="Situacao"
+      subtitle="Analise do cadastro e andamento da obra, eixos independentes"
+      :icon="FlagIcon"
+      tom="warning"
+    >
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <FormSelect v-model="form.situacao_analise" label="Situacao da analise" :options="opcoes.situacoes_analise ?? []" :error="erros.situacao_analise" />
       <FormSelect v-model="form.situacao_obra" label="Situacao da obra" :options="opcoes.situacoes_obra ?? []" :error="erros.situacao_obra" />
       <FormField v-model="form.situacao_analise_obs" label="Observacao da analise" maxlength="255" :error="erros.situacao_analise_obs" class="sm:col-span-2" />
@@ -49,10 +75,19 @@
         nenhuma rotina. A coluna e importada e apenas ordenavel.
       -->
       <FormField v-model="form.ranqueamento_ordem" label="Ordem de ranqueamento" type="number" :error="erros.ranqueamento_ordem" hint="Valor importado, usado apenas para ordenar" />
-    </FormSection>
+      </div>
+    </CollapsibleSection>
 
     <!-- 4. Composicao familiar e renda -->
-    <FormSection titulo="Familia e renda">
+    <CollapsibleSection
+      namespace="cisterna"
+      section-id="social"
+      title="Familia e renda"
+      subtitle="Composicao familiar e criterios sociais com comprovante"
+      :icon="UsersIcon"
+      tom="success"
+    >
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <FormField v-model="form.qtd_pessoas" label="Pessoas na residencia" type="number" required :error="erros.qtd_pessoas" />
       <FormField v-model="form.renda" label="Renda familiar (R$)" inputmode="decimal" required :error="erros.renda" />
       <FormField v-model="form.renda_per_capita" label="Renda per capita (R$)" inputmode="decimal" :error="erros.renda_per_capita" />
@@ -97,10 +132,19 @@
           @change="(f) => $emit('arquivo', { campo: 'comprovante_observacao', arquivo: f })"
         />
       </div>
-    </FormSection>
+      </div>
+    </CollapsibleSection>
 
     <!-- 5. Moradia e telhado: o que define se a agua captada serve -->
-    <FormSection titulo="Moradia e telhado">
+    <CollapsibleSection
+      namespace="cisterna"
+      section-id="tecnica"
+      title="Moradia e telhado"
+      subtitle="Medidas e cobertura que definem se a agua captada serve"
+      :icon="HomeModernIcon"
+      tom="info"
+    >
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <FormSelect v-model="form.tipo_moradia" label="Regime de posse" :options="opcoes.tipos_moradia ?? []" placeholder="Selecione" required :error="erros.tipo_moradia" />
       <FormField v-if="form.tipo_moradia === 'outros'" v-model="form.tipo_moradia_outro" label="Qual regime" maxlength="50" :error="erros.tipo_moradia_outro" />
 
@@ -126,10 +170,19 @@
           <FormField v-model="form.testada_disp_parte_fogao" label="Testada disponivel nessa parte (m)" inputmode="decimal" :error="erros.testada_disp_parte_fogao" />
         </div>
       </div>
-    </FormSection>
+      </div>
+    </CollapsibleSection>
 
     <!-- 6. Pipa -->
-    <FormSection titulo="Atendimento por carro-pipa">
+    <CollapsibleSection
+      namespace="cisterna"
+      section-id="pipa"
+      title="Atendimento por carro-pipa"
+      subtitle="Se a familia ja recebe agua e quem atende"
+      :icon="TruckIcon"
+      tom="warning"
+    >
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div class="sm:col-span-2">
         <AtendimentoPipaFieldset
           v-model:atendido="form.atendido_por_pipa"
@@ -139,22 +192,41 @@
           :error="erros"
         />
       </div>
-    </FormSection>
+      </div>
+    </CollapsibleSection>
 
     <!-- 7. Responsaveis tecnicos -->
-    <FormSection titulo="Responsaveis tecnicos">
+    <CollapsibleSection
+      namespace="cisterna"
+      section-id="responsaveis"
+      title="Responsaveis tecnicos"
+      subtitle="Agente e engenheiro responsaveis pelo cadastro"
+      :icon="WrenchScrewdriverIcon"
+      tom="neutro"
+    >
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <FormField v-model="form.agente_nome" label="Agente" maxlength="70" required :error="erros.agente_nome" />
       <FormField v-model="form.agente_cpf" label="CPF do agente" maxlength="14" required :error="erros.agente_cpf" />
       <FormField v-model="form.engenheiro_nome" label="Engenheiro" maxlength="150" required :error="erros.engenheiro_nome" />
       <FormField v-model="form.engenheiro_crea" label="CREA" maxlength="20" required :error="erros.engenheiro_crea" />
-    </FormSection>
+      </div>
+    </CollapsibleSection>
 
     <!-- 8. Observacoes -->
-    <FormSection titulo="Observacoes">
+    <CollapsibleSection
+      namespace="cisterna"
+      section-id="observacoes"
+      title="Observacoes"
+      subtitle="Anotacoes livres sobre o cadastro"
+      :icon="ChatBubbleLeftEllipsisIcon"
+      tom="neutro"
+    >
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div class="sm:col-span-2">
         <FormTextarea v-model="form.observacoes" label="Observacoes" :rows="4" maxlength="1000" :error="erros.observacoes" />
       </div>
-    </FormSection>
+      </div>
+    </CollapsibleSection>
 
     <FormActions
       :loading="processando"
@@ -175,7 +247,17 @@ import FormActions from '@/Components/Molecules/Form/FormActions.vue';
 import CoordenadaField from '@/Components/Molecules/Cisterna/CoordenadaField.vue';
 import AtendimentoPipaFieldset from '@/Components/Molecules/Cisterna/AtendimentoPipaFieldset.vue';
 import ArquivoField from '@/Components/Molecules/Cisterna/ArquivoField.vue';
-import FormSection from '@/Components/Molecules/Cisterna/FormSection.vue';
+import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
+import {
+  IdentificationIcon,
+  MapPinIcon,
+  FlagIcon,
+  UsersIcon,
+  HomeModernIcon,
+  TruckIcon,
+  WrenchScrewdriverIcon,
+  ChatBubbleLeftEllipsisIcon,
+} from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   /** useForm() do Inertia, vindo da pagina. */

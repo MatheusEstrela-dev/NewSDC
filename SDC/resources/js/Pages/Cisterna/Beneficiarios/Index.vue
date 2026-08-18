@@ -3,31 +3,32 @@
     <Head title="Cisternas — Beneficiarios" />
 
     <div class="space-y-6 p-4 sm:p-6">
-      <header class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 class="text-xl font-bold text-slate-900 dark:text-slate-100">Beneficiarios</h1>
-          <p class="text-sm text-slate-500 dark:text-slate-400">
-            Cadastro e fiscalizacao do programa de cisternas
-          </p>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <a
+      <PageHeader
+        title="Gestao de Cisternas"
+        description="Cadastro de beneficiarios e fiscalizacao da instalacao em tres etapas"
+        :icon-image="moduleIcon('cisternas')"
+        variant="gradient"
+      >
+        <template #actions>
+          <ActionButton
             v-if="permissoes.exportar"
-            :href="urlExportar"
-            class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            Exportar CSV
-          </a>
-          <Link
+            action="export"
+            variant="success"
+            label="Exportar"
+            :allowed="true"
+            @click="exportar"
+          />
+          <ActionButton
             v-if="permissoes.criar"
-            :href="route('cisternas.beneficiarios.create')"
-            class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            Novo cadastro
-          </Link>
-        </div>
-      </header>
+            action="create"
+            module="cisternas"
+            resource="beneficiarios"
+            label="Novo cadastro"
+            :allowed="true"
+            @click="router.visit(route('cisternas.beneficiarios.create'))"
+          />
+        </template>
+      </PageHeader>
 
       <CisternaStatisticsCards
         v-if="indicadores"
@@ -58,8 +59,11 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import CisternaStatisticsCards from '@/Components/Organisms/Cisterna/CisternaStatisticsCards.vue';
 import BeneficiarioFiltersSection from '@/Components/Organisms/Cisterna/BeneficiarioFiltersSection.vue';
@@ -91,9 +95,15 @@ const paginacao = computed(() => {
   };
 });
 
-const urlExportar = computed(
-  () => `${route('cisternas.beneficiarios.export')}?${new URLSearchParams(paraQuery(props.filtros)).toString()}`,
-);
+/**
+ * Download por navegacao direta, e nao router.visit: a resposta e um CSV
+ * streamado, e o Inertia esperaria uma pagina.
+ */
+function exportar() {
+  const query = new URLSearchParams(paraQuery(props.filtros)).toString();
+
+  window.location.href = `${route('cisternas.beneficiarios.export')}?${query}`;
+}
 
 /**
  * Filtro vindo de stat card SUBSTITUI os filtros de eixo, em vez de somar.

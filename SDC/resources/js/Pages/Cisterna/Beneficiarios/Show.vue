@@ -3,18 +3,22 @@
     <Head :title="`Cisternas — ${beneficiario.nome}`" />
 
     <div class="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
-      <header class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link
-            :href="route('cisternas.beneficiarios.index')"
-            class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-          >
-            &larr; Beneficiarios
-          </Link>
-          <h1 class="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">{{ beneficiario.nome }}</h1>
-          <p class="font-mono text-sm text-slate-500 dark:text-slate-400">{{ cpfFormatado }}</p>
+      <PageHeader
+        :title="beneficiario.nome"
+        :description="cpfFormatado"
+        :icon-image="moduleIcon('cisternas')"
+        variant="gradient"
+      >
+        <template #actions>
+          <Link :href="route('cisternas.beneficiarios.index')" :class="BOTAO_SEC">Beneficiarios</Link>
+          <Link :href="route('cisternas.vistorias.index', beneficiario.id)" :class="BOTAO_SEC">Vistorias</Link>
+          <Link v-if="permissoes.editar" :href="route('cisternas.beneficiarios.edit', beneficiario.id)" :class="BOTAO">Editar</Link>
+        </template>
+      </PageHeader>
 
-          <div class="mt-2 flex flex-wrap items-center gap-2">
+      <!-- As situacoes ficam fora do header: sao estado do registro, nao acao. -->
+      <div class="-mt-2">
+          <div class="flex flex-wrap items-center gap-2">
             <SituacaoAnaliseBadge
               :valor="beneficiario.situacao_analise.valor"
               :rotulo="beneficiario.situacao_analise.rotulo"
@@ -30,13 +34,7 @@
               :concluida="etapaConcluida(etapa)"
             />
           </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <Link :href="route('cisternas.vistorias.index', beneficiario.id)" :class="BOTAO_SEC">Vistorias</Link>
-          <Link v-if="permissoes.editar" :href="route('cisternas.beneficiarios.edit', beneficiario.id)" :class="BOTAO">Editar</Link>
-        </div>
-      </header>
+      </div>
 
       <!--
         Observacao da analise em destaque, e nao numa aba: quando ha ressalva ou
@@ -83,6 +81,8 @@
 import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import SituacaoAnaliseBadge from '@/Components/Atoms/Cisterna/SituacaoAnaliseBadge.vue';
 import SituacaoObraBadge from '@/Components/Atoms/Cisterna/SituacaoObraBadge.vue';
 import EtapaVistoriaBadge from '@/Components/Atoms/Cisterna/EtapaVistoriaBadge.vue';
