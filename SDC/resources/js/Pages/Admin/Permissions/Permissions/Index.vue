@@ -107,19 +107,9 @@
                 <svg class="w-4 h-4 text-slate-400 transition-transform duration-200" :class="{ 'rotate-90 text-blue-500': expandedModules.includes(moduleName) }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
-                <div class="w-12 h-12 rounded-xl flex items-center justify-center border"
-                     :class="{
-                       'bg-blue-50 dark:bg-blue-900/20 text-blue-500 border-blue-200 dark:border-blue-800': moduleName === 'users',
-                       'bg-purple-50 dark:bg-purple-900/20 text-purple-500 border-purple-200 dark:border-purple-800': moduleName === 'roles',
-                       'bg-red-50 dark:bg-red-900/20 text-red-500 border-red-200 dark:border-red-800': moduleName === 'permissions',
-                       'bg-green-50 dark:bg-green-900/20 text-green-500 border-green-200 dark:border-green-800': moduleName === 'pae',
-                       'bg-amber-50 dark:bg-amber-900/20 text-amber-500 border-amber-200 dark:border-amber-800': moduleName === 'rat',
-                       'bg-teal-50 dark:bg-teal-900/20 text-teal-500 border-teal-200 dark:border-teal-800': moduleName === 'bi',
-                       'bg-orange-50 dark:bg-orange-900/20 text-orange-500 border-orange-200 dark:border-orange-800': moduleName === 'integrations',
-                       'bg-rose-50 dark:bg-rose-900/20 text-rose-500 border-rose-200 dark:border-rose-800': moduleName === 'webhooks',
-                       'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 border-indigo-200 dark:border-indigo-800': moduleName === 'system',
-                       'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700': !['users','roles','permissions','pae','rat','bi','integrations','webhooks','system'].includes(moduleName)
-                     }"
+                <div
+                  class="w-12 h-12 rounded-xl flex items-center justify-center border"
+                  :class="corDoModulo(moduleName)"
                 >
                   <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
@@ -307,6 +297,54 @@ const handleModuleFilter = () => {
     preserveScroll: true
   });
 };
+
+/**
+ * Uma cor por modulo, para a lista ficar distinguivel de relance.
+ *
+ * Antes eram 9 modulos coloridos no template e TODO o resto caia em cinza --
+ * com 21 prefixos na tabela `permissions`, 12 cartoes ficavam iguais entre si.
+ *
+ * As nove cores originais foram preservadas para nao remexer no que a equipe ja
+ * reconhece. Os quatro prefixos do modulo SISTEMA (users, roles, permissions,
+ * system) e os dois de INTEGRACOES (integrations, webhooks) ficam em familias
+ * proximas, o que agrupa visualmente sem perder a distincao.
+ *
+ * As classes estao escritas por extenso de proposito: o Tailwind so inclui no
+ * CSS o que encontra literal no arquivo -- montar `bg-${cor}-50` geraria classe
+ * que nunca existe.
+ */
+const CORES_POR_MODULO = {
+  // SISTEMA -- familia azul
+  users: 'bg-blue-50 dark:bg-blue-900/20 text-blue-500 border-blue-200 dark:border-blue-800',
+  roles: 'bg-purple-50 dark:bg-purple-900/20 text-purple-500 border-purple-200 dark:border-purple-800',
+  permissions: 'bg-red-50 dark:bg-red-900/20 text-red-500 border-red-200 dark:border-red-800',
+  system: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 border-indigo-200 dark:border-indigo-800',
+
+  // INTEGRACOES -- familia quente
+  integrations: 'bg-orange-50 dark:bg-orange-900/20 text-orange-500 border-orange-200 dark:border-orange-800',
+  webhooks: 'bg-rose-50 dark:bg-rose-900/20 text-rose-500 border-rose-200 dark:border-rose-800',
+
+  // Modulos de gestao
+  pae: 'bg-green-50 dark:bg-green-900/20 text-green-500 border-green-200 dark:border-green-800',
+  rat: 'bg-amber-50 dark:bg-amber-900/20 text-amber-500 border-amber-200 dark:border-amber-800',
+  bi: 'bg-teal-50 dark:bg-teal-900/20 text-teal-500 border-teal-200 dark:border-teal-800',
+  cisternas: 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-500 border-cyan-200 dark:border-cyan-800',
+  tdap: 'bg-violet-50 dark:bg-violet-900/20 text-violet-500 border-violet-200 dark:border-violet-800',
+  pmda: 'bg-sky-50 dark:bg-sky-900/20 text-sky-500 border-sky-200 dark:border-sky-800',
+  compdec: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 border-emerald-200 dark:border-emerald-800',
+  humanitaria: 'bg-pink-50 dark:bg-pink-900/20 text-pink-500 border-pink-200 dark:border-pink-800',
+  estoque: 'bg-lime-50 dark:bg-lime-900/20 text-lime-600 border-lime-200 dark:border-lime-800',
+  inventario: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 border-yellow-200 dark:border-yellow-800',
+  plancon: 'bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-500 border-fuchsia-200 dark:border-fuchsia-800',
+  treinamento: 'bg-stone-100 dark:bg-stone-800/40 text-stone-500 border-stone-200 dark:border-stone-700',
+  decretacoes: 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700',
+  demandas: 'bg-neutral-100 dark:bg-neutral-800/40 text-neutral-500 border-neutral-200 dark:border-neutral-700',
+  plantao: 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700',
+};
+
+const COR_PADRAO = 'bg-gray-100 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700';
+
+const corDoModulo = (module) => CORES_POR_MODULO[module] ?? COR_PADRAO;
 
 const formatModuleName = (module) => {
   return props.modulos?.[module] || module.toUpperCase();
