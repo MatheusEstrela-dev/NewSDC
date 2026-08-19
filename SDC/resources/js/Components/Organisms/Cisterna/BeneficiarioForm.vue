@@ -228,9 +228,16 @@
       </div>
     </CollapsibleSection>
 
+    <!--
+      `@submit` e obrigatorio aqui, nao redundante com o @submit.prevent do
+      <form>: o Button atom renderiza type="button" por padrao e o FormActions
+      nao passa `type`, entao o clique NAO dispara o submit nativo. Sem esta
+      linha o botao nao faz nada -- sem erro, sem requisicao, sem pista.
+    -->
     <FormActions
       :loading="processando"
       :submit-label="rotuloEnvio"
+      @submit="$emit('submit')"
       @cancel="$emit('cancel')"
     />
   </form>

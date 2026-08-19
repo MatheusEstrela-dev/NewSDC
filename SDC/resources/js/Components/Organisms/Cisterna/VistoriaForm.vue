@@ -101,9 +101,12 @@
       </div>
     </CollapsibleSection>
 
+    <!-- Ver BeneficiarioForm: sem `@submit` o botao nao dispara nada, porque o
+         botao do FormActions e type="button". -->
     <FormActions
       :loading="processando"
       :submit-label="modo === 'editar' ? 'Salvar relatorio' : 'Registrar relatorio'"
+      @submit="$emit('submit')"
       @cancel="$emit('cancel')"
     />
   </form>
