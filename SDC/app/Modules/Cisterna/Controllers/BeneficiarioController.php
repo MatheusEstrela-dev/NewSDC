@@ -131,6 +131,50 @@ class BeneficiarioController extends Controller
         ]));
     }
 
+    /**
+     * Dados da ficha para impressao, com os tres relatorios da cadeia.
+     *
+     * So imprime com a CADEIA COMPLETA -- fornecedor, COMPDEC e CEDEC
+     * concluidas. A ficha e o documento que fecha a instalacao e vai para
+     * prestacao de contas; emitir com etapa em aberto produziria papel assinado
+     * afirmando conferencia que ninguem fez.
+     *
+     * A regra e checada AQUI, e nao apenas no botao: a tela esconder o icone
+     * evita o clique, mas nao impede a chamada direta.
+     */
+    public function impressao(CisternaBeneficiario $beneficiario): JsonResponse
+    {
+        $this->authorize('view', $beneficiario);
+
+        $completo = $this->service->obter($beneficiario->id);
+
+        $concluidas = $completo->vistorias
+            ->filter(fn ($v): bool => $v->concluida_em !== null)
+            ->map(fn ($v): string => $v->etapa instanceof EtapaVistoria ? $v->etapa->value : (string) $v->etapa)
+            ->unique();
+
+        $faltando = array_diff(
+            array_map(fn (EtapaVistoria $e): string => $e->value, EtapaVistoria::cases()),
+            $concluidas->all(),
+        );
+
+        if ($faltando !== []) {
+            $rotulos = array_map(
+                fn (string $v): string => EtapaVistoria::from($v)->label(),
+                array_values($faltando),
+            );
+
+            return response()->json([
+                'message' => 'A ficha so pode ser impressa com a cadeia de fiscalizacao completa. Falta concluir: '
+                    .implode(', ', $rotulos).'.',
+            ], 422);
+        }
+
+        return response()->json([
+            'beneficiario' => BeneficiarioResource::make($completo)->resolve(),
+        ]);
+    }
+
     public function show(CisternaBeneficiario $beneficiario): Response
     {
         $this->authorize('view', $beneficiario);

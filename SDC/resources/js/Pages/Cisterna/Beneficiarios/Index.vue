@@ -55,6 +55,7 @@
         :direcao="filtros.direction || 'asc'"
         @excluir="confirmarExclusao"
         @historico="abrirHistorico"
+        @imprimir="abrirImpressao"
         @ordenar="ordenar"
       />
 
@@ -74,6 +75,16 @@
         :show="historicoAberto"
         :beneficiario="beneficiarioDoHistorico"
         @close="historicoAberto = false"
+      />
+
+      <!--
+        Ficha para impressao, no BasePrintModal que Decretacoes e Ajuda
+        Humanitaria usam. So aparece com a cadeia de fiscalizacao completa.
+      -->
+      <BeneficiarioPrintModal
+        :show="impressaoAberta"
+        :beneficiario="beneficiarioDaImpressao"
+        @close="impressaoAberta = false"
       />
 
       <!-- Confirmacao pelo dialogo do sistema, igual a Decretacoes, PAE e RAT. -->
@@ -108,6 +119,7 @@ import CisternaStatisticsCards from '@/Components/Organisms/Cisterna/CisternaSta
 import BeneficiarioFiltersSection from '@/Components/Organisms/Cisterna/BeneficiarioFiltersSection.vue';
 import BeneficiariosTable from '@/Components/Organisms/Cisterna/BeneficiariosTable.vue';
 import BeneficiarioHistoricoModal from '@/Components/Organisms/Cisterna/BeneficiarioHistoricoModal.vue';
+import BeneficiarioPrintModal from '@/Components/Organisms/Cisterna/BeneficiarioPrintModal.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import { useConfirmacao } from '@/Composables/core/useConfirmacao';
 
@@ -130,6 +142,14 @@ const beneficiarioDoHistorico = ref(null);
 function abrirHistorico(beneficiario) {
   beneficiarioDoHistorico.value = beneficiario;
   historicoAberto.value = true;
+}
+
+const impressaoAberta = ref(false);
+const beneficiarioDaImpressao = ref(null);
+
+function abrirImpressao(beneficiario) {
+  beneficiarioDaImpressao.value = beneficiario;
+  impressaoAberta.value = true;
 }
 
 const paginacao = computed(() => {

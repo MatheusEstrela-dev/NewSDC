@@ -405,6 +405,14 @@ return [
                 'edit'   => 'cisternas.beneficiarios.edit',
                 'delete' => 'cisternas.beneficiarios.delete',
                 'export' => 'cisternas.beneficiarios.export',
+                // `history` e `print` sao acoes do TableActions, e o ActionButton
+                // monta o slug {module}.{resource}.{action} e consulta can().
+                // Sem declarar aqui, o icone SO aparecia para super-admin (que
+                // faz bypass) e ficava invisivel para Gestor, Analista e o
+                // fornecedor -- mesmo defeito que `validar` teve nas
+                // notificacoes.
+                'history' => 'cisternas.beneficiarios.history',
+                'print' => 'cisternas.beneficiarios.print',
             ],
             'Vistorias' => [
                 'view'   => 'cisternas.vistorias.view',
@@ -642,6 +650,8 @@ return [
             'webhooks.logs.view',
             // Cisternas - gestao sem delete
             'cisternas.beneficiarios.view',
+            'cisternas.beneficiarios.history',
+            'cisternas.beneficiarios.print',
             'cisternas.beneficiarios.create',
             'cisternas.beneficiarios.edit',
             'cisternas.beneficiarios.export',
@@ -808,6 +818,8 @@ return [
             'webhooks.logs.view',
             // Cisternas - view/create/edit
             'cisternas.beneficiarios.view',
+            'cisternas.beneficiarios.history',
+            'cisternas.beneficiarios.print',
             'cisternas.beneficiarios.create',
             'cisternas.beneficiarios.edit',
             'cisternas.vistorias.view',
@@ -910,6 +922,8 @@ return [
             'bi.dashboards.view',
             // Cisternas - view/create
             'cisternas.beneficiarios.view',
+            'cisternas.beneficiarios.history',
+            'cisternas.beneficiarios.print',
             'cisternas.beneficiarios.create',
             'cisternas.vistorias.view',
             'cisternas.vistorias.create',
@@ -966,6 +980,8 @@ return [
             'plantao.turnos.view',
             'bi.dashboards.view',
             'cisternas.beneficiarios.view',
+            'cisternas.beneficiarios.history',
+            'cisternas.beneficiarios.print',
             'cisternas.vistorias.view',
             'cisternas.comunidades.view',
             // COMPDEC - somente leitura

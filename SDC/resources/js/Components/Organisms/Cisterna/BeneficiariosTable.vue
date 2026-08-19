@@ -87,8 +87,11 @@
                 :show-history="true"
                 :show-edit="permissoes.editar"
                 :show-delete="permissoes.excluir"
+                :show-print="cadeiaCompleta(b)"
+                :show-attachments="false"
                 @view="ir('cisternas.beneficiarios.show', b.id)"
                 @history="$emit('historico', b)"
+                @print="$emit('imprimir', b)"
                 @edit="ir('cisternas.beneficiarios.edit', b.id)"
                 @delete="$emit('excluir', b)"
               />
@@ -132,7 +135,17 @@ const props = defineProps({
   direcao: { type: String, default: 'asc' },
 });
 
-const emit = defineEmits(['update:marcados', 'excluir', 'ordenar', 'historico']);
+const emit = defineEmits(['update:marcados', 'excluir', 'ordenar', 'historico', 'imprimir']);
+
+/**
+ * Impressao so com a CADEIA COMPLETA: a ficha e o documento que fecha a
+ * instalacao e vai para prestacao de contas, e emitir com etapa em aberto
+ * produziria papel afirmando conferencia que ninguem fez. O servidor recusa de
+ * novo -- esconder o icone evita o clique, nao a chamada direta.
+ */
+function cadeiaCompleta(beneficiario) {
+  return ETAPAS.every((e) => (beneficiario.etapas_concluidas ?? []).includes(e));
+}
 
 // Repassa o par coluna/direcao para todos os cabecalhos de uma vez, em vez de
 // declarar as duas props em cada um.

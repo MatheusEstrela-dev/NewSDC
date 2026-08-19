@@ -61,10 +61,12 @@ Route::middleware(['auth'])->prefix('cisternas')->name('cisternas.')->group(func
         Route::get('/novo', [BeneficiarioController::class, 'create'])->name('create');
         Route::post('/', [BeneficiarioController::class, 'store'])->name('store');
         Route::post('/acao-em-massa', [BeneficiarioController::class, 'acaoEmMassa'])->name('acao-em-massa');
-        // Devolve JSON, nao pagina: alimenta o modal de serie historica aberto
-        // por cima da listagem.
+        // Devolvem JSON, nao pagina: alimentam modais abertos por cima da
+        // listagem, sem trocar a rota nem perder filtro e rolagem.
         Route::get('/{beneficiario}/historico', [BeneficiarioController::class, 'historico'])
             ->name('historico')->whereNumber('beneficiario');
+        Route::get('/{beneficiario}/impressao', [BeneficiarioController::class, 'impressao'])
+            ->name('impressao')->whereNumber('beneficiario');
         Route::get('/{beneficiario}', [BeneficiarioController::class, 'show'])
             ->name('show')->whereNumber('beneficiario');
         Route::get('/{beneficiario}/editar', [BeneficiarioController::class, 'edit'])
