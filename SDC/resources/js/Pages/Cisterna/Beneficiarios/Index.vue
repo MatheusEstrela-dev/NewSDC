@@ -51,7 +51,11 @@
         :beneficiarios="beneficiarios.data ?? []"
         :selecionavel="perfil.e_cedec || perfil.e_compdec"
         :permissoes="permissoes"
+        :ordenado-por="filtros.sort || 'nome'"
+        :direcao="filtros.direction || 'asc'"
         @excluir="confirmarExclusao"
+        @historico="abrirHistorico"
+        @ordenar="ordenar"
       />
 
       <Pagination :pagination="paginacao" @page-change="irParaPagina" />
@@ -61,6 +65,17 @@
         vale porque o export do Cisterna passou a ler data_inicio/data_fim: modal
         com data que o backend ignora e uma tela que mente.
       -->
+      <!--
+        Serie historica no molde do PAE. O modal busca sozinho ao abrir, entao
+        reflete o estado do momento: a listagem fica aberta por muito tempo e uma
+        etapa concluida por outro orgao nesse intervalo apareceria aqui.
+      -->
+      <BeneficiarioHistoricoModal
+        :show="historicoAberto"
+        :beneficiario="beneficiarioDoHistorico"
+        @close="historicoAberto = false"
+      />
+
       <ExportCsvModal
         :show="showExportModal"
         module-name="Cisternas"
@@ -84,6 +99,7 @@ import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import CisternaStatisticsCards from '@/Components/Organisms/Cisterna/CisternaStatisticsCards.vue';
 import BeneficiarioFiltersSection from '@/Components/Organisms/Cisterna/BeneficiarioFiltersSection.vue';
 import BeneficiariosTable from '@/Components/Organisms/Cisterna/BeneficiariosTable.vue';
+import BeneficiarioHistoricoModal from '@/Components/Organisms/Cisterna/BeneficiarioHistoricoModal.vue';
 
 const props = defineProps({
   beneficiarios: { type: Object, required: true },
@@ -95,6 +111,14 @@ const props = defineProps({
 });
 
 const marcados = ref([]);
+
+const historicoAberto = ref(false);
+const beneficiarioDoHistorico = ref(null);
+
+function abrirHistorico(beneficiario) {
+  beneficiarioDoHistorico.value = beneficiario;
+  historicoAberto.value = true;
+}
 
 const paginacao = computed(() => {
   const m = props.beneficiarios?.meta;
@@ -137,6 +161,10 @@ function filtrarPorCard(filtro) {
     cpf: props.filtros.cpf,
     numero_instalacao: props.filtros.numero_instalacao,
     municipio_id: props.filtros.municipio_id,
+    // Ordenacao sobrevive ao clique no card: trocar o recorte da lista nao e
+    // motivo para jogar fora a ordem que o usuario escolheu no cabecalho.
+    sort: props.filtros.sort,
+    direction: props.filtros.direction,
   };
 
   buscar({ ...preservado, ...filtro });
@@ -160,6 +188,18 @@ function irParaPagina(page) {
 
 function aplicar(filtros) {
   buscar(filtros);
+}
+
+/**
+ * Ordenacao e no banco, nao no cliente: a listagem e paginada em 25, e ordenar
+ * no front reordenaria apenas a pagina visivel.
+ *
+ * Preserva os filtros vigentes -- trocar a ordem de uma lista ja filtrada nao
+ * deve descartar o filtro -- e a coluna e validada contra a whitelist do
+ * BeneficiarioService antes de virar ORDER BY.
+ */
+function ordenar({ sort, direction }) {
+  buscar({ ...props.filtros, sort, direction });
 }
 
 function limpar() {

@@ -20,9 +20,11 @@ use App\Modules\Cisterna\Requests\UpdateBeneficiarioRequest;
 use App\Modules\Cisterna\Resources\BeneficiarioIndexResource;
 use App\Modules\Cisterna\Resources\BeneficiarioResource;
 use App\Modules\Cisterna\Services\BeneficiarioExportService;
+use App\Modules\Cisterna\Services\BeneficiarioHistoricoService;
 use App\Modules\Cisterna\Services\BeneficiarioService;
 use App\Modules\Cisterna\Services\ComunidadeService;
 use App\Modules\Cisterna\Support\PerfilCisterna;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -99,6 +101,23 @@ class BeneficiarioController extends Controller
         return redirect()
             ->route('cisternas.beneficiarios.index')
             ->with('success', "Beneficiario {$beneficiario->nome} cadastrado com sucesso.");
+    }
+
+    /**
+     * Serie historica do beneficiario, consumida pelo modal da listagem.
+     *
+     * JSON, e nao pagina Inertia: o modal abre sobre a listagem e nao pode
+     * trocar a rota -- navegar levaria embora a pagina, o filtro e a posicao de
+     * rolagem. Buscar na abertura tambem e o que faz o painel refletir o estado
+     * do momento, e nao o que estava carregado quando a lista foi montada.
+     */
+    public function historico(CisternaBeneficiario $beneficiario, BeneficiarioHistoricoService $historico): JsonResponse
+    {
+        // Mesma policy da visualizacao: quem nao pode ver o cadastro nao pode
+        // ver o andamento dele.
+        $this->authorize('view', $beneficiario);
+
+        return response()->json($historico->para($beneficiario));
     }
 
     public function show(CisternaBeneficiario $beneficiario, Request $request): Response

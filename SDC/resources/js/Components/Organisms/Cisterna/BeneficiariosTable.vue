@@ -14,8 +14,21 @@
                 @change="alternarTodos"
               >
             </th>
-            <th v-for="c in COLUNAS" :key="c.chave" scope="col" :class="TH">{{ c.titulo }}</th>
-            <th scope="col" :class="TH">Opcoes</th>
+            <!-- Coluna sem `coluna` preenchida vira cabecalho de texto puro: e o
+                 caso de lote, numero de instalacao, etapas e ranqueamento, que
+                 saem de relacao a dois saltos ou de valor derivado e nao existem
+                 como coluna ordenavel no backend. -->
+            <SortableHeader
+              v-for="c in COLUNAS"
+              :key="c.chave"
+              :coluna="c.ordenavel ? c.chave : ''"
+              :direcao-inicial="c.direcaoInicial ?? 'asc'"
+              v-bind="ordenacao"
+              @ordenar="emit('ordenar', $event)"
+            >
+              {{ c.titulo }}
+            </SortableHeader>
+            <SortableHeader>Opcoes</SortableHeader>
           </tr>
         </thead>
 
@@ -71,9 +84,11 @@
                 module="cisternas"
                 resource="beneficiarios"
                 :show-view="true"
+                :show-history="true"
                 :show-edit="permissoes.editar"
                 :show-delete="permissoes.excluir"
                 @view="ir('cisternas.beneficiarios.show', b.id)"
+                @history="$emit('historico', b)"
                 @edit="ir('cisternas.beneficiarios.edit', b.id)"
                 @delete="$emit('excluir', b)"
               />
@@ -98,6 +113,7 @@
 import { computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import SortableHeader from '@/Components/Molecules/Table/SortableHeader.vue';
 import SituacaoAnaliseBadge from '@/Components/Atoms/Cisterna/SituacaoAnaliseBadge.vue';
 import SituacaoObraBadge from '@/Components/Atoms/Cisterna/SituacaoObraBadge.vue';
 import EtapaVistoriaBadge from '@/Components/Atoms/Cisterna/EtapaVistoriaBadge.vue';
@@ -108,26 +124,46 @@ const props = defineProps({
   marcados: { type: Array, default: () => [] },
   selecionavel: { type: Boolean, default: false },
   permissoes: { type: Object, default: () => ({}) },
+
+  /** Coluna ordenada no momento, vinda da URL. */
+  ordenadoPor: { type: String, default: 'nome' },
+
+  /** Direcao atual da ordenacao: 'asc' ou 'desc'. */
+  direcao: { type: String, default: 'asc' },
 });
 
-const emit = defineEmits(['update:marcados', 'excluir']);
+const emit = defineEmits(['update:marcados', 'excluir', 'ordenar', 'historico']);
+
+// Repassa o par coluna/direcao para todos os cabecalhos de uma vez, em vez de
+// declarar as duas props em cada um.
+const ordenacao = computed(() => ({
+  ordenadoPor: props.ordenadoPor,
+  direcao: props.direcao,
+}));
 
 const ETAPAS = ['fornecedor', 'compdec', 'cedec'];
 
+// `ordenavel` espelha BeneficiarioService::colunasOrdenaveis(). Manter os dois
+// lados juntos e proposital: cabecalho clicavel sem coluna na whitelist do
+// backend cai silenciosamente na ordenacao padrao, e o usuario clica sem
+// entender por que a lista nao muda.
 const COLUNAS = [
-  { chave: 'nome', titulo: 'Nome' },
-  { chave: 'cpf', titulo: 'CPF' },
-  { chave: 'municipio', titulo: 'Municipio' },
-  { chave: 'comunidade', titulo: 'Comunidade' },
-  { chave: 'lote', titulo: 'Lote / Ordem' },
-  { chave: 'numero_instalacao', titulo: 'Nº instalacao' },
-  { chave: 'situacao_analise', titulo: 'Analise' },
-  { chave: 'situacao_obra', titulo: 'Obra' },
-  { chave: 'etapas', titulo: 'Etapas' },
-  { chave: 'ranqueamento', titulo: 'Ranq.' },
+  { chave: 'nome', titulo: 'Nome', ordenavel: true },
+  { chave: 'cpf', titulo: 'CPF', ordenavel: true },
+  { chave: 'municipio', titulo: 'Municipio', ordenavel: true },
+  { chave: 'comunidade', titulo: 'Comunidade', ordenavel: true },
+  { chave: 'lote', titulo: 'Lote / Ordem', ordenavel: false },
+  { chave: 'numero_instalacao', titulo: 'Nº instalacao', ordenavel: false },
+  { chave: 'situacao_analise', titulo: 'Analise', ordenavel: true },
+  { chave: 'situacao_obra', titulo: 'Obra', ordenavel: true },
+  // Ordena pelo numero de etapas concluidas (0 a 3), nao por texto: e o que os
+  // selos F/C/CD desenham. Comeca em desc para a primeira tela mostrar quem
+  // avancou -- em asc, as 7.106 sem vistoria nenhuma enchem a pagina de selos
+  // vazios e parece que a ordenacao nao fez nada.
+  { chave: 'etapas', titulo: 'Etapas', ordenavel: true, direcaoInicial: 'desc' },
+  { chave: 'ranqueamento', titulo: 'Ranq.', ordenavel: false },
 ];
 
-const TH = 'whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400';
 const TD = 'whitespace-nowrap px-3 py-2 text-sm text-slate-700 dark:text-slate-200';
 const TD_FORTE = 'px-3 py-2 text-sm font-medium text-slate-900 dark:text-slate-100';
 const TD_MONO = 'whitespace-nowrap px-3 py-2 font-mono text-sm text-slate-600 dark:text-slate-300';
