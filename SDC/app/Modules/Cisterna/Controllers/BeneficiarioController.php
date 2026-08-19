@@ -131,18 +131,18 @@ class BeneficiarioController extends Controller
         ]));
     }
 
-    public function show(CisternaBeneficiario $beneficiario, Request $request): Response
+    public function show(CisternaBeneficiario $beneficiario): Response
     {
         $this->authorize('view', $beneficiario);
 
         $completo = $this->service->obter($beneficiario->id);
 
+        // Sem `permissoes`: a tela e leitura, e as acoes de editar e excluir
+        // moraram para os botoes de acao da listagem. Mandar flag que ninguem le
+        // custa duas consultas de policy por abertura e faz o contrato de props
+        // mentir sobre o que a tela usa.
         return Inertia::render('Cisterna/Beneficiarios/Show', [
             'beneficiario' => BeneficiarioResource::make($completo)->resolve(),
-            'permissoes' => [
-                'editar' => $request->user()?->can('update', $beneficiario) ?? false,
-                'excluir' => $request->user()?->can('delete', $beneficiario) ?? false,
-            ],
         ]);
     }
 

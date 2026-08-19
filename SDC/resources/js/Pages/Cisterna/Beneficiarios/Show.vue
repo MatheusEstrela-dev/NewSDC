@@ -10,19 +10,14 @@
         variant="gradient"
       >
         <!--
-          Sem botao de volta para a listagem: a trilha ja tem "Cisternas"
-          apontando para la, e o "Voltar" ao lado dela faz o mesmo. Tres
-          caminhos para o mesmo lugar disputam a atencao de quem procura a
-          acao real da tela.
+          Tela de LEITURA: sem acao no cabecalho.
 
-          "Vistorias" fica: e navegacao para FRENTE, e trilha so oferece
-          ancestrais. Sem ele, o cadastro nao teria caminho para a cadeia de
-          fiscalizacao.
+          Editar e a mesma coisa que o lapis da listagem, e o caminho para a
+          cadeia de fiscalizacao existe pelo icone de historico -- o modal tem
+          "Cadeia de fiscalizacao completa". Repetir aqui espalhava a mesma acao
+          por dois lugares, e era o que sobrava depois que a trilha assumiu a
+          navegacao.
         -->
-        <template #actions>
-          <Link :href="route('cisternas.vistorias.index', beneficiario.id)" :class="BOTAO_SEC">Vistorias</Link>
-          <Link v-if="permissoes.editar" :href="route('cisternas.beneficiarios.edit', beneficiario.id)" :class="BOTAO">Editar</Link>
-        </template>
       </PageHeader>
 
       <!-- As situacoes ficam fora do header: sao estado do registro, nao acao. -->
@@ -88,7 +83,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
@@ -100,13 +95,10 @@ import DadosBloco from '@/Components/Molecules/Cisterna/DadosBloco.vue';
 
 const props = defineProps({
   beneficiario: { type: Object, required: true },
-  permissoes: { type: Object, default: () => ({}) },
 });
 
 const ETAPAS = ['fornecedor', 'compdec', 'cedec'];
 
-const BOTAO = 'rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700';
-const BOTAO_SEC = 'rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800';
 
 const social = computed(() => props.beneficiario.criterios_sociais ?? {});
 const tecnica = computed(() => props.beneficiario.avaliacao_tecnica ?? {});
