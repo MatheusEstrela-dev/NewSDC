@@ -128,8 +128,11 @@ function concluir() {
       title: 'Concluir etapa',
       message: `Concluir ${props.vistoria.etapa.rotulo}?`,
       description: 'A etapa fica fechada e a proxima da cadeia de fiscalizacao e liberada.',
-      // `warning`, e nao `danger`: concluir e avanco de fluxo, nao destruicao.
-      variant: 'warning',
+      // `success`: concluir e avanco de fluxo, nao destruicao nem alerta. Verde
+      // tambem separa visualmente das confirmacoes de exclusao (danger, em
+      // vermelho) -- num modulo com as duas acoes na mesma tela, a cor e a
+      // primeira coisa que a pessoa le antes do texto.
+      variant: 'success',
       confirmText: 'Concluir',
     },
     enviarConclusao,
