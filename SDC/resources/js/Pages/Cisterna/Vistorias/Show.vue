@@ -68,6 +68,15 @@
           <p class="whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">{{ vistoria.observacoes }}</p>
         </section>
       </template>
+
+      <!-- Confirmacao pelo dialogo do sistema, igual a Decretacoes, PAE e RAT. -->
+      <ConfirmDialog
+        :is-open="confirmacao.aberto"
+        v-bind="confirmacao.opcoes"
+        :loading="concluindo"
+        @confirm="confirmar"
+        @cancel="cancelar"
+      />
     </div>
   </AuthenticatedLayout>
 </template>
@@ -84,6 +93,8 @@ import ChecklistItens from '@/Components/Organisms/Cisterna/ChecklistItens.vue';
 import VistoriaForm from '@/Components/Organisms/Cisterna/VistoriaForm.vue';
 import { useVistoriaForm } from '@/Composables/cisterna/useVistoriaForm';
 import { useToast } from '@/Composables/useToast';
+import { useConfirmacao } from '@/Composables/core/useConfirmacao';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 
 const props = defineProps({
   vistoria: { type: Object, required: true },
@@ -93,6 +104,7 @@ const props = defineProps({
 });
 
 const { show: toast } = useToast();
+const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
 
 const BOTAO = 'rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700';
 const BOTAO_SEC = 'rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800';
@@ -111,8 +123,20 @@ const concluindo = ref(false);
  * modo de edicao.
  */
 function concluir() {
-  if (!window.confirm(`Concluir ${props.vistoria.etapa.rotulo}? Isso libera a proxima etapa.`)) return;
+  pedirConfirmacao(
+    {
+      title: 'Concluir etapa',
+      message: `Concluir ${props.vistoria.etapa.rotulo}?`,
+      description: 'A etapa fica fechada e a proxima da cadeia de fiscalizacao e liberada.',
+      // `warning`, e nao `danger`: concluir e avanco de fluxo, nao destruicao.
+      variant: 'warning',
+      confirmText: 'Concluir',
+    },
+    enviarConclusao,
+  );
+}
 
+function enviarConclusao() {
   concluindo.value = true;
 
   router.post(route('cisternas.vistorias.concluir', props.vistoria.id), {}, {

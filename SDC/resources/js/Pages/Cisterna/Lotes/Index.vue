@@ -85,6 +85,14 @@
           <FormTextarea v-model="form.observacao" label="Observacao" :rows="3" maxlength="1000" :error="form.errors.observacao" />
         </div>
       </CisternaFormModal>
+
+      <!-- Confirmacao pelo dialogo do sistema, igual a Decretacoes, PAE e RAT. -->
+      <ConfirmDialog
+        :is-open="confirmacao.aberto"
+        v-bind="confirmacao.opcoes"
+        @confirm="confirmar"
+        @cancel="cancelar"
+      />
     </div>
   </AuthenticatedLayout>
 </template>
@@ -98,6 +106,7 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormDateField from '@/Components/Molecules/Form/FormDateField.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
@@ -125,7 +134,9 @@ const lista = computed(() => props.lotes?.data ?? props.lotes ?? []);
  * para uma funcao e a data nao preenche nem salva. `paraPayload` devolve o nome
  * que o StoreLoteRequest espera.
  */
-const { aberto, editando, form, abrirNovo, abrirEdicao, fechar, salvar, excluir } = useCrudModal(
+const { aberto, editando, form, abrirNovo, abrirEdicao, fechar, salvar, excluir,
+  confirmacao, confirmar, cancelar,
+} = useCrudModal(
   'cisternas.lotes',
   { nome: '', data_lote: '', observacao: '' },
   (l) => ({ nome: l.nome, data_lote: l.data ?? '', observacao: l.observacao ?? '' }),

@@ -157,6 +157,14 @@
           />
         </div>
       </CisternaFormModal>
+
+      <!-- Confirmacao pelo dialogo do sistema, igual a Decretacoes, PAE e RAT. -->
+      <ConfirmDialog
+        :is-open="confirmacao.aberto"
+        v-bind="confirmacao.opcoes"
+        @confirm="confirmar"
+        @cancel="cancelar"
+      />
     </div>
   </AuthenticatedLayout>
 </template>
@@ -170,6 +178,7 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
@@ -215,7 +224,9 @@ const tiposOpcoes = computed(
   () => (props.tipos ?? []).map((t) => ({ value: t, label: ROTULOS_TIPO[t] ?? t })),
 );
 
-const { aberto, editando, form, abrirNovo, abrirEdicao, fechar, salvar, anexar, excluir } = useCrudModal(
+const { aberto, editando, form, abrirNovo, abrirEdicao, fechar, salvar, anexar, excluir,
+  confirmacao, confirmar, cancelar,
+} = useCrudModal(
   'cisternas.notificacoes',
   { notificavel_type: '', notificavel_id: '', observacao: '', arquivo: null },
   (n) => ({

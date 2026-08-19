@@ -76,6 +76,14 @@
         @close="historicoAberto = false"
       />
 
+      <!-- Confirmacao pelo dialogo do sistema, igual a Decretacoes, PAE e RAT. -->
+      <ConfirmDialog
+        :is-open="confirmacao.aberto"
+        v-bind="confirmacao.opcoes"
+        @confirm="confirmar"
+        @cancel="cancelar"
+      />
+
       <ExportCsvModal
         :show="showExportModal"
         module-name="Cisternas"
@@ -100,6 +108,8 @@ import CisternaStatisticsCards from '@/Components/Organisms/Cisterna/CisternaSta
 import BeneficiarioFiltersSection from '@/Components/Organisms/Cisterna/BeneficiarioFiltersSection.vue';
 import BeneficiariosTable from '@/Components/Organisms/Cisterna/BeneficiariosTable.vue';
 import BeneficiarioHistoricoModal from '@/Components/Organisms/Cisterna/BeneficiarioHistoricoModal.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import { useConfirmacao } from '@/Composables/core/useConfirmacao';
 
 const props = defineProps({
   beneficiarios: { type: Object, required: true },
@@ -111,6 +121,8 @@ const props = defineProps({
 });
 
 const marcados = ref([]);
+
+const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
 
 const historicoAberto = ref(false);
 const beneficiarioDoHistorico = ref(null);
@@ -175,11 +187,18 @@ function filtrarPorCard(filtro) {
  * que evita perder um cadastro por clique errado numa lista de 8.096 linhas.
  */
 function confirmarExclusao(beneficiario) {
-  if (!window.confirm(`Remover o cadastro de ${beneficiario.nome}?`)) return;
-
-  router.delete(route('cisternas.beneficiarios.destroy', beneficiario.id), {
-    preserveScroll: true,
-  });
+  pedirConfirmacao(
+    {
+      title: 'Remover cadastro',
+      message: `Remover o cadastro de ${beneficiario.nome}?`,
+      description: 'O cadastro sai das listagens e continua guardado para auditoria, com as vistorias e notificacoes dele.',
+      variant: 'danger',
+      confirmText: 'Remover',
+    },
+    () => router.delete(route('cisternas.beneficiarios.destroy', beneficiario.id), {
+      preserveScroll: true,
+    }),
+  );
 }
 
 function irParaPagina(page) {

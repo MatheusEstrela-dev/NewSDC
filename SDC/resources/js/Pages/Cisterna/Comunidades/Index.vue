@@ -121,6 +121,14 @@
           <ToggleField v-model="form.ativa" label="Comunidade ativa" description="Inativa nao aparece na escolha de novos cadastros" />
         </div>
       </CisternaFormModal>
+
+      <!-- Confirmacao pelo dialogo do sistema, igual a Decretacoes, PAE e RAT. -->
+      <ConfirmDialog
+        :is-open="confirmacao.aberto"
+        v-bind="confirmacao.opcoes"
+        @confirm="confirmar"
+        @cancel="cancelar"
+      />
     </div>
   </AuthenticatedLayout>
 </template>
@@ -135,6 +143,7 @@ import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
 import ToggleField from '@/Components/Molecules/Form/ToggleField.vue';
@@ -175,7 +184,9 @@ const filtro = reactive({
   apenas_ativas: Boolean(props.filtros.apenas_ativas),
 });
 
-const { aberto, editando, form, abrirNovo, abrirEdicao, fechar, salvar, excluir } = useCrudModal(
+const { aberto, editando, form, abrirNovo, abrirEdicao, fechar, salvar, excluir,
+  confirmacao, confirmar, cancelar,
+} = useCrudModal(
   'cisternas.comunidades',
   { municipio_id: '', nome: '', ativa: true },
   (c) => ({ municipio_id: c.municipio?.id ?? '', nome: c.nome, ativa: Boolean(c.ativa) }),

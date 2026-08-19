@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
+import { useConfirmacao } from '@/Composables/core/useConfirmacao';
 
 /**
  * CRUD em modal, para os quatro recursos de apoio do modulo.
@@ -21,6 +22,8 @@ import { useForm, router } from '@inertiajs/vue3';
  *        O lote tem um campo de data, e por isso usa nome local diferente.
  */
 export function useCrudModal(recurso, vazio, paraFormulario = null, opcoes = {}) {
+  const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
+
   const { comArquivo = false, paraPayload = null } = opcoes;
 
   const aberto = ref(false);
@@ -97,14 +100,29 @@ export function useCrudModal(recurso, vazio, paraFormulario = null, opcoes = {})
   }
 
   /**
-   * Exclusao pede confirmacao: e soft delete no dominio, mas o usuario nao sabe
-   * disso, e a lista nao deve perder registro por clique errado.
+   * Exclusao pede confirmacao pelo ConfirmDialog do sistema, e nao pelo confirm
+   * nativo: e soft delete no dominio, mas o usuario nao sabe disso, e a lista
+   * nao deve perder registro por clique errado.
+   *
+   * O confirm do navegador oferece "nao mostrar mais mensagens assim" -- quem
+   * marca passa a excluir sem confirmacao nenhuma, calado.
    */
   function excluir(registro, rotulo = 'este registro') {
-    if (!window.confirm(`Remover ${rotulo}?`)) return;
-
-    router.delete(route(`${recurso}.destroy`, registro.id), { preserveScroll: true });
+    pedirConfirmacao(
+      {
+        title: 'Remover registro',
+        message: `Remover ${rotulo}?`,
+        description: 'O registro sai das listagens e continua guardado para auditoria.',
+        variant: 'danger',
+        confirmText: 'Remover',
+      },
+      () => router.delete(route(`${recurso}.destroy`, registro.id), { preserveScroll: true }),
+    );
   }
 
-  return { aberto, emEdicao, editando, form, abrirNovo, abrirEdicao, fechar, salvar, anexar, excluir };
+  return {
+    aberto, emEdicao, editando, form, abrirNovo, abrirEdicao, fechar, salvar, anexar, excluir,
+    // O dialogo e desenhado pela pagina: composable nao renderiza.
+    confirmacao, confirmar, cancelar,
+  };
 }
