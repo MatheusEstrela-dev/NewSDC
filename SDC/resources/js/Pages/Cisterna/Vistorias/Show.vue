@@ -11,8 +11,23 @@
       >
         <template #actions>
           <Link :href="route('cisternas.vistorias.index', beneficiario.id)" :class="BOTAO_SEC">Vistorias</Link>
-          <button v-if="permissoes.editar && !editando" type="button" :class="BOTAO" @click="editar">
+          <button v-if="permissoes.editar && !editando" type="button" :class="BOTAO_SEC" @click="editar">
             Editar relatorio
+          </button>
+          <!--
+            Concluir e o que DESTRAVA a etapa seguinte da cadeia: sem esta acao
+            o relatorio do fornecedor ficava eternamente "em aberto" e COMPDEC e
+            CEDEC nunca saiam de "bloqueada". O endpoint ja existia; faltava a
+            tela chamar.
+          -->
+          <button
+            v-if="permissoes.editar && !editando && !vistoria.concluida"
+            type="button"
+            :class="BOTAO"
+            :disabled="concluindo"
+            @click="concluir"
+          >
+            {{ concluindo ? 'Concluindo...' : 'Concluir etapa' }}
           </button>
         </template>
       </PageHeader>
@@ -59,7 +74,7 @@
 
 <script setup>
 import { ref, computed, shallowRef } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
@@ -68,6 +83,7 @@ import DadosBloco from '@/Components/Molecules/Cisterna/DadosBloco.vue';
 import ChecklistItens from '@/Components/Organisms/Cisterna/ChecklistItens.vue';
 import VistoriaForm from '@/Components/Organisms/Cisterna/VistoriaForm.vue';
 import { useVistoriaForm } from '@/Composables/cisterna/useVistoriaForm';
+import { useToast } from '@/Composables/useToast';
 
 const props = defineProps({
   vistoria: { type: Object, required: true },
@@ -76,11 +92,44 @@ const props = defineProps({
   permissoes: { type: Object, default: () => ({}) },
 });
 
+const { show: toast } = useToast();
+
 const BOTAO = 'rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700';
 const BOTAO_SEC = 'rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800';
 
 const editando = ref(false);
 const formulario = shallowRef(null);
+const concluindo = ref(false);
+
+/**
+ * Conclui a etapa, liberando a proxima na cadeia de fiscalizacao.
+ *
+ * O backend recusa com ValidationException quando falta engenheiro/CREA -- e,
+ * na etapa da CEDEC, tambem processo SEI, contrato, empenho e ART. Esses erros
+ * chegam por campo, e sem trazer para a tela a pessoa clicaria de novo sem
+ * saber o que falta: a tela de detalhe nao desenha erro de formulario, so o
+ * modo de edicao.
+ */
+function concluir() {
+  if (!window.confirm(`Concluir ${props.vistoria.etapa.rotulo}? Isso libera a proxima etapa.`)) return;
+
+  concluindo.value = true;
+
+  router.post(route('cisternas.vistorias.concluir', props.vistoria.id), {}, {
+    preserveScroll: true,
+    onError: (erros) => {
+      const pendencias = Object.values(erros ?? {});
+
+      toast(
+        pendencias.length > 0
+          ? pendencias.join(' ')
+          : 'Nao foi possivel concluir a etapa.',
+        'error',
+      );
+    },
+    onFinish: () => { concluindo.value = false; },
+  });
+}
 
 const form = computed(() => formulario.value?.form ?? { errors: {}, processing: false });
 

@@ -242,22 +242,43 @@ async function carregar() {
 
   carregando.value = true;
   erro.value = '';
+  dados.value = { timeline: [], vistorias: [], notificacoes: [] };
+
+  let url;
 
   try {
-    const resposta = await fetch(route('cisternas.beneficiarios.historico', props.beneficiario.id), {
-      headers: { Accept: 'application/json' },
-    });
+    url = route('cisternas.beneficiarios.historico', props.beneficiario.id);
+  } catch {
+    // O Ziggy lanca quando a rota nao esta na tabela, e essa tabela vem do
+    // @routes -- renderizado no carregamento da PAGINA, nao a cada navegacao do
+    // Inertia. Numa aba aberta desde antes do deploy a rota nova nao existe ali,
+    // e so recarregar resolve. Dizer isso evita que a pessoa procure o problema
+    // no cadastro.
+    erro.value = 'Esta aba foi carregada antes desta funcionalidade existir. Recarregue a pagina.';
+    carregando.value = false;
+
+    return;
+  }
+
+  try {
+    const resposta = await fetch(url, { headers: { Accept: 'application/json' } });
 
     if (!resposta.ok) {
-      throw new Error(`HTTP ${resposta.status}`);
+      // O status importa: 403 e problema de alcance do perfil e 500 e defeito
+      // do servidor. A mensagem unica de antes mandava investigar a coisa
+      // errada.
+      erro.value = resposta.status === 403
+        ? 'Voce nao tem alcance sobre este cadastro para ver o andamento dele.'
+        : `Nao foi possivel carregar a serie historica (HTTP ${resposta.status}).`;
+
+      return;
     }
 
     dados.value = await resposta.json();
   } catch {
     // Mensagem no lugar de modal vazio: sem isto a falha de rede seria lida
     // como "este cadastro nao tem historico".
-    erro.value = 'Nao foi possivel carregar a serie historica.';
-    dados.value = { timeline: [], vistorias: [], notificacoes: [] };
+    erro.value = 'Falha de rede ao buscar a serie historica.';
   } finally {
     carregando.value = false;
   }
