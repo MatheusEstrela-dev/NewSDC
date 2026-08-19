@@ -36,6 +36,7 @@ class RefinarCisternaLegadoCommand extends Command
     protected $signature = 'cisterna:refinar-legado
                             {--only= : Recursos separados por virgula: comunidades,lotes,os,beneficiarios,vistorias,notificacoes,midia}
                             {--chunk=500 : Linhas por lote}
+                            {--marcar-municipios : Apenas remarca at_cisterna em cedec_municipio e sai}
                             {--dry-run : Nao escreve no dominio; registra no cisterna_etl_log o que faria}';
 
     protected $description = 'Refina cisterna_legado_raw para as tabelas do dominio Cisterna.';
@@ -60,6 +61,30 @@ class RefinarCisternaLegadoCommand extends Command
 
         if ($dryRun) {
             $this->warn('DRY-RUN: nada sera escrito nas tabelas do dominio.');
+        }
+
+        // A marcacao normalmente acontece no fim do refino de beneficiarios, mas
+        // ela depende de cedec_municipio ESTAR populada -- e a ordem real foi a
+        // inversa: o refino rodou com a ponte vazia (marcou 0) e a tabela chegou
+        // depois, pelo import da Ajuda Humanitaria, que compartilha a mesma
+        // tabela. Sem uma porta isolada, remarcar exigiria refinar 8 mil
+        // beneficiarios de novo so para chegar no UPDATE de 55 linhas.
+        if ($this->option('marcar-municipios')) {
+            if ($dryRun) {
+                $this->warn('Nada a fazer: --marcar-municipios escreve, e --dry-run nao.');
+
+                return self::SUCCESS;
+            }
+
+            $marcados = $this->marcarMunicipiosHabilitados();
+            $this->info("Municipios marcados com at_cisterna: {$marcados}.");
+
+            if ($marcados === 0) {
+                $this->warn('  Zero. Ou nao ha beneficiario importado, ou cedec_municipio '
+                    .'nao tem Codmundv casando com municipios.codigo_ibge.');
+            }
+
+            return self::SUCCESS;
         }
 
         $selecionados = $this->refinadoresSelecionados();
