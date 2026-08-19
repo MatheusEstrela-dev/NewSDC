@@ -35,8 +35,16 @@ use Illuminate\Support\Facades\Route;
 
 // Ficha publica lida pelo QR Code colado na cisterna: sem autenticacao,
 // como no legado.
+//
+// throttle:60,1 porque esta e a unica rota do modulo sem `auth`, e ela consulta
+// o banco: sem limite, um laco nesta URL ocupa os 12 workers do Octane e derruba
+// o sistema inteiro para todo mundo. O teto e por IP, e o numero e alto de
+// proposito -- uma prefeitura sai por um unico IP publico, entao 60/min e o que
+// permite ~30 agentes escaneando ao mesmo tempo atras do mesmo NAT sem barrar
+// ninguem. Abuso automatizado nao chega perto de 60: chega em milhares.
 Route::get('cisternas/qrcode/{numeroInstalacao}', [QrCodeController::class, 'ficha'])
     ->withoutMiddleware(['auth'])
+    ->middleware('throttle:60,1')
     ->name('cisternas.qrcode.ficha')
     ->whereNumber('numeroInstalacao');
 
