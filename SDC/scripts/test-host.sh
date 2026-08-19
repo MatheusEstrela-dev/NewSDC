@@ -25,6 +25,12 @@
 #   5. Se bootstrap/cache/config.php existir, o item 4 nao resolve -- config
 #      cacheado ignora env var. O script derruba o cache antes.
 #
+#   6. bootstrap/cache/routes-*.php e pior que o item 5, porque nao da erro:
+#      a suite roda contra a tabela de rotas de quando o cache foi gerado. Uma
+#      rota nova responde 404 e um middleware novo (throttle, can, etc) fica
+#      simplesmente ausente -- o teste falha "de verdade", apontando para o
+#      codigo em vez do cache. Derrubado junto com o config.
+#
 # Uso:
 #   scripts/test-host.sh                      # suite inteira
 #   scripts/test-host.sh --filter=EnumsTest   # um teste
@@ -50,6 +56,15 @@ if [[ -f bootstrap/cache/config.php ]]; then
     echo "Derrubando bootstrap/cache/config.php (config cacheado ignora env var)..."
     rm -f bootstrap/cache/config.php
 fi
+
+# Rota cacheada esconde rota e middleware novos, sem erro nenhum (item 6).
+# O glob cobre routes-v7.php e o que a versao do Laravel vier a usar.
+for cache_rotas in bootstrap/cache/routes-*.php; do
+    if [[ -f "${cache_rotas}" ]]; then
+        echo "Derrubando ${cache_rotas} (rota cacheada esconde rota/middleware novos)..."
+        rm -f "${cache_rotas}"
+    fi
+done
 
 # Postgres de dev, exposto pelo container newsdc_dev_db.
 export DB_CONNECTION="${DB_CONNECTION:-pgsql}"
