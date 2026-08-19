@@ -15,14 +15,39 @@
         -->
       </PageHeader>
 
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div class="lg:col-span-1">
+      <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <!--
+          A cadeia e barra lateral FIXA a direita: o formulario de vistoria e
+          longo (responsavel, local, 13 itens de checklist, observacoes) e, com a
+          cadeia rolando junto, ela saia da tela na primeira dobra -- justamente
+          quando a pessoa precisa conferir em que etapa esta mexendo.
+
+          Ordem trocada por breakpoint, nao por acaso: no DOM a cadeia vem
+          primeiro, porque no celular (uma coluna) escolher a etapa acontece
+          ANTES de preencher. No desktop o `order` joga o formulario para a
+          esquerda e a cadeia para a direita.
+
+          `items-start` no grid e `self-start` aqui sao o que faz o sticky
+          funcionar: item de grid esticado ocupa a altura toda da linha e nao
+          sobra distancia para grudar.
+
+          `top-20` e o mesmo deslocamento do FlashNotification e do
+          ToastContainer -- a TopBar e `fixed` com ~4rem, e este e o valor que o
+          projeto ja usa para "logo abaixo do cabecalho". O max-height com
+          overflow existe para tela baixa: sem ele a terceira etapa ficaria
+          cortada, sem rolagem propria.
+        -->
+        <aside
+          class="lg:order-2 lg:col-span-1 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
+        >
           <VistoriaTimeline
             :vistorias="vistorias.data ?? vistorias"
             :opcoes-etapa="OPCOES_ETAPA"
             :etapa-disponivel="etapa_disponivel"
             :pode-criar="permissoes.criar"
+            :pode-editar="permissoes.editar"
             @preencher="abrirFormulario"
+            @editar="abrirEdicao"
           />
 
           <!--
@@ -30,13 +55,18 @@
             mostrar botao, que parece falta de permissao.
           -->
           <p v-if="etapa_disponivel === null" class="mt-3 text-xs text-slate-500 dark:text-slate-400">
-            As tres etapas foram concluidas. Para corrigir um relatorio, abra-o e edite.
+            As tres etapas foram concluidas. Use "Corrigir" na etapa para ajustar um relatorio.
           </p>
-        </div>
+        </aside>
 
-        <div class="lg:col-span-2">
+        <div class="lg:order-1 lg:col-span-2">
           <div v-if="etapaEmEdicao">
-            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <!--
+              Cabecalho do painel, com borda: antes o "Fechar" flutuava solto
+              acima do formulario, sem nada que o ligasse a ele, e parecia botao
+              perdido no meio da pagina.
+            -->
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
               <h2 class="text-sm font-bold text-slate-900 dark:text-slate-100">
                 {{ rotuloEtapa(etapaEmEdicao) }}
               </h2>
@@ -49,7 +79,7 @@
               :itens="itens"
               :etapa="etapaEmEdicao"
               :processando="form.processing"
-              modo="criar"
+              :modo="modo"
               @arquivo="anexar"
               @submit="salvar"
               @cancel="etapaEmEdicao = null"
@@ -106,6 +136,7 @@ const OPCOES_ETAPA = [
 ];
 
 const etapaEmEdicao = ref(null);
+const modo = ref('criar');
 
 const municipio = computed(() => {
   const m = props.beneficiario.municipio;
@@ -117,7 +148,7 @@ const ajuda = computed(() => {
   if (props.etapa_disponivel === null) return 'A cadeia de fiscalizacao esta completa.';
   if (!props.permissoes.criar) return 'Voce nao tem permissao para registrar vistoria.';
 
-  return 'Escolha "Preencher" na etapa liberada ao lado.';
+  return 'Escolha "Preencher" na etapa liberada, ao lado.';
 });
 
 /**
@@ -131,6 +162,18 @@ const form = computed(() => formulario.value?.form ?? { errors: {}, processing: 
 function abrirFormulario(etapa) {
   formulario.value = useVistoriaForm(props.beneficiario.id, etapa);
   etapaEmEdicao.value = etapa;
+  modo.value = 'criar';
+}
+
+/**
+ * Mesma gaveta, com a vistoria existente: o useVistoriaForm ja aceita o terceiro
+ * argumento e troca o POST por PUT quando ele vem. Sem passar a vistoria, salvar
+ * criaria um segundo relatorio para a mesma etapa e bateria no indice unico.
+ */
+function abrirEdicao(etapa) {
+  formulario.value = useVistoriaForm(props.beneficiario.id, etapa.valor, etapa.vistoria);
+  etapaEmEdicao.value = etapa.valor;
+  modo.value = 'editar';
 }
 
 function anexar(evento) {

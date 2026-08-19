@@ -51,6 +51,23 @@
             >
               Preencher
             </button>
+            <!--
+              Editar mora AQUI, junto das outras acoes da etapa, e nao no
+              cabecalho da tela de detalhe: o relatorio nasce vazio e se completa
+              em varias sessoes, entao continuar o preenchimento e acao rotineira
+              da cadeia, no mesmo painel do "Preencher".
+
+              Vale tambem para etapa concluida: corrigir relatorio fechado e caso
+              real, e era o que a nota da tela ja mandava fazer.
+            -->
+            <button
+              v-if="etapa.vistoria && podeEditar"
+              type="button"
+              :class="ACAO"
+              @click="$emit('editar', etapa)"
+            >
+              {{ etapa.estado === 'concluida' ? 'Corrigir' : 'Continuar preenchimento' }}
+            </button>
           </div>
         </div>
       </li>
@@ -82,9 +99,10 @@ const props = defineProps({
   /** Valor da etapa liberada agora, ou null quando a cadeia terminou. */
   etapaDisponivel: { type: String, default: null },
   podeCriar: { type: Boolean, default: false },
+  podeEditar: { type: Boolean, default: false },
 });
 
-defineEmits(['preencher']);
+defineEmits(['preencher', 'editar']);
 
 const MARCADOR = {
   concluida: 'bg-emerald-500 text-white',

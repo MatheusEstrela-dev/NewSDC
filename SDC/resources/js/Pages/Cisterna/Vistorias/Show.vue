@@ -10,21 +10,18 @@
         variant="gradient"
       >
         <!--
-          Sem "Vistorias": a trilha ja tem esse degrau como link. Aqui ficam so
-          as ACOES do relatorio.
+          Esta tela e LEITURA do relatorio. Nao tem "Editar": a edicao acontece
+          pelos botoes de acao da cadeia de fiscalizacao, na tela de vistorias,
+          no mesmo painel usado para preencher. Ter dois lugares para editar o
+          mesmo relatorio criava dois formularios com estados independentes.
+
+          Concluir fica: e o que DESTRAVA a etapa seguinte, e nao existe em outro
+          lugar. Sem esta acao o relatorio do fornecedor ficava eternamente "em
+          aberto" e COMPDEC e CEDEC nunca saiam de "bloqueada".
         -->
         <template #actions>
-          <button v-if="permissoes.editar && !editando" type="button" :class="BOTAO_SEC" @click="editar">
-            Editar relatorio
-          </button>
-          <!--
-            Concluir e o que DESTRAVA a etapa seguinte da cadeia: sem esta acao
-            o relatorio do fornecedor ficava eternamente "em aberto" e COMPDEC e
-            CEDEC nunca saiam de "bloqueada". O endpoint ja existia; faltava a
-            tela chamar.
-          -->
           <button
-            v-if="permissoes.editar && !editando && !vistoria.concluida"
+            v-if="permissoes.editar && !vistoria.concluida"
             type="button"
             :class="BOTAO"
             :disabled="concluindo"
@@ -47,30 +44,16 @@
         </span>
       </div>
 
-      <VistoriaForm
-        v-if="editando"
-        :form="form"
-        :itens="itens"
-        :etapa="vistoria.etapa.valor"
-        :processando="form.processing"
-        modo="editar"
-        @arquivo="anexar"
-        @submit="salvar"
-        @cancel="editando = false"
-      />
+      <DadosBloco titulo="Responsavel tecnico" :itens="itensResponsavel" />
+      <DadosBloco v-if="vistoria.dados_administrativos" titulo="Dados administrativos" :itens="itensAdministrativos" />
+      <DadosBloco titulo="Local da instalacao" :itens="itensLocal" />
 
-      <template v-else>
-        <DadosBloco titulo="Responsavel tecnico" :itens="itensResponsavel" />
-        <DadosBloco v-if="vistoria.dados_administrativos" titulo="Dados administrativos" :itens="itensAdministrativos" />
-        <DadosBloco titulo="Local da instalacao" :itens="itensLocal" />
+      <ChecklistItens :itens="itens" :model-value="checklist" somente-leitura />
 
-        <ChecklistItens :itens="itens" :model-value="checklist" somente-leitura />
-
-        <section v-if="vistoria.observacoes" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
-          <h3 class="mb-2 text-sm font-bold text-slate-900 dark:text-slate-100">Observacoes</h3>
-          <p class="whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">{{ vistoria.observacoes }}</p>
-        </section>
-      </template>
+      <section v-if="vistoria.observacoes" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
+        <h3 class="mb-2 text-sm font-bold text-slate-900 dark:text-slate-100">Observacoes</h3>
+        <p class="whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">{{ vistoria.observacoes }}</p>
+      </section>
 
       <!-- Confirmacao pelo dialogo do sistema, igual a Decretacoes, PAE e RAT. -->
       <ConfirmDialog
@@ -85,7 +68,7 @@
 </template>
 
 <script setup>
-import { ref, computed, shallowRef } from 'vue';
+import { ref, computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
@@ -93,8 +76,6 @@ import { moduleIcon } from '@/Support/moduleIcons';
 import EtapaVistoriaBadge from '@/Components/Atoms/Cisterna/EtapaVistoriaBadge.vue';
 import DadosBloco from '@/Components/Molecules/Cisterna/DadosBloco.vue';
 import ChecklistItens from '@/Components/Organisms/Cisterna/ChecklistItens.vue';
-import VistoriaForm from '@/Components/Organisms/Cisterna/VistoriaForm.vue';
-import { useVistoriaForm } from '@/Composables/cisterna/useVistoriaForm';
 import { useToast } from '@/Composables/useToast';
 import { useConfirmacao } from '@/Composables/core/useConfirmacao';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
@@ -110,10 +91,7 @@ const { show: toast } = useToast();
 const { confirmacao, pedirConfirmacao, confirmar, cancelar } = useConfirmacao();
 
 const BOTAO = 'rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700';
-const BOTAO_SEC = 'rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800';
 
-const editando = ref(false);
-const formulario = shallowRef(null);
 const concluindo = ref(false);
 
 /**
@@ -160,8 +138,6 @@ function enviarConclusao() {
     onFinish: () => { concluindo.value = false; },
   });
 }
-
-const form = computed(() => formulario.value?.form ?? { errors: {}, processing: false });
 
 /**
  * O resource entrega os itens como lista; o ChecklistItens trabalha com objeto
@@ -214,23 +190,6 @@ const itensLocal = computed(() => {
     },
   ];
 });
-
-function editar() {
-  formulario.value = useVistoriaForm(
-    props.beneficiario.id,
-    props.vistoria.etapa.valor,
-    props.vistoria,
-  );
-  editando.value = true;
-}
-
-function anexar(evento) {
-  formulario.value?.anexar(evento);
-}
-
-function salvar() {
-  formulario.value?.salvar();
-}
 
 function dataBr(iso) {
   if (!iso) return null;

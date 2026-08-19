@@ -38,6 +38,11 @@ class VistoriaController extends Controller
             'itens' => ItemInstalacao::options(),
             'permissoes' => [
                 'criar' => $request->user()?->can('create', CisternaVistoria::class) ?? false,
+                // Flag de PERMISSAO, nao de instancia: a cadeia tem no maximo
+                // tres etapas, mas autorizar cada vistoria aqui exigiria uma
+                // consulta de policy por etapa. Nao afrouxa nada -- a rota de
+                // update reavalia com a instancia na mao.
+                'editar' => $request->user()?->can('cisternas.vistorias.edit') ?? false,
             ],
         ]);
     }
