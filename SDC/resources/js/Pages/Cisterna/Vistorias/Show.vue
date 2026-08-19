@@ -9,8 +9,11 @@
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
       >
+        <!--
+          Sem "Vistorias": a trilha ja tem esse degrau como link. Aqui ficam so
+          as ACOES do relatorio.
+        -->
         <template #actions>
-          <Link :href="route('cisternas.vistorias.index', beneficiario.id)" :class="BOTAO_SEC">Vistorias</Link>
           <button v-if="permissoes.editar && !editando" type="button" :class="BOTAO_SEC" @click="editar">
             Editar relatorio
           </button>
@@ -83,7 +86,7 @@
 
 <script setup>
 import { ref, computed, shallowRef } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';

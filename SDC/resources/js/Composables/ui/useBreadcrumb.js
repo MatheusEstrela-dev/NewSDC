@@ -278,7 +278,15 @@ export function useBreadcrumb() {
             // A propria lista: ela e o fim da trilha, entao nao vira link.
             'Cisterna/Beneficiarios/Index': [inicio, { label: 'Cisternas', route: null }],
             'Cisterna/Beneficiarios/Create': [inicio, lista, { label: 'Novo cadastro', route: null }],
-            'Cisterna/Beneficiarios/Show': [inicio, lista, { label: 'Visualizar', route: null }],
+            // O nome, e nao "Visualizar": com os botoes de navegacao fora do
+            // header, a trilha passou a ser o caminho, e "Visualizar" nao diz
+            // QUAL cadastro esta aberto. Ultimo degrau nao vira link -- ele e a
+            // propria pagina.
+            'Cisterna/Beneficiarios/Show': [
+                inicio,
+                lista,
+                { label: props?.beneficiario?.nome ?? 'Visualizar', route: null },
+            ],
             'Cisterna/Beneficiarios/Edit': [inicio, lista, doBeneficiario, { label: 'Edição', route: null }],
 
             // Vistoria pertence a um beneficiario: a trilha passa por ele.

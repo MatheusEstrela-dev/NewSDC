@@ -9,8 +9,17 @@
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
       >
+        <!--
+          Sem botao de volta para a listagem: a trilha ja tem "Cisternas"
+          apontando para la, e o "Voltar" ao lado dela faz o mesmo. Tres
+          caminhos para o mesmo lugar disputam a atencao de quem procura a
+          acao real da tela.
+
+          "Vistorias" fica: e navegacao para FRENTE, e trilha so oferece
+          ancestrais. Sem ele, o cadastro nao teria caminho para a cadeia de
+          fiscalizacao.
+        -->
         <template #actions>
-          <Link :href="route('cisternas.beneficiarios.index')" :class="BOTAO_SEC">Beneficiarios</Link>
           <Link :href="route('cisternas.vistorias.index', beneficiario.id)" :class="BOTAO_SEC">Vistorias</Link>
           <Link v-if="permissoes.editar" :href="route('cisternas.beneficiarios.edit', beneficiario.id)" :class="BOTAO">Editar</Link>
         </template>

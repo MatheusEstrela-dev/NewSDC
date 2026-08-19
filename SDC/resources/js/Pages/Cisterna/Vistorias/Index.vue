@@ -9,11 +9,10 @@
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
       >
-        <template #actions>
-          <Link :href="route('cisternas.beneficiarios.show', beneficiario.id)" :class="BOTAO_SEC">
-            Ver cadastro
-          </Link>
-        </template>
+        <!--
+          Sem slot de acoes: o unico botao aqui era "Ver cadastro", e a trilha
+          traz o nome do beneficiario como link para o mesmo destino.
+        -->
       </PageHeader>
 
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -70,7 +69,7 @@
 
 <script setup>
 import { ref, computed, shallowRef } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
