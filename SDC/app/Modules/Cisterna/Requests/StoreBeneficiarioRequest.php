@@ -17,6 +17,24 @@ use Illuminate\Validation\Rule;
 
 class StoreBeneficiarioRequest extends FormRequest
 {
+    /**
+     * Tetos espelhados do schema, e nao escolhidos aqui.
+     *
+     * Sem eles o valor gigante passava na validacao e estourava no INSERT como
+     * 500 (SQLSTATE 22003, numeric field overflow) -- erro de servidor no lugar
+     * de uma mensagem no campo. Renda e numeric(12,2), entao a parte inteira vai
+     * a 10 digitos; as medidas sao numeric(8,2), com 6 digitos inteiros.
+     *
+     * Ao mexer na precisao das colunas, mexer aqui junto: divergir volta a
+     * transformar dado invalido em erro 500.
+     */
+    private const MAX_RENDA = 9999999999.99;
+
+    private const MAX_MEDIDA = 999999.99;
+
+    /** ranqueamento_ordem e integer: 2^31 - 1. */
+    private const MAX_ORDEM = 2147483647;
+
     public function authorize(): bool
     {
         return $this->user()?->can('create', CisternaBeneficiario::class) ?? false;
@@ -90,11 +108,11 @@ class StoreBeneficiarioRequest extends FormRequest
             'situacao_analise' => ['nullable', Rule::in(SituacaoAnalise::valores())],
             'situacao_analise_obs' => ['nullable', 'string', 'max:255'],
             'situacao_obra' => ['nullable', Rule::in(SituacaoObra::valores())],
-            'ranqueamento_ordem' => ['nullable', 'integer', 'min:1'],
+            'ranqueamento_ordem' => ['nullable', 'integer', 'min:1', 'max:'.self::MAX_ORDEM],
 
             'qtd_pessoas' => ['required', 'integer', 'min:1', 'max:99'],
-            'renda' => ['required', 'numeric', 'min:0'],
-            'renda_per_capita' => ['nullable', 'numeric', 'min:0'],
+            'renda' => ['required', 'numeric', 'min:0', 'max:'.self::MAX_RENDA],
+            'renda_per_capita' => ['nullable', 'numeric', 'min:0', 'max:'.self::MAX_RENDA],
 
             'possui_deficiencia' => ['required', 'boolean'],
             'comprovante_deficiencia' => ['exclude_if:possui_deficiencia,false', 'required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
@@ -107,16 +125,16 @@ class StoreBeneficiarioRequest extends FormRequest
 
             'tipo_moradia' => ['required', Rule::in(TipoMoradia::valores())],
             'tipo_moradia_outro' => ['nullable', 'string', 'max:50'],
-            'comprimento_telhado' => ['required', 'numeric', 'min:0'],
-            'largura_telhado' => ['required', 'numeric', 'min:0'],
-            'area_telhado' => ['nullable', 'numeric', 'min:0'],
-            'comprimento_testada' => ['required', 'numeric', 'min:0'],
+            'comprimento_telhado' => ['required', 'numeric', 'min:0', 'max:'.self::MAX_MEDIDA],
+            'largura_telhado' => ['required', 'numeric', 'min:0', 'max:'.self::MAX_MEDIDA],
+            'area_telhado' => ['nullable', 'numeric', 'min:0', 'max:'.self::MAX_MEDIDA],
+            'comprimento_testada' => ['required', 'numeric', 'min:0', 'max:'.self::MAX_MEDIDA],
             'num_caidas_telhado' => ['required', 'integer', 'min:1', 'max:99'],
             'cobertura_telhado' => ['required', Rule::in(CoberturaTelhado::valores())],
             'cobertura_outro' => ['nullable', 'string', 'max:150'],
             'possui_fogao_lenha' => ['required', 'boolean'],
-            'medida_telhado_area_fogao' => ['nullable', 'numeric', 'min:0'],
-            'testada_disp_parte_fogao' => ['nullable', 'numeric', 'min:0'],
+            'medida_telhado_area_fogao' => ['nullable', 'numeric', 'min:0', 'max:'.self::MAX_MEDIDA],
+            'testada_disp_parte_fogao' => ['nullable', 'numeric', 'min:0', 'max:'.self::MAX_MEDIDA],
 
             'atendido_por_pipa' => ['required', 'boolean'],
             'responsaveis_pipa' => ['nullable', 'array'],
