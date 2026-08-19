@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -54,12 +55,25 @@ class HandleInertiaRequests extends Middleware
             // Nao vazar a arvore de ACL/permissoes em paginas publicas (login, etc).
             // Antes: era exposta no data-page do Inertia mesmo sem usuario autenticado.
             'acl' => fn() => $user ? $this->getCachedAclConfig() : (object) [],
-            'flash' => [
+            // Inertia::always() porque flash PRECISA viajar tambem no reload
+            // parcial. Sem isso o `only:` do reload filtra o flash da resposta,
+            // o cliente mantem o objeto da visita anterior, e o watcher do
+            // FlashNotification torna a disparar: o aviso de "cadastrado com
+            // sucesso" reaparecia a cada clique em filtro, ordenacao ou
+            // paginacao, muito depois do cadastro.
+            //
+            // Marcado como always, toda resposta carrega o flash do PROPRIO
+            // request -- vazio, no caso -- e sobrescreve o valor velho.
+            //
+            // As closures internas continuam preguicosas: evaluateProps()
+            // percorre o array recursivamente depois de desembrulhar o
+            // AlwaysProp.
+            'flash' => Inertia::always([
                 'success' => fn() => $request->session()->get('success'),
                 'error'   => fn() => $request->session()->get('error'),
                 'warning' => fn() => $request->session()->get('warning'),
                 'info'    => fn() => $request->session()->get('info'),
-            ],
+            ]),
             // Badge do sino ja correto no primeiro paint, sem piscar zero e sem
             // um request extra por navegacao. Custo: um GET no Redis, resolvido
             // pelo ContadorNaoLidas (sem COUNT no banco no caminho quente).

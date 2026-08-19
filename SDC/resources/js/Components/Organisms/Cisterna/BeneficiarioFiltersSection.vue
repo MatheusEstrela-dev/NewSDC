@@ -7,17 +7,14 @@
     :icon="FunnelIcon"
     tom="neutro"
     :status-text="resumoAtivos"
-  >
-    <div class="mb-3 flex justify-end">
-      <button
-        type="button"
-        class="text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-        @click="limpar"
-      >
-        Limpar
-      </button>
-    </div>
-
+    :expandido-por-padrao="false"
+  ><!--
+    Recolhido por padrao: aberto, o painel empurra a tabela para fora da
+    primeira dobra e a tela abre mostrando formulario em vez de dado. O
+    `status-text` no cabecalho diz quantos filtros estao valendo, entao recolher
+    nao esconde informacao. Quem expandir tem a escolha lembrada no
+    localStorage.
+  -->
     <form class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" @submit.prevent="aplicar">
       <label class="block">
         <span class="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Nome</span>
@@ -98,7 +95,19 @@
           <span>Ordenar por ranqueamento</span>
         </label>
 
-        <button type="submit" class="ml-auto rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+        <!-- Limpar ao lado de Pesquisar, e nao so como link no topo do painel:
+             a decisao "limpar" acontece depois de olhar os campos, e o olho
+             termina justamente aqui. O type="button" e obrigatorio -- dentro de
+             <form>, botao sem type e submit e limpar acabaria pesquisando. -->
+        <button
+          type="button"
+          class="ml-auto rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          @click="limpar"
+        >
+          Limpar
+        </button>
+
+        <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
           Pesquisar
         </button>
       </div>
