@@ -78,6 +78,37 @@ export function moeda(valor) {
   return `${texto.slice(0, primeiro)},${centavos}`;
 }
 
+/** Data no formato dd/mm/aaaa, inserindo as barras conforme se digita. */
+export function dataBr(valor) {
+  const d = apenasDigitos(valor).slice(0, 8);
+
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
+/**
+ * Converte dd/mm/aaaa em aaaa-mm-dd, ou null se a data nao existir.
+ *
+ * A conferencia de volta (getDate/getMonth) e o que barra 31/02: o Date do
+ * JavaScript nao recusa dia invalido, ele TRANSBORDA para 03/03 calado.
+ */
+export function isoDeDataBr(texto) {
+  const par = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(texto ?? '').trim());
+
+  if (! par) return null;
+
+  const [, dia, mes, ano] = par.map(Number);
+  const data = new Date(ano, mes - 1, dia);
+
+  if (data.getFullYear() !== ano || data.getMonth() !== mes - 1 || data.getDate() !== dia) {
+    return null;
+  }
+
+  return `${par[3]}-${par[2]}-${par[1]}`;
+}
+
 /**
  * Registro consultado pelo FormField. Nome desconhecido devolve o valor
  * intacto, para um erro de digitacao no prop nao virar campo que apaga o que a
@@ -90,6 +121,7 @@ export const MASCARAS = {
   decimal: decimalSimples,
   coordenada,
   moeda,
+  data: dataBr,
 };
 
 export function aplicarMascara(nome, valor) {

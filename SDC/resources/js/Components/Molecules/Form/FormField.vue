@@ -27,8 +27,9 @@
       :error="!!error"
       :maxlength="maxlength"
       :inputmode="inputmode"
+      :mask="mask"
       :size="size"
-      @update:model-value="aoAtualizar"
+      @update:model-value="$emit('update:modelValue', $event)"
       @blur="$emit('blur', $event)"
       @focus="$emit('focus', $event)"
     />
@@ -46,7 +47,6 @@ import { computed } from 'vue';
 import Label from '../../Atoms/Typography/Label.vue';
 import TextInput from '../../Atoms/Input/TextInput.vue';
 import DatePicker from '../../Form/DatePicker.vue';
-import { aplicarMascara } from '@/utils/inputMasks';
 
 const props = defineProps({
   modelValue: {
@@ -114,17 +114,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['update:modelValue', 'blur', 'focus']);
-
-/**
- * Sem `mask` o valor sobe intacto -- e o caminho de todos os campos que ja
- * existem. Com `mask`, o que sobe e o texto ja formatado, e nao o cru: o v-model
- * do pai precisa refletir exatamente o que esta na tela, senao o cursor pula e
- * caractere invalido reaparece a cada tecla.
- */
-function aoAtualizar(valor) {
-  emit('update:modelValue', props.mask ? aplicarMascara(props.mask, valor) : valor);
-}
+defineEmits(['update:modelValue', 'blur', 'focus']);
 
 const inputId = computed(() => {
   return props.label ? `field-${props.label.toLowerCase().replace(/\s+/g, '-')}` : `field-${Math.random().toString(36).substr(2, 9)}`;
