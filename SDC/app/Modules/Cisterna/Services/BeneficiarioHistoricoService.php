@@ -29,6 +29,10 @@ use Illuminate\Support\Collection;
  */
 class BeneficiarioHistoricoService
 {
+    public function __construct(
+        private readonly VistoriaService $vistorias,
+    ) {}
+
     /**
      * @return array{timeline: array<int, array<string, mixed>>, vistorias: array<int, array<string, mixed>>, notificacoes: array<int, array<string, mixed>>}
      */
@@ -53,10 +57,56 @@ class BeneficiarioHistoricoService
             ->values();
 
         return [
+            'cadeia' => $this->cadeiaDeFiscalizacao($beneficiario),
             'timeline' => $eventos->all(),
             'vistorias' => $this->detalheDasVistorias($beneficiario),
             'notificacoes' => $this->detalheDasNotificacoes($beneficiario),
         ];
+    }
+
+    /**
+     * As tres etapas com o estado de cada uma, resolvido AQUI e nao na tela.
+     *
+     * Qual etapa esta liberada e regra de dominio: o COMPDEC so confere depois
+     * do fornecedor, e a CEDEC so fiscaliza depois do COMPDEC. Reimplementar
+     * isso no cliente criaria uma segunda versao da regra, livre para divergir.
+     *
+     * `em_aberto` e diferente de `concluida` de proposito: relatorio salvo pela
+     * metade e caso comum na carga real, e tratar os dois como iguais mostraria
+     * a cadeia mais adiantada do que ela esta.
+     *
+     * @return array{etapas: array<int, array<string, mixed>>, etapa_disponivel: ?string}
+     */
+    private function cadeiaDeFiscalizacao(CisternaBeneficiario $beneficiario): array
+    {
+        $disponivel = $this->vistorias->etapaDisponivel($beneficiario)?->value;
+
+        $etapas = [];
+
+        foreach (EtapaVistoria::cases() as $etapa) {
+            $vistoria = $beneficiario->vistorias->first(
+                fn ($v): bool => ($v->etapa instanceof EtapaVistoria ? $v->etapa->value : (string) $v->etapa) === $etapa->value,
+            );
+
+            $estado = match (true) {
+                $vistoria !== null && $vistoria->concluida_em !== null => 'concluida',
+                $vistoria !== null => 'em_aberto',
+                $etapa->value === $disponivel => 'disponivel',
+                default => 'bloqueada',
+            };
+
+            $etapas[] = [
+                'valor' => $etapa->value,
+                'rotulo' => $etapa->label(),
+                'estado' => $estado,
+                'vistoria_id' => $vistoria?->id,
+                'numero_instalacao' => $vistoria?->numero_instalacao,
+                'data' => $this->formatar($vistoria?->concluida_em ?? $vistoria?->data_relatorio),
+                'engenheiro' => $vistoria?->engenheiro_nome,
+            ];
+        }
+
+        return ['etapas' => $etapas, 'etapa_disponivel' => $disponivel];
     }
 
     /**

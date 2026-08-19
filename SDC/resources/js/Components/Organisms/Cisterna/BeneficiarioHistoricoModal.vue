@@ -58,7 +58,48 @@
         </div>
 
         <template v-else>
-          <ol v-if="abaAtiva === 'timeline' && contagem('timeline')" class="relative ml-5 space-y-6 border-l border-slate-700">
+          <!--
+            Cadeia primeiro, e segregada do relatorio: quem abre o historico quer
+            saber EM QUE PONTO a fiscalizacao esta antes de ler evento por
+            evento. O estado de cada etapa vem resolvido do servidor -- a ordem
+            (fornecedor, COMPDEC, CEDEC) e regra de dominio e reimplementar aqui
+            criaria uma segunda versao livre para divergir.
+          -->
+          <ol v-if="abaAtiva === 'cadeia'" class="space-y-3">
+            <li
+              v-for="(etapa, indice) in dados.cadeia?.etapas ?? []"
+              :key="etapa.valor"
+              class="flex gap-3 rounded-xl border border-slate-700/50 bg-slate-800/60 p-4"
+            >
+              <span
+                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                :class="MARCADOR_ETAPA[etapa.estado] ?? MARCADOR_ETAPA.bloqueada"
+              >
+                {{ indice + 1 }}
+              </span>
+
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h4 class="text-base font-semibold text-white">{{ etapa.rotulo }}</h4>
+                  <Badge :variant="VARIANTE_ETAPA[etapa.estado] ?? 'secondary'" size="sm">
+                    {{ TEXTO_ETAPA[etapa.estado] ?? etapa.estado }}
+                  </Badge>
+                </div>
+
+                <p class="mt-1 text-xs text-slate-400">
+                  <template v-if="etapa.estado === 'bloqueada'">Aguarda a etapa anterior.</template>
+                  <template v-else-if="etapa.estado === 'disponivel'">Liberada para preenchimento.</template>
+                  <template v-else>
+                    <span v-if="etapa.numero_instalacao" class="font-mono">Nº {{ etapa.numero_instalacao }}</span>
+                    <span v-if="etapa.data"> — {{ etapa.data }}</span>
+                    <span v-if="etapa.engenheiro"> — {{ etapa.engenheiro }}</span>
+                  </template>
+                </p>
+              </div>
+            </li>
+          </ol>
+
+          <ol v-else-if="abaAtiva === 'timeline' && contagem('timeline')" class="relative ml-5 space-y-6 border-l border-slate-700">
             <li v-for="evento in dados.timeline" :key="evento.id" class="relative ml-8">
               <span
                 class="absolute -left-[42px] flex h-7 w-7 items-center justify-center rounded-full ring-4 ring-slate-900"
@@ -166,12 +207,14 @@ const props = defineProps({
 defineEmits(['close']);
 
 const ABAS = [
+  { chave: 'cadeia', rotulo: 'Cadeia', variante: 'info' },
   { chave: 'timeline', rotulo: 'Timeline', variante: 'info' },
   { chave: 'vistorias', rotulo: 'Vistorias', variante: 'info' },
   { chave: 'notificacoes', rotulo: 'Notificacoes', variante: 'warning' },
 ];
 
 const VAZIO = {
+  cadeia: 'Cadeia de fiscalizacao indisponivel.',
   timeline: 'Nenhum evento registrado para este cadastro.',
   vistorias: 'Nenhuma etapa de fiscalizacao aberta.',
   notificacoes: 'Nenhum apontamento da fiscalizacao.',
@@ -221,12 +264,40 @@ const ICONE_DO_TIPO = {
   alocacao: TruckIcon,
 };
 
-const abaAtiva = ref('timeline');
+// Espelha VistoriaTimeline: o mesmo estado tem que ter a mesma cor nas duas
+// telas, senao "liberada" no modal e "liberada" na pagina parecem coisas
+// diferentes.
+const MARCADOR_ETAPA = {
+  concluida: 'bg-emerald-600 text-white',
+  em_aberto: 'bg-amber-500/20 text-amber-300',
+  disponivel: 'bg-sky-500/20 text-sky-300',
+  bloqueada: 'bg-slate-700 text-slate-400',
+};
+
+const TEXTO_ETAPA = {
+  concluida: 'Concluida',
+  em_aberto: 'Em aberto',
+  disponivel: 'Liberada',
+  bloqueada: 'Bloqueada',
+};
+
+const VARIANTE_ETAPA = {
+  concluida: 'success',
+  em_aberto: 'warning',
+  disponivel: 'info',
+  bloqueada: 'secondary',
+};
+
+const abaAtiva = ref('cadeia');
 const carregando = ref(false);
 const erro = ref('');
-const dados = ref({ timeline: [], vistorias: [], notificacoes: [] });
+const dados = ref({ cadeia: null, timeline: [], vistorias: [], notificacoes: [] });
 
 function contagem(chave) {
+  // A cadeia tem sempre as tres etapas: um badge "3" fixo no rotulo nao informa
+  // nada, entao ela nao conta.
+  if (chave === 'cadeia') return 0;
+
   return dados.value?.[chave]?.length ?? 0;
 }
 
@@ -242,7 +313,7 @@ async function carregar() {
 
   carregando.value = true;
   erro.value = '';
-  dados.value = { timeline: [], vistorias: [], notificacoes: [] };
+  dados.value = { cadeia: null, timeline: [], vistorias: [], notificacoes: [] };
 
   let url;
 
@@ -289,7 +360,7 @@ watch(
   ([aberto]) => {
     if (!aberto) return;
 
-    abaAtiva.value = 'timeline';
+    abaAtiva.value = 'cadeia';
     carregar();
   },
 );
