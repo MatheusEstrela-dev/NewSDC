@@ -14,6 +14,7 @@ use App\Modules\Cisterna\Enums\SituacaoAnalise;
 use App\Modules\Cisterna\Enums\SituacaoObra;
 use App\Modules\Cisterna\Enums\TipoMoradia;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
+use App\Modules\Cisterna\Models\CisternaVistoria;
 use App\Modules\Cisterna\Requests\AcaoEmMassaRequest;
 use App\Modules\Cisterna\Requests\StoreBeneficiarioRequest;
 use App\Modules\Cisterna\Requests\UpdateBeneficiarioRequest;
@@ -111,13 +112,23 @@ class BeneficiarioController extends Controller
      * rolagem. Buscar na abertura tambem e o que faz o painel refletir o estado
      * do momento, e nao o que estava carregado quando a lista foi montada.
      */
-    public function historico(CisternaBeneficiario $beneficiario, BeneficiarioHistoricoService $historico): JsonResponse
-    {
+    public function historico(
+        CisternaBeneficiario $beneficiario,
+        BeneficiarioHistoricoService $historico,
+        Request $request,
+    ): JsonResponse {
         // Mesma policy da visualizacao: quem nao pode ver o cadastro nao pode
         // ver o andamento dele.
         $this->authorize('view', $beneficiario);
 
-        return response()->json($historico->para($beneficiario));
+        return response()->json(array_merge($historico->para($beneficiario), [
+            // O modal oferece o caminho para preencher a etapa liberada, e o
+            // botao so aparece para quem pode. Decidir isso no servidor evita
+            // que a tela ofereca acao que o backend vai recusar.
+            'permissoes' => [
+                'preencher' => $request->user()?->can('create', CisternaVistoria::class) ?? false,
+            ],
+        ]));
     }
 
     public function show(CisternaBeneficiario $beneficiario, Request $request): Response

@@ -95,6 +95,31 @@
                     <span v-if="etapa.engenheiro"> — {{ etapa.engenheiro }}</span>
                   </template>
                 </p>
+
+                <!--
+                  O caminho para a etapa, dentro do modal: sem isto a cadeia
+                  informava o estado e obrigava a fechar, achar a linha de novo e
+                  entrar pela pagina de vistorias. Sao Links do Inertia, e nao
+                  botoes de acao: a leitura acontece aqui, o preenchimento
+                  acontece na tela da etapa, que e onde o formulario vive.
+                -->
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <Link
+                    v-if="etapa.vistoria_id"
+                    :href="route('cisternas.vistorias.show', etapa.vistoria_id)"
+                    :class="ELO_ACAO"
+                  >
+                    Ver relatorio
+                  </Link>
+
+                  <Link
+                    v-else-if="etapa.estado === 'disponivel' && dados.permissoes?.preencher"
+                    :href="route('cisternas.vistorias.index', beneficiario.id)"
+                    :class="ELO_PRIMARIO"
+                  >
+                    Preencher
+                  </Link>
+                </div>
               </div>
             </li>
           </ol>
@@ -178,6 +203,22 @@
           </p>
         </template>
       </div>
+
+      <!--
+        Saidas do modal. Ficam fixas no rodape, e nao dentro de uma aba, porque
+        valem para qualquer aba aberta.
+      -->
+      <div
+        v-if="!carregando && !erro && beneficiario?.id"
+        class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-700/50 bg-slate-900/60 px-6 py-4"
+      >
+        <Link :href="route('cisternas.vistorias.index', beneficiario.id)" :class="ELO_ACAO">
+          Cadeia de fiscalizacao completa
+        </Link>
+        <Link :href="route('cisternas.beneficiarios.show', beneficiario.id)" :class="ELO_ACAO">
+          Ver cadastro
+        </Link>
+      </div>
     </div>
   </Modal>
 </template>
@@ -195,6 +236,7 @@ import {
   FlagIcon,
   TruckIcon,
 } from '@heroicons/vue/24/outline';
+import { Link } from '@inertiajs/vue3';
 import Modal from '@/Components/Modal.vue';
 import Badge from '@/Components/Atoms/Badge/Badge.vue';
 
@@ -207,7 +249,7 @@ const props = defineProps({
 defineEmits(['close']);
 
 const ABAS = [
-  { chave: 'cadeia', rotulo: 'Cadeia', variante: 'info' },
+  { chave: 'cadeia', rotulo: 'Cadeia de fiscalizacao', variante: 'info' },
   { chave: 'timeline', rotulo: 'Timeline', variante: 'info' },
   { chave: 'vistorias', rotulo: 'Vistorias', variante: 'info' },
   { chave: 'notificacoes', rotulo: 'Notificacoes', variante: 'warning' },
@@ -254,6 +296,9 @@ const COR_DO_TIPO = {
 
 const COR_PADRAO = 'bg-slate-600 text-white';
 
+const ELO_ACAO = 'rounded-md border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-slate-800';
+const ELO_PRIMARIO = 'rounded-md bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-700';
+
 const ICONE_DO_TIPO = {
   criacao: PlusCircleIcon,
   vistoria: ClipboardDocumentCheckIcon,
@@ -291,7 +336,7 @@ const VARIANTE_ETAPA = {
 const abaAtiva = ref('cadeia');
 const carregando = ref(false);
 const erro = ref('');
-const dados = ref({ cadeia: null, timeline: [], vistorias: [], notificacoes: [] });
+const dados = ref({ cadeia: null, timeline: [], vistorias: [], notificacoes: [], permissoes: {} });
 
 function contagem(chave) {
   // A cadeia tem sempre as tres etapas: um badge "3" fixo no rotulo nao informa
@@ -313,7 +358,7 @@ async function carregar() {
 
   carregando.value = true;
   erro.value = '';
-  dados.value = { cadeia: null, timeline: [], vistorias: [], notificacoes: [] };
+  dados.value = { cadeia: null, timeline: [], vistorias: [], notificacoes: [], permissoes: {} };
 
   let url;
 
