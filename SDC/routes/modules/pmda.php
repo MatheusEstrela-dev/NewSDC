@@ -19,8 +19,19 @@ use App\Modules\Pmda\Models\PmdaPlano;
 use App\Modules\Pmda\Models\PmdaRepresentante;
 use Illuminate\Support\Facades\Route;
 
+/*
+| Route::model() e GLOBAL, nao vale so para as rotas deste arquivo. `comunidade`
+| saiu daqui porque o Cisterna tem /cisternas/comunidades/{comunidade} (update e
+| destroy), e o binder explicito vence o implicito no SubstituteBindings: as duas
+| rotas resolviam contra PmdaComunidade e devolviam 404.
+|
+| Nao fazia falta: destroy() e o store() de representantes type-hintam
+| PmdaComunidade, e o binding implicito ja resolve.
+|
+| Ao acrescentar Route::model() aqui, confira se o nome do parametro e exclusivo
+| deste modulo. `plano`, `anexo` e `equipe` abaixo ainda colidem com compdec.php.
+*/
 Route::model('plano', PmdaPlano::class);
-Route::model('comunidade', PmdaComunidade::class);
 Route::model('anexo', CompdecAnexo::class);
 Route::model('equipe', CompdecEquipe::class);
 Route::model('solicitacao', ComunidadeSolicitacao::class);
