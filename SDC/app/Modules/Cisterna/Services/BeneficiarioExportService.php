@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Cisterna\Services;
 
+use App\Database\QueryBudgetGuard;
 use App\Modules\Cisterna\Enums\ResponsavelPipa;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Support\PerfilCisterna;
@@ -72,6 +73,7 @@ class BeneficiarioExportService
 
     public function __construct(
         private readonly BeneficiarioService $beneficiarios,
+        private readonly QueryBudgetGuard $orcamentoDeQueries,
     ) {}
 
     /**
@@ -80,6 +82,11 @@ class BeneficiarioExportService
     public function streamCsv(PerfilCisterna $perfil, array $filtros = []): StreamedResponse
     {
         $nomeArquivo = 'cisterna-beneficiarios-'.now()->format('Y-m-d_His').'.csv';
+
+        // O lazy() abaixo faz ceil(N/1000) rodadas de 4 queries, o que passa do
+        // warn_at do guard por tamanho de base e nao por N+1. Isentar aqui evita
+        // um aviso falso em toda exportacao.
+        $this->orcamentoDeQueries->isentar();
 
         return response()->streamDownload(function () use ($perfil, $filtros): void {
             $saida = fopen('php://output', 'wb');
