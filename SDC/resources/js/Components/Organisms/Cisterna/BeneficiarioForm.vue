@@ -10,11 +10,11 @@
       tom="info"
     >
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <FormField v-model="form.cpf" label="CPF" maxlength="14" required :error="erros.cpf" hint="Somente digitos ou com mascara" />
+      <FormField v-model="form.cpf" label="CPF" mask="cpf" inputmode="numeric" maxlength="14" required :error="erros.cpf" hint="11 digitos" />
       <FormField v-model="form.nome" label="Nome completo" maxlength="150" required :error="erros.nome" />
-      <FormField v-model="form.telefone" label="Telefone" maxlength="15" :error="erros.telefone" />
+      <FormField v-model="form.telefone" label="Telefone" mask="telefone" inputmode="tel" maxlength="15" :error="erros.telefone" />
       <FormDateField v-model="form.data_nascimento" label="Data de nascimento" required :error="erros.data_nascimento" hint="Beneficiario maior de 18 anos" />
-      <FormField v-model="form.cadastro_unico" label="Cadastro Unico" maxlength="12" :error="erros.cadastro_unico" />
+      <FormField v-model="form.cadastro_unico" label="Cadastro Unico" mask="inteiro" inputmode="numeric" maxlength="12" :error="erros.cadastro_unico" />
       </div>
     </CollapsibleSection>
 
@@ -74,7 +74,7 @@
         Ordenacao, nao calculo: o legado tinha rota de ranqueamento quebrada e
         nenhuma rotina. A coluna e importada e apenas ordenavel.
       -->
-      <FormField v-model="form.ranqueamento_ordem" label="Ordem de ranqueamento" type="number" :error="erros.ranqueamento_ordem" hint="Valor importado, usado apenas para ordenar" />
+      <FormField v-model="form.ranqueamento_ordem" label="Ordem de ranqueamento" mask="inteiro" inputmode="numeric" :error="erros.ranqueamento_ordem" hint="Valor importado, usado apenas para ordenar" />
       </div>
     </CollapsibleSection>
 
@@ -88,9 +88,9 @@
       tom="success"
     >
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <FormField v-model="form.qtd_pessoas" label="Pessoas na residencia" type="number" required :error="erros.qtd_pessoas" />
-      <FormField v-model="form.renda" label="Renda familiar (R$)" inputmode="decimal" required :error="erros.renda" />
-      <FormField v-model="form.renda_per_capita" label="Renda per capita (R$)" inputmode="decimal" :error="erros.renda_per_capita" />
+      <FormField v-model="form.qtd_pessoas" label="Pessoas na residencia" mask="inteiro" inputmode="numeric" maxlength="2" required :error="erros.qtd_pessoas" />
+      <FormField v-model="form.renda" label="Renda familiar (R$)" mask="moeda" inputmode="decimal" required :error="erros.renda" />
+      <FormField v-model="form.renda_per_capita" label="Renda per capita (R$)" mask="moeda" inputmode="decimal" :error="erros.renda_per_capita" />
 
       <div class="space-y-3 sm:col-span-2 lg:col-span-3">
         <ToggleField v-model="form.possui_deficiencia" label="Ha pessoa com deficiencia" />
@@ -151,23 +151,24 @@
       <FormSelect v-model="form.cobertura_telhado" label="Cobertura do telhado" :options="opcoes.coberturas_telhado ?? []" placeholder="Selecione" required :error="erros.cobertura_telhado" />
       <FormField v-if="form.cobertura_telhado === 'outros'" v-model="form.cobertura_outro" label="Qual cobertura" maxlength="150" :error="erros.cobertura_outro" />
 
-      <FormField v-model="form.comprimento_telhado" label="Comprimento do telhado (m)" inputmode="decimal" required :error="erros.comprimento_telhado" />
-      <FormField v-model="form.largura_telhado" label="Largura do telhado (m)" inputmode="decimal" required :error="erros.largura_telhado" />
+      <FormField v-model="form.comprimento_telhado" label="Comprimento do telhado (m)" mask="decimal" inputmode="decimal" required :error="erros.comprimento_telhado" />
+      <FormField v-model="form.largura_telhado" label="Largura do telhado (m)" mask="decimal" inputmode="decimal" required :error="erros.largura_telhado" />
       <FormField
         v-model="areaCalculada"
         label="Area total do telhado (m2)"
+        mask="decimal"
         inputmode="decimal"
         :error="erros.area_telhado"
         hint="Calculada por comprimento x largura; pode ser ajustada"
       />
-      <FormField v-model="form.comprimento_testada" label="Comprimento da testada (m)" inputmode="decimal" required :error="erros.comprimento_testada" />
-      <FormField v-model="form.num_caidas_telhado" label="Numero de caidas" type="number" required :error="erros.num_caidas_telhado" />
+      <FormField v-model="form.comprimento_testada" label="Comprimento da testada (m)" mask="decimal" inputmode="decimal" required :error="erros.comprimento_testada" />
+      <FormField v-model="form.num_caidas_telhado" label="Numero de caidas" mask="inteiro" inputmode="numeric" maxlength="2" required :error="erros.num_caidas_telhado" />
 
       <div class="space-y-3 sm:col-span-2 lg:col-span-3">
         <ToggleField v-model="form.possui_fogao_lenha" label="Possui fogao a lenha" description="Fuligem contamina a agua captada na area do fogao" />
         <div v-if="form.possui_fogao_lenha" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <FormField v-model="form.medida_telhado_area_fogao" label="Telhado na area do fogao (m2)" inputmode="decimal" :error="erros.medida_telhado_area_fogao" />
-          <FormField v-model="form.testada_disp_parte_fogao" label="Testada disponivel nessa parte (m)" inputmode="decimal" :error="erros.testada_disp_parte_fogao" />
+          <FormField v-model="form.medida_telhado_area_fogao" label="Telhado na area do fogao (m2)" mask="decimal" inputmode="decimal" :error="erros.medida_telhado_area_fogao" />
+          <FormField v-model="form.testada_disp_parte_fogao" label="Testada disponivel nessa parte (m)" mask="decimal" inputmode="decimal" :error="erros.testada_disp_parte_fogao" />
         </div>
       </div>
       </div>
@@ -206,7 +207,7 @@
     >
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <FormField v-model="form.agente_nome" label="Agente" maxlength="70" required :error="erros.agente_nome" />
-      <FormField v-model="form.agente_cpf" label="CPF do agente" maxlength="14" required :error="erros.agente_cpf" />
+      <FormField v-model="form.agente_cpf" label="CPF do agente" mask="cpf" inputmode="numeric" maxlength="14" required :error="erros.agente_cpf" />
       <FormField v-model="form.engenheiro_nome" label="Engenheiro" maxlength="150" required :error="erros.engenheiro_nome" />
       <FormField v-model="form.engenheiro_crea" label="CREA" maxlength="20" required :error="erros.engenheiro_crea" />
       </div>

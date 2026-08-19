@@ -5,6 +5,7 @@
       label="Latitude"
       type="text"
       inputmode="decimal"
+      mask="coordenada"
       placeholder="-16.393269"
       required
       :error="error?.latitude"
@@ -17,6 +18,7 @@
       label="Longitude"
       type="text"
       inputmode="decimal"
+      mask="coordenada"
       placeholder="-43.940933"
       required
       :error="error?.longitude"

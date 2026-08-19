@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
+import { useToast } from '@/Composables/useToast';
 
 /**
  * Monta o formulario do beneficiario, em modo criar ou editar.
@@ -16,6 +17,7 @@ import { useForm, router } from '@inertiajs/vue3';
  */
 export function useBeneficiarioForm(beneficiario = null) {
   const form = useForm(camposIniciais(beneficiario));
+  const { show: toast } = useToast();
 
   const comunidades = ref([]);
   const carregandoComunidades = ref(false);
@@ -57,23 +59,47 @@ export function useBeneficiarioForm(beneficiario = null) {
     form[campo] = arquivo;
   }
 
+  /**
+   * Opcoes comuns ao criar e ao editar.
+   *
+   * Sem toast de SUCESSO de proposito: o controller ja redireciona com
+   * `->with('success', ...)` e o FlashNotification do layout desenha isso no
+   * mesmo canto superior direito. Emitir toast aqui empilharia dois avisos
+   * identicos.
+   *
+   * O erro, sim, precisa: numa falha de validacao o Inertia so preenche
+   * `form.errors`, sem flash nenhum. Com `preserveScroll` a pessoa fica parada
+   * no botao, e se o campo invalido estiver numa secao recolhida ela nao ve
+   * marca vermelha nenhuma -- o formulario parece ter ignorado o clique, que foi
+   * exatamente a queixa original.
+   */
+  const opcoesDeEnvio = {
+    forceFormData: true,
+    preserveScroll: true,
+    onError: (erros) => {
+      const quantidade = Object.keys(erros ?? {}).length;
+      const primeiro = Object.values(erros ?? {})[0];
+
+      toast(
+        quantidade > 1
+          ? `${quantidade} campos precisam de correcao. ${primeiro}`
+          : (primeiro ?? 'Nao foi possivel salvar o cadastro.'),
+        'error',
+      );
+    },
+  };
+
   function salvar() {
     // Update com arquivo exige POST + _method, porque PHP nao popula $_FILES em
     // PUT.
     if (beneficiario?.id) {
       form.transform((dados) => ({ ...dados, _method: 'put' }))
-        .post(route('cisternas.beneficiarios.update', beneficiario.id), {
-          forceFormData: true,
-          preserveScroll: true,
-        });
+        .post(route('cisternas.beneficiarios.update', beneficiario.id), opcoesDeEnvio);
 
       return;
     }
 
-    form.post(route('cisternas.beneficiarios.store'), {
-      forceFormData: true,
-      preserveScroll: true,
-    });
+    form.post(route('cisternas.beneficiarios.store'), opcoesDeEnvio);
   }
 
   function cancelar() {
