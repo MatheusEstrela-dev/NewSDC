@@ -92,8 +92,12 @@ class BeneficiarioController extends Controller
 
         $this->anexarArquivos($request, $beneficiario);
 
+        // Volta para a listagem, e nao para o detalhe: quem cadastra costuma
+        // cadastrar em serie, e a listagem e de onde o proximo "Novo cadastro"
+        // sai. O nome vai na mensagem porque, no meio de 8.096 linhas, o flash e
+        // a unica confirmacao de QUAL registro entrou.
         return redirect()
-            ->route('cisternas.beneficiarios.show', $beneficiario->id)
+            ->route('cisternas.beneficiarios.index')
             ->with('success', "Beneficiario {$beneficiario->nome} cadastrado com sucesso.");
     }
 
@@ -134,7 +138,7 @@ class BeneficiarioController extends Controller
         $this->anexarArquivos($request, $atualizado);
 
         return redirect()
-            ->route('cisternas.beneficiarios.show', $atualizado->id)
+            ->route('cisternas.beneficiarios.index')
             ->with('success', "Beneficiario {$atualizado->nome} atualizado.");
     }
 
@@ -197,6 +201,10 @@ class BeneficiarioController extends Controller
             'municipio_id', 'comunidade_id', 'situacao_analise', 'situacao_obra',
             'ordem_servico_id', 'lote_id', 'cpf', 'search', 'numero_instalacao',
             'etapa_concluida', 'etapa_pendente',
+            // Ordenacao vinda do cabecalho da tabela. Valor livre aqui e
+            // whitelistado em BeneficiarioService::ORDENACAO_PERMITIDA, que e
+            // quem monta o ORDER BY.
+            'sort', 'direction',
             // Faixa de cadastro. E o que o modal de exportacao do projeto envia
             // quando o usuario escolhe "Periodo Especifico": sem ler estas duas
             // chaves, o modal ofereceria um recorte que o export ignora.
