@@ -28,10 +28,17 @@ use Illuminate\Support\Facades\Route;
 | Nao fazia falta: destroy() e o store() de representantes type-hintam
 | PmdaComunidade, e o binding implicito ja resolve.
 |
+| `plano` saiu pelo mesmo motivo: compdec.php amarrava o mesmo nome a
+| CompdecPlanoContingencia, e como pmda.php e carregado depois em web.php o
+| binder daqui vencia e as 6 rotas {plano} do Compdec devolviam 404. Os 26
+| handlers de plano daqui type-hintam PmdaPlano, entao o implicito resolve.
+|
+| `anexo` e `equipe` ficam: compdec.php amarra os MESMOS nomes as MESMAS classes,
+| entao a duplicidade e inofensiva -- quem vencer resolve igual.
+|
 | Ao acrescentar Route::model() aqui, confira se o nome do parametro e exclusivo
-| deste modulo. `plano`, `anexo` e `equipe` abaixo ainda colidem com compdec.php.
+| deste modulo.
 */
-Route::model('plano', PmdaPlano::class);
 Route::model('anexo', CompdecAnexo::class);
 Route::model('equipe', CompdecEquipe::class);
 Route::model('solicitacao', ComunidadeSolicitacao::class);
