@@ -270,7 +270,7 @@
 
         <NavItem
           v-if="canSeeCisterna && _routes.hasCisterna"
-          :href="route('cisternas.index')"
+          :href="route('cisternas.beneficiarios.index')"
           :active="isRouteActive('cisternas.*')"
           icon="cisterna"
           :collapsed="isCollapsed"
@@ -749,7 +749,7 @@ const _routes = {
   hasTdapVistorias: route().has('tdap.vistorias.index'),
   hasTdapHistoricos: route().has('tdap.historicos.index'),
   hasTdapProcessos: route().has('tdap.processos.swimlanes'),
-  hasCisterna: route().has('cisternas.index'),
+  hasCisterna: route().has('cisternas.beneficiarios.index'),
   hasInventario: route().has('inventario.index'),
   hasEstoque: route().has('estoque.index'),
   hasEstoqueProdutos: route().has('estoque.produtos.index'),
@@ -915,7 +915,7 @@ const canSeeTdap = computed(() => {
 });
 
 const canSeeCisterna = computed(() => {
-  return hasPermission(['cisternas.view']);
+  return hasPermission(['cisternas.beneficiarios.view']);
 });
 
 const canSeeInventario = computed(() => {

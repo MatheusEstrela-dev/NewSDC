@@ -26,6 +26,7 @@
       :required="required"
       :error="!!error"
       :maxlength="maxlength"
+      :inputmode="inputmode"
       :size="size"
       @update:model-value="$emit('update:modelValue', $event)"
       @blur="$emit('blur', $event)"
@@ -78,6 +79,12 @@ const props = defineProps({
   error: {
     type: String,
     default: '',
+  },
+  // Repassada ao input. Sem esta prop, `inputmode` ficava na div raiz do
+  // FormField e o teclado do celular nao mudava -- no-op silencioso.
+  inputmode: {
+    type: String,
+    default: undefined,
   },
   maxlength: {
     type: [String, Number],

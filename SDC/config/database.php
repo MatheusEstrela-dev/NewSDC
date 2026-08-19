@@ -83,6 +83,25 @@ return [
             ]) : [],
         ],
 
+        // Somente leitura, consumida por cisterna:extrair-legado. Nao ha
+        // migration nem model apontando para ela.
+        'legado_cisterna_mysql' => [
+            'driver' => 'mysql',
+            'host' => env('LEGADO_CISTERNA_DB_HOST', '127.0.0.1'),
+            'port' => env('LEGADO_CISTERNA_DB_PORT', '3306'),
+            'database' => env('LEGADO_CISTERNA_DB_DATABASE', 'dbsdc'),
+            'username' => env('LEGADO_CISTERNA_DB_USERNAME', 'root'),
+            'password' => env('LEGADO_CISTERNA_DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('LEGADO_CISTERNA_DB_SSL_CA'),
+            ]) : [],
+        ],
+
         // Conexão para carga/queries otimizadas (leitura intensiva, ETL, BI)
         // Aponta para réplica de leitura ou banco dedicado a carga de dados
         'carga' => [
