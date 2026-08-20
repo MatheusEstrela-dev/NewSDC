@@ -66,6 +66,11 @@ use App\Http\Controllers\Controller;
  * )
  *
  * @OA\Tag(
+ *     name="Ajuda Humanitaria",
+ *     description="Fornecimento de dados de Ajuda Humanitaria — saldo de estoque, liberacoes e consolidado de pedidos. Paridade com os endpoints publicos do sistema legado"
+ * )
+ *
+ * @OA\Tag(
  *     name="RAT",
  *     description="Relatório de Atividade Técnica — listagem paginada, detalhe e recebimento externo via BI"
  * )

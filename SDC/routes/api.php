@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\AjudaHumanitaria\EstoqueApiController as AhEstoqueApiController;
 use App\Http\Controllers\Api\V1\Pae\EmpreendimentoController;
 use App\Http\Controllers\Api\V1\Pae\NotificacaoController;
 use App\Http\Controllers\Api\V1\Rat\HistoricoController as RatHistoricoApiController;
@@ -145,6 +146,14 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
         Route::post('notificacoes/{paeNotificacao}/devolutiva', [NotificacaoController::class, 'devolutiva'])
             ->name('notificacoes.devolutiva')
             ->middleware('can:pae.protocolos.edit');
+    });
+
+    // Modulo Ajuda Humanitaria: fornecimento de dados, somente leitura.
+    // Paridade de contrato com os endpoints publicos do legado, agora sob token.
+    Route::prefix('ajuda-humanitaria')->name('api.v1.ajuda-humanitaria.')->group(function () {
+        Route::get('estoque/saldo-cesta', [AhEstoqueApiController::class, 'saldoCesta'])
+            ->name('estoque.saldo-cesta')
+            ->middleware(['can:humanitaria.saldo.view', 'throttle:60,1']);
     });
 
     // Módulo RAT — Protocolos (stub removido — rotas reais abaixo com auth dual)
