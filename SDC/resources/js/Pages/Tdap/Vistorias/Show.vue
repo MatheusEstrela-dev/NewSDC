@@ -26,7 +26,8 @@
             <div><dt class="text-slate-500">Data</dt><dd>{{ fmtDate(v.data) }}</dd></div>
             <div><dt class="text-slate-500">Ficha</dt><dd class="font-mono">{{ v.ficha || '—' }}</dd></div>
             <div><dt class="text-slate-500">Edital</dt><dd>{{ v.edital || '—' }}</dd></div>
-            <div><dt class="text-slate-500">Lote</dt><dd>{{ v.lote || '—' }}</dd></div>
+            <!-- Lacre do tanque no lugar do antigo "Lote" (que repetia o lote da ata). -->
+            <div><dt class="text-slate-500">Número do lacre</dt><dd class="font-mono">{{ v.lacre || '—' }}</dd></div>
           </dl>
         </div>
 
@@ -127,19 +128,25 @@ const props = defineProps({
   canDelete: { type: Boolean, default: false },
 });
 
-const v = computed(() => props.vistoria.data ?? props.vistoria).value;
+// `computed(...).value` congelava o payload no setup: apos um reload parcial do
+// Inertia a tela continuava mostrando a versao antiga da vistoria.
+const v = computed(() => props.vistoria.data ?? props.vistoria);
 
 function countOk(itens) {
-  return itens.filter(i => !!v[i]).length;
+  return itens.filter(i => !!v.value[i]).length;
 }
 
 function excluir() {
-  if (!confirm(`Excluir vistoria #${v.id}?`)) return;
-  router.delete(route('tdap.vistorias.destroy', v.id));
+  if (!confirm(`Excluir vistoria #${v.value.id}?`)) return;
+  router.delete(route('tdap.vistorias.destroy', v.value.id));
 }
 
+// Datas vem como 'YYYY-MM-DD'. `new Date('2026-05-01')` e meia-noite UTC e, no
+// fuso do Brasil, exibia o dia anterior.
 function fmtDate(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('pt-BR');
+  const [ano, mes, dia] = String(d).slice(0, 10).split('-');
+
+  return ano && mes && dia ? `${dia}/${mes}/${ano}` : '—';
 }
 </script>

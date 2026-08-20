@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property float           $capacidade
  * @property ParecerVistoria $parecer
  * @property ?string         $ficha
+ * @property ?string         $lacre
  * @property ?int            $user_id
  * @property ?string         $observacoes
  */
@@ -121,7 +122,10 @@ class Vistoria extends Model
             $q->whereRaw('UPPER(nome) LIKE ?', [$like])
               ->orWhereRaw('UPPER(edital) LIKE ?', [$like])
               ->orWhereRaw('UPPER(lote) LIKE ?', [$like])
-              ->orWhereRaw('UPPER(ficha) LIKE ?', [$like]);
+              ->orWhereRaw('UPPER(ficha) LIKE ?', [$like])
+              // O numero do lacre e outro identificador que o fiscal tem em
+              // maos na conferencia do caminhao.
+              ->orWhereRaw('UPPER(lacre) LIKE ?', [$like]);
         });
     }
 }

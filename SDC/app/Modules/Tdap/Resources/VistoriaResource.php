@@ -33,6 +33,7 @@ class VistoriaResource extends JsonResource
             'parecer_label'   => $this->parecer?->label(),
             'esta_vigente'    => (bool) $this->esta_vigente,
             'ficha'           => $this->ficha,
+            'lacre'           => $this->lacre,
             'observacoes'     => $this->observacoes,
             'caminhao'        => $this->whenLoaded('caminhao', fn () => [
                 'id'             => $this->caminhao->id,

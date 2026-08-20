@@ -225,7 +225,11 @@ const semAcento = (v) => (v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, 
 const municipiosFiltrados = computed(() => {
   const termo = semAcento(buscaMunicipio.value).trim();
   if (!termo) return props.municipios;
-  return props.municipios.filter(m => semAcento(m.nome).includes(termo));
+
+  // Nome ou UF: o catalogo tem municipios homonimos em estados diferentes.
+  return props.municipios.filter(
+    m => semAcento(m.nome).includes(termo) || semAcento(m.uf) === termo,
+  );
 });
 
 const municipiosSelecionados = computed(() => {

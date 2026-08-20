@@ -53,7 +53,7 @@
             <thead class="bg-slate-50 dark:bg-slate-800/40">
               <tr>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Lote</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Município</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Municípios</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Prestador</th>
                 <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">m³</th>
                 <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">R$/m³</th>
@@ -64,10 +64,21 @@
                 <td class="px-4 py-3 font-mono">
                   <Link :href="route('tdap.lotes.show', l.id)" class="text-blue-600 hover:text-blue-800">{{ l.numero }}</Link>
                 </td>
-                <td class="px-4 py-3">
-                  <span v-if="l.municipios && l.municipios.length">
-                    {{ l.municipios.map(m => m.nome).join(', ') }}
-                  </span>
+                <!--
+                  O lote atende varios municipios: o join de todos os nomes
+                  esticava a celula (ha lote com mais de 30). Mostra os
+                  primeiros, o resto no contador e a lista inteira no title.
+                -->
+                <td class="px-4 py-3 align-top">
+                  <div v-if="municipiosDo(l).length" class="max-w-xs" :title="listaMunicipios(l)">
+                    <span class="text-slate-700 dark:text-slate-300">
+                      {{ municipiosDo(l).slice(0, 3).map(m => m.nome).join(', ') }}
+                    </span>
+                    <span v-if="municipiosDo(l).length > 3" class="text-slate-400">
+                      +{{ municipiosDo(l).length - 3 }}
+                    </span>
+                    <span class="block text-xs text-slate-400">{{ municipiosDo(l).length }} município(s)</span>
+                  </div>
                   <span v-else class="text-slate-400">—</span>
                 </td>
                 <td class="px-4 py-3">{{ l.prestador_nome }}</td>
@@ -152,9 +163,24 @@ function excluir() {
   router.delete(route('tdap.atas.destroy', a.id));
 }
 
+// Municipios do lote (relacao N:N); o fallback evita quebrar a tabela quando o
+// payload chega sem a relacao carregada.
+function municipiosDo(lote) {
+  return Array.isArray(lote?.municipios) ? lote.municipios : [];
+}
+
+function listaMunicipios(lote) {
+  return municipiosDo(lote)
+    .map(m => (m.uf ? `${m.nome}/${m.uf}` : m.nome))
+    .join(', ');
+}
+
+// Datas vem como 'YYYY-MM-DD'. `new Date('2026-05-01')` e meia-noite UTC e, no
+// fuso do Brasil, exibia o dia anterior.
 function formatDate(d) {
   if (!d) return '—';
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('pt-BR');
+  const [ano, mes, dia] = String(d).slice(0, 10).split('-');
+
+  return ano && mes && dia ? `${dia}/${mes}/${ano}` : '—';
 }
 </script>

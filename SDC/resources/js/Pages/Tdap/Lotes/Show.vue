@@ -3,7 +3,7 @@
   <div class="p-6 space-y-6">
     <TdapPageHeader
       :title="`Lote ${l.numero}`"
-      :description="l.nome || (l.municipios ?? []).map(m => m.nome).join(', ')"
+      :description="descricao"
       :icon="MapIcon"
     >
       <template #actions>
@@ -116,20 +116,38 @@ const props = defineProps({
   canDelete: { type: Boolean, default: false },
 });
 
-const l = computed(() => props.lote.data ?? props.lote).value;
+// `computed(...).value` congelava o payload no setup: depois de um reload
+// parcial do Inertia a tela seguia mostrando a versao antiga do lote.
+const l = computed(() => props.lote.data ?? props.lote);
 
-const municipios = l.municipios ?? [];
+const municipios = computed(() => (Array.isArray(l.value.municipios) ? l.value.municipios : []));
 
-const temCronograma = (l.cronogramas_count ?? 0) > 0;
+// Cabecalho: o nome do lote quando existe, senao um resumo dos municipios. A
+// lista inteira (ha lote com mais de 30) estourava a linha do header.
+const descricao = computed(() => {
+  if (l.value.nome) return l.value.nome;
+
+  const nomes = municipios.value.map(m => m.nome);
+
+  if (nomes.length === 0) return 'Nenhum município vinculado';
+  if (nomes.length <= 3) return nomes.join(', ');
+
+  return `${nomes.slice(0, 3).join(', ')} e mais ${nomes.length - 3}`;
+});
+
+const temCronograma = computed(() => (l.value.cronogramas_count ?? 0) > 0);
 
 function excluir() {
-  if (!confirm(`Excluir o lote ${l.numero}?`)) return;
-  router.delete(route('tdap.lotes.destroy', l.id));
+  if (!confirm(`Excluir o lote ${l.value.numero}?`)) return;
+  router.delete(route('tdap.lotes.destroy', l.value.id));
 }
 
+// Datas vem como 'YYYY-MM-DD'. `new Date('2026-05-01')` e meia-noite UTC e, no
+// fuso do Brasil, exibia o dia anterior.
 function formatDate(d) {
   if (!d) return '—';
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('pt-BR');
+  const [ano, mes, dia] = String(d).slice(0, 10).split('-');
+
+  return ano && mes && dia ? `${dia}/${mes}/${ano}` : '—';
 }
 </script>

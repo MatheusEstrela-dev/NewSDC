@@ -34,7 +34,9 @@ const props = defineProps({
   prestadores: { type: Array, default: () => [] },
 });
 
-const l = props.lote.data;
+// O resource vem embrulhado em `data` pelo Inertia; o fallback mantem a tela de
+// pe caso o payload chegue plano (mesmo padrao do Show).
+const l = props.lote.data ?? props.lote;
 
 const form = useForm({
   ata_id: l.ata_id,

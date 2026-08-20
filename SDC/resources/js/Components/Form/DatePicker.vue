@@ -166,6 +166,24 @@ function calculatePosition() {
 
 const now = new Date();
 
+/**
+ * Data no fuso LOCAL como 'YYYY-MM-DD'.
+ *
+ * `toISOString()` converte para UTC: no horario de Brasilia, depois das 21h, o
+ * botao "Hoje" gravava a data do dia seguinte e o calendario circulava o dia
+ * errado. O calendario ja monta os dias em horario local (ver isoFor), entao a
+ * unica fonte divergente era o UTC.
+ */
+function isoLocal(data) {
+  return [
+    data.getFullYear(),
+    String(data.getMonth() + 1).padStart(2, '0'),
+    String(data.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+const hojeIso = isoLocal(now);
+
 function parseSelectedDate() {
   if (!props.modelValue) return { m: now.getMonth(), y: now.getFullYear() };
   const dateOnly = props.modelValue.split('T')[0];
@@ -280,7 +298,7 @@ function isoFor(day) {
 
 function getDayClass(day) {
   const iso      = isoFor(day);
-  const todayIso = now.toISOString().split('T')[0];
+  const todayIso = hojeIso;
   const selIso   = props.modelValue ? props.modelValue.split('T')[0] : '';
   if (selIso === iso)
     return 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30';
@@ -304,14 +322,14 @@ function selectDay(day) {
 function onTimeInput(e) {
   const time = e.target.value;
   if (!time) return;
-  const dateIso = (props.modelValue ? props.modelValue.split('T')[0] : '') || now.toISOString().split('T')[0];
+  const dateIso = (props.modelValue ? props.modelValue.split('T')[0] : '') || hojeIso;
   emit('update:modelValue', `${dateIso}T${time}`);
 }
 
 function clearDate() { emit('update:modelValue', ''); open.value = false; }
 
 function selectToday() {
-  const t = now.toISOString().split('T')[0];
+  const t = hojeIso;
   viewMonth.value = now.getMonth();
   viewYear.value  = now.getFullYear();
   if (isDateTime.value) {

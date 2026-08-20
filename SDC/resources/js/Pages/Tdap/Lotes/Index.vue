@@ -75,7 +75,7 @@
           <tr>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Lote</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ata</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Município</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Municípios</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Prestador</th>
             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Volume (m³)</th>
             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Valor total (R$)</th>
@@ -92,18 +92,31 @@
             </td>
             <td class="px-4 py-3 text-sm font-mono text-slate-700 dark:text-slate-300">{{ l.ata_numero }}</td>
             <!--
-              Um lote atende varios municipios: a coluna lista todos, em chips,
-              em vez do municipio_id unico (que na base legada era 0 e deixava
-              a coluna vazia).
+              Um lote atende varios municipios (relacao N:N). Listar todos em
+              chips estourava a linha nos lotes grandes (ha lote com mais de 30
+              municipios): a celula mostra os primeiros, um contador do resto e
+              a lista inteira no title/no detalhe do lote.
             -->
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 align-top">
-              <div v-if="l.municipios && l.municipios.length" class="flex flex-wrap gap-1 max-w-xs">
-                <span
-                  v-for="m in l.municipios"
-                  :key="m.id"
-                  class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300"
-                >
-                  {{ m.nome }}<span v-if="m.uf" class="text-slate-400">/{{ m.uf }}</span>
+              <div v-if="municipiosDo(l).length" class="max-w-xs" :title="listaMunicipios(l)">
+                <div class="flex flex-wrap items-center gap-1">
+                  <span
+                    v-for="m in municipiosDo(l).slice(0, MUNICIPIOS_VISIVEIS)"
+                    :key="m.id"
+                    class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300"
+                  >
+                    {{ m.nome }}<span v-if="m.uf" class="text-slate-400">/{{ m.uf }}</span>
+                  </span>
+                  <Link
+                    v-if="municipiosDo(l).length > MUNICIPIOS_VISIVEIS"
+                    :href="route('tdap.lotes.show', l.id)"
+                    class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/30 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100"
+                  >
+                    +{{ municipiosDo(l).length - MUNICIPIOS_VISIVEIS }}
+                  </Link>
+                </div>
+                <span class="mt-1 block text-xs text-slate-400">
+                  {{ municipiosDo(l).length }} município(s)
                 </span>
               </div>
               <span v-else class="text-slate-400">—</span>
@@ -229,6 +242,22 @@ const prestadorOptions = computed(() => [
   { value: '', label: 'Todos os prestadores' },
   ...props.prestadores.map(p => ({ value: p.id, label: p.nome })),
 ]);
+// Quantos chips de municipio a celula mostra antes de resumir no contador.
+const MUNICIPIOS_VISIVEIS = 3;
+
+// A lista N:N so vem do backend quando a relacao esta carregada; o fallback
+// evita quebrar a grade se o payload chegar sem ela.
+function municipiosDo(lote) {
+  return Array.isArray(lote?.municipios) ? lote.municipios : [];
+}
+
+// Lista completa no tooltip da celula — os chips resumidos escondem o resto.
+function listaMunicipios(lote) {
+  return municipiosDo(lote)
+    .map(m => (m.uf ? `${m.nome}/${m.uf}` : m.nome))
+    .join(', ');
+}
+
 const ativoOptions = [
   { value: '', label: 'Todos' },
   { value: '1', label: 'Ativos' },
