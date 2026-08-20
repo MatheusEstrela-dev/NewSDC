@@ -23,6 +23,11 @@
  * comprimir, e abaixo disso o comportamento continua sendo o de 4 colunas. Assim
  * a fileira unica volta no desktop sem reintroduzir os cards cortados em telas
  * menores, que foi o motivo do limite original.
+ *
+ * Recolher detalhe NAO e responsabilidade deste componente: o retrator vive
+ * dentro do card (StatCardWithBreakdown), porque o que se recolhe e o detalhe de
+ * cada card, nao a fileira inteira. Um retrator aqui esconderia tambem titulo e
+ * numero, que sao justamente o que precisa ficar visivel.
  */
 import { computed } from 'vue';
 
