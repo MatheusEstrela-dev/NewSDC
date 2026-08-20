@@ -7,8 +7,10 @@ use App\Http\Controllers\Api\RatAuditController;
 use App\Http\Controllers\Api\RatNovoController;
 use App\Http\Controllers\Api\V1\AjudaHumanitaria\EstoqueApiController as AhEstoqueApiController;
 use App\Http\Controllers\Api\V1\AjudaHumanitaria\LiberacaoApiController as AhLiberacaoApiController;
+use App\Http\Controllers\Api\V1\AjudaHumanitaria\PedidoConsolidadoController as AhPedidoConsolidadoController;
 use App\Http\Controllers\Api\V1\BI\EntradaController;
 use App\Http\Controllers\Api\V1\Cisterna\BeneficiarioApiController as CisternaBeneficiarioApiController;
+use App\Http\Controllers\Api\V1\Cisterna\VistoriaApiController as CisternaVistoriaApiController;
 use App\Http\Controllers\Api\V1\Decretacoes\DecretacoesApiController;
 use App\Http\Controllers\Api\V1\Integracao\IntegracaoController;
 use App\Http\Controllers\Api\V1\Integration\DynamicIntegrationController;
@@ -165,6 +167,10 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
         Route::get('estoque/saldo-cesta', [AhEstoqueApiController::class, 'saldoCesta'])
             ->name('estoque.saldo-cesta')
             ->middleware(['can:humanitaria.saldo.view', 'throttle:60,1']);
+
+        Route::get('pedidos/consolidado', AhPedidoConsolidadoController::class)
+            ->name('pedidos.consolidado')
+            ->middleware(['can:humanitaria.pedidos.view', 'throttle:60,1']);
     });
 
     // Modulo Cisterna: fornecimento de dados, somente leitura.
@@ -190,6 +196,23 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
             Route::get('/{beneficiario}', [CisternaBeneficiarioApiController::class, 'show'])
                 ->name('show')
                 ->whereNumber('beneficiario');
+        });
+
+        // Vistoria e recurso do Cisterna, nao modulo proprio: a cadeia
+        // fornecedor -> COMPDEC -> CEDEC pertence ao beneficiario.
+        //
+        // O parametro se chama {cisternaVistoria} e nao {vistoria} de proposito:
+        // routes/modules/tdap.php registra Route::model() explicito para
+        // {vistoria}, e binder explicito vence o implicito no SubstituteBindings
+        // -- com o nome curto o Laravel resolveria o model do TDAP aqui.
+        Route::prefix('vistorias')->name('vistorias.')->group(function (): void {
+            Route::get('/', [CisternaVistoriaApiController::class, 'index'])
+                ->name('index')
+                ->middleware('can:cisternas.vistorias.view');
+
+            Route::get('/{cisternaVistoria}', [CisternaVistoriaApiController::class, 'show'])
+                ->name('show')
+                ->whereNumber('cisternaVistoria');
         });
     });
 
