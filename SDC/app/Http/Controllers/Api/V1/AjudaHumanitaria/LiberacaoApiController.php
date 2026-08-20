@@ -63,7 +63,9 @@ final class LiberacaoApiController extends Controller
      *         response=200,
      *         description="Liberacoes agrupadas por ano, com totais por situacao",
      *         @OA\JsonContent(
-     *             @OA\Property(property="data", type="object", description="Chave = ano", additionalProperties=@OA\Schema(type="array", @OA\Items(ref="#/components/schemas/AhLiberacaoItem"))),
+     *             @OA\Property(property="data", type="object", description="Chave = ano",
+     *                 @OA\AdditionalProperties(type="array", @OA\Items(ref="#/components/schemas/AhLiberacaoItem"))
+     *             ),
      *             @OA\Property(property="meta", type="object",
      *                 @OA\Property(property="totais", type="object",
      *                     @OA\Property(property="total_registros", type="integer", example=3582),
