@@ -1,8 +1,8 @@
 <template>
-  <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
+  <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/60">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/50">
-        <thead class="bg-slate-50 dark:bg-slate-800/70">
+        <thead class="bg-slate-50 dark:bg-slate-900/50">
           <tr>
             <th v-if="selecionavel" scope="col" class="w-10 px-3 py-2">
               <input
@@ -28,7 +28,7 @@
             >
               {{ c.titulo }}
             </SortableHeader>
-            <SortableHeader>Opcoes</SortableHeader>
+            <SortableHeader classe="table-actions-head w-44 min-w-44 text-right">Opcoes</SortableHeader>
           </tr>
         </thead>
 
@@ -36,7 +36,7 @@
           <tr
             v-for="b in beneficiarios"
             :key="b.id"
-            class="hover:bg-slate-50 dark:hover:bg-slate-800/40"
+            class="table-row-solid transition-colors"
           >
             <td v-if="selecionavel" class="px-3 py-2">
               <input
@@ -79,22 +79,23 @@
             </td>
             <td :class="TD_MONO">{{ b.ranqueamento_ordem ?? '—' }}</td>
 
-            <td class="whitespace-nowrap px-3 py-2 text-right">
-              <TableActions
-                module="cisternas"
-                resource="beneficiarios"
-                :show-view="true"
-                :show-history="true"
-                :show-edit="permissoes.editar"
-                :show-delete="permissoes.excluir"
-                :show-print="cadeiaCompleta(b)"
-                :show-attachments="false"
-                @view="ir('cisternas.beneficiarios.show', b.id)"
-                @history="$emit('historico', b)"
-                @print="$emit('imprimir', b)"
-                @edit="ir('cisternas.beneficiarios.edit', b.id)"
-                @delete="$emit('excluir', b)"
-              />
+            <!-- Coluna fixa no canto direito: com 11 colunas a tabela passa a
+                 area util entre ~768px e ~1300px e as acoes saiam da tela. Depende
+                 de .table-row-solid na <tr> para o fundo opaco. -->
+            <td class="table-actions-cell w-44 min-w-44 whitespace-nowrap px-3 py-2 text-right">
+              <div class="flex items-center justify-end">
+                <ActionButton
+                  module="cisternas"
+                  resource="beneficiarios"
+                  :actions="[
+                    { action: 'view',    handler: () => ir('cisternas.beneficiarios.show', b.id) },
+                    { action: 'print',   handler: () => emit('imprimir', b), allowed: cadeiaCompleta(b) },
+                    { action: 'edit',    handler: () => ir('cisternas.beneficiarios.edit', b.id), allowed: permissoes.editar },
+                    { action: 'history', handler: () => emit('historico', b), label: 'Serie Historica' },
+                    { action: 'delete',  handler: () => emit('excluir', b), allowed: permissoes.excluir },
+                  ]"
+                />
+              </div>
             </td>
           </tr>
 
@@ -115,7 +116,7 @@
 <script setup>
 import { computed } from 'vue';
 import { router } from '@inertiajs/vue3';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 import SortableHeader from '@/Components/Molecules/Table/SortableHeader.vue';
 import SituacaoAnaliseBadge from '@/Components/Atoms/Cisterna/SituacaoAnaliseBadge.vue';
 import SituacaoObraBadge from '@/Components/Atoms/Cisterna/SituacaoObraBadge.vue';

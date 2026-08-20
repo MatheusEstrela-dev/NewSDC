@@ -22,22 +22,22 @@
         </template>
       </PageHeader>
 
-      <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
+      <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/60">
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/50">
-            <thead class="bg-slate-50 dark:bg-slate-800/70">
+            <thead class="bg-slate-50 dark:bg-slate-900/50">
               <tr>
                 <th :class="TH">Sobre</th>
                 <th :class="TH">Apontamento</th>
                 <th :class="TH">Emitida por</th>
                 <th :class="TH">Situacao</th>
                 <th :class="TH">Anexos</th>
-                <th :class="TH">Opcoes</th>
+                <th :class="[TH, 'table-actions-head w-36 min-w-36 text-right']">Opcoes</th>
               </tr>
             </thead>
 
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
-              <tr v-for="n in lista" :key="n.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+              <tr v-for="n in lista" :key="n.id" class="table-row-solid transition-colors">
                 <td :class="TD">
                   <span :class="PILULA_TIPO">{{ rotuloTipo(n.notificavel?.tipo) }}</span>
                   <span class="ml-1 font-mono text-xs text-slate-400">#{{ n.notificavel?.id }}</span>
@@ -67,10 +67,13 @@
                   </a>
                   <span v-if="(n.documentos ?? []).length === 0" class="text-slate-400">—</span>
                 </td>
-                <td class="whitespace-nowrap px-3 py-2 text-right">
+                <!-- Coluna fixa no canto direito: em tela estreita a tabela rola
+                     na horizontal e as acoes precisam continuar alcancaveis. Depende
+                     de .table-row-solid na <tr> para o fundo opaco. -->
+                <td class="table-actions-cell w-36 min-w-36 whitespace-nowrap px-3 py-2 text-right">
                   <div class="flex items-center justify-end gap-1">
                     <!--
-                      Botao proprio, e nao a acao `check` do TableActions: aquela
+                      Botao proprio, e nao a acao `check` do ActionButton: aquela
                       consulta o slug `cisternas.notificacoes.validar`, que NAO
                       existe no config/permissions.php -- o icone nunca renderizava
                       e responder ficava inalcancavel. O backend autoriza o
@@ -86,13 +89,13 @@
                       <CheckCircleIcon class="h-4 w-4" />
                     </button>
 
-                    <TableActions
+                    <ActionButton
                       module="cisternas"
                       resource="notificacoes"
-                      :show-edit="true"
-                      :show-delete="true"
-                      @edit="abrirEdicao(n)"
-                      @delete="excluir(n, 'esta notificacao')"
+                      :actions="[
+                        { action: 'edit',   handler: () => abrirEdicao(n) },
+                        { action: 'delete', handler: () => excluir(n, 'esta notificacao') },
+                      ]"
                     />
                   </div>
                 </td>
@@ -176,7 +179,6 @@ import { BellAlertIcon, CheckCircleIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
