@@ -67,6 +67,8 @@ Route::middleware(['auth'])->prefix('cisternas')->name('cisternas.')->group(func
             ->name('historico')->whereNumber('beneficiario');
         Route::get('/{beneficiario}/impressao', [BeneficiarioController::class, 'impressao'])
             ->name('impressao')->whereNumber('beneficiario');
+        Route::get('/{beneficiario}/qrcode', [QrCodeController::class, 'dadosDoBeneficiario'])
+            ->name('qrcode')->whereNumber('beneficiario');
         Route::get('/{beneficiario}', [BeneficiarioController::class, 'show'])
             ->name('show')->whereNumber('beneficiario');
         Route::get('/{beneficiario}/editar', [BeneficiarioController::class, 'edit'])

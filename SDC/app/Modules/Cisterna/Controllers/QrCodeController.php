@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Cisterna\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Models\CisternaVistoria;
-use App\Modules\Cisterna\Resources\BeneficiarioResource;
 use App\Modules\Cisterna\Resources\FichaPublicaResource;
 use App\Modules\Cisterna\Services\QrCodeService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -44,6 +45,42 @@ class QrCodeController extends Controller
             // Inertia embute as props no HTML. Ver FichaPublicaResource.
             'beneficiario' => FichaPublicaResource::make($vistoria->beneficiario)->resolve(),
             'instalada_em' => $vistoria->data_relatorio?->toDateString(),
+        ]);
+    }
+
+    /**
+     * Dados do QR de um beneficiario, para o modal da listagem.
+     *
+     * O QR pertence a uma VISTORIA, e nao ao cadastro: o que ele codifica e o
+     * numero de instalacao, atribuido quando a etapa do fornecedor abre. Um
+     * beneficiario sem vistoria numerada nao tem adesivo para colar, e o modal
+     * precisa dizer isso em vez de mostrar quadrado vazio.
+     *
+     * Devolve SVG, e nao PNG: escala sem borrar na tela e na impressao, e o
+     * download continua em PNG pela rota que ja existia.
+     */
+    public function dadosDoBeneficiario(CisternaBeneficiario $beneficiario): JsonResponse
+    {
+        $this->authorize('view', $beneficiario);
+
+        $vistoria = $beneficiario->vistorias()
+            ->whereNotNull('numero_instalacao')
+            ->orderBy('numero_instalacao')
+            ->first();
+
+        if ($vistoria === null) {
+            return response()->json([
+                'message' => 'Este cadastro ainda nao tem numero de instalacao. '
+                    .'O numero e atribuido ao abrir o relatorio do fornecedor.',
+            ], SymfonyResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return response()->json([
+            'numero_instalacao' => $vistoria->numero_instalacao,
+            'beneficiario' => $beneficiario->nome,
+            'url' => $this->service->urlDaFicha((int) $vistoria->numero_instalacao),
+            'svg' => $this->service->svgDaVistoria($vistoria),
+            'download' => route('cisternas.qrcode.pdf-individual', $vistoria->id),
         ]);
     }
 

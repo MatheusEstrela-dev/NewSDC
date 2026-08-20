@@ -56,6 +56,8 @@
         @excluir="confirmarExclusao"
         @historico="abrirHistorico"
         @imprimir="abrirImpressao"
+        @pdf="abrirImpressao"
+        @qrcode="abrirQrCode"
         @ordenar="ordenar"
       />
 
@@ -85,6 +87,13 @@
         :show="impressaoAberta"
         :beneficiario="beneficiarioDaImpressao"
         @close="impressaoAberta = false"
+      />
+
+      <!-- Adesivo do QR Code, no molde do legado: ver, baixar e imprimir. -->
+      <BeneficiarioQrCodeModal
+        :show="qrCodeAberto"
+        :beneficiario="beneficiarioDoQrCode"
+        @close="qrCodeAberto = false"
       />
 
       <!-- Confirmacao pelo dialogo do sistema, igual a Decretacoes, PAE e RAT. -->
@@ -120,6 +129,7 @@ import BeneficiarioFiltersSection from '@/Components/Organisms/Cisterna/Benefici
 import BeneficiariosTable from '@/Components/Organisms/Cisterna/BeneficiariosTable.vue';
 import BeneficiarioHistoricoModal from '@/Components/Organisms/Cisterna/BeneficiarioHistoricoModal.vue';
 import BeneficiarioPrintModal from '@/Components/Organisms/Cisterna/BeneficiarioPrintModal.vue';
+import BeneficiarioQrCodeModal from '@/Components/Organisms/Cisterna/BeneficiarioQrCodeModal.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import { useConfirmacao } from '@/Composables/core/useConfirmacao';
 
@@ -150,6 +160,14 @@ const beneficiarioDaImpressao = ref(null);
 function abrirImpressao(beneficiario) {
   beneficiarioDaImpressao.value = beneficiario;
   impressaoAberta.value = true;
+}
+
+const qrCodeAberto = ref(false);
+const beneficiarioDoQrCode = ref(null);
+
+function abrirQrCode(beneficiario) {
+  beneficiarioDoQrCode.value = beneficiario;
+  qrCodeAberto.value = true;
 }
 
 const paginacao = computed(() => {

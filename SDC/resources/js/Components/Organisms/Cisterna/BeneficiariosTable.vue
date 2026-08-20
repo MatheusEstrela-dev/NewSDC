@@ -89,10 +89,48 @@
                   resource="beneficiarios"
                   :actions="[
                     { action: 'view',    handler: () => ir('cisternas.beneficiarios.show', b.id) },
-                    { action: 'print',   handler: () => emit('imprimir', b), allowed: cadeiaCompleta(b) },
                     { action: 'edit',    handler: () => ir('cisternas.beneficiarios.edit', b.id), allowed: permissoes.editar },
                     { action: 'history', handler: () => emit('historico', b), label: 'Serie Historica' },
                     { action: 'delete',  handler: () => emit('excluir', b), allowed: permissoes.excluir },
+
+                    /*
+                      No menu de tres pontos, como no PAE: sao acoes de saida em
+                      documento, nao do dia a dia, e inline disputariam espaco
+                      com ver/editar/excluir numa coluna ja apertada.
+
+                      IMPRIMIR e PDF sao acoes SEPARADAS de proposito, e nao
+                      duas portas para a mesma coisa: imprimir manda a ficha
+                      para o papel pelo dialogo do navegador; PDF gera o
+                      arquivo. A regra de negocio de cada uma sera definida --
+                      ate la o PDF usa a mesma ficha, e gerar arquivo de
+                      verdade ainda depende de escolher biblioteca de PDF, que
+                      o NewSDC nao tem.
+
+                      `aliasOverride` reaproveita permissao existente em vez de
+                      inventar slug: o ActionButton monta {module}.{resource}.
+                      {action} e consulta can(), entao 'pdf' procuraria
+                      cisternas.beneficiarios.pdf -- que nao existe -- e o item
+                      sumiria para todo mundo menos super-admin. Mesmo defeito
+                      que `validar` teve nas notificacoes.
+
+                      QR aponta para a ficha PUBLICA, que abre sem login: exigir
+                      mais que `view` para mostrar o adesivo nao protegeria nada.
+                    */
+                    {
+                      action: 'print', placement: 'menu',
+                      aliasOverride: 'print', allowed: cadeiaCompleta(b),
+                      handler: () => emit('imprimir', b),
+                    },
+                    {
+                      action: 'pdf', placement: 'menu',
+                      aliasOverride: 'print', allowed: cadeiaCompleta(b),
+                      handler: () => emit('pdf', b),
+                    },
+                    {
+                      action: 'qrcode', placement: 'menu',
+                      aliasOverride: 'view', allowed: Boolean(b.numero_instalacao),
+                      handler: () => emit('qrcode', b),
+                    },
                   ]"
                 />
               </div>
@@ -136,9 +174,14 @@ const props = defineProps({
   direcao: { type: String, default: 'asc' },
 });
 
-const emit = defineEmits(['update:marcados', 'excluir', 'ordenar', 'historico', 'imprimir']);
+const emit = defineEmits(['update:marcados', 'excluir', 'ordenar', 'historico', 'imprimir', 'pdf', 'qrcode']);
 
 /**
+ * PDF e QR foram para o menu de tres pontos, como no PAE, e a impressora inline
+ * saiu: eram DOIS caminhos para a mesma ficha, e o icone repetido roubava
+ * espaco das acoes do dia a dia. O QR aparece so quando ja existe numero de
+ * instalacao -- sem numero nao ha adesivo para colar.
+ *
  * Impressao so com a CADEIA COMPLETA: a ficha e o documento que fecha a
  * instalacao e vai para prestacao de contas, e emitir com etapa em aberto
  * produziria papel afirmando conferencia que ninguem fez. O servidor recusa de
