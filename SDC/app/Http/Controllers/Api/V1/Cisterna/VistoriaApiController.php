@@ -95,12 +95,15 @@ class VistoriaApiController extends Controller
      *     @OA\Response(response=403, description="Fora do territorio do usuario ou sem permissao", @OA\JsonContent(ref="#/components/schemas/ErrorResponse")),
      *     @OA\Response(response=404, description="Nao encontrada", @OA\JsonContent(ref="#/components/schemas/ErrorResponse"))
      * )
-     */
-    /**
+     *
      * O parametro se chama `cisternaVistoria` porque routes/modules/tdap.php
      * registra Route::model() explicito para `{vistoria}`, e binder explicito
      * vence o implicito -- com o nome curto, o Laravel resolveria o model do
      * TDAP nesta rota.
+     *
+     * Esta nota fica DENTRO do mesmo docblock de proposito: um segundo docblock
+     * aqui separa a anotacao do metodo e o swagger-php descarta o endpoint em
+     * silencio -- foi o que aconteceu na primeira geracao, 8 paths em vez de 9.
      */
     public function show(CisternaVistoria $cisternaVistoria): VistoriaResource
     {
