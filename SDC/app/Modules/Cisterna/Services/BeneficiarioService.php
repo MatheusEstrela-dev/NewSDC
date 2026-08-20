@@ -9,6 +9,7 @@ use App\Modules\Cisterna\Enums\EtapaVistoria;
 use App\Modules\Cisterna\Enums\SituacaoAnalise;
 use App\Modules\Cisterna\Enums\SituacaoObra;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
+use App\Modules\Cisterna\Support\EscopoPerfil;
 use App\Modules\Cisterna\Support\PerfilCisterna;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -398,19 +399,15 @@ class BeneficiarioService
      * Perfil CEDEC ve todos os municipios habilitados; COMPDEC so o proprio;
      * fornecedor ve qualquer municipio, mas so obras em envio ou instaladas.
      *
+     * A regra mora em EscopoPerfil porque vistoria, comunidade e notificacao
+     * aplicam a mesma coisa. Este metodo permanece como o ponto unico de
+     * entrada do service, que e o que o comentario da classe promete.
+     *
      * @param  Builder<CisternaBeneficiario>  $query
      */
     private function aplicarEscopoDoPerfil(Builder $query, PerfilCisterna $perfil): void
     {
-        $municipioId = $perfil->municipioId();
-
-        if ($municipioId !== null) {
-            $query->doMunicipio($municipioId);
-        }
-
-        if ($perfil->eFornecedor()) {
-            $query->comSituacaoObra(SituacaoObra::visiveisAoFornecedor());
-        }
+        EscopoPerfil::aplicarEmBeneficiario($query, $perfil);
     }
 
     /**
