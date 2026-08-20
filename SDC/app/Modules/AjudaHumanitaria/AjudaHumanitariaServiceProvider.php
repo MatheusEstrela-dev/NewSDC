@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AjudaHumanitaria;
 
 use App\Modules\AjudaHumanitaria\Console\ExtrairLegadoAjuCommand;
+use App\Modules\AjudaHumanitaria\Console\ImportarDumpLegadoAjuCommand;
 use App\Modules\AjudaHumanitaria\Console\RefinarLegadoAjuCommand;
 use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItemNoPedido;
 use App\Modules\AjudaHumanitaria\Domain\Guards\ExigeItensLiberados;
@@ -74,6 +75,7 @@ class AjudaHumanitariaServiceProvider extends ServiceProvider
      */
     private const COMANDOS = [
         ExtrairLegadoAjuCommand::class,
+        ImportarDumpLegadoAjuCommand::class,
         RefinarLegadoAjuCommand::class,
     ];
 

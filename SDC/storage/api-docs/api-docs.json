@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "SDC - Sistema de Defesa Civil API",
-        "description": "API RESTful escalável para 100k+ usuários simultâneos.\r\n *                  Suporta webhooks, rate limiting inteligente, processamento assíncrono via Redis,\r\n *                  e múltiplos níveis de priorização de requisições.",
+        "description": "API RESTful escalável para 100k+ usuários simultâneos.\n *                  Suporta webhooks, rate limiting inteligente, processamento assíncrono via Redis,\n *                  e múltiplos níveis de priorização de requisições.",
         "contact": {
             "name": "SDC API Support",
             "email": "api@sdc.gov.br"
@@ -25,6 +25,9 @@
         {
             "url": "http://localhost:19444",
             "description": "Servidor de Desenvolvimento (FrankenPHP HTTP)"
+        },
+        {
+            "url": "http://localhost:19444"
         }
     ],
     "paths": {
@@ -591,6 +594,325 @@
                                         }
                                     },
                                     "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ajuda-humanitaria/estoque/saldo-cesta": {
+            "get": {
+                "tags": [
+                    "Ajuda Humanitaria"
+                ],
+                "summary": "Saldo de cesta basica por deposito",
+                "description": "Paridade com o endpoint publico saldocesta do sistema legado, lendo do banco do NewSDC. Considera apenas material de categoria CESTA BASICA com saldo diferente de zero.",
+                "operationId": "7a7e31e00e7b36cbb146ae61d0165b91",
+                "responses": {
+                    "200": {
+                        "description": "Lista de saldos consolidados por deposito",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/AhSaldoCestaItem"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sem permissao humanitaria.saldo.view",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ajuda-humanitaria/liberacoes": {
+            "get": {
+                "tags": [
+                    "Ajuda Humanitaria"
+                ],
+                "summary": "Liberacoes agrupadas por ano",
+                "description": "Paridade com o endpoint publico pubajudah do sistema legado, lendo do banco do NewSDC.",
+                "operationId": "78e529a294f1f2308e6644776d8b103a",
+                "parameters": [
+                    {
+                        "name": "ano_comeco",
+                        "in": "query",
+                        "description": "Ano inicial, 4 digitos",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2022
+                        }
+                    },
+                    {
+                        "name": "ano_fim",
+                        "in": "query",
+                        "description": "Ano final, 4 digitos, no maximo o ano corrente",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2024
+                        }
+                    },
+                    {
+                        "name": "evento",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "AJUDA HUMANITARIA",
+                                "CEDEC",
+                                "CHUVA",
+                                "COVID-19",
+                                "OUTROS",
+                                "SECA"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liberacoes agrupadas por ano, com totais por situacao",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "description": "Chave = ano",
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "$ref": "#/components/schemas/AhLiberacaoItem"
+                                                }
+                                            }
+                                        },
+                                        "meta": {
+                                            "properties": {
+                                                "totais": {
+                                                    "properties": {
+                                                        "total_registros": {
+                                                            "type": "integer",
+                                                            "example": 3582
+                                                        },
+                                                        "total_pagas": {
+                                                            "type": "integer",
+                                                            "example": 3300
+                                                        },
+                                                        "total_aberto": {
+                                                            "type": "integer",
+                                                            "example": 200
+                                                        },
+                                                        "total_canceladas": {
+                                                            "type": "integer",
+                                                            "example": 82
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sem permissao humanitaria.saldo.view",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Parametros invalidos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ajuda-humanitaria/liberacoes/cedec": {
+            "get": {
+                "tags": [
+                    "Ajuda Humanitaria"
+                ],
+                "summary": "Liberacoes em formato plano, uma linha por item",
+                "description": "Paridade com o endpoint publico pubajudahCedec do sistema legado. Considera itens de status 0 ou 1. Retorna lista vazia enquanto a carga de itens de liberacao do legado nao estiver concluida.",
+                "operationId": "07f26ad08af11d70cb94ea55c6529e8b",
+                "responses": {
+                    "200": {
+                        "description": "Lista plana de itens liberados",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/AhLiberacaoCedecItem"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sem permissao humanitaria.saldo.view",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ajuda-humanitaria/pedidos/consolidado": {
+            "get": {
+                "tags": [
+                    "Ajuda Humanitaria"
+                ],
+                "summary": "Consolidado de itens de pedido",
+                "description": "Paridade com o endpoint listPedidoAh do sistema legado. Informe decreto_id (agrupa por municipio, somente pedidos Atendido ou Finalizado) ou bi (lista plana, sem recorte de status). Retorna vazio enquanto o historico de pedidos do legado nao estiver carregado no banco novo.",
+                "operationId": "3c7074f6e9688a95479d341d0e979750",
+                "parameters": [
+                    {
+                        "name": "decreto_id",
+                        "in": "query",
+                        "description": "Numero do decreto. Obrigatorio se bi nao for informado",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "123"
+                        }
+                    },
+                    {
+                        "name": "bi",
+                        "in": "query",
+                        "description": "Qualquer valor ativa o modo plano. Obrigatorio se decreto_id nao for informado",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "1"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Modo decreto_id devolve objeto com chave = municipio; modo bi devolve array plano",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "oneOf": [
+                                        {
+                                            "$ref": "#/components/schemas/AhPedidoConsolidadoPorMunicipio"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/AhPedidoConsolidadoLista"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sem permissao humanitaria.pedidos.view",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Nem decreto_id nem bi informado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
@@ -1176,6 +1498,1075 @@
                     },
                     "403": {
                         "description": "Acesso negado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/cisternas/comunidades": {
+            "get": {
+                "tags": [
+                    "Cisternas"
+                ],
+                "summary": "Lista comunidades atendidas",
+                "description": "840 comunidades em 55 municipios. `beneficiarios` e a contagem por `comunidade_id`, nao por nome: no legado o join era por nome de comunidade sem o municipio, e os nomes que existem em mais de um municipio somavam a contagem entre eles. Recorte territorial: orgao COMPDEC ve somente o proprio municipio.",
+                "operationId": "cisternasComunidadesIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Maximo 100. Acima disso a resposta e 422.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 25,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "municipio_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "apenas_ativas",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CisternaComunidadeItem"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        },
+                                        "links": {
+                                            "$ref": "#/components/schemas/PaginationLinks"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sem a permissao cisternas.comunidades.view",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/cisternas/lotes": {
+            "get": {
+                "tags": [
+                    "Cisternas"
+                ],
+                "summary": "Lista lotes de contratacao",
+                "description": "SEM recorte territorial, por contrato: `cisterna_lotes` nao tem `municipio_id` — o lote e nacional, e um COMPDEC precisa ve-lo para saber em que lote esta a propria ordem de servico. `ordens_servico` e a contagem de OS do lote.",
+                "operationId": "cisternasLotesIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Maximo 100. Acima disso a resposta e 422.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 25,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CisternaLoteItem"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        },
+                                        "links": {
+                                            "$ref": "#/components/schemas/PaginationLinks"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sem a permissao cisternas.lotes.view",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/cisternas/ordens-servico": {
+            "get": {
+                "tags": [
+                    "Cisternas"
+                ],
+                "summary": "Lista ordens de servico",
+                "description": "SEM recorte territorial, mesma razao do lote. `documento_url` e a URL do processo no SEI vinda do legado; `documento_anexo` e arquivo anexado no NewSDC, que o legado nao tinha.",
+                "operationId": "cisternasOrdensServicoIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Maximo 100. Acima disso a resposta e 422.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 25,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "lote_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CisternaOrdemServicoItem"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        },
+                                        "links": {
+                                            "$ref": "#/components/schemas/PaginationLinks"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sem a permissao cisternas.ordens-servico.view",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/cisternas/beneficiarios": {
+            "get": {
+                "tags": [
+                    "Cisternas"
+                ],
+                "summary": "Lista beneficiarios do Projeto Cisterna",
+                "description": "Lista paginada. O recorte territorial vem do usuario dono do token: orgao COMPDEC ve somente o proprio municipio, e a role cisterna_fornecedor ve somente obras em envio_instalacao ou instalado. O recorte vence o filtro `municipio_id`. Atencao: 516 dos registros tem `situacao_analise = duplicado` e sao tombstone do legado, nao cadastro ativo — filtre-os em analise.",
+                "operationId": "cisternasBeneficiariosIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Maximo 100. Acima disso a resposta e 422.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 25,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "municipio_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "comunidade_id",
+                        "in": "query",
+                        "description": "Aceita lista separada por virgula.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "12,34"
+                        }
+                    },
+                    {
+                        "name": "situacao_analise",
+                        "in": "query",
+                        "description": "Aceita lista separada por virgula.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "aprovado,ressalva"
+                        }
+                    },
+                    {
+                        "name": "situacao_obra",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "instalado"
+                        }
+                    },
+                    {
+                        "name": "lote_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "ordem_servico_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "cpf",
+                        "in": "query",
+                        "description": "Prefixo. Aceita com ou sem mascara.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "123456789"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Busca por nome, apoiada em indice GIN pg_trgm.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "data_inicio",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "data_fim",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "atendido_por_pipa",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "numero_instalacao",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "etapa_concluida",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "fornecedor",
+                                "compdec",
+                                "cedec"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "etapa_pendente",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "fornecedor",
+                                "compdec",
+                                "cedec"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "ranqueamento",
+                        "in": "query",
+                        "description": "Quando verdadeiro, substitui a ordenacao pela ordem de ranqueamento.",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "nome",
+                                "cpf",
+                                "situacao_analise",
+                                "situacao_obra",
+                                "municipio",
+                                "comunidade",
+                                "etapas"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "direction",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CisternaBeneficiarioItem"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        },
+                                        "links": {
+                                            "$ref": "#/components/schemas/PaginationLinks"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sem a permissao cisternas.beneficiarios.view",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Filtro invalido",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/cisternas/beneficiarios/{id}": {
+            "get": {
+                "tags": [
+                    "Cisternas"
+                ],
+                "summary": "Detalhe do beneficiario",
+                "description": "Traz criterios sociais, avaliacao tecnica do telhado, atendimento por pipa, as vistorias das tres etapas com os itens conferidos, as notificacoes e a midia. Um usuario de orgao COMPDEC recebe 403 ao pedir beneficiario de outro municipio.",
+                "operationId": "cisternasBeneficiariosShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 4201
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Beneficiario",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CisternaBeneficiarioDetail"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Fora do territorio do usuario ou sem permissao",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Nao encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/cisternas/beneficiarios/export": {
+            "get": {
+                "tags": [
+                    "Cisternas"
+                ],
+                "summary": "Exporta beneficiarios em CSV",
+                "description": "CSV streamado, sem teto de linhas — aceita os mesmos filtros do index e aplica o mesmo recorte de perfil. Exige a permissao cisternas.beneficiarios.export, separada da de leitura.",
+                "operationId": "cisternasBeneficiariosExport",
+                "parameters": [
+                    {
+                        "name": "municipio_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "situacao_analise",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "aprovado"
+                        }
+                    },
+                    {
+                        "name": "situacao_obra",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "instalado"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Arquivo CSV",
+                        "content": {
+                            "text/csv": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sem a permissao cisternas.beneficiarios.export",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/cisternas/notificacoes": {
+            "get": {
+                "tags": [
+                    "Cisternas"
+                ],
+                "summary": "Lista notificacoes de fiscalizacao",
+                "description": "Notificacao polimorfica: o `notificavel` e um beneficiario ou uma vistoria, identificado pelo alias curto (`beneficiario` / `vistoria`), nao pelo FQCN. O recorte territorial cobre as duas pontas — o beneficiario tem `municipio_id`, e a vistoria chega ao municipio pela relacao. As 7 linhas migradas do legado sao dado de teste.",
+                "operationId": "cisternasNotificacoesIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Maximo 100. Acima disso a resposta e 422.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 25,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "notificavel_type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "beneficiario",
+                                "vistoria"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "notificavel_id",
+                        "in": "query",
+                        "description": "Obrigatorio quando notificavel_type e informado.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "apenas_pendentes",
+                        "in": "query",
+                        "description": "Somente as ainda nao respondidas.",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CisternaNotificacaoItem"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        },
+                                        "links": {
+                                            "$ref": "#/components/schemas/PaginationLinks"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sem a permissao cisternas.notificacoes.view",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Filtro invalido",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/cisternas/vistorias": {
+            "get": {
+                "tags": [
+                    "Cisternas"
+                ],
+                "summary": "Lista vistorias das tres etapas",
+                "description": "Uma linha por etapa do mesmo documento, com `unique (beneficiario_id, etapa)`. No legado eram tres tabelas separadas (sinc_cisterna_rel_fornecedor, _rel_compdec, _rel_cedec). ATENCAO: `numero_instalacao` e preenchido SOMENTE na etapa `fornecedor` — nas etapas `compdec` e `cedec` e sempre nulo, por contrato, nao por falta de dado. A chave `dados_administrativos` aparece somente na etapa `cedec`.",
+                "operationId": "cisternasVistoriasIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Maximo 100. Acima disso a resposta e 422.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 25,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "etapa",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "fornecedor",
+                                "compdec",
+                                "cedec"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "beneficiario_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "municipio_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "comunidade_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "numero_instalacao",
+                        "in": "query",
+                        "description": "Numero do QR Code. Existe somente na etapa fornecedor.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "concluida",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "data_relatorio_inicio",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "data_relatorio_fim",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CisternaVistoriaItem"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        },
+                                        "links": {
+                                            "$ref": "#/components/schemas/PaginationLinks"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sem a permissao cisternas.vistorias.view",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Filtro invalido",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/cisternas/vistorias/{id}": {
+            "get": {
+                "tags": [
+                    "Cisternas"
+                ],
+                "summary": "Detalhe da vistoria com o checklist conferido",
+                "description": "Traz `itens`: uma entrada por item de instalacao conferido (13 itens no enum ItemInstalacao). No legado o checklist eram ~87 colunas espalhadas pelas tres tabelas, com nomes divergentes entre elas. O item `fixacao` traz as subquantidades (abracadeira, bucha, parafuso) em `detalhes`.",
+                "operationId": "cisternasVistoriasShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 8088
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vistoria",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CisternaVistoriaItem"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Fora do territorio do usuario ou sem permissao",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Nao encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2778,6 +4169,236 @@
                     },
                     "404": {
                         "description": "Empreendimento nao encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pae/protocolos/{paeProtocolo}/notificacoes": {
+            "get": {
+                "tags": [
+                    "PAE"
+                ],
+                "summary": "Lista os ciclos de notificacao de um protocolo PAE",
+                "description": "Retorna os ciclos de notificacao (1/2/3) emitidos para o protocolo, com prazo e situacao de vencimento",
+                "operationId": "listPaeNotificacoes",
+                "parameters": [
+                    {
+                        "name": "paeProtocolo",
+                        "in": "path",
+                        "description": "ID do protocolo PAE",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de notificacoes retornada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PaeNotificacao"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Nao autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unauthenticated."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "PAE"
+                ],
+                "summary": "Emite um novo ciclo de notificacao para o protocolo",
+                "description": "Cria a analise (se ainda nao existir) e emite a proxima notificacao (ciclo 1/2/3), enviando e-mail ao coordenador do empreendimento quando cadastrado",
+                "operationId": "storePaeNotificacao",
+                "parameters": [
+                    {
+                        "name": "paeProtocolo",
+                        "in": "path",
+                        "description": "ID do protocolo PAE",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "num_sei"
+                                ],
+                                "properties": {
+                                    "num_sei": {
+                                        "type": "string",
+                                        "example": "SEI-1234.567890/2026-01"
+                                    },
+                                    "obs": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Notificacao emitida com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PaeNotificacao"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validacao (sem analista delegado, ciclo em aberto ou limite de 3 ciclos atingido)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/pae/notificacoes/{paeNotificacao}/devolutiva": {
+            "post": {
+                "tags": [
+                    "PAE"
+                ],
+                "summary": "Registra a devolutiva de um ciclo de notificacao",
+                "description": "Fecha o ciclo de notificacao informando a data de devolutiva recebida",
+                "operationId": "storePaeNotificacaoDevolutiva",
+                "parameters": [
+                    {
+                        "name": "paeNotificacao",
+                        "in": "path",
+                        "description": "ID da notificacao",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "dt_devolutiva"
+                                ],
+                                "properties": {
+                                    "dt_devolutiva": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-07-17"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Devolutiva registrada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PaeNotificacao"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Ciclo ja possui devolutiva registrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -5815,6 +7436,1081 @@
                 },
                 "type": "object"
             },
+            "CisternaBeneficiarioItem": {
+                "title": "Beneficiario do Projeto Cisterna (listagem)",
+                "description": "Formato reduzido da listagem. Origem no legado: tabela `sinc_cisterna` (80 colunas).",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 4201
+                    },
+                    "cpf": {
+                        "description": "11 digitos, sem mascara. Legado: `sinc_cisterna.cpf` varchar(14) com mascara. 5 cadastros nao foram importados por CPF truncado na origem.",
+                        "type": "string",
+                        "example": "05924079659",
+                        "nullable": true
+                    },
+                    "nome": {
+                        "type": "string",
+                        "example": "Maria Aparecida de Souza"
+                    },
+                    "municipio": {
+                        "description": "Nome. Legado: `sinc_cisterna.codmundv` (codigo IBGE), traduzido para `municipios.id` pela ponte PonteMunicipio.",
+                        "type": "string",
+                        "example": "Janauba",
+                        "nullable": true
+                    },
+                    "comunidade": {
+                        "description": "Legado: `sinc_cisterna.comunidade` varchar(34) de texto livre, normalizado em `cisterna_comunidades`.",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "situacao_analise": {
+                        "description": "Legado: `sinc_cisterna.aprovado` int. ATENCAO: `duplicado` (valor 5 no legado) e tombstone, nao cadastro ativo -- 516 registros. Filtre em analise.",
+                        "properties": {
+                            "valor": {
+                                "type": "string",
+                                "enum": [
+                                    "em_edicao",
+                                    "aprovado",
+                                    "reprovado",
+                                    "ressalva",
+                                    "desconsiderado",
+                                    "duplicado"
+                                ],
+                                "example": "aprovado"
+                            },
+                            "rotulo": {
+                                "type": "string",
+                                "example": "Aprovado"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "situacao_obra": {
+                        "description": "Legado: `sinc_cisterna.estado` (0..2). Ortogonal a situacao_analise.",
+                        "properties": {
+                            "valor": {
+                                "type": "string",
+                                "enum": [
+                                    "processamento",
+                                    "envio_instalacao",
+                                    "instalado"
+                                ],
+                                "example": "instalado"
+                            },
+                            "rotulo": {
+                                "type": "string",
+                                "example": "Instalado"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "ranqueamento_ordem": {
+                        "description": "Ordem de prioridade social. Nulo na maioria: e ordenavel, nao calculado pelo sistema.",
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "lote": {
+                        "description": "Nome do lote da ordem de servico do beneficiario.",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "ordem_servico": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "etapas_concluidas": {
+                        "description": "Etapas de vistoria ja concluidas. Substitui os tres whereHas aninhados do legado.",
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "fornecedor",
+                                "compdec",
+                                "cedec"
+                            ]
+                        }
+                    },
+                    "numero_instalacao": {
+                        "description": "Numero do QR Code colado na cisterna. Alocado SOMENTE na etapa `fornecedor`.",
+                        "type": "integer",
+                        "example": 1247,
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CisternaBeneficiarioDetail": {
+                "title": "Beneficiario do Projeto Cisterna (detalhe)",
+                "description": "Formato completo. Origem: `sinc_cisterna` (80 colunas) mais as tabelas de relatorio. As ~54 colunas de caminho de arquivo do legado sairam do dominio: os arquivos vivem em collections do Spatie MediaLibrary.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 4201
+                    },
+                    "cpf": {
+                        "type": "string",
+                        "example": "05924079659",
+                        "nullable": true
+                    },
+                    "nome": {
+                        "type": "string",
+                        "example": "Maria Aparecida de Souza"
+                    },
+                    "telefone": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "data_nascimento": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "cadastro_unico": {
+                        "description": "NIS. Legado: `sinc_cisterna.cad_unico`.",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "municipio": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1234
+                            },
+                            "nome": {
+                                "type": "string",
+                                "example": "Janauba"
+                            },
+                            "uf": {
+                                "type": "string",
+                                "example": "MG"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "comunidade": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "nome": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "endereco": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "latitude": {
+                        "description": "Legado: `sinc_cisterna.latitude` varchar(150) de texto livre, com 21 formatos distintos. 7.993 de 8.099 foram parseadas; o resto e perda irrecuperavel (truncada na origem) ou eixo trocado no cadastro. O valor original continua em `cisterna_legado_raw.doc`.",
+                        "type": "number",
+                        "format": "float",
+                        "example": -15.8021456,
+                        "nullable": true
+                    },
+                    "longitude": {
+                        "type": "number",
+                        "format": "float",
+                        "example": -43.9673012,
+                        "nullable": true
+                    },
+                    "ordem_servico": {
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "nome": {
+                                "type": "string"
+                            },
+                            "lote": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "situacao_analise": {
+                        "properties": {
+                            "valor": {
+                                "type": "string",
+                                "enum": [
+                                    "em_edicao",
+                                    "aprovado",
+                                    "reprovado",
+                                    "ressalva",
+                                    "desconsiderado",
+                                    "duplicado"
+                                ]
+                            },
+                            "rotulo": {
+                                "type": "string"
+                            },
+                            "observacao": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "situacao_obra": {
+                        "properties": {
+                            "valor": {
+                                "type": "string",
+                                "enum": [
+                                    "processamento",
+                                    "envio_instalacao",
+                                    "instalado"
+                                ]
+                            },
+                            "rotulo": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "ranqueamento_ordem": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "criterios_sociais": {
+                        "description": "Criterios de elegibilidade do programa.",
+                        "properties": {
+                            "qtd_pessoas": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "renda": {
+                                "description": "SEM CENTAVOS: no legado `renda` e float(10,0), zero casas decimais. Perda na origem, nao na migracao -- nenhuma das 8.099 linhas tinha centavos.",
+                                "type": "number",
+                                "format": "float",
+                                "example": 1412,
+                                "nullable": true
+                            },
+                            "renda_per_capita": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            },
+                            "possui_deficiencia": {
+                                "type": "boolean",
+                                "nullable": true
+                            },
+                            "possui_crianca": {
+                                "type": "boolean",
+                                "nullable": true
+                            },
+                            "data_nascimento_crianca": {
+                                "type": "string",
+                                "format": "date",
+                                "nullable": true
+                            },
+                            "possui_idoso": {
+                                "type": "boolean",
+                                "nullable": true
+                            },
+                            "chefiada_mulher": {
+                                "type": "boolean",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "avaliacao_tecnica": {
+                        "description": "Medidas do telhado que definem a viabilidade da captacao.",
+                        "properties": {
+                            "tipo_moradia": {
+                                "description": "Legado: `moradia` varchar(7) em utf8mb3 -- 'PROPRIA' com acento nao cabia e chegou corrompida em 67 cadastros. 162 linhas gravaram o literal '0' (placeholder de nao respondido) e viraram nulo.",
+                                "type": "string",
+                                "enum": [
+                                    "propria",
+                                    "cedida",
+                                    "alugada",
+                                    "outros"
+                                ],
+                                "nullable": true
+                            },
+                            "tipo_moradia_outro": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "comprimento_telhado": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            },
+                            "largura_telhado": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            },
+                            "area_telhado": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            },
+                            "comprimento_testada": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            },
+                            "num_caidas_telhado": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "cobertura_telhado": {
+                                "description": "Legado: `coberturaTelhado`. 14 linhas com o literal '0' viraram nulo; as 434 'Ceramica' acentuadas casaram.",
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "cobertura_outro": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "possui_fogao_lenha": {
+                                "type": "boolean",
+                                "nullable": true
+                            },
+                            "medida_telhado_area_fogao": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            },
+                            "testada_disp_parte_fogao": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "atendimento_pipa": {
+                        "description": "Legado: `atendPipa` varchar(36) que devia ser booleano. 34 cadastros gravaram ali o RESPONSAVEL ('prefeitura', 'respAtExercito', ...) em vez de sim/nao; o refino leu como atendido=sim e guardou o responsavel.",
+                        "properties": {
+                            "atendido": {
+                                "type": "boolean",
+                                "nullable": true
+                            },
+                            "responsaveis": {
+                                "type": "array",
+                                "items": {
+                                    "properties": {
+                                        "valor": {
+                                            "type": "string"
+                                        },
+                                        "rotulo": {
+                                            "type": "string"
+                                        },
+                                        "descricao": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "responsaveis_cadastro": {
+                        "properties": {
+                            "agente_nome": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "agente_cpf": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "engenheiro_nome": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "engenheiro_crea": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "observacoes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "vistorias": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CisternaVistoriaItem"
+                        }
+                    },
+                    "notificacoes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CisternaNotificacaoItem"
+                        }
+                    },
+                    "fotos_imovel": {
+                        "description": "ATENCAO: 72% dos cadastros do legado NAO tem o arquivo aqui. As colunas `img_*` do legado guardavam o rotulo da foto ('FRENTE', 'FUNDO'), nao o caminho; o arquivo esta no Google Drive, e a URL foi preservada em `custom_properties.origem_legado`. Extrair os ~5.800 arquivos do Drive e decisao de infraestrutura pendente.",
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "url": {
+                                    "type": "string"
+                                },
+                                "thumb": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "angulo": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "observacao": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "comprovantes": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "url": {
+                                    "type": "string"
+                                },
+                                "tipo": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "nome": {
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "criado_em": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "atualizado_em": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CisternaVistoriaItem": {
+                "title": "Vistoria de instalacao",
+                "description": "Uma linha por etapa do mesmo documento, com `unique (beneficiario_id, etapa)`. No legado eram tres tabelas: `sinc_cisterna_rel_fornecedor` (53 colunas), `sinc_cisterna_rel_compdec` (39) e `sinc_cisterna_rel_cedec` (27).",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 8088
+                    },
+                    "beneficiario_id": {
+                        "type": "integer",
+                        "example": 4201
+                    },
+                    "etapa": {
+                        "properties": {
+                            "valor": {
+                                "type": "string",
+                                "enum": [
+                                    "fornecedor",
+                                    "compdec",
+                                    "cedec"
+                                ],
+                                "example": "fornecedor"
+                            },
+                            "rotulo": {
+                                "type": "string",
+                                "example": "Relatorio do Fornecedor"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "numero_instalacao": {
+                        "description": "Numero do QR Code. Alocado SOMENTE na etapa `fornecedor` -- medido no banco: 794 de 794 no fornecedor, 0 em compdec e 0 em cedec. Nulo nas outras etapas e contrato, nao dado faltante.",
+                        "type": "integer",
+                        "example": 1247,
+                        "nullable": true
+                    },
+                    "concluida": {
+                        "type": "boolean"
+                    },
+                    "concluida_em": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "engenheiro": {
+                        "properties": {
+                            "nome": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "crea": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "art": {
+                                "description": "Preenchido somente na etapa cedec.",
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "data_relatorio": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "local_relatorio": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "dados_administrativos": {
+                        "description": "Chave AUSENTE fora da etapa `cedec`: so ela preenche processo, contrato e empenho.",
+                        "properties": {
+                            "processo_sei": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "contrato": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "empenho": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "placa_obras": {
+                                "type": "integer",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "local": {
+                        "properties": {
+                            "endereco": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "bairro": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "latitude": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            },
+                            "longitude": {
+                                "type": "number",
+                                "format": "float",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "itens": {
+                        "description": "Chave presente somente quando a relacao vem carregada (endpoint de detalhe).",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CisternaItemConferido"
+                        }
+                    },
+                    "observacoes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "criado_em": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CisternaItemConferido": {
+                "title": "Item do checklist de instalacao",
+                "description": "Uma linha por item conferido, polimorfica. No legado os 13 itens eram ~87 colunas espalhadas pelas tres tabelas de relatorio, com nomes divergentes entre elas (`calha_metros` numa, `qtd_calha` noutra, `calha_opcao` numa terceira).",
+                "properties": {
+                    "item": {
+                        "type": "string",
+                        "enum": [
+                            "cisterna_logo",
+                            "sucao",
+                            "bomba",
+                            "placa",
+                            "calha",
+                            "tubulacao",
+                            "fixacao",
+                            "filtro",
+                            "bloco",
+                            "te_pvc",
+                            "joelho_pvc",
+                            "luva_pvc",
+                            "cap_pvc"
+                        ],
+                        "example": "calha"
+                    },
+                    "rotulo": {
+                        "type": "string",
+                        "example": "Calha"
+                    },
+                    "conferido": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "quantidade": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    },
+                    "unidade": {
+                        "type": "string",
+                        "example": "m",
+                        "nullable": true
+                    },
+                    "detalhes": {
+                        "description": "Subquantidades que nao cabem numa coluna. Existe para `fixacao`, que no COMPDEC se desdobra em abracadeira, bucha e parafuso.",
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "observacao": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CisternaComunidadeItem": {
+                "title": "Comunidade atendida",
+                "description": "Legado: `sinc_cisterna_com` (6 colunas). 840 comunidades em 55 municipios; pares (municipio, nome) duplicados na origem foram deduplicados, e nomes que existem em municipios distintos convivem como registros separados.",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "nome": {
+                        "type": "string",
+                        "example": "Barreiro Grande"
+                    },
+                    "ativa": {
+                        "type": "boolean"
+                    },
+                    "municipio": {
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "nome": {
+                                "type": "string"
+                            },
+                            "uf": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "beneficiarios": {
+                        "description": "Contagem por `comunidade_id`, nao por nome -- o legado somava a contagem entre comunidades homonimas de municipios distintos.",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "CisternaLoteItem": {
+                "title": "Lote de contratacao",
+                "description": "Legado: `sinc_cisterna_lotes` (6 colunas), 3 linhas. Nao tem municipio: o lote e nacional e a listagem nao aplica recorte territorial.",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "nome": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "observacao": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "ordens_servico": {
+                        "description": "Contagem de OS do lote.",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "CisternaOrdemServicoItem": {
+                "title": "Ordem de servico",
+                "description": "Legado: `sinc_cisterna_ordem_servico` (7 colunas), 7 linhas. Sem recorte territorial, mesma razao do lote.",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "nome": {
+                        "type": "string"
+                    },
+                    "observacao": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "lote": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "nome": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "beneficiarios": {
+                        "type": "integer"
+                    },
+                    "documento_url": {
+                        "description": "URL do processo no SEI, vinda do legado. Nao e arquivo.",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "documento_anexo": {
+                        "description": "Arquivo anexado no NewSDC, que o legado nao tinha.",
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CisternaNotificacaoItem": {
+                "title": "Notificacao de fiscalizacao",
+                "description": "Legado: `sinc_cisterna_notificacoes` (7 colunas), 7 linhas -- todas dado de teste. Polimorfica: o notificavel e um beneficiario ou uma vistoria.",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "notificavel": {
+                        "properties": {
+                            "tipo": {
+                                "description": "Alias curto, nao o FQCN.",
+                                "type": "string",
+                                "enum": [
+                                    "beneficiario",
+                                    "vistoria"
+                                ],
+                                "nullable": true
+                            },
+                            "id": {
+                                "type": "integer"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "observacao": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "respondida": {
+                        "type": "boolean"
+                    },
+                    "respondida_em": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "emitida_por": {
+                        "description": "Nome de quem emitiu. NULO em tudo que veio do legado: os 43 usuarios de origem nao mapeiam para o NewSDC (0 casam por CPF, 0 por e-mail). O `user_id` original continua em `cisterna_legado_raw.doc`.",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "documentos": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "url": {
+                                    "type": "string"
+                                },
+                                "nome": {
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "criado_em": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AhSaldoCestaItem": {
+                "title": "Saldo de cesta basica por deposito",
+                "properties": {
+                    "id_deposito": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "nome": {
+                        "type": "string",
+                        "example": "BELO HORIZONTE"
+                    },
+                    "total_saldo": {
+                        "type": "string",
+                        "example": "1240"
+                    },
+                    "singular": {
+                        "description": "aju_unidade.singular do legado. Veio esparso na carga; onde falta, o nome do material ocupa o lugar.",
+                        "type": "string",
+                        "example": "CESTA"
+                    },
+                    "valor": {
+                        "type": "string",
+                        "example": "1.00",
+                        "nullable": true
+                    },
+                    "peso": {
+                        "description": "Peso truncado, equivalente ao floor() do legado.",
+                        "type": "integer",
+                        "example": 1,
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AhLiberacaoItem": {
+                "title": "Liberacao de material de ajuda humanitaria",
+                "properties": {
+                    "id_liberacao": {
+                        "description": "Identificador do sistema legado, preservado para consumidores de BI.",
+                        "type": "integer",
+                        "example": 3421,
+                        "nullable": true
+                    },
+                    "data_liberacao": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2022-03-10"
+                    },
+                    "hora_liberacao": {
+                        "type": "string",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "mes": {
+                        "type": "integer",
+                        "example": 3
+                    },
+                    "evento": {
+                        "type": "string",
+                        "enum": [
+                            "AJUDA HUMANITARIA",
+                            "CEDEC",
+                            "CHUVA",
+                            "COVID-19",
+                            "OUTROS",
+                            "SECA"
+                        ],
+                        "example": "SECA",
+                        "nullable": true
+                    },
+                    "situacao": {
+                        "type": "string",
+                        "enum": [
+                            "Aberto",
+                            "Pago",
+                            "Cancelado",
+                            "Desconhecido"
+                        ],
+                        "example": "Pago"
+                    },
+                    "unidade": {
+                        "properties": {
+                            "id_municipio": {
+                                "type": "integer",
+                                "example": 123
+                            },
+                            "codmundv": {
+                                "type": "string",
+                                "example": "3106200",
+                                "nullable": true
+                            },
+                            "nome": {
+                                "type": "string",
+                                "example": "Belo Horizonte"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "items_quant": {
+                        "description": "Soma das quantidades dos itens. Zero enquanto a carga de itens do legado nao estiver concluida.",
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "items": {
+                        "description": "Vazio enquanto ajuda_h_liberacao_itens nao tiver carga.",
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "AhLiberacaoCedecItem": {
+                "title": "Liberacao no formato plano do CEDEC",
+                "properties": {
+                    "id_municipio": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "Codmundv": {
+                        "type": "string",
+                        "example": "3106200",
+                        "nullable": true
+                    },
+                    "municipio": {
+                        "type": "string",
+                        "example": "Belo Horizonte"
+                    },
+                    "dataLibera": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2023-04-01"
+                    },
+                    "quantidade": {
+                        "type": "string",
+                        "example": "15.000"
+                    },
+                    "id_material": {
+                        "description": "aju_unidade.id_unidade do legado.",
+                        "type": "string",
+                        "example": "1",
+                        "nullable": true
+                    },
+                    "material": {
+                        "type": "string",
+                        "example": "CESTA"
+                    },
+                    "evento": {
+                        "type": "string",
+                        "example": "CHUVA",
+                        "nullable": true
+                    },
+                    "deposito": {
+                        "type": "string",
+                        "example": "BELO HORIZONTE"
+                    },
+                    "status": {
+                        "type": "integer",
+                        "enum": [
+                            0,
+                            1
+                        ],
+                        "example": 1
+                    }
+                },
+                "type": "object"
+            },
+            "AhPedidoConsolidadoItem": {
+                "title": "Item consolidado de pedido de ajuda humanitaria",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "EdicaoCompdec",
+                            "AnaliseDlog",
+                            "AnaliseDiretorDlog",
+                            "Aprovado",
+                            "AguardandoDisponibilidade",
+                            "AguardandoRetirada",
+                            "Atendido",
+                            "Cancelado",
+                            "Reprovado",
+                            "Finalizado"
+                        ],
+                        "example": "Atendido",
+                        "nullable": true
+                    },
+                    "descricao_item": {
+                        "type": "string",
+                        "example": "CESTA BASICA"
+                    },
+                    "tp_item": {
+                        "description": "P = pedido pelo municipio, L = liberado pelo CEDEC.",
+                        "type": "string",
+                        "enum": [
+                            "P",
+                            "L"
+                        ],
+                        "example": "L",
+                        "nullable": true
+                    },
+                    "municipio": {
+                        "type": "string",
+                        "example": "Belo Horizonte"
+                    },
+                    "num_decreto": {
+                        "type": "string",
+                        "example": "123",
+                        "nullable": true
+                    },
+                    "total_qtd": {
+                        "type": "string",
+                        "example": "500"
+                    }
+                },
+                "type": "object"
+            },
+            "AhPedidoConsolidadoPorMunicipio": {
+                "title": "Consolidado agrupado por municipio",
+                "description": "Chave = nome do municipio. Formato do modo decreto_id.",
+                "type": "object",
+                "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/components/schemas/AhPedidoConsolidadoItem"
+                    }
+                }
+            },
+            "AhPedidoConsolidadoLista": {
+                "title": "Consolidado em lista plana",
+                "description": "Formato do modo bi.",
+                "type": "array",
+                "items": {
+                    "$ref": "#/components/schemas/AhPedidoConsolidadoItem"
+                }
+            },
             "Empreendimento": {
                 "title": "Empreendimento PAE",
                 "description": "Empreendimento (barragem) cadastrado no modulo PAE",
@@ -6033,6 +8729,46 @@
                     }
                 },
                 "type": "object"
+            },
+            "PaeNotificacao": {
+                "title": "Notificacao PAE",
+                "description": "Ciclo de notificacao (1/2/3) emitido para um protocolo PAE",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "num_sei": {
+                        "type": "string",
+                        "example": "SEI-1234.567890/2026-01"
+                    },
+                    "dt_notificacao": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2026-07-17"
+                    },
+                    "prazo_final": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2026-08-16"
+                    },
+                    "dt_devolutiva": {
+                        "type": "string",
+                        "format": "date",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "vencida": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "obs": {
+                        "type": "string",
+                        "example": null,
+                        "nullable": true
+                    }
+                },
+                "type": "object"
             }
         },
         "securitySchemes": {
@@ -6067,6 +8803,10 @@
             "description": "Endpoints do modulo de Decretacoes — listagem, detalhe, export BI e recebimento externo"
         },
         {
+            "name": "Ajuda Humanitaria",
+            "description": "Fornecimento de dados de Ajuda Humanitaria — saldo de estoque, liberacoes e consolidado de pedidos. Paridade com os endpoints publicos do sistema legado"
+        },
+        {
             "name": "RAT",
             "description": "Relatório de Atividade Técnica — listagem paginada, detalhe, exportação Power BI e recebimento externo"
         },
@@ -6077,6 +8817,10 @@
         {
             "name": "BI - Entrada",
             "description": "Endpoints para acesso aos dados de entrada de desastres e eventos para Power BI"
+        },
+        {
+            "name": "Cisternas",
+            "description": "Projeto Cisterna — cadastro do beneficiario e a cadeia de vistoria em tres etapas (fornecedor, COMPDEC, CEDEC). Somente leitura. O recorte territorial vem do usuario dono do token."
         },
         {
             "name": "Integração",

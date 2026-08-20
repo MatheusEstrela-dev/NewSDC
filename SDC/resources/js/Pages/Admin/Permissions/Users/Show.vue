@@ -219,6 +219,7 @@
           <UserApiTokens
             :user-id="user.id"
             :tokens="tokens"
+            :available-abilities="tokenAbilities"
             :new-token="newToken"
             :new-token-name="newTokenName"
           />
@@ -269,6 +270,10 @@ const props = defineProps({
     required: true
   },
   tokens: {
+    type: Array,
+    default: () => []
+  },
+  tokenAbilities: {
     type: Array,
     default: () => []
   },

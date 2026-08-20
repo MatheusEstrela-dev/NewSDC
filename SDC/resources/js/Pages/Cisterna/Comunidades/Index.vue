@@ -43,21 +43,21 @@
         </form>
       </CollapsibleSection>
 
-      <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-900/60">
+      <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/60">
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/50">
-            <thead class="bg-slate-50 dark:bg-slate-800/70">
+            <thead class="bg-slate-50 dark:bg-slate-900/50">
               <tr>
                 <th :class="TH">Comunidade</th>
                 <th :class="TH">Municipio</th>
                 <th :class="TH">Beneficiarios</th>
                 <th :class="TH">Situacao</th>
-                <th :class="TH">Opcoes</th>
+                <th :class="[TH, 'table-actions-head w-28 min-w-28 text-right']">Opcoes</th>
               </tr>
             </thead>
 
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
-              <tr v-for="c in lista" :key="c.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+              <tr v-for="c in lista" :key="c.id" class="table-row-solid transition-colors">
                 <td :class="TD_FORTE">{{ c.nome }}</td>
                 <td :class="TD">{{ nomeUf(c.municipio) }}</td>
                 <td :class="TD_MONO">{{ c.beneficiarios ?? 0 }}</td>
@@ -66,15 +66,20 @@
                     {{ c.ativa ? 'Ativa' : 'Inativa' }}
                   </span>
                 </td>
-                <td class="whitespace-nowrap px-3 py-2 text-right">
-                  <TableActions
-                    module="cisternas"
-                    resource="comunidades"
-                    :show-edit="true"
-                    :show-delete="true"
-                    @edit="abrirEdicao(c)"
-                    @delete="excluir(c, `a comunidade ${c.nome}`)"
-                  />
+                <!-- Coluna fixa no canto direito: em tela estreita a tabela rola
+                     na horizontal e as acoes precisam continuar alcancaveis. Depende
+                     de .table-row-solid na <tr> para o fundo opaco. -->
+                <td class="table-actions-cell w-28 min-w-28 whitespace-nowrap px-3 py-2 text-right">
+                  <div class="flex items-center justify-end">
+                    <ActionButton
+                      module="cisternas"
+                      resource="comunidades"
+                      :actions="[
+                        { action: 'edit',   handler: () => abrirEdicao(c) },
+                        { action: 'delete', handler: () => excluir(c, `a comunidade ${c.nome}`) },
+                      ]"
+                    />
+                  </div>
                 </td>
               </tr>
 
@@ -140,7 +145,6 @@ import { FunnelIcon, MapPinIcon } from '@heroicons/vue/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
-import TableActions from '@/Components/Molecules/Table/TableActions.vue';
 import CollapsibleSection from '@/Components/Molecules/CollapsibleSection.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';

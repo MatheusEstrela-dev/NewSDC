@@ -71,9 +71,20 @@
         <div class="flex flex-wrap gap-4 text-xs text-slate-400 dark:text-slate-500">
           <span>Criado: {{ formatDate(token.created_at) }}</span>
           <span v-if="token.expires_at">Expira: {{ formatDate(token.expires_at) }}</span>
-          <span v-else>Sem expiracao</span>
+          <span v-else class="text-amber-500">Sem expiracao (token legado)</span>
           <span v-if="token.last_used_at">Ultimo uso: {{ formatDate(token.last_used_at) }}</span>
           <span v-else>Nunca usado</span>
+        </div>
+
+        <div class="mt-2 flex flex-wrap items-center gap-1.5">
+          <Badge v-if="temCuringa(token)" variant="warning" size="sm">Escopo total</Badge>
+          <template v-else>
+            <span
+              v-for="ability in (token.abilities || [])"
+              :key="ability"
+              class="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+            >{{ ability }}</span>
+          </template>
         </div>
       </div>
     </div>
@@ -115,7 +126,7 @@
             <option value="24h">24 horas</option>
             <option value="7d">7 dias</option>
             <option value="30d">30 dias</option>
-            <option value="never">Sem expiracao</option>
+            <option value="90d">90 dias</option>
           </select>
         </div>
         <Button type="submit" variant="primary" size="sm" :loading="processing">
@@ -124,6 +135,61 @@
         <Button type="button" variant="secondary" size="sm" @click="cancelForm">
           Cancelar
         </Button>
+
+        <div class="w-full flex flex-col gap-2">
+          <div class="flex flex-wrap items-center gap-3">
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+              Escopo
+            </label>
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              {{ escopoResumo }}
+            </span>
+            <button
+              v-if="availableAbilities.length"
+              type="button"
+              class="text-xs font-semibold text-blue-500 hover:text-blue-400 underline"
+              @click="mostrarEscopo = !mostrarEscopo"
+            >
+              {{ mostrarEscopo ? 'Ocultar' : 'Restringir' }}
+            </button>
+          </div>
+
+          <p v-if="!availableAbilities.length" class="text-xs text-amber-500">
+            Este usuario nao tem nenhuma permissao. Um token nao daria acesso a nada.
+          </p>
+
+          <div v-else-if="mostrarEscopo" class="flex flex-col gap-2">
+            <div class="flex flex-wrap gap-2">
+              <button type="button" class="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-blue-500" @click="marcarSomenteLeitura">
+                Somente leitura
+              </button>
+              <button type="button" class="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-blue-500" @click="form.abilities = [...availableAbilities]">
+                Marcar todas
+              </button>
+              <button type="button" class="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-blue-500" @click="form.abilities = []">
+                Limpar
+              </button>
+            </div>
+
+            <div class="max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/50">
+              <label
+                v-for="ability in availableAbilities"
+                :key="ability"
+                class="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50"
+              >
+                <input
+                  v-model="form.abilities"
+                  type="checkbox"
+                  :value="ability"
+                  class="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
+                />
+                <span class="font-mono text-xs text-slate-600 dark:text-slate-300">{{ ability }}</span>
+              </label>
+            </div>
+
+            <span v-if="errors.abilities" class="text-xs text-red-400">{{ errors.abilities }}</span>
+          </div>
+        </div>
       </form>
     </div>
 
@@ -144,7 +210,7 @@
 </template>
 
 <script setup>
-import { ref, markRaw } from 'vue';
+import { computed, ref, markRaw } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import CardBase from '@/Components/Atoms/Card/CardBase.vue';
@@ -163,6 +229,7 @@ const TrashIconRaw    = markRaw(TrashIcon);
 const props = defineProps({
   userId:       { type: Number, required: true },
   tokens:       { type: Array,  default: () => [] },
+  availableAbilities: { type: Array, default: () => [] },
   newToken:     { type: String, default: null },
   newTokenName: { type: String, default: null },
 });
@@ -176,15 +243,43 @@ const showRevokeDialog = ref(false);
 const tokenToRevoke    = ref(null);
 const isRevoking       = ref(false);
 
+const mostrarEscopo = ref(false);
+
 const form = ref({
   name:       '',
   expires_in: '30d',
+  // Vazio = herda todas as permissoes do usuario (o backend resolve). Marcar
+  // itens aqui e restringir, nunca ampliar: o backend recusa o que exceder.
+  abilities:  [],
 });
 
+// Convencao de slug do projeto: leitura termina em .view, .export ou .access.
+const SUFIXOS_DE_LEITURA = ['.view', '.export', '.access'];
+
+const escopoResumo = computed(() => {
+  if (!props.availableAbilities.length) return 'nenhuma permissao disponivel';
+  if (!form.value.abilities.length) {
+    return `todas as ${props.availableAbilities.length} permissoes do usuario`;
+  }
+  return `${form.value.abilities.length} de ${props.availableAbilities.length} permissoes`;
+});
+
+function marcarSomenteLeitura() {
+  form.value.abilities = props.availableAbilities.filter(
+    (a) => SUFIXOS_DE_LEITURA.some((sufixo) => a.endsWith(sufixo)),
+  );
+}
+
+function temCuringa(token) {
+  return (token.abilities || []).includes('*');
+}
+
 function cancelForm() {
-  showForm.value  = false;
-  form.value.name = '';
-  errors.value    = {};
+  showForm.value       = false;
+  form.value.name      = '';
+  form.value.abilities = [];
+  mostrarEscopo.value  = false;
+  errors.value         = {};
 }
 
 function submitForm() {
@@ -193,7 +288,13 @@ function submitForm() {
 
   router.post(route('admin.permissions.users.tokens.store', props.userId), form.value, {
     onError:  (e) => { errors.value = e; },
-    onFinish: () => { processing.value = false; showForm.value = false; form.value.name = ''; },
+    onFinish: () => {
+      processing.value     = false;
+      showForm.value       = false;
+      form.value.name      = '';
+      form.value.abilities = [];
+      mostrarEscopo.value  = false;
+    },
   });
 }
 

@@ -9,6 +9,7 @@ use App\Modules\Cisterna\Enums\EtapaVistoria;
 use App\Modules\Cisterna\Enums\SituacaoAnalise;
 use App\Modules\Cisterna\Enums\SituacaoObra;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
+use App\Modules\Cisterna\Support\EscopoPerfil;
 use App\Modules\Cisterna\Support\PerfilCisterna;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -64,14 +65,113 @@ class BeneficiarioService
         $this->aplicarFiltros($query, $filtros);
 
         // Ranqueamento e uma ordenacao alternativa, nao um filtro: quando
-        // pedido, substitui o orderBy padrao.
+        // pedido, substitui a ordenacao pedida no cabecalho da tabela.
         if (($filtros['ranqueamento'] ?? false) === true) {
             $query->ranqueados();
         } else {
-            $query->orderBy('nome');
+            $this->aplicarOrdenacao($query, $filtros);
         }
 
         return $query->paginate($porPagina)->withQueryString();
+    }
+
+    /**
+     * Colunas que o cabecalho da tabela pode ordenar, mapeadas para a coluna
+     * real.
+     *
+     * A whitelist e obrigatoria, nao defensiva: `sort` vem da query string e
+     * iria direto para o ORDER BY. A chave e o nome publico usado pelo front.
+     *
+     * Municipio e comunidade ficam de fora daqui porque nao sao colunas desta
+     * tabela -- sao tratadas por subquery em aplicarOrdenacao(). Lote, numero de
+     * instalacao, etapas e ranqueamento nao entram: os dois primeiros saem de
+     * relacao a dois saltos, etapas e derivada das vistorias, e ranqueamento ja
+     * tem toggle proprio. Cabecalho que promete ordenar e nao ordena e pior que
+     * cabecalho que nao promete.
+     */
+    private const ORDENACAO_PERMITIDA = [
+        'nome' => 'nome',
+        'cpf' => 'cpf',
+        'situacao_analise' => 'situacao_analise',
+        'situacao_obra' => 'situacao_obra',
+    ];
+
+    private const ORDENACAO_PADRAO = 'nome';
+
+    /**
+     * Aplica a ordenacao pedida no cabecalho, caindo no padrao quando o
+     * parametro esta ausente ou fora da whitelist.
+     *
+     * A ordenacao e no banco, e nao no cliente: a listagem e paginada em 25 e
+     * ordenar no front reordenaria apenas a pagina visivel.
+     *
+     * O desempate por `id` mantem a paginacao estavel. Sem ele, linhas com o
+     * mesmo valor na coluna ordenada podem trocar de pagina entre requests, e o
+     * usuario ve o mesmo beneficiario duas vezes (ou nenhuma) -- com 8 mil
+     * cadastros e nome repetido, isso acontece de verdade.
+     */
+    private function aplicarOrdenacao(Builder $query, array $filtros): void
+    {
+        $chave = (string) ($filtros['sort'] ?? '');
+        $direcao = strtolower((string) ($filtros['direction'] ?? '')) === 'desc' ? 'desc' : 'asc';
+
+        // Relacao ordenada por subquery correlacionada, e nao por join: join
+        // aqui mudaria o shape da query paginada (e, com relacao a muitos,
+        // duplicaria linha), enquanto a subquery so acrescenta uma expressao ao
+        // ORDER BY.
+        $subquery = match ($chave) {
+            'municipio' => DB::table('municipios')
+                ->select('nome')
+                ->whereColumn('municipios.id', 'cisterna_beneficiarios.municipio_id')
+                ->limit(1),
+            'comunidade' => DB::table('cisterna_comunidades')
+                ->select('nome')
+                ->whereColumn('cisterna_comunidades.id', 'cisterna_beneficiarios.comunidade_id')
+                ->limit(1),
+            // Etapas nao e coluna nem texto: ordena pelo QUANTO andou, ou seja
+            // pelo numero de vistorias concluidas (0 a 3). E o que a coluna
+            // desenha com os selos F/C/CD, e o que responde "quem esta parado".
+            // A condicao de concluida acompanha CisternaVistoria::concluidas().
+            'etapas' => DB::table('cisterna_vistorias')
+                ->selectRaw('count(*)')
+                ->whereColumn('cisterna_vistorias.beneficiario_id', 'cisterna_beneficiarios.id')
+                ->whereNotNull('concluida_em'),
+            default => null,
+        };
+
+        if ($subquery !== null) {
+            // NULLS LAST explicito: beneficiario sem comunidade cadastrada nao
+            // deve encabecar a lista ao ordenar por essa coluna. Contagem nao
+            // entra aqui: count(*) devolve 0, nunca NULL, e a clausula seria
+            // sempre falsa.
+            if ($chave !== 'etapas') {
+                $query->orderByRaw(
+                    '('.$subquery->toSql().') IS NULL',
+                    $subquery->getBindings()
+                );
+            }
+
+            $query->orderBy($subquery, $direcao)->orderBy('id');
+
+            return;
+        }
+
+        $coluna = self::ORDENACAO_PERMITIDA[$chave] ?? null;
+
+        if ($coluna === null) {
+            $coluna = self::ORDENACAO_PERMITIDA[self::ORDENACAO_PADRAO];
+            $direcao = 'asc';
+        }
+
+        $query->orderByRaw("{$coluna} IS NULL")
+            ->orderBy($coluna, $direcao)
+            ->orderBy('id');
+    }
+
+    /** Colunas ordenaveis expostas para a interface montar os cabecalhos. */
+    public static function colunasOrdenaveis(): array
+    {
+        return array_merge(array_keys(self::ORDENACAO_PERMITIDA), ['municipio', 'comunidade', 'etapas']);
     }
 
     public function obter(int $id): CisternaBeneficiario
@@ -299,19 +399,15 @@ class BeneficiarioService
      * Perfil CEDEC ve todos os municipios habilitados; COMPDEC so o proprio;
      * fornecedor ve qualquer municipio, mas so obras em envio ou instaladas.
      *
+     * A regra mora em EscopoPerfil porque vistoria, comunidade e notificacao
+     * aplicam a mesma coisa. Este metodo permanece como o ponto unico de
+     * entrada do service, que e o que o comentario da classe promete.
+     *
      * @param  Builder<CisternaBeneficiario>  $query
      */
     private function aplicarEscopoDoPerfil(Builder $query, PerfilCisterna $perfil): void
     {
-        $municipioId = $perfil->municipioId();
-
-        if ($municipioId !== null) {
-            $query->doMunicipio($municipioId);
-        }
-
-        if ($perfil->eFornecedor()) {
-            $query->comSituacaoObra(SituacaoObra::visiveisAoFornecedor());
-        }
+        EscopoPerfil::aplicarEmBeneficiario($query, $perfil);
     }
 
     /**

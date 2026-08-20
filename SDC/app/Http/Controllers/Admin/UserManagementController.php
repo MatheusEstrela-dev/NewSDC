@@ -125,6 +125,13 @@ class UserManagementController extends Controller
         return Inertia::render('Admin/Permissions/Users/Show', [
             'user'         => $user,
             'tokens'       => $tokens,
+            // Escopo possivel de um token: nunca mais que as permissoes
+            // efetivas do dono. Alimenta o seletor de escopo da emissao.
+            'tokenAbilities' => $user->getAllPermissions()
+                ->pluck('name')
+                ->sort()
+                ->values()
+                ->all(),
             'newToken'     => session('new_token'),
             'newTokenName' => session('new_token_name'),
             'history'      => $this->buildHistory($user),

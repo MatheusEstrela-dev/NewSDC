@@ -8,6 +8,10 @@ use App\Modules\Cisterna\DTOs\VistoriaDTO;
 use App\Modules\Cisterna\Enums\EtapaVistoria;
 use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Models\CisternaVistoria;
+use App\Modules\Cisterna\Support\EscopoPerfil;
+use App\Modules\Cisterna\Support\PerfilCisterna;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -22,9 +26,102 @@ use Illuminate\Validation\ValidationException;
  */
 class VistoriaService
 {
+    /**
+     * Mesmo teto do beneficiario. Sem ele, `per_page=100000` puxa as 2.136
+     * vistorias com os 27.684 itens conferidos num unico request.
+     */
+    public const PORTE_MAXIMO_PAGINA = 100;
+
+    public const PORTE_PADRAO_PAGINA = 25;
+
     public function __construct(
         private readonly NumeracaoInstalacaoService $numeracao,
     ) {}
+
+    /**
+     * Listagem paginada das vistorias, recortada pelo perfil.
+     *
+     * Nao existe equivalente na interface web: a tela lista as vistorias de um
+     * beneficiario so, direto da relacao. Este metodo nasce para a API.
+     *
+     * @param  array<string, mixed>  $filtros
+     */
+    public function listar(
+        PerfilCisterna $perfil,
+        array $filtros = [],
+        int $porPagina = self::PORTE_PADRAO_PAGINA,
+    ): LengthAwarePaginator {
+        $porPagina = max(1, min($porPagina, self::PORTE_MAXIMO_PAGINA));
+
+        $query = CisternaVistoria::query()
+            ->with([
+                // Colunas restritas: a vistoria e o beneficiario juntos passam
+                // de 60 colunas, e a listagem precisa de meia duzia.
+                'beneficiario:id,nome,cpf,municipio_id,comunidade_id',
+                'beneficiario.municipio:id,nome,uf',
+                'itensConferidos',
+            ]);
+
+        EscopoPerfil::aplicarViaBeneficiario($query, $perfil);
+        $this->aplicarFiltros($query, $filtros);
+
+        return $query
+            // `nulls last` explicito: data_relatorio e anulavel, e no Postgres
+            // DESC coloca NULL primeiro -- a primeira pagina viria com as
+            // vistorias sem data em vez das mais recentes.
+            ->orderByRaw('data_relatorio desc nulls last')
+            // Desempate por id mantem a paginacao estavel: sem ele, linhas com
+            // a mesma data trocam de pagina entre requests e o consumidor le a
+            // mesma vistoria duas vezes (ou nenhuma).
+            ->orderByDesc('id')
+            ->paginate($porPagina)
+            ->withQueryString();
+    }
+
+    /**
+     * @param  Builder<CisternaVistoria>  $query
+     * @param  array<string, mixed>  $filtros
+     */
+    private function aplicarFiltros(Builder $query, array $filtros): void
+    {
+        $query
+            ->when($filtros['etapa'] ?? null, function (Builder $q, $valor): void {
+                $etapa = EtapaVistoria::tryFrom((string) $valor);
+
+                if ($etapa !== null) {
+                    $q->daEtapa($etapa);
+                }
+            })
+            ->when($filtros['beneficiario_id'] ?? null, function (Builder $q, $id): void {
+                $q->where('beneficiario_id', (int) $id);
+            })
+            ->when($filtros['numero_instalacao'] ?? null, function (Builder $q, $numero): void {
+                $q->where('numero_instalacao', (int) $numero);
+            })
+            ->when($filtros['municipio_id'] ?? null, function (Builder $q, $id): void {
+                $q->whereHas('beneficiario', fn (Builder $b) => $b->where('municipio_id', (int) $id));
+            })
+            ->when($filtros['comunidade_id'] ?? null, function (Builder $q, $id): void {
+                $q->whereHas('beneficiario', fn (Builder $b) => $b->where('comunidade_id', (int) $id));
+            })
+            ->when($filtros['data_relatorio_inicio'] ?? null, function (Builder $q, $inicio): void {
+                $q->whereDate('data_relatorio', '>=', $inicio);
+            })
+            ->when($filtros['data_relatorio_fim'] ?? null, function (Builder $q, $fim): void {
+                $q->whereDate('data_relatorio', '<=', $fim);
+            });
+
+        // `concluida` e booleano e precisa de isset, nao de when(): when() nao
+        // dispara com false, entao `concluida=false` seria ignorado e a API
+        // devolveria tudo -- errado sem erro nenhum aparecer.
+        if (isset($filtros['concluida'])) {
+            if ((bool) $filtros['concluida']) {
+                $query->concluidas();
+            } else {
+                $query->whereNull('concluida_em');
+            }
+        }
+    }
 
     /**
      * Qual etapa pode ser trabalhada agora. Null quando a cadeia terminou.

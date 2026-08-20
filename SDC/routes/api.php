@@ -1,26 +1,32 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\Pae\EmpreendimentoController;
-use App\Http\Controllers\Api\V1\Pae\NotificacaoController;
-use App\Http\Controllers\Api\V1\Rat\HistoricoController as RatHistoricoApiController;
-use App\Http\Controllers\Api\V1\Rat\OcorrenciaController as RatOcorrenciaApiController;
-use App\Http\Controllers\Api\V1\Rat\ProtocoloController;
-use App\Http\Controllers\Api\V1\Integracao\IntegracaoController;
-use App\Http\Controllers\Api\V1\PowerBI\TokenController;
-use App\Http\Controllers\Api\V1\BI\EntradaController;
-use App\Http\Controllers\Api\V1\Webhook\WebhookController;
-use App\Http\Controllers\Api\V1\Integration\DynamicIntegrationController;
+use App\Http\Controllers\ActivityFeedController;
 use App\Http\Controllers\Api\HealthCheckController;
 use App\Http\Controllers\Api\LogViewerController;
-use App\Http\Controllers\Api\V1\LogViewerController as LogViewerV1Controller;
-use App\Http\Controllers\Api\RatNovoController;
 use App\Http\Controllers\Api\RatAuditController;
+use App\Http\Controllers\Api\RatNovoController;
+use App\Http\Controllers\Api\V1\AjudaHumanitaria\EstoqueApiController as AhEstoqueApiController;
+use App\Http\Controllers\Api\V1\AjudaHumanitaria\LiberacaoApiController as AhLiberacaoApiController;
+use App\Http\Controllers\Api\V1\AjudaHumanitaria\PedidoConsolidadoController as AhPedidoConsolidadoController;
+use App\Http\Controllers\Api\V1\BI\EntradaController;
+use App\Http\Controllers\Api\V1\Cisterna\ApoioApiController as CisternaApoioApiController;
+use App\Http\Controllers\Api\V1\Cisterna\BeneficiarioApiController as CisternaBeneficiarioApiController;
+use App\Http\Controllers\Api\V1\Cisterna\NotificacaoApiController as CisternaNotificacaoApiController;
+use App\Http\Controllers\Api\V1\Cisterna\VistoriaApiController as CisternaVistoriaApiController;
 use App\Http\Controllers\Api\V1\Decretacoes\DecretacoesApiController;
+use App\Http\Controllers\Api\V1\Integracao\IntegracaoController;
+use App\Http\Controllers\Api\V1\Integration\DynamicIntegrationController;
+use App\Http\Controllers\Api\V1\LogViewerController as LogViewerV1Controller;
+use App\Http\Controllers\Api\V1\Pae\EmpreendimentoController;
+use App\Http\Controllers\Api\V1\Pae\NotificacaoController;
+use App\Http\Controllers\Api\V1\PowerBI\TokenController;
+use App\Http\Controllers\Api\V1\Rat\HistoricoController as RatHistoricoApiController;
+use App\Http\Controllers\Api\V1\Rat\OcorrenciaController as RatOcorrenciaApiController;
+use App\Http\Controllers\Api\V1\Webhook\WebhookController;
 use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\NotificationPreferencesController;
-use App\Http\Controllers\ActivityFeedController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -98,7 +104,7 @@ Route::prefix('v1/auth')->group(function () {
 // somaria round-trips Redis por request. Se um dia for preciso SHEDDING explicito
 // (503) em vez de fila no worker, reduza DB_MAX_CONCURRENT abaixo do total de
 // workers E aplique 'backpressure'+'acquire_slot' neste grupo.
-Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class, 'statement_timeout:10000'])->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class, 'token.abilities', 'statement_timeout:10000'])->group(function () {
 
     // Activity Feed
     Route::get('activity-feed', [ActivityFeedController::class, 'index'])->name('api.v1.activity-feed');
@@ -147,32 +153,116 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
             ->middleware('can:pae.protocolos.edit');
     });
 
+    // Modulo Ajuda Humanitaria: fornecimento de dados, somente leitura.
+    // Paridade de contrato com os endpoints publicos do legado, agora sob token.
+    Route::prefix('ajuda-humanitaria')->name('api.v1.ajuda-humanitaria.')->group(function () {
+        Route::get('liberacoes', [AhLiberacaoApiController::class, 'index'])
+            ->name('liberacoes.index')
+            ->middleware(['can:humanitaria.saldo.view', 'throttle:60,1']);
+
+        // Throttle mais apertado: este endpoint nao tem filtro obrigatorio e,
+        // com a carga de itens completa, e a consulta mais pesada do modulo.
+        Route::get('liberacoes/cedec', [AhLiberacaoApiController::class, 'cedec'])
+            ->name('liberacoes.cedec')
+            ->middleware(['can:humanitaria.saldo.view', 'throttle:30,1']);
+
+        Route::get('estoque/saldo-cesta', [AhEstoqueApiController::class, 'saldoCesta'])
+            ->name('estoque.saldo-cesta')
+            ->middleware(['can:humanitaria.saldo.view', 'throttle:60,1']);
+
+        Route::get('pedidos/consolidado', AhPedidoConsolidadoController::class)
+            ->name('pedidos.consolidado')
+            ->middleware(['can:humanitaria.pedidos.view', 'throttle:60,1']);
+    });
+
+    // Modulo Cisterna: fornecimento de dados, somente leitura.
+    //
+    // O recorte territorial nao cabe em middleware: depende do usuario dono do
+    // token e, no `show`, da instancia do registro. `can:` cobre a permissao;
+    // PerfilCisterna cobre o territorio nas listagens, e a policy no detalhe.
+    Route::prefix('cisternas')->name('api.v1.cisternas.')->group(function (): void {
+
+        Route::prefix('beneficiarios')->name('beneficiarios.')->group(function (): void {
+            Route::get('/', [CisternaBeneficiarioApiController::class, 'index'])
+                ->name('index')
+                ->middleware('can:cisternas.beneficiarios.view');
+
+            // Antes do /{beneficiario}: sem isto "export" casa com o parametro
+            // e o whereNumber devolveria 404 em vez de servir o CSV.
+            Route::get('/export', [CisternaBeneficiarioApiController::class, 'export'])
+                ->name('export')
+                ->middleware('can:cisternas.beneficiarios.export');
+
+            // Sem `can:`: a policy view() checa a permissao E o territorio, e um
+            // can: antes dela daria 403 sem distinguir os dois motivos.
+            Route::get('/{beneficiario}', [CisternaBeneficiarioApiController::class, 'show'])
+                ->name('show')
+                ->whereNumber('beneficiario');
+        });
+
+        // Vistoria e recurso do Cisterna, nao modulo proprio: a cadeia
+        // fornecedor -> COMPDEC -> CEDEC pertence ao beneficiario.
+        //
+        // O parametro se chama {cisternaVistoria} e nao {vistoria} de proposito:
+        // routes/modules/tdap.php registra Route::model() explicito para
+        // {vistoria}, e binder explicito vence o implicito no SubstituteBindings
+        // -- com o nome curto o Laravel resolveria o model do TDAP aqui.
+        Route::prefix('vistorias')->name('vistorias.')->group(function (): void {
+            Route::get('/', [CisternaVistoriaApiController::class, 'index'])
+                ->name('index')
+                ->middleware('can:cisternas.vistorias.view');
+
+            Route::get('/{cisternaVistoria}', [CisternaVistoriaApiController::class, 'show'])
+                ->name('show')
+                ->whereNumber('cisternaVistoria');
+        });
+
+        // Referencia. Lote e ordem de servico nao tem recorte territorial: as
+        // tabelas nao tem municipio_id e o lote e nacional -- um COMPDEC precisa
+        // ver o lote para saber onde esta a propria ordem de servico.
+        Route::get('comunidades', [CisternaApoioApiController::class, 'comunidades'])
+            ->name('comunidades.index')
+            ->middleware('can:cisternas.comunidades.view');
+
+        Route::get('lotes', [CisternaApoioApiController::class, 'lotes'])
+            ->name('lotes.index')
+            ->middleware('can:cisternas.lotes.view');
+
+        Route::get('ordens-servico', [CisternaApoioApiController::class, 'ordensServico'])
+            ->name('ordens-servico.index')
+            ->middleware('can:cisternas.ordens-servico.view');
+
+        Route::get('notificacoes', [CisternaNotificacaoApiController::class, 'index'])
+            ->name('notificacoes.index')
+            ->middleware('can:cisternas.notificacoes.view');
+    });
+
     // Módulo RAT — Protocolos (stub removido — rotas reais abaixo com auth dual)
 
     // Módulo RAT — Ocorrências (nova estrutura polimórfica, acesso mobile/API)
     // Requer permissão: rat.api.access
     Route::prefix('rat/ocorrencias')->name('api.v1.rat.ocorrencias.')->middleware('can:rat.api.access')->group(function () {
-        Route::get('/',            [RatOcorrenciaApiController::class, 'index'])  ->name('index');
-        Route::post('/',           [RatOcorrenciaApiController::class, 'store'])  ->name('store');
-        Route::get('/{id}',        [RatOcorrenciaApiController::class, 'show'])   ->name('show');
-        Route::put('/{id}',        [RatOcorrenciaApiController::class, 'update']) ->name('update');
+        Route::get('/', [RatOcorrenciaApiController::class, 'index'])->name('index');
+        Route::post('/', [RatOcorrenciaApiController::class, 'store'])->name('store');
+        Route::get('/{id}', [RatOcorrenciaApiController::class, 'show'])->name('show');
+        Route::put('/{id}', [RatOcorrenciaApiController::class, 'update'])->name('update');
         Route::patch('/{id}/finalizar', [RatOcorrenciaApiController::class, 'finalize'])->name('finalize');
-        Route::delete('/{id}',     [RatOcorrenciaApiController::class, 'destroy'])->name('destroy');
+        Route::delete('/{id}', [RatOcorrenciaApiController::class, 'destroy'])->name('destroy');
     });
 
     // Módulo RAT — Histórico de ocorrência (timeline)
     Route::prefix('rat/ocorrencias/{id}/historico')->name('api.v1.rat.historico.')->middleware('can:rat.historico.view')->group(function () {
-        Route::get('/',        [RatHistoricoApiController::class, 'index']) ->name('index');
-        Route::get('/recent',  [RatHistoricoApiController::class, 'recent'])->name('recent');
+        Route::get('/', [RatHistoricoApiController::class, 'index'])->name('index');
+        Route::get('/recent', [RatHistoricoApiController::class, 'recent'])->name('recent');
     });
 
     // Módulo RAT — Nova Estrutura (RatOcorrencia + relatos polimórficos)
     Route::prefix('rat-novo')->name('api.v1.rat-novo.')->group(function () {
-        Route::get('/',            [RatNovoController::class, 'index'])   ->name('index');
-        Route::post('/',           [RatNovoController::class, 'store'])   ->name('store');
-        Route::get('/{id}',        [RatNovoController::class, 'show'])    ->name('show');
-        Route::put('/{id}',        [RatNovoController::class, 'update'])  ->name('update');
-        Route::delete('/{id}',     [RatNovoController::class, 'destroy']) ->name('destroy');
+        Route::get('/', [RatNovoController::class, 'index'])->name('index');
+        Route::post('/', [RatNovoController::class, 'store'])->name('store');
+        Route::get('/{id}', [RatNovoController::class, 'show'])->name('show');
+        Route::put('/{id}', [RatNovoController::class, 'update'])->name('update');
+        Route::delete('/{id}', [RatNovoController::class, 'destroy'])->name('destroy');
         Route::get('/{id}/power-bi', [RatNovoController::class, 'powerBiData'])->name('power-bi');
     });
 
@@ -253,8 +343,8 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
     // Cada user gerencia suas proprias conexoes em Configuracoes > Integracoes.
     Route::prefix('integrations/telegram')->name('api.v1.integrations.telegram.')->group(function () {
         Route::post('connect', [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'connect'])->name('connect');
-        Route::get('status',   [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'status'])->name('status');
-        Route::delete('{id}',  [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'disconnect'])
+        Route::get('status', [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'status'])->name('status');
+        Route::delete('{id}', [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'disconnect'])
             ->whereNumber('id')
             ->name('disconnect');
     });
@@ -289,11 +379,11 @@ Route::prefix('v1/logs')->name('api.v1.logs.')->middleware([
                     $x = 1 / 0;
                     break;
                 case 'null':
-                    throw new \Error('Simulated null dereference: ' . now()->toIso8601String());
+                    throw new \Error('Simulated null dereference: '.now()->toIso8601String());
                 case 'custom':
-                    throw new \Exception('Erro de teste customizado: ' . now()->toIso8601String());
+                    throw new \Exception('Erro de teste customizado: '.now()->toIso8601String());
                 default:
-                    throw new \RuntimeException('Erro de teste padrao: ' . now()->toIso8601String());
+                    throw new \RuntimeException('Erro de teste padrao: '.now()->toIso8601String());
             }
 
             return response()->json(['error' => 'Nao deveria chegar aqui']);
@@ -349,21 +439,21 @@ Route::prefix('v1/decretacoes')
         'api-rate-limiter:pro',
     ])
     ->group(function () {
-        Route::get('/',                      [DecretacoesApiController::class, 'index'])->name('index');
-        Route::get('/export/power-bi',       [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');
+        Route::get('/', [DecretacoesApiController::class, 'index'])->name('index');
+        Route::get('/export/power-bi', [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');
         Route::get('/export/power-bi/async', [DecretacoesApiController::class, 'exportPowerBIAsync'])->name('export.power-bi.async');
 
         // Polling de trace assincrono no mesmo grupo (suporta triple auth via
         // DecretacoesApiAuth: session/Sanctum/PowerBI token). Permite que o
         // cliente PowerBI consulte status e baixe artefato do export async.
-        Route::get('/traces/{traceId}',          [\App\Http\Controllers\Api\V1\TraceController::class, 'show'])
+        Route::get('/traces/{traceId}', [\App\Http\Controllers\Api\V1\TraceController::class, 'show'])
             ->name('traces.show')
             ->whereUuid('traceId');
         Route::get('/traces/{traceId}/download', [\App\Http\Controllers\Api\V1\TraceController::class, 'download'])
             ->name('traces.download')
             ->whereUuid('traceId');
 
-        Route::get('/{id}',                  [DecretacoesApiController::class, 'show'])->name('show');
+        Route::get('/{id}', [DecretacoesApiController::class, 'show'])->name('show');
     });
 
 // Rota de escrita — limite restrito (default: 300 creditos/min, protege contra abuso)
@@ -398,9 +488,9 @@ Route::prefix('v1/rat')
         'api-rate-limiter:pro',
     ])
     ->group(function () {
-        Route::get('protocolos',               [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'index'])->name('protocolos.index');
+        Route::get('protocolos', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'index'])->name('protocolos.index');
         Route::get('protocolos/export/power-bi', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'exportPowerBI'])->name('protocolos.export.powerbi');
-        Route::get('protocolos/{id}',          [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'show'])->name('protocolos.show');
+        Route::get('protocolos/{id}', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'show'])->name('protocolos.show');
     });
 
 // Rota de escrita — limite restrito (default: 300 creditos/min)
@@ -490,17 +580,17 @@ if (app()->environment('local', 'development')) {
 if (app()->environment('local', 'development')) {
     Route::post('_dev/rat-dados-gerais', function (\App\Modules\Rat\Http\Requests\RatDadosGeraisRequest $request) {
         $validated = $request->validated();
-        $dto       = \App\Modules\Rat\DTOs\RatDadosGeraisDTO::fromArray($validated);
+        $dto = \App\Modules\Rat\DTOs\RatDadosGeraisDTO::fromArray($validated);
 
         $ocorrencia = \App\Modules\Rat\Models\RatOcorrencia::create(['status' => 0]);
-        $model      = app(\App\Modules\Rat\Services\RatWriteService::class)
+        $model = app(\App\Modules\Rat\Services\RatWriteService::class)
             ->saveDadosGerais($ocorrencia->id, $dto);
 
         return response()->json([
-            'etapa_1_validated'  => $validated,
-            'etapa_2_dto_array'  => $dto->toArray(),
+            'etapa_1_validated' => $validated,
+            'etapa_2_dto_array' => $dto->toArray(),
             'etapa_3_persistido' => $model->fresh(),
-            'ocorrencia_id'      => $ocorrencia->id,
+            'ocorrencia_id' => $ocorrencia->id,
         ], 201);
     });
 }

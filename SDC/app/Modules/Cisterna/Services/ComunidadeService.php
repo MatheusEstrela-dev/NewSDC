@@ -6,6 +6,8 @@ namespace App\Modules\Cisterna\Services;
 
 use App\Modules\Cisterna\DTOs\ComunidadeDTO;
 use App\Modules\Cisterna\Models\CisternaComunidade;
+use App\Modules\Cisterna\Support\EscopoPerfil;
+use App\Modules\Cisterna\Support\PerfilCisterna;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -15,10 +17,17 @@ class ComunidadeService
 {
     /**
      * @param  array<string, mixed>  $filtros
+     *
+     * O perfil e o ultimo parametro e opcional: as telas web chamam
+     * `listar($filtros, $porPagina)` e continuam sem recorte territorial, que
+     * e o comportamento atual delas. A API passa o perfil.
      */
-    public function listar(array $filtros = [], int $porPagina = 50): LengthAwarePaginator
-    {
-        return CisternaComunidade::query()
+    public function listar(
+        array $filtros = [],
+        int $porPagina = 50,
+        ?PerfilCisterna $perfil = null,
+    ): LengthAwarePaginator {
+        $query = CisternaComunidade::query()
             ->with('municipio:id,nome,uf')
             // Corrige o defeito C18: o legado contava com
             // leftJoin('sinc_cisterna', 'comunidade', '=', 'comunidade'), sem o
@@ -29,7 +38,13 @@ class ComunidadeService
             ->when($filtros['search'] ?? null, function (Builder $q, $termo): void {
                 $q->where('nome', 'ilike', '%'.trim((string) $termo).'%');
             })
-            ->when(($filtros['apenas_ativas'] ?? false) === true, fn (Builder $q) => $q->ativas())
+            ->when(($filtros['apenas_ativas'] ?? false) === true, fn (Builder $q) => $q->ativas());
+
+        if ($perfil !== null) {
+            EscopoPerfil::aplicarEmMunicipio($query, $perfil);
+        }
+
+        return $query
             ->orderBy('nome')
             ->paginate($porPagina)
             ->withQueryString();
