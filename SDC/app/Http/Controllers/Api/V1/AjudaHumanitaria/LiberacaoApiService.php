@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\AjudaHumanitaria\Services;
+namespace App\Http\Controllers\Api\V1\AjudaHumanitaria;
 
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;

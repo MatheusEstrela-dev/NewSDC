@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\AjudaHumanitaria;
 
 use App\Http\Controllers\Controller;
-use App\Modules\AjudaHumanitaria\Services\SaldoCestaApiService;
 use Illuminate\Http\JsonResponse;
 
 /**

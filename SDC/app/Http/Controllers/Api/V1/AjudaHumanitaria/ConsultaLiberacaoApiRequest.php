@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\AjudaHumanitaria\Requests;
+namespace App\Http\Controllers\Api\V1\AjudaHumanitaria;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
