@@ -3,6 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AjudaHumanitaria\EstoqueApiController as AhEstoqueApiController;
+use App\Http\Controllers\Api\V1\AjudaHumanitaria\LiberacaoApiController as AhLiberacaoApiController;
+use App\Http\Controllers\Api\V1\Cisterna\BeneficiarioApiController as CisternaBeneficiarioApiController;
 use App\Http\Controllers\Api\V1\Pae\EmpreendimentoController;
 use App\Http\Controllers\Api\V1\Pae\NotificacaoController;
 use App\Http\Controllers\Api\V1\Rat\HistoricoController as RatHistoricoApiController;
@@ -151,9 +153,45 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
     // Modulo Ajuda Humanitaria: fornecimento de dados, somente leitura.
     // Paridade de contrato com os endpoints publicos do legado, agora sob token.
     Route::prefix('ajuda-humanitaria')->name('api.v1.ajuda-humanitaria.')->group(function () {
+        Route::get('liberacoes', [AhLiberacaoApiController::class, 'index'])
+            ->name('liberacoes.index')
+            ->middleware(['can:humanitaria.saldo.view', 'throttle:60,1']);
+
+        // Throttle mais apertado: este endpoint nao tem filtro obrigatorio e,
+        // com a carga de itens completa, e a consulta mais pesada do modulo.
+        Route::get('liberacoes/cedec', [AhLiberacaoApiController::class, 'cedec'])
+            ->name('liberacoes.cedec')
+            ->middleware(['can:humanitaria.saldo.view', 'throttle:30,1']);
+
         Route::get('estoque/saldo-cesta', [AhEstoqueApiController::class, 'saldoCesta'])
             ->name('estoque.saldo-cesta')
             ->middleware(['can:humanitaria.saldo.view', 'throttle:60,1']);
+    });
+
+    // Modulo Cisterna: fornecimento de dados, somente leitura.
+    //
+    // O recorte territorial nao cabe em middleware: depende do usuario dono do
+    // token e, no `show`, da instancia do registro. `can:` cobre a permissao;
+    // PerfilCisterna cobre o territorio nas listagens, e a policy no detalhe.
+    Route::prefix('cisternas')->name('api.v1.cisternas.')->group(function (): void {
+
+        Route::prefix('beneficiarios')->name('beneficiarios.')->group(function (): void {
+            Route::get('/', [CisternaBeneficiarioApiController::class, 'index'])
+                ->name('index')
+                ->middleware('can:cisternas.beneficiarios.view');
+
+            // Antes do /{beneficiario}: sem isto "export" casa com o parametro
+            // e o whereNumber devolveria 404 em vez de servir o CSV.
+            Route::get('/export', [CisternaBeneficiarioApiController::class, 'export'])
+                ->name('export')
+                ->middleware('can:cisternas.beneficiarios.export');
+
+            // Sem `can:`: a policy view() checa a permissao E o territorio, e um
+            // can: antes dela daria 403 sem distinguir os dois motivos.
+            Route::get('/{beneficiario}', [CisternaBeneficiarioApiController::class, 'show'])
+                ->name('show')
+                ->whereNumber('beneficiario');
+        });
     });
 
     // Módulo RAT — Protocolos (stub removido — rotas reais abaixo com auth dual)
