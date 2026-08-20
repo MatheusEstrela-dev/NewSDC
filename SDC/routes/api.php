@@ -9,7 +9,9 @@ use App\Http\Controllers\Api\V1\AjudaHumanitaria\EstoqueApiController as AhEstoq
 use App\Http\Controllers\Api\V1\AjudaHumanitaria\LiberacaoApiController as AhLiberacaoApiController;
 use App\Http\Controllers\Api\V1\AjudaHumanitaria\PedidoConsolidadoController as AhPedidoConsolidadoController;
 use App\Http\Controllers\Api\V1\BI\EntradaController;
+use App\Http\Controllers\Api\V1\Cisterna\ApoioApiController as CisternaApoioApiController;
 use App\Http\Controllers\Api\V1\Cisterna\BeneficiarioApiController as CisternaBeneficiarioApiController;
+use App\Http\Controllers\Api\V1\Cisterna\NotificacaoApiController as CisternaNotificacaoApiController;
 use App\Http\Controllers\Api\V1\Cisterna\VistoriaApiController as CisternaVistoriaApiController;
 use App\Http\Controllers\Api\V1\Decretacoes\DecretacoesApiController;
 use App\Http\Controllers\Api\V1\Integracao\IntegracaoController;
@@ -214,6 +216,25 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
                 ->name('show')
                 ->whereNumber('cisternaVistoria');
         });
+
+        // Referencia. Lote e ordem de servico nao tem recorte territorial: as
+        // tabelas nao tem municipio_id e o lote e nacional -- um COMPDEC precisa
+        // ver o lote para saber onde esta a propria ordem de servico.
+        Route::get('comunidades', [CisternaApoioApiController::class, 'comunidades'])
+            ->name('comunidades.index')
+            ->middleware('can:cisternas.comunidades.view');
+
+        Route::get('lotes', [CisternaApoioApiController::class, 'lotes'])
+            ->name('lotes.index')
+            ->middleware('can:cisternas.lotes.view');
+
+        Route::get('ordens-servico', [CisternaApoioApiController::class, 'ordensServico'])
+            ->name('ordens-servico.index')
+            ->middleware('can:cisternas.ordens-servico.view');
+
+        Route::get('notificacoes', [CisternaNotificacaoApiController::class, 'index'])
+            ->name('notificacoes.index')
+            ->middleware('can:cisternas.notificacoes.view');
     });
 
     // Módulo RAT — Protocolos (stub removido — rotas reais abaixo com auth dual)
