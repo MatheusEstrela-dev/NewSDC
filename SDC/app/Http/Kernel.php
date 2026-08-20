@@ -97,5 +97,6 @@ class Kernel extends HttpKernel
         'acquire_slot' => \App\Http\Middleware\AcquireConnectionSlot::class,
         'backpressure' => \App\Http\Middleware\Backpressure::class,
         'cache_swagger' => \App\Http\Middleware\CacheSwaggerUi::class,
+        'token.abilities' => \App\Http\Middleware\EnforceTokenAbilities::class,
     ];
 }

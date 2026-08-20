@@ -104,7 +104,7 @@ Route::prefix('v1/auth')->group(function () {
 // somaria round-trips Redis por request. Se um dia for preciso SHEDDING explicito
 // (503) em vez de fila no worker, reduza DB_MAX_CONCURRENT abaixo do total de
 // workers E aplique 'backpressure'+'acquire_slot' neste grupo.
-Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class, 'statement_timeout:10000'])->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class, 'token.abilities', 'statement_timeout:10000'])->group(function () {
 
     // Activity Feed
     Route::get('activity-feed', [ActivityFeedController::class, 'index'])->name('api.v1.activity-feed');

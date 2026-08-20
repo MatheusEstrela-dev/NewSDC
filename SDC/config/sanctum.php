@@ -46,7 +46,12 @@ return [
     |
     */
 
-    'expiration' => env('SANCTUM_TOKEN_EXPIRATION', 60 * 24 * 7),
+    // Nulo de proposito: a expiracao vale por token, gravada em expires_at na
+    // emissao (UserTokenController). Com valor aqui, este teto vence o
+    // expires_at -- era o que fazia um token de 30 dias morrer em 7, sem a tela
+    // avisar. Quem precisar de um teto global aperta pela env, ciente de que ele
+    // encurta todo token ja emitido.
+    'expiration' => env('SANCTUM_TOKEN_EXPIRATION'),
 
     /*
     |--------------------------------------------------------------------------

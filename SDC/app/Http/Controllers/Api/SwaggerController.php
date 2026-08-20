@@ -38,7 +38,7 @@ use App\Http\Controllers\Controller;
  *
  * @OA\SecurityScheme(
  *     type="http",
- *     description="Token de acesso pessoal (Bearer). Emitido por um administrador com acesso ao modulo de Permissionamento e vinculado ao usuario. Informe no campo abaixo apenas o token (o prefixo 'Bearer ' e adicionado automaticamente). Token Sanctum, nao e JWT.",
+ *     description="Token de acesso pessoal (Bearer). Emitido por um administrador com acesso ao modulo de Permissionamento e vinculado ao usuario. O token carrega um escopo: alcanca apenas as permissoes marcadas na emissao, sempre um subconjunto das permissoes do dono. Uma chamada fora do escopo responde 403 mesmo que o usuario tenha a permissao. Todo token tem prazo (ate 90 dias). Informe no campo abaixo apenas o token (o prefixo 'Bearer ' e adicionado automaticamente). Token Sanctum, nao e JWT.",
  *     name="bearerAuth",
  *     in="header",
  *     scheme="bearer",
