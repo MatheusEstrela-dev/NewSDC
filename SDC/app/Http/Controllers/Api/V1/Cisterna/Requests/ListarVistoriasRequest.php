@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Cisterna\Requests\Api;
+namespace App\Http\Controllers\Api\V1\Cisterna\Requests;
 
 use App\Modules\Cisterna\Enums\EtapaVistoria;
 use Illuminate\Validation\Rule;

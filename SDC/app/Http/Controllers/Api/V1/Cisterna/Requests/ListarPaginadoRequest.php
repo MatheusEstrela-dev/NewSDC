@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Cisterna\Requests\Api;
+namespace App\Http\Controllers\Api\V1\Cisterna\Requests;
 
 /**
  * Lotes e ordens de servico: paginacao, sem filtro proprio alem do lote.

@@ -1,29 +1,28 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\AjudaHumanitaria\EstoqueApiController as AhEstoqueApiController;
-use App\Http\Controllers\Api\V1\AjudaHumanitaria\LiberacaoApiController as AhLiberacaoApiController;
-use App\Http\Controllers\Api\V1\Cisterna\BeneficiarioApiController as CisternaBeneficiarioApiController;
-use App\Http\Controllers\Api\V1\Pae\EmpreendimentoController;
-use App\Http\Controllers\Api\V1\Pae\NotificacaoController;
-use App\Http\Controllers\Api\V1\Rat\HistoricoController as RatHistoricoApiController;
-use App\Http\Controllers\Api\V1\Rat\OcorrenciaController as RatOcorrenciaApiController;
-use App\Http\Controllers\Api\V1\Rat\ProtocoloController;
-use App\Http\Controllers\Api\V1\Integracao\IntegracaoController;
-use App\Http\Controllers\Api\V1\PowerBI\TokenController;
-use App\Http\Controllers\Api\V1\BI\EntradaController;
-use App\Http\Controllers\Api\V1\Webhook\WebhookController;
-use App\Http\Controllers\Api\V1\Integration\DynamicIntegrationController;
+use App\Http\Controllers\ActivityFeedController;
 use App\Http\Controllers\Api\HealthCheckController;
 use App\Http\Controllers\Api\LogViewerController;
-use App\Http\Controllers\Api\V1\LogViewerController as LogViewerV1Controller;
-use App\Http\Controllers\Api\RatNovoController;
 use App\Http\Controllers\Api\RatAuditController;
+use App\Http\Controllers\Api\RatNovoController;
+use App\Http\Controllers\Api\V1\AjudaHumanitaria\EstoqueApiController as AhEstoqueApiController;
+use App\Http\Controllers\Api\V1\AjudaHumanitaria\LiberacaoApiController as AhLiberacaoApiController;
+use App\Http\Controllers\Api\V1\BI\EntradaController;
+use App\Http\Controllers\Api\V1\Cisterna\BeneficiarioApiController as CisternaBeneficiarioApiController;
 use App\Http\Controllers\Api\V1\Decretacoes\DecretacoesApiController;
+use App\Http\Controllers\Api\V1\Integracao\IntegracaoController;
+use App\Http\Controllers\Api\V1\Integration\DynamicIntegrationController;
+use App\Http\Controllers\Api\V1\LogViewerController as LogViewerV1Controller;
+use App\Http\Controllers\Api\V1\Pae\EmpreendimentoController;
+use App\Http\Controllers\Api\V1\Pae\NotificacaoController;
+use App\Http\Controllers\Api\V1\PowerBI\TokenController;
+use App\Http\Controllers\Api\V1\Rat\HistoricoController as RatHistoricoApiController;
+use App\Http\Controllers\Api\V1\Rat\OcorrenciaController as RatOcorrenciaApiController;
+use App\Http\Controllers\Api\V1\Webhook\WebhookController;
 use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\NotificationPreferencesController;
-use App\Http\Controllers\ActivityFeedController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -199,27 +198,27 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
     // Módulo RAT — Ocorrências (nova estrutura polimórfica, acesso mobile/API)
     // Requer permissão: rat.api.access
     Route::prefix('rat/ocorrencias')->name('api.v1.rat.ocorrencias.')->middleware('can:rat.api.access')->group(function () {
-        Route::get('/',            [RatOcorrenciaApiController::class, 'index'])  ->name('index');
-        Route::post('/',           [RatOcorrenciaApiController::class, 'store'])  ->name('store');
-        Route::get('/{id}',        [RatOcorrenciaApiController::class, 'show'])   ->name('show');
-        Route::put('/{id}',        [RatOcorrenciaApiController::class, 'update']) ->name('update');
+        Route::get('/', [RatOcorrenciaApiController::class, 'index'])->name('index');
+        Route::post('/', [RatOcorrenciaApiController::class, 'store'])->name('store');
+        Route::get('/{id}', [RatOcorrenciaApiController::class, 'show'])->name('show');
+        Route::put('/{id}', [RatOcorrenciaApiController::class, 'update'])->name('update');
         Route::patch('/{id}/finalizar', [RatOcorrenciaApiController::class, 'finalize'])->name('finalize');
-        Route::delete('/{id}',     [RatOcorrenciaApiController::class, 'destroy'])->name('destroy');
+        Route::delete('/{id}', [RatOcorrenciaApiController::class, 'destroy'])->name('destroy');
     });
 
     // Módulo RAT — Histórico de ocorrência (timeline)
     Route::prefix('rat/ocorrencias/{id}/historico')->name('api.v1.rat.historico.')->middleware('can:rat.historico.view')->group(function () {
-        Route::get('/',        [RatHistoricoApiController::class, 'index']) ->name('index');
-        Route::get('/recent',  [RatHistoricoApiController::class, 'recent'])->name('recent');
+        Route::get('/', [RatHistoricoApiController::class, 'index'])->name('index');
+        Route::get('/recent', [RatHistoricoApiController::class, 'recent'])->name('recent');
     });
 
     // Módulo RAT — Nova Estrutura (RatOcorrencia + relatos polimórficos)
     Route::prefix('rat-novo')->name('api.v1.rat-novo.')->group(function () {
-        Route::get('/',            [RatNovoController::class, 'index'])   ->name('index');
-        Route::post('/',           [RatNovoController::class, 'store'])   ->name('store');
-        Route::get('/{id}',        [RatNovoController::class, 'show'])    ->name('show');
-        Route::put('/{id}',        [RatNovoController::class, 'update'])  ->name('update');
-        Route::delete('/{id}',     [RatNovoController::class, 'destroy']) ->name('destroy');
+        Route::get('/', [RatNovoController::class, 'index'])->name('index');
+        Route::post('/', [RatNovoController::class, 'store'])->name('store');
+        Route::get('/{id}', [RatNovoController::class, 'show'])->name('show');
+        Route::put('/{id}', [RatNovoController::class, 'update'])->name('update');
+        Route::delete('/{id}', [RatNovoController::class, 'destroy'])->name('destroy');
         Route::get('/{id}/power-bi', [RatNovoController::class, 'powerBiData'])->name('power-bi');
     });
 
@@ -300,8 +299,8 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\CheckUserA
     // Cada user gerencia suas proprias conexoes em Configuracoes > Integracoes.
     Route::prefix('integrations/telegram')->name('api.v1.integrations.telegram.')->group(function () {
         Route::post('connect', [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'connect'])->name('connect');
-        Route::get('status',   [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'status'])->name('status');
-        Route::delete('{id}',  [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'disconnect'])
+        Route::get('status', [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'status'])->name('status');
+        Route::delete('{id}', [\App\Http\Controllers\Api\V1\Integrations\TelegramController::class, 'disconnect'])
             ->whereNumber('id')
             ->name('disconnect');
     });
@@ -336,11 +335,11 @@ Route::prefix('v1/logs')->name('api.v1.logs.')->middleware([
                     $x = 1 / 0;
                     break;
                 case 'null':
-                    throw new \Error('Simulated null dereference: ' . now()->toIso8601String());
+                    throw new \Error('Simulated null dereference: '.now()->toIso8601String());
                 case 'custom':
-                    throw new \Exception('Erro de teste customizado: ' . now()->toIso8601String());
+                    throw new \Exception('Erro de teste customizado: '.now()->toIso8601String());
                 default:
-                    throw new \RuntimeException('Erro de teste padrao: ' . now()->toIso8601String());
+                    throw new \RuntimeException('Erro de teste padrao: '.now()->toIso8601String());
             }
 
             return response()->json(['error' => 'Nao deveria chegar aqui']);
@@ -396,21 +395,21 @@ Route::prefix('v1/decretacoes')
         'api-rate-limiter:pro',
     ])
     ->group(function () {
-        Route::get('/',                      [DecretacoesApiController::class, 'index'])->name('index');
-        Route::get('/export/power-bi',       [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');
+        Route::get('/', [DecretacoesApiController::class, 'index'])->name('index');
+        Route::get('/export/power-bi', [DecretacoesApiController::class, 'exportPowerBI'])->name('export.power-bi');
         Route::get('/export/power-bi/async', [DecretacoesApiController::class, 'exportPowerBIAsync'])->name('export.power-bi.async');
 
         // Polling de trace assincrono no mesmo grupo (suporta triple auth via
         // DecretacoesApiAuth: session/Sanctum/PowerBI token). Permite que o
         // cliente PowerBI consulte status e baixe artefato do export async.
-        Route::get('/traces/{traceId}',          [\App\Http\Controllers\Api\V1\TraceController::class, 'show'])
+        Route::get('/traces/{traceId}', [\App\Http\Controllers\Api\V1\TraceController::class, 'show'])
             ->name('traces.show')
             ->whereUuid('traceId');
         Route::get('/traces/{traceId}/download', [\App\Http\Controllers\Api\V1\TraceController::class, 'download'])
             ->name('traces.download')
             ->whereUuid('traceId');
 
-        Route::get('/{id}',                  [DecretacoesApiController::class, 'show'])->name('show');
+        Route::get('/{id}', [DecretacoesApiController::class, 'show'])->name('show');
     });
 
 // Rota de escrita — limite restrito (default: 300 creditos/min, protege contra abuso)
@@ -445,9 +444,9 @@ Route::prefix('v1/rat')
         'api-rate-limiter:pro',
     ])
     ->group(function () {
-        Route::get('protocolos',               [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'index'])->name('protocolos.index');
+        Route::get('protocolos', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'index'])->name('protocolos.index');
         Route::get('protocolos/export/power-bi', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'exportPowerBI'])->name('protocolos.export.powerbi');
-        Route::get('protocolos/{id}',          [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'show'])->name('protocolos.show');
+        Route::get('protocolos/{id}', [\App\Http\Controllers\Api\V1\Rat\ProtocoloController::class, 'show'])->name('protocolos.show');
     });
 
 // Rota de escrita — limite restrito (default: 300 creditos/min)
@@ -537,17 +536,17 @@ if (app()->environment('local', 'development')) {
 if (app()->environment('local', 'development')) {
     Route::post('_dev/rat-dados-gerais', function (\App\Modules\Rat\Http\Requests\RatDadosGeraisRequest $request) {
         $validated = $request->validated();
-        $dto       = \App\Modules\Rat\DTOs\RatDadosGeraisDTO::fromArray($validated);
+        $dto = \App\Modules\Rat\DTOs\RatDadosGeraisDTO::fromArray($validated);
 
         $ocorrencia = \App\Modules\Rat\Models\RatOcorrencia::create(['status' => 0]);
-        $model      = app(\App\Modules\Rat\Services\RatWriteService::class)
+        $model = app(\App\Modules\Rat\Services\RatWriteService::class)
             ->saveDadosGerais($ocorrencia->id, $dto);
 
         return response()->json([
-            'etapa_1_validated'  => $validated,
-            'etapa_2_dto_array'  => $dto->toArray(),
+            'etapa_1_validated' => $validated,
+            'etapa_2_dto_array' => $dto->toArray(),
             'etapa_3_persistido' => $model->fresh(),
-            'ocorrencia_id'      => $ocorrencia->id,
+            'ocorrencia_id' => $ocorrencia->id,
         ], 201);
     });
 }
