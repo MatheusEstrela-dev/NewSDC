@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Cisterna\Services;
 
 use App\Modules\Cisterna\DTOs\NotificacaoDTO;
+use App\Modules\Cisterna\Models\CisternaBeneficiario;
 use App\Modules\Cisterna\Models\CisternaNotificacao;
+use App\Modules\Cisterna\Models\CisternaVistoria;
+use App\Modules\Cisterna\Support\EscopoPerfil;
+use App\Modules\Cisterna\Support\PerfilCisterna;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -27,10 +31,16 @@ class NotificacaoFiscalizacaoService
 {
     /**
      * @param  array<string, mixed>  $filtros
+     *
+     * O perfil e opcional e vem por ultimo, para as telas web continuarem
+     * chamando `listar($filtros, $porPagina)` sem mudanca de comportamento.
      */
-    public function listar(array $filtros = [], int $porPagina = 25): LengthAwarePaginator
-    {
-        return CisternaNotificacao::query()
+    public function listar(
+        array $filtros = [],
+        int $porPagina = 25,
+        ?PerfilCisterna $perfil = null,
+    ): LengthAwarePaginator {
+        $query = CisternaNotificacao::query()
             ->with(['notificavel', 'criador:id,name', 'media'])
             ->when(($filtros['apenas_pendentes'] ?? false) === true, fn (Builder $q) => $q->pendentes())
             ->when($filtros['notificavel_type'] ?? null, function (Builder $q, $alias) use ($filtros): void {
@@ -45,10 +55,41 @@ class NotificacaoFiscalizacaoService
                 if (isset($filtros['notificavel_id'])) {
                     $q->where('notificavel_id', (int) $filtros['notificavel_id']);
                 }
-            })
+            });
+
+        if ($perfil !== null && EscopoPerfil::temRecorte($perfil)) {
+            $this->aplicarEscopoNoNotificavel($query, $perfil);
+        }
+
+        return $query
             ->orderByDesc('created_at')
             ->paginate($porPagina)
             ->withQueryString();
+    }
+
+    /**
+     * O notificavel e polimorfico e as duas pontas chegam ao municipio por
+     * caminhos diferentes: o beneficiario tem a coluna, a vistoria chega pela
+     * relacao. Cobrir so uma delas deixaria metade das notificacoes vazando
+     * para fora do territorio.
+     *
+     * @param  Builder<CisternaNotificacao>  $query
+     */
+    private function aplicarEscopoNoNotificavel(Builder $query, PerfilCisterna $perfil): void
+    {
+        $query->whereHasMorph(
+            'notificavel',
+            [CisternaBeneficiario::class, CisternaVistoria::class],
+            function (Builder $notificavel, string $tipo) use ($perfil): void {
+                if ($tipo === CisternaBeneficiario::class) {
+                    EscopoPerfil::aplicarEmBeneficiario($notificavel, $perfil);
+
+                    return;
+                }
+
+                EscopoPerfil::aplicarViaBeneficiario($notificavel, $perfil);
+            }
+        );
     }
 
     public function emitir(NotificacaoDTO $dto, ?UploadedFile $arquivo = null): CisternaNotificacao

@@ -217,6 +217,9 @@ return new class extends Migration
             $table->text('observacao')->nullable();
             $table->timestampTz('cancelado_em')->nullable();
             $table->text('motivo_cancelamento')->nullable();
+            // Promovida de payload_legado->evento: e filtro de consulta da API
+            // de liberacoes, e filtro sobre jsonb nao usa indice.
+            $table->string('evento', 40)->nullable();
             // Colunas do legado sem consumidor conhecido (resp_receb_ci,
             // resp_receb_veiculo, resp_receb_placa, hora_libera, entrega).
             // Ficam aqui ate alguem provar que sao usadas; se em seis meses
@@ -229,6 +232,7 @@ return new class extends Migration
 
             $table->index(['municipio_id', 'status'], 'ajuda_h_liberacoes_mun_status_idx');
             $table->index(['deposito_id', 'data_libera'], 'ajuda_h_liberacoes_dep_data_idx');
+            $table->index(['evento', 'data_libera'], 'ajuda_h_liberacoes_evento_data_idx');
         });
 
         Schema::create('ajuda_h_liberacao_itens', function (Blueprint $table): void {
@@ -240,7 +244,9 @@ return new class extends Migration
             $table->string('codigo_legado', 30)->nullable()->unique()
                 ->comment('aju_item.id_item');
 
-            $table->index('liberacao_id', 'ajuda_h_lib_itens_liberacao_idx');
+            // Composto: o contrato plano do CEDEC filtra por status dentro do
+            // join por liberacao_id.
+            $table->index(['liberacao_id', 'status'], 'ajuda_h_lib_itens_liberacao_idx');
         });
 
         Schema::create('ajuda_h_liberacao_recibos', function (Blueprint $table): void {
