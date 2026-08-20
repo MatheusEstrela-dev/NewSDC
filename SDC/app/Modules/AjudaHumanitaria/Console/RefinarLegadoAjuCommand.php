@@ -44,6 +44,14 @@ final class RefinarLegadoAjuCommand extends Command
         'liberacoes',
     ];
 
+    /**
+     * A extracao do legado nao trouxe aju_unidade.categoria. O endpoint
+     * saldocesta filtrava categoria = 'CESTA BASICA', e na pratica o unico
+     * material sob esse recorte e o de nome identico. Enquanto a area nao
+     * confirmar a lista completa, o backfill marca por nome.
+     */
+    private const CATEGORIA_CESTA = 'CESTA BASICA';
+
     public function handle(): int
     {
         $pedidas = (array) $this->option('etapa');
@@ -77,13 +85,18 @@ final class RefinarLegadoAjuCommand extends Command
     {
         return DB::affectingStatement(
             "INSERT INTO materiais_ah
-                 (nome, descricao, unidade_medida, disponivel_para_pedido, codigo_legado, created_at, updated_at)
+                 (nome, descricao, unidade_medida, disponivel_para_pedido, codigo_legado,
+                  valor, peso, singular, categoria, created_at, updated_at)
              SELECT
                  coalesce(nullif(trim(doc->>'nome'), ''), 'SEM NOME'),
                  nullif(trim(doc->>'descricao'), ''),
                  coalesce(nullif(trim(doc->>'uni_medida'), ''), 'UN'),
                  true,
                  doc->>'id_unidade',
+                 nullif(trim(doc->>'valor'), '')::numeric,
+                 nullif(trim(doc->>'peso'), '')::numeric,
+                 nullif(trim(doc->>'singular'), ''),
+                 CASE WHEN trim(doc->>'nome') = ? THEN ? END,
                  now(), now()
              FROM ajuda_h_legado_raw
              WHERE tabela = 'aju_unidade'
@@ -92,7 +105,12 @@ final class RefinarLegadoAjuCommand extends Command
                  SET nome           = EXCLUDED.nome,
                      descricao      = EXCLUDED.descricao,
                      unidade_medida = EXCLUDED.unidade_medida,
-                     updated_at     = now()"
+                     valor          = EXCLUDED.valor,
+                     peso           = EXCLUDED.peso,
+                     singular       = EXCLUDED.singular,
+                     categoria      = EXCLUDED.categoria,
+                     updated_at     = now()",
+            [self::CATEGORIA_CESTA, self::CATEGORIA_CESTA]
         );
     }
 
@@ -376,7 +394,7 @@ final class RefinarLegadoAjuCommand extends Command
         $liberacoes = DB::affectingStatement(
             "INSERT INTO ajuda_h_liberacoes
                  (municipio_id, deposito_id, beneficiario, data_libera, data_limite,
-                  status, observacao, cancelado_em, motivo_cancelamento,
+                  status, observacao, cancelado_em, motivo_cancelamento, evento,
                   payload_legado, codigo_legado, created_at, updated_at)
              SELECT
                  mun.id,
@@ -390,6 +408,7 @@ final class RefinarLegadoAjuCommand extends Command
                  CASE WHEN r.doc->>'dt_cancela' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
                       THEN (r.doc->>'dt_cancela')::timestamptz END,
                  nullif(trim(r.doc->>'m_cancela'), ''),
+                 nullif(trim(r.doc->>'evento'), ''),
                  jsonb_build_object(
                      'id_usuario',         r.doc->>'id_usuario',
                      'id_user_pgto',       r.doc->>'id_user_pgto',
@@ -421,6 +440,7 @@ final class RefinarLegadoAjuCommand extends Command
                      observacao          = EXCLUDED.observacao,
                      cancelado_em        = EXCLUDED.cancelado_em,
                      motivo_cancelamento = EXCLUDED.motivo_cancelamento,
+                     evento              = EXCLUDED.evento,
                      payload_legado      = EXCLUDED.payload_legado,
                      updated_at          = now()"
         );
