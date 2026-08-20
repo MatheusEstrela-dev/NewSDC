@@ -42,6 +42,7 @@ class LiberacaoAh extends Model
         'observacao',
         'cancelado_em',
         'motivo_cancelamento',
+        'evento',
         'payload_legado',
         'codigo_legado',
     ];

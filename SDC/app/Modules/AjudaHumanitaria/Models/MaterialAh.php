@@ -22,10 +22,16 @@ class MaterialAh extends Model
         'unidade_medida',
         'disponivel_para_pedido',
         'codigo_legado',
+        'valor',
+        'peso',
+        'singular',
+        'categoria',
     ];
 
     protected $casts = [
         'disponivel_para_pedido' => 'boolean',
+        'valor'                  => 'decimal:2',
+        'peso'                   => 'decimal:2',
     ];
 
     public function scopeDisponiveisParaPedido(Builder $query): Builder
