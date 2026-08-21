@@ -14,11 +14,14 @@ use App\Modules\Tdap\Domain\Events\ViagemValidadaV1;
 use App\Modules\Tdap\Listeners\AtualizarProjecaoProcessoListener;
 use App\Modules\Tdap\Listeners\EnviarEmailCronogramaListener;
 use App\Modules\Tdap\Listeners\RegistrarHistoricoProcessoListener;
+use App\Modules\Tdap\Listeners\TransitarParaLiquidacaoListener;
 use App\Modules\Tdap\Models\Cronograma;
 use App\Modules\Tdap\Models\CronoViagem;
+use App\Modules\Tdap\Models\Prestador;
 use App\Modules\Tdap\Models\Vistoria;
 use App\Modules\Tdap\Observers\CronogramaObserver;
 use App\Modules\Tdap\Observers\CronoViagemObserver;
+use App\Modules\Tdap\Observers\PrestadorObserver;
 use App\Modules\Tdap\Observers\VistoriaObserver;
 use App\Modules\Tdap\Services\AtaService;
 use App\Modules\Tdap\Services\CaminhaoService;
@@ -89,6 +92,9 @@ class TdapServiceProvider extends ServiceProvider
         Cronograma::observe(CronogramaObserver::class);
         CronoViagem::observe(CronoViagemObserver::class);
         Vistoria::observe(VistoriaObserver::class);
+        // Prestador e a raiz do modulo: cadastro/ativacao ficavam fora da
+        // trilha mesmo com a chave 'prestador' ja mapeada no HistoricoService.
+        Prestador::observe(PrestadorObserver::class);
 
         // Listeners do Outbox (Fase 6) - via Event::listen
         $this->registrarEventListeners();
@@ -108,9 +114,14 @@ class TdapServiceProvider extends ServiceProvider
         Event::listen(CronogramaAtivadoV1::class, [EnviarEmailCronogramaListener::class, 'handle']);
         Event::listen(CronogramaAtivadoV1::class, [RegistrarHistoricoProcessoListener::class, 'handle']);
 
-        // ViagemValidadaV1
+        // ViagemValidadaV1 (emitido por CronoViagemService::validar na aprovacao)
         Event::listen(ViagemValidadaV1::class, [AtualizarProjecaoProcessoListener::class, 'handle']);
         Event::listen(ViagemValidadaV1::class, [RegistrarHistoricoProcessoListener::class, 'handle']);
         Event::listen(ViagemValidadaV1::class, [EncerramentoSaga::class, 'handle']);
+
+        // ExecucaoConcluidaV1 - fecha o ciclo EM_EXECUCAO -> LIQUIDACAO_PENDENTE.
+        // A saga emitia o evento e ninguem escutava: o processo nao saia de
+        // EM_EXECUCAO nem depois de todas as viagens validadas.
+        Event::listen(ExecucaoConcluidaV1::class, [TransitarParaLiquidacaoListener::class, 'handle']);
     }
 }

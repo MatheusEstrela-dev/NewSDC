@@ -78,6 +78,29 @@ export function moeda(valor) {
   return `${texto.slice(0, primeiro)},${centavos}`;
 }
 
+/**
+ * CNPJ no formato 00.000.000/0000-00, inserindo os separadores conforme se
+ * digita. Espelha App\Modules\Tdap\Support\Documento::cnpj() -- o backend grava
+ * SOMENTE digitos, entao a mascara e enfeite de tela dos dois lados.
+ */
+export function cnpj(valor) {
+  const d = apenasDigitos(valor).slice(0, 14);
+
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+}
+
+/** CEP no formato 00000-000. Espelha Documento::cep(). */
+export function cep(valor) {
+  const d = apenasDigitos(valor).slice(0, 8);
+
+  return d.length <= 5 ? d : `${d.slice(0, 5)}-${d.slice(5)}`;
+}
+
 /** Data no formato dd/mm/aaaa, inserindo as barras conforme se digita. */
 export function dataBr(valor) {
   const d = apenasDigitos(valor).slice(0, 8);
@@ -116,6 +139,8 @@ export function isoDeDataBr(texto) {
  */
 export const MASCARAS = {
   cpf: applyCpfMask,
+  cnpj,
+  cep,
   telefone: applyPhoneMask,
   inteiro: apenasDigitos,
   decimal: decimalSimples,

@@ -8,6 +8,7 @@
     />
     <PrestadorForm
       :form="form"
+      :ufs="ufs"
       submit-label="Cadastrar"
       @submit="submit"
       @cancel="cancelar"
@@ -24,6 +25,11 @@ import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
+defineProps({
+  ufs: { type: Array, default: () => [] },
+});
+
+// Documentos vivem em digitos puros no form; a mascara e do PrestadorForm.
 const form = useForm({
   cnpj: '',
   nome: '',
@@ -41,7 +47,8 @@ const form = useForm({
 });
 
 function submit() {
-  form.post(route('tdap.prestadores.store'));
+  // preserveScroll mantem a pagina no campo com erro em vez de voltar ao topo.
+  form.post(route('tdap.prestadores.store'), { preserveScroll: true });
 }
 
 function cancelar() {

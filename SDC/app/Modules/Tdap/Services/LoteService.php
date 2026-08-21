@@ -177,12 +177,23 @@ class LoteService
      */
     public function obterEstatisticas(array $filtros = []): array
     {
+        /*
+         * O alias NAO pode se chamar `valor_total`: `Lote::getValorTotalAttribute()`
+         * existe e um accessor VENCE a coluna vinda do SELECT. O agregado do
+         * banco era descartado e no lugar dele vinha
+         * `qtd_agua_m3 * valor_m3` calculado sobre atributos que este SELECT
+         * nem carrega -> null * null = 0. O card "Valor total" da tela de lotes
+         * mostrava R$ 0,00 sempre.
+         *
+         * A chave publica do retorno segue `valor_total` (contrato com o front);
+         * so o nome do alias mudou.
+         */
         $row = $this->aplicarFiltros(Lote::query(), $filtros)
             ->selectRaw('
                 COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE ativo = TRUE) AS ativos,
                 COALESCE(SUM(qtd_agua_m3) FILTER (WHERE ativo = TRUE), 0) AS volume_total_m3,
-                COALESCE(SUM(qtd_agua_m3 * valor_m3) FILTER (WHERE ativo = TRUE), 0) AS valor_total
+                COALESCE(SUM(qtd_agua_m3 * valor_m3) FILTER (WHERE ativo = TRUE), 0) AS valor_contratado_total
             ')
             ->first();
 
@@ -190,7 +201,7 @@ class LoteService
             'total'           => (int) ($row->total ?? 0),
             'ativos'          => (int) ($row->ativos ?? 0),
             'volume_total_m3' => (float) ($row->volume_total_m3 ?? 0),
-            'valor_total'     => (float) ($row->valor_total ?? 0),
+            'valor_total'     => (float) ($row->valor_contratado_total ?? 0),
         ];
     }
 }

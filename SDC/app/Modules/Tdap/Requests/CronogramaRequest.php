@@ -122,6 +122,10 @@ class StoreCronogramaRequest extends AbstractCronogramaRequest
 
 class UpdateCronogramaRequest extends AbstractCronogramaRequest
 {
+    // `route('cronograma')` e o Model apos SubstituteBindings; o `(int)` de
+    // antes lancava Error e o PUT respondia 500 sem nem validar.
+    use \App\Modules\Tdap\Requests\Concerns\ResolveIdDaRota;
+
     public function authorize(): bool
     {
         return $this->user()?->can('tdap.cronogramas.edit') ?? false;
@@ -130,7 +134,7 @@ class UpdateCronogramaRequest extends AbstractCronogramaRequest
     protected function numeroUniqueRule(): Unique
     {
         return Rule::unique('tdap_cronogramas', 'numero')
-            ->ignore((int) $this->route('cronograma'))
+            ->ignore($this->idDaRota('cronograma'))
             ->whereNull('deleted_at');
     }
 }

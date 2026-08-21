@@ -25,12 +25,15 @@ import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
-defineProps({
+const props = defineProps({
   prestadores: { type: Array, default: () => [] },
+  // Pre-selecao vinda da ficha do prestador (?prestador_id=). O backend so
+  // devolve o id se ele estiver na lista de prestadores ativos.
+  prestadorId: { type: Number, default: null },
 });
 
 const form = useForm({
-  prestador_id: null,
+  prestador_id: props.prestadorId,
   placa: '',
   marca: '',
   modelo: '',

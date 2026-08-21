@@ -9,6 +9,7 @@ use App\Core\Outbox\OutboxDispatcher;
 use App\Modules\Tdap\Domain\Events\CronogramaAtivadoV1;
 use App\Modules\Tdap\DTOs\CronogramaDTO;
 use App\Modules\Tdap\Models\Cronograma;
+use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +35,10 @@ class CronogramaService
                 'prestador:id,nome,cnpj',
             ])
             ->withCount('caminhoes')
+            // volume_contratado/volume_entregue somam colunas dos caminhoes
+            // alocados; sem o withSum o accessor faria um SELECT por linha.
+            ->withSum('caminhoes', 'agua_prevista')
+            ->withSum('caminhoes', 'agua_entregue')
             ->when(
                 ($filtros['estado'] ?? null) === 'arquivado',
                 fn ($q) => $q->arquivado(),
@@ -72,6 +77,10 @@ class CronogramaService
                 'prestador:id,nome,cnpj',
             ])
             ->withCount('caminhoes')
+            // volume_contratado/volume_entregue somam colunas dos caminhoes
+            // alocados; sem o withSum o accessor faria um SELECT por linha.
+            ->withSum('caminhoes', 'agua_prevista')
+            ->withSum('caminhoes', 'agua_entregue')
             ->when(
                 ($filtros['estado'] ?? null) === 'arquivado',
                 fn ($q) => $q->arquivado(),
@@ -105,10 +114,16 @@ class CronogramaService
             'UF'                     => $c->municipio?->uf,
             'Prestador'              => $c->prestador?->nome,
             'CNPJ'                   => $c->prestador?->cnpj,
-            'Volume Contratado (m3)' => number_format((float) $c->fator, 2, ',', '.'),
+            // Contratado = soma da agua prevista dos caminhoes alocados. Esta
+            // coluna trazia `fator` (<= 0,60 em toda a base) e passava a
+            // impressao de que o cronograma nao movia agua nenhuma.
+            'Volume Contratado (m3)' => number_format($c->volume_contratado, 2, ',', '.'),
+            'Volume Entregue (m3)'   => number_format($c->volume_entregue, 2, ',', '.'),
+            'Execucao (%)'           => number_format($c->percentual_entregue, 2, ',', '.'),
             'Caminhoes'              => (int) $c->caminhoes_count,
-            'Consumo Diario (L)'     => number_format((float) $c->consumo_diario, 2, ',', '.'),
+            'Consumo Diario'         => number_format((float) $c->consumo_diario, 2, ',', '.'),
             'Dias'                   => (int) $c->dias,
+            'Fator'                  => number_format((float) $c->fator, 2, ',', '.'),
             'Arquivado'              => $c->arquivado_em ? 'Sim' : 'Nao',
         ])->all();
     }
@@ -127,6 +142,8 @@ class CronogramaService
                 'comprovantes',
             ])
             ->withCount(['caminhoes'])
+            ->withSum('caminhoes', 'agua_prevista')
+            ->withSum('caminhoes', 'agua_entregue')
             ->findOrFail($id);
     }
 
@@ -299,6 +316,15 @@ class CronogramaService
         });
     }
 
+    /**
+     * Estende a vigencia sem criar novo cronograma.
+     *
+     * A regra `dt_inicio_prorrogacao >= dt_final` ja existia no
+     * AbstractCronogramaRequest, mas a rota de prorrogacao tem validacao
+     * propria e mais fraca: dava para "prorrogar" para uma janela ANTERIOR ao
+     * fim da vigencia original, encurtando o prazo em vez de estende-lo (as
+     * datas efetivas dao precedencia a prorrogacao).
+     */
     public function prorrogar(int $id, string $dtInicio, string $dtFinal, ?string $justificativa = null): Cronograma
     {
         return DB::transaction(function () use ($id, $dtInicio, $dtFinal, $justificativa): Cronograma {
@@ -306,6 +332,24 @@ class CronogramaService
             if (! $cronograma->ativo) {
                 throw new \DomainException('Apenas cronogramas ativos podem ser prorrogados.');
             }
+            if ($cronograma->encerrado_em) {
+                throw new \DomainException('Cronograma encerrado nao pode ser prorrogado.');
+            }
+
+            $inicioProrrogacao = Carbon::parse($dtInicio)->startOfDay();
+            $finalProrrogacao = Carbon::parse($dtFinal)->startOfDay();
+
+            if ($finalProrrogacao->lt($inicioProrrogacao)) {
+                throw new \DomainException('A data final da prorrogacao nao pode ser anterior a inicial.');
+            }
+
+            if ($cronograma->dt_final !== null && $inicioProrrogacao->lt($cronograma->dt_final->copy()->startOfDay())) {
+                throw new \DomainException(
+                    'A prorrogacao deve comecar em ou depois do fim da vigencia atual ('
+                    .$cronograma->dt_final->format('d/m/Y').').'
+                );
+            }
+
             $cronograma->update([
                 'dt_inicio_prorrogacao' => $dtInicio,
                 'dt_final_prorrogacao'  => $dtFinal,
@@ -328,17 +372,37 @@ class CronogramaService
                 COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE ativo = TRUE AND encerrado_em IS NULL) AS ativos,
                 COUNT(*) FILTER (WHERE ativo = FALSE AND encerrado_em IS NULL) AS rascunhos,
-                COUNT(*) FILTER (WHERE encerrado_em IS NOT NULL) AS encerrados,
-                COALESCE(SUM(fator) FILTER (WHERE ativo = TRUE AND encerrado_em IS NULL), 0) AS volume_ativo_m3
+                COUNT(*) FILTER (WHERE encerrado_em IS NOT NULL) AS encerrados
             ')
             ->first();
 
+        // Volume ativo = agua prevista dos caminhoes dos cronogramas ativos.
+        // Antes era SUM(fator), que somava grandezas de no maximo 0,60 e
+        // mostrava "0,6 m3 ativos" para a operacao inteira. A soma vem da
+        // tabela dos caminhoes porque e la que o volume por rota e definido.
+        $volumes = DB::table('tdap_crono_caminhoes as cc')
+            ->join('tdap_cronogramas as c', 'c.id', '=', 'cc.cronograma_id')
+            ->whereNull('cc.deleted_at')
+            ->whereNull('c.deleted_at')
+            ->where('c.ativo', true)
+            ->whereNull('c.encerrado_em')
+            ->selectRaw('
+                COALESCE(SUM(cc.agua_prevista), 0) AS previsto,
+                COALESCE(SUM(cc.agua_entregue), 0) AS entregue
+            ')
+            ->first();
+
+        $previsto = (float) ($volumes->previsto ?? 0);
+        $entregue = (float) ($volumes->entregue ?? 0);
+
         return [
-            'total'           => (int) ($row->total ?? 0),
-            'ativos'          => (int) ($row->ativos ?? 0),
-            'rascunhos'       => (int) ($row->rascunhos ?? 0),
-            'encerrados'      => (int) ($row->encerrados ?? 0),
-            'volume_ativo_m3' => (float) ($row->volume_ativo_m3 ?? 0),
+            'total'             => (int) ($row->total ?? 0),
+            'ativos'            => (int) ($row->ativos ?? 0),
+            'rascunhos'         => (int) ($row->rascunhos ?? 0),
+            'encerrados'        => (int) ($row->encerrados ?? 0),
+            'volume_ativo_m3'   => round($previsto, 2),
+            'volume_entregue_m3' => round($entregue, 2),
+            'execucao_percentual' => $previsto > 0 ? round(($entregue / $previsto) * 100, 2) : 0.0,
         ];
     }
 }

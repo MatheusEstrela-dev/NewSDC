@@ -84,7 +84,12 @@
               <p>{{ c.municipio_nome }}<span v-if="c.municipio_uf" class="text-slate-400">/{{ c.municipio_uf }}</span></p>
               <p class="text-xs text-slate-500">{{ c.prestador_nome }}</p>
             </td>
-            <td class="px-4 py-3 text-sm text-right font-mono">{{ Number(c.volume_contratado_m3).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}</td>
+            <td class="px-4 py-3 text-sm text-right font-mono">
+              {{ Number(c.volume_contratado_m3 ?? 0).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}
+              <span v-if="(c.volume_contratado_m3 ?? 0) > 0" class="block text-xs text-slate-500">
+                {{ Number(c.execucao_percentual ?? 0).toFixed(1) }}% entregue
+              </span>
+            </td>
             <td class="px-4 py-3 text-sm text-center">{{ c.caminhoes_count }}</td>
             <td class="px-4 py-3 text-sm">
               <EstadoBadge :estado="c.estado" />

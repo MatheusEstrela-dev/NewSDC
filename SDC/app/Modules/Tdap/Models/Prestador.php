@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\Models;
 
+use App\Modules\Tdap\Support\Documento;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -61,19 +62,35 @@ class Prestador extends Model
         return $query->where('ativo', true);
     }
 
+    /**
+     * Busca textual por nome, e-mail, representante, CNPJ ou telefone.
+     *
+     * CNPJ e telefone sao guardados em digitos puros, entao o termo tem os
+     * separadores removidos antes de comparar: quem digita ou cola
+     * "34.178.669/0001-90" (o formato que a tela EXIBE) nao achava nada.
+     */
     public function scopeBuscar(Builder $query, ?string $termo): Builder
     {
-        if (! $termo) {
+        $termo = trim((string) $termo);
+
+        if ($termo === '') {
             return $query;
         }
 
         $like = '%'.mb_strtolower($termo).'%';
+        $digitos = Documento::digitos($termo);
 
-        return $query->where(function (Builder $q) use ($like): void {
+        return $query->where(function (Builder $q) use ($like, $digitos): void {
             $q->whereRaw('LOWER(nome) LIKE ?', [$like])
-              ->orWhere('cnpj', 'LIKE', $like)
               ->orWhereRaw('LOWER(email) LIKE ?', [$like])
               ->orWhereRaw('LOWER(representante) LIKE ?', [$like]);
+
+            if ($digitos !== null) {
+                $comoDigitos = '%'.$digitos.'%';
+                $q->orWhere('cnpj', 'LIKE', $comoDigitos)
+                  ->orWhere('tel1', 'LIKE', $comoDigitos)
+                  ->orWhere('tel2', 'LIKE', $comoDigitos);
+            }
         });
     }
 }

@@ -129,15 +129,27 @@
           <p class="mt-1 text-xs text-slate-400">Automático: (consumo × dias) ÷ 1000</p>
           <InputError :message="form.errors.fator" class="mt-2" />
         </div>
+        <!--
+          Estes dois cartoes mostram o FATOR e o que ele vale em reais, nao o
+          volume do cronograma. O volume contratado e a soma da agua prevista
+          dos caminhoes alocados, e nesta tela ainda nao existe caminhao nenhum
+          (a alocacao vem depois, na ficha). Chamar o fator de "volume
+          contratado" aqui era o que fazia o card do dashboard e o CSV
+          anunciarem 0,60 m³ para operacoes de centenas de metros cubicos.
+        -->
         <div class="flex flex-col gap-2">
           <div class="w-full rounded-md border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 px-3 py-2">
-            <p class="text-xs text-blue-700 dark:text-blue-300">Volume contratado</p>
-            <p class="text-lg font-mono font-semibold text-blue-700 dark:text-blue-200">{{ fmtNum(volumeContratado) }} m³</p>
+            <p class="text-xs text-blue-700 dark:text-blue-300">Fator aplicado</p>
+            <p class="text-lg font-mono font-semibold text-blue-700 dark:text-blue-200">{{ fmtNum(fatorAplicado) }} m³</p>
           </div>
           <div class="w-full rounded-md border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2">
-            <p class="text-xs text-emerald-700 dark:text-emerald-300">Valor total</p>
-            <p class="text-lg font-mono font-semibold text-emerald-700 dark:text-emerald-200">{{ valorTotal !== null ? fmtMoeda(valorTotal) : '—' }}</p>
+            <p class="text-xs text-emerald-700 dark:text-emerald-300">Valor por fator</p>
+            <p class="text-lg font-mono font-semibold text-emerald-700 dark:text-emerald-200">{{ valorDoFator !== null ? fmtMoeda(valorDoFator) : '—' }}</p>
           </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            O volume contratado é a soma da água prevista dos caminhões, definida
+            na ficha do cronograma após a alocação.
+          </p>
         </div>
       </div>
     </div>
@@ -242,13 +254,15 @@ const fatorAuto = computed(() => {
   return Math.round((c * d / 1000) * 100) / 100;
 });
 
-const volumeContratado = computed(() => {
+/** O fator que sera gravado: o digitado (modo manual) ou o calculado. */
+const fatorAplicado = computed(() => {
   return props.form.usar_fator_manual ? Number(props.form.fator || 0) : fatorAuto.value;
 });
 
-const valorTotal = computed(() => {
+/** Quanto vale o fator ao preco unitario do lote. Nao e o valor do contrato. */
+const valorDoFator = computed(() => {
   if (valorUnitario.value === null) return null;
-  return volumeContratado.value * valorUnitario.value;
+  return fatorAplicado.value * valorUnitario.value;
 });
 
 // Mantem o campo fator sincronizado com o calculo automatico quando nao for manual.

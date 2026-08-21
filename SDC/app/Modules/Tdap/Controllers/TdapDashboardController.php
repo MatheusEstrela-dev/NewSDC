@@ -39,9 +39,14 @@ class TdapDashboardController extends Controller
             ')
             ->first();
 
+        // O global scope de SoftDeletes so cobre a tabela do MODEL: as duas
+        // tabelas do JOIN precisam do filtro explicito, senao viagem e caminhao
+        // excluidos continuavam somando m3 no KPI do mes.
         $aguaEntreguesMes = (float) CronoCaminhao::query()
             ->join('tdap_crono_viagens', 'tdap_crono_caminhoes.id', '=', 'tdap_crono_viagens.crono_caminhao_id')
             ->join('tdap_caminhoes', 'tdap_crono_caminhoes.caminhao_id', '=', 'tdap_caminhoes.id')
+            ->whereNull('tdap_crono_viagens.deleted_at')
+            ->whereNull('tdap_caminhoes.deleted_at')
             ->where('tdap_crono_viagens.validado', 1)
             ->where('tdap_crono_viagens.data_aprovacao', '>=', $inicioMes)
             ->sum('tdap_caminhoes.capacidade_m3');
