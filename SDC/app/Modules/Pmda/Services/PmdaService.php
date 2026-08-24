@@ -121,14 +121,25 @@ class PmdaPlanoService extends BaseService
         // Ao contrario de listar()/exportar(), que recebem o recorte dentro de
         // $filtros, aqui ele vem explicito: nao existe array de filtros para
         // carregar. Null = perfil estadual, sem recorte.
-        $doEscopo = static fn () => PmdaPlano::query()
-            ->when($municipioId !== null, fn ($q) => $q->where('municipio_id', $municipioId));
+        //
+        // UM GROUP BY, nao 4 SELECT count(*). Este metodo roda dentro de um task
+        // worker do Swoole e o worker HTTP fica BLOQUEADO esperando o resultado
+        // (Concurrency wait_ms = 5s), entao cada round-trip a menos sai do caminho
+        // quente de todo mundo. `toBase()` aplica os scopes (SoftDeletes incluso) e
+        // devolve o query builder cru: sem ele o cast de `status` para PmdaStatus
+        // viraria chave de array e o pluck quebraria.
+        $porStatus = PmdaPlano::query()
+            ->when($municipioId !== null, fn ($q) => $q->where('municipio_id', $municipioId))
+            ->toBase()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
 
         return [
-            'total'     => $doEscopo()->count(),
-            'emEdicao'  => $doEscopo()->where('status', PmdaStatus::RASCUNHO->value)->count(),
-            'emAnalise' => $doEscopo()->where('status', PmdaStatus::EM_ANALISE->value)->count(),
-            'aprovados' => $doEscopo()->where('status', PmdaStatus::APROVADO->value)->count(),
+            'total'     => (int) $porStatus->sum(),
+            'emEdicao'  => (int) ($porStatus[PmdaStatus::RASCUNHO->value] ?? 0),
+            'emAnalise' => (int) ($porStatus[PmdaStatus::EM_ANALISE->value] ?? 0),
+            'aprovados' => (int) ($porStatus[PmdaStatus::APROVADO->value] ?? 0),
         ];
     }
 

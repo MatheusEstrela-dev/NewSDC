@@ -32,6 +32,31 @@ services:
     hostname: app
     restart: unless-stopped
 
+    # Teto de memoria por servico. Sem teto, um leak nos workers cresce ate a VM
+    # inteira e o OOM killer do kernel escolhe a vitima por heuristica -- que
+    # frequentemente e o Postgres, o unico processo com estado. Com teto, quem
+    # estoura e quem vazou.
+    #
+    # mem_limit e TETO DE CONTENCAO, nao reserva: o Docker nao aloca nada
+    # antecipado e a soma dos limites pode passar da RAM do host. Existe para que
+    # um leak morra aqui em vez de o OOM killer escolher o Postgres, que e o
+    # unico processo com estado.
+    #
+    # Custo de memoria MEDIDO em dois pontos (cgroup memory.current, nao soma de
+    # RSS -- RSS conta as paginas compartilhadas por copy-on-write uma vez por
+    # processo e superestima 43% nesta escala):
+    #
+    #   16 processos (12 HTTP + 4 task) ->  811 MB
+    #   56 processos (40 HTTP + 16 task) -> 1652 MB
+    #
+    # Resolvendo os dois pontos: 475 MB de base compartilhada (binario do PHP,
+    # opcache) + 21 MB por processo. O modelo previu 1651 MB contra 1652 medido.
+    #
+    # Logo memoria NAO e o fator limitante: 4g comportaria ~168 workers. O teto
+    # real e o ConnectionSemaphore (60). 4g e o teto de leak com folga de 2.4x
+    # sobre o uso medido, nao um alvo de consumo.
+    mem_limit: 4g
+
     environment:
       WORKDIR: /var/www
       APP_NAME: "SDC Dev"
@@ -56,10 +81,77 @@ services:
       OCTANE_SERVER: swoole
       OCTANE_HTTPS: "false"
       PORT: 8000
-      OCTANE_WORKERS: 4
-      OCTANE_TASK_WORKERS: 4
+      # 12 workers, nao 4. Com hook_flags=0 (hooks de corrotina desligados,
+      # exigencia do phpredis que o ConnectionSemaphore tipa como ?Redis) cada
+      # request ocupa um processo inteiro do inicio ao fim: PDO, Redis e arquivo
+      # bloqueiam. Logo a capacidade de requests EM VOO e igual ao numero de
+      # workers, e 4 requests lentos simultaneos (relatorio, export, chamada
+      # externa) paravam a aplicacao inteira, /health incluido. Worker gasta o
+      # tempo esperando o Postgres, nao queimando CPU, entao mais workers que
+      # cores e correto aqui. Custo medido: ~85 MB de RSS por worker.
+      # Dimensionado para OCUPAR o teto do ConnectionSemaphore (DB_MAX_CONCURRENT,
+      # abaixo), nao para caber com folga. O orcamento fecha exato:
+      #
+      #   40 workers HTTP + 16 task workers + 2 queue + 2 de reserva = 60
+      #
+      # Por que ocupar o teto e nao ficar abaixo: o backpressure de
+      # config/resilience.php dispara em fracao de UTILIZACAO do semaforo
+      # (BP_PUBLIC_DROP=0.7 -> 42 conexoes, BP_FREE_DROP=0.9 -> 54). Com 12+4
+      # workers o pico teorico era 18/60 = 30%, entao os limiares NUNCA eram
+      # alcancados e a protecao ficava inerte: sob carga o sistema degradava sem
+      # descartar nada. Com 58 de pico o mecanismo volta a existir.
+      #
+      # Requests em voo == numero de workers, porque hook_flags=0 (exigencia do
+      # phpredis): cada request ocupa um processo inteiro do inicio ao fim. O
+      # Swoole NAO tem worker elastico -- worker_num e fixo no boot, nao existe
+      # equivalente ao pm=dynamic do PHP-FPM. Quem absorve o excedente e o
+      # backpressure (descarta), nao um pool que cresce.
+      OCTANE_WORKERS: 40
+      # Task workers escalam COM os workers HTTP, nao independentes deles.
+      # Concurrency::tasks() e sincrono do lado de quem chama: o worker HTTP fica
+      # bloqueado ate wait_ms (5s) esperando resposta. O indice do PMDA e a
+      # central de analises disparam 3 tasks por request cada, entao com 4 task
+      # workers o pool de task saturava ANTES dos workers HTTP e o sintoma
+      # aparecia como latencia, nao como fila de request.
+      #
+      # 16 nao cobre o pior caso (40 x 3 = 120 tasks); cobre a concorrencia real
+      # esperada no indice. A metrica para mexer neste numero e o tempo gasto
+      # DENTRO do Concurrency, nao o CPU.
+      OCTANE_TASK_WORKERS: 16
       OCTANE_MAX_REQUESTS: 500
       DB_PERSISTENT: "false"
+
+      # Este compose tem containers `queue` e `queue_critical` dedicados, entao o
+      # worker embutido do entrypoint e um TERCEIRO consumidor competindo pelas
+      # MESMAS filas (ele consome critical,high,webhooks,default,low -- tudo). O
+      # proprio entrypoint.sh:186 manda desligar nesta topologia: "nao duplicar
+      # consumidores nem gastar CPU/RAM/conexao PG com um segundo worker no
+      # container do app". Fica true so no Azure, onde o container e unico.
+      START_EMBEDDED_QUEUE: "false"
+
+      # Ativa o guardrail de conexoes do entrypoint. Sem esta variavel ele apenas
+      # imprime "guardrail de conexoes inativo" e segue -- o boot passa mesmo
+      # projetando mais conexoes do que o Postgres aceita, e a falha aparece
+      # depois, como "too many connections" no meio de um request.
+      #
+      # A conta que ele faz:
+      #   (WORKERS + TASK_WORKERS + QUEUE_WORKERS) * APP_INSTANCES
+      #       + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE <= PG_MAX_CONNECTIONS
+      #   (40 + 16 + 0) * 1 + 2 + 5 = 63  <=  100   OK
+      #
+      # Com isso um OCTANE_WORKERS excessivo aborta o boot com mensagem clara em
+      # vez de degradar em producao. Foi o que faltou para 80 workers: a projecao
+      # daria 118 e o gate barraria.
+      PG_MAX_CONNECTIONS: 100
+      # Os 2 containers de fila dedicados. Somados UMA vez, nao por instancia --
+      # o entrypoint estava projetando 0 externas e subestimando o consumo real.
+      EXTERNAL_DB_CONSUMERS: 2
+      # Teto do ConnectionSemaphore. O default (100) era igual ao
+      # max_connections do Postgres, que ainda reserva 3 para superuser: o
+      # semaforo autorizava mais conexoes do que o banco aceita, e o
+      # "too many connections" chegava antes de qualquer throttle. 60 deixa
+      # folga para queue worker, psql de manutencao e as reservadas.
+      DB_MAX_CONCURRENT: 60
 
       # Raiz dos anexos por modulo (bind mount do disco dedicado; ver volumes).
       # filesystems.php reponta os disks pae/rat/compdec/tdap/exports para
@@ -86,6 +178,15 @@ services:
       DB_USERNAME: sdc
       DB_PASSWORD: secret
       DB_SSLMODE: disable
+
+      # Banco legado (MySQL do Laragon no host) para o ETL do COMPDEC.
+      # Le com_comdec / com_plano_upload; somente leitura, so usado por
+      # migrar:compdec. host.docker.internal ja resolve via extra_hosts.
+      DB_LEGACY_HOST: host.docker.internal
+      DB_LEGACY_PORT: 3306
+      DB_LEGACY_DATABASE: dbsdc
+      DB_LEGACY_USERNAME: root
+      DB_LEGACY_PASSWORD: ""
 
       # Redis (cache / session / queue)
       REDIS_HOST: redis
@@ -153,6 +254,23 @@ services:
       # Storage e logs visiveis no host
       - ../storage/app:/var/www/storage/app
       - ../storage/logs:/var/www/storage/logs
+      # TEMPORARIO -- validacao dos PDFs do legado Cisterna.
+      # O disco 'legado_cisterna' tem root storage/app/public/legado_cisterna
+      # e os caminhos gravados no banco comecam em relatorios/cisterna/.
+      # Somente leitura: e fonte do refino do ETL, nunca destino.
+      # Remover quando o refino tiver copiado tudo para o MediaLibrary.
+      - "${LEGADO_CISTERNA_HOST_PATH:-../storage/app/public/legado_cisterna/relatorios/cisterna}:/var/www/storage/app/public/legado_cisterna/relatorios/cisterna:ro"
+      # TEMPORARIO -- planos de contingencia do legado gestaocedec.
+      # 618 dos 619 registros apontam para DOCUMENT_ROOT/anexo/planoCont
+      # (Classe.Anexo::uploadSimple). O caminho e o 1o candidato de
+      # config(compdec.legacy_paths.planos) e o download le direto dele.
+      - "${LEGADO_PLANOS_HOST_PATH:-../storage/app/public/legado_planos}:/legacy/gestaocedec/anexo/planoCont:ro"
+      # TEMPORARIO -- anexos do RAT arquivo morto.
+      # O disco `legado_rat` NAO usa o default de filesystems.php: o proprio
+      # compose define LEGADO_RAT_ANEXOS_ROOT=/data/anexos/RAT/Legado, entao e
+      # ali que o bind precisa cair. Estrutura {id}/{arquivo}, igual ao legado
+      # rat_uploads/{id}/.
+      - "${LEGADO_RAT_HOST_PATH:-../storage/anexos/RAT/Legado}:/data/anexos/RAT/Legado:ro"
       # Anexos por modulo (PAE/RAT/COMPDEC/TDAP/EXPORTS): bind mount UNICO do
       # disco dedicado (1.2T, ext4). A separacao por modulo e subpasta logica
       # via config/filesystems.php (ANEXOS_ROOT) — modulo novo = subpasta
@@ -181,12 +299,16 @@ services:
     hostname: queue
     restart: unless-stopped
 
+    # 768m e nao 512m: o dump-autoload do boot (11.5k classes) e o pico de
+    # memoria deste container, nao o worker em si (~110 MB em regime).
+    mem_limit: 768m
+
     # Mesmo racional do app: sem isso o boot do worker conclui que o Vite dev
     # server e inalcancavel e apaga o public/hot compartilhado (bind mount).
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-    environment:
+    environment: &queue-env
       WORKDIR: /var/www
       APP_NAME: "SDC Dev Queue"
       # Mesmo racional do servico app: APP_KEY via env, nao via .env montado.
@@ -235,7 +357,7 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-dev@sdc.local}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
 
-    volumes:
+    volumes: &queue-volumes
       # Bind-mount identico ao app; vendor fica na imagem.
       - ../app:/var/www/app
       - ../core:/var/www/core
@@ -260,7 +382,7 @@ services:
       # Mesmo bind mount de anexos do app (ver comentario no servico app).
       - ${ANEXOS_HOST_PATH:-../storage/anexos}:/data/anexos
 
-    depends_on:
+    depends_on: &queue-depends
       app:
         condition: service_started
       db:
@@ -276,7 +398,14 @@ services:
     # passa pelo /start.sh; o queue sobrescreve o CMD e pularia essa etapa.
     # dump-autoload --optimize (sem -a) reconstroi o classmap e reativa o PSR-4
     # fallback, fazendo o worker enxergar os modulos montados.
-    # Prioridade: critical > high > default > webhooks > low.
+    # Este worker consome apenas o trabalho DIFERIVEL. As filas critical e high
+    # sairam daqui para o servico queue_critical: um unico processo consumindo
+    # as cinco filas em ordem de prioridade e sequencial, entao um export
+    # pesado ou um webhook em retry (ate 60s cada) segurava a fila critical
+    # atras dele. Prioridade so decide a ordem de escolha do PROXIMO job, nao
+    # interrompe o que esta em execucao -- num sistema onde a fila carrega
+    # notificacao de alerta, isso e latencia inaceitavel.
+    # --timeout=120: job diferivel pode ser longo (export, relatorio).
     # --max-time=3600: restart de hora em hora para evitar memory leak.
     # --tries=2: jobs com $tries proprio (export, webhook) sobrescrevem.
     # A guarda do marcador replica o /start.sh (este command sobrescreve o CMD
@@ -291,21 +420,74 @@ services:
         umask 002 &&
         composer dump-autoload --optimize --no-interaction &&
         exec php artisan queue:work redis
-        --queue=critical,high,default,webhooks,low
-        --tries=2 --timeout=60 --max-time=3600 --sleep=3
+        --queue=default,webhooks,low
+        --tries=2 --timeout=120 --max-time=3600 --sleep=3
 
-    healthcheck:
+    healthcheck: &queue-healthcheck
       test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 30s
 
+  # Worker dedicado ao trabalho URGENTE (critical, high). Processo separado para
+  # que job diferivel nao possa atrasa-lo: e a fila que carrega notificacao de
+  # alerta e e-mail de reset de senha. --sleep=1 em vez de 3 reduz a espera
+  # media de polling quando a fila esta vazia.
+  queue_critical:
+    image: newsdc-swoole-dev:latest
+    container_name: newsdc_dev_queue_critical
+    hostname: queue-critical
+    restart: unless-stopped
+
+    mem_limit: 768m
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    environment:
+      <<: *queue-env
+      APP_NAME: "SDC Dev Queue Critical"
+
+    volumes: *queue-volumes
+
+    depends_on: *queue-depends
+
+    command:
+      - sh
+      - -c
+      - >
+        if [ -n "$${ANEXOS_ROOT:-}" ] && [ ! -e "$${ANEXOS_ROOT}/.sdc_storage_mounted" ]; then
+        echo "ERRO: ANEXOS_ROOT sem o marcador .sdc_storage_mounted (disco de anexos nao montado no host?)" && exit 1;
+        fi &&
+        umask 002 &&
+        composer dump-autoload --optimize --no-interaction &&
+        exec php artisan queue:work redis
+        --queue=critical,high
+        --tries=2 --timeout=60 --max-time=3600 --sleep=1
+
+    healthcheck: *queue-healthcheck
+
   db:
     image: postgis/postgis:18-3.6-alpine
     container_name: newsdc_dev_db
     hostname: db
     restart: unless-stopped
+
+    # shared_buffers default e 128 MB; 1g cobre isso mais work_mem por conexao.
+    mem_limit: 1g
+
+    # Mesmos flags do docker-compose.yml (producao). Sem pg_stat_statements nao
+    # existe resposta para "qual consulta esta segurando o worker" -- e a primeira
+    # coisa que se olha quando a aplicacao trava. Nao se diagnostica o que nao se
+    # mede, e ligar depois exige restart do cluster (shared_preload_libraries).
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c pg_stat_statements.max=10000
+      -c track_activity_query_size=2048
+
     environment:
       POSTGRES_USER: sdc
       POSTGRES_PASSWORD: secret
@@ -320,12 +502,52 @@ services:
       timeout: 3s
       retries: 10
 
+  # Cluster do backup 2026-07-27 restaurado lado a lado (somente conferencia e
+  # reimportacao de dados). Schema pre-Cisterna: nao usar como banco da aplicacao.
+  db_bkp:
+    image: postgis/postgis:18-3.6-alpine
+    container_name: newsdc_dev_db_bkp
+    hostname: db_bkp
+    restart: unless-stopped
+
+    mem_limit: 512m
+    environment:
+      POSTGRES_USER: sdc
+      POSTGRES_DB: sdc
+    ports:
+      - "5435:5432"       # 5435 no host (5434 e o db de desenvolvimento)
+    volumes:
+      - pgdata_bkp2607:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sdc -d sdc"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   redis:
     image: redis:7-alpine
     container_name: newsdc_dev_redis
     hostname: redis
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+
+    # 640m = maxmemory 512m + folga para AOF e overhead do proprio Redis.
+    mem_limit: 640m
+    # volatile-lru, nao allkeys-lru: cache, sessao e FILA moram na mesma
+    # instancia. Sob allkeys-lru (o que o docker-compose.yml de producao usa) o
+    # Redis pode evictar qualquer chave quando enche -- inclusive as listas de
+    # job, fazendo notificacao enfileirada desaparecer sem erro em log nenhum.
+    # volatile-lru so evicta chave COM TTL, e as listas de fila do Laravel nao
+    # tem TTL: cache e sessao cedem primeiro, job nunca. Com o teto atingido e
+    # nada volatil para liberar, a escrita falha alto -- que e o comportamento
+    # desejado num sistema onde alerta perdido e pior que erro visivel.
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - volatile-lru
     ports:
       - "6380:6379"       # 6380 no host
     volumes:
@@ -341,10 +563,13 @@ services:
     container_name: newsdc_dev_mailhog
     hostname: mailhog
     restart: unless-stopped
+
+    mem_limit: 128m
     ports:
       - "1025:1025"       # SMTP
       - "8025:8025"       # UI
 
 volumes:
   pgdata:
+  pgdata_bkp2607:
   redisdata:

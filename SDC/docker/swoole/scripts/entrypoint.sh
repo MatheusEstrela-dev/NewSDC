@@ -179,8 +179,10 @@ chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 # Container unico no App Service: worker roda junto do Octane. O subshell herda
 # o "set -e"; o "set +e" abaixo garante que um crash do queue:work nao mate o
 # loop de restart. A lista de filas cobre TODAS as filas da aplicacao
-# (RequestPriority: critical/high/default/low + webhooks inbound +
-# high-throughput legada) em ordem de prioridade — fila fora da lista vira
+# (RequestPriority: critical/high/default/low + webhooks inbound) em ordem de
+# prioridade. `high-throughput` saiu: o nome so existe em config/api.php
+# ('queue.high_throughput'), que ninguem le, e nenhum dispatch aponta para ela --
+# era um BRPOP vazio por ciclo antes de chegar em webhooks/default — fila fora da lista vira
 # job orfao que nunca e consumido.
 #
 # START_EMBEDDED_QUEUE (default true): no Azure (container unico) o worker
@@ -192,7 +194,7 @@ if [ "${START_EMBEDDED_QUEUE:-true}" = "true" ]; then
     (
         set +e
         while true; do
-            php artisan queue:work --queue=critical,high,high-throughput,webhooks,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
+            php artisan queue:work --queue=critical,high,webhooks,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
             echo "[queue:work] worker saiu (codigo $?); reiniciando em 2s..."
             sleep 2
         done
