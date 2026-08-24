@@ -41,6 +41,7 @@ use App\Modules\Pmda\Services\PlanoPontoService;
 use App\Modules\Pmda\Services\PmdaCopiaService;
 use App\Modules\Pmda\Services\PmdaPlanoService;
 use App\Modules\Pmda\Services\RepresentanteService;
+use App\Modules\Pmda\Support\PerfilPmda;
 use App\Support\Concurrency\Concurrency;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -123,7 +124,10 @@ class PmdaAnaliseController extends Controller
 
     public function index(Request $request): Response
     {
-        $filtros = $request->only(['municipio_id']);
+        // Mesmo recorte do indice de planos: um COMPDEC com pmda.analise.view
+        // ve a fila do proprio municipio, nao a do estado.
+        $perfil = PerfilPmda::deUsuario($request->user());
+        $filtros = $perfil->aplicarEscopo($request->only(['municipio_id']));
         // Cada painel pagina de forma independente ('page' segue aceito como
         // fallback do painel de analises por compatibilidade de URLs antigas).
         $pageAnalises = max(1, (int) $request->query('analises_page', $request->query('page', '1')));
@@ -144,6 +148,7 @@ class PmdaAnaliseController extends Controller
             'solicitacoes' => ComunidadeSolicitacaoResource::collection($partes['solicitacoes']->withPath($path)),
             'filtros'      => $filtros,
             'municipios'   => $partes['municipios'],
+            'perfil'       => ['e_compdec' => $perfil->eCompdec(), 'e_cedec' => $perfil->eCedec()],
         ]);
     }
 
@@ -231,17 +236,28 @@ class PmdaPlanoController extends Controller
 
     public function index(Request $request): Response
     {
-        $filtros = $request->only(['buscar', 'status', 'municipio_id', 'data_inicio', 'data_fim']);
+        $perfil = PerfilPmda::deUsuario($request->user());
+        $municipioId = $perfil->municipioId();
+        $filtros = $perfil->aplicarEscopo($request->only(['buscar', 'status', 'municipio_id', 'data_inicio', 'data_fim']));
         $page = max(1, (int) $request->query('page', '1'));
         $path = $request->url();
 
         // Listagem, statistics e municipios sao independentes: paralelos nos
         // task workers, sequenciais no fallback. statusOpcoes fica fora (enum
         // em memoria, sem query).
+        //
+        // O recorte de perfil e resolvido ANTES e entra como escalar: o task
+        // worker roda em outro processo e nao tem a request nem o usuario.
         $partes = Concurrency::tasks([
             'planos'     => static fn () => app(PmdaPlanoService::class)->listar($filtros, 15, $page),
-            'statistics' => static fn () => app(PmdaPlanoService::class)->statisticsIndex(),
-            'municipios' => static fn () => \App\Models\Municipio::catalogo(),
+            'statistics' => static fn () => app(PmdaPlanoService::class)->statisticsIndex($municipioId),
+            // Perfil municipal recebe so o proprio municipio, buscado direto:
+            // catalogo() e um cache de 24h dos 853 municipios, e filtra-lo nao
+            // enxergaria um municipio recem-cadastrado.
+            'municipios' => static fn () => $municipioId !== null
+                ? \App\Models\Municipio::query()->whereKey($municipioId)->get(['id', 'nome', 'uf'])
+                    ->map(static fn ($m) => ['id' => $m->id, 'nome' => $m->nome, 'uf' => $m->uf])->values()
+                : \App\Models\Municipio::catalogo(),
         ]);
 
         return Inertia::render('Pmda/Index', [
@@ -251,16 +267,34 @@ class PmdaPlanoController extends Controller
             'statusOpcoes' => collect(\App\Modules\Pmda\Enums\PmdaStatus::cases())
                 ->map(fn ($s) => ['value' => $s->value, 'label' => $s->getLabel()])->values(),
             'municipios'   => $partes['municipios'],
+            'perfil'       => [
+                'e_compdec' => $perfil->eCompdec(),
+                'e_cedec'   => $perfil->eCedec(),
+                // Unica fonte do botao "Novo PMDA" no front. Espelha a
+                // PmdaPlanoPolicy::create para o Vue nao reimplementar a regra.
+                'pode_criar' => $request->user()?->can('create', \App\Modules\Pmda\Models\PmdaPlano::class) ?? false,
+            ],
         ]);
     }
 
     public function create(Request $request): Response|RedirectResponse
     {
-        $municipioId = (int) $request->query('municipio_id');
+        // O municipio vem do login, nunca da URL: e a regra do legado
+        // (PmdaController::create gravava em Auth::user()->municipio_id).
+        // Null aqui so acontece com super-admin, que a policy deixa passar sem
+        // ter orgao municipal -- nao ha onde gravar o PMDA.
+        $municipioId = PerfilPmda::deUsuario($request->user())->municipioId();
+
+        if ($municipioId === null) {
+            return to_route('pmda.planos.index')->withErrors([
+                'municipio_id' => 'Seu usuário não está vinculado a um município. Só a COMPDEC do município abre PMDA.',
+            ]);
+        }
+
         $municipio = \App\Models\Municipio::find($municipioId);
 
         if ($municipio === null) {
-            return to_route('pmda.planos.index')->withErrors(['municipio_id' => 'Selecione um município válido.']);
+            return to_route('pmda.planos.index')->withErrors(['municipio_id' => 'Município do seu órgão não encontrado.']);
         }
 
         $pendente = \App\Modules\Pmda\Models\PmdaPlano::query()
@@ -316,7 +350,9 @@ class PmdaPlanoController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        $data = $this->service->exportar($request->only(['municipio_id', 'status']));
+        $data = $this->service->exportar(
+            PerfilPmda::deUsuario($request->user())->aplicarEscopo($request->only(['municipio_id', 'status'])),
+        );
         $filename = 'pmda_'.now()->format('Y-m-d_H-i-s').'.csv';
 
         return response()->streamDownload(function () use ($data): void {

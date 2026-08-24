@@ -17,7 +17,9 @@
       @update:model-value="local.status = $event"
     />
 
+    <!-- Perfil municipal ja ve so o proprio municipio: o select nao filtraria nada. -->
     <FilterField
+      v-if="!ocultarMunicipio"
       label="Município"
       type="select"
       :model-value="local.municipio_id"
@@ -52,6 +54,7 @@ const props = defineProps({
   filters: { type: Object, default: () => ({}) },
   statusOpcoes: { type: Array, default: () => [] },
   municipios: { type: Array, default: () => [] },
+  ocultarMunicipio: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['apply', 'clear']);

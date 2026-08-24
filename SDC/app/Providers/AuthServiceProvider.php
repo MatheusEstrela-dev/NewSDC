@@ -34,6 +34,7 @@ class AuthServiceProvider extends ServiceProvider
         \App\Modules\Cisterna\Models\CisternaLote::class => \App\Policies\CisternaLotePolicy::class,
         \App\Modules\Cisterna\Models\CisternaOrdemServico::class => \App\Policies\CisternaOrdemServicoPolicy::class,
         \App\Modules\Cisterna\Models\CisternaNotificacao::class => \App\Policies\CisternaNotificacaoPolicy::class,
+        \App\Modules\Pmda\Models\PmdaPlano::class => \App\Policies\PmdaPlanoPolicy::class,
     ];
 
     /**

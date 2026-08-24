@@ -51,27 +51,29 @@ Route::prefix('pmda')->name('pmda.')->group(function () {
             ->name('index')->middleware('can:pmda.planos.view');
         Route::get('/export', [PmdaPlanoController::class, 'export'])
             ->name('export')->middleware('can:pmda.planos.export');
+        // `can:create,PmdaPlano` e nao `can:pmda.planos.create`: a PmdaPlanoPolicy
+        // soma a permissao ao perfil (so COMPDEC com municipio cria -- issue #56).
         Route::get('/create', [PmdaPlanoController::class, 'create'])
-            ->name('create')->middleware('can:pmda.planos.create');
+            ->name('create')->middleware('can:create,'.PmdaPlano::class);
         Route::post('/', [PmdaPlanoController::class, 'store'])
-            ->name('store')->middleware('can:pmda.planos.create');
+            ->name('store')->middleware('can:create,'.PmdaPlano::class);
         Route::get('/{plano}/edit', [PmdaPlanoController::class, 'edit'])
-            ->name('edit')->middleware('can:pmda.planos.edit');
+            ->name('edit')->middleware('can:update,plano');
         // Continuacao da criacao (contexto Create) apos o 1o POST do Novo PMDA
         Route::get('/{plano}/continuar', [PmdaPlanoController::class, 'continuar'])
-            ->name('continuar')->middleware('can:pmda.planos.create');
+            ->name('continuar')->middleware(['can:pmda.planos.create', 'can:territorio,plano']);
         Route::put('/{plano}', [PmdaPlanoController::class, 'update'])
-            ->name('update')->middleware('can:pmda.planos.edit');
+            ->name('update')->middleware('can:update,plano');
         Route::delete('/{plano}', [PmdaPlanoController::class, 'destroy'])
-            ->name('destroy')->middleware('can:pmda.planos.delete');
+            ->name('destroy')->middleware('can:delete,plano');
         Route::post('/{plano}/copiar', [PmdaPlanoController::class, 'copiar'])
-            ->name('copiar')->middleware('can:pmda.planos.copiar');
+            ->name('copiar')->middleware(['can:pmda.planos.copiar', 'can:territorio,plano']);
         // Ficha COMPDEC (JSON) para impressao
         Route::get('/{plano}/ficha', [PmdaPlanoController::class, 'ficha'])
-            ->name('ficha')->middleware('can:pmda.planos.view');
+            ->name('ficha')->middleware('can:view,plano');
         // Serie historica / situacao geral (JSON) estilo PAE
         Route::get('/{plano}/historico', [PmdaPlanoController::class, 'historico'])
-            ->name('historico')->middleware('can:pmda.planos.view');
+            ->name('historico')->middleware('can:view,plano');
 
         // Analise CEDEC: decisoes sobre o PMDA em analise
         Route::post('/{plano}/aprovar', [PmdaAnaliseController::class, 'aprovar'])
@@ -83,51 +85,51 @@ Route::prefix('pmda')->name('pmda.')->group(function () {
 
         // Etapa 7: anexos (PDF) e envio para analise
         Route::post('/{plano}/anexos', [PmdaPlanoController::class, 'storeAnexo'])
-            ->name('anexos.store')->middleware('can:pmda.anexos.create');
+            ->name('anexos.store')->middleware(['can:pmda.anexos.create', 'can:territorio,plano']);
         Route::post('/{plano}/enviar', [PmdaPlanoController::class, 'enviar'])
-            ->name('enviar')->middleware('can:pmda.analise.enviar');
+            ->name('enviar')->middleware(['can:pmda.analise.enviar', 'can:territorio,plano']);
 
         // Etapa 3: equipe COMPDEC (membros)
         Route::post('/{plano}/membros', [CompdecMembroController::class, 'store'])
-            ->name('membros.store')->middleware('can:pmda.planos.edit');
+            ->name('membros.store')->middleware(['can:pmda.planos.edit', 'can:territorio,plano']);
 
         // Etapa 3: ficha cadastral do COMPDEC (registro mestre do municipio)
         Route::put('/{plano}/compdec-ficha', [CompdecFichaController::class, 'update'])
-            ->name('compdec.update')->middleware('can:pmda.planos.edit');
+            ->name('compdec.update')->middleware(['can:pmda.planos.edit', 'can:territorio,plano']);
         Route::post('/{plano}/compdec-ficha/foto', [CompdecFichaController::class, 'uploadFoto'])
-            ->name('compdec.foto.upload')->middleware('can:pmda.planos.edit');
+            ->name('compdec.foto.upload')->middleware(['can:pmda.planos.edit', 'can:territorio,plano']);
         Route::delete('/{plano}/compdec-ficha/foto', [CompdecFichaController::class, 'removerFoto'])
-            ->name('compdec.foto.destroy')->middleware('can:pmda.planos.edit');
+            ->name('compdec.foto.destroy')->middleware(['can:pmda.planos.edit', 'can:territorio,plano']);
 
         // Etapa 3: documentos (Leis e Decretos) do COMPDEC
         Route::post('/{plano}/compdec-ficha/anexos', [CompdecAnexoController::class, 'store'])
-            ->name('compdec.anexos.store')->middleware('can:pmda.planos.edit');
+            ->name('compdec.anexos.store')->middleware(['can:pmda.planos.edit', 'can:territorio,plano']);
         Route::delete('/{plano}/compdec-ficha/anexos/{anexo}', [CompdecAnexoController::class, 'destroy'])
-            ->name('compdec.anexos.destroy')->middleware('can:pmda.planos.edit');
+            ->name('compdec.anexos.destroy')->middleware(['can:pmda.planos.edit', 'can:territorio,plano']);
         Route::get('/{plano}/compdec-ficha/anexos/{anexo}/download', [CompdecAnexoController::class, 'download'])
-            ->name('compdec.anexos.download')->middleware('can:pmda.planos.edit');
+            ->name('compdec.anexos.download')->middleware(['can:pmda.planos.edit', 'can:territorio,plano']);
 
         // Etapa 3: Editar Equipe COMPDEC (membros do orgao - ativos e inativos)
         Route::post('/{plano}/compdec-ficha/equipe', [CompdecEquipeController::class, 'store'])
-            ->name('compdec.equipe.store')->middleware('can:pmda.planos.edit');
+            ->name('compdec.equipe.store')->middleware(['can:pmda.planos.edit', 'can:territorio,plano']);
         Route::put('/{plano}/compdec-ficha/equipe/{equipe}', [CompdecEquipeController::class, 'update'])
-            ->name('compdec.equipe.update')->middleware('can:pmda.planos.edit');
+            ->name('compdec.equipe.update')->middleware(['can:pmda.planos.edit', 'can:territorio,plano']);
         Route::delete('/{plano}/compdec-ficha/equipe/{equipe}', [CompdecEquipeController::class, 'destroy'])
-            ->name('compdec.equipe.destroy')->middleware('can:pmda.planos.edit');
+            ->name('compdec.equipe.destroy')->middleware(['can:pmda.planos.edit', 'can:territorio,plano']);
 
         // Comunidades do plano
         Route::post('/{plano}/comunidades', [ComunidadeController::class, 'store'])
-            ->name('comunidades.store')->middleware('can:pmda.comunidades.create');
+            ->name('comunidades.store')->middleware(['can:pmda.comunidades.create', 'can:territorio,plano']);
 
         // Municipio solicita o cadastro de uma comunidade ainda inexistente
         Route::post('/{plano}/comunidades/solicitar', [ComunidadeSolicitacaoController::class, 'store'])
-            ->name('comunidades.solicitar')->middleware('can:pmda.comunidades.solicitar');
+            ->name('comunidades.solicitar')->middleware(['can:pmda.comunidades.solicitar', 'can:territorio,plano']);
 
         // Pontos de captacao do plano
         Route::post('/{plano}/pontos', [PlanoPontoController::class, 'store'])
-            ->name('pontos.store')->middleware('can:pmda.pontos.create');
+            ->name('pontos.store')->middleware(['can:pmda.pontos.create', 'can:territorio,plano']);
         Route::delete('/{plano}/pontos/{ponto}', [PlanoPontoController::class, 'destroy'])
-            ->name('pontos.destroy')->middleware('can:pmda.pontos.delete');
+            ->name('pontos.destroy')->middleware(['can:pmda.pontos.delete', 'can:territorio,plano']);
     });
 
     Route::delete('/comunidades/{comunidade}', [ComunidadeController::class, 'destroy'])

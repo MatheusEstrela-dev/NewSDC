@@ -18,7 +18,9 @@
 
     <!-- Filtro (retrátil, padrão do módulo) -->
     <FilterSection title="Filtros de Pesquisa" :columns="4" class="mb-6" :default-collapsed="true">
+      <!-- Perfil municipal ja ve so a propria fila: o select nao filtraria nada. -->
       <FilterField
+        v-if="!perfil.e_compdec"
         label="Município"
         type="select"
         :model-value="filtros.municipio_id"
@@ -182,6 +184,7 @@ const props = defineProps({
   solicitacoes: { type: Object, default: () => ({ data: [], meta: {} }) },
   filtros: { type: Object, default: () => ({}) },
   municipios: { type: Array, default: () => [] },
+  perfil: { type: Object, default: () => ({ e_compdec: false, e_cedec: false }) },
 });
 
 const analises = computed(() => props.analises?.data ?? []);

@@ -116,13 +116,19 @@ class PmdaPlanoService extends BaseService
      *
      * @return array<string, int>
      */
-    public function statisticsIndex(): array
+    public function statisticsIndex(?int $municipioId = null): array
     {
+        // Ao contrario de listar()/exportar(), que recebem o recorte dentro de
+        // $filtros, aqui ele vem explicito: nao existe array de filtros para
+        // carregar. Null = perfil estadual, sem recorte.
+        $doEscopo = static fn () => PmdaPlano::query()
+            ->when($municipioId !== null, fn ($q) => $q->where('municipio_id', $municipioId));
+
         return [
-            'total'     => PmdaPlano::count(),
-            'emEdicao'  => PmdaPlano::where('status', PmdaStatus::RASCUNHO->value)->count(),
-            'emAnalise' => PmdaPlano::where('status', PmdaStatus::EM_ANALISE->value)->count(),
-            'aprovados' => PmdaPlano::where('status', PmdaStatus::APROVADO->value)->count(),
+            'total'     => $doEscopo()->count(),
+            'emEdicao'  => $doEscopo()->where('status', PmdaStatus::RASCUNHO->value)->count(),
+            'emAnalise' => $doEscopo()->where('status', PmdaStatus::EM_ANALISE->value)->count(),
+            'aprovados' => $doEscopo()->where('status', PmdaStatus::APROVADO->value)->count(),
         ];
     }
 

@@ -31,14 +31,17 @@
             label="Exportar"
             @click="openExportModal"
           />
+          <!-- O municipio vem do login: nao ha o que escolher, entao nao ha modal.
+               `perfil.pode_criar` vem da PmdaPlanoPolicy::create (so COMPDEC com
+               municipio vinculado -- issue #56). -->
           <ActionButton
-            v-if="can('pmda.planos.create')"
+            v-if="perfil.pode_criar"
             action="create"
             module="pmda"
             resource="planos"
             label="Novo PMDA"
             :allowed="true"
-            @click="showCriar = true"
+            @click="router.visit(route('pmda.planos.create'))"
           />
         </div>
       </template>
@@ -51,6 +54,7 @@
       :filters="filtros"
       :status-opcoes="statusOpcoes"
       :municipios="municipios"
+      :ocultar-municipio="perfil.e_compdec"
       @apply="aplicar"
       @clear="limpar"
     />
@@ -176,8 +180,6 @@
       @export="onExport"
     />
 
-    <PmdaCreateModal :show="showCriar" :municipios="municipios" @close="showCriar = false" />
-
     <PrintPmdaFichaModal
       :show="printModalOpen"
       :loading="fichaCarregandoId !== null"
@@ -223,7 +225,6 @@ import { moduleIcon } from '@/Support/moduleIcons';
 import PmdaStatusBadge from '@/Components/Atoms/Pmda/PmdaStatusBadge.vue';
 import PmdaStatisticsCards from '@/Components/Organisms/Pmda/PmdaStatisticsCards.vue';
 import PmdaFiltersSection from '@/Components/Organisms/Pmda/PmdaFiltersSection.vue';
-import PmdaCreateModal from '@/Components/Organisms/Pmda/PmdaCreateModal.vue';
 import PmdaPlanosCards from '@/Components/Organisms/Pmda/PmdaPlanosCards.vue';
 import PrintPmdaFichaModal from '@/Components/Organisms/Pmda/Print/PrintPmdaFichaModal.vue';
 import PmdaHistoricoModal from '@/Components/Organisms/Pmda/PmdaHistoricoModal.vue';
@@ -236,7 +237,6 @@ const { can } = usePermissions();
 const { show: toast } = useToast();
 
 const viewMode = ref('table');
-const showCriar = ref(false);
 
 // Impressao da ficha COMPDEC (fetch sob demanda + modelo BasePrintModal).
 const printModalOpen = ref(false);
@@ -334,6 +334,9 @@ const props = defineProps({
   statistics: { type: Object, default: () => ({ total: 0, emEdicao: 0, emAnalise: 0, aprovados: 0 }) },
   statusOpcoes: { type: Array, default: () => [] },
   municipios: { type: Array, default: () => [] },
+  // e_compdec recorta a tela ao municipio do usuario; pode_criar espelha a
+  // PmdaPlanoPolicy::create para o front nao reimplementar a regra.
+  perfil: { type: Object, default: () => ({ e_compdec: false, e_cedec: false, pode_criar: false }) },
 });
 
 const pagination = computed(() => {
