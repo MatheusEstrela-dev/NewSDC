@@ -75,8 +75,8 @@
           <span>Li e aceito os termos de uso e a política de privacidade (LGPD)</span>
         </label>
 
-        <div v-if="hasErrors" class="mb-4 mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-center shadow-sm backdrop-blur-sm">
-          <p v-for="(msg, key) in form.errors" :key="key" class="text-sm text-red-400 font-medium">{{ msg }}</p>
+        <div v-if="mensagensErro.length" class="mb-4 mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-center shadow-sm backdrop-blur-sm">
+          <p v-for="msg in mensagensErro" :key="msg" class="text-sm text-red-400 font-medium">{{ msg }}</p>
         </div>
 
         <button type="submit" class="btn-login" :disabled="form.processing">
@@ -111,7 +111,16 @@ const form = useForm({
 
 const cpfFormatted = ref('');
 const telefoneFormatted = ref('');
-const hasErrors = computed(() => Object.keys(form.errors).length > 0);
+
+// retry_after nao e mensagem: o backend manda essa chave junto do erro de rate
+// limit para o front animar a contagem regressiva (mesmo contrato do
+// LoginRequest::throwThrottle). Sem filtrar, o v-for imprimiria o numero cru
+// como se fosse texto de erro.
+const mensagensErro = computed(() =>
+  Object.entries(form.errors)
+    .filter(([campo]) => campo !== 'retry_after')
+    .map(([, msg]) => msg),
+);
 
 const handleCpfInput = (evt) => {
   const numbersOnly = evt.target.value.replace(/\D/g, '').slice(0, 11);

@@ -72,6 +72,15 @@ class Kernel extends ConsoleKernel
             ->onOneServer()
             ->withoutOverlapping()
             ->name('email-change-cleanup');
+
+        // Portal de Treinamentos: descarta cadastro de cidadao que nunca
+        // confirmou o e-mail. Higiene da tabela - quem tenta se cadastrar de
+        // novo com o mesmo CPF/e-mail ja sobrescreve o pendente no ato.
+        $schedule->command('treinamento:limpar-cidadaos-nao-verificados')
+            ->daily()
+            ->onOneServer()
+            ->withoutOverlapping()
+            ->name('treinamento-limpar-cidadaos-nao-verificados');
     }
 
     /**
