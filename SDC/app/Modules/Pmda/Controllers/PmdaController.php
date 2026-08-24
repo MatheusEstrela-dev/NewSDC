@@ -286,15 +286,16 @@ class PmdaPlanoController extends Controller
         $municipioId = PerfilPmda::deUsuario($request->user())->municipioId();
 
         if ($municipioId === null) {
-            return to_route('pmda.planos.index')->withErrors([
-                'municipio_id' => 'Seu usuário não está vinculado a um município. Só a COMPDEC do município abre PMDA.',
-            ]);
+            return to_route('pmda.planos.index')->with(
+                'error',
+                'Seu usuário não está vinculado a um município. Só a COMPDEC do município abre PMDA.',
+            );
         }
 
         $municipio = \App\Models\Municipio::find($municipioId);
 
         if ($municipio === null) {
-            return to_route('pmda.planos.index')->withErrors(['municipio_id' => 'Município do seu órgão não encontrado.']);
+            return to_route('pmda.planos.index')->with('error', 'Município do seu órgão não encontrado.');
         }
 
         $pendente = \App\Modules\Pmda\Models\PmdaPlano::query()
@@ -303,10 +304,15 @@ class PmdaPlanoController extends Controller
             ->first();
 
         if ($pendente !== null) {
-            return to_route('pmda.planos.index')->withErrors([
-                'municipio_id' => 'Este município já possui um PMDA em aberto ('.$pendente->status->getLabel().
-                    ', protocolo '.($pendente->protocolo ?? '—').').',
-            ]);
+            // Regra do legado: "nao e possivel criar este PMDA pois ja existe
+            // processo em EDICAO". Vai por flash, nao por withErrors: o indice
+            // nao renderiza error bag, e sem o modal de municipio o usuario
+            // ficaria com um botao que aparenta nao fazer nada.
+            return to_route('pmda.planos.index')->with(
+                'error',
+                'Este município já possui um PMDA em aberto ('.$pendente->status->getLabel().
+                    ', protocolo '.($pendente->protocolo ?? '—').'). Conclua ou exclua o existente antes de abrir outro.',
+            );
         }
 
         return Inertia::render('Pmda/Create', [
@@ -378,7 +384,7 @@ class PmdaPlanoController extends Controller
                 data: collect($request->validated())->except('municipio_id')->toArray(),
             );
         } catch (\DomainException $e) {
-            return back()->withErrors(['municipio_id' => $e->getMessage()]);
+            return to_route('pmda.planos.index')->with('error', $e->getMessage());
         }
 
         // Redirect Inertia (SPA, via XHR) para a continuacao: mantem o contexto de
