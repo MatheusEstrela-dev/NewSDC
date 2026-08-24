@@ -8,17 +8,17 @@ use App\Http\Controllers\Auth\FirstAccessController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\OnboardingController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
-    Route::get('register', [RegisteredUserController::class, 'create'])
-                ->name('register');
-
-    Route::post('register', [RegisteredUserController::class, 'store'])
-                ->middleware('throttle:register');
+    // Nao existe cadastro publico de servidor. As rotas GET/POST /register do
+    // scaffolding do Breeze foram removidas: criavam direto na tabela `users` e
+    // ja autenticavam no guard "web", sem CPF, sem role, sem aprovacao e sem
+    // verificacao de e-mail. Conta de servidor nasce pelo fluxo administrativo
+    // (Admin\UserManagementController); o unico cadastro publico do sistema e o
+    // do cidadao, no Portal de Treinamentos (routes/modules/treinamento-portal).
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
                 ->name('login');

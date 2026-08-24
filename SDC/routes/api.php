@@ -72,8 +72,11 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckUserActive::class, 
 // ============================================================================
 
 // Public auth routes (no authentication required)
+// Sem 'register' aqui: a rota publica POST api/auth/register criava um User real,
+// atribuia a role 'user' (leitura de PAE, RAT, COMPDEC, inventario, estoque,
+// plantao + criacao de chamado) e devolvia um token Sanctum com abilities, tudo
+// sem autenticacao. Conta de servidor nasce so pelo fluxo administrativo.
 Route::prefix('auth')->name('auth.')->group(function () {
-    Route::post('register', [\App\Http\Controllers\Api\AuthController::class, 'register'])->middleware('throttle:register')->name('register');
     Route::post('login', [\App\Http\Controllers\Api\AuthController::class, 'login'])->middleware('throttle:login')->name('login');
 });
 
