@@ -44,3 +44,12 @@ tests
 
 # Dumps de dados legados (grandes, carregados via comando de import)
 /database/data/*.sql
+
+# Backups do cluster de banco (dumps logicos, tarballs de PGDATA e saida de
+# pg_basebackup) - dados reais. O /**/ cobre tambem as subpastas por data:
+# sem ele, mover um backup para basebackup_<data>/ o tornaria commitavel.
+/database/backup/**/*.dump
+/database/backup/**/*.tar.gz
+/database/backup/**/*.sha256
+/database/backup/**/backup_manifest
+/database/backup/**/SHA256SUMS
