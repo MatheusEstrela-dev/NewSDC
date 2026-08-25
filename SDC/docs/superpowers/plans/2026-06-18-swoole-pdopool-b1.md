@@ -345,7 +345,23 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Interfaces:** Consome Tasks 1-3.
 
-- [ ] **Step 1: Concorrência + transação isolada + tenant (hooks on, Postgres dev)**
+- [x] **Step 1: Concorrência + transação isolada + tenant (hooks on, Postgres dev)** — VALIDADO 2026-08-25
+
+Resultado medido (Postgres dev, `hook_flags=SWOOLE_HOOK_ALL`, script CLI isolado — não passa pelo servidor Octane, então não multiplica por `OCTANE_WORKERS`):
+
+| pool | conc | ok | collision | timeout | other |
+|---|---|---|---|---|---|
+| 16 | 24  | 24  | 0 | 0 | 0 |
+| 16 | 50  | 50  | 0 | 0 | 0 |
+| 16 | 100 | 100 | 0 | 0 | 0 |
+| 24 | 100 | 100 | 0 | 0 | 0 |
+| 1  | 100 | 100 | 0 | 0 | 0 |
+
+`collision=0` e `other=0` em todas: sem colisão de protocolo e sem vazamento de nível de transação.
+
+Prova de que o pool está de fato engajado (contada pelo próprio Postgres, `pg_stat_activity` antes/depois do `warm()`): `pool=4` abriu exatamente 4 conexões, `pool=16` abriu 16. E `db` resolve para `CoroutineDatabaseManager`, `hook_flags=2143283199`.
+
+RESSALVA: as queries do harness são triviais (`select count(*) from pg_class`). Que `pool=1` sustente conc=100 NÃO generaliza para queries reais, que seguram a conexão por muito mais tempo. Não usar isto para justificar pool pequeno.
 
 Run:
 ```bash
