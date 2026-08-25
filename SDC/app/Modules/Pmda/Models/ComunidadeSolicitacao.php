@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Pmda\Models;
 
 use App\Models\Municipio;
+use App\Models\User;
 use App\Modules\Pmda\Enums\SolicitacaoComunidadeStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,5 +42,15 @@ class ComunidadeSolicitacao extends Model
     public function comunidade(): BelongsTo
     {
         return $this->belongsTo(Comunidade::class, 'comunidade_id');
+    }
+
+    public function solicitadoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'solicitado_por');
+    }
+
+    public function analisadoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'analisado_por');
     }
 }

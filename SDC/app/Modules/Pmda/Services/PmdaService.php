@@ -499,7 +499,9 @@ class ComunidadeSolicitacaoService
     public function pendentes(array $filtros = [], int $perPage = 15, ?int $page = null): LengthAwarePaginator
     {
         return ComunidadeSolicitacao::query()
-            ->with('municipio')
+            // plano e solicitadoPor alimentam o detalhamento que a CEDEC le antes
+            // de decidir; carregados aqui para nao gerar N+1 na fila paginada.
+            ->with(['municipio', 'plano', 'solicitadoPor'])
             ->where('status', SolicitacaoComunidadeStatus::PENDENTE->value)
             ->when($filtros['municipio_id'] ?? null, fn ($q, $m) => $q->where('municipio_id', $m))
             ->oldest()

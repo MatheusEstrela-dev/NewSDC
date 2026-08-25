@@ -23,12 +23,17 @@ class ComunidadeSolicitacaoResource extends JsonResource
             'status_label'    => $this->status->getLabel(),
             // Nome de cor da paleta do Badge; o componente aplica a receita de pill.
             'status_cor'      => $this->status->getCor(),
-            // @deprecated Classe Tailwind crua. Sai quando nenhum consumidor usar.
-            'status_color'    => $this->status->getColorClass(),
             'comunidade_id'   => $this->comunidade_id,
             'motivo_rejeicao' => $this->motivo_rejeicao,
             'analisado_em'    => $this->analisado_em?->toIso8601String(),
             'created_at'      => $this->created_at?->toIso8601String(),
+            // Detalhamento da fila CEDEC: quem pediu, de qual PMDA e quem decidiu.
+            'solicitante'     => $this->whenLoaded('solicitadoPor', fn () => [
+                'nome'  => $this->solicitadoPor->name,
+                'email' => $this->solicitadoPor->email,
+            ]),
+            'plano_protocolo' => $this->whenLoaded('plano', fn () => $this->plano?->protocolo),
+            'analisado_por_nome' => $this->whenLoaded('analisadoPor', fn () => $this->analisadoPor?->name),
         ];
     }
 }
