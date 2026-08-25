@@ -423,9 +423,11 @@ class PmdaPlanoController extends Controller
                 'latitude'  => $c->latitude,
                 'longitude' => $c->longitude,
             ])->values(),
+            // ->resolve() desembrulha o {data: [...]} do resource collection: o
+            // modal de solicitacao espera uma lista crua (ver compdec_anexos).
             'comunidade_solicitacoes' => ComunidadeSolicitacaoResource::collection(
                 $this->solicitacoes->historicoDoMunicipio((int) $plano->municipio_id)
-            ),
+            )->resolve(),
             'compdec_ficha' => $this->compdecFicha->fichaDoPlano($plano),
             'compdec_anexos' => $this->compdecAnexosDoPlano($plano),
             'compdec_equipe' => $this->compdecEquipeDoPlano($plano),
