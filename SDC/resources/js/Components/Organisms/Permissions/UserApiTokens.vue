@@ -76,15 +76,14 @@
           <span v-else>Nunca usado</span>
         </div>
 
-        <div class="mt-2 flex flex-wrap items-center gap-1.5">
-          <Badge v-if="temCuringa(token)" variant="warning" size="sm">Escopo total</Badge>
-          <template v-else>
-            <span
-              v-for="ability in (token.abilities || [])"
-              :key="ability"
-              class="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
-            >{{ ability }}</span>
-          </template>
+        <!--
+          O escopo do token nao e listado aqui. Um token com escopo total tem
+          ~200 permissoes, e pintar uma badge por slug enchia o card de parede
+          de texto. O aviso de curinga fica, porque token que pode tudo precisa
+          ser visivel de longe; o resto se consulta na emissao.
+        -->
+        <div v-if="temCuringa(token)" class="mt-2 flex flex-wrap items-center gap-1.5">
+          <Badge variant="warning" size="sm">Escopo total</Badge>
         </div>
       </div>
     </div>
@@ -270,8 +269,10 @@ function marcarSomenteLeitura() {
   );
 }
 
+// Calculado no backend (UserManagementController::show): o frontend nao recebe
+// mais a lista de abilities para nao expor o escopo inteiro no data-page.
 function temCuringa(token) {
-  return (token.abilities || []).includes('*');
+  return token.escopo_total === true;
 }
 
 function cancelForm() {

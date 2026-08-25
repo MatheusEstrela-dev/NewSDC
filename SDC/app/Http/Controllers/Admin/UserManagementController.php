@@ -116,7 +116,12 @@ class UserManagementController extends Controller
         $tokens = $user->tokens->map(fn ($t) => [
             'id'           => $t->id,
             'name'         => $t->name,
-            'abilities'    => $t->abilities,
+            // A lista de abilities NAO vai para o frontend. Um token emitido
+            // com escopo total carrega ~200 slugs, e manda-los pintava uma
+            // parede de badges no card e, pior, deixava o inventario inteiro
+            // do escopo do token legivel no data-page do Inertia (view-source).
+            // Só o que a tela precisa: se o escopo e curinga, para o aviso.
+            'escopo_total' => in_array('*', (array) $t->abilities, true),
             'last_used_at' => $t->last_used_at,
             'expires_at'   => $t->expires_at,
             'created_at'   => $t->created_at,
