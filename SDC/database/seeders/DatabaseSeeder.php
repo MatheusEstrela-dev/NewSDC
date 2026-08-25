@@ -25,6 +25,10 @@ class DatabaseSeeder extends Seeder
         // 2. Órgãos (hierarquia CEDEC > REDEC > COMPDEC)
         $this->call(OrgaosSeeder::class);
 
+        // 2b. Tabela oficial do COBRADE (65 códigos). Roda depois da carga do
+        //     dump legado para reescrever nome/descrição por cima dele.
+        $this->call(CobradeSeeder::class);
+
         // 3. Admin principal do sistema
         $admin = \App\Models\User::updateOrCreate(
             ['cpf' => '12345678900'],
