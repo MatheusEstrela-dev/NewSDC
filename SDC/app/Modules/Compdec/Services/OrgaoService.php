@@ -10,6 +10,7 @@ use App\Modules\Compdec\Enums\TipoOrgao;
 use App\Modules\Compdec\Models\Orgao;
 use App\Modules\Compdec\Support\LegacyParser;
 use App\Modules\Compdec\Support\MigracaoReport;
+use App\Modules\Compdec\Support\PonteMunicipioLegado;
 use App\Support\Cache\CachedRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -24,9 +25,12 @@ class OrgaoService
 {
     private CachedRepository $cache;
 
-    public function __construct(?CachedRepository $cache = null)
+    private PonteMunicipioLegado $ponteMunicipio;
+
+    public function __construct(?CachedRepository $cache = null, ?PonteMunicipioLegado $ponteMunicipio = null)
     {
         $this->cache = $cache ?? new CachedRepository('orgaos', ttlSeconds: 3600);
+        $this->ponteMunicipio = $ponteMunicipio ?? new PonteMunicipioLegado();
     }
 
     /**
@@ -356,7 +360,7 @@ class OrgaoService
 
         DB::connection($connection)
             ->table('com_comdec')
-            ->orderBy('id_comdec')
+            ->orderBy('id')
             ->chunk($chunk, function ($linhas) use ($report, $dryRun): void {
                 foreach ($linhas as $row) {
                     $this->migrarOrgaoLegado($row, $report, $dryRun);
@@ -368,7 +372,10 @@ class OrgaoService
 
     private function migrarOrgaoLegado(object $row, MigracaoReport $report, bool $dryRun): void
     {
-        $legacyId = LegacyParser::toIntOrNull($row->id_comdec ?? null);
+        // PK hibrida do legado: o dump declara `id_comdec`, mas a tabela em
+        // producao usa `id`. Aceita os dois para nao depender de qual copia
+        // do schema esta na conexao legada.
+        $legacyId = LegacyParser::toIntOrNull($row->id ?? $row->id_comdec ?? null);
 
         if ($legacyId === null) {
             $report->registrarSkip();
@@ -408,44 +415,56 @@ class OrgaoService
      */
     private function mapearLegadoParaOrgao(object $row, int $legacyId): array
     {
+        $municipioLegadoId = LegacyParser::toIntOrNull($row->id_municipio ?? null);
+        $municipioId = $this->ponteMunicipio->resolver($municipioLegadoId);
+        $municipioNome = $this->ponteMunicipio->nome($municipioLegadoId);
+        $codigoIbge = $this->ponteMunicipio->codigoIbge($municipioLegadoId);
+
         return [
             'tipo' => TipoOrgao::COMPDEC->value,
             'status' => 'ativo',
-            'codigo' => LegacyParser::toStringOrNull($row->codigo ?? null) ?? "LEG-{$legacyId}",
-            'nome' => LegacyParser::toStringOrNull($row->nome ?? null) ?? "(sem nome) {$legacyId}",
-            'municipio_id' => LegacyParser::toIntOrNull($row->municipio_id ?? $row->mun_id ?? null),
+            // com_comdec nao tem codigo nem nome: ambos sao derivados do
+            // municipio. O codigo usa o IBGE porque a coluna e UNIQUE e ha
+            // municipios homonimos entre UFs; sem municipio resolvido cai no
+            // legacy_id, que tambem e unico.
+            'codigo' => $codigoIbge !== null ? "COMPDEC-{$codigoIbge}" : "COMPDEC-LEG-{$legacyId}",
+            'nome' => $municipioNome !== null ? "COMPDEC {$municipioNome}" : "COMPDEC (sem municipio) {$legacyId}",
+            'municipio_id' => $municipioId,
             'email' => LegacyParser::toStringOrNull($row->email ?? null),
             'email_secundario' => LegacyParser::toStringOrNull($row->email2 ?? null),
             'email_terciario' => LegacyParser::toStringOrNull($row->email3 ?? null),
-            'telefone' => LegacyParser::toStringOrNull($row->fone_com ?? $row->telefone ?? null),
+            'telefone' => LegacyParser::toStringOrNull($row->fone_com1 ?? null),
             'telefone_secundario' => LegacyParser::toStringOrNull($row->fone_com2 ?? null),
             'fax' => LegacyParser::toStringOrNull($row->fax ?? null),
             'endereco' => LegacyParser::toStringOrNull($row->endereco ?? null),
-            'lei_criacao_numero' => LegacyParser::toStringOrNull($row->lei_num ?? null),
-            'lei_criacao_data' => LegacyParser::toDate($row->lei_data ?? null)?->toDateString(),
-            'decreto_numero' => LegacyParser::toStringOrNull($row->dec_num ?? null),
-            'decreto_data' => LegacyParser::toDate($row->dec_data ?? null)?->toDateString(),
-            'portaria_numero' => LegacyParser::toStringOrNull($row->port_numero ?? null),
-            'portaria_data' => LegacyParser::toDate($row->port_data ?? null)?->toDateString(),
-            'qtd_efetivo' => LegacyParser::toIntOrNull($row->efetivo_qtd ?? null) ?? 0,
-            'qtd_nupdec' => LegacyParser::toIntOrNull($row->nupdec_qtd ?? null) ?? 0,
+            'lei_criacao_numero' => LegacyParser::toStringOrNull($row->num_lei ?? null),
+            'lei_criacao_data' => LegacyParser::toDate($row->dt_lei ?? null)?->toDateString(),
+            'decreto_numero' => LegacyParser::toStringOrNull($row->num_decreto ?? null),
+            'decreto_data' => LegacyParser::toDate($row->dt_decreto ?? null)?->toDateString(),
+            'portaria_numero' => LegacyParser::toStringOrNull($row->num_portaria ?? null),
+            'portaria_data' => LegacyParser::toDate($row->dt_portaria ?? null)?->toDateString(),
+            'qtd_efetivo' => LegacyParser::toIntOrNull($row->qtd_efetivo ?? null) ?? 0,
+            'qtd_nupdec' => LegacyParser::toIntOrNull($row->qtd_nupdec ?? null) ?? 0,
             'tem_sede_propria' => LegacyParser::toBool($row->sede_propria ?? null),
             'tem_viatura' => LegacyParser::toBool($row->viatura ?? null),
-            'tem_mapeamento_risco' => LegacyParser::toBool($row->mapeamento_risco ?? null),
+            'tem_mapeamento_risco' => LegacyParser::toBool($row->mapeamento ?? null),
             'tem_simulado' => LegacyParser::toBool($row->simulado ?? null),
             'tem_cartao_pdc' => LegacyParser::toBool($row->cartao_pdc ?? null),
             'metadata' => [
                 'capacidades' => [
                     'tem_computador' => LegacyParser::toBool($row->computador ?? null),
                     'tem_curso_gestao' => LegacyParser::toBool($row->curso_gestao ?? null),
-                    'data_curso_gestao' => LegacyParser::toDate($row->curso_gestao_data ?? null)?->toDateString(),
+                    'data_curso_gestao' => LegacyParser::toDate($row->dt_curso_gestao ?? null)?->toDateString(),
                     'tem_curso_sco' => LegacyParser::toBool($row->curso_sco ?? null),
-                    'data_curso_sco' => LegacyParser::toDate($row->curso_sco_data ?? null)?->toDateString(),
-                    'tem_workshop_pdc' => LegacyParser::toBool($row->workshop_pdc ?? null),
-                    'data_workshop_pdc' => LegacyParser::toDate($row->workshop_pdc_data ?? null)?->toDateString(),
-                    'experiencia_dc' => LegacyParser::toStringOrNull($row->experiencia_dc ?? null),
+                    'data_curso_sco' => LegacyParser::toDate($row->dt_curso_sco ?? null)?->toDateString(),
+                    'tem_workshop_pdc' => LegacyParser::toBool($row->particip_workshop ?? null),
+                    'data_workshop_pdc' => LegacyParser::toDate($row->dt_partic_workshop ?? null)?->toDateString(),
+                    'experiencia_dc' => LegacyParser::toStringOrNull($row->exp_dc ?? null),
                     'capacitacao_nupdec' => LegacyParser::toStringOrNull($row->capacitacao_nupdec ?? null),
-                    'obs_capacidades' => LegacyParser::toStringOrNull($row->obs ?? null),
+                    'obs_capacidades' => LegacyParser::toStringOrNull($row->org_rep ?? null),
+                ],
+                'legado' => [
+                    'municipio_id' => $municipioLegadoId,
                 ],
             ],
         ];

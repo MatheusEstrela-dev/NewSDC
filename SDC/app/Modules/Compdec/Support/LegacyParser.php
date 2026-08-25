@@ -72,10 +72,24 @@ final class LegacyParser
 
         // yyyy-mm-dd / ISO
         try {
-            return Carbon::parse($value);
+            return self::descartarAnoInvalido(Carbon::parse($value));
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * MySQL aceita data-zero parcial; o Postgres nao. Alem do '0000-00-00' ja
+     * filtrado acima, o legado tem casos como '0000-07-01' (dt_portaria do
+     * COMPDEC Bom Jesus do Galho), que o Carbon parseia para o ano 0 e o
+     * Postgres rejeita com "date/time field value out of range".
+     *
+     * Nenhuma data real do dominio e anterior ao ano 1000: ano abaixo disso e
+     * sempre lixo do legado, entao vira null em vez de derrubar a linha.
+     */
+    private static function descartarAnoInvalido(Carbon $date): ?Carbon
+    {
+        return $date->year < 1000 ? null : $date;
     }
 
     public static function toDecimalBR(mixed $value): float

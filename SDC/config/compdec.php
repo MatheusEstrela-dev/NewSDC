@@ -43,6 +43,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Validade do Plano de Contingencia (em anos)
+    |--------------------------------------------------------------------------
+    | Um plano ativo enviado ha mais tempo que isso conta como irregular no
+    | painel estadual de cobertura (/plancon). O legado nao tinha esse
+    | conceito: so um flag `com_comdec.plano_cont` ja defasado.
+    */
+    'plano_validade_anos' => (int) env('COMPDEC_PLANO_VALIDADE_ANOS', 5),
+
+    /*
+    |--------------------------------------------------------------------------
     | Limites de Upload (em bytes)
     |--------------------------------------------------------------------------
     | Limites por tipo de arquivo. Mantem paridade com o sistema legado.
@@ -80,7 +90,22 @@ return [
         'foto_compdec' => env('COMPDEC_LEGACY_FOTO_COMPDEC', '/legacy/storage/app/public/compdec_fotos'),
         'foto_prefeito' => env('COMPDEC_LEGACY_FOTO_PREFEITO', '/legacy/storage/app/public/prefeitura_fotos'),
         'anexos' => env('COMPDEC_LEGACY_ANEXOS', '/legacy/storage/app/public/compdecleis'),
-        'planos' => env('COMPDEC_LEGACY_PLANOS', '/legacy/storage/app/public/plano'),
+
+        /*
+        | Plano de contingencia teve DOIS sistemas gravando arquivo, e por isso
+        | e uma lista de candidatos, tentada em ordem:
+        |
+        |  1. gestaocedec (PHP puro) -- 618 dos 619 registros, de 2019 a 2022.
+        |     Classe.Anexo::uploadSimple() move para DOCUMENT_ROOT/anexo/planoCont.
+        |     Nomes no padrao `Plano_<data>_V.<n>.<ext>`.
+        |  2. sdc (Laravel) -- 1 registro, de 2022-08. CompdecUploadPlanoController
+        |     usa storeAs('public/plano'). Nomes `<compdec_id>-<timestamp>.<ext>`.
+        |     Esta pasta pode nem existir no servidor, justamente por ter 1 arquivo.
+        */
+        'planos' => array_values(array_filter([
+            env('COMPDEC_LEGACY_PLANOS_GESTAOCEDEC', '/legacy/gestaocedec/anexo/planoCont'),
+            env('COMPDEC_LEGACY_PLANOS', '/legacy/storage/app/public/plano'),
+        ])),
     ],
 
     /*
