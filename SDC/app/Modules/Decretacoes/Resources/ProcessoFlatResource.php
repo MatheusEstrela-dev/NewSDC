@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Resources;
 
-use App\Modules\Decretacoes\Enums\Redec;
+use App\Modules\Decretacoes\Services\RedecService;
 use App\Modules\Decretacoes\Support\Vigencia;
 use Illuminate\Http\Request;
 
@@ -48,7 +48,7 @@ class ProcessoFlatResource extends ProcessoResource
             'deletado'                    => $this->deleted_at !== null,
             'data_delecao'                => $this->deleted_at?->toIso8601String(),
             'redec_id'                    => $this->safeGetInt('redec_id'),
-            'redec'                       => Redec::labelFor($this->safeGet('redec_id')),
+            'redec'                       => RedecService::labelFor($this->safeGet('redec_id')),
             'protocolo'                   => $this->safeGet('n_protocolo_fide'),
             'cobrade'                     => $this->getTipoDesastreCobrade(),
             'tipo_desastre'               => $this->safeGet('tipo_desastre'),

@@ -320,6 +320,10 @@ const statusVigentesCount = computed(
   () => reconhecimentoOptions.value.filter(o => o.vigente).length
 );
 
+// Catalogo das REDECs vindo do banco: dec_redecs -> RedecDTO ->
+// RedecService::toSelectOptions() -> ProcessoFilter::getFilterOptions().
+// Cada item tem { id, label, sigla, sede, rpm }; nada de lista fixa aqui, para
+// que uma regional nova apareca sem alterar o front.
 const redecOptions = computed(() => props.filterOptions.redecs || []);
 
 // Correspondencia municipio <-> REDEC: cada municipio traz `redec_id`

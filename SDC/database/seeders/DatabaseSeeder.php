@@ -63,11 +63,15 @@ class DatabaseSeeder extends Seeder
             $this->command->warn('Tabela "rats" não encontrada - RatMockSeeder pulado.');
         }
 
-        // 6b. REDECs de Minas Gerais (tabela de referência rat_redec)
-        if (\Illuminate\Support\Facades\Schema::hasTable('rat_redec')) {
-            $this->call(RatRedecSeeder::class);
+        // 6b. REDECs de Minas Gerais (catálogo dec_redecs, usado por Decretações).
+        //     A própria migration já faz a carga; o seeder existe para
+        //     ressincronizar os rótulos. Substituiu o RatRedecSeeder, que
+        //     populava a rat_redec removida por
+        //     2026_05_19_100000_drop_unused_rat_tables.
+        if (\Illuminate\Support\Facades\Schema::hasTable('dec_redecs')) {
+            $this->call(RedecSeeder::class);
         } else {
-            $this->command->warn('Tabela "rat_redec" não encontrada - RatRedecSeeder pulado.');
+            $this->command->warn('Tabela "dec_redecs" não encontrada - RedecSeeder pulado.');
         }
 
         // 7. Orgaos de teste (hierarquia completa para testes)

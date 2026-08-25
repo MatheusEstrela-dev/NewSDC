@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Decretacoes\Filters;
 
 use App\Models\Municipio;
-use App\Modules\Decretacoes\Enums\Redec;
 use App\Modules\Decretacoes\Enums\StatusProcesso;
 use App\Modules\Decretacoes\Models\DecretoMunicipio;
 use App\Modules\Decretacoes\Models\Processo;
+use App\Modules\Decretacoes\Services\RedecService;
 use App\Modules\Decretacoes\Support\Vigencia;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -479,7 +479,7 @@ class ProcessoFilter
             'analistas' => self::getAnalistasOptions(),
             'reconhecimentos' => self::getStatusProcessoOptions(),
             'municipios' => self::getMunicipiosOptions(),
-            'redecs' => Redec::toSelectOptions(),
+            'redecs' => RedecService::toSelectOptions(),
             'situacoes_anormalidade' => [
                 ['value' => 'ECP', 'label' => 'ECP - Estado de Calamidade Publica'],
                 ['value' => 'SE', 'label' => 'SE - Situacao de Emergencia'],
@@ -517,9 +517,11 @@ class ProcessoFilter
      */
     protected static function getMunicipiosOptions(): array
     {
-        // v5: a v4 foi gravada quando o enum Redec so conhecia 14 regionais, e
-        // por isso guardou `redec_sigla`/`redec_label` nulos para todo municipio
-        // das REDECs 15 a 19 - por 24h, mesmo depois do enum corrigido.
+        // v5: a v4 foi gravada quando a lista de REDECs vivia num enum PHP que
+        // so conhecia 14 regionais, e por isso guardou `redec_sigla`/
+        // `redec_label` nulos para todo municipio das REDECs 15 a 19 - por 24h,
+        // mesmo depois do codigo corrigido. Hoje as regionais vem de
+        // `dec_redecs` (RedecService) e clearCache() cobre as duas listas.
         return Cache::remember('decretacoes.filter.municipios.v5', 86400, function () {
             $redecPorMunicipio = self::getRedecPorMunicipioId();
 
@@ -535,14 +537,14 @@ class ProcessoFilter
                 ->get()
                 ->map(function ($m) use ($redecPorMunicipio) {
                     $redecId = $redecPorMunicipio[(int) $m->id] ?? null;
-                    $redec = $redecId ? Redec::tryFrom($redecId) : null;
+                    $redec = $redecId ? RedecService::find($redecId) : null;
 
                     return [
                         'id' => $m->id,
                         'label' => $m->nome,
                         'codigo_ibge' => $m->codigo_ibge,
                         'redec_id' => $redecId,
-                        'redec_sigla' => $redec?->sigla(),
+                        'redec_sigla' => $redec?->sigla,
                         'redec_label' => $redec?->label(),
                     ];
                 })
@@ -736,8 +738,12 @@ class ProcessoFilter
         Cache::forget('decretacoes.filter.analistas');
         Cache::forget('decretacoes.filter.status_processo.v1');
 
-        foreach (Redec::cases() as $redec) {
-            Cache::forget("decretacoes.filter.ibge_por_redec.v1.{$redec->value}");
+        // As chaves por REDEC vem do catalogo, mas o catalogo em si NAO e
+        // invalidado aqui: este metodo roda no observer de Processo, e salvar um
+        // processo nao muda a lista de regionais. Quem cuida disso e o proprio
+        // model Redec (hook booted) e RedecService::clearCache().
+        foreach (RedecService::ids() as $redecId) {
+            Cache::forget("decretacoes.filter.ibge_por_redec.v1.{$redecId}");
         }
     }
 

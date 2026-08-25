@@ -27,7 +27,9 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  // Opcoes vindas de ProcessoFilter::getFilterOptions() -> Redec::toSelectOptions()
+  // Opcoes do catalogo `dec_redecs`: RedecService::toSelectOptions() ->
+  // RedecDTO -> ProcessoFilter::getFilterOptions() -> props do Inertia.
+  // Cada item tem { id, label, sigla, sede, rpm }.
   redecs: {
     type: Array,
     default: () => []

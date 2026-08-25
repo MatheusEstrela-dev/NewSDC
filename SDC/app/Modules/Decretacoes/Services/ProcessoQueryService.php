@@ -224,7 +224,7 @@ class ProcessoQueryService
             }
 
             if ($param === 'redec_id') {
-                $entry['display_value'] = \App\Modules\Decretacoes\Enums\Redec::labelFor($value);
+                $entry['display_value'] = RedecService::labelFor($value);
             }
 
             $activeFilters[] = $entry;
