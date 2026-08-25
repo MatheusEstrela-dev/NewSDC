@@ -24,6 +24,7 @@ use App\Modules\AjudaHumanitaria\Resources\PedidoAhResource;
 use App\Modules\AjudaHumanitaria\Services\AnexoPedidoService;
 use App\Modules\AjudaHumanitaria\Services\ItemPedidoService;
 use App\Modules\AjudaHumanitaria\Services\ParecerService;
+use App\Support\Cobrade;
 use App\Modules\AjudaHumanitaria\Services\PedidoAhService;
 use App\Modules\AjudaHumanitaria\Services\PrestacaoContasService;
 use App\Modules\AjudaHumanitaria\Services\TramitacaoService;
@@ -32,7 +33,6 @@ use App\Modules\Compdec\Enums\FuncaoEquipe;
 use App\Modules\Compdec\Models\CompdecEquipe;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -261,18 +261,14 @@ class PedidoAhController extends Controller
     }
 
     /**
-     * @return array<int, array{value: int, label: string}>
+     * @return array<int, array{value: int, codigo: string, label: string, descricao: string}>
      */
     private function cobrades(): array
     {
-        return DB::table('dec_cobrade')
-            ->orderBy('descricao')
-            ->get(['id', 'codigo', 'descricao'])
-            ->map(static fn (object $c): array => [
-                'value' => (int) $c->id,
-                'label' => trim(($c->codigo ? "{$c->codigo} - " : '') . (string) $c->descricao),
-            ])
-            ->all();
+        // Fonte unica (App\Support\Cobrade): o rotulo vem de `nome`, a
+        // denominacao oficial curta. `descricao` guarda a definicao completa,
+        // que chega a 497 caracteres e nao serve de rotulo de select.
+        return Cobrade::opcoes();
     }
 
     /**

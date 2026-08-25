@@ -390,12 +390,14 @@ return [
                 'desvincular' => 'compdec.usuarios.desvincular',
             ],
         ],
+        // Painel estadual de cobertura + envio do plano pelo proprio municipio.
+        // O dado vive em compdec_planos_contingencia; a gestao completa
+        // (versoes, aprovacao) fica em COMPDEC > Planos.
         'PLANCON' => [
             'Planos' => [
                 'view'     => 'plancon.view',
                 'upload'   => 'plancon.upload',
                 'download' => 'plancon.download',
-                'delete'   => 'plancon.delete',
             ],
         ],
         'CISTERNAS' => [
@@ -671,7 +673,7 @@ return [
             'cisternas.notificacoes.view',
             'cisternas.notificacoes.create',
             'cisternas.notificacoes.edit',
-            // PlanCon - upload e download de planos, sem delete
+            // PlanCon - painel de cobertura + envio do plano do municipio
             'plancon.view',
             'plancon.upload',
             'plancon.download',
