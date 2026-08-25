@@ -15,6 +15,10 @@ return new class extends Migration {
             $table->string('email', 110)->nullable();
             $table->string('cpf', 14)->nullable();
             $table->string('whatsapp', 20)->nullable();
+            // Endereco e bairro vem da ficha do legado (mod_pipa, representante.php):
+            // a CEDEC usa para localizar o contato na comunidade.
+            $table->string('endereco', 150)->nullable();
+            $table->string('bairro', 100)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

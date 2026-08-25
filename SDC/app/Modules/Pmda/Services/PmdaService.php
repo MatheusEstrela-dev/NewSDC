@@ -565,6 +565,8 @@ class RepresentanteService
 
     public function adicionar(PmdaComunidade $comunidade, array $data): PmdaRepresentante
     {
+        $this->validarCpfUnicoNoPlano($comunidade, $data['cpf'] ?? null, null);
+
         $representante = $comunidade->representantes()->create($data);
         $this->recalcular($comunidade);
 
@@ -573,9 +575,39 @@ class RepresentanteService
 
     public function atualizar(PmdaRepresentante $representante, array $data): PmdaRepresentante
     {
+        $comunidade = $representante->comunidade;
+        if ($comunidade) {
+            $this->validarCpfUnicoNoPlano($comunidade, $data['cpf'] ?? null, $representante->id);
+        }
+
         $representante->update($data);
 
         return $representante->refresh();
+    }
+
+    /**
+     * Legado (gestaocedec, mod_pipa: RepPmda::buscaRepDupPmda): a mesma pessoa nao
+     * representa duas comunidades do MESMO PMDA. O escopo e o plano inteiro, nao a
+     * comunidade -- por isso a busca sobe ate o plano antes de comparar.
+     *
+     * Sem CPF nao ha o que comparar: representante sem documento nao bloqueia outro.
+     */
+    private function validarCpfUnicoNoPlano(PmdaComunidade $comunidade, ?string $cpf, ?int $ignorarId): void
+    {
+        $cpf = preg_replace('/\D/', '', (string) $cpf);
+        if ($cpf === '') {
+            return;
+        }
+
+        $duplicado = PmdaRepresentante::query()
+            ->whereHas('comunidade', fn ($q) => $q->where('pmda_plano_id', $comunidade->pmda_plano_id))
+            ->when($ignorarId, fn ($q, $id) => $q->where('id', '!=', $id))
+            ->whereRaw("regexp_replace(coalesce(cpf, ''), '\\D', '', 'g') = ?", [$cpf])
+            ->exists();
+
+        if ($duplicado) {
+            throw new \DomainException('Esse representante já está cadastrado em outra comunidade deste PMDA.');
+        }
     }
 
     public function remover(PmdaRepresentante $representante): void

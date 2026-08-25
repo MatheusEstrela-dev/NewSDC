@@ -706,14 +706,22 @@ class RepresentanteController extends Controller
 
     public function store(StoreRepresentanteRequest $request, PmdaComunidade $comunidade): RedirectResponse
     {
-        $this->service->adicionar($comunidade, $request->validated());
+        try {
+            $this->service->adicionar($comunidade, $request->validated());
+        } catch (\DomainException $e) {
+            return back()->withErrors(['representante' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'Representante adicionado.');
     }
 
     public function update(UpdateRepresentanteRequest $request, PmdaRepresentante $representante): RedirectResponse
     {
-        $this->service->atualizar($representante, $request->validated());
+        try {
+            $this->service->atualizar($representante, $request->validated());
+        } catch (\DomainException $e) {
+            return back()->withErrors(['representante' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'Representante atualizado.');
     }
