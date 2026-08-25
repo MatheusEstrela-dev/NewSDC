@@ -382,6 +382,22 @@ class ComunidadeService
             $data['nome']      = $mestre->nome;
             $data['latitude']  = $data['latitude'] ?? $mestre->latitude;
             $data['longitude'] = $data['longitude'] ?? $mestre->longitude;
+
+            // Ultima referencia conhecida da comunidade, so como ponto de
+            // partida: o que o municipio informar no plano sempre vence. E o
+            // destino dos campos que o legado guardava em pip_comunidade
+            // (trecho_pav/trecho_n_pav/pop_atendida) e que aqui pertencem ao
+            // vinculo, nao ao catalogo - ver ComunidadeLegadoService.
+            //
+            // array_key_exists e nao ??: o middleware ConvertEmptyStringsToNull
+            // transforma campo apagado de proposito em null, e com ?? o valor
+            // do catalogo voltaria por cima justamente de quem quis zerar. So
+            // pre-preenche o que o formulario nao mandou.
+            foreach (['trecho_pav', 'trecho_n_pav', 'pop_atendida'] as $campo) {
+                if (! array_key_exists($campo, $data)) {
+                    $data[$campo] = $mestre->{$campo};
+                }
+            }
         }
 
         $data['municipio_id'] = $plano->municipio_id;

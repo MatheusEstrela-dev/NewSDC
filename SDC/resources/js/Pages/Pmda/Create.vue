@@ -6,6 +6,7 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import RatTabs from '@/Components/Rat/RatTabs.vue';
 import PmdaStatusBadge from '@/Components/Atoms/Pmda/PmdaStatusBadge.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import PmdaInicioSection from '@/Components/Organisms/Pmda/PmdaInicioSection.vue';
 import PmdaIssSection from '@/Components/Organisms/Pmda/PmdaIssSection.vue';
 import PmdaCompdecSection from '@/Components/Organisms/Pmda/PmdaCompdecSection.vue';
@@ -143,6 +144,7 @@ function voltar() {
     <PageHeader
       :title="`Novo PMDA — ${municipioLabel}`"
       :icon="DocumentTextIcon"
+      :icon-image="moduleIcon('pmda')"
       variant="gradient"
     >
       <template #actions>

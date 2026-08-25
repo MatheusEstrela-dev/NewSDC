@@ -21,11 +21,16 @@ class Comunidade extends Model
     protected $table = 'comunidades';
 
     protected $fillable = [
-        'municipio_id', 'nome', 'latitude', 'longitude', 'ativo', 'created_by',
+        'legacy_id', 'municipio_id', 'nome', 'latitude', 'longitude',
+        'trecho_pav', 'trecho_n_pav', 'pop_atendida', 'ponto_legacy_id',
+        'ativo', 'created_by',
     ];
 
     protected $casts = [
         'ativo' => 'boolean',
+        'trecho_pav' => 'decimal:2',
+        'trecho_n_pav' => 'decimal:2',
+        'pop_atendida' => 'integer',
     ];
 
     public function municipio(): BelongsTo
