@@ -37,6 +37,13 @@ function enviar() {
   enviando.value = true;
   router.post(route('pmda.planos.enviar', props.plano.id), {}, {
     preserveScroll: true,
+    onSuccess: () => { toast('PMDA enviado para análise da CEDEC-MG.', 'success'); },
+    // O backend recusa o envio nomeando o que falta (comunidade, representantes
+    // ou os PDFs). Sem repassar essa mensagem o botao parece quebrado: a acao
+    // nao acontece e a tela nao diz por que.
+    onError: (errors) => {
+      toast(errors.enviar ?? 'Não foi possível enviar o PMDA.', 'error');
+    },
     onFinish: () => { enviando.value = false; },
   });
 }

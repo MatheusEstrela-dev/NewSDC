@@ -53,6 +53,15 @@ class MigrarComunidadesPmdaLegadoCommand extends Command
             ]],
         );
 
+        if ($service->coordenadasInvertidas > 0 || $service->coordenadasDescartadas > 0) {
+            $this->newLine();
+            $this->line(sprintf(
+                'Coordenadas: %d invertida(s) corrigida(s), %d impossivel(is) anulada(s).',
+                $service->coordenadasInvertidas,
+                $service->coordenadasDescartadas,
+            ));
+        }
+
         // "ignorados" nao e falha: sao as comunidades de municipio sem par em
         // `municipios` e as duplicatas perdedoras do unique (municipio, nome).
         if ($report->erros > 0) {

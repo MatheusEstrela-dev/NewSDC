@@ -100,14 +100,11 @@
                 <p class="text-sm text-slate-600 dark:text-slate-300">{{ s.municipio ?? '—' }}</p>
                 <p class="mt-0.5 text-xs text-slate-400">Solicitada em {{ fmtData(s.created_at) }}</p>
               </div>
-              <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium" :class="s.status_color">{{ s.status_label }}</span>
+              <PmdaStatusBadge :label="s.status_label" :cor="s.status_cor" />
             </div>
             <div class="mt-3 flex flex-wrap items-center justify-end gap-2">
-              <Button v-if="canAprovarComunidade" variant="success" size="sm" :disabled="processandoSolic === s.id" @click="aprovarComunidade(s)">
-                <CheckIcon class="mr-1 h-4 w-4" /> Aprovar
-              </Button>
-              <Button v-if="canAprovarComunidade" variant="danger" size="sm" :disabled="processandoSolic === s.id" @click="abrirMotivo('rejeitar', s)">
-                <XMarkIcon class="mr-1 h-4 w-4" /> Rejeitar
+              <Button variant="secondary" size="sm" @click="abrirDetalhe(s)">
+                <EyeIcon class="mr-1 h-4 w-4" /> Ver detalhes
               </Button>
             </div>
           </li>
@@ -118,6 +115,17 @@
         </div>
       </div>
     </div>
+
+    <!-- Detalhe da solicitação de comunidade (decide a partir daqui) -->
+    <SolicitacaoComunidadeDetalheModal
+      :show="detalheModal.open"
+      :solicitacao="detalheModal.solicitacao"
+      :pode-decidir="canAprovarComunidade"
+      :processando="processandoSolic === detalheModal.solicitacao?.id"
+      @close="fecharDetalhe"
+      @aprovar="aprovarComunidade"
+      @rejeitar="abrirMotivo('rejeitar', $event)"
+    />
 
     <!-- Aprovar PMDA (confirmação) -->
     <ConfirmDialog
@@ -167,11 +175,12 @@ import TextInput from '@/Components/Atoms/Input/TextInput.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import PmdaStatusBadge from '@/Components/Atoms/Pmda/PmdaStatusBadge.vue';
+import SolicitacaoComunidadeDetalheModal from '@/Components/Organisms/Pmda/SolicitacaoComunidadeDetalheModal.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import {
-  CheckIcon, XMarkIcon, PencilSquareIcon, ArchiveBoxIcon,
-  ClipboardDocumentCheckIcon, MapPinIcon,
+  CheckIcon, PencilSquareIcon, ArchiveBoxIcon,
+  ClipboardDocumentCheckIcon, MapPinIcon, EyeIcon,
 } from '@heroicons/vue/24/outline';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -266,14 +275,28 @@ function confirmDelete_aprovar() {
   });
 }
 
-// --- Aprovar comunidade (direto) ---
+// --- Solicitação de comunidade: detalhe e decisão ---
 const processandoSolic = ref(null);
+const detalheModal = reactive({ open: false, solicitacao: null });
+
+function abrirDetalhe(s) {
+  detalheModal.solicitacao = s;
+  detalheModal.open = true;
+}
+
+function fecharDetalhe() {
+  detalheModal.open = false;
+  detalheModal.solicitacao = null;
+}
 
 function aprovarComunidade(s) {
   processandoSolic.value = s.id;
   router.post(route('pmda.solicitacoes.aprovar', s.id), {}, {
     preserveScroll: true,
-    onSuccess: () => toast('Comunidade aprovada e disponível para os PMDA do município.', 'success'),
+    onSuccess: () => {
+      toast('Comunidade aprovada e disponível para os PMDA do município.', 'success');
+      fecharDetalhe();
+    },
     onError: () => toast('Não foi possível aprovar a comunidade.', 'error'),
     onFinish: () => { processandoSolic.value = null; },
   });
@@ -303,6 +326,8 @@ const CONFIG_MOTIVO = {
 
 function abrirMotivo(tipo, target) {
   const cfg = CONFIG_MOTIVO[tipo];
+  // A rejeicao parte do detalhe: fecha para os dois modais nao empilharem.
+  fecharDetalhe();
   motivoModal.tipo = tipo;
   motivoModal.target = target;
   motivoModal.titulo = cfg.titulo;

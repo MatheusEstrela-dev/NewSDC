@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Pmda\Requests;
 
+use App\Modules\Pmda\Support\CoordenadaMG;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreComunidadeRequest extends FormRequest
@@ -20,12 +21,18 @@ class StoreComunidadeRequest extends FormRequest
             'municipio_id'  => ['nullable', 'integer', 'exists:municipios,id'],
             'ponto_id'      => ['nullable', 'integer'],
             'nome'          => ['required', 'string', 'max:150'],
-            'latitude'      => ['nullable', 'string', 'max:30'],
-            'longitude'     => ['nullable', 'string', 'max:30'],
+            'latitude'      => CoordenadaMG::regrasLatitude(),
+            'longitude'     => CoordenadaMG::regrasLongitude(),
             'trecho_pav'    => ['nullable', 'numeric', 'min:0'],
             'trecho_n_pav'  => ['nullable', 'numeric', 'min:0'],
             'distancia_km'  => ['nullable', 'numeric', 'min:0'],
             'pop_atendida'  => ['nullable', 'integer', 'min:0'],
         ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return CoordenadaMG::mensagens();
     }
 }

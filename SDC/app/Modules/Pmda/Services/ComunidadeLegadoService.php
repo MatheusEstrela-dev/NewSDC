@@ -111,11 +111,13 @@ class ComunidadeLegadoService
             return;
         }
 
+        [$latitude, $longitude] = $this->coordenadas($linha->latitude, $linha->longitude);
+
         $atributos = [
             'municipio_id' => $municipioId,
             'nome' => $nome,
-            'latitude' => $this->texto($linha->latitude, 30),
-            'longitude' => $this->texto($linha->longitude, 30),
+            'latitude' => $latitude,
+            'longitude' => $longitude,
             'trecho_pav' => $this->decimal($linha->trecho_pav),
             'trecho_n_pav' => $this->decimal($linha->trecho_n_pav),
             'pop_atendida' => $this->inteiro($linha->pop_atendida),
@@ -254,6 +256,79 @@ class ComunidadeLegadoService
     private function conexaoLegado(): string
     {
         return (string) config('pmda.legacy_connection', config('compdec.legacy_connection', 'legacy'));
+    }
+
+    /**
+     * Caixa envolvente de MG, com folga sobre os centroides dos 853 municipios
+     * (lat -22.85 a -14.27, lon -50.69 a -39.94). A folga cobre o territorio
+     * alem do centroide e comunidade rural encostada na divisa.
+     */
+    private const LAT_MIN = -23.6;
+    private const LAT_MAX = -13.6;
+    private const LON_MIN = -51.4;
+    private const LON_MAX = -39.2;
+
+    /** Coordenadas invertidas que o ETL corrigiu nesta execucao. */
+    public int $coordenadasInvertidas = 0;
+
+    /** Coordenadas impossiveis que o ETL anulou nesta execucao. */
+    public int $coordenadasDescartadas = 0;
+
+    /**
+     * Saneia o par lat/long vindo do legado.
+     *
+     * O legado nao validava coordenada, entao ha tres tipos de sujeira:
+     * par invertido (lat com valor de longitude), virgula deslocada
+     * (-4.03 onde caberia -40.3) e lixo puro (lat -81, zeros).
+     *
+     * Inverter e seguro porque so acontece quando o par trocado cai dentro de
+     * MG - e o caso das 5 comunidades de Jenipapo de Minas, que trocadas ficam
+     * a ~12 km da sede. Ja "consertar" virgula deslocada multiplicando por 10
+     * seria inventar precisao: o resultado fica verossimil, ninguem confere, e
+     * o caminhao-pipa vai para o lugar errado. Coordenada impossivel vira NULL,
+     * que a tela mostra como "sem coordenada" e alguem preenche direito.
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function coordenadas(mixed $latBruta, mixed $lonBruta): array
+    {
+        $lat = $this->numero($latBruta);
+        $lon = $this->numero($lonBruta);
+
+        if ($lat === null || $lon === null) {
+            return [null, null];
+        }
+
+        if ($this->dentroDeMg($lat, $lon)) {
+            return [$this->texto($latBruta, 30), $this->texto($lonBruta, 30)];
+        }
+
+        if ($this->dentroDeMg($lon, $lat)) {
+            $this->coordenadasInvertidas++;
+
+            return [$this->texto($lonBruta, 30), $this->texto($latBruta, 30)];
+        }
+
+        $this->coordenadasDescartadas++;
+
+        return [null, null];
+    }
+
+    private function dentroDeMg(float $lat, float $lon): bool
+    {
+        return $lat >= self::LAT_MIN && $lat <= self::LAT_MAX
+            && $lon >= self::LON_MIN && $lon <= self::LON_MAX;
+    }
+
+    private function numero(mixed $valor): ?float
+    {
+        if (! $this->preenchido($valor)) {
+            return null;
+        }
+
+        $texto = trim((string) $valor);
+
+        return is_numeric($texto) ? (float) $texto : null;
     }
 
     private function preenchido(mixed $valor): bool

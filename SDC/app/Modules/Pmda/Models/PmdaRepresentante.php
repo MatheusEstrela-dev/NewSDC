@@ -16,6 +16,7 @@ class PmdaRepresentante extends Model
 
     protected $fillable = [
         'pmda_comunidade_id', 'nome', 'tel', 'email', 'cpf', 'whatsapp',
+        'endereco', 'bairro',
     ];
 
     public function comunidade(): BelongsTo

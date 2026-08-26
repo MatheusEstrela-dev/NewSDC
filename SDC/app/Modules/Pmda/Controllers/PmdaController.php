@@ -13,6 +13,7 @@ use App\Modules\Compdec\Models\CompdecEquipe;
 use App\Modules\Compdec\Resources\AnexoIndexResource;
 use App\Modules\Compdec\Services\AnexoService;
 use App\Modules\Compdec\Services\EquipeService;
+use App\Modules\Pmda\Enums\SolicitacaoComunidadeStatus;
 use App\Modules\Pmda\Models\ComunidadeSolicitacao;
 use App\Modules\Pmda\Models\PmdaComunidade;
 use App\Modules\Pmda\Models\PmdaCompdecMembro;
@@ -45,6 +46,8 @@ use App\Modules\Pmda\Support\PerfilPmda;
 use App\Support\Concurrency\Concurrency;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -423,9 +426,11 @@ class PmdaPlanoController extends Controller
                 'latitude'  => $c->latitude,
                 'longitude' => $c->longitude,
             ])->values(),
+            // ->resolve() desembrulha o {data: [...]} do resource collection: o
+            // modal de solicitacao espera uma lista crua (ver compdec_anexos).
             'comunidade_solicitacoes' => ComunidadeSolicitacaoResource::collection(
                 $this->solicitacoes->historicoDoMunicipio((int) $plano->municipio_id)
-            ),
+            )->resolve(),
             'compdec_ficha' => $this->compdecFicha->fichaDoPlano($plano),
             'compdec_anexos' => $this->compdecAnexosDoPlano($plano),
             'compdec_equipe' => $this->compdecEquipeDoPlano($plano),
@@ -538,100 +543,134 @@ class PmdaPlanoController extends Controller
         $nomePor = fn (?int $id) => $id ? (\App\Models\User::find($id)?->name ?? '—') : 'Sistema';
         $fmt = fn ($d) => $d?->format('d/m/Y, H:i');
 
-        $timeline = [];
-        $timeline[] = [
-            'id' => 'criacao',
-            'tipo' => 'criacao',
-            'titulo' => 'Protocolo Criado',
-            'descricao' => 'PMDA criado no sistema SDC.',
-            'data' => $fmt($plano->created_at),
-            'responsavel' => $nomePor($plano->created_by),
+        // _ts guarda o instante cru: a serie so sai cronologica depois do usort no
+        // fim, porque os eventos nao sao montados em ordem de acontecimento.
+        $evento = fn (string $id, string $tipo, string $titulo, string $descricao, $data, string $responsavel) => [
+            'id' => $id,
+            'tipo' => $tipo,
+            'titulo' => $titulo,
+            'descricao' => $descricao,
+            'data' => $fmt($data),
+            'responsavel' => $responsavel,
+            '_ts' => ($data ?? $plano->created_at)?->getTimestamp() ?? 0,
         ];
+
+        // A serie vem do log append-only (pmda_plano_eventos): as colunas do plano
+        // guardam so o ULTIMO tramite, entao devolver -> corrigir -> aprovar perdia
+        // a devolucao. Cada linha do log e um momento que nao volta atras.
+        $timeline = [];
+        $analises = [];
+
+        foreach ($plano->eventos()->orderBy('ocorrido_em')->get() as $ev) {
+            $card = $evento(
+                'evento_'.$ev->id,
+                $ev->tipo->categoria(),
+                $ev->tipo->titulo(),
+                $ev->tipo->descricao($ev->motivo),
+                $ev->ocorrido_em,
+                $ev->responsavel ?: $nomePor($ev->usuario_id)
+            );
+
+            $timeline[] = $card;
+            if ($ev->tipo->eAnalise()) {
+                $analises[] = $card;
+            }
+        }
 
         // "Ultima Atualizacao" so quando for edicao real de conteudo — nao quando o
         // dt_ultima_alteracao apenas acompanha uma acao de status (enviar/aprovar/
-        // arquivar/devolver), que ja tem evento proprio abaixo.
-        $tsAcoes = array_filter([
-            $plano->dt_analise?->getTimestamp(),
-            $plano->data_aprov?->getTimestamp(),
-            $plano->dt_estado?->getTimestamp(),
-        ]);
+        // arquivar/devolver), que ja tem evento proprio no log.
+        $tsAcoes = $plano->eventos()->pluck('ocorrido_em')
+            ->map(fn ($d) => $d?->getTimestamp())->filter()->all();
         if ($plano->dt_ultima_alteracao && $plano->created_at
             && $plano->dt_ultima_alteracao->gt($plano->created_at)
             && ! in_array($plano->dt_ultima_alteracao->getTimestamp(), $tsAcoes, true)) {
-            $timeline[] = [
-                'id' => 'edicao',
-                'tipo' => 'edicao',
-                'titulo' => 'Última Atualização',
-                'descricao' => 'Dados do PMDA atualizados.',
-                'data' => $fmt($plano->dt_ultima_alteracao),
-                'responsavel' => $nomePor($plano->updated_by),
-            ];
+            $timeline[] = $evento(
+                'edicao', 'edicao', 'Última Atualização',
+                'Dados do PMDA atualizados.',
+                $plano->dt_ultima_alteracao, $nomePor($plano->updated_by)
+            );
         }
 
-        $analises = [];
-        if ($plano->dt_analise) {
-            $ev = [
-                'id' => 'analise',
-                'tipo' => 'analise',
-                'titulo' => 'Enviado para Análise',
-                'descricao' => 'PMDA encaminhado para análise da CEDEC-MG.',
-                'data' => $fmt($plano->dt_analise),
-                'responsavel' => $plano->resp_homolog ?: '—',
-            ];
+        // Eventos que sao decisao/tramite: entram na serie e tambem na aba Analises.
+        $registrar = function (array $ev) use (&$timeline, &$analises): void {
             $timeline[] = $ev;
             $analises[] = $ev;
+        };
+
+        // Solicitacoes de comunidade abertas por este plano: o pedido ja nasce numa
+        // fila da CEDEC, entao pedido e decisao contam como analise.
+        foreach ($plano->solicitacoesComunidade()->with(['solicitadoPor', 'analisadoPor'])->get() as $s) {
+            $registrar($evento(
+                'solicitacao_'.$s->id, 'analise', 'Comunidade Solicitada',
+                'Município solicitou a inclusão da comunidade "'.$s->nome.'". Aguardando análise da CEDEC-MG.',
+                $s->created_at, $s->solicitadoPor?->name ?? '—'
+            ));
+
+            if ($s->analisado_em === null) {
+                continue;
+            }
+
+            $aprovada = $s->status === SolicitacaoComunidadeStatus::APROVADA;
+            $registrar($evento(
+                'solicitacao_'.$s->id.'_decisao', 'analise',
+                $aprovada ? 'Comunidade Aprovada' : 'Comunidade Rejeitada',
+                $aprovada
+                    ? 'Comunidade "'.$s->nome.'" aprovada pela CEDEC-MG e disponível para os PMDA do município.'
+                    : 'Solicitação da comunidade "'.$s->nome.'" rejeitada pela CEDEC-MG. Motivo: '.($s->motivo_rejeicao ?: '—'),
+                $s->analisado_em, $s->analisadoPor?->name ?? '—'
+            ));
         }
-        if ($plano->data_aprov) {
-            $ev = [
-                'id' => 'aprovacao',
-                'tipo' => 'analise',
-                'titulo' => 'PMDA Aprovado',
-                'descricao' => 'Plano aprovado pela CEDEC-MG.',
-                'data' => $fmt($plano->data_aprov),
-                'responsavel' => $plano->resp_estado ?: '—',
-            ];
-            $timeline[] = $ev;
-            $analises[] = $ev;
-        }
-        if ($plano->status === \App\Modules\Pmda\Enums\PmdaStatus::ARQUIVADO) {
-            $ev = [
-                'id' => 'arquivamento',
-                'tipo' => 'notificacao',
-                'titulo' => 'PMDA Arquivado',
-                'descricao' => $plano->motivo_analise
-                    ? ('Arquivado pela CEDEC-MG. Motivo: '.$plano->motivo_analise)
-                    : 'Plano arquivado pela CEDEC-MG.',
-                'data' => $fmt($plano->dt_estado),
-                'responsavel' => $plano->resp_estado ?: '—',
-            ];
-            $timeline[] = $ev;
-            $analises[] = $ev;
-        }
-        // Devolutiva: plano devolvido ao municipio para ajustes (nao aprovado, nao arquivado).
-        if ($plano->pedido_altera && $plano->motivo_analise
-            && ! $plano->data_aprov
-            && $plano->status !== \App\Modules\Pmda\Enums\PmdaStatus::ARQUIVADO) {
-            $ev = [
-                'id' => 'pedido_alteracao',
-                'tipo' => 'notificacao',
-                'titulo' => 'Devolvido para Alteração',
-                'descricao' => 'CEDEC-MG devolveu o PMDA ao município para ajustes. Motivo: '.$plano->motivo_analise,
-                'data' => $fmt($plano->dt_estado ?? $plano->dt_ultima_alteracao),
-                'responsavel' => $plano->resp_estado ?: 'CEDEC-MG',
-            ];
-            $timeline[] = $ev;
-            $analises[] = $ev;
-        }
+
+        $cronologico = static function (array $eventos): array {
+            usort($eventos, fn (array $a, array $b) => $a['_ts'] <=> $b['_ts']);
+
+            return array_map(static function (array $ev) {
+                unset($ev['_ts']);
+
+                return $ev;
+            }, $eventos);
+        };
 
         return response()->json([
             'protocolo'     => $plano->protocolo,
             'municipio'     => $plano->municipio?->nome,
             'status'        => $plano->status->getLabel(),
-            'timeline'      => $timeline,
-            'analises'      => $analises,
-            'notificacoes'  => [],
+            'timeline'      => $cronologico($timeline),
+            'analises'      => $cronologico($analises),
+            'notificacoes'  => $this->notificacoesDoPlano($plano),
         ]);
+    }
+
+    /**
+     * Avisos que a trilha de acoes realmente entregou ao dono do protocolo.
+     *
+     * Vinha [] fixo, entao a aba nunca tinha o que mostrar mesmo quando o municipio
+     * havia sido avisado. A chave de agrupamento ja carrega "modulo:id:", que e o
+     * que amarra a notificacao a este plano.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function notificacoesDoPlano(PmdaPlano $plano): array
+    {
+        return DB::table('notifications')
+            ->where('group_key', 'like', $plano->moduloNotificacao().':'.$plano->getKey().':%')
+            ->orderBy('created_at')
+            ->get()
+            ->map(function ($n) {
+                $dados = json_decode((string) $n->data, true) ?: [];
+
+                return [
+                    'id'          => $n->id,
+                    'titulo'      => $dados['titulo'] ?? $dados['title'] ?? 'Notificação enviada',
+                    'descricao'   => $dados['mensagem'] ?? $dados['message'] ?? null,
+                    'data'        => $n->created_at ? Carbon::parse($n->created_at)->format('d/m/Y, H:i') : null,
+                    'responsavel' => 'Sistema',
+                    'canal'       => 'Sistema',
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     public function copiar(Request $request, PmdaPlano $plano): RedirectResponse
@@ -677,14 +716,22 @@ class RepresentanteController extends Controller
 
     public function store(StoreRepresentanteRequest $request, PmdaComunidade $comunidade): RedirectResponse
     {
-        $this->service->adicionar($comunidade, $request->validated());
+        try {
+            $this->service->adicionar($comunidade, $request->validated());
+        } catch (\DomainException $e) {
+            return back()->withErrors(['representante' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'Representante adicionado.');
     }
 
     public function update(UpdateRepresentanteRequest $request, PmdaRepresentante $representante): RedirectResponse
     {
-        $this->service->atualizar($representante, $request->validated());
+        try {
+            $this->service->atualizar($representante, $request->validated());
+        } catch (\DomainException $e) {
+            return back()->withErrors(['representante' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'Representante atualizado.');
     }
