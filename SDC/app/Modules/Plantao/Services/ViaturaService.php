@@ -14,7 +14,7 @@ class ViaturaService extends BaseService
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = Viatura::query()
-            ->with('ultimoCondutor:id,name')
+            ->with(['ultimoCondutor:id,name', 'movimentacaoAberta'])
             ->orderBy('prefixo')
             ->orderBy('placa');
 
@@ -60,7 +60,7 @@ class ViaturaService extends BaseService
 
     public function find(int $id): ?Viatura
     {
-        return Viatura::with('ultimoCondutor:id,name')->find($id);
+        return Viatura::with(['ultimoCondutor:id,name', 'movimentacaoAberta'])->find($id);
     }
 
     public function create(array $data): Viatura

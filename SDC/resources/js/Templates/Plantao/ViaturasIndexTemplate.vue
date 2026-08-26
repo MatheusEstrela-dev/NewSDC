@@ -9,6 +9,7 @@ import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import MovimentacaoModal from '@/Components/Organisms/Plantao/MovimentacaoModal.vue';
 import ViaturaFormModal from '@/Components/Organisms/Plantao/ViaturaFormModal.vue';
 import ViaturasGrid from '@/Components/Organisms/Plantao/ViaturasGrid.vue';
 import ViaturasTable from '@/Components/Organisms/Plantao/ViaturasTable.vue';
@@ -36,6 +37,12 @@ const props = defineProps({
   filterOptions: {
     type: Object,
     default: () => ({ status: [], localizacoes: [], niveis: [] }),
+  },
+  // Ja mapeado para {value, label} pelo ViaturaIndexController -- consumido pelo
+  // FormSelect de condutor do MovimentacaoModal.
+  condutores: {
+    type: Array,
+    default: () => [],
   },
   canCreate: {
     type: Boolean,
@@ -93,6 +100,29 @@ const closeFormModal = () => {
 
 const onSaved = () => {
   closeFormModal();
+  emit('filter', { ...props.filters });
+};
+
+const showMovimentacaoModal = ref(false);
+const viaturaEmMovimentacao = ref(null);
+const modoMovimentacao = ref('saida');
+
+const openMovimentacaoModal = (id) => {
+  const viatura = props.viaturas.find((v) => v.id === id) ?? null;
+  if (!viatura) return;
+
+  viaturaEmMovimentacao.value = viatura;
+  modoMovimentacao.value = viatura.movimentacao_aberta_id ? 'retorno' : 'saida';
+  showMovimentacaoModal.value = true;
+};
+
+const closeMovimentacaoModal = () => {
+  showMovimentacaoModal.value = false;
+  viaturaEmMovimentacao.value = null;
+};
+
+const onMovimentacaoSaved = () => {
+  closeMovimentacaoModal();
   emit('filter', { ...props.filters });
 };
 
@@ -243,6 +273,7 @@ const limparFiltros = () => {
       :can-delete="canDelete"
       @edit="openEditModal"
       @delete="(id) => emit('delete', id)"
+      @movimentacao="openMovimentacaoModal"
     />
 
     <ViaturasTable
@@ -252,6 +283,7 @@ const limparFiltros = () => {
       :can-delete="canDelete"
       @edit="openEditModal"
       @delete="(id) => emit('delete', id)"
+      @movimentacao="openMovimentacaoModal"
     />
 
     <Pagination
@@ -266,6 +298,16 @@ const limparFiltros = () => {
       :filter-options="filterOptions"
       @close="closeFormModal"
       @saved="onSaved"
+    />
+
+    <MovimentacaoModal
+      :show="showMovimentacaoModal"
+      :modo="modoMovimentacao"
+      :viatura="viaturaEmMovimentacao"
+      :condutores="condutores"
+      :filter-options="filterOptions"
+      @close="closeMovimentacaoModal"
+      @saved="onMovimentacaoSaved"
     />
   </div>
 </template>

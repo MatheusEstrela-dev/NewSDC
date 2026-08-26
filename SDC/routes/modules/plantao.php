@@ -1,5 +1,7 @@
 <?php
 
+use App\Modules\Plantao\Controllers\MovimentacaoRetornoController;
+use App\Modules\Plantao\Controllers\MovimentacaoSaidaController;
 use App\Modules\Plantao\Controllers\NoticiasIndexController;
 use App\Modules\Plantao\Controllers\PlantaoExportController;
 use App\Modules\Plantao\Controllers\PlantaoIndexController;
@@ -36,7 +38,15 @@ Route::prefix('plantao')->name('plantao.')->group(function () {
         Route::delete('/{viatura}', ViaturaDestroyController::class)
             ->name('destroy')
             ->middleware('can:plantao.viaturas.delete');
+
+        Route::post('/{viatura}/saida', MovimentacaoSaidaController::class)
+            ->name('saida')
+            ->middleware('can:plantao.viaturas.edit');
     });
+
+    Route::post('/movimentacoes/{movimentacao}/retorno', MovimentacaoRetornoController::class)
+        ->name('movimentacoes.retorno')
+        ->middleware('can:plantao.viaturas.edit');
 
     Route::get('/', PlantaoIndexController::class)
         ->name('index')

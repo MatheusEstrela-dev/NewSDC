@@ -26,6 +26,7 @@ class ViaturaListDTO
         public readonly ?string $ultimo_condutor_nome,
         public readonly bool $ativo,
         public readonly ?string $observacoes,
+        public readonly ?int $movimentacao_aberta_id,
     ) {
     }
 
@@ -49,6 +50,7 @@ class ViaturaListDTO
             ultimo_condutor_nome: $viatura->ultimo_condutor_nome,
             ativo: (bool) $viatura->ativo,
             observacoes: $viatura->observacoes,
+            movimentacao_aberta_id: $viatura->movimentacaoAberta?->id,
         );
     }
 

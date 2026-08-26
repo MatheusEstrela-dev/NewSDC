@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Plantao\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Plantao\DTOs\ViaturaListDTO;
 use App\Modules\Plantao\Enums\LocalizacaoViatura;
 use App\Modules\Plantao\Enums\NivelCombustivel;
@@ -47,6 +48,13 @@ class ViaturaIndexController extends Controller
                 'localizacoes' => LocalizacaoViatura::toSelectArray(),
                 'niveis' => NivelCombustivel::toSelectArray(),
             ],
+            // SelectInput le value/id e label/name/text: a colecao crua de users
+            // renderizaria o objeto inteiro na option, entao o mapeamento e feito aqui.
+            'condutores' => User::query()
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn(User $u) => ['value' => $u->id, 'label' => $u->name])
+                ->all(),
             'canCreate' => (bool) $user?->can('plantao.viaturas.create'),
             'canEdit' => (bool) $user?->can('plantao.viaturas.edit'),
             'canDelete' => (bool) $user?->can('plantao.viaturas.delete'),

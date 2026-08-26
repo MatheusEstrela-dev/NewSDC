@@ -21,7 +21,7 @@ defineProps({
   },
 });
 
-const emit = defineEmits(['edit', 'delete']);
+const emit = defineEmits(['edit', 'delete', 'movimentacao']);
 
 // Cor por status literal no .vue: Tailwind nao escaneia app/**/*.php, entao o
 // backend so manda o valor cru (status_valor) e o mapa fica aqui.
@@ -92,6 +92,13 @@ const getStatusClasses = (statusValor) => CORES_STATUS[statusValor] ?? CORES_STA
                 module="plantao"
                 resource="viaturas"
                 :actions="[
+                  {
+                    action: item.movimentacao_aberta_id ? 'finalize' : 'assign',
+                    aliasOverride: 'edit',
+                    label: item.movimentacao_aberta_id ? 'Registrar retorno' : 'Registrar saida',
+                    handler: () => emit('movimentacao', item.id),
+                    allowed: canEdit,
+                  },
                   { action: 'edit',   handler: () => emit('edit', item.id),   allowed: canEdit },
                   { action: 'delete', handler: () => emit('delete', item.id), allowed: canDelete },
                 ]"

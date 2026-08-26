@@ -24,6 +24,10 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  condutores: {
+    type: Array,
+    default: () => [],
+  },
   canCreate: {
     type: Boolean,
     default: false,
@@ -79,6 +83,7 @@ const confirmDelete = () => {
     :pagination="viaturas.pagination"
     :filters="filters"
     :filter-options="filterOptions"
+    :condutores="condutores"
     :can-create="canCreate"
     :can-edit="canEdit"
     :can-delete="canDelete"
