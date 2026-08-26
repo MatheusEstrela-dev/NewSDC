@@ -37,4 +37,44 @@ class ViaturaCrudTest extends TestCase
 
         $this->assertSame(1, Viatura::ativas()->count());
     }
+
+    public function test_service_lista_filtrando_por_status(): void
+    {
+        Viatura::factory()->count(2)->create();
+        Viatura::factory()->emManutencao()->create();
+
+        $service = app(\App\Modules\Plantao\Services\ViaturaService::class);
+
+        $todas = $service->list([], 50);
+        $manutencao = $service->list(['status' => StatusViatura::MANUTENCAO->value], 50);
+
+        $this->assertSame(3, $todas->total());
+        $this->assertSame(1, $manutencao->total());
+    }
+
+    public function test_service_estatisticas_contam_por_status(): void
+    {
+        Viatura::factory()->count(2)->create();
+        Viatura::factory()->emManutencao()->create();
+
+        $stats = app(\App\Modules\Plantao\Services\ViaturaService::class)->getStatistics();
+
+        $this->assertSame(3, $stats['total']);
+        $this->assertSame(2, $stats['disponiveis']);
+        $this->assertSame(1, $stats['indisponiveis']);
+    }
+
+    public function test_dto_expoe_percentual_para_o_gauge(): void
+    {
+        $viatura = Viatura::factory()->create([
+            'nivel_combustivel' => \App\Modules\Plantao\Enums\NivelCombustivel::QUARTO_3,
+            'hodometro_atual' => 112799,
+        ]);
+
+        $dto = \App\Modules\Plantao\DTOs\ViaturaListDTO::fromModel($viatura);
+
+        $this->assertSame(75, $dto->combustivel_percentual);
+        $this->assertSame('3/4', $dto->combustivel_label);
+        $this->assertSame(112799, $dto->hodometro);
+    }
 }

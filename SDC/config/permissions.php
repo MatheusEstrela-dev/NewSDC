@@ -332,6 +332,17 @@ return [
                 'delete' => 'plantao.turnos.delete',
                 'export' => 'plantao.turnos.export',
             ],
+            'Viaturas' => [
+                'view' => 'plantao.viaturas.view',
+                'create' => 'plantao.viaturas.create',
+                'edit' => 'plantao.viaturas.edit',
+                'delete' => 'plantao.viaturas.delete',
+            ],
+            'Passagem' => [
+                'encerrar' => 'plantao.passagem.encerrar',
+                'aceitar' => 'plantao.passagem.aceitar',
+                'relatorio' => 'plantao.passagem.relatorio',
+            ],
         ],
         'BI' => [
             'Dashboards' => [
@@ -642,6 +653,12 @@ return [
             'plantao.turnos.create',
             'plantao.turnos.edit',
             'plantao.turnos.export',
+            'plantao.viaturas.view',
+            'plantao.viaturas.create',
+            'plantao.viaturas.edit',
+            'plantao.passagem.encerrar',
+            'plantao.passagem.aceitar',
+            'plantao.passagem.relatorio',
             // BI
             'bi.dashboards.view',
             'bi.reports.export',
@@ -812,6 +829,12 @@ return [
             'plantao.turnos.view',
             'plantao.turnos.create',
             'plantao.turnos.edit',
+            'plantao.viaturas.view',
+            'plantao.viaturas.create',
+            'plantao.viaturas.edit',
+            'plantao.passagem.encerrar',
+            'plantao.passagem.aceitar',
+            'plantao.passagem.relatorio',
             // BI
             'bi.dashboards.view',
             'bi.reports.export',
@@ -920,6 +943,9 @@ return [
             // Plantao - view, create
             'plantao.turnos.view',
             'plantao.turnos.create',
+            'plantao.viaturas.view',
+            'plantao.viaturas.create',
+            'plantao.passagem.relatorio',
             // BI - view
             'bi.dashboards.view',
             // Cisternas - view/create
@@ -980,6 +1006,8 @@ return [
             'treinamento.cursos.view',
             'treinamento.inscricoes.view',
             'plantao.turnos.view',
+            'plantao.viaturas.view',
+            'plantao.passagem.relatorio',
             'bi.dashboards.view',
             'cisternas.beneficiarios.view',
             'cisternas.beneficiarios.history',
@@ -1009,6 +1037,8 @@ return [
             'demandas.chamados.create',
             'treinamento.cursos.view',
             'plantao.turnos.view',
+            'plantao.viaturas.view',
+            'plantao.passagem.relatorio',
             // COMPDEC - apenas listagem de orgaos
             'compdec.orgaos.view',
             // Inventario - acesso inicial ao modulo
