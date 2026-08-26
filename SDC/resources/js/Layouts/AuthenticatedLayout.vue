@@ -112,9 +112,17 @@ provide('openSidebar', openSidebar);
       Medido antes/depois em 768, 1024 e 1280px sobre PAE, Decretacoes, RAT e
       Permissionamento: o estouro ia de ate 672px para 0 em todos os casos.
       O [overflow-x:clip] do <main> abaixo nao resolvia porque o pai ja havia crescido.
+
+      O offset lateral vira em `lg`, NAO em `md`: abaixo de 1024px a Sidebar e um
+      drawer off-canvas (`transform: translateX(-100%)` em Sidebar.styles.css, tanto
+      na media query de mobile quanto na de tablet), logo nao ocupa nada no layout.
+      Reservar `md:ml-20` ali criava 80px de faixa branca morta entre a borda da tela
+      e o conteudo em toda a faixa 768-1023px -- medido em 900px: wrapper e TopBar
+      comecavam em x=80 com a sidebar em translateX(-280px). O `lg:!ml-20` do
+      collapsed continua valendo, porque em lg+ a sidebar existe mesmo (80px).
     -->
     <div
-      class="flex-1 min-w-0 flex flex-col min-h-screen ml-0 md:ml-20 lg:ml-[280px]"
+      class="flex-1 min-w-0 flex flex-col min-h-screen ml-0 lg:ml-[280px]"
       :class="{
         'lg:!ml-20': sidebarCollapsed
       }"
