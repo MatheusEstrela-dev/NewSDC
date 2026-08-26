@@ -11,6 +11,7 @@ use App\Modules\Plantao\Models\Plantao;
 use App\Modules\Plantao\Models\Viatura;
 use App\Modules\Plantao\Models\ViaturaSnapshot;
 use App\Modules\Shared\BaseService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -49,16 +50,30 @@ class PassagemServicoService extends BaseService
             $plantonista = User::findOrFail((int) $dados['plantonista_id']);
             $anterior = $this->turnoAnterior();
 
-            return Plantao::create([
-                'plantonista_id' => $plantonista->id,
-                'plantonista_nome' => $plantonista->name,
-                'plantonista_saida_id' => $anterior?->plantonista_id,
-                'plantonista_saida_nome' => $anterior?->plantonista_nome,
-                'data' => $data,
-                'periodo' => $periodo,
-                'status' => StatusPlantao::ATIVO,
-                'localizacao' => $dados['localizacao'] ?? 'Predio Alterosas',
-            ]);
+            // O exists() acima e check-then-insert: nao serializa duplo-clique
+            // nem double-submit do formulario. Quem garante a exclusividade de
+            // fato e o indice unico parcial plantoes_turno_ativo_unico
+            // (data, periodo) WHERE status = 'ATIVO', criado na migration
+            // 2026_08_26_100004. Se duas chamadas concorrentes passarem pelo
+            // exists() ao mesmo tempo, o banco deixa so uma completar o
+            // insert; a outra recebe a violacao de unicidade abaixo, traduzida
+            // para o mesmo erro de dominio.
+            try {
+                return Plantao::create([
+                    'plantonista_id' => $plantonista->id,
+                    'plantonista_nome' => $plantonista->name,
+                    'plantonista_saida_id' => $anterior?->plantonista_id,
+                    'plantonista_saida_nome' => $anterior?->plantonista_nome,
+                    'data' => $data,
+                    'periodo' => $periodo,
+                    'status' => StatusPlantao::ATIVO,
+                    'localizacao' => $dados['localizacao'] ?? 'Predio Alterosas',
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                throw new PassagemInvalidaException(
+                    "Ja existe um plantao ativo para {$data} ({$periodo}). Encerre-o antes de abrir um novo turno para o mesmo periodo."
+                );
+            }
         });
     }
 
@@ -74,7 +89,6 @@ class PassagemServicoService extends BaseService
     {
         return Viatura::query()
             ->ativas()
-            ->with('ultimoCondutor:id,name')
             ->orderBy('prefixo')
             ->orderBy('placa')
             ->get()
