@@ -2551,6 +2551,21 @@ class MovimentacaoViaturaTest extends TestCase
         ]);
     }
 
+    public function test_saida_com_condutor_inexistente_e_rejeitada(): void
+    {
+        // Acrescentado na execucao: a guarda 6 nao tinha teste, e por isso o
+        // desvio do findOrFail passou pelo ciclo RED/GREEN sem ser notado.
+        $viatura = Viatura::factory()->create(['hodometro_atual' => 100_000]);
+
+        $this->expectException(MovimentacaoInvalidaException::class);
+
+        $this->service()->registrarSaida($viatura->id, [
+            'condutor_id' => 99_999_999,
+            'saida_hodometro' => 100_000,
+            'saida_combustivel' => NivelCombustivel::QUARTO_4->value,
+        ]);
+    }
+
     public function test_retorno_em_movimentacao_ja_fechada_e_rejeitado(): void
     {
         $viatura = Viatura::factory()->create(['hodometro_atual' => 100_000]);
@@ -2657,7 +2672,16 @@ class MovimentacaoViaturaService extends BaseService
                 );
             }
 
-            $condutor = User::findOrFail((int) $dados['condutor_id']);
+            // CORRIGIDO na execucao: findOrFail lancava ModelNotFoundException,
+            // contradizendo o contrato deste service (toda guarda lanca
+            // MovimentacaoInvalidaException) e deixando a Task 7 sem capturar.
+            $condutor = User::find((int) $dados['condutor_id']);
+
+            if ($condutor === null) {
+                throw new MovimentacaoInvalidaException(
+                    'Condutor informado nao existe.'
+                );
+            }
 
             $movimentacao = ViaturaMovimentacao::create([
                 'viatura_id' => $viatura->id,
@@ -2751,7 +2775,7 @@ APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d exte
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=MovimentacaoViaturaTest
 ```
 
-Esperado: PASS, 7 testes.
+Esperado: PASS, 8 testes.
 
 - [ ] **Step 7: Commit**
 
@@ -4851,7 +4875,11 @@ class RelatorioPassagemService
             ->values()
             ->all();
 
-        return view('plantao.passagem-servico', [
+        // CORRIGIDO na execucao: `view('plantao.passagem-servico')` NAO resolve
+        // a extensao composta `.txt.blade.php` — o FileViewFinder do Laravel nao
+        // trata nome pontilhado sem um `addExtension` registrado, e nao existe
+        // nenhum neste projeto. Usar `view()->file()` com caminho absoluto.
+        return view()->file(resource_path('views/plantao/passagem-servico.txt.blade.php'), [
             'data' => $plantao->data?->format('d/m/Y') ?? '',
             'periodo' => $plantao->periodo?->labelCurto() ?? '',
             'plantonista' => $plantao->plantonista_nome ?? '',
