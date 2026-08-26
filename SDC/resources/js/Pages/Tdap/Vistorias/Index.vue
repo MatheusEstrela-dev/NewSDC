@@ -6,6 +6,7 @@
       description="Inspeções técnicas dos caminhões-tanque (vigência 12 meses)"
       :icon="TruckIcon"
       :icon-image="moduleIcon('tdap')"
+      :espaco-inferior="false"
     >
       <template #actions>
         <ActionButton action="export" :allowed="true" variant="success" label="Exportar" @click="openExportModal" />

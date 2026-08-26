@@ -6,6 +6,7 @@
       description="Workflow de habilitação até liquidação"
       :icon="TruckIcon"
       :icon-image="moduleIcon('tdap')"
+      :espaco-inferior="false"
     >
       <template #actions>
         <ActionButton action="export" :allowed="true" variant="success" label="Exportar" @click="openExportModal" />

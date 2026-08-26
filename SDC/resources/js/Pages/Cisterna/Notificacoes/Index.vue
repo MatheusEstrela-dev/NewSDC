@@ -8,6 +8,7 @@
         description="Apontamentos abertos sobre um cadastro ou uma vistoria"
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
+        :espaco-inferior="false"
       >
         <template #actions>
           <ActionButton

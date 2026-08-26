@@ -8,6 +8,7 @@
         :description="`${beneficiario.nome}${vistoria.numero_instalacao ? ` — instalacao Nº ${vistoria.numero_instalacao}` : ''}`"
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
+        :espaco-inferior="false"
       >
         <!--
           Esta tela e LEITURA do relatorio. Nao tem "Editar": a edicao acontece

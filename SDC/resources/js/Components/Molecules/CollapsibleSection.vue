@@ -3,7 +3,7 @@
     class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow dark:border-slate-700/50 dark:bg-slate-900/40"
   >
     <div
-      class="flex cursor-pointer select-none items-center gap-3 px-4 py-3"
+      class="flex cursor-pointer select-none items-center gap-3 px-4 lg:px-6 py-3"
       role="button"
       :aria-expanded="estaExpandido"
       tabindex="0"
@@ -41,7 +41,7 @@
       leave-from-class="opacity-100 max-h-[3000px]"
       leave-to-class="opacity-0 max-h-0"
     >
-      <div v-show="estaExpandido" class="overflow-hidden border-t border-slate-200 px-4 py-4 dark:border-slate-700/50">
+      <div v-show="estaExpandido" class="overflow-hidden border-t border-slate-200 px-4 lg:px-6 py-4 dark:border-slate-700/50">
         <slot />
       </div>
     </Transition>

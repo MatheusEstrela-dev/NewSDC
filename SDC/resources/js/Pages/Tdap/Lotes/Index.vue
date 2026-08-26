@@ -6,6 +6,7 @@
       description="Subdivisões das atas por município e prestador"
       :icon="MapIcon"
       :icon-image="moduleIcon('tdap')"
+      :espaco-inferior="false"
     >
       <template #actions>
         <Button variant="success" size="md" :icon="DownloadIcon" icon-position="left" @click="openExportModal">

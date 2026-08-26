@@ -8,6 +8,7 @@
         description="Cadastro de beneficiarios e fiscalizacao da instalacao em tres etapas"
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
+        :espaco-inferior="false"
       >
         <template #actions>
           <ActionButton

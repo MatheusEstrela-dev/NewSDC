@@ -6,6 +6,7 @@
       description="Ordens operacionais de entrega de água potável"
       :icon="TruckIcon"
       :icon-image="moduleIcon('tdap')"
+      :espaco-inferior="false"
     >
       <template #actions>
         <Button variant="success" size="md" :icon="DownloadIcon" icon-position="left" @click="openExportModal">

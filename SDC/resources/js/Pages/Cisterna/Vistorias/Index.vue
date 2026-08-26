@@ -8,6 +8,7 @@
         :description="`${beneficiario.nome} — ${municipio}`"
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
+        :espaco-inferior="false"
       >
         <!--
           Sem slot de acoes: o unico botao aqui era "Ver cadastro", e a trilha

@@ -6,6 +6,7 @@
       description="Contratos-pai que autorizam o fornecimento de água potável"
       :icon="CalendarIcon"
       :icon-image="moduleIcon('tdap')"
+      :espaco-inferior="false"
     >
       <template #actions>
         <Button variant="success" size="md" :icon="DownloadIcon" icon-position="left" @click="openExportModal">

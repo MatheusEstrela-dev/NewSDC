@@ -8,6 +8,7 @@
         description="Cadastro para o programa de cisternas"
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
+        :espaco-inferior="false"
       >
       </PageHeader>
 

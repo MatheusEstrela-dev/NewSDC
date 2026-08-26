@@ -8,6 +8,7 @@
         description="Agrupamento das instalacoes; cada lote reune ordens de servico"
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
+        :espaco-inferior="false"
       >
         <template #actions>
           <ActionButton

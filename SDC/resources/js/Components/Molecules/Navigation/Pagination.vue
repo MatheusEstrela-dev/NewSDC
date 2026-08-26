@@ -5,7 +5,7 @@
     Empilha no mobile: em telas estreitas o texto "Mostrando X ate Y" e a fileira de
     numeros competiam pela mesma linha e o bloco estourava a largura do card.
   -->
-  <div class="mt-4 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700/50 dark:bg-slate-900/60">
+  <div class="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 lg:px-6 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700/50 dark:bg-slate-900/60">
     <Text size="sm" color="muted" class="text-center sm:text-left">
       Mostrando {{ start }} até {{ end }} de {{ total }} resultados
     </Text>

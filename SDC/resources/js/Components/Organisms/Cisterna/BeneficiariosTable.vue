@@ -1,5 +1,8 @@
 <template>
-  <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/60">
+  <!-- rounded-xl para esquadrar com os stat cards e o painel de filtros, que
+     tambem sao 12px. Com rounded-lg (8px) a pagina empilhava tres raios
+     diferentes: 16px no PageHeader, 12px nos cards/filtros e 8px aqui. -->
+  <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/60">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/50">
         <thead class="bg-slate-50 dark:bg-slate-900/50">

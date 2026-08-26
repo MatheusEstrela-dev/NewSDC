@@ -8,6 +8,7 @@
         :description="cpfFormatado"
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
+        :espaco-inferior="false"
       >
         <!--
           Tela de LEITURA: sem acao no cabecalho.

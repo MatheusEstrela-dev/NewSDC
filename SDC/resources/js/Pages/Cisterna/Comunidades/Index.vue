@@ -8,6 +8,7 @@
         description="Comunidades atendidas pelo programa, por municipio"
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
+        :espaco-inferior="false"
       >
         <template #actions>
           <ActionButton

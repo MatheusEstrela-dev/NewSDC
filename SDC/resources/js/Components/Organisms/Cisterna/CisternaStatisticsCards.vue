@@ -4,7 +4,10 @@
        composicao, legenda, rateio) vem pela seta no rodape do card. A seta e de
        estado UNICO: abrir num card abre nos cinco, porque abrir um por um seria
        cinco cliques para a mesma decisao. -->
-  <StatCardsGrid :colunas="5">
+  <!-- espaco-inferior=false: o container da pagina governa o ritmo vertical pelo
+       `space-y-6`. Com a margem do grid ligada as duas somariam, e o gap depois
+       dos cards ficava no dobro dos outros. -->
+  <StatCardsGrid :colunas="5" :espaco-inferior="false">
     <!-- 1. Beneficiarios: o total, decomposto pelo eixo ANALISE. Clique no card
             limpa o filtro; clique em cada item da legenda filtra por situacao. -->
     <StatCardWithBreakdown

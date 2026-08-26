@@ -8,6 +8,7 @@
         :description="lote ? `Do lote ${lote.nome}` : 'Todas as ordens; cada uma pertence a um lote'"
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
+        :espaco-inferior="false"
       >
         <template #actions>
           <Link v-if="lote" :href="route('cisternas.lotes.index')" :class="BOTAO_SEC">Todos os lotes</Link>

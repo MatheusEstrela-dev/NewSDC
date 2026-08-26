@@ -8,6 +8,7 @@
         :description="beneficiario.nome"
         :icon-image="moduleIcon('cisternas')"
         variant="gradient"
+        :espaco-inferior="false"
       >
       </PageHeader>
 

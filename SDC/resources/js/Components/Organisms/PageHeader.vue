@@ -49,10 +49,20 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  /**
+   * Espaco inferior. Mesma semantica do StatCardsGrid: a maioria das paginas
+   * deixa o header controlar a propria margem, mas quem envolve os blocos num
+   * container `space-y-*` precisa desligar isso -- senao as duas margens somam e
+   * o primeiro gap fica no dobro dos outros.
+   */
+  espacoInferior: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const containerClasses = computed(() => {
-  const base = 'mb-6';
+  const base = props.espacoInferior ? 'mb-6' : '';
   
   if (props.variant === 'gradient') {
     return `${base} rounded-2xl p-6 border bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-700/30 border-slate-200 dark:border-slate-700/30`;
