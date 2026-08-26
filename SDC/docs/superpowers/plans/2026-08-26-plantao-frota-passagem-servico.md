@@ -17,7 +17,17 @@
 - **Regra de ouro 9 — migrations consolidadas.** Cada tabela nova tem UMA migration. Ajuste descoberto durante esta release edita a migration original; nao empilha migration nova.
 - **Regra de ouro 11 — commits gitmoji.** Formato `<emoji> tipo(escopo): descricao em pt-BR`. Escopo desta release: `plantao`.
 - **Regra de ouro 12 — commits atomicos.** Uma unidade coerente por commit. Nao quebrar a mesma classe em varios commits.
-- **Regra de ouro 10 — teste nao entra no commit?** Nao se aplica aqui: os testes deste plano sao a suite permanente do modulo, nao scripts descartaveis de investigacao. Eles entram no commit.
+- **Regra de ouro 10 — TESTE NAO ENTRA NO COMMIT.** Decisao explicita do usuario
+  durante a execucao: os testes desta release NAO sao versionados. Escreva-os,
+  rode-os, use-os como prova de que o codigo funciona — mas **nunca** os adicione
+  ao commit. A validacao e local.
+  - NAO use `git add -f` para forcar teste no indice. O `.gitignore` do projeto
+    (regra bare `tests`, linha 39) ja bloqueia isso de proposito; forcar era erro
+    meu, corrigido.
+  - Os arquivos de teste ficam em disco, ignorados pelo git. Isso e o resultado
+    desejado, nao um problema a resolver.
+  - TDD continua obrigatorio: teste primeiro, RED, implementacao, GREEN. O que
+    muda e apenas o que vai para o historico.
 - **Sem trailer `Co-Authored-By`** em nenhum commit.
 - **Banco:** PostgreSQL (`config/database.php` default `pgsql`). Nao usar `$table->engine`, `charset` nem `collation` nas migrations — sao MySQL-ismos.
 - **Todo arquivo PHP novo comeca com** `declare(strict_types=1);`.
@@ -37,7 +47,18 @@
   `APP_CONFIG_CACHE` apontando para caminho inexistente e obrigatorio: sem ele o
   Laravel tenta usar o config cacheado e quebra. `pdo_pgsql` e `pgsql` nao estao
   no php.ini do Laragon, precisam do `-d`.
-- **Comando de teste:** `APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=<NomeDoTeste>`
+- **Comando de teste:** rode o phpunit DIRETO, nunca `artisan test`:
+
+  ```bash
+  APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=<NomeDoTeste>
+  ```
+
+  Motivo, verificado empiricamente: `artisan test` dispara o phpunit num
+  subprocesso que NAO herda os `-d extension=...`, e o teste morre com
+  `PDOException: could not find driver` — que aparece como falha de assercao e
+  engana. Mesmo teste, mesmo commit: `artisan test` deu "2 failed (0 assertions)",
+  phpunit direto deu "OK (2 tests, 5 assertions)". Se voce vir falha estranha sem
+  assertion nenhuma, e provavel que tenha usado o comando errado.
 - **Comando de lint:** `"$PHP83" -l <caminho relativo a SDC/>`
 - **Comando de migration:** o mesmo `artisan` do host. O banco e o Postgres de dev
   COMPARTILHADO com o repo principal. As migrations desta release sao aditivas
@@ -242,7 +263,7 @@ class NivelCombustivelTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=NivelCombustivelTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=NivelCombustivelTest
 ```
 
 Esperado: FAIL com `Class "App\Modules\Plantao\Enums\NivelCombustivel" not found`.
@@ -552,7 +573,7 @@ enum StatusPlantao: string
 - [ ] **Step 8: Rodar o teste e confirmar que passa**
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=NivelCombustivelTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=NivelCombustivelTest
 ```
 
 Esperado: PASS, 6 testes.
@@ -562,8 +583,8 @@ Esperado: PASS, 6 testes.
 O `DIURNO`/`NOTURNO` mudou de label, e o `PlantaoListDTO` usa `->label()`. Rodar a suite do modulo e a busca global:
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=Plantao
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=GlobalSearchServiceTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=Plantao
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=GlobalSearchServiceTest
 ```
 
 Esperado: PASS. Se algum teste asseverar o texto antigo `07:00hs as 19:00hs`, atualizar a assercao — o label antigo estava errado em relacao a operacao.
@@ -571,7 +592,7 @@ Esperado: PASS. Se algum teste asseverar o texto antigo `07:00hs as 19:00hs`, at
 - [ ] **Step 10: Commit**
 
 ```bash
-git add app/Modules/Plantao/Enums tests/Unit/Plantao/NivelCombustivelTest.php
+git add app/Modules/Plantao/Enums
 git commit -m "✨ feat(plantao): enums de frota e correcao dos turnos para 06-16 e 16-02"
 ```
 
@@ -921,7 +942,7 @@ class ViaturaCrudTest extends TestCase
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=ViaturaCrudTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=ViaturaCrudTest
 ```
 
 Esperado: FAIL com `Class "App\Modules\Plantao\Models\Viatura" not found`.
@@ -1373,7 +1394,7 @@ pedir para adicionar um singleton, o passo ja esta feito aqui — ignore.
 - [ ] **Step 10: Rodar o teste e confirmar que passa**
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=ViaturaCrudTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=ViaturaCrudTest
 ```
 
 Esperado: PASS, 2 testes.
@@ -1382,7 +1403,7 @@ Esperado: PASS, 2 testes.
 
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
-git add app/Modules/Plantao/Models database/factories/Plantao tests/Feature/Plantao/ViaturaCrudTest.php
+git add app/Modules/Plantao/Models database/factories/Plantao
 git commit -m "✨ feat(plantao): models e factories de viatura, movimentacao e snapshot"
 ```
 
@@ -1461,7 +1482,7 @@ estiver presente no arquivo.
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=ViaturaCrudTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=ViaturaCrudTest
 ```
 
 Esperado: FAIL com `Target class [App\Modules\Plantao\Services\ViaturaService] does not exist`.
@@ -1699,7 +1720,7 @@ Config mudou, entao `config:clear` e obrigatorio:
 
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan config:clear
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=ViaturaCrudTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=ViaturaCrudTest
 ```
 
 Esperado: PASS, 5 testes.
@@ -1707,7 +1728,7 @@ Esperado: PASS, 5 testes.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add app/Modules/Plantao/Services/ViaturaService.php app/Modules/Plantao/DTOs/ViaturaListDTO.php app/Modules/Plantao/PlantaoServiceProvider.php config/permissions.php tests/Feature/Plantao/ViaturaCrudTest.php
+git add app/Modules/Plantao/Services/ViaturaService.php app/Modules/Plantao/DTOs/ViaturaListDTO.php app/Modules/Plantao/PlantaoServiceProvider.php config/permissions.php
 git commit -m "✨ feat(plantao): servico, DTO e permissoes da frota de viaturas"
 ```
 
@@ -1846,7 +1867,7 @@ Adicionar a `tests/Feature/Plantao/ViaturaCrudTest.php`:
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=ViaturaCrudTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=ViaturaCrudTest
 ```
 
 Esperado: FAIL com `Route [plantao.viaturas.index] not defined`.
@@ -2165,7 +2186,7 @@ Route::prefix('plantao')->name('plantao.')->group(function () {
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan route:list --name=plantao.viaturas
 npm run prebuild
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=ViaturaCrudTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=ViaturaCrudTest
 ```
 
 Esperado: 4 rotas listadas; PASS em 10 testes.
@@ -2351,7 +2372,7 @@ funciona.
 - [ ] **Step 12: Commit**
 
 ```bash
-git add app/Modules/Plantao/Requests app/Modules/Plantao/Controllers routes/modules/plantao.php resources/js/Components/Atoms/Plantao resources/js/Components/Organisms/Plantao resources/js/Templates/Plantao/ViaturasIndexTemplate.vue resources/js/Pages/Plantao/ViaturasIndex.vue resources/js/ziggy.js tests/Feature/Plantao/ViaturaCrudTest.php
+git add app/Modules/Plantao/Requests app/Modules/Plantao/Controllers routes/modules/plantao.php resources/js/Components/Atoms/Plantao resources/js/Components/Organisms/Plantao resources/js/Templates/Plantao/ViaturasIndexTemplate.vue resources/js/Pages/Plantao/ViaturasIndex.vue resources/js/ziggy.js
 git commit -m "✨ feat(plantao): CRUD da frota de viaturas com tela e permissoes"
 ```
 
@@ -2559,7 +2580,7 @@ class MovimentacaoViaturaTest extends TestCase
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=MovimentacaoViaturaTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=MovimentacaoViaturaTest
 ```
 
 Esperado: FAIL com `Class "App\Modules\Plantao\Exceptions\MovimentacaoInvalidaException" not found`.
@@ -2727,7 +2748,7 @@ task rode em paralelo com as Tasks 4 e 11. Passo sem acao.
 
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=MovimentacaoViaturaTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=MovimentacaoViaturaTest
 ```
 
 Esperado: PASS, 7 testes.
@@ -2735,7 +2756,7 @@ Esperado: PASS, 7 testes.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add app/Modules/Plantao/Exceptions app/Modules/Plantao/Services/MovimentacaoViaturaService.php app/Modules/Plantao/PlantaoServiceProvider.php tests/Feature/Plantao/MovimentacaoViaturaTest.php
+git add app/Modules/Plantao/Exceptions app/Modules/Plantao/Services/MovimentacaoViaturaService.php app/Modules/Plantao/PlantaoServiceProvider.php
 git commit -m "✨ feat(plantao): movimentacao de viatura com saida, retorno e guardas de negocio"
 ```
 
@@ -2855,7 +2876,7 @@ Adicionar a `tests/Feature/Plantao/MovimentacaoViaturaTest.php`:
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=MovimentacaoViaturaTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=MovimentacaoViaturaTest
 ```
 
 Esperado: FAIL com `Route [plantao.viaturas.saida] not defined`.
@@ -3096,7 +3117,7 @@ quando nao e.
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
 npm run prebuild
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=MovimentacaoViaturaTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=MovimentacaoViaturaTest
 npm run build
 ```
 
@@ -3105,7 +3126,7 @@ Esperado: PASS em 10 testes; build sem erro.
 - [ ] **Step 10: Commit**
 
 ```bash
-git add app/Modules/Plantao/Requests app/Modules/Plantao/Controllers app/Modules/Plantao/DTOs app/Modules/Plantao/Services/ViaturaService.php routes/modules/plantao.php resources/js/Components/Organisms/Plantao/MovimentacaoModal.vue resources/js/Templates/Plantao/ViaturasIndexTemplate.vue resources/js/ziggy.js tests/Feature/Plantao/MovimentacaoViaturaTest.php
+git add app/Modules/Plantao/Requests app/Modules/Plantao/Controllers app/Modules/Plantao/DTOs app/Modules/Plantao/Services/ViaturaService.php routes/modules/plantao.php resources/js/Components/Organisms/Plantao/MovimentacaoModal.vue resources/js/Templates/Plantao/ViaturasIndexTemplate.vue resources/js/ziggy.js
 git commit -m "✨ feat(plantao): rotas e interface de saida e retorno de viatura"
 ```
 
@@ -3505,7 +3526,7 @@ class PassagemServicoTest extends TestCase
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=PassagemServicoTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=PassagemServicoTest
 ```
 
 Esperado: FAIL com `Class "App\Modules\Plantao\Exceptions\PassagemInvalidaException" not found`.
@@ -3775,7 +3796,7 @@ ja foi registrado na Task 3. Passo sem acao.
 
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=PassagemServicoTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=PassagemServicoTest
 ```
 
 Esperado: PASS, 14 testes.
@@ -3783,7 +3804,7 @@ Esperado: PASS, 14 testes.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add app/Modules/Plantao/Services/PassagemServicoService.php app/Modules/Plantao/Services/PlantaoService.php app/Modules/Plantao/Exceptions/PassagemInvalidaException.php app/Modules/Plantao/PlantaoServiceProvider.php tests/Feature/Plantao/PassagemServicoTest.php
+git add app/Modules/Plantao/Services/PassagemServicoService.php app/Modules/Plantao/Services/PlantaoService.php app/Modules/Plantao/Exceptions/PassagemInvalidaException.php app/Modules/Plantao/PlantaoServiceProvider.php
 git commit -m "✨ feat(plantao): passagem de servico com snapshot sugerido e aceite das duas partes"
 ```
 
@@ -3905,7 +3926,7 @@ Adicionar a `tests/Feature/Plantao/PassagemServicoTest.php`:
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=PassagemServicoTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=PassagemServicoTest
 ```
 
 Esperado: FAIL com `Route [plantao.passagem.encerrar] not defined`.
@@ -4221,7 +4242,7 @@ com `only: ['plantoes', 'filters']` para nao recalcular esses dois.
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
 npm run prebuild
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=PassagemServicoTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=PassagemServicoTest
 ```
 
 Esperado: PASS, 18 testes.
@@ -4229,7 +4250,7 @@ Esperado: PASS, 18 testes.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add app/Modules/Plantao/Requests app/Modules/Plantao/Controllers app/Modules/Plantao/DTOs/SnapshotDTO.php routes/modules/plantao.php resources/js/ziggy.js tests/Feature/Plantao/PassagemServicoTest.php
+git add app/Modules/Plantao/Requests app/Modules/Plantao/Controllers app/Modules/Plantao/DTOs/SnapshotDTO.php routes/modules/plantao.php resources/js/ziggy.js
 git commit -m "✨ feat(plantao): rotas de encerramento e aceite da passagem de servico"
 ```
 
@@ -4785,7 +4806,7 @@ porque precisa do container para resolver `view()` e `config()`. Nao usa
 
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan config:clear
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=RelatorioPassagemServiceTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=RelatorioPassagemServiceTest
 ```
 
 Esperado: FAIL com `Target class [App\Modules\Plantao\Services\RelatorioPassagemService] does not exist`.
@@ -4878,7 +4899,7 @@ task rode em paralelo com as Tasks 4 e 6. Passo sem acao.
 
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan view:clear
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=RelatorioPassagemServiceTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=RelatorioPassagemServiceTest
 ```
 
 Esperado: PASS, 9 testes. Se algum falhar por linha em branco a mais ou a menos,
@@ -4890,7 +4911,7 @@ template** — a assercao e a especificacao.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add config/plantao.php resources/views/plantao app/Modules/Plantao/Services/RelatorioPassagemService.php app/Modules/Plantao/PlantaoServiceProvider.php tests/Unit/Plantao/RelatorioPassagemServiceTest.php
+git add config/plantao.php resources/views/plantao app/Modules/Plantao/Services/RelatorioPassagemService.php app/Modules/Plantao/PlantaoServiceProvider.php
 git commit -m "✨ feat(plantao): relatorio de passagem de servico no formato praticado"
 ```
 
@@ -4967,7 +4988,7 @@ Adicionar a `tests/Feature/Plantao/PassagemServicoTest.php`:
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=PassagemServicoTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=PassagemServicoTest
 ```
 
 Esperado: FAIL com `Route [plantao.passagem.relatorio] not defined`.
@@ -5191,7 +5212,7 @@ Em `PlantaoIndexTemplate.vue`, renderizar o painel abaixo dos stat cards:
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
 npm run prebuild
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=PassagemServicoTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=PassagemServicoTest
 npm run build
 ```
 
@@ -5209,7 +5230,7 @@ confirmar que o conteudo da area de transferencia esta identico.
 - [ ] **Step 10: Commit**
 
 ```bash
-git add app/Modules/Plantao/Controllers/RelatorioPassagemController.php routes/modules/plantao.php resources/js/Composables/useCopiarTexto.js resources/js/Components/Organisms/Plantao/RelatorioPassagemPanel.vue resources/js/Templates/Plantao/PlantaoIndexTemplate.vue resources/js/ziggy.js tests/Feature/Plantao/PassagemServicoTest.php
+git add app/Modules/Plantao/Controllers/RelatorioPassagemController.php routes/modules/plantao.php resources/js/Composables/useCopiarTexto.js resources/js/Components/Organisms/Plantao/RelatorioPassagemPanel.vue resources/js/Templates/Plantao/PlantaoIndexTemplate.vue resources/js/ziggy.js
 git commit -m "✨ feat(plantao): painel do relatorio com copia para WhatsApp"
 ```
 
@@ -5242,7 +5263,7 @@ O `$mapper` recebe o model, entao usar:
 - [ ] **Step 2: Rodar a suite inteira do modulo**
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=Plantao
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=Plantao
 ```
 
 Esperado: PASS em todos. Contagem alvo: 6 (NivelCombustivel) + 9 (Relatorio) +
@@ -5254,7 +5275,7 @@ O label do `PeriodoPlantao` mudou e `getStatistics()` do `PlantaoService` trocou
 uma chave. Rodar tudo:
 
 ```bash
-APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit
 ```
 
 Esperado: nenhuma falha nova em relacao ao estado da branch antes desta release.
