@@ -22,9 +22,33 @@
 - **Banco:** PostgreSQL (`config/database.php` default `pgsql`). Nao usar `$table->engine`, `charset` nem `collation` nas migrations — sao MySQL-ismos.
 - **Todo arquivo PHP novo comeca com** `declare(strict_types=1);`.
 - **Testes usam** `Illuminate\Foundation\Testing\DatabaseTransactions` (nao `RefreshDatabase`), `withoutMiddleware(VerifyCsrfToken::class)` no `setUp`, e criam permissao com `Permission::firstOrCreate([...])` seguido de `app(PermissionRegistrar::class)->forgetCachedPermissions()`.
-- **Comando de teste:** `docker exec newsdc_frankenphp_local php artisan test --filter=<NomeDoTeste>`
-- **Comando de lint:** `docker exec newsdc_frankenphp_local php -l /app/<caminho>`
-- **Apos mexer em PHP:** `docker exec newsdc_frankenphp_local php artisan octane:reload` (~1s). NAO usar restart do container: custa ~3min por causa do `chmod -R` sobre 17k arquivos. Restart so para mudanca em `.env`, `config/` ou extensao PHP.
+- **AMBIENTE (corrigido na execucao).** O container `newsdc_frankenphp_local` citado
+  originalmente NAO existe; o container real e `newsdc_dev_app` e ele monta o
+  REPO PRINCIPAL (`NewSDC/SDC` -> `/var/www`), nao este worktree. Portanto o
+  container NAO serve para rodar nada desta branch. Toda execucao acontece no
+  HOST, com o PHP 8.3 do Laragon.
+- **Atalho:** defina uma vez por sessao de shell:
+
+  ```bash
+  export PHP83="C:/laragon/bin/php/php-8.3.16-Win32-vs16-x64/php.exe"
+  export ART="APP_CONFIG_CACHE=/nonexistent/config.php $PHP83 -d extension=pdo_pgsql -d extension=pgsql artisan"
+  ```
+
+  `APP_CONFIG_CACHE` apontando para caminho inexistente e obrigatorio: sem ele o
+  Laravel tenta usar o config cacheado e quebra. `pdo_pgsql` e `pgsql` nao estao
+  no php.ini do Laragon, precisam do `-d`.
+- **Comando de teste:** `APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=<NomeDoTeste>`
+- **Comando de lint:** `"$PHP83" -l <caminho relativo a SDC/>`
+- **Comando de migration:** o mesmo `artisan` do host. O banco e o Postgres de dev
+  COMPARTILHADO com o repo principal. As migrations desta release sao aditivas
+  (4 tabelas novas + 8 colunas nullable em `plantoes`) e nao alteram nada que
+  outro modulo use.
+- **Octane:** NAO rodar `octane:reload` nem restart. O Octane roda no container,
+  que aponta para o repo principal — reload ali nao tem efeito nenhum sobre esta
+  branch, e restart custa ~3min por nada. Ignore todo passo do plano que peca
+  reload ou restart.
+- **`npm run build` e `npm run prebuild`** rodam no host, dentro de `SDC/`
+  (`node_modules` esta ligado por junction ao repo principal).
 - **Apos criar rota nova:** rodar `npm run prebuild` para regenerar `resources/js/ziggy.js`.
 - **Enum nunca devolve classe CSS.** Tailwind nao escaneia `app/**/*.php`. Cor vive no `.vue`.
 
@@ -218,7 +242,7 @@ class NivelCombustivelTest extends TestCase
 - [ ] **Step 2: Rodar o teste e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=NivelCombustivelTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=NivelCombustivelTest
 ```
 
 Esperado: FAIL com `Class "App\Modules\Plantao\Enums\NivelCombustivel" not found`.
@@ -528,7 +552,7 @@ enum StatusPlantao: string
 - [ ] **Step 8: Rodar o teste e confirmar que passa**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=NivelCombustivelTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=NivelCombustivelTest
 ```
 
 Esperado: PASS, 6 testes.
@@ -538,8 +562,8 @@ Esperado: PASS, 6 testes.
 O `DIURNO`/`NOTURNO` mudou de label, e o `PlantaoListDTO` usa `->label()`. Rodar a suite do modulo e a busca global:
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=Plantao
-docker exec newsdc_frankenphp_local php artisan test --filter=GlobalSearchServiceTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=Plantao
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=GlobalSearchServiceTest
 ```
 
 Esperado: PASS. Se algum teste asseverar o texto antigo `07:00hs as 19:00hs`, atualizar a assercao — o label antigo estava errado em relacao a operacao.
@@ -793,7 +817,7 @@ return new class extends Migration
 - [ ] **Step 5: Rodar as migrations**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan migrate
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan migrate
 ```
 
 Esperado: as 4 migrations executam sem erro.
@@ -801,10 +825,10 @@ Esperado: as 4 migrations executam sem erro.
 - [ ] **Step 6: Verificar o schema no banco**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan db:table plantao_viaturas
-docker exec newsdc_frankenphp_local php artisan db:table plantao_viatura_movimentacoes
-docker exec newsdc_frankenphp_local php artisan db:table plantao_viatura_snapshots
-docker exec newsdc_frankenphp_local php artisan db:table plantoes
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan db:table plantao_viaturas
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan db:table plantao_viatura_movimentacoes
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan db:table plantao_viatura_snapshots
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan db:table plantoes
 ```
 
 Esperado: todas as colunas da secao 3 do spec presentes, `unique` em `plantao_viaturas.placa` e em `(plantao_id, viatura_id)` dos snapshots.
@@ -812,8 +836,8 @@ Esperado: todas as colunas da secao 3 do spec presentes, `unique` em `plantao_vi
 - [ ] **Step 7: Testar o rollback**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan migrate:rollback --step=4
-docker exec newsdc_frankenphp_local php artisan migrate
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan migrate:rollback --step=4
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan migrate
 ```
 
 Esperado: rollback e reaplicacao sem erro. Este passo prova que o `down()` esta correto antes de qualquer dado real existir.
@@ -897,7 +921,7 @@ class ViaturaCrudTest extends TestCase
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=ViaturaCrudTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=ViaturaCrudTest
 ```
 
 Esperado: FAIL com `Class "App\Modules\Plantao\Models\Viatura" not found`.
@@ -1309,10 +1333,47 @@ Em `Plantao`:
     }
 ```
 
+- [ ] **Step 9b: Registrar TODOS os servicos novos no provider de uma vez**
+
+Decisao do controlador durante a execucao: as Tasks 4, 6, 8 e 11 originalmente
+adicionavam cada uma o seu `singleton()` neste arquivo, o que as impedia de rodar
+em paralelo. Todos os registros passam para ca.
+
+`Foo::class` resolve para string sem disparar autoload, portanto registrar uma
+classe que ainda nao existe e inofensivo: o erro so apareceria se alguem tentasse
+resolve-la, e cada uma sera resolvida pela primeira vez no teste da task que a
+criar. Se um nome divergir, o erro aparece exatamente ali.
+
+Em `app/Modules/Plantao/PlantaoServiceProvider.php`, o metodo `register()` fica:
+
+```php
+    public function register(): void
+    {
+        $this->app->singleton(PlantaoService::class);
+        $this->app->singleton(ViaturaService::class);
+        $this->app->singleton(MovimentacaoViaturaService::class);
+        $this->app->singleton(PassagemServicoService::class);
+        $this->app->singleton(RelatorioPassagemService::class);
+    }
+```
+
+Com os imports correspondentes no topo do arquivo:
+
+```php
+use App\Modules\Plantao\Services\MovimentacaoViaturaService;
+use App\Modules\Plantao\Services\PassagemServicoService;
+use App\Modules\Plantao\Services\PlantaoService;
+use App\Modules\Plantao\Services\RelatorioPassagemService;
+use App\Modules\Plantao\Services\ViaturaService;
+```
+
+As Tasks 4, 6, 8 e 11 NAO devem tocar este arquivo. Se o brief de alguma delas
+pedir para adicionar um singleton, o passo ja esta feito aqui — ignore.
+
 - [ ] **Step 10: Rodar o teste e confirmar que passa**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=ViaturaCrudTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=ViaturaCrudTest
 ```
 
 Esperado: PASS, 2 testes.
@@ -1320,7 +1381,7 @@ Esperado: PASS, 2 testes.
 - [ ] **Step 11: Recarregar o Octane e commitar**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan octane:reload
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
 git add app/Modules/Plantao/Models database/factories/Plantao tests/Feature/Plantao/ViaturaCrudTest.php
 git commit -m "✨ feat(plantao): models e factories de viatura, movimentacao e snapshot"
 ```
@@ -1400,7 +1461,7 @@ estiver presente no arquivo.
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=ViaturaCrudTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=ViaturaCrudTest
 ```
 
 Esperado: FAIL com `Target class [App\Modules\Plantao\Services\ViaturaService] does not exist`.
@@ -1626,23 +1687,19 @@ Localizar cada bloco de papel que hoje lista `plantao.turnos.*` (linhas ~641,
   frota e o relatorio, mas nao opera.
 - O curinga `plantao.*` (linha ~522) ja cobre os slugs novos; nao mexer.
 
-- [ ] **Step 7: Registrar o service no provider**
+- [ ] **Step 7: Registro no provider — JA FEITO na Task 3**
 
-Em `app/Modules/Plantao/PlantaoServiceProvider.php`, no metodo `register()`:
-
-```php
-        $this->app->singleton(ViaturaService::class);
-```
-
-E o import `use App\Modules\Plantao\Services\ViaturaService;`.
+Nao toque em `PlantaoServiceProvider.php`. O `singleton(ViaturaService::class)` ja
+foi registrado na Task 3, por decisao do controlador, para permitir que esta task
+rode em paralelo com as Tasks 6 e 11. Passo sem acao.
 
 - [ ] **Step 8: Limpar cache de config e rodar o teste**
 
 Config mudou, entao `config:clear` e obrigatorio:
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan config:clear
-docker exec newsdc_frankenphp_local php artisan test --filter=ViaturaCrudTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan config:clear
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=ViaturaCrudTest
 ```
 
 Esperado: PASS, 5 testes.
@@ -1789,7 +1846,7 @@ Adicionar a `tests/Feature/Plantao/ViaturaCrudTest.php`:
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=ViaturaCrudTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=ViaturaCrudTest
 ```
 
 Esperado: FAIL com `Route [plantao.viaturas.index] not defined`.
@@ -2105,10 +2162,10 @@ Route::prefix('plantao')->name('plantao.')->group(function () {
 - [ ] **Step 6: Regenerar o ziggy e rodar o teste do backend**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan route:list --name=plantao.viaturas
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan route:list --name=plantao.viaturas
 npm run prebuild
-docker exec newsdc_frankenphp_local php artisan test --filter=ViaturaCrudTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=ViaturaCrudTest
 ```
 
 Esperado: 4 rotas listadas; PASS em 10 testes.
@@ -2502,7 +2559,7 @@ class MovimentacaoViaturaTest extends TestCase
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=MovimentacaoViaturaTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=MovimentacaoViaturaTest
 ```
 
 Esperado: FAIL com `Class "App\Modules\Plantao\Exceptions\MovimentacaoInvalidaException" not found`.
@@ -2660,21 +2717,17 @@ class MovimentacaoViaturaService extends BaseService
 }
 ```
 
-- [ ] **Step 5: Registrar o service no provider**
+- [ ] **Step 5: Registro no provider — JA FEITO na Task 3**
 
-Em `PlantaoServiceProvider::register()`:
-
-```php
-        $this->app->singleton(MovimentacaoViaturaService::class);
-```
-
-Mais o import correspondente.
+Nao toque em `PlantaoServiceProvider.php`. O `singleton(MovimentacaoViaturaService::class)`
+ja foi registrado na Task 3, por decisao do controlador, para permitir que esta
+task rode em paralelo com as Tasks 4 e 11. Passo sem acao.
 
 - [ ] **Step 6: Rodar o teste e confirmar que passa**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan test --filter=MovimentacaoViaturaTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=MovimentacaoViaturaTest
 ```
 
 Esperado: PASS, 7 testes.
@@ -2802,7 +2855,7 @@ Adicionar a `tests/Feature/Plantao/MovimentacaoViaturaTest.php`:
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=MovimentacaoViaturaTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=MovimentacaoViaturaTest
 ```
 
 Esperado: FAIL com `Route [plantao.viaturas.saida] not defined`.
@@ -3041,9 +3094,9 @@ quando nao e.
 - [ ] **Step 9: Rodar tudo e buildar**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan octane:reload
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
 npm run prebuild
-docker exec newsdc_frankenphp_local php artisan test --filter=MovimentacaoViaturaTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=MovimentacaoViaturaTest
 npm run build
 ```
 
@@ -3452,7 +3505,7 @@ class PassagemServicoTest extends TestCase
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PassagemServicoTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=PassagemServicoTest
 ```
 
 Esperado: FAIL com `Class "App\Modules\Plantao\Exceptions\PassagemInvalidaException" not found`.
@@ -3713,17 +3766,16 @@ Adicionar o import de `StatusPlantao`. Note que a chave `equipe_online` foi
 removida: era duplicata de `ativos`, sem consumidor distinto. Verificar o
 frontend antes de remover e ajustar `PlantaoStatsCards.vue` na Task 11.
 
-- [ ] **Step 6: Registrar o service no provider**
+- [ ] **Step 6: Registro no provider — JA FEITO na Task 3**
 
-```php
-        $this->app->singleton(PassagemServicoService::class);
-```
+Nao toque em `PlantaoServiceProvider.php`. O `singleton(PassagemServicoService::class)`
+ja foi registrado na Task 3. Passo sem acao.
 
 - [ ] **Step 7: Rodar o teste e confirmar que passa**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan octane:reload
-docker exec newsdc_frankenphp_local php artisan test --filter=PassagemServicoTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=PassagemServicoTest
 ```
 
 Esperado: PASS, 14 testes.
@@ -3853,7 +3905,7 @@ Adicionar a `tests/Feature/Plantao/PassagemServicoTest.php`:
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PassagemServicoTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=PassagemServicoTest
 ```
 
 Esperado: FAIL com `Route [plantao.passagem.encerrar] not defined`.
@@ -4167,9 +4219,9 @@ com `only: ['plantoes', 'filters']` para nao recalcular esses dois.
 - [ ] **Step 8: Rodar tudo**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan octane:reload
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
 npm run prebuild
-docker exec newsdc_frankenphp_local php artisan test --filter=PassagemServicoTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=PassagemServicoTest
 ```
 
 Esperado: PASS, 18 testes.
@@ -4691,8 +4743,8 @@ porque precisa do container para resolver `view()` e `config()`. Nao usa
 - [ ] **Step 4: Rodar e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan config:clear
-docker exec newsdc_frankenphp_local php artisan test --filter=RelatorioPassagemServiceTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan config:clear
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=RelatorioPassagemServiceTest
 ```
 
 Esperado: FAIL com `Target class [App\Modules\Plantao\Services\RelatorioPassagemService] does not exist`.
@@ -4775,17 +4827,17 @@ class RelatorioPassagemService
 }
 ```
 
-- [ ] **Step 6: Registrar o service no provider**
+- [ ] **Step 6: Registro no provider — JA FEITO na Task 3**
 
-```php
-        $this->app->singleton(RelatorioPassagemService::class);
-```
+Nao toque em `PlantaoServiceProvider.php`. O `singleton(RelatorioPassagemService::class)`
+ja foi registrado na Task 3, por decisao do controlador, para permitir que esta
+task rode em paralelo com as Tasks 4 e 6. Passo sem acao.
 
 - [ ] **Step 7: Rodar o teste e ajustar o template**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan view:clear
-docker exec newsdc_frankenphp_local php artisan test --filter=RelatorioPassagemServiceTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan view:clear
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=RelatorioPassagemServiceTest
 ```
 
 Esperado: PASS, 9 testes. Se algum falhar por linha em branco a mais ou a menos,
@@ -4874,7 +4926,7 @@ Adicionar a `tests/Feature/Plantao/PassagemServicoTest.php`:
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=PassagemServicoTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=PassagemServicoTest
 ```
 
 Esperado: FAIL com `Route [plantao.passagem.relatorio] not defined`.
@@ -5096,9 +5148,9 @@ Em `PlantaoIndexTemplate.vue`, renderizar o painel abaixo dos stat cards:
 - [ ] **Step 8: Rodar tudo**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan octane:reload
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
 npm run prebuild
-docker exec newsdc_frankenphp_local php artisan test --filter=PassagemServicoTest
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=PassagemServicoTest
 npm run build
 ```
 
@@ -5149,7 +5201,7 @@ O `$mapper` recebe o model, entao usar:
 - [ ] **Step 2: Rodar a suite inteira do modulo**
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test --filter=Plantao
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test --filter=Plantao
 ```
 
 Esperado: PASS em todos. Contagem alvo: 6 (NivelCombustivel) + 9 (Relatorio) +
@@ -5161,7 +5213,7 @@ O label do `PeriodoPlantao` mudou e `getStatistics()` do `PlantaoService` trocou
 uma chave. Rodar tudo:
 
 ```bash
-docker exec newsdc_frankenphp_local php artisan test
+APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan test
 ```
 
 Esperado: nenhuma falha nova em relacao ao estado da branch antes desta release.
