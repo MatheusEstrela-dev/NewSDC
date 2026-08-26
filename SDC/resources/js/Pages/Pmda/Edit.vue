@@ -42,6 +42,11 @@ const { activeTab, tabs, goTo, next, prev } = usePmdaWizard({
   initialTab: 1,
 });
 
+const devolucaoEm = computed(() => {
+  const iso = dados.value?.devolucao_em;
+  return iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : null;
+});
+
 const tabsComBadge = computed(() =>
   tabs.value.map((t) => {
     if (t.id === 3) return { ...t, badge: dados.value.compdec_membros?.length || null };
@@ -109,6 +114,22 @@ function voltar() {
         <PmdaStatusBadge :label="dados.status_label" :cor="dados.status_cor" />
       </template>
     </PageHeader>
+
+    <!-- Devolutiva da CEDEC: o motivo precisa estar na tela onde o municipio
+         corrige, e nao so na serie historica que ele nao abre. -->
+    <div
+      v-if="dados.devolvido"
+      class="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+    >
+      <p class="font-semibold">PMDA devolvido pela CEDEC-MG para alteração</p>
+      <p v-if="dados.devolucao_motivo" class="mt-1">{{ dados.devolucao_motivo }}</p>
+      <p class="mt-1 text-xs opacity-80">
+        <span v-if="dados.devolucao_por">Por {{ dados.devolucao_por }}</span>
+        <span v-if="dados.devolucao_por && devolucaoEm"> · </span>
+        <span v-if="devolucaoEm">{{ devolucaoEm }}</span>
+      </p>
+      <p class="mt-2">Faça as correções e envie o PMDA novamente na aba Anexos.</p>
+    </div>
 
     <div v-if="Object.keys(form.errors).length" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
       <p class="font-semibold">Não foi possível salvar. Corrija:</p>

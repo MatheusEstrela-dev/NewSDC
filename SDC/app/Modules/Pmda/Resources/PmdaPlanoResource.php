@@ -73,6 +73,12 @@ class PmdaPlanoResource extends JsonResource
                 'termo'  => $this->anexoInfo(\App\Modules\Pmda\Models\PmdaPlano::MEDIA_TERMO),
                 'oficio' => $this->anexoInfo(\App\Modules\Pmda\Models\PmdaPlano::MEDIA_OFICIO),
             ],
+            // Devolutiva da CEDEC: sem estes campos o plano voltava ao municipio
+            // como "Em Edicao" comum, sem dizer que foi devolvido nem por que.
+            'devolvido'         => (bool) $this->pedido_altera,
+            'devolucao_motivo'  => $this->pedido_altera ? $this->motivo_analise : null,
+            'devolucao_em'      => $this->pedido_altera ? $this->dt_estado?->toIso8601String() : null,
+            'devolucao_por'     => $this->pedido_altera ? $this->resp_estado : null,
             'data_aprov'        => $this->data_aprov?->toIso8601String(),
             'dt_ultima_alteracao' => $this->dt_ultima_alteracao?->toIso8601String(),
             'comunidades_count' => $this->whenCounted('comunidades'),

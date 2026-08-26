@@ -46,6 +46,8 @@ use App\Modules\Pmda\Support\PerfilPmda;
 use App\Support\Concurrency\Concurrency;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -553,21 +555,33 @@ class PmdaPlanoController extends Controller
             '_ts' => ($data ?? $plano->created_at)?->getTimestamp() ?? 0,
         ];
 
+        // A serie vem do log append-only (pmda_plano_eventos): as colunas do plano
+        // guardam so o ULTIMO tramite, entao devolver -> corrigir -> aprovar perdia
+        // a devolucao. Cada linha do log e um momento que nao volta atras.
         $timeline = [];
-        $timeline[] = $evento(
-            'criacao', 'criacao', 'Protocolo Criado',
-            'PMDA criado no sistema SDC.',
-            $plano->created_at, $nomePor($plano->created_by)
-        );
+        $analises = [];
+
+        foreach ($plano->eventos()->orderBy('ocorrido_em')->get() as $ev) {
+            $card = $evento(
+                'evento_'.$ev->id,
+                $ev->tipo->categoria(),
+                $ev->tipo->titulo(),
+                $ev->tipo->descricao($ev->motivo),
+                $ev->ocorrido_em,
+                $ev->responsavel ?: $nomePor($ev->usuario_id)
+            );
+
+            $timeline[] = $card;
+            if ($ev->tipo->eAnalise()) {
+                $analises[] = $card;
+            }
+        }
 
         // "Ultima Atualizacao" so quando for edicao real de conteudo — nao quando o
         // dt_ultima_alteracao apenas acompanha uma acao de status (enviar/aprovar/
-        // arquivar/devolver), que ja tem evento proprio abaixo.
-        $tsAcoes = array_filter([
-            $plano->dt_analise?->getTimestamp(),
-            $plano->data_aprov?->getTimestamp(),
-            $plano->dt_estado?->getTimestamp(),
-        ]);
+        // arquivar/devolver), que ja tem evento proprio no log.
+        $tsAcoes = $plano->eventos()->pluck('ocorrido_em')
+            ->map(fn ($d) => $d?->getTimestamp())->filter()->all();
         if ($plano->dt_ultima_alteracao && $plano->created_at
             && $plano->dt_ultima_alteracao->gt($plano->created_at)
             && ! in_array($plano->dt_ultima_alteracao->getTimestamp(), $tsAcoes, true)) {
@@ -578,46 +592,11 @@ class PmdaPlanoController extends Controller
             );
         }
 
-        $analises = [];
         // Eventos que sao decisao/tramite: entram na serie e tambem na aba Analises.
         $registrar = function (array $ev) use (&$timeline, &$analises): void {
             $timeline[] = $ev;
             $analises[] = $ev;
         };
-
-        if ($plano->dt_analise) {
-            $registrar($evento(
-                'analise', 'analise', 'Enviado para Análise',
-                'PMDA encaminhado para análise da CEDEC-MG.',
-                $plano->dt_analise, $plano->resp_homolog ?: '—'
-            ));
-        }
-        if ($plano->data_aprov) {
-            $registrar($evento(
-                'aprovacao', 'analise', 'PMDA Aprovado',
-                'Plano aprovado pela CEDEC-MG.',
-                $plano->data_aprov, $plano->resp_estado ?: '—'
-            ));
-        }
-        if ($plano->status === \App\Modules\Pmda\Enums\PmdaStatus::ARQUIVADO) {
-            $registrar($evento(
-                'arquivamento', 'notificacao', 'PMDA Arquivado',
-                $plano->motivo_analise
-                    ? ('Arquivado pela CEDEC-MG. Motivo: '.$plano->motivo_analise)
-                    : 'Plano arquivado pela CEDEC-MG.',
-                $plano->dt_estado, $plano->resp_estado ?: '—'
-            ));
-        }
-        // Devolutiva: plano devolvido ao municipio para ajustes (nao aprovado, nao arquivado).
-        if ($plano->pedido_altera && $plano->motivo_analise
-            && ! $plano->data_aprov
-            && $plano->status !== \App\Modules\Pmda\Enums\PmdaStatus::ARQUIVADO) {
-            $registrar($evento(
-                'pedido_alteracao', 'notificacao', 'Devolvido para Alteração',
-                'CEDEC-MG devolveu o PMDA ao município para ajustes. Motivo: '.$plano->motivo_analise,
-                $plano->dt_estado ?? $plano->dt_ultima_alteracao, $plano->resp_estado ?: 'CEDEC-MG'
-            ));
-        }
 
         // Solicitacoes de comunidade abertas por este plano: o pedido ja nasce numa
         // fila da CEDEC, entao pedido e decisao contam como analise.
@@ -659,8 +638,39 @@ class PmdaPlanoController extends Controller
             'status'        => $plano->status->getLabel(),
             'timeline'      => $cronologico($timeline),
             'analises'      => $cronologico($analises),
-            'notificacoes'  => [],
+            'notificacoes'  => $this->notificacoesDoPlano($plano),
         ]);
+    }
+
+    /**
+     * Avisos que a trilha de acoes realmente entregou ao dono do protocolo.
+     *
+     * Vinha [] fixo, entao a aba nunca tinha o que mostrar mesmo quando o municipio
+     * havia sido avisado. A chave de agrupamento ja carrega "modulo:id:", que e o
+     * que amarra a notificacao a este plano.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function notificacoesDoPlano(PmdaPlano $plano): array
+    {
+        return DB::table('notifications')
+            ->where('group_key', 'like', $plano->moduloNotificacao().':'.$plano->getKey().':%')
+            ->orderBy('created_at')
+            ->get()
+            ->map(function ($n) {
+                $dados = json_decode((string) $n->data, true) ?: [];
+
+                return [
+                    'id'          => $n->id,
+                    'titulo'      => $dados['titulo'] ?? $dados['title'] ?? 'Notificação enviada',
+                    'descricao'   => $dados['mensagem'] ?? $dados['message'] ?? null,
+                    'data'        => $n->created_at ? Carbon::parse($n->created_at)->format('d/m/Y, H:i') : null,
+                    'responsavel' => 'Sistema',
+                    'canal'       => 'Sistema',
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     public function copiar(Request $request, PmdaPlano $plano): RedirectResponse

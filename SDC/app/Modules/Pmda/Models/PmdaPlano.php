@@ -74,6 +74,12 @@ class PmdaPlano extends Model implements HasMedia, Rastreavel
         return $this->hasMany(PmdaCompdecMembro::class, 'pmda_plano_id');
     }
 
+    /** Log append-only das transicoes do plano (serie historica). */
+    public function eventos(): HasMany
+    {
+        return $this->hasMany(PmdaPlanoEvento::class, 'pmda_plano_id');
+    }
+
     /** Solicitacoes de inclusao de comunidade abertas a partir deste plano. */
     public function solicitacoesComunidade(): HasMany
     {

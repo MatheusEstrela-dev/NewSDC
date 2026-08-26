@@ -7,6 +7,7 @@ namespace App\Modules\Pmda\Services;
 use App\Modules\Compdec\Enums\StatusOrgao;
 use App\Modules\Compdec\Enums\TipoOrgao;
 use App\Modules\Compdec\Models\Orgao;
+use App\Modules\Pmda\Enums\PmdaEventoTipo;
 use App\Modules\Pmda\Enums\PmdaStatus;
 use App\Modules\Pmda\Enums\SolicitacaoComunidadeStatus;
 use App\Modules\Pmda\Models\Comunidade;
@@ -14,6 +15,7 @@ use App\Modules\Pmda\Models\ComunidadeSolicitacao;
 use App\Modules\Pmda\Models\PmdaComunidade;
 use App\Modules\Pmda\Models\PmdaCompdecMembro;
 use App\Modules\Pmda\Models\PmdaPlano;
+use App\Modules\Pmda\Models\PmdaPlanoEvento;
 use App\Modules\Pmda\Models\PmdaPonto;
 use App\Modules\Pmda\Models\PmdaRepresentante;
 use App\Modules\Shared\BaseService;
@@ -181,9 +183,62 @@ class PmdaPlanoService extends BaseService
                 ->every(fn ($c) => $c->representantes_count >= self::REPRESENTANTES_POR_COMUNIDADE);
 
         $novo = $todasComRepresentantes ? PmdaStatus::COMPLETO : PmdaStatus::RASCUNHO;
+        // Nao passa por transicionar(): RASCUNHO <-> COMPLETO e derivacao automatica
+        // do preenchimento, nao tramite — virava ruido no log a cada representante
+        // salvo. A validacao da maquina de estados continua valendo.
         if ($plano->status !== $novo) {
+            if (! $plano->status->podeTransicionarPara($novo)) {
+                throw new \DomainException(sprintf(
+                    'Transição não permitida: %s → %s.',
+                    $plano->status->getLabel(),
+                    $novo->getLabel()
+                ));
+            }
             $plano->update(['status' => $novo]);
         }
+
+        return $plano->refresh();
+    }
+
+    /**
+     * Unico ponto de mudanca de situacao com tramite. Valida contra
+     * PmdaStatus::transicoes() e registra o evento no log.
+     *
+     * Antes cada acao (enviar/aprovar/arquivar/devolver) repetia a sua propria
+     * guarda e gravava direto no update, e o enum de transicoes nao era consultado
+     * por ninguem. Concentrar aqui e o que faz a maquina de estados existir de fato
+     * e o que garante que nenhuma transicao passe sem deixar rastro.
+     *
+     * @param  array<string, mixed>  $atributos  colunas especificas da acao
+     */
+    private function transicionar(
+        PmdaPlano $plano,
+        PmdaStatus $destino,
+        PmdaEventoTipo $tipo,
+        int $userId,
+        array $atributos = [],
+        ?string $motivo = null,
+        ?string $responsavel = null,
+    ): PmdaPlano {
+        $origem = $plano->status;
+
+        if (! $origem->podeTransicionarPara($destino)) {
+            throw new \DomainException(sprintf(
+                'Transição não permitida: %s → %s.',
+                $origem->getLabel(),
+                $destino->getLabel()
+            ));
+        }
+
+        $nome = $responsavel ?: \App\Models\User::find($userId)?->name;
+
+        $plano->update($atributos + [
+            'status'              => $destino,
+            'dt_ultima_alteracao' => now(),
+            'updated_by'          => $userId,
+        ]);
+
+        PmdaPlanoEvento::registrar($plano, $tipo, $origem, $destino, $userId, $motivo, $nome);
 
         return $plano->refresh();
     }
@@ -213,15 +268,18 @@ class PmdaPlanoService extends BaseService
             throw new \DomainException('Anexe o Termo de Compromisso e o Ofício de Solicitação (PDF) antes de enviar.');
         }
 
-        $plano->update([
-            'status'              => PmdaStatus::EM_ANALISE,
-            'dt_analise'          => now(),
-            'resp_homolog'        => \App\Models\User::find($userId)?->name, // quem enviou (municipio), como no legado
-            'dt_ultima_alteracao' => now(),
-            'updated_by'          => $userId,
-        ]);
+        $nome = \App\Models\User::find($userId)?->name;
 
-        return $plano->refresh();
+        return $this->transicionar($plano, PmdaStatus::EM_ANALISE, PmdaEventoTipo::ENVIO, $userId, [
+            'dt_analise'     => now(),
+            'resp_homolog'   => $nome, // quem enviou (municipio), como no legado
+            // Reenvio fecha o ciclo de correcao: sem limpar, o plano seguia marcado
+            // como "aguardando alteracao" ate depois de aprovado. O motivo nao se
+            // perde — ficou na linha DEVOLUCAO do log de eventos.
+            'pedido_altera'  => false,
+            'alterar_com'    => false,
+            'motivo_analise' => null,
+        ], responsavel: $nome);
     }
 
     /** Fila de analise CEDEC: planos EM_ANALISE (mais antigos primeiro). */
@@ -241,16 +299,13 @@ class PmdaPlanoService extends BaseService
     {
         $this->garantirEmAnalise($plano);
 
-        $plano->update([
-            'status'              => PmdaStatus::APROVADO,
-            'data_aprov'          => now(),
-            'dt_estado'           => now(),
-            'resp_estado'         => $resp ?: (\App\Models\User::find($userId)?->name),
-            'dt_ultima_alteracao' => now(),
-            'updated_by'          => $userId,
-        ]);
+        $nome = $resp ?: \App\Models\User::find($userId)?->name;
 
-        return $plano->refresh();
+        return $this->transicionar($plano, PmdaStatus::APROVADO, PmdaEventoTipo::APROVACAO, $userId, [
+            'data_aprov'  => now(),
+            'dt_estado'   => now(),
+            'resp_estado' => $nome,
+        ], responsavel: $nome);
     }
 
     /** Arquiva/rejeita o PMDA (EM_ANALISE -> ARQUIVADO) com motivo. */
@@ -258,16 +313,13 @@ class PmdaPlanoService extends BaseService
     {
         $this->garantirEmAnalise($plano);
 
-        $plano->update([
-            'status'              => PmdaStatus::ARQUIVADO,
-            'motivo_analise'      => $motivo,
-            'dt_estado'           => now(),
-            'resp_estado'         => \App\Models\User::find($userId)?->name,
-            'dt_ultima_alteracao' => now(),
-            'updated_by'          => $userId,
-        ]);
+        $nome = \App\Models\User::find($userId)?->name;
 
-        return $plano->refresh();
+        return $this->transicionar($plano, PmdaStatus::ARQUIVADO, PmdaEventoTipo::ARQUIVAMENTO, $userId, [
+            'motivo_analise' => $motivo,
+            'dt_estado'      => now(),
+            'resp_estado'    => $nome,
+        ], motivo: $motivo, responsavel: $nome);
     }
 
     /** Devolve o PMDA ao municipio para correcao (EM_ANALISE -> RASCUNHO) com motivo. */
@@ -275,18 +327,15 @@ class PmdaPlanoService extends BaseService
     {
         $this->garantirEmAnalise($plano);
 
-        $plano->update([
-            'status'              => PmdaStatus::RASCUNHO,
-            'pedido_altera'       => true,
-            'alterar_com'         => true, // legado: libera edicao de comunidades apos devolucao
-            'motivo_analise'      => $motivo,
-            'resp_estado'         => \App\Models\User::find($userId)?->name, // quem devolveu (CEDEC)
-            'dt_estado'           => now(),
-            'dt_ultima_alteracao' => now(),
-            'updated_by'          => $userId,
-        ]);
+        $nome = \App\Models\User::find($userId)?->name;
 
-        return $plano->refresh();
+        return $this->transicionar($plano, PmdaStatus::RASCUNHO, PmdaEventoTipo::DEVOLUCAO, $userId, [
+            'pedido_altera'  => true,
+            'alterar_com'    => true, // legado: libera edicao de comunidades apos devolucao
+            'motivo_analise' => $motivo,
+            'resp_estado'    => $nome, // quem devolveu (CEDEC)
+            'dt_estado'      => now(),
+        ], motivo: $motivo, responsavel: $nome);
     }
 
     /** Garante que o plano esta EM_ANALISE (unico estado analisavel pela CEDEC). */
