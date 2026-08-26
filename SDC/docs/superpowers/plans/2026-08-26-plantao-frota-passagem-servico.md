@@ -68,9 +68,29 @@
   que aponta para o repo principal — reload ali nao tem efeito nenhum sobre esta
   branch, e restart custa ~3min por nada. Ignore todo passo do plano que peca
   reload ou restart.
-- **`npm run build` e `npm run prebuild`** rodam no host, dentro de `SDC/`
-  (`node_modules` esta ligado por junction ao repo principal).
-- **Apos criar rota nova:** rodar `npm run prebuild` para regenerar `resources/js/ziggy.js`.
+- **NUNCA rode `artisan ziggy:generate (ver Global Constraints)`.** Verificado na execucao: o
+  `scripts/generate-ziggy.mjs` testa a versao do `php` do PATH (aqui e 8.1.25),
+  ve que e menor que 8.3.0, e cai em `docker exec newsdc_dev_app` — que aponta
+  para o REPO PRINCIPAL. Resultado: sobrescreve `resources/js/ziggy.js` com as
+  rotas da branch errada, **sem erro nenhum**, e a tela quebra no navegador com
+  `route()` indefinido.
+
+- **Para regenerar o ziggy**, use o caminho absoluto do PHP 8.3:
+
+  ```bash
+  APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql -d memory_limit=2G artisan ziggy:generate resources/js/ziggy.js
+  ```
+
+  Comprovado: gera saida byte-identica a correta. O `memory_limit=2G` vem do
+  proprio script original e evita "Allowed memory size exhausted" no
+  symfony/finder.
+
+- **`npm run build`** dispara o `prebuild` automaticamente (ciclo de vida do npm),
+  entao ele tambem clobbera o ziggy. Use `npm run build --ignore-scripts`, e
+  regenere o ziggy ANTES com o comando acima. O build em si roda no host sem
+  problema (`node_modules` esta ligado por junction ao repo principal e o Vite
+  resolve pelo CWD, nao pelo realpath — validado).
+- **Apos criar rota nova:** rodar `artisan ziggy:generate (ver Global Constraints)` para regenerar `resources/js/ziggy.js`.
 - **Enum nunca devolve classe CSS.** Tailwind nao escaneia `app/**/*.php`. Cor vive no `.vue`.
 
 ---
@@ -2185,7 +2205,7 @@ Route::prefix('plantao')->name('plantao.')->group(function () {
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan route:list --name=plantao.viaturas
-npm run prebuild
+artisan ziggy:generate (ver Global Constraints)
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=ViaturaCrudTest
 ```
 
@@ -3140,7 +3160,7 @@ quando nao e.
 
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
-npm run prebuild
+artisan ziggy:generate (ver Global Constraints)
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=MovimentacaoViaturaTest
 npm run build
 ```
@@ -4265,7 +4285,7 @@ com `only: ['plantoes', 'filters']` para nao recalcular esses dois.
 
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
-npm run prebuild
+artisan ziggy:generate (ver Global Constraints)
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=PassagemServicoTest
 ```
 
@@ -5239,7 +5259,7 @@ Em `PlantaoIndexTemplate.vue`, renderizar o painel abaixo dos stat cards:
 
 ```bash
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql artisan octane:reload
-npm run prebuild
+artisan ziggy:generate (ver Global Constraints)
 APP_CONFIG_CACHE=/nonexistent/config.php "$PHP83" -d extension=pdo_pgsql -d extension=pgsql vendor/phpunit/phpunit/phpunit --filter=PassagemServicoTest
 npm run build
 ```
