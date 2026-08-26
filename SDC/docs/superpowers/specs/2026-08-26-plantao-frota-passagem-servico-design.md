@@ -197,6 +197,7 @@ deteccao de conflito, e o relatorio passa a derivar o texto dela. O campo
 | `localizacao` | string(60) nullable | ex. Predio Alterosas |
 | `ocorrencias_destaque` | text nullable | bloco de ocorrencias ou acoes de destaque do turno anterior |
 | `encerrado_em` | datetime nullable | quando quem sai declarou o estado |
+| `encerrado_por_id` | FK `users` nullable, nullOnDelete | quem operou o encerramento; difere de `plantonista_id` quando foi feito por terceiro |
 | `aceito_em` | datetime nullable | quando quem assume aceitou |
 | `aceito_por_id` | FK `users` nullable, nullOnDelete | |
 | `divergencia` | text nullable | preenchido apenas quando ha divergencia apontada |
@@ -273,10 +274,15 @@ release, sem inventar automacao:
 
 - A tela de indice mostra `PassagemHandshakeBanner` com a pendencia em destaque
   para quem tem `plantao.passagem.aceitar`.
-- Quem assume pode encerrar o turno anterior em nome de quem saiu, registrando
-  em `divergencia` que o encerramento foi feito por terceiro. O turno vai para
-  `FINALIZADO_COM_DIVERGENCIA` — o sistema nao esconde a falha do ritual, ele a
-  registra.
+- Quem assume pode encerrar o turno anterior em nome de quem saiu. Nesse caso
+  `encerrado_por_id` fica diferente de `plantonista_id`, e a interface exibe
+  "encerrado por X em nome de Y". O sistema nao esconde a falha do ritual, ele a
+  registra em coluna propria — nao em `divergencia`, que pertence ao lado do
+  aceite.
+- A guarda "quem encerrou nao pode aceitar" olha o **dono do turno**
+  (`plantonista_id`), nao quem operou o encerramento. Por isso quem assume
+  consegue encerrar o turno alheio e em seguida aceita-lo: as duas partes
+  continuam sendo pessoas distintas, que e o que o aceite formal protege.
 
 Nao havera job de encerramento automatico. Encerrar sozinho um turno que ninguem
 conferiu produziria dado falso com aparencia de dado verdadeiro.
@@ -482,7 +488,8 @@ kernel. Nada de header, secao ou card novo.
 | Um unico turno `ATIVO` por data e periodo | guarda no `PassagemServicoService` |
 | Nao encerrar turno que nao esta `ATIVO` | guarda no servico |
 | Nao aceitar turno que nao esta `PENDENTE_ACEITE` | guarda no servico |
-| Quem aceita nao pode ser quem encerrou | guarda no servico; o aceite formal perde sentido se for a mesma pessoa |
+| Quem aceita nao pode ser o dono do turno (`plantonista_id`) | guarda no servico; o aceite formal perde sentido se for a mesma pessoa |
+| `encerrado_por_id` recebe quem operou o encerramento, ou o proprio plantonista quando nao informado | `PassagemServicoService::encerrar()` |
 | Snapshot exige uma linha por viatura ativa | guarda no `encerrar()` |
 
 Validacao dupla, em request e em servico, porque o servico tambem e chamado por
@@ -502,6 +509,9 @@ TDD: teste antes da implementacao, em cada fase.
 - Aceitar move para `FINALIZADO` e grava `aceito_em` e `aceito_por_id`.
 - Apontar divergencia move para `FINALIZADO_COM_DIVERGENCIA` e grava o texto.
 - Quem encerrou nao consegue aceitar o proprio turno.
+- Encerramento por terceiro grava `encerrado_por_id` diferente de
+  `plantonista_id`, e esse terceiro consegue aceitar em seguida.
+- Encerramento pelo proprio plantonista grava `encerrado_por_id` igual a ele.
 - Abrir turno preenche `plantonista_saida_id` a partir do turno anterior.
 - Abrir turno sem antecessor grava `plantonista_saida_id` nulo e monta o snapshot
   a partir do estado corrente das viaturas.
