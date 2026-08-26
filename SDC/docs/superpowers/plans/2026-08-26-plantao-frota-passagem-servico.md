@@ -4244,6 +4244,7 @@ git commit -m "✨ feat(plantao): rotas de encerramento e aceite da passagem de 
 - Create: `resources/js/Components/Organisms/Plantao/AceitarPassagemModal.vue`
 - Modify: `resources/js/Templates/Plantao/PlantaoIndexTemplate.vue`
 - Modify: `resources/js/Components/Organisms/Plantao/PlantaoStatsCards.vue`
+- Modify: `resources/js/Components/Organisms/Plantao/AbrirPlantaoModal.vue` (labels de periodo hardcoded, ver Step 4b)
 - Modify: `resources/js/Pages/Plantao/PlantaoIndex.vue`
 
 **Interfaces:**
@@ -4398,6 +4399,46 @@ defineEmits(['conferir']);
 - `Apontar divergencia` revela um `FormTextarea` obrigatorio; o submit envia
   `acao: 'divergencia'` mais o texto. `Aceitar` envia `acao: 'aceitar'`.
 - Exibe `form.errors.plantao` e `form.errors.divergencia`.
+
+- [ ] **Step 4b: Corrigir os labels de periodo hardcoded no `AbrirPlantaoModal`**
+
+Lacuna encontrada durante a execucao da Task 1, roteada para ca porque nenhuma
+task do plano original era dona deste arquivo.
+
+`resources/js/Components/Organisms/Plantao/AbrirPlantaoModal.vue:129-130` tem os
+labels ANTIGOS embutidos no codigo:
+
+```js
+      { value: 'DIURNO', label: '07:00hs as 19:00hs' },
+      { value: 'NOTURNO', label: '19:00hs as 07:00hs' },
+```
+
+A Task 1 corrigiu o enum para 06-16 e 16-02, entao este modal passou a oferecer
+horario que nao existe mais em nenhum outro lugar do sistema.
+
+**Nao corrija trocando as strings.** A causa e o hardcode, nao o valor: o backend
+ja envia `filterOptions.periodos` a partir de `PeriodoPlantao::toSelectArray()`,
+que e a fonte de verdade. O modal deve consumir essa prop.
+
+1. Verifique se `AbrirPlantaoModal.vue` ja recebe `filterOptions` como prop. Se
+   nao, adicione a prop e repasse-a de `PlantaoIndexTemplate.vue`, que ja a tem.
+2. Troque o array literal pelo consumo da prop, mantendo um fallback vazio:
+
+```js
+const periodos = computed(() => props.filterOptions?.periodos ?? []);
+```
+
+3. O `<FormSelect>` (ou `SelectInput`) passa a receber `periodos`. O formato de
+   `toSelectArray()` ja e `{value, label}`, entao **nao remapeie** — a armadilha
+   do `SelectInput` (que le `value`/`id` e `label`/`name`/`text`) nao se aplica
+   aqui.
+4. Confirme que nao sobrou nenhum horario embutido em `.vue`:
+
+```bash
+grep -rn "07:00hs\|19:00hs\|06:00hs\|16:00hs" resources/js/
+```
+
+Esperado: nenhuma saida.
 
 - [ ] **Step 5: Ajustar o `PlantaoStatsCards`**
 
