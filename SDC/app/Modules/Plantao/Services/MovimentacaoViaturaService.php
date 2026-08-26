@@ -47,7 +47,13 @@ class MovimentacaoViaturaService extends BaseService
                 );
             }
 
-            $condutor = User::findOrFail((int) $dados['condutor_id']);
+            $condutor = User::find((int) $dados['condutor_id']);
+
+            if ($condutor === null) {
+                throw new MovimentacaoInvalidaException(
+                    "Condutor {$dados['condutor_id']} nao foi encontrado."
+                );
+            }
 
             $movimentacao = ViaturaMovimentacao::create([
                 'viatura_id' => $viatura->id,
