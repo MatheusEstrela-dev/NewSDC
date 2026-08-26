@@ -68,7 +68,7 @@ watch(
         modelo: props.viatura.modelo ?? '',
         localizacao: props.viatura.localizacao_valor ?? '',
         status: props.viatura.status_valor ?? 'DISPONIVEL',
-        nivel_combustivel: props.viatura.nivel_combustivel_valor ?? '',
+        nivel_combustivel: props.viatura.combustivel_valor ?? '',
         hodometro_atual: props.viatura.hodometro ?? '',
         exclusiva_sobreaviso: props.viatura.exclusiva_sobreaviso ?? false,
         observacoes: props.viatura.observacoes ?? '',
