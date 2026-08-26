@@ -3,10 +3,15 @@
 use App\Modules\Plantao\Controllers\NoticiasIndexController;
 use App\Modules\Plantao\Controllers\PlantaoExportController;
 use App\Modules\Plantao\Controllers\PlantaoIndexController;
+use App\Modules\Plantao\Controllers\ViaturaDestroyController;
+use App\Modules\Plantao\Controllers\ViaturaIndexController;
+use App\Modules\Plantao\Controllers\ViaturaStoreController;
+use App\Modules\Plantao\Controllers\ViaturaUpdateController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('plantao')->name('plantao.')->group(function () {
 
+    // Rotas estaticas primeiro: /viaturas nao pode ser capturada como {plantao}.
     Route::get('/export', PlantaoExportController::class)
         ->name('export')
         ->middleware('can:plantao.turnos.export');
@@ -14,6 +19,24 @@ Route::prefix('plantao')->name('plantao.')->group(function () {
     Route::get('/noticias', NoticiasIndexController::class)
         ->name('noticias')
         ->middleware('can:plantao.turnos.view');
+
+    Route::prefix('viaturas')->name('viaturas.')->group(function () {
+        Route::get('/', ViaturaIndexController::class)
+            ->name('index')
+            ->middleware('can:plantao.viaturas.view');
+
+        Route::post('/', ViaturaStoreController::class)
+            ->name('store')
+            ->middleware('can:plantao.viaturas.create');
+
+        Route::put('/{viatura}', ViaturaUpdateController::class)
+            ->name('update')
+            ->middleware('can:plantao.viaturas.edit');
+
+        Route::delete('/{viatura}', ViaturaDestroyController::class)
+            ->name('destroy')
+            ->middleware('can:plantao.viaturas.delete');
+    });
 
     Route::get('/', PlantaoIndexController::class)
         ->name('index')
