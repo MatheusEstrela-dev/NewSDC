@@ -58,16 +58,20 @@ const props = defineProps({
  * literais, e `lg:grid-cols-${n}` nao seria detectado nem gerado no CSS final.
  */
 const COLUNAS_DESKTOP = {
-  2: 'lg:grid-cols-2',
-  3: 'lg:grid-cols-3',
-  4: 'lg:grid-cols-4',
+  2: 'md:grid-cols-2 lg:grid-cols-2',
+  3: 'md:grid-cols-2 lg:grid-cols-3',
+  4: 'md:grid-cols-2 lg:grid-cols-4',
   // 4 em lg, 5 so em xl: preserva o limite de 4 onde ele foi criado (notebook)
   // e devolve a fileira unica onde ha largura para ela.
-  5: 'lg:grid-cols-4 xl:grid-cols-5',
+  // 3 colunas em md: com 5 cards, 2 colunas deixavam a fileira em 2+2+1 e o
+  // quinto card orfao numa linha inteira em 768-1023px. Em 3 colunas fica 3+2.
+  // Cabe: o card ja e legivel a 162px (2 colunas em 375px), e 3 colunas em
+  // 768px dao ~240px por card.
+  5: 'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
 };
 
 const classes = computed(() => [
-  'grid grid-cols-2 md:grid-cols-2 gap-3 sm:gap-4',
+  'grid grid-cols-2 gap-3 sm:gap-4',
   COLUNAS_DESKTOP[props.colunas],
   props.espacoInferior ? 'mb-6' : '',
 ]);

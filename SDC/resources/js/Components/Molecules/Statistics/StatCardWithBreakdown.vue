@@ -19,7 +19,7 @@
             {{ title }}
           </Text>
 
-          <span v-if="nota" class="group/nota relative inline-flex shrink-0">
+          <span v-if="nota" class="group/nota static lg:relative inline-flex shrink-0">
             <button
               type="button"
               class="flex rounded-full text-cyan-600 transition-colors hover:text-cyan-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 dark:text-cyan-400 dark:hover:text-cyan-300"
@@ -32,12 +32,26 @@
                  O lado e explicito por card: nao existe valor unico que sirva
                  aos dois extremos da grade. Crescendo sempre para a direita, o
                  ultimo card estoura a viewport; sempre para a esquerda, o
-                 primeiro fica sob a sidebar. -->
+                 primeiro fica sob a sidebar.
+
+                 Esse lado vale de `lg` para cima -- o MESMO breakpoint em que o
+                 StatCardsGrid sai de 2 colunas. Abaixo disso ele nao serve:
+                 `notaAlign` e escolhido para a fileira de 5 colunas do desktop, e
+                 a grade reflui para 2 colunas -- o card que era o ultimo da
+                 direita passa a ser o da esquerda, e o `right-0` jogava o bubble
+                 para fora da tela (medido em 599px: caixa em -125..131, 125px
+                 comidos pelo `overflow-x:clip` do <main>; e 376..632 no card da
+                 coluna direita, 33px para fora). Em tela pequena, entao, o
+                 tooltip para de se ancorar no icone (alvo de 20px para um bubble
+                 de 256px) e passa a ocupar a largura do card -- o bloco de
+                 referencia vira o proprio card, que ja e `relative`. Ancorar na
+                 linha do titulo nao bastava: com 3 colunas em 768px a coluna de
+                 texto tem ~136px, e o texto da nota pintava para fora da bolha. -->
             <span
               role="tooltip"
               :class="[
-                'pointer-events-none absolute top-full z-30 mt-1 w-64 rounded-md border border-cyan-200 bg-cyan-50 px-3 py-2 text-left text-sm leading-relaxed text-cyan-900 opacity-0 shadow-lg transition-opacity duration-150 group-hover/nota:opacity-100 group-focus-within/nota:opacity-100 dark:border-cyan-500/30 dark:bg-slate-800 dark:text-cyan-100',
-                notaAlign === 'right' ? 'right-0' : 'left-0',
+                'pointer-events-none absolute top-full z-30 mt-1 left-0 right-0 w-auto lg:w-64 rounded-md border border-cyan-200 bg-cyan-50 px-3 py-2 text-left text-sm leading-relaxed text-cyan-900 opacity-0 shadow-lg transition-opacity duration-150 group-hover/nota:opacity-100 group-focus-within/nota:opacity-100 dark:border-cyan-500/30 dark:bg-slate-800 dark:text-cyan-100',
+                notaAlign === 'right' ? 'lg:left-auto lg:right-0' : 'lg:right-auto lg:left-0',
               ]"
             >
               {{ nota }}
@@ -389,7 +403,7 @@ const cardClasses = computed(() => {
   // a largura em pixels CSS sem reduzir o texto na mesma proporcao. Com min-w-0
   // o card encolhe e a legenda quebra linha, em vez de vazar.
   const base =
-    'relative min-w-0 hover:z-50 focus-within:z-50 rounded-lg sm:rounded-xl border backdrop-blur-sm px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] touch-manipulation bg-white dark:bg-slate-900/60 hover:bg-slate-50 dark:hover:bg-slate-900/80';
+    'relative min-w-0 hover:z-50 focus-within:z-50 rounded-lg sm:rounded-xl border backdrop-blur-sm px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-4 lg:px-6 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] touch-manipulation bg-white dark:bg-slate-900/60 hover:bg-slate-50 dark:hover:bg-slate-900/80';
   const cursor = props.clickable ? 'cursor-pointer' : '';
   return [base, variantBorderClasses[props.variant], cursor].filter(Boolean).join(' ');
 });
