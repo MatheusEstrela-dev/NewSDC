@@ -19,7 +19,18 @@ class ViaturaService extends BaseService
             ->orderBy('placa');
 
         if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+            // Cards agregados (ex.: "Indisponiveis" = MANUTENCAO+CEDIDA+INDISPONIVEL)
+            // mandam uma lista separada por virgula; sem virgula, comportamento
+            // de igualdade simples permanece inalterado.
+            $statusFiltro = str_contains($filters['status'], ',')
+                ? array_values(array_filter(array_map('trim', explode(',', $filters['status']))))
+                : $filters['status'];
+
+            if (is_array($statusFiltro)) {
+                $query->whereIn('status', $statusFiltro);
+            } else {
+                $query->where('status', $statusFiltro);
+            }
         }
 
         if (!empty($filters['localizacao'])) {

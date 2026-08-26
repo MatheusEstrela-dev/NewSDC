@@ -171,7 +171,7 @@ const limparFiltros = () => {
         :value="statistics.indisponiveis"
         variant="warning"
         clickable
-        @click="handleStatFilter('MANUTENCAO')"
+        @click="handleStatFilter('MANUTENCAO,CEDIDA,INDISPONIVEL')"
       />
     </StatCardsGrid>
 
