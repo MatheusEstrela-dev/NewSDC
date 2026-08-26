@@ -33,7 +33,7 @@
 
     <FormField
       label="COBRADE"
-      :model-value="modelValue.nat_codigo"
+      :model-value="cobradeSelecionado?.label ?? modelValue.nat_codigo"
       placeholder="Preenchido pelo Evento"
       readonly
       :hint="cobradeSelecionado?.descricao"
@@ -87,22 +87,25 @@ const grupo = computed(() => grupoEscolhido.value ?? cobradeSelecionado.value?.g
 
 // A lista ja vem ordenada por codigo, entao os grupos saem na ordem oficial
 // (Geologico, Hidrologico, ...) e nao em ordem alfabetica.
+//
+// O rotulo leva o prefixo do codigo (1.3 - Meteorologico): quem opera o sistema
+// reconhece o grupo pelo numero antes de ler o nome.
 const opcoesGrupo = computed(() => {
   const grupos = [];
 
   props.cobrades.forEach((c) => {
-    if (c.grupo && !grupos.includes(c.grupo)) {
-      grupos.push(c.grupo);
+    if (c.grupo && !grupos.some((g) => g.value === c.grupo)) {
+      grupos.push({ value: c.grupo, label: `${c.codigo.slice(0, 3)} - ${c.grupo}` });
     }
   });
 
-  return grupos.map((g) => ({ value: g, label: g }));
+  return grupos;
 });
 
 const opcoesEvento = computed(() =>
   props.cobrades
     .filter((c) => c.grupo === grupo.value)
-    .map((c) => ({ value: c.codigo, label: c.nome }))
+    .map((c) => ({ value: c.codigo, label: c.label }))
 );
 
 function selecionarGrupo(novoGrupo) {
