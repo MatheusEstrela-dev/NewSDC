@@ -123,13 +123,12 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Fonte de verdade: filterOptions.periodos do PlantaoIndexController, a
+  // partir de PeriodoPlantao::toSelectArray(). Sem prop, o select fica vazio
+  // em vez de oferecer um horario que nao existe mais em lugar nenhum.
   periodos: {
     type: Array,
-    default: () => [
-      { value: 'DIURNO', label: '07:00hs as 19:00hs' },
-      { value: 'NOTURNO', label: '19:00hs as 07:00hs' },
-      { value: 'EXTRAORDINARIO', label: 'Extraordinário' },
-    ],
+    default: () => [],
   },
 });
 

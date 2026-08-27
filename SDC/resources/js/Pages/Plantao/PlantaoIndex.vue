@@ -25,6 +25,28 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  // Listas: pode haver mais de um turno ATIVO (periodos diferentes) e mais de
+  // um PENDENTE_ACEITE, porque abrir turno nao bloqueia o pendente (spec 4.2).
+  turnosAtivos: {
+    type: Array,
+    default: () => [],
+  },
+  turnosPendentes: {
+    type: Array,
+    default: () => [],
+  },
+  canEncerrar: {
+    type: Boolean,
+    default: false,
+  },
+  canAceitar: {
+    type: Boolean,
+    default: false,
+  },
+  canRelatorio: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const handleView = (id) => {
@@ -36,15 +58,26 @@ const handleEdit = (id) => {
 };
 
 const handleFilter = (filters) => {
+  // Reload parcial: turnosAtivos/turnosPendentes fazem query propria e nao
+  // dependem do filtro da listagem. Sem o `only`, toda troca de filtro
+  // recalcularia os dois a cada visita completa do Inertia.
   router.visit(route('plantao.index'), {
     data: filters,
+    only: ['plantoes', 'filters'],
     preserveState: true,
     replace: true,
   });
 };
 
-const handleAbrirPlantao = (data) => {
-  // TODO: Implementar POST para criar plantão
+const handleAbrirPlantao = (dados) => {
+  // O plantonista responsavel e o usuario autenticado, resolvido no
+  // PassagemAbrirController: nao viaja no payload.
+  router.post(route('plantao.passagem.abrir'), {
+    data: dados.data,
+    periodo: dados.periodo,
+  }, {
+    preserveScroll: true,
+  });
 };
 </script>
 
@@ -59,6 +92,11 @@ const handleAbrirPlantao = (data) => {
     :can-edit="can('plantao.turnos.edit')"
     :can-delete="can('plantao.turnos.delete')"
     :can-export="can('plantao.turnos.export')"
+    :turnos-ativos="turnosAtivos"
+    :turnos-pendentes="turnosPendentes"
+    :can-encerrar="canEncerrar"
+    :can-aceitar="canAceitar"
+    :can-relatorio="canRelatorio"
     @view="handleView"
     @edit="handleEdit"
     @filter="handleFilter"

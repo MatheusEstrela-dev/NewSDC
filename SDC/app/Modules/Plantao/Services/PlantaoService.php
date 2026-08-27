@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Plantao\Services;
 
+use App\Modules\Plantao\Enums\StatusPlantao;
 use App\Modules\Plantao\Models\Plantao;
 use App\Modules\Shared\BaseService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -62,16 +63,23 @@ class PlantaoService extends BaseService
 
     public function getStatistics(array $filters = []): array
     {
-        $query = Plantao::query();
+        $porStatus = Plantao::query()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status')
+            ->all();
 
         return [
-            'total' => (clone $query)->count(),
-            'ativos' => (clone $query)->where('status', 'ATIVO')->count(),
-            'finalizados_hoje' => (clone $query)
-                ->where('status', 'FINALIZADO')
+            'total' => array_sum($porStatus),
+            'ativos' => (int) ($porStatus[StatusPlantao::ATIVO->value] ?? 0),
+            'pendentes_aceite' => (int) ($porStatus[StatusPlantao::PENDENTE_ACEITE->value] ?? 0),
+            'finalizados_hoje' => Plantao::query()
+                ->whereIn('status', [
+                    StatusPlantao::FINALIZADO->value,
+                    StatusPlantao::FINALIZADO_COM_DIVERGENCIA->value,
+                ])
                 ->whereDate('data', now()->toDateString())
                 ->count(),
-            'equipe_online' => (clone $query)->where('status', 'ATIVO')->count(),
         ];
     }
 }

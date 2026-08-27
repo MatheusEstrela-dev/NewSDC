@@ -15,8 +15,8 @@ const props = defineProps({
 });
 
 // Cards clicaveis sao atalhos de filtro rapido (emitem o status StatusPlantao).
-// "Total Turnos" limpa o filtro. "Finalizados Hoje" (metrica com recorte de data) e
-// "Equipe Online" (metrica pura) nao mapeiam para um filtro de listagem: ficam como metrica.
+// "Total Turnos" limpa o filtro. "Finalizados Hoje" (metrica com recorte de data)
+// nao mapeia para um filtro de listagem: fica como metrica pura.
 const emit = defineEmits(['filter']);
 
 const stats = computed(() => [
@@ -45,12 +45,12 @@ const stats = computed(() => [
     filter: null,
   },
   {
-    id: 'equipe_online',
-    title: 'Equipe Online',
-    value: props.statistics.equipe_online || 0,
-    variant: 'info',
+    id: 'pendentes_aceite',
+    title: 'Pendentes de aceite',
+    value: props.statistics.pendentes_aceite || 0,
+    variant: 'warning',
     icon: UsersIcon,
-    filter: null,
+    filter: 'PENDENTE_ACEITE',
   },
 ]);
 </script>
