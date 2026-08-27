@@ -422,10 +422,17 @@ class UserManagementController extends Controller
         $availableRoles = Role::withCount('permissions')->orderBy('hierarchy_level')->get();
         $availablePermissions = Permission::orderBy('name')->get();
 
+        // Ordem que torna 893 opcoes navegaveis: primeiro a estadual, depois as 19
+        // regionais na SEQUENCIA delas, e por fim os municipios em ordem alfabetica.
+        // Com `orderBy('nome')` puro as regionais saiam alfabeticamente -- "Barbacena
+        // (13a RPM)" antes de "Belo Horizonte (1a RPM)" --, o que nao e a ordem em que
+        // ninguem pensa numa REDEC. Para elas o criterio e o `codigo`
+        // (REDEC-MG-01..19), que ja carrega o numero.
         $availableOrgaos = Orgao::query()
             ->with('municipio:id,nome')
-            ->orderBy('nome')
-            ->get(['id', 'nome', 'tipo', 'municipio_id']);
+            ->orderByRaw("case tipo when 'cedec' then 0 when 'redec' then 1 else 2 end")
+            ->orderByRaw("case when tipo = 'compdec' then nome else codigo end")
+            ->get(['id', 'nome', 'tipo', 'codigo', 'municipio_id']);
 
         return Inertia::render('Admin/Permissions/Users/Edit', [
             'user' => $user,

@@ -74,6 +74,11 @@ class DatabaseSeeder extends Seeder
             $this->command->warn('Tabela "dec_redecs" não encontrada - RedecSeeder pulado.');
         }
 
+        // 6c. As mesmas 19 REDECs publicadas em compdec_orgaos, que e a tabela que
+        //     alimenta o seletor de orgao do Permissionamento e o escopo
+        //     territorial dos modulos. Depende do 6b: deriva de dec_redecs.
+        $this->call(RedecOrgaoSeeder::class);
+
         // 7. Orgaos de teste (hierarquia completa para testes)
         $this->call(TestOrgaosSeeder::class);
 
