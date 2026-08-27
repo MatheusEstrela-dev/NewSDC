@@ -15,7 +15,7 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  // turnoAtivo do PlantaoIndexController: { id, data, periodo,
+  // Um item de turnosAtivos do PlantaoIndexController: { id, data, periodo,
   // plantonista_nome, plantonista_saida_nome, snapshot_sugerido }.
   turno: {
     type: Object,

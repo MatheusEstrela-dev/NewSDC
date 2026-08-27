@@ -14,7 +14,7 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  // turnoPendente do PlantaoIndexController: { id, data, periodo,
+  // Um item de turnosPendentes do PlantaoIndexController: { id, data, periodo,
   // plantonista_nome, encerrado_em, encerrado_por_terceiro,
   // encerrado_por_nome, snapshots (SnapshotDTO) }.
   turno: {

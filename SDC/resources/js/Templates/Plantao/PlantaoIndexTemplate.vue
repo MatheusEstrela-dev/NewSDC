@@ -21,8 +21,8 @@ import RelatorioPassagemPanel from '@/Components/Organisms/Plantao/RelatorioPass
 import { useExport } from '@/Composables/useExport';
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon, NewspaperIcon } from '@heroicons/vue/24/outline';
-import { router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   plantoes: {
@@ -61,13 +61,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  turnoAtivo: {
-    type: Object,
-    default: null,
+  // Um item por turno ATIVO. Cada um ganha o proprio botao de encerrar: com
+  // apenas o mais recente, um turno anterior ficava sem saida (spec 4.3).
+  turnosAtivos: {
+    type: Array,
+    default: () => [],
   },
-  turnoPendente: {
-    type: Object,
-    default: null,
+  // Um item por turno PENDENTE_ACEITE, cada um com o proprio banner de aceite.
+  turnosPendentes: {
+    type: Array,
+    default: () => [],
   },
   canEncerrar: {
     type: Boolean,
@@ -90,7 +93,41 @@ const viewMode = ref('table');
 const showAbrirModal = ref(false);
 const showEncerrarModal = ref(false);
 const showAceitarModal = ref(false);
+// Qual turno da lista esta sendo encerrado/conferido. Os modais leem `turno`,
+// entao a selecao e explicita em vez de implicita no "mais recente".
+const turnoParaEncerrar = ref(null);
+const turnoParaAceitar = ref(null);
 const { isMobile } = useMobile();
+
+const page = usePage();
+
+// Erro de dominio da abertura de turno (PassagemInvalidaException traduzida
+// pelo PassagemAbrirController). Chave propria: o redirect de volta recria o
+// componente e fecha o modal, entao a mensagem precisa de casa na pagina.
+const erroAbertura = computed(() => page.props.errors?.abertura || '');
+
+// O painel do relatorio segue o turno mais relevante: a pendencia mais recente
+// e, sem nenhuma, o turno ativo mais recente. Um painel por turno exigiria
+// section-id proprio no CollapsibleSection (compartilhado, fora de escopo).
+const plantaoDoRelatorio = computed(
+  () => props.turnosPendentes[0]?.id ?? props.turnosAtivos[0]?.id ?? null,
+);
+
+const rotuloEncerrar = (turno) => (
+  props.turnosAtivos.length > 1
+    ? `Encerrar ${turno.data} (${turno.periodo})`
+    : 'Encerrar turno'
+);
+
+const abrirEncerrarModal = (turno) => {
+  turnoParaEncerrar.value = turno;
+  showEncerrarModal.value = true;
+};
+
+const abrirAceitarModal = (turno) => {
+  turnoParaAceitar.value = turno;
+  showAceitarModal.value = true;
+};
 
 const handleFrota = () => {
   router.visit(route('plantao.viaturas.index'));
@@ -155,14 +192,15 @@ const handleBuscarNoticias = () => {
           </Button>
 
           <Button
-            v-if="canEncerrar && turnoAtivo"
+            v-for="turno in (canEncerrar ? turnosAtivos : [])"
+            :key="turno.id"
             variant="danger"
             size="md"
             :icon="ClipboardDocumentListIcon"
             icon-position="left"
-            @click="showEncerrarModal = true"
+            @click="abrirEncerrarModal(turno)"
           >
-            Encerrar turno
+            {{ rotuloEncerrar(turno) }}
           </Button>
 
           <Button
@@ -192,13 +230,22 @@ const handleBuscarNoticias = () => {
       </template>
     </PageHeader>
 
-    <!-- Banner de passagem pendente de aceite -->
+    <!-- Erro de abertura de turno -->
+    <div
+      v-if="erroAbertura"
+      class="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"
+    >
+      {{ erroAbertura }}
+    </div>
+
+    <!-- Um banner por passagem pendente de aceite: nenhuma fica sem caminho -->
     <PassagemHandshakeBanner
-      v-if="turnoPendente"
-      :turno="turnoPendente"
+      v-for="turno in turnosPendentes"
+      :key="turno.id"
+      :turno="turno"
       :pode-aceitar="canAceitar"
       class="mb-6"
-      @conferir="showAceitarModal = true"
+      @conferir="abrirAceitarModal(turno)"
     />
 
     <!-- Smart Cards -->
@@ -210,8 +257,9 @@ const handleBuscarNoticias = () => {
 
     <!-- Relatorio de passagem de servico: texto pronto para colar no WhatsApp -->
     <RelatorioPassagemPanel
-      v-if="canRelatorio && (turnoPendente?.id || turnoAtivo?.id)"
-      :plantao-id="turnoPendente?.id ?? turnoAtivo.id"
+      v-if="canRelatorio && plantaoDoRelatorio"
+      :key="plantaoDoRelatorio"
+      :plantao-id="plantaoDoRelatorio"
       class="mb-6"
     />
 
@@ -271,7 +319,7 @@ const handleBuscarNoticias = () => {
     <!-- Modal: Encerrar turno (quem sai declara o estado das viaturas) -->
     <EncerrarTurnoModal
       :show="showEncerrarModal"
-      :turno="turnoAtivo"
+      :turno="turnoParaEncerrar"
       :filter-options="filterOptions"
       @close="showEncerrarModal = false"
       @saved="showEncerrarModal = false"
@@ -280,7 +328,7 @@ const handleBuscarNoticias = () => {
     <!-- Modal: Aceitar passagem (quem assume confere e aceita ou aponta divergencia) -->
     <AceitarPassagemModal
       :show="showAceitarModal"
-      :turno="turnoPendente"
+      :turno="turnoParaAceitar"
       @close="showAceitarModal = false"
       @saved="showAceitarModal = false"
     />

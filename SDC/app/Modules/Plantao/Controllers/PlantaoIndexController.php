@@ -55,61 +55,70 @@ class PlantaoIndexController extends Controller
                 // de combustivel por viatura na conferencia de encerramento.
                 'niveis' => NivelCombustivel::toSelectArray(),
             ],
-            'turnoAtivo' => $this->turnoAtivo(),
-            'turnoPendente' => $this->turnoPendente(),
+            // Listas, nao "o mais recente": a abertura de turno e
+            // deliberadamente nao-bloqueante (spec 4.2), entao pode existir mais
+            // de um ATIVO (periodos diferentes) e mais de um PENDENTE_ACEITE.
+            // Com ->first(), o turno mais antigo ficava sem botao de encerrar ou
+            // aceitar em lugar nenhum - o travamento que a secao 4.3 quis evitar.
+            'turnosAtivos' => $this->turnosAtivos(),
+            'turnosPendentes' => $this->turnosPendentes(),
             'canEncerrar' => (bool) $request->user()?->can('plantao.passagem.encerrar'),
             'canAceitar' => (bool) $request->user()?->can('plantao.passagem.aceitar'),
             'canRelatorio' => (bool) $request->user()?->can('plantao.passagem.relatorio'),
         ]);
     }
 
-    private function turnoAtivo(): ?array
+    /**
+     * Todos os turnos ATIVO, do mais recente para o mais antigo. A tela
+     * renderiza um botao de encerrar por turno: nenhum fica sem saida.
+     *
+     * @return list<array<string,mixed>>
+     */
+    private function turnosAtivos(): array
     {
-        $turno = Plantao::query()
+        return Plantao::query()
             ->where('status', StatusPlantao::ATIVO->value)
             ->orderByDesc('data')
             ->orderByDesc('id')
-            ->first();
-
-        if ($turno === null) {
-            return null;
-        }
-
-        return [
-            'id' => $turno->id,
-            'data' => $turno->data?->format('d/m/Y'),
-            'periodo' => $turno->periodo?->labelCurto(),
-            'plantonista_nome' => $turno->plantonista_nome,
-            'plantonista_saida_nome' => $turno->plantonista_saida_nome,
-            'snapshot_sugerido' => $this->passagemService->montarSnapshotSugerido($turno),
-        ];
+            ->get()
+            ->map(fn (Plantao $turno) => [
+                'id' => $turno->id,
+                'data' => $turno->data?->format('d/m/Y'),
+                'periodo' => $turno->periodo?->labelCurto(),
+                'plantonista_nome' => $turno->plantonista_nome,
+                'plantonista_saida_nome' => $turno->plantonista_saida_nome,
+                'snapshot_sugerido' => $this->passagemService->montarSnapshotSugerido($turno),
+            ])
+            ->all();
     }
 
-    private function turnoPendente(): ?array
+    /**
+     * Todos os turnos PENDENTE_ACEITE. A tela renderiza um banner por
+     * pendencia: nenhuma fica sem caminho de aceite.
+     *
+     * @return list<array<string,mixed>>
+     */
+    private function turnosPendentes(): array
     {
-        $turno = Plantao::query()
+        return Plantao::query()
             ->where('status', StatusPlantao::PENDENTE_ACEITE->value)
             ->orderByDesc('data')
             ->orderByDesc('id')
-            ->with(['snapshots', 'encerradoPor:id,name'])
-            ->first();
-
-        if ($turno === null) {
-            return null;
-        }
-
-        return [
-            'id' => $turno->id,
-            'data' => $turno->data?->format('d/m/Y'),
-            'periodo' => $turno->periodo?->labelCurto(),
-            'plantonista_nome' => $turno->plantonista_nome,
-            'encerrado_em' => $turno->encerrado_em?->format('d/m/Y H:i'),
-            // Quando difere do dono do turno, o encerramento foi por terceiro
-            // e a interface precisa deixar isso visivel (spec 4.3).
-            'encerrado_por_terceiro' => $turno->encerrado_por_id !== null
-                && (int) $turno->encerrado_por_id !== (int) $turno->plantonista_id,
-            'encerrado_por_nome' => $turno->encerradoPor?->name,
-            'snapshots' => SnapshotDTO::collection($turno->snapshots),
-        ];
+            ->with(['snapshots.viatura:id,exclusiva_sobreaviso', 'encerradoPor:id,name'])
+            ->get()
+            ->map(fn (Plantao $turno) => [
+                'id' => $turno->id,
+                'data' => $turno->data?->format('d/m/Y'),
+                'periodo' => $turno->periodo?->labelCurto(),
+                'plantonista_nome' => $turno->plantonista_nome,
+                'encerrado_em' => $turno->encerrado_em?->format('d/m/Y H:i'),
+                // Quando difere do dono do turno, o encerramento foi por terceiro
+                // e a interface precisa deixar isso visivel (spec 4.3).
+                'encerrado_por_terceiro' => $turno->encerrado_por_id !== null
+                    && (int) $turno->encerrado_por_id !== (int) $turno->plantonista_id,
+                'encerrado_por_nome' => $turno->encerradoPor?->name,
+                'snapshots' => SnapshotDTO::collection($turno->snapshots),
+            ])
+            ->all();
     }
 }

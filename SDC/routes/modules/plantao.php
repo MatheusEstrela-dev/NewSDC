@@ -3,6 +3,7 @@
 use App\Modules\Plantao\Controllers\MovimentacaoRetornoController;
 use App\Modules\Plantao\Controllers\MovimentacaoSaidaController;
 use App\Modules\Plantao\Controllers\NoticiasIndexController;
+use App\Modules\Plantao\Controllers\PassagemAbrirController;
 use App\Modules\Plantao\Controllers\PassagemAceitarController;
 use App\Modules\Plantao\Controllers\PassagemEncerrarController;
 use App\Modules\Plantao\Controllers\PlantaoExportController;
@@ -24,6 +25,13 @@ Route::prefix('plantao')->name('plantao.')->group(function () {
     Route::get('/noticias', NoticiasIndexController::class)
         ->name('noticias')
         ->middleware('can:plantao.turnos.view');
+
+    // Abertura de turno: entrada da maquina de estados da passagem (spec 4).
+    // Estatica, entao vem antes das parametrizadas /{plantao}/... - senao
+    // "abrir" seria casado como {plantao}.
+    Route::post('/abrir', PassagemAbrirController::class)
+        ->name('passagem.abrir')
+        ->middleware('can:plantao.turnos.create');
 
     Route::prefix('viaturas')->name('viaturas.')->group(function () {
         Route::get('/', ViaturaIndexController::class)
