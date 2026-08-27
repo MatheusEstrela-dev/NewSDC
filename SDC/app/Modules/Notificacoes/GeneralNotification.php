@@ -6,6 +6,7 @@ namespace App\Modules\Notificacoes;
 
 use App\Models\UserNotificationPreference;
 use App\Modules\Notificacoes\Channels\AgrupavelDatabaseChannel;
+use App\Modules\Notificacoes\Channels\EmailNotificacaoChannel;
 use App\Modules\Notificacoes\Contracts\Agrupavel;
 use App\Modules\Notificacoes\DTO\NotificacaoSpec;
 use App\Modules\Notificacoes\Support\TextoSeguro;
@@ -110,13 +111,41 @@ class GeneralNotification extends Notification implements Agrupavel, ShouldQueue
             $canais[] = 'broadcast';
         }
 
+        if ($pref->canal_email) {
+            $canais[] = EmailNotificacaoChannel::class;
+        }
+
         if ($pref->canal_telegram) {
             $canais[] = TelegramChannel::class;
         }
 
-        // canal_email e canal_whatsapp entram quando os respectivos channels existirem.
+        // canal_whatsapp entra quando o respectivo channel existir.
 
         return $canais;
+    }
+
+    /**
+     * Payload para o EmailNotificacaoChannel.
+     *
+     * Manda modulo e group_key junto porque o channel precisa deles para a dedup
+     * por janela -- e o mesmo criterio que agrupa os cards no sino.
+     *
+     * @return array<string, mixed>
+     */
+    public function toMailNotificacao(object $notifiable): array
+    {
+        $modulo = $this->modulo();
+
+        return [
+            'titulo' => TextoSeguro::titulo($this->title),
+            'mensagem' => TextoSeguro::mensagem($this->message),
+            'tipo' => $this->type,
+            'acao_url' => TextoSeguro::url($this->actionUrl),
+            'acao_texto' => $this->actionText === null ? null : TextoSeguro::titulo($this->actionText),
+            'modulo' => $modulo,
+            'modulo_label' => (string) config("notificacoes.modulos.{$modulo}.label", 'SDC'),
+            'group_key' => $this->groupKey,
+        ];
     }
 
     /**
