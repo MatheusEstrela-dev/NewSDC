@@ -7,6 +7,7 @@ namespace App\Modules\Plantao\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Plantao\DTOs\PlantaoListDTO;
 use App\Modules\Plantao\DTOs\SnapshotDTO;
+use App\Modules\Plantao\Enums\NivelCombustivel;
 use App\Modules\Plantao\Enums\PeriodoPlantao;
 use App\Modules\Plantao\Enums\StatusPlantao;
 use App\Modules\Plantao\Models\Plantao;
@@ -50,6 +51,9 @@ class PlantaoIndexController extends Controller
             'filterOptions' => [
                 'status' => StatusPlantao::toSelectArray(),
                 'periodos' => PeriodoPlantao::toSelectArray(),
+                // Consumido pelo EncerrarTurnoModal (Task 10): select de nivel
+                // de combustivel por viatura na conferencia de encerramento.
+                'niveis' => NivelCombustivel::toSelectArray(),
             ],
             'turnoAtivo' => $this->turnoAtivo(),
             'turnoPendente' => $this->turnoPendente(),

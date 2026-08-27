@@ -25,6 +25,26 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  turnoAtivo: {
+    type: Object,
+    default: null,
+  },
+  turnoPendente: {
+    type: Object,
+    default: null,
+  },
+  canEncerrar: {
+    type: Boolean,
+    default: false,
+  },
+  canAceitar: {
+    type: Boolean,
+    default: false,
+  },
+  canRelatorio: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const handleView = (id) => {
@@ -63,6 +83,11 @@ const handleAbrirPlantao = (data) => {
     :can-edit="can('plantao.turnos.edit')"
     :can-delete="can('plantao.turnos.delete')"
     :can-export="can('plantao.turnos.export')"
+    :turno-ativo="turnoAtivo"
+    :turno-pendente="turnoPendente"
+    :can-encerrar="canEncerrar"
+    :can-aceitar="canAceitar"
+    :can-relatorio="canRelatorio"
     @view="handleView"
     @edit="handleEdit"
     @filter="handleFilter"

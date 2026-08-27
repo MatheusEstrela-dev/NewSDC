@@ -1,13 +1,18 @@
 <script setup>
 import Button from '@/Components/Atoms/Button/Button.vue';
+import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
+import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
+import PassagemHandshakeBanner from '@/Components/Molecules/Plantao/PassagemHandshakeBanner.vue';
 import ViewModeToggle from '@/Components/Molecules/ViewModeToggle.vue';
+import AceitarPassagemModal from '@/Components/Organisms/Plantao/AceitarPassagemModal.vue';
 import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import AbrirPlantaoModal from '@/Components/Organisms/Plantao/AbrirPlantaoModal.vue';
+import EncerrarTurnoModal from '@/Components/Organisms/Plantao/EncerrarTurnoModal.vue';
 import PlantaoFiltersSection from '@/Components/Organisms/Plantao/PlantaoFiltersSection.vue';
 import PlantaoGrid from '@/Components/Organisms/Plantao/PlantaoGrid.vue';
 import PlantaoStatsCards from '@/Components/Organisms/Plantao/PlantaoStatsCards.vue';
@@ -55,13 +60,40 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  turnoAtivo: {
+    type: Object,
+    default: null,
+  },
+  turnoPendente: {
+    type: Object,
+    default: null,
+  },
+  canEncerrar: {
+    type: Boolean,
+    default: false,
+  },
+  canAceitar: {
+    type: Boolean,
+    default: false,
+  },
+  // Reservado para o botao de relatorio de passagem (Fase 4 / Task 12).
+  canRelatorio: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['view', 'edit', 'filter', 'abrir-plantao']);
 
 const viewMode = ref('table');
 const showAbrirModal = ref(false);
+const showEncerrarModal = ref(false);
+const showAceitarModal = ref(false);
 const { isMobile } = useMobile();
+
+const handleFrota = () => {
+  router.visit(route('plantao.viaturas.index'));
+};
 
 // Card de estatistica como filtro rapido: recebe o status ('' = Total, limpa o status)
 // e preserva os demais filtros ativos (periodo, search).
@@ -112,6 +144,27 @@ const handleBuscarNoticias = () => {
           </Button>
 
           <Button
+            variant="secondary"
+            size="md"
+            :icon="TruckIcon"
+            icon-position="left"
+            @click="handleFrota"
+          >
+            Frota
+          </Button>
+
+          <Button
+            v-if="canEncerrar && turnoAtivo"
+            variant="danger"
+            size="md"
+            :icon="ClipboardDocumentListIcon"
+            icon-position="left"
+            @click="showEncerrarModal = true"
+          >
+            Encerrar turno
+          </Button>
+
+          <Button
             v-if="canExport"
             variant="success"
             size="md"
@@ -137,6 +190,15 @@ const handleBuscarNoticias = () => {
         </div>
       </template>
     </PageHeader>
+
+    <!-- Banner de passagem pendente de aceite -->
+    <PassagemHandshakeBanner
+      v-if="turnoPendente"
+      :turno="turnoPendente"
+      :pode-aceitar="canAceitar"
+      class="mb-6"
+      @conferir="showAceitarModal = true"
+    />
 
     <!-- Smart Cards -->
     <PlantaoStatsCards
@@ -196,6 +258,23 @@ const handleBuscarNoticias = () => {
       :periodos="filterOptions?.periodos"
       @close="showAbrirModal = false"
       @submit="(data) => { showAbrirModal = false; emit('abrir-plantao', data); }"
+    />
+
+    <!-- Modal: Encerrar turno (quem sai declara o estado das viaturas) -->
+    <EncerrarTurnoModal
+      :show="showEncerrarModal"
+      :turno="turnoAtivo"
+      :filter-options="filterOptions"
+      @close="showEncerrarModal = false"
+      @saved="showEncerrarModal = false"
+    />
+
+    <!-- Modal: Aceitar passagem (quem assume confere e aceita ou aponta divergencia) -->
+    <AceitarPassagemModal
+      :show="showAceitarModal"
+      :turno="turnoPendente"
+      @close="showAceitarModal = false"
+      @saved="showAceitarModal = false"
     />
   </div>
 </template>
