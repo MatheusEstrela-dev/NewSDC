@@ -34,7 +34,12 @@ class PlantaoExportController extends Controller
             'Plantonista',
             'Periodo',
             'Status',
-            'Observacoes'
+            'Observacoes',
+            'Saindo de servico',
+            'Localizacao',
+            'Encerrado em',
+            'Aceito em',
+            'Divergencia'
         ];
 
         $mapper = function ($plantao) {
@@ -44,6 +49,11 @@ class PlantaoExportController extends Controller
                 $plantao->periodo?->label() ?? $plantao->periodo ?? '',
                 $plantao->status?->label() ?? $plantao->status ?? '',
                 $plantao->observacoes ?? '',
+                $plantao->plantonista_saida_nome ?? '',
+                $plantao->localizacao ?? '',
+                $plantao->encerrado_em?->format('d/m/Y H:i') ?? '',
+                $plantao->aceito_em?->format('d/m/Y H:i') ?? '',
+                $plantao->divergencia ?? '',
             ];
         };
 

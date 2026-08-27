@@ -1,7 +1,7 @@
 # Modulo PLANTAO — Frota de Viaturas e Passagem de Servico
 
 **Data:** 2026-08-26
-**Status:** Design aprovado pelo usuario, pendente de revisao final do spec
+**Status:** Implementado (Release 1 — subsistemas A e B)
 **Branch:** `feat/plantao-frota-passagem` (worktree `.claude/worktrees/plantao-frota-passagem`, base `origin/dev`)
 **Destino:** `NewSDC/SDC` — `app/Modules/Plantao`
 **Escopo desta release:** subsistemas A (Frota) e B (Passagem de servico)
