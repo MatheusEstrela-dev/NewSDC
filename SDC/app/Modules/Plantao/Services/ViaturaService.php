@@ -8,6 +8,7 @@ use App\Modules\Plantao\Enums\StatusViatura;
 use App\Modules\Plantao\Models\Viatura;
 use App\Modules\Shared\BaseService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
 
 class ViaturaService extends BaseService
 {
@@ -68,10 +69,26 @@ class ViaturaService extends BaseService
         return Viatura::create($data);
     }
 
+    /**
+     * Estado corrente da viatura (hodometro, combustivel e ultimo condutor) e
+     * derivado do ledger de movimentacoes e escrito somente pelo
+     * MovimentacaoViaturaService (spec 3.1). A edicao do cadastro nunca o toca:
+     * o filtro abaixo e a fronteira, mesmo que algum request volte a aceitar os
+     * campos por engano. `status` fica de fora do filtro de proposito - sem
+     * escrita pelo CRUD os valores MANUTENCAO, CEDIDA e INDISPONIVEL seriam
+     * inalcancaveis por qualquer caminho do sistema.
+     */
+    public const CAMPOS_SOMENTE_MOVIMENTACAO = [
+        'hodometro_atual',
+        'nivel_combustivel',
+        'ultimo_condutor_id',
+        'ultimo_condutor_nome',
+    ];
+
     public function update(int $id, array $data): Viatura
     {
         $viatura = Viatura::findOrFail($id);
-        $viatura->update($data);
+        $viatura->update(Arr::except($data, self::CAMPOS_SOMENTE_MOVIMENTACAO));
 
         return $viatura->fresh();
     }

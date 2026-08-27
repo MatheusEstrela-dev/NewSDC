@@ -68,8 +68,12 @@ watch(
         modelo: props.viatura.modelo ?? '',
         localizacao: props.viatura.localizacao_valor ?? '',
         status: props.viatura.status_valor ?? 'DISPONIVEL',
-        nivel_combustivel: props.viatura.combustivel_valor ?? '',
-        hodometro_atual: props.viatura.hodometro ?? '',
+        // hodometro_atual e nivel_combustivel ficam fora da edicao: pertencem
+        // ao MovimentacaoViaturaService (spec 3.1). Reenvia-los a partir da
+        // lista ja renderizada revertia o valor que outra pessoa gravou num
+        // retorno. Para corrigi-los, registra-se uma movimentacao.
+        nivel_combustivel: '',
+        hodometro_atual: '',
         exclusiva_sobreaviso: props.viatura.exclusiva_sobreaviso ?? false,
         observacoes: props.viatura.observacoes ?? '',
         ativo: props.viatura.ativo ?? true,
@@ -89,11 +93,16 @@ function handleSubmit() {
   processando.value = true;
   limparErros();
 
-  const payload = {
-    ...form,
-    hodometro_atual: form.hodometro_atual === '' ? null : Number(form.hodometro_atual),
-    nivel_combustivel: form.nivel_combustivel === '' ? null : form.nivel_combustivel,
-  };
+  const payload = { ...form };
+
+  if (isEditing.value) {
+    // O UpdateViaturaRequest nao aceita esses campos; enviar seria ruido.
+    delete payload.hodometro_atual;
+    delete payload.nivel_combustivel;
+  } else {
+    payload.hodometro_atual = form.hodometro_atual === '' ? null : Number(form.hodometro_atual);
+    payload.nivel_combustivel = form.nivel_combustivel === '' ? null : form.nivel_combustivel;
+  }
 
   const onSuccess = () => {
     processando.value = false;
@@ -194,7 +203,13 @@ function handleSubmit() {
           />
         </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <!--
+          Estado de partida: aparece somente no cadastro. Uma viatura nova nao
+          tem movimentacao no ledger, entao o hodometro e o combustivel iniciais
+          entram aqui. Na edicao os dois campos nao existem - quem os atualiza e
+          o registro de saida/retorno (spec 3.1).
+        -->
+        <div v-if="!isEditing" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormSelect
             v-model="form.nivel_combustivel"
             label="Nivel de combustivel"
@@ -206,8 +221,9 @@ function handleSubmit() {
           <FormField
             v-model="form.hodometro_atual"
             type="number"
-            label="Hodometro atual (km)"
+            label="Hodometro inicial (km)"
             inputmode="numeric"
+            hint="Depois do cadastro, so muda por saida ou retorno"
             :error="errors.hodometro_atual"
           />
         </div>

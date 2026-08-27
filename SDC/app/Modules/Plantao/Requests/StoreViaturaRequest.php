@@ -26,6 +26,11 @@ class StoreViaturaRequest extends FormRequest
             'modelo' => ['required', 'string', 'max:100'],
             'localizacao' => ['required', Rule::enum(LocalizacaoViatura::class)],
             'status' => ['required', Rule::enum(StatusViatura::class)],
+            // Semeadura inicial, e so aqui. Uma viatura recem-cadastrada nao
+            // tem movimentacao nenhuma no ledger, entao alguem precisa informar
+            // o hodometro e o combustivel de partida. Dali em diante os dois
+            // campos pertencem exclusivamente ao MovimentacaoViaturaService
+            // (spec 3.1) - o UpdateViaturaRequest nao os aceita.
             'nivel_combustivel' => ['nullable', Rule::enum(NivelCombustivel::class)],
             'hodometro_atual' => ['nullable', 'integer', 'min:0'],
             'exclusiva_sobreaviso' => ['boolean'],
