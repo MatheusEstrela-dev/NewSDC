@@ -19,6 +19,10 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  canMovimentar: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['edit', 'delete', 'movimentacao']);
@@ -94,10 +98,10 @@ const getStatusClasses = (statusValor) => CORES_STATUS[statusValor] ?? CORES_STA
                 :actions="[
                   {
                     action: item.movimentacao_aberta_id ? 'finalize' : 'assign',
-                    aliasOverride: 'edit',
+                    aliasOverride: 'movimentar',
                     label: item.movimentacao_aberta_id ? 'Registrar retorno' : 'Registrar saida',
                     handler: () => emit('movimentacao', item.id),
-                    allowed: canEdit,
+                    allowed: canMovimentar,
                   },
                   { action: 'edit',   handler: () => emit('edit', item.id),   allowed: canEdit },
                   { action: 'delete', handler: () => emit('delete', item.id), allowed: canDelete },

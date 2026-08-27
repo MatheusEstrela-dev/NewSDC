@@ -45,6 +45,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canMovimentar: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Reload parcial: so viaturas/filters mudam, statistics nao e recalculada de novo
@@ -93,6 +97,7 @@ const confirmDelete = () => {
     :can-create="canCreate"
     :can-edit="canEdit"
     :can-delete="canDelete"
+    :can-movimentar="canMovimentar"
     @filter="handleFilter"
     @delete="handleDelete"
   />

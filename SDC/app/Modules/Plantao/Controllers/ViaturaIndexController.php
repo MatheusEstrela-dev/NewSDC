@@ -65,6 +65,7 @@ class ViaturaIndexController extends Controller
             'canCreate' => (bool) $user?->can('plantao.viaturas.create'),
             'canEdit' => (bool) $user?->can('plantao.viaturas.edit'),
             'canDelete' => (bool) $user?->can('plantao.viaturas.delete'),
+            'canMovimentar' => (bool) $user?->can('plantao.viaturas.movimentar'),
         ]);
     }
 

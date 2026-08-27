@@ -52,12 +52,12 @@ Route::prefix('plantao')->name('plantao.')->group(function () {
 
         Route::post('/{viatura}/saida', MovimentacaoSaidaController::class)
             ->name('saida')
-            ->middleware('can:plantao.viaturas.edit');
+            ->middleware('can:plantao.viaturas.movimentar');
     });
 
     Route::post('/movimentacoes/{movimentacao}/retorno', MovimentacaoRetornoController::class)
         ->name('movimentacoes.retorno')
-        ->middleware('can:plantao.viaturas.edit');
+        ->middleware('can:plantao.viaturas.movimentar');
 
     // Rotas parametrizadas /{plantao}/...: precisam vir DEPOIS das estaticas
     // e do subgrupo /viaturas, senao Laravel casa "viaturas" como {plantao}.

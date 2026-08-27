@@ -198,6 +198,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'validar' => 'Validar',
             'attachments' => 'Gerenciar Anexos',
             'desvincular' => 'Desvincular',
+            'movimentar' => 'Movimentar',
         ];
 
         $actionLabel = $actionLabels[$action] ?? ucfirst($action);

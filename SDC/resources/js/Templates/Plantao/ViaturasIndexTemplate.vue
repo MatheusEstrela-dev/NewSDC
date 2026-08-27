@@ -62,6 +62,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canMovimentar: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['filter', 'edit', 'delete']);
@@ -277,6 +281,7 @@ const limparFiltros = () => {
       :viaturas="viaturas"
       :can-edit="canEdit"
       :can-delete="canDelete"
+      :can-movimentar="canMovimentar"
       @edit="openEditModal"
       @delete="(id) => emit('delete', id)"
       @movimentacao="openMovimentacaoModal"
@@ -287,6 +292,7 @@ const limparFiltros = () => {
       :viaturas="viaturas"
       :can-edit="canEdit"
       :can-delete="canDelete"
+      :can-movimentar="canMovimentar"
       @edit="openEditModal"
       @delete="(id) => emit('delete', id)"
       @movimentacao="openMovimentacaoModal"

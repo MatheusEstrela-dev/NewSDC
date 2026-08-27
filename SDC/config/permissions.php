@@ -337,6 +337,11 @@ return [
                 'create' => 'plantao.viaturas.create',
                 'edit' => 'plantao.viaturas.edit',
                 'delete' => 'plantao.viaturas.delete',
+                // Registrar saida/retorno de viatura e o ato mais frequente do
+                // plantao. Slug proprio, mais estreito que `edit` (que tambem
+                // altera o cadastro da viatura) - assim um perfil que so opera
+                // o plantao nao precisa de `edit` so para movimentar.
+                'movimentar' => 'plantao.viaturas.movimentar',
             ],
             'Passagem' => [
                 'encerrar' => 'plantao.passagem.encerrar',
@@ -656,6 +661,7 @@ return [
             'plantao.viaturas.view',
             'plantao.viaturas.create',
             'plantao.viaturas.edit',
+            'plantao.viaturas.movimentar',
             'plantao.passagem.encerrar',
             'plantao.passagem.aceitar',
             'plantao.passagem.relatorio',
@@ -832,6 +838,7 @@ return [
             'plantao.viaturas.view',
             'plantao.viaturas.create',
             'plantao.viaturas.edit',
+            'plantao.viaturas.movimentar',
             'plantao.passagem.encerrar',
             'plantao.passagem.aceitar',
             'plantao.passagem.relatorio',
