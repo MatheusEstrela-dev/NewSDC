@@ -97,7 +97,7 @@ class UserManagementController extends Controller
         $roles = Role::whereIn('id', $validated['roles'])->get();
         $user->syncRoles($roles);
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->invalidarCachesDoUsuario($user);
 
         return redirect()
             ->route('admin.permissions.users.index')
@@ -530,7 +530,7 @@ class UserManagementController extends Controller
             $user->syncPermissions($validated['direct_permissions'] ?? []);
         }
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->invalidarCachesDoUsuario($user);
 
         return redirect()
             ->route('admin.permissions.users.show', $user)
@@ -547,7 +547,7 @@ class UserManagementController extends Controller
         $roles = Role::whereIn('id', $validated['roles'])->get();
         $user->syncRoles($roles);
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->invalidarCachesDoUsuario($user);
 
         return redirect()
             ->route('admin.permissions.users.show', $user)
@@ -564,11 +564,29 @@ class UserManagementController extends Controller
         $permissionNames = Permission::whereIn('id', $validated['permissions'])->pluck('name')->toArray();
         $user->syncPermissions($permissionNames);
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->invalidarCachesDoUsuario($user);
 
         return redirect()
             ->route('admin.permissions.users.show', $user)
             ->with('success', 'Permissoes atualizadas com sucesso');
+    }
+
+    /**
+     * Invalida os DOIS caches que decidem o que o usuario-alvo enxerga.
+     *
+     * O do Spatie e obvio; o `inertia_user_data_{id}` nao e, e era o que fazia
+     * permissao recem-concedida levar ate 5 minutos para aparecer na sidebar:
+     * o HandleInertiaRequests guarda ali roles+permissions por 300s, e nenhum
+     * ponto que altera permissao o limpava (so o fluxo de troca de e-mail).
+     *
+     * Sem isso, o admin autoriza, o banco fica correto na hora, e a pessoa
+     * continua sem ver o modulo. Em operacao de plantao, cinco minutos de
+     * atraso para liberar acesso e inaceitavel.
+     */
+    private function invalidarCachesDoUsuario(User $user): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        Cache::forget("inertia_user_data_{$user->id}");
     }
 
     public function destroy(User $user)
