@@ -345,6 +345,11 @@ return [
             ],
             'Passagem' => [
                 'encerrar' => 'plantao.passagem.encerrar',
+                // So o dono do turno encerra por padrao. Este slug e a excecao:
+                // permite encerrar o turno de outra pessoa (spec 4.3 - handshake
+                // que travaria se quem saiu nunca encerrasse). Restrito a
+                // supervisao/administracao, nao ao plantonista comum.
+                'encerrar_alheio' => 'plantao.passagem.encerrar_alheio',
                 'aceitar' => 'plantao.passagem.aceitar',
                 'relatorio' => 'plantao.passagem.relatorio',
             ],
@@ -663,6 +668,10 @@ return [
             'plantao.viaturas.edit',
             'plantao.viaturas.movimentar',
             'plantao.passagem.encerrar',
+            // Manager e o perfil de supervisao do modulo (Gestor de area, "pode
+            // aprovar e gerenciar modulos"): unico alem do admin que encerra
+            // turno alheio para nao travar o handshake da secao 4.3.
+            'plantao.passagem.encerrar_alheio',
             'plantao.passagem.aceitar',
             'plantao.passagem.relatorio',
             // BI

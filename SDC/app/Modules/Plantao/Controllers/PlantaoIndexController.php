@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Plantao\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Plantao\DTOs\PlantaoListDTO;
 use App\Modules\Plantao\DTOs\SnapshotDTO;
 use App\Modules\Plantao\Enums\NivelCombustivel;
@@ -31,6 +32,7 @@ class PlantaoIndexController extends Controller
 
         $plantoes = $this->plantaoService->list($filters, 15);
         $statistics = $this->plantaoService->getStatistics($filters);
+        $user = $request->user();
 
         $plantoesData = [
             'data' => PlantaoListDTO::collection($plantoes->items()),
@@ -60,11 +62,11 @@ class PlantaoIndexController extends Controller
             // de um ATIVO (periodos diferentes) e mais de um PENDENTE_ACEITE.
             // Com ->first(), o turno mais antigo ficava sem botao de encerrar ou
             // aceitar em lugar nenhum - o travamento que a secao 4.3 quis evitar.
-            'turnosAtivos' => $this->turnosAtivos(),
+            'turnosAtivos' => $this->turnosAtivos($user),
             'turnosPendentes' => $this->turnosPendentes(),
-            'canEncerrar' => (bool) $request->user()?->can('plantao.passagem.encerrar'),
-            'canAceitar' => (bool) $request->user()?->can('plantao.passagem.aceitar'),
-            'canRelatorio' => (bool) $request->user()?->can('plantao.passagem.relatorio'),
+            'canEncerrar' => (bool) $user?->can('plantao.passagem.encerrar'),
+            'canAceitar' => (bool) $user?->can('plantao.passagem.aceitar'),
+            'canRelatorio' => (bool) $user?->can('plantao.passagem.relatorio'),
         ]);
     }
 
@@ -74,8 +76,13 @@ class PlantaoIndexController extends Controller
      *
      * @return list<array<string,mixed>>
      */
-    private function turnosAtivos(): array
+    private function turnosAtivos(?User $user): array
     {
+        // Decidido aqui, nao no frontend: usuario so encerra o proprio turno,
+        // a menos que tenha a permissao de excecao (spec 4.3 ajustada -
+        // handshake que travaria se so o dono pudesse destravar).
+        $podeEncerrarAlheio = (bool) $user?->can('plantao.passagem.encerrar_alheio');
+
         return Plantao::query()
             ->where('status', StatusPlantao::ATIVO->value)
             ->orderByDesc('data')
@@ -88,6 +95,8 @@ class PlantaoIndexController extends Controller
                 'plantonista_nome' => $turno->plantonista_nome,
                 'plantonista_saida_nome' => $turno->plantonista_saida_nome,
                 'snapshot_sugerido' => $this->passagemService->montarSnapshotSugerido($turno),
+                'pode_encerrar' => $podeEncerrarAlheio
+                    || ($user !== null && (int) $turno->plantonista_id === (int) $user->id),
             ])
             ->all();
     }

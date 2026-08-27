@@ -113,8 +113,16 @@ const plantaoDoRelatorio = computed(
   () => props.turnosPendentes[0]?.id ?? props.turnosAtivos[0]?.id ?? null,
 );
 
+// So mostra o botao de encerrar para turnos que o usuario logado pode
+// encerrar: o proprio (dono do turno) ou, com `encerrar_alheio`, qualquer um.
+// A regra ja vem decidida do backend em `turno.pode_encerrar` (PlantaoIndexController) -
+// o frontend so filtra, nao recalcula quem e dono de que.
+const turnosEncerraveis = computed(
+  () => (props.canEncerrar ? props.turnosAtivos.filter((turno) => turno.pode_encerrar) : []),
+);
+
 const rotuloEncerrar = (turno) => (
-  props.turnosAtivos.length > 1
+  turnosEncerraveis.value.length > 1
     ? `Encerrar ${turno.data} (${turno.periodo})`
     : 'Encerrar turno'
 );
@@ -192,7 +200,7 @@ const handleBuscarNoticias = () => {
           </Button>
 
           <Button
-            v-for="turno in (canEncerrar ? turnosAtivos : [])"
+            v-for="turno in turnosEncerraveis"
             :key="turno.id"
             variant="danger"
             size="md"

@@ -20,6 +20,20 @@ class PassagemEncerrarController extends Controller
 
     public function __invoke(EncerrarPassagemRequest $request, Plantao $plantao): RedirectResponse
     {
+        $usuario = $request->user();
+
+        // Decisao do usuario: so o dono do turno encerra por padrao. Quem tem
+        // `encerrar_alheio` (supervisao/administracao) e a excecao prevista na
+        // secao 4.3 do spec para o handshake nao travar quando quem saiu nunca
+        // encerra. Falta de autorizacao, nao erro de formulario -> 403.
+        if ((int) $plantao->plantonista_id !== (int) $usuario->id) {
+            abort_unless(
+                $usuario->can('plantao.passagem.encerrar_alheio'),
+                403,
+                'Voce so pode encerrar o proprio turno.'
+            );
+        }
+
         $dados = $request->validated();
 
         try {

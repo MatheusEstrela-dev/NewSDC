@@ -199,6 +199,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'attachments' => 'Gerenciar Anexos',
             'desvincular' => 'Desvincular',
             'movimentar' => 'Movimentar',
+            'encerrar_alheio' => 'Encerrar (Alheio)',
         ];
 
         $actionLabel = $actionLabels[$action] ?? ucfirst($action);
