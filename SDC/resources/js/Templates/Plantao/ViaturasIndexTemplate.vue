@@ -44,6 +44,12 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  // Turno ATIVO corrente. Vai no payload da saida para amarrar a movimentacao
+  // ao turno de quem esta de servico; null quando nao ha turno aberto.
+  plantaoAtivoId: {
+    type: Number,
+    default: null,
+  },
   canCreate: {
     type: Boolean,
     default: false,
@@ -305,6 +311,7 @@ const limparFiltros = () => {
       :modo="modoMovimentacao"
       :viatura="viaturaEmMovimentacao"
       :condutores="condutores"
+      :plantao-ativo-id="plantaoAtivoId"
       :filter-options="filterOptions"
       @close="closeMovimentacaoModal"
       @saved="onMovimentacaoSaved"

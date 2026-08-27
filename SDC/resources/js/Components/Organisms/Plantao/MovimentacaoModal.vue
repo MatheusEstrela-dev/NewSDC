@@ -29,6 +29,14 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  // Turno ATIVO corrente, do ViaturaIndexController. Viaja no payload da saida
+  // para que plantao_viatura_movimentacoes.plantao_id nao nasca NULL - e a
+  // amarracao "esta saida ocorreu no turno de quem". Null e aceito pelo
+  // MovimentacaoSaidaRequest: registrar saida nao exige turno aberto.
+  plantaoAtivoId: {
+    type: Number,
+    default: null,
+  },
   // filterOptions.niveis ja vem no formato {value, label} do toSelectArray(): nao remapear.
   filterOptions: {
     type: Object,
@@ -88,6 +96,7 @@ function handleSubmit() {
         saida_combustivel: data.saida_combustivel || null,
         destino: data.destino || null,
         motivo: data.motivo || null,
+        plantao_id: props.plantaoAtivoId ?? null,
       }))
       .post(route('plantao.viaturas.saida', props.viatura.id), {
         preserveScroll: true,

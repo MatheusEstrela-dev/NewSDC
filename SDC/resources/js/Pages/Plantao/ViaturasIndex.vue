@@ -28,6 +28,11 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  // Turno ATIVO corrente; null quando nao ha turno aberto.
+  plantaoAtivoId: {
+    type: Number,
+    default: null,
+  },
   canCreate: {
     type: Boolean,
     default: false,
@@ -84,6 +89,7 @@ const confirmDelete = () => {
     :filters="filters"
     :filter-options="filterOptions"
     :condutores="condutores"
+    :plantao-ativo-id="plantaoAtivoId"
     :can-create="canCreate"
     :can-edit="canEdit"
     :can-delete="canDelete"
