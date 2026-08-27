@@ -103,7 +103,7 @@ function handleSubmit() {
           aria-label="Fechar"
           @click="handleClose"
         >
-          <XMarkIcon class="h-5 w-5" />
+          <XMarkIcon class-name="h-5 w-5" />
         </button>
       </header>
 
