@@ -17,6 +17,7 @@ import PlantaoFiltersSection from '@/Components/Organisms/Plantao/PlantaoFilters
 import PlantaoGrid from '@/Components/Organisms/Plantao/PlantaoGrid.vue';
 import PlantaoStatsCards from '@/Components/Organisms/Plantao/PlantaoStatsCards.vue';
 import PlantaoTable from '@/Components/Organisms/Plantao/PlantaoTable.vue';
+import RelatorioPassagemPanel from '@/Components/Organisms/Plantao/RelatorioPassagemPanel.vue';
 import { useExport } from '@/Composables/useExport';
 import { useMobile } from '@/Composables/useMobile';
 import { ArrowDownTrayIcon, NewspaperIcon } from '@heroicons/vue/24/outline';
@@ -205,6 +206,13 @@ const handleBuscarNoticias = () => {
       :statistics="statistics"
       class="mb-6"
       @filter="handleStatFilter"
+    />
+
+    <!-- Relatorio de passagem de servico: texto pronto para colar no WhatsApp -->
+    <RelatorioPassagemPanel
+      v-if="canRelatorio && (turnoPendente?.id || turnoAtivo?.id)"
+      :plantao-id="turnoPendente?.id ?? turnoAtivo.id"
+      class="mb-6"
     />
 
     <!-- Filtros -->

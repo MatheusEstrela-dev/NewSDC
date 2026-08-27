@@ -7,6 +7,7 @@ use App\Modules\Plantao\Controllers\PassagemAceitarController;
 use App\Modules\Plantao\Controllers\PassagemEncerrarController;
 use App\Modules\Plantao\Controllers\PlantaoExportController;
 use App\Modules\Plantao\Controllers\PlantaoIndexController;
+use App\Modules\Plantao\Controllers\RelatorioPassagemController;
 use App\Modules\Plantao\Controllers\ViaturaDestroyController;
 use App\Modules\Plantao\Controllers\ViaturaIndexController;
 use App\Modules\Plantao\Controllers\ViaturaStoreController;
@@ -59,6 +60,10 @@ Route::prefix('plantao')->name('plantao.')->group(function () {
     Route::post('/{plantao}/aceitar', PassagemAceitarController::class)
         ->name('passagem.aceitar')
         ->middleware('can:plantao.passagem.aceitar');
+
+    Route::get('/{plantao}/relatorio', RelatorioPassagemController::class)
+        ->name('passagem.relatorio')
+        ->middleware('can:plantao.passagem.relatorio');
 
     Route::get('/', PlantaoIndexController::class)
         ->name('index')
