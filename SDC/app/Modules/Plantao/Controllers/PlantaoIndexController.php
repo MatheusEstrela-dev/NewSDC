@@ -6,8 +6,11 @@ namespace App\Modules\Plantao\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Plantao\DTOs\PlantaoListDTO;
+use App\Modules\Plantao\DTOs\SnapshotDTO;
 use App\Modules\Plantao\Enums\PeriodoPlantao;
 use App\Modules\Plantao\Enums\StatusPlantao;
+use App\Modules\Plantao\Models\Plantao;
+use App\Modules\Plantao\Services\PassagemServicoService;
 use App\Modules\Plantao\Services\PlantaoService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,7 +19,8 @@ use Inertia\Response;
 class PlantaoIndexController extends Controller
 {
     public function __construct(
-        private readonly PlantaoService $plantaoService
+        private readonly PlantaoService $plantaoService,
+        private readonly PassagemServicoService $passagemService
     ) {
     }
 
@@ -47,6 +51,61 @@ class PlantaoIndexController extends Controller
                 'status' => StatusPlantao::toSelectArray(),
                 'periodos' => PeriodoPlantao::toSelectArray(),
             ],
+            'turnoAtivo' => $this->turnoAtivo(),
+            'turnoPendente' => $this->turnoPendente(),
+            'canEncerrar' => (bool) $request->user()?->can('plantao.passagem.encerrar'),
+            'canAceitar' => (bool) $request->user()?->can('plantao.passagem.aceitar'),
+            'canRelatorio' => (bool) $request->user()?->can('plantao.passagem.relatorio'),
         ]);
+    }
+
+    private function turnoAtivo(): ?array
+    {
+        $turno = Plantao::query()
+            ->where('status', StatusPlantao::ATIVO->value)
+            ->orderByDesc('data')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($turno === null) {
+            return null;
+        }
+
+        return [
+            'id' => $turno->id,
+            'data' => $turno->data?->format('d/m/Y'),
+            'periodo' => $turno->periodo?->labelCurto(),
+            'plantonista_nome' => $turno->plantonista_nome,
+            'plantonista_saida_nome' => $turno->plantonista_saida_nome,
+            'snapshot_sugerido' => $this->passagemService->montarSnapshotSugerido($turno),
+        ];
+    }
+
+    private function turnoPendente(): ?array
+    {
+        $turno = Plantao::query()
+            ->where('status', StatusPlantao::PENDENTE_ACEITE->value)
+            ->orderByDesc('data')
+            ->orderByDesc('id')
+            ->with(['snapshots', 'encerradoPor:id,name'])
+            ->first();
+
+        if ($turno === null) {
+            return null;
+        }
+
+        return [
+            'id' => $turno->id,
+            'data' => $turno->data?->format('d/m/Y'),
+            'periodo' => $turno->periodo?->labelCurto(),
+            'plantonista_nome' => $turno->plantonista_nome,
+            'encerrado_em' => $turno->encerrado_em?->format('d/m/Y H:i'),
+            // Quando difere do dono do turno, o encerramento foi por terceiro
+            // e a interface precisa deixar isso visivel (spec 4.3).
+            'encerrado_por_terceiro' => $turno->encerrado_por_id !== null
+                && (int) $turno->encerrado_por_id !== (int) $turno->plantonista_id,
+            'encerrado_por_nome' => $turno->encerradoPor?->name,
+            'snapshots' => SnapshotDTO::collection($turno->snapshots),
+        ];
     }
 }

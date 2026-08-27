@@ -3,6 +3,8 @@
 use App\Modules\Plantao\Controllers\MovimentacaoRetornoController;
 use App\Modules\Plantao\Controllers\MovimentacaoSaidaController;
 use App\Modules\Plantao\Controllers\NoticiasIndexController;
+use App\Modules\Plantao\Controllers\PassagemAceitarController;
+use App\Modules\Plantao\Controllers\PassagemEncerrarController;
 use App\Modules\Plantao\Controllers\PlantaoExportController;
 use App\Modules\Plantao\Controllers\PlantaoIndexController;
 use App\Modules\Plantao\Controllers\ViaturaDestroyController;
@@ -47,6 +49,16 @@ Route::prefix('plantao')->name('plantao.')->group(function () {
     Route::post('/movimentacoes/{movimentacao}/retorno', MovimentacaoRetornoController::class)
         ->name('movimentacoes.retorno')
         ->middleware('can:plantao.viaturas.edit');
+
+    // Rotas parametrizadas /{plantao}/...: precisam vir DEPOIS das estaticas
+    // e do subgrupo /viaturas, senao Laravel casa "viaturas" como {plantao}.
+    Route::post('/{plantao}/encerrar', PassagemEncerrarController::class)
+        ->name('passagem.encerrar')
+        ->middleware('can:plantao.passagem.encerrar');
+
+    Route::post('/{plantao}/aceitar', PassagemAceitarController::class)
+        ->name('passagem.aceitar')
+        ->middleware('can:plantao.passagem.aceitar');
 
     Route::get('/', PlantaoIndexController::class)
         ->name('index')

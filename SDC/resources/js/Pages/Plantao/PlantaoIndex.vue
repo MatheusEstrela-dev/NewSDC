@@ -36,8 +36,12 @@ const handleEdit = (id) => {
 };
 
 const handleFilter = (filters) => {
+  // Reload parcial: turnoAtivo/turnoPendente fazem query propria e nao
+  // dependem do filtro da listagem. Sem o `only`, toda troca de filtro
+  // recalcularia os dois a cada visita completa do Inertia.
   router.visit(route('plantao.index'), {
     data: filters,
+    only: ['plantoes', 'filters'],
     preserveState: true,
     replace: true,
   });
