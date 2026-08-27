@@ -111,67 +111,29 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useNotifications } from '@/Composables/useNotifications';
+import { useNotificationPreferences } from '@/Composables/useNotificationPreferences';
 import ToggleInput from '@/Components/Atoms/Input/ToggleInput.vue';
 import NotificationItem from './NotificationItem.vue';
 
 const showPreferences = ref(false);
 
-// Preferencias reais, vindas da mesma API usada pela tela de Configuracoes.
-// A lista de modulos e o rotulo vem de config/notificacoes.php no backend, para
-// nao existir uma segunda lista hardcoded aqui.
-const preferencias = ref([]);
-const carregandoPreferencias = ref(false);
-const salvandoModulo = ref(false);
-const erroPreferencias = ref(null);
+// Estado compartilhado com o modal de Configuracoes. Este painel edita so o canal
+// do sino; os demais canais ficam na tela cheia, que tem espaco para explicar o
+// que falta em cada um.
+const {
+    modulos: preferencias,
+    carregando: carregandoPreferencias,
+    salvando: salvandoModulo,
+    erro: erroPreferencias,
+    carregar: carregarPreferencias,
+    alternar,
+} = useNotificationPreferences();
 
-const carregarPreferencias = async () => {
-    if (preferencias.value.length > 0) return;
+const alternarModulo = (modulo, valor) => alternar(modulo, 'canal_sistema', valor);
 
-    carregandoPreferencias.value = true;
-    erroPreferencias.value = null;
-
-    try {
-        // Rota web (sessao), nao a de API: o painel vive dentro do app Inertia.
-        const { data } = await window.axios.get('/notificacoes/preferencias');
-        preferencias.value = data.modules ?? [];
-    } catch (e) {
-        erroPreferencias.value = 'Não foi possível carregar suas preferências.';
-    } finally {
-        carregandoPreferencias.value = false;
-    }
-};
-
-/**
- * Alterna um modulo e persiste na hora. Em caso de falha o toggle volta ao valor
- * anterior, para a tela nunca mostrar um estado que o backend nao tem.
- */
-const alternarModulo = async (modulo, valor) => {
-    const anterior = modulo.canal_sistema;
-
-    modulo.canal_sistema = valor;
-    salvandoModulo.value = true;
-    erroPreferencias.value = null;
-
-    try {
-        await window.axios.put('/notificacoes/preferencias', {
-            modules: [{
-                module: modulo.module,
-                canal_sistema: valor,
-                canal_email: modulo.canal_email,
-                canal_push: modulo.canal_push,
-                canal_telegram: modulo.canal_telegram,
-                canal_whatsapp: modulo.canal_whatsapp,
-            }],
-        });
-    } catch (e) {
-        modulo.canal_sistema = anterior;
-        erroPreferencias.value = 'Não foi possível salvar. Tente novamente.';
-    } finally {
-        salvandoModulo.value = false;
-    }
-};
-
-// Só busca as preferências quando o usuário abre a engrenagem.
+// Só busca as preferências quando o usuário abre a engrenagem. Sem cache local:
+// quem decide se ja tem dado e o composable, entao uma alteracao feita no modal
+// aparece aqui na hora, sem F5.
 watch(showPreferences, (aberto) => {
     if (aberto) carregarPreferencias();
 });

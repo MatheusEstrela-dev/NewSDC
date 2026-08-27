@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Models\UserNotificationPreference;
+use App\Modules\Notificacoes\Services\CanaisDisponiveis;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,10 +21,18 @@ use Illuminate\Http\Request;
  * A resposta tambem carrega o rotulo e a descricao de cada modulo, vindos do
  * config. Antes, o frontend mantinha essa lista hardcoded em SettingsModal.vue e
  * ela divergia da lista aceita pelo backend.
+ *
+ * Pelo mesmo motivo a resposta carrega o catalogo de CANAIS com a disponibilidade
+ * de cada um para este usuario. O frontend tinha tres checkboxes fixos: Telegram
+ * nao aparecia mesmo funcionando, e E-mail/Push apareciam sem channel por tras.
  */
 class NotificationPreferencesController extends Controller
 {
     private const MODOS = ['auto', 'realtime', 'polling'];
+
+    public function __construct(
+        private readonly CanaisDisponiveis $canais,
+    ) {}
 
     /**
      * Lista preferencias do user (auto-cria defaults se vazio).
@@ -34,10 +44,7 @@ class NotificationPreferencesController extends Controller
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
-        return response()->json([
-            'modules' => $this->modulos($user->id),
-            'update_mode' => $user->notification_update_mode ?? 'auto',
-        ]);
+        return response()->json($this->payload($user));
     }
 
     /**
@@ -84,11 +91,25 @@ class NotificationPreferencesController extends Controller
             $user->forceFill(['notification_update_mode' => $validated['update_mode']])->save();
         }
 
-        return response()->json([
-            'message' => 'Preferencias atualizadas.',
-            'modules' => $this->modulos($user->id),
+        return response()->json(
+            ['message' => 'Preferencias atualizadas.'] + $this->payload($user)
+        );
+    }
+
+    /**
+     * Envelope unico das duas acoes: quem salva recebe exatamente o mesmo estado
+     * que quem carrega, entao o cliente nunca precisa refazer o GET depois do PUT
+     * nem montar o estado novo por conta propria.
+     *
+     * @return array<string, mixed>
+     */
+    private function payload(User $user): array
+    {
+        return [
+            'modules' => $this->modulos((int) $user->id),
+            'canais' => $this->canais->paraUsuario($user),
             'update_mode' => $user->notification_update_mode ?? 'auto',
-        ]);
+        ];
     }
 
     /**

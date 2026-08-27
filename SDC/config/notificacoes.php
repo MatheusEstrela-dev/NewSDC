@@ -28,6 +28,45 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Canais de entrega
+    |--------------------------------------------------------------------------
+    |
+    | A chave e a coluna de user_notification_preferences. Assim como a lista de
+    | modulos, esta e a fonte unica: a tela de preferencias monta os checkboxes a
+    | partir daqui, em vez de manter tres canais fixos no SettingsModal.vue. Era
+    | por isso que Telegram, que funciona no backend desde a integracao, nunca
+    | aparecia para o usuario ligar.
+    |
+    | Quem decide se o canal esta DISPONIVEL para um usuario especifico e o
+    | servico CanaisDisponiveis -- ter e-mail cadastrado, ter conta Telegram
+    | vinculada, o servidor ter VAPID configurado. Aqui fica so o vocabulario.
+    |
+    | canal_whatsapp existe na tabela mas nao esta listado: nao ha channel por
+    | tras dele. Canal que o backend ignora nao entra nesta lista, senao a tela
+    | volta a prometer o que o sistema nao faz.
+    |
+    */
+    'canais' => [
+        'canal_sistema' => [
+            'label' => 'Sino (Sistema)',
+            'descricao' => 'Aparece no sino e no historico dentro do SDC.',
+        ],
+        'canal_email' => [
+            'label' => 'E-mail',
+            'descricao' => 'Enviado para o e-mail do seu cadastro.',
+        ],
+        'canal_push' => [
+            'label' => 'Push (Desktop)',
+            'descricao' => 'Aviso do sistema operacional, mesmo com o SDC fechado.',
+        ],
+        'canal_telegram' => [
+            'label' => 'Telegram',
+            'descricao' => 'Mensagem do bot na conta que voce vinculou.',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Modulos notificaveis
     |--------------------------------------------------------------------------
     |
