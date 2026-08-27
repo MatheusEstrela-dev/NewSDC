@@ -16,7 +16,6 @@ use App\Modules\Compdec\Services\EquipeService;
 use App\Modules\Pmda\Enums\SolicitacaoComunidadeStatus;
 use App\Modules\Pmda\Models\ComunidadeSolicitacao;
 use App\Modules\Pmda\Models\PmdaComunidade;
-use App\Modules\Pmda\Models\PmdaCompdecMembro;
 use App\Modules\Pmda\Models\PmdaPlano;
 use App\Modules\Pmda\Models\PmdaRepresentante;
 use App\Modules\Pmda\Requests\ArquivarPmdaPlanoRequest;
@@ -35,7 +34,6 @@ use App\Modules\Pmda\Resources\ComunidadeSolicitacaoResource;
 use App\Modules\Pmda\Resources\PmdaPlanoListResource;
 use App\Modules\Pmda\Resources\PmdaPlanoResource;
 use App\Modules\Pmda\Services\CompdecFichaService;
-use App\Modules\Pmda\Services\CompdecMembroService;
 use App\Modules\Pmda\Services\ComunidadeService;
 use App\Modules\Pmda\Services\ComunidadeSolicitacaoService;
 use App\Modules\Pmda\Services\PlanoPontoService;
@@ -59,7 +57,11 @@ class ComunidadeController extends Controller
 
     public function store(StoreComunidadeRequest $request, PmdaPlano $plano): RedirectResponse
     {
-        $this->service->adicionar($plano, $request->validated());
+        try {
+            $this->service->adicionar($plano, $request->validated());
+        } catch (\DomainException $e) {
+            return back()->withErrors(['comunidade' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'Comunidade adicionada.');
     }
@@ -210,10 +212,28 @@ class PlanoPontoController extends Controller
             'nome'     => ['required', 'string', 'max:150'],
             'tipo'     => ['required', 'integer', 'between:1,6'],
             'situacao' => ['nullable', 'in:ATIVO,SECO'],
+        ], [
+            // O tipo trafega como CODIGO (1..6), nao como rotulo. Pela tela o
+            // select ja manda o numero; quem erra e integracao, e "The tipo field
+            // must be between 1 and 6" nao diz a que numero cada tipo corresponde.
+            'tipo.integer' => 'O tipo do ponto é um código numérico: '.$this->tiposDePontoParaMensagem().'.',
+            'tipo.between' => 'O tipo do ponto deve ser um destes: '.$this->tiposDePontoParaMensagem().'.',
+            'situacao.in'  => 'A situação deve ser ATIVO ou SECO (em maiúsculas).',
         ]);
         $this->service->criarEVincular($plano, $validated);
 
         return back()->with('success', 'Ponto de captação adicionado.');
+    }
+
+    /** "1 = COPASA, 2 = COPANOR, ..." a partir da mesma fonte que o Resource rotula. */
+    private function tiposDePontoParaMensagem(): string
+    {
+        $pares = [];
+        foreach (PmdaPlanoResource::tiposDePonto() as $codigo => $rotulo) {
+            $pares[] = $codigo.' = '.$rotulo;
+        }
+
+        return implode(', ', $pares);
     }
 
     public function destroy(PmdaPlano $plano, int $ponto): RedirectResponse
@@ -240,7 +260,10 @@ class PmdaPlanoController extends Controller
     public function index(Request $request): Response
     {
         $perfil = PerfilPmda::deUsuario($request->user());
-        $municipioId = $perfil->municipioId();
+        // Recorte de LEITURA (alimenta os contadores e o seletor de municipios),
+        // nao o municipio de gravacao: super-admin le o estado inteiro mesmo
+        // lotado num COMPDEC. Quem grava continua usando municipioId().
+        $municipioId = $perfil->municipioDoEscopo();
         $filtros = $perfil->aplicarEscopo($request->only(['buscar', 'status', 'municipio_id', 'data_inicio', 'data_fim']));
         $page = max(1, (int) $request->query('page', '1'));
         $path = $request->url();
@@ -406,7 +429,7 @@ class PmdaPlanoController extends Controller
      */
     private function wizardProps(PmdaPlano $plano): array
     {
-        $plano->load(['municipio', 'comunidades.representantes', 'pontos', 'compdecMembros', 'media'])
+        $plano->load(['municipio', 'comunidades.representantes', 'pontos', 'media'])
             ->loadCount('comunidades');
 
         return [
@@ -489,7 +512,11 @@ class PmdaPlanoController extends Controller
 
     public function update(UpdatePmdaPlanoRequest $request, PmdaPlano $plano): RedirectResponse
     {
-        $this->service->atualizar($plano, $request->validated(), (int) $request->user()->id);
+        try {
+            $this->service->atualizar($plano, $request->validated(), (int) $request->user()->id);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['plano' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'PMDA atualizado.');
     }
@@ -643,18 +670,28 @@ class PmdaPlanoController extends Controller
     }
 
     /**
-     * Avisos que a trilha de acoes realmente entregou ao dono do protocolo.
+     * Avisos que ESTE usuario recebeu sobre o plano.
      *
-     * Vinha [] fixo, entao a aba nunca tinha o que mostrar mesmo quando o municipio
-     * havia sido avisado. A chave de agrupamento ja carrega "modulo:id:", que e o
-     * que amarra a notificacao a este plano.
+     * Escopo por destinatario, e nao por protocolo: a tabela guarda UMA LINHA POR
+     * PESSOA avisada, entao um envio que alcanca 29 analistas da CEDEC virava 29
+     * cards identicos na aba. A aba passa a espelhar o sino de quem esta olhando --
+     * quem agiu nao recebe aviso da propria acao e por isso ve a aba vazia, igual
+     * ao sino.
      *
      * @return list<array<string, mixed>>
      */
     private function notificacoesDoPlano(PmdaPlano $plano): array
     {
+        $usuarioId = auth()->id();
+
+        if ($usuarioId === null) {
+            return [];
+        }
+
         return DB::table('notifications')
             ->where('group_key', 'like', $plano->moduloNotificacao().':'.$plano->getKey().':%')
+            ->where('notifiable_id', $usuarioId)
+            ->where('notifiable_type', \App\Models\User::class)
             ->orderBy('created_at')
             ->get()
             ->map(function ($n) {
@@ -741,31 +778,6 @@ class RepresentanteController extends Controller
         $this->service->remover($representante);
 
         return back()->with('success', 'Representante removido.');
-    }
-}
-
-class CompdecMembroController extends Controller
-{
-    public function __construct(private readonly CompdecMembroService $service) {}
-
-    public function store(Request $request, PmdaPlano $plano): RedirectResponse
-    {
-        $data = $request->validate([
-            'nome'     => ['required', 'string', 'max:110'],
-            'cargo'    => ['nullable', 'string', 'max:80'],
-            'telefone' => ['nullable', 'string', 'max:20'],
-        ]);
-
-        $this->service->adicionar($plano, $data);
-
-        return back()->with('success', 'Membro adicionado.');
-    }
-
-    public function destroy(PmdaCompdecMembro $membro): RedirectResponse
-    {
-        $this->service->remover($membro);
-
-        return back()->with('success', 'Membro removido.');
     }
 }
 

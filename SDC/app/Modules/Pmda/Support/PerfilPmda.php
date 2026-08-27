@@ -24,6 +24,7 @@ final readonly class PerfilPmda
     private function __construct(
         private ?TipoOrgao $tipoOrgao,
         private ?int $municipioId,
+        private bool $irrestrito,
     ) {}
 
     public static function deUsuario(User $user): self
@@ -40,6 +41,11 @@ final readonly class PerfilPmda
         return new self(
             tipoOrgao: $tipo,
             municipioId: $orgao?->municipio_id === null ? null : (int) $orgao->municipio_id,
+            // Mesmo papel do Gate::before em AuthServiceProvider. O bypass de
+            // POLICY nao alcancava a listagem porque o recorte territorial e
+            // filtro de QUERY, e nao autorizacao: o super-admin lotado num
+            // COMPDEC via so o proprio municipio.
+            irrestrito: $user->hasRole('super-admin'),
         );
     }
 
@@ -50,6 +56,26 @@ final readonly class PerfilPmda
     public function municipioId(): ?int
     {
         return $this->eCompdec() ? $this->municipioId : null;
+    }
+
+    /**
+     * Municipio que RESTRINGE a leitura. Null = ve o estado inteiro.
+     *
+     * Existe separado de municipioId() porque as duas perguntas so PARECEM a
+     * mesma: "de onde eu sou" (onde gravar) e "o que eu posso ver". Para quase
+     * todo mundo a resposta coincide, mas nao para o super-admin, que tem
+     * municipio proprio para criar E precisa enxergar tudo. Unificar as duas
+     * obrigaria a escolher entre o overview e o botao Novo PMDA.
+     */
+    public function municipioDoEscopo(): ?int
+    {
+        return $this->irrestrito ? null : $this->municipioId();
+    }
+
+    /** Le sem recorte territorial (super-admin). */
+    public function eIrrestrito(): bool
+    {
+        return $this->irrestrito;
     }
 
     /**
@@ -67,8 +93,8 @@ final readonly class PerfilPmda
      */
     public function aplicarEscopo(array $filtros): array
     {
-        if ($this->municipioId() !== null) {
-            $filtros['municipio_id'] = $this->municipioId();
+        if ($this->municipioDoEscopo() !== null) {
+            $filtros['municipio_id'] = $this->municipioDoEscopo();
         }
 
         return $filtros;

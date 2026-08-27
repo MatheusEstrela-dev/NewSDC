@@ -7,13 +7,13 @@ namespace App\Modules\Pmda\Services;
 use App\Modules\Compdec\Enums\StatusOrgao;
 use App\Modules\Compdec\Enums\TipoOrgao;
 use App\Modules\Compdec\Models\Orgao;
+use App\Modules\Pmda\DTOs\PmdaPlanoDTO;
 use App\Modules\Pmda\Enums\PmdaEventoTipo;
 use App\Modules\Pmda\Enums\PmdaStatus;
 use App\Modules\Pmda\Enums\SolicitacaoComunidadeStatus;
 use App\Modules\Pmda\Models\Comunidade;
 use App\Modules\Pmda\Models\ComunidadeSolicitacao;
 use App\Modules\Pmda\Models\PmdaComunidade;
-use App\Modules\Pmda\Models\PmdaCompdecMembro;
 use App\Modules\Pmda\Models\PmdaPlano;
 use App\Modules\Pmda\Models\PmdaPlanoEvento;
 use App\Modules\Pmda\Models\PmdaPonto;
@@ -59,16 +59,36 @@ class PmdaPlanoService extends BaseService
             );
         }
 
-        return PmdaPlano::create(array_merge($data, [
+        return PmdaPlano::create(array_merge(PmdaPlanoDTO::deFormulario($data)->toArray(), [
             'municipio_id' => $municipioId,
             'status'       => PmdaStatus::RASCUNHO,
             'created_by'   => $userId,
         ]));
     }
 
+    /**
+     * Edita o conteudo de um plano em aberto.
+     *
+     * A guarda de situacao fica AQUI, e nao so no middleware pmda.editavel:
+     * enviar/aprovar/arquivar/pedirAlteracao todos validam no proprio service, e
+     * atualizar() era o unico que dependia de guarda externa -- um comando
+     * artisan, um job ou uma rota nova sem o middleware escreveria num plano
+     * arquivado sem reclamar.
+     *
+     * O DTO decide QUAIS colunas entram no update: chave ausente nao mexe na
+     * coluna, chave com null limpa. E o que faz "submeti so a aba ISS" nao apagar
+     * o resto e "apaguei o campo" gravar de fato.
+     */
     public function atualizar(PmdaPlano $plano, array $data, int $userId): PmdaPlano
     {
-        $plano->update(array_merge($data, [
+        if (! $plano->status->permiteEdicao()) {
+            throw new \DomainException(sprintf(
+                'Este PMDA está %s e não aceita mais edição.',
+                mb_strtolower($plano->status->getLabel())
+            ));
+        }
+
+        $plano->update(array_merge(PmdaPlanoDTO::deFormulario($data)->toArray(), [
             'updated_by'          => $userId,
             'dt_ultima_alteracao' => now(),
         ]));
@@ -139,7 +159,14 @@ class PmdaPlanoService extends BaseService
 
         return [
             'total'     => (int) $porStatus->sum(),
-            'emEdicao'  => (int) ($porStatus[PmdaStatus::RASCUNHO->value] ?? 0),
+            // COMPLETO conta como em edicao, alinhado a PmdaStatus::permiteEdicao():
+            // o recalculo promove o plano assim que cada comunidade tem os 3
+            // representantes, muito antes de enviar. Contando so RASCUNHO, o plano
+            // sumia dos tres cards no momento em que o municipio terminava de
+            // preencher -- parecia que havia saido do painel sem ter ido a lugar
+            // nenhum. O badge da tabela segue mostrando "Completo".
+            'emEdicao'  => (int) ($porStatus[PmdaStatus::RASCUNHO->value] ?? 0)
+                         + (int) ($porStatus[PmdaStatus::COMPLETO->value] ?? 0),
             'emAnalise' => (int) ($porStatus[PmdaStatus::EM_ANALISE->value] ?? 0),
             'aprovados' => (int) ($porStatus[PmdaStatus::APROVADO->value] ?? 0),
         ];
@@ -716,24 +743,6 @@ class PlanoPontoService
     }
 }
 
-class CompdecMembroService
-{
-    public function adicionar(PmdaPlano $plano, array $data): PmdaCompdecMembro
-    {
-        return $plano->compdecMembros()->create($data);
-    }
-
-    public function remover(PmdaCompdecMembro $membro): void
-    {
-        $membro->delete();
-    }
-}
-
-/**
- * Ficha cadastral do COMPDEC acessada de dentro do PMDA. Reaproveita o
- * registro mestre do municipio (Compdec\Orgao tipo COMPDEC): o PMDA le como
- * fallback e grava no proprio orgao, mantendo o cadastro unico e autoritativo.
- */
 class CompdecFichaService
 {
     /** Colunas reais de compdec_orgaos editaveis pela ficha (exclui tem_plano_contingencia, gerido por observer). */

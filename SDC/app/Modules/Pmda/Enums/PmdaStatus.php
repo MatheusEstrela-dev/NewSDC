@@ -33,6 +33,26 @@ enum PmdaStatus: string
         return in_array($destino, $this->transicoes(), true);
     }
 
+    /**
+     * O conteudo do plano ainda pode ser editado pelo municipio.
+     *
+     * Fonte unica ao lado de transicoes(): a situacao ja governa PARA ONDE o plano
+     * pode ir, e governar tambem SE ele aceita escrita evita a lista de status
+     * editaveis nascer duplicada em cada controller.
+     *
+     * EM_ANALISE trava porque o plano esta na mao da CEDEC -- editar durante a
+     * analise faria o analista decidir sobre uma versao que ja mudou. Os terminais
+     * travam porque o desfecho ja foi dado; para mexer num arquivado o caminho e
+     * duplicar (permiteCopia() devolve true em qualquer situacao) e enviar um novo.
+     */
+    public function permiteEdicao(): bool
+    {
+        return match ($this) {
+            self::RASCUNHO, self::COMPLETO => true,
+            default => false,
+        };
+    }
+
     public function permiteCopia(): bool
     {
         // Duplicacao disponivel em qualquer status: gera sempre um novo PMDA em

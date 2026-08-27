@@ -20,7 +20,11 @@ class StoreComunidadeRequest extends FormRequest
             'comunidade_id' => ['nullable', 'integer'],
             'municipio_id'  => ['nullable', 'integer', 'exists:municipios,id'],
             'ponto_id'      => ['nullable', 'integer'],
-            'nome'          => ['required', 'string', 'max:150'],
+            // required_without: ao escolher uma comunidade do registro mestre, o
+            // ComunidadeService SOBRESCREVE o nome com o do mestre. Exigir o campo
+            // ali obrigava a mandar um valor que era descartado -- e dava a
+            // impressao de que o nome digitado seria gravado.
+            'nome'          => ['required_without:comunidade_id', 'nullable', 'string', 'max:150'],
             'latitude'      => CoordenadaMG::regrasLatitude(),
             'longitude'     => CoordenadaMG::regrasLongitude(),
             'trecho_pav'    => ['nullable', 'numeric', 'min:0'],

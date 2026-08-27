@@ -23,6 +23,10 @@ class PmdaPlanoResource extends JsonResource
             // @deprecated Classe Tailwind crua. Sai quando nenhum consumidor usar.
             'status_color'      => $this->status->getColorClass(),
             'pode_copiar'       => $this->status->permiteCopia(),
+            // Somente-leitura fora de RASCUNHO/COMPLETO: a tela precisa saber o
+            // mesmo que o middleware pmda.editavel, para nao oferecer um botao
+            // de salvar que o backend vai recusar.
+            'editavel'          => $this->status->permiteEdicao(),
             'data'              => $this->data?->toIso8601String(),
             'acoes'             => $this->acoes,
             'motivo'            => $this->motivo,
@@ -63,12 +67,6 @@ class PmdaPlanoResource extends JsonResource
                 'situacao'   => $p->pivot->situacao ?? 'ATIVO',
                 'capacidade' => $p->capacidade,
             ])->values()),
-            'compdec_membros'   => $this->whenLoaded('compdecMembros', fn () => $this->compdecMembros->map(fn ($m) => [
-                'id'       => $m->id,
-                'nome'     => $m->nome,
-                'cargo'    => $m->cargo,
-                'telefone' => $m->telefone,
-            ])->values()),
             'anexos'            => [
                 'termo'  => $this->anexoInfo(\App\Modules\Pmda\Models\PmdaPlano::MEDIA_TERMO),
                 'oficio' => $this->anexoInfo(\App\Modules\Pmda\Models\PmdaPlano::MEDIA_OFICIO),
@@ -95,6 +93,17 @@ class PmdaPlanoResource extends JsonResource
         5 => 'Poço Público',
         6 => 'Poço Particular',
     ];
+
+    /**
+     * Mapa codigo => rotulo, para quem precisa dos tipos fora da serializacao
+     * (mensagem de validacao, por exemplo). Fonte unica: a const acima.
+     *
+     * @return array<int, string>
+     */
+    public static function tiposDePonto(): array
+    {
+        return self::TIPOS_PONTO;
+    }
 
     /** Metadados do anexo de uma colecao (URL + nome do arquivo), ou null. */
     private function anexoInfo(string $colecao): ?array
