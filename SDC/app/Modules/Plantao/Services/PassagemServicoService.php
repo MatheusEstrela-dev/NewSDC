@@ -99,7 +99,12 @@ class PassagemServicoService extends BaseService
                 'hodometro' => $v->hodometro_atual,
                 'nivel_combustivel' => $v->nivel_combustivel?->value,
                 'alteracoes' => null,
-                'anotacao' => $v->exclusiva_sobreaviso ? 'Exclusiva Sobreaviso' : null,
+                // Texto livre, e so isso. A marca (Exclusiva Sobreaviso) NAO e
+                // copiada para ca: o relatorio a deriva da flag booleana da
+                // viatura (spec 3.3.1). Canalizar a flag para dentro do texto
+                // fazia o relatorio depender do formato de um campo que a
+                // Release 2 vai substituir pela entidade de reservas.
+                'anotacao' => null,
                 'ultimo_condutor_id' => $v->ultimo_condutor_id,
                 'ultimo_condutor_nome' => $v->ultimo_condutor_nome,
                 // Ponto de partida do formulario. O plantonista pode sobrescrever
@@ -130,6 +135,8 @@ class PassagemServicoService extends BaseService
                     "Somente um plantao ativo pode ser encerrado. O plantao #{$plantao->id} esta como {$plantao->status->label()}."
                 );
             }
+
+            $this->exigirLinhaPorViaturaAtiva($snapshots);
 
             foreach ($snapshots as $linha) {
                 $viatura = Viatura::findOrFail((int) $linha['viatura_id']);
@@ -169,6 +176,46 @@ class PassagemServicoService extends BaseService
 
             return $plantao->fresh();
         });
+    }
+
+    /**
+     * Guarda da secao 10 do spec: o snapshot exige uma linha por viatura ativa.
+     *
+     * O modal de encerramento monta as linhas a partir do `snapshot_sugerido`
+     * que veio na carga da pagina. Sem esta guarda, uma viatura cadastrada (ou
+     * reativada) depois disso simplesmente nao entrava no snapshot e desaparecia
+     * do relatorio - sem erro, sem aviso, sem log. Um relatorio incompleto com
+     * aparencia de completo. Vale tambem para submissao adulterada.
+     *
+     * @param list<array<string,mixed>> $snapshots
+     */
+    private function exigirLinhaPorViaturaAtiva(array $snapshots): void
+    {
+        $recebidos = array_map(
+            static fn (array $linha): int => (int) ($linha['viatura_id'] ?? 0),
+            $snapshots
+        );
+
+        $faltantes = Viatura::query()
+            ->ativas()
+            ->whereNotIn('id', $recebidos === [] ? [0] : $recebidos)
+            ->orderBy('prefixo')
+            ->orderBy('placa')
+            ->get(['id', 'prefixo', 'placa']);
+
+        if ($faltantes->isEmpty()) {
+            return;
+        }
+
+        $nomes = $faltantes
+            ->map(static fn (Viatura $v): string => "{$v->prefixo} - {$v->placa}")
+            ->implode(', ');
+
+        throw new PassagemInvalidaException(
+            'O encerramento precisa de uma linha por viatura ativa da frota. '
+            ."Faltando: {$nomes}. Recarregue a tela de encerramento - a frota mudou "
+            .'depois que ela foi aberta.'
+        );
     }
 
     /**
