@@ -25,6 +25,7 @@
         "laravel/reverb": "^1.10",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10",
+        "minishlink/web-push": "^11.0",
         "nativephp/mobile": "^3.0",
         "predis/predis": "^3.4",
         "rap2hpoutre/laravel-log-viewer": "^2.5",

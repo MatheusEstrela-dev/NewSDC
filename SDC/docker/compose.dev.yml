@@ -222,6 +222,15 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-dev@sdc.local}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
 
+      # Web Push. Sem par VAPID o canal fica indisponivel para todos os usuarios
+      # e CanaisDisponiveis desabilita o checkbox na tela com esse motivo -- ou
+      # seja, ausencia aqui degrada, nao quebra. Gere o par com
+      # `php artisan notificacoes:vapid` e ponha no docker/.env.
+      # Trocar o par depois invalida todas as inscricoes ja gravadas.
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:sdc@defesacivil.mg.gov.br}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+
     ports:
       - "8000:8000"     # HTTP (Swoole) — externo=interno p/ assets baterem
 
@@ -356,6 +365,12 @@ services:
       MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-}
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-dev@sdc.local}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
+
+      # Web Push. Precisa estar aqui tambem, e nao so no app: quem fala com o
+      # push service e o EnviarWebPushJob, que roda NESTE container.
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:sdc@defesacivil.mg.gov.br}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
 
     volumes: &queue-volumes
       # Bind-mount identico ao app; vendor fica na imagem.

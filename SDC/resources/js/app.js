@@ -206,6 +206,15 @@ const registerServiceWorker = async () => {
 
                     // Fallback: check every 2 hours
                     setInterval(tryUpdate, 1000 * 60 * 120);
+
+                    // Reenvia ao backend o endpoint de push deste navegador.
+                    // Necessario porque recoverFromStaleBuild e o handler de 419
+                    // acima chamam unregister() em todos os service workers: o
+                    // worker volta com endpoint novo e o antigo morre no banco.
+                    // Sem isto o push pararia em silencio apos o primeiro 419.
+                    import('@/Composables/useWebPush')
+                        .then(({ useWebPush }) => useWebPush().ressincronizar())
+                        .catch(() => {});
                 },
                 onOfflineReady() {
                 },

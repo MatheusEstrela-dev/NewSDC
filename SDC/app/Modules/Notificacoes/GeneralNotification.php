@@ -7,6 +7,7 @@ namespace App\Modules\Notificacoes;
 use App\Models\UserNotificationPreference;
 use App\Modules\Notificacoes\Channels\AgrupavelDatabaseChannel;
 use App\Modules\Notificacoes\Channels\EmailNotificacaoChannel;
+use App\Modules\Notificacoes\Channels\WebPushChannel;
 use App\Modules\Notificacoes\Contracts\Agrupavel;
 use App\Modules\Notificacoes\DTO\NotificacaoSpec;
 use App\Modules\Notificacoes\Support\TextoSeguro;
@@ -115,6 +116,10 @@ class GeneralNotification extends Notification implements Agrupavel, ShouldQueue
             $canais[] = EmailNotificacaoChannel::class;
         }
 
+        if ($pref->canal_push) {
+            $canais[] = WebPushChannel::class;
+        }
+
         if ($pref->canal_telegram) {
             $canais[] = TelegramChannel::class;
         }
@@ -145,6 +150,26 @@ class GeneralNotification extends Notification implements Agrupavel, ShouldQueue
             'modulo' => $modulo,
             'modulo_label' => (string) config("notificacoes.modulos.{$modulo}.label", 'SDC'),
             'group_key' => $this->groupKey,
+        ];
+    }
+
+    /**
+     * Payload para o WebPushChannel, consumido por public/sw-push.js.
+     *
+     * A tag e o group_key: o navegador substitui o aviso anterior de mesma tag em
+     * vez de empilhar, que e o equivalente no sistema operacional ao agrupamento
+     * que o sino faz numa linha so.
+     *
+     * @return array<string, mixed>
+     */
+    public function toWebPush(object $notifiable): array
+    {
+        return [
+            'titulo' => TextoSeguro::titulo($this->title),
+            'mensagem' => TextoSeguro::mensagem($this->message),
+            'tipo' => $this->type,
+            'url' => TextoSeguro::url($this->actionUrl) ?? '/notificacoes',
+            'tag' => $this->groupKey ?? $this->modulo(),
         ];
     }
 

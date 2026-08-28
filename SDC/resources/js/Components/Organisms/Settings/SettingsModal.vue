@@ -163,6 +163,63 @@
                         </div>
                     </div>
 
+                    <!-- Dispositivos de Push. A preferencia canal_push e por usuario,
+                         mas a entrega e por navegador: quem quer push sem nenhum
+                         dispositivo autorizado nao recebe nada, e precisa ver isso. -->
+                    <div v-if="pushConfiguradoNoServidor" class="p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
+                        <div class="flex items-start justify-between gap-4 flex-wrap">
+                            <div class="min-w-0">
+                                <h4 class="font-bold text-slate-900 dark:text-white mb-1">Notificações neste dispositivo</h4>
+                                <p class="text-xs text-slate-500">
+                                    O canal Push só entrega em navegadores autorizados. Autorize em cada máquina que você usa.
+                                </p>
+                            </div>
+                            <button
+                                v-if="!pushInscritoAqui"
+                                @click="ativarPush"
+                                :disabled="pushInscrevendo || pushBloqueado || !pushSuportado"
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {{ pushInscrevendo ? 'Ativando...' : 'Ativar neste navegador' }}
+                            </button>
+                            <button
+                                v-else
+                                @click="desativarPush"
+                                :disabled="pushInscrevendo"
+                                class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                Desativar aqui
+                            </button>
+                        </div>
+
+                        <p v-if="!pushSuportado" class="mt-3 text-xs text-amber-600 dark:text-amber-500">
+                            Este navegador não suporta notificações push.
+                        </p>
+                        <p v-else-if="pushBloqueado" class="mt-3 text-xs text-amber-600 dark:text-amber-500">
+                            Você bloqueou as notificações para este site. Libere nas configurações do navegador para poder ativar.
+                        </p>
+                        <p v-else-if="pushErro" class="mt-3 text-xs text-red-500 dark:text-red-400">{{ pushErro }}</p>
+
+                        <ul v-if="pushDispositivos.length" class="mt-4 space-y-2">
+                            <li
+                                v-for="dispositivo in pushDispositivos"
+                                :key="dispositivo.id"
+                                class="flex items-center justify-between gap-3 text-sm bg-slate-50 dark:bg-slate-800/50 rounded-lg px-3 py-2"
+                            >
+                                <span class="text-slate-700 dark:text-slate-300">{{ dispositivo.apelido }}</span>
+                                <button
+                                    @click="pushRemoverDispositivo(dispositivo.id)"
+                                    class="text-xs text-red-600 hover:text-red-500 dark:text-red-400 font-medium"
+                                >
+                                    Remover
+                                </button>
+                            </li>
+                        </ul>
+                        <p v-else class="mt-4 text-xs text-slate-500">
+                            Nenhum dispositivo autorizado ainda.
+                        </p>
+                    </div>
+
                     <div v-if="carregandoPreferencias" class="flex items-center justify-center py-12">
                         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                     </div>
@@ -463,6 +520,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { usePage, useForm } from '@inertiajs/vue3';
 import { useNotificationPreferences } from '@/Composables/useNotificationPreferences';
+import { useWebPush } from '@/Composables/useWebPush';
 import { iconeDeNotificacao } from '@/utils/notificationIcons';
 import TelegramCard from './integrations/TelegramCard.vue';
 import GovBrSignerCard from './integrations/GovBrSignerCard.vue';
@@ -484,19 +542,6 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 const settingsModalContainer = ref(null);
 
-watch(
-  () => props.isOpen,
-  (newVal) => {
-    if (newVal) {
-      document.body.style.overflow = 'hidden';
-      loadPreferences();
-    } else {
-      document.body.style.overflow = null;
-    }
-  },
-  { immediate: true }
-);
-
 const page = usePage();
 const currentTab = ref('profile');
 
@@ -517,6 +562,41 @@ const {
 const rascunhoModulos = ref([]);
 const updateMode = ref('auto');
 
+// Inscricao de push deste navegador. Vive separado da preferencia de proposito:
+// canal_push e "eu quero push" (por usuario), a inscricao e "entregue aqui" (por
+// dispositivo). Ativar so um dos dois nao entrega nada, e a tela mostra os dois.
+const {
+    dispositivos: pushDispositivos,
+    inscrevendo: pushInscrevendo,
+    erro: pushErro,
+    inscritoAqui: pushInscritoAqui,
+    suportado: pushSuportado,
+    bloqueado: pushBloqueado,
+    ativar: pushAtivar,
+    desativar: pushDesativar,
+    removerDispositivo: pushRemoverDispositivo,
+    ressincronizar: pushRessincronizar,
+    carregarDispositivos: pushCarregarDispositivos,
+} = useWebPush();
+
+const vapidPublicKey = computed(() => page.props.notificacoes?.vapid_public_key ?? '');
+const pushConfiguradoNoServidor = computed(() => vapidPublicKey.value !== '');
+
+const ativarPush = async () => {
+    const ok = await pushAtivar(vapidPublicKey.value);
+
+    // Autorizar o navegador so faz sentido junto com a preferencia ligada. Marcar
+    // o canal em todos os modulos do rascunho evita o estado confuso de ter
+    // dispositivo autorizado e nenhum modulo enviando para ele.
+    if (ok) {
+        rascunhoModulos.value.forEach((modulo) => {
+            modulo.canal_push = true;
+        });
+    }
+};
+
+const desativarPush = () => pushDesativar();
+
 async function loadPreferences() {
     // forcar: reabrir o modal deve mostrar o que esta no servidor agora, inclusive
     // o que mudou pelo sino enquanto ele estava fechado.
@@ -525,7 +605,28 @@ async function loadPreferences() {
     const copia = rascunho();
     rascunhoModulos.value = copia.modulos;
     updateMode.value = copia.updateMode;
+
+    if (pushConfiguradoNoServidor.value) {
+        await pushCarregarDispositivos();
+        await pushRessincronizar();
+    }
 }
+
+// Declarado DEPOIS de loadPreferences e das refs que ela usa. Com immediate:true
+// o watcher roda durante o setup, e la em cima ele alcancaria essas const na zona
+// morta temporal -- basta o modal montar ja aberto para virar ReferenceError.
+watch(
+  () => props.isOpen,
+  (newVal) => {
+    if (newVal) {
+      document.body.style.overflow = 'hidden';
+      loadPreferences();
+    } else {
+      document.body.style.overflow = null;
+    }
+  },
+  { immediate: true }
+);
 
 const tabs = [
   { id: 'profile', label: 'Meu Perfil', icon: UserIcon, description: 'Gerencie suas informações pessoais e assinatura digital.' },
