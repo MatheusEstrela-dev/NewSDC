@@ -84,6 +84,12 @@ class HandleInertiaRequests extends Middleware
                 // Como o cliente deve se atualizar: 'auto' tenta websocket e cai
                 // para polling sozinho. Ver useNotifications no frontend.
                 'update_mode' => fn() => $user ? ($user->notification_update_mode ?? 'auto') : 'polling',
+                // Chave publica VAPID: o PushManager do navegador precisa dela
+                // para se inscrever. E publica por definicao (identifica o
+                // servidor para o push service); a privada nunca sai daqui.
+                // String vazia significa "este servidor nao faz push", e e o que
+                // CanaisDisponiveis usa para desabilitar o canal na tela.
+                'vapid_public_key' => fn() => (string) config('webpush.vapid.public_key', ''),
             ],
         ];
     }
@@ -115,7 +121,15 @@ class HandleInertiaRequests extends Middleware
             $user->loadMissing('activeEmailChangeRequest');
             // Eager load roles+permissions se nao carregados
             if (!$user->relationLoaded('roles')) {
-                $user->load(['roles.permissions', 'permissions']);
+                // Colunas restritas de proposito. `getEffectivePermissions()` so
+                // consome `name` (dois `pluck('name')`), mas o eager load sem
+                // recorte hidratava o model inteiro -- slug, description, group,
+                // module, is_active, is_immutable e timestamps -- vezes o numero
+                // de permissoes do cargo. No cargo Desenvolvedor sao 262: medido
+                // em 878 KB por hidratacao contra 383 KB com o recorte.
+                // `id` e `guard_name` ficam porque o Spatie os usa para casar o
+                // pivot e o guard.
+                $user->load(['roles.permissions:id,name,guard_name', 'permissions:id,name,guard_name']);
             }
             return $this->getUserData($user);
         });

@@ -28,6 +28,45 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Canais de entrega
+    |--------------------------------------------------------------------------
+    |
+    | A chave e a coluna de user_notification_preferences. Assim como a lista de
+    | modulos, esta e a fonte unica: a tela de preferencias monta os checkboxes a
+    | partir daqui, em vez de manter tres canais fixos no SettingsModal.vue. Era
+    | por isso que Telegram, que funciona no backend desde a integracao, nunca
+    | aparecia para o usuario ligar.
+    |
+    | Quem decide se o canal esta DISPONIVEL para um usuario especifico e o
+    | servico CanaisDisponiveis -- ter e-mail cadastrado, ter conta Telegram
+    | vinculada, o servidor ter VAPID configurado. Aqui fica so o vocabulario.
+    |
+    | canal_whatsapp existe na tabela mas nao esta listado: nao ha channel por
+    | tras dele. Canal que o backend ignora nao entra nesta lista, senao a tela
+    | volta a prometer o que o sistema nao faz.
+    |
+    */
+    'canais' => [
+        'canal_sistema' => [
+            'label' => 'Sino (Sistema)',
+            'descricao' => 'Aparece no sino e no historico dentro do SDC.',
+        ],
+        'canal_email' => [
+            'label' => 'E-mail',
+            'descricao' => 'Enviado para o e-mail do seu cadastro.',
+        ],
+        'canal_push' => [
+            'label' => 'Push (Desktop)',
+            'descricao' => 'Aviso do sistema operacional, mesmo com o SDC fechado.',
+        ],
+        'canal_telegram' => [
+            'label' => 'Telegram',
+            'descricao' => 'Mensagem do bot na conta que voce vinculou.',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Modulos notificaveis
     |--------------------------------------------------------------------------
     |
@@ -211,13 +250,23 @@ return [
     |
     | Fan-out em lotes: os destinatarios sao resolvidos dentro do job ja
     | enfileirado e notificados em blocos, evitando um job por (usuario x canal).
-    | A fila segue a lista de prioridade do worker em producao.
+    |
+    | FILA PROPRIA, e nao default/high. Os canais externos (push, e-mail) fazem
+    | I/O de rede: um disparo para mil pessoas gerava mil jobs em `default` e,
+    | com um worker so, segurava export, webhook e e-mail de reset de senha atras
+    | deles por minutos -- head-of-line blocking. Em fila separada, com worker
+    | dedicado (servico queue_notificacoes no compose), uma rajada de notificacao
+    | atrasa apenas outras notificacoes.
+    |
+    | As duas filas sao consumidas pelo MESMO worker, nesta ordem de prioridade:
+    | alerta urgente passa na frente do aviso de rotina sem precisar de processo
+    | proprio.
     |
     */
     'entrega' => [
         'chunk_destinatarios' => 200,
-        'fila' => 'default',
-        'fila_urgente' => 'high',
+        'fila' => 'notificacoes',
+        'fila_urgente' => 'notificacoes_urgente',
         'tentativas' => 3,
         'backoff_segundos' => [10, 30, 60],
     ],

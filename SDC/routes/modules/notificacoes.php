@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\NotificationPreferencesController;
 use App\Modules\Notificacoes\Controllers\NotificacaoInboxController;
+use App\Modules\Notificacoes\Controllers\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -51,6 +52,26 @@ Route::middleware('auth')->prefix('notificacoes')->name('notificacoes.')->group(
     Route::put('/preferencias', [NotificationPreferencesController::class, 'update'])
         ->middleware('throttle:30,1')
         ->name('preferencias.update');
+
+    /*
+    | Dispositivos de Web Push.
+    |
+    | O throttle de inscrever e mais folgado que o das demais escritas porque o
+    | cliente reenvia o endpoint a cada boot: o app.js desregistra o service
+    | worker na recuperacao de build velho e no 419, e sem esse reenvio o push
+    | pararia em silencio depois do primeiro 419.
+    */
+    Route::get('/push/dispositivos', [PushSubscriptionController::class, 'index'])
+        ->middleware('throttle:60,1')
+        ->name('push.dispositivos');
+
+    Route::post('/push/inscrever', [PushSubscriptionController::class, 'store'])
+        ->middleware('throttle:60,1')
+        ->name('push.inscrever');
+
+    Route::delete('/push/inscrever', [PushSubscriptionController::class, 'destroy'])
+        ->middleware('throttle:30,1')
+        ->name('push.desinscrever');
 
     // Depois das rotas fixas, senao "lidas" e "todas-lidas" cairiam aqui.
     Route::post('/{notificacao}/lida', [NotificacaoInboxController::class, 'lida'])

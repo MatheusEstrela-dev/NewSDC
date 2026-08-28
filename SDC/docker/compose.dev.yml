@@ -137,15 +137,16 @@ services:
       # A conta que ele faz:
       #   (WORKERS + TASK_WORKERS + QUEUE_WORKERS) * APP_INSTANCES
       #       + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE <= PG_MAX_CONNECTIONS
-      #   (40 + 16 + 0) * 1 + 2 + 5 = 63  <=  100   OK
+      #   (40 + 16 + 0) * 1 + 3 + 5 = 64  <=  100   OK
       #
       # Com isso um OCTANE_WORKERS excessivo aborta o boot com mensagem clara em
       # vez de degradar em producao. Foi o que faltou para 80 workers: a projecao
       # daria 118 e o gate barraria.
       PG_MAX_CONNECTIONS: 100
-      # Os 2 containers de fila dedicados. Somados UMA vez, nao por instancia --
-      # o entrypoint estava projetando 0 externas e subestimando o consumo real.
-      EXTERNAL_DB_CONSUMERS: 2
+      # Os 3 containers de fila dedicados (queue, queue_critical,
+      # queue_notificacoes). Somados UMA vez, nao por instancia -- o entrypoint
+      # estava projetando 0 externas e subestimando o consumo real.
+      EXTERNAL_DB_CONSUMERS: 3
       # Teto do ConnectionSemaphore. O default (100) era igual ao
       # max_connections do Postgres, que ainda reserva 3 para superuser: o
       # semaforo autorizava mais conexoes do que o banco aceita, e o
@@ -221,6 +222,15 @@ services:
       MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-}
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-dev@sdc.local}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
+
+      # Web Push. Sem par VAPID o canal fica indisponivel para todos os usuarios
+      # e CanaisDisponiveis desabilita o checkbox na tela com esse motivo -- ou
+      # seja, ausencia aqui degrada, nao quebra. Gere o par com
+      # `php artisan notificacoes:vapid` e ponha no docker/.env.
+      # Trocar o par depois invalida todas as inscricoes ja gravadas.
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:sdc@defesacivil.mg.gov.br}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
 
     ports:
       - "8000:8000"     # HTTP (Swoole) — externo=interno p/ assets baterem
@@ -357,6 +367,12 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-dev@sdc.local}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SDC Dev}
 
+      # Web Push. Precisa estar aqui tambem, e nao so no app: quem fala com o
+      # push service e o EnviarWebPushJob, que roda NESTE container.
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:sdc@defesacivil.mg.gov.br}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+
     volumes: &queue-volumes
       # Bind-mount identico ao app; vendor fica na imagem.
       - ../app:/var/www/app
@@ -465,6 +481,53 @@ services:
         exec php artisan queue:work redis
         --queue=critical,high
         --tries=2 --timeout=60 --max-time=3600 --sleep=1
+
+    healthcheck: *queue-healthcheck
+
+  # Worker exclusivo das notificacoes (push e e-mail).
+  #
+  # Existe por causa de head-of-line blocking. O fan-out de uma notificacao para
+  # mil pessoas enfileirava mil jobs de I/O de rede; em `default`, com UM worker,
+  # isso segurava export, webhook e e-mail de reset de senha atras deles por
+  # minutos. Aqui uma rajada de notificacao so atrasa outra notificacao.
+  #
+  # As duas filas no mesmo processo, nesta ordem: alerta urgente passa na frente
+  # do aviso de rotina sem custar um container a mais. Os nomes vem de
+  # config/notificacoes.php (entrega.fila / entrega.fila_urgente).
+  #
+  # --timeout=120: o job de push fala com FCM/Mozilla/WNS e, no pior caso, cai
+  # para envio individual por dispositivo.
+  queue_notificacoes:
+    image: newsdc-swoole-dev:latest
+    container_name: newsdc_dev_queue_notificacoes
+    hostname: queue-notificacoes
+    restart: unless-stopped
+
+    mem_limit: 768m
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    environment:
+      <<: *queue-env
+      APP_NAME: "SDC Dev Queue Notificacoes"
+
+    volumes: *queue-volumes
+
+    depends_on: *queue-depends
+
+    command:
+      - sh
+      - -c
+      - >
+        if [ -n "$${ANEXOS_ROOT:-}" ] && [ ! -e "$${ANEXOS_ROOT}/.sdc_storage_mounted" ]; then
+        echo "ERRO: ANEXOS_ROOT sem o marcador .sdc_storage_mounted (disco de anexos nao montado no host?)" && exit 1;
+        fi &&
+        umask 002 &&
+        composer dump-autoload --optimize --no-interaction &&
+        exec php artisan queue:work redis
+        --queue=notificacoes_urgente,notificacoes
+        --tries=2 --timeout=120 --max-time=3600 --sleep=1
 
     healthcheck: *queue-healthcheck
 

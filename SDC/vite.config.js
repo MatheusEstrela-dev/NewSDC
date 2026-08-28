@@ -53,6 +53,11 @@ export default defineConfig({
                 ],
             },
             workbox: {
+                // Handlers de push e notificationclick. A estrategia aqui e
+                // generateSW, que so gera worker de cache; importScripts e como
+                // se acrescenta comportamento proprio sem migrar para
+                // injectManifest e reescrever o cache do zero.
+                importScripts: ['/sw-push.js'],
                 globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
                 runtimeCaching: [
                     {
