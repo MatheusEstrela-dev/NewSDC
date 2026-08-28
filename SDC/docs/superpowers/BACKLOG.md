@@ -91,6 +91,59 @@ telefones da RMBH no rodape do relatorio.
 
 ---
 
+## Permuta de plantao (subsistema B da escala)
+
+**Origem:** fora de escopo declarado da Release 1 da escala (2026-08-28)
+
+Pedido de troca de turno entre dois plantonistas, com aprovacao da chefia e
+reescrita da escala publicada. E o subsistema que mais gera trabalho: maquina de
+estados propria, duas partes, autorizacao, e trilha de quem aprovou.
+
+Hoje a troca e feita pelo montador em `EscalaItemUpdateController`, que ja avisa
+quem entra e quem sai. A permuta acrescenta o pedido partindo do plantonista, em
+vez de partir de quem monta.
+
+Base pronta: `plantao_escala_itens` tem `status` com o caso `SUBSTITUIDO`, que
+nasceu para este fluxo e hoje nao e atribuido por nada.
+
+---
+
+## Gerador automatico de ciclo (subsistema D da escala)
+
+**Origem:** fora de escopo declarado da Release 1 da escala
+
+Preencher o mes inteiro a partir de um padrao (12x36, 5x1) em vez de vaga a
+vaga.
+
+**Cuidado que precede o planejamento:** a proposta original assumia ciclo 12x36,
+que NAO e a escala do CEDEC. Os turnos reais sao 06-16 e 16-02 (10h) mais 08-20
+e 20-08 (12h), e agora sao cadastraveis em `plantao_tipos_turno` -- um gerador
+tem que ler a tabela, nunca embutir o ciclo.
+
+---
+
+## Exportacao da escala em PDF/Excel (subsistema E)
+
+**Origem:** fora de escopo declarado da Release 1 da escala
+
+O modulo ja tem `PlantaoExportController` e a infraestrutura de exports
+assincronos (`exports:cleanup` no scheduler). O trabalho e a montagem do
+documento, nao o encanamento.
+
+---
+
+## Turno EXTRAORDINARIO nao gera lembrete
+
+**Origem:** consequencia aceita do desenho da Release 1 da escala
+
+`EXTRAORDINARIO` tem `hora_inicio` e `hora_fim` nulas -- por definicao nao tem
+horario -- entao `escalavel = false` e ele nunca entra na escala nem no
+lembrete. Continua servindo para abrir turno fora de escala pelo botao normal.
+
+Se um dia for preciso escalar turno extraordinario com hora marcada, o caminho e
+cadastrar um tipo novo com horario, nao afrouxar a regra.
+
+---
 ## Dividas menores da release de Plantao
 
 Trazidas da triagem da revisao final de branch. Nenhuma bloqueou o merge.
