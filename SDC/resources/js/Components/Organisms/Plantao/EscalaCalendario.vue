@@ -6,12 +6,20 @@
  * biblioteca de calendario um dia significa reescrever este arquivo e nenhum
  * outro.
  *
- * RESPONSIVIDADE. No celular a grade mensal e ilegivel: sete colunas em 375px
- * dao ~50px por dia, e o nome do plantonista nao cabe em nenhum deles. Abaixo
- * de md a visao vira `listWeek`, que e uma lista vertical de compromissos --
- * a forma que o plantonista realmente usa no telefone. A troca segue o
- * `useMobile`, que le matchMedia e nao innerWidth: e a MESMA medida das media
- * queries do Tailwind, entao o componente nunca discorda do CSS ao redor.
+ * RESPONSIVIDADE. A grade mensal so e legivel a partir de ~1000px: sao sete
+ * colunas, e cada uma precisa caber "Sgt Fulano" mais o horario. Abaixo disso a
+ * visao vira `listWeek`, uma lista vertical da semana -- que e a forma como o
+ * plantonista realmente consulta a escala.
+ *
+ * O corte e em `lg` (1024px), o MESMO da sidebar, e nao em `md`: entre 768 e
+ * 1023px a grade ainda cabe na tela mas fica espremida a ponto de o nome nao
+ * caber na celula, que era o sintoma. Um corte so para o layout inteiro tambem
+ * evita a faixa em que sidebar e calendario discordam sobre o que e "tela
+ * pequena".
+ *
+ * A decisao segue o `useMobile`, que le matchMedia e nao innerWidth: e a MESMA
+ * medida das media queries do Tailwind, entao o componente nunca discorda do
+ * CSS ao redor.
  */
 import { useMobile } from '@/Composables/useMobile';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -41,20 +49,23 @@ const props = defineProps({
 const emit = defineEmits(['selecionar-dia', 'selecionar-vaga', 'mudar-mes']);
 
 const calendarRef = ref(null);
-const { isMobile } = useMobile();
+const { isDesktop } = useMobile();
 
-const viewInicial = computed(() => (isMobile.value ? 'listWeek' : 'dayGridMonth'));
+// Lista semanal em tudo que nao for desktop: mobile E tablet.
+const usaLista = computed(() => !isDesktop.value);
+
+const viewInicial = computed(() => (usaLista.value ? 'listWeek' : 'dayGridMonth'));
 
 /**
  * Troca a visao quando o dispositivo cruza o breakpoint -- girar o telefone,
  * redimensionar a janela. `initialView` so vale na montagem, entao sem este
  * watch a grade mensal ficaria presa numa tela estreita.
  */
-watch(isMobile, (movel) => {
+watch(usaLista, (lista) => {
   const api = calendarRef.value?.getApi();
   if (!api) return;
 
-  const alvo = movel ? 'listWeek' : 'dayGridMonth';
+  const alvo = lista ? 'listWeek' : 'dayGridMonth';
   if (api.view.type !== alvo) api.changeView(alvo);
 });
 
@@ -92,16 +103,16 @@ const opcoes = computed(() => ({
   headerToolbar: {
     left: 'prev,next',
     center: 'title',
-    right: isMobile.value ? '' : 'today',
+    right: usaLista.value ? '' : 'today',
   },
   // Altura fixa quebra em telefone: o conteudo da lista semanal varia muito.
   height: 'auto',
   // Sem isto, um dia com tres turnos estica a celula e desalinha a grade.
-  dayMaxEvents: isMobile.value ? false : 3,
+  dayMaxEvents: usaLista.value ? false : 3,
   moreLinkContent: (args) => `+${args.num}`,
   firstDay: 0,
   // Some o cabecalho de horario duplicado: a hora ja vai no titulo do evento.
-  displayEventTime: !isMobile.value,
+  displayEventTime: !usaLista.value,
   eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
   noEventsContent: 'Nenhum plantao escalado nesta semana.',
   datesSet: aoMudarIntervalo,
