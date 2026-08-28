@@ -50,11 +50,11 @@ const props = defineProps({
 });
 
 const handleView = (id) => {
-  // TODO: Implementar visualização detalhada
+  router.visit(route('plantao.show', id));
 };
 
 const handleEdit = (id) => {
-  // TODO: Implementar edição
+  router.visit(route('plantao.edit', id));
 };
 
 const handleFilter = (filters) => {

@@ -35,7 +35,10 @@ class PlantaoIndexController extends Controller
         $user = $request->user();
 
         $plantoesData = [
-            'data' => PlantaoListDTO::collection($plantoes->items()),
+            'data' => PlantaoListDTO::collection(
+                $plantoes->items(),
+                fn (Plantao $turno) => $user !== null && $this->plantaoService->podeEditar($turno, $user)
+            ),
             'pagination' => [
                 'current_page' => $plantoes->currentPage(),
                 'per_page' => $plantoes->perPage(),

@@ -19,7 +19,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['view', 'edit', 'delete']);
+const emit = defineEmits(['view', 'print', 'edit', 'delete']);
 
 const getStatusClasses = (status) => {
   const s = status?.toLowerCase?.() || '';
@@ -73,7 +73,17 @@ const getStatusClasses = (status) => {
                   resource="turnos"
                   :actions="[
                     { action: 'view',   handler: () => emit('view', item.id) },
-                    { action: 'edit',   handler: () => emit('edit', item.id),   allowed: canEdit },
+                    // Sem slug 'plantao.turnos.print' no config: o ActionButton
+                    // montaria {module}.{resource}.{action} e o item sumiria
+                    // para todo mundo, em silencio (mesmo defeito do 'validar'
+                    // nas notificacoes). `resource` + `aliasOverride` juntos
+                    // reescrevem o slug para 'plantao.passagem.relatorio' - a
+                    // MESMA permissao que ja guarda a rota GET
+                    // plantao.passagem.relatorio consumida pelo modal de
+                    // impressao, entao quem ve o relatorio no painel tambem
+                    // ve o botao de imprimir, e ninguem mais.
+                    { action: 'print',  handler: () => emit('print', item.id), resource: 'passagem', aliasOverride: 'relatorio' },
+                    { action: 'edit',   handler: () => emit('edit', item.id),   allowed: canEdit && item.pode_editar },
                     { action: 'delete', handler: () => emit('delete', item.id), allowed: canDelete },
                   ]"
                 />

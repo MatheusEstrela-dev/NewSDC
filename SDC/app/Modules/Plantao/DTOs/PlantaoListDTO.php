@@ -14,10 +14,14 @@ class PlantaoListDTO
         public readonly string $periodo,
         public readonly string $status,
         public readonly ?string $observacoes,
+        // Decidido no backend (PlantaoService::podeEditar): dono + turno
+        // ATIVO, ou excecao de supervisao. O frontend so le a flag, nao
+        // recalcula quem e dono de que.
+        public readonly bool $pode_editar,
     ) {
     }
 
-    public static function fromModel($plantao): self
+    public static function fromModel($plantao, bool $podeEditar = false): self
     {
         $nome = $plantao->plantonista_nome ?? 'N/A';
         $parts = explode(' ', $nome);
@@ -36,13 +40,19 @@ class PlantaoListDTO
             periodo: $periodoLabel,
             status: $statusLabel,
             observacoes: $plantao->observacoes,
+            pode_editar: $podeEditar,
         );
     }
 
-    public static function collection(iterable $items): array
+    /**
+     * @param  (callable(mixed):bool)|null  $podeEditarResolver  decide o
+     *         `pode_editar` por item; sem resolver, ninguem edita (default
+     *         seguro para chamadores que ainda nao passam usuario).
+     */
+    public static function collection(iterable $items, ?callable $podeEditarResolver = null): array
     {
         return array_map(
-            fn($item) => self::fromModel($item),
+            fn ($item) => self::fromModel($item, $podeEditarResolver ? $podeEditarResolver($item) : false),
             is_array($items) ? $items : iterator_to_array($items)
         );
     }

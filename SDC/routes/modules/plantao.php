@@ -6,8 +6,11 @@ use App\Modules\Plantao\Controllers\NoticiasIndexController;
 use App\Modules\Plantao\Controllers\PassagemAbrirController;
 use App\Modules\Plantao\Controllers\PassagemAceitarController;
 use App\Modules\Plantao\Controllers\PassagemEncerrarController;
+use App\Modules\Plantao\Controllers\PlantaoEditController;
 use App\Modules\Plantao\Controllers\PlantaoExportController;
 use App\Modules\Plantao\Controllers\PlantaoIndexController;
+use App\Modules\Plantao\Controllers\PlantaoShowController;
+use App\Modules\Plantao\Controllers\PlantaoUpdateController;
 use App\Modules\Plantao\Controllers\RelatorioPassagemController;
 use App\Modules\Plantao\Controllers\ViaturaDestroyController;
 use App\Modules\Plantao\Controllers\ViaturaIndexController;
@@ -72,6 +75,24 @@ Route::prefix('plantao')->name('plantao.')->group(function () {
     Route::get('/{plantao}/relatorio', RelatorioPassagemController::class)
         ->name('passagem.relatorio')
         ->middleware('can:plantao.passagem.relatorio');
+
+    // /{plantao}/edit antes do /{plantao} bare word, no mesmo espirito das
+    // estaticas acima (nao ha colisao real - segmentos diferentes -, mas
+    // mantem o padrao de "mais especifico primeiro" documentado neste
+    // arquivo). Middleware de rota so garante a permissao base; a checagem
+    // fina de dono+ATIVO (com excecao de supervisao) mora no controller e
+    // responde 403, nao 404/422.
+    Route::get('/{plantao}/edit', PlantaoEditController::class)
+        ->name('edit')
+        ->middleware('can:plantao.turnos.edit');
+
+    Route::get('/{plantao}', PlantaoShowController::class)
+        ->name('show')
+        ->middleware('can:plantao.turnos.view');
+
+    Route::put('/{plantao}', PlantaoUpdateController::class)
+        ->name('update')
+        ->middleware('can:plantao.turnos.edit');
 
     Route::get('/', PlantaoIndexController::class)
         ->name('index')

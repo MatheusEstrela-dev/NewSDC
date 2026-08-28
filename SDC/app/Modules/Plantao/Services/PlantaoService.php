@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Plantao\Services;
 
+use App\Models\User;
 use App\Modules\Plantao\Enums\StatusPlantao;
 use App\Modules\Plantao\Models\Plantao;
 use App\Modules\Shared\BaseService;
@@ -59,6 +60,33 @@ class PlantaoService extends BaseService
     public function delete(int $id): bool
     {
         return Plantao::findOrFail($id)->delete();
+    }
+
+    /**
+     * Autorizacao fina de edicao do turno (Decisao 2 do plano de
+     * visualizar/editar): so o dono, e so enquanto ATIVO. Em PENDENTE_ACEITE
+     * ou FINALIZADO* o snapshot ja foi declarado e possivelmente aceito pela
+     * outra parte - editar reescreveria historico e esvaziaria o aceite
+     * formal, entao nem o dono edita depois disso.
+     *
+     * Excecao: `plantao.passagem.encerrar_alheio` (supervisao/administracao)
+     * cobre tambem a edicao alheia, pela mesma logica "dono, com excecao
+     * supervisionada" ja usada no encerramento (spec 4.3). Toda edicao -
+     * inclusive alheia - ja fica rastreada automaticamente pela trilha de
+     * acoes do model (TrilhaDeAcoes/RegistroDeAcao avisa o dono "editado por
+     * X"), sem precisar de coluna nova.
+     */
+    public function podeEditar(Plantao $plantao, User $user): bool
+    {
+        if ($plantao->status !== StatusPlantao::ATIVO) {
+            return false;
+        }
+
+        if ((int) $plantao->plantonista_id === (int) $user->id) {
+            return true;
+        }
+
+        return $user->can('plantao.passagem.encerrar_alheio');
     }
 
     public function getStatistics(array $filters = []): array

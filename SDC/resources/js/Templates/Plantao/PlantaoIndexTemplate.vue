@@ -15,6 +15,7 @@ import AbrirPlantaoModal from '@/Components/Organisms/Plantao/AbrirPlantaoModal.
 import EncerrarTurnoModal from '@/Components/Organisms/Plantao/EncerrarTurnoModal.vue';
 import PlantaoFiltersSection from '@/Components/Organisms/Plantao/PlantaoFiltersSection.vue';
 import PlantaoGrid from '@/Components/Organisms/Plantao/PlantaoGrid.vue';
+import PrintPassagemModal from '@/Components/Organisms/Plantao/Print/PrintPassagemModal.vue';
 import PlantaoStatsCards from '@/Components/Organisms/Plantao/PlantaoStatsCards.vue';
 import PlantaoTable from '@/Components/Organisms/Plantao/PlantaoTable.vue';
 import RelatorioPassagemPanel from '@/Components/Organisms/Plantao/RelatorioPassagemPanel.vue';
@@ -160,6 +161,22 @@ const handleExportCsv = (params) => {
 const handleBuscarNoticias = () => {
   router.visit(route('plantao.noticias'));
 };
+
+// =========================
+// Modal de Impressao (passagem de servico do turno selecionado)
+// =========================
+const printModalOpen = ref(false);
+const selectedPlantao = ref(null);
+
+function handlePrint(id) {
+  selectedPlantao.value = props.plantoes.find((p) => p.id === id) || null;
+  printModalOpen.value = true;
+}
+
+function closePrintModal() {
+  printModalOpen.value = false;
+  selectedPlantao.value = null;
+}
 </script>
 
 <template>
@@ -285,6 +302,7 @@ const handleBuscarNoticias = () => {
       :can-edit="canEdit"
       :can-delete="canDelete"
       @view="emit('view', $event)"
+      @print="handlePrint"
       @edit="emit('edit', $event)"
       @delete="emit('delete', $event)"
     />
@@ -296,6 +314,7 @@ const handleBuscarNoticias = () => {
       :can-edit="canEdit"
       :can-delete="canDelete"
       @view="emit('view', $event)"
+      @print="handlePrint"
       @edit="emit('edit', $event)"
       @delete="emit('delete', $event)"
     />
@@ -339,6 +358,13 @@ const handleBuscarNoticias = () => {
       :turno="turnoParaAceitar"
       @close="showAceitarModal = false"
       @saved="showAceitarModal = false"
+    />
+
+    <!-- Modal: Imprimir passagem de servico do turno selecionado -->
+    <PrintPassagemModal
+      :show="printModalOpen"
+      :plantao="selectedPlantao"
+      @close="closePrintModal"
     />
   </div>
 </template>
