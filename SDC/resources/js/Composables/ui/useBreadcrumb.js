@@ -340,27 +340,63 @@ export function useBreadcrumb() {
 
         const humanize = (segment) => segment.replace(/([A-Z])/g, ' $1').trim();
 
-        // A ultima parte costuma ser a acao (Index/Create/Edit/Show).
-        const last = segments[segments.length - 1];
-        const isAction = Object.prototype.hasOwnProperty.call(actionMap, last);
+        /**
+         * Separa recurso e acao do ultimo segmento.
+         *
+         * O projeto usa DOIS estilos de nome de pagina, e o gerador so conhecia
+         * um deles:
+         *
+         *   Tdap/Cronogramas/Index   acao como SEGMENTO proprio  (71 paginas)
+         *   Plantao/ViaturasIndex    acao como SUFIXO do recurso (33 paginas)
+         *
+         * Sem tratar o sufixo, o segundo estilo caia no humanize() e a trilha
+         * terminava em "Viaturas Index", "Escala Index", "Plantao Index" -- o
+         * nome interno do arquivo vazando para o usuario final.
+         */
+        const separarAcao = (segmento) => {
+            if (Object.prototype.hasOwnProperty.call(actionMap, segmento)) {
+                return { recurso: null, acao: segmento };
+            }
+
+            for (const acao of Object.keys(actionMap)) {
+                // `length >` e nao `>=`: o segmento tem que sobrar alguma coisa
+                // depois de tirar a acao, senao "Index" viraria recurso vazio.
+                if (segmento.length > acao.length && segmento.endsWith(acao)) {
+                    return { recurso: segmento.slice(0, -acao.length), acao };
+                }
+            }
+
+            return { recurso: segmento, acao: null };
+        };
+
+        const { recurso: recursoFinal, acao } = separarAcao(segments[segments.length - 1]);
 
         // Modulo (primeiro segmento): ex. Tdap
         if (segments[0]) {
             items.push({ label: humanize(segments[0]), route: null });
         }
 
-        // Recursos intermediarios (entre modulo e acao): ex. Cronogramas, Prestadores
-        const middleEnd = isAction ? segments.length - 1 : segments.length;
-        for (let i = 1; i < middleEnd; i++) {
+        // Recursos intermediarios (entre modulo e acao): ex. Cronogramas
+        for (let i = 1; i < segments.length - 1; i++) {
             items.push({ label: humanize(segments[i]), route: null });
         }
 
-        // Acao final (so quando mapeia para um rotulo nao nulo)
-        if (isAction && actionMap[last]) {
-            items.push({ label: actionMap[last], route: null });
+        // Recurso do ultimo segmento, quando sobra algo depois de tirar a acao
+        if (recursoFinal && segments.length > 1) {
+            items.push({ label: humanize(recursoFinal), route: null });
         }
 
-        return items;
+        // Acao final (so quando mapeia para um rotulo nao nulo)
+        if (acao && actionMap[acao]) {
+            items.push({ label: actionMap[acao], route: null });
+        }
+
+        // Colapsa repeticao consecutiva: `Plantao/PlantaoIndex` produzia
+        // "Plantao > Plantao", porque modulo e recurso tem o mesmo nome. E o
+        // caso de toda pagina raiz de modulo neste projeto.
+        return items.filter(
+            (item, i) => i === 0 || item.label !== items[i - 1].label
+        );
     });
 
     // Navega para o item anterior do proprio breadcrumb (deterministico) em vez

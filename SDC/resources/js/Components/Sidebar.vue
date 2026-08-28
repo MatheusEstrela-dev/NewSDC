@@ -703,7 +703,6 @@ import NavItem from './NavItem.vue';
 
 // Tentar injetar o estado do layout, se não existir, criar localmente
 const sidebarCollapsed = inject('sidebarCollapsed', ref(false));
-const isCollapsed = sidebarCollapsed;
 
 // Injetar estados mobile
 const isMobile = inject('isMobile', ref(false));
@@ -711,6 +710,26 @@ const isTablet = inject('isTablet', ref(false));
 const isDesktop = inject('isDesktop', ref(true));
 const isSidebarOpen = inject('isSidebarOpen', ref(false));
 const closeSidebar = inject('closeSidebar', () => {});
+
+/**
+ * Recolher a sidebar e preferencia de DESKTOP, onde ela ocupa espaco de fato e
+ * trocar 280px por 80px devolve area util. Abaixo de lg ela e um drawer
+ * off-canvas: nao ocupa nada quando fechado e, quando abre, abre inteiro.
+ *
+ * Antes `isCollapsed` era o `sidebarCollapsed` cru, sem guarda de largura. Quem
+ * deixasse a sidebar recolhida no desktop e depois estreitasse a janela abria o
+ * drawer com `is-collapsed` junto: os itens herdavam
+ * `.nav-item.is-collapsed { justify-content: center; padding: 0.75rem }`, os
+ * rotulos longos ("Ajuda Humanitaria", "Plano de Contingencia") quebravam em
+ * duas linhas e sobrava uma faixa morta a esquerda -- a largura continuava 280px
+ * por causa do `!important` do `.is-mobile-open`, mas o conteudo era desenhado
+ * como se fosse o rail de 80px.
+ *
+ * O guard ja existia para o logo (`!isCollapsed || (isMobile || isTablet)`, mais
+ * acima); faltava valer para o resto. Aqui ele passa a ser a fonte unica, e o
+ * template todo herda o comportamento certo.
+ */
+const isCollapsed = computed(() => sidebarCollapsed.value && isDesktop.value);
 
 const page = usePage();
 
@@ -1029,9 +1048,18 @@ const permissionamentoHref = route().has('admin.permissions.users.index') ? rout
                               route().has('admin.permissions.permissions.index') ? route('admin.permissions.permissions.index') :
                               route('dashboard');
 
+/**
+ * Escreve na FONTE (`sidebarCollapsed`, o ref injetado do layout), nunca em
+ * `isCollapsed`, que agora e um computed derivado e somente leitura -- atribuir
+ * a ele falha em silencio e o botao de recolher para de funcionar.
+ *
+ * O layout tambem le `sidebarCollapsed` para o offset `lg:!ml-20` do conteudo,
+ * entao a fonte precisa ser a mesma nos dois lados.
+ */
 function toggleSidebar() {
-  isCollapsed.value = !isCollapsed.value;
-  if (isCollapsed.value) {
+  sidebarCollapsed.value = !sidebarCollapsed.value;
+
+  if (sidebarCollapsed.value) {
     activeSubmenu.value = null;
   }
 }
