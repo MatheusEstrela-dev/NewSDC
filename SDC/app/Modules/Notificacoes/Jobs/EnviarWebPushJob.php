@@ -15,12 +15,17 @@ use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\WebPush;
 
 /**
- * Entrega um payload de push a todas as inscricoes de um usuario.
+ * Entrega um payload de push a todas as inscricoes de um LOTE de usuarios.
  *
  * Roda em job, e nao dentro do Notification::sendNow() do dispatcher, porque
  * cada inscricao e uma requisicao HTTP para um push service externo (FCM,
  * Mozilla, WNS). Segurar o worker do fan-out esperando rede seria o mesmo
  * problema do e-mail, multiplicado pelo numero de dispositivos.
+ *
+ * Recebe uma LISTA de destinatarios, nao um so: um disparo para mil pessoas
+ * criava mil jobs, cada um com o proprio SELECT. Agora sao mil/chunk jobs e uma
+ * query por job. O envio individual segue existindo pelo WebPushChannel, que
+ * despacha este mesmo job com um id apenas -- uma implementacao, duas entradas.
  *
  * Endpoint morto e apagado aqui. Sem isso a tabela so cresce: o app.js
  * desregistra o service worker na recuperacao de build velho e no 419, entao o
@@ -37,16 +42,17 @@ class EnviarWebPushJob implements ShouldQueue
     public int $tries = 3;
 
     /**
+     * @param  list<int>  $userIds  destinatarios deste lote
      * @param  array<string, mixed>  $payload  o que o service worker recebe
      */
     public function __construct(
-        private readonly int $userId,
+        private readonly array $userIds,
         private readonly array $payload,
         private readonly bool $urgente = false,
     ) {
         $this->onQueue($urgente
-            ? (string) config('notificacoes.entrega.fila_urgente', 'high')
-            : (string) config('notificacoes.entrega.fila', 'default'));
+            ? (string) config('notificacoes.entrega.fila_urgente', 'notificacoes_urgente')
+            : (string) config('notificacoes.entrega.fila', 'notificacoes'));
     }
 
     /**
@@ -59,7 +65,15 @@ class EnviarWebPushJob implements ShouldQueue
 
     public function handle(): void
     {
-        $inscricoes = PushSubscription::query()->forUser($this->userId)->get();
+        if ($this->userIds === []) {
+            return;
+        }
+
+        // UMA query para o lote inteiro. Antes era um job (e uma query) por
+        // destinatario: mil pessoas geravam mil jobs e mil SELECTs.
+        $inscricoes = PushSubscription::query()
+            ->whereIn('user_id', $this->userIds)
+            ->get();
 
         if ($inscricoes->isEmpty()) {
             return;
@@ -105,7 +119,7 @@ class EnviarWebPushJob implements ShouldQueue
                 // Demais falhas sao transitorias (rede, 5xx do push service). Nao
                 // apagar: o dispositivo continua valido.
                 Log::channel('jobs')->warning('Falha ao enviar web push', [
-                    'user_id' => $this->userId,
+                    'user_ids' => $this->userIds,
                     'motivo' => $relatorio->getReason(),
                 ]);
             }
@@ -115,7 +129,7 @@ class EnviarWebPushJob implements ShouldQueue
             // lote inteiro morre e os dispositivos validos do usuario ficam sem
             // receber. Cair para envio individual isola a linha ruim.
             Log::channel('jobs')->warning('Lote de web push falhou, tentando um a um', [
-                'user_id' => $this->userId,
+                'user_ids' => $this->userIds,
                 'erro' => $e->getMessage(),
             ]);
 
@@ -170,7 +184,7 @@ class EnviarWebPushJob implements ShouldQueue
                 $expirados[] = $inscricao->getKey();
 
                 Log::channel('jobs')->warning('Inscricao de push invalida, removendo', [
-                    'user_id' => $this->userId,
+                    'user_ids' => $this->userIds,
                     'subscription_id' => $inscricao->getKey(),
                     'erro' => $e->getMessage(),
                 ]);

@@ -162,7 +162,7 @@ class GeneralNotification extends Notification implements Agrupavel, ShouldQueue
      *
      * @return array<string, mixed>
      */
-    public function toWebPush(object $notifiable): array
+    public function toWebPush(?object $notifiable = null): array
     {
         return [
             'titulo' => TextoSeguro::titulo($this->title),

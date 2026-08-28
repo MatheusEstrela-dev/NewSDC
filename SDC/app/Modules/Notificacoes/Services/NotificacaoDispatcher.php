@@ -6,7 +6,12 @@ namespace App\Modules\Notificacoes\Services;
 
 use App\Models\User;
 use App\Models\UserNotificationPreference;
+use App\Modules\Notificacoes\Channels\AgrupavelDatabaseChannel;
+use App\Modules\Notificacoes\Channels\EmailNotificacaoChannel;
+use App\Modules\Notificacoes\Channels\WebPushChannel;
 use App\Modules\Notificacoes\DTO\NotificacaoSpec;
+use App\Modules\Notificacoes\Jobs\EnviarEmailNotificacaoJob;
+use App\Modules\Notificacoes\Jobs\EnviarWebPushJob;
 use App\Modules\Notificacoes\Support\JanelaAgrupamento;
 use App\Modules\Notificacoes\GeneralNotification;
 use Illuminate\Database\Eloquent\Model;
@@ -57,6 +62,9 @@ class NotificacaoDispatcher
         );
 
         $notificados = [];
+        $comInbox = [];
+        // Canais de rede acumulam destinatarios e saem em lote depois do loop.
+        $emLote = [WebPushChannel::class => [], EmailNotificacaoChannel::class => []];
         $chunk = max(1, (int) config('notificacoes.entrega.chunk_destinatarios', 200));
 
         foreach ($usuarios->chunk($chunk) as $lote) {
@@ -72,9 +80,31 @@ class NotificacaoDispatcher
                     continue;
                 }
 
+                // Canais locais (inbox, broadcast) sao baratos e vao agora.
+                // Push e e-mail fazem I/O de rede: enfileirar um job por pessoa
+                // era o que fazia um disparo em massa entupir a fila.
+                $imediatos = [];
+
+                foreach ($canais as $canal) {
+                    if (array_key_exists($canal, $emLote)) {
+                        $emLote[$canal][] = $id;
+                    } else {
+                        $imediatos[] = $canal;
+                    }
+                }
+
+                $notificados[] = $id;
+
+                if ($imediatos === []) {
+                    continue;
+                }
+
                 try {
-                    Notification::sendNow($usuario, GeneralNotification::deSpec($spec, $canais));
-                    $notificados[] = $id;
+                    Notification::sendNow($usuario, GeneralNotification::deSpec($spec, $imediatos));
+
+                    if (in_array(AgrupavelDatabaseChannel::class, $imediatos, true)) {
+                        $comInbox[] = $id;
+                    }
                 } catch (\Throwable $e) {
                     // Falha de um destinatario nao derruba o lote: o job seria
                     // reprocessado inteiro e reenviaria a quem ja recebeu.
@@ -88,11 +118,36 @@ class NotificacaoDispatcher
             }
         }
 
-        if ($notificados !== []) {
-            $this->contador->invalidar($notificados);
+        $this->despacharEmLote($spec, $emLote, $chunk);
+
+        // Invalida o contador so de quem realmente ganhou linha no inbox: quem
+        // recebeu apenas por e-mail ou push nao teve o badge alterado.
+        if ($comInbox !== []) {
+            $this->contador->invalidar($comInbox);
         }
 
         return count($notificados);
+    }
+
+    /**
+     * Um job por canal a cada chunk de destinatarios, em vez de um job por pessoa.
+     *
+     * @param  array<class-string, list<int>>  $emLote
+     */
+    private function despacharEmLote(NotificacaoSpec $spec, array $emLote, int $chunk): void
+    {
+        $payloadPush = null;
+
+        foreach (array_chunk($emLote[WebPushChannel::class], $chunk) as $ids) {
+            // O payload nao depende do destinatario, entao e montado uma vez.
+            $payloadPush ??= GeneralNotification::deSpec($spec, [])->toWebPush();
+
+            EnviarWebPushJob::dispatch($ids, $payloadPush, $spec->ehUrgente());
+        }
+
+        foreach (array_chunk($emLote[EmailNotificacaoChannel::class], $chunk) as $ids) {
+            EnviarEmailNotificacaoJob::dispatch($ids, $spec);
+        }
     }
 
     /**

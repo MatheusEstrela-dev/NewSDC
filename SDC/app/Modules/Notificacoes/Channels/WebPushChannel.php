@@ -31,8 +31,9 @@ class WebPushChannel
         /** @var array<string, mixed> $payload */
         $payload = $notification->toWebPush($notifiable);
 
+        // Lista de um: o job e o mesmo usado pelo fan-out em lote do dispatcher.
         EnviarWebPushJob::dispatch(
-            $userId,
+            [$userId],
             $payload,
             ($payload['tipo'] ?? 'info') === 'urgent',
         );
