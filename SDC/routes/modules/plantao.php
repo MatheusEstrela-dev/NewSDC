@@ -14,6 +14,7 @@ use App\Modules\Plantao\Controllers\NoticiasIndexController;
 use App\Modules\Plantao\Controllers\PassagemAbrirController;
 use App\Modules\Plantao\Controllers\PassagemAceitarController;
 use App\Modules\Plantao\Controllers\PassagemEncerrarController;
+use App\Modules\Plantao\Controllers\PlantaoDestroyController;
 use App\Modules\Plantao\Controllers\PlantaoEditController;
 use App\Modules\Plantao\Controllers\PlantaoExportController;
 use App\Modules\Plantao\Controllers\PlantaoIndexController;
@@ -168,6 +169,13 @@ Route::prefix('plantao')->name('plantao.')->group(function () {
     Route::put('/{plantao}', PlantaoUpdateController::class)
         ->name('update')
         ->middleware('can:plantao.turnos.edit');
+
+    // Exclusao suave. Slug proprio e mais restrito que `edit`: hoje so
+    // super-admin e admin o tem, porque o turno carrega aceite formal de duas
+    // partes e tirar isso da listagem nao e ato de operacao diaria.
+    Route::delete('/{plantao}', PlantaoDestroyController::class)
+        ->name('destroy')
+        ->middleware('can:plantao.turnos.delete');
 
     Route::get('/', PlantaoIndexController::class)
         ->name('index')

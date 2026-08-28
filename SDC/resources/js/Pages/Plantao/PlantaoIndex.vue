@@ -1,8 +1,10 @@
 <script setup>
 import { usePermissions } from '@/Composables/usePermissions';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PlantaoIndexTemplate from '@/Templates/Plantao/PlantaoIndexTemplate.vue';
 import { router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -83,6 +85,38 @@ const handleAbrirPlantao = (dados) => {
     preserveScroll: true,
   });
 };
+
+/**
+ * Exclusao do turno. Ate aqui o icone de lixeira emitia um evento que NENHUM
+ * listener escutava -- o clique sumia no caminho, sem erro e sem efeito.
+ *
+ * Confirmacao explicita no padrao do projeto (mesmo dialogo do PAE e da frota):
+ * a exclusao e suave, e o texto diz isso, porque o turno carrega passagem de
+ * servico e aceite formal de duas partes.
+ */
+const dialogExcluir = ref({ open: false, loading: false, id: null });
+
+const pedirExclusao = (id) => {
+  dialogExcluir.value = { open: true, loading: false, id };
+};
+
+const cancelarExclusao = () => {
+  if (dialogExcluir.value.loading) return;
+  dialogExcluir.value = { open: false, loading: false, id: null };
+};
+
+const confirmarExclusao = () => {
+  const { id } = dialogExcluir.value;
+  if (!id) return;
+
+  dialogExcluir.value.loading = true;
+  router.delete(route('plantao.destroy', id), {
+    preserveScroll: true,
+    onFinish: () => {
+      dialogExcluir.value = { open: false, loading: false, id: null };
+    },
+  });
+};
 </script>
 
 <template>
@@ -104,7 +138,21 @@ const handleAbrirPlantao = (dados) => {
     :can-escala="canEscala"
     @view="handleView"
     @edit="handleEdit"
+    @delete="pedirExclusao"
     @filter="handleFilter"
     @abrir-plantao="handleAbrirPlantao"
+  />
+
+  <ConfirmDialog
+    :is-open="dialogExcluir.open"
+    variant="danger"
+    title="Excluir Turno"
+    message="Tem certeza que deseja excluir este turno?"
+    description="Esta acao marcara o turno como excluido. Os dados serao preservados para auditoria, e a vaga do periodo fica livre para reabrir."
+    confirm-text="Excluir"
+    cancel-text="Cancelar"
+    :loading="dialogExcluir.loading"
+    @confirm="confirmarExclusao"
+    @cancel="cancelarExclusao"
   />
 </template>
