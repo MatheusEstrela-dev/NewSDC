@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Database\Factories\Plantao;
 
 use App\Models\User;
-use App\Modules\Plantao\Enums\PeriodoPlantao;
 use App\Modules\Plantao\Enums\StatusPlantao;
 use App\Modules\Plantao\Models\Plantao;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -20,7 +19,7 @@ class PlantaoFactory extends Factory
             'plantonista_id' => User::factory(),
             'plantonista_nome' => $this->faker->name(),
             'data' => now()->toDateString(),
-            'periodo' => PeriodoPlantao::DIURNO,
+            'periodo' => 'DIURNO',
             'status' => StatusPlantao::ATIVO,
             'localizacao' => 'Predio Alterosas',
         ];

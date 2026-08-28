@@ -343,6 +343,21 @@ return [
                 // o plantao nao precisa de `edit` so para movimentar.
                 'movimentar' => 'plantao.viaturas.movimentar',
             ],
+            'Escala' => [
+                'view' => 'plantao.escala.view',
+                'create' => 'plantao.escala.create',
+                'edit' => 'plantao.escala.edit',
+                // Publicar e o ato que notifica todo mundo e transforma o
+                // rascunho em compromisso. Slug proprio, mais estreito que
+                // `edit`: quem monta o mes nao necessariamente e quem responde
+                // por divulga-lo.
+                'publicar' => 'plantao.escala.publicar',
+            ],
+            'Plantonistas' => [
+                // Define QUEM pode ser escalado. Administrativo, nao
+                // operacional -- fica fora do perfil que so trabalha no plantao.
+                'manage' => 'plantao.plantonistas.manage',
+            ],
             'Passagem' => [
                 'encerrar' => 'plantao.passagem.encerrar',
                 // So o dono do turno encerra por padrao. Este slug e a excecao:
@@ -674,6 +689,11 @@ return [
             'plantao.passagem.encerrar_alheio',
             'plantao.passagem.aceitar',
             'plantao.passagem.relatorio',
+            'plantao.escala.view',
+            'plantao.escala.create',
+            'plantao.escala.edit',
+            'plantao.escala.publicar',
+            'plantao.plantonistas.manage',
             // BI
             'bi.dashboards.view',
             'bi.reports.export',
@@ -851,6 +871,9 @@ return [
             'plantao.passagem.encerrar',
             'plantao.passagem.aceitar',
             'plantao.passagem.relatorio',
+            'plantao.escala.view',
+            'plantao.escala.create',
+            'plantao.escala.edit',
             // BI
             'bi.dashboards.view',
             'bi.reports.export',
@@ -962,6 +985,7 @@ return [
             'plantao.viaturas.view',
             'plantao.viaturas.create',
             'plantao.passagem.relatorio',
+            'plantao.escala.view',
             // BI - view
             'bi.dashboards.view',
             // Cisternas - view/create
@@ -1024,6 +1048,7 @@ return [
             'plantao.turnos.view',
             'plantao.viaturas.view',
             'plantao.passagem.relatorio',
+            'plantao.escala.view',
             'bi.dashboards.view',
             'cisternas.beneficiarios.view',
             'cisternas.beneficiarios.history',
@@ -1055,6 +1080,7 @@ return [
             'plantao.turnos.view',
             'plantao.viaturas.view',
             'plantao.passagem.relatorio',
+            'plantao.escala.view',
             // COMPDEC - apenas listagem de orgaos
             'compdec.orgaos.view',
             // Inventario - acesso inicial ao modulo

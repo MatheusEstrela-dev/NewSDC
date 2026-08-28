@@ -6,7 +6,6 @@ namespace App\Modules\Plantao\Models;
 
 use App\Modules\Notificacoes\Contracts\Rastreavel;
 use App\Modules\Notificacoes\Support\TrilhaDeAcoes;
-use App\Modules\Plantao\Enums\PeriodoPlantao;
 use App\Modules\Plantao\Enums\StatusPlantao;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -34,6 +33,7 @@ class Plantao extends Model implements Rastreavel
         'aceito_por_id',
         'divergencia',
         'periodo',
+        'escala_item_id',
         'status',
         'observacoes',
     ];
@@ -41,7 +41,6 @@ class Plantao extends Model implements Rastreavel
     protected $casts = [
         'data' => 'date',
         'status' => StatusPlantao::class,
-        'periodo' => PeriodoPlantao::class,
         'encerrado_em' => 'datetime',
         'aceito_em' => 'datetime',
     ];
@@ -71,6 +70,28 @@ class Plantao extends Model implements Rastreavel
         return $this->belongsTo(\App\Models\User::class, 'aceito_por_id');
     }
 
+    /**
+     * O horario deste turno, resolvido pelo codigo guardado em `periodo`.
+     *
+     * Chave local `periodo` e nao `tipo_turno_id`: a coluna ja existia com o
+     * codigo em texto e continua legivel sozinha no banco, sem join, o que
+     * mantem o historico compreensivel se a tabela de tipos mudar.
+     */
+    public function tipoTurno(): BelongsTo
+    {
+        return $this->belongsTo(TipoTurno::class, 'periodo', 'codigo');
+    }
+
+    /**
+     * A vaga da escala que este turno cumpriu. Null quando o turno foi aberto
+     * fora de escala -- caso legitimo (EXTRAORDINARIO) e tambem o sinal de que
+     * alguem assumiu sem estar escalado.
+     */
+    public function escalaItem(): BelongsTo
+    {
+        return $this->belongsTo(EscalaItem::class, 'escala_item_id');
+    }
+
     public function snapshots(): HasMany
     {
         return $this->hasMany(ViaturaSnapshot::class, 'plantao_id');
@@ -91,7 +112,7 @@ class Plantao extends Model implements Rastreavel
     public function rotuloProtocolo(): string
     {
         $data = $this->data?->format('d/m/Y');
-        $periodo = $this->periodo instanceof PeriodoPlantao ? $this->periodo->label() : null;
+        $periodo = $this->tipoTurno?->label();
 
         if ($data === null) {
             return 'Plantao #'.$this->getKey();

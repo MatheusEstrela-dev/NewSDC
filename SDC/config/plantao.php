@@ -34,4 +34,50 @@ return [
         ],
     ],
 
+    /*
+    |---------------------------------------------------------------------------
+    | Escala de plantao
+    |---------------------------------------------------------------------------
+    |
+    | Regras operacionais do planejamento de turnos. Em config, e nao em banco,
+    | porque sao politica da corporacao e nao dado do dia a dia -- mudam por
+    | decisao, nao por operacao.
+    |
+    */
+
+    /*
+    |---------------------------------------------------------------------------
+    | Aceite da passagem de servico
+    |---------------------------------------------------------------------------
+    */
+
+    'aceite' => [
+
+        // Teto do aviso de "pendente de aceite" quando NAO ha escala publicada
+        // que diga quem assume o turno seguinte. Sem escala o sistema nao sabe
+        // o destinatario certo e avisa quem pode aceitar -- mas avisar cinquenta
+        // pessoas de uma pendencia que e de uma so ensina todo mundo a ignorar
+        // o sino.
+        'max_destinatarios_fallback' => (int) env('PLANTAO_ACEITE_MAX_DESTINATARIOS', 15),
+    ],
+
+    'escala' => [
+
+        // Quantos minutos antes do inicio do turno o plantonista e lembrado.
+        // O comando roda a cada 15 minutos e varre a janela
+        // [agora, agora + lembrete_minutos_antes]; itens ja avisados sao
+        // filtrados por lembrete_enviado_em, nunca reenviados.
+        'lembrete_minutos_antes' => (int) env('PLANTAO_ESCALA_LEMBRETE_MINUTOS', 120),
+
+        // Descanso minimo recomendado entre dois turnos do mesmo plantonista.
+        // AVISA, nao bloqueia: emenda acontece e as vezes e inevitavel -- o
+        // sistema registra que foi consciente, em vez de impedir a operacao.
+        'intervalo_minimo_horas' => (int) env('PLANTAO_ESCALA_INTERVALO_MINIMO_HORAS', 8),
+
+        // Sobreposicao de horario do mesmo plantonista BLOQUEIA. Nao ha leitura
+        // valida de estar em dois turnos ao mesmo tempo, e o indice unico do
+        // banco nao pega o caso (tipos de turno diferentes).
+        'bloquear_sobreposicao' => true,
+    ],
+
 ];

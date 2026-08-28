@@ -16,13 +16,6 @@ const props = defineProps({
 
 const emit = defineEmits(['view', 'print', 'edit', 'delete']);
 
-const getStatusClasses = (status) => {
-  const s = status?.toLowerCase?.() || '';
-  if (s === 'ativo') {
-    return 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/25';
-  }
-  return 'bg-slate-500/15 text-slate-400 ring-1 ring-slate-500/25';
-};
 
 import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
 </script>
@@ -51,9 +44,7 @@ import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
             </p>
           </div>
         </div>
-        <span :class="getStatusClasses(item.status)" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
-          {{ item.status }}
-        </span>
+        <StatusPlantaoBadge :status="item.status_valor" :label="item.status" />
       </div>
       
       <div class="space-y-2 mb-4">

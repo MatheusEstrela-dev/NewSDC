@@ -9,7 +9,7 @@ use App\Models\User;
 use App\Modules\Plantao\DTOs\PlantaoListDTO;
 use App\Modules\Plantao\DTOs\SnapshotDTO;
 use App\Modules\Plantao\Enums\NivelCombustivel;
-use App\Modules\Plantao\Enums\PeriodoPlantao;
+use App\Modules\Plantao\Models\TipoTurno;
 use App\Modules\Plantao\Enums\StatusPlantao;
 use App\Modules\Plantao\Models\Plantao;
 use App\Modules\Plantao\Services\PassagemServicoService;
@@ -55,7 +55,7 @@ class PlantaoIndexController extends Controller
             'filters' => $filters,
             'filterOptions' => [
                 'status' => StatusPlantao::toSelectArray(),
-                'periodos' => PeriodoPlantao::toSelectArray(),
+                'periodos' => $this->opcoesDePeriodo(),
                 // Consumido pelo EncerrarTurnoModal (Task 10): select de nivel
                 // de combustivel por viatura na conferencia de encerramento.
                 'niveis' => NivelCombustivel::toSelectArray(),
@@ -70,7 +70,31 @@ class PlantaoIndexController extends Controller
             'canEncerrar' => (bool) $user?->can('plantao.passagem.encerrar'),
             'canAceitar' => (bool) $user?->can('plantao.passagem.aceitar'),
             'canRelatorio' => (bool) $user?->can('plantao.passagem.relatorio'),
+            // Sem isto a escala existe mas nao ha como chegar nela pela
+            // interface -- o mesmo furo (F-6) da release anterior, em que a
+            // maquina de estados nao tinha porta de entrada.
+            'canEscala' => (bool) $user?->can('plantao.escala.view'),
         ]);
+    }
+
+    /**
+     * Opcoes do filtro de periodo, vindas da tabela de tipos de turno.
+     *
+     * Aqui entram TODOS os tipos ativos, inclusive os nao escalaveis: o filtro
+     * olha turnos ja gravados, e um turno EXTRAORDINARIO precisa ser
+     * encontravel mesmo nao podendo ser escalado.
+     *
+     * @return list<array{value:string,label:string}>
+     */
+    private function opcoesDePeriodo(): array
+    {
+        return TipoTurno::ativos()
+            ->get()
+            ->map(fn (TipoTurno $tipo) => [
+                'value' => $tipo->codigo,
+                'label' => $tipo->label(),
+            ])
+            ->all();
     }
 
     /**
@@ -88,13 +112,14 @@ class PlantaoIndexController extends Controller
 
         return Plantao::query()
             ->where('status', StatusPlantao::ATIVO->value)
+            ->with('tipoTurno')
             ->orderByDesc('data')
             ->orderByDesc('id')
             ->get()
             ->map(fn (Plantao $turno) => [
                 'id' => $turno->id,
                 'data' => $turno->data?->format('d/m/Y'),
-                'periodo' => $turno->periodo?->labelCurto(),
+                'periodo' => $turno->tipoTurno?->labelCurto(),
                 'plantonista_nome' => $turno->plantonista_nome,
                 'plantonista_saida_nome' => $turno->plantonista_saida_nome,
                 'snapshot_sugerido' => $this->passagemService->montarSnapshotSugerido($turno),
@@ -116,12 +141,12 @@ class PlantaoIndexController extends Controller
             ->where('status', StatusPlantao::PENDENTE_ACEITE->value)
             ->orderByDesc('data')
             ->orderByDesc('id')
-            ->with(['snapshots.viatura:id,exclusiva_sobreaviso', 'encerradoPor:id,name'])
+            ->with(['tipoTurno', 'snapshots.viatura:id,exclusiva_sobreaviso', 'encerradoPor:id,name'])
             ->get()
             ->map(fn (Plantao $turno) => [
                 'id' => $turno->id,
                 'data' => $turno->data?->format('d/m/Y'),
-                'periodo' => $turno->periodo?->labelCurto(),
+                'periodo' => $turno->tipoTurno?->labelCurto(),
                 'plantonista_nome' => $turno->plantonista_nome,
                 'encerrado_em' => $turno->encerrado_em?->format('d/m/Y H:i'),
                 // Quando difere do dono do turno, o encerramento foi por terceiro

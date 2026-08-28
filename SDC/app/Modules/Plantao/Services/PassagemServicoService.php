@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Plantao\Services;
 
 use App\Models\User;
+use App\Modules\Notificacoes\DTO\NotificacaoSpec;
+use App\Modules\Notificacoes\Jobs\EntregarNotificacaoJob;
 use App\Modules\Plantao\Enums\StatusPlantao;
 use App\Modules\Plantao\Exceptions\PassagemInvalidaException;
+use App\Modules\Plantao\Models\EscalaItem;
 use App\Modules\Plantao\Models\Plantao;
 use App\Modules\Plantao\Models\Viatura;
 use App\Modules\Plantao\Models\ViaturaSnapshot;
@@ -66,6 +69,9 @@ class PassagemServicoService extends BaseService
                     'plantonista_saida_nome' => $anterior?->plantonista_nome,
                     'data' => $data,
                     'periodo' => $periodo,
+                    // Vaga da escala que este turno cumpre, quando veio de la.
+                    // Null e caso legitimo: turno aberto fora de escala.
+                    'escala_item_id' => $dados['escala_item_id'] ?? null,
                     'status' => StatusPlantao::ATIVO,
                     'localizacao' => $dados['localizacao'] ?? 'Predio Alterosas',
                 ]);
@@ -127,7 +133,7 @@ class PassagemServicoService extends BaseService
         ?string $ocorrenciasDestaque = null,
         ?int $encerradoPorId = null
     ): Plantao {
-        return DB::transaction(function () use ($plantaoId, $snapshots, $ocorrenciasDestaque, $encerradoPorId): Plantao {
+        $plantao = DB::transaction(function () use ($plantaoId, $snapshots, $ocorrenciasDestaque, $encerradoPorId): Plantao {
             $plantao = Plantao::query()->lockForUpdate()->findOrFail($plantaoId);
 
             if ($plantao->status !== StatusPlantao::ATIVO) {
@@ -176,6 +182,128 @@ class PassagemServicoService extends BaseService
 
             return $plantao->fresh();
         });
+
+        // FORA da transacao de proposito: o job entra na fila do Redis, que nao
+        // participa do commit do Postgres. Despachado la dentro, o worker
+        // poderia ler o turno antes do commit e nao encontrar o PENDENTE_ACEITE.
+        $this->avisarPendenteDeAceite($plantao, $encerradoPorId);
+
+        return $plantao;
+    }
+
+    /**
+     * Coloca a pendencia de aceite no sino, e nao so no banner da tela.
+     *
+     * O banner do Plantao Diario so aparece para quem abre aquela pagina. Quem
+     * assume o turno seguinte costuma chegar, olhar o celular e nao ter ideia de
+     * que ha viatura para conferir -- a passagem ficava dependendo de alguem
+     * lembrar de avisar por fora do sistema, que e exatamente o que esta release
+     * veio substituir.
+     *
+     * Quem recebe, em ordem de preferencia:
+     *
+     * 1. o proximo escalado, quando ha escala publicada. E a pessoa que de fato
+     *    vai conferir e aceitar;
+     * 2. o dono do turno, quando um terceiro encerrou por ele (supervisao usando
+     *    `encerrar_alheio`) -- ele precisa saber que o turno dele foi fechado;
+     * 3. como ultimo recurso, quem tem `plantao.passagem.aceitar`, limitado por
+     *    config: sem escala montada o sistema nao sabe quem assume, e avisar o
+     *    grupo e melhor que nao avisar ninguem.
+     *
+     * O autor da acao nunca entra: o dispatcher ja o descartaria, mas manter a
+     * exclusao aqui deixa a regra visivel.
+     */
+    private function avisarPendenteDeAceite(Plantao $plantao, ?int $encerradoPorId): void
+    {
+        $ator = $encerradoPorId ?? (int) $plantao->plantonista_id;
+
+        $destinatarios = array_values(array_unique(array_filter(
+            [
+                $this->proximoEscalado($plantao),
+                (int) $plantao->plantonista_id,
+            ],
+            static fn (?int $id): bool => $id !== null && $id > 0 && $id !== $ator,
+        )));
+
+        if ($destinatarios === []) {
+            $destinatarios = $this->quemPodeAceitar($ator);
+        }
+
+        if ($destinatarios === []) {
+            return;
+        }
+
+        $periodo = $plantao->tipoTurno?->labelCurto() ?? (string) $plantao->periodo;
+
+        EntregarNotificacaoJob::dispatch(
+            new NotificacaoSpec(
+                modulo: 'plantao',
+                titulo: 'Passagem de servico pendente de aceite',
+                mensagem: sprintf(
+                    '%s encerrou o turno de %s (%s). Confira as viaturas antes de aceitar.',
+                    $plantao->encerradoPor?->name ?? $plantao->plantonista_nome,
+                    $plantao->data?->format('d/m/Y') ?? '',
+                    $periodo,
+                ),
+                // Pendencia operacional que trava o turno seguinte: vai para a
+                // fila de prioridade, nao para a normal.
+                tipo: 'urgent',
+                // Por turno: um aceite pendente nunca pode ser fundido com
+                // outro, senao o segundo some do sino.
+                groupKey: 'plantao:aceite:'.$plantao->id,
+                acaoUrl: '/plantao',
+                acaoTexto: 'Conferir e aceitar',
+            ),
+            $destinatarios,
+        );
+    }
+
+    /**
+     * Quem esta escalado para o turno seguinte a este, em escala publicada.
+     *
+     * Janela de dois dias para frente porque turno que vira o dia (16h-02h,
+     * 20h-08h) empurra o proximo inicio para a data seguinte.
+     */
+    private function proximoEscalado(Plantao $plantao): ?int
+    {
+        $plantao->loadMissing(['tipoTurno', 'escalaItem']);
+
+        $fimDoTurno = $plantao->escalaItem?->fimEm();
+
+        // Turno aberto fora de escala: sem ancora de horario, apontar o
+        // "proximo" seria chute. Cai para as regras seguintes.
+        if ($fimDoTurno === null) {
+            return null;
+        }
+
+        $candidato = EscalaItem::query()
+            ->with('tipoTurno')
+            ->deEscalaPublicada()
+            ->pendentes()
+            ->entre($plantao->data->copy()->subDay(), $plantao->data->copy()->addDays(2))
+            ->get()
+            ->filter(fn (EscalaItem $item) => $item->inicioEm()?->gte($fimDoTurno) ?? false)
+            ->sortBy(fn (EscalaItem $item) => $item->inicioEm()->getTimestamp())
+            ->first();
+
+        return $candidato === null ? null : (int) $candidato->plantonista_id;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function quemPodeAceitar(int $ator): array
+    {
+        $limite = (int) config('plantao.aceite.max_destinatarios_fallback', 15);
+
+        return User::permission('plantao.passagem.aceitar')
+            ->where('active', true)
+            ->whereKeyNot($ator)
+            ->orderBy('id')
+            ->limit($limite)
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->all();
     }
 
     /**

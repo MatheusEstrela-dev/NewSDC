@@ -251,6 +251,69 @@
             </div>
           </div>
 
+          <!--
+            Plantao: transformar o usuario em plantonista sem sair da governanca.
+            A alternativa era a tela do proprio modulo (/plantao/plantonistas),
+            que busca por nome -- fluxo separado para uma decisao que se toma
+            justamente aqui, ao cadastrar ou revisar a pessoa.
+          -->
+          <div
+            v-if="canManagePlantonistas"
+            class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden"
+          >
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+              <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+                <ClockIcon class="w-5 h-5 text-blue-500" />
+                Plantão
+              </h3>
+            </div>
+
+            <div class="p-6 space-y-4">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input
+                  v-model="form.plantonista"
+                  type="checkbox"
+                  class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-700"
+                />
+                <span class="min-w-0">
+                  <span class="block text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    Pode ser escalado no plantão
+                  </span>
+                  <span class="block text-xs text-slate-500 dark:text-slate-400">
+                    Passa a aparecer no seletor da escala mensal. Desmarcar tira
+                    da lista, mas não apaga histórico: as vagas já escaladas
+                    guardam o nome no momento da escala.
+                  </span>
+                </span>
+              </label>
+
+              <div v-if="form.plantonista" class="max-w-[10rem]">
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                  Posto
+                </label>
+                <input
+                  v-model="form.plantonista_posto"
+                  type="text"
+                  maxlength="20"
+                  placeholder="Sgt, Ten, Cb..."
+                  class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+                />
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Usado no relatório de passagem: "Sgt Leandro".
+                </p>
+              </div>
+
+              <p
+                v-if="plantonistaChanged"
+                class="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"
+              >
+                {{ form.plantonista
+                  ? 'Ao salvar, este usuário passa a poder ser escalado.'
+                  : 'Ao salvar, este usuário sai da lista de escaláveis.' }}
+              </p>
+            </div>
+          </div>
+
           <!-- Roles Card -->
           <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
             <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
@@ -519,6 +582,7 @@ import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { route } from 'ziggy-js';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -545,6 +609,18 @@ const props = defineProps({
     default: false
   },
   canManageSensitive: {
+    type: Boolean,
+    default: false
+  },
+  // Estado no modulo Plantao. Chega pronto do servidor via PlantonistaService:
+  // esta tela nao conhece a tabela plantao_plantonistas.
+  plantonista: {
+    type: Object,
+    default: () => ({ marcado: false, posto: null, ativo: false })
+  },
+  // Permissao PROPRIA do Plantao. Quem administra contas nao necessariamente
+  // decide quem faz plantao, entao a secao some para quem nao tem o slug.
+  canManagePlantonistas: {
     type: Boolean,
     default: false
   },
@@ -614,11 +690,14 @@ const form = useForm({
   password: '',
   password_confirmation: '',
   active: props.user.active ?? true,
-  orgao_principal_id: props.user.orgao_principal_id ?? null
+  orgao_principal_id: props.user.orgao_principal_id ?? null,
+  plantonista: props.plantonista?.marcado ?? false,
+  plantonista_posto: props.plantonista?.posto ?? ''
 });
 
 const initialOrgaoId = props.user.orgao_principal_id ?? null;
 const initialActive = props.user.active ?? true;
+const initialPlantonista = props.plantonista?.marcado ?? false;
 
 const selectedOrgao = computed(() =>
   props.availableOrgaos.find(o => o.id === form.orgao_principal_id) ?? null
@@ -626,6 +705,7 @@ const selectedOrgao = computed(() =>
 
 const orgaoChanged = computed(() => form.orgao_principal_id !== initialOrgaoId);
 const activeChanged = computed(() => form.active !== initialActive);
+const plantonistaChanged = computed(() => form.plantonista !== initialPlantonista);
 const passwordWillChange = computed(() => form.password && form.password.length > 0);
 
 const isFromRole = (slug) => {

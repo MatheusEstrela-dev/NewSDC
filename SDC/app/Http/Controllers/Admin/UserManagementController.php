@@ -8,6 +8,7 @@ use App\Models\PermissionAuditLog;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Modules\Plantao\Services\PlantonistaService;
 use App\Models\UserStatusHistory;
 use App\Modules\Compdec\Models\Orgao;
 use App\Services\Auth\EmailChangeService;
@@ -81,6 +82,8 @@ class UserManagementController extends Controller
             'roles' => 'required|array',
             'roles.*' => 'exists:roles,id',
             'orgao_principal_id' => 'nullable|integer|exists:compdec_orgaos,id',
+            'plantonista' => 'sometimes|boolean',
+            'plantonista_posto' => 'nullable|string|max:20',
         ]);
 
         // Cria usuario em status='pending' com senha provisoria + envia e-mail
@@ -434,6 +437,10 @@ class UserManagementController extends Controller
             ->orderByRaw("case when tipo = 'compdec' then nome else codigo end")
             ->get(['id', 'nome', 'tipo', 'codigo', 'municipio_id']);
 
+        // Estado de plantonista lido pelo SERVICO do modulo Plantao, nao pela
+        // tabela: a governanca nao deve conhecer plantao_plantonistas.
+        $plantonista = app(PlantonistaService::class)->para($user);
+
         return Inertia::render('Admin/Permissions/Users/Edit', [
             'user' => $user,
             'availableRoles' => $availableRoles,
@@ -441,6 +448,14 @@ class UserManagementController extends Controller
             'availableOrgaos' => $availableOrgaos,
             'canEditSuperAdmin' => auth()->user()->hasRole('super-admin'),
             'canManageSensitive' => auth()->user()->hasAnyRole('super-admin', 'admin'),
+            'plantonista' => [
+                'marcado' => $plantonista !== null,
+                'posto' => $plantonista?->posto,
+                'ativo' => (bool) ($plantonista?->ativo ?? false),
+            ],
+            // Permissao PROPRIA do Plantao, e nao a de editar usuario: quem
+            // administra contas nao necessariamente decide quem faz plantao.
+            'canManagePlantonistas' => (bool) auth()->user()?->can('plantao.plantonistas.manage'),
         ]);
     }
 
@@ -483,6 +498,19 @@ class UserManagementController extends Controller
             }
             if (array_key_exists('orgao_principal_id', $validated)) {
                 $payload['orgao_principal_id'] = $validated['orgao_principal_id'];
+            }
+        }
+
+        // Marcacao de plantonista: acao de OUTRO modulo disparada daqui, entao
+        // passa pelo servico dele e exige a permissao dele. Fica fora do
+        // $payload de proposito -- nao e coluna de `users`.
+        if ($request->has('plantonista') && auth()->user()?->can('plantao.plantonistas.manage')) {
+            $plantonistaService = app(PlantonistaService::class);
+
+            if ($request->boolean('plantonista')) {
+                $plantonistaService->marcar($user, $validated['plantonista_posto'] ?? null);
+            } else {
+                $plantonistaService->remover($user);
             }
         }
 

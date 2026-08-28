@@ -1,5 +1,6 @@
 <script setup>
 import Button from '@/Components/Atoms/Button/Button.vue';
+import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
@@ -86,6 +87,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canEscala: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['view', 'edit', 'filter', 'abrir-plantao']);
@@ -142,6 +147,10 @@ const handleFrota = () => {
   router.visit(route('plantao.viaturas.index'));
 };
 
+const handleEscala = () => {
+  router.visit(route('plantao.escala.index'));
+};
+
 // Card de estatistica como filtro rapido: recebe o status ('' = Total, limpa o status)
 // e preserva os demais filtros ativos (periodo, search).
 const handleStatFilter = (status) => {
@@ -195,8 +204,14 @@ function closePrintModal() {
           <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
           <ViewModeToggle v-model="viewMode" />
 
+          <!--
+            Cor por natureza da acao, e nao tudo cinza: com quatro botoes
+            secundarios lado a lado o olho nao distingue nada e o usuario le
+            todos toda vez. Consulta = info, frota = black (neutro forte),
+            escala = violet (planejamento), exportar = success, abrir = primary.
+          -->
           <Button
-            variant="secondary"
+            variant="info"
             size="md"
             :icon="NewspaperIcon"
             icon-position="left"
@@ -207,13 +222,24 @@ function closePrintModal() {
           </Button>
 
           <Button
-            variant="secondary"
+            variant="black"
             size="md"
             :icon="TruckIcon"
             icon-position="left"
             @click="handleFrota"
           >
             Frota
+          </Button>
+
+          <Button
+            v-if="canEscala"
+            variant="violet"
+            size="md"
+            :icon="CalendarIcon"
+            icon-position="left"
+            @click="handleEscala"
+          >
+            Escala
           </Button>
 
           <Button
@@ -291,6 +317,7 @@ function closePrintModal() {
     <!-- Filtros -->
     <PlantaoFiltersSection
       :filters="filters"
+      :filter-options="filterOptions"
       @filter-change="emit('filter', $event)"
       @filter-reset="emit('filter', {})"
     />
