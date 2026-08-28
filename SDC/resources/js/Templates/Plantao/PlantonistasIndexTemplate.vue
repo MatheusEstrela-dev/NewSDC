@@ -10,10 +10,11 @@
  * O posto ("Sgt", "Ten") vive aqui e nao em `users` de proposito: `users` e
  * tabela transversal a todo o sistema, e posto e vocabulario deste modulo.
  */
+import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
+import Badge from '@/Components/Atoms/Badge/Badge.vue';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
-import TrashIcon from '@/Components/Icons/TrashIcon.vue';
 import UserIcon from '@/Components/Icons/UserIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
@@ -129,6 +130,43 @@ const cards = computed(() => [
     icon: ExclamationTriangleIcon,
   },
 ]);
+
+/**
+ * Acoes da linha no padrao do sistema: ActionButton em modo grupo, com os
+ * mesmos icones, cores e tooltips da coluna ACOES do Plantao Diario e do RAT.
+ *
+ * `aliasOverride: 'manage'` em todas: o ActionButton monta o slug
+ * `{module}.{resource}.{action}` e consultaria `plantao.plantonistas.edit` e
+ * `.delete`, que nao existem -- este modulo tem UM slug so,
+ * `plantao.plantonistas.manage`. Sem o alias, o RBAC negaria tudo em silencio e
+ * a coluna sumiria.
+ *
+ * `allowed: postoMudou(p)` no salvar: o botao so aparece quando o campo de
+ * posto difere do gravado, entao nao ha requisicao a toa nem botao inerte.
+ */
+const acoesDe = (p) => [
+  {
+    // 'edit' e nao 'check': 'check' e 'finalize' compartilham o CheckIcon, e
+    // numa linha inativa com posto alterado sairiam dois icones identicos.
+    action: 'edit',
+    aliasOverride: 'manage',
+    label: 'Salvar posto',
+    handler: () => salvarPosto(p),
+    allowed: postoMudou(p),
+  },
+  {
+    action: p.ativo ? 'archive' : 'finalize',
+    aliasOverride: 'manage',
+    label: p.ativo ? 'Inativar' : 'Reativar',
+    handler: () => emit('atualizar', { ...p, ativo: !p.ativo }),
+  },
+  {
+    action: 'delete',
+    aliasOverride: 'manage',
+    label: 'Remover da escala',
+    handler: () => emit('remover', p),
+  },
+];
 
 const submeterBusca = () => emit('buscar', busca.value);
 
@@ -246,37 +284,17 @@ const submeterNovo = () => {
               />
             </div>
 
-            <Button
-              v-if="postoMudou(p)"
-              variant="primary"
+            <ActionButton
+              module="plantao"
+              resource="plantonistas"
               size="sm"
-              @click="salvarPosto(p)"
-            >
-              Salvar
-            </Button>
-
-            <Button
-              :variant="p.ativo ? 'secondary' : 'success'"
-              size="sm"
-              @click="emit('atualizar', { ...p, ativo: !p.ativo })"
-            >
-              {{ p.ativo ? 'Inativar' : 'Reativar' }}
-            </Button>
-
-            <Button variant="danger" size="sm" @click="emit('remover', p)">
-              <TrashIcon class="h-4 w-4" />
-            </Button>
+              :actions="acoesDe(p)"
+            />
           </div>
 
-          <span
-            v-else
-            class="rounded-full px-2 py-0.5 text-xs font-medium"
-            :class="p.ativo
-              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
-              : 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300'"
-          >
+          <Badge v-else :variant="p.ativo ? 'success' : 'neutral'" size="sm">
             {{ p.ativo ? 'Ativo' : 'Inativo' }}
-          </span>
+          </Badge>
         </li>
       </ul>
     </section>
