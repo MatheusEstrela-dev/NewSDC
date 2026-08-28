@@ -69,7 +69,7 @@ import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
           resource="turnos"
           :actions="[
             { action: 'view',   handler: () => emit('view', item.id) },
-            { action: 'edit',   handler: () => emit('edit', item.id),   allowed: canEdit },
+            { action: 'edit',   handler: () => emit('edit', item.id),   allowed: canEdit && item.pode_editar },
             { action: 'delete', handler: () => emit('delete', item.id), allowed: canDelete },
           ]"
         />
