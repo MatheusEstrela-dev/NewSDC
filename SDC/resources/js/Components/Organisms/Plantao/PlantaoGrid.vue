@@ -14,7 +14,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['view', 'edit', 'delete']);
+const emit = defineEmits(['view', 'print', 'edit', 'delete']);
 
 const getStatusClasses = (status) => {
   const s = status?.toLowerCase?.() || '';
@@ -69,6 +69,8 @@ import ActionButton from '@/Components/Atoms/Button/ActionButton.vue';
           resource="turnos"
           :actions="[
             { action: 'view',   handler: () => emit('view', item.id) },
+            // Mesma escolha de slug do PlantaoTable.vue: ver comentario la.
+            { action: 'print',  handler: () => emit('print', item.id), resource: 'passagem', aliasOverride: 'relatorio' },
             { action: 'edit',   handler: () => emit('edit', item.id),   allowed: canEdit && item.pode_editar },
             { action: 'delete', handler: () => emit('delete', item.id), allowed: canDelete },
           ]"
