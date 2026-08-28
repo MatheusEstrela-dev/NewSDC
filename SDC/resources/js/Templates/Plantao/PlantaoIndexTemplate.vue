@@ -204,8 +204,14 @@ function closePrintModal() {
           <!-- Toggle Grade/Tabela - Componente Reutilizavel -->
           <ViewModeToggle v-model="viewMode" />
 
+          <!--
+            Cor por natureza da acao, e nao tudo cinza: com quatro botoes
+            secundarios lado a lado o olho nao distingue nada e o usuario le
+            todos toda vez. Consulta = info, frota = black (neutro forte),
+            escala = violet (planejamento), exportar = success, abrir = primary.
+          -->
           <Button
-            variant="secondary"
+            variant="info"
             size="md"
             :icon="NewspaperIcon"
             icon-position="left"
@@ -216,7 +222,7 @@ function closePrintModal() {
           </Button>
 
           <Button
-            variant="secondary"
+            variant="black"
             size="md"
             :icon="TruckIcon"
             icon-position="left"
@@ -227,7 +233,7 @@ function closePrintModal() {
 
           <Button
             v-if="canEscala"
-            variant="secondary"
+            variant="violet"
             size="md"
             :icon="CalendarIcon"
             icon-position="left"

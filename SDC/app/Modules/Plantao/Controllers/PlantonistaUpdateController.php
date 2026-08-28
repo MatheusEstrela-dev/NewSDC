@@ -7,6 +7,7 @@ namespace App\Modules\Plantao\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Plantao\Models\Plantonista;
 use App\Modules\Plantao\Requests\UpdatePlantonistaRequest;
+use App\Modules\Plantao\Services\PlantonistaService;
 use Illuminate\Http\RedirectResponse;
 
 /**
@@ -18,9 +19,14 @@ use Illuminate\Http\RedirectResponse;
  */
 class PlantonistaUpdateController extends Controller
 {
+    public function __construct(
+        private readonly PlantonistaService $plantonistaService
+    ) {
+    }
+
     public function __invoke(UpdatePlantonistaRequest $request, Plantonista $plantonista): RedirectResponse
     {
-        $plantonista->update($request->validated());
+        $this->plantonistaService->atualizar($plantonista, $request->validated());
 
         return back()->with('success', 'Cadastro de '.$plantonista->nomeComPosto().' atualizado.');
     }

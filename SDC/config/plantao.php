@@ -45,6 +45,22 @@ return [
     |
     */
 
+    /*
+    |---------------------------------------------------------------------------
+    | Aceite da passagem de servico
+    |---------------------------------------------------------------------------
+    */
+
+    'aceite' => [
+
+        // Teto do aviso de "pendente de aceite" quando NAO ha escala publicada
+        // que diga quem assume o turno seguinte. Sem escala o sistema nao sabe
+        // o destinatario certo e avisa quem pode aceitar -- mas avisar cinquenta
+        // pessoas de uma pendencia que e de uma so ensina todo mundo a ignorar
+        // o sino.
+        'max_destinatarios_fallback' => (int) env('PLANTAO_ACEITE_MAX_DESTINATARIOS', 15),
+    ],
+
     'escala' => [
 
         // Quantos minutos antes do inicio do turno o plantonista e lembrado.

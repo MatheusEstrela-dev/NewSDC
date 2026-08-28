@@ -13,6 +13,11 @@ class PlantaoListDTO
         public readonly string $avatar,
         public readonly string $periodo,
         public readonly string $status,
+        // Valor cru do enum, ao lado do label. A cor do badge se decide por
+        // ELE, nunca pelo texto exibido: label e para o humano e pode mudar;
+        // valor e contrato. Foi exatamente essa confusao que deixou todo
+        // status fora de "Ativo" cinza na tabela.
+        public readonly ?string $status_valor,
         public readonly ?string $observacoes,
         // Decidido no backend (PlantaoService::podeEditar): dono + turno
         // ATIVO, ou excecao de supervisao. O frontend so le a flag, nao
@@ -31,6 +36,9 @@ class PlantaoListDTO
 
         $periodoLabel = $plantao->tipoTurno?->label() ?? $plantao->periodo ?? '';
         $statusLabel = $plantao->status?->label() ?? $plantao->status ?? '';
+        $statusValor = $plantao->status instanceof \App\Modules\Plantao\Enums\StatusPlantao
+            ? $plantao->status->value
+            : (is_string($plantao->status) ? $plantao->status : null);
 
         return new self(
             id: $plantao->id,
@@ -39,6 +47,7 @@ class PlantaoListDTO
             avatar: $avatar,
             periodo: $periodoLabel,
             status: $statusLabel,
+            status_valor: $statusValor,
             observacoes: $plantao->observacoes,
             pode_editar: $podeEditar,
         );
