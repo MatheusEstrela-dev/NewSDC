@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Plantao;
 
+use App\Modules\Plantao\Services\EscalaService;
 use App\Modules\Plantao\Services\MovimentacaoViaturaService;
 use App\Modules\Plantao\Services\PassagemServicoService;
 use App\Modules\Plantao\Services\PlantaoService;
@@ -20,6 +21,7 @@ class PlantaoServiceProvider extends ServiceProvider
         $this->app->singleton(MovimentacaoViaturaService::class);
         $this->app->singleton(PassagemServicoService::class);
         $this->app->singleton(RelatorioPassagemService::class);
+        $this->app->singleton(EscalaService::class);
     }
 
     public function boot(): void

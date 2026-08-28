@@ -81,6 +81,23 @@ class Kernel extends ConsoleKernel
             ->onOneServer()
             ->withoutOverlapping()
             ->name('treinamento-limpar-cidadaos-nao-verificados');
+
+        // Escala de plantao: avisa quem tem turno comecando dentro da janela de
+        // config('plantao.escala.lembrete_minutos_antes').
+        //
+        // A cada 15 minutos, e nao de hora em hora, para que a antecedencia
+        // sentida seja proxima da configurada: com passo horario, um turno das
+        // 16h avisado com janela de 2h chegaria em qualquer ponto entre 14h e
+        // 15h. onOneServer + withoutOverlapping evitam duas execucoes
+        // concorrentes -- e, ainda assim, o comando marca lembrete_enviado_em
+        // por UPDATE condicional, porque agendamento nao e garantia de exclusao
+        // mutua e um aviso repetido ensina o usuario a ignorar o sino.
+        $schedule->command('plantao:lembrar-escala')
+            ->everyFifteenMinutes()
+            ->onOneServer()
+            ->withoutOverlapping()
+            ->runInBackground()
+            ->name('plantao-lembrar-escala');
     }
 
     /**
@@ -94,6 +111,7 @@ class Kernel extends ConsoleKernel
         // Usar load() e nao $this->commands([...]): dentro deste metodo, que ja se
         // chama commands(), aquela chamada seria recursao infinita.
         $this->load(base_path('app/Modules/Notificacoes/Console'));
+        $this->load(base_path('app/Modules/Plantao/Console'));
 
         require base_path('routes/console.php');
     }

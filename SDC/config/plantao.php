@@ -34,4 +34,34 @@ return [
         ],
     ],
 
+    /*
+    |---------------------------------------------------------------------------
+    | Escala de plantao
+    |---------------------------------------------------------------------------
+    |
+    | Regras operacionais do planejamento de turnos. Em config, e nao em banco,
+    | porque sao politica da corporacao e nao dado do dia a dia -- mudam por
+    | decisao, nao por operacao.
+    |
+    */
+
+    'escala' => [
+
+        // Quantos minutos antes do inicio do turno o plantonista e lembrado.
+        // O comando roda a cada 15 minutos e varre a janela
+        // [agora, agora + lembrete_minutos_antes]; itens ja avisados sao
+        // filtrados por lembrete_enviado_em, nunca reenviados.
+        'lembrete_minutos_antes' => (int) env('PLANTAO_ESCALA_LEMBRETE_MINUTOS', 120),
+
+        // Descanso minimo recomendado entre dois turnos do mesmo plantonista.
+        // AVISA, nao bloqueia: emenda acontece e as vezes e inevitavel -- o
+        // sistema registra que foi consciente, em vez de impedir a operacao.
+        'intervalo_minimo_horas' => (int) env('PLANTAO_ESCALA_INTERVALO_MINIMO_HORAS', 8),
+
+        // Sobreposicao de horario do mesmo plantonista BLOQUEIA. Nao ha leitura
+        // valida de estar em dois turnos ao mesmo tempo, e o indice unico do
+        // banco nao pega o caso (tipos de turno diferentes).
+        'bloquear_sobreposicao' => true,
+    ],
+
 ];

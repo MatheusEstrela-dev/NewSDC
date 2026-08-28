@@ -66,6 +66,9 @@ class PassagemServicoService extends BaseService
                     'plantonista_saida_nome' => $anterior?->plantonista_nome,
                     'data' => $data,
                     'periodo' => $periodo,
+                    // Vaga da escala que este turno cumpre, quando veio de la.
+                    // Null e caso legitimo: turno aberto fora de escala.
+                    'escala_item_id' => $dados['escala_item_id'] ?? null,
                     'status' => StatusPlantao::ATIVO,
                     'localizacao' => $dados['localizacao'] ?? 'Predio Alterosas',
                 ]);
