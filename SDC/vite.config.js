@@ -151,10 +151,19 @@ export default defineConfig({
             output: {
                 manualChunks: (id) => {
                     if (id.includes('node_modules')) {
-                        // Lazy chunks (nao preload) - Charts, Maps, DnD
+                        // Lazy chunks (nao preload) - Charts, Maps, DnD, Calendario
+                        //
+                        // fullcalendar ANTES da regra de 'vue' logo abaixo: o
+                        // pacote @fullcalendar/vue3 contem a substring 'vue' no
+                        // caminho e seria capturado por ela, indo parar no
+                        // vendor-vue -- que carrega em toda pagina. Medido: sem
+                        // esta linha o vendor-other subiu para 551 KB e o
+                        // calendario passou a ser baixado ate por quem nunca
+                        // abre a escala.
                         if (
                             id.includes('apexcharts') ||
                             id.includes('leaflet') ||
+                            id.includes('fullcalendar') ||
                             id.includes('vuedraggable') || id.includes('sortablejs')
                         ) {
                             return undefined;

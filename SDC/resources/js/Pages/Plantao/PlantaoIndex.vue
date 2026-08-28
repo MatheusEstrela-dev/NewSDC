@@ -47,6 +47,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canEscala: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const handleView = (id) => {
@@ -97,6 +101,7 @@ const handleAbrirPlantao = (dados) => {
     :can-encerrar="canEncerrar"
     :can-aceitar="canAceitar"
     :can-relatorio="canRelatorio"
+    :can-escala="canEscala"
     @view="handleView"
     @edit="handleEdit"
     @filter="handleFilter"

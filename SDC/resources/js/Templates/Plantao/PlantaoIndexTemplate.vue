@@ -1,5 +1,6 @@
 <script setup>
 import Button from '@/Components/Atoms/Button/Button.vue';
+import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
 import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListIcon.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import PlusIcon from '@/Components/Icons/PlusIcon.vue';
@@ -86,6 +87,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canEscala: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['view', 'edit', 'filter', 'abrir-plantao']);
@@ -140,6 +145,10 @@ const abrirAceitarModal = (turno) => {
 
 const handleFrota = () => {
   router.visit(route('plantao.viaturas.index'));
+};
+
+const handleEscala = () => {
+  router.visit(route('plantao.escala.index'));
 };
 
 // Card de estatistica como filtro rapido: recebe o status ('' = Total, limpa o status)
@@ -214,6 +223,17 @@ function closePrintModal() {
             @click="handleFrota"
           >
             Frota
+          </Button>
+
+          <Button
+            v-if="canEscala"
+            variant="secondary"
+            size="md"
+            :icon="CalendarIcon"
+            icon-position="left"
+            @click="handleEscala"
+          >
+            Escala
           </Button>
 
           <Button
