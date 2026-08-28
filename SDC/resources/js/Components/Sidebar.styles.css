@@ -133,6 +133,34 @@
   .sidebar:not(.is-mobile-open) .nav-icon {
     margin: 0;
   }
+
+  /*
+   * Neutraliza o rail de 80px, como o bloco de mobile ja fazia.
+   *
+   * Esta linha FALTAVA aqui, e era a assimetria que deixava o drawer torto so
+   * na faixa de tablet: `.sidebar.is-collapsed { width: 80px }` mora fora de
+   * qualquer media query, com especificidade 0,2,0, e vencia o
+   * `.sidebar { width: 280px }` deste bloco, que e 0,1,0 -- media query nao
+   * soma especificidade. So o `.is-mobile-open` escapava, por usar !important.
+   *
+   * Recolher e preferencia de DESKTOP. Abaixo de lg a sidebar e drawer
+   * off-canvas: fechada nao ocupa nada, aberta abre inteira. Manter o estado
+   * recolhido aqui nao economiza espaco nenhum -- so desalinha.
+   */
+  .sidebar.is-collapsed {
+    width: 280px;
+  }
+
+  /*
+   * E o mesmo para o conteudo: `.nav-item.is-collapsed` traz
+   * `justify-content: center`, que num item de 280px centraliza icone e rotulo
+   * e abre a folga a esquerda que aparecia como "vao". Aqui o drawer sempre
+   * desenha expandido.
+   */
+  .sidebar .nav-item.is-collapsed,
+  .sidebar .nav-group-toggle {
+    justify-content: flex-start;
+  }
 }
 
 /* Mobile (< 768px): Esconder sidebar por padrão e mostrar como drawer */

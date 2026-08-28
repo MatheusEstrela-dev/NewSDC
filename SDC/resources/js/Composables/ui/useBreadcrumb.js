@@ -1,5 +1,6 @@
 import { computed } from 'vue';
 import { usePage, router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 
 export function useBreadcrumb() {
     const page = usePage();
@@ -341,6 +342,56 @@ export function useBreadcrumb() {
         const humanize = (segment) => segment.replace(/([A-Z])/g, ' $1').trim();
 
         /**
+         * Nome de rota provavel para um nivel da trilha, ou null.
+         *
+         * Sem isto, TODO crumb intermediario nascia com `route: null` e so
+         * "Inicio" tinha destino. O efeito era duplo e visivel:
+         *
+         *  - o crumb do modulo nao era clicavel;
+         *  - o botao Voltar, que varre a trilha de tras para frente atras do
+         *    primeiro item com rota, pulava o modulo inteiro e caia no
+         *    dashboard. De /plantao/viaturas, "Voltar" ia para o Inicio em vez
+         *    de voltar para o Plantao.
+         *
+         * O nome do componente nao mapeia 1:1 para o da rota, entao aqui se
+         * TENTAM os formatos usados no projeto e fica o primeiro que existir de
+         * verdade -- `AjudaHumanitaria` -> `ajuda-humanitaria`, mas `PlanCon` ->
+         * `plancon`. Perguntar ao Ziggy e mais confiavel que adivinhar a regra.
+         */
+        const rotaDe = (...segmentos) => {
+            const partes = segmentos.filter(Boolean);
+
+            if (partes.length === 0) {
+                return null;
+            }
+
+            const kebab = (t) => t.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+            const plano = (t) => t.toLowerCase();
+
+            // Variacoes por segmento, combinadas em ordem de preferencia.
+            const candidatos = [
+                partes.map(kebab).join('.') + '.index',
+                partes.map(plano).join('.') + '.index',
+                partes.map(kebab).join('.'),
+                partes.map(plano).join('.'),
+            ];
+
+            for (const nome of candidatos) {
+                try {
+                    if (route().has(nome)) {
+                        return nome;
+                    }
+                } catch {
+                    // Ziggy indisponivel: trilha sem link e degradacao aceitavel,
+                    // quebrar a pagina inteira nao e.
+                    return null;
+                }
+            }
+
+            return null;
+        };
+
+        /**
          * Separa recurso e acao do ultimo segmento.
          *
          * O projeto usa DOIS estilos de nome de pagina, e o gerador so conhecia
@@ -373,15 +424,19 @@ export function useBreadcrumb() {
 
         // Modulo (primeiro segmento): ex. Tdap
         if (segments[0]) {
-            items.push({ label: humanize(segments[0]), route: null });
+            items.push({ label: humanize(segments[0]), route: rotaDe(segments[0]) });
         }
 
         // Recursos intermediarios (entre modulo e acao): ex. Cronogramas
         for (let i = 1; i < segments.length - 1; i++) {
-            items.push({ label: humanize(segments[i]), route: null });
+            items.push({
+                label: humanize(segments[i]),
+                route: rotaDe(segments[0], segments[i]),
+            });
         }
 
-        // Recurso do ultimo segmento, quando sobra algo depois de tirar a acao
+        // Recurso do ultimo segmento, quando sobra algo depois de tirar a acao.
+        // Sem rota: e a pagina em que o usuario ja esta.
         if (recursoFinal && segments.length > 1) {
             items.push({ label: humanize(recursoFinal), route: null });
         }
@@ -394,9 +449,19 @@ export function useBreadcrumb() {
         // Colapsa repeticao consecutiva: `Plantao/PlantaoIndex` produzia
         // "Plantao > Plantao", porque modulo e recurso tem o mesmo nome. E o
         // caso de toda pagina raiz de modulo neste projeto.
-        return items.filter(
+        const trilha = items.filter(
             (item, i) => i === 0 || item.label !== items[i - 1].label
         );
+
+        // O ultimo crumb e a pagina atual: nunca vira link, e o Voltar tem que
+        // pular ele. `handleBack` ja comeca em length - 2, mas zerar aqui evita
+        // que o colapso de duplicados deixe um item com rota na ponta -- caso de
+        // `Plantao/PlantaoIndex`, onde modulo e recurso colapsam num crumb so.
+        if (trilha.length > 1) {
+            trilha[trilha.length - 1] = { ...trilha[trilha.length - 1], route: null };
+        }
+
+        return trilha;
     });
 
     // Navega para o item anterior do proprio breadcrumb (deterministico) em vez
