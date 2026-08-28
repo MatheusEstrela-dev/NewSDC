@@ -11,8 +11,11 @@ defineOptions({ layout: AuthenticatedLayout });
 const props = defineProps({
   competencia: { type: Object, required: true },
   escala: { type: Object, default: null },
+  statistics: { type: Object, default: () => ({}) },
   eventos: { type: Array, default: () => [] },
   minhasVagas: { type: Array, default: () => [] },
+  filters: { type: Object, default: () => ({}) },
+  filterOptions: { type: Object, default: () => ({ tiposTurno: [], plantonistas: [] }) },
   tiposTurno: { type: Array, default: () => [] },
   plantonistas: { type: Array, default: () => [] },
   can: { type: Object, default: () => ({}) },
@@ -35,11 +38,57 @@ const mudarMes = ({ ano, mes }) => {
 
   router.get(
     route('plantao.escala.index'),
-    { ano, mes },
+    { ano, mes, ...filtrosAtivos() },
     {
       preserveState: true,
       preserveScroll: true,
-      only: ['competencia', 'escala', 'eventos', 'minhasVagas'],
+      only: ['competencia', 'escala', 'statistics', 'eventos', 'minhasVagas', 'filters'],
+    },
+  );
+};
+
+/**
+ * So os filtros com valor: mandar `undefined` na query do Inertia produz
+ * `?tipo_turno_id=` e o backend passaria a receber string vazia em vez de nulo.
+ */
+function filtrosAtivos() {
+  const { tipo_turno_id, plantonista_id, somente_meus } = props.filters ?? {};
+
+  return {
+    ...(tipo_turno_id ? { tipo_turno_id } : {}),
+    ...(plantonista_id ? { plantonista_id } : {}),
+    ...(somente_meus ? { somente_meus: 1 } : {}),
+  };
+}
+
+// Reload parcial tambem aqui: `can`, `tiposTurno` e `plantonistas` nao mudam
+// com o filtro, e sao closures reavaliadas em toda visita completa.
+const filtrar = (novos) => {
+  router.get(
+    route('plantao.escala.index'),
+    {
+      ano: props.competencia.ano,
+      mes: props.competencia.mes,
+      ...(novos.tipo_turno_id ? { tipo_turno_id: novos.tipo_turno_id } : {}),
+      ...(novos.plantonista_id ? { plantonista_id: novos.plantonista_id } : {}),
+      ...(novos.somente_meus ? { somente_meus: 1 } : {}),
+    },
+    {
+      preserveState: true,
+      preserveScroll: true,
+      only: ['eventos', 'filters'],
+    },
+  );
+};
+
+const limparFiltros = () => {
+  router.get(
+    route('plantao.escala.index'),
+    { ano: props.competencia.ano, mes: props.competencia.mes },
+    {
+      preserveState: true,
+      preserveScroll: true,
+      only: ['eventos', 'filters'],
     },
   );
 };
@@ -120,8 +169,11 @@ const irParaPlantonistas = () => {
   <EscalaIndexTemplate
     :competencia="competencia"
     :escala="escala"
+    :statistics="statistics"
     :eventos="eventos"
     :minhas-vagas="minhasVagas"
+    :filters="filters"
+    :filter-options="filterOptions"
     :can="can"
     @criar-escala="criarEscala"
     @publicar="pedirPublicacao"
@@ -130,6 +182,8 @@ const irParaPlantonistas = () => {
     @selecionar-vaga="abrirVagaExistente"
     @assumir="pedirAssuncao"
     @gerir-plantonistas="irParaPlantonistas"
+    @filtrar="filtrar"
+    @limpar-filtros="limparFiltros"
   />
 
   <EscalaVagaModal

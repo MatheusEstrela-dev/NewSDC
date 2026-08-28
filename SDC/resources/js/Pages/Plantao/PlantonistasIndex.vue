@@ -9,6 +9,7 @@ defineOptions({ layout: AuthenticatedLayout });
 
 defineProps({
   plantonistas: { type: Array, default: () => [] },
+  statistics: { type: Object, default: () => ({}) },
   filtros: { type: Object, default: () => ({ busca: '' }) },
   candidatos: { type: Array, default: () => [] },
   can: { type: Object, default: () => ({}) },
@@ -69,6 +70,7 @@ const confirmarRemocao = () => {
 <template>
   <PlantonistasIndexTemplate
     :plantonistas="plantonistas"
+    :statistics="statistics"
     :filtros="filtros"
     :candidatos="candidatos"
     :can="can"

@@ -14,6 +14,7 @@ use App\Modules\Plantao\Models\TipoTurno;
 use App\Modules\Plantao\Services\EscalaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -37,6 +38,8 @@ class EscalaIndexController extends Controller
         $usuario = $request->user();
         [$ano, $mes] = $this->competencia($request);
 
+        $filtros = $this->filtros($request);
+
         $escala = Escala::doMes($ano, $mes)
             ->with(['publicadaPor:id,name', 'criadaPor:id,name'])
             ->first();
@@ -49,9 +52,11 @@ class EscalaIndexController extends Controller
         $escalaVisivel = $escala !== null
             && ($podeMontar || ($escala->status instanceof StatusEscala && $escala->status->publicada()));
 
-        $itens = $escalaVisivel
+        $todas = $escalaVisivel
             ? $this->escalaService->itensNoIntervalo($escala->primeiroDia(), $escala->ultimoDia())
             : collect();
+
+        $visiveis = $this->aplicarFiltros($todas, $filtros, $usuario);
 
         return Inertia::render('Plantao/EscalaIndex', [
             'competencia' => [
@@ -73,10 +78,18 @@ class EscalaIndexController extends Controller
                 'editavel' => $escala->status instanceof StatusEscala && $escala->status->editavel(),
                 'publicada_em' => $escala->publicada_em?->format('d/m/Y H:i'),
                 'publicada_por' => $escala->publicadaPor?->name,
-                'total_vagas' => $itens->count(),
             ],
-            'eventos' => $this->eventos($itens, $usuario),
-            'minhasVagas' => $this->minhasVagas($itens, $usuario),
+            // Sempre sobre o mes INTEIRO, nunca sobre o recorte filtrado: os
+            // cards descrevem a cobertura do mes, e "dias sem cobertura" com
+            // filtro aplicado responderia outra pergunta -- e a errada.
+            'statistics' => $this->estatisticas($todas, $escala, $usuario),
+            'eventos' => $this->eventos($visiveis, $usuario),
+            'minhasVagas' => $this->minhasVagas($todas, $usuario),
+            'filters' => $filtros,
+            'filterOptions' => [
+                'tiposTurno' => $this->tiposTurno(),
+                'plantonistas' => $this->plantonistas(),
+            ],
             'tiposTurno' => $this->tiposTurno(),
             'plantonistas' => $podeMontar ? $this->plantonistas() : [],
             'can' => [
@@ -110,6 +123,78 @@ class EscalaIndexController extends Controller
     }
 
     /**
+     * @return array<string,mixed>
+     */
+    private function filtros(Request $request): array
+    {
+        return [
+            'tipo_turno_id' => $request->query('tipo_turno_id') ?: null,
+            'plantonista_id' => $request->query('plantonista_id') ?: null,
+            'somente_meus' => $request->boolean('somente_meus') ?: null,
+        ];
+    }
+
+    /**
+     * Filtragem em memoria, e nao em SQL: as vagas de um mes sao poucas dezenas
+     * e ja foram carregadas uma vez para as estatisticas e para "meus proximos
+     * plantoes". Refazer a consulta por filtro custaria mais que percorrer.
+     *
+     * @param  Collection<int, EscalaItem>  $itens
+     * @return Collection<int, EscalaItem>
+     */
+    private function aplicarFiltros(Collection $itens, array $filtros, ?User $usuario): Collection
+    {
+        return $itens
+            ->when(
+                $filtros['tipo_turno_id'] !== null,
+                fn (Collection $c) => $c->filter(
+                    fn (EscalaItem $i) => (int) $i->tipo_turno_id === (int) $filtros['tipo_turno_id']
+                )
+            )
+            ->when(
+                $filtros['plantonista_id'] !== null,
+                fn (Collection $c) => $c->filter(
+                    fn (EscalaItem $i) => (int) $i->plantonista_id === (int) $filtros['plantonista_id']
+                )
+            )
+            ->when(
+                $filtros['somente_meus'] === true && $usuario !== null,
+                fn (Collection $c) => $c->filter(
+                    fn (EscalaItem $i) => (int) $i->plantonista_id === (int) $usuario->id
+                )
+            )
+            ->values();
+    }
+
+    /**
+     * Cobertura do mes.
+     *
+     * `dias_descobertos` e a metrica que justifica a tela existir: e o numero de
+     * dias do mes sem nenhuma vaga preenchida, ou seja, os buracos que alguem
+     * precisa fechar antes de publicar.
+     *
+     * @param  Collection<int, EscalaItem>  $itens
+     * @return array<string,int>
+     */
+    private function estatisticas(Collection $itens, ?Escala $escala, ?User $usuario): array
+    {
+        $diasComVaga = $itens->map(fn (EscalaItem $i) => $i->data->toDateString())->unique()->count();
+
+        $diasNoMes = $escala !== null
+            ? (int) $escala->primeiroDia()->daysInMonth
+            : 0;
+
+        return [
+            'vagas' => $itens->count(),
+            'minhas' => $usuario === null ? 0 : $itens
+                ->filter(fn (EscalaItem $i) => (int) $i->plantonista_id === (int) $usuario->id)
+                ->count(),
+            'assumidas' => $itens->filter(fn (EscalaItem $i) => $i->plantao !== null)->count(),
+            'dias_descobertos' => max(0, $diasNoMes - $diasComVaga),
+        ];
+    }
+
+    /**
      * Vagas no formato de evento do FullCalendar.
      *
      * `end` vai com o instante real de termino, ja somada a virada de dia: sem
@@ -120,10 +205,10 @@ class EscalaIndexController extends Controller
      * escaneia PHP nem valores vindos do banco, e a classe seria purgada do
      * bundle.
      *
-     * @param  \Illuminate\Support\Collection<int, EscalaItem>  $itens
+     * @param  Collection<int, EscalaItem>  $itens
      * @return list<array<string,mixed>>
      */
-    private function eventos($itens, ?User $usuario): array
+    private function eventos(Collection $itens, ?User $usuario): array
     {
         $meuId = (int) ($usuario?->id ?? 0);
 
@@ -158,7 +243,7 @@ class EscalaIndexController extends Controller
                     'podeAssumir' => $ehMinha && $item->plantao === null,
                 ],
             ];
-        })->all();
+        })->values()->all();
     }
 
     /**
@@ -166,12 +251,13 @@ class EscalaIndexController extends Controller
      *
      * Existe para o celular: no telefone o calendario vira lista, e o que o
      * plantonista abre o app para ver e "quando eu trabalho", nao o mes inteiro
-     * da equipe.
+     * da equipe. Ignora os filtros de proposito -- e a agenda dele, nao um
+     * recorte de consulta.
      *
-     * @param  \Illuminate\Support\Collection<int, EscalaItem>  $itens
+     * @param  Collection<int, EscalaItem>  $itens
      * @return list<array<string,mixed>>
      */
-    private function minhasVagas($itens, ?User $usuario): array
+    private function minhasVagas(Collection $itens, ?User $usuario): array
     {
         if ($usuario === null) {
             return [];

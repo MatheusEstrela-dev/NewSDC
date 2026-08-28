@@ -311,6 +311,7 @@ function closePrintModal() {
     <!-- Filtros -->
     <PlantaoFiltersSection
       :filters="filters"
+      :filter-options="filterOptions"
       @filter-change="emit('filter', $event)"
       @filter-reset="emit('filter', {})"
     />

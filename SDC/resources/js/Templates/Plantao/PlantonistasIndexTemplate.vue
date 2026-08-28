@@ -11,18 +11,28 @@
  * tabela transversal a todo o sistema, e posto e vocabulario deste modulo.
  */
 import Button from '@/Components/Atoms/Button/Button.vue';
+import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
+import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
 import TrashIcon from '@/Components/Icons/TrashIcon.vue';
+import UserIcon from '@/Components/Icons/UserIcon.vue';
 import UsersIcon from '@/Components/Icons/UsersIcon.vue';
 import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
 import ListEmptyState from '@/Components/Molecules/ListEmptyState.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
+import StatCardsGrid from '@/Components/Molecules/Statistics/StatCardsGrid.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
-import { reactive, ref, watch } from 'vue';
+import { moduleIcon } from '@/Support/moduleIcons';
+import { computed, reactive, ref, watch } from 'vue';
 
 const props = defineProps({
   plantonistas: {
     type: Array,
     default: () => [],
+  },
+  statistics: {
+    type: Object,
+    default: () => ({}),
   },
   filtros: {
     type: Object,
@@ -87,6 +97,39 @@ const salvarPosto = (p) => {
   emit('atualizar', { ...p, posto: rascunhoPosto[p.id] });
 };
 
+const cards = computed(() => [
+  {
+    id: 'total',
+    title: 'Cadastrados',
+    value: props.statistics.total || 0,
+    variant: 'info',
+    icon: UsersIcon,
+  },
+  {
+    id: 'ativos',
+    title: 'Ativos',
+    value: props.statistics.ativos || 0,
+    variant: 'success',
+    icon: CheckCircleIcon,
+  },
+  {
+    id: 'inativos',
+    title: 'Inativos',
+    value: props.statistics.inativos || 0,
+    variant: 'warning',
+    icon: UserIcon,
+  },
+  {
+    // Sem posto o relatorio de passagem imprime so o nome, e o documento
+    // perde o "Sgt"/"Ten" que a corporacao usa.
+    id: 'sem_posto',
+    title: 'Sem posto',
+    value: props.statistics.sem_posto || 0,
+    variant: (props.statistics.sem_posto || 0) > 0 ? 'danger' : 'success',
+    icon: ExclamationTriangleIcon,
+  },
+]);
+
 const submeterBusca = () => emit('buscar', busca.value);
 
 const submeterNovo = () => {
@@ -96,17 +139,31 @@ const submeterNovo = () => {
 </script>
 
 <template>
-  <div class="space-y-4 p-4 sm:space-y-6 sm:p-6">
+  <div class="plantao-container">
     <PageHeader
       title="Plantonistas"
-      description="Quem pode ser escalado no plantao"
+      description="Quem pode ser escalado no plantão"
       :icon="UsersIcon"
+      :icon-image="moduleIcon('plantao')"
+      variant="gradient"
+      icon-class="text-blue-600 dark:text-blue-400"
     />
+
+    <StatCardsGrid class="mb-6">
+      <StatCard
+        v-for="card in cards"
+        :key="card.id"
+        :title="card.title"
+        :value="card.value"
+        :variant="card.variant"
+        :icon="card.icon"
+      />
+    </StatCardsGrid>
 
     <!-- Adicionar -->
     <section
       v-if="can.gerir"
-      class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50"
+      class="mb-6 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/60"
     >
       <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
         Adicionar plantonista
@@ -159,7 +216,7 @@ const submeterNovo = () => {
     </section>
 
     <!-- Lista -->
-    <section class="rounded-lg border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/50">
+    <section class="rounded-xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/60">
       <ListEmptyState
         v-if="!plantonistas.length"
         title="Nenhum plantonista cadastrado"
@@ -225,3 +282,9 @@ const submeterNovo = () => {
     </section>
   </div>
 </template>
+
+<style scoped>
+.plantao-container {
+  @apply w-full pb-8 bg-slate-50 dark:bg-slate-950;
+}
+</style>

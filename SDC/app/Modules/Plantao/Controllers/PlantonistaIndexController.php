@@ -30,9 +30,20 @@ class PlantonistaIndexController extends Controller
     {
         $busca = trim((string) $request->query('busca', ''));
 
+        $todos = Plantonista::with('user:id,name,email')->get();
+
         return Inertia::render('Plantao/PlantonistasIndex', [
-            'plantonistas' => Plantonista::with('user:id,name,email')
-                ->get()
+            'statistics' => [
+                'total' => $todos->count(),
+                'ativos' => $todos->where('ativo', true)->count(),
+                'inativos' => $todos->where('ativo', false)->count(),
+                // Sem posto o relatorio de passagem imprime so o nome, e a
+                // escala perde o "Sgt"/"Ten" que o documento usa.
+                'sem_posto' => $todos->filter(
+                    fn (Plantonista $p) => trim((string) $p->posto) === ''
+                )->count(),
+            ],
+            'plantonistas' => $todos
                 ->map(fn (Plantonista $p) => [
                     'id' => $p->id,
                     'user_id' => (int) $p->user_id,

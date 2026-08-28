@@ -45,22 +45,35 @@ import FilterSection from '@/Components/Molecules/Filter/FilterSection.vue';
 import FilterField from '@/Components/Molecules/Filter/FilterField.vue';
 import FilterActions from '@/Components/Molecules/Filter/FilterActions.vue';
 import FormDateRange from '@/Components/Molecules/Form/FormDateRange.vue';
+import { computed } from 'vue';
 
 const props = defineProps({
   filters: {
     type: Object,
     default: () => ({}),
   },
+  // Ja em {value, label}, montado pelo PlantaoIndexController a partir de
+  // plantao_tipos_turno. Nao remapear.
+  filterOptions: {
+    type: Object,
+    default: () => ({ periodos: [] }),
+  },
 });
 
 const emit = defineEmits(['filter-change', 'filter-reset']);
 
-const periodoOptions = [
+/**
+ * Vem do servidor, nunca de lista fixa aqui.
+ *
+ * Os horarios passaram a ser cadastraveis em plantao_tipos_turno quando o enum
+ * PeriodoPlantao foi aposentado. A lista fixa que existia neste arquivo
+ * conhecia so DIURNO/NOTURNO/EXTRAORDINARIO e escondia do filtro os turnos de
+ * 12h (08-20 e 20-08) -- e esconderia qualquer turno cadastrado depois.
+ */
+const periodoOptions = computed(() => [
   { value: '', label: 'Todos' },
-  { value: 'DIURNO', label: 'Diurno' },
-  { value: 'NOTURNO', label: 'Noturno' },
-  { value: 'EXTRAORDINARIO', label: 'Extraordinário' },
-];
+  ...(props.filterOptions?.periodos ?? []),
+]);
 
 const statusOptions = [
   { value: '', label: 'Todos' },
