@@ -14,7 +14,9 @@ class PlantaoService extends BaseService
 {
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Plantao::query()->orderBy('data', 'desc');
+        // tipoTurno eager: o DTO da listagem chama ->tipoTurno->label()
+        // por linha, e sem isto sao 15 queries extras por pagina.
+        $query = Plantao::query()->with('tipoTurno')->orderBy('data', 'desc');
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -42,7 +44,7 @@ class PlantaoService extends BaseService
 
     public function find(int $id): ?Plantao
     {
-        return Plantao::find($id);
+        return Plantao::with('tipoTurno')->find($id);
     }
 
     public function create(array $data): Plantao

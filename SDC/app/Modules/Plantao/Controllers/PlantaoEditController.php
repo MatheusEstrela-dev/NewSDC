@@ -44,7 +44,7 @@ class PlantaoEditController extends Controller
             'plantao' => [
                 'id' => $plantao->id,
                 'data' => $plantao->data?->format('d/m/Y') ?? '',
-                'periodo_label' => $plantao->periodo?->labelCurto() ?? '',
+                'periodo_label' => $plantao->tipoTurno?->labelCurto() ?? '',
                 'status_label' => $plantao->status?->label() ?? '',
                 'plantonista_nome' => $plantao->plantonista_nome,
                 'localizacao' => $plantao->localizacao,

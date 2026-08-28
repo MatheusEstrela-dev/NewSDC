@@ -50,7 +50,7 @@ class RelatorioPassagemService
         // extensao no provider.
         return view()->file(resource_path('views/plantao/passagem-servico.txt.blade.php'), [
             'data' => $plantao->data?->format('d/m/Y') ?? '',
-            'periodo' => $plantao->periodo?->labelCurto() ?? '',
+            'periodo' => $plantao->tipoTurno?->labelCurto() ?? '',
             'plantonista' => $plantao->plantonista_nome ?? '',
             'plantonistaSaida' => $this->nuloSeVazio($plantao->plantonista_saida_nome),
             'localizacao' => $plantao->localizacao ?? '',

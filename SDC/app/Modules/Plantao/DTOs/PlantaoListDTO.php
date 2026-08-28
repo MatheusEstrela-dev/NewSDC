@@ -29,7 +29,7 @@ class PlantaoListDTO
             substr($parts[0] ?? '', 0, 1) . substr(end($parts) ?: '', 0, 1)
         );
 
-        $periodoLabel = $plantao->periodo?->label() ?? $plantao->periodo ?? '';
+        $periodoLabel = $plantao->tipoTurno?->label() ?? $plantao->periodo ?? '';
         $statusLabel = $plantao->status?->label() ?? $plantao->status ?? '';
 
         return new self(

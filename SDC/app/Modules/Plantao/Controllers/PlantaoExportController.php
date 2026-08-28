@@ -46,7 +46,7 @@ class PlantaoExportController extends Controller
             return [
                 $plantao->data ? $plantao->data->format('d/m/Y') : '',
                 $plantao->plantonista_nome ?? '',
-                $plantao->periodo?->label() ?? $plantao->periodo ?? '',
+                $plantao->tipoTurno?->label() ?? $plantao->periodo ?? '',
                 $plantao->status?->label() ?? $plantao->status ?? '',
                 $plantao->observacoes ?? '',
                 $plantao->plantonista_saida_nome ?? '',

@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use App\Modules\Plantao\Models\Plantao;
-use App\Modules\Plantao\Enums\PeriodoPlantao;
 use App\Modules\Plantao\Enums\StatusPlantao;
 use App\Models\User;
 use Carbon\Carbon;
@@ -46,7 +45,7 @@ class PlantoesMockSeeder extends Seeder
                 'data' => $data->format('Y-m-d'),
                 'plantonista_id' => $users->random()->id,
                 'plantonista_nome' => $users->random()->name,
-                'periodo' => PeriodoPlantao::DIURNO->value,
+                'periodo' => 'DIURNO',
                 'status' => $i < 0 ? StatusPlantao::FINALIZADO->value : StatusPlantao::ATIVO->value,
                 'observacoes' => $i === 0 ? 'Plantão transcorrendo sem alterações.' : null,
             ];
@@ -56,7 +55,7 @@ class PlantoesMockSeeder extends Seeder
                 'data' => $data->format('Y-m-d'),
                 'plantonista_id' => $users->random()->id,
                 'plantonista_nome' => $users->random()->name,
-                'periodo' => PeriodoPlantao::NOTURNO->value,
+                'periodo' => 'NOTURNO',
                 'status' => $i <= 0 ? ($i === 0 ? StatusPlantao::ATIVO->value : StatusPlantao::FINALIZADO->value) : StatusPlantao::ATIVO->value,
                 'observacoes' => null,
             ];
@@ -67,7 +66,7 @@ class PlantoesMockSeeder extends Seeder
                     'data' => $data->format('Y-m-d'),
                     'plantonista_id' => $users->random()->id,
                     'plantonista_nome' => $users->random()->name,
-                    'periodo' => PeriodoPlantao::EXTRAORDINARIO->value,
+                    'periodo' => 'EXTRAORDINARIO',
                     'status' => $i < 0 ? StatusPlantao::FINALIZADO->value : StatusPlantao::ATIVO->value,
                     'observacoes' => 'Convocado devido alerta vermelho de chuvas fortes.',
                 ];

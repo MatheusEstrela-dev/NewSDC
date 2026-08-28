@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Plantao\Requests;
 
-use App\Modules\Plantao\Enums\PeriodoPlantao;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,7 +18,12 @@ class AbrirPassagemRequest extends FormRequest
     {
         return [
             'data' => ['required', 'date'],
-            'periodo' => ['required', Rule::enum(PeriodoPlantao::class)],
+            // Valida contra a tabela, nao contra enum: os horarios agora sao
+            // cadastraveis e um enum voltaria a exigir deploy a cada turno novo.
+            'periodo' => [
+                'required',
+                Rule::exists('plantao_tipos_turno', 'codigo')->where('ativo', true),
+            ],
             // Localizacao do turno no relatorio (ex.: Predio Alterosas). Ausente,
             // o service aplica o padrao.
             'localizacao' => ['nullable', 'string', 'max:60'],
