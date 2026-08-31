@@ -48,46 +48,86 @@
     </div>
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
-      <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
-        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Quando</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Tipo</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Entidade</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Mensagem</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Usuário</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Ações</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="h in historicos.data" :key="h.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-            <td class="px-4 py-3 text-slate-700 dark:text-slate-300 text-xs">{{ fmtDateTime(h.data_evento) }}</td>
-            <td class="px-4 py-3">
-              <span :class="badgeTipo(h.tipo_evento)" class="px-2 py-0.5 rounded text-xs font-mono">{{ h.tipo_evento }}</span>
-            </td>
-            <td class="px-4 py-3 text-xs font-mono">{{ h.entity_type }}#{{ h.entity_id }}</td>
-            <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ h.obs || '—' }}</td>
-            <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ h.user?.name || 'Sistema' }}</td>
-            <td class="px-4 py-3 text-right">
-              <div class="flex items-center justify-end gap-1">
-                <ActionButton
-                  action="view"
-                  module="tdap"
-                  resource="historicos"
-                  :allowed="true"
-                  :show-label="false"
-                  size="sm"
-                  tooltip-text="Ver detalhes do evento"
-                  @click="router.visit(route('tdap.historicos.show', h.id))"
-                />
-              </div>
-            </td>
-          </tr>
-          <tr v-if="historicos.data.length === 0">
-            <td colspan="6" class="px-4 py-12 text-center text-slate-400">Nenhum evento registrado.</td>
-          </tr>
-        </tbody>
-      </table>
+      <ResponsiveTable
+      :items="historicos.data"
+      :mobile-fields="CAMPOS_MOBILE"
+      :get-item-title="(h) => fmtDateTime(h.data_evento)"
+      empty-message="Nenhum historico encontrado"
+    >
+      <template #table>
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Quando</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Tipo</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Entidade</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Mensagem</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Usuário</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Ações</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                  <tr v-for="h in historicos.data" :key="h.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300 text-xs">{{ fmtDateTime(h.data_evento) }}</td>
+                    <td class="px-4 py-3">
+                      <span :class="badgeTipo(h.tipo_evento)" class="px-2 py-0.5 rounded text-xs font-mono">{{ h.tipo_evento }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-xs font-mono">{{ h.entity_type }}#{{ h.entity_id }}</td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ h.obs || '—' }}</td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ h.user?.name || 'Sistema' }}</td>
+                    <td class="px-4 py-3 text-right">
+                      <div class="flex items-center justify-end gap-1">
+                        <ActionButton
+                          action="view"
+                          module="tdap"
+                          resource="historicos"
+                          :allowed="true"
+                          :show-label="false"
+                          size="sm"
+                          tooltip-text="Ver detalhes do evento"
+                          @click="router.visit(route('tdap.historicos.show', h.id))"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="historicos.data.length === 0">
+                    <td colspan="6" class="px-4 py-12 text-center text-slate-400">Nenhum evento registrado.</td>
+                  </tr>
+                </tbody>
+              </table>
+      </template>
+
+      <template #mobile-c1="{ item: h }">
+        <span :class="badgeTipo(h.tipo_evento)" class="px-2 py-0.5 rounded text-xs font-mono">{{ h.tipo_evento }}</span>
+      </template>
+
+      <template #mobile-c2="{ item: h }">
+        {{ h.entity_type }}#{{ h.entity_id }}
+      </template>
+
+      <template #mobile-c3="{ item: h }">
+        {{ h.obs || '—' }}
+      </template>
+
+      <template #mobile-c4="{ item: h }">
+        {{ h.user?.name || 'Sistema' }}
+      </template>
+
+      <template #mobile-actions="{ item: h }">
+        <div class="flex items-center justify-end gap-1">
+        <ActionButton
+        action="view"
+        module="tdap"
+        resource="historicos"
+        :allowed="true"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Ver detalhes do evento"
+        @click="router.visit(route('tdap.historicos.show', h.id))"
+        />
+        </div>
+      </template>
+    </ResponsiveTable>
 
     </div>
 
@@ -114,6 +154,7 @@ import ExportCsvModal from '@/Components/Organisms/ExportCsvModal.vue';
 import DatePicker from '@/Components/Form/DatePicker.vue';
 import { useExport } from '@/Composables/data/useExport';
 import DownloadIcon from '@/Components/Icons/DownloadIcon.vue';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -166,4 +207,19 @@ function fmtDateTime(d) {
 function irParaPagina(page) {
   router.get(route('tdap.historicos.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
 }
+
+/**
+ * Campos do card no mobile (regra 9 de responsividade).
+ *
+ * Sao os que IDENTIFICAM o registro, nao todos: card com oito linhas nao e
+ * melhor que tabela rolando de lado. Cada um reusa o markup da celula
+ * original pelo slot `#mobile-<key>`, entao badge e formatacao continuam
+ * identicos aos da tabela.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'c1', label: 'Tipo' },
+  { key: 'c2', label: 'Entidade' },
+  { key: 'c3', label: 'Mensagem' },
+  { key: 'c4', label: 'Usuário' },
+];
 </script>

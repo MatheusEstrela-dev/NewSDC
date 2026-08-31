@@ -44,6 +44,31 @@
         </form>
       </CollapsibleSection>
 
+      <!--
+        Cinco colunas com `whitespace-nowrap`: no telefone a tabela rolava de
+        lado e a coluna fixa de acoes flutuava sobre conteudo cortado.
+        Regra 9 de `.claude/skills/frontend/04 - Responsividade`.
+      -->
+      <ResponsiveTable
+        :items="lista"
+        :mobile-fields="CAMPOS_MOBILE"
+        :get-item-title="(c) => c.nome"
+        :get-item-subtitle="(c) => nomeUf(c.municipio)"
+        :get-item-key="(c) => c.id"
+        empty-message="Nenhuma comunidade encontrada"
+      >
+        <!-- Pilula nao sobrevive a interpolacao de texto: vem por slot. -->
+        <template #mobile-situacao="{ item }">
+          <span :class="item.ativa ? PILULA_ATIVA : PILULA_INATIVA">
+            {{ item.ativa ? 'Ativa' : 'Inativa' }}
+          </span>
+        </template>
+
+        <template #mobile-actions="{ item }">
+          <ActionButton module="cisternas" resource="comunidades" :actions="acoesDe(item)" />
+        </template>
+
+        <template #table>
       <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/60">
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/50">
@@ -75,10 +100,7 @@
                     <ActionButton
                       module="cisternas"
                       resource="comunidades"
-                      :actions="[
-                        { action: 'edit',   handler: () => abrirEdicao(c) },
-                        { action: 'delete', handler: () => excluir(c, `a comunidade ${c.nome}`) },
-                      ]"
+                      :actions="acoesDe(c)"
                     />
                   </div>
                 </td>
@@ -98,6 +120,8 @@
           </table>
         </div>
       </div>
+        </template>
+      </ResponsiveTable>
 
       <CisternaFormModal
         :show="aberto"
@@ -153,6 +177,7 @@ import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormSelect from '@/Components/Molecules/Form/FormSelect.vue';
 import ToggleField from '@/Components/Molecules/Form/ToggleField.vue';
 import CisternaFormModal from '@/Components/Organisms/Cisterna/CisternaFormModal.vue';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useCrudModal } from '@/Composables/cisterna/useCrudModal';
 
@@ -162,6 +187,30 @@ const props = defineProps({
   municipios: { type: Array, default: () => [] },
   permissoes: { type: Object, default: () => ({}) },
 });
+
+/**
+ * Acoes da linha, definidas UMA vez.
+ *
+ * Servem a dois lugares: a celula da tabela no desktop e o pe do card no
+ * mobile. Duplicar a lista entre os dois sairia de sincronia na primeira acao
+ * nova -- e divergencia aqui significa acao existindo num modo e nao no outro,
+ * sem erro nenhum.
+ */
+function acoesDe(c) {
+  return [
+    { action: 'edit',   handler: () => abrirEdicao(c) },
+    { action: 'delete', handler: () => excluir(c, `a comunidade ${c.nome}`) },
+  ];
+}
+
+/**
+ * O card mostra o que a tabela tem menos o que ja subiu para titulo e
+ * subtitulo: nome e municipio saem das colunas e viram cabecalho do card.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'beneficiarios', label: 'Beneficiarios' },
+  { key: 'situacao', label: 'Situacao' },
+];
 
 const TH = 'whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400';
 const TD = 'whitespace-nowrap px-3 py-2 text-sm text-slate-700 dark:text-slate-200';

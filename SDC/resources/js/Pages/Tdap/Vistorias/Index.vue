@@ -65,79 +65,142 @@
     </FilterSection>
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
-      <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
-        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Data</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Caminhão</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Vistoriador</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Ficha</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Lacre</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Parecer</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Vigência</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Ações</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="v in vistorias.data" :key="v.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-            <td class="px-4 py-3">{{ fmtDate(v.data) }}</td>
-            <td class="px-4 py-3">
-              <Link :href="route('tdap.vistorias.show', v.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">{{ v.caminhao_placa }}</Link>
-              <p v-if="v.caminhao_modelo" class="text-xs text-slate-500">{{ v.caminhao_modelo }}</p>
-            </td>
-            <td class="px-4 py-3">
-              <p>{{ v.nome }}</p>
-              <p v-if="v.prestador_nome" class="text-xs text-slate-500">{{ v.prestador_nome }}</p>
-            </td>
-            <td class="px-4 py-3 font-mono text-xs">{{ v.ficha || '—' }}</td>
-            <td class="px-4 py-3 font-mono text-xs">{{ v.lacre || '—' }}</td>
-            <td class="px-4 py-3">
-              <span :class="v.parecer === 'aprovada'
-                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'"
-                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
-                {{ v.parecer_label }}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <span v-if="v.esta_vigente" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                <span class="w-1.5 h-1.5 rounded-full mr-1.5 bg-blue-500"></span>
-                Vigente
-              </span>
-              <span v-else class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                Expirada
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex items-center justify-end gap-1">
-                <ActionButton
-                  action="view"
-                  module="tdap"
-                  resource="vistorias"
-                  :allowed="true"
-                  :show-label="false"
-                  size="sm"
-                  tooltip-text="Visualizar vistoria"
-                  @click="router.visit(route('tdap.vistorias.show', v.id))"
-                />
-                <ActionButton
-                  action="edit"
-                  module="tdap"
-                  resource="vistorias"
-                  :allowed="canEdit"
-                  :show-label="false"
-                  size="sm"
-                  tooltip-text="Editar vistoria"
-                  @click="router.visit(route('tdap.vistorias.edit', v.id))"
-                />
-              </div>
-            </td>
-          </tr>
-          <tr v-if="vistorias.data.length === 0">
-            <td colspan="8" class="px-4 py-12 text-center text-slate-400">Nenhuma vistoria cadastrada.</td>
-          </tr>
-        </tbody>
-      </table>
+      <ResponsiveTable
+      :items="vistorias.data"
+      :mobile-fields="CAMPOS_MOBILE"
+      :get-item-title="(v) => fmtDate(v.data)"
+      empty-message="Nenhuma vistoria encontrada"
+    >
+      <template #table>
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Data</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Caminhão</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Vistoriador</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Ficha</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Lacre</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Parecer</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Vigência</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Ações</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                  <tr v-for="v in vistorias.data" :key="v.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                    <td class="px-4 py-3">{{ fmtDate(v.data) }}</td>
+                    <td class="px-4 py-3">
+                      <Link :href="route('tdap.vistorias.show', v.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">{{ v.caminhao_placa }}</Link>
+                      <p v-if="v.caminhao_modelo" class="text-xs text-slate-500">{{ v.caminhao_modelo }}</p>
+                    </td>
+                    <td class="px-4 py-3">
+                      <p>{{ v.nome }}</p>
+                      <p v-if="v.prestador_nome" class="text-xs text-slate-500">{{ v.prestador_nome }}</p>
+                    </td>
+                    <td class="px-4 py-3 font-mono text-xs">{{ v.ficha || '—' }}</td>
+                    <td class="px-4 py-3 font-mono text-xs">{{ v.lacre || '—' }}</td>
+                    <td class="px-4 py-3">
+                      <span :class="v.parecer === 'aprovada'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'"
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
+                        {{ v.parecer_label }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <span v-if="v.esta_vigente" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        <span class="w-1.5 h-1.5 rounded-full mr-1.5 bg-blue-500"></span>
+                        Vigente
+                      </span>
+                      <span v-else class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                        Expirada
+                      </span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center justify-end gap-1">
+                        <ActionButton
+                          action="view"
+                          module="tdap"
+                          resource="vistorias"
+                          :allowed="true"
+                          :show-label="false"
+                          size="sm"
+                          tooltip-text="Visualizar vistoria"
+                          @click="router.visit(route('tdap.vistorias.show', v.id))"
+                        />
+                        <ActionButton
+                          action="edit"
+                          module="tdap"
+                          resource="vistorias"
+                          :allowed="canEdit"
+                          :show-label="false"
+                          size="sm"
+                          tooltip-text="Editar vistoria"
+                          @click="router.visit(route('tdap.vistorias.edit', v.id))"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="vistorias.data.length === 0">
+                    <td colspan="8" class="px-4 py-12 text-center text-slate-400">Nenhuma vistoria cadastrada.</td>
+                  </tr>
+                </tbody>
+              </table>
+      </template>
+
+      <template #mobile-c1="{ item: v }">
+        <Link :href="route('tdap.vistorias.show', v.id)" class="font-mono font-semibold text-blue-600 hover:text-blue-800">{{ v.caminhao_placa }}</Link>
+        <p v-if="v.caminhao_modelo" class="text-xs text-slate-500">{{ v.caminhao_modelo }}</p>
+      </template>
+
+      <template #mobile-c2="{ item: v }">
+        <p>{{ v.nome }}</p>
+        <p v-if="v.prestador_nome" class="text-xs text-slate-500">{{ v.prestador_nome }}</p>
+      </template>
+
+      <template #mobile-c5="{ item: v }">
+        <span :class="v.parecer === 'aprovada'
+        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'"
+        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
+        {{ v.parecer_label }}
+        </span>
+      </template>
+
+      <template #mobile-c6="{ item: v }">
+        <span v-if="v.esta_vigente" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+        <span class="w-1.5 h-1.5 rounded-full mr-1.5 bg-blue-500"></span>
+        Vigente
+        </span>
+        <span v-else class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+        Expirada
+        </span>
+      </template>
+
+      <template #mobile-actions="{ item: v }">
+        <div class="flex items-center justify-end gap-1">
+        <ActionButton
+        action="view"
+        module="tdap"
+        resource="vistorias"
+        :allowed="true"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Visualizar vistoria"
+        @click="router.visit(route('tdap.vistorias.show', v.id))"
+        />
+        <ActionButton
+        action="edit"
+        module="tdap"
+        resource="vistorias"
+        :allowed="canEdit"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Editar vistoria"
+        @click="router.visit(route('tdap.vistorias.edit', v.id))"
+        />
+        </div>
+      </template>
+    </ResponsiveTable>
 
     </div>
 
@@ -176,6 +239,7 @@ import ExclamationIcon from '@/Components/Icons/ExclamationIcon.vue';
 import ExclamationTriangleIcon from '@/Components/Icons/ExclamationTriangleIcon.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -255,4 +319,19 @@ function fmtDate(d) {
 function irParaPagina(page) {
   router.get(route('tdap.vistorias.index'), { ...queryFiltros(), page }, { preserveState: true, replace: true });
 }
+
+/**
+ * Campos do card no mobile (regra 9 de responsividade).
+ *
+ * Sao os que IDENTIFICAM o registro, nao todos: card com oito linhas nao e
+ * melhor que tabela rolando de lado. Cada um reusa o markup da celula
+ * original pelo slot `#mobile-<key>`, entao badge e formatacao continuam
+ * identicos aos da tabela.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'c1', label: 'Caminhão' },
+  { key: 'c2', label: 'Vistoriador' },
+  { key: 'c5', label: 'Parecer' },
+  { key: 'c6', label: 'Vigência' },
+];
 </script>

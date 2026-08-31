@@ -7,9 +7,6 @@
       :icon="CalendarIcon"
     >
       <template #actions>
-        <Link :href="route('tdap.atas.index')">
-          <SecondaryButton>Voltar</SecondaryButton>
-        </Link>
         <Link v-if="canEdit" :href="route('tdap.atas.edit', a.id)">
           <PrimaryButton>Editar</PrimaryButton>
         </Link>
@@ -49,44 +46,79 @@
               <PrimaryButton size="sm">Adicionar</PrimaryButton>
             </Link>
           </div>
-          <table v-if="a.lotes && a.lotes.length > 0" class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-800/40">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Lote</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Municípios</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Prestador</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">m³</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">R$/m³</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-              <tr v-for="l in a.lotes" :key="l.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                <td class="px-4 py-3 font-mono">
-                  <Link :href="route('tdap.lotes.show', l.id)" class="text-blue-600 hover:text-blue-800">{{ l.numero }}</Link>
-                </td>
-                <!--
-                  O lote atende varios municipios: o join de todos os nomes
-                  esticava a celula (ha lote com mais de 30). Mostra os
-                  primeiros, o resto no contador e a lista inteira no title.
-                -->
-                <td class="px-4 py-3 align-top">
-                  <div v-if="municipiosDo(l).length" class="max-w-xs" :title="listaMunicipios(l)">
-                    <span class="text-slate-700 dark:text-slate-300">
-                      {{ municipiosDo(l).slice(0, 3).map(m => m.nome).join(', ') }}
-                    </span>
-                    <span v-if="municipiosDo(l).length > 3" class="text-slate-400">
-                      +{{ municipiosDo(l).length - 3 }}
-                    </span>
-                    <span class="block text-xs text-slate-400">{{ municipiosDo(l).length }} município(s)</span>
-                  </div>
-                  <span v-else class="text-slate-400">—</span>
-                </td>
-                <td class="px-4 py-3">{{ l.prestador_nome }}</td>
-                <td class="px-4 py-3 text-right font-mono">{{ Number(l.qtd_agua_m3).toFixed(2) }}</td>
-                <td class="px-4 py-3 text-right font-mono">{{ Number(l.valor_m3).toFixed(2) }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <ResponsiveTable
+      v-if="a.lotes && a.lotes.length > 0"
+      :items="a.lotes"
+      :mobile-fields="CAMPOS_MOBILE"
+      :get-item-title="(l) => l.numero"
+      empty-message="Nenhum lote nesta ata"
+    >
+      <template #table>
+        <table v-if="a.lotes && a.lotes.length > 0" class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                    <thead class="bg-slate-50 dark:bg-slate-800/40">
+                      <tr>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Lote</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Municípios</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Prestador</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">m³</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">R$/m³</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                      <tr v-for="l in a.lotes" :key="l.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                        <td class="px-4 py-3 font-mono">
+                          <Link :href="route('tdap.lotes.show', l.id)" class="text-blue-600 hover:text-blue-800">{{ l.numero }}</Link>
+                        </td>
+                        <!--
+                          O lote atende varios municipios: o join de todos os nomes
+                          esticava a celula (ha lote com mais de 30). Mostra os
+                          primeiros, o resto no contador e a lista inteira no title.
+                        -->
+                        <td class="px-4 py-3 align-top">
+                          <div v-if="municipiosDo(l).length" class="max-w-xs" :title="listaMunicipios(l)">
+                            <span class="text-slate-700 dark:text-slate-300">
+                              {{ municipiosDo(l).slice(0, 3).map(m => m.nome).join(', ') }}
+                            </span>
+                            <span v-if="municipiosDo(l).length > 3" class="text-slate-400">
+                              +{{ municipiosDo(l).length - 3 }}
+                            </span>
+                            <span class="block text-xs text-slate-400">{{ municipiosDo(l).length }} município(s)</span>
+                          </div>
+                          <span v-else class="text-slate-400">—</span>
+                        </td>
+                        <td class="px-4 py-3">{{ l.prestador_nome }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ Number(l.qtd_agua_m3).toFixed(2) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ Number(l.valor_m3).toFixed(2) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+      </template>
+
+      <template #mobile-c1="{ item: l }">
+        <div v-if="municipiosDo(l).length" class="max-w-xs" :title="listaMunicipios(l)">
+        <span class="text-slate-700 dark:text-slate-300">
+        {{ municipiosDo(l).slice(0, 3).map(m => m.nome).join(', ') }}
+        </span>
+        <span v-if="municipiosDo(l).length > 3" class="text-slate-400">
+        +{{ municipiosDo(l).length - 3 }}
+        </span>
+        <span class="block text-xs text-slate-400">{{ municipiosDo(l).length }} município(s)</span>
+        </div>
+        <span v-else class="text-slate-400">—</span>
+      </template>
+
+      <template #mobile-c2="{ item: l }">
+        {{ l.prestador_nome }}
+      </template>
+
+      <template #mobile-c3="{ item: l }">
+        {{ Number(l.qtd_agua_m3).toFixed(2) }}
+      </template>
+
+      <template #mobile-c4="{ item: l }">
+        {{ Number(l.valor_m3).toFixed(2) }}
+      </template>
+    </ResponsiveTable>
           <p v-else class="px-6 py-8 text-center text-slate-400">Nenhum lote cadastrado.</p>
         </div>
       </div>
@@ -123,9 +155,9 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import CalendarIcon from '@/Components/Icons/CalendarIcon.vue';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -183,4 +215,19 @@ function formatDate(d) {
 
   return ano && mes && dia ? `${dia}/${mes}/${ano}` : '—';
 }
+
+/**
+ * Campos do card no mobile (regra 9 de responsividade).
+ *
+ * Sao os que IDENTIFICAM o registro, nao todos: card com oito linhas nao e
+ * melhor que tabela rolando de lado. Cada um reusa o markup da celula
+ * original pelo slot `#mobile-<key>`, entao badge e formatacao continuam
+ * identicos aos da tabela.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'c1', label: 'Municípios' },
+  { key: 'c2', label: 'Prestador' },
+  { key: 'c3', label: 'm³' },
+  { key: 'c4', label: 'R$/m³' },
+];
 </script>

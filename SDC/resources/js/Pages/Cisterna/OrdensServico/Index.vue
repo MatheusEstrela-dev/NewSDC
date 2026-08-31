@@ -26,65 +26,112 @@
 
       <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/60">
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/50">
-            <thead class="bg-slate-50 dark:bg-slate-900/50">
-              <tr>
-                <th :class="TH">Ordem</th>
-                <th :class="TH">Lote</th>
-                <th :class="TH">Beneficiarios</th>
-                <th :class="TH">Documento</th>
-                <th :class="[TH, 'table-actions-head w-36 min-w-36 text-right']">Opcoes</th>
-              </tr>
-            </thead>
+          <ResponsiveTable
+      :items="lista"
+      :mobile-fields="CAMPOS_MOBILE"
+      :get-item-title="(o) => o.nome"
+      empty-message="Nenhuma ordem de servico"
+    >
+      <template #table>
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/50">
+                    <thead class="bg-slate-50 dark:bg-slate-900/50">
+                      <tr>
+                        <th :class="TH">Ordem</th>
+                        <th :class="TH">Lote</th>
+                        <th :class="TH">Beneficiarios</th>
+                        <th :class="TH">Documento</th>
+                        <th :class="[TH, 'table-actions-head w-36 min-w-36 text-right']">Opcoes</th>
+                      </tr>
+                    </thead>
+        
+                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
+                      <tr v-for="o in lista" :key="o.id" class="table-row-solid transition-colors">
+                        <td :class="TD_FORTE">{{ o.nome }}</td>
+                        <td :class="TD">{{ o.lote?.nome ?? '—' }}</td>
+                        <td :class="TD_MONO">{{ o.beneficiarios ?? 0 }}</td>
+                        <td :class="TD">
+                          <!--
+                            Duas origens diferentes: o legado guardava em `link_doc` tanto
+                            URL do SEI quanto caminho de arquivo. Na migracao isso virou
+                            coluna propria (documento_url) e anexo do MediaLibrary, e a
+                            tela mostra os dois quando existem.
+                          -->
+                          <a v-if="o.documento_url" :href="o.documento_url" target="_blank" rel="noopener" :class="ELO">
+                            Link externo
+                          </a>
+                          <a v-if="o.documento_anexo" :href="o.documento_anexo" target="_blank" rel="noopener" :class="ELO">
+                            Arquivo
+                          </a>
+                          <span v-if="!o.documento_url && !o.documento_anexo" class="text-slate-400">—</span>
+                        </td>
+                        <!-- Coluna fixa no canto direito: em tela estreita a tabela rola
+                             na horizontal e as acoes precisam continuar alcancaveis. Depende
+                             de .table-row-solid na <tr> para o fundo opaco. -->
+                        <td class="table-actions-cell w-36 min-w-36 whitespace-nowrap px-3 py-2 text-right">
+                          <div class="flex items-center justify-end">
+                            <ActionButton
+                              module="cisternas"
+                              resource="ordens-servico"
+                              :actions="[
+                                { action: 'edit',    handler: () => abrirEdicao(o) },
+                                { action: 'history', handler: () => verTimeline(o) },
+                                { action: 'delete',  handler: () => excluir(o, `a ordem ${o.nome}`) },
+                              ]"
+                            />
+                          </div>
+                        </td>
+                      </tr>
+        
+                      <tr v-if="lista.length === 0">
+                        <td colspan="5" class="px-3 py-10">
+                          <ListEmptyState
+                            title="Nenhuma ordem de servico"
+                            helper="A ordem aloca os beneficiarios de um lote para instalacao."
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+      </template>
 
-            <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
-              <tr v-for="o in lista" :key="o.id" class="table-row-solid transition-colors">
-                <td :class="TD_FORTE">{{ o.nome }}</td>
-                <td :class="TD">{{ o.lote?.nome ?? '—' }}</td>
-                <td :class="TD_MONO">{{ o.beneficiarios ?? 0 }}</td>
-                <td :class="TD">
-                  <!--
-                    Duas origens diferentes: o legado guardava em `link_doc` tanto
-                    URL do SEI quanto caminho de arquivo. Na migracao isso virou
-                    coluna propria (documento_url) e anexo do MediaLibrary, e a
-                    tela mostra os dois quando existem.
-                  -->
-                  <a v-if="o.documento_url" :href="o.documento_url" target="_blank" rel="noopener" :class="ELO">
-                    Link externo
-                  </a>
-                  <a v-if="o.documento_anexo" :href="o.documento_anexo" target="_blank" rel="noopener" :class="ELO">
-                    Arquivo
-                  </a>
-                  <span v-if="!o.documento_url && !o.documento_anexo" class="text-slate-400">—</span>
-                </td>
-                <!-- Coluna fixa no canto direito: em tela estreita a tabela rola
-                     na horizontal e as acoes precisam continuar alcancaveis. Depende
-                     de .table-row-solid na <tr> para o fundo opaco. -->
-                <td class="table-actions-cell w-36 min-w-36 whitespace-nowrap px-3 py-2 text-right">
-                  <div class="flex items-center justify-end">
-                    <ActionButton
-                      module="cisternas"
-                      resource="ordens-servico"
-                      :actions="[
-                        { action: 'edit',    handler: () => abrirEdicao(o) },
-                        { action: 'history', handler: () => verTimeline(o) },
-                        { action: 'delete',  handler: () => excluir(o, `a ordem ${o.nome}`) },
-                      ]"
-                    />
-                  </div>
-                </td>
-              </tr>
+      <template #mobile-c1="{ item: o }">
+        {{ o.lote?.nome ?? '—' }}
+      </template>
 
-              <tr v-if="lista.length === 0">
-                <td colspan="5" class="px-3 py-10">
-                  <ListEmptyState
-                    title="Nenhuma ordem de servico"
-                    helper="A ordem aloca os beneficiarios de um lote para instalacao."
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <template #mobile-c2="{ item: o }">
+        {{ o.beneficiarios ?? 0 }}
+      </template>
+
+      <template #mobile-c3="{ item: o }">
+        <!--
+        Duas origens diferentes: o legado guardava em `link_doc` tanto
+        URL do SEI quanto caminho de arquivo. Na migracao isso virou
+        coluna propria (documento_url) e anexo do MediaLibrary, e a
+        tela mostra os dois quando existem.
+        -->
+        <a v-if="o.documento_url" :href="o.documento_url" target="_blank" rel="noopener" :class="ELO">
+        Link externo
+        </a>
+        <a v-if="o.documento_anexo" :href="o.documento_anexo" target="_blank" rel="noopener" :class="ELO">
+        Arquivo
+        </a>
+        <span v-if="!o.documento_url && !o.documento_anexo" class="text-slate-400">—</span>
+      </template>
+
+      <template #mobile-actions="{ item: o }">
+        <div class="flex items-center justify-end">
+        <ActionButton
+        module="cisternas"
+        resource="ordens-servico"
+        :actions="[
+        { action: 'edit',    handler: () => abrirEdicao(o) },
+        { action: 'history', handler: () => verTimeline(o) },
+        { action: 'delete',  handler: () => excluir(o, `a ordem ${o.nome}`) },
+        ]"
+        />
+        </div>
+      </template>
+    </ResponsiveTable>
         </div>
       </div>
 
@@ -156,6 +203,7 @@ import CisternaFormModal from '@/Components/Organisms/Cisterna/CisternaFormModal
 import OrdemServicoTimelineModal from '@/Components/Organisms/Cisterna/OrdemServicoTimelineModal.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useCrudModal } from '@/Composables/cisterna/useCrudModal';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 const props = defineProps({
   ordens: { type: [Object, Array], default: () => [] },
@@ -216,4 +264,18 @@ function verTimeline(ordem) {
   ordemDaTimeline.value = ordem;
   timelineAberta.value = true;
 }
+
+/**
+ * Campos do card no mobile (regra 9 de responsividade).
+ *
+ * Sao os que IDENTIFICAM o registro, nao todos: card com oito linhas nao e
+ * melhor que tabela rolando de lado. Cada um reusa o markup da celula
+ * original pelo slot `#mobile-<key>`, entao badge e formatacao continuam
+ * identicos aos da tabela.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'c1', label: 'Lote' },
+  { key: 'c2', label: 'Beneficiarios' },
+  { key: 'c3', label: 'Documento' },
+];
 </script>

@@ -65,76 +65,135 @@
     </FilterSection>
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
-      <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Número</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Vigência</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Lotes</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Status</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ações</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="a in atas.data" :key="a.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-            <td class="px-4 py-3 text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">
-              <Link :href="route('tdap.atas.show', a.id)" class="hover:text-blue-600">{{ a.numero }}</Link>
-            </td>
-            <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
-              {{ formatDate(a.dt_inicio) }} — {{ formatDate(a.dt_final) }}
-            </td>
-            <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ a.lotes_count }}</td>
-            <!--
-              O badge apenas PINTA o que o backend classificou (a.situacao).
-              Antes havia regra de negocio aqui: `v-else-if="a.ativo"` pintava de
-              verde "Ativa" uma ata ja vencida, escondendo o vencimento.
-            -->
-            <td class="px-4 py-3 text-sm whitespace-nowrap">
-              <span
-                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                :class="classesSituacao(a)"
-              >
-                {{ a.situacao_label ?? (a.vigente ? 'Vigente' : (a.ativo ? 'Ativa' : 'Inativa')) }}
-              </span>
-              <span
-                v-if="a.proxima_vencer"
-                class="ml-2 text-xs font-medium text-amber-600 dark:text-amber-400"
-                :title="`Vigência termina em ${formatDate(a.dt_final)}`"
-              >
-                {{ rotuloAlerta(a) }}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex items-center justify-end gap-1">
-                <ActionButton
-                  action="view"
-                  module="tdap"
-                  resource="atas"
-                  :allowed="true"
-                  :show-label="false"
-                  size="sm"
-                  tooltip-text="Visualizar ata"
-                  @click="router.visit(route('tdap.atas.show', a.id))"
-                />
-                <ActionButton
-                  v-if="canEdit"
-                  action="edit"
-                  module="tdap"
-                  resource="atas"
-                  :allowed="canEdit"
-                  :show-label="false"
-                  size="sm"
-                  tooltip-text="Editar ata"
-                  @click="router.visit(route('tdap.atas.edit', a.id))"
-                />
-              </div>
-            </td>
-          </tr>
-          <tr v-if="atas.data.length === 0">
-            <td colspan="5" class="px-4 py-12 text-center text-slate-400">Nenhuma ata cadastrada.</td>
-          </tr>
-        </tbody>
-      </table>
+      <ResponsiveTable
+      :items="atas.data"
+      :mobile-fields="CAMPOS_MOBILE"
+      :get-item-title="(a) => a.numero"
+      empty-message="Nenhuma ata encontrada"
+    >
+      <template #table>
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Número</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Vigência</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Lotes</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Status</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ações</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                  <tr v-for="a in atas.data" :key="a.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                    <td class="px-4 py-3 text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">
+                      <Link :href="route('tdap.atas.show', a.id)" class="hover:text-blue-600">{{ a.numero }}</Link>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+                      {{ formatDate(a.dt_inicio) }} — {{ formatDate(a.dt_final) }}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ a.lotes_count }}</td>
+                    <!--
+                      O badge apenas PINTA o que o backend classificou (a.situacao).
+                      Antes havia regra de negocio aqui: `v-else-if="a.ativo"` pintava de
+                      verde "Ativa" uma ata ja vencida, escondendo o vencimento.
+                    -->
+                    <td class="px-4 py-3 text-sm whitespace-nowrap">
+                      <span
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                        :class="classesSituacao(a)"
+                      >
+                        {{ a.situacao_label ?? (a.vigente ? 'Vigente' : (a.ativo ? 'Ativa' : 'Inativa')) }}
+                      </span>
+                      <span
+                        v-if="a.proxima_vencer"
+                        class="ml-2 text-xs font-medium text-amber-600 dark:text-amber-400"
+                        :title="`Vigência termina em ${formatDate(a.dt_final)}`"
+                      >
+                        {{ rotuloAlerta(a) }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center justify-end gap-1">
+                        <ActionButton
+                          action="view"
+                          module="tdap"
+                          resource="atas"
+                          :allowed="true"
+                          :show-label="false"
+                          size="sm"
+                          tooltip-text="Visualizar ata"
+                          @click="router.visit(route('tdap.atas.show', a.id))"
+                        />
+                        <ActionButton
+                          v-if="canEdit"
+                          action="edit"
+                          module="tdap"
+                          resource="atas"
+                          :allowed="canEdit"
+                          :show-label="false"
+                          size="sm"
+                          tooltip-text="Editar ata"
+                          @click="router.visit(route('tdap.atas.edit', a.id))"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="atas.data.length === 0">
+                    <td colspan="5" class="px-4 py-12 text-center text-slate-400">Nenhuma ata cadastrada.</td>
+                  </tr>
+                </tbody>
+              </table>
+      </template>
+
+      <template #mobile-c1="{ item: a }">
+        {{ formatDate(a.dt_inicio) }} — {{ formatDate(a.dt_final) }}
+      </template>
+
+      <template #mobile-c2="{ item: a }">
+        {{ a.lotes_count }}
+      </template>
+
+      <template #mobile-c3="{ item: a }">
+        <span
+        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+        :class="classesSituacao(a)"
+        >
+        {{ a.situacao_label ?? (a.vigente ? 'Vigente' : (a.ativo ? 'Ativa' : 'Inativa')) }}
+        </span>
+        <span
+        v-if="a.proxima_vencer"
+        class="ml-2 text-xs font-medium text-amber-600 dark:text-amber-400"
+        :title="`Vigência termina em ${formatDate(a.dt_final)}`"
+        >
+        {{ rotuloAlerta(a) }}
+        </span>
+      </template>
+
+      <template #mobile-actions="{ item: a }">
+        <div class="flex items-center justify-end gap-1">
+        <ActionButton
+        action="view"
+        module="tdap"
+        resource="atas"
+        :allowed="true"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Visualizar ata"
+        @click="router.visit(route('tdap.atas.show', a.id))"
+        />
+        <ActionButton
+        v-if="canEdit"
+        action="edit"
+        module="tdap"
+        resource="atas"
+        :allowed="canEdit"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Editar ata"
+        @click="router.visit(route('tdap.atas.edit', a.id))"
+        />
+        </div>
+      </template>
+    </ResponsiveTable>
 
     </div>
 
@@ -171,6 +230,7 @@ import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -288,4 +348,18 @@ function formatDate(d) {
 function irParaPagina(page) {
   router.get(route('tdap.atas.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
 }
+
+/**
+ * Campos do card no mobile (regra 9 de responsividade).
+ *
+ * Sao os que IDENTIFICAM o registro, nao todos: card com oito linhas nao e
+ * melhor que tabela rolando de lado. Cada um reusa o markup da celula
+ * original pelo slot `#mobile-<key>`, entao badge e formatacao continuam
+ * identicos aos da tabela.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'c1', label: 'Vigência' },
+  { key: 'c2', label: 'Lotes' },
+  { key: 'c3', label: 'Status' },
+];
 </script>

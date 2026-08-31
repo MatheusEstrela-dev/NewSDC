@@ -58,101 +58,183 @@
     </FilterSection>
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
-      <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Número</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Vigência</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ata / Lote</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Município / Prestador</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Volume (m³)</th>
-            <th class="px-4 py-3 text-center text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Caminhões</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Estado</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ações</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="c in cronogramas.data" :key="c.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-            <td class="px-4 py-3 text-sm font-mono">
-              <Link :href="route('tdap.cronogramas.show', c.id)" class="text-blue-600 hover:text-blue-800 font-semibold">{{ c.numero }}</Link>
-            </td>
-            <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ fmtDate(c.dt_inicio) }} — {{ fmtDate(c.dt_final) }}</td>
-            <td class="px-4 py-3 text-sm">
-              <p class="font-mono">{{ c.ata_numero }}</p>
-              <p class="text-xs text-slate-500 font-mono">{{ c.lote_numero }}</p>
-            </td>
-            <td class="px-4 py-3 text-sm">
-              <p>{{ c.municipio_nome }}<span v-if="c.municipio_uf" class="text-slate-400">/{{ c.municipio_uf }}</span></p>
-              <p class="text-xs text-slate-500">{{ c.prestador_nome }}</p>
-            </td>
-            <td class="px-4 py-3 text-sm text-right font-mono">
-              {{ Number(c.volume_contratado_m3 ?? 0).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}
-              <span v-if="(c.volume_contratado_m3 ?? 0) > 0" class="block text-xs text-slate-500">
-                {{ Number(c.execucao_percentual ?? 0).toFixed(1) }}% entregue
-              </span>
-            </td>
-            <td class="px-4 py-3 text-sm text-center">{{ c.caminhoes_count }}</td>
-            <td class="px-4 py-3 text-sm">
-              <EstadoBadge :estado="c.estado" />
-            </td>
-            <td class="px-4 py-3 text-right">
-              <div class="flex items-center justify-end gap-1">
-                <ActionButton
-                  action="view"
-                  module="tdap"
-                  resource="cronogramas"
-                  :allowed="true"
-                  :show-label="false"
-                  size="sm"
-                  tooltip-text="Visualizar cronograma"
-                  @click="router.visit(route('tdap.cronogramas.show', c.id))"
-                />
-                <ActionButton
-                  v-if="c.estado === 'rascunho'"
-                  action="edit"
-                  module="tdap"
-                  resource="cronogramas"
-                  :allowed="canEdit"
-                  :show-label="false"
-                  size="sm"
-                  tooltip-text="Editar cronograma"
-                  @click="router.visit(route('tdap.cronogramas.edit', c.id))"
-                />
-                <ActionButton
-                  v-if="c.estado === 'rascunho'"
-                  action="delete"
-                  module="tdap"
-                  resource="cronogramas"
-                  :allowed="canDelete"
-                  :show-label="false"
-                  size="sm"
-                  tooltip-text="Excluir cronograma"
-                  @click="excluir(c)"
-                />
-                <ActionButton
-                  action="history"
-                  :allowed="true"
-                  :show-label="false"
-                  size="sm"
-                  tooltip-text="Histórico"
-                  @click="abrirHistorico(c)"
-                />
-                <ActionButton
-                  action="archive"
-                  :allowed="canDelete"
-                  :show-label="false"
-                  size="sm"
-                  :tooltip-text="c.arquivado ? 'Desarquivar' : 'Arquivar'"
-                  @click="arquivarToggle(c)"
-                />
-              </div>
-            </td>
-          </tr>
-          <tr v-if="cronogramas.data.length === 0">
-            <td colspan="8" class="px-4 py-12 text-center text-slate-400">Nenhum cronograma cadastrado.</td>
-          </tr>
-        </tbody>
-      </table>
+      <ResponsiveTable
+      :items="cronogramas.data"
+      :mobile-fields="CAMPOS_MOBILE"
+      :get-item-title="(c) => c.numero"
+      empty-message="Nenhum cronograma encontrado"
+    >
+      <template #table>
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Número</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Vigência</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ata / Lote</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Município / Prestador</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Volume (m³)</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Caminhões</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Estado</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ações</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                  <tr v-for="c in cronogramas.data" :key="c.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                    <td class="px-4 py-3 text-sm font-mono">
+                      <Link :href="route('tdap.cronogramas.show', c.id)" class="text-blue-600 hover:text-blue-800 font-semibold">{{ c.numero }}</Link>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ fmtDate(c.dt_inicio) }} — {{ fmtDate(c.dt_final) }}</td>
+                    <td class="px-4 py-3 text-sm">
+                      <p class="font-mono">{{ c.ata_numero }}</p>
+                      <p class="text-xs text-slate-500 font-mono">{{ c.lote_numero }}</p>
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                      <p>{{ c.municipio_nome }}<span v-if="c.municipio_uf" class="text-slate-400">/{{ c.municipio_uf }}</span></p>
+                      <p class="text-xs text-slate-500">{{ c.prestador_nome }}</p>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-right font-mono">
+                      {{ Number(c.volume_contratado_m3 ?? 0).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}
+                      <span v-if="(c.volume_contratado_m3 ?? 0) > 0" class="block text-xs text-slate-500">
+                        {{ Number(c.execucao_percentual ?? 0).toFixed(1) }}% entregue
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-center">{{ c.caminhoes_count }}</td>
+                    <td class="px-4 py-3 text-sm">
+                      <EstadoBadge :estado="c.estado" />
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                      <div class="flex items-center justify-end gap-1">
+                        <ActionButton
+                          action="view"
+                          module="tdap"
+                          resource="cronogramas"
+                          :allowed="true"
+                          :show-label="false"
+                          size="sm"
+                          tooltip-text="Visualizar cronograma"
+                          @click="router.visit(route('tdap.cronogramas.show', c.id))"
+                        />
+                        <ActionButton
+                          v-if="c.estado === 'rascunho'"
+                          action="edit"
+                          module="tdap"
+                          resource="cronogramas"
+                          :allowed="canEdit"
+                          :show-label="false"
+                          size="sm"
+                          tooltip-text="Editar cronograma"
+                          @click="router.visit(route('tdap.cronogramas.edit', c.id))"
+                        />
+                        <ActionButton
+                          v-if="c.estado === 'rascunho'"
+                          action="delete"
+                          module="tdap"
+                          resource="cronogramas"
+                          :allowed="canDelete"
+                          :show-label="false"
+                          size="sm"
+                          tooltip-text="Excluir cronograma"
+                          @click="excluir(c)"
+                        />
+                        <ActionButton
+                          action="history"
+                          :allowed="true"
+                          :show-label="false"
+                          size="sm"
+                          tooltip-text="Histórico"
+                          @click="abrirHistorico(c)"
+                        />
+                        <ActionButton
+                          action="archive"
+                          :allowed="canDelete"
+                          :show-label="false"
+                          size="sm"
+                          :tooltip-text="c.arquivado ? 'Desarquivar' : 'Arquivar'"
+                          @click="arquivarToggle(c)"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="cronogramas.data.length === 0">
+                    <td colspan="8" class="px-4 py-12 text-center text-slate-400">Nenhum cronograma cadastrado.</td>
+                  </tr>
+                </tbody>
+              </table>
+      </template>
+
+      <template #mobile-c1="{ item: c }">
+        {{ fmtDate(c.dt_inicio) }} — {{ fmtDate(c.dt_final) }}
+      </template>
+
+      <template #mobile-c3="{ item: c }">
+        <p>{{ c.municipio_nome }}<span v-if="c.municipio_uf" class="text-slate-400">/{{ c.municipio_uf }}</span></p>
+        <p class="text-xs text-slate-500">{{ c.prestador_nome }}</p>
+      </template>
+
+      <template #mobile-c4="{ item: c }">
+        {{ Number(c.volume_contratado_m3 ?? 0).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}
+        <span v-if="(c.volume_contratado_m3 ?? 0) > 0" class="block text-xs text-slate-500">
+        {{ Number(c.execucao_percentual ?? 0).toFixed(1) }}% entregue
+        </span>
+      </template>
+
+      <template #mobile-c6="{ item: c }">
+        <EstadoBadge :estado="c.estado" />
+      </template>
+
+      <template #mobile-actions="{ item: c }">
+        <div class="flex items-center justify-end gap-1">
+        <ActionButton
+        action="view"
+        module="tdap"
+        resource="cronogramas"
+        :allowed="true"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Visualizar cronograma"
+        @click="router.visit(route('tdap.cronogramas.show', c.id))"
+        />
+        <ActionButton
+        v-if="c.estado === 'rascunho'"
+        action="edit"
+        module="tdap"
+        resource="cronogramas"
+        :allowed="canEdit"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Editar cronograma"
+        @click="router.visit(route('tdap.cronogramas.edit', c.id))"
+        />
+        <ActionButton
+        v-if="c.estado === 'rascunho'"
+        action="delete"
+        module="tdap"
+        resource="cronogramas"
+        :allowed="canDelete"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Excluir cronograma"
+        @click="excluir(c)"
+        />
+        <ActionButton
+        action="history"
+        :allowed="true"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Histórico"
+        @click="abrirHistorico(c)"
+        />
+        <ActionButton
+        action="archive"
+        :allowed="canDelete"
+        :show-label="false"
+        size="sm"
+        :tooltip-text="c.arquivado ? 'Desarquivar' : 'Arquivar'"
+        @click="arquivarToggle(c)"
+        />
+        </div>
+      </template>
+    </ResponsiveTable>
 
     </div>
 
@@ -228,6 +310,7 @@ import CubeIcon from '@/Components/Icons/CubeIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -403,4 +486,19 @@ function fmtDate(d) {
 function irParaPagina(page) {
   router.get(route('tdap.cronogramas.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
 }
+
+/**
+ * Campos do card no mobile (regra 9 de responsividade).
+ *
+ * Sao os que IDENTIFICAM o registro, nao todos: card com oito linhas nao e
+ * melhor que tabela rolando de lado. Cada um reusa o markup da celula
+ * original pelo slot `#mobile-<key>`, entao badge e formatacao continuam
+ * identicos aos da tabela.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'c1', label: 'Vigência' },
+  { key: 'c3', label: 'Município / Prestador' },
+  { key: 'c4', label: 'Volume (m³)' },
+  { key: 'c6', label: 'Estado' },
+];
 </script>

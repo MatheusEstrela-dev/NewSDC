@@ -96,37 +96,72 @@
               + Alocar Caminhão
             </PrimaryButton>
           </div>
-          <table v-if="c.caminhoes && c.caminhoes.length > 0" class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-800/40">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Placa</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Veículo</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Capacidade</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Previsto (m³)</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Entregue (m³)</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">%</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Ações</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-              <tr v-for="cc in c.caminhoes" :key="cc.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                <td class="px-4 py-3 font-mono font-semibold">{{ cc.placa }}</td>
-                <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ cc.marca_modelo || '—' }}</td>
-                <td class="px-4 py-3 text-right font-mono">{{ Number(cc.capacidade_m3).toFixed(2) }}</td>
-                <td class="px-4 py-3 text-right font-mono">{{ Number(cc.agua_prevista).toFixed(2) }}</td>
-                <td class="px-4 py-3 text-right font-mono">{{ Number(cc.agua_entregue).toFixed(2) }}</td>
-                <td class="px-4 py-3 text-right font-mono">{{ cc.percentual }}%</td>
-                <td class="px-4 py-3 text-right space-x-2">
-                  <button v-if="c.estado === 'ativo'" @click="abrirRegistrarViagem(cc)" class="text-blue-600 hover:text-blue-800 text-sm">
-                    + Viagem
-                  </button>
-                  <button v-if="canAlocarCaminhao && c.estado !== 'encerrado'" @click="removerCaminhao(cc)" class="text-red-600 hover:text-red-800 text-sm">
-                    Remover
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <ResponsiveTable
+      v-if="c.caminhoes && c.caminhoes.length > 0"
+      :items="c.caminhoes"
+      :mobile-fields="CAMPOS_MOBILE"
+      :get-item-title="(cc) => cc.placa"
+      empty-message="Nenhum caminhao neste cronograma"
+    >
+      <template #table>
+        <table v-if="c.caminhoes && c.caminhoes.length > 0" class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                    <thead class="bg-slate-50 dark:bg-slate-800/40">
+                      <tr>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Placa</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Veículo</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Capacidade</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Previsto (m³)</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Entregue (m³)</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">%</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                      <tr v-for="cc in c.caminhoes" :key="cc.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                        <td class="px-4 py-3 font-mono font-semibold">{{ cc.placa }}</td>
+                        <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ cc.marca_modelo || '—' }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ Number(cc.capacidade_m3).toFixed(2) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ Number(cc.agua_prevista).toFixed(2) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ Number(cc.agua_entregue).toFixed(2) }}</td>
+                        <td class="px-4 py-3 text-right font-mono">{{ cc.percentual }}%</td>
+                        <td class="px-4 py-3 text-right space-x-2">
+                          <button v-if="c.estado === 'ativo'" @click="abrirRegistrarViagem(cc)" class="text-blue-600 hover:text-blue-800 text-sm">
+                            + Viagem
+                          </button>
+                          <button v-if="canAlocarCaminhao && c.estado !== 'encerrado'" @click="removerCaminhao(cc)" class="text-red-600 hover:text-red-800 text-sm">
+                            Remover
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+      </template>
+
+      <template #mobile-c1="{ item: cc }">
+        {{ cc.marca_modelo || '—' }}
+      </template>
+
+      <template #mobile-c3="{ item: cc }">
+        {{ Number(cc.agua_prevista).toFixed(2) }}
+      </template>
+
+      <template #mobile-c4="{ item: cc }">
+        {{ Number(cc.agua_entregue).toFixed(2) }}
+      </template>
+
+      <template #mobile-c5="{ item: cc }">
+        {{ cc.percentual }}%
+      </template>
+
+      <template #mobile-actions="{ item: cc }">
+        <button v-if="c.estado === 'ativo'" @click="abrirRegistrarViagem(cc)" class="text-blue-600 hover:text-blue-800 text-sm">
+        + Viagem
+        </button>
+        <button v-if="canAlocarCaminhao && c.estado !== 'encerrado'" @click="removerCaminhao(cc)" class="text-red-600 hover:text-red-800 text-sm">
+        Remover
+        </button>
+      </template>
+    </ResponsiveTable>
           <p v-else class="px-6 py-8 text-center text-slate-400">
             Nenhum caminhão alocado. Aloque pelo menos 1 para ativar o cronograma.
           </p>
@@ -218,6 +253,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -378,4 +414,19 @@ function fmtM3(valor) {
     maximumFractionDigits: 2,
   });
 }
+
+/**
+ * Campos do card no mobile (regra 9 de responsividade).
+ *
+ * Sao os que IDENTIFICAM o registro, nao todos: card com oito linhas nao e
+ * melhor que tabela rolando de lado. Cada um reusa o markup da celula
+ * original pelo slot `#mobile-<key>`, entao badge e formatacao continuam
+ * identicos aos da tabela.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'c1', label: 'Veículo' },
+  { key: 'c3', label: 'Previsto (m³)' },
+  { key: 'c4', label: 'Entregue (m³)' },
+  { key: 'c5', label: '%' },
+];
 </script>

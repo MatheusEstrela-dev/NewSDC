@@ -7,9 +7,6 @@
       :icon="MapIcon"
     >
       <template #actions>
-        <Link :href="route('tdap.lotes.index')">
-          <SecondaryButton>Voltar</SecondaryButton>
-        </Link>
         <Link v-if="canEdit" :href="route('tdap.lotes.edit', l.id)">
           <PrimaryButton>Editar</PrimaryButton>
         </Link>
@@ -104,7 +101,6 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import MapIcon from '@/Components/Icons/MapIcon.vue';
 

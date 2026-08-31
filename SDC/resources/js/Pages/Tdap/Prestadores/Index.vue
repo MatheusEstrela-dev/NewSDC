@@ -62,99 +62,164 @@
       </div>
 
       <div class="overflow-x-auto">
+        <ResponsiveTable
+      :items="prestadores.data"
+      :mobile-fields="CAMPOS_MOBILE"
+      :get-item-title="(prestador) => prestador.nome"
+      :get-item-subtitle="(prestador) => prestador.cnpj_formatado"
+      empty-message="Nenhum prestador encontrado"
+    >
+      <template #table>
         <table class="w-full text-sm">
-          <thead class="border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase text-slate-500 dark:border-slate-700/50 dark:bg-slate-800 dark:text-slate-400">
-            <tr>
-              <th class="px-4 py-3 text-left">CNPJ</th>
-              <th class="px-4 py-3 text-left">Razão Social</th>
-              <th class="px-4 py-3 text-left">Cidade/UF</th>
-              <th class="px-4 py-3 text-left">Caminhões</th>
-              <th class="px-4 py-3 text-left">Status</th>
-              <th class="w-28 px-4 py-3 text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
-            <tr
-              v-for="prestador in prestadores.data"
-              :key="prestador.id"
-              class="transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
-            >
-              <td class="whitespace-nowrap px-4 py-4 font-mono text-slate-700 dark:text-slate-300">
-                {{ prestador.cnpj_formatado }}
-              </td>
-              <td class="px-4 py-4">
-                <Link
-                  :href="route('tdap.prestadores.show', prestador.id)"
-                  class="font-semibold text-slate-900 transition hover:text-blue-600 dark:text-slate-100"
-                >
-                  {{ prestador.nome }}
-                </Link>
-                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                  {{ prestador.email }}<span v-if="prestador.tel1_formatado"> · {{ prestador.tel1_formatado }}</span>
-                </p>
-              </td>
-              <td class="whitespace-nowrap px-4 py-4 text-slate-600 dark:text-slate-300">
-                <span v-if="prestador.cidade || prestador.uf">
-                  {{ prestador.cidade }}<span v-if="prestador.uf">/{{ prestador.uf }}</span>
-                </span>
-                <span v-else class="text-slate-400">-</span>
-              </td>
-              <td class="whitespace-nowrap px-4 py-4 font-semibold text-slate-700 dark:text-slate-300">
-                {{ prestador.caminhoes_count }}
-              </td>
-              <td class="whitespace-nowrap px-4 py-4">
-                <TdapStatusBadge :active="prestador.ativo" />
-              </td>
-              <td class="px-4 py-4">
-                <div class="flex items-center justify-end gap-1">
-                  <ActionButton
-                    action="view"
-                    module="tdap"
-                    resource="prestadores"
-                    :allowed="true"
-                    :show-label="false"
-                    size="sm"
-                    tooltip-text="Visualizar prestador"
-                    @click="router.visit(route('tdap.prestadores.show', prestador.id))"
-                  />
-                  <ActionButton
-                    action="edit"
-                    module="tdap"
-                    resource="prestadores"
-                    :allowed="canEdit"
-                    :show-label="false"
-                    size="sm"
-                    tooltip-text="Editar prestador"
-                    @click="router.visit(route('tdap.prestadores.edit', prestador.id))"
-                  />
-                  <!-- `canDelete` chegava como prop e nunca era usado: nao havia
-                       como excluir pela grade. Caminhao vinculado bloqueia
-                       (guard real no PrestadorService). -->
-                  <ActionButton
-                    action="delete"
-                    module="tdap"
-                    resource="prestadores"
-                    :allowed="canDelete && prestador.caminhoes_count === 0"
-                    :show-label="false"
-                    size="sm"
-                    :tooltip-text="prestador.caminhoes_count > 0
-                      ? 'Remova os caminhões vinculados antes de excluir'
-                      : 'Excluir prestador'"
-                    @click="excluir(prestador)"
-                  />
-                </div>
-              </td>
-            </tr>
+                  <thead class="border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase text-slate-500 dark:border-slate-700/50 dark:bg-slate-800 dark:text-slate-400">
+                    <tr>
+                      <th class="px-4 py-3 text-left">CNPJ</th>
+                      <th class="px-4 py-3 text-left">Razão Social</th>
+                      <th class="px-4 py-3 text-left">Cidade/UF</th>
+                      <th class="px-4 py-3 text-left">Caminhões</th>
+                      <th class="px-4 py-3 text-left">Status</th>
+                      <th class="w-28 px-4 py-3 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                    <tr
+                      v-for="prestador in prestadores.data"
+                      :key="prestador.id"
+                      class="transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    >
+                      <td class="whitespace-nowrap px-4 py-4 font-mono text-slate-700 dark:text-slate-300">
+                        {{ prestador.cnpj_formatado }}
+                      </td>
+                      <td class="px-4 py-4">
+                        <Link
+                          :href="route('tdap.prestadores.show', prestador.id)"
+                          class="font-semibold text-slate-900 transition hover:text-blue-600 dark:text-slate-100"
+                        >
+                          {{ prestador.nome }}
+                        </Link>
+                        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                          {{ prestador.email }}<span v-if="prestador.tel1_formatado"> · {{ prestador.tel1_formatado }}</span>
+                        </p>
+                      </td>
+                      <td class="whitespace-nowrap px-4 py-4 text-slate-600 dark:text-slate-300">
+                        <span v-if="prestador.cidade || prestador.uf">
+                          {{ prestador.cidade }}<span v-if="prestador.uf">/{{ prestador.uf }}</span>
+                        </span>
+                        <span v-else class="text-slate-400">-</span>
+                      </td>
+                      <td class="whitespace-nowrap px-4 py-4 font-semibold text-slate-700 dark:text-slate-300">
+                        {{ prestador.caminhoes_count }}
+                      </td>
+                      <td class="whitespace-nowrap px-4 py-4">
+                        <TdapStatusBadge :active="prestador.ativo" />
+                      </td>
+                      <td class="px-4 py-4">
+                        <div class="flex items-center justify-end gap-1">
+                          <ActionButton
+                            action="view"
+                            module="tdap"
+                            resource="prestadores"
+                            :allowed="true"
+                            :show-label="false"
+                            size="sm"
+                            tooltip-text="Visualizar prestador"
+                            @click="router.visit(route('tdap.prestadores.show', prestador.id))"
+                          />
+                          <ActionButton
+                            action="edit"
+                            module="tdap"
+                            resource="prestadores"
+                            :allowed="canEdit"
+                            :show-label="false"
+                            size="sm"
+                            tooltip-text="Editar prestador"
+                            @click="router.visit(route('tdap.prestadores.edit', prestador.id))"
+                          />
+                          <!-- `canDelete` chegava como prop e nunca era usado: nao havia
+                               como excluir pela grade. Caminhao vinculado bloqueia
+                               (guard real no PrestadorService). -->
+                          <ActionButton
+                            action="delete"
+                            module="tdap"
+                            resource="prestadores"
+                            :allowed="canDelete && prestador.caminhoes_count === 0"
+                            :show-label="false"
+                            size="sm"
+                            :tooltip-text="prestador.caminhoes_count > 0
+                              ? 'Remova os caminhões vinculados antes de excluir'
+                              : 'Excluir prestador'"
+                            @click="excluir(prestador)"
+                          />
+                        </div>
+                      </td>
+                    </tr>
+        
+                    <tr v-if="prestadores.data.length === 0">
+                      <td colspan="6" class="px-4 py-10 text-center">
+                        <BuildingIcon class="mx-auto h-12 w-12 text-slate-400" />
+                        <p class="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Nenhum prestador encontrado</p>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajuste os filtros ou cadastre um novo prestador.</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+      </template>
 
-            <tr v-if="prestadores.data.length === 0">
-              <td colspan="6" class="px-4 py-10 text-center">
-                <BuildingIcon class="mx-auto h-12 w-12 text-slate-400" />
-                <p class="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Nenhum prestador encontrado</p>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajuste os filtros ou cadastre um novo prestador.</p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <template #mobile-c2="{ item: prestador }">
+        <span v-if="prestador.cidade || prestador.uf">
+        {{ prestador.cidade }}<span v-if="prestador.uf">/{{ prestador.uf }}</span>
+        </span>
+        <span v-else class="text-slate-400">-</span>
+      </template>
+
+      <template #mobile-c3="{ item: prestador }">
+        {{ prestador.caminhoes_count }}
+      </template>
+
+      <template #mobile-c4="{ item: prestador }">
+        <TdapStatusBadge :active="prestador.ativo" />
+      </template>
+
+      <template #mobile-actions="{ item: prestador }">
+        <div class="flex items-center justify-end gap-1">
+        <ActionButton
+        action="view"
+        module="tdap"
+        resource="prestadores"
+        :allowed="true"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Visualizar prestador"
+        @click="router.visit(route('tdap.prestadores.show', prestador.id))"
+        />
+        <ActionButton
+        action="edit"
+        module="tdap"
+        resource="prestadores"
+        :allowed="canEdit"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Editar prestador"
+        @click="router.visit(route('tdap.prestadores.edit', prestador.id))"
+        />
+        <!-- `canDelete` chegava como prop e nunca era usado: nao havia
+        como excluir pela grade. Caminhao vinculado bloqueia
+        (guard real no PrestadorService). -->
+        <ActionButton
+        action="delete"
+        module="tdap"
+        resource="prestadores"
+        :allowed="canDelete && prestador.caminhoes_count === 0"
+        :show-label="false"
+        size="sm"
+        :tooltip-text="prestador.caminhoes_count > 0
+        ? 'Remova os caminhões vinculados antes de excluir'
+        : 'Excluir prestador'"
+        @click="excluir(prestador)"
+        />
+        </div>
+      </template>
+    </ResponsiveTable>
       </div>
 
     </div>
@@ -183,6 +248,7 @@ import { useExport } from '@/Composables/data/useExport';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import TdapPrestadoresFiltersSection from '@/Components/Organisms/Tdap/TdapPrestadoresFiltersSection.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -244,4 +310,18 @@ function excluir(prestador) {
 
   router.delete(route('tdap.prestadores.destroy', prestador.id), { preserveScroll: true });
 }
+
+/**
+ * Campos do card no mobile (regra 9 de responsividade).
+ *
+ * Sao os que IDENTIFICAM o registro, nao todos: card com oito linhas nao e
+ * melhor que tabela rolando de lado. Cada um reusa o markup da celula
+ * original pelo slot `#mobile-<key>`, entao badge e formatacao continuam
+ * identicos aos da tabela.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'c2', label: 'Cidade/UF' },
+  { key: 'c3', label: 'Caminhões' },
+  { key: 'c4', label: 'Status' },
+];
 </script>

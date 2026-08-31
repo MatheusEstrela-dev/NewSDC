@@ -6,11 +6,6 @@
       :description="h.tipo_evento"
       :icon="ClockIcon"
     >
-      <template #actions>
-        <Link :href="route('tdap.historicos.index')">
-          <SecondaryButton>Voltar</SecondaryButton>
-        </Link>
-      </template>
     </TdapPageHeader>
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
@@ -35,7 +30,6 @@ import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
 
 defineOptions({ layout: AuthenticatedLayout });

@@ -20,33 +20,16 @@ Regras que governam estes itens: `.claude/skills/frontend/04 - Responsividade/04
 | Calendario da escala | `EscalaCalendario.vue` | 24h rolaveis, toggle Dia/Semana, clique lanca vaga |
 | Impresso em tela pequena | `Organisms/Print/BasePrintModal.vue` | no mobile abre em outra aba; sem modal apertado |
 | Mapa sobre a sidebar | `Pages/Inmet/MapaInmet.vue` | `isolation: isolate` no wrapper; altura em `vh` no mobile |
+| Tabelas rolando de lado — 16 paginas | TDAP (11), Cisterna (5) | `ResponsiveTable`; excesso 0px medido em 375px nas 13 restantes |
+| Sanfona no formulario longo | `Composables/rat/useCollapsible.js` | uma secao aberta abaixo de md; as 2 secoes cruas viraram colapsaveis |
+| Acoes no pe do card | `Molecules/Table/TableMobileCard.vue` | saiu do cabecalho, onde disputava espaco com o titulo |
+| Botao Voltar duplicado | 7 paginas do TDAP | a trilha ja tem o BackButton; sobrava um segundo na mesma dobra |
 
 ---
 
 ## Pendente
 
-### 1. Tabelas que ainda rolam de lado no telefone — 16 paginas
-
-**Prioridade alta.** E o defeito que mais engana: a coluna de acoes flutua sobre conteudo
-cortado, e o usuario nao sabe de qual registro sao os botoes que esta tocando.
-
-Medido em 2026-08-31: `grep -c "isMobile\|md:hidden\|hidden md:"` = **0** em todas.
-
-| modulo | paginas |
-|---|---|
-| TDAP | `Atas/Index`, `Atas/Show`, `Caminhoes/Index`, `Cronogramas/Index`, `Cronogramas/Show`, `Historicos/Index`, `Lotes/Index`, `Prestadores/Index`, `Processos/Index`, `Viagens/Pendentes`, `Vistorias/Index` |
-| Cisterna | `Beneficiarios/Index`, `Comunidades/Index`, `Lotes/Index`, `Notificacoes/Index`, `OrdensServico/Index` |
-
-**Receita:** Forma B da regra 9 — `Organisms/Table/ResponsiveTable.vue` com
-`Molecules/Table/TableMobileCard.vue`. Os dois componentes existem, estao corretos e **nunca
-foram usados por ninguem** (eram codigo morto ate a correcao de tema desta rodada). Nao ha
-componente novo a escrever: falta declarar `mobileFields` e o slot `#mobile-actions` por
-pagina.
-
-Comecar por `Cisterna/Beneficiarios/Index.vue`, que e a que o usuario reportou, e usa-la como
-implementacao de referencia para as outras 15.
-
-### 2. Auditoria de modais e popups em tela pequena
+### 1. Auditoria de modais e popups em tela pequena
 
 **Pedido explicito, ainda nao medido.** Verificar em 375px:
 
@@ -58,7 +41,7 @@ implementacao de referencia para as outras 15.
 
 Criterio: nada corta, nada rola a pagina de fundo, botao de acao sempre alcancavel sem zoom.
 
-### 3. INMET: reatividade alem do z-index
+### 2. INMET: reatividade alem do z-index
 
 O `isolation` e a altura em `vh` resolveram o pior. Ainda vale medir em 375px:
 

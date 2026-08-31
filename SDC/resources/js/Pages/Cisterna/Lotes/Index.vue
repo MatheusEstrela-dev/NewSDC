@@ -23,6 +23,21 @@
         </template>
       </PageHeader>
 
+      <!-- Regra 9 de `.claude/skills/frontend/04 - Responsividade`: tabela no
+           desktop, cards no telefone. -->
+      <ResponsiveTable
+        :items="lista"
+        :mobile-fields="CAMPOS_MOBILE"
+        :get-item-title="(l) => l.nome"
+        :get-item-subtitle="(l) => dataBr(l.data)"
+        :get-item-key="(l) => l.id"
+        empty-message="Nenhum lote cadastrado"
+      >
+        <template #mobile-actions="{ item }">
+          <ActionButton module="cisternas" resource="lotes" :actions="acoesDe(item)" />
+        </template>
+
+        <template #table>
       <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/60">
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/50">
@@ -52,11 +67,7 @@
                     <ActionButton
                       module="cisternas"
                       resource="lotes"
-                      :actions="[
-                        { action: 'view',   handler: () => verOrdens(l) },
-                        { action: 'edit',   handler: () => abrirEdicao(l) },
-                        { action: 'delete', handler: () => excluir(l, `o lote ${l.nome}`) },
-                      ]"
+                      :actions="acoesDe(l)"
                     />
                   </div>
                 </td>
@@ -74,6 +85,8 @@
           </table>
         </div>
       </div>
+        </template>
+      </ResponsiveTable>
 
       <CisternaFormModal
         :show="aberto"
@@ -115,6 +128,7 @@ import FormField from '@/Components/Molecules/Form/FormField.vue';
 import FormDateField from '@/Components/Molecules/Form/FormDateField.vue';
 import FormTextarea from '@/Components/Molecules/Form/FormTextarea.vue';
 import CisternaFormModal from '@/Components/Organisms/Cisterna/CisternaFormModal.vue';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 import { useCrudModal } from '@/Composables/cisterna/useCrudModal';
 
@@ -122,6 +136,24 @@ const props = defineProps({
   lotes: { type: [Object, Array], default: () => [] },
   permissoes: { type: Object, default: () => ({}) },
 });
+
+/** Acoes da linha, definidas uma vez: servem a tabela e ao pe do card. */
+function acoesDe(l) {
+  return [
+    { action: 'view',   handler: () => verOrdens(l) },
+    { action: 'edit',   handler: () => abrirEdicao(l) },
+    { action: 'delete', handler: () => excluir(l, `o lote ${l.nome}`) },
+  ];
+}
+
+/**
+ * Nome e data viram titulo e subtitulo. A observacao ocupa a linha inteira: e
+ * texto corrido e em meia coluna quebraria em quatro linhas.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'ordens_servico', label: 'Ordens de servico' },
+  { key: 'observacao', label: 'Observacao', fullWidth: true },
+];
 
 const TH = 'whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400';
 const TD = 'whitespace-nowrap px-3 py-2 text-sm text-slate-700 dark:text-slate-200';

@@ -25,93 +25,162 @@
 
       <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/60">
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/50">
-            <thead class="bg-slate-50 dark:bg-slate-900/50">
-              <tr>
-                <th :class="TH">Sobre</th>
-                <th :class="TH">Apontamento</th>
-                <th :class="TH">Emitida por</th>
-                <th :class="TH">Situacao</th>
-                <th :class="TH">Anexos</th>
-                <th :class="[TH, 'table-actions-head w-36 min-w-36 text-right']">Opcoes</th>
-              </tr>
-            </thead>
+          <ResponsiveTable
+      :items="lista"
+      :mobile-fields="CAMPOS_MOBILE"
+      :get-item-title="(n) => `${rotuloTipo(n.notificavel?.tipo)} #${n.notificavel?.id ?? ''}`"
+      empty-message="Nenhuma notificacao encontrada"
+    >
+      <template #table>
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/50">
+                    <thead class="bg-slate-50 dark:bg-slate-900/50">
+                      <tr>
+                        <th :class="TH">Sobre</th>
+                        <th :class="TH">Apontamento</th>
+                        <th :class="TH">Emitida por</th>
+                        <th :class="TH">Situacao</th>
+                        <th :class="TH">Anexos</th>
+                        <th :class="[TH, 'table-actions-head w-36 min-w-36 text-right']">Opcoes</th>
+                      </tr>
+                    </thead>
+        
+                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
+                      <tr v-for="n in lista" :key="n.id" class="table-row-solid transition-colors">
+                        <td :class="TD">
+                          <span :class="PILULA_TIPO">{{ rotuloTipo(n.notificavel?.tipo) }}</span>
+                          <span class="ml-1 font-mono text-xs text-slate-400">#{{ n.notificavel?.id }}</span>
+                        </td>
+                        <td class="max-w-md px-3 py-2 text-sm text-slate-700 dark:text-slate-200">
+                          <span class="line-clamp-2" :title="n.observacao">{{ n.observacao }}</span>
+                        </td>
+                        <td :class="TD">{{ n.emitida_por ?? '—' }}</td>
+                        <td :class="TD">
+                          <span :class="n.respondida ? PILULA_OK : PILULA_ABERTA">
+                            {{ n.respondida ? 'Respondida' : 'Em aberto' }}
+                          </span>
+                          <span v-if="n.respondida_em" class="ml-1 text-xs text-slate-400">
+                            {{ dataBr(n.respondida_em) }}
+                          </span>
+                        </td>
+                        <td :class="TD">
+                          <a
+                            v-for="d in (n.documentos ?? [])"
+                            :key="d.id"
+                            :href="d.url"
+                            target="_blank"
+                            rel="noopener"
+                            :class="ELO"
+                          >
+                            {{ d.nome || 'anexo' }}
+                          </a>
+                          <span v-if="(n.documentos ?? []).length === 0" class="text-slate-400">—</span>
+                        </td>
+                        <!-- Coluna fixa no canto direito: em tela estreita a tabela rola
+                             na horizontal e as acoes precisam continuar alcancaveis. Depende
+                             de .table-row-solid na <tr> para o fundo opaco. -->
+                        <td class="table-actions-cell w-36 min-w-36 whitespace-nowrap px-3 py-2 text-right">
+                          <div class="flex items-center justify-end gap-1">
+                            <!--
+                              Botao proprio, e nao a acao `check` do ActionButton: aquela
+                              consulta o slug `cisternas.notificacoes.validar`, que NAO
+                              existe no config/permissions.php -- o icone nunca renderizava
+                              e responder ficava inalcancavel. O backend autoriza o
+                              responder com `update`, entao a guarda aqui e a mesma.
+                            -->
+                            <button
+                              v-if="!n.respondida && podeResponder"
+                              type="button"
+                              :class="BOTAO_RESPONDER"
+                              title="Marcar como respondida"
+                              @click="responder(n)"
+                            >
+                              <CheckCircleIcon class="h-4 w-4" />
+                            </button>
+        
+                            <ActionButton
+                              module="cisternas"
+                              resource="notificacoes"
+                              :actions="[
+                                { action: 'edit',   handler: () => abrirEdicao(n) },
+                                { action: 'delete', handler: () => excluir(n, 'esta notificacao') },
+                              ]"
+                            />
+                          </div>
+                        </td>
+                      </tr>
+        
+                      <tr v-if="lista.length === 0">
+                        <td colspan="6" class="px-3 py-10">
+                          <ListEmptyState
+                            title="Nenhuma notificacao"
+                            helper="A notificacao registra um apontamento da fiscalizacao sobre um cadastro ou vistoria."
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+      </template>
 
-            <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
-              <tr v-for="n in lista" :key="n.id" class="table-row-solid transition-colors">
-                <td :class="TD">
-                  <span :class="PILULA_TIPO">{{ rotuloTipo(n.notificavel?.tipo) }}</span>
-                  <span class="ml-1 font-mono text-xs text-slate-400">#{{ n.notificavel?.id }}</span>
-                </td>
-                <td class="max-w-md px-3 py-2 text-sm text-slate-700 dark:text-slate-200">
-                  <span class="line-clamp-2" :title="n.observacao">{{ n.observacao }}</span>
-                </td>
-                <td :class="TD">{{ n.emitida_por ?? '—' }}</td>
-                <td :class="TD">
-                  <span :class="n.respondida ? PILULA_OK : PILULA_ABERTA">
-                    {{ n.respondida ? 'Respondida' : 'Em aberto' }}
-                  </span>
-                  <span v-if="n.respondida_em" class="ml-1 text-xs text-slate-400">
-                    {{ dataBr(n.respondida_em) }}
-                  </span>
-                </td>
-                <td :class="TD">
-                  <a
-                    v-for="d in (n.documentos ?? [])"
-                    :key="d.id"
-                    :href="d.url"
-                    target="_blank"
-                    rel="noopener"
-                    :class="ELO"
-                  >
-                    {{ d.nome || 'anexo' }}
-                  </a>
-                  <span v-if="(n.documentos ?? []).length === 0" class="text-slate-400">—</span>
-                </td>
-                <!-- Coluna fixa no canto direito: em tela estreita a tabela rola
-                     na horizontal e as acoes precisam continuar alcancaveis. Depende
-                     de .table-row-solid na <tr> para o fundo opaco. -->
-                <td class="table-actions-cell w-36 min-w-36 whitespace-nowrap px-3 py-2 text-right">
-                  <div class="flex items-center justify-end gap-1">
-                    <!--
-                      Botao proprio, e nao a acao `check` do ActionButton: aquela
-                      consulta o slug `cisternas.notificacoes.validar`, que NAO
-                      existe no config/permissions.php -- o icone nunca renderizava
-                      e responder ficava inalcancavel. O backend autoriza o
-                      responder com `update`, entao a guarda aqui e a mesma.
-                    -->
-                    <button
-                      v-if="!n.respondida && podeResponder"
-                      type="button"
-                      :class="BOTAO_RESPONDER"
-                      title="Marcar como respondida"
-                      @click="responder(n)"
-                    >
-                      <CheckCircleIcon class="h-4 w-4" />
-                    </button>
+      <template #mobile-c1="{ item: n }">
+        <span class="line-clamp-2" :title="n.observacao">{{ n.observacao }}</span>
+      </template>
 
-                    <ActionButton
-                      module="cisternas"
-                      resource="notificacoes"
-                      :actions="[
-                        { action: 'edit',   handler: () => abrirEdicao(n) },
-                        { action: 'delete', handler: () => excluir(n, 'esta notificacao') },
-                      ]"
-                    />
-                  </div>
-                </td>
-              </tr>
+      <template #mobile-c2="{ item: n }">
+        {{ n.emitida_por ?? '—' }}
+      </template>
 
-              <tr v-if="lista.length === 0">
-                <td colspan="6" class="px-3 py-10">
-                  <ListEmptyState
-                    title="Nenhuma notificacao"
-                    helper="A notificacao registra um apontamento da fiscalizacao sobre um cadastro ou vistoria."
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <template #mobile-c3="{ item: n }">
+        <span :class="n.respondida ? PILULA_OK : PILULA_ABERTA">
+        {{ n.respondida ? 'Respondida' : 'Em aberto' }}
+        </span>
+        <span v-if="n.respondida_em" class="ml-1 text-xs text-slate-400">
+        {{ dataBr(n.respondida_em) }}
+        </span>
+      </template>
+
+      <template #mobile-c4="{ item: n }">
+        <a
+        v-for="d in (n.documentos ?? [])"
+        :key="d.id"
+        :href="d.url"
+        target="_blank"
+        rel="noopener"
+        :class="ELO"
+        >
+        {{ d.nome || 'anexo' }}
+        </a>
+        <span v-if="(n.documentos ?? []).length === 0" class="text-slate-400">—</span>
+      </template>
+
+      <template #mobile-actions="{ item: n }">
+        <div class="flex items-center justify-end gap-1">
+        <!--
+        Botao proprio, e nao a acao `check` do ActionButton: aquela
+        consulta o slug `cisternas.notificacoes.validar`, que NAO
+        existe no config/permissions.php -- o icone nunca renderizava
+        e responder ficava inalcancavel. O backend autoriza o
+        responder com `update`, entao a guarda aqui e a mesma.
+        -->
+        <button
+        v-if="!n.respondida && podeResponder"
+        type="button"
+        :class="BOTAO_RESPONDER"
+        title="Marcar como respondida"
+        @click="responder(n)"
+        >
+        <CheckCircleIcon class="h-4 w-4" />
+        </button>
+        <ActionButton
+        module="cisternas"
+        resource="notificacoes"
+        :actions="[
+        { action: 'edit',   handler: () => abrirEdicao(n) },
+        { action: 'delete', handler: () => excluir(n, 'esta notificacao') },
+        ]"
+        />
+        </div>
+      </template>
+    </ResponsiveTable>
         </div>
       </div>
 
@@ -190,6 +259,7 @@ import CisternaFormModal from '@/Components/Organisms/Cisterna/CisternaFormModal
 import { moduleIcon } from '@/Support/moduleIcons';
 import { usePermissions } from '@/Composables/auth';
 import { useCrudModal } from '@/Composables/cisterna/useCrudModal';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 const props = defineProps({
   notificacoes: { type: [Object, Array], default: () => [] },
@@ -264,4 +334,19 @@ function dataBr(iso) {
 
   return data.length === 3 ? `${data[2]}/${data[1]}/${data[0]}` : iso;
 }
+
+/**
+ * Campos do card no mobile (regra 9 de responsividade).
+ *
+ * Sao os que IDENTIFICAM o registro, nao todos: card com oito linhas nao e
+ * melhor que tabela rolando de lado. Cada um reusa o markup da celula
+ * original pelo slot `#mobile-<key>`, entao badge e formatacao continuam
+ * identicos aos da tabela.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'c1', label: 'Apontamento' },
+  { key: 'c2', label: 'Emitida por' },
+  { key: 'c3', label: 'Situacao' },
+  { key: 'c4', label: 'Anexos' },
+];
 </script>

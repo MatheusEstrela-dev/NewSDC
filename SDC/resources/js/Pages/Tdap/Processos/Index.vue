@@ -63,46 +63,86 @@
     </FilterSection>
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
-      <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
-        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Número</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Estado</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Swimlane</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Município</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Aberto</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Ações</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="p in processos.data" :key="p.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-            <td class="px-4 py-3 font-mono font-semibold">
-              <Link :href="route('tdap.processos.show', p.id)" class="text-blue-600 hover:text-blue-800">{{ p.numero }}</Link>
-            </td>
-            <td class="px-4 py-3"><EstadoProcessoBadge :estado="p.estado" /></td>
-            <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ p.swimlane_label }}</td>
-            <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ p.municipio_nome }}<span v-if="p.municipio_uf" class="text-slate-400">/{{ p.municipio_uf }}</span></td>
-            <td class="px-4 py-3 text-xs text-slate-500">{{ fmtDate(p.aberto_em) }}</td>
-            <td class="px-4 py-3">
-              <div class="flex items-center justify-end gap-1">
-                <ActionButton
-                  action="view"
-                  module="tdap"
-                  resource="processos"
-                  :allowed="true"
-                  :show-label="false"
-                  size="sm"
-                  tooltip-text="Visualizar processo"
-                  @click="router.visit(route('tdap.processos.show', p.id))"
-                />
-              </div>
-            </td>
-          </tr>
-          <tr v-if="processos.data.length === 0">
-            <td colspan="6" class="px-4 py-12 text-center text-slate-400">Nenhum processo aberto.</td>
-          </tr>
-        </tbody>
-      </table>
+      <ResponsiveTable
+      :items="processos.data"
+      :mobile-fields="CAMPOS_MOBILE"
+      :get-item-title="(p) => p.numero"
+      empty-message="Nenhum processo encontrado"
+    >
+      <template #table>
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Número</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Estado</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Swimlane</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Município</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Aberto</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Ações</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                  <tr v-for="p in processos.data" :key="p.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                    <td class="px-4 py-3 font-mono font-semibold">
+                      <Link :href="route('tdap.processos.show', p.id)" class="text-blue-600 hover:text-blue-800">{{ p.numero }}</Link>
+                    </td>
+                    <td class="px-4 py-3"><EstadoProcessoBadge :estado="p.estado" /></td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ p.swimlane_label }}</td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ p.municipio_nome }}<span v-if="p.municipio_uf" class="text-slate-400">/{{ p.municipio_uf }}</span></td>
+                    <td class="px-4 py-3 text-xs text-slate-500">{{ fmtDate(p.aberto_em) }}</td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center justify-end gap-1">
+                        <ActionButton
+                          action="view"
+                          module="tdap"
+                          resource="processos"
+                          :allowed="true"
+                          :show-label="false"
+                          size="sm"
+                          tooltip-text="Visualizar processo"
+                          @click="router.visit(route('tdap.processos.show', p.id))"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="processos.data.length === 0">
+                    <td colspan="6" class="px-4 py-12 text-center text-slate-400">Nenhum processo aberto.</td>
+                  </tr>
+                </tbody>
+              </table>
+      </template>
+
+      <template #mobile-c1="{ item: p }">
+        <EstadoProcessoBadge :estado="p.estado" />
+      </template>
+
+      <template #mobile-c2="{ item: p }">
+        {{ p.swimlane_label }}
+      </template>
+
+      <template #mobile-c3="{ item: p }">
+        {{ p.municipio_nome }}<span v-if="p.municipio_uf" class="text-slate-400">/{{ p.municipio_uf }}</span>
+      </template>
+
+      <template #mobile-c4="{ item: p }">
+        {{ fmtDate(p.aberto_em) }}
+      </template>
+
+      <template #mobile-actions="{ item: p }">
+        <div class="flex items-center justify-end gap-1">
+        <ActionButton
+        action="view"
+        module="tdap"
+        resource="processos"
+        :allowed="true"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Visualizar processo"
+        @click="router.visit(route('tdap.processos.show', p.id))"
+        />
+        </div>
+      </template>
+    </ResponsiveTable>
 
     </div>
 
@@ -140,6 +180,7 @@ import ClipboardDocumentListIcon from '@/Components/Icons/ClipboardDocumentListI
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
 import { computed } from 'vue';
 import { moduleIcon } from '@/Support/moduleIcons';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -208,4 +249,19 @@ function fmtDate(d) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('pt-BR');
 }
+
+/**
+ * Campos do card no mobile (regra 9 de responsividade).
+ *
+ * Sao os que IDENTIFICAM o registro, nao todos: card com oito linhas nao e
+ * melhor que tabela rolando de lado. Cada um reusa o markup da celula
+ * original pelo slot `#mobile-<key>`, entao badge e formatacao continuam
+ * identicos aos da tabela.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'c1', label: 'Estado' },
+  { key: 'c2', label: 'Swimlane' },
+  { key: 'c3', label: 'Município' },
+  { key: 'c4', label: 'Aberto' },
+];
 </script>

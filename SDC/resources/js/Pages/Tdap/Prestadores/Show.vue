@@ -7,9 +7,6 @@
       :icon="BuildingIcon"
     >
       <template #actions>
-        <Link :href="route('tdap.prestadores.index')">
-          <SecondaryButton>Voltar</SecondaryButton>
-        </Link>
         <Link v-if="canEdit" :href="route('tdap.prestadores.edit', p.id)">
           <PrimaryButton>Editar</PrimaryButton>
         </Link>
@@ -117,7 +114,6 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import TdapStatusBadge from '@/Components/Atoms/Tdap/TdapStatusBadge.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
 

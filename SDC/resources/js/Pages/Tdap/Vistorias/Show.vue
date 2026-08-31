@@ -7,9 +7,6 @@
       :icon="TruckIcon"
     >
       <template #actions>
-        <Link :href="route('tdap.vistorias.index')">
-          <SecondaryButton>Voltar</SecondaryButton>
-        </Link>
         <Link v-if="canEdit" :href="route('tdap.vistorias.edit', v.id)">
           <PrimaryButton>Editar</PrimaryButton>
         </Link>
@@ -114,7 +111,6 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import VistoriaChecklistGroup from '@/Components/Organisms/Tdap/VistoriaChecklistGroup.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 

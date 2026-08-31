@@ -66,83 +66,138 @@
       </div>
 
       <div class="overflow-x-auto">
+        <ResponsiveTable
+      :items="caminhoes.data"
+      :mobile-fields="CAMPOS_MOBILE"
+      :get-item-title="(caminhao) => caminhao.placa"
+      empty-message="Nenhum caminhao encontrado"
+    >
+      <template #table>
         <table class="w-full text-sm">
-          <thead class="border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase text-slate-500 dark:border-slate-700/50 dark:bg-slate-800 dark:text-slate-400">
-            <tr>
-              <th class="px-4 py-3 text-left">Placa</th>
-              <th class="px-4 py-3 text-left">Prestador</th>
-              <th class="px-4 py-3 text-left">Marca / Modelo</th>
-              <th class="px-4 py-3 text-right">Capacidade (m³)</th>
-              <th class="px-4 py-3 text-left">Status</th>
-              <th class="w-28 px-4 py-3 text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
-            <tr
-              v-for="caminhao in caminhoes.data"
-              :key="caminhao.id"
-              class="transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
-            >
-              <td class="whitespace-nowrap px-4 py-4">
-                <Link
-                  :href="route('tdap.caminhoes.show', caminhao.id)"
-                  class="font-mono font-bold text-slate-900 transition hover:text-blue-600 dark:text-slate-100"
-                >
-                  {{ caminhao.placa }}
-                </Link>
-              </td>
-              <td class="px-4 py-4">
-                <p class="font-semibold text-slate-900 dark:text-slate-100">{{ caminhao.prestador_nome }}</p>
-                <p class="mt-0.5 font-mono text-xs text-slate-500 dark:text-slate-400">{{ caminhao.prestador_cnpj }}</p>
-              </td>
-              <td class="px-4 py-4 text-slate-600 dark:text-slate-300">
-                <span v-if="caminhao.marca || caminhao.modelo">
-                  {{ caminhao.marca }} {{ caminhao.modelo }}
-                  <span v-if="caminhao.ano" class="text-slate-400">({{ caminhao.ano }})</span>
-                </span>
-                <span v-else class="text-slate-400">-</span>
-              </td>
-              <td class="whitespace-nowrap px-4 py-4 text-right font-mono text-slate-700 dark:text-slate-300">
-                {{ Number(caminhao.capacidade_m3 || 0).toFixed(2) }}
-              </td>
-              <td class="whitespace-nowrap px-4 py-4">
-                <TdapStatusBadge :active="caminhao.ativo" />
-              </td>
-              <td class="px-4 py-4">
-                <div class="flex items-center justify-end gap-1">
-                  <ActionButton
-                    action="view"
-                    module="tdap"
-                    resource="caminhoes"
-                    :allowed="true"
-                    :show-label="false"
-                    size="sm"
-                    tooltip-text="Visualizar caminhão"
-                    @click="router.visit(route('tdap.caminhoes.show', caminhao.id))"
-                  />
-                  <ActionButton
-                    action="edit"
-                    module="tdap"
-                    resource="caminhoes"
-                    :allowed="canEdit"
-                    :show-label="false"
-                    size="sm"
-                    tooltip-text="Editar caminhão"
-                    @click="router.visit(route('tdap.caminhoes.edit', caminhao.id))"
-                  />
-                </div>
-              </td>
-            </tr>
+                  <thead class="border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase text-slate-500 dark:border-slate-700/50 dark:bg-slate-800 dark:text-slate-400">
+                    <tr>
+                      <th class="px-4 py-3 text-left">Placa</th>
+                      <th class="px-4 py-3 text-left">Prestador</th>
+                      <th class="px-4 py-3 text-left">Marca / Modelo</th>
+                      <th class="px-4 py-3 text-right">Capacidade (m³)</th>
+                      <th class="px-4 py-3 text-left">Status</th>
+                      <th class="w-28 px-4 py-3 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                    <tr
+                      v-for="caminhao in caminhoes.data"
+                      :key="caminhao.id"
+                      class="transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    >
+                      <td class="whitespace-nowrap px-4 py-4">
+                        <Link
+                          :href="route('tdap.caminhoes.show', caminhao.id)"
+                          class="font-mono font-bold text-slate-900 transition hover:text-blue-600 dark:text-slate-100"
+                        >
+                          {{ caminhao.placa }}
+                        </Link>
+                      </td>
+                      <td class="px-4 py-4">
+                        <p class="font-semibold text-slate-900 dark:text-slate-100">{{ caminhao.prestador_nome }}</p>
+                        <p class="mt-0.5 font-mono text-xs text-slate-500 dark:text-slate-400">{{ caminhao.prestador_cnpj }}</p>
+                      </td>
+                      <td class="px-4 py-4 text-slate-600 dark:text-slate-300">
+                        <span v-if="caminhao.marca || caminhao.modelo">
+                          {{ caminhao.marca }} {{ caminhao.modelo }}
+                          <span v-if="caminhao.ano" class="text-slate-400">({{ caminhao.ano }})</span>
+                        </span>
+                        <span v-else class="text-slate-400">-</span>
+                      </td>
+                      <td class="whitespace-nowrap px-4 py-4 text-right font-mono text-slate-700 dark:text-slate-300">
+                        {{ Number(caminhao.capacidade_m3 || 0).toFixed(2) }}
+                      </td>
+                      <td class="whitespace-nowrap px-4 py-4">
+                        <TdapStatusBadge :active="caminhao.ativo" />
+                      </td>
+                      <td class="px-4 py-4">
+                        <div class="flex items-center justify-end gap-1">
+                          <ActionButton
+                            action="view"
+                            module="tdap"
+                            resource="caminhoes"
+                            :allowed="true"
+                            :show-label="false"
+                            size="sm"
+                            tooltip-text="Visualizar caminhão"
+                            @click="router.visit(route('tdap.caminhoes.show', caminhao.id))"
+                          />
+                          <ActionButton
+                            action="edit"
+                            module="tdap"
+                            resource="caminhoes"
+                            :allowed="canEdit"
+                            :show-label="false"
+                            size="sm"
+                            tooltip-text="Editar caminhão"
+                            @click="router.visit(route('tdap.caminhoes.edit', caminhao.id))"
+                          />
+                        </div>
+                      </td>
+                    </tr>
+        
+                    <tr v-if="caminhoes.data.length === 0">
+                      <td colspan="6" class="px-4 py-10 text-center">
+                        <TruckIcon class="mx-auto h-12 w-12 text-slate-400" />
+                        <p class="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Nenhum caminhão encontrado</p>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajuste os filtros ou cadastre um novo caminhão.</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+      </template>
 
-            <tr v-if="caminhoes.data.length === 0">
-              <td colspan="6" class="px-4 py-10 text-center">
-                <TruckIcon class="mx-auto h-12 w-12 text-slate-400" />
-                <p class="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Nenhum caminhão encontrado</p>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajuste os filtros ou cadastre um novo caminhão.</p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <template #mobile-c1="{ item: caminhao }">
+        <p class="font-semibold text-slate-900 dark:text-slate-100">{{ caminhao.prestador_nome }}</p>
+        <p class="mt-0.5 font-mono text-xs text-slate-500 dark:text-slate-400">{{ caminhao.prestador_cnpj }}</p>
+      </template>
+
+      <template #mobile-c2="{ item: caminhao }">
+        <span v-if="caminhao.marca || caminhao.modelo">
+        {{ caminhao.marca }} {{ caminhao.modelo }}
+        <span v-if="caminhao.ano" class="text-slate-400">({{ caminhao.ano }})</span>
+        </span>
+        <span v-else class="text-slate-400">-</span>
+      </template>
+
+      <template #mobile-c3="{ item: caminhao }">
+        {{ Number(caminhao.capacidade_m3 || 0).toFixed(2) }}
+      </template>
+
+      <template #mobile-c4="{ item: caminhao }">
+        <TdapStatusBadge :active="caminhao.ativo" />
+      </template>
+
+      <template #mobile-actions="{ item: caminhao }">
+        <div class="flex items-center justify-end gap-1">
+        <ActionButton
+        action="view"
+        module="tdap"
+        resource="caminhoes"
+        :allowed="true"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Visualizar caminhão"
+        @click="router.visit(route('tdap.caminhoes.show', caminhao.id))"
+        />
+        <ActionButton
+        action="edit"
+        module="tdap"
+        resource="caminhoes"
+        :allowed="canEdit"
+        :show-label="false"
+        size="sm"
+        tooltip-text="Editar caminhão"
+        @click="router.visit(route('tdap.caminhoes.edit', caminhao.id))"
+        />
+        </div>
+      </template>
+    </ResponsiveTable>
       </div>
 
     </div>
@@ -171,6 +226,7 @@ import TruckIcon from '@/Components/Icons/TruckIcon.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
 import TdapCaminhoesFiltersSection from '@/Components/Organisms/Tdap/TdapCaminhoesFiltersSection.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -216,4 +272,19 @@ function onExport(params) {
 function irParaPagina(page) {
   router.get(route('tdap.caminhoes.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
 }
+
+/**
+ * Campos do card no mobile (regra 9 de responsividade).
+ *
+ * Sao os que IDENTIFICAM o registro, nao todos: card com oito linhas nao e
+ * melhor que tabela rolando de lado. Cada um reusa o markup da celula
+ * original pelo slot `#mobile-<key>`, entao badge e formatacao continuam
+ * identicos aos da tabela.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'c1', label: 'Prestador' },
+  { key: 'c2', label: 'Marca / Modelo' },
+  { key: 'c3', label: 'Capacidade (m³)' },
+  { key: 'c4', label: 'Status' },
+];
 </script>

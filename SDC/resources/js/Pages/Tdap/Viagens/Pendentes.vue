@@ -6,51 +6,77 @@
       description="Fila de viagens registradas aguardando aprovação"
       :icon="ClockIcon"
     >
-      <template #actions>
-        <Link :href="route('tdap.cronogramas.index')">
-          <SecondaryButton>Voltar</SecondaryButton>
-        </Link>
-      </template>
     </TdapPageHeader>
 
     <div class="bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 overflow-hidden">
-      <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
-        <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Cronograma</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Caminhão</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Data da viagem</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Observação</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ações</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr v-for="v in viagens.data" :key="v.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-            <td class="px-4 py-3 font-mono font-semibold">{{ v.cronograma_numero }}</td>
-            <td class="px-4 py-3 font-mono">{{ v.caminhao_placa }}</td>
-            <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ fmtDateTime(v.data_registro) }}</td>
-            <td class="px-4 py-3 text-slate-700 dark:text-slate-300">
-              <span v-if="v.obs">{{ v.obs }}</span>
-              <span v-else class="text-slate-400">—</span>
-            </td>
-            <td class="px-4 py-3 text-right space-x-2">
-              <button v-if="canValidar" @click="validar(v, true)" class="px-3 py-1 text-xs font-medium rounded bg-emerald-600 text-white hover:bg-emerald-700">
-                Aprovar
-              </button>
-              <button v-if="canValidar" @click="validar(v, false)" class="px-3 py-1 text-xs font-medium rounded bg-red-600 text-white hover:bg-red-700">
-                Rejeitar
-              </button>
-            </td>
-          </tr>
-          <tr v-if="viagens.data.length === 0">
-            <td colspan="5" class="px-4 py-12 text-center text-slate-400">
-              <ClockIcon class="mx-auto h-10 w-10 text-slate-300 mb-2" />
-              <p class="font-medium text-slate-900 dark:text-slate-100">Nenhuma viagem pendente</p>
-              <p class="text-sm mt-1">Todas as viagens registradas foram validadas.</p>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <ResponsiveTable
+      :items="viagens.data"
+      :mobile-fields="CAMPOS_MOBILE"
+      :get-item-title="(v) => v.cronograma_numero"
+      empty-message="Nenhuma viagem pendente"
+    >
+      <template #table>
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                <thead class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Cronograma</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Caminhão</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Data da viagem</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Observação</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ações</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                  <tr v-for="v in viagens.data" :key="v.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                    <td class="px-4 py-3 font-mono font-semibold">{{ v.cronograma_numero }}</td>
+                    <td class="px-4 py-3 font-mono">{{ v.caminhao_placa }}</td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{{ fmtDateTime(v.data_registro) }}</td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300">
+                      <span v-if="v.obs">{{ v.obs }}</span>
+                      <span v-else class="text-slate-400">—</span>
+                    </td>
+                    <td class="px-4 py-3 text-right space-x-2">
+                      <button v-if="canValidar" @click="validar(v, true)" class="px-3 py-1 text-xs font-medium rounded bg-emerald-600 text-white hover:bg-emerald-700">
+                        Aprovar
+                      </button>
+                      <button v-if="canValidar" @click="validar(v, false)" class="px-3 py-1 text-xs font-medium rounded bg-red-600 text-white hover:bg-red-700">
+                        Rejeitar
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="viagens.data.length === 0">
+                    <td colspan="5" class="px-4 py-12 text-center text-slate-400">
+                      <ClockIcon class="mx-auto h-10 w-10 text-slate-300 mb-2" />
+                      <p class="font-medium text-slate-900 dark:text-slate-100">Nenhuma viagem pendente</p>
+                      <p class="text-sm mt-1">Todas as viagens registradas foram validadas.</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+      </template>
+
+      <template #mobile-c1="{ item: v }">
+        {{ v.caminhao_placa }}
+      </template>
+
+      <template #mobile-c2="{ item: v }">
+        {{ fmtDateTime(v.data_registro) }}
+      </template>
+
+      <template #mobile-c3="{ item: v }">
+        <span v-if="v.obs">{{ v.obs }}</span>
+        <span v-else class="text-slate-400">—</span>
+      </template>
+
+      <template #mobile-actions="{ item: v }">
+        <button v-if="canValidar" @click="validar(v, true)" class="px-3 py-1 text-xs font-medium rounded bg-emerald-600 text-white hover:bg-emerald-700">
+        Aprovar
+        </button>
+        <button v-if="canValidar" @click="validar(v, false)" class="px-3 py-1 text-xs font-medium rounded bg-red-600 text-white hover:bg-red-700">
+        Rejeitar
+        </button>
+      </template>
+    </ResponsiveTable>
 
     </div>
 
@@ -63,8 +89,8 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TdapPageHeader from '@/Components/Organisms/Tdap/Header/TdapPageHeader.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -98,4 +124,18 @@ function fmtDateTime(d) {
 function irParaPagina(page) {
   router.get(route(route().current()), { page }, { preserveState: true, replace: true });
 }
+
+/**
+ * Campos do card no mobile (regra 9 de responsividade).
+ *
+ * Sao os que IDENTIFICAM o registro, nao todos: card com oito linhas nao e
+ * melhor que tabela rolando de lado. Cada um reusa o markup da celula
+ * original pelo slot `#mobile-<key>`, entao badge e formatacao continuam
+ * identicos aos da tabela.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'c1', label: 'Caminhão' },
+  { key: 'c2', label: 'Data da viagem' },
+  { key: 'c3', label: 'Observação' },
+];
 </script>
