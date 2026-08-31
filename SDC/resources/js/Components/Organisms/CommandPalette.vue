@@ -455,12 +455,12 @@ const handleInput = () => {
         timeout: 8000,
       });
       const r = response.data.results ?? {};
-      const dbResults = [
-        ...(r.decretacoes ?? []),
-        ...(r.rat        ?? []),
-        ...(r.demandas   ?? []),
-        ...(r.pae        ?? []),
-      ];
+
+      // Achata QUALQUER grupo que o backend devolver, em vez de nomear as
+      // fontes uma a uma. Nomeando, toda fonte nova era descartada aqui em
+      // silencio -- sem erro, sem log, so ausencia de resultado -- e o backend
+      // parecia culpado. Agora acrescentar fonte e mudanca so no servidor.
+      const dbResults = Object.values(r).flat();
       results.value = { ...results.value, db_results: dbResults };
     } catch (error) {
       // Falha silenciosa — resultados locais continuam visíveis

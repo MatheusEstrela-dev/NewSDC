@@ -46,6 +46,11 @@ return new class extends Migration
             $table->string('codigo_legado', 30)->nullable()->unique()
                 ->comment('aju_fornecedores.id (dbsdc) ou aju_cfornecedor.id_fornecedor (gestaocedec)');
             $table->timestamps();
+
+            // O Postgres nao indexa a coluna filha de uma FK automaticamente.
+            // Sem este indice, apagar ou renumerar um municipio varre a tabela
+            // inteira para validar a restricao.
+            $table->index('municipio_id', 'ajuda_h_fornecedores_municipio_idx');
         });
 
         Schema::create('ajuda_h_depositos', function (Blueprint $table): void {
@@ -65,6 +70,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('ativo', 'ajuda_h_depositos_ativo_idx');
+            $table->index('municipio_id', 'ajuda_h_depositos_municipio_idx');
         });
 
         Schema::create('ajuda_h_estoque_movimentos', function (Blueprint $table): void {
@@ -79,6 +85,10 @@ return new class extends Migration
             $table->unsignedBigInteger('origem_id')->nullable();
             $table->timestampTz('ocorrido_em');
             $table->foreignId('registrado_por')->nullable()->constrained('users')->nullOnDelete();
+            // Mesmo retrato de cargo das liberacoes. O ledger e a tabela mais
+            // sensivel a auditoria do modulo: quem lancou importa tanto quanto
+            // em que papel lancou.
+            $table->foreignId('cargo_id')->nullable()->constrained('roles')->nullOnDelete();
             $table->jsonb('payload_legado')->nullable();
             $table->timestampTz('created_at')->useCurrent();
 
@@ -194,6 +204,12 @@ return new class extends Migration
             $table->foreignId('municipio_id')->constrained('municipios')->restrictOnDelete();
             $table->foreignId('deposito_id')->constrained('ajuda_h_depositos')->restrictOnDelete();
             $table->foreignId('solicitante_id')->nullable()->constrained('users')->nullOnDelete();
+            // Cargo exercido no momento da liberacao, nao o cargo atual da
+            // pessoa. Cargo muda com o tempo: sem este retrato, um relatorio de
+            // 2027 atribuiria uma liberacao de 2020 ao papel que o solicitante
+            // ocupa hoje. Nulo nas 3.582 linhas vindas do legado, onde nem o
+            // solicitante e recuperavel.
+            $table->foreignId('cargo_id')->nullable()->constrained('roles')->nullOnDelete();
             $table->text('beneficiario')->nullable();
             $table->date('data_libera');
             $table->date('data_limite')->nullable();
@@ -201,6 +217,9 @@ return new class extends Migration
             $table->text('observacao')->nullable();
             $table->timestampTz('cancelado_em')->nullable();
             $table->text('motivo_cancelamento')->nullable();
+            // Promovida de payload_legado->evento: e filtro de consulta da API
+            // de liberacoes, e filtro sobre jsonb nao usa indice.
+            $table->string('evento', 40)->nullable();
             // Colunas do legado sem consumidor conhecido (resp_receb_ci,
             // resp_receb_veiculo, resp_receb_placa, hora_libera, entrega).
             // Ficam aqui ate alguem provar que sao usadas; se em seis meses
@@ -213,6 +232,7 @@ return new class extends Migration
 
             $table->index(['municipio_id', 'status'], 'ajuda_h_liberacoes_mun_status_idx');
             $table->index(['deposito_id', 'data_libera'], 'ajuda_h_liberacoes_dep_data_idx');
+            $table->index(['evento', 'data_libera'], 'ajuda_h_liberacoes_evento_data_idx');
         });
 
         Schema::create('ajuda_h_liberacao_itens', function (Blueprint $table): void {
@@ -224,7 +244,9 @@ return new class extends Migration
             $table->string('codigo_legado', 30)->nullable()->unique()
                 ->comment('aju_item.id_item');
 
-            $table->index('liberacao_id', 'ajuda_h_lib_itens_liberacao_idx');
+            // Composto: o contrato plano do CEDEC filtra por status dentro do
+            // join por liberacao_id.
+            $table->index(['liberacao_id', 'status'], 'ajuda_h_lib_itens_liberacao_idx');
         });
 
         Schema::create('ajuda_h_liberacao_recibos', function (Blueprint $table): void {

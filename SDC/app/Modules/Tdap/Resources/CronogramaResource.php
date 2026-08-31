@@ -38,7 +38,12 @@ class CronogramaResource extends JsonResource
             'dias'                  => (int) $this->dias,
             'fator'                 => (float) $this->fator,
             'usar_fator_manual'     => (bool) $this->usar_fator_manual,
+            'fator_calculado'       => $this->fator_calculado,
+            // Contratado/entregue vem da soma dos caminhoes alocados, nao do
+            // `fator` (ver Cronograma::getVolumeContratadoAttribute).
             'volume_contratado_m3'  => $this->volume_contratado,
+            'volume_entregue_m3'    => $this->volume_entregue,
+            'execucao_percentual'   => $this->percentual_entregue,
             'justificativa'         => $this->justificativa,
             'observacao'            => $this->observacao,
             'cnpj'                  => $this->cnpj,

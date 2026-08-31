@@ -22,12 +22,14 @@ class VistoriaIndexResource extends JsonResource
             'id'              => $this->id,
             'nome'            => $this->nome,
             'edital'          => $this->edital,
-            'lote'            => $this->lote,
             'data'            => $this->data?->toDateString(),
             'parecer'         => $this->parecer?->value,
             'parecer_label'   => $this->parecer?->label(),
             'esta_vigente'    => (bool) $this->esta_vigente,
             'ficha'           => $this->ficha,
+            // Numero do lacre: a grade mostra no lugar do antigo "lote", que
+            // repetia o lote da ata sem valor para a conferencia da vistoria.
+            'lacre'           => $this->lacre,
             'caminhao_placa'  => $this->whenLoaded('caminhao', fn () => $this->caminhao?->placa),
             'caminhao_modelo' => $this->whenLoaded('caminhao', fn () => trim(($this->caminhao?->marca ?? '').' '.($this->caminhao?->modelo ?? '')) ?: null),
             'prestador_nome'  => $this->whenLoaded('caminhao', fn () => $this->caminhao?->prestador?->nome),

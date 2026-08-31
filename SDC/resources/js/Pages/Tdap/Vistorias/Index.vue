@@ -6,6 +6,7 @@
       description="Inspeções técnicas dos caminhões-tanque (vigência 12 meses)"
       :icon="TruckIcon"
       :icon-image="moduleIcon('tdap')"
+      :espaco-inferior="false"
     >
       <template #actions>
         <ActionButton action="export" :allowed="true" variant="success" label="Exportar" @click="openExportModal" />
@@ -35,7 +36,7 @@
         label="Buscar"
         type="text"
         :model-value="filtroSearch"
-        placeholder="Vistoriador, edital ou ficha"
+        placeholder="Vistoriador, edital, ficha ou lacre"
         @update:model-value="filtroSearch = $event"
       />
       <FilterField
@@ -71,6 +72,7 @@
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Caminhão</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Vistoriador</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Ficha</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Lacre</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Parecer</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Vigência</th>
             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Ações</th>
@@ -88,6 +90,7 @@
               <p v-if="v.prestador_nome" class="text-xs text-slate-500">{{ v.prestador_nome }}</p>
             </td>
             <td class="px-4 py-3 font-mono text-xs">{{ v.ficha || '—' }}</td>
+            <td class="px-4 py-3 font-mono text-xs">{{ v.lacre || '—' }}</td>
             <td class="px-4 py-3">
               <span :class="v.parecer === 'aprovada'
                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
@@ -131,7 +134,7 @@
             </td>
           </tr>
           <tr v-if="vistorias.data.length === 0">
-            <td colspan="7" class="px-4 py-12 text-center text-slate-400">Nenhuma vistoria cadastrada.</td>
+            <td colspan="8" class="px-4 py-12 text-center text-slate-400">Nenhuma vistoria cadastrada.</td>
           </tr>
         </tbody>
       </table>
@@ -209,13 +212,18 @@ function limparFiltros() {
   router.get(route('tdap.vistorias.index'), {}, { preserveState: false });
 }
 
-function aplicarFiltros() {
-  router.get(route('tdap.vistorias.index'), {
+// Fonte unica dos parametros: busca, cards, paginacao e export usam este objeto.
+function queryFiltros() {
+  return {
     search:   filtroSearch.value || undefined,
     placa_id: filtroCaminhao.value || undefined,
     parecer:  filtroParecer.value || undefined,
     vigente:  filtroVigente.value ? 1 : undefined,
-  }, { preserveState: true, replace: true });
+  };
+}
+
+function aplicarFiltros() {
+  router.get(route('tdap.vistorias.index'), queryFiltros(), { preserveState: true, replace: true });
 }
 
 // Cards de estatistica como filtros rapidos: objeto vazio limpa parecer/vigente (Total),
@@ -230,21 +238,21 @@ function filtrarRapido({ parecer = '', vigente = false } = {}) {
 const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.vistorias.export');
 
 function onExport(params) {
-  handleExport(params, {
-    search:   filtroSearch.value || undefined,
-    placa_id: filtroCaminhao.value || undefined,
-    parecer:  filtroParecer.value || undefined,
-    vigente:  filtroVigente.value ? 1 : undefined,
-  });
+  handleExport(params, queryFiltros());
 }
 
+// Datas vem como 'YYYY-MM-DD'. `new Date('2026-05-01')` e meia-noite UTC e, no
+// fuso do Brasil, exibia o dia anterior.
 function fmtDate(d) {
   if (!d) return '—';
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('pt-BR');
+  const [ano, mes, dia] = String(d).slice(0, 10).split('-');
+
+  return ano && mes && dia ? `${dia}/${mes}/${ano}` : '—';
 }
 
+// Pagina mantendo os filtros da tela (os refs, nao o snapshot de props: o
+// usuario podia trocar um filtro, paginar e voltar ao recorte antigo).
 function irParaPagina(page) {
-  router.get(route('tdap.vistorias.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
+  router.get(route('tdap.vistorias.index'), { ...queryFiltros(), page }, { preserveState: true, replace: true });
 }
 </script>

@@ -1,5 +1,6 @@
 import { computed } from 'vue';
 import { usePage, router } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 
 export function useBreadcrumb() {
     const page = usePage();
@@ -66,6 +67,97 @@ export function useBreadcrumb() {
         'Treinamento/TreinamentoShow': [
             { label: 'Início', route: 'dashboard' },
             { label: 'Treinamentos', route: 'treinamentos.index' },
+            { label: 'Visualizar', route: null }
+        ],
+
+        // Ajuda Humanitaria. Mapeado explicitamente porque o construtor
+        // automatico deixa route: null em todo item intermediario, e o botao
+        // Voltar percorre o breadcrumb procurando o primeiro item com rota:
+        // sem estas entradas ele pulava a listagem e caia no Inicio. De quebra,
+        // os rotulos ganham acento, que o humanize() da URL nao devolve.
+        'AjudaHumanitaria/Dashboard': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: null }
+        ],
+        'AjudaHumanitaria/Pedidos/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Pedidos', route: null }
+        ],
+        'AjudaHumanitaria/Pedidos/Create': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Pedidos', route: 'ajuda-humanitaria.pedidos.index' },
+            { label: 'Novo', route: null }
+        ],
+        'AjudaHumanitaria/Pedidos/Show': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Pedidos', route: 'ajuda-humanitaria.pedidos.index' },
+            { label: 'Visualizar', route: null }
+        ],
+        'AjudaHumanitaria/Beneficiarios/BeneficiarioIndex': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Beneficiários', route: null }
+        ],
+        'AjudaHumanitaria/Beneficiarios/BeneficiarioShow': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Beneficiários', route: 'ajuda-humanitaria.beneficiarios.index' },
+            { label: 'Visualizar', route: null }
+        ],
+        'AjudaHumanitaria/Estoque/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Estoque', route: null }
+        ],
+        'AjudaHumanitaria/Parametros/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Parâmetros', route: null }
+        ],
+        'AjudaHumanitaria/Movimentos/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Movimentações', route: null }
+        ],
+        'AjudaHumanitaria/Materiais/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Materiais', route: null }
+        ],
+        'AjudaHumanitaria/Entradas/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Entradas', route: null }
+        ],
+        'AjudaHumanitaria/Entradas/Show': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Entradas', route: 'ajuda-humanitaria.entradas.index' },
+            { label: 'Visualizar', route: null }
+        ],
+        'AjudaHumanitaria/Liberacoes/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Liberações', route: null }
+        ],
+        'AjudaHumanitaria/Liberacoes/Show': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Liberações', route: 'ajuda-humanitaria.liberacoes.index' },
+            { label: 'Visualizar', route: null }
+        ],
+        'AjudaHumanitaria/Transferencias/Index': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Transferências', route: null }
+        ],
+        'AjudaHumanitaria/Transferencias/Show': [
+            { label: 'Início', route: 'dashboard' },
+            { label: 'Ajuda Humanitária', route: 'ajuda-humanitaria.dashboard' },
+            { label: 'Transferências', route: 'ajuda-humanitaria.transferencias.index' },
             { label: 'Visualizar', route: null }
         ],
 
@@ -152,11 +244,85 @@ export function useBreadcrumb() {
 
     const currentRoute = computed(() => page.component.value);
 
+    /**
+     * Trilha do modulo Cisterna.
+     *
+     * Fica fora do `breadcrumbMap` porque precisa das PROPS da pagina, e o mapa
+     * e estatico: a trilha da vistoria volta para a lista de vistorias DAQUELE
+     * beneficiario, e isso exige o id. Lida aqui dentro do computed, o valor
+     * acompanha a navegacao.
+     *
+     * Sem estas entradas o fallback assumia: rotulava o modulo como "Cisterna"
+     * no singular (vem do caminho do componente) e marcava `route: null` em
+     * todos os niveis -- ou seja, "Cisterna" e "Beneficiarios" pareciam link e
+     * nao levavam a lugar nenhum.
+     */
+    const trilhaCisterna = (componentName, props) => {
+        if (!componentName.startsWith('Cisterna/')) {
+            return null;
+        }
+
+        const inicio = { label: 'Início', route: 'dashboard' };
+        const lista = { label: 'Cisternas', route: 'cisternas.beneficiarios.index' };
+
+        const beneficiarioId = props?.beneficiario?.id ?? null;
+
+        const doBeneficiario = beneficiarioId === null
+            ? { label: 'Beneficiario', route: null }
+            : {
+                label: props.beneficiario.nome ?? 'Beneficiario',
+                route: 'cisternas.beneficiarios.show',
+                params: beneficiarioId,
+            };
+
+        const trilhas = {
+            // A propria lista: ela e o fim da trilha, entao nao vira link.
+            'Cisterna/Beneficiarios/Index': [inicio, { label: 'Cisternas', route: null }],
+            'Cisterna/Beneficiarios/Create': [inicio, lista, { label: 'Novo cadastro', route: null }],
+            // O nome, e nao "Visualizar": com os botoes de navegacao fora do
+            // header, a trilha passou a ser o caminho, e "Visualizar" nao diz
+            // QUAL cadastro esta aberto. Ultimo degrau nao vira link -- ele e a
+            // propria pagina.
+            'Cisterna/Beneficiarios/Show': [
+                inicio,
+                lista,
+                { label: props?.beneficiario?.nome ?? 'Visualizar', route: null },
+            ],
+            'Cisterna/Beneficiarios/Edit': [inicio, lista, doBeneficiario, { label: 'Edição', route: null }],
+
+            // Vistoria pertence a um beneficiario: a trilha passa por ele.
+            'Cisterna/Vistorias/Index': [inicio, lista, doBeneficiario, { label: 'Vistorias', route: null }],
+            'Cisterna/Vistorias/Show': [
+                inicio,
+                lista,
+                doBeneficiario,
+                beneficiarioId === null
+                    ? { label: 'Vistorias', route: null }
+                    : { label: 'Vistorias', route: 'cisternas.vistorias.index', params: beneficiarioId },
+                { label: 'Relatorio', route: null },
+            ],
+
+            'Cisterna/Comunidades/Index': [inicio, lista, { label: 'Comunidades', route: null }],
+            'Cisterna/Lotes/Index': [inicio, lista, { label: 'Lotes', route: null }],
+            'Cisterna/OrdensServico/Index': [inicio, lista, { label: 'Ordens de servico', route: null }],
+            'Cisterna/Notificacoes/Index': [inicio, lista, { label: 'Notificacoes', route: null }],
+            'Cisterna/QrCode/Ficha': [inicio, lista, { label: 'Ficha do QR Code', route: null }],
+        };
+
+        return trilhas[componentName] ?? null;
+    };
+
     const breadcrumbItems = computed(() => {
         const componentName = page.component?.value || page.component;
 
         if (!componentName) {
             return ['Início'];
+        }
+
+        const doCisterna = trilhaCisterna(componentName, page.props?.value ?? page.props);
+
+        if (doCisterna) {
+            return doCisterna;
         }
 
         if (breadcrumbMap[componentName]) {
@@ -175,27 +341,127 @@ export function useBreadcrumb() {
 
         const humanize = (segment) => segment.replace(/([A-Z])/g, ' $1').trim();
 
-        // A ultima parte costuma ser a acao (Index/Create/Edit/Show).
-        const last = segments[segments.length - 1];
-        const isAction = Object.prototype.hasOwnProperty.call(actionMap, last);
+        /**
+         * Nome de rota provavel para um nivel da trilha, ou null.
+         *
+         * Sem isto, TODO crumb intermediario nascia com `route: null` e so
+         * "Inicio" tinha destino. O efeito era duplo e visivel:
+         *
+         *  - o crumb do modulo nao era clicavel;
+         *  - o botao Voltar, que varre a trilha de tras para frente atras do
+         *    primeiro item com rota, pulava o modulo inteiro e caia no
+         *    dashboard. De /plantao/viaturas, "Voltar" ia para o Inicio em vez
+         *    de voltar para o Plantao.
+         *
+         * O nome do componente nao mapeia 1:1 para o da rota, entao aqui se
+         * TENTAM os formatos usados no projeto e fica o primeiro que existir de
+         * verdade -- `AjudaHumanitaria` -> `ajuda-humanitaria`, mas `PlanCon` ->
+         * `plancon`. Perguntar ao Ziggy e mais confiavel que adivinhar a regra.
+         */
+        const rotaDe = (...segmentos) => {
+            const partes = segmentos.filter(Boolean);
+
+            if (partes.length === 0) {
+                return null;
+            }
+
+            const kebab = (t) => t.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+            const plano = (t) => t.toLowerCase();
+
+            // Variacoes por segmento, combinadas em ordem de preferencia.
+            const candidatos = [
+                partes.map(kebab).join('.') + '.index',
+                partes.map(plano).join('.') + '.index',
+                partes.map(kebab).join('.'),
+                partes.map(plano).join('.'),
+            ];
+
+            for (const nome of candidatos) {
+                try {
+                    if (route().has(nome)) {
+                        return nome;
+                    }
+                } catch {
+                    // Ziggy indisponivel: trilha sem link e degradacao aceitavel,
+                    // quebrar a pagina inteira nao e.
+                    return null;
+                }
+            }
+
+            return null;
+        };
+
+        /**
+         * Separa recurso e acao do ultimo segmento.
+         *
+         * O projeto usa DOIS estilos de nome de pagina, e o gerador so conhecia
+         * um deles:
+         *
+         *   Tdap/Cronogramas/Index   acao como SEGMENTO proprio  (71 paginas)
+         *   Plantao/ViaturasIndex    acao como SUFIXO do recurso (33 paginas)
+         *
+         * Sem tratar o sufixo, o segundo estilo caia no humanize() e a trilha
+         * terminava em "Viaturas Index", "Escala Index", "Plantao Index" -- o
+         * nome interno do arquivo vazando para o usuario final.
+         */
+        const separarAcao = (segmento) => {
+            if (Object.prototype.hasOwnProperty.call(actionMap, segmento)) {
+                return { recurso: null, acao: segmento };
+            }
+
+            for (const acao of Object.keys(actionMap)) {
+                // `length >` e nao `>=`: o segmento tem que sobrar alguma coisa
+                // depois de tirar a acao, senao "Index" viraria recurso vazio.
+                if (segmento.length > acao.length && segmento.endsWith(acao)) {
+                    return { recurso: segmento.slice(0, -acao.length), acao };
+                }
+            }
+
+            return { recurso: segmento, acao: null };
+        };
+
+        const { recurso: recursoFinal, acao } = separarAcao(segments[segments.length - 1]);
 
         // Modulo (primeiro segmento): ex. Tdap
         if (segments[0]) {
-            items.push({ label: humanize(segments[0]), route: null });
+            items.push({ label: humanize(segments[0]), route: rotaDe(segments[0]) });
         }
 
-        // Recursos intermediarios (entre modulo e acao): ex. Cronogramas, Prestadores
-        const middleEnd = isAction ? segments.length - 1 : segments.length;
-        for (let i = 1; i < middleEnd; i++) {
-            items.push({ label: humanize(segments[i]), route: null });
+        // Recursos intermediarios (entre modulo e acao): ex. Cronogramas
+        for (let i = 1; i < segments.length - 1; i++) {
+            items.push({
+                label: humanize(segments[i]),
+                route: rotaDe(segments[0], segments[i]),
+            });
+        }
+
+        // Recurso do ultimo segmento, quando sobra algo depois de tirar a acao.
+        // Sem rota: e a pagina em que o usuario ja esta.
+        if (recursoFinal && segments.length > 1) {
+            items.push({ label: humanize(recursoFinal), route: null });
         }
 
         // Acao final (so quando mapeia para um rotulo nao nulo)
-        if (isAction && actionMap[last]) {
-            items.push({ label: actionMap[last], route: null });
+        if (acao && actionMap[acao]) {
+            items.push({ label: actionMap[acao], route: null });
         }
 
-        return items;
+        // Colapsa repeticao consecutiva: `Plantao/PlantaoIndex` produzia
+        // "Plantao > Plantao", porque modulo e recurso tem o mesmo nome. E o
+        // caso de toda pagina raiz de modulo neste projeto.
+        const trilha = items.filter(
+            (item, i) => i === 0 || item.label !== items[i - 1].label
+        );
+
+        // O ultimo crumb e a pagina atual: nunca vira link, e o Voltar tem que
+        // pular ele. `handleBack` ja comeca em length - 2, mas zerar aqui evita
+        // que o colapso de duplicados deixe um item com rota na ponta -- caso de
+        // `Plantao/PlantaoIndex`, onde modulo e recurso colapsam num crumb so.
+        if (trilha.length > 1) {
+            trilha[trilha.length - 1] = { ...trilha[trilha.length - 1], route: null };
+        }
+
+        return trilha;
     });
 
     // Navega para o item anterior do proprio breadcrumb (deterministico) em vez

@@ -179,8 +179,10 @@ chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 # Container unico no App Service: worker roda junto do Octane. O subshell herda
 # o "set -e"; o "set +e" abaixo garante que um crash do queue:work nao mate o
 # loop de restart. A lista de filas cobre TODAS as filas da aplicacao
-# (RequestPriority: critical/high/default/low + webhooks inbound +
-# high-throughput legada) em ordem de prioridade — fila fora da lista vira
+# (RequestPriority: critical/high/default/low + webhooks inbound) em ordem de
+# prioridade. `high-throughput` saiu: o nome so existe em config/api.php
+# ('queue.high_throughput'), que ninguem le, e nenhum dispatch aponta para ela --
+# era um BRPOP vazio por ciclo antes de chegar em webhooks/default — fila fora da lista vira
 # job orfao que nunca e consumido.
 #
 # START_EMBEDDED_QUEUE (default true): no Azure (container unico) o worker
@@ -192,7 +194,7 @@ if [ "${START_EMBEDDED_QUEUE:-true}" = "true" ]; then
     (
         set +e
         while true; do
-            php artisan queue:work --queue=critical,high,high-throughput,webhooks,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
+            php artisan queue:work --queue=critical,high,webhooks,default,low --tries=3 --timeout=90 --sleep=3 --max-time=3600 2>&1
             echo "[queue:work] worker saiu (codigo $?); reiniciando em 2s..."
             sleep 2
         done
@@ -252,7 +254,7 @@ echo "vCores=$(nproc 2>/dev/null || echo '?'); workers=${WORKERS}; task-workers=
 # com supervisord) entram em EXTERNAL_DB_CONSUMERS -- somado UMA vez, nao por
 # instancia. O teto e o max_connections do Postgres, COMPARTILHADO por todos.
 # Conta:
-#   (WORKERS + TASK_WORKERS + QUEUE_WORKERS) * APP_INSTANCES
+#   (WORKERS * CONN_POR_WORKER + TASK_WORKERS + QUEUE_WORKERS) * APP_INSTANCES
 #       + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE  <= PG_MAX_CONNECTIONS
 # Descubra o real: psql -c 'SHOW max_connections;'  (dev = 100)
 #   az postgres flexible-server parameter show -g <rg> -s <srv> -n max_connections
@@ -272,8 +274,27 @@ require_uint QUEUE_WORKERS "$QUEUE_WORKERS"
 require_uint APP_INSTANCES "$APP_INSTANCES"
 require_uint EXTERNAL_DB_CONSUMERS "$EXTERNAL_DB_CONSUMERS"
 require_uint PG_ADMIN_RESERVE "$PG_ADMIN_RESERVE"
-CONN_PER_INSTANCE=$((WORKERS + TASK_WORKERS + QUEUE_WORKERS))
+# Conexoes por worker HTTP: 1 sob hooks OFF (PDO quente por worker), mas ate
+# SWOOLE_PG_POOL_SIZE sob hooks ON -- o CoroutineDatabaseManager da uma conexao
+# POR COROUTINE, emprestada de um pool que existe POR WORKER. Sem este fator o
+# guardrail projetava 63 quando o teto real era 640 (40 workers x pool 16), e
+# ligar OCTANE_HOOK_FLAGS_ENABLED estourava o max_connections silenciosamente --
+# a falha aparecia como "too many connections" no meio de um request, nao no boot.
+#
+# Referencia: questao aberta 7.1 de docs/superpowers/specs/2026-06-15-swoole-pdopool-consumo-design.md
+#   pool_size x workers x instancias <= max_connections - reserva
+if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
+    PG_POOL_SIZE="${SWOOLE_PG_POOL_SIZE:-16}"
+    require_uint SWOOLE_PG_POOL_SIZE "$PG_POOL_SIZE"
+    CONN_POR_WORKER="$PG_POOL_SIZE"
+    MODO_CONN="hooks ON: ${PG_POOL_SIZE} conexoes/worker (pool por-coroutine)"
+else
+    CONN_POR_WORKER=1
+    MODO_CONN="hooks OFF: 1 conexao/worker"
+fi
+CONN_PER_INSTANCE=$(((WORKERS * CONN_POR_WORKER) + TASK_WORKERS + QUEUE_WORKERS))
 CONN_PROJECTED=$((CONN_PER_INSTANCE * APP_INSTANCES + EXTERNAL_DB_CONSUMERS + PG_ADMIN_RESERVE))
+echo "Modo de conexao: ${MODO_CONN}"
 echo "Conexoes PG projetadas: ${CONN_PER_INSTANCE}/inst x ${APP_INSTANCES} + ${EXTERNAL_DB_CONSUMERS} externas + ${PG_ADMIN_RESERVE} reserva = ${CONN_PROJECTED}"
 if [ -n "${PG_MAX_CONNECTIONS:-}" ]; then
     require_uint PG_MAX_CONNECTIONS "$PG_MAX_CONNECTIONS"
@@ -281,6 +302,11 @@ if [ -n "${PG_MAX_CONNECTIONS:-}" ]; then
         echo "FATAL: conexoes projetadas (${CONN_PROJECTED}) excedem PG_MAX_CONNECTIONS (${PG_MAX_CONNECTIONS})."
         echo "       Reduza OCTANE_WORKERS / OCTANE_WORKER_MULTIPLIER / OCTANE_TASK_WORKERS,"
         echo "       diminua APP_INSTANCES/EXTERNAL_DB_CONSUMERS, ou suba o tier do Postgres. Abortando boot."
+        if [ "${OCTANE_HOOK_FLAGS_ENABLED:-false}" = "true" ]; then
+            echo "       Sob hooks ON a alavanca mais barata e SWOOLE_PG_POOL_SIZE (hoje ${CONN_POR_WORKER}):"
+            echo "       o orcamento e pool_size x workers <= ${PG_MAX_CONNECTIONS} - ${EXTERNAL_DB_CONSUMERS} - ${PG_ADMIN_RESERVE} - ${TASK_WORKERS}."
+            echo "       Alternativa: OCTANE_HOOK_FLAGS_ENABLED=false volta a 1 conexao/worker."
+        fi
         exit 1
     fi
     echo "OK: dentro do teto de ${PG_MAX_CONNECTIONS} conexoes do Postgres."

@@ -25,6 +25,9 @@ class ProductionSeeder extends Seeder
         // Dados de referência: municípios de Minas Gerais (idempotente)
         $this->call(MunicipiosMGSeeder::class);
 
+        // Dados de referência: tabela oficial do COBRADE (idempotente)
+        $this->call(CobradeSeeder::class);
+
         // Verificar se o admin já existe (por email ou CPF)
         $adminExists = User::where('email', 'admin@defesa.mg.gov.br')
             ->orWhere('cpf', '12345678900')

@@ -32,18 +32,33 @@ class CronoCaminhaoController extends Controller
         }
     }
 
+    /**
+     * cronograma_id/caminhao_id nao vem do payload -- eles sao a chave da
+     * alocacao e o UpdateCronoCaminhaoRequest nem os valida
+     * (`includeVinculo() === false`). Sao tomados do proprio model.
+     *
+     * O resto sai de `validated()`, e nao de `input()`: lendo o request cru os
+     * limites do Request (min/max de agua_prevista e num_viagens) eram
+     * validados e depois ignorados.
+     */
     public function update(UpdateCronoCaminhaoRequest $request, CronoCaminhao $cronoCaminhao): RedirectResponse
     {
+        $dados = $request->validated();
+
         $dto = new CronoCaminhaoDTO(
             cronograma_id: $cronoCaminhao->cronograma_id,
             caminhao_id:   $cronoCaminhao->caminhao_id,
-            comunidade_id: $request->input('comunidade_id') !== '' && $request->input('comunidade_id') !== null ? (int) $request->input('comunidade_id') : null,
-            agua_prevista: (float) $request->input('agua_prevista', 0),
-            num_viagens:   (int) $request->input('num_viagens', 0),
-            ordem:         (int) $request->input('ordem', 0),
+            comunidade_id: isset($dados['comunidade_id']) && $dados['comunidade_id'] !== '' ? (int) $dados['comunidade_id'] : null,
+            agua_prevista: (float) ($dados['agua_prevista'] ?? 0),
+            num_viagens:   (int) ($dados['num_viagens'] ?? 0),
+            ordem:         (int) ($dados['ordem'] ?? 0),
         );
 
-        $this->service->atualizar($cronoCaminhao->id, $dto);
+        try {
+            $this->service->atualizar($cronoCaminhao->id, $dto);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect()
             ->route('tdap.cronogramas.show', $cronoCaminhao->cronograma_id)

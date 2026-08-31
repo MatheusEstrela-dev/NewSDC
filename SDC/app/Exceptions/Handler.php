@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Request;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Session\TokenMismatchException;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -317,6 +318,24 @@ class Handler extends ExceptionHandler
                 'title' => 'Não encontrado',
                 'message' => 'O recurso solicitado não foi encontrado.',
             ])->toResponse($request)->setStatusCode(404);
+        }
+
+        if ($e instanceof ThrottleRequestsException || ($e instanceof HttpException && $e->getStatusCode() === 429)) {
+            // Mesma politica do 404 acima: visitante NAO recebe o shell Inertia.
+            // Ele cai em resources/views/errors/429.blade.php (Blade puro, sem
+            // branding e sem navegacao), que o parent resolve sozinho. Esse e o
+            // caminho do login e do cadastro do Portal de Treinamentos.
+            if (! $request->user()) {
+                return parent::render($request, $e);
+            }
+
+            Inertia::share($this->getInertiaSharedData($request));
+
+            return Inertia::render('Errors/TooManyRequests', [
+                'title' => 'Muitas tentativas',
+                'message' => 'Recebemos várias solicitações em pouco tempo e pausamos o acesso por segurança. Aguarde um instante e tente novamente.',
+                'retryAfter' => (int) ($e->getHeaders()['Retry-After'] ?? 0),
+            ])->toResponse($request)->setStatusCode(429);
         }
 
         return parent::render($request, $e);

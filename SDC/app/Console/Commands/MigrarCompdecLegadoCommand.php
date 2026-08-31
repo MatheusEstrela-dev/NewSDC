@@ -8,6 +8,7 @@ use App\Modules\Compdec\Services\AnexoService;
 use App\Modules\Compdec\Services\EquipeService;
 use App\Modules\Compdec\Services\OrgaoService;
 use App\Modules\Compdec\Services\PlanoContingenciaService;
+use App\Modules\Compdec\Services\VinculoUsuarioService;
 use App\Modules\Compdec\Services\PrefeituraService;
 use App\Modules\Compdec\Support\MigracaoReport;
 use Illuminate\Console\Command;
@@ -27,7 +28,7 @@ class MigrarCompdecLegadoCommand extends Command
 {
     protected $signature = 'compdec:migrar-legado
                             {--dry-run : Simula sem persistir}
-                            {--only= : Recursos a migrar (csv): orgaos,prefeituras,equipes,anexos,planos}
+                            {--only= : Recursos a migrar (csv): orgaos,prefeituras,equipes,anexos,planos,usuarios}
                             {--municipio= : Migra apenas o municipio_id especificado (futuro)}
                             {--chunk=100 : Tamanho do chunk de leitura}
                             {--continue-on-error : Continua mesmo apos erros}';
@@ -35,7 +36,7 @@ class MigrarCompdecLegadoCommand extends Command
     protected $description = 'Migra dados do banco legado (com_comdec, cedec_prefeitura, etc.) para o schema novo do modulo COMPDEC.';
 
     /** @var array<int, string> */
-    private const RECURSOS_DISPONIVEIS = ['orgaos', 'prefeituras', 'equipes', 'anexos', 'planos'];
+    private const RECURSOS_DISPONIVEIS = ['orgaos', 'prefeituras', 'equipes', 'anexos', 'planos', 'usuarios'];
 
     /** @var array<int, string> */
     private const RECURSOS_FUTUROS = [];
@@ -46,6 +47,7 @@ class MigrarCompdecLegadoCommand extends Command
         private readonly EquipeService $equipeService,
         private readonly AnexoService $anexoService,
         private readonly PlanoContingenciaService $planoService,
+        private readonly VinculoUsuarioService $vinculoUsuarioService,
     ) {
         parent::__construct();
     }
@@ -145,6 +147,9 @@ class MigrarCompdecLegadoCommand extends Command
             'equipes' => $this->equipeService->migrarLegado($chunk, $dryRun),
             'anexos' => $this->anexoService->migrarLegado($chunk, $dryRun),
             'planos' => $this->planoService->migrarLegado($chunk, $dryRun),
+            // Nao le o banco legado: deriva o vinculo da convencao de nome
+            // do usuario. Depende de 'orgaos' ja ter rodado.
+            'usuarios' => $this->vinculoUsuarioService->vincularPorConvencaoDeNome($dryRun),
             default => throw new \InvalidArgumentException("Recurso desconhecido: {$recurso}"),
         };
     }

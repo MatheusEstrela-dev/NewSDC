@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Resources;
 
-use App\Modules\Decretacoes\Enums\Redec;
+use App\Modules\Decretacoes\Services\RedecService;
 use App\Modules\Decretacoes\Support\Vigencia;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -44,7 +44,7 @@ class ProcessoResource extends JsonResource
             'protocolo_fide' => $this->safeGet('n_protocolo_fide'),
             'decreto_municipal' => $this->safeGet('decreto_municipal'),
             'redec_id' => $this->safeGetInt('redec_id'),
-            'redec_label' => Redec::labelFor($this->safeGet('redec_id')),
+            'redec_label' => RedecService::labelFor($this->safeGet('redec_id')),
             'municipio_id' => $this->getFirstMunicipioId(), // Primeiro municipio para edicao
 
             // Datas - formatadas para API (ISO) e para exibicao (BR)

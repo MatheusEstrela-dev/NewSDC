@@ -14,6 +14,7 @@
       <div v-if="Number(activeTab) === 1">
         <RatDadosGeraisForm
           :rat="null"
+          :cobrades="cobrades"
           :view-only="false"
           @save="(data) => salvarComAnexos(data, 'Dados Gerais salvo com sucesso!').then(() => unlockAndAdvanceTab(1)).catch(() => {})"
           @finalize="finalizarRat"
@@ -102,6 +103,11 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import '../../../css/pages/rat/rat.css';
 
 defineOptions({ layout: AuthenticatedLayout });
+
+// Tabela oficial do COBRADE, enviada por RatUnifiedController::create().
+defineProps({
+  cobrades: { type: Array, default: () => [] },
+});
 
 // RAT reativo: começa vazio, atualizado após o primeiro save com id e numero_bos
 const ratData = reactive({ id: null, protocolo: null, numero_bos: null, status: 'rascunho' });

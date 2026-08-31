@@ -16,6 +16,7 @@ return [
         'operator' => 4,
         'viewer' => 5,
         'user' => 6,
+        'citizen' => 7,
     ],
 
     /*
@@ -57,6 +58,11 @@ return [
         'user' => [
             'name' => 'Usuario',
             'description' => 'Usuario padrao do sistema',
+            'is_active' => true,
+        ],
+        'citizen' => [
+            'name' => 'Cidadao',
+            'description' => 'Cargo de menor hierarquia para governanca de dados do cidadao externo - acesso somente leitura ao catalogo publico de Treinamento',
             'is_active' => true,
         ],
     ],
@@ -182,6 +188,10 @@ return [
                 'materiais' => 'humanitaria.materiais.manage',
                 'parametros' => 'humanitaria.parametros.manage',
                 'saldo' => 'humanitaria.saldo.view',
+                // Escrita no ledger: entrada, transferencia e liberacao de
+                // material. Separado de saldo.view de proposito, porque ler o
+                // estoque e mexer nele sao atos diferentes para a auditoria.
+                'movimentar' => 'humanitaria.estoque.movimentar',
             ],
         ],
         'TDAP' => [
@@ -328,6 +338,42 @@ return [
                 'delete' => 'plantao.turnos.delete',
                 'export' => 'plantao.turnos.export',
             ],
+            'Viaturas' => [
+                'view' => 'plantao.viaturas.view',
+                'create' => 'plantao.viaturas.create',
+                'edit' => 'plantao.viaturas.edit',
+                'delete' => 'plantao.viaturas.delete',
+                // Registrar saida/retorno de viatura e o ato mais frequente do
+                // plantao. Slug proprio, mais estreito que `edit` (que tambem
+                // altera o cadastro da viatura) - assim um perfil que so opera
+                // o plantao nao precisa de `edit` so para movimentar.
+                'movimentar' => 'plantao.viaturas.movimentar',
+            ],
+            'Escala' => [
+                'view' => 'plantao.escala.view',
+                'create' => 'plantao.escala.create',
+                'edit' => 'plantao.escala.edit',
+                // Publicar e o ato que notifica todo mundo e transforma o
+                // rascunho em compromisso. Slug proprio, mais estreito que
+                // `edit`: quem monta o mes nao necessariamente e quem responde
+                // por divulga-lo.
+                'publicar' => 'plantao.escala.publicar',
+            ],
+            'Plantonistas' => [
+                // Define QUEM pode ser escalado. Administrativo, nao
+                // operacional -- fica fora do perfil que so trabalha no plantao.
+                'manage' => 'plantao.plantonistas.manage',
+            ],
+            'Passagem' => [
+                'encerrar' => 'plantao.passagem.encerrar',
+                // So o dono do turno encerra por padrao. Este slug e a excecao:
+                // permite encerrar o turno de outra pessoa (spec 4.3 - handshake
+                // que travaria se quem saiu nunca encerrasse). Restrito a
+                // supervisao/administracao, nao ao plantonista comum.
+                'encerrar_alheio' => 'plantao.passagem.encerrar_alheio',
+                'aceitar' => 'plantao.passagem.aceitar',
+                'relatorio' => 'plantao.passagem.relatorio',
+            ],
         ],
         'BI' => [
             'Dashboards' => [
@@ -386,21 +432,62 @@ return [
                 'desvincular' => 'compdec.usuarios.desvincular',
             ],
         ],
+        // Painel estadual de cobertura + envio do plano pelo proprio municipio.
+        // O dado vive em compdec_planos_contingencia; a gestao completa
+        // (versoes, aprovacao) fica em COMPDEC > Planos.
         'PLANCON' => [
             'Planos' => [
                 'view'     => 'plancon.view',
                 'upload'   => 'plancon.upload',
                 'download' => 'plancon.download',
-                'delete'   => 'plancon.delete',
             ],
         ],
         'CISTERNAS' => [
-            'Cisternas' => [
-                'view'   => 'cisternas.view',
-                'create' => 'cisternas.create',
-                'edit'   => 'cisternas.edit',
-                'delete' => 'cisternas.delete',
-                'export' => 'cisternas.export',
+            'Beneficiarios' => [
+                'view'   => 'cisternas.beneficiarios.view',
+                'create' => 'cisternas.beneficiarios.create',
+                'edit'   => 'cisternas.beneficiarios.edit',
+                'delete' => 'cisternas.beneficiarios.delete',
+                'export' => 'cisternas.beneficiarios.export',
+                // `history` e `print` sao acoes do TableActions, e o ActionButton
+                // monta o slug {module}.{resource}.{action} e consulta can().
+                // Sem declarar aqui, o icone SO aparecia para super-admin (que
+                // faz bypass) e ficava invisivel para Gestor, Analista e o
+                // fornecedor -- mesmo defeito que `validar` teve nas
+                // notificacoes.
+                'history' => 'cisternas.beneficiarios.history',
+                'print' => 'cisternas.beneficiarios.print',
+            ],
+            'Vistorias' => [
+                'view'   => 'cisternas.vistorias.view',
+                'create' => 'cisternas.vistorias.create',
+                'edit'   => 'cisternas.vistorias.edit',
+                'delete' => 'cisternas.vistorias.delete',
+            ],
+            'Comunidades' => [
+                'view'   => 'cisternas.comunidades.view',
+                'create' => 'cisternas.comunidades.create',
+                'edit'   => 'cisternas.comunidades.edit',
+                'delete' => 'cisternas.comunidades.delete',
+            ],
+            'Lotes' => [
+                'view'   => 'cisternas.lotes.view',
+                'create' => 'cisternas.lotes.create',
+                'edit'   => 'cisternas.lotes.edit',
+                'delete' => 'cisternas.lotes.delete',
+            ],
+            'OrdensServico' => [
+                'view'    => 'cisternas.ordens-servico.view',
+                'create'  => 'cisternas.ordens-servico.create',
+                'edit'    => 'cisternas.ordens-servico.edit',
+                'delete'  => 'cisternas.ordens-servico.delete',
+                'history' => 'cisternas.ordens-servico.history',
+            ],
+            'Notificacoes' => [
+                'view'   => 'cisternas.notificacoes.view',
+                'create' => 'cisternas.notificacoes.create',
+                'edit'   => 'cisternas.notificacoes.edit',
+                'delete' => 'cisternas.notificacoes.delete',
             ],
         ],
         'INVENTARIO' => [
@@ -546,6 +633,7 @@ return [
             'humanitaria.materiais.manage',
             'humanitaria.parametros.manage',
             'humanitaria.saldo.view',
+            'humanitaria.estoque.movimentar',
             // TDAP - gestao completa (sem delete)
             'tdap.dashboard.view',
             'tdap.prestadores.view',
@@ -596,6 +684,22 @@ return [
             'plantao.turnos.create',
             'plantao.turnos.edit',
             'plantao.turnos.export',
+            'plantao.viaturas.view',
+            'plantao.viaturas.create',
+            'plantao.viaturas.edit',
+            'plantao.viaturas.movimentar',
+            'plantao.passagem.encerrar',
+            // Manager e o perfil de supervisao do modulo (Gestor de area, "pode
+            // aprovar e gerenciar modulos"): unico alem do admin que encerra
+            // turno alheio para nao travar o handshake da secao 4.3.
+            'plantao.passagem.encerrar_alheio',
+            'plantao.passagem.aceitar',
+            'plantao.passagem.relatorio',
+            'plantao.escala.view',
+            'plantao.escala.create',
+            'plantao.escala.edit',
+            'plantao.escala.publicar',
+            'plantao.plantonistas.manage',
             // BI
             'bi.dashboards.view',
             'bi.reports.export',
@@ -605,11 +709,29 @@ return [
             'webhooks.send',
             'webhooks.logs.view',
             // Cisternas - gestao sem delete
-            'cisternas.view',
-            'cisternas.create',
-            'cisternas.edit',
-            'cisternas.export',
-            // PlanCon - upload e download de planos, sem delete
+            'cisternas.beneficiarios.view',
+            'cisternas.beneficiarios.history',
+            'cisternas.beneficiarios.print',
+            'cisternas.beneficiarios.create',
+            'cisternas.beneficiarios.edit',
+            'cisternas.beneficiarios.export',
+            'cisternas.vistorias.view',
+            'cisternas.vistorias.create',
+            'cisternas.vistorias.edit',
+            'cisternas.comunidades.view',
+            'cisternas.comunidades.create',
+            'cisternas.comunidades.edit',
+            'cisternas.lotes.view',
+            'cisternas.lotes.create',
+            'cisternas.lotes.edit',
+            'cisternas.ordens-servico.view',
+            'cisternas.ordens-servico.create',
+            'cisternas.ordens-servico.edit',
+            'cisternas.ordens-servico.history',
+            'cisternas.notificacoes.view',
+            'cisternas.notificacoes.create',
+            'cisternas.notificacoes.edit',
+            // PlanCon - painel de cobertura + envio do plano do municipio
             'plancon.view',
             'plancon.upload',
             'plancon.download',
@@ -748,6 +870,16 @@ return [
             'plantao.turnos.view',
             'plantao.turnos.create',
             'plantao.turnos.edit',
+            'plantao.viaturas.view',
+            'plantao.viaturas.create',
+            'plantao.viaturas.edit',
+            'plantao.viaturas.movimentar',
+            'plantao.passagem.encerrar',
+            'plantao.passagem.aceitar',
+            'plantao.passagem.relatorio',
+            'plantao.escala.view',
+            'plantao.escala.create',
+            'plantao.escala.edit',
             // BI
             'bi.dashboards.view',
             'bi.reports.export',
@@ -755,9 +887,18 @@ return [
             'integrations.view',
             'webhooks.logs.view',
             // Cisternas - view/create/edit
-            'cisternas.view',
-            'cisternas.create',
-            'cisternas.edit',
+            'cisternas.beneficiarios.view',
+            'cisternas.beneficiarios.history',
+            'cisternas.beneficiarios.print',
+            'cisternas.beneficiarios.create',
+            'cisternas.beneficiarios.edit',
+            'cisternas.vistorias.view',
+            'cisternas.vistorias.create',
+            'cisternas.vistorias.edit',
+            'cisternas.comunidades.view',
+            'cisternas.lotes.view',
+            'cisternas.ordens-servico.view',
+            'cisternas.notificacoes.view',
             // COMPDEC - sem delete e sem aprovar
             'compdec.orgaos.view',
             'compdec.orgaos.create',
@@ -847,11 +988,20 @@ return [
             // Plantao - view, create
             'plantao.turnos.view',
             'plantao.turnos.create',
+            'plantao.viaturas.view',
+            'plantao.viaturas.create',
+            'plantao.passagem.relatorio',
+            'plantao.escala.view',
             // BI - view
             'bi.dashboards.view',
             // Cisternas - view/create
-            'cisternas.view',
-            'cisternas.create',
+            'cisternas.beneficiarios.view',
+            'cisternas.beneficiarios.history',
+            'cisternas.beneficiarios.print',
+            'cisternas.beneficiarios.create',
+            'cisternas.vistorias.view',
+            'cisternas.vistorias.create',
+            'cisternas.comunidades.view',
             // COMPDEC - leitura + downloads
             'compdec.orgaos.view',
             'compdec.prefeitura.view',
@@ -902,8 +1052,15 @@ return [
             'treinamento.cursos.view',
             'treinamento.inscricoes.view',
             'plantao.turnos.view',
+            'plantao.viaturas.view',
+            'plantao.passagem.relatorio',
+            'plantao.escala.view',
             'bi.dashboards.view',
-            'cisternas.view',
+            'cisternas.beneficiarios.view',
+            'cisternas.beneficiarios.history',
+            'cisternas.beneficiarios.print',
+            'cisternas.vistorias.view',
+            'cisternas.comunidades.view',
             // COMPDEC - somente leitura
             'compdec.orgaos.view',
             'compdec.prefeitura.view',
@@ -927,6 +1084,9 @@ return [
             'demandas.chamados.create',
             'treinamento.cursos.view',
             'plantao.turnos.view',
+            'plantao.viaturas.view',
+            'plantao.passagem.relatorio',
+            'plantao.escala.view',
             // COMPDEC - apenas listagem de orgaos
             'compdec.orgaos.view',
             // Inventario - acesso inicial ao modulo
@@ -937,6 +1097,11 @@ return [
             'estoque.lotes.view',
             'estoque.kits.view',
             'estoque.movimentacoes.view',
+        ],
+        'citizen' => [
+            // Cargo de governanca de dados - somente leitura do catalogo publico.
+            // Nao concede acesso a nenhum outro modulo interno.
+            'treinamento.cursos.view',
         ],
     ],
 

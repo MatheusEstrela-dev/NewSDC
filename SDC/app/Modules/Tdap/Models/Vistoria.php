@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property float           $capacidade
  * @property ParecerVistoria $parecer
  * @property ?string         $ficha
+ * @property ?string         $lacre
  * @property ?int            $user_id
  * @property ?string         $observacoes
  */
@@ -34,7 +35,9 @@ class Vistoria extends Model
     protected $table = 'tdap_vistorias';
 
     /**
-     * 27 itens estruturais.
+     * 28 itens estruturais do checklist. (O docblock dizia 27; a lista sempre
+     * teve 28 — o front monta a ficha a partir desta constante, entao o numero
+     * errado so enganava quem lia o codigo.)
      *
      * @var array<int, string>
      */
@@ -82,10 +85,30 @@ class Vistoria extends Model
 
     /* Computed */
 
+    /**
+     * Vigencia em DIAS, nao em instantes.
+     *
+     * `data` e coluna DATE (meia-noite) e `now()` traz a hora corrente: a
+     * comparacao antiga dava FALSE para a vistoria feita exatamente 12 meses
+     * atras, enquanto scopeVigente() -- que usa whereDate -- a considerava
+     * vigente. O accessor e o scope divergiam por um dia, e era o scope que o
+     * guard de ativacao do cronograma usava.
+     */
     public function getEstaVigenteAttribute(): bool
     {
-        return $this->parecer === ParecerVistoria::Aprovada
-            && $this->data?->gte(now()->subMonths(self::VIGENCIA_MESES));
+        if ($this->parecer !== ParecerVistoria::Aprovada || $this->data === null) {
+            return false;
+        }
+
+        return $this->data->startOfDay()->gte(
+            now()->subMonths(self::VIGENCIA_MESES)->startOfDay(),
+        );
+    }
+
+    /** Ultimo dia de validade da vistoria; null quando nao ha data. */
+    public function getValidoAteAttribute(): ?\Carbon\Carbon
+    {
+        return $this->data?->copy()->addMonths(self::VIGENCIA_MESES);
     }
 
     /* Scopes */
@@ -121,7 +144,10 @@ class Vistoria extends Model
             $q->whereRaw('UPPER(nome) LIKE ?', [$like])
               ->orWhereRaw('UPPER(edital) LIKE ?', [$like])
               ->orWhereRaw('UPPER(lote) LIKE ?', [$like])
-              ->orWhereRaw('UPPER(ficha) LIKE ?', [$like]);
+              ->orWhereRaw('UPPER(ficha) LIKE ?', [$like])
+              // O numero do lacre e outro identificador que o fiscal tem em
+              // maos na conferencia do caminhao.
+              ->orWhereRaw('UPPER(lacre) LIKE ?', [$like]);
         });
     }
 }

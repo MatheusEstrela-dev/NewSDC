@@ -43,6 +43,7 @@
 
     <TdapPrestadoresFiltersSection
       v-model:filters="activeFilters"
+      :ufs="ufs"
       @apply="aplicarFiltros"
       @clear="limparFiltros"
     />
@@ -88,7 +89,9 @@
                 >
                   {{ prestador.nome }}
                 </Link>
-                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ prestador.email }}</p>
+                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                  {{ prestador.email }}<span v-if="prestador.tel1_formatado"> · {{ prestador.tel1_formatado }}</span>
+                </p>
               </td>
               <td class="whitespace-nowrap px-4 py-4 text-slate-600 dark:text-slate-300">
                 <span v-if="prestador.cidade || prestador.uf">
@@ -123,6 +126,21 @@
                     size="sm"
                     tooltip-text="Editar prestador"
                     @click="router.visit(route('tdap.prestadores.edit', prestador.id))"
+                  />
+                  <!-- `canDelete` chegava como prop e nunca era usado: nao havia
+                       como excluir pela grade. Caminhao vinculado bloqueia
+                       (guard real no PrestadorService). -->
+                  <ActionButton
+                    action="delete"
+                    module="tdap"
+                    resource="prestadores"
+                    :allowed="canDelete && prestador.caminhoes_count === 0"
+                    :show-label="false"
+                    size="sm"
+                    :tooltip-text="prestador.caminhoes_count > 0
+                      ? 'Remova os caminhões vinculados antes de excluir'
+                      : 'Excluir prestador'"
+                    @click="excluir(prestador)"
                   />
                 </div>
               </td>
@@ -172,25 +190,36 @@ const props = defineProps({
   prestadores:  { type: Object, default: () => ({ data: [], meta: {} }) },
   estatisticas: { type: Object, default: () => ({ total: 0, ativos: 0, inativos: 0 }) },
   filtros:      { type: Object, default: () => ({}) },
+  ufs:          { type: Array,  default: () => [] },
   canCreate:    { type: Boolean, default: false },
   canEdit:      { type: Boolean, default: false },
   canDelete:    { type: Boolean, default: false },
 });
 
-const activeFilters = ref({
-  search: props.filtros.search ?? '',
-  ativo: props.filtros.ativo ?? '',
-});
+const FILTROS_VAZIOS = { search: '', ativo: '', uf: '' };
+
+const activeFilters = ref({ ...FILTROS_VAZIOS, ...props.filtros });
+
+/**
+ * Query string a partir dos filtros: chave vazia sai fora para a URL nao
+ * carregar `?ativo=&uf=`, que a listagem trataria como filtro presente.
+ */
+function queryDeFiltros(filters) {
+  return {
+    search: filters.search || undefined,
+    ativo:  filters.ativo !== '' && filters.ativo !== null && filters.ativo !== undefined ? filters.ativo : undefined,
+    uf:     filters.uf || undefined,
+  };
+}
 
 function aplicarFiltros(filters = activeFilters.value) {
-  router.get(route('tdap.prestadores.index'), {
-    search: filters.search || undefined,
-    ativo:  filters.ativo !== '' ? filters.ativo : undefined,
-  }, { preserveState: true, replace: true });
+  router.get(route('tdap.prestadores.index'), queryDeFiltros(filters), { preserveState: true, replace: true });
 }
 
 function limparFiltros() {
-  activeFilters.value = {};
+  // Reatribuir `{}` deixava o objeto sem as chaves e o FilterSection perdia a
+  // referencia dos campos; o certo e voltar aos valores vazios conhecidos.
+  activeFilters.value = { ...FILTROS_VAZIOS };
   router.get(route('tdap.prestadores.index'), {}, { preserveState: true, replace: true });
 }
 
@@ -198,12 +227,21 @@ function limparFiltros() {
 const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.prestadores.export');
 
 function onExport(params) {
-  handleExport(params, {
-    search: activeFilters.value.search || undefined,
-    ativo:  activeFilters.value.ativo !== '' ? activeFilters.value.ativo : undefined,
-  });
+  handleExport(params, queryDeFiltros(activeFilters.value));
 }
+
 function irParaPagina(page) {
-  router.get(route('tdap.prestadores.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
+  router.get(
+    route('tdap.prestadores.index'),
+    { ...queryDeFiltros(activeFilters.value), page },
+    { preserveState: true, replace: true },
+  );
+}
+
+function excluir(prestador) {
+  if (prestador.caminhoes_count > 0) return;
+  if (!confirm(`Excluir o prestador ${prestador.nome}? Esta ação não pode ser desfeita.`)) return;
+
+  router.delete(route('tdap.prestadores.destroy', prestador.id), { preserveScroll: true });
 }
 </script>

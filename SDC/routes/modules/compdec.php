@@ -25,10 +25,24 @@ use Illuminate\Support\Facades\Route;
 | em PRs subsequentes.
 */
 
+/*
+| Route::model() e GLOBAL: vale para o nome do parametro em TODA a aplicacao, nao
+| so nas rotas deste arquivo. `plano` saiu daqui porque pmda.php tambem amarrava
+| o mesmo nome, a OUTRA classe (PmdaPlano), e o pmda e carregado depois em
+| web.php -- entao o binder dele vencia e as 6 rotas {plano} do Compdec
+| resolviam contra PmdaPlano e devolviam 404.
+|
+| Nao fazia falta: os 6 handlers do PlanoContingenciaController type-hintam
+| CompdecPlanoContingencia, e o binding implicito ja resolve o certo em cada
+| modulo.
+|
+| O `anexo` duplicado tambem saiu -- eram duas linhas identicas.
+|
+| Ao acrescentar Route::model() aqui, confira se o nome do parametro e exclusivo
+| deste modulo.
+*/
 Route::model('orgao', Orgao::class);
 Route::model('equipe', CompdecEquipe::class);
-Route::model('anexo', CompdecAnexo::class);
-Route::model('plano', CompdecPlanoContingencia::class);
 Route::model('anexo', CompdecAnexo::class);
 
 Route::middleware(['auth', 'compdec.query-threshold:' . config('compdec.query_threshold', 15)])

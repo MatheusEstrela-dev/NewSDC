@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Services;
 
-use App\Modules\Decretacoes\Enums\Redec;
 use App\Modules\Decretacoes\Filters\ProcessoFilter;
 use App\Modules\Decretacoes\Models\Processo;
 use App\Modules\Decretacoes\Support\Vigencia;
@@ -199,14 +198,14 @@ class ProcessoExportRedecService
         array $danosAmbientais = []
     ): array {
         $redecId = $this->resolveRedecId($processo, $municipio, $redecPorMunicipioId);
-        $redec   = $redecId !== null ? Redec::tryFrom($redecId) : null;
+        $redec   = $redecId !== null ? RedecService::find($redecId) : null;
 
         $prazo      = $processo->getAttributes()['prazo_vigencia'] ?? null;
         $publicacao = $processo->data_publicacao_mg;
 
         return [
             'redec_id'               => $redecId,
-            'redec'                  => $redec?->sigla(),
+            'redec'                  => $redec?->sigla,
             'redec_regiao'           => $redec?->regiao(),
             'uf'                     => $municipio['uf'] ?? 'MG',
             'municipio'              => $municipio['nome'] ?? null,

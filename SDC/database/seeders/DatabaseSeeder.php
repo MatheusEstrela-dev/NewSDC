@@ -17,8 +17,17 @@ class DatabaseSeeder extends Seeder
         // 1b. Permissões específicas do módulo RAT (roles + 9 permissões)
         $this->call(RatPermissionsSeeder::class);
 
+        // 1c. Cargos CEDEC do módulo Ajuda Humanitária (Analista DLOG, Diretor
+        //     DLOG e Leitor). Não cria permissão: agrupa as humanitaria.* que o
+        //     RolesAndPermissionsSeeder já criou.
+        $this->call(AjudaHumanitariaRolesSeeder::class);
+
         // 2. Órgãos (hierarquia CEDEC > REDEC > COMPDEC)
         $this->call(OrgaosSeeder::class);
+
+        // 2b. Tabela oficial do COBRADE (65 códigos). Roda depois da carga do
+        //     dump legado para reescrever nome/descrição por cima dele.
+        $this->call(CobradeSeeder::class);
 
         // 3. Admin principal do sistema
         $admin = \App\Models\User::updateOrCreate(
@@ -54,12 +63,21 @@ class DatabaseSeeder extends Seeder
             $this->command->warn('Tabela "rats" não encontrada - RatMockSeeder pulado.');
         }
 
-        // 6b. REDECs de Minas Gerais (tabela de referência rat_redec)
-        if (\Illuminate\Support\Facades\Schema::hasTable('rat_redec')) {
-            $this->call(RatRedecSeeder::class);
+        // 6b. REDECs de Minas Gerais (catálogo dec_redecs, usado por Decretações).
+        //     A própria migration já faz a carga; o seeder existe para
+        //     ressincronizar os rótulos. Substituiu o RatRedecSeeder, que
+        //     populava a rat_redec removida por
+        //     2026_05_19_100000_drop_unused_rat_tables.
+        if (\Illuminate\Support\Facades\Schema::hasTable('dec_redecs')) {
+            $this->call(RedecSeeder::class);
         } else {
-            $this->command->warn('Tabela "rat_redec" não encontrada - RatRedecSeeder pulado.');
+            $this->command->warn('Tabela "dec_redecs" não encontrada - RedecSeeder pulado.');
         }
+
+        // 6c. As mesmas 19 REDECs publicadas em compdec_orgaos, que e a tabela que
+        //     alimenta o seletor de orgao do Permissionamento e o escopo
+        //     territorial dos modulos. Depende do 6b: deriva de dec_redecs.
+        $this->call(RedecOrgaoSeeder::class);
 
         // 7. Orgaos de teste (hierarquia completa para testes)
         $this->call(TestOrgaosSeeder::class);

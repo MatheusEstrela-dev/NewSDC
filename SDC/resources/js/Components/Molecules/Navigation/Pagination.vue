@@ -5,7 +5,7 @@
     Empilha no mobile: em telas estreitas o texto "Mostrando X ate Y" e a fileira de
     numeros competiam pela mesma linha e o bloco estourava a largura do card.
   -->
-  <div class="mt-4 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700/50 dark:bg-slate-900/60">
+  <div class="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 lg:px-6 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700/50 dark:bg-slate-900/60">
     <Text size="sm" color="muted" class="text-center sm:text-left">
       Mostrando {{ start }} até {{ end }} de {{ total }} resultados
     </Text>
@@ -14,6 +14,8 @@
       <Button
         variant="secondary"
         size="sm"
+        :icon="ArrowLeftIcon"
+        icon-position="left"
         :disabled="!canGoPrevious"
         @click="handlePrevious"
       >
@@ -35,6 +37,8 @@
       <Button
         variant="secondary"
         size="sm"
+        :icon="ArrowRightIcon"
+        icon-position="right"
         :disabled="!canGoNext"
         @click="handleNext"
       >
@@ -48,6 +52,11 @@
 import { computed } from 'vue';
 import Button from '../../Atoms/Button/Button.vue';
 import Text from '../../Atoms/Typography/Text.vue';
+// Seta, e nao chevron: ArrowLeft/ArrowRight ja existem em Components/Icons e
+// e o mesmo sinal usado no "Voltar" do breadcrumb e no "Avancar" dos wizards.
+// De chevron so existe o Right, faltaria criar o Left so para isto.
+import ArrowLeftIcon from '@/Components/Icons/ArrowLeftIcon.vue';
+import ArrowRightIcon from '@/Components/Icons/ArrowRightIcon.vue';
 
 const props = defineProps({
   pagination: {

@@ -26,12 +26,18 @@ class LoteResource extends JsonResource
                 'dt_inicio' => $this->ata->dt_inicio?->toDateString(),
                 'dt_final'  => $this->ata->dt_final?->toDateString(),
             ]),
-            'municipio_id' => $this->municipio_id,
-            'municipio'    => $this->whenLoaded('municipio', fn () => [
-                'id'   => $this->municipio->id,
-                'nome' => $this->municipio->nome,
-                'uf'   => $this->municipio->uf,
-            ]),
+            // Municipios atendidos pelo lote (relacao N:N). `municipio_ids`
+            // alimenta o multi-select do formulario.
+            'municipios'    => $this->whenLoaded(
+                'municipios',
+                fn () => $this->municipios
+                    ->map(fn ($m) => ['id' => $m->id, 'nome' => $m->nome, 'uf' => $m->uf])
+                    ->values(),
+            ),
+            'municipio_ids' => $this->whenLoaded(
+                'municipios',
+                fn () => $this->municipios->pluck('id')->values(),
+            ),
             'prestador_id' => $this->prestador_id,
             'prestador'    => $this->whenLoaded('prestador', fn () => [
                 'id'    => $this->prestador->id,
@@ -41,11 +47,15 @@ class LoteResource extends JsonResource
             ]),
             'numero'       => $this->numero,
             'nome'         => $this->nome,
+            'contrato'     => $this->contrato,
             'qtd_agua_m3'  => (float) $this->qtd_agua_m3,
             'valor_m3'     => (float) $this->valor_m3,
             'valor_total'  => (float) $this->valor_total,
             'ativo'        => (bool) $this->ativo,
             'observacoes'  => $this->observacoes,
+            // A tela de detalhe usa para esconder o botao Excluir quando ha
+            // cronograma vinculado (o service recusaria a exclusao).
+            'cronogramas_count' => $this->whenCounted('cronogramas'),
             'created_at'   => $this->created_at?->toIso8601String(),
             'updated_at'   => $this->updated_at?->toIso8601String(),
         ];

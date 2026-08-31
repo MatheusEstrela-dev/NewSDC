@@ -14,60 +14,6 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     /**
-     * Register a new user
-     */
-    public function register(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'cpf' => 'required|string|size:11|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation errors',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'cpf' => $request->cpf,
-            'password' => Hash::make($request->password),
-        ]);
-
-        // Assign default role (user)
-        $defaultRole = \App\Models\Role::where('slug', 'user')->first();
-        if ($defaultRole) {
-            $user->assignRole($defaultRole);
-        }
-
-        // Create token with user abilities
-        $token = $user->createTokenWithAbilities('auth-token');
-
-        return response()->json([
-            'success' => true,
-            'message' => 'User registered successfully',
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'cpf' => $user->cpf,
-                    'roles' => $user->roles->pluck('slug'),
-                    'permissions' => $user->getAllPermissions(),
-                ],
-                'token' => $token->plainTextToken,
-                'token_type' => 'Bearer',
-            ],
-        ], 201);
-    }
-
-    /**
      * Login user and generate token
      */
     public function login(Request $request): JsonResponse

@@ -70,10 +70,18 @@ class CaminhaoController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        $prestadores = Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']);
+
+        // `?prestador_id=` vem do botao "Cadastrar caminhao" da ficha do
+        // prestador: sem o pre-preenchimento o usuario tinha que reencontrar a
+        // empresa numa lista de todos os prestadores ativos.
+        $prestadorId = $request->integer('prestador_id') ?: null;
+
         return Inertia::render('Tdap/Caminhoes/Create', [
-            'prestadores' => Prestador::ativo()->orderBy('nome')->get(['id', 'nome', 'cnpj']),
+            'prestadores'  => $prestadores,
+            'prestadorId'  => $prestadores->contains('id', $prestadorId) ? $prestadorId : null,
         ]);
     }
 
@@ -126,7 +134,15 @@ class CaminhaoController extends Controller
         }
 
         $placa = $caminhao->placa;
-        $this->service->deletar($caminhao->id);
+
+        try {
+            $this->service->deletar($caminhao->id);
+        } catch (\DomainException $e) {
+            // Alocado em cronograma vivo: mensagem de negocio, nao 500.
+            return redirect()
+                ->route('tdap.caminhoes.show', $caminhao->id)
+                ->with('error', $e->getMessage());
+        }
 
         return redirect()
             ->route('tdap.caminhoes.index')

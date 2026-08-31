@@ -12,6 +12,7 @@
 
     <RatNaturezaSection
       :model-value="localData.dadosGerais"
+      :cobrades="cobrades"
       @update:model-value="localData.dadosGerais = $event"
     />
 
@@ -70,6 +71,11 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false,
+  },
+  // Tabela oficial do COBRADE (dec_cobrade), repassada a RatNaturezaSection.
+  cobrades: {
+    type: Array,
+    default: () => [],
   },
 });
 

@@ -1,10 +1,20 @@
 <?php
 
+use App\Modules\AjudaHumanitaria\Controllers\AnexoPedidoController;
 use App\Modules\AjudaHumanitaria\Controllers\BeneficiarioController;
+use App\Modules\AjudaHumanitaria\Controllers\EntradaAhController;
+use App\Modules\AjudaHumanitaria\Controllers\EstoqueAhController;
 use App\Modules\AjudaHumanitaria\Controllers\ItemPedidoController;
+use App\Modules\AjudaHumanitaria\Controllers\LiberacaoAhController;
+use App\Modules\AjudaHumanitaria\Controllers\MaterialAhController;
+use App\Modules\AjudaHumanitaria\Controllers\MovimentoEstoqueAhController;
+use App\Modules\AjudaHumanitaria\Controllers\ParametroAhController;
+use App\Modules\AjudaHumanitaria\Controllers\ParecerController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhController;
 use App\Modules\AjudaHumanitaria\Controllers\PedidoAhDashboardController;
+use App\Modules\AjudaHumanitaria\Controllers\PrestacaoContaController;
 use App\Modules\AjudaHumanitaria\Controllers\TramitacaoController;
+use App\Modules\AjudaHumanitaria\Controllers\TransferenciaAhController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function () {
@@ -46,6 +56,190 @@ Route::prefix('ajuda-humanitaria')->name('ajuda-humanitaria.')->group(function (
         Route::post('/{id}/tramitar', [TramitacaoController::class, 'store'])
             ->name('tramitar')
             ->middleware('can:humanitaria.pedidos.tramitar')
+            ->whereNumber('id');
+
+        // Pareceres tecnicos.
+        Route::post('/{id}/pareceres', [ParecerController::class, 'store'])
+            ->name('pareceres.store')
+            ->middleware('can:humanitaria.pedidos.parecer')
+            ->whereNumber('id');
+
+        Route::delete('/{id}/pareceres/{parecer}', [ParecerController::class, 'destroy'])
+            ->name('pareceres.destroy')
+            ->middleware('can:humanitaria.pedidos.parecer')
+            ->whereNumber(['id', 'parecer']);
+
+        // Anexos. O download exige apenas leitura; anexar e remover exigem a
+        // permissao propria de anexos.
+        Route::post('/{id}/anexos', [AnexoPedidoController::class, 'store'])
+            ->name('anexos.store')
+            ->middleware('can:humanitaria.pedidos.anexos')
+            ->whereNumber('id');
+
+        Route::get('/{id}/anexos/{media}', [AnexoPedidoController::class, 'download'])
+            ->name('anexos.download')
+            ->middleware('can:humanitaria.pedidos.view')
+            ->whereNumber(['id', 'media']);
+
+        Route::delete('/{id}/anexos/{media}', [AnexoPedidoController::class, 'destroy'])
+            ->name('anexos.destroy')
+            ->middleware('can:humanitaria.pedidos.anexos')
+            ->whereNumber(['id', 'media']);
+
+        // Prestacao de contas. A prestacao em si nasce como efeito da entrada
+        // do pedido em Atendido, nao por rota.
+        Route::post('/{id}/entregas', [PrestacaoContaController::class, 'storeEntrega'])
+            ->name('entregas.store')
+            ->middleware('can:humanitaria.prestacao.lancar')
+            ->whereNumber('id');
+
+        Route::delete('/{id}/entregas/{entrega}', [PrestacaoContaController::class, 'destroyEntrega'])
+            ->name('entregas.destroy')
+            ->middleware('can:humanitaria.prestacao.lancar')
+            ->whereNumber(['id', 'entrega']);
+
+        Route::post('/{id}/homologar', [PrestacaoContaController::class, 'homologar'])
+            ->name('homologar')
+            ->middleware('can:humanitaria.prestacao.homologar')
+            ->whereNumber('id');
+    });
+
+    // Consulta do estoque (RN-25). Somente leitura: a escrita no ledger e
+    // feita por RegistrarMovimentoEstoque, a partir das operacoes do modulo.
+    Route::prefix('estoque')->name('estoque.')->group(function () {
+        // Declarada antes de / para nao ser capturada por uma futura rota
+        // com parametro.
+        Route::get('/export', [EstoqueAhController::class, 'export'])
+            ->name('export')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/', [EstoqueAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.saldo.view');
+    });
+
+    // Parametros do modulo (RN-16). Linha unica: nao ha criar nem excluir.
+    Route::prefix('parametros')->name('parametros.')->group(function () {
+        Route::get('/', [ParametroAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.parametros.manage');
+
+        Route::put('/', [ParametroAhController::class, 'update'])
+            ->name('update')
+            ->middleware('can:humanitaria.parametros.manage');
+    });
+
+    // Extrato do ledger. Somente leitura, e nao por limitacao: o ledger e
+    // append-only, e corrigir lancamento e lancar o oposto pela operacao que
+    // o originou.
+    Route::prefix('movimentos')->name('movimentos.')->group(function () {
+        Route::get('/export', [MovimentoEstoqueAhController::class, 'export'])
+            ->name('export')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/', [MovimentoEstoqueAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.saldo.view');
+    });
+
+    // Liberacoes de material. Consulta do historico migrado do gestaocedec:
+    // nao ha criacao pelo sistema novo, porque liberacao sem lancamento no
+    // ledger seria registro sem lastro no estoque.
+    //
+    // A permissao e humanitaria.saldo.view, a mesma da consulta de estoque.
+    // Liberacao e a saida do saldo, e o catalogo em config/permissions.php ja
+    // agrupa saldo com a consulta de estoque. Um slug proprio exigiria decidir
+    // quem o recebe; enquanto isso nao for definido, criar um deixaria a tela
+    // visivel apenas para super-admin.
+    Route::prefix('liberacoes')->name('liberacoes.')->group(function () {
+        Route::get('/export', [LiberacaoAhController::class, 'export'])
+            ->name('export')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/', [LiberacaoAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/{id}', [LiberacaoAhController::class, 'show'])
+            ->name('show')
+            ->middleware('can:humanitaria.saldo.view')
+            ->whereNumber('id');
+    });
+
+    // Transferencias entre depositos. Consulta do historico migrado; a escrita,
+    // quando existir, passa pelo ledger com um par TRANSF_SAIDA e TRANSF_ENTRADA.
+    Route::prefix('transferencias')->name('transferencias.')->group(function () {
+        Route::get('/export', [TransferenciaAhController::class, 'export'])
+            ->name('export')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/', [TransferenciaAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/{id}', [TransferenciaAhController::class, 'show'])
+            ->name('show')
+            ->middleware('can:humanitaria.saldo.view')
+            ->whereNumber('id');
+    });
+
+    // Entradas de material nos depositos.
+    Route::prefix('entradas')->name('entradas.')->group(function () {
+        Route::get('/export', [EntradaAhController::class, 'export'])
+            ->name('export')
+            ->middleware('can:humanitaria.saldo.view');
+
+        Route::get('/', [EntradaAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.saldo.view');
+
+        // Escrita: lanca no ledger e atualiza o saldo, por isso exige
+        // movimentar, e nao a permissao de consulta.
+        Route::post('/', [EntradaAhController::class, 'store'])
+            ->name('store')
+            ->middleware('can:humanitaria.estoque.movimentar');
+
+        Route::get('/{id}', [EntradaAhController::class, 'show'])
+            ->name('show')
+            ->middleware('can:humanitaria.saldo.view')
+            ->whereNumber('id');
+
+        // Cancelamento estorna o saldo por lancamento compensatorio, entao
+        // pesa o mesmo que registrar.
+        Route::post('/{id}/cancelar', [EntradaAhController::class, 'cancelar'])
+            ->name('cancelar')
+            ->middleware('can:humanitaria.estoque.movimentar')
+            ->whereNumber('id');
+    });
+
+    // Catalogo de material (RN-07). Unica tela do estoque que escreve, porque
+    // cadastro de material nao movimenta saldo e nao passa pelo ledger.
+    //
+    // Toda a rota usa humanitaria.materiais.manage: o catalogo em
+    // config/permissions.php tem um slug so para o recurso, e criar um
+    // .view separado deixaria a tela invisivel ate alguem decidir quem o
+    // recebe.
+    Route::prefix('materiais')->name('materiais.')->group(function () {
+        Route::get('/export', [MaterialAhController::class, 'export'])
+            ->name('export')
+            ->middleware('can:humanitaria.materiais.manage');
+
+        Route::get('/', [MaterialAhController::class, 'index'])
+            ->name('index')
+            ->middleware('can:humanitaria.materiais.manage');
+
+        Route::post('/', [MaterialAhController::class, 'store'])
+            ->name('store')
+            ->middleware('can:humanitaria.materiais.manage');
+
+        Route::put('/{id}', [MaterialAhController::class, 'update'])
+            ->name('update')
+            ->middleware('can:humanitaria.materiais.manage')
+            ->whereNumber('id');
+
+        Route::delete('/{id}', [MaterialAhController::class, 'destroy'])
+            ->name('destroy')
+            ->middleware('can:humanitaria.materiais.manage')
             ->whereNumber('id');
     });
 

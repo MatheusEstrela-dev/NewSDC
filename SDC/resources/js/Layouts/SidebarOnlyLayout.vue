@@ -34,7 +34,7 @@ provide('openSidebar', openSidebar);
     <Sidebar />
 
     <div
-      class="flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-300 ml-0 md:ml-20"
+      class="flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-300 ml-0"
       :class="{
         'lg:ml-[280px]': !sidebarCollapsed,
         'lg:ml-20': sidebarCollapsed

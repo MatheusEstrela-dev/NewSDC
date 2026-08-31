@@ -4,7 +4,7 @@
     <MunicipiosListTemplate
       title="Municipios sem Plano"
       description="Lista de municipios que ainda nao possuem Plano de Contingencia cadastrado"
-      :icon="ExclamationCircleIcon"
+      :icon="ShieldCheckIcon"
       :municipios="municipios"
       :total-municipios="pagination?.total ?? municipios.length"
       :pagination="pagination"
@@ -24,7 +24,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { usePermissions } from '@/Composables/usePermissions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import MunicipiosListTemplate from '@/Templates/PlanCon/MunicipiosListTemplate.vue';
-import { ExclamationCircleIcon } from '@heroicons/vue/24/outline';
+import { ShieldCheckIcon } from '@heroicons/vue/24/outline';
 
 defineOptions({ layout: AuthenticatedLayout });
 

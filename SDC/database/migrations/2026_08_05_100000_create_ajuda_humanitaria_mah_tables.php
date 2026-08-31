@@ -29,10 +29,22 @@ return new class extends Migration
             $table->boolean('disponivel_para_pedido')->default(true);
             $table->string('codigo_legado', 30)->nullable()
                 ->comment('aju_unidade.id_unidade, ponte para o saldo do deposito legado');
+            // Valor e peso vem de aju_unidade e alimentam o contrato de saldo de
+            // cesta basica. Nulos ate o backfill (legado:aju:refinar --etapa=materiais).
+            $table->decimal('valor', 10, 2)->nullable();
+            $table->decimal('peso', 10, 2)->nullable();
+            // Forma reduzida do nome (aju_unidade.singular): 'CESTA' para
+            // 'CESTA BASICA'. E o que os contratos de BI do legado publicam.
+            $table->string('singular', 60)->nullable();
+            // A extracao do legado nao trouxe aju_unidade.categoria. O backfill
+            // marca CESTA BASICA no material de nome correspondente, que e o
+            // recorte efetivo que o endpoint saldocesta praticava.
+            $table->string('categoria', 60)->nullable();
             $table->timestamps();
 
             $table->index('disponivel_para_pedido');
             $table->index('codigo_legado');
+            $table->index('categoria');
         });
 
         Schema::create('parametros_ah', function (Blueprint $table): void {

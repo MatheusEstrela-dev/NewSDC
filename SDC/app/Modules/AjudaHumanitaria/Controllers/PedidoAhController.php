@@ -9,21 +9,30 @@ use App\Models\Municipio;
 use App\Models\User;
 use App\Modules\AjudaHumanitaria\DTOs\PedidoAhDTO;
 use App\Modules\AjudaHumanitaria\Enums\StatusPedidoAh;
+use App\Modules\AjudaHumanitaria\Enums\EtapaParecer;
+use App\Modules\AjudaHumanitaria\Enums\SituacaoParecer;
 use App\Modules\AjudaHumanitaria\Enums\TipoDecreto;
 use App\Modules\AjudaHumanitaria\Models\PedidoAh;
+use App\Modules\AjudaHumanitaria\Models\PedidoAhParecer;
 use App\Modules\AjudaHumanitaria\Models\PedidoAhTramite;
+use App\Modules\AjudaHumanitaria\Models\PrestacaoConta;
+use App\Modules\AjudaHumanitaria\Models\PrestacaoContaEntrega;
+use App\Modules\AjudaHumanitaria\Models\PrestacaoContaItem;
 use App\Modules\AjudaHumanitaria\Requests\StorePedidoAhRequest;
 use App\Modules\AjudaHumanitaria\Resources\PedidoAhIndexResource;
 use App\Modules\AjudaHumanitaria\Resources\PedidoAhResource;
+use App\Modules\AjudaHumanitaria\Services\AnexoPedidoService;
 use App\Modules\AjudaHumanitaria\Services\ItemPedidoService;
+use App\Modules\AjudaHumanitaria\Services\ParecerService;
+use App\Support\Cobrade;
 use App\Modules\AjudaHumanitaria\Services\PedidoAhService;
+use App\Modules\AjudaHumanitaria\Services\PrestacaoContasService;
 use App\Modules\AjudaHumanitaria\Services\TramitacaoService;
 use App\Modules\AjudaHumanitaria\Support\MunicipioDoUsuario;
 use App\Modules\Compdec\Enums\FuncaoEquipe;
 use App\Modules\Compdec\Models\CompdecEquipe;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -39,6 +48,9 @@ class PedidoAhController extends Controller
         private readonly PedidoAhService $pedidos,
         private readonly ItemPedidoService $itens,
         private readonly TramitacaoService $tramitacao,
+        private readonly ParecerService $pareceres,
+        private readonly AnexoPedidoService $anexos,
+        private readonly PrestacaoContasService $prestacoesContas,
     ) {}
 
     public function index(Request $request): Response
@@ -107,7 +119,12 @@ class PedidoAhController extends Controller
         return Inertia::render('AjudaHumanitaria/Pedidos/Show', [
             'pedido'    => new PedidoAhResource($pedido),
             'tramites'  => $this->tramites($pedido),
+            'pareceres' => $this->pareceresDoPedido($pedido->id),
+            'anexos'    => $this->anexos->listar($pedido->id),
+            'prestacao' => $this->prestacaoDoPedido($pedido->id),
             'materiais' => $this->itens->materiaisDisponiveis(),
+            'situacoesParecer' => SituacaoParecer::options(),
+            'etapasParecer'    => EtapaParecer::options(),
 
             // Destinos que existem no grafo. A validade final continua sendo do
             // workflow, no momento da transicao: aqui e so a lista de opcoes.
@@ -123,7 +140,85 @@ class PedidoAhController extends Controller
             'canDelete'        => $usuario?->can('delete', $pedido) ?? false,
             'canTramitar'      => $usuario?->can('tramitar', $pedido) ?? false,
             'canLiberarItens'  => $usuario?->can('liberarItens', $pedido) ?? false,
+            'canParecer'       => $usuario?->can('parecer', $pedido) ?? false,
+            'canAnexos'        => $usuario?->can('anexos', $pedido) ?? false,
+            'canVerPrestacao'  => $usuario?->can('verPrestacao', $pedido) ?? false,
+            'canLancarEntrega' => $usuario?->can('lancarEntrega', $pedido) ?? false,
+            'canHomologar'     => $usuario?->can('homologar', $pedido) ?? false,
         ]);
+    }
+
+    /**
+     * Prestacao de contas com o saldo de cada item.
+     *
+     * O saldo (RN-18) e o numero que o operador precisa ver: quanto ainda
+     * falta entregar antes de a homologacao ser possivel.
+     *
+     * @return ?array<string, mixed>
+     */
+    private function prestacaoDoPedido(int $pedidoId): ?array
+    {
+        $prestacao = PrestacaoConta::with(['itens.entregas'])
+            ->where('pedido_ah_id', $pedidoId)
+            ->first();
+
+        if ($prestacao === null) {
+            return null;
+        }
+
+        $itens = $prestacao->itens->map(function (PrestacaoContaItem $item): array {
+            $saldo = $this->prestacoesContas->saldoDoItem($item->id);
+
+            return [
+                'id'            => $item->id,
+                'nome_material' => $item->nome_material,
+                'qtd'           => $item->qtd,
+                'entregue'      => $item->qtd - $saldo,
+                'saldo'         => $saldo,
+                'entregas'      => $item->entregas
+                    ->map(static fn (PrestacaoContaEntrega $e): array => [
+                        'id'                => $e->id,
+                        'nome_beneficiario' => $e->nome_beneficiario,
+                        'rg'                => $e->rg,
+                        'comunidade'        => $e->comunidade,
+                        'qtd'               => $e->qtd,
+                        'data_entrega'      => $e->data_entrega?->toDateString(),
+                    ])
+                    ->all(),
+            ];
+        })->all();
+
+        return [
+            'id'           => $prestacao->id,
+            'status'       => $prestacao->status?->value,
+            'status_label' => $prestacao->status?->label(),
+            'data_limite'  => $prestacao->data_limite?->toDateString(),
+            'vencida'      => $this->prestacoesContas->estaVencida($prestacao->id),
+            'homologada'   => $prestacao->homologado_em !== null,
+            'itens'        => $itens,
+            'saldo_total'  => array_sum(array_column($itens, 'saldo')),
+        ];
+    }
+
+    /**
+     * RN-10: pareceres emitidos, do mais recente para o mais antigo.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function pareceresDoPedido(int $pedidoId): array
+    {
+        return $this->pareceres->doPedido($pedidoId)
+            ->map(static fn (PedidoAhParecer $p): array => [
+                'id'             => $p->id,
+                'data_parecer'   => $p->data_parecer?->toDateString(),
+                'parecer'        => $p->parecer,
+                'situacao'       => $p->situacao?->value,
+                'situacao_label' => $p->situacao?->label(),
+                'favoravel'      => $p->situacao?->ehFavoravel() ?? false,
+                'etapa_label'    => $p->etapa?->label(),
+                'autor'          => $p->autor?->name,
+            ])
+            ->all();
     }
 
     /**
@@ -166,18 +261,14 @@ class PedidoAhController extends Controller
     }
 
     /**
-     * @return array<int, array{value: int, label: string}>
+     * @return array<int, array{value: int, codigo: string, label: string, descricao: string}>
      */
     private function cobrades(): array
     {
-        return DB::table('dec_cobrade')
-            ->orderBy('descricao')
-            ->get(['id', 'codigo', 'descricao'])
-            ->map(static fn (object $c): array => [
-                'value' => (int) $c->id,
-                'label' => trim(($c->codigo ? "{$c->codigo} - " : '') . (string) $c->descricao),
-            ])
-            ->all();
+        // Fonte unica (App\Support\Cobrade): o rotulo vem de `nome`, a
+        // denominacao oficial curta. `descricao` guarda a definicao completa,
+        // que chega a 497 caracteres e nao serve de rotulo de select.
+        return Cobrade::opcoes();
     }
 
     /**

@@ -28,6 +28,11 @@ const fmtData = (iso) => {
 
 const historicoOrdenado = computed(() => props.historico ?? []);
 
+// Uma linha de erro para o formulario inteiro: a coordenada fora da faixa de MG
+// precisa aparecer tanto quanto o nome duplicado, e enumerar campo a campo aqui
+// so repetiria o que o backend ja nomeia.
+const erro = computed(() => Object.values(form.errors)[0] ?? null);
+
 function fechar() {
   form.reset();
   form.clearErrors();
@@ -64,11 +69,11 @@ function gravar() {
         </div>
         <div>
           <label class="pmda-field-label">Latitude</label>
-          <TextInput v-model="form.latitude" :maxlength="30" />
+          <TextInput v-model="form.latitude" mask="coordenada" :maxlength="12" placeholder="-19.1234" />
         </div>
         <div>
           <label class="pmda-field-label">Longitude</label>
-          <TextInput v-model="form.longitude" :maxlength="30" />
+          <TextInput v-model="form.longitude" mask="coordenada" :maxlength="12" placeholder="-46.1231" />
         </div>
         <div class="flex items-end">
           <Button
@@ -83,9 +88,7 @@ function gravar() {
           </Button>
         </div>
       </div>
-      <p v-if="form.errors.solicitacao || form.errors.nome" class="text-xs text-red-600">
-        {{ form.errors.solicitacao || form.errors.nome }}
-      </p>
+      <p v-if="erro" class="text-xs text-red-600">{{ erro }}</p>
 
       <div>
         <h3 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">

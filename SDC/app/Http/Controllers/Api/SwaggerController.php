@@ -11,10 +11,12 @@ use App\Http\Controllers\Controller;
  *     description="API RESTful escalável para 100k+ usuários simultâneos.
  *                  Suporta webhooks, rate limiting inteligente, processamento assíncrono via Redis,
  *                  e múltiplos níveis de priorização de requisições.",
+ *
  *     @OA\Contact(
  *         email="api@sdc.gov.br",
  *         name="SDC API Support"
  *     ),
+ *
  *     @OA\License(
  *         name="Proprietary",
  *         url="https://sdc.gov.br/license"
@@ -25,12 +27,10 @@ use App\Http\Controllers\Controller;
  *     url="/",
  *     description="Servidor atual (mesma origem da documentacao)"
  * )
- *
  * @OA\Server(
  *     url="https://sdcdefesa.azurewebsites.net",
  *     description="Servidor de Producao (Azure App Service)"
  * )
- *
  * @OA\Server(
  *     url="http://localhost:19444",
  *     description="Servidor de Desenvolvimento (FrankenPHP HTTP)"
@@ -38,7 +38,7 @@ use App\Http\Controllers\Controller;
  *
  * @OA\SecurityScheme(
  *     type="http",
- *     description="Token de acesso pessoal (Bearer). Emitido por um administrador com acesso ao modulo de Permissionamento e vinculado ao usuario. Informe no campo abaixo apenas o token (o prefixo 'Bearer ' e adicionado automaticamente). Token Sanctum, nao e JWT.",
+ *     description="Token de acesso pessoal (Bearer). Emitido por um administrador com acesso ao modulo de Permissionamento e vinculado ao usuario. O token carrega um escopo: alcanca apenas as permissoes marcadas na emissao, sempre um subconjunto das permissoes do dono. Uma chamada fora do escopo responde 403 mesmo que o usuario tenha a permissao. Todo token tem prazo (ate 90 dias). Informe no campo abaixo apenas o token (o prefixo 'Bearer ' e adicionado automaticamente). Token Sanctum, nao e JWT.",
  *     name="bearerAuth",
  *     in="header",
  *     scheme="bearer",
@@ -49,22 +49,22 @@ use App\Http\Controllers\Controller;
  *     name="Authentication",
  *     description="Endpoints de autenticação e autorização"
  * )
- *
  * @OA\Tag(
  *     name="Webhooks",
  *     description="Sistema de webhooks com filas e priorização"
  * )
- *
  * @OA\Tag(
  *     name="High Performance",
  *     description="Endpoints otimizados para alta carga (100k+ usuários)"
  * )
- *
  * @OA\Tag(
  *     name="Decretacoes",
  *     description="Endpoints do modulo de Decretacoes — listagem, detalhe, export Power BI e recebimento externo"
  * )
- *
+ * @OA\Tag(
+ *     name="Ajuda Humanitaria",
+ *     description="Fornecimento de dados de Ajuda Humanitaria — saldo de estoque, liberacoes e consolidado de pedidos. Paridade com os endpoints publicos do sistema legado"
+ * )
  * @OA\Tag(
  *     name="RAT",
  *     description="Relatório de Atividade Técnica — listagem paginada, detalhe e recebimento externo via BI"
@@ -73,6 +73,7 @@ use App\Http\Controllers\Controller;
  * @OA\Schema(
  *     schema="ErrorResponse",
  *     type="object",
+ *
  *     @OA\Property(property="success", type="boolean", example=false),
  *     @OA\Property(property="message", type="string", example="An error occurred"),
  *     @OA\Property(property="errors", type="object")
@@ -81,6 +82,7 @@ use App\Http\Controllers\Controller;
  * @OA\Schema(
  *     schema="SuccessResponse",
  *     type="object",
+ *
  *     @OA\Property(property="success", type="boolean", example=true),
  *     @OA\Property(property="message", type="string", example="Operation successful"),
  *     @OA\Property(property="data", type="object")
@@ -89,6 +91,7 @@ use App\Http\Controllers\Controller;
  * @OA\Schema(
  *     schema="PaginatedResponse",
  *     type="object",
+ *
  *     @OA\Property(property="data", type="array", @OA\Items(type="object")),
  *     @OA\Property(property="meta", type="object",
  *         @OA\Property(property="current_page", type="integer", example=1),
@@ -108,6 +111,7 @@ use App\Http\Controllers\Controller;
  *     schema="ProcessoDecretacaoItem",
  *     type="object",
  *     title="Processo de Decretacao (formato plano)",
+ *
  *     @OA\Property(property="id", type="integer", example=261),
  *     @OA\Property(property="uf", type="string", example="MG"),
  *     @OA\Property(property="municipio", type="string", nullable=true, example="Ouro Verde de Minas"),
@@ -153,6 +157,7 @@ use App\Http\Controllers\Controller;
  *     type="object",
  *     title="Detalhe de Processo de Decretacao (formato rico)",
  *     description="Resposta do GET /api/v1/decretacoes/{id}. Usa ProcessoResource (estrutura aninhada), diferente do formato plano da listagem.",
+ *
  *     @OA\Property(property="success", type="boolean", example=true),
  *     @OA\Property(property="data", type="object",
  *         @OA\Property(property="id", type="integer", example=261),
@@ -181,14 +186,18 @@ use App\Http\Controllers\Controller;
  *         @OA\Property(property="observacoes", type="string", nullable=true),
  *         @OA\Property(property="municipios_count", type="integer", example=1),
  *         @OA\Property(property="municipios", type="array",
+ *
  *             @OA\Items(type="object",
+ *
  *                 @OA\Property(property="id", type="integer", example=123),
  *                 @OA\Property(property="nome", type="string", example="Ouro Verde de Minas"),
  *                 @OA\Property(property="codigo_ibge", type="string", nullable=true, example="3146206")
  *             )
  *         ),
  *         @OA\Property(property="desastres", type="array",
+ *
  *             @OA\Items(type="object",
+ *
  *                 @OA\Property(property="id", type="integer", example=1),
  *                 @OA\Property(property="categoria_id", type="integer", nullable=true, example=2),
  *                 @OA\Property(property="descricao", type="string", nullable=true)
@@ -204,6 +213,7 @@ use App\Http\Controllers\Controller;
  * @OA\Schema(
  *     schema="ProcessoDecretacaoList",
  *     type="object",
+ *
  *     @OA\Property(property="success", type="boolean", example=true),
  *     @OA\Property(property="data", type="object",
  *         @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/ProcessoDecretacaoItem")),
@@ -220,6 +230,7 @@ use App\Http\Controllers\Controller;
  *     schema="ReceiveProcessoRequest",
  *     type="object",
  *     required={"data_entrada", "origem", "municipio_id"},
+ *
  *     @OA\Property(property="data_entrada", type="string", format="date", example="2025-01-15"),
  *     @OA\Property(property="origem", type="string", enum={"municipal", "estadual"}, example="municipal"),
  *     @OA\Property(property="municipio_id", type="integer", example=123),
@@ -233,8 +244,10 @@ use App\Http\Controllers\Controller;
  *     schema="DecretacaoPowerBIExport",
  *     type="object",
  *     title="Export Power BI Decretacoes",
+ *
  *     @OA\Property(property="success", type="boolean", example=true),
  *     @OA\Property(property="data", type="array",
+ *
  *         @OA\Items(ref="#/components/schemas/ProcessoDecretacaoItem")
  *     )
  * )
@@ -244,6 +257,7 @@ use App\Http\Controllers\Controller;
  *     type="object",
  *     title="RAT — Item de listagem (paginado)",
  *     description="Retornado pelo GET /api/v1/rat/protocolos (RatListResource). Campos leves para grid/tabela.",
+ *
  *     @OA\Property(property="id", type="string", format="uuid", example="018f2a3b-0000-7000-8000-000000000001"),
  *     @OA\Property(property="numero_bos", type="string", example="2025-000000001-001"),
  *     @OA\Property(property="protocolo", type="string", example="2025-000000001-001"),
@@ -267,6 +281,7 @@ use App\Http\Controllers\Controller;
  *     type="object",
  *     title="RAT — Listagem paginada",
  *     description="Resposta do GET /api/v1/rat/protocolos. Segue o padrão PaginatedResponse com success/data/meta.",
+ *
  *     @OA\Property(property="success", type="boolean", example=true),
  *     @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/RatProtocoloItem")),
  *     @OA\Property(property="meta", type="object",
@@ -282,6 +297,7 @@ use App\Http\Controllers\Controller;
  *     type="object",
  *     title="RAT — Item export Power BI (nested)",
  *     description="Estrutura de cada item retornado por GET /api/v1/rat/protocolos/export/power-bi. Datas em 'Y-m-d H:i:s'. Espelha o contrato do módulo PAE.",
+ *
  *     @OA\Property(property="dados_gerais", type="object",
  *         @OA\Property(property="id", type="string", format="uuid", example="018f2a3b-0000-7000-8000-000000000001"),
  *         @OA\Property(property="numero_bos", type="string", example="2025-000000001-001"),
@@ -316,7 +332,9 @@ use App\Http\Controllers\Controller;
  *         @OA\Property(property="updated_at", type="string", example="2025-12-23 08:54:53")
  *     ),
  *     @OA\Property(property="recursos", type="array",
+ *
  *         @OA\Items(type="object",
+ *
  *             @OA\Property(property="id", type="string", nullable=true),
  *             @OA\Property(property="seq", type="integer", example=0),
  *             @OA\Property(property="tipo_recurso", type="string", nullable=true, example="aquatico"),
@@ -331,7 +349,9 @@ use App\Http\Controllers\Controller;
  *         )
  *     ),
  *     @OA\Property(property="envolvidos", type="array",
+ *
  *         @OA\Items(type="object",
+ *
  *             @OA\Property(property="id", type="string", nullable=true),
  *             @OA\Property(property="tipo_pessoa", type="string", nullable=true, enum={"fisica","juridica"}, example="juridica"),
  *             @OA\Property(property="nome", type="string", nullable=true, example="João da Silva"),
@@ -437,6 +457,7 @@ use App\Http\Controllers\Controller;
  *     type="object",
  *     title="RAT — Resposta Export Power BI",
  *     description="Resposta do GET /api/v1/rat/protocolos/export/power-bi. Sem paginação, formato nested compatível com Power BI.",
+ *
  *     @OA\Property(property="sucesso", type="boolean", example=true),
  *     @OA\Property(property="dados", type="array", @OA\Items(ref="#/components/schemas/RatBIExportItem")),
  *     @OA\Property(property="meta", type="object",
@@ -451,6 +472,7 @@ use App\Http\Controllers\Controller;
  *     type="object",
  *     title="RAT — Detalhe completo (show / create)",
  *     description="Retornado pelo GET /api/v1/rat/protocolos/{id} e POST /api/v1/rat/protocolos (via RatResource).",
+ *
  *     @OA\Property(property="success", type="boolean", example=true),
  *     @OA\Property(property="data", type="object",
  *         @OA\Property(property="id", type="string", format="uuid", example="018f2a3b-0000-7000-8000-000000000001"),
@@ -504,7 +526,9 @@ use App\Http\Controllers\Controller;
  *             @OA\Property(property="numero_bos", type="string", example="2025-000000001-001")
  *         ),
  *         @OA\Property(property="ocorrencias_filhas", type="array",
+ *
  *             @OA\Items(type="object",
+ *
  *                 @OA\Property(property="id", type="string", format="uuid"),
  *                 @OA\Property(property="numero_bos", type="string", example="2025-000000001-002")
  *             )
@@ -520,6 +544,7 @@ use App\Http\Controllers\Controller;
  *     schema="ReceiveRatProtocoloRequest",
  *     type="object",
  *     title="RAT — Corpo do POST /api/v1/rat/protocolos",
+ *
  *     @OA\Property(property="dados_gerais", type="object", nullable=true,
  *         @OA\Property(property="data_fato", type="string", example="2025-12-23 08:53:00"),
  *         @OA\Property(property="nat_cobrade_id", type="integer", nullable=true, example=15),
@@ -546,7 +571,9 @@ use App\Http\Controllers\Controller;
  *         @OA\Property(property="longitude", type="number", format="float", nullable=true)
  *     ),
  *     @OA\Property(property="recursos", type="array", nullable=true,
+ *
  *         @OA\Items(type="object",
+ *
  *             @OA\Property(property="tipo_recurso", type="string", nullable=true, example="aquatico"),
  *             @OA\Property(property="categoria", type="string", nullable=true, example="comunicacao"),
  *             @OA\Property(property="orgao_responsavel", type="string", nullable=true, example="samu"),
@@ -557,7 +584,9 @@ use App\Http\Controllers\Controller;
  *         )
  *     ),
  *     @OA\Property(property="envolvidos", type="array", nullable=true,
+ *
  *         @OA\Items(type="object",
+ *
  *             @OA\Property(property="tipo_pessoa", type="string", nullable=true, enum={"fisica","juridica"}, example="fisica"),
  *             @OA\Property(property="nome", type="string", nullable=true, example="João da Silva"),
  *             @OA\Property(property="cpf", type="string", nullable=true),
@@ -573,6 +602,270 @@ use App\Http\Controllers\Controller;
  *     @OA\Property(property="finalize", type="boolean", nullable=true, example=false,
  *         description="true para finalizar imediatamente; false (padrão) salva como rascunho. Ao finalizar, data_fato e local.uf tornam-se obrigatórios."
  *     )
+ * )
+ *
+ * ---------------------------------------------------------------------------
+ * MODULO CISTERNA
+ * ---------------------------------------------------------------------------
+ * As `description` abaixo carregam o mapeamento legado -> dominio -> payload.
+ * Ficam aqui, e nao num .md, porque e onde o consumidor da API de fato le.
+ *
+ * Origem: os 225 campos de `database/data/Cisternas.sql` (80 em sinc_cisterna,
+ * 53 em _rel_fornecedor, 39 em _rel_compdec, 27 em _rel_cedec, 6 em _com, 6 em
+ * _lotes, 7 em _ordem_servico, 7 em _notificacoes), conferidos contra
+ * app/Modules/Cisterna/Domain/Etl/Refinadores/.
+ *
+ * NAO mover para app/Http/Controllers/Api/Schemas.php: aquele arquivo tem um
+ * docblock solto sem classe, e o swagger-php exige que a anotacao esteja ligada
+ * a um elemento PHP -- os schemas de la nunca chegam ao api-docs.json (medido:
+ * ProtocoloRAT, PowerBITokenResponse e RatReceiveRequest estao ausentes).
+ *
+ * @OA\Schema(
+ *     schema="CisternaBeneficiarioItem",
+ *     type="object",
+ *     title="Beneficiario do Projeto Cisterna (listagem)",
+ *     description="Formato reduzido da listagem. Origem no legado: tabela `sinc_cisterna` (80 colunas).",
+ *
+ *     @OA\Property(property="id", type="integer", example=4201),
+ *     @OA\Property(property="cpf", type="string", nullable=true, description="11 digitos, sem mascara. Legado: `sinc_cisterna.cpf` varchar(14) com mascara. 5 cadastros nao foram importados por CPF truncado na origem.", example="05924079659"),
+ *     @OA\Property(property="nome", type="string", example="Maria Aparecida de Souza"),
+ *     @OA\Property(property="municipio", type="string", nullable=true, description="Nome. Legado: `sinc_cisterna.codmundv` (codigo IBGE), traduzido para `municipios.id` pela ponte PonteMunicipio.", example="Janauba"),
+ *     @OA\Property(property="comunidade", type="string", nullable=true, description="Legado: `sinc_cisterna.comunidade` varchar(34) de texto livre, normalizado em `cisterna_comunidades`."),
+ *     @OA\Property(property="situacao_analise", type="object", description="Legado: `sinc_cisterna.aprovado` int. ATENCAO: `duplicado` (valor 5 no legado) e tombstone, nao cadastro ativo -- 516 registros. Filtre em analise.",
+ *         @OA\Property(property="valor", type="string", enum={"em_edicao","aprovado","reprovado","ressalva","desconsiderado","duplicado"}, example="aprovado"),
+ *         @OA\Property(property="rotulo", type="string", example="Aprovado")
+ *     ),
+ *     @OA\Property(property="situacao_obra", type="object", description="Legado: `sinc_cisterna.estado` (0..2). Ortogonal a situacao_analise.",
+ *         @OA\Property(property="valor", type="string", enum={"processamento","envio_instalacao","instalado"}, example="instalado"),
+ *         @OA\Property(property="rotulo", type="string", example="Instalado")
+ *     ),
+ *     @OA\Property(property="ranqueamento_ordem", type="integer", nullable=true, description="Ordem de prioridade social. Nulo na maioria: e ordenavel, nao calculado pelo sistema."),
+ *     @OA\Property(property="lote", type="string", nullable=true, description="Nome do lote da ordem de servico do beneficiario."),
+ *     @OA\Property(property="ordem_servico", type="string", nullable=true),
+ *     @OA\Property(property="etapas_concluidas", type="array", description="Etapas de vistoria ja concluidas. Substitui os tres whereHas aninhados do legado.", @OA\Items(type="string", enum={"fornecedor","compdec","cedec"})),
+ *     @OA\Property(property="numero_instalacao", type="integer", nullable=true, description="Numero do QR Code colado na cisterna. Alocado SOMENTE na etapa `fornecedor`.", example=1247)
+ * )
+ *
+ * @OA\Schema(
+ *     schema="CisternaBeneficiarioDetail",
+ *     type="object",
+ *     title="Beneficiario do Projeto Cisterna (detalhe)",
+ *     description="Formato completo. Origem: `sinc_cisterna` (80 colunas) mais as tabelas de relatorio. As ~54 colunas de caminho de arquivo do legado sairam do dominio: os arquivos vivem em collections do Spatie MediaLibrary.",
+ *
+ *     @OA\Property(property="id", type="integer", example=4201),
+ *     @OA\Property(property="cpf", type="string", nullable=true, example="05924079659"),
+ *     @OA\Property(property="nome", type="string", example="Maria Aparecida de Souza"),
+ *     @OA\Property(property="telefone", type="string", nullable=true),
+ *     @OA\Property(property="data_nascimento", type="string", format="date", nullable=true),
+ *     @OA\Property(property="cadastro_unico", type="string", nullable=true, description="NIS. Legado: `sinc_cisterna.cad_unico`."),
+ *     @OA\Property(property="municipio", type="object",
+ *         @OA\Property(property="id", type="integer", example=1234),
+ *         @OA\Property(property="nome", type="string", example="Janauba"),
+ *         @OA\Property(property="uf", type="string", example="MG")
+ *     ),
+ *     @OA\Property(property="comunidade", type="object",
+ *         @OA\Property(property="id", type="integer", nullable=true),
+ *         @OA\Property(property="nome", type="string", nullable=true)
+ *     ),
+ *     @OA\Property(property="endereco", type="string", nullable=true),
+ *     @OA\Property(property="latitude", type="number", format="float", nullable=true, description="Legado: `sinc_cisterna.latitude` varchar(150) de texto livre, com 21 formatos distintos. 7.993 de 8.099 foram parseadas; o resto e perda irrecuperavel (truncada na origem) ou eixo trocado no cadastro. O valor original continua em `cisterna_legado_raw.doc`.", example=-15.8021456),
+ *     @OA\Property(property="longitude", type="number", format="float", nullable=true, example=-43.9673012),
+ *     @OA\Property(property="ordem_servico", type="object", nullable=true,
+ *         @OA\Property(property="id", type="integer"),
+ *         @OA\Property(property="nome", type="string"),
+ *         @OA\Property(property="lote", type="string", nullable=true)
+ *     ),
+ *     @OA\Property(property="situacao_analise", type="object",
+ *         @OA\Property(property="valor", type="string", enum={"em_edicao","aprovado","reprovado","ressalva","desconsiderado","duplicado"}),
+ *         @OA\Property(property="rotulo", type="string"),
+ *         @OA\Property(property="observacao", type="string", nullable=true)
+ *     ),
+ *     @OA\Property(property="situacao_obra", type="object",
+ *         @OA\Property(property="valor", type="string", enum={"processamento","envio_instalacao","instalado"}),
+ *         @OA\Property(property="rotulo", type="string")
+ *     ),
+ *     @OA\Property(property="ranqueamento_ordem", type="integer", nullable=true),
+ *     @OA\Property(property="criterios_sociais", type="object", description="Criterios de elegibilidade do programa.",
+ *         @OA\Property(property="qtd_pessoas", type="integer", nullable=true),
+ *         @OA\Property(property="renda", type="number", format="float", nullable=true, description="SEM CENTAVOS: no legado `renda` e float(10,0), zero casas decimais. Perda na origem, nao na migracao -- nenhuma das 8.099 linhas tinha centavos.", example=1412),
+ *         @OA\Property(property="renda_per_capita", type="number", format="float", nullable=true),
+ *         @OA\Property(property="possui_deficiencia", type="boolean", nullable=true),
+ *         @OA\Property(property="possui_crianca", type="boolean", nullable=true),
+ *         @OA\Property(property="data_nascimento_crianca", type="string", format="date", nullable=true),
+ *         @OA\Property(property="possui_idoso", type="boolean", nullable=true),
+ *         @OA\Property(property="chefiada_mulher", type="boolean", nullable=true)
+ *     ),
+ *     @OA\Property(property="avaliacao_tecnica", type="object", description="Medidas do telhado que definem a viabilidade da captacao.",
+ *         @OA\Property(property="tipo_moradia", type="string", nullable=true, enum={"propria","cedida","alugada","outros"}, description="Legado: `moradia` varchar(7) em utf8mb3 -- 'PROPRIA' com acento nao cabia e chegou corrompida em 67 cadastros. 162 linhas gravaram o literal '0' (placeholder de nao respondido) e viraram nulo."),
+ *         @OA\Property(property="tipo_moradia_outro", type="string", nullable=true),
+ *         @OA\Property(property="comprimento_telhado", type="number", format="float", nullable=true),
+ *         @OA\Property(property="largura_telhado", type="number", format="float", nullable=true),
+ *         @OA\Property(property="area_telhado", type="number", format="float", nullable=true),
+ *         @OA\Property(property="comprimento_testada", type="number", format="float", nullable=true),
+ *         @OA\Property(property="num_caidas_telhado", type="integer", nullable=true),
+ *         @OA\Property(property="cobertura_telhado", type="string", nullable=true, description="Legado: `coberturaTelhado`. 14 linhas com o literal '0' viraram nulo; as 434 'Ceramica' acentuadas casaram."),
+ *         @OA\Property(property="cobertura_outro", type="string", nullable=true),
+ *         @OA\Property(property="possui_fogao_lenha", type="boolean", nullable=true),
+ *         @OA\Property(property="medida_telhado_area_fogao", type="number", format="float", nullable=true),
+ *         @OA\Property(property="testada_disp_parte_fogao", type="number", format="float", nullable=true)
+ *     ),
+ *     @OA\Property(property="atendimento_pipa", type="object", description="Legado: `atendPipa` varchar(36) que devia ser booleano. 34 cadastros gravaram ali o RESPONSAVEL ('prefeitura', 'respAtExercito', ...) em vez de sim/nao; o refino leu como atendido=sim e guardou o responsavel.",
+ *         @OA\Property(property="atendido", type="boolean", nullable=true),
+ *         @OA\Property(property="responsaveis", type="array", @OA\Items(type="object",
+ *             @OA\Property(property="valor", type="string"),
+ *             @OA\Property(property="rotulo", type="string"),
+ *             @OA\Property(property="descricao", type="string", nullable=true)
+ *         ))
+ *     ),
+ *     @OA\Property(property="responsaveis_cadastro", type="object",
+ *         @OA\Property(property="agente_nome", type="string", nullable=true),
+ *         @OA\Property(property="agente_cpf", type="string", nullable=true),
+ *         @OA\Property(property="engenheiro_nome", type="string", nullable=true),
+ *         @OA\Property(property="engenheiro_crea", type="string", nullable=true)
+ *     ),
+ *     @OA\Property(property="observacoes", type="string", nullable=true),
+ *     @OA\Property(property="vistorias", type="array", @OA\Items(ref="#/components/schemas/CisternaVistoriaItem")),
+ *     @OA\Property(property="notificacoes", type="array", @OA\Items(ref="#/components/schemas/CisternaNotificacaoItem")),
+ *     @OA\Property(property="fotos_imovel", type="array", description="ATENCAO: 72% dos cadastros do legado NAO tem o arquivo aqui. As colunas `img_*` do legado guardavam o rotulo da foto ('FRENTE', 'FUNDO'), nao o caminho; o arquivo esta no Google Drive, e a URL foi preservada em `custom_properties.origem_legado`. Extrair os ~5.800 arquivos do Drive e decisao de infraestrutura pendente.", @OA\Items(type="object",
+ *         @OA\Property(property="id", type="integer"),
+ *         @OA\Property(property="url", type="string"),
+ *         @OA\Property(property="thumb", type="string", nullable=true),
+ *         @OA\Property(property="angulo", type="string", nullable=true),
+ *         @OA\Property(property="observacao", type="string", nullable=true)
+ *     )),
+ *     @OA\Property(property="comprovantes", type="array", @OA\Items(type="object",
+ *         @OA\Property(property="id", type="integer"),
+ *         @OA\Property(property="url", type="string"),
+ *         @OA\Property(property="tipo", type="string", nullable=true),
+ *         @OA\Property(property="nome", type="string")
+ *     )),
+ *     @OA\Property(property="criado_em", type="string", format="date-time", nullable=true),
+ *     @OA\Property(property="atualizado_em", type="string", format="date-time", nullable=true)
+ * )
+ *
+ * @OA\Schema(
+ *     schema="CisternaVistoriaItem",
+ *     type="object",
+ *     title="Vistoria de instalacao",
+ *     description="Uma linha por etapa do mesmo documento, com `unique (beneficiario_id, etapa)`. No legado eram tres tabelas: `sinc_cisterna_rel_fornecedor` (53 colunas), `sinc_cisterna_rel_compdec` (39) e `sinc_cisterna_rel_cedec` (27).",
+ *
+ *     @OA\Property(property="id", type="integer", example=8088),
+ *     @OA\Property(property="beneficiario_id", type="integer", example=4201),
+ *     @OA\Property(property="etapa", type="object",
+ *         @OA\Property(property="valor", type="string", enum={"fornecedor","compdec","cedec"}, example="fornecedor"),
+ *         @OA\Property(property="rotulo", type="string", example="Relatorio do Fornecedor")
+ *     ),
+ *     @OA\Property(property="numero_instalacao", type="integer", nullable=true, description="Numero do QR Code. Alocado SOMENTE na etapa `fornecedor` -- medido no banco: 794 de 794 no fornecedor, 0 em compdec e 0 em cedec. Nulo nas outras etapas e contrato, nao dado faltante.", example=1247),
+ *     @OA\Property(property="concluida", type="boolean"),
+ *     @OA\Property(property="concluida_em", type="string", format="date-time", nullable=true),
+ *     @OA\Property(property="engenheiro", type="object",
+ *         @OA\Property(property="nome", type="string", nullable=true),
+ *         @OA\Property(property="crea", type="string", nullable=true),
+ *         @OA\Property(property="art", type="string", nullable=true, description="Preenchido somente na etapa cedec.")
+ *     ),
+ *     @OA\Property(property="data_relatorio", type="string", format="date", nullable=true),
+ *     @OA\Property(property="local_relatorio", type="string", nullable=true),
+ *     @OA\Property(property="dados_administrativos", type="object", nullable=true, description="Chave AUSENTE fora da etapa `cedec`: so ela preenche processo, contrato e empenho.",
+ *         @OA\Property(property="processo_sei", type="string", nullable=true),
+ *         @OA\Property(property="contrato", type="string", nullable=true),
+ *         @OA\Property(property="empenho", type="string", nullable=true),
+ *         @OA\Property(property="placa_obras", type="integer", nullable=true)
+ *     ),
+ *     @OA\Property(property="local", type="object",
+ *         @OA\Property(property="endereco", type="string", nullable=true),
+ *         @OA\Property(property="bairro", type="string", nullable=true),
+ *         @OA\Property(property="latitude", type="number", format="float", nullable=true),
+ *         @OA\Property(property="longitude", type="number", format="float", nullable=true)
+ *     ),
+ *     @OA\Property(property="itens", type="array", description="Chave presente somente quando a relacao vem carregada (endpoint de detalhe).", @OA\Items(ref="#/components/schemas/CisternaItemConferido")),
+ *     @OA\Property(property="observacoes", type="string", nullable=true),
+ *     @OA\Property(property="criado_em", type="string", format="date-time", nullable=true)
+ * )
+ *
+ * @OA\Schema(
+ *     schema="CisternaItemConferido",
+ *     type="object",
+ *     title="Item do checklist de instalacao",
+ *     description="Uma linha por item conferido, polimorfica. No legado os 13 itens eram ~87 colunas espalhadas pelas tres tabelas de relatorio, com nomes divergentes entre elas (`calha_metros` numa, `qtd_calha` noutra, `calha_opcao` numa terceira).",
+ *
+ *     @OA\Property(property="item", type="string", enum={"cisterna_logo","sucao","bomba","placa","calha","tubulacao","fixacao","filtro","bloco","te_pvc","joelho_pvc","luva_pvc","cap_pvc"}, example="calha"),
+ *     @OA\Property(property="rotulo", type="string", example="Calha"),
+ *     @OA\Property(property="conferido", type="boolean", nullable=true),
+ *     @OA\Property(property="quantidade", type="number", format="float", nullable=true),
+ *     @OA\Property(property="unidade", type="string", nullable=true, example="m"),
+ *     @OA\Property(property="detalhes", type="object", nullable=true, description="Subquantidades que nao cabem numa coluna. Existe para `fixacao`, que no COMPDEC se desdobra em abracadeira, bucha e parafuso."),
+ *     @OA\Property(property="observacao", type="string", nullable=true)
+ * )
+ *
+ * @OA\Schema(
+ *     schema="CisternaComunidadeItem",
+ *     type="object",
+ *     title="Comunidade atendida",
+ *     description="Legado: `sinc_cisterna_com` (6 colunas). 840 comunidades em 55 municipios; pares (municipio, nome) duplicados na origem foram deduplicados, e nomes que existem em municipios distintos convivem como registros separados.",
+ *
+ *     @OA\Property(property="id", type="integer"),
+ *     @OA\Property(property="nome", type="string", example="Barreiro Grande"),
+ *     @OA\Property(property="ativa", type="boolean"),
+ *     @OA\Property(property="municipio", type="object",
+ *         @OA\Property(property="id", type="integer"),
+ *         @OA\Property(property="nome", type="string"),
+ *         @OA\Property(property="uf", type="string")
+ *     ),
+ *     @OA\Property(property="beneficiarios", type="integer", description="Contagem por `comunidade_id`, nao por nome -- o legado somava a contagem entre comunidades homonimas de municipios distintos.")
+ * )
+ *
+ * @OA\Schema(
+ *     schema="CisternaLoteItem",
+ *     type="object",
+ *     title="Lote de contratacao",
+ *     description="Legado: `sinc_cisterna_lotes` (6 colunas), 3 linhas. Nao tem municipio: o lote e nacional e a listagem nao aplica recorte territorial.",
+ *
+ *     @OA\Property(property="id", type="integer"),
+ *     @OA\Property(property="nome", type="string"),
+ *     @OA\Property(property="data", type="string", format="date", nullable=true),
+ *     @OA\Property(property="observacao", type="string", nullable=true),
+ *     @OA\Property(property="ordens_servico", type="integer", description="Contagem de OS do lote.")
+ * )
+ *
+ * @OA\Schema(
+ *     schema="CisternaOrdemServicoItem",
+ *     type="object",
+ *     title="Ordem de servico",
+ *     description="Legado: `sinc_cisterna_ordem_servico` (7 colunas), 7 linhas. Sem recorte territorial, mesma razao do lote.",
+ *
+ *     @OA\Property(property="id", type="integer"),
+ *     @OA\Property(property="nome", type="string"),
+ *     @OA\Property(property="observacao", type="string", nullable=true),
+ *     @OA\Property(property="lote", type="object",
+ *         @OA\Property(property="id", type="integer", nullable=true),
+ *         @OA\Property(property="nome", type="string", nullable=true)
+ *     ),
+ *     @OA\Property(property="beneficiarios", type="integer"),
+ *     @OA\Property(property="documento_url", type="string", nullable=true, description="URL do processo no SEI, vinda do legado. Nao e arquivo."),
+ *     @OA\Property(property="documento_anexo", type="string", nullable=true, description="Arquivo anexado no NewSDC, que o legado nao tinha.")
+ * )
+ *
+ * @OA\Schema(
+ *     schema="CisternaNotificacaoItem",
+ *     type="object",
+ *     title="Notificacao de fiscalizacao",
+ *     description="Legado: `sinc_cisterna_notificacoes` (7 colunas), 7 linhas -- todas dado de teste. Polimorfica: o notificavel e um beneficiario ou uma vistoria.",
+ *
+ *     @OA\Property(property="id", type="integer"),
+ *     @OA\Property(property="notificavel", type="object",
+ *         @OA\Property(property="tipo", type="string", nullable=true, enum={"beneficiario","vistoria"}, description="Alias curto, nao o FQCN."),
+ *         @OA\Property(property="id", type="integer")
+ *     ),
+ *     @OA\Property(property="observacao", type="string", nullable=true),
+ *     @OA\Property(property="respondida", type="boolean"),
+ *     @OA\Property(property="respondida_em", type="string", format="date-time", nullable=true),
+ *     @OA\Property(property="emitida_por", type="string", nullable=true, description="Nome de quem emitiu. NULO em tudo que veio do legado: os 43 usuarios de origem nao mapeiam para o NewSDC (0 casam por CPF, 0 por e-mail). O `user_id` original continua em `cisterna_legado_raw.doc`."),
+ *     @OA\Property(property="documentos", type="array", @OA\Items(type="object",
+ *         @OA\Property(property="id", type="integer"),
+ *         @OA\Property(property="url", type="string"),
+ *         @OA\Property(property="nome", type="string")
+ *     )),
+ *     @OA\Property(property="criado_em", type="string", format="date-time", nullable=true)
  * )
  */
 class SwaggerController extends Controller

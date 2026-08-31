@@ -4,13 +4,31 @@ declare(strict_types=1);
 
 namespace App\Modules\Pmda\Requests;
 
+use App\Modules\Pmda\Models\PmdaPlano;
+use App\Modules\Pmda\Support\PerfilPmda;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StorePmdaPlanoRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('pmda.planos.create') ?? false;
+        return $this->user()?->can('create', PmdaPlano::class) ?? false;
+    }
+
+    /**
+     * O municipio do PMDA vem do login, nao do formulario.
+     *
+     * Sobrescrever aqui, e nao no controller, deixa a regra em um unico ponto e
+     * preserva a validacao `exists`: um `municipio_id` forjado no POST e
+     * descartado antes de chegar as rules.
+     */
+    protected function prepareForValidation(): void
+    {
+        $municipioId = PerfilPmda::deUsuario($this->user())->municipioId();
+
+        if ($municipioId !== null) {
+            $this->merge(['municipio_id' => $municipioId]);
+        }
     }
 
     public function rules(): array

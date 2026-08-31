@@ -458,6 +458,27 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 **Interfaces:**
 - Consumes: Tasks 1-3 já no deploy (imagem swoole rebuildada com o pool).
 
+- [x] **Step 0 (acrescentado): validação em DEV antes de tocar produção** — VALIDADO 2026-08-25
+
+O plano original saltava de Tasks 1-3 direto para o gate de produção (Azure). Faltava reproduzir em dev a falha que causou o incidente. Harness CLI com hooks ON, `Cache`/`Redis` usados como o framework usa (implicitamente), N coroutines concorrentes:
+
+| pool | conc | ok | bound | timeout | other |
+|---|---|---|---|---|---|
+| 16 | 40  | 40  | 0 | 0 | 0 |
+| 16 | 100 | 100 | 0 | 0 | 0 |
+| 4  | 100 | 100 | 0 | 0 | 0 |
+
+CONTRA-PROVA (o que torna o verde confiável): o MESMO harness sem registrar os pools reproduz o erro do incidente, e como **Fatal error** — não exceção capturável, que é por que derrubava o worker:
+
+```
+Swoole\Error: Socket#32 has already been bound to another coroutine#23,
+reading of the same socket in coroutine#4 at the same time is not allowed
+  em Illuminate/Redis/Connections/Connection.php:122 (Redis->get)
+  via Cache::get -> RedisStore::get
+```
+
+Confirma o diagnóstico do design §1: o Redis é usado implicitamente em todo request, e sem bind por-coroutine qualquer página real cai.
+
 - [ ] **Step 1: Build + deploy da imagem com o pool** (mesmo fluxo do hotfix: build retry + push retry + cutover limpo via digest). Manter `OCTANE_HOOK_FLAGS_ENABLED=false` neste deploy.
 
 - [ ] **Step 2: Ligar os hooks em produção**

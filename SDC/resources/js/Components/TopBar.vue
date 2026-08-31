@@ -1,6 +1,11 @@
 <template>
+  <!--
+    `left` acompanha a Sidebar e vira em `lg`, nao em `md`: abaixo de 1024px ela e
+    drawer off-canvas e nao ocupa espaco, entao `md:left-20` deixava 80px de faixa
+    branca a esquerda da barra em 768-1023px. Ver a nota no AuthenticatedLayout.
+  -->
   <header
-    class="fixed top-0 right-0 left-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm md:left-20 lg:left-[280px]"
+    class="fixed top-0 right-0 left-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm lg:left-[280px]"
     :class="{
       'lg:!left-20': isCollapsed
     }"

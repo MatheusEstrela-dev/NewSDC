@@ -35,10 +35,24 @@ const props = defineProps({
   itensTanque: { type: Array, default: () => [] },
 });
 
+// `toISOString()` devolve a data em UTC: depois das 21h no horario de Brasilia
+// a vistoria nascia datada do dia seguinte. Aqui a data e montada no fuso local.
+const hoje = new Date();
+const hojeLocal = [
+  hoje.getFullYear(),
+  String(hoje.getMonth() + 1).padStart(2, '0'),
+  String(hoje.getDate()).padStart(2, '0'),
+].join('-');
+
+// `data_vistoria`, e nao `data`: `data` e uma propriedade RESERVADA do useForm
+// do Inertia (o metodo form.data(), definido depois do spread dos campos,
+// sobrescrevia o campo). O DatePicker recebia a funcao no lugar da data, quebrava
+// no setup e o campo simplesmente nao aparecia na tela; no envio a data ia
+// vazia. O transform devolve o nome `data` na requisicao, sem mexer no backend.
 const base = {
-  nome: '', edital: '', lote: '', placa_id: null, modelo: '', cor: '',
-  data: new Date().toISOString().slice(0, 10), ano: '', capacidade: '',
-  parecer: 'aprovada', ficha: '', observacoes: '',
+  nome: '', edital: '', placa_id: null, modelo: '', cor: '',
+  data_vistoria: hojeLocal, ano: '', capacidade: '',
+  parecer: 'aprovada', ficha: '', lacre: '', observacoes: '',
 };
 [...props.itensEstruturais, ...props.itensTanque].forEach(k => {
   base[k] = false;
@@ -46,6 +60,8 @@ const base = {
 });
 
 const form = useForm(base);
+
+form.transform(({ data_vistoria: dataVistoria, ...resto }) => ({ ...resto, data: dataVistoria }));
 
 function submit() { form.post(route('tdap.vistorias.store')); }
 function cancelar() { router.visit(route('tdap.vistorias.index')); }

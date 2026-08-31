@@ -39,14 +39,31 @@ use Illuminate\Support\Facades\Route;
 | Plano: docs/superpowers/plans/2026-05-11-tdap-migration.md
 */
 
+/*
+| Route::model() e GLOBAL: registra o binder para o nome do parametro em TODA a
+| aplicacao, nao so nas rotas deste arquivo. `lote` e `vistoria` sairam daqui
+| porque o Cisterna tambem tem /cisternas/lotes/{lote} e
+| /cisternas/vistorias/{vistoria}, e o binder explicito vence o implicito no
+| SubstituteBindings -- as quatro rotas de vistoria e a de lote do Cisterna
+| resolviam contra o model do Tdap e devolviam 404.
+|
+| Nao faziam falta: os 8 handlers de Lote e Vistoria daqui type-hintam o proprio
+| model, e o binding implicito ja resolve o certo em cada modulo.
+|
+| O bug so aparecia sem cache de rota. Com bootstrap/cache/routes-*.php este
+| arquivo nao e carregado, os Route::model() nunca executam e o Cisterna
+| funcionava -- ou seja, o comportamento mudava entre producao (cacheada) e
+| dev/teste (nao cacheada), que e o pior lugar para uma divergencia morar.
+|
+| Ao acrescentar Route::model() aqui, confira se o nome do parametro e exclusivo
+| deste modulo.
+*/
 Route::model('prestador', Prestador::class);
 Route::model('caminhao', Caminhao::class);
 Route::model('ata', Ata::class);
-Route::model('lote', Lote::class);
 Route::model('cronograma', Cronograma::class);
 Route::model('cronoCaminhao', CronoCaminhao::class);
 Route::model('viagem', CronoViagem::class);
-Route::model('vistoria', Vistoria::class);
 Route::model('historico', Historico::class);
 Route::model('processo', ProcessoTdap::class);
 

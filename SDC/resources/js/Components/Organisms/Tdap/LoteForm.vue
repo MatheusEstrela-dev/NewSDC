@@ -19,20 +19,53 @@
           </select>
           <InputError :message="form.errors.ata_id" class="mt-2" />
         </div>
+        <!--
+          O lote atende VARIOS municipios ("...destinado aos municipios de A, B
+          e C"): multi-selecao com busca, em vez do select unico que forcava um
+          municipio so por lote.
+        -->
         <div>
-          <InputLabel for="municipio_id" value="Município *" />
-          <select
-            id="municipio_id"
-            v-model="form.municipio_id"
-            class="mt-1 block w-full border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
-            required
-          >
-            <option :value="null">Selecione o município</option>
-            <option v-for="m in municipios" :key="m.id" :value="m.id">
-              {{ m.nome }}<span v-if="m.uf"> / {{ m.uf }}</span>
-            </option>
-          </select>
-          <InputError :message="form.errors.municipio_id" class="mt-2" />
+          <InputLabel value="Municípios atendidos *" />
+          <div class="mt-1 rounded-md border border-slate-300 dark:border-slate-700 dark:bg-slate-900/50">
+            <div class="p-2 border-b border-slate-200 dark:border-slate-700">
+              <TextInput
+                v-model="buscaMunicipio"
+                type="search"
+                class="block w-full text-sm"
+                placeholder="Buscar município..."
+              />
+            </div>
+            <div v-if="municipiosSelecionados.length" class="flex flex-wrap gap-1 p-2 border-b border-slate-200 dark:border-slate-700">
+              <button
+                v-for="m in municipiosSelecionados"
+                :key="m.id"
+                type="button"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-xs text-blue-800 dark:text-blue-200"
+                :title="`Remover ${m.nome}`"
+                @click="alternarMunicipio(m.id)"
+              >
+                {{ m.nome }}<span aria-hidden="true">×</span>
+              </button>
+            </div>
+            <ul class="max-h-52 overflow-y-auto p-2 space-y-1">
+              <li v-for="m in municipiosFiltrados" :key="m.id">
+                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    :checked="estaSelecionado(m.id)"
+                    @change="alternarMunicipio(m.id)"
+                  />
+                  <span>{{ m.nome }}<span v-if="m.uf" class="text-slate-400"> / {{ m.uf }}</span></span>
+                </label>
+              </li>
+              <li v-if="municipiosFiltrados.length === 0" class="text-sm text-slate-400 px-1 py-2">
+                Nenhum município encontrado.
+              </li>
+            </ul>
+          </div>
+          <p class="mt-1 text-xs text-slate-500">{{ municipiosSelecionados.length }} selecionado(s)</p>
+          <InputError :message="form.errors.municipio_ids" class="mt-2" />
         </div>
         <div class="md:col-span-2">
           <InputLabel for="prestador_id" value="Prestador *" />
@@ -68,7 +101,7 @@
           />
           <InputError :message="form.errors.numero" class="mt-2" />
         </div>
-        <div class="md:col-span-2">
+        <div>
           <InputLabel for="nome" value="Nome (opcional)" />
           <TextInput
             id="nome"
@@ -79,6 +112,18 @@
             placeholder="Ex: Lote Norte – Distrito 1"
           />
           <InputError :message="form.errors.nome" class="mt-2" />
+        </div>
+        <div>
+          <InputLabel for="contrato" value="Contrato (opcional)" />
+          <TextInput
+            id="contrato"
+            v-model="form.contrato"
+            type="text"
+            class="mt-1 block w-full"
+            maxlength="50"
+            placeholder="Ex: 123/2026"
+          />
+          <InputError :message="form.errors.contrato" class="mt-2" />
         </div>
       </div>
     </div>
@@ -154,7 +199,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -170,6 +215,38 @@ const props = defineProps({
 });
 
 defineEmits(['submit', 'cancel']);
+
+// Multi-selecao de municipios: o catalogo tem 853 itens, entao a lista e
+// filtrada por busca (sem acento/caixa) e os escolhidos aparecem como chips.
+const buscaMunicipio = ref('');
+
+const semAcento = (v) => (v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+const municipiosFiltrados = computed(() => {
+  const termo = semAcento(buscaMunicipio.value).trim();
+  if (!termo) return props.municipios;
+
+  // Nome ou UF: o catalogo tem municipios homonimos em estados diferentes.
+  return props.municipios.filter(
+    m => semAcento(m.nome).includes(termo) || semAcento(m.uf) === termo,
+  );
+});
+
+const municipiosSelecionados = computed(() => {
+  const ids = props.form.municipio_ids ?? [];
+  return props.municipios.filter(m => ids.includes(m.id));
+});
+
+function estaSelecionado(id) {
+  return (props.form.municipio_ids ?? []).includes(id);
+}
+
+function alternarMunicipio(id) {
+  const atuais = props.form.municipio_ids ?? [];
+  props.form.municipio_ids = atuais.includes(id)
+    ? atuais.filter(i => i !== id)
+    : [...atuais, id];
+}
 
 const valorTotal = computed(() => {
   const qtd = Number(props.form.qtd_agua_m3 || 0);

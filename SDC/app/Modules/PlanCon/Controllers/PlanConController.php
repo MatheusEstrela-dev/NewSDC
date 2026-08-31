@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace App\Modules\PlanCon\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\PlanCon\Models\PlanoContingencia;
+use App\Modules\Compdec\Models\CompdecPlanoContingencia;
 use App\Modules\PlanCon\Requests\UploadPlanoRequest;
 use App\Modules\PlanCon\Services\PlanoContingenciaService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use RuntimeException;
+use Illuminate\Http\Response as HttpResponse;
 
 class PlanConController extends Controller
 {
@@ -32,6 +33,10 @@ class PlanConController extends Controller
             'planos' => $planos,
             'stats' => $statistics,
             'filters' => $filters,
+            // Usuario municipal envia direto (orgao vem do vinculo). Conta
+            // estadual escolhe o municipio, entao recebe a lista.
+            'podeEnviar' => true,
+            'municipiosParaEnvio' => $this->planoService->municipiosParaEnvio($request->user()),
         ]);
     }
 
@@ -68,33 +73,28 @@ class PlanConController extends Controller
         ]);
     }
 
+    /**
+     * Envio do plano pelo proprio municipio. O orgao vem do usuario logado --
+     * o request nao escolhe municipio, entao ninguem envia plano em nome de
+     * outra cidade.
+     */
     public function store(UploadPlanoRequest $request): RedirectResponse
     {
-        $user = $request->user();
-        $user->loadMissing('orgaoPrincipal');
-
-        $orgao = $user->orgaoPrincipal
-            ?? $user->orgaos()->wherePivot('is_principal', true)->first()
-            ?? ($user->orgaos()->count() === 1 ? $user->orgaos()->first() : null);
-
-        if (! $orgao?->municipio_id) {
-            return redirect()
-                ->route('plancon.index')
-                ->with('error', 'Seu usuario nao possui um municipio vinculado ao orgao principal. Contate o administrador.');
+        try {
+            $resultado = $this->planoService->enviarPlanosDoUsuario(
+                $request->user(),
+                $request->file('files', []),
+                $request->input('versao'),
+                $request->input('observacoes'),
+                $request->integer('municipio_id') ?: null,
+            );
+        } catch (RuntimeException $e) {
+            return redirect()->route('plancon.index')->with('error', $e->getMessage());
         }
-
-        $resultado = $this->planoService->uploadPlanos(
-            $request->file('files', []),
-            (int) $orgao->municipio_id
-        );
 
         Cache::forget('dashboard.stats.full');
 
-        $mensagem = sprintf(
-            '%d plano(s) criado(s), %d atualizado(s).',
-            $resultado['criados'],
-            $resultado['atualizados']
-        );
+        $mensagem = sprintf('%d plano(s) enviado(s).', $resultado['enviados']);
 
         if ($resultado['erros']) {
             $mensagem .= ' ' . implode(' ', array_values($resultado['erros']));
@@ -106,7 +106,7 @@ class PlanConController extends Controller
             ->with('upload_erros', $resultado['erros']);
     }
 
-    public function download(PlanoContingencia $planoContingencia): StreamedResponse
+    public function download(CompdecPlanoContingencia $planoContingencia): HttpResponse
     {
         return $this->planoService->downloadPlano($planoContingencia);
     }

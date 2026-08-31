@@ -36,13 +36,21 @@ const props = defineProps({
   itensTanque: { type: Array, default: () => [] },
 });
 
-const v = props.vistoria.data;
+// O resource vem embrulhado em `data` pelo Inertia; o fallback mantem a tela de
+// pe caso o payload chegue plano (mesmo padrao do Show).
+const v = props.vistoria.data ?? props.vistoria;
 
 const base = {
-  nome: v.nome || '', edital: v.edital || '', lote: v.lote || '',
+  nome: v.nome || '', edital: v.edital || '',
+  // `lote` saiu do formulario, mas continua no payload para nao ser apagado nas
+  // vistorias legadas que ja o tinham preenchido.
+  lote: v.lote ?? null,
   placa_id: v.placa_id, modelo: v.modelo || '', cor: v.cor || '',
-  data: v.data || '', ano: v.ano || '', capacidade: v.capacidade ?? '',
-  parecer: v.parecer ?? 'aprovada', ficha: v.ficha || '', observacoes: v.observacoes || '',
+  // `data_vistoria`, e nao `data`: `data` e propriedade reservada do useForm
+  // (form.data()) e sobrescrevia o campo — ver o transform abaixo.
+  data_vistoria: v.data || '', ano: v.ano || '', capacidade: v.capacidade ?? '',
+  parecer: v.parecer ?? 'aprovada', ficha: v.ficha || '',
+  lacre: v.lacre || '', observacoes: v.observacoes || '',
 };
 [...props.itensEstruturais, ...props.itensTanque].forEach(k => {
   base[k] = !!v[k];
@@ -51,11 +59,19 @@ const base = {
 
 const form = useForm(base);
 
+// Devolve o nome `data` na requisicao: o contrato do backend nao muda.
+form.transform(({ data_vistoria: dataVistoria, ...resto }) => ({ ...resto, data: dataVistoria }));
+
 function submit() { form.put(route('tdap.vistorias.update', v.id)); }
 function cancelar() { router.visit(route('tdap.vistorias.show', v.id)); }
 
+// Datas vem como 'YYYY-MM-DD' (date puro). `new Date('2026-05-01')` e lido como
+// meia-noite UTC e, no fuso do Brasil, exibia o dia anterior.
 function fmtDate(d) {
   if (!d) return '';
-  return new Date(d).toLocaleDateString('pt-BR');
+  const iso = String(d).slice(0, 10);
+  const [ano, mes, dia] = iso.split('-');
+
+  return ano && mes && dia ? `${dia}/${mes}/${ano}` : '';
 }
 </script>

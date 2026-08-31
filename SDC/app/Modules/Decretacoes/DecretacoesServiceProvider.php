@@ -12,7 +12,9 @@ use App\Modules\Decretacoes\Services\HexagonIntegrationService;
 use App\Modules\Decretacoes\Services\ProcessoExportBIService;
 use App\Modules\Decretacoes\Services\ProcessoQueryService;
 use App\Modules\Decretacoes\Services\ProcessoStatsService;
+use App\Modules\Decretacoes\Services\RedecService;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Octane\Events\RequestReceived;
 
 /**
  * Service Provider: Modulo Decretacoes
@@ -24,10 +26,10 @@ class DecretacoesServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Carrega modelos e DTOs consolidados (nao seguem padrao PSR-4 de 1 arquivo por classe)
-        require_once __DIR__ . '/Models/DecretoesModels.php';
-        require_once __DIR__ . '/DTO/DecretacoesDTO.php';
-
+        // Modelos e DTOs consolidados (varias classes por arquivo) sao resolvidos
+        // pelo `classmap` do composer.json, como os do Tdap e do Pmda. Antes eram
+        // carregados aqui por require_once: funcionava, mas custava carregar os dois
+        // arquivos em toda requisicao e enchia o `dump-autoload` de 17 avisos PSR-4.
         $this->app->singleton(HexagonIntegrationService::class);
         $this->app->singleton(DesastreDataService::class);
         $this->app->singleton(ProcessoQueryService::class);
@@ -55,5 +57,17 @@ class DecretacoesServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Processo::observe(ProcessoObserver::class);
+
+        // Catalogo de REDECs: o memo de RedecService e estatico e, sob
+        // Octane/Swoole, o worker atravessa centenas de requisicoes. Sem este
+        // reset, cadastrar uma REDEC nova em `dec_redecs` so apareceria depois
+        // do worker reciclar - o cache compartilhado e invalidado por
+        // clearCache(), mas o memo de cada processo nao.
+        if (class_exists(RequestReceived::class)) {
+            $this->app['events']->listen(
+                RequestReceived::class,
+                fn () => RedecService::flushMemo()
+            );
+        }
     }
 }

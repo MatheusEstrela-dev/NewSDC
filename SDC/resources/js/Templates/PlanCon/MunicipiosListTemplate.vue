@@ -1,6 +1,12 @@
 <template>
   <div class="space-y-6">
-    <PageHeader :title="title" :description="description" :icon="icon" variant="gradient">
+    <PageHeader
+      :title="title"
+      :description="description"
+      :icon="icon"
+      :icon-image="moduleIcon('plano-contingencia')"
+      variant="gradient"
+    >
       <template #actions>
         <Button v-if="canExport" variant="success" size="md" :icon="ArrowDownTrayIcon" @click="emit('export')">Exportar</Button>
       </template>
@@ -13,6 +19,7 @@
       :total="resolvedTotal"
       :show-situacao="showSituacao"
       :show-data-atualizacao="showDataAtualizacao"
+      :show-plano="showPlano"
       @view="emit('view', $event)"
     />
 
@@ -26,6 +33,7 @@ import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import Button from '@/Components/Atoms/Button/Button.vue';
 import Pagination from '@/Components/Molecules/Navigation/Pagination.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import PlanConMunicipiosFilters from '@/Components/Organisms/PlanCon/PlanConMunicipiosFilters.vue';
 import PlanConMunicipiosTable from '@/Components/Organisms/PlanCon/PlanConMunicipiosTable.vue';
 
@@ -37,6 +45,7 @@ const props = defineProps({
   totalMunicipios: { type: Number, default: 0 },
   showSituacao: { type: Boolean, default: false },
   showDataAtualizacao: { type: Boolean, default: false },
+  showPlano: { type: Boolean, default: false },
   canExport: { type: Boolean, default: false },
   pagination: { type: Object, default: null },
   filters: { type: Object, default: () => ({}) },

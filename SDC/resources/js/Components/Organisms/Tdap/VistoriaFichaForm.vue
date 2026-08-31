@@ -8,9 +8,26 @@
           <TextInput id="nome" v-model="form.nome" type="text" class="mt-1 block w-full" maxlength="150" required />
           <InputError :message="form.errors.nome" class="mt-2" />
         </div>
+        <!--
+          O campo se chama `data_vistoria` no formulario: `data` e propriedade
+          reservada do useForm do Inertia (form.data()) e sobrescrevia o valor,
+          entregando uma funcao ao DatePicker — o campo nao renderizava. O
+          transform em Create/Edit devolve o nome `data` na requisicao, entao o
+          erro de validacao continua chegando em `errors.data`.
+
+          `error` pinta a borda quando o backend recusa a data; `extra-class`
+          aplica margem/largura na caixa do campo, e nao no wrapper — e como o
+          resto do modulo usa o DatePicker (ver CronogramaForm).
+        -->
         <div>
           <InputLabel for="data" value="Data da vistoria *" />
-          <DatePicker id="data" v-model="form.data" class="mt-1 block w-full" required />
+          <DatePicker
+            id="data"
+            v-model="form.data_vistoria"
+            :error="!!form.errors.data"
+            extra-class="mt-1 w-full"
+            required
+          />
           <InputError :message="form.errors.data" class="mt-2" />
         </div>
         <div>
@@ -19,14 +36,19 @@
           <InputError :message="form.errors.edital" class="mt-2" />
         </div>
         <div>
-          <InputLabel for="lote" value="Lote" />
-          <TextInput id="lote" v-model="form.lote" type="text" class="mt-1 block w-full" maxlength="30" />
-          <InputError :message="form.errors.lote" class="mt-2" />
-        </div>
-        <div>
           <InputLabel for="ficha" value="Ficha / Laudo" />
           <TextInput id="ficha" v-model="form.ficha" type="text" class="mt-1 block w-full" maxlength="50" />
           <InputError :message="form.errors.ficha" class="mt-2" />
+        </div>
+        <!--
+          Numero do lacre aplicado no tanque ao fim da vistoria. Substitui o
+          campo "Lote" (que apenas repetia o lote da ata e nao dizia nada sobre
+          o caminhao vistoriado).
+        -->
+        <div>
+          <InputLabel for="lacre" value="Número do lacre" />
+          <TextInput id="lacre" v-model="form.lacre" type="text" class="mt-1 block w-full" maxlength="30" placeholder="Ex: 000123" />
+          <InputError :message="form.errors.lacre" class="mt-2" />
         </div>
       </div>
     </div>
@@ -49,6 +71,17 @@
             </option>
           </select>
           <InputError :message="form.errors.placa_id" class="mt-2" />
+        </div>
+        <!--
+          Placa do caminhao selecionado, em leitura: o texto da opcao fica
+          cortado no select em telas estreitas e a placa e o dado que o fiscal
+          confere contra o veiculo no patio.
+        -->
+        <div>
+          <InputLabel value="Placa" />
+          <p class="mt-1 flex items-center rounded-md border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 font-mono font-semibold text-slate-900 dark:text-slate-100">
+            {{ caminhaoSelecionado?.placa || '—' }}
+          </p>
         </div>
         <div>
           <InputLabel for="capacidade" value="Capacidade (m³) *" />
@@ -128,6 +161,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -147,8 +181,12 @@ const props = defineProps({
 
 defineEmits(['submit', 'cancel']);
 
+const caminhaoSelecionado = computed(
+  () => props.caminhoes.find(c => Number(c.id) === Number(props.form.placa_id)) ?? null,
+);
+
 function onCaminhaoChange() {
-  const c = props.caminhoes.find(c => Number(c.id) === Number(props.form.placa_id));
+  const c = caminhaoSelecionado.value;
   if (c) {
     if (!props.form.modelo) props.form.modelo = c.modelo || '';
     if (!props.form.cor)    props.form.cor    = c.cor || '';

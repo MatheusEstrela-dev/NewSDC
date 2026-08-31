@@ -49,17 +49,40 @@ return new class extends Migration
                 ->constrained('users')
                 ->nullOnDelete();
 
+            // Dono do registro, para a trilha de acoes do sino (Rastreavel),
+            // no mesmo padrao de compdec_orgaos.created_by. Fica nulo nos
+            // planos vindos do ETL: o legado nao registra quem subiu.
+            $table->foreignId('created_by')->nullable()
+                ->constrained('users')
+                ->cascadeOnUpdate()
+                ->nullOnDelete()
+                ->comment('Usuario que cadastrou; recebe a trilha de acoes do registro');
+
+            // Data real do upload no legado (com_plano_upload.dt_upload). Sem
+            // ela os 619 planos migrados ficariam todos com created_at igual a
+            // data do ETL, achatando o historico de 2019-2022 e quebrando o
+            // "ultima atualizacao" do painel de cobertura.
+            $table->timestamp('enviado_em')->nullable()
+                ->comment('Data do upload original; no legado, com_plano_upload.dt_upload');
+
             $table->string('legacy_arquivo', 255)->nullable()
                 ->comment('Path no storage legado (com_plano_upload) durante transicao ETL');
 
             $table->unsignedBigInteger('legacy_id')->nullable()
                 ->comment('ID original em com_plano_upload para idempotencia ETL');
 
+            // com_plano_upload.id_municipio (id da cedec_municipio, nao IBGE).
+            // Guardado para reconciliar planos cujo orgao nao resolveu no ETL.
+            $table->unsignedBigInteger('legacy_municipio_id')->nullable()
+                ->comment('id_municipio legado (cedec_municipio.id) para reconciliacao');
+
             $table->timestamps();
             $table->softDeletes();
 
             $table->index(['orgao_id', 'ativo', 'created_at']);
             $table->index('legacy_id');
+            // Serve o passo pos-ETL que elege o plano mais recente por orgao.
+            $table->index(['orgao_id', 'enviado_em']);
         });
 
         // PARTIAL UNIQUE: 1 plano ativo por orgao (PG-only)

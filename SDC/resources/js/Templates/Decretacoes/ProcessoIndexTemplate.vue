@@ -292,7 +292,7 @@ function handleExportCsv(params) {
     return;
   }
 
-  triggerExport(params, filtrosParaExportacao(params));
+  triggerExport(params, filtrosParaExportacao());
 }
 
 // =========================
@@ -309,7 +309,7 @@ const { handleExport: triggerExportRedec } = useExport('decretacoes.export.redec
  */
 function handleExportRedec(params) {
   const { redec_id: redecId, ...escopo } = params ?? {};
-  const filtros = filtrosParaExportacao(params);
+  const filtros = filtrosParaExportacao();
 
   delete filtros.redec_id;
 
@@ -317,24 +317,46 @@ function handleExportRedec(params) {
 }
 
 /**
+ * Chaves de recorte por data de entrada aceitas pelo backend (ProcessoFilter).
+ *
+ * `data_entrada` é a data exata; os pares `data_inicio`/`data_fim` e
+ * `data_entrada_inicio`/`data_entrada_fim` são intervalos equivalentes — o
+ * backend dá precedência aos `data_entrada_*`.
+ */
+const CHAVES_DATA_ENTRADA = [
+  'data_entrada',
+  'data_inicio',
+  'data_fim',
+  'data_entrada_inicio',
+  'data_entrada_fim',
+];
+
+/**
  * Filtros da tela prontos para a exportação.
  *
- * Em "Toda Série Histórica" os recortes de data são descartados, para não
- * herdar o período que estava filtrado na listagem.
+ * O ESCOPO DE DATA É SEMPRE DO MODAL, nunca da listagem: todas as chaves de
+ * data de entrada saem daqui e só voltam pelo que o modal emitiu.
+ *
+ * Antes só o escopo "Toda Série Histórica" limpava essas chaves. Em "Período
+ * Específico" o recorte da tela sobrevivia e era combinado (E lógico) com o
+ * período escolhido — uma `data_entrada` exata filtrada na listagem, por
+ * exemplo, reduzia o CSV a um único dia (ou a nada, se estivesse fora do
+ * período), e um `data_entrada_inicio` herdado simplesmente vencia o
+ * `data_inicio` do modal na precedência do backend. Em ambos os casos o arquivo
+ * saía sem relação com o que o usuário pediu.
+ *
+ * Os demais filtros da tela (REDEC, município, status, vigência, COBRADE...)
+ * continuam valendo: o CSV é o recorte visível, no período pedido.
  */
-function filtrosParaExportacao(params) {
+function filtrosParaExportacao() {
   const filtros = { ...localFilters.value };
 
-  if (params?.all || params?.type === 'all') {
-    delete filtros.data_entrada;
-    delete filtros.data_inicio;
-    delete filtros.data_fim;
-    delete filtros.data_entrada_inicio;
-    delete filtros.data_entrada_fim;
-  }
+  CHAVES_DATA_ENTRADA.forEach((chave) => delete filtros[chave]);
 
-  // A paginação da listagem não tem sentido no CSV.
+  // Paginação e ordenação da listagem não têm sentido no CSV.
   delete filtros.page;
+  delete filtros.sort;
+  delete filtros.direction;
 
   return filtros;
 }

@@ -6,6 +6,7 @@
       description="Subdivisões das atas por município e prestador"
       :icon="MapIcon"
       :icon-image="moduleIcon('tdap')"
+      :espaco-inferior="false"
     >
       <template #actions>
         <Button variant="success" size="md" :icon="DownloadIcon" icon-position="left" @click="openExportModal">
@@ -30,11 +31,25 @@
 
     <FilterSection title="Filtros de Pesquisa" :columns="3" :default-collapsed="true">
       <FilterField
+        label="Buscar"
+        type="search"
+        placeholder="Número, nome ou contrato"
+        :model-value="filtroBusca"
+        @update:model-value="filtroBusca = $event"
+      />
+      <FilterField
         label="Ata"
         type="select"
         :model-value="filtroAta"
         :options="ataOptions"
         @update:model-value="filtroAta = $event"
+      />
+      <FilterField
+        label="Município"
+        type="select"
+        :model-value="filtroMunicipio"
+        :options="municipioOptions"
+        @update:model-value="filtroMunicipio = $event"
       />
       <FilterField
         label="Prestador"
@@ -61,7 +76,7 @@
           <tr>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Lote</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Ata</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Município</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Municípios</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Prestador</th>
             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Volume (m³)</th>
             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Valor total (R$)</th>
@@ -74,9 +89,39 @@
             <td class="px-4 py-3 text-sm font-mono">
               <Link :href="route('tdap.lotes.show', l.id)" class="text-blue-600 hover:text-blue-800">{{ l.numero }}</Link>
               <span v-if="l.nome" class="block text-xs text-slate-500">{{ l.nome }}</span>
+              <span v-if="l.contrato" class="block text-xs text-slate-400">Contrato {{ l.contrato }}</span>
             </td>
             <td class="px-4 py-3 text-sm font-mono text-slate-700 dark:text-slate-300">{{ l.ata_numero }}</td>
-            <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ l.municipio_nome }}<span v-if="l.municipio_uf" class="text-slate-400">/{{ l.municipio_uf }}</span></td>
+            <!--
+              Um lote atende varios municipios (relacao N:N). Listar todos em
+              chips estourava a linha nos lotes grandes (ha lote com mais de 30
+              municipios): a celula mostra os primeiros, um contador do resto e
+              a lista inteira no title/no detalhe do lote.
+            -->
+            <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 align-top">
+              <div v-if="municipiosDo(l).length" class="max-w-xs" :title="listaMunicipios(l)">
+                <div class="flex flex-wrap items-center gap-1">
+                  <span
+                    v-for="m in municipiosDo(l).slice(0, MUNICIPIOS_VISIVEIS)"
+                    :key="m.id"
+                    class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300"
+                  >
+                    {{ m.nome }}<span v-if="m.uf" class="text-slate-400">/{{ m.uf }}</span>
+                  </span>
+                  <Link
+                    v-if="municipiosDo(l).length > MUNICIPIOS_VISIVEIS"
+                    :href="route('tdap.lotes.show', l.id)"
+                    class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/30 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100"
+                  >
+                    +{{ municipiosDo(l).length - MUNICIPIOS_VISIVEIS }}
+                  </Link>
+                </div>
+                <span class="mt-1 block text-xs text-slate-400">
+                  {{ municipiosDo(l).length }} município(s)
+                </span>
+              </div>
+              <span v-else class="text-slate-400">—</span>
+            </td>
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ l.prestador_nome }}</td>
             <td class="px-4 py-3 text-sm text-right font-mono">{{ Number(l.qtd_agua_m3).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}</td>
             <td class="px-4 py-3 text-sm text-right font-mono">{{ Number(l.valor_total).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2}) }}</td>
@@ -107,6 +152,17 @@
                   size="sm"
                   tooltip-text="Editar lote"
                   @click="router.visit(route('tdap.lotes.edit', l.id))"
+                />
+                <ActionButton
+                  v-if="canDelete"
+                  action="delete"
+                  module="tdap"
+                  resource="lotes"
+                  :allowed="canDelete"
+                  :show-label="false"
+                  size="sm"
+                  tooltip-text="Excluir lote"
+                  @click="excluir(l)"
                 />
               </div>
             </td>
@@ -160,6 +216,7 @@ const props = defineProps({
   lotes:        { type: Object, default: () => ({ data: [], meta: {} }) },
   estatisticas: { type: Object, default: () => ({ total: 0, ativos: 0, volume_total_m3: 0, valor_total: 0 }) },
   atas:         { type: Array, default: () => [] },
+  municipios:   { type: Array, default: () => [] },
   prestadores:  { type: Array, default: () => [] },
   filtros:      { type: Object, default: () => ({}) },
   canCreate:    { type: Boolean, default: false },
@@ -167,7 +224,9 @@ const props = defineProps({
   canDelete:    { type: Boolean, default: false },
 });
 
+const filtroBusca     = ref(props.filtros.search ?? '');
 const filtroAta       = ref(props.filtros.ata_id ?? '');
+const filtroMunicipio = ref(props.filtros.municipio_id ?? '');
 const filtroPrestador = ref(props.filtros.prestador_id ?? '');
 const filtroAtivo     = ref(props.filtros.ativo ?? '');
 
@@ -175,26 +234,57 @@ const ataOptions = computed(() => [
   { value: '', label: 'Todas as atas' },
   ...props.atas.map(a => ({ value: a.id, label: a.numero })),
 ]);
+// Vem do backend ja restrito aos municipios que possuem lote no recorte atual.
+const municipioOptions = computed(() => [
+  { value: '', label: 'Todos os municípios' },
+  ...props.municipios.map(m => ({ value: m.id, label: m.uf ? `${m.nome} / ${m.uf}` : m.nome })),
+]);
 const prestadorOptions = computed(() => [
   { value: '', label: 'Todos os prestadores' },
   ...props.prestadores.map(p => ({ value: p.id, label: p.nome })),
 ]);
+// Quantos chips de municipio a celula mostra antes de resumir no contador.
+const MUNICIPIOS_VISIVEIS = 3;
+
+// A lista N:N so vem do backend quando a relacao esta carregada; o fallback
+// evita quebrar a grade se o payload chegar sem ela.
+function municipiosDo(lote) {
+  return Array.isArray(lote?.municipios) ? lote.municipios : [];
+}
+
+// Lista completa no tooltip da celula — os chips resumidos escondem o resto.
+function listaMunicipios(lote) {
+  return municipiosDo(lote)
+    .map(m => (m.uf ? `${m.nome}/${m.uf}` : m.nome))
+    .join(', ');
+}
+
 const ativoOptions = [
   { value: '', label: 'Todos' },
   { value: '1', label: 'Ativos' },
   { value: '0', label: 'Inativos' },
 ];
 
-function aplicarFiltros() {
-  router.get(route('tdap.lotes.index'), {
+// Fonte unica dos parametros de filtro: busca, cards, paginacao e export usam
+// este objeto (antes cada um montava o seu e o municipio ficava de fora).
+function queryFiltros() {
+  return {
+    search:       filtroBusca.value || undefined,
     ata_id:       filtroAta.value || undefined,
+    municipio_id: filtroMunicipio.value || undefined,
     prestador_id: filtroPrestador.value || undefined,
     ativo:        filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
-  }, { preserveState: true, replace: true });
+  };
+}
+
+function aplicarFiltros() {
+  router.get(route('tdap.lotes.index'), queryFiltros(), { preserveState: true, replace: true });
 }
 
 function limparFiltros() {
+  filtroBusca.value = '';
   filtroAta.value = '';
+  filtroMunicipio.value = '';
   filtroPrestador.value = '';
   filtroAtivo.value = '';
   router.get(route('tdap.lotes.index'), {}, { preserveState: false });
@@ -203,24 +293,23 @@ function limparFiltros() {
 // Cards de estatistica como filtros rapidos: '' = Total (limpa o filtro de status), preservando ata/prestador.
 function filtrarPorAtivo(ativo) {
   filtroAtivo.value = ativo ?? '';
-  router.get(route('tdap.lotes.index'), {
-    ata_id:       filtroAta.value || undefined,
-    prestador_id: filtroPrestador.value || undefined,
-    ativo:        filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
-  }, { preserveState: true, replace: true });
+  router.get(route('tdap.lotes.index'), queryFiltros(), { preserveState: true, replace: true });
+}
+
+// O backend recusa lote com cronograma vinculado e devolve flash de erro na
+// tela do lote — aqui so confirmamos a intencao.
+function excluir(lote) {
+  if (!confirm(`Excluir o lote ${lote.numero}?`)) return;
+  router.delete(route('tdap.lotes.destroy', lote.id), { preserveScroll: true });
 }
 
 // Exportacao CSV (mesmo padrao dos outros modulos)
 const { showExportModal, openExportModal, closeExportModal, handleExport } = useExport('tdap.lotes.export');
 
 function onExport(params) {
-  handleExport(params, {
-    ata_id:       filtroAta.value || undefined,
-    prestador_id: filtroPrestador.value || undefined,
-    ativo:        filtroAtivo.value !== '' ? filtroAtivo.value : undefined,
-  });
+  handleExport(params, queryFiltros());
 }
 function irParaPagina(page) {
-  router.get(route('tdap.lotes.index'), { ...props.filtros, page }, { preserveState: true, replace: true });
+  router.get(route('tdap.lotes.index'), { ...queryFiltros(), page }, { preserveState: true, replace: true });
 }
 </script>
