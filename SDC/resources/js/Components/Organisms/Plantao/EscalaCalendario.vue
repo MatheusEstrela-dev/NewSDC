@@ -6,16 +6,24 @@
  * biblioteca de calendario um dia significa reescrever este arquivo e nenhum
  * outro.
  *
- * RESPONSIVIDADE. A grade mensal so e legivel a partir de ~1000px: sao sete
- * colunas, e cada uma precisa caber "Sgt Fulano" mais o horario. Abaixo disso a
- * visao vira `listWeek`, uma lista vertical da semana -- que e a forma como o
- * plantonista realmente consulta a escala.
+ * RESPONSIVIDADE em tres degraus, todos CLICAVEIS:
  *
- * O corte e em `lg` (1024px), o MESMO da sidebar, e nao em `md`: entre 768 e
- * 1023px a grade ainda cabe na tela mas fica espremida a ponto de o nome nao
- * caber na celula, que era o sintoma. Um corte so para o layout inteiro tambem
- * evita a faixa em que sidebar e calendario discordam sobre o que e "tela
- * pequena".
+ *   >= 1024px  dayGridMonth  mes inteiro, sete colunas com folga
+ *   768-1023   dayGridWeek   sete colunas de ~110px, nome ainda legivel
+ *   < 768px    timeGridDay   um dia por vez, com as horas na vertical
+ *
+ * O que estava aqui antes era `listWeek` abaixo de lg, e isso QUEBRAVA o
+ * lancamento: a visao de lista do FullCalendar nao dispara `dateClick`, entao
+ * no celular o montador nao conseguia tocar num dia para preencher vaga. Era
+ * uma tela de leitura se passando por tela de trabalho.
+ *
+ * `timeGridDay` no telefone e nao `dayGridWeek`: em 375px sete colunas dao
+ * ~53px cada, onde nao cabe nem a hora. Um dia por vez usa a largura toda, e a
+ * grade de horas mostra visualmente que 06h-16h e 16h-02h se encostam -- que e
+ * a leitura que o plantonista faz.
+ *
+ * O corte de cima e `lg`, o MESMO da sidebar, para nao existir faixa em que
+ * sidebar e calendario discordem sobre o que e "tela pequena".
  *
  * A decisao segue o `useMobile`, que le matchMedia e nao innerWidth: e a MESMA
  * medida das media queries do Tailwind, entao o componente nunca discorda do
@@ -24,7 +32,7 @@
 import { useMobile } from '@/Composables/useMobile';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import listPlugin from '@fullcalendar/list';
+import timeGridPlugin from '@fullcalendar/timegrid';
 import ptBrLocale from '@fullcalendar/core/locales/pt-br';
 import FullCalendar from '@fullcalendar/vue3';
 import { computed, ref, watch } from 'vue';
@@ -49,23 +57,26 @@ const props = defineProps({
 const emit = defineEmits(['selecionar-dia', 'selecionar-vaga', 'mudar-mes']);
 
 const calendarRef = ref(null);
-const { isDesktop } = useMobile();
+const { isMobile, isDesktop } = useMobile();
 
-// Lista semanal em tudo que nao for desktop: mobile E tablet.
-const usaLista = computed(() => !isDesktop.value);
+const viewAlvo = computed(() => {
+  if (isMobile.value) return 'timeGridDay';
+  if (!isDesktop.value) return 'dayGridWeek';
+  return 'dayGridMonth';
+});
 
-const viewInicial = computed(() => (usaLista.value ? 'listWeek' : 'dayGridMonth'));
+// Telefone e tablet: sem "hoje" na barra, que nao caberia junto do titulo.
+const telaEstreita = computed(() => !isDesktop.value);
 
 /**
  * Troca a visao quando o dispositivo cruza o breakpoint -- girar o telefone,
  * redimensionar a janela. `initialView` so vale na montagem, entao sem este
  * watch a grade mensal ficaria presa numa tela estreita.
  */
-watch(usaLista, (lista) => {
+watch(viewAlvo, (alvo) => {
   const api = calendarRef.value?.getApi();
   if (!api) return;
 
-  const alvo = lista ? 'listWeek' : 'dayGridMonth';
   if (api.view.type !== alvo) api.changeView(alvo);
 });
 
@@ -91,30 +102,43 @@ const aoClicarEvento = (info) => {
 
 const aoClicarDia = (info) => {
   if (!props.podeMontar) return;
-  emit('selecionar-dia', info.dateStr);
+
+  // `dateStr` vem como data pura no dayGrid ("2026-08-28") mas com hora e fuso
+  // no timeGrid ("2026-08-28T06:00:00-03:00"). O modal alimenta um input
+  // type=date, que rejeita a segunda forma em silencio -- o campo abriria
+  // vazio. O recorte serve as duas.
+  emit('selecionar-dia', info.dateStr.slice(0, 10));
 };
 
 const opcoes = computed(() => ({
-  plugins: [dayGridPlugin, listPlugin, interactionPlugin],
+  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
   locale: ptBrLocale,
-  initialView: viewInicial.value,
+  initialView: viewAlvo.value,
   initialDate: props.dataInicial,
   events: props.eventos,
   headerToolbar: {
     left: 'prev,next',
     center: 'title',
-    right: usaLista.value ? '' : 'today',
+    right: telaEstreita.value ? '' : 'today',
   },
   // Altura fixa quebra em telefone: o conteudo da lista semanal varia muito.
   height: 'auto',
   // Sem isto, um dia com tres turnos estica a celula e desalinha a grade.
-  dayMaxEvents: usaLista.value ? false : 3,
+  dayMaxEvents: telaEstreita.value ? false : 3,
   moreLinkContent: (args) => `+${args.num}`,
   firstDay: 0,
   // Some o cabecalho de horario duplicado: a hora ja vai no titulo do evento.
-  displayEventTime: !usaLista.value,
+  displayEventTime: true,
+  // Recorte de horas: fora de 05h-23h nao ha turno comecando, e mostrar as 24h
+  // obrigaria a rolar para achar o plantao no telefone.
+  slotMinTime: '05:00:00',
+  slotMaxTime: '23:00:00',
+  slotDuration: '01:00:00',
+  allDaySlot: false,
+  expandRows: true,
+  nowIndicator: true,
   eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
-  noEventsContent: 'Nenhum plantao escalado nesta semana.',
+  noEventsContent: 'Nenhum plantao escalado neste periodo.',
   datesSet: aoMudarIntervalo,
   eventClick: aoClicarEvento,
   dateClick: aoClicarDia,

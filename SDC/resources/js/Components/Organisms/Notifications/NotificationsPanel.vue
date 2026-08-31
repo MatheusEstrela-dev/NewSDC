@@ -9,6 +9,19 @@
         </span>
       </div>
       <div class="flex items-center gap-3">
+        <!--
+          "Limpar" e independente de haver nao lidas: o "Ler todas" ao lado
+          desaparece quando tudo esta lido (v-if="hasUnread"), e era justamente
+          nesse estado que a caixa cheia ficava sem nenhuma saida.
+        -->
+        <button
+            v-if="notifications.length && !showPreferences"
+            @click="limparTudo"
+            class="text-slate-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400 transition-colors"
+            title="Limpar notificacoes (mantem no historico)"
+        >
+            <TrashIcon class="w-4 h-4" />
+        </button>
         <button
             @click="showPreferences = !showPreferences"
             class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
@@ -108,6 +121,7 @@
 </template>
 
 <script setup>
+import TrashIcon from '@/Components/Icons/TrashIcon.vue';
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useNotifications } from '@/Composables/useNotifications';
@@ -146,9 +160,25 @@ const {
   markAsRead,
   markGroupAsRead,
   markAllAsRead,
+  clearAll,
   startPolling,
   stopPolling
 } = useNotifications();
+
+/**
+ * Limpar ARQUIVA, nao apaga -- as notificacoes seguem no historico completo.
+ *
+ * Confirmacao mesmo assim: a acao atinge a caixa inteira de uma vez e fica ao
+ * lado da engrenagem, onde o dedo escorrega. Como e reversivel pelo historico,
+ * um confirm nativo basta; nao vale montar dialogo dentro do dropdown, que
+ * fecharia ao perder foco.
+ */
+const limparTudo = async () => {
+  if (!notifications.value.length) return;
+  if (!window.confirm('Limpar as notificacoes do sino? Elas continuam no historico completo.')) return;
+
+  await clearAll();
+};
 
 // O agrupamento e uma unica linha no banco, entao marcar como lida e sempre uma
 // operacao sobre um id. markGroupAsRead segue disponivel para acoes em lote.

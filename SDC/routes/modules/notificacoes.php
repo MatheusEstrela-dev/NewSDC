@@ -34,6 +34,13 @@ Route::middleware('auth')->prefix('notificacoes')->name('notificacoes.')->group(
         ->middleware('throttle:30,1')
         ->name('todas-lidas');
 
+    // Esvazia o sino ARQUIVANDO, nao apagando. Estatica, e por isso fica antes
+    // da parametrizada /{notificacao}/lida, la embaixo -- senao "limpar" seria
+    // casado como id de notificacao.
+    Route::post('/limpar', [NotificacaoInboxController::class, 'limpar'])
+        ->middleware('throttle:10,1')
+        ->name('limpar');
+
     /*
     | Preferencias por sessao.
     |

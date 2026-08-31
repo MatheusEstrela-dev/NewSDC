@@ -7,6 +7,7 @@ namespace App\Modules\Notificacoes\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Notificacoes\Resources\NotificacaoResource;
 use App\Modules\Notificacoes\Models\Notificacao;
+use App\Modules\Notificacoes\Services\ArquivadorDeNotificacoes;
 use App\Modules\Notificacoes\Services\ContadorNaoLidas;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -143,6 +144,25 @@ class NotificacaoInboxController extends Controller
      * Historico completo, paginado. Destino do botao "Ver Historico Completo",
      * que ate agora nao levava a lugar nenhum.
      */
+    /**
+     * Esvazia o sino de quem pediu.
+     *
+     * ARQUIVA, nao apaga: as linhas vao para notifications_archive, mesma
+     * tratativa do notificacoes:arquivar e do padrao do projeto de preservar
+     * para auditoria. O sino fica limpo, o historico continua consultavel.
+     *
+     * Escopo pelo `base($request)`, que ja recorta pelo destinatario -- nao ha
+     * caminho aqui para limpar a caixa de outra pessoa.
+     */
+    public function limpar(Request $request, ArquivadorDeNotificacoes $arquivador): JsonResponse
+    {
+        $arquivadas = $arquivador->arquivar($this->base($request));
+
+        $this->contador->invalidar($request->user()->getKey());
+
+        return response()->json(['arquivadas' => $arquivadas, 'unread_count' => 0]);
+    }
+
     public function historico(Request $request): InertiaResponse
     {
         $filtros = $request->validate([
