@@ -1,6 +1,6 @@
 <template>
   <Head title="TDAP — Vistorias" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <PageHeader variant="gradient"
       title="Vistorias de Veículos"
       description="Inspeções técnicas dos caminhões-tanque (vigência 12 meses)"

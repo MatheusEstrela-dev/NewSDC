@@ -1,6 +1,6 @@
 <template>
   <Head :title="`TDAP — Ata ${a.numero}`" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       :title="`Ata ${a.numero}`"
       :description="`${formatDate(a.dt_inicio)} — ${formatDate(a.dt_final)}`"

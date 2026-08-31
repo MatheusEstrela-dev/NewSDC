@@ -1,6 +1,6 @@
 <template>
   <Head title="TDAP — Histórico" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       title="Histórico TDAP"
       description="Auditoria cronológica de eventos de negócio"

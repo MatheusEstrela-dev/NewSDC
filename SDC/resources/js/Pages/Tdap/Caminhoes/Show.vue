@@ -1,6 +1,6 @@
 <template>
   <Head :title="`TDAP — ${c.placa}`" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       :title="c.placa"
       :description="`${c.marca || ''} ${c.modelo || ''}`.trim() || 'Caminhão-tanque'"

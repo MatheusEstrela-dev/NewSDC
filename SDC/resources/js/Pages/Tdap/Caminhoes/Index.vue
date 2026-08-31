@@ -1,7 +1,7 @@
 <template>
   <Head title="TDAP - Caminhões" />
 
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       title="Caminhões-Tanque"
       description="Frota dos prestadores autorizados a transportar água potável"

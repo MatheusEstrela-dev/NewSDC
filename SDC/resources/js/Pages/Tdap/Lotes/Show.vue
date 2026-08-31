@@ -1,6 +1,6 @@
 <template>
   <Head :title="`TDAP — Lote ${l.numero}`" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       :title="`Lote ${l.numero}`"
       :description="descricao"

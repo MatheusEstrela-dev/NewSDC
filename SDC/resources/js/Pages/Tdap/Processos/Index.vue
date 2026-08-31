@@ -1,6 +1,6 @@
 <template>
   <Head title="TDAP — Processos" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <PageHeader variant="gradient"
       title="Processos TDAP"
       description="Workflow de habilitação até liquidação"

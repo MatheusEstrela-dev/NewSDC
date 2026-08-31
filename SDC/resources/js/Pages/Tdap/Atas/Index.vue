@@ -1,6 +1,6 @@
 <template>
   <Head title="TDAP — Atas" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <PageHeader variant="gradient"
       title="Atas de Registro de Preços"
       description="Contratos-pai que autorizam o fornecimento de água potável"

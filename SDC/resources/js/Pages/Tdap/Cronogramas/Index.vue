@@ -1,6 +1,6 @@
 <template>
   <Head title="TDAP — Cronogramas" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <PageHeader variant="gradient"
       title="Cronogramas de Fornecimento"
       description="Ordens operacionais de entrega de água potável"

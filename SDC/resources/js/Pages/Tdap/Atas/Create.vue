@@ -1,6 +1,6 @@
 <template>
   <Head title="TDAP — Nova Ata" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       title="Nova Ata de Registro de Preços"
       description="Cadastrar contrato-pai para fornecimento de água potável"

@@ -1,6 +1,6 @@
 <template>
   <Head title="TDAP — Viagens Pendentes" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       title="Viagens pendentes de validação"
       description="Fila de viagens registradas aguardando aprovação"

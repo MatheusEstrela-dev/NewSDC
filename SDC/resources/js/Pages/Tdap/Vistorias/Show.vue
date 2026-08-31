@@ -1,6 +1,6 @@
 <template>
   <Head :title="`TDAP — Vistoria #${v.id}`" />
-  <div class="p-6 space-y-6">
+  <div class="w-full space-y-6 pb-8">
     <TdapPageHeader
       :title="`Vistoria #${v.id}`"
       :description="`${v.caminhao?.placa ?? ''} — ${fmtDate(v.data)}`"
