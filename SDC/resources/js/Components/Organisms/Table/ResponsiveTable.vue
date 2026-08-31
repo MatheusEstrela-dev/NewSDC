@@ -181,7 +181,7 @@ const props = defineProps({
   color: #cbd5e1;
 }
 
-  :global(html.dark) .empty-icon {
+  :global(html.dark .empty-icon) {
     color: #475569;
   }
 
@@ -191,7 +191,7 @@ const props = defineProps({
   margin: 0;
 }
 
-  :global(html.dark) .empty-text {
+  :global(html.dark .empty-text) {
     color: #94a3b8;
   }
 
@@ -213,7 +213,7 @@ const props = defineProps({
   animation: spin 0.8s linear infinite;
 }
 
-  :global(html.dark) .loading-spinner {
+  :global(html.dark .loading-spinner) {
     border-color: #334155;
     border-top-color: #60a5fa;
   }
@@ -230,7 +230,7 @@ const props = defineProps({
   margin: 0;
 }
 
-  :global(html.dark) .loading-text {
+  :global(html.dark .loading-text) {
     color: #94a3b8;
   }
 

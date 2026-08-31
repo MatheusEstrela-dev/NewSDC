@@ -146,12 +146,20 @@
           </svg>
         </button>
 
-        <!-- Settings Button - staff-only (preferencias do guard web) -->
+        <!--
+          Settings - staff-only (preferencias do guard web).
+
+          Visivel TAMBEM no telefone: era `hidden sm:flex` e simplesmente nao
+          existia abaixo de 640px, onde vivem preferencia de tema, canais de
+          notificacao e modo de atualizacao -- justamente o que se ajusta no
+          celular. `shrink-0` porque e alvo de toque; quem cede largura e o
+          campo de busca ao lado, que tem `flex-1 min-w-0` e `truncate`.
+        -->
         <button
           v-if="!isCidadao"
           id="settings-btn"
           @click.stop="openSettings"
-          class="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg transition-colors
+          class="flex shrink-0 items-center justify-center w-10 h-10 rounded-lg transition-colors
                  text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300
                  active:scale-95 relative"
           title="Configurações e Preferências"

@@ -104,7 +104,7 @@ function getYear(date) {
 }
 
 /* Dark mode */
-  :global(html.dark) .rat-card {
+  :global(html.dark .rat-card) {
     background: #1e293b;
     border-color: #334155;
   }
@@ -120,7 +120,7 @@ function getYear(date) {
   background: #f8fafc;
 }
 
-  :global(html.dark) .rat-card-header {
+  :global(html.dark .rat-card-header) {
     background: #0f172a;
     border-bottom-color: #334155;
   }
@@ -140,7 +140,7 @@ function getYear(date) {
   white-space: nowrap;
 }
 
-  :global(html.dark) .rat-card-number {
+  :global(html.dark .rat-card-number) {
     color: #f1f5f9;
   }
 
@@ -153,7 +153,7 @@ function getYear(date) {
   white-space: nowrap;
 }
 
-  :global(html.dark) .rat-card-subtitle {
+  :global(html.dark .rat-card-subtitle) {
     color: #94a3b8;
   }
 
@@ -203,7 +203,7 @@ function getYear(date) {
   letter-spacing: 0.05em;
 }
 
-  :global(html.dark) .field-label {
+  :global(html.dark .field-label) {
     color: #94a3b8;
   }
 
@@ -215,7 +215,7 @@ function getYear(date) {
   text-overflow: ellipsis;
 }
 
-  :global(html.dark) .field-value {
+  :global(html.dark .field-value) {
     color: #f1f5f9;
   }
 
@@ -231,7 +231,7 @@ function getYear(date) {
   flex-wrap: wrap;
 }
 
-  :global(html.dark) .rat-card-footer {
+  :global(html.dark .rat-card-footer) {
     background: #0f172a;
     border-top-color: #334155;
   }
