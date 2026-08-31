@@ -2,7 +2,7 @@
   <AuthenticatedLayout>
     <Head :title="`Cisternas — Vistorias de ${beneficiario.nome}`" />
 
-    <div class="space-y-6 p-4 sm:p-6">
+    <div class="w-full space-y-6 pb-8">
       <PageHeader
         title="Vistorias"
         :description="`${beneficiario.nome} — ${municipio}`"
