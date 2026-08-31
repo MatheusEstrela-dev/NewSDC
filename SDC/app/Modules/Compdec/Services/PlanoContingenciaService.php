@@ -47,6 +47,12 @@ class PlanoContingenciaService
                 'orgao_id' => $orgao->id,
                 'tamanho_bytes' => $arquivo->getSize(),
                 'ativo' => false, // sempre criado inativo; ativacao via metodo dedicado
+                // Data do envio. Sem ela o plano nasce com enviado_em NULL e,
+                // como "NULL >= data" e NULL, o CASE de PlanCon\...\
+                // expressaoSituacao() cai no ELSE e marca o plano recem-enviado
+                // como IRREGULAR - alem de ordena-lo por ultimo (NULLS LAST) e
+                // deixar a coluna de data em branco na tela.
+                'enviado_em' => now(),
             ]);
 
             $plano = CompdecPlanoContingencia::create($payload);
@@ -71,6 +77,9 @@ class PlanoContingenciaService
 
             if ($arquivo) {
                 $payload['tamanho_bytes'] = $arquivo->getSize();
+                // Arquivo novo e envio novo: a idade que define regular/irregular
+                // passa a contar a partir de agora.
+                $payload['enviado_em'] = now();
                 $plano->clearMediaCollection(CompdecPlanoContingencia::MEDIA_ARQUIVO);
                 $plano->update($payload);
                 $this->anexarArquivo($plano, $arquivo);
@@ -170,11 +179,11 @@ class PlanoContingenciaService
     private function migrarPlanoLegado(object $row, MigracaoReport $report, bool $dryRun): void
     {
         $legacyId = LegacyParser::toIntOrNull($row->id ?? null);
-        $legacyOrgaoId = LegacyParser::toIntOrNull($row->id_compdec ?? $row->id_comdec ?? null);
+        $legacyOrgaoId = LegacyParser::toIntOrNull($row->compdec_id ?? null);
 
         if ($legacyOrgaoId === null) {
             $report->registrarSkip();
-            $this->logEtl($legacyId, null, 'skipped', 'sem id_compdec', $row, $dryRun);
+            $this->logEtl($legacyId, null, 'skipped', 'sem compdec_id', $row, $dryRun);
 
             return;
         }
@@ -189,13 +198,22 @@ class PlanoContingenciaService
         }
 
         try {
+            // dt_upload e a unica data confiavel da linha: created_at/updated_at
+            // so existem nos registros pos-2022 do legado.
+            $enviadoEm = LegacyParser::toDate($row->dt_upload ?? null);
+
             $payload = [
                 'orgao_id' => $orgao->id,
-                'versao' => LegacyParser::toStringOrNull($row->versao ?? null) ?? 'v1.0',
-                'observacoes' => LegacyParser::toStringOrNull($row->observacoes ?? null),
+                // O legado grava a versao como '1', '2' ou vazio. Vazio vira v1
+                // porque a coluna e NOT NULL e o registro e a unica versao.
+                'versao' => $this->normalizarVersaoLegado($row->versao ?? null),
+                'observacoes' => LegacyParser::toStringOrNull($row->obs ?? null),
                 'ativo' => false, // marcado depois pelo passo marcarUltimoComoAtivo
-                'legacy_arquivo' => LegacyParser::toStringOrNull($row->arquivo ?? null),
+                'tamanho_bytes' => LegacyParser::toIntOrNull($row->tamanho ?? null),
+                'enviado_em' => $enviadoEm,
+                'legacy_arquivo' => LegacyParser::toStringOrNull($row->file_plano ?? null),
                 'legacy_id' => $legacyId,
+                'legacy_municipio_id' => LegacyParser::toIntOrNull($row->id_municipio ?? null),
             ];
 
             if ($dryRun) {
@@ -208,7 +226,18 @@ class PlanoContingenciaService
             $existente = CompdecPlanoContingencia::query()->where('legacy_id', $legacyId)->first();
             $plano = CompdecPlanoContingencia::query()->updateOrCreate(['legacy_id' => $legacyId], $payload);
 
-            $this->copiarArquivoLegado($plano, (string) ($row->arquivo ?? ''));
+            // Preserva a linha do tempo do legado: sem isto os 619 planos
+            // nasceriam todos com a data do ETL.
+            //
+            // Precisa ser forceFill: `created_at` esta FORA de $fillable de
+            // proposito (nao deve ser mass-assignable no fluxo normal do app),
+            // entao passa-lo no payload do updateOrCreate era descartado em
+            // silencio - justamente a data que este passo existe para manter.
+            if ($enviadoEm !== null && ! $plano->created_at?->equalTo($enviadoEm)) {
+                $plano->forceFill(['created_at' => $enviadoEm])->saveQuietly();
+            }
+
+            $this->copiarArquivoLegado($plano, (string) ($row->file_plano ?? ''));
 
             $existente ? $report->registrarAtualizacao() : $report->registrarInsercao();
             $this->logEtl($legacyId, $plano->id, $existente ? 'updated' : 'inserted', null, $row, false);
@@ -218,21 +247,86 @@ class PlanoContingenciaService
         }
     }
 
+    /**
+     * Procura o arquivo nas pastas dos dois sistemas que gravaram plano
+     * (gestaocedec e sdc). Retorna o primeiro caminho existente, ou null.
+     *
+     * @see config('compdec.legacy_paths.planos')
+     */
+    public function localizarArquivoLegado(string $arquivoLegado): ?string
+    {
+        $bases = config('compdec.legacy_paths.planos', []);
+        $bases = is_array($bases) ? $bases : [$bases];
+
+        foreach ($bases as $base) {
+            $base = trim((string) $base);
+
+            if ($base === '') {
+                continue;
+            }
+
+            $base = rtrim($base, '/');
+
+            foreach ($this->candidatosDeNome($arquivoLegado) as $nome) {
+                $path = $base.'/'.ltrim($nome, '/');
+
+                if (File::exists($path)) {
+                    return $path;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Nomes a tentar para um mesmo registro do legado.
+     *
+     * Alem do nome exato, tenta a variante com a EXTENSAO DUPLICADA
+     * (`Plano_...V.1.pdf.pdf`). O legado gravou assim em parte dos uploads --
+     * o banco guarda `X.pdf` e o arquivo em disco chama `X.pdf.pdf` -- e sao
+     * 8 planos que apareciam como 404 sem estarem perdidos de verdade.
+     *
+     * @return list<string>
+     */
+    private function candidatosDeNome(string $arquivo): array
+    {
+        $extensao = pathinfo($arquivo, PATHINFO_EXTENSION);
+
+        return $extensao === ''
+            ? [$arquivo]
+            : [$arquivo, $arquivo.'.'.$extensao];
+    }
+
+    /**
+     * com_plano_upload.versao vem como '1', '2' ou string vazia. Normaliza para
+     * o formato usado no cadastro novo (v1, v2), mantendo texto ja livre.
+     */
+    private function normalizarVersaoLegado(mixed $versao): string
+    {
+        $texto = LegacyParser::toStringOrNull($versao);
+
+        if ($texto === null) {
+            return 'v1';
+        }
+
+        return ctype_digit($texto) ? "v{$texto}" : $texto;
+    }
+
     private function copiarArquivoLegado(CompdecPlanoContingencia $plano, string $arquivoLegado): void
     {
         if ($arquivoLegado === '') {
             return;
         }
 
-        $base = (string) config('compdec.legacy_paths.planos', '');
-        $path = rtrim($base, '/').'/'.ltrim($arquivoLegado, '/');
+        $path = $this->localizarArquivoLegado($arquivoLegado);
 
-        if (! File::exists($path)) {
+        if ($path === null) {
             $this->logEtl(
                 $plano->legacy_id,
                 $plano->id,
                 'skipped',
-                'arquivo_legado_inexistente: '.$path,
+                'arquivo_legado_inexistente: '.$arquivoLegado,
                 null,
                 false,
             );
@@ -259,10 +353,15 @@ class PlanoContingenciaService
      */
     private function marcarUltimoComoAtivo(): void
     {
+        // Elege por data de upload, nao por MAX(id): a numeracao do legado nao
+        // segue a cronologia (o id 1209 e de 2022-08 e o 1207 de 2022-02, mas
+        // ha faixas antigas reaproveitadas). O id so desempata datas iguais.
         $ultimosIds = CompdecPlanoContingencia::query()
-            ->select(DB::raw('MAX(id) as id'))
+            ->select(DB::raw('DISTINCT ON (orgao_id) id'))
             ->whereNotNull('legacy_id')
-            ->groupBy('orgao_id')
+            ->orderBy('orgao_id')
+            ->orderByRaw('enviado_em DESC NULLS LAST')
+            ->orderByDesc('id')
             ->pluck('id');
 
         if ($ultimosIds->isEmpty()) {

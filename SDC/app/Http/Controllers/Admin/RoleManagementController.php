@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\Permission;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleManagementController extends Controller
 {
@@ -92,6 +94,8 @@ class RoleManagementController extends Controller
             $role->permissions()->sync($validated['permissions']);
         }
 
+        $this->invalidarCachesDoCargo($role);
+
         return redirect()
             ->route('admin.permissions.roles.show', $role)
             ->with('success', 'Cargo criado com sucesso');
@@ -127,6 +131,11 @@ class RoleManagementController extends Controller
 
         $role->update($validated);
 
+        // Nao mexe em permissao, mas `hierarchy_level` viaja no payload do
+        // Inertia (getUserData -> roles), entao o cache por usuario tambem
+        // precisa cair.
+        $this->invalidarCachesDoCargo($role);
+
         return redirect()
             ->route('admin.permissions.roles.show', $role)
             ->with('success', 'Cargo atualizado com sucesso');
@@ -145,9 +154,37 @@ class RoleManagementController extends Controller
 
         $role->permissions()->sync($validated['permissions']);
 
+        $this->invalidarCachesDoCargo($role);
+
         return redirect()
             ->route('admin.permissions.roles.show', $role)
             ->with('success', 'Permissoes atualizadas com sucesso');
+    }
+
+    /**
+     * Invalida os caches que decidem o que os usuarios DESTE cargo enxergam.
+     *
+     * Mudanca em cargo e mais ampla que mudanca em usuario: atinge todos os que
+     * o tem. Dois caches precisam cair:
+     *
+     * - o do Spatie, que serve a resolucao de `can()` (TTL de 1 hora);
+     * - o `inertia_user_data_{id}` de CADA usuario do cargo, que o
+     *   HandleInertiaRequests guarda por 300s e que carrega roles, permissoes
+     *   efetivas e hierarchy_level -- ou seja, e o que monta a sidebar.
+     *
+     * Sem o segundo, o admin altera o cargo, o banco fica correto na hora, e
+     * quem tem aquele cargo segue vendo o menu antigo por ate cinco minutos.
+     *
+     * `cursor()` de proposito: cargo com muitos usuarios nao cabe em memoria de
+     * uma vez, e aqui so precisamos do id para montar a chave.
+     */
+    private function invalidarCachesDoCargo(Role $role): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $role->users()->select('users.id')->cursor()->each(
+            fn ($usuario) => Cache::forget("inertia_user_data_{$usuario->id}")
+        );
     }
 
     public function destroy(Role $role)

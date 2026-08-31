@@ -13,6 +13,7 @@
               <div v-if="Number(activeTab) === 1">
                 <RatDadosGeraisForm
                   :rat="rat"
+                  :cobrades="props.cobrades"
                   :view-only="props.viewOnly"
                   :loading="loading"
                   @save="(data) => saveAndAdvance({ dadosGerais: data.dadosGerais, comunicacao: data.comunicacao, local: data.local, endereco: data.endereco }, 2)"
@@ -117,6 +118,7 @@ const props = defineProps({
   viewOnly:   { type: Boolean, default: false },
   isCreate:   { type: Boolean, default: false },
   lastUpdate: { type: String,  default: null },
+  cobrades:   { type: Array,   default: () => [] },
 });
 
 const ABA_TO_TAB = { recursos: 2, envolvidos: 3, vistoria: 4, historico: 5, anexos: 6 };

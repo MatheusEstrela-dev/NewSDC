@@ -364,6 +364,8 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  // Catalogo das REDECs vindo do banco: dec_redecs -> RedecDTO ->
+  // RedecService::toSelectOptions(). Itens { id, label, sigla, sede, rpm }.
   redecs: {
     type: Array,
     default: () => [],

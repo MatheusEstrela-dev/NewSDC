@@ -8,6 +8,7 @@ use App\Modules\Treinamento\Controllers\Portal\InscricaoController;
 use App\Modules\Treinamento\Controllers\Portal\MinhasInscricoesController;
 use App\Modules\Treinamento\Controllers\Portal\PresencaAutoconfirmacaoController;
 use App\Modules\Treinamento\Controllers\Portal\RegisterController;
+use App\Modules\Treinamento\Controllers\Portal\VerificarEmailController;
 use App\Modules\Treinamento\Http\Middleware\DisableDebugbarOnPortal;
 use App\Modules\Treinamento\Http\Middleware\ShareCidadaoInertiaData;
 use Illuminate\Support\Facades\Route;
@@ -26,10 +27,27 @@ Route::prefix('portal-treinamento')->name('portal.treinamento.')->middleware(Dis
     // Login e unificado em /login (App\Http\Controllers\Auth\AuthenticatedSessionController
     // decide o guard pelo CPF) - o portal so tem cadastro e as telas pos-login.
     Route::get('/registrar', [RegisterController::class, 'create'])->name('registrar');
-    // Mesmo limiter nativo do cadastro interno (RouteServiceProvider::boot,
-    // limiter "register") - o cadastro do cidadao nao tinha nenhum throttle.
+    // Duas camadas de rate limit, mesma logica do login web (ver routes/auth.php):
+    // o limite que o cidadao legitimo encosta e o de dentro do
+    // RegisterCidadaoRequest, que lanca ValidationException -> mensagem discreta
+    // inline no formulario. Este 'portal-registro' e so o teto de abuso, bem mais
+    // alto, pensado em NAT institucional. O antigo 'throttle:register' era 3/min
+    // por IP e dividia o bucket com o /register interno (ja removido).
     Route::post('/registrar', [RegisterController::class, 'store'])
-        ->middleware('throttle:register');
+        ->middleware('throttle:portal-registro');
+
+    // Confirmacao do codigo de 6 numeros enviado no cadastro. FORA do grupo
+    // 'auth:cidadao' de proposito: quem esta aqui ainda nao autenticou, e esse e
+    // justamente o gate. A conta em verificacao vem da session, nao da URL (ver
+    // VerificarEmailController::SESSION_KEY), entao nao ha id para adulterar.
+    Route::get('/verificar-email', [VerificarEmailController::class, 'create'])
+        ->name('verificar-email');
+    Route::post('/verificar-email', [VerificarEmailController::class, 'store'])
+        ->name('verificar-email.store')
+        ->middleware('throttle:portal-registro');
+    Route::post('/verificar-email/reenviar', [VerificarEmailController::class, 'resend'])
+        ->name('verificar-email.reenviar')
+        ->middleware('throttle:portal-registro');
 
     Route::middleware(['auth:cidadao', ShareCidadaoInertiaData::class])->group(function () {
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');

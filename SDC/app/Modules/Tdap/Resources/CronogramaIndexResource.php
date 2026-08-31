@@ -33,6 +33,8 @@ class CronogramaIndexResource extends JsonResource
             'prestador_nome'  => $this->whenLoaded('prestador', fn () => $this->prestador?->nome),
             'caminhoes_count' => (int) ($this->caminhoes_count ?? 0),
             'volume_contratado_m3' => $this->volume_contratado,
+            'volume_entregue_m3'   => $this->volume_entregue,
+            'execucao_percentual'  => $this->percentual_entregue,
         ];
     }
 }

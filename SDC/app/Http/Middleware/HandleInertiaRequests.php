@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -54,12 +55,25 @@ class HandleInertiaRequests extends Middleware
             // Nao vazar a arvore de ACL/permissoes em paginas publicas (login, etc).
             // Antes: era exposta no data-page do Inertia mesmo sem usuario autenticado.
             'acl' => fn() => $user ? $this->getCachedAclConfig() : (object) [],
-            'flash' => [
+            // Inertia::always() porque flash PRECISA viajar tambem no reload
+            // parcial. Sem isso o `only:` do reload filtra o flash da resposta,
+            // o cliente mantem o objeto da visita anterior, e o watcher do
+            // FlashNotification torna a disparar: o aviso de "cadastrado com
+            // sucesso" reaparecia a cada clique em filtro, ordenacao ou
+            // paginacao, muito depois do cadastro.
+            //
+            // Marcado como always, toda resposta carrega o flash do PROPRIO
+            // request -- vazio, no caso -- e sobrescreve o valor velho.
+            //
+            // As closures internas continuam preguicosas: evaluateProps()
+            // percorre o array recursivamente depois de desembrulhar o
+            // AlwaysProp.
+            'flash' => Inertia::always([
                 'success' => fn() => $request->session()->get('success'),
                 'error'   => fn() => $request->session()->get('error'),
                 'warning' => fn() => $request->session()->get('warning'),
                 'info'    => fn() => $request->session()->get('info'),
-            ],
+            ]),
             // Badge do sino ja correto no primeiro paint, sem piscar zero e sem
             // um request extra por navegacao. Custo: um GET no Redis, resolvido
             // pelo ContadorNaoLidas (sem COUNT no banco no caminho quente).
@@ -70,6 +84,12 @@ class HandleInertiaRequests extends Middleware
                 // Como o cliente deve se atualizar: 'auto' tenta websocket e cai
                 // para polling sozinho. Ver useNotifications no frontend.
                 'update_mode' => fn() => $user ? ($user->notification_update_mode ?? 'auto') : 'polling',
+                // Chave publica VAPID: o PushManager do navegador precisa dela
+                // para se inscrever. E publica por definicao (identifica o
+                // servidor para o push service); a privada nunca sai daqui.
+                // String vazia significa "este servidor nao faz push", e e o que
+                // CanaisDisponiveis usa para desabilitar o canal na tela.
+                'vapid_public_key' => fn() => (string) config('webpush.vapid.public_key', ''),
             ],
         ];
     }
@@ -101,7 +121,15 @@ class HandleInertiaRequests extends Middleware
             $user->loadMissing('activeEmailChangeRequest');
             // Eager load roles+permissions se nao carregados
             if (!$user->relationLoaded('roles')) {
-                $user->load(['roles.permissions', 'permissions']);
+                // Colunas restritas de proposito. `getEffectivePermissions()` so
+                // consome `name` (dois `pluck('name')`), mas o eager load sem
+                // recorte hidratava o model inteiro -- slug, description, group,
+                // module, is_active, is_immutable e timestamps -- vezes o numero
+                // de permissoes do cargo. No cargo Desenvolvedor sao 262: medido
+                // em 878 KB por hidratacao contra 383 KB com o recorte.
+                // `id` e `guard_name` ficam porque o Spatie os usa para casar o
+                // pivot e o guard.
+                $user->load(['roles.permissions:id,name,guard_name', 'permissions:id,name,guard_name']);
             }
             return $this->getUserData($user);
         });

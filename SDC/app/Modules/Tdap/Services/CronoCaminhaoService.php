@@ -64,7 +64,15 @@ class CronoCaminhaoService
     public function atualizar(int $id, CronoCaminhaoDTO $dto): CronoCaminhao
     {
         return DB::transaction(function () use ($id, $dto): CronoCaminhao {
-            $cc = CronoCaminhao::findOrFail($id);
+            $cc = CronoCaminhao::query()->with('cronograma:id,encerrado_em')->findOrFail($id);
+
+            // Mesmo guard de alocar(): cronograma encerrado e registro fechado.
+            // Sem ele era possivel remexer em agua_prevista depois do
+            // encerramento e desalinhar o volume contratado do que foi pago.
+            if ($cc->cronograma?->encerrado_em) {
+                throw new \DomainException('Cronograma encerrado nao aceita alteracao de alocacao.');
+            }
+
             // somente campos editaveis (caminhao nao pode trocar via update; remova e aloque outro)
             $cc->update([
                 'comunidade_id' => $dto->comunidade_id,

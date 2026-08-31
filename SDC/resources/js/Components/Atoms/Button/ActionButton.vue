@@ -101,6 +101,7 @@ import DownloadIcon from '../../Icons/DownloadIcon.vue';
 import DocumentIcon from '../../Icons/DocumentIcon.vue';
 import DocumentDuplicateIcon from '../../Icons/DocumentDuplicateIcon.vue';
 import DocumentTextIcon from '../../Icons/DocumentTextIcon.vue';
+import QrCodeIcon from '../../Icons/QrCodeIcon.vue';
 import CheckIcon from '../../Icons/CheckIcon.vue';
 import ArchiveBoxIcon from '../../Icons/ArchiveBoxIcon.vue';
 import UploadIcon from '../../Icons/UploadIcon.vue';
@@ -123,6 +124,7 @@ const ActionIcons = {
   finalize: markRaw(CheckIcon),
   check: markRaw(CheckIcon),
   pdf: markRaw(DocumentTextIcon),
+  qrcode: markRaw(QrCodeIcon),
   archive: markRaw(ArchiveBoxIcon),
   upload: markRaw(UploadIcon),
   attachments: markRaw(PaperClipIcon),
@@ -145,6 +147,7 @@ const ActionLabels = {
   finalize: 'Finalizar',
   check: 'Validar',
   pdf: 'PDF',
+  qrcode: 'QR Code',
   archive: 'Arquivar',
   upload: 'Upload',
   attachments: 'Anexos',
@@ -213,6 +216,7 @@ const ActionMenuIconClasses = {
   relate: 'text-indigo-400',
   finalize: 'text-emerald-500',
   check: 'text-emerald-400',
+  qrcode: 'text-cyan-400',
   pdf: 'text-[#ff4d00]',
   archive: 'text-yellow-500',
   upload: 'text-slate-400',

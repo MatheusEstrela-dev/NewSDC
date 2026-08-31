@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Decretacoes\Requests;
 
+use App\Modules\Decretacoes\Services\RedecService;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateProcessoRequest extends FormRequest
@@ -25,7 +26,10 @@ class UpdateProcessoRequest extends FormRequest
             'data_ocorrencia'                   => 'nullable|date',
             'analista_id'                       => 'nullable|string|max:255',
             'n_protocolo_fide'                  => 'nullable|string|max:50',
-            'redec_id'                          => 'nullable|integer|min:1|max:14',
+            // Lista derivada do catalogo `dec_redecs`: um `max:` fixo travou a
+            // edicao nas 14 primeiras REDECs e rejeitava as regionais 15 a 19,
+            // e a lista escrita em codigo obrigava deploy a cada regional nova.
+            'redec_id'                          => RedecService::regrasDoCampo(),
             'n_decreto_municipal'               => 'nullable|string|max:255',
             'data_decreto_municipal'            => 'nullable|date',
             'data_publicacao_decreto_municipal' => 'nullable|date',

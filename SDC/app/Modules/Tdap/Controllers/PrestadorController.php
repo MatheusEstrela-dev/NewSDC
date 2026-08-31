@@ -12,6 +12,7 @@ use App\Modules\Tdap\Requests\UpdatePrestadorRequest;
 use App\Modules\Tdap\Resources\PrestadorIndexResource;
 use App\Modules\Tdap\Resources\PrestadorResource;
 use App\Modules\Tdap\Services\PrestadorService;
+use App\Support\UnidadeFederativa;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -33,8 +34,11 @@ class PrestadorController extends Controller
 
         return Inertia::render('Tdap/Prestadores/Index', [
             'prestadores'  => PrestadorIndexResource::collection($prestadores),
-            'estatisticas' => fn () => $this->service->obterEstatisticas(),
+            // Mesmos filtros da grade: o card "Total" conta o que a tabela
+            // mostra (`ativo` fica de fora — ver o service).
+            'estatisticas' => fn () => $this->service->obterEstatisticas($filtros),
             'filtros'      => $filtros,
+            'ufs'          => UnidadeFederativa::options(),
             'canCreate'    => $request->user()?->can('tdap.prestadores.create') ?? false,
             'canEdit'      => $request->user()?->can('tdap.prestadores.edit') ?? false,
             'canDelete'    => $request->user()?->can('tdap.prestadores.delete') ?? false,
@@ -70,7 +74,9 @@ class PrestadorController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Tdap/Prestadores/Create');
+        return Inertia::render('Tdap/Prestadores/Create', [
+            'ufs' => UnidadeFederativa::options(),
+        ]);
     }
 
     public function store(StorePrestadorRequest $request): RedirectResponse
@@ -81,7 +87,7 @@ class PrestadorController extends Controller
 
         return redirect()
             ->route('tdap.prestadores.show', $prestador->id)
-            ->with('success', "Prestador {$prestador->nome} cadastrado.");
+            ->with('success', "Prestador {$prestador->nome} cadastrado. Cadastre os caminhoes-tanque para habilita-lo em cronogramas.");
     }
 
     public function show(Prestador $prestador, Request $request): Response
@@ -99,6 +105,7 @@ class PrestadorController extends Controller
     {
         return Inertia::render('Tdap/Prestadores/Edit', [
             'prestador' => PrestadorResource::make($prestador),
+            'ufs'       => UnidadeFederativa::options(),
         ]);
     }
 

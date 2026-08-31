@@ -19,6 +19,8 @@ class RepresentanteResource extends JsonResource
             'email'              => $this->email,
             'cpf'                => $this->cpf,
             'whatsapp'           => $this->whatsapp,
+            'endereco'           => $this->endereco,
+            'bairro'             => $this->bairro,
         ];
     }
 }

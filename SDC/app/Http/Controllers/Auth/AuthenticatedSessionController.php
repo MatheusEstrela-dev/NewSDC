@@ -7,6 +7,8 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Jobs\RecordUserLogin;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Modules\Treinamento\Controllers\Portal\VerificarEmailController;
+use App\Modules\Treinamento\Enums\StatusAutenticacaoCidadao;
 use App\Modules\Treinamento\Services\CidadaoAuthService;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\RedirectResponse;
@@ -87,14 +89,34 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
-        $autenticado = $cidadaoAuth->attempt(
+        $resultado = $cidadaoAuth->attempt(
             $cpf,
             (string) $request->input('password'),
             $request->boolean('remember'),
             $request->ip()
         );
 
-        if (!$autenticado) {
+        // Cadastro que nunca confirmou o e-mail: a senha esta certa, o que falta
+        // e o codigo. Dizer "CPF ou senha invalidos" aqui mandaria a pessoa
+        // procurar o problema no lugar errado, entao abrimos o fluxo de
+        // confirmacao. Nao vaza nada: so chega neste ponto quem tem a senha.
+        if ($resultado->status === StatusAutenticacaoCidadao::EMAIL_NAO_VERIFICADO) {
+            $request->session()->put(
+                VerificarEmailController::SESSION_KEY,
+                $resultado->cidadao->id,
+            );
+
+            return redirect()->route('portal.treinamento.verificar-email')
+                ->with('success', 'Seu cadastro ainda nao foi confirmado. Digite o codigo que enviamos para o seu e-mail, ou peca um novo.');
+        }
+
+        if ($resultado->status === StatusAutenticacaoCidadao::CONTA_INATIVA) {
+            throw ValidationException::withMessages([
+                'cpf' => 'Seu cadastro esta desativado. Entre em contato com a Defesa Civil.',
+            ]);
+        }
+
+        if (!$resultado->autenticou()) {
             throw ValidationException::withMessages([
                 'cpf' => 'CPF ou senha invalidos.',
             ]);

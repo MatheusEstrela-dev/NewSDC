@@ -33,6 +33,7 @@ use App\Modules\Rat\Services\RatHistoricoService;
 use App\Modules\Rat\Services\RatOcorrenciaService;
 use App\Modules\Rat\Services\RatRelatoService;
 use App\Modules\Rat\Services\RatWriteService;
+use App\Support\Cobrade;
 use App\Support\Concurrency\Concurrency;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -197,9 +198,11 @@ class RatUnifiedController extends BaseController
 
     public function create(): Response
     {
-        // Render create page - NO database operations here
-        // The form will use POST /rat to store data
-        return Inertia::render('Rat/RatCreate');
+        // A unica leitura aqui e a tabela de referencia do COBRADE (66 linhas):
+        // sem ela o select da aba Dados Gerais nao teria o que exibir.
+        return Inertia::render('Rat/RatCreate', [
+            'cobrades' => Cobrade::opcoes(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
@@ -328,6 +331,7 @@ class RatUnifiedController extends BaseController
         return Inertia::render('Rat', [
             'rat'      => (new RatOcorrenciaResource($ocorrencia))->resolve(),
             'viewOnly' => true,
+            'cobrades' => Cobrade::opcoes(),
         ]);
     }
 
@@ -356,6 +360,7 @@ class RatUnifiedController extends BaseController
         return Inertia::render('Rat/RatEdit', [
             'rat'        => $ratData,
             'lastUpdate' => $ocorrencia->updated_at?->toIso8601String(),
+            'cobrades'   => Cobrade::opcoes(),
         ]);
     }
 
@@ -499,6 +504,7 @@ class RatUnifiedController extends BaseController
                 'rat'      => (new RatOcorrenciaResource($ocorrencia))->resolve(),
                 'viewOnly' => false,
                 'isCreate' => $isNew,
+                'cobrades' => Cobrade::opcoes(),
             ]);
         }
 

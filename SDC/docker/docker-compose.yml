@@ -65,7 +65,20 @@ services:
       # Octane Swoole - HTTP para dev local
       OCTANE_SERVER: swoole
       OCTANE_HTTPS: "false"
-      OCTANE_WORKERS: ${OCTANE_WORKERS:-4}
+      # 12 workers, nao 4. Com hook_flags=0 (hooks de corrotina desligados por
+      # causa do phpredis, que o ConnectionSemaphore tipa como ?Redis) cada
+      # request ocupa um processo inteiro: PDO, Redis e arquivo bloqueiam. A
+      # capacidade de requests EM VOO e igual ao numero de workers, entao 4
+      # requests lentos simultaneos paravam a aplicacao inteira. Medido em dev:
+      # 12 workers custam +180 MB (fork copy-on-write compartilha o framework)
+      # e cabem no limite de 2G deste servico. Cauda a 128 concorrentes caiu de
+      # 187ms para 34ms.
+      OCTANE_WORKERS: ${OCTANE_WORKERS:-12}
+      # Teto do ConnectionSemaphore. O default (100) igualava o max_connections
+      # do Postgres, que ainda reserva 3 para superuser: o semaforo liberava mais
+      # conexao do que o banco aceita e o "too many connections" chegava antes de
+      # qualquer throttle agir.
+      DB_MAX_CONCURRENT: ${DB_MAX_CONCURRENT:-60}
       OCTANE_TASK_WORKERS: ${OCTANE_TASK_WORKERS:-4}
       OCTANE_MAX_REQUESTS: ${OCTANE_MAX_REQUESTS:-500}
       DB_PERSISTENT: "false"
@@ -226,7 +239,14 @@ services:
       - "com.docker.compose.project=newsdc"
       - "com.docker.compose.service=redis"
 
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    # volatile-lru, NAO allkeys-lru: cache, sessao e FILA dividem esta instancia.
+    # Sob allkeys-lru o Redis evicta qualquer chave ao encher, inclusive as listas
+    # de job -- notificacao de alerta enfileirada desaparecia sem erro, sem log e
+    # sem entrada em failed_jobs. volatile-lru so evicta chave COM TTL (cache e
+    # sessao); lista de fila do Laravel nao tem TTL e fica imune. Se encher e nao
+    # houver nada volatil para liberar, a escrita falha alto -- comportamento
+    # desejado num sistema onde perder alerta e pior que erro visivel.
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy volatile-lru
 
     volumes:
       - newsdc_redis_data:/data

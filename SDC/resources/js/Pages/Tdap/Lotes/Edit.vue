@@ -3,7 +3,7 @@
   <div class="p-6 space-y-6">
     <TdapPageHeader
       :title="`Editar Lote ${l.numero}`"
-      :description="`${l.municipio?.nome ?? ''}${l.municipio?.uf ? '/' + l.municipio.uf : ''}`"
+      :description="(l.municipios ?? []).map(m => m.nome).join(', ')"
       :icon="MapIcon"
     />
     <LoteForm
@@ -34,14 +34,17 @@ const props = defineProps({
   prestadores: { type: Array, default: () => [] },
 });
 
-const l = props.lote.data;
+// O resource vem embrulhado em `data` pelo Inertia; o fallback mantem a tela de
+// pe caso o payload chegue plano (mesmo padrao do Show).
+const l = props.lote.data ?? props.lote;
 
 const form = useForm({
   ata_id: l.ata_id,
-  municipio_id: l.municipio_id,
+  municipio_ids: [...(l.municipio_ids ?? [])],
   prestador_id: l.prestador_id,
   numero: l.numero || '',
   nome: l.nome || '',
+  contrato: l.contrato || '',
   qtd_agua_m3: l.qtd_agua_m3 ?? '',
   valor_m3: l.valor_m3 ?? '',
   ativo: l.ativo ?? true,

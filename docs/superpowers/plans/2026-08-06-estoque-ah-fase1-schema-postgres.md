@@ -15,8 +15,225 @@
 | 1. Extensoes e landing zone | **APLICADA** em 06/08/2026 | migration `2026_08_06_110000_create_ajuda_h_legado_raw_table`; `btree_gist`, `citext` e `postgis` presentes; indice GIN `ajuda_h_legado_raw_doc_idx` criado |
 | 2. Comando de extracao | **EXECUTADA** em 06/08/2026 | `legado:aju:extrair` carregou 13.598 linhas em 15 tabelas a partir do snapshot de producao; `aju_cfornecedor` pulada por ausencia na base. Contagem conferida 1:1 com a origem em todas as tabelas |
 | 3. Schema do nucleo | **APLICADA** em 06/08/2026 | migration `2026_08_06_110100_create_ajuda_h_estoque_tables`; 13 tabelas `ajuda_h_*`; os 4 CHECK verificados por teste transacional (saldo negativo, quantidade zero e transferencia para o mesmo deposito recusados; `valor_total` calculado em 31.50; `geography` gravada) |
-| 4. Servico de movimentacao | pendente | |
-| 5. Refino da landing zone | **EXECUTADA** em 06/08/2026, sete etapas | 187 materiais, 24 depositos, 10 fornecedores, 36 fontes, 118 saldos, 752 entradas com 752 itens, 69 transferencias com 205 itens. Agregados de saldo identicos a origem (soma 46.204, min 1, max 4.896) e **MD5 das tuplas (material, deposito, saldo) igual dos dois lados**: `07067c0945e624e6fa24a2d8e9c22051`. Reexecucao completa nao alterou nenhuma contagem |
+| 4. Servico de movimentacao | **EXECUTADA** em 07/08/2026 | `MovimentoEstoque`, `SaldoInsuficiente` e `RegistrarMovimentoEstoque`. Verificado contra o banco real: entrada projeta saldo, saldo e a soma dos movimentos, saida acima do saldo lanca `SaldoInsuficiente` sem deixar movimento orfao, DTO recusa quantidade zero e origem pela metade |
+| 5. Refino da landing zone | **EXECUTADA**, oito etapas | 187 materiais, 24 depositos, 10 fornecedores, 36 fontes, 118 saldos, 752 entradas com 752 itens, 69 transferencias com 205 itens, 3.582 liberacoes com 3.363 recibos. Agregados de saldo identicos a origem (soma 46.204, min 1, max 4.896) e **MD5 das tuplas (material, deposito, saldo) igual dos dois lados**: `07067c0945e624e6fa24a2d8e9c22051`. Reexecucao completa nao alterou nenhuma contagem |
+| 6. Troca da leitura de saldo | **EXECUTADA** em 07/08/2026 | `PostgresSaldoMaterialRepository` no lugar do `LegadoSaldoMaterialRepository` no bind. Container resolve a classe nova e devolve os 118 pares reais; filtro por `codigo_legado` conferido. 14 verificacoes proprias sem falha, e a suite do modulo fecha em **243 testes, 636 assercoes, zero falhas** |
+| 7. Consulta de estoque na interface | **EXECUTADA** em 07/08/2026 | Fora do escopo original, feita para homologacao. `EstoqueAhController`, rota `ajuda-humanitaria.estoque.index` sob `can:humanitaria.saldo.view` (permissao ja existente), models `DepositoAh` e `SaldoEstoqueAh`, pagina e template Vue no padrao do modulo, item no submenu. Payload conferido contra o banco: 118 itens, 56 materiais, 18 depositos, total 46.204. Build em 2.335 modulos sem erro |
+
+### Consulta de estoque: o que a tela assume
+
+`SaldoEstoqueAh` existe para leitura. A projecao e escrita apenas por `RegistrarMovimentoEstoque`, dentro da transacao do lancamento, e nenhuma tela grava saldo direto sob pena de divergir do ledger. O model nao tem `id` nem timestamps: a chave e o par `(material_ah_id, deposito_id)`.
+
+Duas decisoes de exibicao, ambas por causa da forma do dado real:
+
+- **Saldo zero nao aparece.** O legado tinha 4.510 linhas de saldo, das quais 118 com quantidade. Listar as demais encheria a tela de material que zerou naquele deposito
+- **O filtro de deposito oferece 18, nao 24.** Sao os que tem estoque. Oferecer os 24 cadastrados so produziria consulta que volta vazia
+
+Ao adicionar o item no submenu apareceu um defeito anterior: `isRouteActive` resolve `_activeRoutes.value[pattern] ?? false`, e o mapa so tinha a chave `ajuda-humanitaria.*`. Nenhum item do submenu destacava a pagina corrente. Foram registradas as quatro chaves por secao (`dashboard`, `pedidos.*`, `beneficiarios.*`, `estoque.*`).
+
+### Diagrama do estado atual, com as contagens de 07/08/2026
+
+O que segue e o banco como ele esta, e nao a intencao de projeto. O desenho original vive na secao 1.3 e diverge deste em tres pontos que a implementacao mudou: prefixo `ajuda_h_`, coluna `cargo_id` e a ponte de municipio por codigo IBGE.
+
+#### Nucleo de estoque
+
+```mermaid
+erDiagram
+    materiais_ah {
+        bigint id PK "187 linhas"
+        text nome
+        text unidade_medida
+        text codigo_legado UK "aju_unidade.id_unidade"
+    }
+    ajuda_h_depositos {
+        bigint id PK "24 linhas"
+        text nome
+        text abreviacao UK
+        bigint municipio_id FK "indexada"
+        geography ponto "PostGIS 4326"
+        boolean ativo
+        text codigo_legado UK
+    }
+    ajuda_h_estoque_movimentos {
+        bigint id PK "118 - so ABERTURA"
+        bigint material_ah_id FK
+        bigint deposito_id FK
+        numeric quantidade "CHECK <> 0"
+        text tipo
+        text origem_tipo
+        bigint origem_id
+        timestamptz ocorrido_em "BRIN"
+        bigint registrado_por FK
+        bigint cargo_id FK
+        jsonb payload_legado
+    }
+    ajuda_h_estoque_saldos {
+        bigint material_ah_id PK "118 pares"
+        bigint deposito_id PK
+        numeric saldo "CHECK >= 0 - soma 46.204"
+        timestamptz atualizado_em
+    }
+    ajuda_h_entradas {
+        bigint id PK "752 linhas"
+        bigint deposito_id FK
+        bigint fornecedor_id FK
+        bigint fonte_recurso_id FK "537 casaram"
+        timestamptz recebido_em
+        boolean cancelado
+        text observacao
+        jsonb payload_legado
+        text codigo_legado UK
+    }
+    ajuda_h_entrada_itens {
+        bigint id PK "752 linhas"
+        bigint entrada_id FK
+        bigint material_ah_id FK
+        numeric qtd
+        numeric valor_unitario
+        numeric valor_total "GENERATED STORED"
+        date data_validade
+    }
+    ajuda_h_transferencias {
+        bigint id PK "69 - 1 recusada"
+        bigint deposito_origem_id FK
+        bigint deposito_destino_id FK "CHECK origem <> destino"
+        timestamptz saiu_em
+        timestamptz chegou_em
+        smallint status
+        text codigo_legado UK
+    }
+    ajuda_h_transferencia_itens {
+        bigint id PK "205 linhas"
+        bigint transferencia_id FK
+        bigint material_ah_id FK
+        numeric qtd
+        smallint status
+    }
+    ajuda_h_fornecedores {
+        bigint id PK "10 linhas"
+        text nome
+        text cpf_cnpj UK "3 NULL - placeholder"
+        bigint municipio_id FK "indexada"
+        text codigo_legado UK
+    }
+    ajuda_h_fontes_recurso {
+        bigint id PK "36 linhas"
+        text nome UK
+        text codigo_legado UK
+    }
+    municipios {
+        bigint id PK "853 - 344 kB"
+        varchar codigo_ibge UK
+        varchar nome
+        varchar uf
+    }
+    users { bigint id PK "1103 linhas" }
+    roles { bigint id PK "13 cargos" }
+
+    materiais_ah      ||--o{ ajuda_h_estoque_movimentos  : ""
+    materiais_ah      ||--o{ ajuda_h_estoque_saldos      : ""
+    materiais_ah      ||--o{ ajuda_h_entrada_itens       : ""
+    materiais_ah      ||--o{ ajuda_h_transferencia_itens : ""
+    ajuda_h_depositos ||--o{ ajuda_h_estoque_movimentos  : ""
+    ajuda_h_depositos ||--o{ ajuda_h_estoque_saldos      : ""
+    ajuda_h_depositos ||--o{ ajuda_h_entradas            : ""
+    ajuda_h_depositos ||--o{ ajuda_h_transferencias      : "origem / destino"
+    ajuda_h_entradas  ||--o{ ajuda_h_entrada_itens       : ""
+    ajuda_h_transferencias ||--o{ ajuda_h_transferencia_itens : ""
+    ajuda_h_fornecedores   ||--o{ ajuda_h_entradas       : ""
+    ajuda_h_fontes_recurso ||--o{ ajuda_h_entradas       : ""
+    municipios ||--o{ ajuda_h_depositos    : ""
+    municipios ||--o{ ajuda_h_fornecedores : ""
+    users      ||--o{ ajuda_h_estoque_movimentos : "registrado_por"
+    roles      ||--o{ ajuda_h_estoque_movimentos : "cargo_id"
+```
+
+#### Liberacoes e a ponte de municipio
+
+```mermaid
+erDiagram
+    ajuda_h_liberacoes {
+        bigint id PK "3.582 linhas"
+        bigint municipio_id FK "via codigo IBGE"
+        bigint deposito_id FK
+        bigint solicitante_id FK "NULL em todas"
+        bigint cargo_id FK "NULL em todas"
+        text beneficiario
+        date data_libera
+        smallint status
+        jsonb payload_legado "guarda id_usuario"
+        text codigo_legado UK
+        timestamp deleted_at
+    }
+    ajuda_h_liberacao_recibos {
+        bigint id PK "3.363 - 1 orfao fora"
+        bigint liberacao_id FK
+        date pago_em
+        text n_documento
+        int n_recibo
+        text responsavel_recebimento
+        smallint status
+    }
+    ajuda_h_liberacao_itens {
+        bigint id PK "0 - aju_item vazia na origem"
+        bigint liberacao_id FK
+        bigint material_ah_id FK
+        numeric qtd
+    }
+    cedec_municipio {
+        bigint id PK "854 - espelho do legado"
+        varchar nome
+        varchar Codmundv "codigo IBGE"
+    }
+    municipios { bigint id PK "853" }
+    ajuda_h_depositos { bigint id PK }
+    materiais_ah      { bigint id PK }
+    users             { bigint id PK }
+    roles             { bigint id PK }
+
+    ajuda_h_liberacoes ||--o{ ajuda_h_liberacao_recibos : ""
+    ajuda_h_liberacoes ||--o{ ajuda_h_liberacao_itens   : "vazia"
+    municipios         ||--o{ ajuda_h_liberacoes        : "municipio_id"
+    ajuda_h_depositos  ||--o{ ajuda_h_liberacoes        : ""
+    users              ||--o{ ajuda_h_liberacoes        : "solicitante_id"
+    roles              ||--o{ ajuda_h_liberacoes        : "cargo_id"
+    materiais_ah       ||--o{ ajuda_h_liberacao_itens   : ""
+    cedec_municipio    }o..|| municipios                : "Codmundv = codigo_ibge (so no ETL)"
+```
+
+A linha tracejada nao e chave estrangeira: e a traducao usada durante a carga. O legado referencia `cedec_municipio`, e o codigo IBGE leva ate `public.municipios`, que e o alvo real da FK.
+
+#### Fluxo da carga
+
+```mermaid
+flowchart LR
+    DUMP[("aju_humanitaria.sql<br/>dump producao dbsdc")] --> MY[("MySQL aju_prod_snapshot<br/>54 tabelas")]
+    MY -->|"legado:aju:extrair<br/>somente leitura"| RAW[("ajuda_h_legado_raw<br/>13.598 linhas jsonb<br/>GIN jsonb_path_ops")]
+    RAW -->|"legado:aju:refinar<br/>8 etapas, idempotente"| DEST[("13 tabelas ajuda_h_*<br/>mais materiais_ah")]
+    DEST --> LEDGER["ajuda_h_estoque_movimentos<br/>so ABERTURA lanca aqui"]
+    LEDGER --> PROJ["ajuda_h_estoque_saldos<br/>CHECK saldo >= 0"]
+    APP["RegistrarMovimentoEstoque<br/>unico caminho de escrita"] --> LEDGER
+    REPO["PostgresSaldoMaterialRepository<br/>bind ativo"] --> PROJ
+```
+
+#### Cargos e trilha de auditoria
+
+```mermaid
+flowchart LR
+    subgraph CARGOS["Cargos CEDEC do modulo"]
+        DIR["Diretor DLOG<br/>nivel 2 - 22 permissoes"]
+        ANA["Analista DLOG<br/>nivel 3 - 15 permissoes"]
+        LEI["Leitor Ajuda Humanitaria<br/>nivel 5 - 4 permissoes"]
+    end
+    PERM[("22 permissoes humanitaria.*")]
+    DIR --> PERM
+    ANA --> PERM
+    LEI --> PERM
+    ATRIB["assignRole / removeRole"] -->|"eventos do Spatie<br/>events_enabled = true"| SUB["PermissionEventSubscriber"]
+    SUB --> TRILHA[("permission_audit_log<br/>autor, alvo, role_id, role_name")]
+    DIR -.->|"cargo_id no momento da acao"| LIB[("ajuda_h_liberacoes<br/>ajuda_h_estoque_movimentos")]
+    ANA -.-> LIB
+```
 
 ### Regra do ledger na carga
 
@@ -35,10 +252,69 @@ Quatro casos, todos tratados sem afrouxar constraint:
 | `cpfcnpj` de preenchimento em `aju_fornecedores` | 3 (`00.000.000-0000-00` repetido em dois fornecedores, e `00.000.0` truncado) | Vira `NULL` por regra estrutural: menos de 11 digitos ou nenhum digito diferente de zero. Documento invalido nao e identidade, e o Postgres aceita varios `NULL` sob `UNIQUE` |
 | `aju_produto.origem` fora de `aju_fonte` | 215 de 752 | `origem` e texto livre que mistura fonte de recurso (CAMPANHA DOACAO, LBV) com tipo de movimento (`Transferencia entre Depositos` em tres grafias, `Correcao Manual de Saldo`). So o que casa com `aju_fonte` vira `fonte_recurso_id` (537); o resto fica em `ajuda_h_entradas.payload_legado`, em vez de virar cadastro inventado |
 
-### Tabelas que seguem vazias, e por que
+### Liberacoes: carregadas em 07/08/2026
 
-`ajuda_h_liberacoes`, `ajuda_h_liberacao_itens` e `ajuda_h_liberacao_recibos` ainda nao tem etapa de refino. O dado esta na area de pouso (`aju_liberacao` 3.582, `aju_pagamento` 3.364), mas **`aju_item` esta vazia na producao**: as 3.582 liberacoes nao tem um unico item registrado nessa tabela. Carregar as liberacoes agora produziria 3.582 registros orfaos de item. Antes de modelar essa etapa e preciso descobrir com quem opera o modulo se o item da liberacao vive em outro lugar ou se a tabela foi abandonada.
-| 6. Troca da leitura de saldo | pendente | |
+3.582 liberacoes e 3.363 recibos, contra 3.582 e 3.364 na origem. O recibo a menos aponta para uma liberacao que nao existe no legado, e o JOIN o deixa de fora: recibo sem liberacao nao tem significado.
+
+**`ajuda_h_liberacao_itens` continua vazia, e nao ha o que fazer a respeito.** A origem, `aju_item`, tem zero linhas na producao: as 3.582 liberacoes nao registram item nessa tabela. Nao e lacuna do refino, e ausencia no legado. Se o item da liberacao existe em algum lugar, e em estrutura que este dump nao cobre.
+
+Duas decisoes desta etapa merecem registro.
+
+**Municipio.** `aju_liberacao.id_municipio` nao aponta para `aju_municipio`, e sim para `cedec_municipio`, o espelho do cadastro antigo que o NewSDC ja carrega. Confere em 3.582 de 3.582, contra 670 se fosse `municipios.id` e 670 se fosse `aju_municipio`. A ponte ate `public.municipios` e o codigo IBGE em `cedec_municipio.Codmundv`, mesmo caminho do arquivo morto do RAT. Casar por nome resolveria 3.560: as 22 restantes divergem so na grafia (`SEM PEIXE` contra `Sem-Peixe`, `SAO THOME` contra `São Tomé`), e o codigo IBGE as recupera.
+
+**Solicitante fica NULL, de proposito.** `aju_liberacao.id_usuario` vai de 26 a 180, e todo valor coincide numericamente com algum `users.id` — o que parece um mapeamento pronto e nao e. `users.id` 73 no NewSDC e `BERIZAL665`, conta de municipio, nao o oficial da CEDEC que autorizou a liberacao. Aproveitar a coincidencia atribuiria entrega de ajuda humanitaria a pessoa errada. O id original fica em `payload_legado` ate existir um De-Para real.
+
+### Governanca por cargo, e dois defeitos achados no caminho
+
+A atribuicao de responsabilidade passou a ser **pessoa mais cargo exercido no momento da acao**. `ajuda_h_liberacoes` e `ajuda_h_estoque_movimentos` ganharam `cargo_id` apontando para `roles`, ao lado do `solicitante_id` e do `registrado_por` que ja existiam. O motivo do retrato: cargo muda com o tempo, e sem ele um relatorio de 2027 atribuiria uma liberacao de 2020 ao papel que a pessoa ocupa hoje. Nas 3.582 linhas vindas do legado os dois campos ficam nulos, porque nem a pessoa e recuperavel.
+
+Os cargos CEDEC nao foram inventados: saem do proprio fluxo. `StatusPedidoAh` define `AnaliseDlog` e `AnaliseDiretorDlog`, `EtapaParecer` define `analise_dlog` e `analise_coord`, e `pedidos_ah` ja carrega `analista_id` e `diretor_id`. O legado dizia o mesmo por outro caminho, com as colunas `analista_drd`, `analista_dlog` e `analista_coord` em `aju_h_permissao`.
+
+| Cargo | Slug | Nivel | Permissoes |
+| --- | --- | --- | --- |
+| Diretor DLOG | `diretor-dlog` | 2 | 22 (todas) |
+| Analista DLOG | `analista-dlog` | 3 | 15 |
+| Leitor Ajuda Humanitaria | `leitor-ajuda-humanitaria` | 5 | 4 |
+
+Segregacao de funcoes conferida em teste: o analista instrui (parecer, tramitar, lancar prestacao) e nao decide. `prestacao.homologar`, `pedidos.liberar_itens` e `parametros.manage` sao privativos do diretor. Nenhuma permissao nova foi criada; as 22 `humanitaria.*` ja existiam.
+
+**Defeito 1: a trilha de auditoria estava morta.** `config/permission.php` tinha `events_enabled => false` enquanto `PermissionEventSubscriber` estava registrado no `EventServiceProvider` e pronto para gravar em `permission_audit_log`. O Spatie nunca disparava os eventos, entao a trilha existia no codigo e nunca recebia uma linha. Verificado empiricamente: `assignRole` seguido de `removeRole` nao produzia registro algum. Corrigido para `true`.
+
+**Defeito 2: a trilha nao dizia qual cargo.** Com os eventos ligados, o registro saia como `{"role_id": null, "role_name": null}`. Os extratores liam `$event->role` e `$event->roles`, propriedades que nao existem em versao alguma do Spatie: a role chega em `$event->rolesOrIds`, e o proprio docblock avisa que ali pode vir id, nome, objeto ou `Collection`. Saber que alguem recebeu "um cargo" sem saber se foi Diretor ou Leitor nao serve para governanca. Reescrito com um resolvedor que trata as quatro formas.
+
+Depois das duas correcoes, `assignRole` grava `role.assigned` com autor, alvo e `{"role_id": 11, "role_name": "Analista DLOG"}`, e `removeRole` grava `role.removed` com o estado anterior.
+
+**Limite que permanece.** `logAudit` descarta em silencio quando nao ha usuario autenticado (`if (! $userId) return;`). Cargo concedido por seeder, comando de console ou job de fila nao deixa rastro. Aceitavel enquanto a concessao acontece so pela interface, mas e uma porta aberta que vale fechar quando houver automacao concedendo acesso.
+
+### Auditoria de integridade em 07/08/2026
+
+Oito verificacoes sobre o conjunto carregado, todas em zero: constraints nao validadas, saldos negativos, divergencia entre saldo e soma dos movimentos, itens de entrada orfaos, itens de transferencia orfaos, recibos orfaos, transferencia com origem igual ao destino, e CPF/CNPJ duplicado em fornecedores. 23 chaves estrangeiras declaradas e validas.
+
+Indices em torno de `municipios` tambem revisados: o btree simples em `codigo_ibge` era duplicata do unique e saiu, e as tres colunas filhas de FK que estavam descobertas (`ajuda_h_depositos`, `ajuda_h_fornecedores`, `pedido_ah_agendamentos`) ganharam indice. Nenhuma das 21 FKs para `municipios` segue sem indice. A tabela em si tem 853 linhas e 344 kB: nao e gargalo de leitura, cabe inteira em `shared_buffers`.
+
+### Duas armadilhas que so a verificacao contra o banco real revelou
+
+**`ON CONFLICT DO UPDATE` nao serve para somar delta sob um CHECK.** A primeira versao de `RegistrarMovimentoEstoque` projetava o saldo com `INSERT ... VALUES (m, d, delta) ON CONFLICT DO UPDATE SET saldo = saldo + EXCLUDED.saldo`. Funcionou na entrada de 100 e falhou na saida de -30 sobre saldo 100. Motivo: `ON CONFLICT` resolve apenas violacao de **unicidade**; o CHECK `saldo >= 0` e avaliado antes, sobre a linha candidata do `VALUES`, que era `-30`. A saida legitima morria ali sem nunca chegar ao `UPDATE`. A forma correta e garantir a linha zerada (`VALUES (m, d, 0) ON CONFLICT DO NOTHING`) e somar o delta em um `UPDATE` separado, cujo CHECK avalia o saldo final.
+
+**Teste que resolve o contrato pelo container testa o bind, nao a classe.** `LegadoSaldoMaterialRepositoryTest` fazia `app(SaldoMaterialRepositoryInterface::class)` no `setUp`. Depois da troca do bind ele passou a exercitar a implementacao Postgres, e os dois casos de degradacao (`disponivel()` falso, lista vazia) quebraram sem que houvesse defeito algum na classe sob teste. Passou a instanciar `LegadoSaldoMaterialRepository` diretamente.
+
+### Efeito colateral de carregar producao no banco de desenvolvimento
+
+Tres testes do modulo assumiam tabelas vazias e quebraram quando os 187 materiais entraram no banco compartilhado. Nenhum era defeito de codigo, e todos foram corrigidos para nao depender do tamanho das tabelas:
+
+- `ModelsMahTest::test_material_filtra_disponiveis_para_pedido` contava linhas no banco inteiro; passou a conferir se o scope inclui e exclui os registros que o proprio teste cria
+- `EloquentPrestacaoContaRepositoryTest` fixava `codigo_legado = '161'`, que agora colide com o catalogo legado sob a nova `UNIQUE`; passou a usar `TESTE-161`
+- `ProviderMahTest` travava o bind antigo; foi atualizado para a implementacao nova
+
+Fica a licao para as proximas fases: com dado real no banco de desenvolvimento, asserção de contagem global e chave fixa numerica sao fontes de falha intermitente.
+
+### Bug encontrado na Task 4: ON CONFLICT nao substitui o CHECK
+
+O desenho original projetava o saldo com `INSERT ... ON CONFLICT DO UPDATE SET saldo = saldo + EXCLUDED.saldo`. Parece correto e passa no caso feliz, mas **recusa toda saida legitima**: `ON CONFLICT` resolve apenas violacao de unicidade, e o `CHECK (saldo >= 0)` e avaliado antes, sobre a linha candidata do `VALUES`. Uma saida de `-30` sobre saldo 100 morre ali, sem nunca chegar ao `UPDATE`.
+
+So apareceu porque a verificacao exercitou movimento negativo; o teste de entrada sozinho teria passado e escondido o defeito ate producao.
+
+A correcao sao duas instrucoes na mesma transacao: garantir a linha com saldo zero (`ON CONFLICT DO NOTHING`, que cobre criacao concorrente e sempre passa no CHECK) e depois `UPDATE ... SET saldo = saldo + ?`, cuja restricao e avaliada sobre o saldo final. O `UPDATE` toma lock da linha, entao transacoes concorrentes sobre o mesmo par material/deposito serializam.
 
 **Banco alvo.** O schema foi aplicado no Postgres `sdc` em `localhost:5434` (container `newsdc_dev_db`, postgis 18-3.6), que e onde vivem `municipios`, `materiais_ah` e `users`. A porta 5433 do `compose.dev.yml` pertence ao `db_ai` (Citus + pgvector, base `sdc_ai`), destinado a carga analitica e vetorial, e nao ao OLTP deste modulo.
 

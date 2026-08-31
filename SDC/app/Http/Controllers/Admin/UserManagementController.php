@@ -8,6 +8,7 @@ use App\Models\PermissionAuditLog;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Modules\Plantao\Services\PlantonistaService;
 use App\Models\UserStatusHistory;
 use App\Modules\Compdec\Models\Orgao;
 use App\Services\Auth\EmailChangeService;
@@ -81,6 +82,8 @@ class UserManagementController extends Controller
             'roles' => 'required|array',
             'roles.*' => 'exists:roles,id',
             'orgao_principal_id' => 'nullable|integer|exists:compdec_orgaos,id',
+            'plantonista' => 'sometimes|boolean',
+            'plantonista_posto' => 'nullable|string|max:20',
         ]);
 
         // Cria usuario em status='pending' com senha provisoria + envia e-mail
@@ -97,7 +100,7 @@ class UserManagementController extends Controller
         $roles = Role::whereIn('id', $validated['roles'])->get();
         $user->syncRoles($roles);
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->invalidarCachesDoUsuario($user);
 
         return redirect()
             ->route('admin.permissions.users.index')
@@ -116,7 +119,12 @@ class UserManagementController extends Controller
         $tokens = $user->tokens->map(fn ($t) => [
             'id'           => $t->id,
             'name'         => $t->name,
-            'abilities'    => $t->abilities,
+            // A lista de abilities NAO vai para o frontend. Um token emitido
+            // com escopo total carrega ~200 slugs, e manda-los pintava uma
+            // parede de badges no card e, pior, deixava o inventario inteiro
+            // do escopo do token legivel no data-page do Inertia (view-source).
+            // Só o que a tela precisa: se o escopo e curinga, para o aviso.
+            'escopo_total' => in_array('*', (array) $t->abilities, true),
             'last_used_at' => $t->last_used_at,
             'expires_at'   => $t->expires_at,
             'created_at'   => $t->created_at,
@@ -125,6 +133,13 @@ class UserManagementController extends Controller
         return Inertia::render('Admin/Permissions/Users/Show', [
             'user'         => $user,
             'tokens'       => $tokens,
+            // Escopo possivel de um token: nunca mais que as permissoes
+            // efetivas do dono. Alimenta o seletor de escopo da emissao.
+            'tokenAbilities' => $user->getAllPermissions()
+                ->pluck('name')
+                ->sort()
+                ->values()
+                ->all(),
             'newToken'     => session('new_token'),
             'newTokenName' => session('new_token_name'),
             'history'      => $this->buildHistory($user),
@@ -410,10 +425,21 @@ class UserManagementController extends Controller
         $availableRoles = Role::withCount('permissions')->orderBy('hierarchy_level')->get();
         $availablePermissions = Permission::orderBy('name')->get();
 
+        // Ordem que torna 893 opcoes navegaveis: primeiro a estadual, depois as 19
+        // regionais na SEQUENCIA delas, e por fim os municipios em ordem alfabetica.
+        // Com `orderBy('nome')` puro as regionais saiam alfabeticamente -- "Barbacena
+        // (13a RPM)" antes de "Belo Horizonte (1a RPM)" --, o que nao e a ordem em que
+        // ninguem pensa numa REDEC. Para elas o criterio e o `codigo`
+        // (REDEC-MG-01..19), que ja carrega o numero.
         $availableOrgaos = Orgao::query()
             ->with('municipio:id,nome')
-            ->orderBy('nome')
-            ->get(['id', 'nome', 'tipo', 'municipio_id']);
+            ->orderByRaw("case tipo when 'cedec' then 0 when 'redec' then 1 else 2 end")
+            ->orderByRaw("case when tipo = 'compdec' then nome else codigo end")
+            ->get(['id', 'nome', 'tipo', 'codigo', 'municipio_id']);
+
+        // Estado de plantonista lido pelo SERVICO do modulo Plantao, nao pela
+        // tabela: a governanca nao deve conhecer plantao_plantonistas.
+        $plantonista = app(PlantonistaService::class)->para($user);
 
         return Inertia::render('Admin/Permissions/Users/Edit', [
             'user' => $user,
@@ -422,6 +448,14 @@ class UserManagementController extends Controller
             'availableOrgaos' => $availableOrgaos,
             'canEditSuperAdmin' => auth()->user()->hasRole('super-admin'),
             'canManageSensitive' => auth()->user()->hasAnyRole('super-admin', 'admin'),
+            'plantonista' => [
+                'marcado' => $plantonista !== null,
+                'posto' => $plantonista?->posto,
+                'ativo' => (bool) ($plantonista?->ativo ?? false),
+            ],
+            // Permissao PROPRIA do Plantao, e nao a de editar usuario: quem
+            // administra contas nao necessariamente decide quem faz plantao.
+            'canManagePlantonistas' => (bool) auth()->user()?->can('plantao.plantonistas.manage'),
         ]);
     }
 
@@ -464,6 +498,19 @@ class UserManagementController extends Controller
             }
             if (array_key_exists('orgao_principal_id', $validated)) {
                 $payload['orgao_principal_id'] = $validated['orgao_principal_id'];
+            }
+        }
+
+        // Marcacao de plantonista: acao de OUTRO modulo disparada daqui, entao
+        // passa pelo servico dele e exige a permissao dele. Fica fora do
+        // $payload de proposito -- nao e coluna de `users`.
+        if ($request->has('plantonista') && auth()->user()?->can('plantao.plantonistas.manage')) {
+            $plantonistaService = app(PlantonistaService::class);
+
+            if ($request->boolean('plantonista')) {
+                $plantonistaService->marcar($user, $validated['plantonista_posto'] ?? null);
+            } else {
+                $plantonistaService->remover($user);
             }
         }
 
@@ -511,7 +558,7 @@ class UserManagementController extends Controller
             $user->syncPermissions($validated['direct_permissions'] ?? []);
         }
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->invalidarCachesDoUsuario($user);
 
         return redirect()
             ->route('admin.permissions.users.show', $user)
@@ -528,7 +575,7 @@ class UserManagementController extends Controller
         $roles = Role::whereIn('id', $validated['roles'])->get();
         $user->syncRoles($roles);
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->invalidarCachesDoUsuario($user);
 
         return redirect()
             ->route('admin.permissions.users.show', $user)
@@ -545,11 +592,29 @@ class UserManagementController extends Controller
         $permissionNames = Permission::whereIn('id', $validated['permissions'])->pluck('name')->toArray();
         $user->syncPermissions($permissionNames);
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->invalidarCachesDoUsuario($user);
 
         return redirect()
             ->route('admin.permissions.users.show', $user)
             ->with('success', 'Permissoes atualizadas com sucesso');
+    }
+
+    /**
+     * Invalida os DOIS caches que decidem o que o usuario-alvo enxerga.
+     *
+     * O do Spatie e obvio; o `inertia_user_data_{id}` nao e, e era o que fazia
+     * permissao recem-concedida levar ate 5 minutos para aparecer na sidebar:
+     * o HandleInertiaRequests guarda ali roles+permissions por 300s, e nenhum
+     * ponto que altera permissao o limpava (so o fluxo de troca de e-mail).
+     *
+     * Sem isso, o admin autoriza, o banco fica correto na hora, e a pessoa
+     * continua sem ver o modulo. Em operacao de plantao, cinco minutos de
+     * atraso para liberar acesso e inaceitavel.
+     */
+    private function invalidarCachesDoUsuario(User $user): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        Cache::forget("inertia_user_data_{$user->id}");
     }
 
     public function destroy(User $user)

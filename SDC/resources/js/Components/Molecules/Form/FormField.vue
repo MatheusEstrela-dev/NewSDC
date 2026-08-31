@@ -26,6 +26,8 @@
       :required="required"
       :error="!!error"
       :maxlength="maxlength"
+      :inputmode="inputmode"
+      :mask="mask"
       :size="size"
       @update:model-value="$emit('update:modelValue', $event)"
       @blur="$emit('blur', $event)"
@@ -78,6 +80,21 @@ const props = defineProps({
   error: {
     type: String,
     default: '',
+  },
+  // Repassada ao input. Sem esta prop, `inputmode` ficava na div raiz do
+  // FormField e o teclado do celular nao mudava -- no-op silencioso.
+  inputmode: {
+    type: String,
+    default: undefined,
+  },
+  /**
+   * Nome de mascara em utils/inputMasks: cpf, telefone, inteiro, decimal,
+   * coordenada, moeda. Sem o prop o campo continua texto livre, entao nenhum
+   * formulario existente muda de comportamento.
+   */
+  mask: {
+    type: String,
+    default: undefined,
   },
   maxlength: {
     type: [String, Number],

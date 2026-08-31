@@ -45,8 +45,17 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by(strtolower((string) $identifier) . '|' . $request->ip());
         });
 
-        RateLimiter::for('register', function (Request $request) {
-            return Limit::perMinute(3)->by($request->ip());
+        // Teto de abuso do cadastro publico do Portal de Treinamentos. Folgado
+        // de proposito: e a UNICA tela de cadastro publico do sistema e ela e
+        // acessada de rede institucional com NAT, onde muitos cidadaos saem pelo
+        // mesmo IP. O limite que o usuario legitimo enxerga e o de dentro do
+        // RegisterCidadaoRequest, que devolve mensagem inline em vez de 429 crua;
+        // este aqui e a barreira que sobra pra automacao.
+        RateLimiter::for('portal-registro', function (Request $request) {
+            return [
+                Limit::perMinute(20)->by($request->ip()),
+                Limit::perHour(60)->by($request->ip()),
+            ];
         });
 
         RateLimiter::for('default', function (Request $request) {

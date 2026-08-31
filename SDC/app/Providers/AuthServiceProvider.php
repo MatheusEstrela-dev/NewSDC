@@ -24,11 +24,17 @@ class AuthServiceProvider extends ServiceProvider
         \App\Modules\Compdec\Models\CompdecEquipe::class => \App\Policies\CompdecEquipePolicy::class,
         \App\Modules\Compdec\Models\CompdecAnexo::class => \App\Policies\CompdecAnexoPolicy::class,
         \App\Modules\Compdec\Models\CompdecPlanoContingencia::class => \App\Policies\CompdecPlanoContingenciaPolicy::class,
-        \App\Modules\Cisterna\Models\Cisterna::class => \App\Policies\CisternaPolicy::class,
         \App\Modules\Treinamento\Models\Treinamento::class => \App\Policies\TreinamentoPolicy::class,
         \App\Modules\Treinamento\Models\Inscricao::class => \App\Policies\InscricaoPolicy::class,
         \App\Modules\Treinamento\Models\Certificado::class => \App\Policies\CertificadoPolicy::class,
         \App\Modules\AjudaHumanitaria\Models\PedidoAh::class => \App\Policies\PedidoAhPolicy::class,
+        \App\Modules\Cisterna\Models\CisternaBeneficiario::class => \App\Policies\CisternaBeneficiarioPolicy::class,
+        \App\Modules\Cisterna\Models\CisternaVistoria::class => \App\Policies\CisternaVistoriaPolicy::class,
+        \App\Modules\Cisterna\Models\CisternaComunidade::class => \App\Policies\CisternaComunidadePolicy::class,
+        \App\Modules\Cisterna\Models\CisternaLote::class => \App\Policies\CisternaLotePolicy::class,
+        \App\Modules\Cisterna\Models\CisternaOrdemServico::class => \App\Policies\CisternaOrdemServicoPolicy::class,
+        \App\Modules\Cisterna\Models\CisternaNotificacao::class => \App\Policies\CisternaNotificacaoPolicy::class,
+        \App\Modules\Pmda\Models\PmdaPlano::class => \App\Policies\PmdaPlanoPolicy::class,
     ];
 
     /**

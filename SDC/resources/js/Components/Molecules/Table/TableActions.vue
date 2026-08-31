@@ -56,6 +56,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import ArchiveBoxIcon from '@/Components/Icons/ArchiveBoxIcon.vue';
 import CheckIcon from '@/Components/Icons/CheckIcon.vue';
 import DocumentTextIcon from '@/Components/Icons/DocumentTextIcon.vue';
+import QrCodeIcon from '@/Components/Icons/QrCodeIcon.vue';
 import UserIcon from '@/Components/Icons/UserIcon.vue';
 
 const props = defineProps({
@@ -139,6 +140,12 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Acao de menu, nao inline: o QR nao e usado a toda hora, e disputar espaco
+  // com visualizar/editar/excluir empurraria as acoes rotineiras para longe.
+  showQrcode: {
+    type: Boolean,
+    default: false,
+  },
   size: {
     type: String,
     default: 'md',
@@ -164,6 +171,7 @@ const emit = defineEmits([
   'finalize',
   'check',
   'pdf',
+  'qrcode',
 ]);
 
 const actions = computed(() => [
@@ -197,6 +205,14 @@ const menuActions = computed(() => [
     label: 'PDF',
     icon: DocumentTextIcon,
     iconClass: 'text-[#ff4d00]',
+  },
+  {
+    name: 'qrcode',
+    event: 'qrcode',
+    show: props.showQrcode,
+    label: 'QR Code',
+    icon: QrCodeIcon,
+    iconClass: 'text-cyan-400',
   },
   {
     name: 'archive',

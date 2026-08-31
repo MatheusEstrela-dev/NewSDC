@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { XMarkIcon, CloudArrowUpIcon, DocumentIcon, PhotoIcon, TrashIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -12,6 +12,12 @@ const props = defineProps({
     type: String,
     default: 'image/*,.pdf,.zip,.fig'
   },
+  // Preenchido so para conta estadual: usuario municipal nao escolhe, o
+  // orgao dele vem do vinculo.
+  municipios: {
+    type: Array,
+    default: () => []
+  },
   maxFileSize: {
     type: Number,
     default: 50 // MB
@@ -21,6 +27,13 @@ const props = defineProps({
 const emit = defineEmits(['close', 'upload']);
 
 const files = ref([]);
+const municipioId = ref(null);
+
+// Conta estadual precisa dizer o municipio antes de enviar; usuario municipal
+// nao ve o campo e o orgao vem do vinculo dele.
+const podeEnviar = computed(
+  () => files.value.length > 0 && !isUploading.value && (props.municipios.length === 0 || !!municipioId.value)
+);
 const isDragging = ref(false);
 const isUploading = ref(false);
 const fileInput = ref(null);
@@ -28,6 +41,7 @@ const fileInput = ref(null);
 watch(() => props.show, (newVal) => {
   if (newVal) {
     files.value = [];
+    municipioId.value = null;
     isDragging.value = false;
     isUploading.value = false;
   }
@@ -104,7 +118,11 @@ const handleUpload = async () => {
     formData.append(`files[${index}]`, file.raw);
   });
 
-  emit('upload', { files: files.value.map(f => f.raw), formData });
+  if (municipioId.value) {
+    formData.append('municipio_id', municipioId.value);
+  }
+
+  emit('upload', { files: files.value.map(f => f.raw), formData, municipioId: municipioId.value });
 
   setTimeout(() => {
     isUploading.value = false;
@@ -157,6 +175,23 @@ const openFileDialog = () => {
               </button>
             </div>
 
+
+            <div v-if="municipios.length" class="mb-5">
+              <label for="plancon-municipio" class="mb-2 block text-sm font-medium text-slate-200">
+                Municipio do plano
+              </label>
+              <select
+                id="plancon-municipio"
+                v-model="municipioId"
+                class="w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-100 focus:border-cyan-400 focus:outline-none"
+              >
+                <option :value="null">Selecione o municipio...</option>
+                <option v-for="m in municipios" :key="m.id" :value="m.id">{{ m.nome }}</option>
+              </select>
+              <p class="mt-2 text-xs text-slate-400">
+                Sua conta nao esta vinculada a um municipio, entao o envio precisa indicar por qual deles o plano esta sendo cadastrado.
+              </p>
+            </div>
 
             <div
               @dragover.prevent="isDragging = true"
@@ -276,9 +311,9 @@ const openFileDialog = () => {
 
               <button
                 @click="handleUpload"
-                :disabled="files.length === 0 || isUploading"
+                :disabled="!podeEnviar"
                 class="flex-1 py-4 rounded-xl font-black text-xs tracking-[0.15em] uppercase flex items-center justify-center gap-2 transition-all"
-                :class="files.length > 0 && !isUploading
+                :class="podeEnviar
                   ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:-translate-y-0.5 active:translate-y-0'
                   : 'bg-slate-800 text-slate-500 cursor-not-allowed'"
               >

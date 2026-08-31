@@ -29,7 +29,11 @@ abstract class AbstractCaminhaoRequest extends FormRequest
     {
         return [
             'prestador_id'  => ['required', 'integer', Rule::exists('tdap_prestadores', 'id')->whereNull('deleted_at')],
-            'placa'         => ['required', 'string', 'min:7', 'max:8', 'regex:/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/', $this->placaUniqueRule()],
+            // A placa chega sem separador (prepareForValidation) e tem 7
+            // caracteres nos dois padroes: AAA1111 (antigo) e AAA1A11
+            // (Mercosul). O `max:8` de antes nunca podia ser exercido -- o
+            // regex ja recusava o 8o caractere -- e so confundia a leitura.
+            'placa'         => ['required', 'string', 'size:7', 'regex:/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/', $this->placaUniqueRule()],
             'marca'         => ['nullable', 'string', 'max:50'],
             'modelo'        => ['nullable', 'string', 'max:50'],
             'cor'           => ['nullable', 'string', 'max:30'],

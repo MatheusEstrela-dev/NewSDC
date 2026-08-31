@@ -35,4 +35,14 @@ class StoreCompdecEquipeRequest extends FormRequest
             'ativo'    => ['boolean'],
         ];
     }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            // Sem isto sai "The selected funcao is invalid", que nao diz o que
+            // enviar. Pela tela o select ja manda certo; quem erra e integracao.
+            'funcao.in' => 'A função deve ser uma destas: coordenador, agente, tecnico, apoio ou outro (em minúsculas).',
+        ];
+    }
 }

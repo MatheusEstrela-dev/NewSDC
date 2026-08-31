@@ -7,13 +7,15 @@ namespace App\Modules\Pmda\Services;
 use App\Modules\Compdec\Enums\StatusOrgao;
 use App\Modules\Compdec\Enums\TipoOrgao;
 use App\Modules\Compdec\Models\Orgao;
+use App\Modules\Pmda\DTOs\PmdaPlanoDTO;
+use App\Modules\Pmda\Enums\PmdaEventoTipo;
 use App\Modules\Pmda\Enums\PmdaStatus;
 use App\Modules\Pmda\Enums\SolicitacaoComunidadeStatus;
 use App\Modules\Pmda\Models\Comunidade;
 use App\Modules\Pmda\Models\ComunidadeSolicitacao;
 use App\Modules\Pmda\Models\PmdaComunidade;
-use App\Modules\Pmda\Models\PmdaCompdecMembro;
 use App\Modules\Pmda\Models\PmdaPlano;
+use App\Modules\Pmda\Models\PmdaPlanoEvento;
 use App\Modules\Pmda\Models\PmdaPonto;
 use App\Modules\Pmda\Models\PmdaRepresentante;
 use App\Modules\Shared\BaseService;
@@ -57,16 +59,36 @@ class PmdaPlanoService extends BaseService
             );
         }
 
-        return PmdaPlano::create(array_merge($data, [
+        return PmdaPlano::create(array_merge(PmdaPlanoDTO::deFormulario($data)->toArray(), [
             'municipio_id' => $municipioId,
             'status'       => PmdaStatus::RASCUNHO,
             'created_by'   => $userId,
         ]));
     }
 
+    /**
+     * Edita o conteudo de um plano em aberto.
+     *
+     * A guarda de situacao fica AQUI, e nao so no middleware pmda.editavel:
+     * enviar/aprovar/arquivar/pedirAlteracao todos validam no proprio service, e
+     * atualizar() era o unico que dependia de guarda externa -- um comando
+     * artisan, um job ou uma rota nova sem o middleware escreveria num plano
+     * arquivado sem reclamar.
+     *
+     * O DTO decide QUAIS colunas entram no update: chave ausente nao mexe na
+     * coluna, chave com null limpa. E o que faz "submeti so a aba ISS" nao apagar
+     * o resto e "apaguei o campo" gravar de fato.
+     */
     public function atualizar(PmdaPlano $plano, array $data, int $userId): PmdaPlano
     {
-        $plano->update(array_merge($data, [
+        if (! $plano->status->permiteEdicao()) {
+            throw new \DomainException(sprintf(
+                'Este PMDA está %s e não aceita mais edição.',
+                mb_strtolower($plano->status->getLabel())
+            ));
+        }
+
+        $plano->update(array_merge(PmdaPlanoDTO::deFormulario($data)->toArray(), [
             'updated_by'          => $userId,
             'dt_ultima_alteracao' => now(),
         ]));
@@ -116,13 +138,37 @@ class PmdaPlanoService extends BaseService
      *
      * @return array<string, int>
      */
-    public function statisticsIndex(): array
+    public function statisticsIndex(?int $municipioId = null): array
     {
+        // Ao contrario de listar()/exportar(), que recebem o recorte dentro de
+        // $filtros, aqui ele vem explicito: nao existe array de filtros para
+        // carregar. Null = perfil estadual, sem recorte.
+        //
+        // UM GROUP BY, nao 4 SELECT count(*). Este metodo roda dentro de um task
+        // worker do Swoole e o worker HTTP fica BLOQUEADO esperando o resultado
+        // (Concurrency wait_ms = 5s), entao cada round-trip a menos sai do caminho
+        // quente de todo mundo. `toBase()` aplica os scopes (SoftDeletes incluso) e
+        // devolve o query builder cru: sem ele o cast de `status` para PmdaStatus
+        // viraria chave de array e o pluck quebraria.
+        $porStatus = PmdaPlano::query()
+            ->when($municipioId !== null, fn ($q) => $q->where('municipio_id', $municipioId))
+            ->toBase()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
         return [
-            'total'     => PmdaPlano::count(),
-            'emEdicao'  => PmdaPlano::where('status', PmdaStatus::RASCUNHO->value)->count(),
-            'emAnalise' => PmdaPlano::where('status', PmdaStatus::EM_ANALISE->value)->count(),
-            'aprovados' => PmdaPlano::where('status', PmdaStatus::APROVADO->value)->count(),
+            'total'     => (int) $porStatus->sum(),
+            // COMPLETO conta como em edicao, alinhado a PmdaStatus::permiteEdicao():
+            // o recalculo promove o plano assim que cada comunidade tem os 3
+            // representantes, muito antes de enviar. Contando so RASCUNHO, o plano
+            // sumia dos tres cards no momento em que o municipio terminava de
+            // preencher -- parecia que havia saido do painel sem ter ido a lugar
+            // nenhum. O badge da tabela segue mostrando "Completo".
+            'emEdicao'  => (int) ($porStatus[PmdaStatus::RASCUNHO->value] ?? 0)
+                         + (int) ($porStatus[PmdaStatus::COMPLETO->value] ?? 0),
+            'emAnalise' => (int) ($porStatus[PmdaStatus::EM_ANALISE->value] ?? 0),
+            'aprovados' => (int) ($porStatus[PmdaStatus::APROVADO->value] ?? 0),
         ];
     }
 
@@ -164,9 +210,62 @@ class PmdaPlanoService extends BaseService
                 ->every(fn ($c) => $c->representantes_count >= self::REPRESENTANTES_POR_COMUNIDADE);
 
         $novo = $todasComRepresentantes ? PmdaStatus::COMPLETO : PmdaStatus::RASCUNHO;
+        // Nao passa por transicionar(): RASCUNHO <-> COMPLETO e derivacao automatica
+        // do preenchimento, nao tramite — virava ruido no log a cada representante
+        // salvo. A validacao da maquina de estados continua valendo.
         if ($plano->status !== $novo) {
+            if (! $plano->status->podeTransicionarPara($novo)) {
+                throw new \DomainException(sprintf(
+                    'Transição não permitida: %s → %s.',
+                    $plano->status->getLabel(),
+                    $novo->getLabel()
+                ));
+            }
             $plano->update(['status' => $novo]);
         }
+
+        return $plano->refresh();
+    }
+
+    /**
+     * Unico ponto de mudanca de situacao com tramite. Valida contra
+     * PmdaStatus::transicoes() e registra o evento no log.
+     *
+     * Antes cada acao (enviar/aprovar/arquivar/devolver) repetia a sua propria
+     * guarda e gravava direto no update, e o enum de transicoes nao era consultado
+     * por ninguem. Concentrar aqui e o que faz a maquina de estados existir de fato
+     * e o que garante que nenhuma transicao passe sem deixar rastro.
+     *
+     * @param  array<string, mixed>  $atributos  colunas especificas da acao
+     */
+    private function transicionar(
+        PmdaPlano $plano,
+        PmdaStatus $destino,
+        PmdaEventoTipo $tipo,
+        int $userId,
+        array $atributos = [],
+        ?string $motivo = null,
+        ?string $responsavel = null,
+    ): PmdaPlano {
+        $origem = $plano->status;
+
+        if (! $origem->podeTransicionarPara($destino)) {
+            throw new \DomainException(sprintf(
+                'Transição não permitida: %s → %s.',
+                $origem->getLabel(),
+                $destino->getLabel()
+            ));
+        }
+
+        $nome = $responsavel ?: \App\Models\User::find($userId)?->name;
+
+        $plano->update($atributos + [
+            'status'              => $destino,
+            'dt_ultima_alteracao' => now(),
+            'updated_by'          => $userId,
+        ]);
+
+        PmdaPlanoEvento::registrar($plano, $tipo, $origem, $destino, $userId, $motivo, $nome);
 
         return $plano->refresh();
     }
@@ -196,15 +295,18 @@ class PmdaPlanoService extends BaseService
             throw new \DomainException('Anexe o Termo de Compromisso e o Ofício de Solicitação (PDF) antes de enviar.');
         }
 
-        $plano->update([
-            'status'              => PmdaStatus::EM_ANALISE,
-            'dt_analise'          => now(),
-            'resp_homolog'        => \App\Models\User::find($userId)?->name, // quem enviou (municipio), como no legado
-            'dt_ultima_alteracao' => now(),
-            'updated_by'          => $userId,
-        ]);
+        $nome = \App\Models\User::find($userId)?->name;
 
-        return $plano->refresh();
+        return $this->transicionar($plano, PmdaStatus::EM_ANALISE, PmdaEventoTipo::ENVIO, $userId, [
+            'dt_analise'     => now(),
+            'resp_homolog'   => $nome, // quem enviou (municipio), como no legado
+            // Reenvio fecha o ciclo de correcao: sem limpar, o plano seguia marcado
+            // como "aguardando alteracao" ate depois de aprovado. O motivo nao se
+            // perde — ficou na linha DEVOLUCAO do log de eventos.
+            'pedido_altera'  => false,
+            'alterar_com'    => false,
+            'motivo_analise' => null,
+        ], responsavel: $nome);
     }
 
     /** Fila de analise CEDEC: planos EM_ANALISE (mais antigos primeiro). */
@@ -224,16 +326,13 @@ class PmdaPlanoService extends BaseService
     {
         $this->garantirEmAnalise($plano);
 
-        $plano->update([
-            'status'              => PmdaStatus::APROVADO,
-            'data_aprov'          => now(),
-            'dt_estado'           => now(),
-            'resp_estado'         => $resp ?: (\App\Models\User::find($userId)?->name),
-            'dt_ultima_alteracao' => now(),
-            'updated_by'          => $userId,
-        ]);
+        $nome = $resp ?: \App\Models\User::find($userId)?->name;
 
-        return $plano->refresh();
+        return $this->transicionar($plano, PmdaStatus::APROVADO, PmdaEventoTipo::APROVACAO, $userId, [
+            'data_aprov'  => now(),
+            'dt_estado'   => now(),
+            'resp_estado' => $nome,
+        ], responsavel: $nome);
     }
 
     /** Arquiva/rejeita o PMDA (EM_ANALISE -> ARQUIVADO) com motivo. */
@@ -241,16 +340,13 @@ class PmdaPlanoService extends BaseService
     {
         $this->garantirEmAnalise($plano);
 
-        $plano->update([
-            'status'              => PmdaStatus::ARQUIVADO,
-            'motivo_analise'      => $motivo,
-            'dt_estado'           => now(),
-            'resp_estado'         => \App\Models\User::find($userId)?->name,
-            'dt_ultima_alteracao' => now(),
-            'updated_by'          => $userId,
-        ]);
+        $nome = \App\Models\User::find($userId)?->name;
 
-        return $plano->refresh();
+        return $this->transicionar($plano, PmdaStatus::ARQUIVADO, PmdaEventoTipo::ARQUIVAMENTO, $userId, [
+            'motivo_analise' => $motivo,
+            'dt_estado'      => now(),
+            'resp_estado'    => $nome,
+        ], motivo: $motivo, responsavel: $nome);
     }
 
     /** Devolve o PMDA ao municipio para correcao (EM_ANALISE -> RASCUNHO) com motivo. */
@@ -258,18 +354,15 @@ class PmdaPlanoService extends BaseService
     {
         $this->garantirEmAnalise($plano);
 
-        $plano->update([
-            'status'              => PmdaStatus::RASCUNHO,
-            'pedido_altera'       => true,
-            'alterar_com'         => true, // legado: libera edicao de comunidades apos devolucao
-            'motivo_analise'      => $motivo,
-            'resp_estado'         => \App\Models\User::find($userId)?->name, // quem devolveu (CEDEC)
-            'dt_estado'           => now(),
-            'dt_ultima_alteracao' => now(),
-            'updated_by'          => $userId,
-        ]);
+        $nome = \App\Models\User::find($userId)?->name;
 
-        return $plano->refresh();
+        return $this->transicionar($plano, PmdaStatus::RASCUNHO, PmdaEventoTipo::DEVOLUCAO, $userId, [
+            'pedido_altera'  => true,
+            'alterar_com'    => true, // legado: libera edicao de comunidades apos devolucao
+            'motivo_analise' => $motivo,
+            'resp_estado'    => $nome, // quem devolveu (CEDEC)
+            'dt_estado'      => now(),
+        ], motivo: $motivo, responsavel: $nome);
     }
 
     /** Garante que o plano esta EM_ANALISE (unico estado analisavel pela CEDEC). */
@@ -365,6 +458,22 @@ class ComunidadeService
             $data['nome']      = $mestre->nome;
             $data['latitude']  = $data['latitude'] ?? $mestre->latitude;
             $data['longitude'] = $data['longitude'] ?? $mestre->longitude;
+
+            // Ultima referencia conhecida da comunidade, so como ponto de
+            // partida: o que o municipio informar no plano sempre vence. E o
+            // destino dos campos que o legado guardava em pip_comunidade
+            // (trecho_pav/trecho_n_pav/pop_atendida) e que aqui pertencem ao
+            // vinculo, nao ao catalogo - ver ComunidadeLegadoService.
+            //
+            // array_key_exists e nao ??: o middleware ConvertEmptyStringsToNull
+            // transforma campo apagado de proposito em null, e com ?? o valor
+            // do catalogo voltaria por cima justamente de quem quis zerar. So
+            // pre-preenche o que o formulario nao mandou.
+            foreach (['trecho_pav', 'trecho_n_pav', 'pop_atendida'] as $campo) {
+                if (! array_key_exists($campo, $data)) {
+                    $data[$campo] = $mestre->{$campo};
+                }
+            }
         }
 
         $data['municipio_id'] = $plano->municipio_id;
@@ -466,7 +575,9 @@ class ComunidadeSolicitacaoService
     public function pendentes(array $filtros = [], int $perPage = 15, ?int $page = null): LengthAwarePaginator
     {
         return ComunidadeSolicitacao::query()
-            ->with('municipio')
+            // plano e solicitadoPor alimentam o detalhamento que a CEDEC le antes
+            // de decidir; carregados aqui para nao gerar N+1 na fila paginada.
+            ->with(['municipio', 'plano', 'solicitadoPor'])
             ->where('status', SolicitacaoComunidadeStatus::PENDENTE->value)
             ->when($filtros['municipio_id'] ?? null, fn ($q, $m) => $q->where('municipio_id', $m))
             ->oldest()
@@ -530,6 +641,8 @@ class RepresentanteService
 
     public function adicionar(PmdaComunidade $comunidade, array $data): PmdaRepresentante
     {
+        $this->validarCpfUnicoNoPlano($comunidade, $data['cpf'] ?? null, null);
+
         $representante = $comunidade->representantes()->create($data);
         $this->recalcular($comunidade);
 
@@ -538,9 +651,39 @@ class RepresentanteService
 
     public function atualizar(PmdaRepresentante $representante, array $data): PmdaRepresentante
     {
+        $comunidade = $representante->comunidade;
+        if ($comunidade) {
+            $this->validarCpfUnicoNoPlano($comunidade, $data['cpf'] ?? null, $representante->id);
+        }
+
         $representante->update($data);
 
         return $representante->refresh();
+    }
+
+    /**
+     * Legado (gestaocedec, mod_pipa: RepPmda::buscaRepDupPmda): a mesma pessoa nao
+     * representa duas comunidades do MESMO PMDA. O escopo e o plano inteiro, nao a
+     * comunidade -- por isso a busca sobe ate o plano antes de comparar.
+     *
+     * Sem CPF nao ha o que comparar: representante sem documento nao bloqueia outro.
+     */
+    private function validarCpfUnicoNoPlano(PmdaComunidade $comunidade, ?string $cpf, ?int $ignorarId): void
+    {
+        $cpf = preg_replace('/\D/', '', (string) $cpf);
+        if ($cpf === '') {
+            return;
+        }
+
+        $duplicado = PmdaRepresentante::query()
+            ->whereHas('comunidade', fn ($q) => $q->where('pmda_plano_id', $comunidade->pmda_plano_id))
+            ->when($ignorarId, fn ($q, $id) => $q->where('id', '!=', $id))
+            ->whereRaw("regexp_replace(coalesce(cpf, ''), '\\D', '', 'g') = ?", [$cpf])
+            ->exists();
+
+        if ($duplicado) {
+            throw new \DomainException('Esse representante já está cadastrado em outra comunidade deste PMDA.');
+        }
     }
 
     public function remover(PmdaRepresentante $representante): void
@@ -600,24 +743,6 @@ class PlanoPontoService
     }
 }
 
-class CompdecMembroService
-{
-    public function adicionar(PmdaPlano $plano, array $data): PmdaCompdecMembro
-    {
-        return $plano->compdecMembros()->create($data);
-    }
-
-    public function remover(PmdaCompdecMembro $membro): void
-    {
-        $membro->delete();
-    }
-}
-
-/**
- * Ficha cadastral do COMPDEC acessada de dentro do PMDA. Reaproveita o
- * registro mestre do municipio (Compdec\Orgao tipo COMPDEC): o PMDA le como
- * fallback e grava no proprio orgao, mantendo o cadastro unico e autoritativo.
- */
 class CompdecFichaService
 {
     /** Colunas reais de compdec_orgaos editaveis pela ficha (exclui tem_plano_contingencia, gerido por observer). */

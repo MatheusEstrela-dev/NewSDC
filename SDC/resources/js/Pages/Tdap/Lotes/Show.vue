@@ -3,7 +3,7 @@
   <div class="p-6 space-y-6">
     <TdapPageHeader
       :title="`Lote ${l.numero}`"
-      :description="l.nome || `${l.municipio?.nome ?? ''}${l.municipio?.uf ? '/' + l.municipio.uf : ''}`"
+      :description="descricao"
       :icon="MapIcon"
     >
       <template #actions>
@@ -13,7 +13,14 @@
         <Link v-if="canEdit" :href="route('tdap.lotes.edit', l.id)">
           <PrimaryButton>Editar</PrimaryButton>
         </Link>
-        <DangerButton v-if="canDelete" @click="excluir">Excluir</DangerButton>
+        <!--
+          Lote com cronograma nao pode ser excluido (FK restrict + guard no
+          LoteService). O botao some para nao oferecer uma acao que falharia.
+        -->
+        <DangerButton v-if="canDelete && !temCronograma" @click="excluir">Excluir</DangerButton>
+        <span v-else-if="canDelete" class="text-xs text-slate-500 self-center">
+          {{ l.cronogramas_count }} cronograma(s) vinculado(s): exclusão bloqueada.
+        </span>
       </template>
     </TdapPageHeader>
 
@@ -21,9 +28,10 @@
       <div class="lg:col-span-2 space-y-4">
         <div class="bg-white dark:bg-slate-900/40 rounded-xl p-6 border border-slate-200 dark:border-slate-700/40">
           <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Identificação</h3>
-          <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div><dt class="text-slate-500">Número</dt><dd class="font-mono font-semibold text-slate-900 dark:text-slate-100">{{ l.numero }}</dd></div>
             <div><dt class="text-slate-500">Nome</dt><dd class="text-slate-900 dark:text-slate-100">{{ l.nome || '—' }}</dd></div>
+            <div><dt class="text-slate-500">Contrato</dt><dd class="font-mono text-slate-900 dark:text-slate-100">{{ l.contrato || '—' }}</dd></div>
           </dl>
         </div>
 
@@ -38,8 +46,17 @@
               </dd>
             </div>
             <div>
-              <dt class="text-slate-500">Município</dt>
-              <dd class="text-slate-900 dark:text-slate-100">{{ l.municipio?.nome }}<span v-if="l.municipio?.uf">/{{ l.municipio.uf }}</span></dd>
+              <dt class="text-slate-500">Municípios ({{ municipios.length }})</dt>
+              <dd class="mt-1 flex flex-wrap gap-1">
+                <span
+                  v-for="m in municipios"
+                  :key="m.id"
+                  class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300"
+                >
+                  {{ m.nome }}<span v-if="m.uf" class="text-slate-400">/{{ m.uf }}</span>
+                </span>
+                <span v-if="municipios.length === 0" class="text-slate-400">—</span>
+              </dd>
             </div>
             <div>
               <dt class="text-slate-500">Prestador</dt>
@@ -99,16 +116,38 @@ const props = defineProps({
   canDelete: { type: Boolean, default: false },
 });
 
-const l = computed(() => props.lote.data ?? props.lote).value;
+// `computed(...).value` congelava o payload no setup: depois de um reload
+// parcial do Inertia a tela seguia mostrando a versao antiga do lote.
+const l = computed(() => props.lote.data ?? props.lote);
+
+const municipios = computed(() => (Array.isArray(l.value.municipios) ? l.value.municipios : []));
+
+// Cabecalho: o nome do lote quando existe, senao um resumo dos municipios. A
+// lista inteira (ha lote com mais de 30) estourava a linha do header.
+const descricao = computed(() => {
+  if (l.value.nome) return l.value.nome;
+
+  const nomes = municipios.value.map(m => m.nome);
+
+  if (nomes.length === 0) return 'Nenhum município vinculado';
+  if (nomes.length <= 3) return nomes.join(', ');
+
+  return `${nomes.slice(0, 3).join(', ')} e mais ${nomes.length - 3}`;
+});
+
+const temCronograma = computed(() => (l.value.cronogramas_count ?? 0) > 0);
 
 function excluir() {
-  if (!confirm(`Excluir o lote ${l.numero}?`)) return;
-  router.delete(route('tdap.lotes.destroy', l.id));
+  if (!confirm(`Excluir o lote ${l.value.numero}?`)) return;
+  router.delete(route('tdap.lotes.destroy', l.value.id));
 }
 
+// Datas vem como 'YYYY-MM-DD'. `new Date('2026-05-01')` e meia-noite UTC e, no
+// fuso do Brasil, exibia o dia anterior.
 function formatDate(d) {
   if (!d) return '—';
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('pt-BR');
+  const [ano, mes, dia] = String(d).slice(0, 10).split('-');
+
+  return ano && mes && dia ? `${dia}/${mes}/${ano}` : '—';
 }
 </script>

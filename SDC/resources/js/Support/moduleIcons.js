@@ -19,6 +19,7 @@ import clock from '../../images/modulos/clock.svg?url';
 import mountains from '../../images/modulos/mountains.svg?url';
 // Arte raster (PNG); as demais sao SVG, mas o PageHeader aceita os dois.
 import notification from '../../images/modulos/notification.png?url';
+import user from '../../images/modulos/user.png?url';
 
 // Catalogo bruto (todas as artes disponiveis).
 export const ICONS = {
@@ -46,6 +47,7 @@ export const MODULE_ICONS = {
   plantao: clock,
   pae: mountains,
   notificacoes: notification,
+  permissionamento: user,
 };
 
 /** Retorna a URL do icone do modulo (ou null se nao mapeado). */

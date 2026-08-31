@@ -37,107 +37,27 @@
   width: 80px;
 }
 
-/* Tablet (768px - 1023px): sidebar como drawer, sem reservar rail lateral */
-@media (min-width: 768px) and (max-width: 1023px) {
+/*
+ * Abaixo de lg (< 1024px) a sidebar e SEMPRE drawer off-canvas.
+ *
+ * Antes havia dois blocos: um para mobile (< 768px) e outro para tablet
+ * (768-1023px) que reproduzia o visual de rail recolhido em dezenas de regras
+ * `:not(.is-mobile-open)`. Aquilo estilizava um estado que NINGUEM ENXERGA --
+ * fechada, a sidebar esta em `translateX(-100%)` nas duas faixas, e o layout
+ * reserva offset so em `lg` (`ml-0 lg:ml-[280px]`), entao nao ha rail nenhum
+ * para desenhar.
+ *
+ * O unico efeito pratico daquele bloco era vazar para o estado ABERTO: o rail
+ * herdado centralizava os itens, quebrava rotulos longos em duas linhas e abria
+ * a faixa morta a esquerda que so aparecia entre 768 e 1023px. Por isso o mesmo
+ * drawer ficava certo em 700px e torto em 840px.
+ *
+ * Unificado, tablet e mobile desenham o mesmo drawer -- que era o comportamento
+ * correto e ja validado na faixa estreita.
+ */
+@media (max-width: 1023px) {
   .sidebar {
     width: 280px;
-    transform: translateX(-100%);
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
-    transition: width 0.3s ease, transform 0.3s ease;
-  }
-
-  .sidebar.is-mobile-open {
-    width: 280px !important;
-    transform: translateX(0);
-  }
-
-  /* Estado collapsed padrao (sem drawer aberto) */
-  .sidebar:not(.is-mobile-open) .logo-text,
-  .sidebar:not(.is-mobile-open) .nav-section-title,
-  .sidebar:not(.is-mobile-open) .nav-arrow {
-    display: none;
-    opacity: 0;
-    visibility: hidden;
-  }
-
-  /* Mostrar textos quando drawer esta aberto */
-  .sidebar.is-mobile-open .logo-text,
-  .sidebar.is-mobile-open .nav-section-title,
-  .sidebar.is-mobile-open .nav-arrow {
-    display: flex;
-    opacity: 1;
-    visibility: visible;
-  }
-
-  .sidebar.is-mobile-open .logo-text {
-    flex-direction: column;
-  }
-
-  /* Esconder submenu quando collapsed */
-  .sidebar:not(.is-mobile-open) .nav-submenu {
-    display: none;
-  }
-
-  /* Mostrar submenu quando drawer aberto */
-  .sidebar.is-mobile-open .nav-submenu {
-    display: block;
-  }
-
-  /* Ajustar header no estado collapsed */
-  .sidebar:not(.is-mobile-open) .sidebar-header {
-    padding: 1rem;
-    justify-content: center;
-  }
-
-  .sidebar:not(.is-mobile-open) .logo-container {
-    justify-content: center;
-  }
-
-  /* Ajustar header quando drawer aberto */
-  .sidebar.is-mobile-open .sidebar-header {
-    padding: 1.5rem 1.25rem;
-    justify-content: space-between;
-  }
-
-  .sidebar.is-mobile-open .logo-container {
-    justify-content: flex-start;
-  }
-
-  /* Esconder botao toggle desktop em tablet */
-  .sidebar-toggle {
-    display: none !important;
-  }
-
-  /* nav-group-toggle collapsed */
-  .sidebar:not(.is-mobile-open) .nav-group-toggle {
-    justify-content: center;
-    padding: 0.75rem;
-  }
-
-  .sidebar:not(.is-mobile-open) .nav-group-toggle span {
-    display: none;
-  }
-
-  /* nav-group-toggle expandido */
-  .sidebar.is-mobile-open .nav-group-toggle {
-    justify-content: flex-start;
-    padding: 0.75rem 1.25rem;
-    gap: 0.75rem;
-  }
-
-  .sidebar.is-mobile-open .nav-group-toggle span {
-    display: inline;
-  }
-
-  /* Ajustar icones quando collapsed */
-  .sidebar:not(.is-mobile-open) .nav-icon {
-    margin: 0;
-  }
-}
-
-/* Mobile (< 768px): Esconder sidebar por padrão e mostrar como drawer */
-@media (max-width: 767px) {
-  .sidebar {
     transform: translateX(-100%);
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
     z-index: 50;
@@ -147,9 +67,20 @@
     transform: translateX(0);
   }
 
-  /* Desabilitar collapsed mode em mobile quando drawer aberto */
+  /*
+   * Neutraliza o rail de 80px. `.sidebar.is-collapsed { width: 80px }` mora
+   * fora de qualquer media query com especificidade 0,2,0 e venceria o
+   * `.sidebar { width: 280px }` daqui, que e 0,1,0 -- media query nao soma
+   * especificidade. Recolher e preferencia de DESKTOP: aqui nao economiza
+   * espaco nenhum, so desalinha.
+   */
   .sidebar.is-collapsed {
     width: 280px;
+  }
+
+  /* O botao de recolher e so para desktop, onde a sidebar ocupa espaco. */
+  .sidebar-toggle {
+    display: none !important;
   }
 }
 

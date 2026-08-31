@@ -22,6 +22,13 @@ return new class extends Migration
             $table->string('cpf', 11)->unique();
             $table->string('telefone', 20)->nullable();
             $table->string('password');
+            // Cadastro do portal e double opt-in: o cidadao so autentica depois
+            // de confirmar o codigo enviado por e-mail (ver
+            // Treinamento\Services\CidadaoVerificacaoService). Enquanto for null
+            // a conta existe mas nao entra, e pode ser sobrescrita por um novo
+            // cadastro no mesmo CPF - registro que nunca provou posse do e-mail
+            // nao tem direito adquirido sobre o CPF.
+            $table->timestamp('email_verified_at')->nullable();
             $table->timestamp('aceite_lgpd_em')->nullable();
             $table->boolean('ativo')->default(true);
             $table->timestamp('last_login_at')->nullable();

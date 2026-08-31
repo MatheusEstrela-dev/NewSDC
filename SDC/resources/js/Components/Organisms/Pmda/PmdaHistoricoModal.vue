@@ -133,6 +133,9 @@
                 </div>
                 <Badge variant="warning" size="sm">{{ n.canal }}</Badge>
               </div>
+              <!-- A mensagem carrega o motivo da devolutiva; sem ela o card so diz
+                   que algo mudou, que e o que o usuario ja sabe. -->
+              <p v-if="n.descricao" class="mt-2 text-sm leading-relaxed text-slate-300">{{ n.descricao }}</p>
             </div>
           </div>
           <div v-else class="text-center py-10 text-slate-400">Nenhuma notificação registrada.</div>

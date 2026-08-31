@@ -249,7 +249,15 @@ class RegistroDeAcao
             );
             $complemento = $registro->detalheSituacao();
 
-            return $this->vazio($complemento) ? $frase.'.' : $frase.' '.trim((string) $complemento).'.';
+            if ($this->vazio($complemento)) {
+                return $frase.'.';
+            }
+
+            // Frase e complemento sao DUAS oracoes: sem o ponto entre elas saia
+            // "por Joao Motivo: ...", e o rtrim evita o ponto duplo quando o
+            // modulo ja entrega o complemento pontuado (motivo digitado pelo
+            // usuario quase sempre termina em ponto).
+            return $frase.'. '.rtrim(trim((string) $complemento), '.').'.';
         }
 
         return "{$protocolo} foi {$acao->verbo()} por {$autor}.";

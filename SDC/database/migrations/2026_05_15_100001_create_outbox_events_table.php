@@ -25,7 +25,10 @@ return new class extends Migration
             $table->string('event_name', 150)->index();
             $table->unsignedTinyInteger('event_version')->default(1);
             $table->string('aggregate_type', 100)->index();
-            $table->uuid('aggregate_id')->index();
+            // varchar, nao uuid: o outbox e generico e recebe agregados de
+            // chave inteira (Cronograma, CronoViagem) alem dos de UUID
+            // (ProcessoTdap). Ver 2026_08_21_110000_widen_outbox_events_aggregate_id.
+            $table->string('aggregate_id', 64)->index();
             $table->jsonb('payload');
             $table->jsonb('metadata')->nullable();
             $table->timestampTz('occurred_at');

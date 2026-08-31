@@ -1,13 +1,14 @@
 <template>
-  <Head :title="`TDAP — ${prestador.data.nome}`" />
+  <Head :title="`TDAP — ${p.nome}`" />
   <div class="p-6 space-y-6">
     <TdapPageHeader
-      :title="`Editar: ${prestador.data.nome}`"
-      :description="prestador.data.cnpj_formatado"
+      :title="`Editar: ${p.nome}`"
+      :description="p.cnpj_formatado"
       :icon="BuildingIcon"
     />
     <PrestadorForm
       :form="form"
+      :ufs="ufs"
       submit-label="Salvar alterações"
       @submit="submit"
       @cancel="cancelar"
@@ -26,12 +27,16 @@ defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps({
   prestador: { type: Object, required: true },
+  ufs: { type: Array, default: () => [] },
 });
 
-const p = props.prestador.data;
+const p = props.prestador.data ?? props.prestador;
 
+// Os campos de documento recebem o valor CRU (digitos), nao o `*_formatado`:
+// o form e a mascara compartilham o contrato de digitos puros, e semear com o
+// valor mascarado obrigava o backend a limpar de novo o que ele mesmo gravou.
 const form = useForm({
-  cnpj: p.cnpj_formatado || p.cnpj || '',
+  cnpj: p.cnpj || '',
   nome: p.nome || '',
   representante: p.representante || '',
   email: p.email || '',
@@ -47,7 +52,7 @@ const form = useForm({
 });
 
 function submit() {
-  form.put(route('tdap.prestadores.update', p.id));
+  form.put(route('tdap.prestadores.update', p.id), { preserveScroll: true });
 }
 
 function cancelar() {

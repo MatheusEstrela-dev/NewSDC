@@ -3,14 +3,15 @@
     <Head title="Municipios com Plano de Contingencia" />
     <MunicipiosListTemplate
       title="Municipios com Plano"
-      description="Lista de municipios que possuem Plano de Contingencia cadastrado"
-      :icon="CheckCircleIcon"
+      description="Todos os planos enviados, um por linha, como na tela do sistema legado"
+      :icon="ShieldCheckIcon"
       :municipios="municipios"
       :total-municipios="pagination?.total ?? municipios.length"
       :pagination="pagination"
       :filters="filters"
       :show-situacao="true"
       :show-data-atualizacao="true"
+      :show-plano="true"
       :can-export="can('plancon.export')"
       @export="handleExport"
       @filter="handleFilter"
@@ -24,7 +25,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { usePermissions } from '@/Composables/usePermissions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import MunicipiosListTemplate from '@/Templates/PlanCon/MunicipiosListTemplate.vue';
-import { CheckCircleIcon } from '@heroicons/vue/24/outline';
+import { ShieldCheckIcon } from '@heroicons/vue/24/outline';
 
 defineOptions({ layout: AuthenticatedLayout });
 

@@ -24,11 +24,15 @@ abstract class AbstractVistoriaRequest extends FormRequest
             'placa_id'    => ['required', 'integer', Rule::exists('tdap_caminhoes', 'id')->whereNull('deleted_at')],
             'modelo'      => ['nullable', 'string', 'max:50'],
             'cor'         => ['nullable', 'string', 'max:30'],
-            'data'        => ['required', 'date'],
+            // A vistoria e um ato ja praticado: data futura nao existe e ainda
+            // esticava a vigencia de 12 meses para frente (Vistoria::vigente).
+            'data'        => ['required', 'date', 'before_or_equal:today'],
             'ano'         => ['nullable', 'string', 'size:4', 'regex:/^[0-9]{4}$/'],
             'capacidade'  => ['required', 'numeric', 'min:0.01', 'max:999.99'],
             'parecer'     => ['required', new Enum(ParecerVistoria::class)],
             'ficha'       => ['nullable', 'string', 'max:50'],
+            // Numero do lacre aplicado no tanque ao fim da vistoria.
+            'lacre'       => ['nullable', 'string', 'max:30'],
             'observacoes' => ['nullable', 'string', 'max:2000'],
         ];
 
@@ -51,6 +55,7 @@ abstract class AbstractVistoriaRequest extends FormRequest
     {
         return [
             'ano.regex' => 'Ano deve ter 4 dígitos numéricos.',
+            'data.before_or_equal' => 'A data da vistoria não pode ser futura.',
         ];
     }
 }

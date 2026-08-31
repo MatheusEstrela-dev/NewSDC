@@ -90,9 +90,41 @@ class CaminhaoService
         });
     }
 
+    /**
+     * Guard de integridade de negocio: caminhao alocado em cronograma vivo
+     * (rascunho ou ativo) nao pode sair do cadastro.
+     *
+     * Sem o guard o delete passava calado -- SoftDeletes nao dispara a FK
+     * `restrictOnDelete` de tdap_crono_caminhoes -- e o cronograma ficava com
+     * uma alocacao apontando para um caminhao invisivel: a ficha mostrava
+     * placa vazia e podeAtivar() acusava vistoria faltando num caminhao que
+     * ninguem mais achava na tela.
+     *
+     * Cronograma ENCERRADO nao bloqueia: ali a alocacao e registro historico
+     * (e o proprio cronograma guarda o snapshot em `stored_caminhoes`).
+     *
+     * @throws \DomainException quando o caminhao esta alocado em cronograma vivo
+     */
     public function deletar(int $id): bool
     {
         $caminhao = Caminhao::findOrFail($id);
+
+        $cronogramasVivos = DB::table('tdap_crono_caminhoes as cc')
+            ->join('tdap_cronogramas as c', 'c.id', '=', 'cc.cronograma_id')
+            ->where('cc.caminhao_id', $id)
+            ->whereNull('cc.deleted_at')
+            ->whereNull('c.deleted_at')
+            ->whereNull('c.encerrado_em')
+            ->distinct()
+            ->pluck('c.numero');
+
+        if ($cronogramasVivos->isNotEmpty()) {
+            throw new \DomainException(sprintf(
+                'Caminhao %s esta alocado no(s) cronograma(s) %s. Desaloque-o antes de excluir.',
+                $caminhao->placa,
+                $cronogramasVivos->implode(', '),
+            ));
+        }
 
         return (bool) $caminhao->delete();
     }

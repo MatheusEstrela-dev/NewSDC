@@ -32,6 +32,7 @@ final class TramitacaoService
         private readonly PedidoAhRepositoryInterface $pedidos,
         private readonly PrestacaoContaRepositoryInterface $prestacoes,
         private readonly PrazoPrestacaoContas $prazo,
+        private readonly AjudaHumanitariaNotificacaoService $notificacoes,
     ) {}
 
     /**
@@ -113,7 +114,20 @@ final class TramitacaoService
             }
         });
 
-        return [$pedido->fresh(), null];
+        $atualizado = $pedido->fresh();
+
+        // Notifica so depois do commit: aviso de mudanca que nao aconteceu e
+        // pior do que aviso nenhum.
+        $this->notificacoes->pedidoTramitado($atualizado, $origem, $alvo, $usuarioId);
+
+        if ($alvo === StatusPedidoAh::Atendido) {
+            $this->notificacoes->prestacaoAberta(
+                $atualizado,
+                $atualizado->prestacaoConta?->data_limite?->format('d/m/Y'),
+            );
+        }
+
+        return [$atualizado, null];
     }
 
     /**

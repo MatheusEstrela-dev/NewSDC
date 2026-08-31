@@ -2,27 +2,28 @@
 
     <Head title="Detalhes do Cargo" />
     <div>
-      <!-- Page Header -->
-      <div class="mb-8">
-
-
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Detalhes do Cargo</h1>
-            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Visualize informações e permissões do cargo</p>
+      <PageHeader
+        title="Detalhes do Cargo"
+        description="Visualize informações e permissões do cargo"
+        :icon-image="moduleIcon('permissionamento')"
+        variant="gradient"
+        class="mb-6 md:mb-8"
+      >
+        <template #actions>
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+    <Link
+    v-if="!role.is_immutable"
+    :href="route('admin.permissions.roles.edit', role.id)"
+    class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow"
+    >
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+    Editar Cargo
+    </Link>
           </div>
-          <Link
-            v-if="!role.is_immutable"
-            :href="route('admin.permissions.roles.edit', role.id)"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Editar Cargo
-          </Link>
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
       <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
         <!-- Main Content -->
@@ -181,23 +182,23 @@
 
         <!-- Sidebar -->
         <div class="xl:col-span-1 space-y-6">
-          <StatsCard
-            label="Total de Usuários"
+          <StatCard
+            title="Total de Usuários"
             :value="role.users?.length || 0"
             :icon="UsersIcon"
-            variant="primary"
+            variant="info"
           />
-          <StatsCard
-            label="Permissões"
+          <StatCard
+            title="Permissões"
             :value="permissionsCount"
             :icon="PermissionsIcon"
             variant="success"
           />
-          <StatsCard
-            label="Nível Hierárquico"
+          <StatCard
+            title="Nível Hierárquico"
             :value="role.hierarchy_level"
             :icon="HierarchyIcon"
-            variant="default"
+            variant="info"
           />
         </div>
       </div>
@@ -209,11 +210,13 @@
 import { computed, h } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
+import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import { moduleIcon } from '@/Support/moduleIcons';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
 import PermissionBadge from '@/Components/Admin/PermissionBadge.vue';
-import StatsCard from '@/Components/Admin/StatsCard.vue';
+import StatCard from '@/Components/Molecules/Statistics/StatCard.vue';
 
 const props = defineProps({
   role: {

@@ -133,6 +133,19 @@ return [
             'throw' => false,
         ],
 
+        // Arquivos do modulo Cisterna no legado `sdc`: fotos do imovel em
+        // cisterna/{cpf}/ e fotos de vistoria em
+        // relatorios/cisterna/{form}/{id}/. Disco de LEITURA, usado somente
+        // pelo refino do ETL para copiar para as collections do MediaLibrary.
+        // Nenhum caminho novo contem CPF — o legado usava dado pessoal como
+        // nome de diretorio.
+        'legado_cisterna' => [
+            'driver' => 'local',
+            'root' => env('LEGADO_CISTERNA_ANEXOS_ROOT', storage_path('app/public/legado_cisterna')),
+            'visibility' => 'private',
+            'throw' => false,
+        ],
+
         // Artefatos gerados por jobs assincronos (exports CSV/XLSX/PDF).
         // Servido via App\Http\Controllers\Api\V1\TraceController::download.
         // Arquivos sao temporarios; podem ser limpos por job de retencao.

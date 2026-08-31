@@ -13,6 +13,7 @@
               <div v-if="Number(activeTab) === 1">
                 <RatDadosGeraisForm
                   :rat="props.rat"
+                  :cobrades="props.cobrades"
                   :view-only="true"
                 />
               </div>
@@ -89,6 +90,7 @@ defineOptions({ layout: AuthenticatedLayout });
 const props = defineProps({
   rat: { type: Object, default: () => ({}) },
   lastUpdate: { type: String, default: null },
+  cobrades: { type: Array, default: () => [] },
 });
 
 const tabs = useTabs(1);

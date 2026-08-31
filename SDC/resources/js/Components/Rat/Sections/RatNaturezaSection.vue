@@ -13,22 +13,31 @@
 
     <div class="rat-grid-2">
       <FormSelect
-        label="Codigo da Ocorrencia"
-        :model-value="modelValue.nat_codigo"
-        :options="codigoOcorrenciaOptions"
-        placeholder="Selecione o Codigo da Ocorrencia"
+        label="Grupo do Desastre"
+        :model-value="grupo"
+        :options="opcoesGrupo"
+        placeholder="Selecione o Grupo"
         required
-        @update:model-value="emit('update:modelValue', { ...modelValue, nat_codigo: $event })"
+        @update:model-value="selecionarGrupo"
       />
       <FormSelect
-        label="COBRADE"
-        :model-value="modelValue.nat_cobrade_id"
-        :options="cobradeOptions"
-        placeholder="Selecione o COBRADE"
+        label="Evento"
+        :model-value="modelValue.nat_codigo"
+        :options="opcoesEvento"
+        :placeholder="grupo ? 'Selecione o Evento' : 'Selecione o Grupo primeiro'"
+        :disabled="!grupo"
         required
-        @update:model-value="emit('update:modelValue', { ...modelValue, nat_cobrade_id: $event })"
+        @update:model-value="selecionarEvento"
       />
     </div>
+
+    <FormField
+      label="COBRADE"
+      :model-value="cobradeSelecionado?.label ?? modelValue.nat_codigo"
+      placeholder="Preenchido pelo Evento"
+      readonly
+      :hint="cobradeSelecionado?.descricao"
+    />
 
     <FormField
       label="Nome da Operação (Opcional)"
@@ -41,6 +50,7 @@
 </template>
 
 <script setup>
+import { computed, ref } from 'vue';
 import FormField from '@/Components/Form/FormField.vue';
 import FormSelect from '@/Components/Form/FormSelect.vue';
 import RatCollapsibleSection from './RatCollapsibleSection.vue';
@@ -54,29 +64,67 @@ const props = defineProps({
       nat_nome_operacao: '',
     }),
   },
+  // Tabela oficial do COBRADE vinda do banco (dec_cobrade), enviada pelo
+  // controller. Cada item: { value: id, codigo, label, nome, descricao, grupo }.
+  cobrades: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits(['update:modelValue']);
 
-const codigoOcorrenciaOptions = [
-  { value: '1.1.1.0.0', label: '1.1.1.0.0 - Terremoto' },
-  { value: '1.2.1.0.0', label: '1.2.1.0.0 - Inundação' },
-  { value: '1.2.2.0.0', label: '1.2.2.0.0 - Enxurrada' },
-  { value: '1.2.3.0.0', label: '1.2.3.0.0 - Alagamento' },
-  { value: '1.3.2.1.0', label: '1.3.2.1.0 - Tempestade Local/Convectiva' },
-  { value: '1.4.1.0.0', label: '1.4.1.0.0 - Deslizamento de Grande Dimensão' },
-  { value: '1.4.2.0.0', label: '1.4.2.0.0 - Corrida de Massa' },
-  { value: '1.5.1.0.0', label: '1.5.1.0.0 - Incêndio Florestal' },
-  { value: '2.1.1.0.0', label: '2.1.1.0.0 - Incêndio em Área Urbana' },
-  { value: '2.4.1.0.0', label: '2.4.1.0.0 - Desabamento/Colapso de Edificação' },
-  { value: '2.5.1.0.0', label: '2.5.1.0.0 - Acidente de Trânsito' },
-];
+const cobradeSelecionado = computed(() =>
+  props.cobrades.find((c) => c.codigo === props.modelValue.nat_codigo)
+);
 
-const cobradeOptions = [
-  { value: '1', label: '1.3.2.1.0 - Tempestade Local/Convectiva' },
-  { value: '2', label: '1.2.1.0.0 - Inundação' },
-  { value: '3', label: '1.4.1.0.0 - Deslizamento' },
-  { value: '4', label: '1.2.2.0.0 - Enxurrada' },
-  { value: '5', label: '1.5.1.0.0 - Incêndio Florestal' },
-];
+// O grupo nao e gravado no RAT: ele sai do proprio codigo escolhido. So quando
+// o usuario troca o grupo (e ainda nao escolheu o evento novo) e que a escolha
+// dele precisa ser lembrada aqui.
+const grupoEscolhido = ref(null);
+
+const grupo = computed(() => grupoEscolhido.value ?? cobradeSelecionado.value?.grupo ?? '');
+
+// A lista ja vem ordenada por codigo, entao os grupos saem na ordem oficial
+// (Geologico, Hidrologico, ...) e nao em ordem alfabetica.
+//
+// O rotulo leva o prefixo do codigo (1.3 - Meteorologico): quem opera o sistema
+// reconhece o grupo pelo numero antes de ler o nome.
+const opcoesGrupo = computed(() => {
+  const grupos = [];
+
+  props.cobrades.forEach((c) => {
+    if (c.grupo && !grupos.some((g) => g.value === c.grupo)) {
+      grupos.push({ value: c.grupo, label: `${c.codigo.slice(0, 3)} - ${c.grupo}` });
+    }
+  });
+
+  return grupos;
+});
+
+const opcoesEvento = computed(() =>
+  props.cobrades
+    .filter((c) => c.grupo === grupo.value)
+    .map((c) => ({ value: c.codigo, label: c.label }))
+);
+
+function selecionarGrupo(novoGrupo) {
+  grupoEscolhido.value = novoGrupo;
+
+  // Trocar de grupo invalida o evento anterior: ele pertence a outro ramo da
+  // classificacao. Limpar evita gravar um COBRADE que a tela nao mostra mais.
+  if (cobradeSelecionado.value?.grupo !== novoGrupo) {
+    emit('update:modelValue', { ...props.modelValue, nat_codigo: '', nat_cobrade_id: null });
+  }
+}
+
+function selecionarEvento(codigo) {
+  const escolhido = props.cobrades.find((c) => c.codigo === codigo);
+
+  emit('update:modelValue', {
+    ...props.modelValue,
+    nat_codigo: codigo,
+    nat_cobrade_id: escolhido ? escolhido.value : null,
+  });
+}
 </script>

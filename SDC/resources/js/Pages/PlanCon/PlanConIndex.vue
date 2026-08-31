@@ -2,10 +2,10 @@
   <div>
     <Head title="Plano de Contingencia" />
     <PlanConIndexTemplate
-      :stats="effectiveStats"
+      :stats="stats"
       :recent-activities="recentActivities"
       :can-export="can('plancon.export')"
-      :can-upload="can('plancon.upload')"
+      :can-upload="can('plancon.upload') && podeEnviar"
       @export="handleExport"
       @upload="showUploadModal = true"
     />
@@ -13,8 +13,9 @@
     <UploadModal
       :show="showUploadModal"
       module-name="Plano de Contingencia"
-      accepted-types=".pdf"
-      :max-file-size="10"
+      :municipios="municipiosParaEnvio"
+      accepted-types=".pdf,.doc,.docx,.odt"
+      :max-file-size="20"
       @close="showUploadModal = false"
       @upload="handleUpload"
     />
@@ -22,7 +23,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { usePermissions } from '@/Composables/usePermissions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -33,43 +34,28 @@ defineOptions({ layout: AuthenticatedLayout });
 
 const { can } = usePermissions();
 
-const props = defineProps({
+defineProps({
   stats: {
     type: Object,
-    default: () => ({
-      totalMunicipios: 853,
-      municipiosComPlano: 729,
-      municipiosSemPlano: 124,
-      percentualComPlano: 85.5,
-      totalPlanos: 729,
-      planosRegulares: 714,
-      planosIrregulares: 15,
-      percentualRegulares: 97.9,
-    }),
+    required: true,
   },
   recentActivities: {
+    type: Array,
+    default: () => [],
+  },
+  podeEnviar: {
+    type: Boolean,
+    default: false,
+  },
+  // Vem preenchido so para conta estadual (sem orgao): ela escolhe por qual
+  // municipio o plano esta sendo enviado. Usuario municipal recebe [].
+  municipiosParaEnvio: {
     type: Array,
     default: () => [],
   },
 });
 
 const showUploadModal = ref(false);
-
-const effectiveStats = computed(() => {
-  if (props.stats && props.stats.totalMunicipios > 0) {
-    return props.stats;
-  }
-  return {
-    totalMunicipios: 853,
-    municipiosComPlano: 729,
-    municipiosSemPlano: 124,
-    percentualComPlano: 85.5,
-    totalPlanos: 729,
-    planosRegulares: 714,
-    planosIrregulares: 15,
-    percentualRegulares: 97.9,
-  };
-});
 
 const handleExport = () => {
   window.location.href = route('plancon.export');

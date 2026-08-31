@@ -1,10 +1,11 @@
 <template>
   <div class="relative" ref="el">
-    <button
-      type="button"
-      :id="id || undefined"
-      :disabled="disabled"
-      @click.stop="toggleOpen"
+    <!--
+      Campo de TEXTO, nao botao. Era botao, e por isso digitar data era
+      impossivel: so restava navegar o calendario mes a mes, o que para data de
+      nascimento significa dezenas de cliques. O calendario continua, no icone.
+    -->
+    <div
       class="dt-input w-full flex items-center justify-between gap-2"
       :class="[
         error ? 'dt-input-error' : (modelValue ? 'dt-input-filled' : ''),
@@ -12,14 +13,34 @@
         extraClass,
       ]"
     >
-      <span :class="modelValue ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'">
-        {{ displayDate || placeholder }}
-      </span>
-      <svg v-if="showIcon" class="w-4 h-4 flex-shrink-0 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-      </svg>
-    </button>
+      <input
+        :id="id || undefined"
+        type="text"
+        inputmode="numeric"
+        class="w-full border-0 bg-transparent p-0 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 dark:text-slate-100 dark:placeholder:text-slate-500"
+        :value="textoVisivel"
+        :placeholder="placeholder"
+        :disabled="disabled"
+        :readonly="readonly"
+        :required="required"
+        maxlength="10"
+        @input="aoDigitar"
+        @blur="aoSair"
+      >
+      <button
+        v-if="showIcon"
+        type="button"
+        :disabled="disabled"
+        class="flex-shrink-0"
+        :aria-label="open ? 'Fechar calendario' : 'Abrir calendario'"
+        @click.stop="toggleOpen"
+      >
+        <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+      </button>
+    </div>
 
     <!-- Teleport to body to escape overflow:hidden and stacking contexts -->
     <Teleport to="body">
@@ -96,6 +117,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue';
 import { onClickOutside } from '@vueuse/core';
+import { dataBr, isoDeDataBr } from '@/utils/inputMasks';
 
 const props = defineProps({
   modelValue:  { type: String, default: '' },
@@ -144,6 +166,24 @@ function calculatePosition() {
 
 const now = new Date();
 
+/**
+ * Data no fuso LOCAL como 'YYYY-MM-DD'.
+ *
+ * `toISOString()` converte para UTC: no horario de Brasilia, depois das 21h, o
+ * botao "Hoje" gravava a data do dia seguinte e o calendario circulava o dia
+ * errado. O calendario ja monta os dias em horario local (ver isoFor), entao a
+ * unica fonte divergente era o UTC.
+ */
+function isoLocal(data) {
+  return [
+    data.getFullYear(),
+    String(data.getMonth() + 1).padStart(2, '0'),
+    String(data.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+const hojeIso = isoLocal(now);
+
 function parseSelectedDate() {
   if (!props.modelValue) return { m: now.getMonth(), y: now.getFullYear() };
   const dateOnly = props.modelValue.split('T')[0];
@@ -190,6 +230,60 @@ const displayDate = computed(() => {
   return out;
 });
 
+/**
+ * Digitacao manual da data, alem do calendario.
+ *
+ * `textoRascunho` guarda o que esta sendo digitado enquanto a data ainda nao
+ * fecha: sem ele, cada tecla seria descartada, porque o modelValue so aceita
+ * data completa e valida. Quando esta vazio, a fonte da verdade e o modelValue
+ * -- e assim que a escolha pelo calendario aparece no campo.
+ *
+ * No datetime o rascunho cobre so a parte da data; a hora continua vindo do
+ * seletor de hora, e buildValue() a preserva.
+ */
+const textoRascunho = ref('');
+
+const textoVisivel = computed(() => (
+  textoRascunho.value !== '' ? textoRascunho.value : displayDate.value
+));
+
+// Escolher no calendario tem que apagar o rascunho, senao o texto digitado
+// antes continuaria na tela sobrepondo a data escolhida.
+watch(() => props.modelValue, () => { textoRascunho.value = ''; });
+
+function aoDigitar(evento) {
+  const elemento = evento.target;
+  const texto = dataBr(elemento.value);
+
+  // Mesma armadilha do TextInput: caractere rejeitado deixa o valor mascarado
+  // igual ao anterior, o Vue nao repinta, e a letra fica visivel no DOM.
+  if (elemento.value !== texto) {
+    elemento.value = texto;
+  }
+
+  textoRascunho.value = texto;
+
+  const iso = isoDeDataBr(texto);
+
+  if (iso) {
+    emit('update:modelValue', buildValue(iso));
+  } else if (props.modelValue) {
+    // Apagar ou corromper uma data ja escolhida tem que limpar o modelo. Sem
+    // isto o campo mostraria o rascunho e enviaria a data antiga.
+    emit('update:modelValue', '');
+  }
+}
+
+/**
+ * Ao sair, texto incompleto e descartado: mostrar "19/08" num campo de data e
+ * dizer que ha algo la quando o formulario nao tem nada.
+ */
+function aoSair() {
+  if (! isoDeDataBr(textoRascunho.value)) {
+    textoRascunho.value = '';
+  }
+}
+
 const calendarDays = computed(() => {
   const firstDow    = new Date(viewYear.value, viewMonth.value, 1).getDay();
   const daysInMonth = new Date(viewYear.value, viewMonth.value + 1, 0).getDate();
@@ -204,7 +298,7 @@ function isoFor(day) {
 
 function getDayClass(day) {
   const iso      = isoFor(day);
-  const todayIso = now.toISOString().split('T')[0];
+  const todayIso = hojeIso;
   const selIso   = props.modelValue ? props.modelValue.split('T')[0] : '';
   if (selIso === iso)
     return 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30';
@@ -228,14 +322,14 @@ function selectDay(day) {
 function onTimeInput(e) {
   const time = e.target.value;
   if (!time) return;
-  const dateIso = (props.modelValue ? props.modelValue.split('T')[0] : '') || now.toISOString().split('T')[0];
+  const dateIso = (props.modelValue ? props.modelValue.split('T')[0] : '') || hojeIso;
   emit('update:modelValue', `${dateIso}T${time}`);
 }
 
 function clearDate() { emit('update:modelValue', ''); open.value = false; }
 
 function selectToday() {
-  const t = now.toISOString().split('T')[0];
+  const t = hojeIso;
   viewMonth.value = now.getMonth();
   viewYear.value  = now.getFullYear();
   if (isDateTime.value) {
@@ -268,6 +362,12 @@ function nextMonth() {
     border border-slate-300 dark:border-slate-700/50
     focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500
     transition-all duration-200;
+}
+/* O foco agora e do <input> interno, e nao mais do elemento que desenha a
+   borda. Sem focus-within o campo nao daria nenhum sinal de estar ativo -- as
+   variantes focus: acima ficaram inertes quando o gatilho deixou de ser botao. */
+.dt-input:focus-within {
+  @apply outline-none ring-2 ring-indigo-500/40 border-indigo-500;
 }
 .dt-input-filled {
   /* !important para vencer .dark .dt-input (que tem especificidade maior pelo .dark) */

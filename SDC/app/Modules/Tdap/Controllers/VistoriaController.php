@@ -35,7 +35,9 @@ class VistoriaController extends Controller
 
         return Inertia::render('Tdap/Vistorias/Index', [
             'vistorias'     => VistoriaIndexResource::collection($vistorias),
-            'estatisticas'  => fn () => $this->service->obterEstatisticas(),
+            // Mesmos filtros da listagem: o card "Total" conta o que a grade
+            // mostra (parecer/vigente ficam de fora — ver o service).
+            'estatisticas'  => fn () => $this->service->obterEstatisticas($filtros),
             'caminhoes'     => fn () => Caminhao::ativo()->with('prestador:id,nome')->orderBy('placa')->get(['id', 'placa', 'marca', 'modelo', 'prestador_id']),
             'pareceres'     => ParecerVistoria::options(),
             'filtros'       => $filtros,

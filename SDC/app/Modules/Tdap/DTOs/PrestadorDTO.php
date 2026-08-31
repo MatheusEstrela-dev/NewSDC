@@ -4,6 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Tdap\DTOs;
 
+use App\Modules\Tdap\Support\Documento;
+
+/**
+ * Payload de escrita do Prestador.
+ *
+ * CONTRATO: cnpj, tel1, tel2 e cep saem daqui como DIGITOS PUROS -- a mascara e
+ * assunto da exibicao ({@see Documento}). O acervo legado guardava valores
+ * mascarados e truncados, o que impedia buscar prestador por telefone.
+ */
 final readonly class PrestadorDTO
 {
     public function __construct(
@@ -27,18 +36,21 @@ final readonly class PrestadorDTO
      */
     public static function fromRequest(array $data): self
     {
+        $uf = self::nullable($data['uf'] ?? null);
+
         return new self(
             cnpj:          self::cleanDigits((string) ($data['cnpj'] ?? '')),
-            nome:          (string) ($data['nome'] ?? ''),
+            nome:          trim((string) ($data['nome'] ?? '')),
             representante: self::nullable($data['representante'] ?? null),
-            email:         mb_strtolower((string) ($data['email'] ?? '')),
-            tel1:          self::cleanDigitsOrNull($data['tel1'] ?? null),
-            tel2:          self::cleanDigitsOrNull($data['tel2'] ?? null),
+            email:         mb_strtolower(trim((string) ($data['email'] ?? ''))),
+            tel1:          Documento::digitos(self::nullable($data['tel1'] ?? null)),
+            tel2:          Documento::digitos(self::nullable($data['tel2'] ?? null)),
             endereco:      self::nullable($data['endereco'] ?? null),
             bairro:        self::nullable($data['bairro'] ?? null),
             cidade:        self::nullable($data['cidade'] ?? null),
-            uf:            isset($data['uf']) ? mb_strtoupper((string) $data['uf']) : null,
-            cep:           self::cleanDigitsOrNull($data['cep'] ?? null),
+            // `uf` vazia virava string '' e o filtro por UF nunca casava.
+            uf:            $uf === null ? null : mb_strtoupper($uf),
+            cep:           Documento::digitos(self::nullable($data['cep'] ?? null)),
             ativo:         (bool) ($data['ativo'] ?? true),
             observacoes:   self::nullable($data['observacoes'] ?? null),
         );
@@ -68,17 +80,7 @@ final readonly class PrestadorDTO
 
     private static function cleanDigits(string $value): string
     {
-        return preg_replace('/\D+/', '', $value) ?? '';
-    }
-
-    private static function cleanDigitsOrNull(?string $value): ?string
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-        $clean = self::cleanDigits($value);
-
-        return $clean === '' ? null : $clean;
+        return Documento::digitos($value) ?? '';
     }
 
     private static function nullable(mixed $value): ?string

@@ -21,6 +21,7 @@ final readonly class VistoriaDTO
         public float $capacidade,
         public ParecerVistoria $parecer,
         public ?string $ficha,
+        public ?string $lacre,
         public ?string $observacoes,
         /** @var array<string, array{0: bool, 1: ?string}> */
         public array $itensEstruturais,
@@ -45,6 +46,7 @@ final readonly class VistoriaDTO
             capacidade:       (float) ($data['capacidade'] ?? 0),
             parecer:          ParecerVistoria::from((string) ($data['parecer'] ?? 'aprovada')),
             ficha:            self::nullable($data['ficha'] ?? null),
+            lacre:            self::nullable($data['lacre'] ?? null),
             observacoes:      self::nullable($data['observacoes'] ?? null),
             itensEstruturais: self::extrairItens($data, Vistoria::ITENS_ESTRUTURAIS),
             itensTanque:      self::extrairItens($data, Vistoria::ITENS_TANQUE),
@@ -68,6 +70,7 @@ final readonly class VistoriaDTO
             'capacidade'  => $this->capacidade,
             'parecer'     => $this->parecer->value,
             'ficha'       => $this->ficha,
+            'lacre'       => $this->lacre,
             'observacoes' => $this->observacoes,
         ];
 

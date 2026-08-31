@@ -270,7 +270,7 @@
 
         <NavItem
           v-if="canSeeCisterna && _routes.hasCisterna"
-          :href="route('cisternas.index')"
+          :href="route('cisternas.beneficiarios.index')"
           :active="isRouteActive('cisternas.*')"
           icon="cisterna"
           :collapsed="isCollapsed"
@@ -487,6 +487,76 @@
         >
           Beneficiários
         </NavItem>
+        <NavItem
+          v-if="_routes.hasHumanitariaEstoque"
+          :href="route('ajuda-humanitaria.estoque.index')"
+          :active="isRouteActive('ajuda-humanitaria.estoque.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Estoque
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasHumanitariaParametros && canManageParametrosAh"
+          :href="route('ajuda-humanitaria.parametros.index')"
+          :active="isRouteActive('ajuda-humanitaria.parametros.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Parâmetros
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasHumanitariaMovimentos"
+          :href="route('ajuda-humanitaria.movimentos.index')"
+          :active="isRouteActive('ajuda-humanitaria.movimentos.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Movimentações
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasHumanitariaMateriais && canManageMateriaisAh"
+          :href="route('ajuda-humanitaria.materiais.index')"
+          :active="isRouteActive('ajuda-humanitaria.materiais.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Materiais
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasHumanitariaEntradas"
+          :href="route('ajuda-humanitaria.entradas.index')"
+          :active="isRouteActive('ajuda-humanitaria.entradas.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Entradas
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasHumanitariaLiberacoes"
+          :href="route('ajuda-humanitaria.liberacoes.index')"
+          :active="isRouteActive('ajuda-humanitaria.liberacoes.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Liberações
+        </NavItem>
+        <NavItem
+          v-if="_routes.hasHumanitariaTransferencias"
+          :href="route('ajuda-humanitaria.transferencias.index')"
+          :active="isRouteActive('ajuda-humanitaria.transferencias.*')"
+          icon="dot"
+          is-submenu
+          :collapsed="isCollapsed"
+        >
+          Transferências
+        </NavItem>
       </div>
     </nav>
 
@@ -633,7 +703,6 @@ import NavItem from './NavItem.vue';
 
 // Tentar injetar o estado do layout, se não existir, criar localmente
 const sidebarCollapsed = inject('sidebarCollapsed', ref(false));
-const isCollapsed = sidebarCollapsed;
 
 // Injetar estados mobile
 const isMobile = inject('isMobile', ref(false));
@@ -641,6 +710,26 @@ const isTablet = inject('isTablet', ref(false));
 const isDesktop = inject('isDesktop', ref(true));
 const isSidebarOpen = inject('isSidebarOpen', ref(false));
 const closeSidebar = inject('closeSidebar', () => {});
+
+/**
+ * Recolher a sidebar e preferencia de DESKTOP, onde ela ocupa espaco de fato e
+ * trocar 280px por 80px devolve area util. Abaixo de lg ela e um drawer
+ * off-canvas: nao ocupa nada quando fechado e, quando abre, abre inteiro.
+ *
+ * Antes `isCollapsed` era o `sidebarCollapsed` cru, sem guarda de largura. Quem
+ * deixasse a sidebar recolhida no desktop e depois estreitasse a janela abria o
+ * drawer com `is-collapsed` junto: os itens herdavam
+ * `.nav-item.is-collapsed { justify-content: center; padding: 0.75rem }`, os
+ * rotulos longos ("Ajuda Humanitaria", "Plano de Contingencia") quebravam em
+ * duas linhas e sobrava uma faixa morta a esquerda -- a largura continuava 280px
+ * por causa do `!important` do `.is-mobile-open`, mas o conteudo era desenhado
+ * como se fosse o rail de 80px.
+ *
+ * O guard ja existia para o logo (`!isCollapsed || (isMobile || isTablet)`, mais
+ * acima); faltava valer para o resto. Aqui ele passa a ser a fonte unica, e o
+ * template todo herda o comportamento certo.
+ */
+const isCollapsed = computed(() => sidebarCollapsed.value && isDesktop.value);
 
 const page = usePage();
 
@@ -661,6 +750,13 @@ const _routes = {
   hasHumanitaria: route().has('ajuda-humanitaria.pedidos.index'),
   hasHumanitariaDashboard: route().has('ajuda-humanitaria.dashboard'),
   hasHumanitariaBeneficiarios: route().has('ajuda-humanitaria.beneficiarios.index'),
+  hasHumanitariaEstoque: route().has('ajuda-humanitaria.estoque.index'),
+  hasHumanitariaParametros: route().has('ajuda-humanitaria.parametros.index'),
+  hasHumanitariaMovimentos: route().has('ajuda-humanitaria.movimentos.index'),
+  hasHumanitariaMateriais: route().has('ajuda-humanitaria.materiais.index'),
+  hasHumanitariaEntradas: route().has('ajuda-humanitaria.entradas.index'),
+  hasHumanitariaLiberacoes: route().has('ajuda-humanitaria.liberacoes.index'),
+  hasHumanitariaTransferencias: route().has('ajuda-humanitaria.transferencias.index'),
   hasCompdec: route().has('compdec.index'),
   hasTdapDashboard: route().has('tdap.dashboard'),
   hasTdapPrestadores: route().has('tdap.prestadores.index'),
@@ -672,7 +768,7 @@ const _routes = {
   hasTdapVistorias: route().has('tdap.vistorias.index'),
   hasTdapHistoricos: route().has('tdap.historicos.index'),
   hasTdapProcessos: route().has('tdap.processos.swimlanes'),
-  hasCisterna: route().has('cisternas.index'),
+  hasCisterna: route().has('cisternas.beneficiarios.index'),
   hasInventario: route().has('inventario.index'),
   hasEstoque: route().has('estoque.index'),
   hasEstoqueProdutos: route().has('estoque.produtos.index'),
@@ -697,6 +793,19 @@ const _activeRoutes = computed(() => {
     'plantao.*': route().current('plantao.*'),
     'decretacoes.*': route().current('decretacoes.*'),
     'ajuda-humanitaria.*': route().current('ajuda-humanitaria.*'),
+    // isRouteActive so acende o item quando o padrao e chave deste mapa. Sem as
+    // linhas abaixo, nenhum item do submenu de Ajuda Humanitaria destacava a
+    // pagina em que o usuario esta.
+    'ajuda-humanitaria.dashboard': route().current('ajuda-humanitaria.dashboard'),
+    'ajuda-humanitaria.pedidos.*': route().current('ajuda-humanitaria.pedidos.*'),
+    'ajuda-humanitaria.beneficiarios.*': route().current('ajuda-humanitaria.beneficiarios.*'),
+    'ajuda-humanitaria.estoque.*': route().current('ajuda-humanitaria.estoque.*'),
+    'ajuda-humanitaria.movimentos.*': route().current('ajuda-humanitaria.movimentos.*'),
+    'ajuda-humanitaria.parametros.*': route().current('ajuda-humanitaria.parametros.*'),
+    'ajuda-humanitaria.materiais.*': route().current('ajuda-humanitaria.materiais.*'),
+    'ajuda-humanitaria.entradas.*': route().current('ajuda-humanitaria.entradas.*'),
+    'ajuda-humanitaria.liberacoes.*': route().current('ajuda-humanitaria.liberacoes.*'),
+    'ajuda-humanitaria.transferencias.*': route().current('ajuda-humanitaria.transferencias.*'),
     'compdec.*': route().current('compdec.*'),
     'tdap.*': route().current('tdap.*'),
     'tdap.dashboard': route().current('tdap.dashboard'),
@@ -794,6 +903,16 @@ const canSeeAjudaHumanitaria = computed(() => {
   return hasPermission(['humanitaria.beneficiarios.view']);
 });
 
+// O catalogo tem um slug so, de escrita: quem nao gerencia material nao tem o
+// que fazer na tela, e sem esta checagem o item levaria a um 403.
+const canManageMateriaisAh = computed(() => {
+  return hasPermission(['humanitaria.materiais.manage']);
+});
+
+const canManageParametrosAh = computed(() => {
+  return hasPermission(['humanitaria.parametros.manage']);
+});
+
 const canSeeOrgaos = computed(() => {
   // TODO: Adicionar permissao compdec.orgaos.view no config
   return hasPermission(['users.view']); // Temporario - usar permissao de admin
@@ -815,7 +934,7 @@ const canSeeTdap = computed(() => {
 });
 
 const canSeeCisterna = computed(() => {
-  return hasPermission(['cisternas.view']);
+  return hasPermission(['cisternas.beneficiarios.view']);
 });
 
 const canSeeInventario = computed(() => {
@@ -929,9 +1048,18 @@ const permissionamentoHref = route().has('admin.permissions.users.index') ? rout
                               route().has('admin.permissions.permissions.index') ? route('admin.permissions.permissions.index') :
                               route('dashboard');
 
+/**
+ * Escreve na FONTE (`sidebarCollapsed`, o ref injetado do layout), nunca em
+ * `isCollapsed`, que agora e um computed derivado e somente leitura -- atribuir
+ * a ele falha em silencio e o botao de recolher para de funcionar.
+ *
+ * O layout tambem le `sidebarCollapsed` para o offset `lg:!ml-20` do conteudo,
+ * entao a fonte precisa ser a mesma nos dois lados.
+ */
 function toggleSidebar() {
-  isCollapsed.value = !isCollapsed.value;
-  if (isCollapsed.value) {
+  sidebarCollapsed.value = !sidebarCollapsed.value;
+
+  if (sidebarCollapsed.value) {
     activeSubmenu.value = null;
   }
 }

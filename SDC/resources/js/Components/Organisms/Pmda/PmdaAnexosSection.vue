@@ -37,6 +37,13 @@ function enviar() {
   enviando.value = true;
   router.post(route('pmda.planos.enviar', props.plano.id), {}, {
     preserveScroll: true,
+    onSuccess: () => { toast('PMDA enviado para análise da CEDEC-MG.', 'success'); },
+    // O backend recusa o envio nomeando o que falta (comunidade, representantes
+    // ou os PDFs). Sem repassar essa mensagem o botao parece quebrado: a acao
+    // nao acontece e a tela nao diz por que.
+    onError: (errors) => {
+      toast(errors.enviar ?? 'Não foi possível enviar o PMDA.', 'error');
+    },
     onFinish: () => { enviando.value = false; },
   });
 }
@@ -93,13 +100,16 @@ const docs = [
     </div>
 
     <template #footer>
-      <div class="flex w-full flex-col gap-3 rounded-lg bg-slate-800 p-4 text-white sm:flex-row sm:items-center sm:justify-between dark:bg-slate-900">
+      <!-- Paleta clara como base e o par dark por cima: o bloco vinha fixo em
+           bg-slate-800/text-white, entao no tema claro era uma caixa escura no meio
+           de uma pagina branca -- o unico bloco da tela que nao seguia o tema. -->
+      <div class="flex w-full flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 text-slate-900 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700/50 dark:bg-slate-900/60 dark:text-slate-100">
         <div>
           <span class="block font-semibold">Pronto para envio?</span>
-          <span class="block text-sm text-slate-300">Ao enviar, o PMDA será analisado pela CEDEC-MG.</span>
+          <span class="block text-sm text-slate-600 dark:text-slate-300">Ao enviar, o PMDA será analisado pela CEDEC-MG.</span>
         </div>
         <div class="flex items-center gap-3">
-          <button type="button" class="rounded-md border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-700" @click="emit('revisar')">
+          <button type="button" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800" @click="emit('revisar')">
             Revisar
           </button>
           <button

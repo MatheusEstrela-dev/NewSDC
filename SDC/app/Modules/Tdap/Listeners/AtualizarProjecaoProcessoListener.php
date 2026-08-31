@@ -70,13 +70,19 @@ class AtualizarProjecaoProcessoListener extends IdempotentListener
 
         $capacidade = (float) ($event->payload()['capacidade_m3'] ?? 0);
 
+        // incrementEach em vez de DB::raw concatenado: o valor vem do payload de
+        // um evento e a versao anterior colava o float direto na string SQL.
         DB::table('tdap_processo_projecoes')
             ->where('processo_id', $processoId)
-            ->update([
-                'total_viagens_validadas' => DB::raw('total_viagens_validadas + 1'),
-                'total_agua_entregue_m3'  => DB::raw('total_agua_entregue_m3 + '.$capacidade),
-                'ultimo_evento'           => $event->eventName(),
-                'atualizado_em'           => now(),
-            ]);
+            ->incrementEach(
+                [
+                    'total_viagens_validadas' => 1,
+                    'total_agua_entregue_m3'  => $capacidade,
+                ],
+                [
+                    'ultimo_evento' => $event->eventName(),
+                    'atualizado_em' => now(),
+                ],
+            );
     }
 }
