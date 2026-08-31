@@ -629,8 +629,8 @@ services:
 
     mem_limit: 128m
     ports:
-      - "1025:1025"       # SMTP
-      - "8025:8025"       # UI
+      - "1027:1025"       # SMTP
+      - "8027:8025"       # UI
 
 volumes:
   pgdata:
