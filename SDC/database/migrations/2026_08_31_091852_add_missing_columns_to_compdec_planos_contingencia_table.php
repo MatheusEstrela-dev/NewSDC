@@ -31,9 +31,17 @@ return new class extends Migration
             }
         });
 
-        Schema::table('compdec_planos_contingencia', function (Blueprint $table) {
-            $table->index(['orgao_id', 'enviado_em']);
-        });
+        // O indice ja nasce na migration de criacao da tabela
+        // (2026_05_08_160000), que tambem ja traz enviado_em. Em banco novo as
+        // guardas de coluna acima pulam tudo e esta linha era a unica sem
+        // guarda: recriava um indice existente e derrubava o migrate:fresh
+        // inteiro. Em banco que rodou a versao antiga daquela migration, o
+        // indice nao existe e continua sendo criado aqui.
+        if (! Schema::hasIndex('compdec_planos_contingencia', ['orgao_id', 'enviado_em'])) {
+            Schema::table('compdec_planos_contingencia', function (Blueprint $table) {
+                $table->index(['orgao_id', 'enviado_em']);
+            });
+        }
     }
 
     /**
