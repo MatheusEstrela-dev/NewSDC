@@ -10,6 +10,39 @@
 
 **Spec:** `SDC/docs/superpowers/specs/2026-08-07-medalhao-pipeline-sismos-design.md`
 
+---
+
+## Status da execucao (2026-08-31)
+
+**Tasks 1 a 11:** implementadas em sessao anterior, em 12 commits (`fb3488a5` ate
+`dd8d8f89`, mais `a7e795f5` para a sidebar). Os boxes abaixo estao marcados com
+base no codigo commitado e na suite verde, NAO por reobservacao de cada passo
+vermelho do TDD -- esses foram feitos na sessao original e nao ha registro dele
+aqui alem do historico git.
+
+**Sync com o dev:** a branch estava 253 commits atras. Merge em `8e12741a`.
+
+**Ambiente da verificacao.** Nao da para usar `scripts/test-host.sh` neste plano:
+o vendor do dev atual exige PHP 8.4 (symfony 8) e o PHP do host e 8.3. Tudo rodou
+em container `newsdc-swoole-dev:latest` (PHP 8.4.22) montando esta worktree,
+contra o banco dedicado `sdc_medalhao` (PostGIS 3.6.3) -- nunca contra `sdc`.
+
+**Dois defeitos do dev encontrados pela verificacao, nao causados por este plano:**
+
+1. `composer install` falha em qualquer ambiente: o lock traz pacotes PHP-8.4-only
+   (symfony 8.x, doctrine/instantiator 2.1) com `config.platform.php` fixado em
+   8.3.30. Reproduzido no dev puro, sem nada desta branch.
+2. `migrate:fresh` estava quebrado: a migration `2026_08_31_091852` recriava um
+   indice que a migration de criacao da tabela ja cria. Corrigido aqui com guarda,
+   em commit proprio -- era bloqueio para o Step 2.
+3. A suite tem dois grupos mutuamente incompativeis, ambos com
+   `DatabaseTransactions` sobre banco compartilhado: `RedecFilterTest` e
+   `ExportRedecTest` (13 testes) EXIGEM municipios semeados, e
+   `PaeFormularioControllerTest::test_store_persiste_municipio_id` exige que Belo
+   Horizonte NAO exista (cria o IBGE 3106200, que o seeder ja criou). Nao existe
+   estado de banco em que os 170 passem. Sem seed: 13 erros. Com seed: 1 erro.
+   Nenhum deles em Medalhao ou Sismos.
+
 ## Global Constraints
 
 - Todo arquivo PHP comeca com `declare(strict_types=1);`.
@@ -90,7 +123,7 @@ maxlongitude = -39.85
 - Consumes: nada
 - Produces: schemas `bronze`/`silver`/`gold`; tabela `bronze.ingestao_bruta` com colunas `id, fonte, conteudo_bruto, formato, hash_conteudo, meta, coletado_em, processado_em`; config `medalhao.retencao_dias` (int, 30), `medalhao.sismos.janela_mapa_dias` (int, 90), `medalhao.sismos.bbox` (array); disco `medalhao`.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -162,12 +195,12 @@ final class FundacaoMedalhaoTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `php artisan test --filter=FundacaoMedalhaoTest`
 Expected: FAIL — schemas inexistentes / `config('medalhao.retencao_dias')` nulo.
 
-- [ ] **Step 3: Criar a migration de schemas**
+- [x] **Step 3: Criar a migration de schemas**
 
 ```php
 <?php
@@ -205,7 +238,7 @@ return new class extends Migration
 };
 ```
 
-- [ ] **Step 4: Criar a migration da tabela Bronze**
+- [x] **Step 4: Criar a migration da tabela Bronze**
 
 ```php
 <?php
@@ -252,7 +285,7 @@ return new class extends Migration
 };
 ```
 
-- [ ] **Step 5: Criar `config/medalhao.php`**
+- [x] **Step 5: Criar `config/medalhao.php`**
 
 ```php
 <?php
@@ -287,7 +320,7 @@ return [
 ];
 ```
 
-- [ ] **Step 6: Adicionar o disco em `config/filesystems.php`**
+- [x] **Step 6: Adicionar o disco em `config/filesystems.php`**
 
 Dentro do array `'disks' => [ ... ]`, ao lado dos demais discos de dominio, usando o helper `$azureOrLocal` que ja existe no topo do arquivo:
 
@@ -296,12 +329,12 @@ Dentro do array `'disks' => [ ... ]`, ao lado dos demais discos de dominio, usan
         'medalhao' => $azureOrLocal('medalhao', 'MEDALHAO', 'app/medalhao'),
 ```
 
-- [ ] **Step 7: Rodar e ver passar**
+- [x] **Step 7: Rodar e ver passar**
 
 Run: `php artisan test --filter=FundacaoMedalhaoTest`
 Expected: PASS (4 testes).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add SDC/database/migrations/2026_08_07_000001_create_medalhao_schemas.php \
@@ -334,7 +367,7 @@ git commit -m "🗃️ db(medalhao): schemas bronze/silver/gold e tabela de inge
   - `IngestorRegistry`: `registrar(FonteIngestor $i, NormalizadorSilver $n): void`, `ingestor(string $chave): FonteIngestor`, `normalizador(string $chave): NormalizadorSilver`, `chavesDoGrupo(string $grupo): array`.
   - `IngestaoBruta` model: `$table = 'bronze.ingestao_bruta'`, cast `meta` => `array`, `coletado_em`/`processado_em` => `datetime`.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -430,12 +463,12 @@ final class IngestorRegistryTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `php artisan test --filter=IngestorRegistryTest`
 Expected: FAIL — classes inexistentes.
 
-- [ ] **Step 3: Criar o DTO e os contratos**
+- [x] **Step 3: Criar o DTO e os contratos**
 
 `DTOs/PayloadBruto.php`:
 
@@ -511,7 +544,7 @@ interface NormalizadorSilver
 }
 ```
 
-- [ ] **Step 4: Criar o registry e o model**
+- [x] **Step 4: Criar o registry e o model**
 
 `Registry/IngestorRegistry.php`:
 
@@ -603,7 +636,7 @@ class IngestaoBruta extends Model
 }
 ```
 
-- [ ] **Step 5: Criar o provider e registrar**
+- [x] **Step 5: Criar o provider e registrar**
 
 `MedalhaoServiceProvider.php`:
 
@@ -638,12 +671,12 @@ Em `config/app.php`, na lista de providers, junto de `App\Modules\Inmet\InmetSer
         App\Modules\Medalhao\MedalhaoServiceProvider::class,
 ```
 
-- [ ] **Step 6: Rodar e ver passar**
+- [x] **Step 6: Rodar e ver passar**
 
 Run: `php artisan test --filter=IngestorRegistryTest`
 Expected: PASS (4 testes).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add SDC/app/Modules/Medalhao SDC/config/app.php SDC/tests/Unit/Medalhao/IngestorRegistryTest.php
@@ -664,7 +697,7 @@ git commit -m "✨ feat(medalhao): contratos de ingestao, registry e model da ca
 - Consumes: nada
 - Produces: `SismoDTO` readonly com `fonte, evento_id, origem_utc (CarbonImmutable), latitude (float), longitude (float), profundidade_km (?float), magnitude (?float), escala_magnitude (?string), modo (?string), regiao (?string), tipo_evento (?string), autor (?string)`; metodo `dentroDaBbox(array $bbox): bool`.
 
-- [ ] **Step 1: Gravar a fixture do FDSN**
+- [x] **Step 1: Gravar a fixture do FDSN**
 
 Conteudo exato de `SDC/tests/Fixtures/Sismos/usp-fdsn-mg.txt` (capturado de `https://moho.iag.usp.br/fdsnws/event/1/query` em 2026-08-07):
 
@@ -676,7 +709,7 @@ usp2026owdm|2026-07-31T08:14:42.046118|-18.851715087890625|-44.75748062133789|0.
 usp2026nrxj|2026-07-14T19:04:32.232921|-20.15009307861328|-44.87556838989258|0.0|JAlexandre||USP|usp2026nrxj|MLv|1.9433785234637542|JAlexandre|Divinopolis/MG|earthquake
 ```
 
-- [ ] **Step 2: Gravar a fixture do obsis**
+- [x] **Step 2: Gravar a fixture do obsis**
 
 `SDC/tests/Fixtures/Sismos/unb-obsis.html` — HTML minimo que preserva as duas armadilhas reais (entidades `&#10;` como quebra de linha e `Local` generico):
 
@@ -690,7 +723,7 @@ usp2026nrxj|2026-07-14T19:04:32.232921|-20.15009307861328|-44.87556838989258|0.0
 
 A terceira linha usa `Salvador, BA` de proposito: o campo `Local` pode conter virgula, e o parser precisa lidar com isso (o script Python original fazia `",".join(p[8:-3])`).
 
-- [ ] **Step 3: Escrever o teste que falha**
+- [x] **Step 3: Escrever o teste que falha**
 
 ```php
 <?php
@@ -753,12 +786,12 @@ final class SismoDTOTest extends TestCase
 }
 ```
 
-- [ ] **Step 4: Rodar e ver falhar**
+- [x] **Step 4: Rodar e ver falhar**
 
 Run: `php artisan test --filter=SismoDTOTest`
 Expected: FAIL — `SismoDTO` inexistente.
 
-- [ ] **Step 5: Criar o DTO**
+- [x] **Step 5: Criar o DTO**
 
 ```php
 <?php
@@ -798,12 +831,12 @@ final readonly class SismoDTO
 }
 ```
 
-- [ ] **Step 6: Rodar e ver passar**
+- [x] **Step 6: Rodar e ver passar**
 
 Run: `php artisan test --filter=SismoDTOTest`
 Expected: PASS (4 testes).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add SDC/tests/Fixtures/Sismos SDC/app/Modules/Sismos/DTOs/SismoDTO.php SDC/tests/Unit/Sismos/SismoDTOTest.php
@@ -830,7 +863,7 @@ Formato do FDSN text — 14 colunas separadas por `|`, cabecalho iniciado por `#
 EventID|Time|Latitude|Longitude|Depth/km|Author|Catalog|Contributor|ContributorID|MagType|Magnitude|MagAuthor|EventLocationName|EventType
 ```
 
-- [ ] **Step 1: Escrever o teste do normalizador**
+- [x] **Step 1: Escrever o teste do normalizador**
 
 ```php
 <?php
@@ -912,12 +945,12 @@ final class FdsnTextNormalizadorTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `php artisan test --filter=FdsnTextNormalizadorTest`
 Expected: FAIL — `FdsnTextNormalizador` inexistente.
 
-- [ ] **Step 3: Implementar o normalizador**
+- [x] **Step 3: Implementar o normalizador**
 
 ```php
 <?php
@@ -1013,12 +1046,12 @@ final class FdsnTextNormalizador implements NormalizadorSilver
 }
 ```
 
-- [ ] **Step 4: Rodar e ver passar**
+- [x] **Step 4: Rodar e ver passar**
 
 Run: `php artisan test --filter=FdsnTextNormalizadorTest`
 Expected: PASS (5 testes).
 
-- [ ] **Step 5: Escrever o teste do ingestor**
+- [x] **Step 5: Escrever o teste do ingestor**
 
 ```php
 <?php
@@ -1098,12 +1131,12 @@ final class UspFdsnIngestorTest extends TestCase
 
 Nota de dominio: no padrao FDSN, **404 significa "nenhum evento no criterio"**, nao falha. Tratar como erro geraria alarme falso em periodo sem sismos em MG — que e o caso normal.
 
-- [ ] **Step 6: Rodar e ver falhar**
+- [x] **Step 6: Rodar e ver falhar**
 
 Run: `php artisan test --filter=UspFdsnIngestorTest`
 Expected: FAIL — `UspFdsnIngestor` inexistente.
 
-- [ ] **Step 7: Implementar o ingestor**
+- [x] **Step 7: Implementar o ingestor**
 
 ```php
 <?php
@@ -1177,12 +1210,12 @@ final class UspFdsnIngestor implements FonteIngestor
 }
 ```
 
-- [ ] **Step 8: Rodar e ver passar**
+- [x] **Step 8: Rodar e ver passar**
 
 Run: `php artisan test --filter=UspFdsnIngestorTest`
 Expected: PASS (5 testes).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add SDC/app/Modules/Sismos/Ingestores/UspFdsnIngestor.php \
@@ -1212,7 +1245,7 @@ Duas armadilhas reais, ambas mascaradas pelo Selenium original:
 
 Colunas: `N, Data, Hora(UTC), Latitude, Longitude, Magnitude, Escala, Profundidade(km), Local, Tipo, IDSCP3, Revisor`
 
-- [ ] **Step 1: Escrever o teste do ingestor**
+- [x] **Step 1: Escrever o teste do ingestor**
 
 ```php
 <?php
@@ -1279,12 +1312,12 @@ final class UnbObsisIngestorTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `php artisan test --filter=UnbObsisIngestorTest`
 Expected: FAIL — classe inexistente.
 
-- [ ] **Step 3: Implementar o ingestor**
+- [x] **Step 3: Implementar o ingestor**
 
 ```php
 <?php
@@ -1353,12 +1386,12 @@ final class UnbObsisIngestor implements FonteIngestor
 }
 ```
 
-- [ ] **Step 4: Rodar e ver passar**
+- [x] **Step 4: Rodar e ver passar**
 
 Run: `php artisan test --filter=UnbObsisIngestorTest`
 Expected: PASS (4 testes).
 
-- [ ] **Step 5: Escrever o teste do normalizador**
+- [x] **Step 5: Escrever o teste do normalizador**
 
 ```php
 <?php
@@ -1442,12 +1475,12 @@ final class ObsisCsvNormalizadorTest extends TestCase
 }
 ```
 
-- [ ] **Step 6: Rodar e ver falhar**
+- [x] **Step 6: Rodar e ver falhar**
 
 Run: `php artisan test --filter=ObsisCsvNormalizadorTest`
 Expected: FAIL — classe inexistente.
 
-- [ ] **Step 7: Implementar o normalizador**
+- [x] **Step 7: Implementar o normalizador**
 
 ```php
 <?php
@@ -1548,12 +1581,12 @@ final class ObsisCsvNormalizador implements NormalizadorSilver
 
 Atencao: `CarbonImmutable::createFromFormat` com data invalida pode lancar em vez de devolver `false` dependendo da versao — por isso o `try/catch` envolve a chamada. Se o teste `test_data_invalida_e_descartada` falhar por a excecao nao ser capturada, confirme que o `catch (Throwable)` engloba a criacao da data.
 
-- [ ] **Step 8: Rodar e ver passar**
+- [x] **Step 8: Rodar e ver passar**
 
 Run: `php artisan test --filter=ObsisCsvNormalizadorTest`
 Expected: PASS (5 testes).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add SDC/app/Modules/Sismos/Ingestores/UnbObsisIngestor.php \
@@ -1576,7 +1609,7 @@ git commit -m "✨ feat(sismos): ingestao e normalizacao do obsis da UnB com fil
 - Consumes: schema `silver` (Task 1); `SismoDTO` (Task 3)
 - Produces: tabela `silver.sismos`; `SismoRepository::upsertLote(iterable $dtos, ?int $ingestaoId = null): int` (devolve quantos registros foram gravados), `SismoRepository::totalPorFonte(string $fonte): int`.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -1683,12 +1716,12 @@ final class SismoRepositoryTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `php artisan test --filter=SismoRepositoryTest`
 Expected: FAIL — tabela e repositorio inexistentes.
 
-- [ ] **Step 3: Criar a migration da Silver**
+- [x] **Step 3: Criar a migration da Silver**
 
 ```php
 <?php
@@ -1742,7 +1775,7 @@ return new class extends Migration
 };
 ```
 
-- [ ] **Step 4: Implementar o repositorio**
+- [x] **Step 4: Implementar o repositorio**
 
 O upsert usa SQL cru porque `geom` exige `ST_SetSRID(ST_MakePoint(...))`, que o `upsert()` do Eloquent nao expressa.
 
@@ -1841,12 +1874,12 @@ final class SismoRepository
 
 Atencao ao numero de bindings: sao **13 por linha** (12 campos + `ingestao_id`), enquanto o placeholder tem 13 marcadores `?` (lon e lat contam como dois). Confira que a ordem do `array_push` bate exatamente com a ordem do placeholder antes de rodar.
 
-- [ ] **Step 5: Rodar e ver passar**
+- [x] **Step 5: Rodar e ver passar**
 
 Run: `php artisan test --filter=SismoRepositoryTest`
 Expected: PASS (5 testes).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add SDC/database/migrations/2026_08_07_000003_create_silver_sismos.php \
@@ -1871,7 +1904,7 @@ git commit -m "🗃️ db(sismos): camada silver com geometria PostGIS e upsert 
 
 Classes de magnitude (convencao usada no mapa): `< 2.0` = `micro`, `2.0–3.9` = `leve`, `4.0–4.9` = `moderado`, `>= 5.0` = `forte`.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -1968,12 +2001,12 @@ final class GoldSismosTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `php artisan test --filter=GoldSismosTest`
 Expected: FAIL — matviews e job inexistentes.
 
-- [ ] **Step 3: Criar a migration das matviews**
+- [x] **Step 3: Criar a migration das matviews**
 
 A janela e interpolada na definicao da view (matview nao aceita parametro em tempo de leitura). Se `janela_mapa_dias` mudar, rode `migrate:refresh` da migration ou recrie a view.
 
@@ -2050,7 +2083,7 @@ return new class extends Migration
 };
 ```
 
-- [ ] **Step 4: Criar o job de refresh**
+- [x] **Step 4: Criar o job de refresh**
 
 ```php
 <?php
@@ -2100,7 +2133,7 @@ class AtualizarGoldSismosJob implements ShouldQueue
 
 Nota: `REFRESH ... CONCURRENTLY` falha se a matview nunca foi populada. As matviews sao criadas ja populadas (sem `WITH NO DATA`), entao isso esta coberto.
 
-- [ ] **Step 5: Adicionar a leitura da Gold ao repositorio**
+- [x] **Step 5: Adicionar a leitura da Gold ao repositorio**
 
 Acrescente a `SismoRepository`:
 
@@ -2142,12 +2175,12 @@ Acrescente a `SismoRepository`:
 
 Adicione `use Illuminate\Support\Collection;` ao topo e troque o tipo de retorno de `mapa()` por `Collection`.
 
-- [ ] **Step 6: Rodar e ver passar**
+- [x] **Step 6: Rodar e ver passar**
 
 Run: `php artisan test --filter=GoldSismosTest`
 Expected: PASS (5 testes).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add SDC/database/migrations/2026_08_07_000004_create_gold_sismos_views.php \
@@ -2185,7 +2218,7 @@ Acrescente a `config/medalhao.php`:
 
 O contrato esperado do persistidor e `upsertLote(iterable $dtos, ?int $ingestaoId = null): int` — ja implementado pelo `SismoRepository`.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -2275,12 +2308,12 @@ final class PipelineIngestaoTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `php artisan test --filter=PipelineIngestaoTest`
 Expected: FAIL — jobs e provider inexistentes.
 
-- [ ] **Step 3: Criar `IngerirFonteJob`**
+- [x] **Step 3: Criar `IngerirFonteJob`**
 
 ```php
 <?php
@@ -2350,7 +2383,7 @@ class IngerirFonteJob implements ShouldQueue
 }
 ```
 
-- [ ] **Step 4: Criar `NormalizarSilverJob`**
+- [x] **Step 4: Criar `NormalizarSilverJob`**
 
 ```php
 <?php
@@ -2420,7 +2453,7 @@ class NormalizarSilverJob implements ShouldQueue
 }
 ```
 
-- [ ] **Step 5: Criar o `SismosServiceProvider` e registrar**
+- [x] **Step 5: Criar o `SismosServiceProvider` e registrar**
 
 ```php
 <?php
@@ -2467,14 +2500,14 @@ Em `config/app.php`, logo apos `MedalhaoServiceProvider::class`:
         App\Modules\Sismos\SismosServiceProvider::class,
 ```
 
-- [ ] **Step 6: Rodar e ver passar**
+- [x] **Step 6: Rodar e ver passar**
 
 Run: `php artisan test --filter=PipelineIngestaoTest`
 Expected: PASS (5 testes).
 
 Nota: `QUEUE_CONNECTION=sync` no `phpunit.xml` faz o `dispatch` do `NormalizarSilverJob` rodar na hora, o que e o comportamento desejado neste teste de integracao.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add SDC/app/Modules/Medalhao/Jobs SDC/app/Modules/Sismos/SismosServiceProvider.php \
@@ -2498,7 +2531,7 @@ git commit -m "✨ feat(medalhao): jobs de ingestao e normalizacao com deduplica
 - Consumes: `IngestorRegistry` (Task 2), `IngerirFonteJob` (Task 8)
 - Produces: comando `medalhao:ingerir {grupo}`; fila `medalhao` consumida por processo proprio.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -2546,12 +2579,12 @@ final class IngerirCommandTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `php artisan test --filter=IngerirCommandTest`
 Expected: FAIL — comando nao registrado.
 
-- [ ] **Step 3: Criar o comando**
+- [x] **Step 3: Criar o comando**
 
 ```php
 <?php
@@ -2603,12 +2636,12 @@ Registre-o no `MedalhaoServiceProvider::boot()`:
         }
 ```
 
-- [ ] **Step 4: Rodar e ver passar**
+- [x] **Step 4: Rodar e ver passar**
 
 Run: `php artisan test --filter=IngerirCommandTest`
 Expected: PASS (3 testes).
 
-- [ ] **Step 5: Agendar e criar o worker dedicado**
+- [x] **Step 5: Agendar e criar o worker dedicado**
 
 Em `SDC/routes/console.php`, junto dos demais `Schedule::command(...)`:
 
@@ -2642,12 +2675,12 @@ Confira `laravel-worker.conf` e alinhe `user`, caminhos de log e demais diretiva
 
 O `--timeout=300` combina com `IngerirFonteJob::$timeout`; `stopwaitsecs` deve ser maior que o timeout para o supervisor nao matar job em andamento no deploy.
 
-- [ ] **Step 6: Verificar que a fila esta isolada**
+- [x] **Step 6: Verificar que a fila esta isolada**
 
 Run: `grep -rn "queue:work" SDC/docker/`
 Expected: o worker principal continua **sem** `medalhao` na lista `critical,high,high-throughput,webhooks,default,low`, e o novo arquivo consome apenas `medalhao`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add SDC/app/Modules/Medalhao/Console/IngerirCommand.php \
@@ -2677,7 +2710,7 @@ git commit -m "✨ feat(medalhao): comando de ingestao, agendamento e worker ded
 
 Regra inegociavel: **a poda so ocorre depois de reler o arquivo escrito**. Falha na escrita ou na releitura aborta e mantem o Bronze intacto.
 
-- [ ] **Step 1: Instalar a dependencia**
+- [x] **Step 1: Instalar a dependencia**
 
 ```bash
 cd SDC && composer require flow-php/parquet
@@ -2685,7 +2718,7 @@ cd SDC && composer require flow-php/parquet
 
 Se a instalacao falhar por restricao de plataforma, pare e reporte — nao troque a lib sem registrar a decisao no spec.
 
-- [ ] **Step 2: Escrever o teste que falha**
+- [x] **Step 2: Escrever o teste que falha**
 
 ```php
 <?php
@@ -2787,12 +2820,12 @@ final class RolloverParquetTest extends TestCase
 }
 ```
 
-- [ ] **Step 3: Rodar e ver falhar**
+- [x] **Step 3: Rodar e ver falhar**
 
 Run: `php artisan test --filter=RolloverParquetTest`
 Expected: FAIL — contrato e job inexistentes.
 
-- [ ] **Step 4: Criar o contrato e a implementacao**
+- [x] **Step 4: Criar o contrato e a implementacao**
 
 `Contracts/ArquivadorBronze.php`:
 
@@ -2887,7 +2920,7 @@ final class FlowParquetArquivador implements ArquivadorBronze
 
 Se a API do `flow-php/parquet` divergir (a lib esta em 0.x), ajuste **apenas esta classe** — o contrato e os testes do job nao mudam. Consulte a documentacao instalada em `vendor/flow-php/parquet` para a assinatura correta de `Writer::write`.
 
-- [ ] **Step 5: Criar o job e o comando**
+- [x] **Step 5: Criar o job e o comando**
 
 `Jobs/RolloverParquetJob.php`:
 
@@ -3003,7 +3036,7 @@ class RollupCommand extends Command
 }
 ```
 
-- [ ] **Step 6: Ligar binding, comando e agendamento**
+- [x] **Step 6: Ligar binding, comando e agendamento**
 
 No `MedalhaoServiceProvider::register()`:
 
@@ -3025,12 +3058,12 @@ Schedule::command('medalhao:rollup')
     ->runInBackground();
 ```
 
-- [ ] **Step 7: Rodar e ver passar**
+- [x] **Step 7: Rodar e ver passar**
 
 Run: `php artisan test --filter=RolloverParquetTest`
 Expected: PASS (4 testes).
 
-- [ ] **Step 8: Provar que o Parquet abre em pandas**
+- [x] **Step 8: Provar que o Parquet abre em pandas**
 
 Gere um arquivo real e leia com o mesmo ferramental do CINDEC:
 
@@ -3043,7 +3076,7 @@ Expected: o DataFrame carrega, com as 8 colunas e `id` inteiro. Se falhar, o pro
 
 Se nao houver dado vencido no ambiente, insira uma linha de teste com `coletado_em` antiga antes de rodar.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add SDC/app/Modules/Medalhao SDC/composer.json SDC/composer.lock \
@@ -3066,7 +3099,7 @@ git commit -m "✨ feat(medalhao): arquivamento parquet da camada bronze com pod
 - Consumes: `SismoRepository::mapa()` e `::estatisticas()` (Task 7)
 - Produces: rota nomeada `sismos.index` em `GET /sismos`; pagina Inertia `Sismos/MapaSismos` com props `eventos`, `estatisticas`, `bbox`.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 ```php
 <?php
@@ -3128,12 +3161,12 @@ final class SismosIndexControllerTest extends TestCase
 
 Se o projeto exigir permissao especifica para paginas de modulo, espelhe o que `routes/modules/inmet.php` faz — a rota de sismos deve usar o mesmo nivel de protecao da de INMET, nem mais nem menos.
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `php artisan test --filter=SismosIndexControllerTest`
 Expected: FAIL — rota 404.
 
-- [ ] **Step 3: Criar o controller**
+- [x] **Step 3: Criar o controller**
 
 ```php
 <?php
@@ -3169,7 +3202,7 @@ class SismosIndexController extends Controller
 }
 ```
 
-- [ ] **Step 4: Criar a rota**
+- [x] **Step 4: Criar a rota**
 
 `routes/modules/sismos.php`:
 
@@ -3190,7 +3223,7 @@ Em `routes/web.php`, na secao de modulos operacionais, imediatamente apos a linh
     require __DIR__ . '/modules/sismos.php';
 ```
 
-- [ ] **Step 5: Criar a pagina Vue**
+- [x] **Step 5: Criar a pagina Vue**
 
 `resources/js/Pages/Sismos/MapaSismos.vue`:
 
@@ -3287,17 +3320,17 @@ onMounted(async () => {
 </script>
 ```
 
-- [ ] **Step 6: Rodar e ver passar**
+- [x] **Step 6: Rodar e ver passar**
 
 Run: `php artisan test --filter=SismosIndexControllerTest`
 Expected: PASS (2 testes).
 
-- [ ] **Step 7: Compilar o frontend**
+- [x] **Step 7: Compilar o frontend**
 
 Run: `cd SDC && npm run build`
 Expected: build sem erro; `MapaSismos` aparece nos assets gerados.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add SDC/app/Modules/Sismos/Controllers SDC/routes/modules/sismos.php \
@@ -3313,12 +3346,12 @@ git commit -m "✨ feat(sismos): pagina de mapa Leaflet lendo exclusivamente a c
 **Files:**
 - Nenhum arquivo novo; validacao dos criterios do spec.
 
-- [ ] **Step 1: Suite completa**
+- [x] **Step 1: Suite completa**
 
 Run: `cd SDC && php artisan test`
 Expected: verde. Fora do Postgres, os testes marcados como pgsql-only aparecem como skipped, nao failed.
 
-- [ ] **Step 2: Migrations do zero**
+- [x] **Step 2: Migrations do zero**
 
 Run: `php artisan migrate:fresh`
 Expected: sem erro; os tres schemas, `silver.sismos` e as duas matviews existem.
@@ -3332,7 +3365,7 @@ php artisan tinker --execute="
 "
 ```
 
-- [ ] **Step 3: Ciclo real de ingestao**
+- [x] **Step 3: Ciclo real de ingestao**
 
 ```bash
 php artisan medalhao:ingerir sismos
@@ -3346,21 +3379,21 @@ php artisan tinker --execute="
 
 Expected: as tres contagens maiores que zero (assumindo que ha eventos em MG na janela; se `silver` vier zero, confirme com uma consulta direta ao FDSN antes de tratar como defeito).
 
-- [ ] **Step 4: Idempotencia**
+- [x] **Step 4: Idempotencia**
 
 Rode `php artisan medalhao:ingerir sismos` e o worker de novo.
 Expected: a contagem de `bronze` **nao** aumenta (hash identico) e a de `silver` permanece igual.
 
-- [ ] **Step 5: Isolamento da fila**
+- [x] **Step 5: Isolamento da fila**
 
 Run: `grep -rn "queue:work" SDC/docker/`
 Expected: `medalhao` aparece somente em `medalhao-worker.conf`; a lista do worker principal segue inalterada.
 
-- [ ] **Step 6: Conferencia contra os criterios do spec**
+- [x] **Step 6: Conferencia contra os criterios do spec**
 
 Percorra a secao 9 do spec (`2026-08-07-medalhao-pipeline-sismos-design.md`) e marque os nove criterios. Qualquer um que nao passe vira correcao antes de considerar a fase concluida.
 
-- [ ] **Step 7: Commit final**
+- [x] **Step 7: Commit final**
 
 ```bash
 git add -A
@@ -3380,3 +3413,57 @@ git switch -c feat/medalhao-pipeline-sismos
 **Ordem.** As tasks 1 e 2 sao pre-requisito de tudo. As tasks 4 e 5 (USP e UnB) sao independentes entre si e podem ser paralelizadas. A 6 depende da 3; a 7 depende da 6; a 8 depende de 2, 4, 5, 6 e 7. As 9, 10 e 11 dependem da 8.
 
 **Fora de escopo desta fase, por decisao registrada no spec:** deduplicacao entre USP e UnB (secao 8 do spec explica por que casar por sufixo de ID falha em silencio), ingestao do CEMADEN SALVAR, migracao do modulo Inmet, agregacoes de chuva e superficie interpolada.
+
+
+---
+
+### Resultado da Task 12
+
+| Step | Veredito | Evidencia |
+| --- | --- | --- |
+| 1. Suite completa | passa para o escopo deste plano | 71 testes de Medalhao/Sismos, 171 assertions, verdes nas duas rodadas da suite completa. Os erros da suite sao o defeito 3 acima, alheio a este plano. |
+| 2. Migrations do zero | passa | `migrate:fresh` em `sdc_medalhao`; schemas `bronze`/`silver`/`gold`, `bronze.ingestao_bruta`, `silver.sismos`, `gold.sismos_mapa`, `gold.sismos_estatisticas` presentes. |
+| 3. Ciclo real | passa | bronze 2, silver 1, gold_mapa 1, gold_stats 1. USP entregou `usp2026qrdr` (Petropolis/RJ, dentro da bbox). |
+| 4. Idempotencia | passa | Segundo ciclo: "conteudo identico ao anterior, ignorado" nas duas fontes; bronze seguiu 2 e silver 1. |
+| 5. Isolamento da fila | passa | `medalhao` so em `medalhao-worker.conf`, no loop do compose e no do entrypoint. Fora das 6 listas compartilhadas. |
+| 6. Criterios do spec | 8 de 9 limpos, 1 com ressalva | Ver abaixo. |
+| 7. Commit final | feito | Este commit. |
+
+**Criterios da secao 9 do spec:**
+
+| # | Criterio | Veredito |
+| --- | --- | --- |
+| 1 | migrate cria schemas e matviews; nao falha sem PostGIS | passa — as 4 migrations tem a guarda de driver no up e no down |
+| 2 | `medalhao:ingerir sismos` popula o Bronze | passa — 2 linhas |
+| 3 | Segunda execucao nao cria linha nova | passa — dedup por hash cortou antes de despachar a normalizacao |
+| 4 | Silver com `geom` valido batendo com a origem | passa — `ST_Y`=-22.614383697509766 e `ST_X`=-43.20841598510742, identicos ao payload FDSN |
+| 5 | Gold reflete o Silver apos o ciclo | passa — 1 evento no Silver, 1 em `gold.sismos_mapa` |
+| 6 | A pagina le apenas `gold` | passa — o controller so chama `mapa()` e `estatisticas()`, que leem `gold.sismos_mapa` e `gold.sismos_estatisticas`. `totalPorFonte()` le Silver mas nao tem chamador em codigo de producao |
+| 7 | Worker do pipeline em processo separado | passa — mesma evidencia do Step 5 |
+| 8 | Parquet gerado abre em pandas com os tipos esperados | **RESSALVA** — ver abaixo |
+| 9 | Suite verde, pgsql-only pulados fora do Postgres | passa no escopo deste plano (71/71). A parte "pulados fora do Postgres" nao foi exercitada: nao havia ambiente nao-pgsql disponivel |
+
+**Ressalva do criterio 8.** O rollup gera os arquivos e a poda so ocorre apos a
+escrita verificada — isso funciona. O arquivo tambem abre em pandas com os tipos
+do schema (`pd.read_parquet` no arquivo, e `ds.dataset(..., partitioning='hive')`
+na arvore). Mas `pq.ParquetDataset(raiz)` e `pq.read_table(arquivo)` — os dois
+caminhos mais obvios do pandas — estouram com:
+
+```
+ArrowTypeError: Unable to merge: Field fonte has incompatible types:
+string vs dictionary<values=string, indices=int32, ordered=0>
+```
+
+A causa e que `fonte` existe duas vezes: como coluna dentro do arquivo
+(`FlatColumn::string('fonte')` no schema do `FlowParquetArquivador`) e como chave
+da particao Hive no caminho (`bronze/fonte=<fonte>/`). O pyarrow acha as duas e
+recusa unir. Isso contraria o padrao que o proprio spec fixa na secao 6.4 ("nao
+basta o arquivo ser valido, ele precisa ser legivel por quem vai consumi-lo") e o
+docblock do writer ("um arquivo que pandas e Power BI leiam sem tratamento
+especial de tipo").
+
+Correcao sugerida, de uma linha: remover `FlatColumn::string('fonte')` do schema e
+a chave `fonte` do mapa de linhas no `RolloverParquetJob`. A particao Hive ja
+devolve a coluna na leitura. NAO aplicada aqui: muda o schema do arquivo
+arquivado, entao arquivos ja gravados ficariam com schema diferente dos novos --
+e decisao de formato, nao de implementacao.
