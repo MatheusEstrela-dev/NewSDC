@@ -11,16 +11,21 @@
     </Text>
 
     <div class="flex flex-wrap items-center justify-center gap-2">
-      <Button
+      <!--
+        So a seta, sem rotulo, em TODA paginacao do sistema.
+        "Anterior" e "Proxima" escritos dobravam a largura de cada botao e, no
+        telefone, empurravam a fileira de numeros para uma terceira linha. A
+        direcao da seta ja diz o que o texto dizia; o rotulo sobrevive no
+        `title`, para leitor de tela e para o tooltip no desktop.
+      -->
+      <ButtonIcon
+        :icon="ArrowLeftIcon"
         variant="secondary"
         size="sm"
-        :icon="ArrowLeftIcon"
-        icon-position="left"
+        title="Pagina anterior"
         :disabled="!canGoPrevious"
         @click="handlePrevious"
-      >
-        Anterior
-      </Button>
+      />
 
       <!-- Os numeros quebram linha em vez de empurrar os botoes fora do card. -->
       <div class="flex flex-wrap items-center justify-center gap-1">
@@ -34,23 +39,21 @@
         </button>
       </div>
 
-      <Button
+      <ButtonIcon
+        :icon="ArrowRightIcon"
         variant="secondary"
         size="sm"
-        :icon="ArrowRightIcon"
-        icon-position="right"
+        title="Proxima pagina"
         :disabled="!canGoNext"
         @click="handleNext"
-      >
-        Próxima
-      </Button>
+      />
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import Button from '../../Atoms/Button/Button.vue';
+import ButtonIcon from '@/Components/Atoms/Button/ButtonIcon.vue';
 import Text from '../../Atoms/Typography/Text.vue';
 // Seta, e nao chevron: ArrowLeft/ArrowRight ja existem em Components/Icons e
 // e o mesmo sinal usado no "Voltar" do breadcrumb e no "Avancar" dos wizards.

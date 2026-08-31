@@ -30,7 +30,20 @@
           class="snap-start"
         >
           <component :is="tab.icon" class="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0" />
-          <span class="hidden sm:inline whitespace-nowrap">{{ tab.label }}</span>
+          <!--
+            A aba ATIVA sempre mostra o nome; as inativas ficam so no icone
+            abaixo de `sm`.
+
+            Antes o rotulo era `hidden sm:inline` para todas, e no telefone o
+            wizard virava uma fileira de cinco icones sem legenda: nao havia
+            como saber em que etapa se esta, nem o que as outras sao. Mostrar
+            todos os nomes nao serve -- a fileira passaria de tres telas de
+            largura. Nomear so a ativa cabe e responde a pergunta que importa.
+          -->
+          <span
+            class="whitespace-nowrap"
+            :class="activeTab === tab.id ? 'inline' : 'hidden sm:inline'"
+          >{{ tab.label }}</span>
           <span
             v-if="tab.badge && !tab.disabled"
             class="ml-1 sm:ml-1.5 px-1.5 sm:px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 min-w-[1.25rem] text-center"

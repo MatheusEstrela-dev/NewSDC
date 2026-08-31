@@ -68,18 +68,33 @@
       </div>
       <div v-else class="flex-1"></div>
 
-      <!-- Mobile Only: Search Icon Button (< 768px) -->
+      <!--
+        Mobile (< 768px): campo de busca, nao icone nu.
+
+        Antes era um botao de 40x40 com so a lupa, cercado de espaco vazio: nao
+        se lia como busca e nao dizia o que buscar. Agora usa a mesma receita
+        visual do trigger de desktop (retangulo, lupa a esquerda, texto de
+        dica), comprimida.
+
+        `flex-1 min-w-0` para ocupar a largura que sobra entre o hamburger e as
+        acoes da direita -- sem o `min-w-0` o texto empurraria a barra e voltaria
+        o transbordo horizontal que a trilha tinha. `truncate` fecha a conta: a
+        dica encurta em vez de esticar o campo.
+      -->
       <button
         v-if="!isCidadao"
-        class="flex md:hidden items-center justify-center w-10 h-10 rounded-lg transition-colors
-               text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+        class="group relative flex md:hidden flex-1 min-w-0 mx-2 items-center gap-2 h-10 px-3 rounded-lg
+               bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+               text-slate-400 dark:text-slate-500 transition-colors
+               hover:border-blue-400 dark:hover:border-blue-500 active:scale-[0.98]"
         title="Buscar"
         @click="openCommandPalette"
         data-tour="search"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4 shrink-0 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
+        <span class="truncate text-xs font-medium text-left">Buscar protocolo, município...</span>
       </button>
 
       <!-- Right Section - User Info & Actions -->

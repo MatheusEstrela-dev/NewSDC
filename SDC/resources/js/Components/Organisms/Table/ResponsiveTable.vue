@@ -181,11 +181,9 @@ const props = defineProps({
   color: #cbd5e1;
 }
 
-@media (prefers-color-scheme: dark) {
-  .empty-icon {
+  :global(html.dark) .empty-icon {
     color: #475569;
   }
-}
 
 .empty-text {
   font-size: 0.875rem;
@@ -193,11 +191,9 @@ const props = defineProps({
   margin: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  .empty-text {
+  :global(html.dark) .empty-text {
     color: #94a3b8;
   }
-}
 
 /* Loading State */
 .mobile-loading-state {
@@ -217,12 +213,10 @@ const props = defineProps({
   animation: spin 0.8s linear infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  .loading-spinner {
+  :global(html.dark) .loading-spinner {
     border-color: #334155;
     border-top-color: #60a5fa;
   }
-}
 
 @keyframes spin {
   to {
@@ -236,11 +230,9 @@ const props = defineProps({
   margin: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  .loading-text {
+  :global(html.dark) .loading-text {
     color: #94a3b8;
   }
-}
 
 /* Responsive adjustments */
 @media (min-width: 640px) and (max-width: 767px) {

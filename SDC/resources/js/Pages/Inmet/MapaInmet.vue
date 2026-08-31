@@ -214,8 +214,27 @@ function getMarkerColor(nivel) {
 }
 
 /* Map Wrapper */
+/*
+ * `isolation: isolate` conserta o mapa aparecendo SOBRE a sidebar.
+ *
+ * O Leaflet posiciona os proprios paines em z-index 200-700 e os controles
+ * (o +/- de zoom) em 800-1000, e os overlays deste arquivo usam 1000. Sem um
+ * contexto de empilhamento aqui, todos esses valores competiam no contexto
+ * RAIZ -- e a sidebar e z-index 50. Resultado: no telefone, abrir o menu com o
+ * mapa na tela deixava zoom e "Estatisticas" flutuando por cima do drawer.
+ *
+ * `isolation: isolate` cria o contexto sem depender de position/z-index, e o
+ * `z-index: 0` garante o mesmo em navegador que ignore `isolation`. Dentro
+ * dele o 1000 do overlay continua valendo sobre os paines do mapa; fora, o
+ * wrapper inteiro vale 0 e fica abaixo de qualquer chrome do app.
+ *
+ * Regra geral: TODO container de mapa, modal ou dropdown de biblioteca externa
+ * precisa isolar -- a biblioteca nao conhece a escala de z-index do SDC.
+ */
 .map-wrapper {
   position: relative;
+  isolation: isolate;
+  z-index: 0;
   height: 600px;
   width: 100%; /* Ensure it doesn't overflow container */
   border-radius: 8px;
@@ -223,6 +242,40 @@ function getMarkerColor(nivel) {
   border: 1px solid #374151;
   margin-bottom: 24px;
   box-sizing: border-box; /* Include border in width calculation */
+}
+
+/*
+ * Telas pequenas: o mapa de 600px fixos ocupava a tela inteira e os overlays de
+ * 280-300px cobriam metade dele. Altura por viewport e overlays em largura
+ * relativa devolvem o mapa ao usuario.
+ */
+@media (max-width: 767px) {
+  .map-wrapper {
+    height: 60vh;
+    min-height: 320px;
+    margin-bottom: 16px;
+  }
+
+  .map-overlay {
+    padding: 10px 12px;
+    font-size: 0.8125rem;
+  }
+
+  .stats-overlay {
+    top: 8px;
+    right: 8px;
+    left: auto;
+    width: auto;
+    max-width: 60%;
+  }
+
+  /* A legenda vai para baixo do mapa: sobreposta, ela cobria o proprio dado
+     que explica. */
+  .legend-overlay {
+    position: static;
+    width: 100%;
+    margin-top: 12px;
+  }
 }
 
 #map {

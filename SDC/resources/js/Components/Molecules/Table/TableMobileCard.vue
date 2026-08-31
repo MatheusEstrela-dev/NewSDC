@@ -103,12 +103,10 @@ const getFieldValue = (key) => {
 }
 
 /* Dark mode */
-@media (prefers-color-scheme: dark) {
-  .table-mobile-card {
+  :global(html.dark) .table-mobile-card {
     background: #1e293b;
     border-color: #334155;
   }
-}
 
 /* Header */
 .card-header {
@@ -121,12 +119,10 @@ const getFieldValue = (key) => {
   background: #f8fafc;
 }
 
-@media (prefers-color-scheme: dark) {
-  .card-header {
+  :global(html.dark) .card-header {
     background: #0f172a;
     border-bottom-color: #334155;
   }
-}
 
 .card-title-section {
   flex: 1;
@@ -143,11 +139,9 @@ const getFieldValue = (key) => {
   white-space: nowrap;
 }
 
-@media (prefers-color-scheme: dark) {
-  .card-title {
+  :global(html.dark) .card-title {
     color: #f1f5f9;
   }
-}
 
 .card-subtitle {
   font-size: 0.875rem;
@@ -155,11 +149,9 @@ const getFieldValue = (key) => {
   margin: 0.25rem 0 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  .card-subtitle {
+  :global(html.dark) .card-subtitle {
     color: #94a3b8;
   }
-}
 
 .card-actions {
   flex-shrink: 0;
@@ -200,11 +192,9 @@ const getFieldValue = (key) => {
   letter-spacing: 0.05em;
 }
 
-@media (prefers-color-scheme: dark) {
-  .field-label {
+  :global(html.dark) .field-label {
     color: #94a3b8;
   }
-}
 
 .field-value {
   font-size: 0.875rem;
@@ -214,11 +204,9 @@ const getFieldValue = (key) => {
   text-overflow: ellipsis;
 }
 
-@media (prefers-color-scheme: dark) {
-  .field-value {
+  :global(html.dark) .field-value {
     color: #f1f5f9;
   }
-}
 
 /* Footer */
 .card-footer {
@@ -231,12 +219,10 @@ const getFieldValue = (key) => {
   gap: 0.5rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  .card-footer {
+  :global(html.dark) .card-footer {
     background: #0f172a;
     border-top-color: #334155;
   }
-}
 
 /* Variantes */
 .table-mobile-card[data-variant='primary'] {

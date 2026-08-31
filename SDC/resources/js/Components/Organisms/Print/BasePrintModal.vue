@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { useMobile } from '@/Composables/useMobile';
 import XMarkIcon from '@/Components/Icons/XMarkIcon.vue';
 import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
 import GovBrButton from '@/Components/Molecules/GovBr/GovBrButton.vue';
@@ -28,14 +29,46 @@ const emit = defineEmits(['close']);
 const printContentRef = ref(null);
 const govBrSignerUrl = 'https://assinador.iti.br/assinatura/index.xhtml';
 
+const { isMobile } = useMobile();
+
+/**
+ * No celular o documento NAO abre em modal: vai direto para outra aba.
+ *
+ * O impresso e uma folha A4 de tabelas com largura fixa -- boletim de
+ * ocorrencia, passagem de servico, ficha PMDA. Em 375px isso nao encolhe: cada
+ * celula quebra em tres linhas e o cabecalho ocupa meia tela. Nao ha versao
+ * mobile possivel desse layout, e forcar uma seria pior que nao ter.
+ *
+ * A aba nova ja existia: e o mesmo `handlePrint()` do botao Imprimir, que
+ * escreve o documento com o proprio CSS de impressao. A unica mudanca e nao
+ * mostrar o modal antes -- o toque no icone da impressora leva direto ao
+ * documento legivel, com zoom e rolagem do proprio navegador.
+ *
+ * Se o navegador bloquear o popup, `handlePrint()` devolve false e o modal
+ * aparece como antes. Degradar para o comportamento antigo e melhor que o
+ * toque nao fazer nada.
+ */
+const suprimirModal = ref(false);
+
 watch(
   () => props.show,
   (newVal) => {
-    if (newVal) {
-      document.body.style.overflow = 'hidden';
-    } else {
+    if (!newVal) {
       document.body.style.overflow = null;
+      suprimirModal.value = false;
+      return;
     }
+
+    // `v-show` mantem o conteudo no DOM, entao printContentRef ja existe aqui e
+    // nao e preciso esperar render.
+    if (isMobile.value && handlePrint()) {
+      suprimirModal.value = true;
+      document.body.style.overflow = null;
+      emit('close');
+      return;
+    }
+
+    document.body.style.overflow = 'hidden';
   },
   { immediate: true }
 );
@@ -57,12 +90,16 @@ onUnmounted(() => {
   document.body.style.overflow = null;
 });
 
+/**
+ * Abre o documento em outra aba. Devolve `true` quando conseguiu -- o caminho do
+ * mobile depende disso para decidir se ainda precisa mostrar o modal.
+ */
 function handlePrint() {
   const printContent = printContentRef.value;
-  if (!printContent) return;
+  if (!printContent) return false;
 
   const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
+  if (!printWindow) return false;
 
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -109,6 +146,8 @@ function handlePrint() {
   setTimeout(() => {
     printWindow.print();
   }, 250);
+
+  return true;
 }
 
 function handleGovBrSign() {
@@ -122,7 +161,7 @@ defineExpose({ printContentRef, handlePrint });
   <Teleport to="body">
     <Transition leave-active-class="duration-200">
       <div
-        v-show="show"
+        v-show="show && !suprimirModal"
         class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0"
         style="z-index: 9999 !important;"
         scroll-region
