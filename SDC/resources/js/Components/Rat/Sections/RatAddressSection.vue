@@ -1,18 +1,23 @@
 <template>
-  <div class="rat-section-card">
-    <div class="rat-section-header">
-      <div class="rat-section-icon rat-section-icon-default">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-        </svg>
-      </div>
-      <div>
-        <h3 class="rat-section-title">Endereço Detalhado</h3>
-        <p class="text-xs text-slate-500 mt-0.5">Informações completas sobre a localização do fato</p>
-      </div>
-    </div>
+  <!--
+    Colapsavel como as outras secoes do formulario.
 
-    <div class="rat-section-content">
+    Esta e a "Local do Fato" eram `div.rat-section-card` cru, sem chevron e
+    SEMPRE abertas: no telefone a sanfona fechava as demais e estas seguiam
+    expandidas, o que fazia o modo parecer quebrado.
+  -->
+  <RatCollapsibleSection
+    section-id="endereco-detalhado"
+    title="Endereço Detalhado"
+    subtitle="Informações completas sobre a localização do fato"
+    icon-class="rat-section-icon-default"
+  >
+    <template #icon>
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+    </template>
+
       <!-- Linha 1: CEP, Logradouro, Bairro, Complemento -->
       <div class="rat-grid-4">
         <FormField
@@ -124,11 +129,11 @@
 
       <input type="hidden" v-model="localData.latitude" />
       <input type="hidden" v-model="localData.longitude" />
-    </div>
-  </div>
+  </RatCollapsibleSection>
 </template>
 
 <script setup>
+import RatCollapsibleSection from './RatCollapsibleSection.vue';
 import FormField from '@/Components/Form/FormField.vue';
 import FormSelect from '@/Components/Form/FormSelect.vue';
 import { useCep } from '@/Composables/location';

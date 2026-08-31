@@ -83,7 +83,8 @@
       -->
       <button
         v-if="!isCidadao"
-        class="group relative flex md:hidden flex-1 min-w-0 mx-2 items-center gap-2 h-10 px-3 rounded-lg
+        class="group relative flex md:hidden w-10 justify-center xxs:w-auto xxs:flex-1 xxs:min-w-0 xxs:justify-start
+               mx-1 xxs:mx-2 items-center gap-2 h-10 px-0 xxs:px-3 rounded-lg
                bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700
                text-slate-400 dark:text-slate-500 transition-colors
                hover:border-blue-400 dark:hover:border-blue-500 active:scale-[0.98]"
@@ -94,7 +95,12 @@
         <svg class="w-4 h-4 shrink-0 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
-        <span class="truncate text-xs font-medium text-left">Buscar protocolo, município...</span>
+        <!--
+          Abaixo de 350px o campo vira so a lupa: com a engrenagem na barra,
+          sobrava largura para a lupa e uma letra orfa de "Buscar..." -- pior
+          que nao ter rotulo nenhum.
+        -->
+        <span class="hidden xxs:inline truncate text-xs font-medium text-left">Buscar protocolo, município...</span>
       </button>
 
       <!-- Right Section - User Info & Actions -->

@@ -1,13 +1,10 @@
 <template>
   <div class="table-mobile-card">
-    <!-- Header: Título principal e ações -->
+    <!-- Header: titulo e subtitulo. As acoes ficam no pe do card. -->
     <div class="card-header">
       <div class="card-title-section">
         <h3 v-if="title" class="card-title">{{ title }}</h3>
         <p v-if="subtitle" class="card-subtitle">{{ subtitle }}</p>
-      </div>
-      <div v-if="$slots.actions" class="card-actions">
-        <slot name="actions"></slot>
       </div>
     </div>
 
@@ -28,7 +25,21 @@
       </div>
     </div>
 
-    <!-- Footer: Ações secundárias -->
+    <!--
+      Acoes no PE do card, nao no cabecalho.
+
+      Padrao do sistema: o RatCard e os cards de Decretacoes e PAE fecham com a
+      fileira de acoes separada por divisor. No cabecalho, os icones disputavam
+      espaco com o titulo -- que e o dado que identifica o registro -- e em
+      nome longo o titulo quebrava em tres linhas para caber ao lado deles.
+
+      No pe, tambem, o dedo alcanca sem cobrir o conteudo que acabou de ler.
+    -->
+    <div v-if="$slots.actions" class="card-actions">
+      <slot name="actions"></slot>
+    </div>
+
+    <!-- Footer: acoes secundarias, abaixo das principais. -->
     <div v-if="$slots.footer" class="card-footer">
       <slot name="footer"></slot>
     </div>
@@ -153,11 +164,14 @@ const getFieldValue = (key) => {
     color: #94a3b8;
   }
 
+/* Fileira de acoes no pe, com o mesmo tratamento do .card-footer. */
 .card-actions {
-  flex-shrink: 0;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #e2e8f0;
 }
 
 /* Body */
@@ -218,6 +232,11 @@ const getFieldValue = (key) => {
   justify-content: flex-end;
   gap: 0.5rem;
 }
+
+  /* A borda da fileira de acoes acompanha o tema, como a do footer. */
+  :global(html.dark .card-actions) {
+    border-top-color: #334155;
+  }
 
   :global(html.dark .card-footer) {
     background: #0f172a;
