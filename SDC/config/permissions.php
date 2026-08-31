@@ -16,6 +16,7 @@ return [
         'operator' => 4,
         'viewer' => 5,
         'user' => 6,
+        'citizen' => 7,
     ],
 
     /*
@@ -57,6 +58,11 @@ return [
         'user' => [
             'name' => 'Usuario',
             'description' => 'Usuario padrao do sistema',
+            'is_active' => true,
+        ],
+        'citizen' => [
+            'name' => 'Cidadao',
+            'description' => 'Cargo de menor hierarquia para governanca de dados do cidadao externo - acesso somente leitura ao catalogo publico de Treinamento',
             'is_active' => true,
         ],
     ],
@@ -937,6 +943,11 @@ return [
             'estoque.lotes.view',
             'estoque.kits.view',
             'estoque.movimentacoes.view',
+        ],
+        'citizen' => [
+            // Cargo de governanca de dados - somente leitura do catalogo publico.
+            // Nao concede acesso a nenhum outro modulo interno.
+            'treinamento.cursos.view',
         ],
     ],
 

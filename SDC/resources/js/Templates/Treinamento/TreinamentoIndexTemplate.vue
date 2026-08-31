@@ -181,7 +181,7 @@ function handleExportCsv(params) {
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Status</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Instrutor</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Período</th>
-            <th class="table-actions-head px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Ações</th>
+            <th class="table-actions-head px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider w-32 min-w-32 whitespace-nowrap">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
@@ -204,7 +204,7 @@ function handleExportCsv(params) {
             <td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
               {{ formatDate(treinamento.data_inicio) }}
             </td>
-            <td class="table-actions-cell px-4 py-3">
+            <td class="table-actions-cell px-4 py-3 w-32 min-w-32">
               <div class="flex items-center justify-end">
                 <ActionButton
                   module="treinamento"
