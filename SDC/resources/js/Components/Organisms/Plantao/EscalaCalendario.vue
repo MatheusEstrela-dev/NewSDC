@@ -6,28 +6,30 @@
  * biblioteca de calendario um dia significa reescrever este arquivo e nenhum
  * outro.
  *
- * RESPONSIVIDADE em tres degraus, todos CLICAVEIS:
+ * RESPONSIVIDADE em dois degraus, os dois CLICAVEIS:
  *
- *   >= 1024px  dayGridMonth  mes inteiro, sete colunas com folga
- *   768-1023   dayGridWeek   sete colunas de ~110px, nome ainda legivel
- *   < 768px    timeGridDay   um dia por vez, com as horas na vertical
+ *   >= 1024px  dayGridMonth   mes inteiro, sete colunas com folga
+ *   <  1024px  timeGridWeek   semana com as 24h na vertical, rolando
  *
- * O que estava aqui antes era `listWeek` abaixo de lg, e isso QUEBRAVA o
- * lancamento: a visao de lista do FullCalendar nao dispara `dateClick`, entao
- * no celular o montador nao conseguia tocar num dia para preencher vaga. Era
- * uma tela de leitura se passando por tela de trabalho.
+ * A referencia da faixa estreita e a semana do Google Agenda: sete colunas
+ * estreitas, o dia inteiro disponivel e ROLAGEM vertical em vez de recorte. As
+ * duas tentativas anteriores erraram por motivos diferentes e vale registrar:
  *
- * `timeGridDay` no telefone e nao `dayGridWeek`: em 375px sete colunas dao
- * ~53px cada, onde nao cabe nem a hora. Um dia por vez usa a largura toda, e a
- * grade de horas mostra visualmente que 06h-16h e 16h-02h se encostam -- que e
- * a leitura que o plantonista faz.
+ *  - `listWeek` nao dispara `dateClick`. Era tela de leitura se passando por
+ *    tela de trabalho: no celular o montador nao conseguia lancar vaga.
+ *  - `timeGridDay` com as horas recortadas em 05h-23h resolvia o clique mas
+ *    desperdicava a largura toda numa coluna so, e o recorte escondia turno
+ *    que atravessa a meia-noite -- 16h-02h e 20h-08h, que sao METADE dos
+ *    horarios praticados.
  *
- * O corte de cima e `lg`, o MESMO da sidebar, para nao existir faixa em que
- * sidebar e calendario discordem sobre o que e "tela pequena".
+ * Agora sao as 24 horas de fato (`slotMinTime` 00:00, `slotMaxTime` 24:00), com
+ * altura fixa e rolagem interna. `scrollTime` abre em 05h para o primeiro turno
+ * do dia (06h) aparecer sem rolar, e o resto fica a um gesto de distancia.
  *
- * A decisao segue o `useMobile`, que le matchMedia e nao innerWidth: e a MESMA
- * medida das media queries do Tailwind, entao o componente nunca discorda do
- * CSS ao redor.
+ * O corte e `lg`, o MESMO da sidebar, para nao existir faixa em que sidebar e
+ * calendario discordem sobre o que e "tela pequena". A decisao segue o
+ * `useMobile`, que le matchMedia e nao innerWidth: e a MESMA medida das media
+ * queries do Tailwind, entao o componente nunca discorda do CSS ao redor.
  */
 import { useMobile } from '@/Composables/useMobile';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -57,16 +59,12 @@ const props = defineProps({
 const emit = defineEmits(['selecionar-dia', 'selecionar-vaga', 'mudar-mes']);
 
 const calendarRef = ref(null);
-const { isMobile, isDesktop } = useMobile();
+const { isDesktop } = useMobile();
 
-const viewAlvo = computed(() => {
-  if (isMobile.value) return 'timeGridDay';
-  if (!isDesktop.value) return 'dayGridWeek';
-  return 'dayGridMonth';
-});
-
-// Telefone e tablet: sem "hoje" na barra, que nao caberia junto do titulo.
+// Telefone e tablet: semana com horas. Desktop: mes.
 const telaEstreita = computed(() => !isDesktop.value);
+
+const viewAlvo = computed(() => (telaEstreita.value ? 'timeGridWeek' : 'dayGridMonth'));
 
 /**
  * Troca a visao quando o dispositivo cruza o breakpoint -- girar o telefone,
@@ -121,22 +119,34 @@ const opcoes = computed(() => ({
     center: 'title',
     right: telaEstreita.value ? '' : 'today',
   },
-  // Altura fixa quebra em telefone: o conteudo da lista semanal varia muito.
-  height: 'auto',
+  // Altura FIXA na faixa estreita: e o que cria a rolagem interna das 24h.
+  // Com 'auto' o calendario cresceria para a altura do dia inteiro e a pagina
+  // toda passaria a rolar, empurrando cards e filtros para longe. No desktop o
+  // mes tem altura previsivel e 'auto' continua melhor.
+  height: telaEstreita.value ? 560 : 'auto',
   // Sem isto, um dia com tres turnos estica a celula e desalinha a grade.
   dayMaxEvents: telaEstreita.value ? false : 3,
   moreLinkContent: (args) => `+${args.num}`,
   firstDay: 0,
   // Some o cabecalho de horario duplicado: a hora ja vai no titulo do evento.
   displayEventTime: true,
-  // Recorte de horas: fora de 05h-23h nao ha turno comecando, e mostrar as 24h
-  // obrigaria a rolar para achar o plantao no telefone.
-  slotMinTime: '05:00:00',
-  slotMaxTime: '23:00:00',
+  // 24 horas de verdade. Recortar escondia turno que atravessa a meia-noite --
+  // 16h-02h e 20h-08h sao metade dos horarios praticados no CEDEC.
+  slotMinTime: '00:00:00',
+  slotMaxTime: '24:00:00',
   slotDuration: '01:00:00',
+  slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+  // Abre em 05h: o primeiro turno comeca as 06h e aparece sem rolar.
+  scrollTime: '05:00:00',
+  // expandRows FALSE de proposito: com true as linhas se esticam para preencher
+  // a altura e a rolagem desaparece, que e o oposto do pedido.
+  expandRows: false,
   allDaySlot: false,
-  expandRows: true,
   nowIndicator: true,
+  // "dom 31" em vez de "domingo, 31 de agosto": sao sete colunas estreitas.
+  dayHeaderFormat: telaEstreita.value
+    ? { weekday: 'short', day: 'numeric', omitCommas: true }
+    : { weekday: 'short' },
   eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
   noEventsContent: 'Nenhum plantao escalado neste periodo.',
   datesSet: aoMudarIntervalo,

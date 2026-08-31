@@ -203,6 +203,12 @@ export function useNotifications() {
         } catch (e) {
             notifications.value = anteriores;
             unreadCount.value = contagemAnterior;
+
+            // Sem este log a falha era MUDA: a lista voltava inteira e o
+            // usuario via "nao limpou", sem nada no console apontando o 500 do
+            // servidor. Foi exatamente o que aconteceu quando o endpoint subiu
+            // com o classmap velho nos workers do Octane.
+            console.error('[notificacoes] falha ao limpar; lista restaurada', e);
         }
     };
 
