@@ -6,10 +6,18 @@
  * biblioteca de calendario um dia significa reescrever este arquivo e nenhum
  * outro.
  *
- * RESPONSIVIDADE em dois degraus, os dois CLICAVEIS:
+ * RESPONSIVIDADE, sempre CLICAVEL para lancar vaga:
  *
  *   >= 1024px  dayGridMonth   mes inteiro, sete colunas com folga
- *   <  1024px  timeGridWeek   semana com as 24h na vertical, rolando
+ *   768-1023   timeGridWeek   semana com as 24h na vertical, rolando
+ *   <  768px   timeGridDay    UM dia, porque no telefone sete colunas de
+ *                             ~53px sao ruido, nao informacao
+ *
+ * Nas duas faixas estreitas a barra traz o par de botoes Dia/Semana, para quem
+ * quiser a visao geral escolher -- em vez de ficarmos decidindo por ele. Sao os
+ * botoes NATIVOS do FullCalendar (`timeGridDay,timeGridWeek` no headerToolbar):
+ * ja vem com estado ativo e rotulo em pt-BR do locale carregado, e ocupam
+ * exatamente o canto que antes ficava vazio por causa do `today` removido.
  *
  * A referencia da faixa estreita e a semana do Google Agenda: sete colunas
  * estreitas, o dia inteiro disponivel e ROLAGEM vertical em vez de recorte. As
@@ -59,12 +67,16 @@ const props = defineProps({
 const emit = defineEmits(['selecionar-dia', 'selecionar-vaga', 'mudar-mes']);
 
 const calendarRef = ref(null);
-const { isDesktop } = useMobile();
+const { isMobile, isDesktop } = useMobile();
 
-// Telefone e tablet: semana com horas. Desktop: mes.
+// Telefone e tablet: grade de horas. Desktop: mes.
 const telaEstreita = computed(() => !isDesktop.value);
 
-const viewAlvo = computed(() => (telaEstreita.value ? 'timeGridWeek' : 'dayGridMonth'));
+const viewAlvo = computed(() => {
+  if (isMobile.value) return 'timeGridDay';
+  if (telaEstreita.value) return 'timeGridWeek';
+  return 'dayGridMonth';
+});
 
 /**
  * Troca a visao quando o dispositivo cruza o breakpoint -- girar o telefone,
@@ -117,7 +129,10 @@ const opcoes = computed(() => ({
   headerToolbar: {
     left: 'prev,next',
     center: 'title',
-    right: telaEstreita.value ? '' : 'today',
+    // O par Dia/Semana substitui o `today`, que nao cabia junto do titulo em
+    // tela estreita. No desktop o mes ja mostra tudo e `today` volta a ser o
+    // que faz falta.
+    right: telaEstreita.value ? 'timeGridDay,timeGridWeek' : 'today',
   },
   // Altura FIXA na faixa estreita: e o que cria a rolagem interna das 24h.
   // Com 'auto' o calendario cresceria para a altura do dia inteiro e a pagina
@@ -147,6 +162,8 @@ const opcoes = computed(() => ({
   dayHeaderFormat: telaEstreita.value
     ? { weekday: 'short', day: 'numeric', omitCommas: true }
     : { weekday: 'short' },
+  // Rotulos curtos: "Semana" e "Dia" inteiros estouram a barra em 375px.
+  buttonText: { day: 'Dia', week: 'Semana' },
   eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
   noEventsContent: 'Nenhum plantao escalado neste periodo.',
   datesSet: aoMudarIntervalo,
@@ -186,15 +203,28 @@ const opcoes = computed(() => ({
   font-weight: 600;
 }
 
-/* Barra de ferramentas empilha no telefone em vez de espremer os botoes. */
+/*
+ * Barra de ferramentas no telefone: continua em linha, mas com wrap.
+ *
+ * Empilhar em coluna era aceitavel com dois grupos (setas + titulo); com o par
+ * Dia/Semana viraram tres, e a coluna comia tres linhas de altura antes do
+ * calendario aparecer. Em linha com wrap, as setas e o par de visao dividem a
+ * primeira linha e o titulo desce so quando nao cabe.
+ */
 @media (max-width: 767px) {
   .escala-calendario :deep(.fc .fc-toolbar) {
-    flex-direction: column;
-    gap: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.375rem;
   }
 
   .escala-calendario :deep(.fc .fc-toolbar-title) {
-    font-size: 1rem;
+    font-size: 0.9375rem;
+  }
+
+  /* Rotulos curtos ("Dia"/"Semana") nao precisam do padding de botao largo. */
+  .escala-calendario :deep(.fc .fc-button) {
+    padding: 0.3125rem 0.5rem;
+    font-size: 0.8125rem;
   }
 }
 
