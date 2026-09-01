@@ -105,7 +105,14 @@
                    <section>
                        <h4 class="text-sm font-medium text-slate-900 dark:text-white uppercase tracking-wider mb-4">Informações Pessoais</h4>
                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           <div class="col-span-2 flex items-center gap-6">
+                           <!--
+                             `col-span-2` sem prefixo dentro de um `grid-cols-1`
+                             fazia o item ocupar duas trilhas e CRIAVA a segunda
+                             coluna. Nome e Cargo caiam lado a lado em 375px e os
+                             rotulos se sobrepunham. O span so vale onde a
+                             segunda coluna existe de fato.
+                           -->
+                           <div class="col-span-1 md:col-span-2 flex flex-col xs:flex-row xs:items-center gap-4 xs:gap-6">
                                <div class="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 border-2 border-dashed border-slate-300 dark:border-slate-700">
                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                </div>
