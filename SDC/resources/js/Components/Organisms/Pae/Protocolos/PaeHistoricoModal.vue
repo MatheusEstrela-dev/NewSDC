@@ -1,7 +1,7 @@
 <template>
   <Modal :show="open" max-width="2xl" @close="$emit('close')">
-    <div class="bg-slate-900 text-slate-200">
-      <div class="px-6 py-5 bg-gradient-to-r from-indigo-700/70 to-fuchsia-600/40 border-b border-slate-700/50">
+    <div class="flex max-h-full min-h-0 flex-col bg-slate-900 text-slate-200">
+      <div class="shrink-0 px-4 py-4 md:px-6 md:py-5 bg-gradient-to-r from-indigo-700/70 to-fuchsia-600/40 border-b border-slate-700/50">
         <div class="flex items-start justify-between gap-4">
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-10 h-10 rounded-full bg-slate-900/40 border border-slate-700/40 flex items-center justify-center">
@@ -26,7 +26,7 @@
           </button>
         </div>
 
-        <div class="mt-4 flex items-center gap-6 border-b border-slate-700/40">
+        <div class="tira-rolavel mt-4 items-center gap-4 border-b border-slate-700/40 sm:gap-6">
           <button
             v-if="showTimelineTab"
             type="button"
@@ -58,7 +58,7 @@
         </div>
       </div>
 
-      <div class="p-6">
+      <div class="flex-1 min-h-0 overflow-y-auto p-4 pb-8 md:p-6">
         <!-- Timeline -->
         <div v-if="activeTab === 'timeline'">
           <ol v-if="timelineCount" class="relative border-l border-slate-700 ml-5 space-y-6">

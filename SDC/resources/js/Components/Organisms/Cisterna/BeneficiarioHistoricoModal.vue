@@ -1,7 +1,7 @@
 <template>
   <Modal :show="show" max-width="2xl" @close="$emit('close')">
-    <div class="bg-slate-900 text-slate-200">
-      <div class="border-b border-slate-700/50 bg-gradient-to-r from-cyan-700/70 to-sky-600/40 px-6 py-5">
+    <div class="flex max-h-full min-h-0 flex-col bg-slate-900 text-slate-200">
+      <div class="shrink-0 border-b border-slate-700/50 bg-gradient-to-r from-cyan-700/70 to-sky-600/40 px-4 py-4 md:px-6 md:py-5">
         <div class="flex items-start justify-between gap-4">
           <div class="flex min-w-0 items-center gap-3">
             <div class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-700/40 bg-slate-900/40">
@@ -43,7 +43,7 @@
         </div>
       </div>
 
-      <div class="max-h-[60vh] overflow-y-auto p-6">
+      <div class="flex-1 min-h-0 overflow-y-auto p-4 pb-8 md:p-6">
         <!-- Carregando e erro sao estados proprios: sem eles o modal abre vazio
              e parece que o cadastro nao tem historico nenhum. -->
         <div v-if="carregando" class="py-10 text-center text-sm text-slate-400">
