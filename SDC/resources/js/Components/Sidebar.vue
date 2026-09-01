@@ -707,7 +707,7 @@
 
 <script setup>
 import { usePage } from '@inertiajs/vue3';
-import { computed, inject, onMounted, onUnmounted, provide, ref, shallowRef, watch } from 'vue';
+import { computed, inject, onMounted, onUnmounted, provide, ref } from 'vue';
 import { route } from 'ziggy-js';
 import NavItem from './NavItem.vue';
 
@@ -854,22 +854,22 @@ const _activeRoutes = computed(() => {
 const isRouteActive = (pattern) => _activeRoutes.value[pattern] ?? false;
 
 // ============================================================================
-// Cache estável de permissões — não re-executa em cada navegação.
-// Atualiza apenas quando o ID do usuário muda (login/logout).
+// Conjunto de permissoes derivado das props da visita atual.
+//
+// Era um shallowRef fotografado na montagem, re-hidratado por um watch no
+// `auth.user.id`. Como o id nao muda enquanto a pessoa segue logada, o Set
+// ficava congelado pela sessao SPA inteira: o admin concedia a permissao, o
+// servidor ja devolvia o slug novo no prop (o `inertia_user_data_{id}` e
+// invalidado no update/syncPermissions do UserManagementController), e mesmo
+// assim o modulo so aparecia na sidebar depois de um F5.
+//
+// O computed reconstroi o Set quando o objeto `auth.user` troca de identidade,
+// o que na pratica e a cada visita Inertia. E o preco de estar sempre correto:
+// montar um Set de ~230 strings custa microssegundos, contra um menu que mente
+// sobre o acesso da pessoa ate ela recarregar a pagina.
 // ============================================================================
-const _permSet = shallowRef(new Set(page.props?.auth?.user?.permissions ?? []));
-const _isSuper = shallowRef(page.props?.auth?.user?.is_super_admin ?? false);
-
-watch(
-  () => page.props?.auth?.user?.id,
-  (newId, prevId) => {
-    if (newId !== prevId) {
-      const user = page.props?.auth?.user;
-      _permSet.value = new Set(user?.permissions ?? []);
-      _isSuper.value = user?.is_super_admin ?? false;
-    }
-  }
-);
+const _permSet = computed(() => new Set(page.props?.auth?.user?.permissions ?? []));
+const _isSuper = computed(() => page.props?.auth?.user?.is_super_admin ?? false);
 
 const hasPermission = (permissionList) => {
   if (_isSuper.value) return true;
