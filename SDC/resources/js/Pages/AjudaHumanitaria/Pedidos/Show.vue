@@ -21,27 +21,18 @@
     <!-- Abas espelhando o legado: Dados, Materiais, Documentos e
          Despachos/Analises, mais Tramitacao. Prestacao de contas entra na
          proxima etapa. -->
-    <div class="mt-6 border-b border-slate-200 dark:border-slate-700">
-      <nav class="-mb-px flex gap-1 overflow-x-auto" aria-label="Abas do pedido">
-        <button
-          v-for="aba in abas"
-          :key="aba.chave"
-          type="button"
-          :class="[
-            'whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition',
-            abaAtiva === aba.chave
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
-          ]"
-          @click="abaAtiva = aba.chave"
-        >
-          {{ aba.rotulo }}
-          <span v-if="aba.contador !== null" class="ml-1.5 text-xs text-slate-400">
-            {{ aba.contador }}
-          </span>
-        </button>
-      </nav>
-    </div>
+    <!--
+      Abas no desenho padrao do projeto (ModuleTabs, nascido no RAT): trilho
+      arredondado, aba ativa como pilula com borda inferior, inativas so com
+      icone abaixo de `sm`, e fades indicando que a tira rola. A tira crua de
+      antes cortava "Documentos" na borda sem nenhuma pista de que havia mais.
+    -->
+    <ModuleTabs
+      class="mt-6"
+      :tabs="abasModulo"
+      :active-tab="abaAtiva"
+      @tab-change="(chave) => (abaAtiva = chave)"
+    />
 
     <div class="mt-6">
       <!-- Dados -->
@@ -176,6 +167,7 @@ import PedidoAhPrestacaoTab from '@/Components/Organisms/AjudaHumanitaria/Pedido
 import PedidoAhTramitacaoTab from '@/Components/Organisms/AjudaHumanitaria/PedidoAhTramitacaoTab.vue';
 import FormSection from '@/Components/Organisms/FormSection.vue';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
+import ModuleTabs from '@/Components/Molecules/Navigation/ModuleTabs.vue';
 import ArrowsRightLeftIcon from '@/Components/Icons/ArrowsRightLeftIcon.vue';
 import CheckCircleIcon from '@/Components/Icons/CheckCircleIcon.vue';
 import BuildingIcon from '@/Components/Icons/BuildingIcon.vue';
@@ -230,6 +222,32 @@ const abas = computed(() => [
       }]
     : []),
 ]);
+
+/**
+ * As abas no formato do ModuleTabs.
+ *
+ * `contador` vira `badge`, e zero/null nao viram badge nenhum -- um "0" ao lado
+ * do nome so ocupa a largura que falta no telefone. O icone e o MESMO da secao
+ * correspondente abaixo, para a aba continuar reconhecivel quando o rotulo some
+ * no mobile.
+ */
+const ICONES_DAS_ABAS = {
+  dados: DocumentTextIcon,
+  materiais: CubeIcon,
+  documentos: DocumentTextIcon,
+  pareceres: ClipboardIcon,
+  tramitacao: ArrowsRightLeftIcon,
+  prestacao: CheckCircleIcon,
+};
+
+const abasModulo = computed(() =>
+  abas.value.map((aba) => ({
+    id: aba.chave,
+    label: aba.rotulo,
+    icon: ICONES_DAS_ABAS[aba.chave] ?? DocumentTextIcon,
+    badge: aba.contador || null,
+  })),
+);
 
 const opcoesPadrao = { preserveScroll: true, preserveState: false };
 
