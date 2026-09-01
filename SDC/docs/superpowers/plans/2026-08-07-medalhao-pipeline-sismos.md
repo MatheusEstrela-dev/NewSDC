@@ -3440,30 +3440,60 @@ git switch -c feat/medalhao-pipeline-sismos
 | 5 | Gold reflete o Silver apos o ciclo | passa — 1 evento no Silver, 1 em `gold.sismos_mapa` |
 | 6 | A pagina le apenas `gold` | passa — o controller so chama `mapa()` e `estatisticas()`, que leem `gold.sismos_mapa` e `gold.sismos_estatisticas`. `totalPorFonte()` le Silver mas nao tem chamador em codigo de producao |
 | 7 | Worker do pipeline em processo separado | passa — mesma evidencia do Step 5 |
-| 8 | Parquet gerado abre em pandas com os tipos esperados | **RESSALVA** — ver abaixo |
+| 8 | Parquet gerado abre em pandas com os tipos esperados | passa — apos a correcao abaixo |
 | 9 | Suite verde, pgsql-only pulados fora do Postgres | passa no escopo deste plano (71/71). A parte "pulados fora do Postgres" nao foi exercitada: nao havia ambiente nao-pgsql disponivel |
 
-**Ressalva do criterio 8.** O rollup gera os arquivos e a poda so ocorre apos a
-escrita verificada — isso funciona. O arquivo tambem abre em pandas com os tipos
-do schema (`pd.read_parquet` no arquivo, e `ds.dataset(..., partitioning='hive')`
-na arvore). Mas `pq.ParquetDataset(raiz)` e `pq.read_table(arquivo)` — os dois
-caminhos mais obvios do pandas — estouram com:
+**Criterio 8 — a ressalva e a correcao.**
+
+Na primeira verificacao o rollup gerava os arquivos e a poda so ocorria apos a
+escrita verificada, mas `pq.ParquetDataset(raiz)` e `pq.read_table(arquivo)` — os
+dois caminhos mais obvios do pandas — estouravam com:
 
 ```
 ArrowTypeError: Unable to merge: Field fonte has incompatible types:
 string vs dictionary<values=string, indices=int32, ordered=0>
 ```
 
-A causa e que `fonte` existe duas vezes: como coluna dentro do arquivo
-(`FlatColumn::string('fonte')` no schema do `FlowParquetArquivador`) e como chave
-da particao Hive no caminho (`bronze/fonte=<fonte>/`). O pyarrow acha as duas e
-recusa unir. Isso contraria o padrao que o proprio spec fixa na secao 6.4 ("nao
-basta o arquivo ser valido, ele precisa ser legivel por quem vai consumi-lo") e o
-docblock do writer ("um arquivo que pandas e Power BI leiam sem tratamento
-especial de tipo").
+`fonte` existia duas vezes: como coluna dentro do arquivo e como chave da
+particao Hive no caminho. O pyarrow achava as duas e recusava unir. Isso
+contrariava o padrao que o proprio spec fixa na secao 6.4 ("nao basta o arquivo
+ser valido, ele precisa ser legivel por quem vai consumi-lo").
 
-Correcao sugerida, de uma linha: remover `FlatColumn::string('fonte')` do schema e
-a chave `fonte` do mapa de linhas no `RolloverParquetJob`. A particao Hive ja
-devolve a coluna na leitura. NAO aplicada aqui: muda o schema do arquivo
-arquivado, entao arquivos ja gravados ficariam com schema diferente dos novos --
-e decisao de formato, nao de implementacao.
+Corrigido por TDD: teste
+`test_fonte_nao_se_repete_como_coluna_dentro_do_arquivo` escrito primeiro, visto
+falhar com "Failed asserting that an array does not have the key 'fonte'", e so
+entao removida a coluna do `schema()` do `FlowParquetArquivador` e do mapa de
+linhas do `RolloverParquetJob`. A particao devolve a coluna na leitura, entao
+nada se perde.
+
+Verificado com pandas 2.3.3 / pyarrow 20.0.0 sobre arquivos gerados de coleta
+real:
+
+| Caminho | Antes | Depois |
+| --- | --- | --- |
+| `pq.ParquetDataset(raiz)` | ArrowTypeError | OK, 2 linhas |
+| `pq.read_table(arquivo)` | ArrowTypeError | OK, 1 linha |
+| `pd.read_parquet(raiz)` | OK | OK, 2 linhas |
+
+Colunas na leitura: `id, conteudo_bruto, formato, hash_conteudo, meta,
+coletado_em, processado_em` do arquivo, mais `fonte` e `dt` vindos da particao
+(dtype `category`). UTF-8 integro no conteudo bruto (U+00D3 presente, nenhum
+U+FFFD).
+
+## Observacao sobre `migrate:fresh` e os schemas do medalhao
+
+`migrate:fresh` derruba as tabelas do schema `public`, mas NAO as de `bronze`,
+`silver` e `gold`. Como as migrations usam `CREATE SCHEMA IF NOT EXISTS` e
+`CREATE TABLE IF NOT EXISTS`, elas passam sem recriar nada e os dados do medalhao
+sobrevivem ao comando. Em banco genuinamente novo — o caso do Step 2 — tudo e
+criado normalmente. Quem precisar zerar as camadas de fato tem de truncar na mao
+ou dropar os schemas.
+
+## Cuidado com a fila `medalhao` do Redis entre execucoes
+
+O Redis e compartilhado entre rodadas e nao e limpo pelo `migrate:fresh`. Durante
+esta verificacao sobraram 4 jobs de execucoes antigas em
+`sdc_preview_medalhao_queues:medalhao`, e o worker os replayou, inserindo no
+Bronze payloads sinteticos de teste (hash `aaaaaaaa...`) junto com a coleta real.
+Antes de medir contagem, conferir com
+`redis-cli --scan --pattern "*medalhao*"` e limpar se preciso.

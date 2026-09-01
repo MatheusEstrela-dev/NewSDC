@@ -63,15 +63,21 @@ final class FlowParquetArquivador implements ArquivadorBronze
     }
 
     /**
-     * Espelha as colunas de bronze.ingestao_bruta. meta vai como string JSON e os
-     * timestamps como ISO-8601: o objetivo e um arquivo que pandas e Power BI
-     * leiam sem tratamento especial de tipo.
+     * Espelha as colunas de bronze.ingestao_bruta, MENOS fonte. meta vai como
+     * string JSON e os timestamps como ISO-8601: o objetivo e um arquivo que
+     * pandas e Power BI leiam sem tratamento especial de tipo.
+     *
+     * fonte fica de fora de proposito. Ela ja e a chave da particao Hive no
+     * caminho (bronze/fonte=<fonte>/), e o pyarrow, ao achar o mesmo nome nos
+     * dois lugares, aborta a leitura do dataset com "Unable to merge: Field
+     * fonte has incompatible types: string vs dictionary<...>" -- justamente
+     * nos dois caminhos mais obvios, pq.ParquetDataset e pq.read_table. A
+     * particao devolve a coluna na leitura, entao nada se perde.
      */
     private function schema(): Schema
     {
         return Schema::with(
             FlatColumn::int64('id'),
-            FlatColumn::string('fonte'),
             FlatColumn::string('conteudo_bruto'),
             FlatColumn::string('formato'),
             FlatColumn::string('hash_conteudo'),

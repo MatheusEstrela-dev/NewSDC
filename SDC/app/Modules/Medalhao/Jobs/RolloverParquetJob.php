@@ -54,9 +54,11 @@ class RolloverParquetJob implements ShouldQueue
                 continue;
             }
 
+            // Sem 'fonte': ela e a chave da particao no caminho, e repeti-la
+            // dentro do arquivo quebra a leitura do dataset no pyarrow. Ver o
+            // schema() do FlowParquetArquivador.
             $linhas = $registros->map(static fn (IngestaoBruta $r): array => [
                 'id' => (int) $r->id,
-                'fonte' => (string) $r->fonte,
                 'conteudo_bruto' => (string) $r->conteudo_bruto,
                 'formato' => (string) $r->formato,
                 'hash_conteudo' => (string) $r->hash_conteudo,
