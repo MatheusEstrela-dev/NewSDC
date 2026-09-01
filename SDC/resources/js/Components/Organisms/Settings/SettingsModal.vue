@@ -3,7 +3,7 @@
     <Transition leave-active-class="duration-200">
       <div 
         v-if="isOpen" 
-        class="fixed inset-0 overflow-y-auto px-3 py-4 pt-16 sm:px-0 sm:pt-20" 
+        class="fixed inset-0 overflow-y-auto overscroll-contain px-3 py-4 pt-16 sm:px-0 sm:pt-20" 
         style="z-index: 9999 !important;" 
         scroll-region
         ref="settingsModalContainer"
@@ -85,7 +85,14 @@
             </div>
 
             <!-- Main Content -->
-            <div class="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-900">
+            <!--
+              `min-h-0` e obrigatorio aqui. Item flex tem `min-height: auto` e se
+              recusa a encolher abaixo do conteudo: sem isto a coluna crescia para
+              568px dentro de um modal de 532px, o `overflow-hidden` do modal
+              cortava o resto e o `overflow-y-auto` de baixo nunca ativava --
+              conteudo cortado e sem rolagem. E o irmao vertical do `min-w-0`.
+            -->
+            <div class="flex-1 flex flex-col min-w-0 min-h-0 bg-white dark:bg-slate-900">
               <!-- Header -->
               <div class="px-4 py-4 sm:px-8 sm:py-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
                 <div>
@@ -98,7 +105,7 @@
               </div>
 
               <!-- Content Area -->
-              <div class="flex-1 overflow-y-auto p-4 sm:p-8">
+              <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-8">
                 
                 <!-- Tab: Perfil -->
                 <div v-if="currentTab === 'profile'" class="space-y-8">
@@ -525,6 +532,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useBloqueioDeRolagem } from '@/Composables/ui/useBloqueioDeRolagem';
 import { usePage, useForm } from '@inertiajs/vue3';
 import { useNotificationPreferences } from '@/Composables/useNotificationPreferences';
 import { useWebPush } from '@/Composables/useWebPush';
@@ -622,18 +630,8 @@ async function loadPreferences() {
 // Declarado DEPOIS de loadPreferences e das refs que ela usa. Com immediate:true
 // o watcher roda durante o setup, e la em cima ele alcancaria essas const na zona
 // morta temporal -- basta o modal montar ja aberto para virar ReferenceError.
-watch(
-  () => props.isOpen,
-  (newVal) => {
-    if (newVal) {
-      document.body.style.overflow = 'hidden';
-      loadPreferences();
-    } else {
-      document.body.style.overflow = null;
-    }
-  },
-  { immediate: true }
-);
+// Bloqueio contado: ver Composables/ui/useBloqueioDeRolagem.
+useBloqueioDeRolagem(() => props.isOpen);
 
 const tabs = [
   { id: 'profile', label: 'Meu Perfil', icon: UserIcon, description: 'Gerencie suas informações pessoais e assinatura digital.' },
@@ -701,7 +699,6 @@ onMounted(() => {
 
 onUnmounted(() => {
     document.removeEventListener('keydown', closeOnEscape);
-    document.body.style.overflow = null;
 });
 
 const updateEmail = () => {

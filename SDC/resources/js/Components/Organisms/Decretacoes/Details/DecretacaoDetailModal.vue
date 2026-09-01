@@ -162,7 +162,7 @@ function handleClose() {
         resolve a entrada e `sticky` mantem as abas alcancaveis enquanto o
         conteudo rola. No desktop nada muda -- `md:order-none md:static`.
       -->
-      <nav ref="tiraRef" class="order-first md:order-none sticky top-0 z-10 md:static flex items-center gap-1 px-3 md:px-6 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50 overflow-x-auto scrollbar-hide">
+      <nav ref="tiraRef" class="order-first md:order-none sticky top-0 z-10 md:static flex flex-shrink-0 items-center gap-1.5 px-3 md:px-6 py-2.5 md:py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50 overflow-x-auto scrollbar-hide">
         <button
           v-for="tab in tabs"
           :key="tab.id"
@@ -191,13 +191,13 @@ function handleClose() {
         onde esta. No desktop as quatro abas cabem inteiras e o titulo seria
         repeticao.
       -->
-      <div v-if="isMobile && abaAtiva" class="px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-900">
+      <div v-if="isMobile && abaAtiva" class="flex-shrink-0 px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-900">
         <h3 class="text-base font-bold text-slate-900 dark:text-white">{{ abaAtiva.label }}</h3>
         <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ abaAtiva.descricao }}</p>
       </div>
 
       <!-- Tab Content -->
-      <div class="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50 dark:bg-slate-900/50 scrollbar-hide">
+      <div class="flex-1 overflow-y-auto overscroll-contain p-4 md:p-6 bg-slate-50 dark:bg-slate-900/50 scrollbar-hide">
         <!-- Loading Skeleton -->
         <div v-if="loading" class="space-y-4">
           <div class="animate-pulse space-y-4">

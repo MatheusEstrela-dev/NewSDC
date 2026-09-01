@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { useBloqueioDeRolagem } from '@/Composables/ui/useBloqueioDeRolagem';
 import { useMobile } from '@/Composables/useMobile';
 import XMarkIcon from '@/Components/Icons/XMarkIcon.vue';
 import PrinterIcon from '@/Components/Icons/PrinterIcon.vue';
@@ -50,11 +51,17 @@ const { isMobile } = useMobile();
  */
 const suprimirModal = ref(false);
 
+// Bloqueio contado, e nao `body.style.overflow` direto: ver
+// Composables/ui/useBloqueioDeRolagem. Aqui ele e manual porque o ramo do
+// mobile abre a impressao em outra aba e fecha sem nunca mostrar o modal --
+// nesse caso nao ha rolagem de fundo a bloquear.
+const { bloquear, liberar } = useBloqueioDeRolagem(() => false);
+
 watch(
   () => props.show,
   (newVal) => {
     if (!newVal) {
-      document.body.style.overflow = null;
+      liberar();
       suprimirModal.value = false;
       return;
     }
@@ -63,12 +70,12 @@ watch(
     // nao e preciso esperar render.
     if (isMobile.value && handlePrint()) {
       suprimirModal.value = true;
-      document.body.style.overflow = null;
+      liberar();
       emit('close');
       return;
     }
 
-    document.body.style.overflow = 'hidden';
+    bloquear();
   },
   { immediate: true }
 );
@@ -87,7 +94,7 @@ onMounted(() => document.addEventListener('keydown', closeOnEscape));
 
 onUnmounted(() => {
   document.removeEventListener('keydown', closeOnEscape);
-  document.body.style.overflow = null;
+  // O bloqueio se devolve sozinho no onUnmounted do composable.
 });
 
 /**

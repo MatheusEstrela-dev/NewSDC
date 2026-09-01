@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, onUnmounted, watch } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
+import { useBloqueioDeRolagem } from '@/Composables/ui/useBloqueioDeRolagem';
 
 const props = defineProps({
     show: {
@@ -18,17 +19,9 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 
-watch(
-    () => props.show,
-    (newVal) => {
-        if (newVal) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = null;
-        }
-    },
-    { immediate: true }
-);
+// O bloqueio da rolagem de fundo e contado no composable: varios modais ficam
+// montados na mesma pagina e cada um limpava o estado global do outro.
+useBloqueioDeRolagem(() => props.show);
 
 const close = () => {
     if (props.closeable) {
@@ -46,7 +39,6 @@ onMounted(() => document.addEventListener('keydown', closeOnEscape));
 
 onUnmounted(() => {
     document.removeEventListener('keydown', closeOnEscape);
-    document.body.style.overflow = null;
 });
 
 const maxWidthClass = computed(() => {
@@ -68,7 +60,7 @@ const maxWidthClass = computed(() => {
         <Transition leave-active-class="duration-200">
             <div 
                 v-show="show" 
-                class="fixed inset-0 overflow-y-auto scrollbar-hide px-3 py-4 pt-16 sm:px-0 sm:pt-20" 
+                class="fixed inset-0 overflow-y-auto overscroll-contain scrollbar-hide px-3 py-4 pt-16 sm:px-0 sm:pt-20" 
                 style="z-index: 9999 !important; position: fixed !important; isolation: isolate !important;" 
                 scroll-region
             >
