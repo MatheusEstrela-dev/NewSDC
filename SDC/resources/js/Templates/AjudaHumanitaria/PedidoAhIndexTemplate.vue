@@ -39,58 +39,97 @@
     />
 
     <ListContainer title="Lista de Pedidos" :icon="DocumentTextIcon" :count="linhas.length">
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-          <thead>
-            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              <th class="px-4 py-3">Número</th>
-              <th class="px-4 py-3">Município</th>
-              <th class="px-4 py-3">Status</th>
-              <th class="px-4 py-3">População</th>
-              <th class="px-4 py-3">Decreto</th>
-              <th class="px-4 py-3">Entrada</th>
-              <th class="px-4 py-3 text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-            <tr
-              v-for="linha in linhas"
-              :key="linha.id"
-              class="text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
-            >
-              <td class="px-4 py-3 font-semibold">{{ linha.identificador }}</td>
-              <td class="px-4 py-3">{{ linha.municipio?.nome ?? '—' }}</td>
-              <td class="px-4 py-3">
-                <PedidoAhStatusBadge
-                  :status="linha.status"
-                  :label="linha.status_label"
-                  :cor="linha.status_cor"
-                />
-              </td>
-              <td class="px-4 py-3">{{ formatarNumero(linha.pop_atendida) }}</td>
-              <td class="px-4 py-3">{{ linha.numero_decreto ?? '—' }}</td>
-              <td class="px-4 py-3">{{ formatarData(linha.data_entrada_sistema) }}</td>
-              <td class="table-actions-cell w-40 min-w-40 px-4 py-3 text-right">
-                <div class="flex justify-end">
-                  <ActionButton
-                    module="humanitaria"
-                    resource="pedidos"
-                    size="sm"
-                    :actions="[
-                      { action: 'view', handler: () => $emit('view', linha.id) },
-                    ]"
+      <ResponsiveTable
+        :items="linhas"
+        :mobile-fields="CAMPOS_MOBILE"
+        :get-item-title="(linha) => linha.identificador"
+        :get-item-subtitle="(linha) => linha.municipio?.nome ?? ''"
+        empty-message="Nenhum pedido encontrado"
+      >
+        <template #table>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <thead>
+              <tr class="text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <th class="px-4 py-3">Número</th>
+                <th class="px-4 py-3">Município</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">População</th>
+                <th class="px-4 py-3">Decreto</th>
+                <th class="px-4 py-3">Entrada</th>
+                <th class="px-4 py-3 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              <tr
+                v-for="linha in linhas"
+                :key="linha.id"
+                class="text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
+              >
+                <td class="px-4 py-3 font-semibold">{{ linha.identificador }}</td>
+                <td class="px-4 py-3">{{ linha.municipio?.nome ?? '—' }}</td>
+                <td class="px-4 py-3">
+                  <PedidoAhStatusBadge
+                    :status="linha.status"
+                    :label="linha.status_label"
+                    :cor="linha.status_cor"
                   />
-                </div>
-              </td>
-            </tr>
-            <tr v-if="!linhas.length">
-              <td colspan="7" class="p-0">
-                <ListEmptyState title="Nenhum pedido encontrado" />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                </td>
+                <td class="px-4 py-3">{{ formatarNumero(linha.pop_atendida) }}</td>
+                <td class="px-4 py-3">{{ linha.numero_decreto ?? '—' }}</td>
+                <td class="px-4 py-3">{{ formatarData(linha.data_entrada_sistema) }}</td>
+                <td class="table-actions-cell w-40 min-w-40 px-4 py-3 text-right">
+                  <div class="flex justify-end">
+                    <ActionButton
+                      module="humanitaria"
+                      resource="pedidos"
+                      size="sm"
+                      :actions="[
+                        { action: 'view', handler: () => $emit('view', linha.id) },
+                      ]"
+                    />
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="!linhas.length">
+                <td colspan="7" class="p-0">
+                  <ListEmptyState title="Nenhum pedido encontrado" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+          </template>
+
+        <template #mobile-status="{ item: linha }">
+          <PedidoAhStatusBadge
+            :status="linha.status"
+            :label="linha.status_label"
+            :cor="linha.status_cor"
+          />
+        </template>
+
+        <template #mobile-populacao="{ item: linha }">
+          {{ formatarNumero(linha.pop_atendida) }}
+        </template>
+
+        <template #mobile-decreto="{ item: linha }">
+          {{ linha.numero_decreto ?? '—' }}
+        </template>
+
+        <template #mobile-entrada="{ item: linha }">
+          {{ formatarData(linha.data_entrada_sistema) }}
+        </template>
+
+        <template #mobile-actions="{ item: linha }">
+          <ActionButton
+            module="humanitaria"
+            resource="pedidos"
+            size="sm"
+            :actions="[{ action: 'view', handler: () => $emit('view', linha.id) }]"
+          />
+        </template>
+      </ResponsiveTable>
     </ListContainer>
 
     <div v-if="paginacao" class="mt-6">
@@ -117,6 +156,7 @@ import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import PedidoAhFiltersSection from '@/Components/Organisms/AjudaHumanitaria/PedidoAhFiltersSection.vue';
 import PedidoAhStatsCards from '@/Components/Organisms/AjudaHumanitaria/PedidoAhStatsCards.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
+import ResponsiveTable from '@/Components/Organisms/Table/ResponsiveTable.vue';
 
 const props = defineProps({
   pedidos: { type: Object, default: () => ({ data: [], meta: null }) },
@@ -166,4 +206,19 @@ function formatarData(valor) {
 
   return dia ? `${dia}/${mes}/${ano}` : valor;
 }
+
+/**
+ * Campos do card no mobile (regra 9).
+ *
+ * Das sete colunas, quatro. O numero vira titulo e o municipio, subtitulo --
+ * juntos identificam o pedido numa lista. A tabela media 769px num espaco de
+ * 326px: rolava 443px de lado, com a coluna de acoes flutuando sobre conteudo
+ * cortado.
+ */
+const CAMPOS_MOBILE = [
+  { key: 'status', label: 'Status' },
+  { key: 'populacao', label: 'População' },
+  { key: 'decreto', label: 'Decreto' },
+  { key: 'entrada', label: 'Entrada' },
+];
 </script>
