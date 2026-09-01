@@ -414,15 +414,31 @@
                     </svg>
                     <h4 class="font-semibold text-slate-700 dark:text-slate-200 uppercase text-xs tracking-wider">{{ moduleName }}</h4>
                   </div>
-                  <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">
-                    {{ getModuleSelectedCount(moduleName) }}/{{ getModuleTotalCount(groups) }}
-                  </span>
+                  <div class="flex items-center gap-3">
+                    <SelectAllCheckbox
+                      :state="estadoDoModulo(moduleName)"
+                      :disabled="!moduloTemSelecionavel(moduleName)"
+                      :title="`Marcar/desmarcar todas as permissoes extras de ${moduleName}`"
+                      @toggle="alternarModulo(moduleName)"
+                    />
+                    <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">
+                      {{ getModuleSelectedCount(moduleName) }}/{{ getModuleTotalCount(groups) }}
+                    </span>
+                  </div>
                 </div>
 
                 <div v-show="expandedModules.includes(moduleName)" class="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                   <!-- Itera sobre grupos dentro do modulo -->
                   <div v-for="(permissions, groupName) in groups" :key="groupName" class="p-4 border-b border-slate-100 dark:border-slate-700 last:border-b-0">
-                    <h5 class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wide">{{ groupName }}</h5>
+                    <div class="flex items-center gap-2 mb-3">
+                      <SelectAllCheckbox
+                        :state="estadoDoGrupo(permissions)"
+                        :disabled="!grupoTemSelecionavel(permissions)"
+                        :title="`Marcar/desmarcar todas as permissoes extras de ${groupName}`"
+                        @toggle="alternarGrupo(permissions)"
+                      />
+                      <h5 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{{ groupName }}</h5>
+                    </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
                       <!-- Itera sobre acoes/permissoes do grupo -->
                       <div v-for="(slug, action) in permissions" :key="slug" class="flex items-center gap-2 sm:gap-1 min-h-[40px] sm:min-h-0">
@@ -583,6 +599,7 @@ import { computed, ref } from 'vue';
 import { route } from 'ziggy-js';
 import PageHeader from '@/Components/Organisms/PageHeader.vue';
 import ClockIcon from '@/Components/Icons/ClockIcon.vue';
+import SelectAllCheckbox from '@/Components/Atoms/Input/SelectAllCheckbox.vue';
 import { moduleIcon } from '@/Support/moduleIcons';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -753,6 +770,70 @@ const getModuleTotalCount = (groups) => {
   }
   return count;
 };
+
+/**
+ * Slugs que o "marcar tudo" pode de fato alternar.
+ *
+ * O que vem do CARGO e o que e imutavel fica de fora: sao os mesmos dois casos
+ * que ja desabilitam o checkbox individual. Se entrassem aqui, o botao de
+ * modulo tentaria adicionar em `direct_permissions` uma permissao que a tela
+ * mostra como fixa -- duplicando no payload o que o cargo ja concede.
+ *
+ * @param {Object} grupos mapa grupo -> { acao: slug }
+ * @returns {string[]}
+ */
+const slugsSelecionaveis = (grupos) => {
+  const slugs = [];
+  for (const grupo in grupos) {
+    for (const acao in grupos[grupo]) {
+      const slug = grupos[grupo][acao];
+      if (!isFromRole(slug) && !isImmutablePermission(slug)) {
+        slugs.push(slug);
+      }
+    }
+  }
+  return slugs;
+};
+
+/** 'all' | 'some' | 'none' de um conjunto de slugs contra as extras marcadas. */
+const estadoDaSelecao = (slugs) => {
+  if (slugs.length === 0) return 'none';
+
+  const marcados = slugs.filter(slug => form.direct_permissions.includes(slug)).length;
+
+  if (marcados === 0) return 'none';
+  return marcados === slugs.length ? 'all' : 'some';
+};
+
+/**
+ * Marca o conjunto inteiro; se ja estava inteiro marcado, desmarca.
+ *
+ * O "some" cai no ramo de marcar, e nao no de desmarcar: quem clica no
+ * cabecalho com metade selecionada quer completar, nao perder o que ja tinha.
+ */
+const alternarTodos = (slugs) => {
+  if (slugs.length === 0) return;
+
+  if (estadoDaSelecao(slugs) === 'all') {
+    form.direct_permissions = form.direct_permissions.filter(slug => !slugs.includes(slug));
+    return;
+  }
+
+  const faltando = slugs.filter(slug => !form.direct_permissions.includes(slug));
+  form.direct_permissions = [...form.direct_permissions, ...faltando];
+};
+
+const estadoDoModulo = (moduleName) => estadoDaSelecao(slugsSelecionaveis(aclModules.value[moduleName] ?? {}));
+
+const alternarModulo = (moduleName) => alternarTodos(slugsSelecionaveis(aclModules.value[moduleName] ?? {}));
+
+const moduloTemSelecionavel = (moduleName) => slugsSelecionaveis(aclModules.value[moduleName] ?? {}).length > 0;
+
+const estadoDoGrupo = (permissions) => estadoDaSelecao(slugsSelecionaveis({ grupo: permissions }));
+
+const alternarGrupo = (permissions) => alternarTodos(slugsSelecionaveis({ grupo: permissions }));
+
+const grupoTemSelecionavel = (permissions) => slugsSelecionaveis({ grupo: permissions }).length > 0;
 
 const getModuleSelectedCount = (moduleName) => {
   const groups = aclModules.value[moduleName] ?? {};
