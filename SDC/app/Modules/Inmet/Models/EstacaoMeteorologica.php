@@ -25,7 +25,11 @@ class EstacaoMeteorologica extends Model
         'altitude',
         'tipo',
         'status',
+        'situacao',
     ];
+    // geom fica de fora de proposito: e escrita por SQL cru no
+    // InmetRepository, porque exige ST_SetSRID(ST_MakePoint(...)), que o
+    // Eloquent nao expressa.
 
     protected $casts = [
         'latitude' => 'decimal:7',
